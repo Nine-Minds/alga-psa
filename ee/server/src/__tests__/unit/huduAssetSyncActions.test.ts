@@ -13,6 +13,7 @@
  */
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { tenantDb } from '@alga-psa/db';
 import knexFactory, { type Knex } from 'knex';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -189,6 +190,10 @@ function readPostgresPassword(): string {
   }
 }
 
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
 describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)', () => {
   const HOOK_TIMEOUT = 60_000;
 
@@ -228,7 +233,7 @@ describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)'
     }
 
     tenantId = randomUUID();
-    await db('tenants').insert({
+    await tenantTable(db, tenantId, 'tenants').insert({
       tenant: tenantId,
       client_name: 'Hudu Asset Sync Test Tenant',
       email: `hudu-asset-sync-${tenantId}@example.test`,
@@ -237,15 +242,15 @@ describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)'
 
   afterAll(async () => {
     if (db && tenantId) {
-      await db(HUDU_MAPPING_TABLE).where({ tenant: tenantId }).del().catch(() => undefined);
-      await db('tenants').where({ tenant: tenantId }).del().catch(() => undefined);
+      await tenantTable(db, tenantId, HUDU_MAPPING_TABLE).where({ tenant: tenantId }).del().catch(() => undefined);
+      await tenantTable(db, tenantId, 'tenants').where({ tenant: tenantId }).del().catch(() => undefined);
     }
     await db?.raw('select pg_advisory_unlock_all()').catch(() => undefined);
     await db?.destroy().catch(() => undefined);
   }, HOOK_TIMEOUT);
 
   beforeEach(async () => {
-    await db(HUDU_MAPPING_TABLE).where({ tenant: tenantId }).del();
+    await tenantTable(db, tenantId, HUDU_MAPPING_TABLE).where({ tenant: tenantId }).del();
   });
 
   it('T226: setHuduAssetMappingStale merges stale both ways, preserving every other metadata key', async () => {
@@ -264,7 +269,7 @@ describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)'
     const mappingId = (created as { mapping: { id: string } }).mapping.id;
 
     expect(await assetMappingDb.setHuduAssetMappingStale(db, tenantId, { huduAssetId: 601 }, true)).toBe(1);
-    let [row] = await db(HUDU_MAPPING_TABLE).where({ tenant: tenantId });
+    let [row] = await tenantTable(db, tenantId, HUDU_MAPPING_TABLE).where({ tenant: tenantId });
     expect(row.metadata).toEqual({
       hudu_asset_name: 'EC-WS-001',
       hudu_company_id: '101',
@@ -277,11 +282,11 @@ describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)'
 
     // Reappearance clears the flag by mapping id; siblings still intact.
     expect(await assetMappingDb.setHuduAssetMappingStale(db, tenantId, { mappingId }, false)).toBe(1);
-    [row] = await db(HUDU_MAPPING_TABLE).where({ tenant: tenantId });
+    [row] = await tenantTable(db, tenantId, HUDU_MAPPING_TABLE).where({ tenant: tenantId });
     expect(row.metadata).toMatchObject({ stale: false, hudu_asset_name: 'EC-WS-001', primary_serial: 'SN-EC-1001' });
 
     // Null metadata coalesces to an object instead of erroring.
-    await db(HUDU_MAPPING_TABLE).insert({
+    await tenantTable(db, tenantId, HUDU_MAPPING_TABLE).insert({
       tenant: tenantId,
       integration_type: 'hudu',
       alga_entity_type: 'asset',
@@ -292,7 +297,7 @@ describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)'
       metadata: null,
     });
     expect(await assetMappingDb.setHuduAssetMappingStale(db, tenantId, { huduAssetId: 602 }, true)).toBe(1);
-    const bare = await db(HUDU_MAPPING_TABLE).where({ tenant: tenantId, external_entity_id: '602' }).first();
+    const bare = await tenantTable(db, tenantId, HUDU_MAPPING_TABLE).where({ tenant: tenantId, external_entity_id: '602' }).first();
     expect(bare.metadata).toEqual({ stale: true });
 
     // Misses report 0; missing ref throws; nothing was ever deleted (T227).
@@ -301,14 +306,14 @@ describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)'
     await expect(assetMappingDb.setHuduAssetMappingStale(db, tenantId, {}, true)).rejects.toThrow(
       /requires mappingId or huduAssetId/
     );
-    expect(await db(HUDU_MAPPING_TABLE).where({ tenant: tenantId })).toHaveLength(2);
+    expect(await tenantTable(db, tenantId, HUDU_MAPPING_TABLE).where({ tenant: tenantId })).toHaveLength(2);
   });
 
   it('T252/T253 row layer: writeHuduAssetAttributes jsonb-merges the Hudu namespace, preserving sibling keys', async () => {
     const clientId = randomUUID();
-    await db('clients').insert({ tenant: tenantId, client_id: clientId, client_name: 'Hudu Attr Client' });
+    await tenantTable(db, tenantId, 'clients').insert({ tenant: tenantId, client_id: clientId, client_name: 'Hudu Attr Client' });
     try {
-      const [asset] = await db('assets')
+      const [asset] = await tenantTable(db, tenantId, 'assets')
         .insert({
           tenant: tenantId,
           client_id: clientId,
@@ -328,7 +333,7 @@ describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)'
       expect(
         await writeHuduAssetAttributes(db, tenantId, asset.asset_id, [{ label: 'Hostname', value: 'EC-WS-001' }], at)
       ).toBe(1);
-      let row = await db('assets').where({ tenant: tenantId, asset_id: asset.asset_id }).first();
+      let row = await tenantTable(db, tenantId, 'assets').where({ tenant: tenantId, asset_id: asset.asset_id }).first();
       // Sibling namespace survives; hudu_fields is replaced wholesale.
       expect(row.attributes).toEqual({
         acme_namespace: { keep: true },
@@ -337,17 +342,17 @@ describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)'
       });
 
       // Null attributes coalesce to an object instead of erroring.
-      await db('assets').where({ tenant: tenantId, asset_id: asset.asset_id }).update({ attributes: null });
+      await tenantTable(db, tenantId, 'assets').where({ tenant: tenantId, asset_id: asset.asset_id }).update({ attributes: null });
       const later = '2026-06-12T11:00:00.000Z';
       expect(await writeHuduAssetAttributes(db, tenantId, asset.asset_id, [], later)).toBe(1);
-      row = await db('assets').where({ tenant: tenantId, asset_id: asset.asset_id }).first();
+      row = await tenantTable(db, tenantId, 'assets').where({ tenant: tenantId, asset_id: asset.asset_id }).first();
       expect(row.attributes).toEqual({ hudu_fields: [], hudu_synced_at: later });
 
       // Tenant scoping holds.
       expect(await writeHuduAssetAttributes(db, randomUUID(), asset.asset_id, [], later)).toBe(0);
     } finally {
-      await db('assets').where({ tenant: tenantId }).del().catch(() => undefined);
-      await db('clients').where({ tenant: tenantId }).del().catch(() => undefined);
+      await tenantTable(db, tenantId, 'assets').where({ tenant: tenantId }).del().catch(() => undefined);
+      await tenantTable(db, tenantId, 'clients').where({ tenant: tenantId }).del().catch(() => undefined);
     }
   });
 
@@ -368,16 +373,16 @@ describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)'
     const at = '2026-06-11T12:00:00.000Z';
     expect(await assetMappingDb.touchHuduAssetMappingsSynced(db, tenantId, [firstId], at)).toBe(1);
 
-    const stamped = await db(HUDU_MAPPING_TABLE).where({ tenant: tenantId, id: firstId }).first();
+    const stamped = await tenantTable(db, tenantId, HUDU_MAPPING_TABLE).where({ tenant: tenantId, id: firstId }).first();
     expect(new Date(stamped.last_synced_at).toISOString()).toBe(at);
-    const untouched = await db(HUDU_MAPPING_TABLE).where({ tenant: tenantId, id: secondId }).first();
+    const untouched = await tenantTable(db, tenantId, HUDU_MAPPING_TABLE).where({ tenant: tenantId, id: secondId }).first();
     expect(untouched.last_synced_at).toBeNull();
 
     // Empty input is a no-op; tenant scoping holds; rows survive (T227).
     expect(await assetMappingDb.touchHuduAssetMappingsSynced(db, tenantId, [], at)).toBe(0);
     expect(await assetMappingDb.touchHuduAssetMappingsSynced(db, randomUUID(), [firstId, secondId], at)).toBe(0);
     expect(await assetMappingDb.touchHuduAssetMappingsSynced(db, tenantId, [firstId, secondId])).toBe(2);
-    expect(await db(HUDU_MAPPING_TABLE).where({ tenant: tenantId })).toHaveLength(2);
+    expect(await tenantTable(db, tenantId, HUDU_MAPPING_TABLE).where({ tenant: tenantId })).toHaveLength(2);
   });
 });
 

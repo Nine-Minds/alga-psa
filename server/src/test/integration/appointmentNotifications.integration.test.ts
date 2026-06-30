@@ -2,6 +2,7 @@ import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'node:path';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createClient, createUser } from '../../../test-utils/testDataFactory';
@@ -20,6 +21,10 @@ let createAppointmentRequest: typeof import('@alga-psa/client-portal/actions').c
 let approveAppointmentRequest: typeof import('@alga-psa/scheduling/actions').approveAppointmentRequest;
 let declineAppointmentRequest: typeof import('@alga-psa/scheduling/actions').declineAppointmentRequest;
 let runWithTenant: typeof import('server/src/lib/db').runWithTenant;
+
+function tenantTableFor(connection: Knex, tenant: string, table: string) {
+  return tenantDb(connection, tenant).table(table);
+}
 
 // Mock email service
 const sendAppointmentRequestReceivedMock = vi.fn().mockResolvedValue(undefined);
@@ -112,7 +117,7 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     // Assign role to staff users
-    await db('user_roles').insert([
+    await tenantTableFor(db, tenantId, 'user_roles').insert([
       {
         user_id: staffUserId,
         role_id: scheduleRoleId,
@@ -129,7 +134,7 @@ describe('Appointment Notification System Integration Tests', () => {
     serviceId = await createService(db, tenantId);
 
     // Create availability settings to allow appointments without contracts
-    await db('availability_settings').insert({
+    await tenantTableFor(db, tenantId, 'availability_settings').insert({
       availability_setting_id: uuidv4(),
       tenant: tenantId,
       setting_type: 'service_rules',
@@ -138,7 +143,7 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     // Create tenant settings
-    await db('tenant_settings').insert({
+    await tenantTableFor(db, tenantId, 'tenant_settings').insert({
       tenant: tenantId,
       settings: {
         supportEmail: 'support@testmsp.com',
@@ -155,7 +160,7 @@ describe('Appointment Notification System Integration Tests', () => {
       // Helper to safely delete from a table if it exists
       const safeDelete = async (tableName: string) => {
         try {
-          await db(tableName).where({ tenant: tenantId }).del();
+          await tenantTableFor(db, tenantId, tableName).where({ tenant: tenantId }).del();
         } catch (error: any) {
           // Ignore errors for non-existent tables
           if (!error.message?.includes('does not exist')) {
@@ -795,7 +800,7 @@ describe('Appointment Notification System Integration Tests', () => {
       }, []);
 
       // Update tenant settings to use German locale
-      await db('tenant_settings')
+      await tenantTableFor(db, tenantId, 'tenant_settings')
         .where({ tenant: tenantId })
         .update({
           settings: {
@@ -823,7 +828,7 @@ describe('Appointment Notification System Integration Tests', () => {
       expect(options.locale).toBe('de');
 
       // Reset tenant settings
-      await db('tenant_settings')
+      await tenantTableFor(db, tenantId, 'tenant_settings')
         .where({ tenant: tenantId })
         .update({
           settings: {
@@ -1092,7 +1097,7 @@ describe('Appointment Notification System Integration Tests', () => {
       const contactWithoutEmail = uuidv4();
       const placeholderEmail = `noemail_${contactWithoutEmail.substring(0, 8)}@placeholder.local`;
 
-      await db('contacts').insert({
+      await tenantTableFor(db, tenantId, 'contacts').insert({
         contact_name_id: contactWithoutEmail,
         tenant: tenantId,
         client_id: clientId,
@@ -1103,7 +1108,7 @@ describe('Appointment Notification System Integration Tests', () => {
       });
 
       const userWithoutEmail = uuidv4();
-      await db('users').insert({
+      await tenantTableFor(db, tenantId, 'users').insert({
         user_id: userWithoutEmail,
         tenant: tenantId,
         username: 'noemail_user',
@@ -1138,8 +1143,8 @@ describe('Appointment Notification System Integration Tests', () => {
       });
 
       // Cleanup
-      await db('users').where({ user_id: userWithoutEmail, tenant: tenantId }).del();
-      await db('contacts').where({ contact_name_id: contactWithoutEmail, tenant: tenantId }).del();
+      await tenantTableFor(db, tenantId, 'users').where({ user_id: userWithoutEmail, tenant: tenantId }).del();
+      await tenantTableFor(db, tenantId, 'contacts').where({ contact_name_id: contactWithoutEmail, tenant: tenantId }).del();
     });
 
     it('should batch notifications to multiple staff members efficiently', async () => {
@@ -1241,7 +1246,7 @@ async function createContact(
   // Use unique email to prevent conflicts between test runs
   const uniqueEmail = `test.contact.${contactId.substring(0, 8)}@example.com`;
 
-  await db('contacts').insert({
+  await tenantTableFor(db, tenantId, 'contacts').insert({
     contact_name_id: contactId,
     tenant: tenantId,
     client_id: clientId,
@@ -1260,7 +1265,7 @@ async function createService(db: Knex, tenantId: string): Promise<string> {
   const serviceTypeId = uuidv4();
 
   // First create a service type
-  await db('service_types').insert({
+  await tenantTableFor(db, tenantId, 'service_types').insert({
     id: serviceTypeId,
     tenant: tenantId,
     name: 'Test Service Type',
@@ -1270,7 +1275,7 @@ async function createService(db: Knex, tenantId: string): Promise<string> {
   });
 
   // Then create the service
-  await db('service_catalog').insert({
+  await tenantTableFor(db, tenantId, 'service_catalog').insert({
     service_id: serviceId!,
     tenant: tenantId,
     service_name: 'Test Service',
@@ -1290,7 +1295,7 @@ async function createRolesAndPermissions(
 ): Promise<{ scheduleRoleId: string }> {
   // Create schedule permission
   const schedulePermissionId = uuidv4();
-  await db('permissions').insert({
+  await tenantTableFor(db, tenantId, 'permissions').insert({
     permission_id: schedulePermissionId,
     tenant: tenantId,
     resource: 'schedule',
@@ -1300,7 +1305,7 @@ async function createRolesAndPermissions(
 
   // Create schedule read permission
   const scheduleReadPermissionId = uuidv4();
-  await db('permissions').insert({
+  await tenantTableFor(db, tenantId, 'permissions').insert({
     permission_id: scheduleReadPermissionId,
     tenant: tenantId,
     resource: 'schedule',
@@ -1310,7 +1315,7 @@ async function createRolesAndPermissions(
 
   // Create role
   const scheduleRoleId = uuidv4();
-  await db('roles').insert({
+  await tenantTableFor(db, tenantId, 'roles').insert({
     role_id: scheduleRoleId,
     tenant: tenantId,
     role_name: 'Schedule Manager',
@@ -1318,7 +1323,7 @@ async function createRolesAndPermissions(
   });
 
   // Assign permissions to role
-  await db('role_permissions').insert([
+  await tenantTableFor(db, tenantId, 'role_permissions').insert([
     {
       role_id: scheduleRoleId,
       permission_id: schedulePermissionId,

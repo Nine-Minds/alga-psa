@@ -1,7 +1,7 @@
 'use server';
 
 import { Knex } from 'knex'; // Ensure Knex type is imported
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { determineDefaultContractLine } from '@alga-psa/billing/lib/contractLineDisambiguation';
 import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
@@ -10,6 +10,13 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
 
 export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreateUsageRecord): Promise<IUsageRecord> => {
   if (!await hasPermission(user, 'billing', 'create')) {
@@ -40,7 +47,7 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
     }
 
     // Insert the usage record
-    const [record] = await trx('usage_tracking')
+    const [record] = await tenantScopedTable(trx, tenant, 'usage_tracking')
       .insert({
         tenant,
         client_id: data.client_id,
@@ -57,9 +64,8 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
 
     // --- Bucket Usage Update Logic ---
     if (record.service_id && record.client_id && record.contract_line_id) {
-      const overlayConfig = await trx('contract_line_service_configuration')
+      const overlayConfig = await tenantScopedTable(trx, tenant, 'contract_line_service_configuration')
         .where({
-          tenant,
           contract_line_id: record.contract_line_id,
           service_id: record.service_id,
           configuration_type: 'Bucket'
@@ -112,8 +118,8 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
 
   return await knex.transaction(async (trx) => {
     // 1. Fetch the original record BEFORE update
-    const originalRecord = await trx('usage_tracking')
-      .where({ tenant, usage_id: data.usage_id })
+    const originalRecord = await tenantScopedTable(trx, tenant, 'usage_tracking')
+      .where({ usage_id: data.usage_id })
       .first<IUsageRecord | undefined>();
 
     if (!originalRecord) {
@@ -157,8 +163,8 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
     };
 
 
-    const [updatedRecord] = await trx('usage_tracking')
-      .where({ tenant, usage_id: data.usage_id })
+    const [updatedRecord] = await tenantScopedTable(trx, tenant, 'usage_tracking')
+      .where({ usage_id: data.usage_id })
       .update(updatePayload)
       .returning('*');
 
@@ -172,9 +178,8 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
     // It currently DOES NOT handle removing quantity when a record is changed *away* from a bucket plan. That requires more complex logic checking the original plan type.
 
     if (updatedRecord.service_id && updatedRecord.client_id && updatedRecord.contract_line_id) {
-      const overlayConfig = await trx('contract_line_service_configuration')
+      const overlayConfig = await tenantScopedTable(trx, tenant, 'contract_line_service_configuration')
         .where({
-          tenant,
           contract_line_id: updatedRecord.contract_line_id,
           service_id: updatedRecord.service_id,
           configuration_type: 'Bucket'
@@ -228,8 +233,8 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
 
   await knex.transaction(async (trx) => {
     // 1. Fetch the record BEFORE deleting
-    const recordToDelete = await trx('usage_tracking')
-      .where({ tenant, usage_id: usageId })
+    const recordToDelete = await tenantScopedTable(trx, tenant, 'usage_tracking')
+      .where({ usage_id: usageId })
       .first<IUsageRecord | undefined>();
 
     if (!recordToDelete) {
@@ -239,9 +244,8 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
 
     // --- Bucket Usage Update Logic (Before Delete) ---
     if (recordToDelete.service_id && recordToDelete.client_id && recordToDelete.contract_line_id) {
-      const overlayConfig = await trx('contract_line_service_configuration')
+      const overlayConfig = await tenantScopedTable(trx, tenant, 'contract_line_service_configuration')
         .where({
-          tenant,
           contract_line_id: recordToDelete.contract_line_id,
           service_id: recordToDelete.service_id,
           configuration_type: 'Bucket'
@@ -281,8 +285,8 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
     // --- End Bucket Usage Update Logic ---
 
     // 2. Delete the record
-    const deleteCount = await trx('usage_tracking')
-      .where({ tenant, usage_id: usageId })
+    const deleteCount = await tenantScopedTable(trx, tenant, 'usage_tracking')
+      .where({ usage_id: usageId })
       .delete();
 
      if (deleteCount > 0) {
@@ -303,21 +307,15 @@ export const getUsageRecords = withAuth(async (user, { tenant }, filter?: IUsage
   }
   const { knex } = await createTenantKnex();
 
-  let query = knex('usage_tracking')
+  const facade = tenantDb(knex, tenant);
+  let query = facade.table('usage_tracking')
     .select(
       'usage_tracking.*',
       'clients.client_name',
       'service_catalog.service_name'
-    )
-    .join('clients', function(this: Knex.JoinClause) {
-      this.on('clients.client_id', '=', 'usage_tracking.client_id')
-        .andOn('clients.tenant', '=', 'usage_tracking.tenant');
-    })
-    .join('service_catalog', function(this: Knex.JoinClause) {
-      this.on('service_catalog.service_id', '=', 'usage_tracking.service_id')
-        .andOn('service_catalog.tenant', '=', 'usage_tracking.tenant');
-    })
-    .where('usage_tracking.tenant', tenant);
+    );
+  facade.tenantJoin(query, 'clients', 'clients.client_id', 'usage_tracking.client_id');
+  facade.tenantJoin(query, 'service_catalog', 'service_catalog.service_id', 'usage_tracking.service_id');
 
   if (filter?.client_id) {
     query = query.where('usage_tracking.client_id', filter.client_id);
@@ -335,7 +333,7 @@ export const getUsageRecords = withAuth(async (user, { tenant }, filter?: IUsage
     query = query.where('usage_tracking.usage_date', '<=', filter.end_date);
   }
 
-  return query.orderBy('usage_tracking.usage_date', 'desc');
+  return await query.orderBy('usage_tracking.usage_date', 'desc') as unknown as IUsageRecord[];
 });
 
 interface Client {
@@ -346,9 +344,8 @@ interface Client {
 export const getClients = withAuth(async (_user, { tenant }) => {
   const { knex } = await createTenantKnex();
 
-  const clients = await knex('clients')
+  const clients = await tenantScopedTable(knex, tenant, 'clients')
     .select('client_id', 'client_name')
-    .where('tenant', tenant)
     .orderBy('client_name') as Client[];
 
   return clients.map((client: Client) => ({

@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { EmailAttachment } from '../../../types/email.types';
 import { StorageService } from '../../storage/StorageService';
 
@@ -172,11 +173,11 @@ export async function rewriteTicketCommentImagesToCid(params: {
   }
 
   const fileIds = Array.from(new Set(sourceFileIds.values()));
-  const ticketImageDocuments = await params.db('documents as d')
-    .join('document_associations as da', function joinAssociations() {
-      this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
-    })
-    .where('d.tenant', params.tenantId)
+  const db = tenantDb(params.db, params.tenantId);
+  const ticketImageDocumentsQuery = db.table('documents as d');
+  db.tenantJoin(ticketImageDocumentsQuery, 'document_associations as da', 'da.document_id', 'd.document_id');
+
+  const ticketImageDocuments = await ticketImageDocumentsQuery
     .whereIn('d.file_id', fileIds)
     .andWhere('da.entity_type', 'ticket')
     .andWhere('da.entity_id', params.ticketId)

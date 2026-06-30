@@ -1,4 +1,4 @@
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { IClient } from '@alga-psa/types';
 import { ContactModel, type CreateContactInput, type UpdateContactInput } from '@alga-psa/shared/models/contactModel';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -95,16 +95,16 @@ const upsertClientByExternalIdAction: InboundActionDefinition<UpsertClientByExte
       const payload = buildClientPayload(mappedValues);
 
       if (existingMapping) {
-        const current = await trx<IClient>('clients')
-          .where({ tenant: ctx.tenant, client_id: existingMapping.algaEntityId })
+        const current = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
+          .where({ client_id: existingMapping.algaEntityId })
           .first();
 
         if (!current) {
           throw new Error(`lookup_miss: mapped client "${existingMapping.algaEntityId}" no longer exists`);
         }
 
-        const [updated] = await trx<IClient>('clients')
-          .where({ tenant: ctx.tenant, client_id: existingMapping.algaEntityId })
+        const [updated] = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
+          .where({ client_id: existingMapping.algaEntityId })
           .update({
             ...payload,
             properties: {
@@ -117,7 +117,7 @@ const upsertClientByExternalIdAction: InboundActionDefinition<UpsertClientByExte
         return { client: updated, wasCreated: false };
       }
 
-      const [created] = await trx<IClient>('clients')
+      const [created] = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
         .insert({
           ...payload,
           tenant: ctx.tenant,
@@ -204,12 +204,12 @@ const setClientActiveByExternalIdAction: InboundActionDefinition<SetClientActive
         return null;
       }
 
-      const previous = await trx<IClient>('clients')
-        .where({ tenant: ctx.tenant, client_id: lookup.algaEntityId })
+      const previous = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
+        .where({ client_id: lookup.algaEntityId })
         .first('is_inactive');
 
-      const [client] = await trx<IClient>('clients')
-        .where({ tenant: ctx.tenant, client_id: lookup.algaEntityId })
+      const [client] = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
+        .where({ client_id: lookup.algaEntityId })
         .update({
           is_inactive: !mappedValues.active,
           updated_at: new Date().toISOString(),

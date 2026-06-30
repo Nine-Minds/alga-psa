@@ -3,6 +3,7 @@ import { StorageService } from 'server/src/lib/storage/StorageService';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/auth/session';
 import { canAccessDocument } from 'server/src/lib/utils/documentPermissionUtils';
+import { tenantDb } from '@alga-psa/db';
 
 export async function GET(
     request: NextRequest,
@@ -25,8 +26,8 @@ export async function GET(
         console.log('Tenant found:', tenant);
 
         const fileId = resolvedParams.fileId;
-        const document = await knex('documents')
-            .where({ tenant, file_id: fileId })
+        const document = await tenantDb(knex, tenant).table('documents')
+            .where({ file_id: fileId })
             .first();
         if (!document || !(await canAccessDocument(user, document))) {
             return new NextResponse('Not found', { status: 404 });

@@ -7,7 +7,7 @@
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
-import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -179,11 +179,11 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async getInvoiceAmountDue(trx: Knex.Transaction, params: { invoiceId: string; totalAmount: number; creditApplied: number; tenantId: string }) {
-    const payments = await trx('invoice_payments')
-      .where({ invoice_id: params.invoiceId, tenant: params.tenantId })
+    const payments = await tenantDb(trx, params.tenantId).table('invoice_payments')
+      .where({ invoice_id: params.invoiceId })
       .sum('amount as total_paid');
 
-    const totalPayments = Number(payments[0]?.total_paid || 0);
+    const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
     const amountDue = params.totalAmount - (params.creditApplied + totalPayments);
     return Math.max(0, amountDue);
   }
@@ -206,8 +206,8 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async computeDueDate(trx: Knex.Transaction, tenant: string, clientId: string, invoiceDate: string): Promise<string> {
-    const client = await trx('clients')
-      .where({ client_id: clientId, tenant })
+    const client = await tenantDb(trx, tenant).table('clients')
+      .where({ client_id: clientId })
       .select('payment_terms')
       .first();
 
@@ -218,8 +218,7 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private buildRecurringInvoiceSummaryQuery(trx: Knex.Transaction, context: ServiceContext) {
-    return trx('recurring_service_periods as rsp')
-      .where('rsp.tenant', context.tenant)
+    return tenantDb(trx, context.tenant).table('recurring_service_periods as rsp')
       .whereNotNull('rsp.invoice_id')
       .select('rsp.invoice_id')
       .min('rsp.service_period_start as recurring_service_period_start')
@@ -248,6 +247,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
+      const db = tenantDb(trx, context.tenant);
       let query = this.buildBaseQuery(trx, context);
 
       // Apply filters
@@ -258,7 +258,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Add joins based on include options
       if ((options as any).include_client) {
         // Use a subquery to get the billing address to avoid aggregate issues with Citus
-        const billingAddressSubquery = trx('client_locations as cl')
+        const billingAddressSubquery = db.table('client_locations as cl')
           .select(
             'cl.client_id',
             'cl.tenant',
@@ -279,12 +279,8 @@ export class InvoiceService extends BaseService<IInvoice> {
           .limit(1)
           .as('billing_loc');
 
-        query = query
-          .leftJoin('clients', 'invoices.client_id', 'clients.client_id')
-          .leftJoin(billingAddressSubquery, function() {
-            this.on('clients.client_id', '=', 'billing_loc.client_id')
-                .andOn('clients.tenant', '=', 'billing_loc.tenant');
-          })
+        query = db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id', { type: 'left' })
+          .leftJoin(billingAddressSubquery, 'clients.client_id', 'billing_loc.client_id')
           .select(
             'clients.client_name',
             trx.raw('COALESCE(billing_loc.formatted_address, \'\') as billing_address')
@@ -292,8 +288,13 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       if ((options as any).include_billing_cycle) {
-        query = query
-          .leftJoin('client_billing_cycles', 'invoices.billing_cycle_id', 'client_billing_cycles.billing_cycle_id')
+        query = db.tenantJoin(
+          query,
+          'client_billing_cycles',
+          'invoices.billing_cycle_id',
+          'client_billing_cycles.billing_cycle_id',
+          { type: 'left' }
+        )
           .select(
             'client_billing_cycles.period_start_date as period_start',
             'client_billing_cycles.period_end_date as period_end',
@@ -301,7 +302,13 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       if ((options as any).include_tax_details) {
-        query = query.leftJoin('tax_rates', 'invoices.tax_rate_id', 'tax_rates.tax_rate_id')
+        query = db.tenantJoin(
+          query,
+          'tax_rates',
+          'invoices.tax_rate_id',
+          'tax_rates.tax_rate_id',
+          { type: 'left' }
+        )
           .select('tax_rates.rate_percentage', 'tax_rates.tax_name');
       }
 
@@ -461,7 +468,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       };
 
       // Insert invoice
-      const [invoice] = await trx('invoices').insert(invoiceData).returning('*');
+      const [invoice] = await tenantDb(trx, context.tenant).table('invoices').insert(invoiceData).returning('*');
 
       // Create line items if provided
       if (data.items?.length) {
@@ -509,8 +516,8 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
-      const existing = await trx('invoices')
-        .where({ invoice_id: id, tenant: context.tenant })
+      const existing = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: id })
         .first();
 
       if (!existing) {
@@ -537,18 +544,18 @@ export class InvoiceService extends BaseService<IInvoice> {
       });
 
       // Update invoice
-      await trx('invoices')
-        .where({ invoice_id: id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: id })
         .update(updateData);
 
       // Update line items if provided
       if (data.items) {
-        const replacedItemIds = await trx('invoice_line_items')
-          .where({ invoice_id: id, tenant: context.tenant })
+        const replacedItemIds = await tenantDb(trx, context.tenant).table('invoice_line_items')
+          .where({ invoice_id: id })
           .pluck('item_id');
 
-        await trx('invoice_line_items')
-          .where({ invoice_id: id, tenant: context.tenant })
+        await tenantDb(trx, context.tenant).table('invoice_line_items')
+          .where({ invoice_id: id })
           .del();
 
         for (const itemId of replacedItemIds) {
@@ -723,8 +730,8 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
     
     await withTransaction(knex, async (trx) => {
-      const invoice = await trx('invoices')
-        .where({ invoice_id: id, tenant: context.tenant })
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: id })
         .first();
 
       if (!invoice) {
@@ -737,34 +744,34 @@ export class InvoiceService extends BaseService<IInvoice> {
         (recurringProvenance.detailPeriodCount ?? 0) > 0;
 
       // Check if invoice has payments
-	      const hasPayments = await trx('invoice_payments')
-	        .where({ invoice_id: id, tenant: context.tenant })
-	        .first();
+      const hasPayments = await tenantDb(trx, context.tenant).table('invoice_payments')
+        .where({ invoice_id: id })
+        .first();
 
-	      const occurredAt = new Date().toISOString();
-	      const softCancelled = Boolean(
-          hasPayments ||
-          invoice.status === 'paid' ||
-          hasCanonicalRecurringDetailPeriods
-        );
+      const occurredAt = new Date().toISOString();
+      const softCancelled = Boolean(
+        hasPayments ||
+        invoice.status === 'paid' ||
+        hasCanonicalRecurringDetailPeriods
+      );
 
-	      if (softCancelled) {
-	        // Soft delete - mark as cancelled
-	        await trx('invoices')
-	          .where({ invoice_id: id, tenant: context.tenant })
-	          .update({
-	            status: 'cancelled',
-	            updated_by: context.userId,
-	            updated_at: new Date()
-	          });
-	      } else {
+      if (softCancelled) {
+        // Soft delete - mark as cancelled
+        await tenantDb(trx, context.tenant).table('invoices')
+          .where({ invoice_id: id })
+          .update({
+            status: 'cancelled',
+            updated_by: context.userId,
+            updated_at: new Date()
+          });
+      } else {
         // Hard delete if no payments
-        await trx('invoice_line_items')
-          .where({ invoice_id: id, tenant: context.tenant })
+        await tenantDb(trx, context.tenant).table('invoice_line_items')
+          .where({ invoice_id: id })
           .del();
         
-        await trx('invoices')
-          .where({ invoice_id: id, tenant: context.tenant })
+        await tenantDb(trx, context.tenant).table('invoices')
+          .where({ invoice_id: id })
           .del();
       }
 
@@ -828,8 +835,8 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
-      const invoice = await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .first();
 
       if (!invoice) {
@@ -844,8 +851,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       const hasInvoiceChargesTable = await trx.schema.hasTable('invoice_charges');
       const lineItems = hasInvoiceChargesTable
         ? await InvoiceModel.getInvoiceCharges(trx, context.tenant, data.invoice_id)
-        : await trx('invoice_line_items')
-          .where({ invoice_id: data.invoice_id, tenant: context.tenant });
+        : await tenantDb(trx, context.tenant).table('invoice_line_items')
+          .where({ invoice_id: data.invoice_id });
 
       if (!lineItems.length) {
         throw new Error('Invoice must have line items to be finalized');
@@ -870,8 +877,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Update invoice status and amounts
-      await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .update(invoiceUpdate);
 
       const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
@@ -934,8 +941,8 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
-      const invoice = await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .first();
 
       if (!invoice) {
@@ -955,8 +962,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Update invoice status
-      await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .update({
           status: 'sent',
           updated_by: context.userId,
@@ -1050,8 +1057,8 @@ export class InvoiceService extends BaseService<IInvoice> {
     await withTransaction(knex, async (trx) => {
       const occurredAt = new Date().toISOString();
 
-      const invoice = await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .first();
 
       if (!invoice) {
@@ -1076,7 +1083,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         created_at: new Date()
       };
 
-      await trx('invoice_payments').insert(paymentData);
+      await tenantDb(trx, context.tenant).table('invoice_payments').insert(paymentData);
 
       deferredEvents.push(() => publishWorkflowEvent({
         eventType: 'PAYMENT_RECORDED',
@@ -1115,11 +1122,11 @@ export class InvoiceService extends BaseService<IInvoice> {
       }));
 
       // Calculate total payments
-      const payments = await trx('invoice_payments')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const payments = await tenantDb(trx, context.tenant).table('invoice_payments')
+        .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
 
-      const totalPayments = Number(payments[0]?.total_paid || 0);
+      const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
       // Include credits in total paid calculation
       const creditApplied = Number(invoice.credit_applied || 0);
@@ -1133,8 +1140,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         newStatus = 'partially_applied';
       }
 
-      await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .update({
           status: newStatus,
           updated_by: context.userId,
@@ -1208,8 +1215,8 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
-      const invoice = await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .first();
 
       if (!invoice) {
@@ -1237,16 +1244,16 @@ export class InvoiceService extends BaseService<IInvoice> {
         created_at: new Date()
       };
 
-      await trx('invoice_credits').insert(creditData);
+      await tenantDb(trx, context.tenant).table('invoice_credits').insert(creditData);
 
       // Update invoice credit applied
       const newCreditApplied = (invoice.credit_applied || 0) + data.credit_amount;
 
       // Calculate total payments to determine correct status
-      const payments = await trx('invoice_payments')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const payments = await tenantDb(trx, context.tenant).table('invoice_payments')
+        .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
-      const totalPayments = Number(payments[0]?.total_paid || 0);
+      const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
       // Total paid includes both credits and payments
       const totalPaid = newCreditApplied + totalPayments;
@@ -1259,8 +1266,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         newStatus = 'partially_applied';
       }
 
-      await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .update({
           credit_applied: newCreditApplied,
           status: newStatus,
@@ -1346,8 +1353,8 @@ export class InvoiceService extends BaseService<IInvoice> {
     await withTransaction(knex, async (trx) => {
       const occurredAt = new Date().toISOString();
 
-      const invoice = await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .first();
 
       if (!invoice) {
@@ -1360,10 +1367,10 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Calculate current payments
-      const payments = await trx('invoice_payments')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const payments = await tenantDb(trx, context.tenant).table('invoice_payments')
+        .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
-      const totalPayments = Number(payments[0]?.total_paid || 0);
+      const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
       if (data.refund_amount > totalPayments) {
         throw new Error('Refund amount cannot exceed total payments');
@@ -1384,7 +1391,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         created_at: new Date()
       };
 
-      await trx('invoice_payments').insert(refundData);
+      await tenantDb(trx, context.tenant).table('invoice_payments').insert(refundData);
 
       deferredEvents.push(() => publishWorkflowEvent({
         eventType: 'PAYMENT_REFUNDED',
@@ -1405,10 +1412,10 @@ export class InvoiceService extends BaseService<IInvoice> {
       }));
 
       // Calculate net payments after refund
-      const netPayments = await trx('invoice_payments')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const netPayments = await tenantDb(trx, context.tenant).table('invoice_payments')
+        .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
-      const netPaid = Number(netPayments[0]?.total_paid || 0);
+      const netPaid = Number((netPayments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
       // Include credits in total paid
       const creditApplied = Number(invoice.credit_applied || 0);
@@ -1424,8 +1431,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         newStatus = 'partially_applied';
       }
 
-      await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .update({
           status: newStatus,
           updated_by: context.userId,
@@ -1508,8 +1515,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       for (const invoiceId of data.invoice_ids) {
         try {
-          const invoice = await trx('invoices')
-            .where({ invoice_id: invoiceId, tenant: context.tenant })
+          const invoice = await tenantDb(trx, context.tenant).table('invoices')
+            .where({ invoice_id: invoiceId })
             .first();
 
           if (!invoice) {
@@ -1523,17 +1530,17 @@ export class InvoiceService extends BaseService<IInvoice> {
             continue;
           }
 
-	          await trx('invoices')
-	            .where({ invoice_id: invoiceId, tenant: context.tenant })
-	            .update({
-	              status: data.status,
+          await tenantDb(trx, context.tenant).table('invoices')
+            .where({ invoice_id: invoiceId })
+            .update({
+              status: data.status,
               finalized_at: data.finalized_at,
               updated_by: context.userId,
               updated_at: new Date()
             });
 
-	          results.updated_count++;
-            const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, invoiceId);
+          results.updated_count++;
+          const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, invoiceId);
 
 	          // Audit log
 	          await auditLog(trx, {
@@ -1750,7 +1757,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      let baseQuery = trx('invoices').where('tenant', context.tenant);
+      let baseQuery = tenantDb(trx, context.tenant).table('invoices');
 
       // Apply filters if provided
       if (filters) {
@@ -1760,7 +1767,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const [statusStats, monthlyStats, topClients] = await Promise.all([
         this.getStatusStatistics(baseQuery.clone(), trx),
         this.getMonthlyStatistics(baseQuery.clone(), trx),
-        this.getTopClientsByRevenue(baseQuery.clone(), trx)
+        this.getTopClientsByRevenue(baseQuery.clone(), trx, context.tenant)
       ]);
 
       return {
@@ -1816,7 +1823,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const client = await getClientDetails(trx, tenant, data.clientId);
       const computedDueDate = await this.computeDueDate(trx, tenant, data.clientId, currentDate);
 
-      await trx('invoices').insert({
+      await tenantDb(trx, tenant).table('invoices').insert({
         invoice_id: invoiceId,
         tenant,
         client_id: data.clientId,
@@ -1859,12 +1866,12 @@ export class InvoiceService extends BaseService<IInvoice> {
         }
       );
 
-      const invoiceRecord = await trx('invoices')
-        .where({ invoice_id: invoiceId, tenant })
+      const invoiceRecord = await tenantDb(trx, tenant).table('invoices')
+        .where({ invoice_id: invoiceId })
         .first();
 
-      const updatedItems = await trx('invoice_charges')
-        .where({ invoice_id: invoiceId, tenant })
+      const updatedItems = await tenantDb(trx, tenant).table('invoice_charges')
+        .where({ invoice_id: invoiceId })
         .orderBy('created_at', 'asc');
 
       if (!invoiceRecord) {
@@ -1944,8 +1951,8 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'read');
 
     const { knex } = await this.getKnex();
-    const invoice = await knex('invoices')
-      .where({ invoice_id: id, tenant: context.tenant })
+    const invoice = await tenantDb(knex, context.tenant).table('invoices')
+      .where({ invoice_id: id })
       .select('invoice_id', 'invoice_number')
       .first();
 
@@ -1998,9 +2005,8 @@ export class InvoiceService extends BaseService<IInvoice> {
   protected buildBaseQuery(trx: Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
     const recurringInvoiceSummary = this.buildRecurringInvoiceSummaryQuery(trx, context);
 
-    return trx('invoices')
+    return tenantDb(trx, context.tenant).table('invoices')
       .leftJoin(recurringInvoiceSummary, 'recurring_invoice_summary.invoice_id', 'invoices.invoice_id')
-      .where('invoices.tenant', context.tenant)
       .select(
         'invoices.*',
         trx.raw('COALESCE(invoices.credit_applied, 0) as credit_applied'),
@@ -2159,8 +2165,8 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'read');
     const { knex } = await this.getKnex();
     return withTransaction(knex, async (trx) => {
-      const exists = await trx('invoices')
-        .where({ invoice_id: invoiceId, tenant: context.tenant })
+      const exists = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: invoiceId })
         .select('invoice_id')
         .first();
 
@@ -2173,16 +2179,24 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async getInvoiceClient(clientId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return trx('clients as c')
-      .leftJoin('client_locations as cl', function() {
-        this.on('c.client_id', '=', 'cl.client_id')
-          .andOn('c.tenant', '=', 'cl.tenant')
-          .andOn(function() {
+    const db = tenantDb(trx, context.tenant);
+
+    return db.tenantJoin(
+      db.table('clients as c'),
+      'client_locations as cl',
+      'c.client_id',
+      'cl.client_id',
+      {
+        type: 'left',
+        on(join) {
+          join.andOn(function() {
             this.on('cl.is_billing_address', '=', trx.raw('true'))
               .orOn('cl.is_default', '=', trx.raw('true'));
           });
-      })
-      .where({ 'c.client_id': clientId, 'c.tenant': context.tenant })
+        },
+      }
+    )
+      .where({ 'c.client_id': clientId })
       .select(
         'c.client_id',
         'c.client_name',
@@ -2195,14 +2209,14 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async getBillingCycle(cycleId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return trx('client_billing_cycles')
-      .where({ billing_cycle_id: cycleId, tenant: context.tenant })
+    return tenantDb(trx, context.tenant).table('client_billing_cycles')
+      .where({ billing_cycle_id: cycleId })
       .first();
   }
 
   private async getTaxDetails(taxRateId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return trx('tax_rates')
-      .where({ tax_rate_id: taxRateId, tenant: context.tenant })
+    return tenantDb(trx, context.tenant).table('tax_rates')
+      .where({ tax_rate_id: taxRateId })
       .first();
   }
 
@@ -2211,8 +2225,8 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const exists = await trx('invoices')
-        .where({ invoice_id: invoiceId, tenant: context.tenant })
+      const exists = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: invoiceId })
         .select('invoice_id')
         .first();
 
@@ -2239,8 +2253,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       return [];
     }
 
-    return trx('invoice_payments')
-      .where({ invoice_id: invoiceId, tenant: context.tenant })
+    return tenantDb(trx, context.tenant).table('invoice_payments')
+      .where({ invoice_id: invoiceId })
       .orderBy('payment_date', 'desc');
   }
 
@@ -2250,8 +2264,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       return [];
     }
 
-    return trx('invoice_credits')
-      .where({ invoice_id: invoiceId, tenant: context.tenant })
+    return tenantDb(trx, context.tenant).table('invoice_credits')
+      .where({ invoice_id: invoiceId })
       .orderBy('applied_date', 'desc');
   }
 
@@ -2285,7 +2299,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       created_at: new Date()
     }));
 
-    await trx('invoice_line_items').insert(lineItemsData);
+    await tenantDb(trx, context.tenant).table('invoice_line_items').insert(lineItemsData);
 
     for (const item of lineItemsData) {
       await publishEvent({
@@ -2338,9 +2352,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       .limit(12);
   }
 
-  private async getTopClientsByRevenue(query: Knex.QueryBuilder, trx: Knex.Transaction): Promise<any[]> {
-    return query
-      .join('clients', 'invoices.client_id', 'clients.client_id')
+  private async getTopClientsByRevenue(query: Knex.QueryBuilder, trx: Knex.Transaction, tenant: string): Promise<any[]> {
+    return tenantDb(trx, tenant).tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id')
       .groupBy('clients.client_id', 'clients.client_name')
       .select(
         'clients.client_id',

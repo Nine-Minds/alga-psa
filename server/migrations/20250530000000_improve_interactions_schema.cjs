@@ -1,8 +1,17 @@
+const MIGRATION_TENANT = 'migration:20250530000000_improve_interactions_schema';
+const INTERACTION_SCHEMA_DATA_BACKFILL_REASON = 'interaction schema historical status data backfill';
+
+async function loadTenantDb() {
+  return require('./utils/tenantDb.cjs').tenantDb;
+}
+
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // 1. Rename description column to title (preserves existing data)
   await knex.schema.alterTable('interactions', (table) => {
     table.renameColumn('description', 'title');
@@ -60,14 +69,14 @@ exports.up = async function(knex) {
     ADD CONSTRAINT interactions_status_fk
     FOREIGN KEY (tenant, status_id)
     REFERENCES statuses (tenant, status_id)
-    `);
+  `);
 
   // 6. Add standard interaction statuses
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', INTERACTION_SCHEMA_DATA_BACKFILL_REASON).select('tenant');
   
   for (const tenant of tenants) {
     // First create standard statuses for this tenant
-    await knex('standard_statuses').insert([
+    await migrationDb.unscoped('standard_statuses', INTERACTION_SCHEMA_DATA_BACKFILL_REASON).insert([
       { name: 'Planned', item_type: 'interaction', display_order: 1, tenant: tenant.tenant, is_closed: false },
       { name: 'In Progress', item_type: 'interaction', display_order: 2, tenant: tenant.tenant, is_closed: false },
       { name: 'Completed', item_type: 'interaction', display_order: 3, tenant: tenant.tenant, is_closed: true, is_default: true },
@@ -75,19 +84,19 @@ exports.up = async function(knex) {
     ]);
 
     // Get the standard status IDs
-    const standardStatuses = await knex('standard_statuses')
+    const standardStatuses = await migrationDb.unscoped('standard_statuses', INTERACTION_SCHEMA_DATA_BACKFILL_REASON)
       .where({ tenant: tenant.tenant, item_type: 'interaction' })
       .select('*');
 
     // Get a system user for this tenant
-    const systemUser = await knex('users')
+    const systemUser = await migrationDb.unscoped('users', INTERACTION_SCHEMA_DATA_BACKFILL_REASON)
       .where({ tenant: tenant.tenant })
       .first();
 
     if (systemUser) {
       // Create tenant statuses that reference the standard ones
       for (const standardStatus of standardStatuses) {
-        await knex('statuses').insert({
+        await migrationDb.unscoped('statuses', INTERACTION_SCHEMA_DATA_BACKFILL_REASON).insert({
           tenant: tenant.tenant,
           name: standardStatus.name,
           status_type: 'interaction',
@@ -102,7 +111,7 @@ exports.up = async function(knex) {
   }
 
   // 7. Set all existing interactions to 'Completed' status (backward compatibility)
-  const completedStatuses = await knex('statuses')
+  const completedStatuses = await migrationDb.unscoped('statuses', INTERACTION_SCHEMA_DATA_BACKFILL_REASON)
     .where({ 
       status_type: 'interaction', 
       name: 'Completed' 
@@ -110,7 +119,7 @@ exports.up = async function(knex) {
     .select('tenant', 'status_id');
 
   for (const status of completedStatuses) {
-    await knex('interactions')
+    await migrationDb.unscoped('interactions', INTERACTION_SCHEMA_DATA_BACKFILL_REASON)
       .where({ tenant: status.tenant })
       .update({ status_id: status.status_id });
   }
@@ -131,6 +140,8 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Remove the composite foreign key constraint first
   await knex.raw(`
     ALTER TABLE interactions
@@ -151,12 +162,12 @@ exports.down = async function(knex) {
   });
 
   // Remove interaction statuses
-  await knex('statuses')
+  await migrationDb.unscoped('statuses', INTERACTION_SCHEMA_DATA_BACKFILL_REASON)
     .where({ status_type: 'interaction' })
     .delete();
 
   // Remove standard interaction statuses
-  await knex('standard_statuses')
+  await migrationDb.unscoped('standard_statuses', INTERACTION_SCHEMA_DATA_BACKFILL_REASON)
     .where({ item_type: 'interaction' })
     .delete();
 

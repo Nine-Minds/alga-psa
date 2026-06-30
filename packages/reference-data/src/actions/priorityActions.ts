@@ -2,12 +2,14 @@
 
 import type { IPriority, DeletionValidationResult } from '@alga-psa/types';
 import Priority from '../models/priority';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import { Knex } from 'knex';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import type { Knex } from 'knex';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
+
+const tenantScopedTable = (trx: Knex | Knex.Transaction, table: string, tenant: string) =>
+  tenantDb(trx, tenant).table(table);
 
 export const getAllPriorities = withAuth(async (_user, { tenant }, itemType?: 'ticket' | 'project_task') => {
   const { knex: db } = await createTenantKnex();
@@ -181,19 +183,18 @@ export const getPrioritiesByBoardType = withAuth(async (_user, { tenant }, board
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Get the board's priority type
-      const board = await trx('boards')
+      const board = await tenantScopedTable(trx, 'boards', tenant)
         .select('priority_type')
-        .where({ tenant, board_id: boardId })
-        .first();
+        .where({ board_id: boardId })
+        .first() as { priority_type?: string | null } | undefined;
 
       if (!board) {
         throw new Error(`Board ${boardId} not found`);
       }
 
       // Get priorities based on board's priority type
-      let query = trx('priorities')
-        .select('*')
-        .where({ tenant });
+      let query = tenantScopedTable(trx, 'priorities', tenant)
+        .select('*') as Knex.QueryBuilder;
 
       if (itemType) {
         query = query.where({ item_type: itemType });
@@ -210,7 +211,7 @@ export const getPrioritiesByBoardType = withAuth(async (_user, { tenant }, board
         });
       }
 
-      return query.orderBy('order_number', 'asc');
+      return await query.orderBy('order_number', 'asc') as IPriority[];
     } catch (error) {
       console.error(`Error fetching priorities for board ${boardId}:`, error);
       throw new Error(`Failed to fetch priorities for board ${boardId}`);
@@ -233,11 +234,10 @@ export const findPriorityByName = withAuth(async (_user, { tenant }, name: strin
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const priority = await trx('priorities')
+      const priority = await tenantScopedTable(trx, 'priorities', tenant)
         .select('priority_id as id', 'priority_name as name', 'order_number', 'color')
-        .where('tenant', tenant)
         .whereRaw('LOWER(priority_name) = LOWER(?)', [name])
-        .first();
+        .first() as FindPriorityByNameOutput | undefined;
 
       return priority || null;
     } catch (error) {

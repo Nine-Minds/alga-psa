@@ -12,6 +12,7 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createClient, createUser } from '../../../test-utils/testDataFactory';
@@ -20,6 +21,10 @@ import { setupCommonMocks, createMockUser, setMockUser } from '../../../test-uti
 let db: Knex;
 let tenantId: string;
 let userId: string;
+
+function scopedDb() {
+  return tenantDb(db, tenantId);
+}
 
 // Action imports - will be populated after mocks
 let createFolder: typeof import('@alga-psa/documents/actions').createFolder;
@@ -60,9 +65,10 @@ let createdIds: CreatedIds = {
 };
 
 async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds): Promise<void> {
+  const tenantScoped = tenantDb(db, tenantId);
   const safeDelete = async (table: string, where: Record<string, unknown>) => {
     try {
-      await db(table).where(where).del();
+      await tenantScoped.table(table).where(where).del();
     } catch {
       // Ignore cleanup issues
     }
@@ -165,8 +171,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       await createFolder(folderPath, clientBId, 'client', false);
 
       // Verify both folders exist
-      const folders = await db('document_folders')
-        .where('tenant', tenantId)
+      const folders = await scopedDb().table('document_folders')
         .where('folder_path', folderPath)
         .whereNotNull('entity_id');
 
@@ -190,13 +195,11 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       await createFolder('/Technical/Documentation', clientBId, 'client', false);
 
       // Verify each client only sees their own folders
-      const clientAFolders = await db('document_folders')
-        .where('tenant', tenantId)
+      const clientAFolders = await scopedDb().table('document_folders')
         .where('entity_id', clientAId)
         .where('entity_type', 'client');
 
-      const clientBFolders = await db('document_folders')
-        .where('tenant', tenantId)
+      const clientBFolders = await scopedDb().table('document_folders')
         .where('entity_id', clientBId)
         .where('entity_type', 'client');
 
@@ -227,7 +230,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       const duplicateFolderId = uuidv4();
 
       await expect(
-        db('document_folders').insert({
+        scopedDb().table('document_folders').insert({
           tenant: tenantId,
           folder_id: duplicateFolderId,
           folder_path: '/Documents',
@@ -251,7 +254,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       const ticketId = uuidv4();
       const folderId = uuidv4();
 
-      await db('document_folders').insert({
+      await scopedDb().table('document_folders').insert({
         tenant: tenantId,
         folder_id: folderId,
         folder_path: '/SharedName',
@@ -262,8 +265,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       });
 
       // Verify both exist
-      const folders = await db('document_folders')
-        .where('tenant', tenantId)
+      const folders = await scopedDb().table('document_folders')
         .where('folder_path', '/SharedName')
         .whereNotNull('entity_id');
 
@@ -326,7 +328,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       const doc3Id = uuidv4();
       const now = new Date();
 
-      await db('documents').insert([
+      await scopedDb().table('documents').insert([
         {
           tenant: tenantId,
           document_id: doc1Id,
@@ -366,9 +368,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       expect(updatedCount).toBe(2);
 
       // Verify visibility changed
-      const docs = await db('documents')
-        .whereIn('document_id', [doc1Id, doc2Id, doc3Id])
-        .where('tenant', tenantId);
+      const docs = await scopedDb().table('documents')
+        .whereIn('document_id', [doc1Id, doc2Id, doc3Id]);
 
       const visibilities = docs.reduce((acc: Record<string, boolean>, d: { document_id: string; is_client_visible: boolean }) => {
         acc[d.document_id] = d.is_client_visible;
@@ -384,7 +385,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       const docId = uuidv4();
       const now = new Date();
 
-      await db('documents').insert({
+      await scopedDb().table('documents').insert({
         tenant: tenantId,
         document_id: docId,
         document_name: 'Toggle Test Doc',
@@ -401,9 +402,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       expect(updatedCount).toBe(1);
 
       // Verify
-      const doc = await db('documents')
+      const doc = await scopedDb().table('documents')
         .where('document_id', docId)
-        .where('tenant', tenantId)
         .first();
 
       expect(doc.is_client_visible).toBe(false);
@@ -423,8 +423,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       // Create folder
       await createFolder('/CascadeTest', clientId, 'client', false);
 
-      const folder = await db('document_folders')
-        .where('tenant', tenantId)
+      const folder = await scopedDb().table('document_folders')
         .where('folder_path', '/CascadeTest')
         .where('entity_id', clientId)
         .first();
@@ -434,7 +433,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       const doc2Id = uuidv4();
       const now = new Date();
 
-      await db('documents').insert([
+      await scopedDb().table('documents').insert([
         {
           tenant: tenantId,
           document_id: doc1Id,
@@ -461,7 +460,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       createdIds.documentIds.push(doc1Id, doc2Id);
 
       // Create associations for entity-scoped filtering
-      await db('document_associations').insert([
+      await scopedDb().table('document_associations').insert([
         {
           tenant: tenantId,
           association_id: uuidv4(),
@@ -488,9 +487,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       expect((result as { updatedDocuments: number }).updatedDocuments).toBe(2);
 
       // Verify documents visibility changed
-      const docs = await db('documents')
-        .whereIn('document_id', [doc1Id, doc2Id])
-        .where('tenant', tenantId);
+      const docs = await scopedDb().table('documents')
+        .whereIn('document_id', [doc1Id, doc2Id]);
 
       for (const doc of docs) {
         expect(doc.is_client_visible).toBe(true);
@@ -503,8 +501,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
 
       await createFolder('/NoCascade', clientId, 'client', false);
 
-      const folder = await db('document_folders')
-        .where('tenant', tenantId)
+      const folder = await scopedDb().table('document_folders')
         .where('folder_path', '/NoCascade')
         .where('entity_id', clientId)
         .first();
@@ -512,7 +509,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       const docId = uuidv4();
       const now = new Date();
 
-      await db('documents').insert({
+      await scopedDb().table('documents').insert({
         tenant: tenantId,
         document_id: docId,
         document_name: 'No Cascade Doc',
@@ -525,7 +522,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       });
       createdIds.documentIds.push(docId);
 
-      await db('document_associations').insert({
+      await scopedDb().table('document_associations').insert({
         tenant: tenantId,
         association_id: uuidv4(),
         document_id: docId,
@@ -541,9 +538,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       expect((result as { updatedDocuments: number }).updatedDocuments).toBe(0);
 
       // Document should remain unchanged
-      const doc = await db('documents')
+      const doc = await scopedDb().table('documents')
         .where('document_id', docId)
-        .where('tenant', tenantId)
         .first();
 
       expect(doc.is_client_visible).toBe(false);
@@ -557,8 +553,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       await createFolder('/Parent', clientId, 'client', false);
       await createFolder('/Parent/Child', clientId, 'client', false);
 
-      const parentFolder = await db('document_folders')
-        .where('tenant', tenantId)
+      const parentFolder = await scopedDb().table('document_folders')
         .where('folder_path', '/Parent')
         .where('entity_id', clientId)
         .first();
@@ -567,7 +562,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       const docId = uuidv4();
       const now = new Date();
 
-      await db('documents').insert({
+      await scopedDb().table('documents').insert({
         tenant: tenantId,
         document_id: docId,
         document_name: 'Child Doc',
@@ -580,7 +575,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       });
       createdIds.documentIds.push(docId);
 
-      await db('document_associations').insert({
+      await scopedDb().table('document_associations').insert({
         tenant: tenantId,
         association_id: uuidv4(),
         document_id: docId,
@@ -594,9 +589,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
 
       expect((result as { updatedDocuments: number }).updatedDocuments).toBeGreaterThanOrEqual(1);
 
-      const doc = await db('documents')
+      const doc = await scopedDb().table('documents')
         .where('document_id', docId)
-        .where('tenant', tenantId)
         .first();
 
       expect(doc.is_client_visible).toBe(true);
@@ -609,8 +603,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       await createFolder('/GlobalTest', null, null, false);
 
       // Verify folder exists
-      const folder = await db('document_folders')
-        .where('tenant', tenantId)
+      const folder = await scopedDb().table('document_folders')
         .where('folder_path', '/GlobalTest')
         .whereNull('entity_id')
         .whereNull('entity_type')
@@ -628,7 +621,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       const docId = uuidv4();
       const now = new Date();
 
-      await db('documents').insert({
+      await scopedDb().table('documents').insert({
         tenant: tenantId,
         document_id: docId,
         document_name: 'Global Document',
@@ -660,14 +653,12 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       await createFolder('/Shared', clientId, 'client', false);
 
       // Verify both exist
-      const globalFolder = await db('document_folders')
-        .where('tenant', tenantId)
+      const globalFolder = await scopedDb().table('document_folders')
         .where('folder_path', '/Shared')
         .whereNull('entity_id')
         .first();
 
-      const entityFolder = await db('document_folders')
-        .where('tenant', tenantId)
+      const entityFolder = await scopedDb().table('document_folders')
         .where('folder_path', '/Shared')
         .where('entity_id', clientId)
         .first();

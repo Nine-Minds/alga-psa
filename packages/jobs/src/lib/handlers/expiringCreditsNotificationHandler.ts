@@ -1,5 +1,5 @@
-import { Knex } from 'knex';
-import { runWithTenant, getConnection } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import { runWithTenant, getConnection, tenantDb } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { ICreditTracking } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '../handler-utils/dateTimeUtils';
@@ -8,6 +8,9 @@ export interface ExpiringCreditsNotificationJobData extends Record<string, unkno
   tenantId: string;
   clientId?: string; // Optional: process only a specific client
 }
+
+const tenantScopedTable = (knex: Knex, table: string, tenant: string) =>
+  tenantDb(knex, tenant).table(table);
 
 /**
  * Job handler for sending notifications about credits that will expire soon
@@ -32,8 +35,7 @@ export async function expiringCreditsNotificationHandler(data: ExpiringCreditsNo
 
     try {
       // Get notification thresholds from settings
-      const defaultSettings = await knex('default_billing_settings')
-        .where({ tenant: tenantId })
+      const defaultSettings = await tenantScopedTable(knex, 'default_billing_settings', tenantId)
         .first();
 
       if (!defaultSettings || !defaultSettings.credit_expiration_notification_days) {
@@ -81,8 +83,7 @@ async function processNotificationsForThreshold(
   endOfDay.setHours(23, 59, 59, 999);
 
   // Find credits expiring on the target date
-  let query = knex('credit_tracking')
-    .where('tenant', tenant)
+  let query = (tenantScopedTable(knex, 'credit_tracking', tenant) as Knex.QueryBuilder<ICreditTracking, ICreditTracking[]>)
     .where('is_expired', false)
     .whereNotNull('expiration_date')
     .where('remaining_amount', '>', 0)

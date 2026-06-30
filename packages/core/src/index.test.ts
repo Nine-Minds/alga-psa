@@ -7,10 +7,10 @@ describe('@alga-psa/core public exports', () => {
     expect(core.logger).toBeTruthy();
   });
 
-  // Secrets, events, and encryption are server-only and moved off the root
-  // barrel (which must stay client-safe). They are re-exported from the
-  // `@alga-psa/core/server` barrel (src/server.ts).
-  it('exports logger, secrets, events, and encryption APIs from the server barrel', async () => {
+  // Secrets, events, encryption, and deletion infrastructure are server-only
+  // and moved off the root barrel (which must stay client-safe). They are
+  // re-exported from the `@alga-psa/core/server` barrel (src/server.ts).
+  it('exports logger, secrets, events, encryption, and deletion APIs from the server barrel', async () => {
     const server = await import('./server');
 
     expect(server.logger).toBeTruthy();
@@ -20,5 +20,8 @@ describe('@alga-psa/core public exports', () => {
     expect(typeof server.hashPassword).toBe('function');
     expect(typeof server.verifyPassword).toBe('function');
     expect(typeof server.generateSecurePassword).toBe('function');
+    expect(typeof server.getDeletionConfig).toBe('function');
+    expect(typeof server.validateDeletion).toBe('function');
+    expect(typeof server.deleteEntityWithValidation).toBe('function');
   });
 });

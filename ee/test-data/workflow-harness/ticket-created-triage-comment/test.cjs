@@ -1,13 +1,12 @@
 const { randomUUID } = require('node:crypto');
+const {
+  deleteTenantRows,
+  pickTenantOne,
+  selectTenantRows
+} = require('./_lib/tenant-sql.cjs');
 
 function getApiKey() {
   return process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
-}
-
-async function pickOne(ctx, { label, sql, params }) {
-  const rows = await ctx.db.query(sql, params);
-  if (!rows.length) throw new Error(`Fixture requires ${label} in DB (tenant=${ctx.config.tenantId}).`);
-  return rows[0];
 }
 
 module.exports = async function run(ctx) {
@@ -16,28 +15,33 @@ module.exports = async function run(ctx) {
     throw new Error('Missing WORKFLOW_HARNESS_API_KEY (or ALGA_API_KEY) for /api/v1 calls.');
   }
 
-  const tenantId = ctx.config.tenantId;
   const marker = '[fixture ticket-created-triage-comment]';
 
-  const client = await pickOne(ctx, {
+  const client = await pickTenantOne(ctx, {
     label: 'a client',
-    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId]
+    table: 'clients',
+    columns: 'client_id',
+    orderBy: 'created_at asc'
   });
-  const board = await pickOne(ctx, {
+  const board = await pickTenantOne(ctx, {
     label: 'a ticket board',
-    sql: `select board_id from boards where tenant = $1 order by is_default desc, display_order asc limit 1`,
-    params: [tenantId]
+    table: 'boards',
+    columns: 'board_id',
+    orderBy: 'is_default desc, display_order asc'
   });
-  const status = await pickOne(ctx, {
+  const status = await pickTenantOne(ctx, {
     label: 'a ticket status',
-    sql: `select status_id from statuses where tenant = $1 and board_id = $2 and status_type = 'ticket' order by is_default desc, order_number asc limit 1`,
-    params: [tenantId, board.board_id]
+    table: 'statuses',
+    columns: 'status_id',
+    where: ['board_id = $2', "status_type = 'ticket'"],
+    params: [board.board_id],
+    orderBy: 'is_default desc, order_number asc'
   });
-  const priority = await pickOne(ctx, {
+  const priority = await pickTenantOne(ctx, {
     label: 'a ticket priority',
-    sql: `select priority_id from priorities where tenant = $1 order by order_number asc limit 1`,
-    params: [tenantId]
+    table: 'priorities',
+    columns: 'priority_id',
+    orderBy: 'order_number asc'
   });
 
   const title = `Fixture triage comment ${randomUUID()}`;
@@ -68,8 +72,8 @@ module.exports = async function run(ctx) {
       // Ticket deletion is blocked when comments reference the ticket; clean up those rows first.
     }
 
-    await ctx.dbWrite.query(`delete from comments where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
-    await ctx.dbWrite.query(`delete from tickets where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
+    await deleteTenantRows(ctx, { table: 'comments', where: 'ticket_id = $2', params: [ticketId] });
+    await deleteTenantRows(ctx, { table: 'tickets', where: 'ticket_id = $2', params: [ticketId] });
   });
 
   const runRow = await ctx.waitForRun({ startedAfter: ctx.triggerStartedAt });
@@ -78,16 +82,14 @@ module.exports = async function run(ctx) {
     throw new Error(`Expected run SUCCEEDED, got ${runRow.status}. Steps: ${JSON.stringify(ctx.summarizeSteps(steps))}`);
   }
 
-  const comments = await ctx.db.query(
-    `
-      select comment_id, note, is_internal, metadata
-      from comments
-      where tenant = $1 and ticket_id = $2
-      order by created_at desc
-      limit 25
-    `,
-    [tenantId, ticketId]
-  );
+  const comments = await selectTenantRows(ctx, {
+    table: 'comments',
+    columns: 'comment_id, note, is_internal, metadata',
+    where: 'ticket_id = $2',
+    params: [ticketId],
+    orderBy: 'created_at desc',
+    limit: 25
+  });
 
   const found = comments.find((c) => typeof c.note === 'string' && c.note.includes(marker) && c.is_internal === true);
   if (!found) {

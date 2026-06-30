@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { enqueueExternalPaymentPush } from './syncProducers';
 
@@ -71,15 +72,15 @@ export function isNonPayableInvoiceStatus(status: string | null | undefined): bo
 }
 
 async function getInvoice(knex: Knex, tenantId: string, invoiceId: string): Promise<InvoiceRow | undefined> {
-  return knex('invoices')
-    .where({ tenant: tenantId, invoice_id: invoiceId })
+  return tenantDb(knex, tenantId).table('invoices')
+    .where({ invoice_id: invoiceId })
     .select('invoice_id', 'client_id', 'status', 'total_amount', 'credit_applied', 'currency_code')
     .first<InvoiceRow | undefined>();
 }
 
 async function sumPayments(trx: Knex, tenantId: string, invoiceId: string): Promise<number> {
-  const totalPayments = await trx('invoice_payments')
-    .where({ tenant: tenantId, invoice_id: invoiceId })
+  const totalPayments = await tenantDb(trx, tenantId).table('invoice_payments')
+    .where({ invoice_id: invoiceId })
     .sum('amount as total')
     .first();
   return parseInt(String(totalPayments?.total ?? '0'), 10) || 0;
@@ -105,8 +106,8 @@ function resolveStatus(invoice: InvoiceRow, totalPaid: number): string {
 async function applyStatus(trx: Knex, tenantId: string, invoice: InvoiceRow, totalPaid: number): Promise<string> {
   const newStatus = resolveStatus(invoice, totalPaid);
   if (newStatus !== invoice.status) {
-    await trx('invoices')
-      .where({ tenant: tenantId, invoice_id: invoice.invoice_id })
+    await tenantDb(trx, tenantId).table('invoices')
+      .where({ invoice_id: invoice.invoice_id })
       .update({ status: newStatus, updated_at: trx.fn.now() });
   }
   return newStatus;
@@ -124,7 +125,7 @@ async function insertTransaction(
     metadata?: Record<string, unknown>;
   }
 ): Promise<void> {
-  await trx('transactions').insert({
+  await tenantDb(trx, tenantId).table('transactions').insert({
     transaction_id: uuidv4(),
     client_id: params.clientId,
     invoice_id: params.invoiceId,
@@ -168,12 +169,12 @@ export async function recordExternalPayment(
 
   const { paymentId, newStatus, totalPaid } = await knex.transaction(async (trx) => {
     // Row lock so concurrent providers can't race the status computation.
-    await trx('invoices')
-      .where({ tenant: tenantId, invoice_id: input.invoiceId })
+    await tenantDb(trx, tenantId).table('invoices')
+      .where({ invoice_id: input.invoiceId })
       .forUpdate()
       .first();
 
-    const [payment] = await trx('invoice_payments')
+    const [payment] = await tenantDb(trx, tenantId).table('invoice_payments')
       .insert({
         tenant: tenantId,
         invoice_id: input.invoiceId,
@@ -254,12 +255,12 @@ export async function reverseExternalPayment(
   }
 
   const { paymentId, newStatus, totalPaid } = await knex.transaction(async (trx) => {
-    await trx('invoices')
-      .where({ tenant: tenantId, invoice_id: input.invoiceId })
+    await tenantDb(trx, tenantId).table('invoices')
+      .where({ invoice_id: input.invoiceId })
       .forUpdate()
       .first();
 
-    const [payment] = await trx('invoice_payments')
+    const [payment] = await tenantDb(trx, tenantId).table('invoice_payments')
       .insert({
         tenant: tenantId,
         invoice_id: input.invoiceId,

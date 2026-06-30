@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { tenantDb } from '@alga-psa/db';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { createTenantKnex } from '@/lib/db';
 import { getWebhookBaseUrl } from '@alga-psa/integrations/utils/email/webhookHelpers';
@@ -48,8 +49,8 @@ function withAdvancedAssetsAccess<TArgs extends unknown[], TResult>(
 
 async function getLevelIoIntegration(tenant: string) {
   const { knex } = await createTenantKnex();
-  const integration = await knex('rmm_integrations')
-    .where({ tenant, provider: PROVIDER })
+  const integration = await tenantDb(knex, tenant).table('rmm_integrations')
+    .where({ provider: PROVIDER })
     .first([
       'integration_id',
       'is_active',
@@ -70,9 +71,10 @@ async function upsertLevelIoIntegrationRow(args: {
   syncError?: string | null;
 }) {
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, args.tenant);
   const settings = { provider_settings: { levelio: {} } };
 
-  const response = await knex('rmm_integrations')
+  const response = await db.table('rmm_integrations')
     .insert({
       tenant: args.tenant,
       provider: PROVIDER,
@@ -231,8 +233,8 @@ export const testLevelIoConnection = withAdvancedAssetsAccess(async (user, { ten
   } catch (error) {
     try {
       const { knex } = await createTenantKnex();
-      await knex('rmm_integrations')
-        .where({ tenant, provider: PROVIDER })
+      await tenantDb(knex, tenant).table('rmm_integrations')
+        .where({ provider: PROVIDER })
         .update({
           is_active: false,
           sync_error: sanitizeError(error),
@@ -259,8 +261,8 @@ export const disconnectLevelIoIntegration = withAdvancedAssetsAccess(async (user
       secretProvider.deleteTenantSecret(tenant, LEVELIO_WEBHOOK_SECRET_KEY),
     ]);
 
-    await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    await tenantDb(knex, tenant).table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .update({
         is_active: false,
         connected_at: null,
@@ -382,14 +384,12 @@ export const listLevelIoOrganizationMappings = withAdvancedAssetsAccess(async (u
       return { success: true, mappings: [], clients: [] };
     }
 
-    const rows = await knex('rmm_organization_mappings as rom')
-      .leftJoin('clients as c', function joinClient() {
-        this.on('rom.tenant', '=', 'c.tenant').andOn('rom.client_id', '=', 'c.client_id');
-      })
-      .where({
-        'rom.tenant': tenant,
-        'rom.integration_id': integration.integration_id,
-      })
+    const db = tenantDb(knex, tenant);
+    const rowsQuery = db.table('rmm_organization_mappings as rom');
+    db.tenantJoin(rowsQuery, 'clients as c', 'rom.client_id', 'c.client_id', { type: 'left' });
+
+    const rows = await rowsQuery
+      .where({ 'rom.integration_id': integration.integration_id })
       .select([
         'rom.mapping_id',
         'rom.external_organization_id',
@@ -404,8 +404,7 @@ export const listLevelIoOrganizationMappings = withAdvancedAssetsAccess(async (u
       ])
       .orderBy('rom.external_organization_name', 'asc');
 
-    const clients = await knex('clients')
-      .where({ tenant })
+    const clients = await db.table('clients')
       .select(['client_id', 'client_name'])
       .orderBy('client_name', 'asc');
 
@@ -431,6 +430,7 @@ export const updateLevelIoOrganizationMapping = withAdvancedAssetsAccess(async (
 
   try {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
     const patch: Record<string, unknown> = {
       updated_at: knex.fn.now(),
     };
@@ -439,8 +439,8 @@ export const updateLevelIoOrganizationMapping = withAdvancedAssetsAccess(async (
     if (typeof input.autoSyncAssets !== 'undefined') patch.auto_sync_assets = input.autoSyncAssets;
     if (typeof input.autoCreateTickets !== 'undefined') patch.auto_create_tickets = input.autoCreateTickets;
 
-    await knex('rmm_organization_mappings')
-      .where({ tenant, mapping_id: input.mappingId })
+    await db.table('rmm_organization_mappings')
+      .where({ mapping_id: input.mappingId })
       .update(patch);
 
     return { success: true };
@@ -501,13 +501,13 @@ export const getLevelIoConnectionSummary = withAdvancedAssetsAccess(async (user,
     }
 
     const [mappedGroups, devices, activeAlerts] = await Promise.all([
-      knex('rmm_organization_mappings')
-        .where({ tenant, integration_id: integration.integration_id })
+      tenantDb(knex, tenant).table('rmm_organization_mappings')
+        .where({ integration_id: integration.integration_id })
         .whereNotNull('client_id')
         .count<{ count: string }[]>('mapping_id as count'),
-      knex('assets').where({ tenant, rmm_provider: PROVIDER }).count<{ count: string }[]>('asset_id as count'),
-      knex('rmm_alerts')
-        .where({ tenant, integration_id: integration.integration_id, status: 'active' })
+      tenantDb(knex, tenant).table('assets').where({ rmm_provider: PROVIDER }).count<{ count: string }[]>('asset_id as count'),
+      tenantDb(knex, tenant).table('rmm_alerts')
+        .where({ integration_id: integration.integration_id, status: 'active' })
         .count<{ count: string }[]>('alert_id as count'),
     ]);
 

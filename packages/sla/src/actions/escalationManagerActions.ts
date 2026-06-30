@@ -10,7 +10,7 @@
  * 2. Notified via in-app and/or email
  */
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import {
@@ -33,12 +33,11 @@ export const getEscalationManagers = withAuth(async (_user, { tenant }): Promise
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const configs = await trx('escalation_managers as em')
-        .leftJoin('users as u', function() {
-          this.on('em.manager_user_id', 'u.user_id')
-              .andOn('em.tenant', 'u.tenant');
-        })
-        .where('em.tenant', tenant)
+      const scopedDb = tenantDb(trx, tenant);
+      const configsQuery = scopedDb.table<any>('escalation_managers as em');
+      scopedDb.tenantJoin(configsQuery, 'users as u', 'em.manager_user_id', 'u.user_id', { type: 'left' });
+
+      const configs = await configsQuery
         .select(
           'em.*',
           'u.first_name as manager_first_name',
@@ -67,12 +66,11 @@ export const getEscalationManagersForBoard = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const configs = await trx('escalation_managers as em')
-        .leftJoin('users as u', function() {
-          this.on('em.manager_user_id', 'u.user_id')
-              .andOn('em.tenant', 'u.tenant');
-        })
-        .where('em.tenant', tenant)
+      const scopedDb = tenantDb(trx, tenant);
+      const configsQuery = scopedDb.table<any>('escalation_managers as em');
+      scopedDb.tenantJoin(configsQuery, 'users as u', 'em.manager_user_id', 'u.user_id', { type: 'left' });
+
+      const configs = await configsQuery
         .where('em.board_id', boardId)
         .select(
           'em.*',
@@ -103,12 +101,11 @@ export const getEscalationManagerForLevel = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const config = await trx('escalation_managers as em')
-        .leftJoin('users as u', function() {
-          this.on('em.manager_user_id', 'u.user_id')
-              .andOn('em.tenant', 'u.tenant');
-        })
-        .where('em.tenant', tenant)
+      const scopedDb = tenantDb(trx, tenant);
+      const configQuery = scopedDb.table<any>('escalation_managers as em');
+      scopedDb.tenantJoin(configQuery, 'users as u', 'em.manager_user_id', 'u.user_id', { type: 'left' });
+
+      const config = await configQuery
         .where('em.board_id', boardId)
         .where('em.escalation_level', level)
         .select(
@@ -140,9 +137,11 @@ export const setEscalationManager = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      const scopedDb = tenantDb(trx, tenant);
+
       // Verify board exists
-      const board = await trx('boards')
-        .where({ tenant, board_id: input.board_id })
+      const board = await scopedDb.table('boards')
+        .where({ board_id: input.board_id })
         .first();
 
       if (!board) {
@@ -151,8 +150,8 @@ export const setEscalationManager = withAuth(async (
 
       // Verify user exists if provided
       if (input.manager_user_id) {
-        const user = await trx('users')
-          .where({ tenant, user_id: input.manager_user_id })
+        const user = await scopedDb.table('users')
+          .where({ user_id: input.manager_user_id })
           .first();
 
         if (!user) {
@@ -161,9 +160,8 @@ export const setEscalationManager = withAuth(async (
       }
 
       // Check if config exists
-      const existing = await trx('escalation_managers')
+      const existing = await scopedDb.table('escalation_managers')
         .where({
-          tenant,
           board_id: input.board_id,
           escalation_level: input.escalation_level
         })
@@ -172,9 +170,8 @@ export const setEscalationManager = withAuth(async (
       // If removing manager (null user_id), delete the config
       if (!input.manager_user_id) {
         if (existing) {
-          await trx('escalation_managers')
+          await scopedDb.table('escalation_managers')
             .where({
-              tenant,
               config_id: existing.config_id
             })
             .delete();
@@ -186,9 +183,8 @@ export const setEscalationManager = withAuth(async (
 
       if (existing) {
         // Update existing config
-        const [updated] = await trx('escalation_managers')
+        const [updated] = await scopedDb.table('escalation_managers')
           .where({
-            tenant,
             config_id: existing.config_id
           })
           .update({
@@ -201,7 +197,7 @@ export const setEscalationManager = withAuth(async (
         return updated as IEscalationManager;
       } else {
         // Insert new config
-        const [inserted] = await trx('escalation_managers')
+        const [inserted] = await scopedDb.table('escalation_managers')
           .insert({
             config_id: crypto.randomUUID(),
             tenant,
@@ -235,8 +231,8 @@ export const deleteEscalationManager = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const deleted = await trx('escalation_managers')
-        .where({ tenant, config_id: configId })
+      const deleted = await tenantDb(trx, tenant).table('escalation_managers')
+        .where({ config_id: configId })
         .delete();
 
       if (!deleted) {
@@ -258,19 +254,19 @@ export const getBoardEscalationConfigs = withAuth(async (_user, { tenant }): Pro
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      const scopedDb = tenantDb(trx, tenant);
+
       // Get all active boards
-      const boards = await trx('boards')
-        .where({ tenant, is_inactive: false })
+      const boards = await scopedDb.table('boards')
+        .where({ is_inactive: false })
         .select('board_id', 'board_name')
         .orderBy('display_order');
 
       // Get all escalation configs
-      const configs = await trx('escalation_managers as em')
-        .leftJoin('users as u', function() {
-          this.on('em.manager_user_id', 'u.user_id')
-              .andOn('em.tenant', 'u.tenant');
-        })
-        .where('em.tenant', tenant)
+      const configsQuery = scopedDb.table<any>('escalation_managers as em');
+      scopedDb.tenantJoin(configsQuery, 'users as u', 'em.manager_user_id', 'u.user_id', { type: 'left' });
+
+      const configs = await configsQuery
         .select(
           'em.*',
           'u.first_name as manager_first_name',
@@ -322,9 +318,11 @@ export const setBoardEscalationManagers = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      const scopedDb = tenantDb(trx, tenant);
+
       // Verify board exists
-      const board = await trx('boards')
-        .where({ tenant, board_id: boardId })
+      const board = await scopedDb.table('boards')
+        .where({ board_id: boardId })
         .first();
 
       if (!board) {
@@ -339,8 +337,8 @@ export const setBoardEscalationManagers = withAuth(async (
 
         // Verify user exists if provided
         if (config.user_id) {
-          const user = await trx('users')
-            .where({ tenant, user_id: config.user_id })
+          const user = await scopedDb.table('users')
+            .where({ user_id: config.user_id })
             .first();
 
           if (!user) {
@@ -349,21 +347,21 @@ export const setBoardEscalationManagers = withAuth(async (
         }
 
         // Check if config exists
-        const existing = await trx('escalation_managers')
-          .where({ tenant, board_id: boardId, escalation_level: level })
+        const existing = await scopedDb.table('escalation_managers')
+          .where({ board_id: boardId, escalation_level: level })
           .first();
 
         if (!config.user_id) {
           // Remove config if user_id is null
           if (existing) {
-            await trx('escalation_managers')
-              .where({ tenant, config_id: existing.config_id })
+            await scopedDb.table('escalation_managers')
+              .where({ config_id: existing.config_id })
               .delete();
           }
         } else if (existing) {
           // Update existing
-          await trx('escalation_managers')
-            .where({ tenant, config_id: existing.config_id })
+          await scopedDb.table('escalation_managers')
+            .where({ config_id: existing.config_id })
             .update({
               manager_user_id: config.user_id,
               notify_via: config.notify_via || ['in_app', 'email'],
@@ -371,7 +369,7 @@ export const setBoardEscalationManagers = withAuth(async (
             });
         } else {
           // Insert new
-          await trx('escalation_managers')
+          await scopedDb.table('escalation_managers')
             .insert({
               config_id: crypto.randomUUID(),
               tenant,

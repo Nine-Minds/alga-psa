@@ -1,0 +1,657 @@
+/**
+ * Self-contained tenant-scoped query helper for MIGRATIONS ONLY.
+ *
+ * Migrations run via `knex migrate:latest` in environments that do NOT build the
+ * @alga-psa/db workspace package (CI Citus smoke, integration harness, the prod
+ * migration image), so `import('@alga-psa/db')` fails with ERR_MODULE_NOT_FOUND.
+ * This plain-CJS shim reproduces tenantDb's table()/unscoped()/tenantJoin()
+ * behaviour without that dependency, so migration files can require it directly.
+ *
+ * TENANT_TABLE_METADATA below is a point-in-time snapshot of
+ * packages/db/src/lib/tenantTableMetadata.ts (the source of truth). A new
+ * migration that uses tenantDb.table() on a table not listed here will throw
+ * "No tenant table metadata registered" — add the entry (matching the source).
+ */
+
+const TENANT_TABLE_METADATA = {
+  assets: { scope: 'tenant' },
+  accounting_export_batches: { scope: 'tenant' },
+  accounting_export_errors: { scope: 'tenant' },
+  accounting_export_lines: { scope: 'tenant' },
+  accounting_sync_cycles: { scope: 'tenant' },
+  accounting_sync_operations: { scope: 'tenant' },
+  asset_types: { scope: 'tenant' },
+  asset_type_registry: { scope: 'tenant' },
+  apple_iap_subscriptions: { scope: 'tenant' },
+  // Reference table for tenantless Apple sign-in discovery, but tenant-known operations must scope by tenant.
+  apple_user_identities: { scope: 'tenant' },
+  appointment_requests: { scope: 'tenant' },
+  availability_exceptions: { scope: 'tenant' },
+  availability_settings: { scope: 'tenant' },
+  app_search_index: { scope: 'tenant' },
+  api_rate_limit_settings: { scope: 'tenant' },
+  api_keys: { scope: 'tenant' },
+  agent_idp_providers: { scope: 'tenant' },
+  agent_roles: { scope: 'tenant' },
+  agents: { scope: 'tenant' },
+  approval_levels: { scope: 'tenant' },
+  approval_thresholds: { scope: 'tenant' },
+  audit_logs: { scope: 'tenant' },
+  clients: { scope: 'tenant' },
+  client_contacts: { scope: 'tenant' },
+  attribute_definitions: { scope: 'tenant' },
+  authorization_bundle_assignments: { scope: 'tenant' },
+  authorization_bundle_revisions: { scope: 'tenant' },
+  authorization_bundle_rules: { scope: 'tenant' },
+  authorization_bundles: { scope: 'tenant' },
+  bucket_usage: { scope: 'tenant' },
+  billing_plan_fixed_config: { scope: 'tenant' },
+  billing_plans: { scope: 'tenant' },
+  bundle_billing_plans: { scope: 'tenant' },
+  business_hours_entries: { scope: 'tenant' },
+  business_hours_schedules: { scope: 'tenant' },
+  calendar_event_mappings: { scope: 'tenant' },
+  calendar_provider_health: { scope: 'tenant' },
+  calendar_providers: { scope: 'tenant' },
+  // Confirmed tenant column in server/migrations/20251104120005_create_calendar_vendor_config_tables.cjs.
+  google_calendar_provider_config: { scope: 'tenant' },
+  microsoft_calendar_provider_config: { scope: 'tenant' },
+  client_billing_cycles: { scope: 'tenant' },
+  client_billing_plans: { scope: 'tenant' },
+  client_billing_settings: { scope: 'tenant' },
+  client_contracts: { scope: 'tenant' },
+  client_contract_lines: { scope: 'tenant' },
+  client_locations: { scope: 'tenant' },
+  client_inbound_email_domains: { scope: 'tenant' },
+  client_name_aliases: { scope: 'tenant' },
+  client_payment_customers: { scope: 'tenant' },
+  client_plan_bundles: { scope: 'tenant' },
+  client_tax_rates: { scope: 'tenant' },
+  client_tax_settings: { scope: 'tenant' },
+  categories: { scope: 'tenant' },
+  checklist_template_apply_rules: { scope: 'tenant' },
+  checklist_template_items: { scope: 'tenant' },
+  checklist_templates: { scope: 'tenant' },
+  chats: { scope: 'tenant' },
+  messages: { scope: 'tenant' },
+  companies: { scope: 'tenant' },
+  company_billing_plans: { scope: 'tenant' },
+  company_plan_bundles: { scope: 'tenant' },
+  comments: { scope: 'tenant' },
+  comment_reactions: { scope: 'tenant' },
+  composite_tax_mappings: {
+    scope: 'tenantViaParent',
+    parentTable: 'tax_rates',
+    parentColumn: 'tax_rate_id',
+    childColumn: 'composite_tax_id',
+  },
+  // Confirmed distributed by tenant in server/migrations/20260422130000_add_content_moderation.cjs.
+  content_reports: { scope: 'tenant' },
+  contact_additional_email_addresses: { scope: 'tenant' },
+  contact_email_type_definitions: { scope: 'tenant' },
+  contact_phone_numbers: { scope: 'tenant' },
+  contact_phone_type_definitions: { scope: 'tenant' },
+  contacts: { scope: 'tenant' },
+  comment_threads: { scope: 'tenant' },
+  contracts: { scope: 'tenant' },
+  contract_pricing_schedules: { scope: 'tenant' },
+  contract_lines: { scope: 'tenant' },
+  contract_line_mappings: { scope: 'tenant' },
+  contract_line_service_bucket_config: { scope: 'tenant' },
+  contract_line_service_configuration: { scope: 'tenant' },
+  contract_line_service_defaults: { scope: 'tenant' },
+  contract_line_service_fixed_config: { scope: 'tenant' },
+  contract_line_service_hourly_config: { scope: 'tenant' },
+  contract_line_service_hourly_configs: { scope: 'tenant' },
+  contract_line_service_rate_tiers: { scope: 'tenant' },
+  contract_line_presets: { scope: 'tenant' },
+  contract_line_preset_fixed_config: { scope: 'tenant' },
+  contract_line_preset_services: { scope: 'tenant' },
+  contract_line_discounts: { scope: 'tenant' },
+  contract_line_service_usage_config: { scope: 'tenant' },
+  contract_line_services: { scope: 'tenant' },
+  contract_template_line_defaults: { scope: 'tenant' },
+  contract_template_line_fixed_config: { scope: 'tenant' },
+  contract_template_line_service_bucket_config: { scope: 'tenant' },
+  contract_template_line_service_configuration: { scope: 'tenant' },
+  contract_template_line_service_fixed_config: { scope: 'tenant' },
+  contract_template_line_service_hourly_config: { scope: 'tenant' },
+  contract_template_line_service_usage_config: { scope: 'tenant' },
+  contract_template_line_services: { scope: 'tenant' },
+  contract_template_line_terms: { scope: 'tenant' },
+  contract_template_lines: { scope: 'tenant' },
+  contract_template_line_mappings: { scope: 'tenant' },
+  contract_template_pricing_schedules: { scope: 'tenant' },
+  contract_template_services: { scope: 'tenant' },
+  contract_templates: { scope: 'tenant' },
+  conditional_display_rules: { scope: 'tenant' },
+  countries: { scope: 'global' },
+  credit_allocations: { scope: 'tenant' },
+  credit_reconciliation_reports: { scope: 'tenant' },
+  credit_tracking: { scope: 'tenant' },
+  custom_fields: { scope: 'tenant' },
+  custom_reports: { scope: 'tenant' },
+  custom_task_types: { scope: 'tenant' },
+  default_billing_settings: { scope: 'tenant' },
+  discounts: { scope: 'tenant' },
+  document_associations: { scope: 'tenant' },
+  document_block_content: { scope: 'tenant' },
+  document_content: { scope: 'tenant' },
+  document_default_folders: { scope: 'tenant' },
+  document_folders: { scope: 'tenant' },
+  document_share_access_log: { scope: 'tenant' },
+  document_share_links: { scope: 'tenant' },
+  document_system_entries: { scope: 'tenant' },
+  document_types: { scope: 'tenant' },
+  document_versions: { scope: 'tenant' },
+  documents: { scope: 'tenant' },
+  email_client_associations: { scope: 'tenant' },
+  email_domains: { scope: 'tenant' },
+  email_processed_attachments: { scope: 'tenant' },
+  email_processed_messages: { scope: 'tenant' },
+  email_provider_configs: { scope: 'tenant' },
+  email_provider_health: { scope: 'tenant' },
+  email_providers: { scope: 'tenant' },
+  email_rate_limits: { scope: 'tenant' },
+  email_reply_tokens: { scope: 'tenant' },
+  email_sending_logs: { scope: 'tenant' },
+  email_templates: { scope: 'tenant' },
+  entra_partner_connections: { scope: 'tenant' },
+  entra_managed_tenants: { scope: 'tenant' },
+  entra_client_tenant_mappings: { scope: 'tenant' },
+  entra_contact_links: { scope: 'tenant' },
+  entra_contact_reconciliation_queue: { scope: 'tenant' },
+  entra_sync_settings: { scope: 'tenant' },
+  entra_sync_runs: { scope: 'tenant' },
+  entra_sync_run_tenants: { scope: 'tenant' },
+  escalation_managers: { scope: 'tenant' },
+  event_catalog: { scope: 'tenant' },
+  extensions: { scope: 'tenant', tenantColumn: 'tenant_id' },
+  extension_audit_logs: { scope: 'tenant' },
+  extension_api_endpoint: { scope: 'global' },
+  extension_bundle: { scope: 'global' },
+  extension_event_subscription: { scope: 'tenant', tenantColumn: 'tenant_id' },
+  extension_execution_log: { scope: 'tenant', tenantColumn: 'tenant_id' },
+  extension_permissions: {
+    scope: 'tenantViaParent',
+    parentTable: 'extensions',
+    parentColumn: 'id',
+    childColumn: 'extension_id',
+  },
+  extension_quota_usage: { scope: 'tenant', tenantColumn: 'tenant_id' },
+  extension_registry: { scope: 'global' },
+  extension_settings: { scope: 'tenant', tenantColumn: 'tenant_id' },
+  extension_storage: { scope: 'tenant', tenantColumn: 'tenant_id' },
+  extension_version: { scope: 'global' },
+  ext_storage_records: { scope: 'tenant' },
+  ext_storage_schemas: { scope: 'tenant' },
+  ext_storage_usage: { scope: 'tenant' },
+  external_files: { scope: 'tenant' },
+  provider_events: { scope: 'tenant' },
+  storage_configurations: { scope: 'tenant' },
+  storage_providers: { scope: 'tenant' },
+  storage_records: { scope: 'tenant' },
+  storage_schemas: { scope: 'tenant' },
+  storage_usage: { scope: 'tenant' },
+  external_entity_mappings: { scope: 'tenant' },
+  external_tax_imports: { scope: 'tenant' },
+  feature_toggles: { scope: 'tenant' },
+  gmail_processed_history: { scope: 'tenant' },
+  google_email_provider_config: { scope: 'tenant' },
+  holidays: { scope: 'tenant' },
+  hudu_integrations: { scope: 'tenant' },
+  impacts: { scope: 'tenant' },
+  import_jobs: { scope: 'tenant' },
+  import_job_items: { scope: 'tenant' },
+  import_sources: { scope: 'tenant' },
+  imap_email_provider_config: { scope: 'tenant' },
+  inbound_email_rules: { scope: 'tenant' },
+  inbound_webhook_deliveries: { scope: 'tenant' },
+  inbound_webhooks: { scope: 'tenant' },
+  invoice_charge_details: { scope: 'tenant' },
+  invoice_charge_fixed_details: { scope: 'tenant' },
+  invoice_charges: { scope: 'tenant' },
+  invoice_annotations: { scope: 'tenant' },
+  invoice_credits: { scope: 'tenant' },
+  invoice_items: { scope: 'tenant' },
+  invoice_line_items: { scope: 'tenant' },
+  invoice_payment_links: { scope: 'tenant' },
+  invoice_payments: { scope: 'tenant' },
+  // System invoice template catalog; created without a tenant column.
+  standard_invoice_templates: { scope: 'global' },
+  standard_quote_document_templates: { scope: 'global' },
+  invoice_template_assignments: { scope: 'tenant' },
+  invoice_templates: { scope: 'tenant' },
+  invoice_time_entries: { scope: 'tenant' },
+  invoice_usage_records: { scope: 'tenant' },
+  invoices: { scope: 'tenant' },
+  internal_notification_categories: { scope: 'global' },
+  internal_notification_subtypes: { scope: 'global' },
+  internal_notification_templates: { scope: 'global' },
+  internal_notifications: { scope: 'tenant' },
+  interactions: { scope: 'tenant' },
+  interaction_types: { scope: 'tenant' },
+  job_details: { scope: 'tenant' },
+  jobs: { scope: 'tenant' },
+  kb_article_relations: { scope: 'tenant' },
+  kb_article_reviewers: { scope: 'tenant' },
+  kb_article_templates: { scope: 'tenant' },
+  kb_articles: { scope: 'tenant' },
+  knex_migrations: { scope: 'global' },
+  layout_blocks: { scope: 'tenant' },
+  license_state: { scope: 'admin' },
+  asset_associations: { scope: 'tenant' },
+  asset_document_associations: { scope: 'tenant' },
+  asset_facts: { scope: 'tenant' },
+  asset_history: { scope: 'tenant' },
+  asset_maintenance_history: { scope: 'tenant' },
+  asset_maintenance_notifications: { scope: 'tenant' },
+  asset_maintenance_schedules: { scope: 'tenant' },
+  asset_relationships: { scope: 'tenant' },
+  asset_service_history: { scope: 'tenant' },
+  asset_software: { scope: 'tenant' },
+  asset_ticket_associations: { scope: 'tenant' },
+  board_auto_close_rules: { scope: 'tenant' },
+  board_close_rules: { scope: 'tenant' },
+  boards: { scope: 'tenant' },
+  client_portal_visibility_group_boards: { scope: 'tenant' },
+  client_portal_visibility_groups: { scope: 'tenant' },
+  inbound_ticket_defaults: { scope: 'tenant' },
+  mobile_device_assets: { scope: 'tenant' },
+  microsoft_email_provider_config: { scope: 'tenant' },
+  microsoft_profile_consumer_bindings: { scope: 'tenant' },
+  microsoft_profiles: { scope: 'tenant' },
+  mobile_auth_otts: { scope: 'tenant' },
+  mobile_push_tokens: { scope: 'tenant' },
+  mobile_refresh_tokens: { scope: 'tenant' },
+  mcp_agent_audit: { scope: 'tenant' },
+  msp_sso_domain_verification_challenges: { scope: 'tenant' },
+  msp_sso_tenant_login_domains: { scope: 'tenant' },
+  network_device_assets: { scope: 'tenant' },
+  next_number: { scope: 'tenant' },
+  notification_categories: { scope: 'global' },
+  notification_logs: { scope: 'tenant' },
+  notification_settings: { scope: 'tenant' },
+  notification_subtypes: { scope: 'global' },
+  online_meeting_artifacts: { scope: 'tenant' },
+  online_meetings: { scope: 'tenant' },
+  password_reset_tokens: { scope: 'tenant' },
+  payment_methods: { scope: 'tenant' },
+  payment_provider_configs: { scope: 'tenant' },
+  payment_webhook_events: { scope: 'tenant' },
+  pending_reactivation_refunds: { scope: 'tenant' },
+  pending_tenant_deletions: { scope: 'tenant' },
+  permissions: { scope: 'tenant' },
+  plan_bundles: { scope: 'tenant' },
+  plan_service_configuration: { scope: 'tenant' },
+  plan_service_fixed_config: { scope: 'tenant' },
+  plan_service_hourly_configs: { scope: 'tenant' },
+  plan_services: { scope: 'tenant' },
+  plan_templates: { scope: 'tenant' },
+  platform_notification_recipients: { scope: 'tenant' },
+  platform_notifications: { scope: 'global' },
+  policies: { scope: 'tenant' },
+  portal_domain_session_otts: { scope: 'tenant' },
+  portal_domains: { scope: 'tenant' },
+  portal_invitations: { scope: 'tenant' },
+  printer_assets: { scope: 'tenant' },
+  priorities: { scope: 'tenant' },
+  project_materials: { scope: 'tenant' },
+  project_phases: { scope: 'tenant' },
+  project_status_mappings: { scope: 'tenant' },
+  project_team_assignments: { scope: 'tenant' },
+  project_templates: { scope: 'tenant' },
+  project_template_checklist_items: { scope: 'tenant' },
+  project_template_dependencies: { scope: 'tenant' },
+  project_template_phases: { scope: 'tenant' },
+  project_template_status_mappings: { scope: 'tenant' },
+  project_template_task_resources: { scope: 'tenant' },
+  project_template_tasks: { scope: 'tenant' },
+  project_task_comment_reactions: { scope: 'tenant' },
+  project_task_comments: { scope: 'tenant' },
+  project_task_dependencies: { scope: 'tenant' },
+  project_ticket_links: { scope: 'tenant' },
+  projects: { scope: 'tenant' },
+  project_tasks: { scope: 'tenant' },
+  quote_activities: { scope: 'tenant' },
+  quote_document_template_assignments: { scope: 'tenant' },
+  quote_document_templates: { scope: 'tenant' },
+  quotes: { scope: 'tenant' },
+  quote_items: { scope: 'tenant' },
+  recurring_service_periods: { scope: 'tenant' },
+  resources: { scope: 'tenant' },
+  roles: { scope: 'tenant' },
+  role_permissions: { scope: 'tenant' },
+  rmm_alert_rules: { scope: 'tenant' },
+  rmm_alerts: { scope: 'tenant' },
+  rmm_integrations: { scope: 'tenant' },
+  rmm_maintenance_windows: { scope: 'tenant' },
+  rmm_organization_mappings: { scope: 'tenant' },
+  schedule_conflicts: { scope: 'tenant' },
+  schedule_entries: { scope: 'tenant' },
+  schedule_entry_assignees: { scope: 'tenant' },
+  server_assets: { scope: 'tenant' },
+  service_categories: { scope: 'tenant' },
+  service_catalog: { scope: 'tenant' },
+  service_catalog_mode_defaults: { scope: 'tenant' },
+  service_items: { scope: 'tenant' },
+  service_prices: { scope: 'tenant' },
+  service_rate_tiers: { scope: 'tenant' },
+  service_request_definitions: { scope: 'tenant' },
+  service_request_definition_versions: { scope: 'tenant' },
+  service_request_submission_attachments: { scope: 'tenant' },
+  service_request_submissions: { scope: 'tenant' },
+  service_types: { scope: 'tenant' },
+  severities: { scope: 'tenant' },
+  sessions: { scope: 'tenant' },
+  sla_audit_log: { scope: 'tenant' },
+  sla_notifications_sent: { scope: 'tenant' },
+  sla_notification_thresholds: { scope: 'tenant' },
+  sla_policies: { scope: 'tenant' },
+  sla_policy_targets: { scope: 'tenant' },
+  sla_settings: { scope: 'tenant' },
+  shared_document_types: { scope: 'global' },
+  standard_boards: { scope: 'global' },
+  standard_categories: { scope: 'global' },
+  standard_priorities: { scope: 'global' },
+  standard_service_categories: { scope: 'global' },
+  standard_service_types: { scope: 'global' },
+  standard_statuses: { scope: 'global' },
+  standard_task_types: { scope: 'global' },
+  statuses: { scope: 'tenant' },
+  status_sla_pause_config: { scope: 'tenant' },
+  stripe_accounts: { scope: 'tenant' },
+  stripe_customers: { scope: 'tenant' },
+  stripe_prices: { scope: 'tenant' },
+  stripe_products: { scope: 'tenant' },
+  stripe_subscriptions: { scope: 'tenant' },
+  stripe_webhook_events: { scope: 'tenant' },
+  survey_invitations: { scope: 'tenant' },
+  survey_responses: { scope: 'tenant' },
+  survey_templates: { scope: 'tenant' },
+  survey_triggers: { scope: 'tenant' },
+  system_email_templates: { scope: 'global' },
+  system_event_catalog: { scope: 'global' },
+  system_interaction_types: { scope: 'global' },
+  system_workflow_form_definitions: { scope: 'global' },
+  system_workflow_task_definitions: { scope: 'global' },
+  tax_components: { scope: 'tenant' },
+  tax_holidays: {
+    scope: 'tenantViaParent',
+    parentTable: 'tax_rates',
+    parentColumn: 'tax_rate_id',
+    childColumn: 'tax_rate_id',
+  },
+  tax_rate_thresholds: {
+    scope: 'tenantViaParent',
+    parentTable: 'tax_rates',
+    parentColumn: 'tax_rate_id',
+    childColumn: 'tax_rate_id',
+  },
+  tax_rates: { scope: 'tenant' },
+  tax_regions: { scope: 'tenant' },
+  tag_definitions: { scope: 'tenant' },
+  tag_mappings: { scope: 'tenant' },
+  task_assignments: { scope: 'tenant' },
+  task_checklist_items: { scope: 'tenant' },
+  task_resources: { scope: 'tenant' },
+  team_members: { scope: 'tenant' },
+  teams: { scope: 'tenant' },
+  teams_audit_events: { scope: 'tenant' },
+  team_hierarchy: { scope: 'tenant' },
+  teams_conversation_references: { scope: 'tenant' },
+  teams_integrations: { scope: 'tenant' },
+  teams_notification_deliveries: { scope: 'tenant' },
+  team_permissions: { scope: 'tenant' },
+  tenants: { scope: 'tenant' },
+  tenant_addons: { scope: 'tenant' },
+  tenant_external_entity_mappings: { scope: 'tenant' },
+  tenant_companies: { scope: 'tenant' },
+  tenant_email_settings: { scope: 'tenant' },
+  tenant_email_templates: { scope: 'tenant' },
+  tenant_time_period_settings: { scope: 'tenant' },
+  tenant_reactivation_tokens: { scope: 'tenant' },
+  tenant_secrets: { scope: 'tenant' },
+  tenant_secrets_audit_log: { scope: 'tenant' },
+  tenant_extension_install: { scope: 'tenant', tenantColumn: 'tenant_id' },
+  tenant_extension_install_config: { scope: 'tenant', tenantColumn: 'tenant_id' },
+  tenant_extension_install_secrets: { scope: 'tenant', tenantColumn: 'tenant_id' },
+  tenant_extension_schedule: { scope: 'tenant', tenantColumn: 'tenant_id' },
+  tenant_settings: { scope: 'tenant' },
+  tenant_internal_notification_category_settings: { scope: 'tenant' },
+  tenant_internal_notification_subtype_settings: { scope: 'tenant' },
+  tenant_notification_category_settings: { scope: 'tenant' },
+  tenant_notification_subtype_settings: { scope: 'tenant' },
+  tenant_telemetry_settings: { scope: 'tenant' },
+  telemetry_consent_log: { scope: 'tenant' },
+  template_sections: { scope: 'tenant' },
+  template_services: { scope: 'tenant' },
+  tickets: { scope: 'tenant' },
+  ticket_audit_logs: { scope: 'tenant' },
+  ticket_auto_close_state: { scope: 'tenant' },
+  ticket_bundle_mirrors: { scope: 'tenant' },
+  ticket_bundle_settings: { scope: 'tenant' },
+  ticket_checklist_items: { scope: 'tenant' },
+  ticket_entity_links: { scope: 'tenant' },
+  ticket_materials: { scope: 'tenant' },
+  ticket_resources: { scope: 'tenant' },
+  time_entries: { scope: 'tenant' },
+  time_entry_change_requests: { scope: 'tenant' },
+  time_periods: { scope: 'tenant' },
+  time_period_settings: { scope: 'tenant' },
+  time_period_types: { scope: 'tenant' },
+  time_sheets: { scope: 'tenant' },
+  time_sheet_comments: { scope: 'tenant' },
+  transactions: { scope: 'tenant' },
+  urgencies: { scope: 'tenant' },
+  user_activity_group_items: { scope: 'tenant' },
+  user_activity_groups: { scope: 'tenant' },
+  user_auth_accounts: { scope: 'tenant' },
+  user_type_rates: { scope: 'tenant' },
+  usage_tracking: { scope: 'tenant' },
+  user_preferences: { scope: 'tenant' },
+  user_internal_notification_preferences: { scope: 'tenant' },
+  user_notification_preferences: { scope: 'tenant' },
+  user_roles: { scope: 'tenant' },
+  user_content_mutes: { scope: 'tenant' },
+  users: { scope: 'tenant' },
+  software_catalog: { scope: 'tenant' },
+  v_asset_software_details: { scope: 'tenant' },
+  vectors: { scope: 'tenant' },
+  webhook_deliveries: { scope: 'tenant' },
+  webhooks: { scope: 'tenant' },
+  workstation_assets: { scope: 'tenant' },
+  tenant_workflow_schedule: { scope: 'tenant' },
+  workflow_action_invocations: { scope: 'tenant' },
+  workflow_data_store: { scope: 'tenant' },
+  workflow_definitions: { scope: 'tenant' },
+  workflow_definition_versions: { scope: 'tenant' },
+  workflow_entity_links: { scope: 'tenant' },
+  workflow_run_logs: { scope: 'tenant' },
+  workflow_run_snapshots: { scope: 'tenant' },
+  workflow_run_steps: { scope: 'tenant' },
+  workflow_run_waits: { scope: 'tenant' },
+  workflow_runs: { scope: 'tenant' },
+  workflow_runtime_events: { scope: 'tenant' },
+  workflow_form_definitions: { scope: 'tenant' },
+  workflow_form_schemas: { scope: 'tenant' },
+  workflow_step_usage_periods: { scope: 'tenant' },
+  workflow_task_definitions: { scope: 'tenant' },
+  workflow_task_history: { scope: 'tenant' },
+  workflow_tasks: { scope: 'tenant' },
+};
+
+// ---------------------------------------------------------------------------
+// Faithful CJS port of the parsing + tenantDb behaviour from
+// packages/db/src/lib/{tenantTableMetadata,tenantScopedQuery,tenantDb}.ts.
+// Only the three methods migrations actually use are implemented
+// (table / unscoped / tenantJoin); the rest throw if ever called.
+// ---------------------------------------------------------------------------
+
+function unquoteIdentifier(identifier) {
+  return String(identifier).replace(/^["'`\[]/, '').replace(/["'`\]]$/, '');
+}
+
+function baseTableName(tableName) {
+  const unquoted = unquoteIdentifier(tableName);
+  const parts = unquoted.split('.');
+  return unquoteIdentifier(parts[parts.length - 1]);
+}
+
+function parseTableExpression(tableExpression) {
+  const trimmed = String(tableExpression).trim();
+  if (!trimmed) {
+    throw new Error('Tenant table expression cannot be empty');
+  }
+
+  const explicitAsAlias = trimmed.match(/^(.+?)\s+as\s+([^\s]+)$/i);
+  if (explicitAsAlias) {
+    return {
+      tableExpression: trimmed,
+      tableName: baseTableName(explicitAsAlias[1].trim()),
+      rootAlias: unquoteIdentifier(explicitAsAlias[2]),
+    };
+  }
+
+  const parts = trimmed.split(/\s+/);
+  if (parts.length > 1) {
+    return {
+      tableExpression: trimmed,
+      tableName: baseTableName(parts.slice(0, -1).join(' ')),
+      rootAlias: unquoteIdentifier(parts[parts.length - 1]),
+    };
+  }
+
+  return {
+    tableExpression: trimmed,
+    tableName: baseTableName(trimmed),
+    rootAlias: baseTableName(trimmed),
+  };
+}
+
+function requireTenantTableScope(tableName) {
+  const scope = TENANT_TABLE_METADATA[tableName];
+  if (!scope) {
+    throw new Error(`No tenant table metadata registered for ${tableName}`);
+  }
+  return scope;
+}
+
+function tenantColumn(scope) {
+  return scope.scope === 'tenant' ? (scope.tenantColumn || 'tenant') : 'tenant';
+}
+
+function rootQualifier(column) {
+  const match = String(column).match(/^([^.\s]+)\./);
+  return match ? match[1] : null;
+}
+
+function inferRootTenantColumn(parsed, left, right) {
+  const leftQualifier = rootQualifier(left);
+  const rightQualifier = rootQualifier(right);
+
+  if (leftQualifier === parsed.rootAlias && rightQualifier) {
+    return `${rightQualifier}.tenant`;
+  }
+  if (rightQualifier === parsed.rootAlias && leftQualifier) {
+    return `${leftQualifier}.tenant`;
+  }
+
+  throw new Error(
+    `Unable to infer root tenant column for join to ${parsed.tableExpression}; pass rootTenantColumn`
+  );
+}
+
+function unsupported(name) {
+  return function () {
+    throw new Error(
+      `tenantDb migration shim does not implement ${name}; no migration uses it. ` +
+      'If a new migration needs it, port it into server/migrations/utils/tenantDb.cjs.'
+    );
+  };
+}
+
+function tenantDb(conn, tenant) {
+  if (!tenant || !String(tenant).trim()) {
+    throw new Error('tenantDb requires a tenant id');
+  }
+
+  function table(tableExpression) {
+    const parsed = parseTableExpression(tableExpression);
+    const scope = requireTenantTableScope(parsed.tableName);
+
+    if (scope.scope === 'global') {
+      return conn(tableExpression);
+    }
+    if (scope.scope === 'admin') {
+      throw new Error(`Admin table ${parsed.tableName} cannot be accessed through tenantDb.table`);
+    }
+    if (scope.scope === 'tenantViaParent') {
+      throw new Error(`Parent-scoped child table ${parsed.tableName} must use tenantDb.parentScopedTable`);
+    }
+
+    return conn(tableExpression).where(`${parsed.rootAlias}.${tenantColumn(scope)}`, tenant);
+  }
+
+  function unscoped(tableExpression, reason) {
+    if (!reason || !String(reason).trim()) {
+      throw new Error('tenantDb.unscoped requires a reason');
+    }
+    return conn(tableExpression);
+  }
+
+  function tenantJoin(builder, tableExpression, left, right, options = {}) {
+    const parsed = parseTableExpression(tableExpression);
+    const scope = requireTenantTableScope(parsed.tableName);
+
+    if (scope.scope === 'admin') {
+      throw new Error(`Admin table ${parsed.tableName} cannot be joined through tenantDb.tenantJoin`);
+    }
+
+    const joinTenantTable = function joinTenantTable() {
+      this.on(left, '=', right);
+
+      if (scope.scope === 'tenant') {
+        const joinedTenantColumn = `${parsed.rootAlias}.${tenantColumn(scope)}`;
+        if (options.tenantPredicate === 'literal') {
+          this.andOn(joinedTenantColumn, '=', conn.raw('?', [tenant]));
+        } else {
+          this.andOn(
+            joinedTenantColumn,
+            '=',
+            options.rootTenantColumn || inferRootTenantColumn(parsed, left, right)
+          );
+        }
+      }
+
+      if (options.on) {
+        options.on(this);
+      }
+    };
+
+    if (options.type === 'left') {
+      return builder.leftJoin(tableExpression, joinTenantTable);
+    }
+    return builder.join(tableExpression, joinTenantTable);
+  }
+
+  return {
+    tenant,
+    table,
+    subquery: table,
+    unscoped,
+    tenantJoin,
+    scoped: unsupported('scoped'),
+    parentScopedTable: unsupported('parentScopedTable'),
+    insertParentScoped: unsupported('insertParentScoped'),
+    tenantJoinSubquery: unsupported('tenantJoinSubquery'),
+    tenantWhereColumn: unsupported('tenantWhereColumn'),
+  };
+}
+
+module.exports = {
+  tenantDb,
+  parseTableExpression,
+  requireTenantTableScope,
+  TENANT_TABLE_METADATA,
+};

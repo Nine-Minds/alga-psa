@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -10,6 +10,22 @@ import type { IQuoteDocumentTemplate, QuoteDocumentTemplateSource } from '@alga-
 import { withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import QuoteDocumentTemplate from '../models/quoteDocumentTemplate';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
+function standardQuoteDocumentTemplates(
+  conn: Knex | Knex.Transaction,
+  tenant?: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant || '__standard_quote_document_templates_catalog__')
+    .table('standard_quote_document_templates');
+}
 
 export const getQuoteDocumentTemplate = withAuth(async (
   user,
@@ -84,19 +100,18 @@ export const setDefaultQuoteDocumentTemplate = withAuth(async (
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Clear previous tenant-level assignment
-    await trx('quote_document_template_assignments')
-      .where({ tenant, scope_type: 'tenant' })
+    await tenantScopedTable(trx, tenant, 'quote_document_template_assignments')
+      .where({ scope_type: 'tenant' })
       .whereNull('scope_id')
       .del();
 
     // Clear is_default on all custom templates
-    await trx('quote_document_templates')
-      .where({ tenant })
+    await tenantScopedTable(trx, tenant, 'quote_document_templates')
       .update({ is_default: false });
 
     if (payload.templateSource === 'custom') {
-      await trx('quote_document_templates')
-        .where({ tenant, template_id: payload.templateId })
+      await tenantScopedTable(trx, tenant, 'quote_document_templates')
+        .where({ template_id: payload.templateId })
         .update({ is_default: true });
     }
 
@@ -109,7 +124,7 @@ export const setDefaultQuoteDocumentTemplate = withAuth(async (
       quote_document_template_id: payload.templateSource === 'custom' ? payload.templateId : null,
     };
 
-    await trx('quote_document_template_assignments').insert(baseAssignment);
+    await tenantScopedTable(trx, tenant, 'quote_document_template_assignments').insert(baseAssignment);
   });
 });
 
@@ -128,8 +143,8 @@ export const deleteQuoteDocumentTemplate = withAuth(async (
     let wasDefault = false;
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const existing = await trx('quote_document_templates')
-        .where({ tenant, template_id: templateId })
+      const existing = await tenantScopedTable(trx, tenant, 'quote_document_templates')
+        .where({ template_id: templateId })
         .first();
 
       if (!existing) {
@@ -137,30 +152,29 @@ export const deleteQuoteDocumentTemplate = withAuth(async (
       }
 
       // Check if this was the tenant default
-      const assignment = await trx('quote_document_template_assignments')
-        .where({ tenant, scope_type: 'tenant', template_source: 'custom', quote_document_template_id: templateId })
+      const assignment = await tenantScopedTable(trx, tenant, 'quote_document_template_assignments')
+        .where({ scope_type: 'tenant', template_source: 'custom', quote_document_template_id: templateId })
         .whereNull('scope_id')
         .first();
       wasDefault = Boolean(assignment);
 
       // Remove assignment if it was pointing to this template
       if (wasDefault) {
-        await trx('quote_document_template_assignments')
-          .where({ tenant, scope_type: 'tenant', quote_document_template_id: templateId })
+        await tenantScopedTable(trx, tenant, 'quote_document_template_assignments')
+          .where({ scope_type: 'tenant', quote_document_template_id: templateId })
           .whereNull('scope_id')
           .del();
       }
 
-      await trx('quote_document_templates')
-        .where({ tenant, template_id: templateId })
+      await tenantScopedTable(trx, tenant, 'quote_document_templates')
+        .where({ template_id: templateId })
         .del();
     });
 
     // If deleted template was default, fall back to another template
     if (wasDefault) {
       await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const fallbackCustom = await trx('quote_document_templates')
-          .where({ tenant })
+        const fallbackCustom = await tenantScopedTable(trx, tenant, 'quote_document_templates')
           .select('template_id')
           .orderBy('name')
           .first();
@@ -171,7 +185,7 @@ export const deleteQuoteDocumentTemplate = withAuth(async (
             templateId: fallbackCustom.template_id,
           });
         } else {
-          const fallbackStandard = await trx('standard_quote_document_templates')
+          const fallbackStandard = await standardQuoteDocumentTemplates(trx, tenant)
             .select('standard_quote_document_template_code')
             .orderByRaw("CASE WHEN standard_quote_document_template_code = 'standard-quote-default' THEN 0 ELSE 1 END")
             .orderBy('name')

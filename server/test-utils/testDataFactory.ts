@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import { TenantEntity } from 'server/src/interfaces/index';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
@@ -19,7 +20,7 @@ export async function createTenant(
   const tenantId = uuidv4();
   const now = new Date().toISOString();
 
-  await db('tenants').insert({
+  await tenantDb(db, tenantId).table('tenants').insert({
     tenant: tenantId,
     client_name: name,
     phone_number: '555-0100',
@@ -82,7 +83,7 @@ export async function createClient(
     billing_email: options.billing_email
   };
 
-  await db('clients').insert(client);
+  await tenantDb(db, tenantId).table('clients').insert(client);
 
   return clientId;
 }
@@ -120,7 +121,7 @@ export async function createClientLocation(
     updated_at: now.toISOString()
   };
 
-  await db('client_locations').insert(location);
+  await tenantDb(db, tenantId).table('client_locations').insert(location);
 
   return locationId;
 }
@@ -173,7 +174,7 @@ export async function createUser(
     timezone: options.timezone
   };
 
-  await db('users').insert(user);
+  await tenantDb(db, tenantId).table('users').insert(user);
 
   return userId;
 }

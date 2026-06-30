@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db/db';
+import { tenantDb } from '@alga-psa/db';
 import { StorageProviderFactory } from '@alga-psa/storage';
 import {
   validateShareToken,
@@ -139,8 +140,8 @@ export async function GET(
 
     // Get the file record
     const knex = await getConnection();
-    const fileRecord = await knex('external_files')
-      .where({ file_id: share.file_id, tenant: share.tenant, is_deleted: false })
+    const fileRecord = await tenantDb(knex, share.tenant).table('external_files')
+      .where({ file_id: share.file_id, is_deleted: false })
       .first();
 
     if (!fileRecord) {

@@ -1,4 +1,5 @@
 import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
@@ -9,6 +10,15 @@ import { computeCanonicalHost } from 'server/src/models/PortalDomainModel';
 
 let db: Knex;
 let tenantId: string | undefined;
+const TEST_DISCOVERY_TENANT = '__portal_domain_actions_test__';
+
+function tenantTable<Row extends object = Record<string, any>>(connection: Knex, tenant: string, table: string) {
+  return tenantDb(connection, tenant).table<Row>(table);
+}
+
+function unscopedTestTable<Row extends object = Record<string, any>>(connection: Knex, table: string, reason: string) {
+  return tenantDb(connection, TEST_DISCOVERY_TENANT).unscoped<Row>(table, reason);
+}
 
 const enqueueWorkflow = vi.fn(async () => ({ enqueued: true }));
 const analyticsCapture = vi.fn();
@@ -86,7 +96,7 @@ describe('Portal domain actions – DB integration', () => {
     enqueueWorkflow.mockClear();
     analyticsCapture.mockClear();
     if (tenantId) {
-      await db('portal_domains').where({ tenant: tenantId }).delete();
+      await tenantTable<PortalDomainRecord>(db, tenantId, 'portal_domains').where({ tenant: tenantId }).delete();
     }
   }, HOOK_TIMEOUT);
 
@@ -96,33 +106,33 @@ describe('Portal domain actions – DB integration', () => {
     expect(result.status.domain).toBe('first.example.com');
     expect(result.status.status).toBe('pending_dns');
 
-    const record = await db<PortalDomainRecord>('portal_domains')
+    const persisted = await tenantTable<PortalDomainRecord>(db, tenantId!, 'portal_domains')
       .where({ tenant: tenantId })
       .first();
 
-    expect(record).toBeTruthy();
-    expect(record?.domain).toBe('first.example.com');
-    expect(record?.status).toBe('pending_dns');
-    expect(record?.certificate_secret_name).toBeNull();
-    expect(record?.verification_details).toMatchObject({
-      expected_cname: record?.canonical_host,
+    expect(persisted).toBeTruthy();
+    expect(persisted?.domain).toBe('first.example.com');
+    expect(persisted?.status).toBe('pending_dns');
+    expect(persisted?.certificate_secret_name).toBeNull();
+    expect(persisted?.verification_details).toMatchObject({
+      expected_cname: persisted?.canonical_host,
       requested_domain: 'first.example.com',
     });
 
     expect(enqueueWorkflow).toHaveBeenCalledWith({
       tenantId: tenantId!,
-      portalDomainId: record?.id,
+      portalDomainId: persisted?.id,
       trigger: 'register',
     });
   });
 
   it('updates an existing portal domain when the domain changes', async () => {
     const existingId = uuidv4();
-    const canonicalHost = computeCanonicalHost(tenantId);
+    const canonicalHost = computeCanonicalHost(tenantId!);
 
-    await db<PortalDomainRecord>('portal_domains').insert({
+    await tenantTable<PortalDomainRecord>(db, tenantId!, 'portal_domains').insert({
       id: existingId,
-      tenant: tenantId,
+      tenant: tenantId!,
       domain: 'old.example.com',
       canonical_host: canonicalHost,
       status: 'active',
@@ -142,7 +152,7 @@ describe('Portal domain actions – DB integration', () => {
     expect(result.status.status).toBe('pending_dns');
     expect(result.status.statusMessage).toContain('Updating custom domain');
 
-    const updated = await db<PortalDomainRecord>('portal_domains')
+    const updated = await tenantTable<PortalDomainRecord>(db, tenantId!, 'portal_domains')
       .where({ tenant: tenantId })
       .first();
 
@@ -209,13 +219,17 @@ async function runMigrationsAndSeeds(connection: Knex): Promise<void> {
 }
 
 async function ensureTenant(connection: Knex): Promise<string> {
-  const row = await connection('tenants').first<{ tenant: string }>('tenant');
+  const row = await unscopedTestTable(
+    connection,
+    'tenants',
+    'portal domain action test discovers seeded tenant after migrations and seeds'
+  ).first<{ tenant: string }>('tenant');
   if (row?.tenant) {
     return row.tenant;
   }
 
   const newTenantId = uuidv4();
-  await connection('tenants').insert({
+  await tenantTable(connection, newTenantId, 'tenants').insert({
     tenant: newTenantId,
     client_name: 'Portal Domain Test Co',
     email: 'portal@test.co',

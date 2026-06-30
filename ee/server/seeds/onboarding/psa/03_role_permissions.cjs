@@ -1,4 +1,6 @@
 exports.seed = async function (knex, tenantId) {
+    const { tenantDb } = await import('@alga-psa/db');
+
     // Use provided tenantId or seed all tenants
     let tenants;
     if (tenantId) {
@@ -13,13 +15,15 @@ exports.seed = async function (knex, tenantId) {
 
     // Process each tenant
     for (const { tenant } of tenants) {
+        const db = tenantDb(knex, tenant);
+
         console.log(`Seeding role permissions for tenant ${tenant}`);
 
         // Get all roles for this tenant
-        const roles = await knex('roles').where({ tenant });
+        const roles = await db.table('roles');
         
         // Get all permissions for this tenant
-        const permissions = await knex('permissions').where({ tenant });
+        const permissions = await db.table('permissions');
         
         // Create permission map for easy lookup
         const permissionMap = new Map();
@@ -29,7 +33,7 @@ exports.seed = async function (knex, tenantId) {
         });
         
         // Clear existing role permissions
-        await knex('role_permissions').where({ tenant }).del();
+        await db.table('role_permissions').del();
         console.log('Cleared existing role permissions');
         
         for (const role of roles) {
@@ -240,7 +244,7 @@ exports.seed = async function (knex, tenantId) {
                     permission_id: permId
                 }));
 
-                await knex('role_permissions').insert(rolePermissionsToAdd);
+                await db.table('role_permissions').insert(rolePermissionsToAdd);
                 console.log(`Added ${rolePermissionsToAdd.length} permissions to ${role.role_name} role (${role.msp ? 'MSP' : 'Client'}) for tenant ${tenant}`);
             } else {
                 console.log(`No permissions found for ${role.role_name} role (${role.msp ? 'MSP' : 'Client'})`);

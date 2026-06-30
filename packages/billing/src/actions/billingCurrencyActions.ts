@@ -1,7 +1,7 @@
 'use server';
 
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 
@@ -10,19 +10,18 @@ export const resolveClientBillingCurrency = withAuth(async (user, { tenant }, cl
     throw new Error('Permission denied: Cannot resolve client billing currency');
   }
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
   const effectiveDate = asOfDate || Temporal.Now.plainDateISO().toString();
 
-  const client = await knex('clients')
-    .where({ tenant, client_id: clientId })
+  const client = await db.table('clients')
+    .where({ client_id: clientId })
     .select('default_currency_code')
     .first();
 
-  const currencies = await knex('client_contracts as cc')
-    .join('contracts as c', function () {
-      this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-    })
+  const currenciesQuery = db.table('client_contracts as cc');
+  db.tenantJoin(currenciesQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
+  const currencies = await currenciesQuery
     .where({
-      'cc.tenant': tenant,
       'cc.client_id': clientId,
       'cc.is_active': true
     })
@@ -42,11 +41,9 @@ export const resolveClientBillingCurrency = withAuth(async (user, { tenant }, cl
   if (client?.default_currency_code) return client.default_currency_code;
 
   // Fall back to tenant-level billing settings default currency
-  const billingSettings = await knex('default_billing_settings')
-    .where({ tenant })
+  const billingSettings = await db.table('default_billing_settings')
     .select('default_currency_code')
     .first();
 
   return billingSettings?.default_currency_code || 'USD';
 });
-

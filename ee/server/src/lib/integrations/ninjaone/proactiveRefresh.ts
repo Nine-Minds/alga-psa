@@ -2,7 +2,7 @@ import axios from 'axios';
 import { Connection, Client } from '@temporalio/client';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildIntegrationTokenRefreshFailedPayload } from '@alga-psa/workflow-streams';
 import type {
@@ -196,8 +196,8 @@ async function fetchIntegration(
 ): Promise<RmmIntegration | undefined> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    return (await knex('rmm_integrations')
-      .where({ tenant: tenantId, integration_id: integrationId, provider: 'ninjaone' })
+    return (await tenantDb(knex, tenantId).table('rmm_integrations')
+      .where({ integration_id: integrationId, provider: 'ninjaone' })
       .first()) as RmmIntegration | undefined;
   });
 }
@@ -209,8 +209,9 @@ async function updateIntegrationLifecycle(
 ): Promise<void> {
   await runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    const row = await knex('rmm_integrations')
-      .where({ tenant: tenantId, integration_id: integrationId, provider: 'ninjaone' })
+    const db = tenantDb(knex, tenantId);
+    const row = await db.table('rmm_integrations')
+      .where({ integration_id: integrationId, provider: 'ninjaone' })
       .select('settings')
       .first();
 
@@ -220,8 +221,8 @@ async function updateIntegrationLifecycle(
 
     const merged = mergeLifecycleSettings(row.settings, update);
 
-    await knex('rmm_integrations')
-      .where({ tenant: tenantId, integration_id: integrationId, provider: 'ninjaone' })
+    await db.table('rmm_integrations')
+      .where({ integration_id: integrationId, provider: 'ninjaone' })
       .update({
         settings: JSON.stringify(merged),
         updated_at: knex.fn.now(),

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
@@ -71,10 +71,11 @@ export async function GET(
       }
 
       const { knex } = await createTenantKnex();
+      const db = tenantDb(knex, tenantId);
 
       const [documentRecord, blockContentRecord, textContentRecord] = await Promise.all([
-        knex('documents')
-          .where({ document_id: documentId, tenant: tenantId })
+        db.table('documents')
+          .where({ document_id: documentId })
           .select(
             'document_id',
             'document_name',
@@ -85,12 +86,12 @@ export async function GET(
             'updated_at',
           )
           .first(),
-        knex('document_block_content')
-          .where({ document_id: documentId, tenant: tenantId })
+        db.table('document_block_content')
+          .where({ document_id: documentId })
           .select('content_id', 'block_data', 'version_id', 'created_at', 'updated_at')
           .first<BlockContentPayload>(),
-        knex('document_content')
-          .where({ document_id: documentId, tenant: tenantId })
+        db.table('document_content')
+          .where({ document_id: documentId })
           .select('id', 'content', 'created_at', 'updated_at')
           .first<TextContentPayload>(),
       ]);

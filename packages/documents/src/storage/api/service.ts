@@ -1,5 +1,6 @@
 import Ajv, { ValidateFunction } from 'ajv';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import {
   StorageBulkPutRequest,
   StorageBulkPutResponse,
@@ -163,9 +164,8 @@ export class StorageService {
       await this.cleanupExpired(trx);
       await this.validateAgainstSchema(trx, request.namespace, request.value, request.schemaVersion);
 
-      const existing = await trx<NamespaceRecord>('storage_records')
+      const existing = await tenantDb(trx, this.tenantId).table<NamespaceRecord>('storage_records')
         .where({
-          tenant: this.tenantId,
           namespace: request.namespace,
           key: request.key,
         })
@@ -179,9 +179,8 @@ export class StorageService {
       }
 
       const usageRow = await this.getUsageForUpdate(trx);
-      const namespaceCountRow = await trx('storage_records')
+      const namespaceCountRow = await tenantDb(trx, this.tenantId).table('storage_records')
         .where({
-          tenant: this.tenantId,
           namespace: request.namespace,
         })
         .count<{ count: string }>('key as count')
@@ -223,7 +222,7 @@ export class StorageService {
         metadata_size_bytes: metadataSize,
       };
 
-      const [row] = await trx('storage_records')
+      const [row] = await tenantDb(trx, this.tenantId).table('storage_records')
         .insert(insertRow)
         .onConflict(['tenant', 'namespace', 'key'])
         .merge({
@@ -294,9 +293,8 @@ export class StorageService {
         schemaVersion,
       );
 
-      const existingRows = await trx<NamespaceRecord>('storage_records')
+      const existingRows = await tenantDb(trx, this.tenantId).table<NamespaceRecord>('storage_records')
         .where({
-          tenant: this.tenantId,
           namespace: request.namespace,
         })
         .whereIn(
@@ -317,9 +315,8 @@ export class StorageService {
       }
 
       const usageRow = await this.getUsageForUpdate(trx);
-      const namespaceCountRow = await trx('storage_records')
+      const namespaceCountRow = await tenantDb(trx, this.tenantId).table('storage_records')
         .where({
-          tenant: this.tenantId,
           namespace: request.namespace,
         })
         .count<{ count: string }>('key as count')
@@ -376,7 +373,7 @@ export class StorageService {
         };
       });
 
-      const result = await trx('storage_records')
+      const result = await tenantDb(trx, this.tenantId).table('storage_records')
         .insert(rows)
         .onConflict(['tenant', 'namespace', 'key'])
         .merge({
@@ -414,9 +411,8 @@ export class StorageService {
     return this.knex.transaction(async (trx) => {
       await this.cleanupExpired(trx);
 
-      const existing = await trx<NamespaceRecord>('storage_records')
+      const existing = await tenantDb(trx, this.tenantId).table<NamespaceRecord>('storage_records')
         .where({
-          tenant: this.tenantId,
           namespace: request.namespace,
           key: request.key,
         })
@@ -430,9 +426,8 @@ export class StorageService {
         throw new StorageRevisionMismatchError('ifRevision did not match stored revision');
       }
 
-      await trx('storage_records')
+      await tenantDb(trx, this.tenantId).table('storage_records')
         .where({
-          tenant: this.tenantId,
           namespace: request.namespace,
           key: request.key,
         })
@@ -451,9 +446,8 @@ export class StorageService {
     return this.knex.transaction(async (trx) => {
       await this.cleanupExpired(trx);
 
-      const row = await trx<NamespaceRecord>('storage_records')
+      const row = await tenantDb(trx, this.tenantId).table<NamespaceRecord>('storage_records')
         .where({
-          tenant: this.tenantId,
           namespace: request.namespace,
           key: request.key,
         })
@@ -491,9 +485,8 @@ export class StorageService {
     return this.knex.transaction(async (trx) => {
       await this.cleanupExpired(trx);
 
-      let query = trx<NamespaceRecord>('storage_records')
+      let query = tenantDb(trx, this.tenantId).table<NamespaceRecord>('storage_records')
         .where({
-          tenant: this.tenantId,
           namespace: request.namespace,
         })
         .orderBy('key', 'asc')
@@ -534,10 +527,7 @@ export class StorageService {
   }
 
   private async cleanupExpired(trx: Knex.Transaction): Promise<void> {
-    const deleted = await trx('storage_records')
-      .where({
-        tenant: this.tenantId,
-      })
+    const deleted = await tenantDb(trx, this.tenantId).table('storage_records')
       .whereNotNull('ttl_expires_at')
       .andWhere('ttl_expires_at', '<=', trx.fn.now())
       .delete();
@@ -548,10 +538,7 @@ export class StorageService {
   }
 
   private async refreshUsage(trx: Knex.Transaction) {
-    const row = await trx('storage_records')
-      .where({
-        tenant: this.tenantId,
-      })
+    const row = await tenantDb(trx, this.tenantId).table('storage_records')
       .select({
         bytes_used: trx.raw('COALESCE(SUM(value_size_bytes + metadata_size_bytes), 0)'),
         keys_count: trx.raw('COUNT(*)'),
@@ -563,7 +550,7 @@ export class StorageService {
     const keysCount = Number(row?.keys_count ?? 0);
     const namespacesCount = Number(row?.namespaces_count ?? 0);
 
-    await trx('storage_usage')
+    await tenantDb(trx, this.tenantId).table('storage_usage')
       .insert({
         tenant: this.tenantId,
         bytes_used: bytesUsed,
@@ -582,7 +569,7 @@ export class StorageService {
 
   private async getUsageForUpdate(trx: Knex.Transaction) {
     // Ensure a usage row exists, then lock it
-    await trx('storage_usage')
+    await tenantDb(trx, this.tenantId).table('storage_usage')
       .insert({
         tenant: this.tenantId,
         bytes_used: 0,
@@ -593,10 +580,7 @@ export class StorageService {
       .onConflict(['tenant'])
       .ignore();
 
-    const row = await trx('storage_usage')
-      .where({
-        tenant: this.tenantId,
-      })
+    const row = await tenantDb(trx, this.tenantId).table('storage_usage')
       .forUpdate()
       .first<UsageRow>();
 
@@ -639,10 +623,9 @@ export class StorageService {
     namespace: string,
     requestedSchemaVersion?: number | null,
   ): Promise<SchemaRow | null> {
-    const query = trx('storage_schemas')
+    const query = tenantDb(trx, this.tenantId).table('storage_schemas')
       .select(['schema_version', 'schema_document'])
       .where({
-        tenant: this.tenantId,
         namespace,
       })
       .andWhere('status', '=', 'active')

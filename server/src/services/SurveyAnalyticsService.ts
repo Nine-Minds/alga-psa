@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 import type {
   SurveyDashboardFilters,
@@ -26,7 +27,7 @@ const SurveyAnalyticsService = {
     tenantId: string,
     filters?: SurveyDashboardFilters
   ): Promise<SurveyDashboardMetrics> {
-    const invitationsQuery = knex(`${INVITATIONS_TABLE} as si`).where('si.tenant', tenantId);
+    const invitationsQuery = tenantDb(knex, tenantId).table(`${INVITATIONS_TABLE} as si`);
     if (filters?.startDate) {
       invitationsQuery.andWhere('si.sent_at', '>=', filters.startDate);
     }
@@ -140,16 +141,23 @@ const SurveyAnalyticsService = {
     filters?: SurveyDashboardFilters,
     limit = 5
   ): Promise<SurveyIssueSummary[]> {
-    const rows = await baseResponseQuery(knex, tenantId, filters)
-      .leftJoin(`${TICKETS_TABLE} as t`, function joinTickets() {
-        this.on('sr.ticket_id', '=', 't.ticket_id').andOn('sr.tenant', '=', 't.tenant');
-      })
-      .leftJoin(`${CLIENTS_TABLE} as c`, function joinClients() {
-        this.on('sr.client_id', '=', 'c.client_id').andOn('sr.tenant', '=', 'c.tenant');
-      })
-      .leftJoin(`${USERS_TABLE} as u`, function joinUsers() {
-        this.on('t.assigned_to', '=', 'u.user_id').andOn('t.tenant', '=', 'u.tenant');
-      })
+    const db = tenantDb(knex, tenantId);
+    const query = baseResponseQuery(knex, tenantId, filters);
+
+    db.tenantJoin(query, `${TICKETS_TABLE} as t`, 'sr.ticket_id', 't.ticket_id', {
+      type: 'left',
+      rootTenantColumn: 'sr.tenant',
+    });
+    db.tenantJoin(query, `${CLIENTS_TABLE} as c`, 'sr.client_id', 'c.client_id', {
+      type: 'left',
+      rootTenantColumn: 'sr.tenant',
+    });
+    db.tenantJoin(query, `${USERS_TABLE} as u`, 't.assigned_to', 'u.user_id', {
+      type: 'left',
+      rootTenantColumn: 't.tenant',
+    });
+
+    const rows = await query
       .where('sr.rating', '<=', NEGATIVE_RATING_THRESHOLD)
       .select([
         'sr.response_id',
@@ -205,20 +213,27 @@ const SurveyAnalyticsService = {
 
     const baseQuery = baseResponseQuery(knex, tenantId, filters);
 
-    const responsesQuery = baseQuery
-      .clone()
-      .leftJoin(`${TICKETS_TABLE} as t`, function joinTickets() {
-        this.on('sr.ticket_id', '=', 't.ticket_id').andOn('sr.tenant', '=', 't.tenant');
-      })
-      .leftJoin(`${CLIENTS_TABLE} as c`, function joinClients() {
-        this.on('sr.client_id', '=', 'c.client_id').andOn('sr.tenant', '=', 'c.tenant');
-      })
-      .leftJoin(`${CONTACTS_TABLE} as ct`, function joinContacts() {
-        this.on('sr.contact_id', '=', 'ct.contact_name_id').andOn('sr.tenant', '=', 'ct.tenant');
-      })
-      .leftJoin(`${USERS_TABLE} as u`, function joinUsers() {
-        this.on('t.assigned_to', '=', 'u.user_id').andOn('t.tenant', '=', 'u.tenant');
-      })
+    const db = tenantDb(knex, tenantId);
+    const responsesQuery = baseQuery.clone();
+
+    db.tenantJoin(responsesQuery, `${TICKETS_TABLE} as t`, 'sr.ticket_id', 't.ticket_id', {
+      type: 'left',
+      rootTenantColumn: 'sr.tenant',
+    });
+    db.tenantJoin(responsesQuery, `${CLIENTS_TABLE} as c`, 'sr.client_id', 'c.client_id', {
+      type: 'left',
+      rootTenantColumn: 'sr.tenant',
+    });
+    db.tenantJoin(responsesQuery, `${CONTACTS_TABLE} as ct`, 'sr.contact_id', 'ct.contact_name_id', {
+      type: 'left',
+      rootTenantColumn: 'sr.tenant',
+    });
+    db.tenantJoin(responsesQuery, `${USERS_TABLE} as u`, 't.assigned_to', 'u.user_id', {
+      type: 'left',
+      rootTenantColumn: 't.tenant',
+    });
+
+    responsesQuery
       .select([
         'sr.response_id',
         'sr.rating',
@@ -270,36 +285,37 @@ const SurveyAnalyticsService = {
     tenantId: string,
     clientId: string
   ): Promise<SurveyClientSatisfactionSummary | null> {
+    const db = tenantDb(knex, tenantId);
     const [clientRow, invitationCounts, responseCounts, averageRatingRow, lastResponseRow, trendRows] =
       await Promise.all([
-        knex(`${CLIENTS_TABLE} as c`)
+        db.table(`${CLIENTS_TABLE} as c`)
           .select('c.client_id', 'c.client_name')
-          .where({ 'c.tenant': tenantId, 'c.client_id': clientId })
+          .where('c.client_id', clientId)
           .first(),
-        knex(`${INVITATIONS_TABLE} as si`)
+        db.table(`${INVITATIONS_TABLE} as si`)
           .count<{ count: string }>('si.invitation_id as count')
-          .where({ 'si.tenant': tenantId, 'si.client_id': clientId })
+          .where('si.client_id', clientId)
           .first(),
-        knex(`${RESPONSES_TABLE} as sr`)
+        db.table(`${RESPONSES_TABLE} as sr`)
           .count<{ count: string }>('sr.response_id as count')
-          .where({ 'sr.tenant': tenantId, 'sr.client_id': clientId })
+          .where('sr.client_id', clientId)
           .first(),
-        knex(`${RESPONSES_TABLE} as sr`)
+        db.table(`${RESPONSES_TABLE} as sr`)
           .avg<{ avg: string }>('sr.rating as avg')
-          .where({ 'sr.tenant': tenantId, 'sr.client_id': clientId })
+          .where('sr.client_id', clientId)
           .first(),
-        knex(`${RESPONSES_TABLE} as sr`)
+        db.table(`${RESPONSES_TABLE} as sr`)
           .select('sr.submitted_at')
-          .where({ 'sr.tenant': tenantId, 'sr.client_id': clientId })
+          .where('sr.client_id', clientId)
           .orderBy('sr.submitted_at', 'desc')
           .first(),
-        knex(`${RESPONSES_TABLE} as sr`)
+        db.table(`${RESPONSES_TABLE} as sr`)
           .select(
             knex.raw("date_trunc('month', sr.submitted_at)::date as date"),
             knex.raw('AVG(sr.rating)::numeric as average_rating'),
             knex.raw('COUNT(sr.response_id) as response_count')
           )
-          .where({ 'sr.tenant': tenantId, 'sr.client_id': clientId })
+          .where('sr.client_id', clientId)
           .groupBy('date')
           .orderBy('date', 'asc'),
       ]);
@@ -332,9 +348,10 @@ const SurveyAnalyticsService = {
     tenantId: string,
     ticketId: string
   ): Promise<SurveyTicketSatisfactionSummary | null> {
-    const ticketRow = await knex(`${TICKETS_TABLE} as t`)
+    const db = tenantDb(knex, tenantId);
+    const ticketRow = await db.table(`${TICKETS_TABLE} as t`)
       .select('t.ticket_id', 't.ticket_number')
-      .where({ 't.tenant': tenantId, 't.ticket_id': ticketId })
+      .where('t.ticket_id', ticketId)
       .first();
 
     if (!ticketRow) {
@@ -342,14 +359,14 @@ const SurveyAnalyticsService = {
     }
 
     const [latestResponseRow, responseCountRow] = await Promise.all([
-      knex(`${RESPONSES_TABLE} as sr`)
+      db.table(`${RESPONSES_TABLE} as sr`)
         .select('sr.rating', 'sr.comment', 'sr.submitted_at')
-        .where({ 'sr.tenant': tenantId, 'sr.ticket_id': ticketId })
+        .where('sr.ticket_id', ticketId)
         .orderBy('sr.submitted_at', 'desc')
         .first(),
-      knex(`${RESPONSES_TABLE} as sr`)
+      db.table(`${RESPONSES_TABLE} as sr`)
         .count<{ count: string }>('sr.response_id as count')
-        .where({ 'sr.tenant': tenantId, 'sr.ticket_id': ticketId })
+        .where('sr.ticket_id', ticketId)
         .first(),
     ]);
 
@@ -410,7 +427,7 @@ function formatDateTime(value: unknown): string {
 }
 
 function baseResponseQuery(knex: Knex, tenantId: string, filters?: SurveyDashboardFilters) {
-  const query = knex(`${RESPONSES_TABLE} as sr`).where('sr.tenant', tenantId);
+  const query = tenantDb(knex, tenantId).table(`${RESPONSES_TABLE} as sr`);
 
   if (filters?.startDate) {
     query.andWhere('sr.submitted_at', '>=', filters.startDate);
@@ -425,9 +442,16 @@ function baseResponseQuery(knex: Knex, tenantId: string, filters?: SurveyDashboa
     query.andWhere('sr.template_id', filters.templateId);
   }
   if (filters?.technicianId) {
-    query.leftJoin(`${TICKETS_TABLE} as t_filter`, function joinTickets() {
-      this.on('sr.ticket_id', '=', 't_filter.ticket_id').andOn('sr.tenant', '=', 't_filter.tenant');
-    });
+    tenantDb(knex, tenantId).tenantJoin(
+      query,
+      `${TICKETS_TABLE} as t_filter`,
+      'sr.ticket_id',
+      't_filter.ticket_id',
+      {
+        type: 'left',
+        rootTenantColumn: 'sr.tenant',
+      }
+    );
     query.andWhere('t_filter.assigned_to', filters.technicianId);
   }
 

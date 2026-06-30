@@ -1,5 +1,5 @@
 import type { IClientContract } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import {
   createClientContractAssignment,
@@ -198,11 +198,10 @@ const validateContractOwnershipForClient = (params: {
 };
 
 const withRenewalDefaultsJoin = (
-  query: Knex.QueryBuilder
+  query: Knex.QueryBuilder,
+  facade: ReturnType<typeof tenantDb>
 ): Knex.QueryBuilder => {
-  return query.leftJoin('default_billing_settings as dbs', function joinDefaultBillingSettings() {
-    this.on('cc.tenant', '=', 'dbs.tenant');
-  });
+  return facade.tenantJoin(query, 'default_billing_settings as dbs', 'cc.tenant', 'dbs.tenant', { type: 'left' });
 };
 
 export const normalizeClientContract = (row: any): IClientContract => {
@@ -326,14 +325,13 @@ const ClientContract = {
     }
 
     try {
-      const baseQuery = db('client_contracts as cc')
-        .leftJoin('contracts as c', function joinContracts() {
-          this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-        })
-        .where({ 'cc.client_id': clientId, 'cc.tenant': tenant })
+      const facade = tenantDb(db, tenant);
+      const baseQuery = facade.table('client_contracts as cc')
+        .where({ 'cc.client_id': clientId })
         .orderBy('cc.start_date', 'desc');
+      facade.tenantJoin(baseQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id', { type: 'left' });
 
-      const rows = await withRenewalDefaultsJoin(baseQuery).select([
+      const rows = await withRenewalDefaultsJoin(baseQuery, facade).select([
         'cc.*',
         'c.billing_frequency as contract_billing_frequency',
         'c.status as contract_status',
@@ -358,18 +356,17 @@ const ClientContract = {
     }
 
     try {
-      const baseQuery = db('client_contracts as cc')
-        .leftJoin('contracts as c', function joinContracts() {
-          this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-        })
+      const facade = tenantDb(db, tenant);
+      const baseQuery = facade.table('client_contracts as cc')
         .whereIn('cc.client_id', clientIds)
-        .andWhere({ 'cc.tenant': tenant, 'cc.is_active': true })
+        .andWhere({ 'cc.is_active': true })
         .orderBy([
           { column: 'cc.client_id', order: 'asc' },
           { column: 'cc.start_date', order: 'desc' }
         ]);
+      facade.tenantJoin(baseQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id', { type: 'left' });
 
-      const rows = await withRenewalDefaultsJoin(baseQuery).select([
+      const rows = await withRenewalDefaultsJoin(baseQuery, facade).select([
         'cc.*',
         'c.billing_frequency as contract_billing_frequency',
         'c.status as contract_status',
@@ -390,13 +387,12 @@ const ClientContract = {
     }
 
     try {
-      const baseQuery = db('client_contracts as cc')
-        .leftJoin('contracts as c', function joinContracts() {
-          this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-        })
-        .where({ 'cc.client_contract_id': clientContractId, 'cc.tenant': tenant });
+      const facade = tenantDb(db, tenant);
+      const baseQuery = facade.table('client_contracts as cc')
+        .where({ 'cc.client_contract_id': clientContractId });
+      facade.tenantJoin(baseQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id', { type: 'left' });
 
-      const row = await withRenewalDefaultsJoin(baseQuery)
+      const row = await withRenewalDefaultsJoin(baseQuery, facade)
         .select([
           'cc.*',
           'c.billing_frequency as contract_billing_frequency',
@@ -419,13 +415,12 @@ const ClientContract = {
     }
 
     try {
-      const baseQuery = db('client_contracts as cc')
-        .join('contracts as c', function joinContracts() {
-          this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-        })
-        .where({ 'cc.client_contract_id': clientContractId, 'cc.tenant': tenant });
+      const facade = tenantDb(db, tenant);
+      const baseQuery = facade.table('client_contracts as cc')
+        .where({ 'cc.client_contract_id': clientContractId });
+      facade.tenantJoin(baseQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
 
-      const clientContract = await withRenewalDefaultsJoin(baseQuery).select(
+      const clientContract = await withRenewalDefaultsJoin(baseQuery, facade).select(
         [
           'cc.*',
           'c.contract_name',
@@ -443,17 +438,15 @@ const ClientContract = {
 
       const normalized = normalizeClientContract(clientContract) as any;
 
-      const assignmentContractLines = await db('client_contracts as cc')
-        .join('contract_lines as cl', function joinContractLines() {
-          this.on('cc.contract_id', '=', 'cl.contract_id').andOn('cc.tenant', '=', 'cl.tenant');
-        })
+      const assignmentContractLinesQuery = facade.table('client_contracts as cc')
         .where({
           'cc.client_contract_id': clientContractId,
-          'cc.tenant': tenant,
           'cl.is_active': true,
         })
         .distinct('cl.contract_line_id', 'cl.contract_line_name')
         .select('cl.contract_line_name');
+      facade.tenantJoin(assignmentContractLinesQuery, 'contract_lines as cl', 'cc.contract_id', 'cl.contract_id');
+      const assignmentContractLines = (await assignmentContractLinesQuery) as unknown as Array<{ contract_line_name: string }>;
 
       normalized.contract_line_names = assignmentContractLines.map((line) => line.contract_line_name);
       normalized.contract_line_count = assignmentContractLines.length;
@@ -482,16 +475,17 @@ const ClientContract = {
     }
 
     try {
-      const clientExists = await db('clients')
-        .where({ client_id: clientId, tenant })
+      const facade = tenantDb(db, tenant);
+      const clientExists = await facade.table('clients')
+        .where({ client_id: clientId })
         .first();
 
       if (!clientExists) {
         throw new Error(`Client ${clientId} not found`);
       }
 
-      const contractExists = await db('contracts')
-        .where({ contract_id: contractId, tenant, is_active: true })
+      const contractExists = await facade.table('contracts')
+        .where({ contract_id: contractId, is_active: true })
         .first();
 
       validateContractOwnershipForClient({
@@ -559,8 +553,8 @@ const ClientContract = {
       };
 
       if (updateData.contract_id && updateData.contract_id !== existing.contract_id) {
-        const nextContract = await db('contracts')
-          .where({ contract_id: updateData.contract_id, tenant })
+        const nextContract = await tenantDb(db, tenant).table('contracts')
+          .where({ contract_id: updateData.contract_id })
           .first();
 
         validateContractOwnershipForClient({
@@ -575,8 +569,8 @@ const ClientContract = {
       sanitized.contract_id = undefined;
 
       if (updateData.start_date !== undefined && updateData.start_date !== existing.start_date) {
-        const contract = await db('contracts')
-          .where({ contract_id: existing.contract_id, tenant })
+        const contract = await tenantDb(db, tenant).table('contracts')
+          .where({ contract_id: existing.contract_id })
           .first();
 
         if (contract && contract.is_active) {
@@ -598,8 +592,8 @@ const ClientContract = {
     }
 
     try {
-      await db('client_contracts')
-        .where({ tenant, client_contract_id: clientContractId })
+      await tenantDb(db, tenant).table('client_contracts')
+        .where({ client_contract_id: clientContractId })
         .update({ is_active: false, updated_at: new Date().toISOString() });
     } catch (error) {
       console.error(`Error deactivating client contract ${clientContractId}:`, error);
@@ -614,16 +608,16 @@ const ClientContract = {
     }
 
     try {
-      const clientContract = await db('client_contracts')
-        .where({ client_contract_id: clientContractId, tenant })
+      const clientContract = await tenantDb(db, tenant).table('client_contracts')
+        .where({ client_contract_id: clientContractId })
         .first();
 
       if (!clientContract) {
         throw new Error(`Client contract ${clientContractId} not found`);
       }
 
-      const contractLines = await db('contract_lines')
-        .where({ contract_id: clientContract.contract_id, tenant })
+      const contractLines = await tenantDb(db, tenant).table('contract_lines')
+        .where({ contract_id: clientContract.contract_id })
         .select('*');
 
       return contractLines.map((line) => normalizeLiveRecurringStorage(line));

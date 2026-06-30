@@ -1,15 +1,24 @@
+const MIGRATION_TENANT = 'migration:20250326201936_populate_service_catalog_service_type_id';
+const SERVICE_TYPE_ID_BACKFILL_REASON = 'historical service catalog service_type_id backfill with tenant_id service_types';
+
+async function loadTenantDb() {
+  return require('./utils/tenantDb.cjs').tenantDb;
+}
+
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Fetch standard service type names for quick lookup
-  const standardTypes = await knex('standard_service_types').select('id', 'name');
+  const standardTypes = await migrationDb.table('standard_service_types').select('id', 'name');
   const standardTypeNameSet = new Set(standardTypes.map(st => st.name));
   const standardTypeNameToIdMap = new Map(standardTypes.map(st => [st.name, st.id]));
 
   // Get all distinct tenant/old_service_type pairs from service_catalog that need processing
-  const distinctOldTypes = await knex('service_catalog')
+  const distinctOldTypes = await migrationDb.unscoped('service_catalog', SERVICE_TYPE_ID_BACKFILL_REASON)
     .distinct('tenant', 'service_type')
     .whereNotNull('service_type')
     .whereNull('service_type_id');
@@ -38,7 +47,7 @@ exports.up = async function(knex) {
     console.log(`Processing tenant ${tenantId} with old types: ${oldTypeNames.join(', ')}`);
 
     // Fetch existing service_types for this tenant to avoid redundant queries inside the loop
-    const existingTenantTypes = await knex('service_types')
+    const existingTenantTypes = await migrationDb.unscoped('service_types', SERVICE_TYPE_ID_BACKFILL_REASON)
         .where('tenant_id', tenantId)
         .select('id', 'name', 'standard_service_type_id');
     const existingTenantTypeNameMap = new Map(existingTenantTypes.map(t => [t.name, t.id]));
@@ -64,7 +73,7 @@ exports.up = async function(knex) {
           // Custom type doesn't exist yet, create it.
           console.log(`Creating custom service type "${oldTypeName}" for tenant ${tenantId}`);
           try {
-            const [newCustomType] = await knex('service_types')
+            const [newCustomType] = await migrationDb.unscoped('service_types', SERVICE_TYPE_ID_BACKFILL_REASON)
               .insert({
                 tenant_id: tenantId,
                 name: oldTypeName,
@@ -82,7 +91,7 @@ exports.up = async function(knex) {
                existingTenantTypeNameMap.set(oldTypeName, targetServiceTypeId);
             } else {
                // If insert was ignored, re-fetch the ID
-               const existingCustomType = await knex('service_types')
+               const existingCustomType = await migrationDb.unscoped('service_types', SERVICE_TYPE_ID_BACKFILL_REASON)
                  .where({ tenant_id: tenantId, name: oldTypeName })
                  .first('id');
                if (existingCustomType) {
@@ -107,7 +116,7 @@ exports.up = async function(knex) {
       // Update service_catalog entries for this tenant and old type name
       if (targetServiceTypeId) {
         try {
-          const numUpdated = await knex('service_catalog')
+          const numUpdated = await migrationDb.unscoped('service_catalog', SERVICE_TYPE_ID_BACKFILL_REASON)
             .where({
               tenant: tenantId,
               service_type: oldTypeName,
@@ -136,11 +145,13 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Set the service_type_id back to null for all rows.
   // Reverting the exact previous state is complex.
-  await knex('service_catalog')
+  await migrationDb.unscoped('service_catalog', SERVICE_TYPE_ID_BACKFILL_REASON)
     .update({ service_type_id: null });
   // Optionally, delete custom service types created by this migration
-  // await knex('service_types').whereNull('standard_service_type_id').del(); // Use with caution!
+  // await migrationDb.unscoped('service_types', SERVICE_TYPE_ID_BACKFILL_REASON).whereNull('standard_service_type_id').del(); // Use with caution!
   console.warn('Rolled back populate_service_catalog_service_type_id migration by setting service_type_id to NULL for all entries. Custom types created during the migration were NOT automatically deleted.');
 };

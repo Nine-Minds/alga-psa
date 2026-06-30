@@ -14,6 +14,7 @@ import {
 } from '@alga-psa/workflows/runtime/core';
 import { startWorkflowRuntimeV2TemporalRun } from './workflowRuntimeV2Temporal';
 import { WORKFLOW_RUNTIME_V2_SEMANTICS_VERSION } from './workflowRuntimeV2Semantics';
+import { workflowTenantTable } from './workflowTenantDb';
 
 const WORKFLOW_RUN_TRIGGER_FIRE_KEY_UNIQUE = 'workflow_runs_trigger_fire_key_unique';
 
@@ -137,7 +138,7 @@ export async function launchPublishedWorkflowRun(
     throw new Error('Workflow is paused');
   }
   if (workflow.concurrency_limit) {
-    const activeCount = await knex('workflow_runs')
+    const activeCount = await workflowTenantTable(knex, workflow.tenant, 'workflow_runs')
       .where({ workflow_id: request.workflowId })
       .whereIn('status', ['RUNNING', 'WAITING'])
       .count('* as count')

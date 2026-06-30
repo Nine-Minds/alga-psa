@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, getTenantSlugForTenant } from '@alga-psa/db';
+import { createTenantKnex, getTenantSlugForTenant, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
@@ -84,8 +84,10 @@ async function assertCanManageClientUser(
   knex: Knex | Knex.Transaction,
   targetUserId: string
 ): Promise<void> {
-  const targetUser = await knex('users')
-    .where({ user_id: targetUserId, tenant, user_type: 'client' })
+  const scopedDb = tenantDb(knex, tenant);
+
+  const targetUser = await scopedDb.table('users')
+    .where({ user_id: targetUserId, user_type: 'client' })
     .select('contact_id')
     .first();
 
@@ -108,13 +110,13 @@ async function assertCanManageClientUser(
   }
 
   const [actorContact, targetContact] = await Promise.all([
-    knex('contacts')
-      .where({ tenant, contact_name_id: user.contact_id })
+    scopedDb.table('contacts')
+      .where({ contact_name_id: user.contact_id })
       .select('client_id', 'is_client_admin')
       .first(),
     targetUser.contact_id
-      ? knex('contacts')
-          .where({ tenant, contact_name_id: targetUser.contact_id })
+      ? scopedDb.table('contacts')
+          .where({ contact_name_id: targetUser.contact_id })
           .select('client_id')
           .first()
       : Promise.resolve(undefined),
@@ -153,8 +155,8 @@ export const updateClientUser = withAuth(async (
         }
       }
 
-      return await trx('users')
-        .where({ user_id: userId, tenant, user_type: 'client' })
+      return await tenantDb(trx, tenant).table('users')
+        .where({ user_id: userId, user_type: 'client' })
         .update({
           ...allowedUpdates,
           updated_at: new Date().toISOString()
@@ -162,7 +164,7 @@ export const updateClientUser = withAuth(async (
         .returning('*');
     });
 
-    return updatedUser || null;
+    return (updatedUser as IUser | undefined) || null;
   } catch (error) {
     console.error('Error updating client user:', error);
     throw error;
@@ -186,8 +188,8 @@ export const resetClientUserPassword = withAuth(async (
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       await assertCanManageClientUser(user, tenant, trx, userId);
 
-      await trx('users')
-        .where({ user_id: userId, tenant, user_type: 'client' })
+      await tenantDb(trx, tenant).table('users')
+        .where({ user_id: userId, user_type: 'client' })
         .update({
           hashed_password: hashedPassword,
           updated_at: new Date().toISOString()
@@ -216,12 +218,12 @@ export const getClientUserById = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const user = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('users')
-      .where({ user_id: userId, tenant, user_type: 'client' })
+      return await tenantDb(trx, tenant).table('users')
+      .where({ user_id: userId, user_type: 'client' })
       .first();
     });
 
-    return user || null;
+    return (user as IUser | undefined) || null;
   } catch (error) {
     console.error('Error getting client user:', error);
     throw error;
@@ -320,10 +322,9 @@ export const uploadContactAvatar = withAuth(async (
     } else {
       // Check if this contact is associated with the current user
       const userContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('contacts')
+        return await tenantDb(trx, tenant).table('contacts')
           .where({
             contact_name_id: contactId,
-            tenant
           })
           .first();
       });
@@ -331,11 +332,10 @@ export const uploadContactAvatar = withAuth(async (
       if (userContact) {
         // Check if there's a user with this contact_id
         const contactUser = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await trx('users')
+          return await tenantDb(trx, tenant).table('users')
             .where({
               contact_id: contactId,
               user_id: currentUser.user_id,
-              tenant
             })
             .first();
         });
@@ -362,8 +362,8 @@ export const uploadContactAvatar = withAuth(async (
 
   // Verify contact exists
   const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('contacts')
-      .where({ contact_name_id: contactId, tenant })
+    return await tenantDb(trx, tenant).table('contacts')
+      .where({ contact_name_id: contactId })
       .first();
   });
   if (!contact) {
@@ -433,10 +433,9 @@ export const deleteContactAvatar = withAuth(async (
     } else {
       // Check if this contact is associated with the current user
       const userContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('contacts')
+        return await tenantDb(trx, tenant).table('contacts')
           .where({
             contact_name_id: contactId,
-            tenant
           })
           .first();
       });
@@ -444,11 +443,10 @@ export const deleteContactAvatar = withAuth(async (
       if (userContact) {
         // Check if there's a user with this contact_id
         const contactUser = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await trx('users')
+          return await tenantDb(trx, tenant).table('users')
             .where({
               contact_id: contactId,
               user_id: currentUser.user_id,
-              tenant
             })
             .first();
         });
@@ -470,8 +468,8 @@ export const deleteContactAvatar = withAuth(async (
 
   // Verify contact exists
   const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('contacts')
-      .where({ contact_name_id: contactId, tenant })
+    return await tenantDb(trx, tenant).table('contacts')
+      .where({ contact_name_id: contactId })
       .first();
   });
   if (!contact) {
@@ -560,8 +558,9 @@ export const checkClientPortalPermissions = withAuth(async (
     const { knex } = await createTenantKnex();
 
     // Check if this is a hosted tenant (has Stripe customer record)
-    const isHosted = await knex('stripe_customers')
-      .where({ tenant })
+    const scopedDb = tenantDb(knex, tenant);
+
+    const isHosted = await scopedDb.table('stripe_customers')
       .first()
       .then(result => !!result)
       .catch(() => false);
@@ -576,9 +575,8 @@ export const checkClientPortalPermissions = withAuth(async (
 
     let hasVisibilityGroupAccess = false;
     if (currentUser.user_type === 'client' && currentUser.contact_id) {
-      const actorContact = await knex('contacts')
+      const actorContact = await scopedDb.table('contacts')
         .where({
-          tenant,
           contact_name_id: currentUser.contact_id
         })
         .select('is_client_admin')

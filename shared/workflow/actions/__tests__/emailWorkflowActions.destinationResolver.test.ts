@@ -12,6 +12,13 @@ let trxImpl: any = null;
 vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
     withAdminTransactionMock(callback),
+  tenantDb: (trx: any, tenant: string) => ({
+    table: (tableName: string) => {
+      const builder = trx(tableName);
+      builder.where?.({ tenant });
+      return builder;
+    },
+  }),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -31,7 +38,7 @@ function createTrxForQueryPlan(plan: QueryPlanRow[]) {
     const builder: any = {
       select: vi.fn(() => builder),
       where: vi.fn((value: Record<string, unknown>) => {
-        whereClause = value ?? {};
+        whereClause = { ...whereClause, ...(value ?? {}) };
         return builder;
       }),
       first: vi.fn(async () => {

@@ -1,6 +1,7 @@
 import logger from '@alga-psa/core/logger';
 import { runWithTenant } from 'server/src/lib/db';
 import { getConnection } from 'server/src/lib/db/db';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getJobRunner } from '../JobRunnerFactory';
 import type { BaseJobData } from '../interfaces';
@@ -91,8 +92,7 @@ async function tenantHasConnectedRealm(tenantId: string): Promise<boolean> {
 
 async function cancelAccountingSyncCycle(tenantId: string, singletonKey: string): Promise<void> {
   const adminKnex = await getAdminConnection();
-  const existing = await adminKnex('jobs')
-    .where({ tenant: tenantId })
+  const existing = await tenantDb(adminKnex, tenantId).table('jobs')
     .whereRaw(`metadata->>'singletonKey' = ?`, [singletonKey])
     .whereNotNull('external_id')
     .orderBy('created_at', 'desc')

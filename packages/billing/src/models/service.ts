@@ -1,4 +1,4 @@
-import { requireTenantId } from '@alga-psa/db';
+import { requireTenantId, tenantDb } from '@alga-psa/db';
 import type { IService, IServicePrice } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
@@ -18,6 +18,34 @@ const log = {
   error: (message: string, ...args: unknown[]) => {
     globalThis.console.error(message, ...args);
   }
+};
+
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableExpression: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(tableExpression);
+}
+
+function serviceCatalogWithType(conn: Knex | Knex.Transaction, tenant: string): Knex.QueryBuilder {
+  const db = tenantDb(conn, tenant);
+  const query = db.table('service_catalog as sc');
+  db.tenantJoin(query, 'service_types as ct', 'sc.custom_service_type_id', 'ct.id', { type: 'left' });
+  return query;
+}
+
+type ServiceCatalogWithTypeRow = IService;
+
+type DefaultBillingSettingsCurrencyRow = {
+  tenant: string;
+  default_currency_code: string | null;
+};
+
+type ServicePriceAvailabilityRow = {
+  service_id: string;
+  service_name: string;
+  price_id: string | null;
 };
 
 // Schema for service prices
@@ -132,34 +160,29 @@ const Service = {
 
     try {
       // Fetch services, joining with custom service types to get type names
-      const servicesData = await knexOrTrx('service_catalog as sc')
-        .where({ 'sc.tenant': tenant })
-        .leftJoin('service_types as ct', function() {
-          this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant', '=', knexOrTrx.raw('?', [tenant]));
-        })
-        .select(
-          'sc.service_id',
-          'sc.service_name',
-          'sc.custom_service_type_id',
-          'sc.billing_method',
+      const servicesData = await serviceCatalogWithType(knexOrTrx, tenant)
+        .select<ServiceCatalogWithTypeRow[]>(
+          'sc.service_id as service_id',
+          'sc.service_name as service_name',
+          'sc.custom_service_type_id as custom_service_type_id',
+          'sc.billing_method as billing_method',
           knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
-          'sc.unit_of_measure',
-          'sc.category_id',
-          'sc.description',
-          'sc.tax_rate_id',
-          'sc.item_kind',
-          'sc.is_active',
-          'sc.sku',
+          'sc.unit_of_measure as unit_of_measure',
+          'sc.category_id as category_id',
+          'sc.description as description',
+          'sc.tax_rate_id as tax_rate_id',
+          'sc.item_kind as item_kind',
+          'sc.is_active as is_active',
+          'sc.sku as sku',
           knexOrTrx.raw('CAST(sc.cost AS FLOAT) as cost'),
-          'sc.cost_currency',
-          'sc.vendor',
-          'sc.manufacturer',
-          'sc.product_category',
-          'sc.is_license',
-          'sc.license_term',
-          'sc.license_billing_cadence',
-          'sc.tenant',
+          'sc.cost_currency as cost_currency',
+          'sc.vendor as vendor',
+          'sc.manufacturer as manufacturer',
+          'sc.product_category as product_category',
+          'sc.is_license as is_license',
+          'sc.license_term as license_term',
+          'sc.license_billing_cadence as license_billing_cadence',
+          'sc.tenant as tenant',
           // Select the service type name from custom type
           'ct.name as service_type_name'
         )
@@ -169,8 +192,7 @@ const Service = {
       // Fetch all prices for these services
       const serviceIds = servicesData.map(s => s.service_id);
       const allPrices = serviceIds.length > 0
-        ? await knexOrTrx('service_prices')
-            .where({ tenant })
+        ? await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
             .whereIn('service_id', serviceIds)
             .select('*')
         : [];
@@ -209,14 +231,9 @@ const Service = {
 
     try {
       // Fetch service by ID, joining with custom service types
-      const serviceData = await knexOrTrx('service_catalog as sc')
+      const serviceData = await serviceCatalogWithType(knexOrTrx, tenant)
         .where({
-          'sc.service_id': service_id,
-          'sc.tenant': tenant
-        })
-        .leftJoin('service_types as ct', function() {
-          this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant', '=', knexOrTrx.raw('?', [tenant]));
+          'sc.service_id': service_id
         })
         .select(
           'sc.service_id',
@@ -251,8 +268,8 @@ const Service = {
       }
 
       // Fetch prices for this service
-      const prices = await knexOrTrx('service_prices')
-        .where({ service_id, tenant })
+      const prices = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
+        .where({ service_id })
         .select('*');
 
       log.info(`[Service.getById] Found service: ${serviceData.service_name} with ${prices.length} price(s)`);
@@ -331,8 +348,7 @@ const Service = {
     // "not provided".
     let resolvedCostCurrency = cleanedData.cost_currency ?? null;
     if (resolvedCostCurrency == null) {
-      const billingSettings = await knexOrTrx('default_billing_settings')
-        .where({ tenant: effectiveTenant })
+      const billingSettings = await tenantScopedTable<DefaultBillingSettingsCurrencyRow>(knexOrTrx, effectiveTenant, 'default_billing_settings')
         .select('default_currency_code')
         .first();
       resolvedCostCurrency = billingSettings?.default_currency_code || 'USD';
@@ -366,21 +382,17 @@ const Service = {
 
     try {
       // Insert into service_catalog (assuming this is the correct table name)
-      const [createdService] = await knexOrTrx('service_catalog')
+      const [createdService] = await tenantScopedTable<IService>(knexOrTrx, effectiveTenant, 'service_catalog')
         .insert(newService)
         .returning('*'); // Return all columns to match IService
 
       log.info('[Service.create] Successfully created service:', createdService);
       
       // After creation, fetch the complete service with type name by joining with type tables
-      const completeService = await knexOrTrx('service_catalog as sc')
+      const completeService = await serviceCatalogWithType(knexOrTrx, effectiveTenant)
         .where({
           'sc.service_id': createdService.service_id,
           'sc.tenant': effectiveTenant
-        })
-        .leftJoin('service_types as ct', function() {
-          this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant', '=', knexOrTrx.raw('?', [effectiveTenant]));
         })
         .select(
           'sc.service_id',
@@ -473,10 +485,9 @@ const Service = {
 
       // Ensure updateData conforms to Partial<IService> based on the *new* interface
       // Zod validation could be added here too if needed for partial updates.
-      const [updatedServiceData] = await knexOrTrx<IService>('service_catalog')
+      const [updatedServiceData] = await tenantScopedTable<IService>(knexOrTrx, tenant, 'service_catalog')
         .where({
-          service_id,
-          tenant
+          service_id
         })
         .update(cleanedUpdateData)
         .returning('*'); // Return all fields to validate against the schema
@@ -487,14 +498,10 @@ const Service = {
       }
 
       // After update, fetch the complete service with type name by joining with type tables
-      const completeService = await knexOrTrx('service_catalog as sc')
+      const completeService = await serviceCatalogWithType(knexOrTrx, tenant)
         .where({
           'sc.service_id': service_id,
           'sc.tenant': tenant
-        })
-        .leftJoin('service_types as ct', function() {
-          this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant', '=', knexOrTrx.raw('?', [tenant]));
         })
         .select(
           'sc.service_id',
@@ -529,8 +536,8 @@ const Service = {
       }
 
       // Fetch prices for this service
-      const prices = await knexOrTrx('service_prices')
-        .where({ service_id, tenant })
+      const prices = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
+        .where({ service_id })
         .select('*');
 
       // Validate and transform the DB result using the final schema's parse method
@@ -547,10 +554,10 @@ const Service = {
     try {
       // If we're already in a transaction, use it directly
       if (knexOrTrx.isTransaction) {
-        const updatedDetails = await knexOrTrx('invoice_charge_details')
+        const db = tenantDb(knexOrTrx, tenant);
+        const updatedDetails = await db.table('invoice_charge_details')
           .where({
-            service_id,
-            tenant
+            service_id
           })
           .update({
             service_id: null
@@ -559,10 +566,9 @@ const Service = {
         log.info(`[Service.delete] Updated ${updatedDetails} invoice_charge_details records for service ${service_id}`);
 
         // Clear service_id from project_tasks (replaces ON DELETE SET NULL)
-        const updatedTasks = await knexOrTrx('project_tasks')
+        const updatedTasks = await db.table('project_tasks')
           .where({
-            service_id,
-            tenant
+            service_id
           })
           .update({
             service_id: null
@@ -571,10 +577,9 @@ const Service = {
         log.info(`[Service.delete] Updated ${updatedTasks} project_tasks records for service ${service_id}`);
 
         // Clear service_id from project_template_tasks (replaces ON DELETE SET NULL)
-        const updatedTemplateTasks = await knexOrTrx('project_template_tasks')
+        const updatedTemplateTasks = await db.table('project_template_tasks')
           .where({
-            service_id,
-            tenant
+            service_id
           })
           .update({
             service_id: null
@@ -583,17 +588,16 @@ const Service = {
         log.info(`[Service.delete] Updated ${updatedTemplateTasks} project_template_tasks records for service ${service_id}`);
 
         // Clear linked_service_id from service_request_definitions (replaces ON DELETE SET NULL)
-        const updatedRequestDefs = await knexOrTrx('service_request_definitions')
-          .where({ linked_service_id: service_id, tenant })
+        const updatedRequestDefs = await db.table('service_request_definitions')
+          .where({ linked_service_id: service_id })
           .update({ linked_service_id: null, linked_service_name_snapshot: null });
 
         log.info(`[Service.delete] Updated ${updatedRequestDefs} service_request_definitions records for service ${service_id}`);
 
         // Then delete the service
-        const deletedCount = await knexOrTrx('service_catalog')
+        const deletedCount = await db.table('service_catalog')
           .where({
-            service_id,
-            tenant
+            service_id
           })
           .del();
 
@@ -602,10 +606,10 @@ const Service = {
       } else {
         // Otherwise create a transaction
         return await knexOrTrx.transaction(async (trx) => {
-          const updatedDetails = await trx('invoice_charge_details')
+          const db = tenantDb(trx, tenant);
+          const updatedDetails = await db.table('invoice_charge_details')
             .where({
-              service_id,
-              tenant
+              service_id
             })
             .update({
               service_id: null
@@ -614,10 +618,9 @@ const Service = {
           log.info(`[Service.delete] Updated ${updatedDetails} invoice_charge_details records for service ${service_id}`);
 
           // Clear service_id from project_tasks (replaces ON DELETE SET NULL)
-          const updatedTasks = await trx('project_tasks')
+          const updatedTasks = await db.table('project_tasks')
             .where({
-              service_id,
-              tenant
+              service_id
             })
             .update({
               service_id: null
@@ -626,10 +629,9 @@ const Service = {
           log.info(`[Service.delete] Updated ${updatedTasks} project_tasks records for service ${service_id}`);
 
           // Clear service_id from project_template_tasks (replaces ON DELETE SET NULL)
-          const updatedTemplateTasks = await trx('project_template_tasks')
+          const updatedTemplateTasks = await db.table('project_template_tasks')
             .where({
-              service_id,
-              tenant
+              service_id
             })
             .update({
               service_id: null
@@ -638,17 +640,16 @@ const Service = {
           log.info(`[Service.delete] Updated ${updatedTemplateTasks} project_template_tasks records for service ${service_id}`);
 
           // Clear linked_service_id from service_request_definitions (replaces ON DELETE SET NULL)
-          const updatedRequestDefs = await trx('service_request_definitions')
-            .where({ linked_service_id: service_id, tenant })
+          const updatedRequestDefs = await db.table('service_request_definitions')
+            .where({ linked_service_id: service_id })
             .update({ linked_service_id: null, linked_service_name_snapshot: null });
 
           log.info(`[Service.delete] Updated ${updatedRequestDefs} service_request_definitions records for service ${service_id}`);
 
           // Then delete the service
-          const deletedCount = await trx('service_catalog')
+          const deletedCount = await db.table('service_catalog')
             .where({
-              service_id,
-              tenant
+              service_id
             })
             .del();
 
@@ -667,37 +668,33 @@ const Service = {
 
     try {
       // Fetch services by category ID, joining with custom service types
-      const servicesData = await knexOrTrx('service_catalog as sc')
+      const servicesData = await serviceCatalogWithType(knexOrTrx, tenant)
         .where({
           'sc.category_id': category_id,
           'sc.tenant': tenant
         })
-        .leftJoin('service_types as ct', function() {
-          this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant', '=', knexOrTrx.raw('?', [tenant]));
-        })
-        .select(
-          'sc.service_id',
-          'sc.service_name',
-          'sc.custom_service_type_id',
-          'sc.billing_method',
+        .select<ServiceCatalogWithTypeRow[]>(
+          'sc.service_id as service_id',
+          'sc.service_name as service_name',
+          'sc.custom_service_type_id as custom_service_type_id',
+          'sc.billing_method as billing_method',
           knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
-          'sc.unit_of_measure',
-          'sc.category_id',
-          'sc.description',
-          'sc.tax_rate_id',
-          'sc.item_kind',
-          'sc.is_active',
-          'sc.sku',
+          'sc.unit_of_measure as unit_of_measure',
+          'sc.category_id as category_id',
+          'sc.description as description',
+          'sc.tax_rate_id as tax_rate_id',
+          'sc.item_kind as item_kind',
+          'sc.is_active as is_active',
+          'sc.sku as sku',
           knexOrTrx.raw('CAST(sc.cost AS FLOAT) as cost'),
-          'sc.cost_currency',
-          'sc.vendor',
-          'sc.manufacturer',
-          'sc.product_category',
-          'sc.is_license',
-          'sc.license_term',
-          'sc.license_billing_cadence',
-          'sc.tenant',
+          'sc.cost_currency as cost_currency',
+          'sc.vendor as vendor',
+          'sc.manufacturer as manufacturer',
+          'sc.product_category as product_category',
+          'sc.is_license as is_license',
+          'sc.license_term as license_term',
+          'sc.license_billing_cadence as license_billing_cadence',
+          'sc.tenant as tenant',
           // Select the service type name from custom type
           'ct.name as service_type_name'
         );
@@ -707,8 +704,7 @@ const Service = {
       // Fetch all prices for these services
       const serviceIds = servicesData.map(s => s.service_id);
       const allPrices = serviceIds.length > 0
-        ? await knexOrTrx('service_prices')
-            .where({ tenant })
+        ? await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
             .whereIn('service_id', serviceIds)
             .select('*')
         : [];
@@ -743,8 +739,8 @@ const Service = {
   getPrices: async (knexOrTrx: Knex | Knex.Transaction, service_id: string): Promise<IServicePrice[]> => {
     const tenant = await requireTenantId(knexOrTrx);
 
-    const prices = await knexOrTrx('service_prices')
-      .where({ service_id, tenant })
+    const prices = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
+      .where({ service_id })
       .select('*')
       .orderBy('currency_code', 'asc');
 
@@ -761,8 +757,8 @@ const Service = {
   ): Promise<IServicePrice | null> => {
     const tenant = await requireTenantId(knexOrTrx);
 
-    const price = await knexOrTrx('service_prices')
-      .where({ service_id, currency_code, tenant })
+    const price = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
+      .where({ service_id, currency_code })
       .first();
 
     return price || null;
@@ -785,14 +781,14 @@ const Service = {
     }
 
     // Check if price already exists
-    const existingPrice = await knexOrTrx('service_prices')
-      .where({ service_id, currency_code, tenant })
+    const existingPrice = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
+      .where({ service_id, currency_code })
       .first();
 
     if (existingPrice) {
       // Update existing price
-      const [updatedPrice] = await knexOrTrx('service_prices')
-        .where({ price_id: existingPrice.price_id, tenant })
+      const [updatedPrice] = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
+        .where({ price_id: existingPrice.price_id })
         .update({
           rate: normalizedRate,
           updated_at: knexOrTrx.fn.now()
@@ -803,7 +799,7 @@ const Service = {
       return updatedPrice;
     } else {
       // Insert new price
-      const [newPrice] = await knexOrTrx('service_prices')
+      const [newPrice] = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
         .insert({
           price_id: uuidv4(),
           tenant,
@@ -829,8 +825,8 @@ const Service = {
     const tenant = await requireTenantId(knexOrTrx);
 
     // Delete existing prices
-    await knexOrTrx('service_prices')
-      .where({ service_id, tenant })
+    await tenantScopedTable(knexOrTrx, tenant, 'service_prices')
+      .where({ service_id })
       .del();
 
     if (prices.length === 0) {
@@ -852,7 +848,7 @@ const Service = {
       })()
     }));
 
-    const insertedPrices = await knexOrTrx('service_prices')
+    const insertedPrices = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
       .insert(pricesToInsert)
       .returning('*');
 
@@ -870,8 +866,8 @@ const Service = {
   ): Promise<boolean> => {
     const tenant = await requireTenantId(knexOrTrx);
 
-    const deletedCount = await knexOrTrx('service_prices')
-      .where({ service_id, currency_code, tenant })
+    const deletedCount = await tenantScopedTable(knexOrTrx, tenant, 'service_prices')
+      .where({ service_id, currency_code })
       .del();
 
     log.info(`[Service.removePrice] Removed price for service ${service_id} in ${currency_code}. Affected: ${deletedCount}`);
@@ -894,18 +890,20 @@ const Service = {
     }
 
     // Get all services with their prices for the required currency
-    const servicesWithPrices = await knexOrTrx('service_catalog as sc')
-      .where({ 'sc.tenant': tenant })
-      .whereIn('sc.service_id', service_ids)
-      .leftJoin('service_prices as sp', function() {
-        this.on('sc.service_id', '=', 'sp.service_id')
-            .andOn('sp.currency_code', '=', knexOrTrx.raw('?', [required_currency]))
-            .andOn('sp.tenant', '=', knexOrTrx.raw('?', [tenant]));
-      })
-      .select(
-        'sc.service_id',
-        'sc.service_name',
-        'sp.price_id'
+    const query = tenantScopedTable(knexOrTrx, tenant, 'service_catalog as sc')
+      .whereIn('sc.service_id', service_ids);
+    tenantDb(knexOrTrx, tenant).tenantJoin(query, 'service_prices as sp', 'sc.service_id', 'sp.service_id', {
+      type: 'left',
+      on(join) {
+        join.andOn('sp.currency_code', '=', knexOrTrx.raw('?', [required_currency]));
+      }
+    });
+
+    const servicesWithPrices = await query
+      .select<ServicePriceAvailabilityRow[]>(
+        'sc.service_id as service_id',
+        'sc.service_name as service_name',
+        'sp.price_id as price_id'
       );
 
     // Find services that don't have a price in the required currency

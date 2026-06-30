@@ -13,6 +13,7 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createClient, createUser } from '../../../test-utils/testDataFactory';
@@ -70,10 +71,14 @@ let createdIds: CreatedIds = {
   clientContractIds: []
 };
 
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
 async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds): Promise<void> {
   const safeDelete = async (table: string, where: Record<string, unknown>) => {
     try {
-      await db(table).where(where).del();
+      await tenantTable(db, tenantId, table).where(where).del();
     } catch {
       // Ignore cleanup issues
     }
@@ -121,7 +126,7 @@ async function createContact(
   const contactId = uuidv4();
   const now = new Date();
 
-  await db('contacts').insert({
+  await tenantTable(db, tenantId, 'contacts').insert({
     contact_name_id: contactId,
     tenant: tenantId,
     client_id: clientId,
@@ -142,7 +147,7 @@ async function createClientUser(
   const userId = uuidv4();
   const now = new Date();
 
-  await db('users').insert({
+  await tenantTable(db, tenantId, 'users').insert({
     user_id: userId,
     tenant: tenantId,
     username: `client-user-${userId.slice(0, 8)}`,
@@ -170,7 +175,7 @@ async function createDocument(
   const docId = uuidv4();
   const now = new Date();
 
-  await db('documents').insert({
+  await tenantTable(db, tenantId, 'documents').insert({
     tenant: tenantId,
     document_id: docId,
     document_name: name,
@@ -194,7 +199,7 @@ async function createDocumentAssociation(
 ): Promise<void> {
   const now = new Date();
 
-  await db('document_associations').insert({
+  await tenantTable(db, tenantId, 'document_associations').insert({
     tenant: tenantId,
     association_id: uuidv4(),
     document_id: documentId,
@@ -214,7 +219,7 @@ async function createEntityFolder(
 ): Promise<string> {
   const folderId = uuidv4();
 
-  await db('document_folders').insert({
+  await tenantTable(db, tenantId, 'document_folders').insert({
     tenant: tenantId,
     folder_id: folderId,
     folder_path: folderPath,
@@ -239,7 +244,7 @@ async function createOwnedContract(
   const clientContractId = uuidv4();
   const now = new Date();
 
-  await db('contracts').insert({
+  await tenantTable(db, tenantId, 'contracts').insert({
     tenant: tenantId,
     contract_id: contractId,
     contract_name: contractName,
@@ -254,7 +259,7 @@ async function createOwnedContract(
     updated_at: now
   });
 
-  await db('client_contracts').insert({
+  await tenantTable(db, tenantId, 'client_contracts').insert({
     tenant: tenantId,
     client_contract_id: clientContractId,
     client_id: clientId,
@@ -425,7 +430,7 @@ describe('Client Portal Documents Integration Tests', () => {
 
       // Create ticket and ticket document
       const ticketId = uuidv4();
-      await db('tickets').insert({
+      await tenantTable(db, tenantId, 'tickets').insert({
         tenant: tenantId,
         ticket_id: ticketId,
         ticket_number: `TKT-${Date.now()}`,
@@ -794,7 +799,7 @@ describe('Client Portal Documents Integration Tests', () => {
 
       const staleClientContractId = uuidv4();
       createdIds.clientContractIds.push(staleClientContractId);
-      await db('client_contracts').insert({
+      await tenantTable(db, tenantId, 'client_contracts').insert({
         tenant: tenantId,
         client_contract_id: staleClientContractId,
         client_id: staleClientId,

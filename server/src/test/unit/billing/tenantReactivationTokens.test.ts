@@ -19,6 +19,7 @@ describe('tenant reactivation tokens', () => {
       (tableName: string) => {
         expect(tableName).toBe('tenant_reactivation_tokens');
         return {
+          where: vi.fn().mockReturnThis(),
           insert: vi.fn(async (row: Record<string, unknown>) => {
             insertedRows.push(row);
           }),
@@ -68,7 +69,11 @@ describe('tenant reactivation tokens', () => {
           }),
           where(criteriaOrColumn: Record<string, unknown> | string, operator?: string, value?: unknown) {
             if (typeof criteriaOrColumn === 'string') {
-              this.expiresAfterNow = operator === '>' && value === 'NOW()';
+              if (criteriaOrColumn.endsWith('.tenant') || criteriaOrColumn === 'tenant') {
+                this.criteria.tenant = operator;
+              } else {
+                this.expiresAfterNow = operator === '>' && value === 'NOW()';
+              }
             } else {
               this.criteria = { ...this.criteria, ...criteriaOrColumn };
             }

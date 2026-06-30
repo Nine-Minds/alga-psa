@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface BoardSearchRow {
@@ -30,9 +31,8 @@ export const boardIndexer: EntityIndexer = {
   ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
-    const row = await knex<BoardSearchRow>('boards')
+    const row = await createTenantScopedIndexerQuery<BoardSearchRow>(knex, 'boards', 'boards', tenant)
       .select('board_id', 'board_name')
-      .where('tenant', tenant)
       .andWhere('board_id', id)
       .first();
 
@@ -45,9 +45,8 @@ export const boardIndexer: EntityIndexer = {
     cursor: string | null | undefined,
     limit: number,
   ): Promise<SearchDoc[]> {
-    const query = knex<BoardSearchRow>('boards')
+    const query = createTenantScopedIndexerQuery<BoardSearchRow>(knex, 'boards', 'boards', tenant)
       .select('board_id', 'board_name')
-      .where('tenant', tenant)
       .orderBy('board_id', 'asc')
       .limit(limit);
 

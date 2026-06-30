@@ -11,7 +11,11 @@ import {
   createBoard,
   updateBoard,
   deleteBoard,
+} from '@alga-psa/tickets/actions/board-actions/boardActions';
+import {
   getBoardTicketStatuses,
+} from '@alga-psa/tickets/actions/board-actions/boardTicketStatusActions';
+import {
   getBoardCloseRules,
   upsertBoardCloseRules,
   getBoardAutoCloseRules,

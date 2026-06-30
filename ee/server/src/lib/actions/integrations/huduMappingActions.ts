@@ -20,6 +20,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { createHuduClient } from '../../integrations/hudu/huduClient';
 import {
@@ -116,8 +117,7 @@ async function fetchAndCacheCompanies(knex: Knex, tenant: string): Promise<HuduC
 }
 
 async function listMatchableClients(knex: Knex, tenant: string): Promise<HuduMatcherClient[]> {
-  return knex('clients')
-    .where({ tenant })
+  return tenantDb(knex, tenant).table('clients')
     .where((qb) => qb.where('is_inactive', false).orWhereNull('is_inactive'))
     .select('client_id', 'client_name');
 }

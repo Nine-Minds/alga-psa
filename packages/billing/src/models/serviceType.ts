@@ -1,23 +1,31 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { IServiceType } from '@alga-psa/types';
 
 const TABLE_NAME = 'service_types';
 
+function tenantScopedTable<Row extends object = IServiceType>(
+  conn: Knex | Knex.Transaction,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(TABLE_NAME);
+}
+
 export const ServiceTypeModel = {
   async findAll(knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<IServiceType[]> {
-    return knexOrTrx(TABLE_NAME).where({ tenant }).select('*');
+    return tenantScopedTable(knexOrTrx, tenant).select('*');
   },
 
   async findActive(knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<IServiceType[]> {
-    return knexOrTrx(TABLE_NAME).where({ tenant, is_active: true }).select('*');
+    return tenantScopedTable(knexOrTrx, tenant).where({ is_active: true }).select('*');
   },
 
   async findById(knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string): Promise<IServiceType | undefined> {
-    return knexOrTrx(TABLE_NAME).where({ id, tenant }).first();
+    return tenantScopedTable(knexOrTrx, tenant).where({ id }).first();
   },
 
   async findByName(knexOrTrx: Knex | Knex.Transaction, tenant: string, name: string): Promise<IServiceType | undefined> {
-    return knexOrTrx(TABLE_NAME).where({ name, tenant }).first();
+    return tenantScopedTable(knexOrTrx, tenant).where({ name }).first();
   },
 
   async create(
@@ -30,7 +38,7 @@ export const ServiceTypeModel = {
       tenant,
     };
 
-    const [newRecord] = await knexOrTrx(TABLE_NAME).insert(dataToInsert).returning('*');
+    const [newRecord] = await tenantScopedTable(knexOrTrx, tenant).insert(dataToInsert).returning('*');
     return newRecord;
   },
 
@@ -40,15 +48,15 @@ export const ServiceTypeModel = {
     id: string,
     data: Partial<Omit<IServiceType, 'id' | 'tenant' | 'created_at' | 'updated_at'>>
   ): Promise<IServiceType | undefined> {
-    const [updatedRecord] = await knexOrTrx(TABLE_NAME)
-      .where({ id, tenant })
-      .update({ ...data, updated_at: new Date() }) 
+    const [updatedRecord] = await tenantScopedTable(knexOrTrx, tenant)
+      .where({ id })
+      .update({ ...data, updated_at: new Date() as any })
       .returning('*');
     return updatedRecord;
   },
 
   async delete(knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string): Promise<boolean> {
-    const deletedCount = await knexOrTrx(TABLE_NAME).where({ id, tenant }).del();
+    const deletedCount = await tenantScopedTable(knexOrTrx, tenant).where({ id }).del();
     return deletedCount > 0;
   },
 
@@ -58,9 +66,8 @@ export const ServiceTypeModel = {
     tenant: string
   ): Promise<{ id: string; name: string; is_standard: boolean }[]> {
     // Fetch all active tenant-specific service types
-    const tenantTypes = await knexOrTrx<IServiceType>(TABLE_NAME)
-      .where('tenant', tenant)
-      .andWhere('is_active', true)
+    const tenantTypes = await tenantScopedTable(knexOrTrx, tenant)
+      .where('is_active', true)
       .select('id', 'name')
       .then(types => types.map(type => ({
         id: type.id,

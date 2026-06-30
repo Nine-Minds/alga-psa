@@ -12,7 +12,7 @@
 
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { unparseCSV, parseCSV } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
 import type { IClient, IClientLocation } from '@alga-psa/types';
@@ -136,6 +136,14 @@ interface DbClientMapping {
   metadata?: Record<string, unknown> | null;
 }
 
+interface DbClientMappingSummaryRow {
+  clientId: string;
+  clientName: string;
+  external_entity_id: string;
+  metadata?: Record<string, unknown> | null;
+  lastSyncedAt: string | null;
+}
+
 type ParsedXeroContact = {
   contactName: string;
   email: string | null;
@@ -194,10 +202,11 @@ export class XeroCsvClientSyncService {
     });
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
       // Load clients
-      let clientsQuery = trx<DbClient>('clients')
+      let clientsQuery = db.table<DbClient>('clients')
         .select('client_id', 'client_name', 'billing_email', 'tax_id_number')
-        .where('tenant', tenant)
         .where('is_inactive', false);
 
       if (clientIds && clientIds.length > 0) {
@@ -212,7 +221,7 @@ export class XeroCsvClientSyncService {
 
       // Load default locations for all clients
       const clientIdList = clients.map(c => c.client_id);
-      const locations = await trx<DbClientLocation>('client_locations')
+      const locations = await db.table<DbClientLocation>('client_locations')
         .select(
           'location_id',
           'client_id',
@@ -226,7 +235,6 @@ export class XeroCsvClientSyncService {
           'country_name',
           'is_default'
         )
-        .where('tenant', tenant)
         .whereIn('client_id', clientIdList)
         .where('is_default', true);
 
@@ -332,15 +340,15 @@ export class XeroCsvClientSyncService {
     }
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
       // Load all existing clients
-      const existingClients = await trx<DbClient>('clients')
+      const existingClients = await db.table<DbClient>('clients')
         .select('client_id', 'client_name', 'billing_email')
-        .where('tenant', tenant);
 
       // Load existing Xero CSV mappings
-      const existingMappings = await trx<DbClientMapping>('tenant_external_entity_mappings')
+      const existingMappings = await db.table<DbClientMapping>('tenant_external_entity_mappings')
         .select('id', 'alga_entity_id', 'external_entity_id', 'metadata')
-        .where('tenant', tenant)
         .where('integration_type', ADAPTER_TYPE)
         .where('alga_entity_type', 'client');
 
@@ -492,15 +500,15 @@ export class XeroCsvClientSyncService {
     }
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
       // Load all existing clients
-      const existingClients = await trx<DbClient>('clients')
+      const existingClients = await db.table<DbClient>('clients')
         .select('client_id', 'client_name', 'billing_email')
-        .where('tenant', tenant);
 
       // Load existing Xero CSV mappings
-      const existingMappings = await trx<DbClientMapping>('tenant_external_entity_mappings')
+      const existingMappings = await db.table<DbClientMapping>('tenant_external_entity_mappings')
         .select('id', 'alga_entity_id', 'external_entity_id', 'metadata')
-        .where('tenant', tenant)
         .where('integration_type', ADAPTER_TYPE)
         .where('alga_entity_type', 'client');
 
@@ -558,9 +566,8 @@ export class XeroCsvClientSyncService {
 
               if (Object.keys(updateData).length > 0) {
                 updateData.updated_at = new Date().toISOString();
-                await trx('clients')
+                await db.table('clients')
                   .where('client_id', matchedClient.client_id)
-                  .where('tenant', tenant)
                   .update(updateData);
               }
 
@@ -702,8 +709,9 @@ export class XeroCsvClientSyncService {
   ): Promise<string> {
     const now = new Date().toISOString();
     const clientId = await trx.raw('SELECT gen_random_uuid() as id').then(r => r.rows[0].id);
+    const db = tenantDb(trx, tenant);
 
-    await trx('clients').insert({
+    await db.table('clients').insert({
       tenant,
       client_id: clientId,
       client_name: contact.contactName,
@@ -728,7 +736,7 @@ export class XeroCsvClientSyncService {
     if (contact.addressLine1 || contact.phone || contact.email) {
       const locationId = await trx.raw('SELECT gen_random_uuid() as id').then(r => r.rows[0].id);
 
-      await trx('client_locations').insert({
+      await db.table('client_locations').insert({
         tenant,
         location_id: locationId,
         client_id: clientId,
@@ -763,10 +771,10 @@ export class XeroCsvClientSyncService {
     contact: ParsedXeroContact
   ): Promise<void> {
     const now = new Date().toISOString();
+    const db = tenantDb(trx, tenant);
 
     // Find existing default location
-    const existingLocation = await trx<DbClientLocation>('client_locations')
-      .where('tenant', tenant)
+    const existingLocation = await db.table<DbClientLocation>('client_locations')
       .where('client_id', clientId)
       .where('is_default', true)
       .first();
@@ -785,15 +793,14 @@ export class XeroCsvClientSyncService {
     if (contact.email) locationData.email = contact.email;
 
     if (existingLocation) {
-      await trx('client_locations')
+      await db.table('client_locations')
         .where('location_id', existingLocation.location_id)
-        .where('tenant', tenant)
         .update(locationData);
     } else {
       // Create a new default location
       const locationId = await trx.raw('SELECT gen_random_uuid() as id').then(r => r.rows[0].id);
 
-      await trx('client_locations').insert({
+      await db.table('client_locations').insert({
         tenant,
         location_id: locationId,
         client_id: clientId,
@@ -826,13 +833,14 @@ export class XeroCsvClientSyncService {
     xeroContactName: string
   ): Promise<void> {
     const now = new Date().toISOString();
+    const db = tenantDb(trx, tenant);
 
     // Use the client ID as the external ID since we embed it in tracking categories
     // and use it for reconciliation
     const externalId = `xero_contact:${xeroContactName}`;
 
     try {
-      await trx('tenant_external_entity_mappings').insert({
+      await db.table('tenant_external_entity_mappings').insert({
         id: trx.raw('gen_random_uuid()'),
         tenant,
         integration_type: ADAPTER_TYPE,
@@ -902,11 +910,11 @@ export class XeroCsvClientSyncService {
       throw new Error('Tenant not found');
     }
 
-    const rows = await knex('tenant_external_entity_mappings as m')
-      .join('clients as c', function() {
-        this.on('m.alga_entity_id', '=', 'c.client_id')
-            .andOn('m.tenant', '=', 'c.tenant');
-      })
+    const db = tenantDb(knex, tenant);
+    const rowsQuery = db.table('tenant_external_entity_mappings as m');
+    db.tenantJoin(rowsQuery, 'clients as c', 'm.alga_entity_id', 'c.client_id');
+
+    const rows = (await rowsQuery
       .select(
         'c.client_id as clientId',
         'c.client_name as clientName',
@@ -914,9 +922,8 @@ export class XeroCsvClientSyncService {
         'm.metadata',
         'm.last_synced_at as lastSyncedAt'
       )
-      .where('m.tenant', tenant)
       .where('m.integration_type', ADAPTER_TYPE)
-      .where('m.alga_entity_type', 'client');
+      .where('m.alga_entity_type', 'client')) as unknown as DbClientMappingSummaryRow[];
 
     return rows.map(row => ({
       clientId: row.clientId,

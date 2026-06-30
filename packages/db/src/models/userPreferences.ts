@@ -1,6 +1,7 @@
 import logger from '@alga-psa/core/logger';
 import type { Knex } from 'knex';
 import { requireTenantId } from '../lib/tenantId';
+import { tenantDb } from '../lib/tenantDb';
 
 export interface IUserPreference {
   tenant: string;
@@ -8,6 +9,14 @@ export interface IUserPreference {
   setting_name: string;
   setting_value: any;
   updated_at: Date;
+}
+
+function tenantScopedTable<Row extends object = Record<string, any>>(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(knexOrTrx, tenant).table<Row>(table);
 }
 
 const UserPreferences = {
@@ -19,13 +28,13 @@ const UserPreferences = {
     try {
       const tenant = await requireTenantId(knexOrTrx);
 
-      const user = await knexOrTrx('users').where({ user_id, tenant }).first();
+      const user = await tenantScopedTable(knexOrTrx, tenant, 'users').where({ user_id }).first();
       if (!user) {
         throw new Error(`User with id ${user_id} not found in tenant ${tenant}`);
       }
 
-      const preference = await knexOrTrx<IUserPreference>('user_preferences')
-        .where({ tenant, user_id, setting_name })
+      const preference = await tenantScopedTable<IUserPreference>(knexOrTrx, tenant, 'user_preferences')
+        .where({ user_id, setting_name })
         .first();
 
       return preference;
@@ -39,12 +48,12 @@ const UserPreferences = {
     try {
       const tenant = await requireTenantId(knexOrTrx);
 
-      const user = await knexOrTrx('users').where({ user_id, tenant }).first();
+      const user = await tenantScopedTable(knexOrTrx, tenant, 'users').where({ user_id }).first();
       if (!user) {
         throw new Error(`User with id ${user_id} not found in tenant ${tenant}`);
       }
 
-      const preferences = await knexOrTrx<IUserPreference>('user_preferences').where({ tenant, user_id });
+      const preferences = await tenantScopedTable<IUserPreference>(knexOrTrx, tenant, 'user_preferences').where({ user_id });
       return preferences;
     } catch (error) {
       logger.error(`Error getting all preferences for user ${user_id}:`, error);
@@ -56,7 +65,7 @@ const UserPreferences = {
     try {
       const tenant = await requireTenantId(knexOrTrx);
 
-      const user = await knexOrTrx('users').where({ user_id: preference.user_id, tenant }).first();
+      const user = await tenantScopedTable(knexOrTrx, tenant, 'users').where({ user_id: preference.user_id }).first();
       if (!user) {
         throw new Error(`User with id ${preference.user_id} not found in tenant ${tenant}`);
       }
@@ -67,7 +76,7 @@ const UserPreferences = {
         updated_at: new Date(),
       };
 
-      await knexOrTrx<IUserPreference>('user_preferences')
+      await tenantScopedTable<IUserPreference>(knexOrTrx, tenant, 'user_preferences')
         .insert(preferenceData)
         .onConflict(['tenant', 'user_id', 'setting_name'])
         .merge({
@@ -87,20 +96,20 @@ const UserPreferences = {
     try {
       const tenant = await requireTenantId(knexOrTrx);
 
-      const user = await knexOrTrx('users').where({ user_id, tenant }).first();
+      const user = await tenantScopedTable(knexOrTrx, tenant, 'users').where({ user_id }).first();
       if (!user) {
         throw new Error(`User with id ${user_id} not found in tenant ${tenant}`);
       }
 
-      const preference = await knexOrTrx<IUserPreference>('user_preferences')
-        .where({ tenant, user_id, setting_name })
+      const preference = await tenantScopedTable<IUserPreference>(knexOrTrx, tenant, 'user_preferences')
+        .where({ user_id, setting_name })
         .first();
       if (!preference) {
         throw new Error(`Preference '${setting_name}' not found for user ${user_id} in tenant ${tenant}`);
       }
 
-      const deletedCount = await knexOrTrx<IUserPreference>('user_preferences')
-        .where({ tenant, user_id, setting_name })
+      const deletedCount = await tenantScopedTable<IUserPreference>(knexOrTrx, tenant, 'user_preferences')
+        .where({ user_id, setting_name })
         .delete();
 
       if (deletedCount === 0) {
@@ -116,12 +125,14 @@ const UserPreferences = {
     try {
       const tenant = await requireTenantId(knexOrTrx);
 
-      const user = await knexOrTrx('users').where({ user_id, tenant }).first();
+      const user = await tenantScopedTable(knexOrTrx, tenant, 'users').where({ user_id }).first();
       if (!user) {
         throw new Error(`User with id ${user_id} not found in tenant ${tenant}`);
       }
 
-      const deletedCount = await knexOrTrx<IUserPreference>('user_preferences').where({ tenant, user_id }).delete();
+      const deletedCount = await tenantScopedTable<IUserPreference>(knexOrTrx, tenant, 'user_preferences')
+        .where({ user_id })
+        .delete();
 
       logger.info(`Deleted ${deletedCount} preferences for user ${user_id} in tenant ${tenant}`);
     } catch (error) {
@@ -135,7 +146,7 @@ const UserPreferences = {
 
     const userIds = [...new Set(preferences.map((p) => p.user_id))];
 
-    const users = await knexOrTrx('users').where('tenant', tenant).whereIn('user_id', userIds).select('user_id');
+    const users = await tenantScopedTable(knexOrTrx, tenant, 'users').whereIn('user_id', userIds).select('user_id');
     const foundUserIds = new Set(users.map((u: any) => u.user_id));
     const missingUserIds = userIds.filter((id) => !foundUserIds.has(id));
     if (missingUserIds.length > 0) {
@@ -155,7 +166,7 @@ const UserPreferences = {
           updated_at: now,
         };
 
-        await trx<IUserPreference>('user_preferences')
+        await tenantScopedTable<IUserPreference>(trx, tenant, 'user_preferences')
           .insert(preferenceData)
           .onConflict(['tenant', 'user_id', 'setting_name'])
           .merge({

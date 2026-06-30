@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getSession } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 export interface ExtProxyUserInfo {
@@ -52,9 +53,8 @@ function extractAdditionalFields(user: Record<string, unknown>): Record<string, 
 async function getTenantClientName(tenantId: string): Promise<string> {
   try {
     const knex = await getAdminConnection();
-    const row = await knex('tenants')
+    const row = await tenantDb(knex, tenantId).table('tenants')
       .select('client_name')
-      .where('tenant', tenantId)
       .first();
     return row?.client_name || '';
   } catch (error) {
@@ -70,21 +70,20 @@ async function getTenantClientName(tenantId: string): Promise<string> {
 async function getUserClientId(userId: string, tenantId: string): Promise<string | undefined> {
   try {
     const knex = await getAdminConnection();
+    const db = tenantDb(knex, tenantId);
     // First get the user's contact_id, then look up the client_id from contacts
-    const user = await knex('users')
+    const user = await db.table('users')
       .select('contact_id')
       .where('user_id', userId)
-      .where('tenant', tenantId)
       .first();
 
     if (!user?.contact_id) {
       return undefined;
     }
 
-    const contact = await knex('contacts')
+    const contact = await db.table('contacts')
       .select('client_id')
       .where('contact_name_id', user.contact_id)
-      .where('tenant', tenantId)
       .first();
 
     return contact?.client_id || undefined;

@@ -1,6 +1,7 @@
 #!/usr/bin/env tsx
 
 import knex from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -15,8 +16,7 @@ type ProvenanceAuditRow = {
 };
 
 async function auditTenant(knexInstance: ReturnType<typeof knex>, tenant: string) {
-  const rows = await knexInstance<ProvenanceAuditRow>('client_contracts')
-    .where({ tenant })
+  const rows = await tenantDb(knexInstance, tenant).table<ProvenanceAuditRow>('client_contracts')
     .select('client_contract_id', 'contract_id', 'template_contract_id');
 
   const missingTemplateProvenance = rows.filter((row) => !row.template_contract_id).length;

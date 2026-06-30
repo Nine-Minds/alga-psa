@@ -11,6 +11,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 import { E2ETestContext } from '../utils/test-context-e2e';
@@ -26,9 +27,18 @@ applyPlaywrightAuthEnvDefaults();
 const TEST_CONFIG = {
   baseUrl: resolvePlaywrightBaseUrl(),
 };
+const TEST_DISCOVERY_TENANT = '__test_discovery__';
 
 test.describe('Project Task Status Management in Edit Mode', () => {
   let context: E2ETestContext;
+
+  function tenantTable(tenantId: string, table: string) {
+    return tenantDb(context.db, tenantId).table(table);
+  }
+
+  function unscopedTestTable(table: string, reason: string) {
+    return tenantDb(context.db, TEST_DISCOVERY_TENANT).unscoped(table, reason);
+  }
 
   test.beforeAll(async () => {
     context = new E2ETestContext({
@@ -69,7 +79,7 @@ test.describe('Project Task Status Management in Edit Mode', () => {
    */
   async function createTestClient(tenantId: string, clientName: string) {
     const clientId = uuidv4();
-    await context.db('companies').insert({
+    await tenantTable(tenantId, 'companies').insert({
       company_id: clientId,
       tenant: tenantId,
       company_name: clientName,
@@ -93,7 +103,10 @@ test.describe('Project Task Status Management in Edit Mode', () => {
     const statusId = uuidv4();
 
     // Insert into project_status_assignments
-    await context.db('project_status_assignments').insert({
+    await unscopedTestTable(
+      'project_status_assignments',
+      'Playwright project status edit test seeds legacy tenant-scoped status assignment table'
+    ).insert({
       project_status_id: statusId,
       tenant: tenantId,
       name: 'Active',
@@ -102,7 +115,7 @@ test.describe('Project Task Status Management in Edit Mode', () => {
     });
 
     // Create the project
-    await context.db('projects').insert({
+    await tenantTable(tenantId, 'projects').insert({
       project_id: projectId,
       tenant: tenantId,
       project_name: projectName,
@@ -125,7 +138,7 @@ test.describe('Project Task Status Management in Edit Mode', () => {
         display_order: index + 1,
         is_visible: true,
       }));
-      await context.db('project_status_mappings').insert(mappings);
+      await tenantTable(tenantId, 'project_status_mappings').insert(mappings);
     }
 
     return projectId;
@@ -140,7 +153,7 @@ test.describe('Project Task Status Management in Edit Mode', () => {
 
     for (let i = 0; i < Math.min(count, statusNames.length); i++) {
       const statusId = uuidv4();
-      await context.db('statuses').insert({
+      await tenantTable(tenantId, 'statuses').insert({
         status_id: statusId,
         tenant: tenantId,
         item_type: 'project_task',
@@ -165,7 +178,7 @@ test.describe('Project Task Status Management in Edit Mode', () => {
     taskName: string
   ) {
     const taskId = uuidv4();
-    await context.db('project_tasks').insert({
+    await tenantTable(tenantId, 'project_tasks').insert({
       task_id: taskId,
       tenant: tenantId,
       project_id: projectId,
@@ -323,7 +336,7 @@ test.describe('Project Task Status Management in Edit Mode', () => {
     await page.waitForTimeout(2000);
 
     // Verify in database
-    const mappings = await context.db('project_status_mappings')
+    const mappings = await tenantTable(tenantId, 'project_status_mappings')
       .where({ project_id: projectId, tenant: tenantId })
       .select('*');
 
@@ -346,7 +359,7 @@ test.describe('Project Task Status Management in Edit Mode', () => {
     const projectId = await createTestProject(tenantId, clientId, 'Test Project Remove Block', statusIds);
 
     // Get the first mapping
-    const mapping = await context.db('project_status_mappings')
+    const mapping = await tenantTable(tenantId, 'project_status_mappings')
       .where({ project_id: projectId, status_id: statusIds[0], tenant: tenantId })
       .first();
 
@@ -431,7 +444,7 @@ test.describe('Project Task Status Management in Edit Mode', () => {
     await page.waitForTimeout(2000);
 
     // Verify in database
-    const mappings = await context.db('project_status_mappings')
+    const mappings = await tenantTable(tenantId, 'project_status_mappings')
       .where({ project_id: projectId, tenant: tenantId })
       .select('*');
 
@@ -485,7 +498,7 @@ test.describe('Project Task Status Management in Edit Mode', () => {
     await page.waitForTimeout(2000);
 
     // Verify in database - the second status should now be first
-    const mappings = await context.db('project_status_mappings')
+    const mappings = await tenantTable(tenantId, 'project_status_mappings')
       .where({ project_id: projectId, tenant: tenantId })
       .orderBy('display_order')
       .select('*');
@@ -567,7 +580,7 @@ test.describe('Project Task Status Management in Edit Mode', () => {
     await expect(removeButton).toBeVisible();
 
     // Verify order in database
-    const mappings = await context.db('project_status_mappings')
+    const mappings = await tenantTable(tenantId, 'project_status_mappings')
       .where({ project_id: projectId, tenant: tenantId })
       .orderBy('display_order')
       .select('*');

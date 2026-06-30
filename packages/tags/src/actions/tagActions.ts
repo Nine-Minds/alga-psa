@@ -3,12 +3,11 @@
 import TagDefinition, { ITagDefinition } from '../models/tagDefinition';
 import TagMapping, { ITagMapping, ITagWithDefinition } from '../models/tagMapping';
 import { ITag, TaggedEntityType, PendingTag, IUserWithRoles } from '@alga-psa/types';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -34,6 +33,35 @@ type CreateTagOptions = {
   suppressEntityUpdateEvent?: boolean;
 };
 
+type TagMappingDefinitionRow = {
+  tag_id: string;
+  board_id?: string | null;
+  tag_text: string;
+  tagged_id: string;
+  tagged_type: TaggedEntityType;
+  background_color?: string | null;
+  text_color?: string | null;
+  tenant: string;
+  created_by?: string | null;
+  definition_tag_id?: string;
+};
+
+type TagMappingDefinitionWithDefinitionIdRow = TagMappingDefinitionRow & {
+  definition_tag_id: string;
+};
+
+const projectTasksQuery = (trx: Knex.Transaction, tenant: string) =>
+  tenantDb(trx, tenant).table('project_tasks as pt');
+
+const tagMappingsWithDefinitionsQuery = (trx: Knex.Transaction, tenant: string) =>
+  tenantDb(trx, tenant).table('tag_mappings as tm');
+
+const joinProjectPhases = (query: Knex.QueryBuilder, trx: Knex.Transaction, tenant: string) =>
+  tenantDb(trx, tenant).tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+
+const joinTagDefinitions = (query: Knex.QueryBuilder, trx: Knex.Transaction, tenant: string) =>
+  tenantDb(trx, tenant).tenantJoin(query, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+
 async function getTagTextSnapshot(
   trx: Knex.Transaction,
   tenant: string,
@@ -53,13 +81,10 @@ async function resolveProjectTaskTagContext(
   tenant: string,
   taskId: string
 ): Promise<{ projectId: string; phaseId: string } | null> {
-  const row = await trx('project_tasks as pt')
-    .join('project_phases as pp', function joinProjectPhases() {
-      this.on('pt.phase_id', '=', 'pp.phase_id')
-        .andOn('pt.tenant', '=', 'pp.tenant');
-    })
-    .where({ 'pt.tenant': tenant, 'pt.task_id': taskId })
-    .first<{ project_id: string; phase_id: string }>('pp.project_id', 'pt.phase_id');
+  const row = await projectTasksQuery(trx, tenant)
+    .modify((query) => joinProjectPhases(query, trx, tenant))
+    .where({ 'pt.task_id': taskId })
+    .first('pp.project_id', 'pt.phase_id') as { project_id: string; phase_id: string } | undefined;
 
   if (!row) {
     return null;
@@ -85,18 +110,14 @@ async function resolveProjectTaskTagContexts(
     return contexts;
   }
 
-  const rows = await trx('project_tasks as pt')
-    .join('project_phases as pp', function joinProjectPhases() {
-      this.on('pt.phase_id', '=', 'pp.phase_id')
-        .andOn('pt.tenant', '=', 'pp.tenant');
-    })
-    .where('pt.tenant', tenant)
+  const rows = await projectTasksQuery(trx, tenant)
+    .modify((query) => joinProjectPhases(query, trx, tenant))
     .whereIn('pt.task_id', taskIds)
-    .select<Array<{ task_id: string; project_id: string; phase_id: string }>>(
+    .select(
       'pt.task_id',
       'pp.project_id',
       'pt.phase_id',
-    );
+    ) as Array<{ task_id: string; project_id: string; phase_id: string }>;
 
   for (const row of rows) {
     contexts.set(row.task_id, { projectId: row.project_id, phaseId: row.phase_id });
@@ -194,13 +215,9 @@ export const findTagById = withAuth(async (_user: IUserWithRoles, { tenant }: Au
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // tagId is actually mapping_id in the new system
-      const tag = await trx('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+      const tag = await tagMappingsWithDefinitionsQuery(trx, tenant)
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', tagId)
-        .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
           'td.board_id',
@@ -212,7 +229,7 @@ export const findTagById = withAuth(async (_user: IUserWithRoles, { tenant }: Au
           'tm.tenant',
           'tm.created_by'
         )
-        .first();
+        .first() as TagMappingDefinitionRow | undefined;
 
       if (!tag) {
         console.warn(`Tag with id ${tagId} not found`);
@@ -400,13 +417,9 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Get existing tag to check entity type (id is mapping_id)
-      const existingTag = await trx('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+      const existingTag = await tagMappingsWithDefinitionsQuery(trx, tenant)
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', id)
-        .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
           'td.board_id',
@@ -419,7 +432,7 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
           'tm.created_by',
           'tm.tag_id as definition_tag_id'
         )
-        .first();
+        .first() as TagMappingDefinitionWithDefinitionIdRow | undefined;
 
       if (!existingTag) {
         throw new Error(`Tag with id ${id} not found`);
@@ -476,15 +489,11 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
 export const getTagMappingUsageCount = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, mappingId: string): Promise<{ tagId: string; tagText: string; usageCount: number }> => {
   const { knex: db } = await createTenantKnex();
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const mapping = await trx('tag_mappings as tm')
-      .join('tag_definitions as td', function() {
-        this.on('tm.tenant', '=', 'td.tenant')
-            .andOn('tm.tag_id', '=', 'td.tag_id');
-      })
+    const mapping = await tagMappingsWithDefinitionsQuery(trx, tenant)
+      .modify((query) => joinTagDefinitions(query, trx, tenant))
       .where('tm.mapping_id', mappingId)
-      .where('tm.tenant', tenant)
       .select('td.tag_id', 'td.tag_text')
-      .first();
+      .first() as { tag_id: string; tag_text: string } | undefined;
 
     if (!mapping) {
       throw new Error(`Tag mapping with id ${mappingId} not found`);
@@ -506,13 +515,9 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Get existing tag to check entity type and creator (id is mapping_id)
-      const existingTag = await trx('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+      const existingTag = await tagMappingsWithDefinitionsQuery(trx, tenant)
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', id)
-        .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
           'td.board_id',
@@ -525,7 +530,7 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
           'tm.created_by',
           'tm.tag_id as definition_tag_id'
         )
-        .first();
+        .first() as TagMappingDefinitionWithDefinitionIdRow | undefined;
 
       if (!existingTag) {
         throw new Error(`Tag with id ${id} not found`);
@@ -655,12 +660,8 @@ export const getAllTags = withOptionalAuth(async (user: IUserWithRoles | null, c
     const { tenant } = ctx;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Join mappings with definitions to create ITag structure
-      const tags = await trx('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
-        .where('tm.tenant', tenant)
+      const tags = await tagMappingsWithDefinitionsQuery(trx, tenant)
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .select(
           'tm.mapping_id as tag_id', // Use mapping_id as tag_id for backward compatibility
           'td.board_id',
@@ -670,7 +671,7 @@ export const getAllTags = withOptionalAuth(async (user: IUserWithRoles | null, c
           'td.background_color',
           'td.text_color',
           'tm.tenant'
-        );
+        ) as ITag[];
 
       return tags;
     });
@@ -692,19 +693,19 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get tag definitions that have at least one mapping (filter out orphans)
       // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
-      const result = await trx.raw(`
-        SELECT DISTINCT ON (td.tag_text) td.*
-        FROM tag_definitions td
-        WHERE td.tenant = ?
-          AND td.tagged_type = ?
-          AND EXISTS (
-            SELECT 1 FROM tag_mappings tm
-            WHERE tm.tenant = td.tenant AND tm.tag_id = td.tag_id
-          )
-        ORDER BY td.tag_text ASC, td.created_at ASC
-      `, [tenant, entityType]);
+      const scopedDb = tenantDb(trx, tenant);
+      const tagMappingsQuery = scopedDb.table('tag_mappings as tm')
+        .select(trx.raw('1'))
+        .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
+      scopedDb.tenantWhereColumn(tagMappingsQuery, 'tm.tenant', 'td.tenant');
 
-      const definitions = result.rows || [];
+      const definitions = await scopedDb.table('tag_definitions as td')
+        .distinctOn('td.tag_text')
+        .select('td.*')
+        .where('td.tagged_type', entityType)
+        .whereExists(tagMappingsQuery)
+        .orderBy('td.tag_text', 'asc')
+        .orderBy('td.created_at', 'asc');
 
       // Convert to ITag format (use definition ID as tag_id since these are unique)
       return definitions.map((def: any) => ({
@@ -1038,7 +1039,7 @@ export const bulkApplyTagsToEntities = withAuth(async (
   // unique(tenant, tag_id, tagged_id) and roll back the entire batch. RETURNING
   // yields only the rows we actually inserted, so events fire for real changes
   // only; a skipped row just means the tag is already present.
-  const insertedRows = await trx('tag_mappings')
+  const insertedRows = await tenantDb(trx, tenant).table('tag_mappings')
     .insert(rows)
     .onConflict(['tenant', 'tag_id', 'tagged_id'])
     .ignore()
@@ -1136,13 +1137,9 @@ export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { ten
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // tagId is actually mapping_id in the new system
-      const tag = await trx('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+      const tag = await tagMappingsWithDefinitionsQuery(trx, tenant)
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', tagId)
-        .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
           'td.board_id',
@@ -1153,7 +1150,7 @@ export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { ten
           'td.text_color',
           'tm.tenant'
         )
-        .first();
+        .first() as TagMappingDefinitionRow | undefined;
 
       if (!tag) {
         throw new Error(`Tag with id ${tagId} not found`);
@@ -1223,13 +1220,9 @@ export const updateTagText = withAuth(async (currentUser: IUserWithRoles, { tena
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // tagId is actually mapping_id in the new system
-      const tag = await trx('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+      const tag = await tagMappingsWithDefinitionsQuery(trx, tenant)
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', tagId)
-        .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
           'td.board_id',
@@ -1240,7 +1233,7 @@ export const updateTagText = withAuth(async (currentUser: IUserWithRoles, { tena
           'td.text_color',
           'tm.tenant'
         )
-        .first();
+        .first() as TagMappingDefinitionRow | undefined;
 
       if (!tag) {
         throw new Error(`Tag with id ${tagId} not found`);

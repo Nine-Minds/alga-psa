@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { NormalizedRmmAlertEvent, RmmAlertRuleActions } from './contracts';
 import { rmmAlertRuleActionsSchema } from './contracts';
 import { createTicketForAlert, type CreatedAlertTicket } from './ticketCreator';
@@ -12,6 +13,23 @@ export interface CreateTicketForAlertIdArgs {
   >;
 }
 
+interface ExistingAlertTicketRow {
+  ticket_id: string | null;
+  asset_id: string | null;
+  metadata: unknown;
+  integration_id: string;
+  provider: NormalizedRmmAlertEvent['provider'];
+  external_alert_id: string;
+  external_device_id: string | null;
+  activity_type: string | null;
+  alert_class: string | null;
+  source_type: string | null;
+  severity: NormalizedRmmAlertEvent['severity'];
+  message: string | null;
+  device_name: string | null;
+  triggered_at: Date | string | null;
+}
+
 /**
  * Creates a ticket for an existing rmm_alerts row (manual button, workflow
  * action). Resolves the client from the asset, falling back to the
@@ -22,14 +40,13 @@ export async function createTicketForAlertId(
   args: CreateTicketForAlertIdArgs
 ): Promise<CreatedAlertTicket> {
   const { tenantId, alertId } = args;
+  const db = tenantDb(knex, tenantId);
 
-  const alert = await knex('rmm_alerts as a')
-    .join('rmm_integrations as i', function joinIntegrations() {
-      this.on('i.tenant', 'a.tenant').andOn('i.integration_id', 'a.integration_id');
-    })
-    .where('a.tenant', tenantId)
+  const alertQuery = db.table('rmm_alerts as a');
+  db.tenantJoin(alertQuery, 'rmm_integrations as i', 'i.integration_id', 'a.integration_id');
+  const alert = (await alertQuery
     .andWhere('a.alert_id', alertId)
-    .first('a.*', 'i.provider');
+    .first('a.*', 'i.provider as provider')) as ExistingAlertTicketRow | undefined;
   if (!alert) {
     throw new Error('Alert not found');
   }
@@ -41,8 +58,8 @@ export async function createTicketForAlertId(
   let organizationName: string | null = null;
   let mappingDefaultContactId: string | null = null;
   if (alert.asset_id) {
-    const asset = await knex('assets')
-      .where({ tenant: tenantId, asset_id: alert.asset_id })
+    const asset = await db.table('assets')
+      .where({ asset_id: alert.asset_id })
       .first('client_id');
     clientId = asset?.client_id ?? null;
   }
@@ -53,9 +70,8 @@ export async function createTicketForAlertId(
       ? String((rawMetadata as Record<string, unknown>).organizationId)
       : null;
   if (externalOrgId) {
-    const orgMapping = await knex('rmm_organization_mappings')
+    const orgMapping = await db.table('rmm_organization_mappings')
       .where({
-        tenant: tenantId,
         integration_id: alert.integration_id,
         external_organization_id: externalOrgId,
       })
@@ -88,6 +104,7 @@ export async function createTicketForAlertId(
   const actions = rmmAlertRuleActionsSchema.parse({ createTicket: true, ...(args.overrides ?? {}) });
 
   const created = await knex.transaction(async (trx) => {
+    const trxDb = tenantDb(trx, tenantId);
     const created = await createTicketForAlert(trx, {
       event,
       actions,
@@ -96,8 +113,8 @@ export async function createTicketForAlertId(
       organizationName,
       mappingDefaultContactId,
     });
-    await trx('rmm_alerts')
-      .where({ tenant: tenantId, alert_id: alertId })
+    await trxDb.table('rmm_alerts')
+      .where({ alert_id: alertId })
       .update({ ticket_id: created.ticket_id, updated_at: new Date().toISOString() });
     return created;
   });

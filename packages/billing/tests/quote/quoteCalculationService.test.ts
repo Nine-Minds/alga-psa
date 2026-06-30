@@ -35,8 +35,9 @@ function buildMockKnex(opts: {
     });
     chain.update = vi.fn(async (data: Record<string, any>) => {
       if (table === 'quote_items') {
-        // The where call receives {tenant, quote_item_id}
-        const whereArg = chain.where.mock.calls[0]?.[0];
+        const whereArg = chain.where.mock.calls
+          .map((call: any[]) => call[0])
+          .find((arg: any) => arg?.quote_item_id);
         if (whereArg?.quote_item_id) {
           updatedQuoteItems.set(whereArg.quote_item_id, data);
         }

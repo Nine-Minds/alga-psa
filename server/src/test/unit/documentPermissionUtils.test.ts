@@ -21,12 +21,17 @@ vi.mock('../../lib/db', () => ({
 import { hasPermission } from '@/lib/auth/rbac';
 import { createTenantKnex } from '@/lib/db';
 
-// canAccessDocument queries associations directly:
-//   db('document_associations').select('*').where({ document_id, tenant })
+// canAccessDocument queries associations through tenantDb:
+//   db('document_associations').where('document_associations.tenant', tenant).select('*').where({ document_id })
 let mockAssociationRows: IDocumentAssociation[] = [];
-const associationWhereMock = vi.fn(() => Promise.resolve(mockAssociationRows));
-const associationSelectMock = vi.fn(() => ({ where: associationWhereMock }));
-const mockKnexInstance: any = vi.fn(() => ({ select: associationSelectMock }));
+const associationBuilder = {
+  where: vi.fn().mockReturnThis(),
+  whereIn: vi.fn().mockReturnThis(),
+  select: vi.fn().mockReturnThis(),
+  then: (resolve: (value: IDocumentAssociation[]) => unknown, reject?: (reason: unknown) => unknown) =>
+    Promise.resolve(mockAssociationRows).then(resolve, reject),
+};
+const mockKnexInstance: any = vi.fn(() => associationBuilder);
 
 describe('documentPermissionUtils', () => {
   const mockUser: IUser = {
@@ -75,7 +80,8 @@ describe('documentPermissionUtils', () => {
 
       expect(result).toBe(true);
       expect(mockKnexInstance).toHaveBeenCalledWith('document_associations');
-      expect(associationWhereMock).toHaveBeenCalledWith({ document_id: 'doc-123', tenant: 'tenant-123' });
+      expect(associationBuilder.where).toHaveBeenCalledWith('document_associations.tenant', 'tenant-123');
+      expect(associationBuilder.where).toHaveBeenCalledWith({ document_id: 'doc-123' });
     });
 
     it('should allow access if user has permission for associated entity (contract)', async () => {
@@ -255,8 +261,8 @@ describe('documentPermissionUtils', () => {
       ];
 
       const mockKnex: any = vi.fn();
+      mockKnex.where = vi.fn().mockReturnValue(mockKnex);
       mockKnex.whereIn = vi.fn().mockReturnValue(mockKnex);
-      mockKnex.andWhere = vi.fn().mockReturnValue(mockKnex);
       mockKnex.select = vi.fn().mockResolvedValue([
         { document_id: 'doc-1', entity_type: 'ticket' },
         { document_id: 'doc-2', entity_type: 'contract' },
@@ -294,8 +300,8 @@ describe('documentPermissionUtils', () => {
       }));
 
       const mockKnex: any = vi.fn();
+      mockKnex.where = vi.fn().mockReturnValue(mockKnex);
       mockKnex.whereIn = vi.fn().mockReturnValue(mockKnex);
-      mockKnex.andWhere = vi.fn().mockReturnValue(mockKnex);
       mockKnex.select = vi.fn().mockResolvedValue([]);
       mockKnex.mockImplementation(() => mockKnex);
 

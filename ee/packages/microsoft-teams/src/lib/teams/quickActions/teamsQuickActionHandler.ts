@@ -1,4 +1,4 @@
-import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
+import { createTenantKnex, getUserWithRoles, tenantDb } from '@alga-psa/db';
 import { NextResponse } from 'next/server';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getTeamsRuntimeAvailability } from '../getTeamsRuntimeAvailability';
@@ -371,8 +371,8 @@ async function loadAssignableUsers(
   }
 
   const { knex } = await createTenantKnex(tenantId);
-  const rows = (await knex('users')
-    .where({ tenant: tenantId, user_type: 'internal', is_inactive: false })
+  const rows = (await tenantDb(knex, tenantId).table('users')
+    .where({ user_type: 'internal', is_inactive: false })
     .select('user_id', 'first_name', 'last_name', 'email')
     .orderBy('first_name', 'asc')
     .orderBy('last_name', 'asc')

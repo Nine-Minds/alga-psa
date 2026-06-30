@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuid4 } from 'uuid';
 import type { ITaxRate, ITaxRegion, ISO8601String } from '@alga-psa/types';
 
@@ -24,10 +25,9 @@ export async function validateTaxRateDateRange(
   endDate: ISO8601String | null,
   excludeTaxRateId?: string
 ): Promise<void> {
-  const query = knexOrTrx('tax_rates')
+  const query = tenantDb(knexOrTrx, tenant).table('tax_rates')
     .where({
       region_code: regionCode,
-      tenant
     })
     .andWhere(function () {
       this.where(function () {
@@ -53,7 +53,7 @@ export async function getTaxRates(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string
 ): Promise<ITaxRate[]> {
-  return knexOrTrx<ITaxRate>('tax_rates').where({ tenant }).select('*');
+  return tenantDb(knexOrTrx, tenant).table<ITaxRate>('tax_rates').select('*');
 }
 
 export async function addTaxRate(
@@ -74,7 +74,7 @@ export async function addTaxRate(
   );
 
   const tax_rate_id = uuid4();
-  const [newTaxRate] = await knexOrTrx('tax_rates')
+  const [newTaxRate] = await tenantDb(knexOrTrx, tenant).table('tax_rates')
     .insert({ ...taxRateData, tax_rate_id, tenant })
     .returning('*');
   return newTaxRate as ITaxRate;
@@ -84,10 +84,8 @@ export async function getActiveTaxRegions(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string
 ): Promise<Pick<ITaxRegion, 'region_code' | 'region_name'>[]> {
-  return knexOrTrx<ITaxRegion>('tax_regions')
+  return tenantDb(knexOrTrx, tenant).table<ITaxRegion>('tax_regions')
     .select('region_code', 'region_name')
     .where('is_active', true)
-    .where('tenant', tenant)
     .orderBy('region_name', 'asc');
 }
-

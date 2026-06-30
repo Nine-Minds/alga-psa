@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 import { StorageProviderFactory } from '@alga-psa/storage';
 import { FileStoreModel } from 'server/src/models/storage';
@@ -9,6 +9,9 @@ import { ApiKeyServiceForApi } from 'server/src/lib/services/apiKeyServiceForApi
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from 'server/src/lib/db';
 import { getAuthorizedDocumentByFileId } from '@alga-psa/documents/actions/documentActions';
+
+const TENANT_LOGO_DISCOVERY_TENANT = 'tenant-logo-file-discovery';
+const TENANT_LOGO_DISCOVERY_REASON = 'public tenant logo file lookup before tenant is known';
 
 export async function GET(
   request: NextRequest,
@@ -31,27 +34,28 @@ export async function GET(
     const adminKnex = await getConnection();
 
     // Get file record to determine tenant
-    const fileRecordAdmin = await adminKnex('external_files')
+    const fileRecordAdmin = await tenantDb(adminKnex, TENANT_LOGO_DISCOVERY_TENANT)
+      .unscoped('external_files', TENANT_LOGO_DISCOVERY_REASON)
       .where({ file_id: fileId, is_deleted: false })
       .first();
 
     if (fileRecordAdmin) {
       fileTenant = fileRecordAdmin.tenant;
       fileRecord = fileRecordAdmin;
+      const tenantScopedAdminDb = tenantDb(adminKnex, fileTenant);
 
       // Check if this is a tenant logo
-      const documentRecord = await adminKnex('documents')
+      const documentRecord = await tenantScopedAdminDb.table('documents')
         .select('document_id')
-        .where({ file_id: fileId, tenant: fileTenant })
+        .where({ file_id: fileId })
         .first();
 
       if (documentRecord) {
-        const tenantLogoAssoc = await adminKnex('document_associations')
+        const tenantLogoAssoc = await tenantScopedAdminDb.table('document_associations')
           .where({
             document_id: documentRecord.document_id,
             entity_type: 'tenant',
             is_entity_logo: true,
-            tenant: fileTenant
           })
           .first();
 

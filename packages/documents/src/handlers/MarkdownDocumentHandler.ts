@@ -1,7 +1,7 @@
 import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
 import { marked } from 'marked';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 
 /**
@@ -46,8 +46,8 @@ export class MarkdownDocumentHandler extends BaseDocumentHandler {
 
       // Get document content from database
       const docContent = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('document_content')
-          .where({ document_id: document.document_id, tenant })
+        return await tenantDb(trx, tenant).table('document_content')
+          .where({ document_id: document.document_id })
           .first();
       });
 
@@ -96,8 +96,8 @@ export class MarkdownDocumentHandler extends BaseDocumentHandler {
     try {
       // Get document content from database
       const docContent = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('document_content')
-          .where({ document_id: document.document_id, tenant })
+        return await tenantDb(trx, tenant).table('document_content')
+          .where({ document_id: document.document_id })
           .first();
       });
 

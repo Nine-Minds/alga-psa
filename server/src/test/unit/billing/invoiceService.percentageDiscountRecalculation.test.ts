@@ -7,6 +7,11 @@ import {
 
 type Row = Record<string, any>;
 
+function normalizeColumnName(columnName: string) {
+  const [, unqualifiedName] = columnName.match(/^(?:[^.]+)\.(.+)$/) ?? [];
+  return unqualifiedName ?? columnName;
+}
+
 function createMockTx() {
   const tables: Record<string, Row[]> = {
     invoices: [
@@ -65,10 +70,16 @@ function createMockTx() {
     let filteredRows = rows;
 
     const builder: any = {
-      where(criteria: Record<string, any>) {
-        filteredRows = filteredRows.filter((row) =>
-          Object.entries(criteria).every(([key, expected]) => row[key] === expected),
-        );
+      where(criteria: Record<string, any> | string, value?: unknown) {
+        filteredRows = filteredRows.filter((row) => {
+          if (typeof criteria === 'string') {
+            return row[normalizeColumnName(criteria)] === value;
+          }
+
+          return Object.entries(criteria).every(
+            ([key, expected]) => row[normalizeColumnName(key)] === expected,
+          );
+        });
         return builder;
       },
       select() {

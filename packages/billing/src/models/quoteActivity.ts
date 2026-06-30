@@ -1,5 +1,13 @@
 import type { Knex } from 'knex';
 import type { IQuoteActivity } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table('quote_activities');
+}
 
 const QuoteActivity = {
   async create(
@@ -11,7 +19,7 @@ const QuoteActivity = {
       throw new Error('Tenant context is required for creating quote activity');
     }
 
-    const [createdActivity] = await knexOrTrx('quote_activities')
+    const [createdActivity] = await tenantScopedTable(knexOrTrx, tenant)
       .insert({ tenant, ...activity, metadata: activity.metadata ?? {} })
       .returning('*');
 
@@ -27,8 +35,8 @@ const QuoteActivity = {
       throw new Error('Tenant context is required for listing quote activities');
     }
 
-    return knexOrTrx('quote_activities')
-      .where({ tenant, quote_id: quoteId })
+    return tenantScopedTable(knexOrTrx, tenant)
+      .where({ quote_id: quoteId })
       .orderBy('created_at', 'asc');
   }
 };

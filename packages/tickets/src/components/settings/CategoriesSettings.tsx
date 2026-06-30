@@ -9,8 +9,8 @@ import {
   updateCategory,
   deleteCategory,
   validateCategoryDeletion
-} from '@alga-psa/tickets/actions';
-import { getAllBoards } from '@alga-psa/tickets/actions';
+} from '../../actions/ticketCategoryActions';
+import { getAllBoards } from '../../actions/board-actions/boardActions';
 import type { IBoard } from '@alga-psa/types';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';

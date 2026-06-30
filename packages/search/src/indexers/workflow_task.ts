@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface WorkflowTaskSearchRow {
@@ -81,9 +82,8 @@ export const workflowTaskIndexer: EntityIndexer = {
   ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
-    const row = await knex<WorkflowTaskSearchRow>('workflow_tasks')
+    const row = await createTenantScopedIndexerQuery<WorkflowTaskSearchRow>(knex, 'workflow_tasks', 'workflow_tasks', tenant)
       .select('task_id', 'title', 'description', 'assigned_users', 'created_at', 'updated_at')
-      .where('tenant', tenant)
       .andWhere('task_id', id)
       .first();
 
@@ -96,9 +96,8 @@ export const workflowTaskIndexer: EntityIndexer = {
     cursor: string | null | undefined,
     limit: number,
   ): Promise<SearchDoc[]> {
-    const query = knex<WorkflowTaskSearchRow>('workflow_tasks')
+    const query = createTenantScopedIndexerQuery<WorkflowTaskSearchRow>(knex, 'workflow_tasks', 'workflow_tasks', tenant)
       .select('task_id', 'title', 'description', 'assigned_users', 'created_at', 'updated_at')
-      .where('tenant', tenant)
       .orderBy('task_id', 'asc')
       .limit(limit);
 

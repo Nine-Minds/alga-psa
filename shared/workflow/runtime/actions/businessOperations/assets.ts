@@ -1,4 +1,6 @@
+import type { Knex } from 'knex';
 import { z } from 'zod';
+import { tenantDb } from '@alga-psa/db';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import {
   uuidSchema,
@@ -6,7 +8,15 @@ import {
   withTenantTransaction,
   requirePermission,
   throwActionError,
+  type TenantTxContext,
 } from './shared';
+
+function tenantScopedTable(
+  tx: Pick<TenantTxContext, 'tenantId' | 'trx'>,
+  table: string
+): Knex.QueryBuilder {
+  return tenantDb(tx.trx, tx.tenantId).table(table);
+}
 
 export function registerAssetActions(): void {
   const registry = getActionRegistryV2();
@@ -83,16 +93,15 @@ export function registerAssetActions(): void {
       let resolvedAssetId: string | null = input.asset_id ?? null;
 
       if (!resolvedAssetId && input.asset_tag) {
-        const asset = await tx.trx('assets')
-          .where({ tenant: tx.tenantId, asset_tag: input.asset_tag })
+        const asset = await tenantScopedTable(tx, 'assets')
+          .where({ asset_tag: input.asset_tag })
           .first<{ asset_id: string }>('asset_id');
         resolvedAssetId = asset?.asset_id ?? null;
       }
 
       if (!resolvedAssetId && input.external_id) {
-        const mappingQuery = tx.trx('tenant_external_entity_mappings')
+        const mappingQuery = tenantScopedTable(tx, 'tenant_external_entity_mappings')
           .where({
-            tenant_id: tx.tenantId,
             alga_entity_type: 'asset',
             external_entity_id: input.external_id,
           });
@@ -131,11 +140,12 @@ export function registerAssetActions(): void {
       // resolvedAssetId comes from tenant_external_entity_mappings.alga_entity_id which
       // is varchar(255); asset_associations.asset_id is uuid. Cast explicitly so the
       // join doesn't trip "operator does not exist: uuid = character varying".
-      const associationsQuery = tx.trx('asset_associations as aa')
-        .innerJoin('tickets as t', function joinTickets() {
-          this.on('t.tenant', '=', 'aa.tenant').andOn('t.ticket_id', '=', 'aa.entity_id');
-        })
-        .where('aa.tenant', tx.tenantId)
+      const db = tenantDb(tx.trx, tx.tenantId);
+      const associationsQuery = db.table('asset_associations as aa');
+      db.tenantJoin(associationsQuery, 'tickets as t', 't.ticket_id', 'aa.entity_id', {
+        rootTenantColumn: 'aa.tenant',
+      });
+      associationsQuery
         .andWhereRaw('aa.asset_id = ?::uuid', [resolvedAssetId])
         .andWhere('aa.entity_type', 'ticket');
 
@@ -153,7 +163,7 @@ export function registerAssetActions(): void {
         });
       }
 
-      const rows = await associationsQuery
+      const rows = (await associationsQuery
         .select(
           't.ticket_id',
           't.ticket_number',
@@ -165,7 +175,7 @@ export function registerAssetActions(): void {
           'aa.relationship_type as relationship_type',
         )
         .orderBy('t.updated_at', 'desc')
-        .limit(input.limit ?? 10) as Array<{
+        .limit(input.limit ?? 10)) as unknown as Array<{
           ticket_id: string;
           ticket_number: string;
           title: string | null;

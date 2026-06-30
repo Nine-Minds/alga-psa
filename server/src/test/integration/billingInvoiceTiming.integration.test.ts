@@ -2,6 +2,7 @@ import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import {
   setupClientTaxConfiguration,
@@ -51,6 +52,38 @@ const authRef = vi.hoisted(() => ({
   tenantId: '11111111-1111-1111-1111-111111111111',
   userId: 'test-user',
 }));
+
+function tenantTable<Row extends object = Record<string, unknown>>(
+  connection: Knex,
+  tenant: string,
+  tableExpression: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(connection, tenant).table<Row>(tableExpression);
+}
+
+function tenantRows(connection: Knex): Knex.QueryBuilder<Record<string, unknown>, Record<string, unknown>[]> {
+  return tenantDb(connection, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+function schemaTable<Row extends object = Record<string, unknown>>(
+  connection: Knex,
+  tableExpression: string,
+  reason = 'test schema/global metadata boundary'
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(connection, '__test_schema__').unscoped<Row>(tableExpression, reason);
+}
+
+async function hasSchemaTable(connection: Knex, tableName: string): Promise<boolean> {
+  const row = await schemaTable(
+    connection,
+    'information_schema.tables',
+    'test schema table existence check'
+  )
+    .where({ table_schema: 'public', table_name: tableName })
+    .first('table_name');
+  return Boolean(row);
+}
 
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
@@ -590,7 +623,7 @@ it('T029: billed recurring service periods link back to invoice charge detail ro
   const detailRows = await getInvoiceDetailRows(generatedInvoice!.invoice_id);
   expect(detailRows).toHaveLength(1);
 
-  const billedRow = await db('recurring_service_periods')
+  const billedRow = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId, record_id: materializationPlan.records[0].recordId })
     .first([
       'record_id',
@@ -754,7 +787,11 @@ it('F221: DB-backed recurring invoice generation succeeds while dropped recurren
     'contract_template_line_mappings',
   ];
 
-  const legacyTables = await db('information_schema.tables')
+  const legacyTables = await schemaTable(
+    db,
+    'information_schema.tables',
+    'test asserts dropped recurrence tables remain absent'
+  )
     .where({ table_schema: 'public' })
     .whereIn('table_name', droppedRecurrenceTables)
     .select('table_name');
@@ -836,7 +873,7 @@ it('T166: DB-backed recurring outputs stay stable across billing_cycle_alignment
     sharedContractId ??= line.contractId;
     sharedClientContractId ??= line.clientContractId;
 
-    await db('contract_lines')
+    await tenantTable(db, tenantId, 'contract_lines')
       .where({ tenant: tenantId, contract_line_id: line.contractLineId })
       .update({
         enable_proration: true,
@@ -895,7 +932,7 @@ it('T111: billing engine contract resolution joins only on instantiated client_c
     billingFrequency: 'monthly',
   });
 
-  await db('client_contracts')
+  await tenantTable(db, tenantId, 'client_contracts')
     .where({
       tenant: tenantId,
       client_contract_id: fixedLine.clientContractId,
@@ -956,7 +993,7 @@ it('T167: DB-backed recurring outputs still persist canonical partial service pe
     billingFrequency: 'monthly'
   });
 
-  await db('contract_lines')
+  await tenantTable(db, tenantId, 'contract_lines')
     .where({ tenant: tenantId, contract_line_id: line.contractLineId })
     .update({
       enable_proration: true,
@@ -1093,7 +1130,7 @@ it('T020/T030: billed recurring service periods link back to invoice charge deta
   const detailRows = await getInvoiceDetailRows(generatedInvoice!.invoice_id);
   expect(detailRows).toHaveLength(1);
 
-  const billedRow = await db('recurring_service_periods')
+  const billedRow = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId, record_id: materializationPlan.records[0].recordId })
     .first([
       'record_id',
@@ -1663,7 +1700,7 @@ it('T009/T011: server-side guard re-checks approval state at generation time and
   expect(readyMember).toBeTruthy();
   expect(readyMember?.canGenerate).toBe(true);
 
-  await db('time_entries')
+  await tenantTable(db, tenantId, 'time_entries')
     .where({ tenant: tenantId, entry_id: mutableEntry.entry_id })
     .update({ approval_status: 'SUBMITTED' });
 
@@ -1671,7 +1708,7 @@ it('T009/T011: server-side guard re-checks approval state at generation time and
     generateInvoiceForSelectionInput(readyMember!.selectorInput),
   ).rejects.toThrow('1 unapproved entry');
 
-  await db('time_entries')
+  await tenantTable(db, tenantId, 'time_entries')
     .where({ tenant: tenantId, entry_id: mutableEntry.entry_id })
     .update({ approval_status: 'APPROVED' });
 
@@ -1883,7 +1920,7 @@ it('T073: mixed recurring invoice generation can combine fixed, hourly, and usag
   const invoice = await generateInvoice(cycleId);
   expect(invoice).toBeTruthy();
 
-  const invoiceChargeRows = await db('invoice_charges')
+  const invoiceChargeRows = await tenantTable(db, tenantId, 'invoice_charges')
     .where({ invoice_id: invoice!.invoice_id, tenant: tenantId })
     .select(['item_id', 'service_id']);
 
@@ -1968,12 +2005,12 @@ it('T021: deleting a recurring invoice clears service-period invoice linkage and
 
   await hardDeleteInvoiceAction(generatedInvoice!.invoice_id);
 
-  const deletedInvoice = await db('invoices')
+  const deletedInvoice = await tenantTable(db, tenantId, 'invoices')
     .where({ tenant: tenantId, invoice_id: generatedInvoice!.invoice_id })
     .first(['invoice_id']);
   expect(deletedInvoice).toBeUndefined();
 
-  const reopenedRow = await db('recurring_service_periods')
+  const reopenedRow = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId, record_id: materializationPlan.records[0].recordId })
     .first([
       'record_id',
@@ -1993,7 +2030,7 @@ it('T021: deleting a recurring invoice clears service-period invoice linkage and
     invoice_linked_at: null,
   });
 
-  const invoiceableRows = await db('recurring_service_periods')
+  const invoiceableRows = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({
       tenant: tenantId,
       record_id: materializationPlan.records[0].recordId,
@@ -2521,7 +2558,7 @@ it('T033/T078: reversing a client-cadence recurring invoice repairs service-peri
     billingCycleId: cycleId,
   });
 
-  const reopenedRow = await db('recurring_service_periods')
+  const reopenedRow = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId, record_id: materializationPlan.records[0].recordId })
     .first(['lifecycle_state', 'invoice_id', 'invoice_charge_id', 'invoice_charge_detail_id']);
   expect(reopenedRow).toMatchObject({
@@ -2531,7 +2568,7 @@ it('T033/T078: reversing a client-cadence recurring invoice repairs service-peri
     invoice_charge_detail_id: null,
   });
 
-  const billingCycle = await db('client_billing_cycles')
+  const billingCycle = await tenantTable(db, tenantId, 'client_billing_cycles')
     .where({ tenant: tenantId, billing_cycle_id: cycleId })
     .first(['billing_cycle_id', 'is_active']);
   expect(billingCycle?.billing_cycle_id).toBe(cycleId);
@@ -2598,7 +2635,7 @@ it('T034/T079: reversing a contract-cadence recurring invoice repairs service-pe
     billingCycleId: null,
   });
 
-  const reopenedRow = await db('recurring_service_periods')
+  const reopenedRow = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId, record_id: materializationPlan.records[0].recordId })
     .first(['lifecycle_state', 'invoice_id']);
   expect(reopenedRow).toMatchObject({
@@ -2655,7 +2692,7 @@ it('T085: hard-deleting recurring invoices reopens linked service periods withou
     billingCycleId: clientSetup.cycleId,
   });
 
-  const preservedBillingCycle = await db('client_billing_cycles')
+  const preservedBillingCycle = await tenantTable(db, tenantId, 'client_billing_cycles')
     .where({ tenant: tenantId, billing_cycle_id: clientSetup.cycleId })
     .first(['billing_cycle_id', 'is_active']);
   expect(preservedBillingCycle).toMatchObject({
@@ -2663,7 +2700,7 @@ it('T085: hard-deleting recurring invoices reopens linked service periods withou
     is_active: true,
   });
 
-  const reopenedClientRow = await db('recurring_service_periods')
+  const reopenedClientRow = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId, record_id: clientMaterializationPlan.records[0].recordId })
     .first(['lifecycle_state', 'invoice_id']);
   expect(reopenedClientRow).toMatchObject({
@@ -2724,7 +2761,7 @@ it('T085: hard-deleting recurring invoices reopens linked service periods withou
     billingCycleId: null,
   });
 
-  const reopenedContractRow = await db('recurring_service_periods')
+  const reopenedContractRow = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId, record_id: contractMaterializationPlan.records[0].recordId })
     .first(['lifecycle_state', 'invoice_id']);
   expect(reopenedContractRow).toMatchObject({
@@ -2977,10 +3014,10 @@ it('T345: invoicing a second contract-cadence contract in the same window does n
   expect(secondInvoice).toBeTruthy();
   expect(secondInvoice!.invoice_id).not.toBe(firstInvoice!.invoice_id);
 
-  const firstInvoiceCharges = await db('invoice_charges')
+  const firstInvoiceCharges = await tenantTable(db, tenantId, 'invoice_charges')
     .where({ tenant: tenantId, invoice_id: firstInvoice!.invoice_id })
     .select(['description']);
-  const secondInvoiceCharges = await db('invoice_charges')
+  const secondInvoiceCharges = await tenantTable(db, tenantId, 'invoice_charges')
     .where({ tenant: tenantId, invoice_id: secondInvoice!.invoice_id })
     .select(['description']);
 
@@ -2992,7 +3029,7 @@ it('T345: invoicing a second contract-cadence contract in the same window does n
   expect(secondInvoiceCharges.map((row) => row.description)).toContain('Sequential Window Contract Plan B');
   expect(secondInvoiceCharges.map((row) => row.description)).not.toContain('Sequential Window Contract Plan A');
 
-  const billedFirstRecord = await db('recurring_service_periods')
+  const billedFirstRecord = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId, record_id: firstTargetRecord!.recordId })
     .first(['lifecycle_state', 'invoice_id', 'invoice_charge_detail_id']);
   expect(billedFirstRecord).toMatchObject({
@@ -3001,7 +3038,7 @@ it('T345: invoicing a second contract-cadence contract in the same window does n
   });
   expect(billedFirstRecord?.invoice_charge_detail_id ?? null).not.toBeNull();
 
-  const billedSecondRecord = await db('recurring_service_periods')
+  const billedSecondRecord = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId, record_id: secondTargetRecord!.recordId })
     .first(['lifecycle_state', 'invoice_id', 'invoice_charge_detail_id']);
   expect(billedSecondRecord).toMatchObject({
@@ -3520,7 +3557,7 @@ it('T276: DB-backed monthly contract-cadence scheduling, grouping, invoice gener
   const generatedInvoice = await generateInvoiceForSelectionInput(selectorInput);
   expect(generatedInvoice).toBeTruthy();
 
-  const persistedInvoices = await db('invoices')
+  const persistedInvoices = await tenantTable(db, tenantId, 'invoices')
     .where({ tenant: tenantId, client_id: contextLike.clientId })
     .andWhere('billing_period_start', currentPeriodStart)
     .andWhere('billing_period_end', nextPeriodStart)
@@ -3698,7 +3735,7 @@ it('T176: DB-backed mixed cadence-owner billing groups same-window due work into
   const invoice = await generateInvoice(cycleId);
   expect(invoice).toBeTruthy();
 
-  const persistedInvoices = await db('invoices')
+  const persistedInvoices = await tenantTable(db, tenantId, 'invoices')
     .where({ tenant: tenantId, client_id: contextLike.clientId })
     .andWhere('billing_period_start', currentPeriodStart)
     .andWhere('billing_period_end', nextPeriodStart)
@@ -3907,7 +3944,7 @@ it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed
   await upsertRecurringServicePeriodRecord(regenerationPlan.supersededRecords[0]);
   await upsertRecurringServicePeriodRecord(regenerationPlan.regeneratedRecords[0]);
 
-  const preInvoiceRows = await db('recurring_service_periods')
+  const preInvoiceRows = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId, schedule_key: materializationPlan.scheduleKey })
     .orderBy('service_period_start', 'asc')
     .orderBy('revision', 'asc')
@@ -3929,7 +3966,7 @@ it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed
   expect(normalizeDateValue(editedLedgerRow?.service_period_end)).toBe(nextPeriodStart);
   expect(editedLedgerRow?.invoice_charge_detail_id ?? null).toBeNull();
 
-  const dueLedgerRows = await db('recurring_service_periods')
+  const dueLedgerRows = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({
       tenant: tenantId,
       obligation_id: fixedLine.clientContractLineId,
@@ -3958,7 +3995,7 @@ it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed
   expect(normalizeDateValue(dueLedgerRows[0]?.invoice_window_start)).toBe(currentPeriodStart);
   expect(normalizeDateValue(dueLedgerRows[0]?.invoice_window_end)).toBe(nextPeriodStart);
 
-  const configRow = await db('contract_line_service_configuration')
+  const configRow = await tenantTable(db, tenantId, 'contract_line_service_configuration')
     .where({
       tenant: tenantId,
       contract_line_id: fixedLine.contractLineId,
@@ -3988,7 +4025,7 @@ it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed
 
   await upsertRecurringServicePeriodRecord(linkedRecord);
 
-  const billedRow = await db('recurring_service_periods')
+  const billedRow = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId, record_id: linkedRecord.recordId })
     .first([
       'record_id',
@@ -4005,7 +4042,7 @@ it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed
     invoice_charge_detail_id: persistedInvoice.invoiceChargeDetailId,
   });
 
-  const linkedDetailRow = await db('invoice_charge_details')
+  const linkedDetailRow = await tenantTable(db, tenantId, 'invoice_charge_details')
     .where({
       tenant: tenantId,
       item_detail_id: persistedInvoice.invoiceChargeDetailId,
@@ -4023,7 +4060,7 @@ it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed
   expect(normalizeDateValue(linkedDetailRow?.service_period_start)).toBe('2025-01-10');
   expect(normalizeDateValue(linkedDetailRow?.service_period_end)).toBe(currentPeriodEnd);
 
-  const futureRow = await db('recurring_service_periods')
+  const futureRow = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId, record_id: regenerationPlan.regeneratedRecords[0].recordId })
     .first([
       'record_id',
@@ -4040,7 +4077,7 @@ it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed
   expect(normalizeDateValue(futureRow?.service_period_start)).toBe('2025-02-05');
   expect(normalizeDateValue(futureRow?.service_period_end)).toBe('2025-03-01');
 
-  const remainingDueLedgerRows = await db('recurring_service_periods')
+  const remainingDueLedgerRows = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({
       tenant: tenantId,
       obligation_id: fixedLine.clientContractLineId,
@@ -4260,7 +4297,7 @@ it('T321: DB-backed boundary edits move due selection without rewriting already 
   await upsertRecurringServicePeriodRecord(currentRecord);
   await upsertRecurringServicePeriodRecord(futureRecord);
 
-  const configRow = await db('contract_line_service_configuration')
+  const configRow = await tenantTable(db, tenantId, 'contract_line_service_configuration')
     .where({
       tenant: tenantId,
       contract_line_id: fixedLine.contractLineId,
@@ -4355,7 +4392,7 @@ it('T321: DB-backed boundary edits move due selection without rewriting already 
     editResponse.editedRecord.recordId,
   ]);
 
-  const billedHistoryRow = await db('recurring_service_periods')
+  const billedHistoryRow = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId, record_id: linkedCurrentRecord.recordId })
     .first(['record_id', 'lifecycle_state', 'invoice_charge_detail_id']);
   expect(billedHistoryRow).toMatchObject({
@@ -4442,7 +4479,7 @@ it('T322/T328: DB-backed skipped client-cadence periods block invoice generation
   await upsertRecurringServicePeriodRecord(skipResponse.supersededRecord);
   await upsertRecurringServicePeriodRecord(skipResponse.editedRecord);
 
-  await db('default_billing_settings')
+  await tenantTable(db, tenantId, 'default_billing_settings')
     .where({ tenant: tenantId })
     .update({ suppress_zero_dollar_invoices: true });
 
@@ -4686,7 +4723,7 @@ it('T326: DB-backed mixed cadence-owner recurring obligations materialize distin
     await upsertRecurringServicePeriodRecord(record);
   }
 
-  const mixedRows = await db('recurring_service_periods')
+  const mixedRows = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId })
     .whereIn('schedule_key', [clientPlan.scheduleKey, contractPlan.scheduleKey])
     .orderBy('schedule_key', 'asc')
@@ -4773,7 +4810,7 @@ async function createClientWithRecurringCycles(
 ): Promise<ClientSetupResult> {
   const clientId = uuidv4();
   const billingCycle = options.billingCycle ?? 'monthly';
-  await db('clients').insert({
+  await tenantTable(db, tenantId, 'clients').insert({
     tenant: tenantId,
     client_id: clientId,
     client_name: options.clientName ?? 'Timing Integration Client',
@@ -4783,7 +4820,7 @@ async function createClientWithRecurringCycles(
     updated_at: db.fn.now()
   });
 
-  await db('client_locations').insert({
+  await tenantTable(db, tenantId, 'client_locations').insert({
     location_id: uuidv4(),
     tenant: tenantId,
     client_id: clientId,
@@ -4824,7 +4861,7 @@ async function createClientWithRecurringCycles(
   const previousPeriodEnd = Temporal.PlainDate.from(currentPeriodStart).subtract({ days: 1 }).toString();
   const currentPeriodEnd = Temporal.PlainDate.from(nextPeriodStart).subtract({ days: 1 }).toString();
 
-  await db('client_billing_cycles').insert({
+  await tenantTable(db, tenantId, 'client_billing_cycles').insert({
     billing_cycle_id: uuidv4(),
     tenant: tenantId,
     client_id: clientId,
@@ -4837,7 +4874,7 @@ async function createClientWithRecurringCycles(
   });
 
   const cycleId = uuidv4();
-  await db('client_billing_cycles').insert({
+  await tenantTable(db, tenantId, 'client_billing_cycles').insert({
     billing_cycle_id: cycleId,
     tenant: tenantId,
     client_id: clientId,
@@ -5016,7 +5053,7 @@ async function convertContractLineToMeteredType(
   },
 ) {
   const now = new Date();
-  const configRow = await contextLike.db('contract_line_service_configuration')
+  const configRow = await tenantTable(contextLike.db, contextLike.tenantId, 'contract_line_service_configuration')
     .where({
       tenant: contextLike.tenantId,
       contract_line_id: params.contractLineId,
@@ -5028,29 +5065,29 @@ async function convertContractLineToMeteredType(
     throw new Error(`Missing configuration for contract line ${params.contractLineId}`);
   }
 
-  await contextLike.db('contract_lines')
+  await tenantTable(contextLike.db, contextLike.tenantId, 'contract_lines')
     .where({ tenant: contextLike.tenantId, contract_line_id: params.contractLineId })
     .update({ contract_line_type: params.type });
 
-  if (await contextLike.db.schema.hasTable('billing_plans')) {
-    await contextLike.db('billing_plans')
+  if (await hasSchemaTable(contextLike.db, 'billing_plans')) {
+    await tenantTable(contextLike.db, contextLike.tenantId, 'billing_plans')
       .where({ tenant: contextLike.tenantId, plan_id: params.contractLineId })
       .update({ plan_type: params.type });
   }
 
-  await contextLike.db('contract_line_service_configuration')
+  await tenantTable(contextLike.db, contextLike.tenantId, 'contract_line_service_configuration')
     .where({ tenant: contextLike.tenantId, config_id: configRow.config_id })
     .update({ configuration_type: params.type });
 
-  if (await contextLike.db.schema.hasTable('plan_service_configuration')) {
-    await contextLike.db('plan_service_configuration')
+  if (await hasSchemaTable(contextLike.db, 'plan_service_configuration')) {
+    await tenantTable(contextLike.db, contextLike.tenantId, 'plan_service_configuration')
       .where({ tenant: contextLike.tenantId, config_id: configRow.config_id })
       .update({ configuration_type: params.type });
   }
 
   if (params.type === 'Hourly') {
-    if (await contextLike.db.schema.hasTable('contract_line_service_hourly_configs')) {
-      await contextLike.db('contract_line_service_hourly_configs')
+    if (await hasSchemaTable(contextLike.db, 'contract_line_service_hourly_configs')) {
+      await tenantTable(contextLike.db, contextLike.tenantId, 'contract_line_service_hourly_configs')
         .insert({
           tenant: contextLike.tenantId,
           config_id: configRow.config_id,
@@ -5069,8 +5106,8 @@ async function convertContractLineToMeteredType(
         });
     }
 
-    if (await contextLike.db.schema.hasTable('contract_line_service_hourly_config')) {
-      await contextLike.db('contract_line_service_hourly_config')
+    if (await hasSchemaTable(contextLike.db, 'contract_line_service_hourly_config')) {
+      await tenantTable(contextLike.db, contextLike.tenantId, 'contract_line_service_hourly_config')
         .insert({
           tenant: contextLike.tenantId,
           config_id: configRow.config_id,
@@ -5096,8 +5133,8 @@ async function convertContractLineToMeteredType(
           updated_at: now,
         });
     }
-  } else if (await contextLike.db.schema.hasTable('contract_line_service_usage_config')) {
-    await contextLike.db('contract_line_service_usage_config')
+  } else if (await hasSchemaTable(contextLike.db, 'contract_line_service_usage_config')) {
+    await tenantTable(contextLike.db, contextLike.tenantId, 'contract_line_service_usage_config')
       .insert({
         tenant: contextLike.tenantId,
         config_id: configRow.config_id,
@@ -5131,14 +5168,14 @@ async function createRecurringCatalogLine(
     tax_region: 'US-NY'
   });
 
-  await contextLike.db('service_catalog')
+  await tenantTable(contextLike.db, contextLike.tenantId, 'service_catalog')
     .where({ tenant: contextLike.tenantId, service_id: serviceId })
     .update({
       item_kind: 'product',
       is_license: Boolean(options.isLicense)
     });
 
-  await contextLike.db('service_prices')
+  await tenantTable(contextLike.db, contextLike.tenantId, 'service_prices')
     .insert({
       tenant: contextLike.tenantId,
       service_id: serviceId,
@@ -5184,7 +5221,7 @@ async function createRecurringCatalogLine(
  * Mirror what production catalog management does and register a USD price.
  */
 async function ensureUsdServicePrice(serviceId: string, rateCents: number): Promise<void> {
-  await db('service_prices')
+  await tenantTable(db, tenantId, 'service_prices')
     .insert({
       tenant: tenantId,
       service_id: serviceId,
@@ -5201,10 +5238,13 @@ async function ensureUsdServicePrice(serviceId: string, rateCents: number): Prom
 }
 
 async function getInvoiceDetailRows(invoiceId: string) {
-  return db('invoice_charge_details as iid')
-    .join('invoice_charges as ii', function () {
-      this.on('iid.item_id', '=', 'ii.item_id').andOn('iid.tenant', '=', 'ii.tenant');
-    })
+  return tenantDb(db, tenantId)
+    .tenantJoin(
+      tenantTable(db, tenantId, 'invoice_charge_details as iid'),
+      'invoice_charges as ii',
+      'iid.item_id',
+      'ii.item_id'
+    )
     .where('ii.invoice_id', invoiceId)
     .andWhere('iid.tenant', tenantId)
     .select([
@@ -5248,7 +5288,7 @@ async function createApprovedTimeEntryForContractLine(params: {
   });
 
   if (params.approvalStatus === null) {
-    await db('time_entries')
+    await tenantTable(db, tenantId, 'time_entries')
       .where({ tenant: tenantId, entry_id: entry.entry_id })
       .update({ approval_status: null });
   }
@@ -5274,7 +5314,7 @@ async function createUsageRecordForContractLine(params: {
     invoiced: false,
   };
 
-  await db('usage_tracking').insert(usageRecord);
+  await tenantTable(db, tenantId, 'usage_tracking').insert(usageRecord);
   return usageRecord;
 }
 
@@ -5282,15 +5322,15 @@ async function createTicketWorkItemForClient(params: {
   clientId: string;
   assignedTo: string;
 }) {
-  const board = await db('boards')
+  const board = await tenantTable(db, tenantId, 'boards')
     .where({ tenant: tenantId })
     .orderBy([{ column: 'is_default', order: 'desc' }, { column: 'display_order', order: 'asc' }])
     .first('board_id');
-  const status = await db('statuses')
+  const status = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, status_type: 'ticket' })
     .orderBy([{ column: 'is_default', order: 'desc' }, { column: 'order_number', order: 'asc' }])
     .first('status_id');
-  const priority = await db('priorities')
+  const priority = await tenantTable(db, tenantId, 'priorities')
     .where({ tenant: tenantId, item_type: 'ticket' })
     .orderBy('order_number', 'asc')
     .first('priority_id');
@@ -5300,7 +5340,7 @@ async function createTicketWorkItemForClient(params: {
   }
 
   const ticketId = uuidv4();
-  await db('tickets').insert({
+  await tenantTable(db, tenantId, 'tickets').insert({
     tenant: tenantId,
     ticket_id: ticketId,
     ticket_number: `T-${Date.now()}-${ticketId.slice(0, 6)}`,
@@ -5319,7 +5359,7 @@ async function createTicketWorkItemForClient(params: {
 }
 
 async function getPersistedInvoice(invoiceId: string) {
-  return db('invoices')
+  return tenantTable(db, tenantId, 'invoices')
     .where({ invoice_id: invoiceId, tenant: tenantId })
     .first(['invoice_id', 'billing_period_start', 'billing_period_end']);
 }
@@ -5327,7 +5367,7 @@ async function getPersistedInvoice(invoiceId: string) {
 async function upsertRecurringServicePeriodRecord(record: IRecurringServicePeriodRecord) {
   const linkage = record.invoiceLinkage;
 
-  await db('recurring_service_periods')
+  await tenantTable(db, tenantId, 'recurring_service_periods')
     .insert({
       record_id: record.recordId,
       tenant: record.sourceObligation.tenant,
@@ -5476,7 +5516,7 @@ async function loadRecurringServicePeriodRecords(params: {
   obligationId?: string;
   scheduleKeys?: string[];
 }) {
-  let query = db('recurring_service_periods')
+  let query = tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId })
     .select([
       'record_id',
@@ -5543,7 +5583,7 @@ async function createManualRecurringInvoiceDetail(input: {
   const invoiceChargeDetailId = uuidv4();
   const now = '2026-03-18T15:15:00.000Z';
 
-  await db('invoices').insert({
+  await tenantTable(db, tenantId, 'invoices').insert({
     invoice_id: invoiceId,
     tenant: tenantId,
     client_id: input.clientId,
@@ -5561,7 +5601,7 @@ async function createManualRecurringInvoiceDetail(input: {
     updated_at: now,
   });
 
-  await db('invoice_charges').insert({
+  await tenantTable(db, tenantId, 'invoice_charges').insert({
     item_id: invoiceChargeId,
     tenant: tenantId,
     invoice_id: invoiceId,
@@ -5577,7 +5617,7 @@ async function createManualRecurringInvoiceDetail(input: {
     updated_at: now,
   });
 
-  await db('invoice_charge_details').insert({
+  await tenantTable(db, tenantId, 'invoice_charge_details').insert({
     item_detail_id: invoiceChargeDetailId,
     item_id: invoiceChargeId,
     tenant: tenantId,
@@ -5620,13 +5660,13 @@ function normalizeDateValue(value: unknown): string | null {
 }
 
 async function ensureTenant(connection: Knex): Promise<string> {
-  const existing = await connection('tenants').first<{ tenant: string }>('tenant');
+  const existing = await tenantRows(connection).first<{ tenant: string }>('tenant');
   if (existing?.tenant) {
     return existing.tenant;
   }
 
   const newTenantId = uuidv4();
-  await connection('tenants').insert({
+  await tenantRows(connection).insert({
     tenant: newTenantId,
     client_name: 'Billing Timing Integration Tenant',
     email: 'billing-timing@test.co',

@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { tenantDb } from '@alga-psa/db';
 import { aclPredicateSql, type SearchAclPrincipal } from './acl';
 import type { SearchObjectType } from '@alga-psa/types';
 
@@ -91,6 +92,18 @@ interface SearchCursorPayload {
   score: number;
   updatedAt: string;
   objectId: string;
+}
+
+function scopedSearchIndexSql(knex: Knex, tenant: string): { sql: string; bindings: Knex.RawBinding[] } {
+  const scoped = tenantDb(knex, tenant)
+    .table('app_search_index')
+    .select('*')
+    .toSQL();
+
+  return {
+    sql: `(${scoped.sql}) s`,
+    bindings: scoped.bindings as Knex.RawBinding[],
+  };
 }
 
 export function parseQuery(raw: string): ParsedSearchQuery {
@@ -268,6 +281,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
   const aclPredicate = options.acl
     ? aclPredicateSql(options.acl)
     : { sql: 'TRUE', bindings: [] };
+  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant);
   const cursorPredicateSql = sort === 'recent'
     ? `
         ?::timestamptz IS NULL
@@ -363,10 +377,9 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
                 )
             )
           END AS score
-        FROM app_search_index s
+        FROM ${searchIndex.sql}
         CROSS JOIN q
-        WHERE s.tenant = ?::uuid
-          AND s.object_type = ANY(?::text[])
+        WHERE s.object_type = ANY(?::text[])
           AND ${aclPredicate.sql}
           AND (
             s.search_vector @@ q.tsq
@@ -398,7 +411,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
       parsed.prefixTsquery,
       parsed.raw,
       parsed.identifier ?? null,
-      options.tenant,
+      ...searchIndex.bindings,
       options.allowedTypes,
       ...aclPredicate.bindings,
       ...cursorBindings,
@@ -433,6 +446,7 @@ export async function countSearchMatchesByType(
   const aclPredicate = options.acl
     ? aclPredicateSql(options.acl)
     : { sql: 'TRUE', bindings: [] };
+  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant);
 
   const result = await options.knex.raw<{ rows: Array<{ object_type: SearchObjectType; total: string | number }> }>(
     `
@@ -444,10 +458,9 @@ export async function countSearchMatchesByType(
           ?::text AS identifier
       )
       SELECT s.object_type, count(*)::bigint AS total
-      FROM app_search_index s
+      FROM ${searchIndex.sql}
       CROSS JOIN q
-      WHERE s.tenant = ?::uuid
-        AND s.object_type = ANY(?::text[])
+      WHERE s.object_type = ANY(?::text[])
         AND ${aclPredicate.sql}
         AND (
           s.search_vector @@ q.tsq
@@ -473,7 +486,7 @@ export async function countSearchMatchesByType(
       parsed.prefixTsquery,
       parsed.raw,
       parsed.identifier ?? null,
-      options.tenant,
+      ...searchIndex.bindings,
       options.allowedTypes,
       ...aclPredicate.bindings,
     ] as Knex.RawBinding[],
@@ -498,6 +511,7 @@ export async function countSearchMatches(
   const aclPredicate = options.acl
     ? aclPredicateSql(options.acl)
     : { sql: 'TRUE', bindings: [] };
+  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant);
 
   const result = await options.knex.raw<{ rows: Array<{ total: string | number }> }>(
     `
@@ -509,10 +523,9 @@ export async function countSearchMatches(
           ?::text AS identifier
       )
       SELECT count(*)::bigint AS total
-      FROM app_search_index s
+      FROM ${searchIndex.sql}
       CROSS JOIN q
-      WHERE s.tenant = ?::uuid
-        AND s.object_type = ANY(?::text[])
+      WHERE s.object_type = ANY(?::text[])
         AND ${aclPredicate.sql}
         AND (
           s.search_vector @@ q.tsq
@@ -537,7 +550,7 @@ export async function countSearchMatches(
       parsed.prefixTsquery,
       parsed.raw,
       parsed.identifier ?? null,
-      options.tenant,
+      ...searchIndex.bindings,
       options.allowedTypes,
       ...aclPredicate.bindings,
     ] as Knex.RawBinding[],

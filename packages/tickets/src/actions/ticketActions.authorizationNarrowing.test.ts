@@ -30,6 +30,13 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  tenantDb: (conn: any) => ({
+    table: (table: string) => conn(table),
+    subquery: (table: string) => conn(table),
+    tenantJoin: (query: any) => query.join?.() ?? query,
+    unscoped: (table: string) => conn(table),
+    scoped: (table: string) => ({ builder: conn(table) }),
+  }),
 }));
 
 vi.mock('next/cache', () => ({
@@ -99,7 +106,7 @@ vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
   buildTicketResolutionSlaStageEnteredEvent: vi.fn(() => null),
 }));
 
-vi.mock('../lib/clientPortalVisibility', () => ({
+vi.mock('../lib/clientPortalVisibility.server', () => ({
   getClientContactVisibilityContext: (...args: any[]) => getClientContactVisibilityContextMock(...args),
 }));
 

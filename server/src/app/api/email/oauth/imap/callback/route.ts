@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { tenantDb } from '@alga-psa/db';
 import { decodeState, validateState } from '@/utils/email/oauthHelpers';
 import { createTenantKnex } from '@/lib/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -33,17 +34,18 @@ export async function GET(request: NextRequest) {
     if (tenant !== state.tenant) {
       return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
     }
+    const db = tenantDb(knex, tenant);
 
-    const provider = await knex('email_providers')
-      .where({ id: state.providerId, tenant, provider_type: 'imap' })
+    const provider = await db.table('email_providers')
+      .where({ id: state.providerId, provider_type: 'imap' })
       .first();
 
     if (!provider) {
       return NextResponse.json({ error: 'IMAP provider not found' }, { status: 404 });
     }
 
-    const imapConfig = await knex('imap_email_provider_config')
-      .where({ email_provider_id: state.providerId, tenant })
+    const imapConfig = await db.table('imap_email_provider_config')
+      .where({ email_provider_id: state.providerId })
       .first();
 
     if (!imapConfig) {
@@ -79,8 +81,8 @@ export async function GET(request: NextRequest) {
       await secretProvider.setTenantSecret(tenant, `imap_refresh_token_${state.providerId}`, refreshToken);
     }
 
-    await knex('imap_email_provider_config')
-      .where({ email_provider_id: state.providerId, tenant })
+    await db.table('imap_email_provider_config')
+      .where({ email_provider_id: state.providerId })
       .update({
         access_token: accessToken,
         refresh_token: refreshToken || null,
@@ -88,8 +90,8 @@ export async function GET(request: NextRequest) {
         updated_at: knex.fn.now(),
       });
 
-    await knex('email_providers')
-      .where({ id: state.providerId, tenant })
+    await db.table('email_providers')
+      .where({ id: state.providerId })
       .update({
         status: 'connected',
         error_message: null,

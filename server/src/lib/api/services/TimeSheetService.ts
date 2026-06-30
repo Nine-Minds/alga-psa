@@ -5,7 +5,7 @@
 
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
-import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import { 
   CreateTimeSheetData,
   UpdateTimeSheetData,
@@ -50,9 +50,9 @@ export class TimeSheetService extends BaseService<any> {
 
   async list(options: ListOptions, context: ServiceContext, filters?: TimeSheetFilterData): Promise<ListResult<any>> {
       const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
       
-      let query = knex(this.tableName)
-        .where(`${this.tableName}.tenant`, context.tenant);
+      let query = this.buildTenantScopedQuery(knex, context);
   
       // Apply filters
       if (filters) {
@@ -81,43 +81,30 @@ export class TimeSheetService extends BaseService<any> {
           query.where(`${this.tableName}.approved_by`, filters.approved_by);
         }
         if (filters.period_start_from) {
-          query.join('time_periods', function() {
-            this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-              .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-          })
+          db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id')
             .where('time_periods.start_date', '>=', filters.period_start_from);
         }
         if (filters.period_start_to) {
           if (!query.toString().includes('time_periods')) {
-            query.join('time_periods', function() {
-              this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-                .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-            });
+            db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
           }
           query.where('time_periods.start_date', '<=', filters.period_start_to);
         }
         if (filters.period_end_from) {
           if (!query.toString().includes('time_periods')) {
-            query.join('time_periods', function() {
-              this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-                .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-            });
+            db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
           }
           query.where('time_periods.end_date', '>=', filters.period_end_from);
         }
         if (filters.period_end_to) {
           if (!query.toString().includes('time_periods')) {
-            query.join('time_periods', function() {
-              this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-                .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-            });
+            db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
           }
           query.where('time_periods.end_date', '<=', filters.period_end_to);
         }
         if (filters.has_entries !== undefined) {
-          const subquery = knex('time_entries')
+          const subquery = tenantDb(knex, context.tenant).table('time_entries')
             .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
-            .andWhere('time_entries.tenant', knex.raw(`${this.tableName}.tenant`))
             .select(knex.raw('1'));
           
           if (filters.has_entries) {
@@ -129,30 +116,21 @@ export class TimeSheetService extends BaseService<any> {
       }
   
       // Add joins for additional data
-      query.leftJoin('users', function() {
-        this.on('time_sheets.user_id', '=', 'users.user_id')
-          .andOn('time_sheets.tenant', '=', 'users.tenant');
-      })
-        .leftJoin('users as approvers', function() {
-          this.on('time_sheets.approved_by', '=', 'approvers.user_id')
-            .andOn('time_sheets.tenant', '=', 'approvers.tenant');
-        })
-        .leftJoin('time_periods', function() {
-          this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-            .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-        })
-        .select(
+      db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
+      db.tenantJoin(query, 'users as approvers', 'time_sheets.approved_by', 'approvers.user_id', { type: 'left' });
+      db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id', { type: 'left' });
+
+      query.select(
           `${this.tableName}.*`,
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
           knex.raw(`CONCAT(approvers.first_name, ' ', approvers.last_name) as approver_name`),
           'time_periods.start_date as period_start',
           'time_periods.end_date as period_end'
-        );
+      );
   
       // Add computed fields
-      const timeEntrySubquery = knex('time_entries')
+      const timeEntrySubquery = tenantDb(knex, context.tenant).table('time_entries')
         .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
-        .andWhere('time_entries.tenant', knex.raw(`${this.tableName}.tenant`))
         .select([
           knex.raw('SUM(billable_duration) / 60.0 as total_hours'),
           knex.raw('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0 as billable_hours'),
@@ -194,24 +172,15 @@ export class TimeSheetService extends BaseService<any> {
 
   async getById(id: string, context: ServiceContext): Promise<any | null> {
       const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
+      const query = this.buildTenantScopedQuery(knex, context);
+
+      db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
+      db.tenantJoin(query, 'users as approvers', 'time_sheets.approved_by', 'approvers.user_id', { type: 'left' });
+      db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id', { type: 'left' });
       
-      const timeSheet = await knex(this.tableName)
-        .leftJoin('users', function() {
-          this.on('time_sheets.user_id', '=', 'users.user_id')
-            .andOn('time_sheets.tenant', '=', 'users.tenant');
-        })
-        .leftJoin('users as approvers', function() {
-          this.on('time_sheets.approved_by', '=', 'approvers.user_id')
-            .andOn('time_sheets.tenant', '=', 'approvers.tenant');
-        })
-        .leftJoin('time_periods', function() {
-          this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-            .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-        })
-        .where({
-          [`${this.tableName}.${this.primaryKey}`]: id,
-          [`${this.tableName}.tenant`]: context.tenant
-        })
+      const timeSheet = await query
+        .where(`${this.tableName}.${this.primaryKey}`, id)
         .select(
           `${this.tableName}.*`,
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
@@ -262,7 +231,7 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
 
-        const [timeSheet] = await trx(this.tableName)
+        const [timeSheet] = await tenantDb(trx, context.tenant).table(this.tableName)
           .insert(timeSheetData)
           .returning('*');
 
@@ -310,8 +279,8 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
-        await trx(this.tableName)
-          .where({ [this.primaryKey]: id, tenant: context.tenant })
+        await this.buildTenantScopedQuery(trx, context)
+          .where({ [this.primaryKey]: id })
           .update(updateData);
   
       });
@@ -352,8 +321,8 @@ export class TimeSheetService extends BaseService<any> {
           throw new Error('Cannot delete approved time sheets');
         }
   
-        await trx(this.tableName)
-          .where({ [this.primaryKey]: id, tenant: context.tenant })
+        await this.buildTenantScopedQuery(trx, context)
+          .where({ [this.primaryKey]: id })
           .del();
       });
 
@@ -395,8 +364,8 @@ export class TimeSheetService extends BaseService<any> {
           throw new Error('Cannot submit time sheet without time entries');
         }
   
-        await trx(this.tableName)
-          .where({ id, tenant: context.tenant })
+        await this.buildTenantScopedQuery(trx, context)
+          .where({ id })
           .update({
             approval_status: 'SUBMITTED',
             submitted_at: new Date(),
@@ -441,8 +410,8 @@ export class TimeSheetService extends BaseService<any> {
           throw new Error('Time sheet must be submitted before approval');
         }
   
-        await trx(this.tableName)
-          .where({ id, tenant: context.tenant })
+        await this.buildTenantScopedQuery(trx, context)
+          .where({ id })
           .update({
             approval_status: 'APPROVED',
             approved_at: new Date(),
@@ -452,8 +421,8 @@ export class TimeSheetService extends BaseService<any> {
           });
   
         // Update all time entries to approved status
-        await trx('time_entries')
-          .where({ time_sheet_id: id, tenant: context.tenant })
+        await tenantDb(trx, context.tenant).table('time_entries')
+          .where({ time_sheet_id: id })
           .update({
             approval_status: 'APPROVED',
             approved_at: new Date(),
@@ -498,8 +467,8 @@ export class TimeSheetService extends BaseService<any> {
           throw new Error('Time sheet must be submitted before requesting changes');
         }
   
-        await trx(this.tableName)
-          .where({ id, tenant: context.tenant })
+        await this.buildTenantScopedQuery(trx, context)
+          .where({ id })
           .update({
             approval_status: 'CHANGES_REQUESTED',
             change_reason: data.change_reason,
@@ -573,8 +542,8 @@ export class TimeSheetService extends BaseService<any> {
           throw new Error('Cannot reverse approval of time sheet that has been invoiced');
         }
   
-        await trx(this.tableName)
-          .where({ id, tenant: context.tenant })
+        await this.buildTenantScopedQuery(trx, context)
+          .where({ id })
           .update({
             approval_status: 'CHANGES_REQUESTED',
             approved_at: null,
@@ -586,8 +555,8 @@ export class TimeSheetService extends BaseService<any> {
           });
   
         // Revert time entries to changes requested status
-        await trx('time_entries')
-          .where({ time_sheet_id: id, tenant: context.tenant })
+        await tenantDb(trx, context.tenant).table('time_entries')
+          .where({ time_sheet_id: id })
           .update({
             approval_status: 'CHANGES_REQUESTED',
             approved_at: null,
@@ -633,7 +602,7 @@ export class TimeSheetService extends BaseService<any> {
           created_at: new Date()
         };
   
-        const [comment] = await trx('time_sheet_comments')
+        const [comment] = await tenantDb(trx, context.tenant).table('time_sheet_comments')
           .insert(commentData)
           .returning('*');
   
@@ -647,16 +616,13 @@ export class TimeSheetService extends BaseService<any> {
 
   async getTimeSheetComments(timeSheetId: string, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
+      const query = db.table('time_sheet_comments');
       
-      const comments = await knex('time_sheet_comments')
-        .leftJoin('users', function() {
-          this.on('time_sheet_comments.user_id', '=', 'users.user_id')
-            .andOn('time_sheet_comments.tenant', '=', 'users.tenant');
-        })
-        .where({
-          'time_sheet_comments.time_sheet_id': timeSheetId,
-          'time_sheet_comments.tenant': context.tenant
-        })
+      db.tenantJoin(query, 'users', 'time_sheet_comments.user_id', 'users.user_id', { type: 'left' });
+
+      const comments = await query
+        .where({ 'time_sheet_comments.time_sheet_id': timeSheetId })
         .select(
           'time_sheet_comments.*',
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`)
@@ -679,8 +645,7 @@ export class TimeSheetService extends BaseService<any> {
   async getTimePeriods(context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
       
-      return knex('time_periods')
-        .where({ tenant: context.tenant })
+      return tenantDb(knex, context.tenant).table('time_periods')
         .orderBy('start_date', 'desc');
     }
 
@@ -698,8 +663,8 @@ export class TimeSheetService extends BaseService<any> {
   async getTimePeriod(id: string, context: ServiceContext): Promise<any | null> {
       const { knex } = await this.getKnex();
       
-      const period = await knex('time_periods')
-        .where({ period_id: id, tenant: context.tenant })
+      const period = await tenantDb(knex, context.tenant).table('time_periods')
+        .where({ period_id: id })
         .first();
   
       if (period && period.start_date && period.end_date) {
@@ -732,7 +697,7 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
-        const [period] = await trx('time_periods')
+        const [period] = await tenantDb(trx, context.tenant).table('time_periods')
           .insert(periodData)
           .returning('*');
   
@@ -750,8 +715,8 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
-        await trx('time_periods')
-          .where({ period_id: id, tenant: context.tenant })
+        await tenantDb(trx, context.tenant).table('time_periods')
+          .where({ period_id: id })
           .update(updateData);
   
         return this.getTimePeriod(id, context);
@@ -764,16 +729,16 @@ export class TimeSheetService extends BaseService<any> {
       
       return withTransaction(knex, async (trx) => {
         // Check if period has time sheets
-        const hasTimeSheets = await trx('time_sheets')
-          .where({ period_id: id, tenant: context.tenant })
+        const hasTimeSheets = await tenantDb(trx, context.tenant).table('time_sheets')
+          .where({ period_id: id })
           .first();
   
         if (hasTimeSheets) {
           throw new Error('Cannot delete time period that has associated time sheets');
         }
   
-        await trx('time_periods')
-          .where({ period_id: id, tenant: context.tenant })
+        await tenantDb(trx, context.tenant).table('time_periods')
+          .where({ period_id: id })
           .del();
       });
     }
@@ -814,8 +779,7 @@ export class TimeSheetService extends BaseService<any> {
   async getTimePeriodSettings(context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
       
-      return knex('time_period_settings')
-        .where({ tenant: context.tenant })
+      return tenantDb(knex, context.tenant).table('time_period_settings')
         .orderBy('effective_from', 'desc');
     }
 
@@ -826,8 +790,8 @@ export class TimeSheetService extends BaseService<any> {
       return withTransaction(knex, async (trx) => {
         // Deactivate previous settings if new one is active
         if (data.is_active) {
-          await trx('time_period_settings')
-            .where({ tenant: context.tenant, is_active: true })
+          await tenantDb(trx, context.tenant).table('time_period_settings')
+            .where({ is_active: true })
             .update({ is_active: false, updated_at: new Date() });
         }
   
@@ -838,7 +802,7 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
-        const [settings] = await trx('time_period_settings')
+        const [settings] = await tenantDb(trx, context.tenant).table('time_period_settings')
           .insert(settingsData)
           .returning('*');
   
@@ -853,8 +817,8 @@ export class TimeSheetService extends BaseService<any> {
       return withTransaction(knex, async (trx) => {
         // Deactivate other settings if this one is being activated
         if (data.is_active) {
-          await trx('time_period_settings')
-            .where({ tenant: context.tenant, is_active: true })
+          await tenantDb(trx, context.tenant).table('time_period_settings')
+            .where({ is_active: true })
             .whereNot('settings_id', id)
             .update({ is_active: false, updated_at: new Date() });
         }
@@ -864,12 +828,12 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
-        await trx('time_period_settings')
-          .where({ settings_id: id, tenant: context.tenant })
+        await tenantDb(trx, context.tenant).table('time_period_settings')
+          .where({ settings_id: id })
           .update(updateData);
   
-        return trx('time_period_settings')
-          .where({ settings_id: id, tenant: context.tenant })
+        return tenantDb(trx, context.tenant).table('time_period_settings')
+          .where({ settings_id: id })
           .first();
       });
     }
@@ -879,9 +843,9 @@ export class TimeSheetService extends BaseService<any> {
   // Schedule entries
   async getScheduleEntries(context: ServiceContext, filters?: any): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
       
-      let query = knex('schedule_entries')
-        .where('schedule_entries.tenant', context.tenant);
+      let query = db.table('schedule_entries');
   
       // Apply date filters if provided
       if (filters?.start_date) {
@@ -891,26 +855,22 @@ export class TimeSheetService extends BaseService<any> {
         query = query.where('scheduled_end', '<=', filters.end_date);
       }
       if (filters?.user_id) {
-        query = query.join('schedule_entry_assignees', function() {
-          this.on('schedule_entries.entry_id', '=', 'schedule_entry_assignees.entry_id')
-            .andOn('schedule_entries.tenant', '=', 'schedule_entry_assignees.tenant');
-        })
+        query = db.tenantJoin(query, 'schedule_entry_assignees', 'schedule_entries.entry_id', 'schedule_entry_assignees.entry_id')
           .where('schedule_entry_assignees.user_id', filters.user_id);
       }
   
       // Check permissions for private entries
       if (!await this.canViewAllSchedules(context)) {
         const userId = context.userId;
+        const assigneeVisibilityQuery = tenantDb(knex, context.tenant).table('schedule_entry_assignees as sea')
+          .select('sea.user_id')
+          .whereRaw('sea.entry_id = schedule_entries.entry_id')
+          .where('sea.user_id', userId);
+
         query = query.where(function() {
           this.where('is_private', false)
             .orWhere('created_by', userId)
-            .orWhereExists(function() {
-              this.select('user_id')
-                .from('schedule_entry_assignees as sea')
-                .whereRaw('sea.entry_id = schedule_entries.entry_id')
-                .whereRaw('sea.tenant = schedule_entries.tenant')
-                .where('sea.user_id', userId);
-            });
+            .orWhereExists(assigneeVisibilityQuery);
         });
       }
 
@@ -1012,8 +972,8 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       const result = await withTransaction(knex, async (trx) => {
-        const existing = await knex('schedule_entries')
-          .where({ entry_id: id, tenant: context.tenant })
+        const existing = await tenantDb(trx, context.tenant).table('schedule_entries')
+          .where({ entry_id: id })
           .first();
   
         if (!existing) {
@@ -1021,8 +981,8 @@ export class TimeSheetService extends BaseService<any> {
         }
 
         // Check permissions
-        const assigneeIds = await trx('schedule_entry_assignees')
-          .where({ entry_id: id, tenant: context.tenant })
+        const assigneeIds = await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
+          .where({ entry_id: id })
           .pluck('user_id');
         const isOwnEntry = existing.created_by === context.userId ||
           (assigneeIds.length === 1 && assigneeIds[0] === context.userId);
@@ -1045,14 +1005,14 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
-        await trx('schedule_entries')
-          .where({ entry_id: id, tenant: context.tenant })
+        await tenantDb(trx, context.tenant).table('schedule_entries')
+          .where({ entry_id: id })
           .update(updateData);
   
         // Update assignees if provided
         if (data.assigned_user_ids !== undefined) {
-          await trx('schedule_entry_assignees')
-            .where({ entry_id: id, tenant: context.tenant })
+          await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
+            .where({ entry_id: id })
             .del();
   
           if (data.assigned_user_ids.length > 0) {
@@ -1062,12 +1022,12 @@ export class TimeSheetService extends BaseService<any> {
               tenant: context.tenant
             }));
   
-            await trx('schedule_entry_assignees').insert(assigneeData);
+            await tenantDb(trx, context.tenant).table('schedule_entry_assignees').insert(assigneeData);
           }
         }
 
-        const updated = await trx('schedule_entries')
-          .where({ entry_id: id, tenant: context.tenant })
+        const updated = await tenantDb(trx, context.tenant).table('schedule_entries')
+          .where({ entry_id: id })
           .first();
 
         return {
@@ -1100,8 +1060,8 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       const existing = await withTransaction(knex, async (trx) => {
-        const existing = await knex('schedule_entries')
-          .where({ entry_id: id, tenant: context.tenant })
+        const existing = await tenantDb(trx, context.tenant).table('schedule_entries')
+          .where({ entry_id: id })
           .first();
   
         if (!existing) {
@@ -1109,8 +1069,8 @@ export class TimeSheetService extends BaseService<any> {
         }
 
         // Check permissions
-        const assigneeIds = await trx('schedule_entry_assignees')
-          .where({ entry_id: id, tenant: context.tenant })
+        const assigneeIds = await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
+          .where({ entry_id: id })
           .pluck('user_id');
         const isOwnEntry = existing.created_by === context.userId ||
           (assigneeIds.length === 1 && assigneeIds[0] === context.userId);
@@ -1123,8 +1083,8 @@ export class TimeSheetService extends BaseService<any> {
           throw new Error('Permission denied: Cannot delete this schedule entry');
         }
 
-        await trx('schedule_entries')
-          .where({ entry_id: id, tenant: context.tenant })
+        await tenantDb(trx, context.tenant).table('schedule_entries')
+          .where({ entry_id: id })
           .del();
 
         return existing;
@@ -1147,10 +1107,10 @@ export class TimeSheetService extends BaseService<any> {
   // Search and statistics
   async search(searchData: TimeSheetSearchData, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
       const tableName = this.tableName; // Capture tableName to use in callbacks
       
-      const query = knex(tableName)
-        .where(`${tableName}.tenant`, context.tenant);
+      const query = this.buildTenantScopedQuery(knex, context);
   
       // Build search query
       if (searchData.fields && searchData.fields.length > 0) {
@@ -1179,28 +1139,20 @@ export class TimeSheetService extends BaseService<any> {
         query.whereIn(`${tableName}.period_id`, searchData.period_ids);
       }
       if (searchData.date_from) {
-        query.join('time_periods', function() {
-          this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-            .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-        })
+        db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id')
           .where('time_periods.start_date', '>=', searchData.date_from);
       }
       if (searchData.date_to) {
         if (!query.toString().includes('time_periods')) {
-          query.join('time_periods', function() {
-            this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-              .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-          });
+          db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
         }
         query.where('time_periods.end_date', '<=', searchData.date_to);
       }
   
       // Add joins
-      query.leftJoin('users', function() {
-        this.on('time_sheets.user_id', '=', 'users.user_id')
-          .andOn('time_sheets.tenant', '=', 'users.tenant');
-      })
-        .select(
+      db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
+
+      query.select(
           `${tableName}.*`,
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`)
         )
@@ -1236,8 +1188,8 @@ export class TimeSheetService extends BaseService<any> {
   private async hasTimeEntries(timeSheetId: string, context: ServiceContext): Promise<boolean> {
       const { knex } = await this.getKnex();
       
-      const entry = await knex('time_entries')
-        .where({ time_sheet_id: timeSheetId, tenant: context.tenant })
+      const entry = await tenantDb(knex, context.tenant).table('time_entries')
+        .where({ time_sheet_id: timeSheetId })
         .first();
       return !!entry;
     }
@@ -1273,7 +1225,7 @@ export class TimeSheetService extends BaseService<any> {
   private async getUserRole(userId: string, context: ServiceContext): Promise<string> {
       const { knex } = await this.getKnex();
       
-      const user = await knex('users')
+      const user = await tenantDb(knex, context.tenant).table('users')
         .where({ user_id: userId })
         .first();
       return user?.role || 'user';
@@ -1283,7 +1235,7 @@ export class TimeSheetService extends BaseService<any> {
   private async getTimeSheetUser(userId: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      return knex('users')
+      return tenantDb(knex, context.tenant).table('users')
         .where({ user_id: userId })
         .select('user_id', 'first_name', 'last_name', 'email')
         .first();
@@ -1293,8 +1245,8 @@ export class TimeSheetService extends BaseService<any> {
   private async getTimeSheetEntries(timeSheetId: string, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
       
-      return knex('time_entries')
-        .where({ time_sheet_id: timeSheetId, tenant: context.tenant })
+      return tenantDb(knex, context.tenant).table('time_entries')
+        .where({ time_sheet_id: timeSheetId })
         .orderBy('start_time');
     }
 
@@ -1302,8 +1254,8 @@ export class TimeSheetService extends BaseService<any> {
   private async getTimeSheetSummary(timeSheetId: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      const stats = await knex('time_entries')
-        .where({ time_sheet_id: timeSheetId, tenant: context.tenant })
+      const stats = await tenantDb(knex, context.tenant).table('time_entries')
+        .where({ time_sheet_id: timeSheetId })
         .select([
           knex.raw('SUM(billable_duration) / 60.0 as total_hours'),
           knex.raw('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0 as billable_hours'),
@@ -1329,8 +1281,8 @@ export class TimeSheetService extends BaseService<any> {
   async getScheduleEntry(id: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      const entry = await knex('schedule_entries')
-        .where({ entry_id: id, tenant: context.tenant })
+      const entry = await tenantDb(knex, context.tenant).table('schedule_entries')
+        .where({ entry_id: id })
         .first();
   
       if (!entry) return null;
@@ -1348,13 +1300,13 @@ export class TimeSheetService extends BaseService<any> {
 
   private async getScheduleAssignees(entryId: string, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
+      const query = db.table('schedule_entry_assignees');
       
-      return knex('schedule_entry_assignees')
-        .join('users', function() {
-          this.on('schedule_entry_assignees.user_id', '=', 'users.user_id')
-            .andOn('schedule_entry_assignees.tenant', '=', 'users.tenant');
-        })
-        .where({ 'schedule_entry_assignees.entry_id': entryId, 'schedule_entry_assignees.tenant': context.tenant })
+      db.tenantJoin(query, 'users', 'schedule_entry_assignees.user_id', 'users.user_id');
+
+      return query
+        .where({ 'schedule_entry_assignees.entry_id': entryId })
         .select('users.user_id', 'users.first_name', 'users.last_name', 'users.email');
     }
 

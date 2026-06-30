@@ -1,4 +1,5 @@
 import { getConnection } from '@/lib/db/db';
+import { tenantDb } from '@alga-psa/db';
 import { ImportValidationError, logImportError } from '@/lib/imports/errors';
 import { createImportErrorCollector } from '@/lib/imports/ErrorCollector';
 import { computeRecordHash } from '@/lib/imports/ExternalEntityMappingRepository';
@@ -126,8 +127,8 @@ export class ImportPreviewManager {
   async persist(importJobId: string, result: PreviewComputationResult): Promise<void> {
     await this.ensureTenantContext();
     const knex = await getConnection(this.tenantId);
-    await knex('import_jobs')
-      .where({ tenant: this.tenantId, import_job_id: importJobId })
+    await tenantDb(knex, this.tenantId).table('import_jobs')
+      .where({ import_job_id: importJobId })
       .update({
         preview_data: result.preview,
         error_summary: result.errorSummary,

@@ -13,6 +13,7 @@
 
 import Stripe from 'stripe';
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from 'server/src/lib/db/db';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -46,7 +47,7 @@ async function getStripePaymentConfig(tenantId: string): Promise<StripePaymentCo
   const secretProvider = await getSecretProviderInstance();
 
   // First check for tenant-specific configuration
-  const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
+  const config = await tenantDb(knex, tenantId).table<IPaymentProviderConfig>('payment_provider_configs')
     .where({
       tenant: tenantId,
       provider_type: 'stripe',
@@ -172,7 +173,7 @@ export class StripePaymentProvider implements PaymentProvider {
     const knex = await getConnection();
 
     // Check if we already have a mapping
-    const existingMapping = await knex<IClientPaymentCustomer>('client_payment_customers')
+    const existingMapping = await tenantDb(knex, this.tenantId).table<IClientPaymentCustomer>('client_payment_customers')
       .where({
         tenant: this.tenantId,
         client_id: clientId,
@@ -233,7 +234,7 @@ export class StripePaymentProvider implements PaymentProvider {
     }
 
     // Store or update the mapping
-    await knex<IClientPaymentCustomer>('client_payment_customers')
+    await tenantDb(knex, this.tenantId).table<IClientPaymentCustomer>('client_payment_customers')
       .insert({
         tenant: this.tenantId,
         client_id: clientId,
@@ -321,7 +322,7 @@ export class StripePaymentProvider implements PaymentProvider {
     };
 
     // Check for existing active link and mark it as replaced
-    await knex('invoice_payment_links')
+    await tenantDb(knex, this.tenantId).table('invoice_payment_links')
       .where({
         tenant: this.tenantId,
         invoice_id: request.invoiceId,
@@ -334,7 +335,7 @@ export class StripePaymentProvider implements PaymentProvider {
       });
 
     // Insert new link
-    await knex<IInvoicePaymentLink>('invoice_payment_links').insert(linkRecord as any);
+    await tenantDb(knex, this.tenantId).table<IInvoicePaymentLink>('invoice_payment_links').insert(linkRecord as any);
 
     logger.info('[StripePaymentProvider] Created payment link', {
       tenantId: this.tenantId,

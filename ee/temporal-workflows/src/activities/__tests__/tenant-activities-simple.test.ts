@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { setupTestDatabase, type TestDatabase } from '../../test-utils/database';
+import { tenantDb } from '@alga-psa/db';
 import { withAdminTransaction } from '@alga-psa/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
@@ -8,10 +9,11 @@ import type { Knex } from 'knex';
 async function createTenantInDB(input: { tenantName: string; email: string; companyName?: string; clientName?: string }) {
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
     const tenantId = uuidv4();
+    const tenantScopedDb = tenantDb(trx, tenantId);
     
     // Create tenant record
     const tenantCompanyName = input.companyName ?? input.tenantName;
-    await trx('tenants').insert({
+    await tenantScopedDb.table('tenants').insert({
       tenant: tenantId,
       client_name: tenantCompanyName,
       email: input.email,
@@ -27,7 +29,7 @@ async function createTenantInDB(input: { tenantName: string; email: string; comp
     if (clientName) {
       clientId = uuidv4();
       
-      await trx('clients').insert({
+      await tenantScopedDb.table('clients').insert({
         client_id: clientId,
         tenant: tenantId,
         client_name: clientName,
@@ -37,7 +39,7 @@ async function createTenantInDB(input: { tenantName: string; email: string; comp
       });
 
       // Create tenant-client association
-      await trx('tenant_companies').insert({
+      await tenantScopedDb.table('tenant_companies').insert({
         tenant: tenantId,
         client_id: clientId,
         is_default: true,
@@ -57,6 +59,7 @@ async function setupTenantDataInDB(input: {
   contractLine?: string;
 }) {
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
+    const tenantScopedDb = tenantDb(trx, input.tenantId);
     const setupSteps: string[] = [];
 
     // Set up default roles
@@ -67,7 +70,7 @@ async function setupTenantDataInDB(input: {
     ];
 
     for (const role of defaultRoles) {
-      await trx('roles').insert({
+      await tenantScopedDb.table('roles').insert({
         role_id: uuidv4(),
         tenant: input.tenantId,
         role_name: role.name,
@@ -87,7 +90,7 @@ async function setupTenantDataInDB(input: {
 
     // Need a valid user ID for created_by - create a temporary admin user
     const adminUserId = uuidv4();
-    await trx('users').insert({
+    await tenantScopedDb.table('users').insert({
       user_id: adminUserId,
       tenant: input.tenantId,
       email: 'admin@test.com',
@@ -99,7 +102,7 @@ async function setupTenantDataInDB(input: {
     });
 
     for (const [index, status] of defaultStatuses.entries()) {
-      await trx('statuses').insert({
+      await tenantScopedDb.table('statuses').insert({
         status_id: uuidv4(),
         tenant: input.tenantId,
         name: status.name,

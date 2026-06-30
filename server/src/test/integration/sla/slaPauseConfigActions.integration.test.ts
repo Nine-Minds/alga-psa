@@ -5,6 +5,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from
 import { TestContext } from 'server/test-utils/testContext';
 import { setupCommonMocks } from 'server/test-utils/testMocks';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import {
   getSlaSettings,
@@ -30,6 +31,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
   let context: TestContext;
   let testBoardId: string;
   let testStatusId: string;
+  const scopedTable = (tenant: string, tableName: string) => tenantDb(context.db, tenant).table(tableName);
 
   beforeAll(async () => {
     context = await setupContext({
@@ -62,13 +64,13 @@ describe('SLA Pause Config Actions Integration Tests', () => {
 
     // Create a test status for the pause config tests
     testBoardId = uuidv4();
-    await context.db('boards').insert({
+    await scopedTable(context.tenantId, 'boards').insert({
       tenant: context.tenantId,
       board_id: testBoardId,
       board_name: 'SLA Test Board'
     });
 
-    const statusResult = await context.db('statuses')
+    const statusResult = await scopedTable(context.tenantId, 'statuses')
       .insert({
         tenant: context.tenantId,
         board_id: testBoardId,
@@ -164,7 +166,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       // Create some configs first
       await setStatusSlaPauseConfig(testStatusId, true);
 
-      const status2Result = await context.db('statuses')
+      const status2Result = await scopedTable(context.tenantId, 'statuses')
         .insert({
           tenant: context.tenantId,
           board_id: testBoardId,
@@ -243,7 +245,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
     it('rejects legacy tenant-global ticket statuses for pause config writes', async () => {
       const legacyStatusId = uuidv4();
 
-      await context.db('statuses').insert({
+      await scopedTable(context.tenantId, 'statuses').insert({
         tenant: context.tenantId,
         status_id: legacyStatusId,
         name: 'Legacy Pending',
@@ -261,7 +263,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
     it('filters legacy tenant-global ticket configs out of returned config lists', async () => {
       const legacyStatusId = uuidv4();
 
-      await context.db('statuses').insert({
+      await scopedTable(context.tenantId, 'statuses').insert({
         tenant: context.tenantId,
         status_id: legacyStatusId,
         name: 'Legacy Waiting',
@@ -271,7 +273,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         created_by: context.userId
       });
 
-      await context.db('status_sla_pause_config').insert({
+      await scopedTable(context.tenantId, 'status_sla_pause_config').insert({
         tenant: context.tenantId,
         config_id: uuidv4(),
         status_id: legacyStatusId,
@@ -293,7 +295,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
   // ============================================================================
   describe('Bulk Update Status SLA Pause Configs', () => {
     it('should bulk update multiple status configs', async () => {
-      const status2Result = await context.db('statuses')
+      const status2Result = await scopedTable(context.tenantId, 'statuses')
         .insert({
           tenant: context.tenantId,
           board_id: testBoardId,
@@ -305,7 +307,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         })
         .returning('status_id');
 
-      const status3Result = await context.db('statuses')
+      const status3Result = await scopedTable(context.tenantId, 'statuses')
         .insert({
           tenant: context.tenantId,
           board_id: testBoardId,
@@ -343,7 +345,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       // Create initial config
       await setStatusSlaPauseConfig(testStatusId, false);
 
-      const status2Result = await context.db('statuses')
+      const status2Result = await scopedTable(context.tenantId, 'statuses')
         .insert({
           tenant: context.tenantId,
           board_id: testBoardId,
@@ -381,7 +383,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
 
     beforeEach(async () => {
       // Create necessary test data for tickets
-      const priorityResult = await context.db('priorities')
+      const priorityResult = await scopedTable(context.tenantId, 'priorities')
         .insert({
           tenant: context.tenantId,
           priority_name: 'Medium',
@@ -393,7 +395,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
 
       // Ticket categories live in `categories` (not the non-existent
       // `ticket_categories`); created_by and display_order are NOT NULL.
-      const categoryResult = await context.db('categories')
+      const categoryResult = await scopedTable(context.tenantId, 'categories')
         .insert({
           tenant: context.tenantId,
           category_name: 'Test Category',
@@ -406,7 +408,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
 
       // Create a test ticket (board_id replaces the former channel_id;
       // client_id replaces company_id).
-      const ticketResult = await context.db('tickets')
+      const ticketResult = await scopedTable(context.tenantId, 'tickets')
         .insert({
           tenant: context.tenantId,
           ticket_number: 'TEST-001',
@@ -438,7 +440,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       await updateSlaSettings({ pause_on_awaiting_client: true });
 
       // Update ticket to awaiting_client state
-      await context.db('tickets')
+      await scopedTable(context.tenantId, 'tickets')
         .where({ ticket_id: testTicketId, tenant: context.tenantId })
         .update({ response_state: 'awaiting_client' });
 
@@ -453,7 +455,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       await updateSlaSettings({ pause_on_awaiting_client: false });
 
       // Update ticket to awaiting_client state
-      await context.db('tickets')
+      await scopedTable(context.tenantId, 'tickets')
         .where({ ticket_id: testTicketId, tenant: context.tenantId })
         .update({ response_state: 'awaiting_client' });
 
@@ -492,7 +494,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       await setStatusSlaPauseConfig(testStatusId, true);
 
       // Set ticket to awaiting_client
-      await context.db('tickets')
+      await scopedTable(context.tenantId, 'tickets')
         .where({ ticket_id: testTicketId, tenant: context.tenantId })
         .update({ response_state: 'awaiting_client' });
 
@@ -509,12 +511,12 @@ describe('SLA Pause Config Actions Integration Tests', () => {
 
     it('should use default settings when no settings exist', async () => {
       // Ensure no settings exist by deleting them
-      await context.db('sla_settings')
+      await scopedTable(context.tenantId, 'sla_settings')
         .where({ tenant: context.tenantId })
         .delete();
 
       // Set ticket to awaiting_client
-      await context.db('tickets')
+      await scopedTable(context.tenantId, 'tickets')
         .where({ ticket_id: testTicketId, tenant: context.tenantId })
         .update({ response_state: 'awaiting_client' });
 
@@ -540,13 +542,13 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       const secondStatusId = uuidv4();
       const secondTicketId = uuidv4();
 
-      await context.db('boards').insert({
+      await scopedTable(context.tenantId, 'boards').insert({
         tenant: context.tenantId,
         board_id: secondBoardId,
         board_name: 'Secondary SLA Board'
       });
 
-      await context.db('statuses').insert({
+      await scopedTable(context.tenantId, 'statuses').insert({
         tenant: context.tenantId,
         board_id: secondBoardId,
         status_id: secondStatusId,
@@ -557,7 +559,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         created_by: context.userId
       });
 
-      await context.db('tickets').insert({
+      await scopedTable(context.tenantId, 'tickets').insert({
         tenant: context.tenantId,
         ticket_id: secondTicketId,
         ticket_number: 'TEST-001-B',
@@ -592,7 +594,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
 
     beforeEach(async () => {
       // Create necessary test data
-      const priorityResult = await context.db('priorities')
+      const priorityResult = await scopedTable(context.tenantId, 'priorities')
         .insert({
           tenant: context.tenantId,
           priority_name: 'High',
@@ -604,7 +606,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
 
       // Ticket categories live in `categories` (not the non-existent
       // `ticket_categories`); created_by and display_order are NOT NULL.
-      const categoryResult = await context.db('categories')
+      const categoryResult = await scopedTable(context.tenantId, 'categories')
         .insert({
           tenant: context.tenantId,
           category_name: 'Support Category',
@@ -615,7 +617,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         .returning('category_id');
       testCategoryId = categoryResult[0].category_id;
 
-      const ticketResult = await context.db('tickets')
+      const ticketResult = await scopedTable(context.tenantId, 'tickets')
         .insert({
           tenant: context.tenantId,
           ticket_number: 'TEST-002',
@@ -644,7 +646,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       await updateSlaSettings({ pause_on_awaiting_client: true });
       await setStatusSlaPauseConfig(testStatusId, false);
 
-      await context.db('tickets')
+      await scopedTable(context.tenantId, 'tickets')
         .where({ ticket_id: testTicketId, tenant: context.tenantId })
         .update({ response_state: 'awaiting_client' });
 
@@ -666,7 +668,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       await updateSlaSettings({ pause_on_awaiting_client: true });
       await setStatusSlaPauseConfig(testStatusId, true);
 
-      await context.db('tickets')
+      await scopedTable(context.tenantId, 'tickets')
         .where({ ticket_id: testTicketId, tenant: context.tenantId })
         .update({ response_state: 'awaiting_client' });
 
@@ -688,7 +690,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       await updateSlaSettings({ pause_on_awaiting_client: false });
 
       // Create a new status that pauses SLA
-      const pendingStatusResult = await context.db('statuses')
+      const pendingStatusResult = await scopedTable(context.tenantId, 'statuses')
         .insert({
           tenant: context.tenantId,
           board_id: testBoardId,
@@ -703,7 +705,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       await setStatusSlaPauseConfig(pendingStatusResult[0].status_id, true);
 
       // Update ticket to the new status
-      await context.db('tickets')
+      await scopedTable(context.tenantId, 'tickets')
         .where({ ticket_id: testTicketId, tenant: context.tenantId })
         .update({ status_id: pendingStatusResult[0].status_id });
 
@@ -717,7 +719,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       await setStatusSlaPauseConfig(testStatusId, false);
 
       // First set to awaiting
-      await context.db('tickets')
+      await scopedTable(context.tenantId, 'tickets')
         .where({ ticket_id: testTicketId, tenant: context.tenantId })
         .update({ response_state: 'awaiting_client' });
 
@@ -726,7 +728,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       expect(result.reason).toBe('awaiting_client');
 
       // Change back to not_set
-      await context.db('tickets')
+      await scopedTable(context.tenantId, 'tickets')
         .where({ ticket_id: testTicketId, tenant: context.tenantId })
         .update({ response_state: 'not_set' });
 
@@ -745,13 +747,13 @@ describe('SLA Pause Config Actions Integration Tests', () => {
 
       // Insert settings for a different tenant directly
       const otherTenantId = uuidv4();
-      await context.db('tenants').insert({
+      await scopedTable(otherTenantId, 'tenants').insert({
         tenant: otherTenantId,
         client_name: 'Other SLA Tenant',
         email: 'other-sla@test.com'
       });
 
-      await context.db('sla_settings').insert({
+      await scopedTable(otherTenantId, 'sla_settings').insert({
         tenant: otherTenantId,
         pause_on_awaiting_client: true
       });
@@ -770,19 +772,19 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       const otherBoardId = uuidv4();
       const otherStatusId = uuidv4();
 
-      await context.db('tenants').insert({
+      await scopedTable(otherTenantId, 'tenants').insert({
         tenant: otherTenantId,
         client_name: 'Other Config Tenant',
         email: 'other-config@test.com'
       });
 
-      await context.db('boards').insert({
+      await scopedTable(otherTenantId, 'boards').insert({
         tenant: otherTenantId,
         board_id: otherBoardId,
         board_name: 'Other Config Board'
       });
 
-      await context.db('statuses').insert({
+      await scopedTable(otherTenantId, 'statuses').insert({
         tenant: otherTenantId,
         board_id: otherBoardId,
         status_id: otherStatusId,
@@ -792,7 +794,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         is_closed: false
       });
 
-      await context.db('status_sla_pause_config').insert({
+      await scopedTable(otherTenantId, 'status_sla_pause_config').insert({
         tenant: otherTenantId,
         config_id: uuidv4(),
         status_id: otherStatusId,
@@ -812,19 +814,19 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       const otherBoardId = uuidv4();
       const otherStatusId = uuidv4();
 
-      await context.db('tenants').insert({
+      await scopedTable(otherTenantId, 'tenants').insert({
         tenant: otherTenantId,
         client_name: 'Isolated Config Tenant',
         email: 'isolated@test.com'
       });
 
-      await context.db('boards').insert({
+      await scopedTable(otherTenantId, 'boards').insert({
         tenant: otherTenantId,
         board_id: otherBoardId,
         board_name: 'Isolated Config Board'
       });
 
-      await context.db('statuses').insert({
+      await scopedTable(otherTenantId, 'statuses').insert({
         tenant: otherTenantId,
         board_id: otherBoardId,
         status_id: otherStatusId,
@@ -834,7 +836,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         is_closed: false
       });
 
-      await context.db('status_sla_pause_config').insert({
+      await scopedTable(otherTenantId, 'status_sla_pause_config').insert({
         tenant: otherTenantId,
         config_id: uuidv4(),
         status_id: otherStatusId,
@@ -851,19 +853,19 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       const otherBoardId = uuidv4();
       const otherStatusId = uuidv4();
 
-      await context.db('tenants').insert({
+      await scopedTable(otherTenantId, 'tenants').insert({
         tenant: otherTenantId,
         client_name: 'Delete Test Tenant',
         email: 'delete-test@test.com'
       });
 
-      await context.db('boards').insert({
+      await scopedTable(otherTenantId, 'boards').insert({
         tenant: otherTenantId,
         board_id: otherBoardId,
         board_name: 'Delete Test Board'
       });
 
-      await context.db('statuses').insert({
+      await scopedTable(otherTenantId, 'statuses').insert({
         tenant: otherTenantId,
         board_id: otherBoardId,
         status_id: otherStatusId,
@@ -873,7 +875,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         is_closed: false
       });
 
-      await context.db('status_sla_pause_config').insert({
+      await scopedTable(otherTenantId, 'status_sla_pause_config').insert({
         tenant: otherTenantId,
         config_id: uuidv4(),
         status_id: otherStatusId,
@@ -887,7 +889,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       await deleteStatusSlaPauseConfig(testStatusId);
 
       // Other tenant's config should still exist
-      const otherConfig = await context.db('status_sla_pause_config')
+      const otherConfig = await scopedTable(otherTenantId, 'status_sla_pause_config')
         .where({ tenant: otherTenantId, status_id: otherStatusId })
         .first();
 

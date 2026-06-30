@@ -1,6 +1,7 @@
 import { E2ETestContext, E2ETestContextOptions } from '../utils/e2e-test-context';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
+import { tenantDb } from '@alga-psa/db';
 
 export interface EmailSettingsTestContextOptions extends E2ETestContextOptions {
   /**
@@ -20,6 +21,10 @@ export class EmailSettingsTestContext extends E2ETestContext {
   constructor(options: EmailSettingsTestContextOptions = {}) {
     super(options);
     this.oauthMockUrl = options.oauthMockUrl || 'http://localhost:8081';
+  }
+
+  tenantTable<Row extends object = Record<string, unknown>>(tenantId: string, table: string) {
+    return tenantDb(this.db, tenantId).table<Row>(table);
   }
 
   /**
@@ -93,7 +98,7 @@ export class EmailSettingsTestContext extends E2ETestContext {
     };
 
     console.log(`     💾 Storing provider configuration in database...`);
-    const [provider] = await this.db('email_providers') // Use correct table name
+    const [provider] = await this.tenantTable(config.tenant_id, 'email_providers') // Use correct table name
       .insert(providerData)
       .returning('*');
     
@@ -118,7 +123,7 @@ export class EmailSettingsTestContext extends E2ETestContext {
         updated_at: new Date()
       };
       
-      const [insertedConfig] = await this.db('microsoft_email_provider_config')
+      const [insertedConfig] = await this.tenantTable(config.tenant_id, 'microsoft_email_provider_config')
         .insert(microsoftConfigData)
         .returning('*');
       vendorConfig = insertedConfig;
@@ -142,7 +147,7 @@ export class EmailSettingsTestContext extends E2ETestContext {
         updated_at: new Date()
       };
       
-      const [insertedConfig] = await this.db('google_email_provider_config')
+      const [insertedConfig] = await this.tenantTable(config.tenant_id, 'google_email_provider_config')
         .insert(googleConfigData)
         .returning('*');
       vendorConfig = insertedConfig;
@@ -185,8 +190,7 @@ export class EmailSettingsTestContext extends E2ETestContext {
     console.log(`     🔍 Looking for existing ${config.provider} provider for mailbox: ${config.mailbox}`);
     
     // Query the email_providers table for matching provider
-    const [provider] = await this.db('email_providers')
-      .where('tenant', config.tenant_id)
+    const [provider] = await this.tenantTable(config.tenant_id, 'email_providers')
       .where('mailbox', config.mailbox)
       .where('provider_type', config.provider)
       .limit(1);
@@ -201,12 +205,12 @@ export class EmailSettingsTestContext extends E2ETestContext {
     // Load vendor-specific config
     let vendorConfig;
     if (config.provider === 'microsoft') {
-      const [microsoftConfig] = await this.db('microsoft_email_provider_config')
+      const [microsoftConfig] = await this.tenantTable(config.tenant_id, 'microsoft_email_provider_config')
         .where('email_provider_id', provider.id)
         .limit(1);
       vendorConfig = microsoftConfig;
     } else if (config.provider === 'google') {
-      const [googleConfig] = await this.db('google_email_provider_config')
+      const [googleConfig] = await this.tenantTable(config.tenant_id, 'google_email_provider_config')
         .where('email_provider_id', provider.id)
         .limit(1);
       vendorConfig = googleConfig;
@@ -401,8 +405,7 @@ export class EmailSettingsTestContext extends E2ETestContext {
     while (Date.now() - startTime < timeoutMs) {
       // Search for tickets by email metadata, checking both the MailHog ID and Message-ID
       // The emailId passed in is the MailHog internal ID, but the workflow stores the Message-ID header
-      const [ticket] = await this.db('tickets')
-        .where('tenant', tenant_id)
+      const [ticket] = await this.tenantTable(tenant_id, 'tickets')
         .where(function() {
           // Primary search: look for MailHog internal ID in mailhogId field
           this.whereRaw(`email_metadata->>'mailhogId' = ?`, [emailId])
@@ -419,8 +422,7 @@ export class EmailSettingsTestContext extends E2ETestContext {
       
       // Debug: Log what tickets exist for this tenant to help troubleshoot
       if ((Date.now() - startTime) > timeoutMs / 2) { // Only log after half the timeout
-        const allTickets = await this.db('tickets')
-          .where('tenant', tenant_id)
+        const allTickets = await this.tenantTable(tenant_id, 'tickets')
           .whereNotNull('email_metadata')
           .select('ticket_id', 'title', 'email_metadata')
           .limit(5);

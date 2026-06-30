@@ -5,6 +5,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from
 import { TestContext } from 'server/test-utils/testContext';
 import { setupCommonMocks } from 'server/test-utils/testMocks';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import {
   getBusinessHoursSchedules,
@@ -36,6 +37,7 @@ describe('Business Hours Actions Integration Tests', () => {
   } = TestContext.createHelpers();
 
   let context: TestContext;
+  const scopedTable = (tenant: string, tableName: string) => tenantDb(context.db, tenant).table(tableName);
 
   beforeAll(async () => {
     context = await setupContext({
@@ -694,7 +696,7 @@ describe('Business Hours Actions Integration Tests', () => {
       });
 
       // Insert SLA policy that references this schedule directly into the database
-      await context.db('sla_policies').insert({
+      await scopedTable(context.tenantId, 'sla_policies').insert({
         tenant: context.tenantId,
         sla_policy_id: uuidv4(),
         policy_name: 'Test SLA Policy',
@@ -761,13 +763,13 @@ describe('Business Hours Actions Integration Tests', () => {
 
       // Insert a schedule directly for a different tenant
       const otherTenantId = uuidv4();
-      await context.db('tenants').insert({
+      await scopedTable(otherTenantId, 'tenants').insert({
         tenant: otherTenantId,
         client_name: 'Other Tenant',
         email: 'other@test.com'
       });
 
-      await context.db('business_hours_schedules').insert({
+      await scopedTable(otherTenantId, 'business_hours_schedules').insert({
         tenant: otherTenantId,
         schedule_id: uuidv4(),
         schedule_name: 'Other Tenant Schedule',
@@ -789,13 +791,13 @@ describe('Business Hours Actions Integration Tests', () => {
       const otherTenantId = uuidv4();
       const otherScheduleId = uuidv4();
 
-      await context.db('tenants').insert({
+      await scopedTable(otherTenantId, 'tenants').insert({
         tenant: otherTenantId,
         client_name: 'Other Tenant 2',
         email: 'other2@test.com'
       });
 
-      await context.db('business_hours_schedules').insert({
+      await scopedTable(otherTenantId, 'business_hours_schedules').insert({
         tenant: otherTenantId,
         schedule_id: otherScheduleId,
         schedule_name: 'Other Tenant Schedule',
@@ -813,13 +815,13 @@ describe('Business Hours Actions Integration Tests', () => {
       const otherTenantId = uuidv4();
       const otherScheduleId = uuidv4();
 
-      await context.db('tenants').insert({
+      await scopedTable(otherTenantId, 'tenants').insert({
         tenant: otherTenantId,
         client_name: 'Other Tenant 3',
         email: 'other3@test.com'
       });
 
-      await context.db('business_hours_schedules').insert({
+      await scopedTable(otherTenantId, 'business_hours_schedules').insert({
         tenant: otherTenantId,
         schedule_id: otherScheduleId,
         schedule_name: 'Other Tenant Schedule',
@@ -851,13 +853,13 @@ describe('Business Hours Actions Integration Tests', () => {
 
       // Insert a holiday for a different tenant
       const otherTenantId = uuidv4();
-      await context.db('tenants').insert({
+      await scopedTable(otherTenantId, 'tenants').insert({
         tenant: otherTenantId,
         client_name: 'Other Tenant 4',
         email: 'other4@test.com'
       });
 
-      await context.db('holidays').insert({
+      await scopedTable(otherTenantId, 'holidays').insert({
         tenant: otherTenantId,
         holiday_id: uuidv4(),
         schedule_id: null,

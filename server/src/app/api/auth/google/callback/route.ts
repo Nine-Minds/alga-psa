@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers.js';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import { configureGmailProvider } from '@alga-psa/integrations/actions/email-actions/configureGmailProvider';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -210,16 +211,11 @@ export async function GET(request: NextRequest) {
       if (stateData.providerId) {
         try {
           console.log(`💾 Saving OAuth tokens to database for provider: ${stateData.providerId}`);
-          const { knex, tenant } = await createTenantKnex();
+          const { knex } = await createTenantKnex();
+          const db = tenantDb(knex, stateData.tenant);
           
-          await knex('google_email_provider_config')
+          await db.table('google_email_provider_config')
             .where('email_provider_id', stateData.providerId)
-            .modify((qb: any) => {
-              // Use the current tenant from context/cookies when available
-              if (tenant) {
-                qb.andWhere('tenant', tenant);
-              }
-            })
             .update({
               access_token: access_token,
               refresh_token: refresh_token || null,
@@ -231,11 +227,8 @@ export async function GET(request: NextRequest) {
 
           // Mark provider connection as connected and clear any previous error
           try {
-            await knex('email_providers')
+            await db.table('email_providers')
               .where('id', stateData.providerId)
-              .modify((qb: any) => {
-                if (tenant) qb.andWhere('tenant', tenant);
-              })
               .update({
                 status: 'connected',
                 updated_at: knex.fn.now(),
@@ -258,10 +251,10 @@ export async function GET(request: NextRequest) {
         try {
           await runWithTenant(stateData.tenant, async () => {
             const { knex } = await createTenantKnex();
-            const googleConfig = await knex('google_email_provider_config')
+            const db = tenantDb(knex, stateData.tenant);
+            const googleConfig = await db.table('google_email_provider_config')
               .select('project_id')
               .where('email_provider_id', stateData.providerId)
-              .andWhere('tenant', stateData.tenant)
               .first();
 
             if (googleConfig?.project_id) {

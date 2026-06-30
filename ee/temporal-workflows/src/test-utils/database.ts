@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 // Local database connection for testing
@@ -42,6 +43,14 @@ async function withAdminTransaction<T>(operation: (trx: Knex.Transaction) => Pro
   } finally {
     await db.destroy();
   }
+}
+
+function unscopedTestTable(
+  trx: Knex.Transaction,
+  table: string,
+  reason: string
+) {
+  return tenantDb(trx, '__test_tenant_discovery__').unscoped(table, reason);
 }
 
 export interface TestDatabase {
@@ -92,111 +101,132 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
         // Clean up in correct dependency order to avoid foreign key violations
         
         // Remove user preferences first
-        for (const userId of createdUsers) {
-          await trx('user_preferences').where({ user_id: userId }).del();
+        for (const tenantId of createdTenants) {
+          const db = tenantDb(trx, tenantId);
+          if (createdUsers.length > 0) {
+            await db.table('user_preferences').whereIn('user_id', createdUsers).del();
+          }
         }
         
         // Remove user roles (references both users and roles)
         for (const tenantId of createdTenants) {
-          await trx('user_roles').where({ tenant: tenantId }).del();
+          const db = tenantDb(trx, tenantId);
+          await db.table('user_roles').del();
         }
         
         // Clear account manager references in clients before deleting users
         for (const tenantId of createdTenants) {
-          await trx('clients')
-            .where({ tenant: tenantId })
-            .update({ account_manager_id: null });
+          const db = tenantDb(trx, tenantId);
+          await db.table('clients').update({ account_manager_id: null });
         }
         
         // Remove users (may be referenced as created_by in statuses)
-        for (const userId of createdUsers) {
-          await trx('users').where({ user_id: userId }).del();
+        for (const tenantId of createdTenants) {
+          const db = tenantDb(trx, tenantId);
+          if (createdUsers.length > 0) {
+            await db.table('users').whereIn('user_id', createdUsers).del();
+          }
         }
         
         // Remove tenant clients
         for (const tenantId of createdTenants) {
-          await trx('tenant_companies').where({ tenant: tenantId }).del();
+          const db = tenantDb(trx, tenantId);
+          await db.table('tenant_companies').del();
         }
         
         // Remove clients
         for (const tenantId of createdTenants) {
-          await trx('clients').where({ tenant: tenantId }).del();
+          const db = tenantDb(trx, tenantId);
+          await db.table('clients').del();
         }
         
         // Remove contract lines and associations
         for (const tenantId of createdTenants) {
-          await trx('client_contract_lines').where({ tenant: tenantId }).del();
-          await trx('contract_lines').where({ tenant: tenantId }).del();
+          const db = tenantDb(trx, tenantId);
+          await db.table('client_contract_lines').del();
+          await db.table('contract_lines').del();
         }
         
         // Remove statuses (may reference users as created_by)
         for (const tenantId of createdTenants) {
-          await trx('statuses').where({ tenant: tenantId }).del();
+          const db = tenantDb(trx, tenantId);
+          await db.table('statuses').del();
         }
         
         // Remove roles (after user_roles are removed)
         for (const tenantId of createdTenants) {
-          await trx('roles').where({ tenant: tenantId }).del();
+          const db = tenantDb(trx, tenantId);
+          await db.table('roles').del();
         }
         
         // Remove tenants last
         for (const tenantId of createdTenants) {
-          await trx('tenants').where({ tenant: tenantId }).del();
+          const db = tenantDb(trx, tenantId);
+          await db.table('tenants').del();
         }
       });
     },
 
     async getTenant(tenantId: string) {
       return await withAdminTransaction(async (trx: Knex.Transaction) => {
-        return await trx('tenants').where({ tenant: tenantId }).first();
+        return await tenantDb(trx, tenantId).table('tenants').first();
       });
     },
 
     async getUser(userId: string) {
       return await withAdminTransaction(async (trx: Knex.Transaction) => {
-        return await trx('users').where({ user_id: userId }).first();
+        return await unscopedTestTable(
+          trx,
+          'users',
+          'test utility getUser resolves a user id before caller supplies tenant context'
+        )
+          .where({ user_id: userId })
+          .first();
       });
     },
 
     async getUserById(userId: string, tenantId: string) {
       return await withAdminTransaction(async (trx: Knex.Transaction) => {
-        return await trx('users')
-          .where({ user_id: userId, tenant: tenantId })
+        return await tenantDb(trx, tenantId).table('users')
+          .where({ user_id: userId })
           .first();
       });
     },
 
     async getUserRoles(userId: string, tenantId: string) {
       return await withAdminTransaction(async (trx: Knex.Transaction) => {
-        return await trx('user_roles as ur')
-          .join('roles as r', function() {
-            this.on('ur.role_id', 'r.role_id')
-                .andOn('ur.tenant', 'r.tenant');
-          })
-          .where({ 'ur.user_id': userId, 'ur.tenant': tenantId })
+        const db = tenantDb(trx, tenantId);
+        const query = db.table('user_roles as ur');
+        db.tenantJoin(query, 'roles as r', 'ur.role_id', 'r.role_id');
+        return await query
+          .where({ 'ur.user_id': userId })
           .select('r.*', 'ur.*');
       });
     },
 
     async getRoleById(roleId: string, tenantId: string) {
       return await withAdminTransaction(async (trx: Knex.Transaction) => {
-        return await trx('roles')
-          .where({ role_id: roleId, tenant: tenantId })
+        return await tenantDb(trx, tenantId).table('roles')
+          .where({ role_id: roleId })
           .first();
       });
     },
 
     async getClientById(clientId: string, tenantId: string) {
       return await withAdminTransaction(async (trx: Knex.Transaction) => {
-        return await trx('clients')
-          .where({ client_id: clientId, tenant: tenantId })
+        return await tenantDb(trx, tenantId).table('clients')
+          .where({ client_id: clientId })
           .first();
       });
     },
 
     async getTenantsMatching(name: string) {
         return await withAdminTransaction(async (trx: Knex.Transaction) => {
-          return await trx('tenants')
+          return await unscopedTestTable(
+            trx,
+            'tenants',
+            'test utility searches tenant rows by name before selecting a tenant context'
+          )
             .where('client_name', 'like', `%${name}%`)
             .select('*');
       });
@@ -204,24 +234,21 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
 
     async getClientsForTenant(tenantId: string) {
       return await withAdminTransaction(async (trx: Knex.Transaction) => {
-        return await trx('clients')
-          .where({ tenant: tenantId })
+        return await tenantDb(trx, tenantId).table('clients')
           .select('*');
       });
     },
 
     async getRolesForTenant(tenantId: string) {
       return await withAdminTransaction(async (trx: Knex.Transaction) => {
-        return await trx('roles')
-          .where({ tenant: tenantId })
+        return await tenantDb(trx, tenantId).table('roles')
           .select('*');
       });
     },
 
     async getStatusesForTenant(tenantId: string) {
       return await withAdminTransaction(async (trx: Knex.Transaction) => {
-        return await trx('statuses')
-          .where({ tenant: tenantId })
+        return await tenantDb(trx, tenantId).table('statuses')
           .select('*');
       });
     },
@@ -239,7 +266,7 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
 
     async createTenant(input: { tenantId: string; tenantName: string; email: string }) {
       await withAdminTransaction(async (trx: Knex.Transaction) => {
-        await trx('tenants').insert({
+        await tenantDb(trx, input.tenantId).table('tenants').insert({
           tenant: input.tenantId,
           client_name: input.tenantName,
           email: input.email,
@@ -252,7 +279,7 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
 
     async createClient(input: { clientId: string; tenantId: string; clientName: string }) {
       await withAdminTransaction(async (trx: Knex.Transaction) => {
-        await trx('clients').insert({
+        await tenantDb(trx, input.tenantId).table('clients').insert({
           client_id: input.clientId,
           tenant: input.tenantId,
           client_name: input.clientName,
@@ -265,7 +292,7 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
 
     async createRole(input: { roleId: string; tenantId: string; roleName: string; description: string }) {
       await withAdminTransaction(async (trx: Knex.Transaction) => {
-        await trx('roles').insert({
+        await tenantDb(trx, input.tenantId).table('roles').insert({
           role_id: input.roleId,
           tenant: input.tenantId,
           role_name: input.roleName,

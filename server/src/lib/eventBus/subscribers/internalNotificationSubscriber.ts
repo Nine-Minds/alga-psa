@@ -1,38 +1,20 @@
 import { getEventBus } from '../index';
 import {
-  EventType,
-  BaseEvent,
-  EventSchemas,
-  TicketCreatedEvent,
-  TicketUpdatedEvent,
-  TicketClosedEvent,
-  TicketAssignedEvent,
-  TicketAdditionalAgentAssignedEvent,
-  TicketCommentAddedEvent,
-  TicketCommentUpdatedEvent,
-  ProjectCreatedEvent,
-  ProjectAssignedEvent,
-  ProjectTaskAssignedEvent,
-  ProjectTaskAdditionalAgentAssignedEvent,
-  TaskCommentAddedEvent,
-  TaskCommentUpdatedEvent,
-  InvoiceGeneratedEvent,
-  MessageSentEvent,
-  UserMentionedInDocumentEvent,
-  AppointmentRequestCreatedEvent,
-  AppointmentRequestApprovedEvent,
-  AppointmentRequestDeclinedEvent,
-  AppointmentRequestCancelledEvent
+  EventType, BaseEvent, EventSchemas, TicketCreatedEvent, TicketUpdatedEvent, TicketClosedEvent, TicketAssignedEvent, TicketAdditionalAgentAssignedEvent, TicketCommentAddedEvent, TicketCommentUpdatedEvent, ProjectCreatedEvent, ProjectAssignedEvent, ProjectTaskAssignedEvent, ProjectTaskAdditionalAgentAssignedEvent, TaskCommentAddedEvent, TaskCommentUpdatedEvent, InvoiceGeneratedEvent, MessageSentEvent, UserMentionedInDocumentEvent, AppointmentRequestCreatedEvent, AppointmentRequestApprovedEvent, AppointmentRequestDeclinedEvent, AppointmentRequestCancelledEvent
 } from '@alga-psa/event-schemas';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
-import { resolveEffectiveTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
+import { resolveEffectiveTimeZone, normalizeIanaTimeZone, tenantDb } from '@alga-psa/db';
 import { formatInTimeZone } from 'date-fns-tz';
 import { formatDate as formatAppointmentDate, formatTime as formatAppointmentTime } from '@alga-psa/scheduling/actions';
 import type { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { resolveNotificationLinks } from '../../utils/notificationLinkResolver';
+
+function tenantScopedTable(db: Knex, table: string, tenant: string): Knex.QueryBuilder {
+  return tenantDb(db, tenant).table(table);
+}
 
 /**
  * Handle ticket created events
@@ -47,7 +29,8 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     // Get ticket details including contact and the board's default team so we
     // can notify dispatchers when the ticket lands unassigned (e.g. from an
     // inbound email hitting a board with no default agent).
-    const ticket = await db('tickets as t')
+    const scopedDb = tenantDb(db, tenantId);
+    const ticketQuery = tenantScopedTable(db, 'tickets as t', tenantId)
       .select(
         't.ticket_id',
         't.ticket_number',
@@ -59,15 +42,11 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         't.client_id',
         'c.client_name',
         'b.default_assigned_team_id as board_default_team_id'
-      )
-      .leftJoin('clients as c', function() {
-        this.on('t.client_id', 'c.client_id')
-            .andOn('t.tenant', 'c.tenant');
-      })
-      .leftJoin('boards as b', function() {
-        this.on('t.board_id', 'b.board_id')
-            .andOn('t.tenant', 'b.tenant');
-      })
+      );
+    scopedDb.tenantJoin(ticketQuery, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'boards as b', 't.board_id', 'b.board_id', { type: 'left' });
+
+    const ticket = await ticketQuery
       .where('t.ticket_id', ticketId)
       .first();
 
@@ -120,9 +99,9 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       // languish until someone manually scans the board.
       const teamId = ticket.assigned_team_id || ticket.board_default_team_id;
       if (teamId) {
-        const teamMembers = await db('team_members')
+        const teamMembers = await tenantScopedTable(db, 'team_members', tenantId)
           .select('user_id')
-          .where({ team_id: teamId, tenant: tenantId });
+          .where({ team_id: teamId });
 
         await Promise.all(
           teamMembers
@@ -149,11 +128,10 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     // Create notification for client contact if they have portal access
     if (ticket.contact_name_id && portalUrl) {
       // Check if contact has a user account
-      const contactUser = await db('users')
+      const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'user_type')
         .where({
           contact_id: ticket.contact_name_id,
-          tenant: tenantId,
           user_type: 'client'
         })
         .first();
@@ -197,9 +175,9 @@ async function getAllTicketAssignees(
   ticketId: string
 ): Promise<string[]> {
   // Get primary assignee
-  const ticket = await db('tickets')
+  const ticket = await tenantScopedTable(db, 'tickets', tenantId)
     .select('assigned_to')
-    .where({ ticket_id: ticketId, tenant: tenantId })
+    .where({ ticket_id: ticketId })
     .first();
 
   const assignees: string[] = [];
@@ -208,9 +186,9 @@ async function getAllTicketAssignees(
   }
 
   // Get additional agents
-  const additionalAgents = await db('ticket_resources')
+  const additionalAgents = await tenantScopedTable(db, 'ticket_resources', tenantId)
     .select('additional_user_id')
-    .where({ tenant: tenantId, ticket_id: ticketId })
+    .where({ ticket_id: ticketId })
     .whereNotNull('additional_user_id');
 
   for (const agent of additionalAgents) {
@@ -231,9 +209,9 @@ async function getAllTaskAssignees(
   taskId: string
 ): Promise<string[]> {
   // Get primary assignee
-  const task = await db('project_tasks')
+  const task = await tenantScopedTable(db, 'project_tasks', tenantId)
     .select('assigned_to')
-    .where({ task_id: taskId, tenant: tenantId })
+    .where({ task_id: taskId })
     .first();
 
   const assignees: string[] = [];
@@ -242,9 +220,9 @@ async function getAllTaskAssignees(
   }
 
   // Get additional agents
-  const additionalAgents = await db('task_resources')
+  const additionalAgents = await tenantScopedTable(db, 'task_resources', tenantId)
     .select('additional_user_id')
-    .where({ tenant: tenantId, task_id: taskId })
+    .where({ task_id: taskId })
     .whereNotNull('additional_user_id');
 
   for (const agent of additionalAgents) {
@@ -267,7 +245,8 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
 
     // Get ticket details including priority + creation time + contact so we
     // can decide whether to also post a client-portal notification.
-    const ticket = await db('tickets as t')
+    const scopedDb = tenantDb(db, tenantId);
+    const ticketQuery = tenantScopedTable(db, 'tickets as t', tenantId)
       .select(
         't.ticket_number',
         't.title',
@@ -276,16 +255,12 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         't.contact_name_id',
         'p.priority_name as priority',
         db.raw("TRIM(CONCAT(COALESCE(au.first_name, ''), ' ', COALESCE(au.last_name, ''))) as assigned_to_name")
-      )
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-            .andOn('t.tenant', 'p.tenant');
-      })
-      .leftJoin('users as au', function() {
-        this.on('t.assigned_to', 'au.user_id')
-            .andOn('t.tenant', 'au.tenant');
-      })
-      .where({ 't.ticket_id': ticketId, 't.tenant': tenantId })
+      );
+    scopedDb.tenantJoin(ticketQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'users as au', 't.assigned_to', 'au.user_id', { type: 'left' });
+
+    const ticket = await ticketQuery
+      .where({ 't.ticket_id': ticketId })
       .first();
 
     if (!ticket) {
@@ -297,9 +272,9 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     }
 
     // Get the user who performed the assignment
-    const assignedByUser = assignedByUserId ? await db('users')
+    const assignedByUser = assignedByUserId ? await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: assignedByUserId, tenant: tenantId })
+      .where({ user_id: assignedByUserId })
       .first() : null;
 
     const performedByName = assignedByUser
@@ -349,11 +324,10 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       isFirstIndividualAssignment &&
       !isCreationTimeAssignment
     ) {
-      const contactUser = await db('users')
+      const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id')
         .where({
           contact_id: ticket.contact_name_id,
-          tenant: tenantId,
           user_type: 'client'
         })
         .first();
@@ -391,18 +365,16 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     // If this is a team assignment, notify team members (excluding primary assignee)
     const assignedTeamId = (event.payload as any).changes?.assigned_team_id as string | undefined;
     if (assignedTeamId) {
-      const team = await db('teams')
+      const team = await tenantScopedTable(db, 'teams', tenantId)
         .select('team_name')
-        .where({ team_id: assignedTeamId, tenant: tenantId })
+        .where({ team_id: assignedTeamId })
         .first();
 
       if (team) {
-        const teamMembers = await db('team_members')
-          .join('users', function() {
-            this.on('team_members.user_id', 'users.user_id')
-                .andOn('team_members.tenant', 'users.tenant');
-          })
-          .where({ 'team_members.team_id': assignedTeamId, 'team_members.tenant': tenantId })
+        const teamMembersQuery = tenantScopedTable(db, 'team_members', tenantId);
+        scopedDb.tenantJoin(teamMembersQuery, 'users', 'team_members.user_id', 'users.user_id');
+        const teamMembers = await teamMembersQuery
+          .where({ 'team_members.team_id': assignedTeamId })
           .andWhere('users.is_inactive', false)
           .select('team_members.user_id');
 
@@ -453,18 +425,18 @@ async function handleTicketAdditionalAgentAssigned(
     const db = await getConnection(tenantId);
 
     // Get ticket details including priority
-    const ticket = await db('tickets as t')
+    const scopedDb = tenantDb(db, tenantId);
+    const ticketQuery = tenantScopedTable(db, 'tickets as t', tenantId)
       .select(
         't.ticket_number',
         't.title',
         't.contact_name_id',
         'p.priority_name as priority'
-      )
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-            .andOn('t.tenant', 'p.tenant');
-      })
-      .where({ 't.ticket_id': ticketId, 't.tenant': tenantId })
+      );
+    scopedDb.tenantJoin(ticketQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+
+    const ticket = await ticketQuery
+      .where({ 't.ticket_id': ticketId })
       .first();
 
     if (!ticket) {
@@ -476,9 +448,9 @@ async function handleTicketAdditionalAgentAssigned(
     }
 
     // Get assigner name
-    const assigner = await db('users')
+    const assigner = await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: assignedByUserId, tenant: tenantId })
+      .where({ user_id: assignedByUserId })
       .first();
 
     const assignerName = assigner
@@ -517,9 +489,9 @@ async function handleTicketAdditionalAgentAssigned(
 
     // 2. Notify the primary agent (if they exist and didn't perform the action)
     if (primaryAgentId && primaryAgentId !== assignedByUserId) {
-      const additionalAgent = await db('users')
+      const additionalAgent = await tenantScopedTable(db, 'users', tenantId)
         .select('first_name', 'last_name')
-        .where({ user_id: additionalAgentId, tenant: tenantId })
+        .where({ user_id: additionalAgentId })
         .first();
 
       const additionalAgentName = additionalAgent
@@ -557,15 +529,15 @@ async function handleTicketAdditionalAgentAssigned(
 
     // 3. Notify client (if they have portal access)
     if (ticket.contact_name_id) {
-      const contactUser = await db('users')
+      const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'first_name', 'last_name')
-        .where({ contact_id: ticket.contact_name_id, tenant: tenantId })
+        .where({ contact_id: ticket.contact_name_id })
         .first();
 
       if (contactUser) {
-        const additionalAgent = await db('users')
+        const additionalAgent = await tenantScopedTable(db, 'users', tenantId)
           .select('first_name', 'last_name')
-          .where({ user_id: additionalAgentId, tenant: tenantId })
+          .where({ user_id: additionalAgentId })
           .first();
 
         const additionalAgentName = additionalAgent
@@ -609,19 +581,18 @@ async function handleProjectTaskAdditionalAgentAssigned(
 
   try {
     const db = await getConnection(tenantId);
+    const scopedDb = tenantDb(db, tenantId);
 
     // Get task and project details
-    const taskData = await db('project_tasks as pt')
-      .select('pt.task_name', 'pt.phase_id', 'p.project_name')
-      .leftJoin('project_phases as ph', function() {
-        this.on('pt.phase_id', 'ph.phase_id')
-           .andOn('pt.tenant', 'ph.tenant');
-      })
-      .leftJoin('projects as p', function() {
-        this.on('ph.project_id', 'p.project_id')
-           .andOn('ph.tenant', 'p.tenant');
-      })
-      .where({ 'pt.task_id': taskId, 'pt.tenant': tenantId })
+    const taskDataQuery = tenantScopedTable(db, 'project_tasks as pt', tenantId)
+      .select('pt.task_name', 'pt.phase_id', 'p.project_name');
+    scopedDb.tenantJoin(taskDataQuery, 'project_phases as ph', 'pt.phase_id', 'ph.phase_id', { type: 'left' });
+    scopedDb.tenantJoin(taskDataQuery, 'projects as p', 'ph.project_id', 'p.project_id', {
+      type: 'left',
+      rootTenantColumn: 'ph.tenant',
+    });
+    const taskData = await taskDataQuery
+      .where({ 'pt.task_id': taskId })
       .first();
 
     if (!taskData) {
@@ -633,9 +604,9 @@ async function handleProjectTaskAdditionalAgentAssigned(
     }
 
     // Get assigner name
-    const assigner = await db('users')
+    const assigner = await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: assignedByUserId, tenant: tenantId })
+      .where({ user_id: assignedByUserId })
       .first();
 
     const assignerName = assigner
@@ -673,9 +644,9 @@ async function handleProjectTaskAdditionalAgentAssigned(
 
     // 2. Notify the primary agent (if they didn't perform the action)
     if (primaryAgentId !== assignedByUserId) {
-      const additionalAgent = await db('users')
+      const additionalAgent = await tenantScopedTable(db, 'users', tenantId)
         .select('first_name', 'last_name')
-        .where({ user_id: additionalAgentId, tenant: tenantId })
+        .where({ user_id: additionalAgentId })
         .first();
 
       const additionalAgentName = additionalAgent
@@ -718,9 +689,9 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const db = await getConnection(tenantId);
 
     // Get ticket details including contact
-    const ticket = await db('tickets')
+    const ticket = await tenantScopedTable(db, 'tickets', tenantId)
       .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'status_id', 'priority_id', 'tenant')
-      .where({ ticket_id: ticketId, tenant: tenantId })
+      .where('ticket_id', ticketId)
       .first();
 
     if (!ticket) {
@@ -728,9 +699,9 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     }
 
     // Get user who made the change
-    const performedByUser = await db('users')
+    const performedByUser = await tenantScopedTable(db, 'users', tenantId)
       .select('user_id', 'first_name', 'last_name')
-      .where({ user_id: userId, tenant: tenantId })
+      .where('user_id', userId)
       .first();
 
     const performedByName = performedByUser ? `${performedByUser.first_name} ${performedByUser.last_name}` : 'Someone';
@@ -749,13 +720,13 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 
       // Handle status change
       if (changes.status_id && typeof changes.status_id === 'object') {
-        const oldStatus = await db('statuses')
+        const oldStatus = await tenantScopedTable(db, 'statuses', tenantId)
           .select('name')
-          .where({ status_id: changes.status_id.old, tenant: tenantId })
+          .where('status_id', changes.status_id.old)
           .first();
-        const newStatus = await db('statuses')
+        const newStatus = await tenantScopedTable(db, 'statuses', tenantId)
           .select('name')
-          .where({ status_id: changes.status_id.new, tenant: tenantId })
+          .where('status_id', changes.status_id.new)
           .first();
 
         if (oldStatus || newStatus) {
@@ -770,13 +741,13 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 
       // Handle priority change
       if (changes.priority_id && typeof changes.priority_id === 'object') {
-        const oldPriority = await db('priorities')
+        const oldPriority = await tenantScopedTable(db, 'priorities', tenantId)
           .select('priority_name', 'color')
-          .where({ priority_id: changes.priority_id.old, tenant: tenantId })
+          .where('priority_id', changes.priority_id.old)
           .first();
-        const newPriority = await db('priorities')
+        const newPriority = await tenantScopedTable(db, 'priorities', tenantId)
           .select('priority_name', 'color')
-          .where({ priority_id: changes.priority_id.new, tenant: tenantId })
+          .where('priority_id', changes.priority_id.new)
           .first();
 
         if (oldPriority || newPriority) {
@@ -795,13 +766,13 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 
       // Handle assignment change
       if (changes.assigned_to && typeof changes.assigned_to === 'object') {
-        const oldAssignee = changes.assigned_to.old ? await db('users')
+        const oldAssignee = changes.assigned_to.old ? await tenantScopedTable(db, 'users', tenantId)
           .select('first_name', 'last_name')
-          .where({ user_id: changes.assigned_to.old, tenant: tenantId })
+          .where('user_id', changes.assigned_to.old)
           .first() : null;
-        const newAssignee = changes.assigned_to.new ? await db('users')
+        const newAssignee = changes.assigned_to.new ? await tenantScopedTable(db, 'users', tenantId)
           .select('first_name', 'last_name')
-          .where({ user_id: changes.assigned_to.new, tenant: tenantId })
+          .where('user_id', changes.assigned_to.new)
           .first() : null;
 
         changeDetails.assigned_to = {
@@ -860,11 +831,10 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 
     // Create notification for client contact if they have portal access
     if (ticket.contact_name_id && portalUrl) {
-      const contactUser = await db('users')
+      const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'user_type')
         .where({
           contact_id: ticket.contact_name_id,
-          tenant: tenantId,
           user_type: 'client'
         })
         .first();
@@ -907,9 +877,9 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const db = await getConnection(tenantId);
 
     // Get ticket details including contact
-    const ticket = await db('tickets')
+    const ticket = await tenantScopedTable(db, 'tickets', tenantId)
       .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'tenant')
-      .where({ ticket_id: ticketId, tenant: tenantId })
+      .where('ticket_id', ticketId)
       .first();
 
     if (!ticket) {
@@ -920,9 +890,9 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const userId = payload.userId || '';
 
     // Get user who closed it for the notification
-    const performedByUser = userId ? await db('users')
+    const performedByUser = userId ? await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: userId, tenant: tenantId })
+      .where('user_id', userId)
       .first() : null;
 
     const performedByName = performedByUser ? `${performedByUser.first_name} ${performedByUser.last_name}` : 'Someone';
@@ -965,11 +935,10 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 
     // Create notification for client contact if they have portal access
     if (ticket.contact_name_id && portalUrl) {
-      const contactUser = await db('users')
+      const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'user_type')
         .where({
           contact_id: ticket.contact_name_id,
-          tenant: tenantId,
           user_type: 'client'
         })
         .first();
@@ -1127,9 +1096,9 @@ async function resolveEveryoneMention(
 
   if (hasEveryone) {
     // Single query to get all active internal users in the tenant
-    const internalUsers = await db('users')
+    const internalUsers = await tenantScopedTable(db, 'users', tenantId)
       .select('user_id')
-      .where({ tenant: tenantId, user_type: 'internal', is_inactive: false });
+      .where({ user_type: 'internal', is_inactive: false });
 
     const allIds = [...regularIds, ...internalUsers.map(u => u.user_id)];
     return Array.from(new Set(allIds));
@@ -1171,9 +1140,8 @@ async function findMentionedUsers(db: Knex, tenantId: string, mentions: string[]
   if (mentions.length === 0) return [];
 
   // Query users by username or display name
-  const users = await db('users')
+  const users = await tenantScopedTable(db, 'users', tenantId)
     .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-    .where('tenant', tenantId)
     .andWhere(function() {
       this.whereIn('username', mentions)
         .orWhereRaw("CONCAT(first_name, ' ', last_name) IN (?)", [mentions]);
@@ -1198,9 +1166,10 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
 
   try {
     const db = await getConnection(tenantId);
+    const scopedDb = tenantDb(db, tenantId);
 
     // Get task details
-    const task = await db('project_tasks as pt')
+    const taskQuery = tenantScopedTable(db, 'project_tasks as pt', tenantId)
       .select(
         'pt.task_id',
         'pt.task_name',
@@ -1208,16 +1177,14 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
         'pt.phase_id',
         'p.project_id',
         'p.project_name'
-      )
-      .leftJoin('project_phases as ph', function() {
-        this.on('pt.phase_id', 'ph.phase_id')
-           .andOn('pt.tenant', 'ph.tenant');
-      })
-      .leftJoin('projects as p', function() {
-        this.on('ph.project_id', 'p.project_id')
-           .andOn('ph.tenant', 'p.tenant');
-      })
-      .where({ 'pt.task_id': taskId, 'pt.tenant': tenantId })
+      );
+    scopedDb.tenantJoin(taskQuery, 'project_phases as ph', 'pt.phase_id', 'ph.phase_id', { type: 'left' });
+    scopedDb.tenantJoin(taskQuery, 'projects as p', 'ph.project_id', 'p.project_id', {
+      type: 'left',
+      rootTenantColumn: 'ph.tenant',
+    });
+    const task = await taskQuery
+      .where('pt.task_id', taskId)
       .first();
 
     if (!task) {
@@ -1226,9 +1193,9 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
     }
 
     // Get author name
-    const author = await db('users')
+    const author = await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: userId, tenant: tenantId })
+      .where('user_id', userId)
       .first();
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
@@ -1267,10 +1234,9 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
 
     // Get user details and create notifications for mentioned users
     if (resolvedMentionedUserIds.length > 0) {
-      const mentionedUsers = await db('users')
+      const mentionedUsers = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-        .whereIn('user_id', resolvedMentionedUserIds)
-        .andWhere('tenant', tenantId);
+        .whereIn('user_id', resolvedMentionedUserIds);
 
       if (mentionedUsers.length > 0) {
         const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1398,9 +1364,10 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
 
   try {
     const db = await getConnection(tenantId);
+    const scopedDb = tenantDb(db, tenantId);
 
     // Get task details
-    const task = await db('project_tasks as pt')
+    const taskQuery = tenantScopedTable(db, 'project_tasks as pt', tenantId)
       .select(
         'pt.task_id',
         'pt.task_name',
@@ -1408,16 +1375,14 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
         'pt.phase_id',
         'p.project_id',
         'p.project_name'
-      )
-      .leftJoin('project_phases as ph', function() {
-        this.on('pt.phase_id', 'ph.phase_id')
-           .andOn('pt.tenant', 'ph.tenant');
-      })
-      .leftJoin('projects as p', function() {
-        this.on('ph.project_id', 'p.project_id')
-           .andOn('ph.tenant', 'p.tenant');
-      })
-      .where({ 'pt.task_id': taskId, 'pt.tenant': tenantId })
+      );
+    scopedDb.tenantJoin(taskQuery, 'project_phases as ph', 'pt.phase_id', 'ph.phase_id', { type: 'left' });
+    scopedDb.tenantJoin(taskQuery, 'projects as p', 'ph.project_id', 'p.project_id', {
+      type: 'left',
+      rootTenantColumn: 'ph.tenant',
+    });
+    const task = await taskQuery
+      .where('pt.task_id', taskId)
       .first();
 
     if (!task) {
@@ -1426,9 +1391,9 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
     }
 
     // Get author name
-    const author = await db('users')
+    const author = await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: userId, tenant: tenantId })
+      .where('user_id', userId)
       .first();
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
@@ -1468,10 +1433,9 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
         .filter(id => id !== userId);
 
       if (resolvedNewlyMentionedUserIds.length > 0) {
-        const newlyMentionedUsers = await db('users')
+        const newlyMentionedUsers = await tenantScopedTable(db, 'users', tenantId)
           .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', resolvedNewlyMentionedUserIds)
-          .andWhere('tenant', tenantId);
+          .whereIn('user_id', resolvedNewlyMentionedUserIds);
 
         if (newlyMentionedUsers.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1546,9 +1510,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const db = await getConnection(tenantId);
 
     // Get ticket details including contact
-    const ticket = await db('tickets')
+    const ticket = await tenantScopedTable(db, 'tickets', tenantId)
       .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'tenant')
-      .where({ ticket_id: ticketId, tenant: tenantId })
+      .where('ticket_id', ticketId)
       .first();
 
     if (!ticket) {
@@ -1557,9 +1521,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     }
 
     // Get author name
-    const author = await db('users')
+    const author = await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: userId, tenant: tenantId })
+      .where('user_id', userId)
       .first();
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
@@ -1593,10 +1557,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         .filter(id => id !== userId);
 
       if (resolvedMentionedUserIds.length > 0) {
-        const mentionedUsers = await db('users')
+        const mentionedUsers = await tenantScopedTable(db, 'users', tenantId)
           .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', resolvedMentionedUserIds)
-          .andWhere('tenant', tenantId);
+          .whereIn('user_id', resolvedMentionedUserIds);
 
         if (mentionedUsers.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1695,11 +1658,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     // Create notification for client contact if they have portal access (and are not the comment author)
     // Skip if comment is internal - internal comments are not visible to client portal users
     if (ticket.contact_name_id && !comment?.isInternal && ticketPortalUrl) {
-      const contactUser = await db('users')
+      const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'user_type')
         .where({
           contact_id: ticket.contact_name_id,
-          tenant: tenantId,
           user_type: 'client'
         })
         .first();
@@ -1764,9 +1726,9 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
     const db = await getConnection(tenantId);
 
     // Get ticket details including contact
-    const ticket = await db('tickets')
+    const ticket = await tenantScopedTable(db, 'tickets', tenantId)
       .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'tenant')
-      .where({ ticket_id: ticketId, tenant: tenantId })
+      .where('ticket_id', ticketId)
       .first();
 
     if (!ticket) {
@@ -1775,9 +1737,9 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
     }
 
     // Get author name
-    const author = await db('users')
+    const author = await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: userId, tenant: tenantId })
+      .where('user_id', userId)
       .first();
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
@@ -1817,10 +1779,9 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
         .filter(id => id !== userId);
 
       if (resolvedNewlyMentionedUserIds.length > 0) {
-        const newlyMentionedUsers = await db('users')
+        const newlyMentionedUsers = await tenantScopedTable(db, 'users', tenantId)
           .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', resolvedNewlyMentionedUserIds)
-          .andWhere('tenant', tenantId);
+          .whereIn('user_id', resolvedNewlyMentionedUserIds);
 
         if (newlyMentionedUsers.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1895,9 +1856,9 @@ async function handleUserMentionedInDocument(event: UserMentionedInDocumentEvent
     const db = await getConnection(tenantId);
 
     // Get document details
-    const document = await db('documents')
+    const document = await tenantScopedTable(db, 'documents', tenantId)
       .select('document_id', 'document_name', 'tenant')
-      .where({ document_id: documentId, tenant: tenantId })
+      .where('document_id', documentId)
       .first();
 
     if (!document) {
@@ -1906,9 +1867,9 @@ async function handleUserMentionedInDocument(event: UserMentionedInDocumentEvent
     }
 
     // Get author name
-    const author = await db('users')
+    const author = await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: userId, tenant: tenantId })
+      .where('user_id', userId)
       .first();
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
@@ -1947,10 +1908,9 @@ async function handleUserMentionedInDocument(event: UserMentionedInDocumentEvent
     }
 
     // Get user details for mentioned users (single batch query)
-    const mentionedUsers = await db('users')
+    const mentionedUsers = await tenantScopedTable(db, 'users', tenantId)
       .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-      .whereIn('user_id', usersToNotify)
-      .andWhere('tenant', tenantId);
+      .whereIn('user_id', usersToNotify);
 
     if (mentionedUsers.length === 0) {
       return;
@@ -2009,22 +1969,20 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
 
   try {
     const db = await getConnection(tenantId);
+    const scopedDb = tenantDb(db, tenantId);
 
     // Get project details including assigned_to
-    const project = await db('projects as p')
+    const projectQuery = tenantScopedTable(db, 'projects as p', tenantId)
       .select(
         'p.project_id',
         'p.project_name',
         'p.wbs_code',
         'p.assigned_to',
         'c.client_name'
-      )
-      .leftJoin('clients as c', function() {
-        this.on('p.client_id', 'c.client_id')
-            .andOn('p.tenant', 'c.tenant');
-      })
+      );
+    scopedDb.tenantJoin(projectQuery, 'clients as c', 'p.client_id', 'c.client_id', { type: 'left' });
+    const project = await projectQuery
       .where('p.project_id', projectId)
-      .andWhere('p.tenant', tenantId)
       .first();
 
     if (!project) {
@@ -2087,9 +2045,9 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
     const db = await getConnection(tenantId);
 
     // Get project details
-    const project = await db('projects')
+    const project = await tenantScopedTable(db, 'projects', tenantId)
       .select('project_id', 'project_name', 'tenant')
-      .where({ project_id: projectId, tenant: tenantId })
+      .where('project_id', projectId)
       .first();
 
     if (!project || !assignedTo) {
@@ -2143,26 +2101,22 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
 
   try {
     const db = await getConnection(tenantId);
+    const scopedDb = tenantDb(db, tenantId);
 
     // Get task and project details
-    const task = await db('project_tasks as pt')
+    const taskQuery = tenantScopedTable(db, 'project_tasks as pt', tenantId)
       .select(
         'pt.task_name',
         'pt.phase_id',
         'p.project_name'
-      )
-      .leftJoin('project_phases as ph', function() {
-        this.on('pt.phase_id', 'ph.phase_id')
-            .andOn('pt.tenant', 'ph.tenant');
-      })
-      .leftJoin('projects as p', function() {
-        this.on('ph.project_id', 'p.project_id')
-            .andOn('ph.tenant', 'p.tenant');
-      })
-      .where({
-        'pt.task_id': taskId,
-        'pt.tenant': tenantId
-      })
+      );
+    scopedDb.tenantJoin(taskQuery, 'project_phases as ph', 'pt.phase_id', 'ph.phase_id', { type: 'left' });
+    scopedDb.tenantJoin(taskQuery, 'projects as p', 'ph.project_id', 'p.project_id', {
+      type: 'left',
+      rootTenantColumn: 'ph.tenant',
+    });
+    const task = await taskQuery
+      .where('pt.task_id', taskId)
       .first();
 
     if (!task || !assignedToId) {
@@ -2175,9 +2129,9 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
     }
 
     // Look up who performed the assignment
-    const assignedByUser = assignedByUserId ? await db('users')
+    const assignedByUser = assignedByUserId ? await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: assignedByUserId, tenant: tenantId })
+      .where('user_id', assignedByUserId)
       .first() : null;
 
     const performedByName = assignedByUser
@@ -2194,9 +2148,9 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
 
     if (assignedToType === 'team') {
       // Team assignment: assignedToId is the team ID
-      const team = await db('teams')
+      const team = await tenantScopedTable(db, 'teams', tenantId)
         .select('team_name', 'manager_id')
-        .where({ team_id: assignedToId, tenant: tenantId })
+        .where('team_id', assignedToId)
         .first();
 
       if (!team) {
@@ -2209,12 +2163,10 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
       }
 
       // Get all active team members
-      const teamMembers = await db('team_members')
-        .join('users', function() {
-          this.on('team_members.user_id', 'users.user_id')
-              .andOn('team_members.tenant', 'users.tenant');
-        })
-        .where({ 'team_members.team_id': assignedToId, 'team_members.tenant': tenantId })
+      const teamMembersQuery = tenantScopedTable(db, 'team_members', tenantId);
+      scopedDb.tenantJoin(teamMembersQuery, 'users', 'team_members.user_id', 'users.user_id');
+      const teamMembers = await teamMembersQuery
+        .where('team_members.team_id', assignedToId)
         .andWhere('users.is_inactive', false)
         .select('team_members.user_id');
 
@@ -2306,17 +2258,16 @@ async function handleInvoiceGenerated(event: InvoiceGeneratedEvent): Promise<voi
 
   try {
     const db = await getConnection(tenantId);
+    const scopedDb = tenantDb(db, tenantId);
 
     // Get invoice and client details
-    const invoice = await db('invoices as i')
+    const invoiceQuery = tenantScopedTable(db, 'invoices as i', tenantId)
       .select(
         'i.invoice_number',
         'c.client_name'
-      )
-      .leftJoin('clients as c', function() {
-        this.on('i.client_id', 'c.client_id')
-            .andOn('i.tenant', 'c.tenant');
-      })
+      );
+    scopedDb.tenantJoin(invoiceQuery, 'clients as c', 'i.client_id', 'c.client_id', { type: 'left' });
+    const invoice = await invoiceQuery
       .where('i.invoice_id', invoiceId)
       .first();
 
@@ -2454,24 +2405,20 @@ async function handleAppointmentRequestCreated(event: AppointmentRequestCreatedE
 
     // Send notification to MSP STAFF
     // Get users with 'schedule' 'update' permission
-    const staffUsers = await db('users as u')
-      .join('user_roles as ur', function() {
-        this.on('u.user_id', 'ur.user_id')
-            .andOn('u.tenant', 'ur.tenant');
-      })
-      .join('roles as r', function() {
-        this.on('ur.role_id', 'r.role_id')
-            .andOn('ur.tenant', 'r.tenant');
-      })
-      .join('role_permissions as rp', function() {
-        this.on('r.role_id', 'rp.role_id')
-            .andOn('r.tenant', 'rp.tenant');
-      })
-      .join('permissions as p', function() {
-        this.on('rp.permission_id', 'p.permission_id');
-      })
+    const scopedDb = tenantDb(db, tenantId);
+    const staffUsersQuery = tenantScopedTable(db, 'users as u', tenantId);
+    scopedDb.tenantJoin(staffUsersQuery, 'user_roles as ur', 'u.user_id', 'ur.user_id');
+    scopedDb.tenantJoin(staffUsersQuery, 'roles as r', 'ur.role_id', 'r.role_id', {
+      rootTenantColumn: 'ur.tenant',
+    });
+    scopedDb.tenantJoin(staffUsersQuery, 'role_permissions as rp', 'r.role_id', 'rp.role_id', {
+      rootTenantColumn: 'r.tenant',
+    });
+    scopedDb.tenantJoin(staffUsersQuery, 'permissions as p', 'rp.permission_id', 'p.permission_id', {
+      rootTenantColumn: 'rp.tenant',
+    });
+    const staffUsers = await staffUsersQuery
       .where({
-        'u.tenant': tenantId,
         'u.user_type': 'internal',
         'p.resource': 'schedule',
         'p.action': 'update'
@@ -2481,9 +2428,9 @@ async function handleAppointmentRequestCreated(event: AppointmentRequestCreatedE
     // Get client name if available
     let clientName = 'Unknown';
     if (clientId) {
-      const client = await db('companies')
+      const client = await tenantScopedTable(db, 'companies', tenantId)
         .select('company_name')
-        .where({ company_id: clientId, tenant: tenantId })
+        .where('company_id', clientId)
         .first();
       clientName = client?.company_name || 'Unknown';
     }
@@ -2547,14 +2494,14 @@ async function handleAppointmentRequestApproved(event: AppointmentRequestApprove
     // requestedDate/requestedTime are the requester's wall-clock. Render the
     // schedule entry's UTC instant per recipient, labeled with their timezone.
     const scheduleEntryId = (payload as any).scheduleEntryId as string | undefined;
-    const request = await db('appointment_requests')
-      .where({ appointment_request_id: appointmentRequestId, tenant: tenantId })
+    const request = await tenantScopedTable(db, 'appointment_requests', tenantId)
+      .where('appointment_request_id', appointmentRequestId)
       .select('requester_timezone', 'schedule_entry_id')
       .first();
     const entryId = scheduleEntryId || request?.schedule_entry_id;
     const entry = entryId
-      ? await db('schedule_entries')
-          .where({ entry_id: entryId, tenant: tenantId })
+      ? await tenantScopedTable(db, 'schedule_entries', tenantId)
+          .where('entry_id', entryId)
           .select('scheduled_start')
           .first()
       : null;
@@ -2569,9 +2516,9 @@ async function handleAppointmentRequestApproved(event: AppointmentRequestApprove
     // Get technician name for client notification
     let technicianName = 'Your technician';
     if (assignedUserId) {
-      const technician = await db('users')
+      const technician = await tenantScopedTable(db, 'users', tenantId)
         .select('first_name', 'last_name')
-        .where({ user_id: assignedUserId, tenant: tenantId })
+        .where('user_id', assignedUserId)
         .first();
 
       if (technician) {
@@ -2608,9 +2555,9 @@ async function handleAppointmentRequestApproved(event: AppointmentRequestApprove
     if (assignedUserId) {
       let clientName = requesterName || '';
       if (clientId) {
-        const client = await db('clients')
+        const client = await tenantScopedTable(db, 'clients', tenantId)
           .select('client_name')
-          .where({ client_id: clientId, tenant: tenantId })
+          .where('client_id', clientId)
           .first();
         if (client?.client_name) {
           clientName = client.client_name;
@@ -2709,26 +2656,22 @@ async function handleAppointmentRequestCancelled(event: AppointmentRequestCancel
 
   try {
     const db = await getConnection(tenantId);
+    const scopedDb = tenantDb(db, tenantId);
 
     // Send notification to MSP STAFF (who had been notified about this request)
-    const staffUsers = await db('users as u')
-      .join('user_roles as ur', function() {
-        this.on('u.user_id', 'ur.user_id')
-            .andOn('u.tenant', 'ur.tenant');
-      })
-      .join('roles as r', function() {
-        this.on('ur.role_id', 'r.role_id')
-            .andOn('ur.tenant', 'r.tenant');
-      })
-      .join('role_permissions as rp', function() {
-        this.on('r.role_id', 'rp.role_id')
-            .andOn('r.tenant', 'rp.tenant');
-      })
-      .join('permissions as p', function() {
-        this.on('rp.permission_id', 'p.permission_id');
-      })
+    const staffUsersQuery = tenantScopedTable(db, 'users as u', tenantId);
+    scopedDb.tenantJoin(staffUsersQuery, 'user_roles as ur', 'u.user_id', 'ur.user_id');
+    scopedDb.tenantJoin(staffUsersQuery, 'roles as r', 'ur.role_id', 'r.role_id', {
+      rootTenantColumn: 'ur.tenant',
+    });
+    scopedDb.tenantJoin(staffUsersQuery, 'role_permissions as rp', 'r.role_id', 'rp.role_id', {
+      rootTenantColumn: 'r.tenant',
+    });
+    scopedDb.tenantJoin(staffUsersQuery, 'permissions as p', 'rp.permission_id', 'p.permission_id', {
+      rootTenantColumn: 'rp.tenant',
+    });
+    const staffUsers = await staffUsersQuery
       .where({
-        'u.tenant': tenantId,
         'u.user_type': 'internal',
         'p.resource': 'schedule',
         'p.action': 'update'

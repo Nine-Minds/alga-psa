@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
@@ -19,15 +19,19 @@ export interface UpdateResponse {
   settings?: NumberSettings;
 }
 
+type NumberSettingsRow = NumberSettings & {
+  tenant: string;
+  entity_type: EntityType;
+};
+
 export const getNumberSettings = withAuth(async (_user, { tenant }, entityType: EntityType): Promise<NumberSettings> => {
   const { knex: db } = await createTenantKnex();
   const settings = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return await trx('next_number')
+    return await tenantDb(trx, tenant).table<NumberSettingsRow>('next_number')
       .where('entity_type', entityType)
-      .andWhere('tenant', tenant)
       .first();
   });
-  return settings;
+  return settings as NumberSettings;
 });
 
 export const updateNumberSettings = withAuth(async (
@@ -41,9 +45,10 @@ export const updateNumberSettings = withAuth(async (
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get current settings if they exist
-      const currentSettings = await trx('next_number')
+      const db = tenantDb(trx, tenant);
+
+      const currentSettings = await db.table<NumberSettingsRow>('next_number')
         .where('entity_type', entityType)
-        .andWhere('tenant', tenant)
         .first();
       const isNewSettings = !currentSettings;
 
@@ -98,22 +103,23 @@ export const updateNumberSettings = withAuth(async (
 
       // Insert or update settings
       if (isNewSettings) {
-        await trx('next_number').insert({
+        await db.table<NumberSettingsRow>('next_number').insert({
           tenant,
           entity_type: entityType,
           ...finalSettings
         });
       } else {
-        await trx('next_number')
+        await db.table<NumberSettingsRow>('next_number')
           .where('entity_type', entityType)
-          .andWhere('tenant', tenant)
           .update(updates);
       }
 
-      const updatedSettings = await trx('next_number')
+      const updatedSettings = await db.table<NumberSettingsRow>('next_number')
         .where('entity_type', entityType)
-        .andWhere('tenant', tenant)
         .first();
+      if (!updatedSettings) {
+        return { success: false, error: 'Failed to retrieve updated number settings' };
+      }
       return { success: true, settings: updatedSettings };
     });
   } catch (error) {

@@ -1,7 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, withTransaction, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import {
   ActivityFilters,
@@ -34,8 +34,7 @@ export const fetchNotificationActivities = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const notifications = await trx('internal_notifications')
-      .where('tenant', tenant)
+    const notifications = await tenantDb(trx, tenant).table('internal_notifications')
       .where('user_id', user.user_id)
       .whereNull('deleted_at')
       .modify((queryBuilder) => {

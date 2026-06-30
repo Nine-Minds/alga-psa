@@ -1,5 +1,5 @@
-import { Knex } from 'knex';
-import { getConnection } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import { tenantDb, getConnection } from '@alga-psa/db';
 import { EmailProviderManager } from './providers/EmailProviderManager';
 import { 
   TenantEmailSettings, 
@@ -260,8 +260,7 @@ export class TenantEmailService extends BaseEmailService {
     knex: Knex | Knex.Transaction
   ): Promise<TenantEmailSettings | null> {
     try {
-      const settings = await knex('tenant_email_settings')
-        .where({ tenant: tenantId })
+      const settings = await tenantDb(knex, tenantId).table('tenant_email_settings')
         .first();
       
       if (!settings) {

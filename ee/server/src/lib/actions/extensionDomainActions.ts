@@ -1,10 +1,13 @@
 'use server'
 
 import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import type { Knex } from 'knex';
 import { computeDomain, enqueueProvisioningWorkflow } from '@ee/lib/extensions/runtime/provision';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
+
+const EXTENSION_REGISTRY_GLOBAL_TENANT = '__extension_registry_global__';
 
 export interface InstallInfo {
   install_id: string;
@@ -21,13 +24,15 @@ export async function getInstallInfo(registryId: string): Promise<InstallInfo | 
   if (!tenant) throw new Error('Tenant not found');
   await assertPsaOnlyTenantAccess(tenant, 'extension_actions');
   const adminDb: Knex = await getAdminConnection();
-  const reg = await adminDb('extension_registry').where({ id: registryId }).first(['id']);
+  const reg = await tenantDb(adminDb, EXTENSION_REGISTRY_GLOBAL_TENANT).table('extension_registry')
+    .where({ id: registryId })
+    .first(['id']);
   if (!reg) return null;
 
   // Join with extension_bundle to get content_hash for Docker backend
-  const result = await adminDb('tenant_extension_install as ti')
+  const result = await tenantDb(adminDb, tenant).table('tenant_extension_install as ti')
     .leftJoin('extension_bundle as eb', 'eb.version_id', 'ti.version_id')
-    .where({ 'ti.tenant_id': tenant, 'ti.registry_id': registryId })
+    .where({ 'ti.registry_id': registryId })
     .orderBy('eb.created_at', 'desc')
     .first([
       'ti.id as install_id',
@@ -54,14 +59,16 @@ export async function reprovisionExtension(registryId: string): Promise<{ domain
   if (!tenant) throw new Error('Tenant not found');
   await assertPsaOnlyTenantAccess(tenant, 'extension_actions');
   const adminDb: Knex = await getAdminConnection();
-  const reg = await adminDb('extension_registry').where({ id: registryId }).first(['id']);
+  const reg = await tenantDb(adminDb, EXTENSION_REGISTRY_GLOBAL_TENANT).table('extension_registry')
+    .where({ id: registryId })
+    .first(['id']);
   if (!reg) throw new Error('Registry not found');
-  const install = await adminDb('tenant_extension_install')
-    .where({ tenant_id: tenant, registry_id: registryId })
+  const install = await tenantDb(adminDb, tenant).table('tenant_extension_install')
+    .where({ registry_id: registryId })
     .first(['id', 'runner_domain']);
   if (!install) throw new Error('Install not found');
   const domain = computeDomain(tenant, registryId);
-  await adminDb('tenant_extension_install')
+  await tenantDb(adminDb, tenant).table('tenant_extension_install')
     .where({ id: install.id })
     .update({
       runner_domain: domain,

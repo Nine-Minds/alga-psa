@@ -10,8 +10,9 @@ const inboundWebhookActionsSource = readFileSync(
 describe('inbound webhook replay source contract', () => {
   it('T163: replay dispatches against the current webhook config', () => {
     expect(inboundWebhookActionsSource).toContain('export const replayInboundDelivery = withAuth');
-    expect(inboundWebhookActionsSource).toContain("knex<InboundWebhookRow>('inbound_webhooks')");
-    expect(inboundWebhookActionsSource).toContain('where({ tenant, inbound_webhook_id: original.inbound_webhook_id })');
+    expect(inboundWebhookActionsSource).toContain('const db = tenantDb(knex, tenant);');
+    expect(inboundWebhookActionsSource).toContain("db.table<InboundWebhookRow>('inbound_webhooks')");
+    expect(inboundWebhookActionsSource).toContain('where({ inbound_webhook_id: original.inbound_webhook_id })');
     expect(inboundWebhookActionsSource).toContain('if (!webhook || !webhook.is_active)');
     expect(inboundWebhookActionsSource).toContain('await dispatchAndRecordOutcome({');
     expect(inboundWebhookActionsSource).toContain('webhook,');

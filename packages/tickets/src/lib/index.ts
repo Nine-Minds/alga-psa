@@ -26,10 +26,11 @@ export {
 export { TicketMobileEditorRuntime } from './ticketMobileEditorRuntime';
 export {
   applyVisibilityBoardFilter,
-  getClientContactVisibilityContext,
   VISIBILITY_GROUP_MISMATCH_ERROR,
   VISIBILITY_GROUP_MISSING_ERROR,
 } from './clientPortalVisibility';
+// getClientContactVisibilityContext is server-only because it imports the DB
+// facade. Import it from './clientPortalVisibility.server' in server actions.
 export {
   buildTicketStatusFilterOptions,
   createTicketStatusNameFilterValue,
@@ -67,7 +68,6 @@ export type {
 export type { TicketMobileEditorRuntimeOptions } from './ticketMobileEditorRuntime';
 export { getTicketOrigin, TICKET_ORIGIN_OTHER } from './ticketOrigin';
 export type { ResolvedTicketOrigin } from './ticketOrigin';
-export { isResponseStateTrackingEnabled } from './responseStateSettings';
 // Only the client-safe close-rule types/constants/error are exported from this
 // barrel. enforceTicketCloseRules / evaluateTicketCloseRules are server-only
 // (they import hasPermission + DB) and must be imported from the deep path

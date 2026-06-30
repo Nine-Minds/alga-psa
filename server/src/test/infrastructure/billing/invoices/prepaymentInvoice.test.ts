@@ -6,6 +6,7 @@ import { createPrepaymentInvoice, applyCreditToInvoice } from '@alga-psa/billing
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
+import { tenantDb } from '@alga-psa/db';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { expectError, expectNotFound } from '../../../../../test-utils/errorUtils';
 import { createTestDate, createTestDateISO, dateHelpers } from '../../../../../test-utils/dateUtils';
@@ -45,6 +46,31 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: activeKnex })),
+  tenantDb: (conn: any, tenant: string) => {
+    const aliasFor = (table: string) => table.match(/\s+as\s+([^\s]+)$/i)?.[1] ?? table.split(/\s+/).pop() ?? table;
+    const qualifierFor = (column: string) => column.match(/^([^.\s]+)\./)?.[1];
+
+    return {
+      table: (table: string) => conn(table).where(`${aliasFor(table)}.tenant`, tenant),
+      tenantJoin: (query: any, table: string, left: string, right: string, options: any = {}) => {
+        const joinAlias = aliasFor(table);
+        const leftQualifier = qualifierFor(left);
+        const rightQualifier = qualifierFor(right);
+        const rootQualifier = leftQualifier === joinAlias ? rightQualifier : leftQualifier;
+        const joinMethod = options.type === 'left' ? 'leftJoin' : 'join';
+
+        return query[joinMethod](table, function (this: any) {
+          this.on(left, '=', right);
+          if (options.tenantPredicate === 'literal') {
+            this.andOn(`${joinAlias}.tenant`, '=', conn.raw('?', [tenant]));
+          } else {
+            this.andOn(`${joinAlias}.tenant`, '=', options.rootTenantColumn ?? `${rootQualifier}.tenant`);
+          }
+          options.on?.(this);
+        });
+      }
+    };
+  },
   runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
   withTransaction: vi.fn(async (knex, callback) => {
     try {
@@ -169,14 +195,22 @@ function parseInvoiceTotals(invoice: Record<string, unknown>) {
   };
 }
 
+function tenantTable(context: TestContext, table: string) {
+  return tenantDb(context.db, context.tenantId).table(table);
+}
+
+function tenantFacade(context: TestContext) {
+  return tenantDb(context.db, context.tenantId);
+}
+
 async function generateInvoiceForCycle(
   context: TestContext,
   billingCycleId: string,
   serviceId: string,
   amountCents: number
 ): Promise<{ invoiceId: string; invoice: Record<string, unknown> }> {
-  const cycleRecord = await context.db('client_billing_cycles')
-    .where({ billing_cycle_id: billingCycleId, tenant: context.tenantId })
+  const cycleRecord = await tenantTable(context, 'client_billing_cycles')
+    .where({ billing_cycle_id: billingCycleId })
     .first();
 
   if (!cycleRecord) {
@@ -224,8 +258,8 @@ async function generateInvoiceForCycle(
 
   await finalizeInvoice(createdInvoice.invoice_id);
 
-  const updatedInvoice = await context.db('invoices')
-    .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
+  const updatedInvoice = await tenantTable(context, 'invoices')
+    .where({ invoice_id: createdInvoice.invoice_id })
     .first();
 
   if (!updatedInvoice) {
@@ -242,7 +276,7 @@ async function createManualInvoiceRecord(context: TestContext, amount: number): 
   const invoiceId = uuidv4();
   const timestamp = new Date().toISOString();
 
-  await context.db('invoices').insert({
+  await tenantTable(context, 'invoices').insert({
     invoice_id: invoiceId,
     tenant: context.tenantId,
     client_id: context.clientId,
@@ -369,7 +403,7 @@ describe('Prepayment Invoice System', () => {
   
       it('creates a prepayment invoice with expiration date', async () => {
         // Setup client billing settings with expiration days
-        await context.db('client_billing_settings').insert({
+        await tenantTable(context, 'client_billing_settings').insert({
           client_id: context.clientId,
           tenant: context.tenantId,
           zero_dollar_invoice_handling: 'normal',
@@ -388,12 +422,11 @@ describe('Prepayment Invoice System', () => {
         await finalizeInvoice(result.invoice_id);
   
         // Check that the transaction has an expiration date
-        const transaction = await context.db('transactions')
+        const transaction = await tenantTable(context, 'transactions')
           .where({
             client_id: context.clientId,
             invoice_id: result.invoice_id,
-            type: 'credit_issuance',
-            tenant: context.tenantId
+            type: 'credit_issuance'
           })
           .first();
   
@@ -407,10 +440,9 @@ describe('Prepayment Invoice System', () => {
         expect(daysDiff).toBeCloseTo(30, 1); // Allow for small time differences during test execution
   
         // Check that the credit tracking entry has the same expiration date
-        const creditTracking = await context.db('credit_tracking')
+        const creditTracking = await tenantTable(context, 'credit_tracking')
           .where({
-            transaction_id: transaction.transaction_id,
-            tenant: context.tenantId
+            transaction_id: transaction.transaction_id
           })
           .first();
   
@@ -421,7 +453,7 @@ describe('Prepayment Invoice System', () => {
       });
   
       it('creates a prepayment invoice with manual expiration date', async () => {
-        await context.db('client_billing_settings').insert({
+        await tenantTable(context, 'client_billing_settings').insert({
           client_id: context.clientId,
           tenant: context.tenantId,
           zero_dollar_invoice_handling: 'normal',
@@ -444,12 +476,11 @@ describe('Prepayment Invoice System', () => {
         await finalizeInvoice(result.invoice_id);
   
         // Check that the transaction has the manual expiration date
-        const transaction = await context.db('transactions')
+        const transaction = await tenantTable(context, 'transactions')
           .where({
             client_id: context.clientId,
             invoice_id: result.invoice_id,
-            type: 'credit_issuance',
-            tenant: context.tenantId
+            type: 'credit_issuance'
           })
           .first();
   
@@ -459,10 +490,9 @@ describe('Prepayment Invoice System', () => {
         expect(actualExpiration).toBe(expirationDateString);
   
         // Check that the credit tracking entry has the same expiration date
-        const creditTracking = await context.db('credit_tracking')
+        const creditTracking = await tenantTable(context, 'credit_tracking')
           .where({
-            transaction_id: transaction.transaction_id,
-            tenant: context.tenantId
+            transaction_id: transaction.transaction_id
           })
           .first();
   
@@ -479,17 +509,15 @@ describe('Prepayment Invoice System', () => {
         'Client'
       );
 
-      const invoices = await context.db('invoices')
+      const invoices = await tenantTable(context, 'invoices')
         .where({ 
-          client_id: invalidClientId,
-          tenant: context.tenantId
+          client_id: invalidClientId
         });
       expect(invoices).toHaveLength(0);
 
-      const transactions = await context.db('transactions')
+      const transactions = await tenantTable(context, 'transactions')
         .where({ 
-          client_id: invalidClientId,
-          tenant: context.tenantId
+          client_id: invalidClientId
         });
       expect(transactions).toHaveLength(0);
     });
@@ -502,10 +530,9 @@ describe('Prepayment Invoice System', () => {
 
       await finalizeInvoice(invoice.invoice_id);
 
-      const finalizedInvoiceRecord = await context.db('invoices')
+      const finalizedInvoiceRecord = await tenantTable(context, 'invoices')
         .where({
-          invoice_id: invoice.invoice_id,
-          tenant: context.tenantId
+          invoice_id: invoice.invoice_id
         })
         .first();
 
@@ -517,12 +544,11 @@ describe('Prepayment Invoice System', () => {
       // The system should automatically create the credit transaction when finalizing
       // No need to manually insert a transaction
 
-      const creditTransaction = await context.db('transactions')
+      const creditTransaction = await tenantTable(context, 'transactions')
         .where({
           client_id: context.clientId,
           invoice_id: invoice.invoice_id,
-          type: 'credit_issuance',
-          tenant: context.tenantId
+          type: 'credit_issuance'
         })
         .first();
 
@@ -565,7 +591,7 @@ describe('Prepayment Invoice System', () => {
 
       // Create billing cycle
       billingCycleId = uuidv4();
-      await context.db('client_billing_cycles').insert({
+      await tenantTable(context, 'client_billing_cycles').insert({
         billing_cycle_id: billingCycleId,
         client_id: context.clientId,
         tenant: context.tenantId,
@@ -579,7 +605,7 @@ describe('Prepayment Invoice System', () => {
         // Older invoice infrastructure tests still wire the legacy client-line
         // table directly when it exists; newer schema snapshots rely on the
         // helper-created contract assignment instead.
-        await context.db('client_contract_lines').insert({
+        await tenantTable(context, 'client_contract_lines').insert({
           client_contract_line_id: uuidv4(),
           client_id: context.clientId,
           contract_line_id: planId,
@@ -600,8 +626,8 @@ describe('Prepayment Invoice System', () => {
       const initialCredit = await ClientContractLine.getClientCredit(context.clientId);
       expect(parseInt(initialCredit+'')).toBe(prepaymentAmount);
 
-    const cycleRecord = await context.db('client_billing_cycles')
-      .where({ billing_cycle_id: billingCycleId, tenant: context.tenantId })
+    const cycleRecord = await tenantTable(context, 'client_billing_cycles')
+      .where({ billing_cycle_id: billingCycleId })
       .first();
 
     const cycleStart = cycleRecord.period_start_date ?? cycleRecord.effective_date;
@@ -645,7 +671,7 @@ describe('Prepayment Invoice System', () => {
 
     await finalizeInvoice(createdInvoice.invoice_id);
 
-    const updatedInvoice = await context.db('invoices')
+    const updatedInvoice = await tenantTable(context, 'invoices')
       .where({ invoice_id: createdInvoice.invoice_id })
       .first();
 
@@ -662,12 +688,11 @@ describe('Prepayment Invoice System', () => {
       expect(parseInt(finalCredit+'')).toBe(prepaymentAmount - totals.creditApplied);
 
       // Verify credit transaction
-    const creditTransaction = await context.db('transactions')
+    const creditTransaction = await tenantTable(context, 'transactions')
       .where({
         client_id: context.clientId,
         invoice_id: createdInvoice.invoice_id,
-        type: 'credit_application',
-        tenant: context.tenantId
+        type: 'credit_application'
       })
       .first();
 
@@ -679,8 +704,8 @@ describe('Prepayment Invoice System', () => {
       const prepaymentInvoice = await createPrepaymentInvoice(context.clientId, 100000);
       await finalizeInvoice(prepaymentInvoice.invoice_id);
 
-      const cycleRecord = await context.db('client_billing_cycles')
-        .where({ billing_cycle_id: billingCycleId, tenant: context.tenantId })
+      const cycleRecord = await tenantTable(context, 'client_billing_cycles')
+        .where({ billing_cycle_id: billingCycleId })
         .first();
 
       const cycleStart = cycleRecord.period_start_date ?? cycleRecord.effective_date;
@@ -722,12 +747,11 @@ describe('Prepayment Invoice System', () => {
 
       await finalizeInvoice(createdInvoice.invoice_id);
 
-      const detailRows = await context.db('invoice_charge_details as iid')
-        .join('invoice_charges as ic', function () {
-          this.on('iid.item_id', '=', 'ic.item_id').andOn('iid.tenant', '=', 'ic.tenant');
-        })
+      const detailsDb = tenantFacade(context);
+      const detailRowsQuery = detailsDb.table('invoice_charge_details as iid');
+      detailsDb.tenantJoin(detailRowsQuery, 'invoice_charges as ic', 'iid.item_id', 'ic.item_id');
+      const detailRows = await detailRowsQuery
         .where('ic.invoice_id', createdInvoice.invoice_id)
-        .andWhere('iid.tenant', context.tenantId)
         .select('iid.service_period_start', 'iid.service_period_end', 'iid.billing_timing');
 
       expect(detailRows).toHaveLength(1);
@@ -834,7 +858,7 @@ describe('Multiple Credit Applications', () => {
     billingCycleId1 = uuidv4();
     billingCycleId2 = uuidv4();
 
-    await context.db('client_billing_cycles').insert([
+    await tenantTable(context, 'client_billing_cycles').insert([
       {
         billing_cycle_id: billingCycleId1,
         client_id: context.clientId,
@@ -907,12 +931,11 @@ describe('Multiple Credit Applications', () => {
     expect(parseInt(finalCredit+'')).toBe(totalPrepayment - totals.creditApplied);
 
     // Verify credit transaction
-    const creditTransaction = await context.db('transactions')
+    const creditTransaction = await tenantTable(context, 'transactions')
       .where({
         client_id: context.clientId,
         invoice_id: invoiceId,
-        type: 'credit_application',
-        tenant: context.tenantId
+        type: 'credit_application'
       })
       .first();
 
@@ -1014,7 +1037,7 @@ describe('Multiple Credit Applications', () => {
     await finalizeInvoice(prepaymentInvoice.invoice_id);
 
     // Create credit issuance transaction after invoice is finalized
-    await context.db('transactions').insert({
+    await tenantTable(context, 'transactions').insert({
       transaction_id: uuidv4(),
       client_id: context.clientId,
       invoice_id: prepaymentInvoice.invoice_id,

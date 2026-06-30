@@ -15,8 +15,12 @@ function createFakeKnex(db: DbState) {
 
     constructor(private readonly table: string) {}
 
-    where(where: Record<string, any>) {
-      this.whereClauses.push(where);
+    where(where: Record<string, any> | string, value?: any) {
+      if (typeof where === 'string') {
+        this.whereClauses.push({ [where]: value });
+      } else {
+        this.whereClauses.push(where);
+      }
       return this;
     }
 
@@ -54,7 +58,10 @@ function createFakeKnex(db: DbState) {
     then(resolve: (value: any[]) => void) {
       let rows = [...db.asset_facts];
       for (const where of this.whereClauses) {
-        rows = rows.filter((row) => Object.entries(where).every(([k, v]) => row[k] === v));
+        rows = rows.filter((row) => Object.entries(where).every(([k, v]) => {
+          const key = k.includes('.') ? k.split('.').pop()! : k;
+          return row[key] === v;
+        }));
       }
       for (const order of this.orderByClauses.reverse()) {
         rows.sort((a, b) => (String(a[order.col] || '').localeCompare(String(b[order.col] || ''))) * (order.dir === 'asc' ? 1 : -1));

@@ -13,6 +13,7 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 /** Tenant-wide import/sync run status (mirrors rmm_integrations.sync_status). */
 export type HuduSyncStatus = 'idle' | 'syncing' | 'completed' | 'error';
@@ -48,7 +49,7 @@ export async function getHuduIntegration(
   knex: Knex,
   tenant: string
 ): Promise<HuduIntegrationRecord | null> {
-  const row = await knex<HuduIntegrationRecord>(TABLE).where({ tenant }).first();
+  const row = await tenantDb(knex, tenant).table<HuduIntegrationRecord>(TABLE).first();
   return row ?? null;
 }
 
@@ -88,7 +89,7 @@ export async function upsertHuduIntegration(
     merge.settings = JSON.stringify(input.settings);
   }
 
-  const rows = await knex(TABLE)
+  const rows = await tenantDb(knex, tenant).table<HuduIntegrationRecord>(TABLE)
     .insert(values)
     .onConflict(['tenant'])
     .merge(merge)
@@ -102,7 +103,7 @@ export async function setHuduIntegrationActive(
   tenant: string,
   isActive: boolean
 ): Promise<void> {
-  await knex(TABLE).where({ tenant }).update({
+  await tenantDb(knex, tenant).table(TABLE).update({
     is_active: isActive,
     updated_at: knex.fn.now(),
   });
@@ -113,8 +114,7 @@ export async function touchHuduIntegrationLastSynced(
   tenant: string,
   at?: Date | string
 ): Promise<void> {
-  await knex(TABLE)
-    .where({ tenant })
+  await tenantDb(knex, tenant).table(TABLE)
     .update({
       last_synced_at: at ?? knex.fn.now(),
       updated_at: knex.fn.now(),

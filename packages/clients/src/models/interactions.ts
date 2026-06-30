@@ -1,5 +1,5 @@
 import type { IInteraction, IInteractionType } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import OnlineMeetingModel from './onlineMeeting';
 
@@ -12,6 +12,14 @@ async function resolveDb(tenantId: string, trx?: DbOrTransaction): Promise<{ db:
 
   const { knex: db, tenant } = await createTenantKnex(tenantId);
   return { db, tenant: tenant ?? tenantId };
+}
+
+function tenantScopedTable<Row extends object = Record<string, any>>(
+  db: DbOrTransaction,
+  tenant: string,
+  table: string,
+) {
+  return tenantDb(db, tenant).table<Row>(table);
 }
 
 class InteractionModel {
@@ -37,10 +45,11 @@ class InteractionModel {
 
   static async getForEntity(entityId: string, entityType: 'contact' | 'client', tenantId: string): Promise<IInteraction[]> {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
+    const scopedTenant = tenant ?? tenantId;
+    const facade = tenantDb(db, scopedTenant);
 
     try {
-      const query = db('interactions')
-        .where('interactions.tenant', tenant)
+      const query = facade.table('interactions')
         .select(
           'interactions.interaction_id',
           'interactions.type_id',
@@ -62,31 +71,14 @@ class InteractionModel {
           'interactions.status_id',
           'statuses.name as status_name',
           'statuses.is_closed as is_status_closed'
-        )
-        .leftJoin('interaction_types as it', function() {
-          this.on('interactions.type_id', '=', 'it.type_id')
-            .andOn('interactions.tenant', '=', 'it.tenant');
-        })
-        .leftJoin('system_interaction_types as sit', function() {
-          this.on('interactions.type_id', '=', 'sit.type_id');
-        })
-        .leftJoin('contacts', function() {
-          this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
-            .andOn('interactions.tenant', '=', 'contacts.tenant');
-        })
-        .leftJoin('clients', function() {
-          this.on('interactions.client_id', '=', 'clients.client_id')
-            .andOn('interactions.tenant', '=', 'clients.tenant');
-        })
-        .leftJoin('users', function() {
-          this.on('interactions.user_id', '=', 'users.user_id')
-            .andOn('interactions.tenant', '=', 'users.tenant');
-        })
-        .leftJoin('statuses', function() {
-          this.on('interactions.status_id', '=', 'statuses.status_id')
-            .andOn('interactions.tenant', '=', 'statuses.tenant');
-        })
-        .orderBy('interactions.interaction_date', 'desc');
+        );
+      facade.tenantJoin(query, 'interaction_types as it', 'interactions.type_id', 'it.type_id', { type: 'left' });
+      facade.tenantJoin(query, 'system_interaction_types as sit', 'interactions.type_id', 'sit.type_id', { type: 'left' });
+      facade.tenantJoin(query, 'contacts', 'interactions.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+      facade.tenantJoin(query, 'clients', 'interactions.client_id', 'clients.client_id', { type: 'left' });
+      facade.tenantJoin(query, 'users', 'interactions.user_id', 'users.user_id', { type: 'left' });
+      facade.tenantJoin(query, 'statuses', 'interactions.status_id', 'statuses.status_id', { type: 'left' });
+      query.orderBy('interactions.interaction_date', 'desc');
 
       if (entityType === 'contact') {
         query.where('interactions.contact_name_id', entityId);
@@ -94,14 +86,14 @@ class InteractionModel {
         query.where('interactions.client_id', entityId);
       }
 
-      const result = await query;
+      const result = (await query) as any[];
 
       const interactions = result.map((row): IInteraction => ({
         ...row,
         type_name: row.type_name?.toLowerCase() || null,
       }));
 
-      return await this.withOnlineMeetings(interactions, tenant ?? tenantId);
+      return await this.withOnlineMeetings(interactions, scopedTenant);
     } catch (error) {
       console.error(`Error fetching interactions for ${entityType}:`, error);
       throw error;
@@ -118,12 +110,12 @@ class InteractionModel {
     limit?: number;
   }, tenantId: string): Promise<IInteraction[]> {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
+    const scopedTenant = tenant ?? tenantId;
 
     try {
       let interactions: any[] = [];
-      const query = db('interactions')
-        .select('*')
-        .where('tenant', tenant);
+      const query = tenantScopedTable(db, scopedTenant, 'interactions')
+        .select('*');
 
       if (filters.userId) {
         query.where('user_id', filters.userId);
@@ -158,17 +150,16 @@ class InteractionModel {
 
         if (typeIds.length > 0) {
           try {
-            const customTypes = await db('interaction_types')
+            const customTypes = await tenantScopedTable(db, scopedTenant, 'interaction_types')
               .select('type_id', 'type_name', 'icon')
-              .whereIn('type_id', typeIds)
-              .where('tenant', tenant);
+              .whereIn('type_id', typeIds);
             customTypes.forEach(t => typeMap.set(t.type_id, { type_name: t.type_name, icon: t.icon }));
           } catch (_typeErr) {
             // Continue without custom types
           }
 
           try {
-            const systemTypes = await db('system_interaction_types')
+            const systemTypes = await tenantScopedTable(db, scopedTenant, 'system_interaction_types')
               .select('type_id', 'type_name', 'icon')
               .whereIn('type_id', typeIds);
             systemTypes.forEach(t => typeMap.set(t.type_id, { type_name: t.type_name, icon: t.icon }));
@@ -181,10 +172,9 @@ class InteractionModel {
         const contactMap = new Map();
         if (contactIds.length > 0) {
           try {
-            const contacts = await db('contacts')
+            const contacts = await tenantScopedTable(db, scopedTenant, 'contacts')
               .select('contact_name_id', 'full_name')
-              .whereIn('contact_name_id', contactIds)
-              .where('tenant', tenant);
+              .whereIn('contact_name_id', contactIds);
             contacts.forEach(c => contactMap.set(c.contact_name_id, c.full_name));
           } catch (_contactErr) {
             // Continue without contact names
@@ -195,10 +185,9 @@ class InteractionModel {
         const clientMap = new Map();
         if (clientIds.length > 0) {
           try {
-            const clients = await db('clients')
+            const clients = await tenantScopedTable(db, scopedTenant, 'clients')
               .select('client_id', 'client_name')
-              .whereIn('client_id', clientIds)
-              .where('tenant', tenant);
+              .whereIn('client_id', clientIds);
             clients.forEach(c => clientMap.set(c.client_id, c.client_name));
           } catch (_clientErr) {
             // Continue without client names
@@ -209,10 +198,9 @@ class InteractionModel {
         const userMap = new Map();
         if (userIds.length > 0) {
           try {
-            const users = await db('users')
+            const users = await tenantScopedTable(db, scopedTenant, 'users')
               .select('user_id', 'username')
-              .whereIn('user_id', userIds)
-              .where('tenant', tenant);
+              .whereIn('user_id', userIds);
             users.forEach(u => userMap.set(u.user_id, u.username));
           } catch (_userErr) {
             // Continue without user names
@@ -223,10 +211,9 @@ class InteractionModel {
         const statusMap = new Map();
         if (statusIds.length > 0) {
           try {
-            const statuses = await db('statuses')
+            const statuses = await tenantScopedTable(db, scopedTenant, 'statuses')
               .select('status_id', 'name', 'is_closed')
-              .whereIn('status_id', statusIds)
-              .where('tenant', tenant);
+              .whereIn('status_id', statusIds);
             statuses.forEach(s => statusMap.set(s.status_id, { name: s.name, is_closed: s.is_closed }));
           } catch (_statusErr) {
             // Continue without status names
@@ -265,7 +252,7 @@ class InteractionModel {
     const { db, tenant } = await resolveDb(tenantId, trx);
 
     try {
-      const [newInteraction] = await db('interactions')
+      const [newInteraction] = await tenantScopedTable(db, tenant, 'interactions')
         .insert({
           ...interactionData,
           tenant
@@ -286,11 +273,11 @@ class InteractionModel {
 
   static async getInteractionTypes(tenantId: string): Promise<IInteractionType[]> {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
+    const scopedTenant = tenant ?? tenantId;
 
     try {
-      const result = await db('interaction_types')
-        .select('type_id', 'type_name', 'icon')
-        .where({ tenant });
+      const result = await tenantScopedTable(db, scopedTenant, 'interaction_types')
+        .select('type_id', 'type_name', 'icon');
 
       return result;
     } catch (error) {
@@ -301,14 +288,14 @@ class InteractionModel {
 
   static async updateInteraction(interactionId: string, updateData: Partial<IInteraction>, tenantId: string): Promise<IInteraction> {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
+    const scopedTenant = tenant ?? tenantId;
 
     try {
       const { tenant: _ignoreTenant, interaction_id: _ignoreId, ...safeUpdateData } = updateData as any;
 
-      const [updatedInteraction] = await db('interactions')
+      const [updatedInteraction] = await tenantScopedTable(db, scopedTenant, 'interactions')
         .where({
           interaction_id: interactionId,
-          tenant
         })
         .update(safeUpdateData)
         .returning('*');
@@ -331,10 +318,10 @@ class InteractionModel {
     trx?: DbOrTransaction,
   ): Promise<IInteraction | null> {
     const { db, tenant } = await resolveDb(tenantId, trx);
+    const facade = tenantDb(db, tenant);
 
     try {
-      const result = await db('interactions')
-        .where('interactions.tenant', tenant)
+      const query = facade.table('interactions')
         .select(
           'interactions.*',
           db.raw(`COALESCE(it.type_name, sit.type_name) as type_name`),
@@ -344,32 +331,17 @@ class InteractionModel {
           'users.username as user_name',
           'statuses.name as status_name',
           'statuses.is_closed as is_status_closed'
-        )
-        .leftJoin('interaction_types as it', function() {
-          this.on('interactions.type_id', '=', 'it.type_id')
-            .andOn('interactions.tenant', '=', 'it.tenant');
-        })
-        .leftJoin('system_interaction_types as sit', function() {
-          this.on('interactions.type_id', '=', 'sit.type_id');
-        })
-        .leftJoin('contacts', function() {
-          this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
-            .andOn('interactions.tenant', '=', 'contacts.tenant');
-        })
-        .leftJoin('clients', function() {
-          this.on('interactions.client_id', '=', 'clients.client_id')
-            .andOn('interactions.tenant', '=', 'clients.tenant');
-        })
-        .leftJoin('users', function() {
-          this.on('interactions.user_id', '=', 'users.user_id')
-            .andOn('interactions.tenant', '=', 'users.tenant');
-        })
-        .leftJoin('statuses', function() {
-          this.on('interactions.status_id', '=', 'statuses.status_id')
-            .andOn('interactions.tenant', '=', 'statuses.tenant');
-        })
+        );
+      facade.tenantJoin(query, 'interaction_types as it', 'interactions.type_id', 'it.type_id', { type: 'left' });
+      facade.tenantJoin(query, 'system_interaction_types as sit', 'interactions.type_id', 'sit.type_id', { type: 'left' });
+      facade.tenantJoin(query, 'contacts', 'interactions.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+      facade.tenantJoin(query, 'clients', 'interactions.client_id', 'clients.client_id', { type: 'left' });
+      facade.tenantJoin(query, 'users', 'interactions.user_id', 'users.user_id', { type: 'left' });
+      facade.tenantJoin(query, 'statuses', 'interactions.status_id', 'statuses.status_id', { type: 'left' });
+
+      const result = (await query
         .where('interactions.interaction_id', interactionId)
-        .first();
+        .first()) as any | undefined;
 
       if (!result) {
         return null;

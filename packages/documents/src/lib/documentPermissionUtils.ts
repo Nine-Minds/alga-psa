@@ -1,7 +1,7 @@
 import type { IUser, IDocument, IDocumentAssociation } from '@alga-psa/types';
 import { hasPermission } from '@alga-psa/auth';
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 /**
  * Entity type to required resource permission mapping
@@ -96,9 +96,13 @@ export async function filterAccessibleDocuments(
   const documentIds = documents.map(d => d.document_id);
   const { knex } = await createTenantKnex();
 
-  const associations = await knex('document_associations')
+  const tenant = documents[0].tenant;
+  if (!tenant) {
+    throw new Error('Tenant is required to filter document permissions');
+  }
+
+  const associations = await tenantDb(knex, tenant).table<IDocumentAssociation>('document_associations')
     .whereIn('document_id', documentIds)
-    .andWhere('tenant', documents[0].tenant)
     .select('document_id', 'entity_type');
 
   // 4. Build map of document_id -> entity_types

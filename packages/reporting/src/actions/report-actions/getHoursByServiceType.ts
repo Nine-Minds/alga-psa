@@ -1,15 +1,10 @@
 'use server';
 
 import { z } from 'zod';
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import type {
-  IProject,
-  IProjectPhase,
   IProjectTask,
-  IService,
-  IServiceType,
   ITicket,
   ITimeEntry,
 } from '@alga-psa/types';
@@ -62,56 +57,45 @@ export const getHoursByServiceType = withAuth(async (
 
   try {
     const results: HoursByServiceResult[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
       // Base query for time entries within the date range and for the tenant
-      const timeEntriesQuery = trx<ITimeEntry>('time_entries')
-      .where('time_entries.tenant', tenant) // Separate where clauses
-      .where('time_entries.billable_duration', '>', 0) // Use billable_duration to determine billable hours
-      .where('start_time', '>=', startDate)
-      .where('start_time', '<=', endDate); // Use start_time for date filtering
+      const timeEntriesQuery = db.table<ITimeEntry>('time_entries')
+        .where('time_entries.billable_duration', '>', 0) // Use billable_duration to determine billable hours
+        .where('start_time', '>=', startDate)
+        .where('start_time', '<=', endDate); // Use start_time for date filtering
 
-    // --- Join Logic based on work_item_type ---
-    // We need to join time_entries to either tickets or projects to filter by clientId
+      // --- Join Logic based on work_item_type ---
+      // We need to join time_entries to either tickets or projects to filter by clientId
 
       // Subquery for tickets linked to the client
-      const ticketClientSubquery = trx<ITicket>('tickets')
+      const ticketClientSubquery = db.table<ITicket>('tickets')
         .select('ticket_id')
-        .where({ client_id: clientId, tenant: tenant });
+        .where({ client_id: clientId });
 
       // Subquery for project tasks linked to the client
-      const projectTaskClientSubquery = trx<IProjectTask>('project_tasks')
-      .join<IProjectPhase>('project_phases', function() {
-        this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
-            .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
-      })
-      .join<IProject>('projects', function() {
-        this.on('project_phases.project_id', '=', 'projects.project_id')
-            .andOn('project_phases.tenant', '=', 'projects.tenant');
-      })
-      .select('project_tasks.task_id')
-      .where('projects.client_id', '=', clientId)
-      .andWhere('project_tasks.tenant', '=', tenant); // Ensure tenant filter on subquery joins
+      const projectTaskClientSubquery = db.table<IProjectTask>('project_tasks');
+      db.tenantJoin(projectTaskClientSubquery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+      db.tenantJoin(projectTaskClientSubquery, 'projects', 'project_phases.project_id', 'projects.project_id');
+      projectTaskClientSubquery
+        .select('project_tasks.task_id')
+        .where('projects.client_id', '=', clientId);
 
       // Apply the client filter using the subqueries
       timeEntriesQuery.where(function() {
-      this.where(function() {
-        this.where('work_item_type', '=', 'Ticket')
+        this.where(function() {
+          this.where('work_item_type', '=', 'Ticket')
             .whereIn('work_item_id', ticketClientSubquery);
-      }).orWhere(function() {
-        this.where('work_item_type', '=', 'Project Task')
+        }).orWhere(function() {
+          this.where('work_item_type', '=', 'Project Task')
             .whereIn('work_item_id', projectTaskClientSubquery);
+        });
+        // Note: Add other work_item_types if they can be linked to a client
       });
-      // Note: Add other work_item_types if they can be linked to a client
-    });
 
       // --- Join Service Catalog and Service Types ---
-      timeEntriesQuery
-      .join<IService>('service_catalog as sc', function() {
-        this.on('time_entries.service_id', '=', 'sc.service_id')
-            .andOn('time_entries.tenant', '=', 'sc.tenant');
-      })
-      .leftJoin<IServiceType>('service_types as st', function() { // Left join in case service type is null
-        this.on('sc.custom_service_type_id', '=', 'st.id')
-            .andOn('sc.tenant', '=', 'st.tenant');
+      db.tenantJoin(timeEntriesQuery, 'service_catalog as sc', 'time_entries.service_id', 'sc.service_id');
+      db.tenantJoin(timeEntriesQuery, 'service_types as st', 'sc.custom_service_type_id', 'st.id', {
+        type: 'left',
       });
 
       // --- Aggregation and Grouping ---

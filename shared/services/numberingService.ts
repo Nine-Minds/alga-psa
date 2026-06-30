@@ -5,6 +5,7 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 // Define supported entity types
 export type EntityType = 'TICKET' | 'INVOICE' | 'PROJECT' | 'QUOTE' | 'CREDIT_NOTE';
@@ -33,8 +34,9 @@ export class SharedNumberingService {
     }
 
     try {
+      const db = tenantDb(knex, tenant);
       if (entityType === 'QUOTE') {
-        await knex('next_number')
+        await db.table('next_number')
           .insert({
             tenant,
             entity_type: 'QUOTE',
@@ -48,7 +50,7 @@ export class SharedNumberingService {
       }
 
       if (entityType === 'CREDIT_NOTE') {
-        await knex('next_number')
+        await db.table('next_number')
           .insert({
             tenant,
             entity_type: 'CREDIT_NOTE',

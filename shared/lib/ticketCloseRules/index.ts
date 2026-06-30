@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import {
   TICKET_ACTIVITY_ENTITY,
   TICKET_ACTIVITY_EVENT,
@@ -41,12 +42,20 @@ export function closeRulesHaveEnabledGates(rules: BoardCloseRulesRow): boolean {
   );
 }
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 export async function getBoardCloseRulesRow(
   trx: Knex.Transaction | Knex,
   tenant: string,
   boardId: string
 ): Promise<BoardCloseRulesRow | undefined> {
-  return trx('board_close_rules').where({ tenant, board_id: boardId }).first();
+  return tenantScopedTable(trx, 'board_close_rules', tenant).where({ board_id: boardId }).first();
 }
 
 /**

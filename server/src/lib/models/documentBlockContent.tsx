@@ -9,7 +9,7 @@ import {
 } from '../../interfaces/documentBlockContent.interface';
 import { IDocument } from '../../interfaces';
 import { createTenantKnex } from '../db';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import Document from '@alga-psa/documents/models/document';
 
@@ -27,11 +27,10 @@ class DocumentBlockContent {
                 if (!document) return undefined;
 
                 // Get block content
-                const blockContent = await trx<IDocumentBlockContent>('document_block_content')
+                const blockContent = await tenantDb(trx, tenant).table<IDocumentBlockContent>('document_block_content')
                     .select('*')
                     .where({
                         document_id,
-                        tenant
                     })
                     .first();
 
@@ -61,11 +60,10 @@ class DocumentBlockContent {
             if (!docWithContent) return undefined;
 
             // Get versions
-            const versions = await db<IDocumentVersion>('document_versions')
+            const versions = await tenantDb(db, tenant).table<IDocumentVersion>('document_versions')
                 .select('*')
                 .where({
                     document_id,
-                    tenant
                 })
                 .orderBy('version_number', 'desc');
 
@@ -95,20 +93,24 @@ class DocumentBlockContent {
                 if (!document) return undefined;
 
                 // Build query for block content
-                let query = trx<IDocumentBlockContent>('document_block_content')
+                const tenantScopedDb = tenantDb(trx, tenant);
+                let query = tenantScopedDb.table<IDocumentBlockContent>('document_block_content')
                     .select('document_block_content.*')
-                    .where('document_block_content.document_id', document_id)
-                    .andWhere('document_block_content.tenant', tenant);
+                    .where('document_block_content.document_id', document_id);
                 
                 if (version_id) {
                     // Handle specific version
                     query = query.andWhere('document_block_content.version_id', version_id);
                 } else {
                     // If no version specified, get content for active version
-                    query = query.leftJoin('document_versions', function() {
-                        this.on('document_block_content.version_id', '=', 'document_versions.version_id')
-                            .andOn('document_block_content.tenant', '=', 'document_versions.tenant');
-                    })
+                    tenantScopedDb.tenantJoin(
+                        query,
+                        'document_versions',
+                        'document_block_content.version_id',
+                        'document_versions.version_id',
+                        { type: 'left' }
+                    );
+                    query = query
                     .where(function() {
                         this.where('document_versions.is_active', true)
                             .orWhereNull('document_block_content.version_id');
@@ -139,7 +141,7 @@ class DocumentBlockContent {
             
             // Remove any tenant from input data to prevent conflicts
             const { tenant: _, ...contentData } = content;
-            const [content_id] = await db<IDocumentBlockContent>('document_block_content')
+            const [content_id] = await tenantDb(db, tenant).table<IDocumentBlockContent>('document_block_content')
                 .insert({
                     ...contentData,
                     tenant
@@ -161,10 +163,9 @@ class DocumentBlockContent {
 
             // Remove tenant from update data to prevent modification
             const { tenant: _, ...updateData } = content;
-            await db<IDocumentBlockContent>('document_block_content')
+            await tenantDb(db, tenant).table<IDocumentBlockContent>('document_block_content')
                 .where({
                     document_id,
-                    tenant
                 })
                 .update({
                     ...updateData,
@@ -183,10 +184,9 @@ class DocumentBlockContent {
                 throw new Error('Tenant context is required for deleting document block content');
             }
 
-            await db<IDocumentBlockContent>('document_block_content')
+            await tenantDb(db, tenant).table<IDocumentBlockContent>('document_block_content')
                 .where({
                     document_id,
-                    tenant
                 })
                 .del();
         } catch (error) {
@@ -205,11 +205,11 @@ class DocumentBlockContent {
 
             // Start a transaction
             const version_id = await db.transaction(async trx => {
+                const tenantScopedDb = tenantDb(trx, tenant);
                 // Set all versions to inactive
-                await trx('document_versions')
+                await tenantScopedDb.table('document_versions')
                     .where({
                         document_id: version.document_id,
-                        tenant
                     })
                     .update({ is_active: false });
 
@@ -217,7 +217,7 @@ class DocumentBlockContent {
                 const { tenant: _, ...versionData } = version;
                 
                 // Insert new version
-                const [newVersion] = await trx<IDocumentVersion>('document_versions')
+                const [newVersion] = await tenantScopedDb.table<IDocumentVersion>('document_versions')
                     .insert({
                         ...versionData,
                         tenant
@@ -241,11 +241,10 @@ class DocumentBlockContent {
                 throw new Error('Tenant context is required for getting active document version');
             }
 
-            const version = await db<IDocumentVersion>('document_versions')
+            const version = await tenantDb(db, tenant).table<IDocumentVersion>('document_versions')
                 .select('*')
                 .where({
                     document_id,
-                    tenant,
                     is_active: true
                 })
                 .first();
@@ -265,19 +264,18 @@ class DocumentBlockContent {
             }
             
             await db.transaction(async trx => {
+                const tenantScopedDb = tenantDb(trx, tenant);
                 // Set all versions to inactive
-                await trx('document_versions')
+                await tenantScopedDb.table('document_versions')
                     .where({
                         document_id,
-                        tenant
                     })
                     .update({ is_active: false });
 
                 // Set specified version to active
-                await trx('document_versions')
+                await tenantScopedDb.table('document_versions')
                     .where({
                         version_id,
-                        tenant
                     })
                     .update({ is_active: true });
             });

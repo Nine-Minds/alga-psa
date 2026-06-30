@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 import {
   resolveTeamsRecipientLink,
@@ -141,7 +141,7 @@ function normalizeStringArray(values: unknown): string[] {
 }
 
 async function getTeamsIntegrationRow(knex: any, tenant: string): Promise<TeamsIntegrationRow | null> {
-  const row = await knex('teams_integrations').where({ tenant }).first();
+  const row = await tenantDb(knex, tenant).table<TeamsIntegrationRow>('teams_integrations').first();
   return row || null;
 }
 
@@ -150,7 +150,7 @@ async function getMicrosoftProfileRow(
   tenant: string,
   profileId: string
 ): Promise<MicrosoftProfileRow | null> {
-  const row = await knex('microsoft_profiles').where({ tenant, profile_id: profileId }).first();
+  const row = await tenantDb(knex, tenant).table<MicrosoftProfileRow>('microsoft_profiles').where({ profile_id: profileId }).first();
   return row || null;
 }
 
@@ -199,8 +199,7 @@ function mapDeliveryRow(row: Record<string, unknown> | null | undefined): Record
 }
 
 async function getLatestDelivery(knex: any, tenant: string, statuses?: string[]): Promise<Record<string, unknown> | null> {
-  const query = knex('teams_notification_deliveries')
-    .where({ tenant })
+  const query = tenantDb(knex, tenant).table('teams_notification_deliveries')
     .modify((builder: any) => {
       if (statuses && statuses.length > 0) {
         builder.whereIn('status', statuses);

@@ -5,7 +5,9 @@
  * device recognition, and concurrent session enforcement.
  */
 
+import type { Knex } from 'knex';
 import { getConnection } from '../lib/tenant';
+import { tenantDb } from '../lib/tenantDb';
 
 export interface LocationData {
   city?: string;
@@ -57,11 +59,18 @@ export type RevocationReason =
   | 'inactivity'
   | 'expired';
 
+function sessions<Row extends object = IUserSession>(
+  conn: Knex | Knex.Transaction,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>('sessions');
+}
+
 export class UserSession {
   static async create(params: CreateSessionParams): Promise<string> {
     const knex = await getConnection(params.tenant);
 
-    const [session] = await knex('sessions')
+    const [session] = await sessions<Record<string, any>>(knex, params.tenant)
       .insert({
         tenant: params.tenant,
         user_id: params.user_id,
@@ -86,7 +95,7 @@ export class UserSession {
   static async findById(tenant: string, sessionId: string): Promise<IUserSession | null> {
     const knex = await getConnection(tenant);
 
-    const session = await knex('sessions').where({ tenant, session_id: sessionId }).first();
+    const session = await sessions(knex, tenant).where({ session_id: sessionId }).first();
 
     return session || null;
   }
@@ -94,13 +103,13 @@ export class UserSession {
   static async getUserSessions(tenant: string, userId: string): Promise<IUserSession[]> {
     const knex = await getConnection(tenant);
 
-    const sessions = await knex('sessions')
-      .where({ tenant, user_id: userId })
+    const sessionsForUser = await sessions(knex, tenant)
+      .where({ user_id: userId })
       .whereNull('revoked_at')
       .where('expires_at', '>', knex.fn.now())
       .orderBy('last_activity_at', 'desc');
 
-    return sessions.map((session: any) => ({
+    return sessionsForUser.map((session: any) => ({
       ...session,
       location_data: typeof session.location_data === 'string' ? JSON.parse(session.location_data) : session.location_data,
     }));
@@ -109,8 +118,8 @@ export class UserSession {
   static async getActiveSessionCount(tenant: string, userId: string): Promise<number> {
     const knex = await getConnection(tenant);
 
-    const result = await knex('sessions')
-      .where({ tenant, user_id: userId })
+    const result = await sessions(knex, tenant)
+      .where({ user_id: userId })
       .whereNull('revoked_at')
       .where('expires_at', '>', knex.fn.now())
       .count('* as count')
@@ -122,7 +131,7 @@ export class UserSession {
   static async updateActivity(tenant: string, sessionId: string): Promise<void> {
     const knex = await getConnection(tenant);
 
-    await knex('sessions').where({ tenant, session_id: sessionId }).update({
+    await sessions(knex, tenant).where({ session_id: sessionId }).update({
       last_activity_at: knex.fn.now(),
       updated_at: knex.fn.now(),
     });
@@ -132,8 +141,8 @@ export class UserSession {
   static async extendExpiry(tenant: string, sessionId: string, expiresAt: Date): Promise<void> {
     const knex = await getConnection(tenant);
 
-    await knex('sessions')
-      .where({ tenant, session_id: sessionId })
+    await sessions(knex, tenant)
+      .where({ session_id: sessionId })
       .whereNull('revoked_at')
       .update({
         expires_at: expiresAt,
@@ -144,7 +153,7 @@ export class UserSession {
   static async updateLocation(tenant: string, sessionId: string, locationData: LocationData): Promise<void> {
     const knex = await getConnection(tenant);
 
-    await knex('sessions').where({ tenant, session_id: sessionId }).update({
+    await sessions(knex, tenant).where({ session_id: sessionId }).update({
       location_data: locationData,
       updated_at: knex.fn.now(),
     });
@@ -153,7 +162,7 @@ export class UserSession {
   static async revokeSession(tenant: string, sessionId: string, reason: RevocationReason): Promise<void> {
     const knex = await getConnection(tenant);
 
-    await knex('sessions').where({ tenant, session_id: sessionId }).update({
+    await sessions(knex, tenant).where({ session_id: sessionId }).update({
       revoked_at: knex.fn.now(),
       revoked_reason: reason,
       updated_at: knex.fn.now(),
@@ -166,14 +175,14 @@ export class UserSession {
   static async revokeAllExcept(tenant: string, userId: string, keepSessionId: string): Promise<number> {
     const knex = await getConnection(tenant);
 
-    const sessionsToRevoke = await knex('sessions')
-      .where({ tenant, user_id: userId })
+    const sessionsToRevoke = await sessions(knex, tenant)
+      .where({ user_id: userId })
       .whereNot({ session_id: keepSessionId })
       .whereNull('revoked_at')
       .select('session_id');
 
-    const count = await knex('sessions')
-      .where({ tenant, user_id: userId })
+    const count = await sessions(knex, tenant)
+      .where({ user_id: userId })
       .whereNot({ session_id: keepSessionId })
       .whereNull('revoked_at')
       .update({
@@ -193,13 +202,13 @@ export class UserSession {
   static async revokeAllForUser(tenant: string, userId: string): Promise<number> {
     const knex = await getConnection(tenant);
 
-    const sessionsToRevoke = await knex('sessions')
-      .where({ tenant, user_id: userId })
+    const sessionsToRevoke = await sessions(knex, tenant)
+      .where({ user_id: userId })
       .whereNull('revoked_at')
       .select('session_id');
 
-    const count = await knex('sessions')
-      .where({ tenant, user_id: userId })
+    const count = await sessions(knex, tenant)
+      .where({ user_id: userId })
       .whereNull('revoked_at')
       .update({
         revoked_at: knex.fn.now(),
@@ -229,7 +238,7 @@ export class UserSession {
 
     const knex = await getConnection(tenant);
 
-    const session = await knex('sessions').where({ tenant, session_id: sessionId }).select('revoked_at').first();
+    const session = await sessions(knex, tenant).where({ session_id: sessionId }).select('revoked_at').first();
 
     const isRevoked = session ? (session as any).revoked_at !== null : true;
 
@@ -249,21 +258,21 @@ export class UserSession {
 
     const revokedSessionIds: string[] = [];
     await knex.transaction(async (trx) => {
-      const sessions = await trx('sessions')
-        .where({ tenant, user_id: userId })
+      const activeSessions = await sessions(trx, tenant)
+        .where({ user_id: userId })
         .whereNull('revoked_at')
         .where('expires_at', '>', trx.fn.now())
         .orderBy('last_activity_at', 'asc')
         .forUpdate();
 
-      if (sessions.length >= maxSessions) {
-        const toRevoke = sessions.length - maxSessions + 1;
-        const sessionsToRevoke = sessions.slice(0, toRevoke);
+      if (activeSessions.length >= maxSessions) {
+        const toRevoke = activeSessions.length - maxSessions + 1;
+        const sessionsToRevoke = activeSessions.slice(0, toRevoke);
         const sessionIdsToRevoke = sessionsToRevoke.map((s: any) => s.session_id);
         revokedSessionIds.push(...sessionIdsToRevoke);
 
-        await trx('sessions')
-          .where({ tenant, user_id: userId })
+        await sessions(trx, tenant)
+          .where({ user_id: userId })
           .whereIn('session_id', sessionIdsToRevoke)
           .update({
             revoked_at: trx.fn.now(),
@@ -282,8 +291,7 @@ export class UserSession {
   static async cleanupExpired(tenant: string): Promise<number> {
     const knex = await getConnection(tenant);
 
-    const count = await knex('sessions')
-      .where({ tenant })
+    const count = await sessions(knex, tenant)
       .where('expires_at', '<', knex.fn.now())
       .whereNull('revoked_at')
       .update({
@@ -301,8 +309,7 @@ export class UserSession {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - inactiveDays);
 
-    const count = await knex('sessions')
-      .where({ tenant })
+    const count = await sessions(knex, tenant)
       .where('last_activity_at', '<', cutoffDate)
       .whereNull('revoked_at')
       .update({
@@ -317,9 +324,8 @@ export class UserSession {
   static async isKnownDevice(tenant: string, userId: string, deviceFingerprint: string): Promise<boolean> {
     const knex = await getConnection(tenant);
 
-    const count = await knex('sessions')
+    const count = await sessions(knex, tenant)
       .where({
-        tenant,
         user_id: userId,
         device_fingerprint: deviceFingerprint,
       })

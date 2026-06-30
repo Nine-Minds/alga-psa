@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { aggregateReactions, validateEmoji } from '@alga-psa/types';
 import type { IReactionsBatchResult } from '@alga-psa/types';
@@ -25,26 +25,26 @@ export const toggleCommentReaction = withAuth(async (
   const userId = user.user_id;
 
   return withTransaction(db, async (trx) => {
-    const comment = await trx('comments')
-      .where({ tenant, comment_id: commentId })
+    const comment = await tenantDb(trx, tenant).table('comments')
+      .where({ comment_id: commentId })
       .first();
 
     if (!comment) {
       throw new Error('Comment not found');
     }
 
-    const existing = await trx('comment_reactions')
-      .where({ tenant, comment_id: commentId, user_id: userId, emoji })
+    const existing = await tenantDb(trx, tenant).table('comment_reactions')
+      .where({ comment_id: commentId, user_id: userId, emoji })
       .first();
 
     let added = true;
     if (existing) {
-      await trx('comment_reactions')
-        .where({ tenant, reaction_id: existing.reaction_id })
+      await tenantDb(trx, tenant).table('comment_reactions')
+        .where({ reaction_id: existing.reaction_id })
         .del();
       added = false;
     } else {
-      await trx('comment_reactions')
+      await tenantDb(trx, tenant).table('comment_reactions')
         .insert({ tenant, comment_id: commentId, user_id: userId, emoji });
     }
 
@@ -77,8 +77,7 @@ export const getCommentsReactionsBatch = withAuth(async (
   const { knex: db } = await createTenantKnex();
   const currentUserId = user.user_id;
 
-  const rows = await db('comment_reactions')
-    .where({ tenant })
+  const rows = await tenantDb(db, tenant).table('comment_reactions')
     .whereIn('comment_id', commentIds)
     .select('comment_id', 'emoji', 'user_id')
     .orderBy('created_at', 'asc');
@@ -89,8 +88,7 @@ export const getCommentsReactionsBatch = withAuth(async (
   const allUserIds = [...new Set(rows.map(r => r.user_id))];
   const userNames: Record<string, string> = {};
   if (allUserIds.length > 0) {
-    const users = await db('users')
-      .where({ tenant })
+    const users = await tenantDb(db, tenant).table('users')
       .whereIn('user_id', allUserIds)
       .select('user_id', 'first_name', 'last_name');
     for (const u of users) {

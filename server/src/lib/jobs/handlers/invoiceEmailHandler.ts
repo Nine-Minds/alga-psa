@@ -9,6 +9,7 @@ import { JobStatus } from 'server/src/types/job';
 import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoicePaymentLinkUrlForEmail } from '@alga-psa/billing/actions/paymentActions';
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 
 /**
  * Gets the tenant company name for email templates.
@@ -16,8 +17,7 @@ import logger from '@alga-psa/core/logger';
 async function getTenantCompanyName(tenantId: string): Promise<string> {
   try {
     const knex = await getConnection();
-    const tenant = await knex('tenants')
-      .where({ tenant: tenantId })
+    const tenant = await tenantDb(knex, tenantId).table('tenants')
       .first();
     return tenant?.company_name || 'Your Company';
   } catch {

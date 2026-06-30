@@ -5,6 +5,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import {
   createTestDbConnection,
   createTenantAndLogin,
@@ -22,6 +23,10 @@ const TEST_CONFIG = {
   baseUrl: getBaseUrl(),
 };
 
+function scopedDb(db: Knex, tenantId: string) {
+  return tenantDb(db, tenantId);
+}
+
 // Helper to create a test client
 async function createTestClient(
   db: Knex,
@@ -29,8 +34,9 @@ async function createTestClient(
 ): Promise<{ clientId: string; clientName: string }> {
   const clientId = uuidv4();
   const clientName = `Test Client ${Date.now().toString().slice(-6)}`;
+  const tenantScoped = scopedDb(db, tenantId);
 
-  await db('clients').insert({
+  await tenantScoped.table('clients').insert({
     client_id: clientId,
     tenant: tenantId,
     client_name: clientName,
@@ -51,14 +57,16 @@ async function createTicketWithDocuments(
   visibleDocId: string;
   hiddenDocId: string;
 }> {
+  const tenantScoped = scopedDb(db, tenantId);
+
   // Get or create a status
-  let status = await db('statuses')
-    .where({ tenant: tenantId, is_closed: false, status_type: 'ticket' })
+  let status = await tenantScoped.table('statuses')
+    .where({ is_closed: false, status_type: 'ticket' })
     .first();
 
   if (!status) {
     const statusId = uuidv4();
-    await db('statuses').insert({
+    await tenantScoped.table('statuses').insert({
       status_id: statusId,
       tenant: tenantId,
       name: 'Open',
@@ -70,12 +78,12 @@ async function createTicketWithDocuments(
   }
 
   // Get or create a priority
-  let priority = await db('priorities').where({ tenant: tenantId }).first();
+  let priority = await tenantScoped.table('priorities').first();
 
   if (!priority) {
     const priorityId = uuidv4();
-    const user = await db('users').where({ tenant: tenantId }).first();
-    await db('priorities').insert({
+    const user = await tenantScoped.table('users').first();
+    await tenantScoped.table('priorities').insert({
       priority_id: priorityId,
       tenant: tenantId,
       priority_name: 'Normal',
@@ -87,11 +95,11 @@ async function createTicketWithDocuments(
   }
 
   // Get or create a board
-  let board = await db('boards').where({ tenant: tenantId }).first();
+  let board = await tenantScoped.table('boards').first();
 
   if (!board) {
     const boardId = uuidv4();
-    await db('boards').insert({
+    await tenantScoped.table('boards').insert({
       board_id: boardId,
       tenant: tenantId,
       board_name: 'Test Board',
@@ -103,7 +111,7 @@ async function createTicketWithDocuments(
   // Create ticket
   const ticketId = uuidv4();
   const ticketNumber = `DOC-${Date.now().toString().slice(-6)}`;
-  await db('tickets').insert({
+  await tenantScoped.table('tickets').insert({
     ticket_id: ticketId,
     tenant: tenantId,
     ticket_number: ticketNumber,
@@ -118,7 +126,7 @@ async function createTicketWithDocuments(
 
   // Create visible document
   const visibleDocId = uuidv4();
-  await db('documents').insert({
+  await tenantScoped.table('documents').insert({
     document_id: visibleDocId,
     tenant: tenantId,
     document_name: 'Visible Document.pdf',
@@ -131,7 +139,7 @@ async function createTicketWithDocuments(
   });
 
   // Link visible document to ticket
-  await db('document_associations').insert({
+  await tenantScoped.table('document_associations').insert({
     tenant: tenantId,
     document_id: visibleDocId,
     entity_id: ticketId,
@@ -140,7 +148,7 @@ async function createTicketWithDocuments(
 
   // Create hidden document
   const hiddenDocId = uuidv4();
-  await db('documents').insert({
+  await tenantScoped.table('documents').insert({
     document_id: hiddenDocId,
     tenant: tenantId,
     document_name: 'Internal Only Document.pdf',
@@ -153,7 +161,7 @@ async function createTicketWithDocuments(
   });
 
   // Link hidden document to ticket
-  await db('document_associations').insert({
+  await tenantScoped.table('document_associations').insert({
     tenant: tenantId,
     document_id: hiddenDocId,
     entity_id: ticketId,
@@ -171,8 +179,9 @@ async function createEntityFolders(
   entityType: string
 ): Promise<{ folderId: string }> {
   const folderId = uuidv4();
+  const tenantScoped = scopedDb(db, tenantId);
 
-  await db('document_folders').insert({
+  await tenantScoped.table('document_folders').insert({
     folder_id: folderId,
     tenant: tenantId,
     folder_name: 'Client Documents',
@@ -201,8 +210,9 @@ async function createDocumentInFolder(
   }
 ): Promise<{ documentId: string }> {
   const documentId = uuidv4();
+  const tenantScoped = scopedDb(db, tenantId);
 
-  await db('documents').insert({
+  await tenantScoped.table('documents').insert({
     document_id: documentId,
     tenant: tenantId,
     document_name: options.name,
@@ -217,7 +227,7 @@ async function createDocumentInFolder(
 
   // Create association if entity specified
   if (options.entityId && options.entityType) {
-    await db('document_associations').insert({
+    await tenantScoped.table('document_associations').insert({
       tenant: tenantId,
       document_id: documentId,
       entity_id: options.entityId,
@@ -235,8 +245,9 @@ async function createDefaultFolders(
   entityType: string,
 ): Promise<void> {
   const now = new Date();
+  const tenantScoped = scopedDb(db, tenantId);
 
-  await db('document_default_folders').insert([
+  await tenantScoped.table('document_default_folders').insert([
     {
       default_folder_id: uuidv4(),
       tenant: tenantId,
@@ -275,8 +286,9 @@ async function createDocumentShareLink(
 ): Promise<{ linkId: string; token: string }> {
   const linkId = uuidv4();
   const token = uuidv4().replace(/-/g, '') + uuidv4().replace(/-/g, '');
+  const tenantScoped = scopedDb(db, tenantId);
 
-  await db('document_share_links').insert({
+  await tenantScoped.table('document_share_links').insert({
     link_id: linkId,
     tenant: tenantId,
     document_id: documentId,
@@ -305,9 +317,10 @@ async function createKBArticle(
 ): Promise<{ articleId: string; documentId: string }> {
   const articleId = uuidv4();
   const documentId = uuidv4();
+  const tenantScoped = scopedDb(db, tenantId);
 
   // Create base document
-  await db('documents').insert({
+  await tenantScoped.table('documents').insert({
     document_id: documentId,
     tenant: tenantId,
     document_name: options.title,
@@ -320,7 +333,7 @@ async function createKBArticle(
   });
 
   // Create KB article record
-  await db('kb_articles').insert({
+  await tenantScoped.table('kb_articles').insert({
     article_id: articleId,
     tenant: tenantId,
     document_id: documentId,
@@ -434,13 +447,14 @@ test.describe('Document System E2E Tests', () => {
         );
 
         // Add document permission for client role
-        const clientRole = await db('roles')
-          .where({ tenant: tenantId, client: true })
+        const tenantScoped = scopedDb(db, tenantId);
+        const clientRole = await tenantScoped.table('roles')
+          .where({ client: true })
           .first();
 
         if (clientRole) {
           const docReadPermissionId = uuidv4();
-          await db('permissions').insert({
+          await tenantScoped.table('permissions').insert({
             permission_id: docReadPermissionId,
             tenant: tenantId,
             resource: 'document',
@@ -448,7 +462,7 @@ test.describe('Document System E2E Tests', () => {
             msp: false,
             client: true,
           });
-          await db('role_permissions').insert({
+          await tenantScoped.table('role_permissions').insert({
             tenant: tenantId,
             role_id: clientRole.role_id,
             permission_id: docReadPermissionId,
@@ -490,7 +504,7 @@ test.describe('Document System E2E Tests', () => {
 
         // Create a document
         const documentId = uuidv4();
-        await db('documents').insert({
+        await scopedDb(db, tenantId).table('documents').insert({
           document_id: documentId,
           tenant: tenantId,
           document_name: 'Shareable Document.pdf',
@@ -568,13 +582,14 @@ test.describe('Document System E2E Tests', () => {
         );
 
         // Add KB read permission for client role
-        const clientRole = await db('roles')
-          .where({ tenant: tenantId, client: true })
+        const tenantScoped = scopedDb(db, tenantId);
+        const clientRole = await tenantScoped.table('roles')
+          .where({ client: true })
           .first();
 
         if (clientRole) {
           const kbReadPermissionId = uuidv4();
-          await db('permissions').insert({
+          await tenantScoped.table('permissions').insert({
             permission_id: kbReadPermissionId,
             tenant: tenantId,
             resource: 'knowledge_base',
@@ -582,7 +597,7 @@ test.describe('Document System E2E Tests', () => {
             msp: false,
             client: true,
           });
-          await db('role_permissions').insert({
+          await tenantScoped.table('role_permissions').insert({
             tenant: tenantId,
             role_id: clientRole.role_id,
             permission_id: kbReadPermissionId,
@@ -663,9 +678,8 @@ test.describe('Document System E2E Tests', () => {
         await expect(invoicesFolder.first()).toBeVisible({ timeout: 10_000 });
 
         // Verify folders exist in database
-        const createdFolders = await db('document_folders')
+        const createdFolders = await scopedDb(db, tenantId).table('document_folders')
           .where({
-            tenant: tenantId,
             entity_id: clientId,
             entity_type: 'client',
           })

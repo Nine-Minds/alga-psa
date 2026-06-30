@@ -22,6 +22,9 @@
  * distribution so prior behaviour — every internal user can at least read interactions
  * — is restored. Idempotent: safe to re-run and safe for tenants that already have
  * some/all of the rows. Adjust ROLE_ACTIONS if a tenant uses custom role names.
+ *
+ * Uses raw knex (every query already passes `tenant` explicitly) so the migration
+ * runner does not load the @alga-psa/db ESM package.
  */
 
 const INTERACTION_PERMISSION_DEFS = [

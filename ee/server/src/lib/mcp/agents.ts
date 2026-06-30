@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { getConnection } from '@/lib/db/db';
 import { resolveIdpFromPreset, type IdpKind } from './idpPresets';
@@ -97,7 +98,9 @@ export async function createAgent(input: CreateAgentInput): Promise<AgentRecord>
     const roleIds = Array.from(new Set((input.roleIds ?? []).filter((r) => typeof r === 'string' && r)));
 
     return knex.transaction(async (trx) => {
-      await trx('users').insert({
+      const db = tenantDb(trx, tenant);
+
+      await db.table('users').insert({
         user_id: userId,
         tenant,
         username: `mcp-agent-${slug}`,
@@ -107,11 +110,11 @@ export async function createAgent(input: CreateAgentInput): Promise<AgentRecord>
       });
 
       for (const roleId of roleIds) {
-        await trx('user_roles').insert({ tenant, user_id: userId, role_id: roleId });
-        await trx('agent_roles').insert({ tenant, agent_id: agentId, role_id: roleId });
+        await db.table('user_roles').insert({ tenant, user_id: userId, role_id: roleId });
+        await db.table('agent_roles').insert({ tenant, agent_id: agentId, role_id: roleId });
       }
 
-      const [agent] = await trx('agents')
+      const [agent] = await db.table('agents')
         .insert({
           agent_id: agentId,
           tenant,
@@ -132,14 +135,14 @@ export async function createAgent(input: CreateAgentInput): Promise<AgentRecord>
 export async function listAgents(tenant: string): Promise<AgentRecord[]> {
   return runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
-    return knex('agents').where({ tenant }).orderBy('created_at', 'desc');
+    return tenantDb(knex, tenant).table('agents').orderBy('created_at', 'desc');
   });
 }
 
 export async function setAgentActive(tenant: string, agentId: string, active: boolean): Promise<void> {
   await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
-    await knex('agents').where({ tenant, agent_id: agentId }).update({ active, updated_at: knex.fn.now() });
+    await tenantDb(knex, tenant).table('agents').where({ agent_id: agentId }).update({ active, updated_at: knex.fn.now() });
   });
 }
 
@@ -152,18 +155,19 @@ export async function setAgentActive(tenant: string, agentId: string, active: bo
 export async function deleteAgent(tenant: string, agentId: string): Promise<void> {
   await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
-    const agent = (await knex('agents').where({ tenant, agent_id: agentId }).first()) as AgentRecord | undefined;
+    const agent = (await tenantDb(knex, tenant).table('agents').where({ agent_id: agentId }).first()) as AgentRecord | undefined;
     if (!agent) return;
     const userId = backingUserId(agent);
     await knex.transaction(async (trx) => {
-      await trx('agent_roles').where({ tenant, agent_id: agentId }).del();
-      await trx('mcp_agent_audit').where({ tenant, agent_id: agentId }).del();
-      await trx('api_keys').where({ tenant, agent_id: agentId }).del();
+      const db = tenantDb(trx, tenant);
+      await db.table('agent_roles').where({ agent_id: agentId }).del();
+      await db.table('mcp_agent_audit').where({ agent_id: agentId }).del();
+      await db.table('api_keys').where({ agent_id: agentId }).del();
       if (userId) {
-        await trx('user_roles').where({ tenant, user_id: userId }).del();
-        await trx('users').where({ tenant, user_id: userId }).del();
+        await db.table('user_roles').where({ user_id: userId }).del();
+        await db.table('users').where({ user_id: userId }).del();
       }
-      await trx('agents').where({ tenant, agent_id: agentId }).del();
+      await db.table('agents').where({ agent_id: agentId }).del();
     });
   });
 }
@@ -196,6 +200,7 @@ export async function addTrustedIdp(input: TrustedIdpInput): Promise<TrustedIdp>
   });
   return runWithTenant(input.tenant, async () => {
     const { knex } = await createTenantKnex(input.tenant);
+    const db = tenantDb(knex, input.tenant);
     const fields = {
       jwks_uri: resolved.jwksUri,
       audience: input.audience ?? null,
@@ -203,24 +208,29 @@ export async function addTrustedIdp(input: TrustedIdpInput): Promise<TrustedIdp>
       kind,
       entra_tenant_id: input.entraTenantId ?? null,
     };
-    await knex('agent_idp_providers')
+    await db.table('agent_idp_providers')
       .insert({ tenant: input.tenant, issuer: resolved.issuer, ...fields })
       .onConflict(['tenant', 'issuer'])
       .merge({ ...fields, active: true, updated_at: new Date().toISOString() });
-    return knex('agent_idp_providers').where({ tenant: input.tenant, issuer: resolved.issuer }).first();
+    return db.table('agent_idp_providers').where({ issuer: resolved.issuer }).first();
   });
 }
 
 /** Cross-tenant (admin connection, RLS-bypassing) lookup of trusted IdPs by issuer. */
 export async function findTrustedIdpsByIssuer(issuer: string): Promise<TrustedIdp[]> {
   const knex = await getConnection(null);
-  return knex('agent_idp_providers').where({ issuer, active: true });
+  return tenantDb(knex, '__mcp_trusted_idp_issuer_discovery__')
+    .unscoped('agent_idp_providers', 'MCP trusted IdP lookup resolves issuer registrations across tenants')
+    .where({ issuer, active: true });
 }
 
 /** Distinct active issuers across the instance (for the Protected Resource Metadata doc). */
 export async function listAllActiveIssuers(): Promise<string[]> {
   const knex = await getConnection(null);
-  const rows = await knex('agent_idp_providers').where({ active: true }).distinct('issuer');
+  const rows = await tenantDb(knex, '__mcp_trusted_idp_issuer_listing__')
+    .unscoped('agent_idp_providers', 'MCP protected resource metadata lists active issuers across tenants')
+    .where({ active: true })
+    .distinct('issuer');
   const registered = rows.map((r: { issuer: string }) => r.issuer);
   // Advertise hosted built-ins (Google/Microsoft shared apps) when enabled, so
   // MCP clients can discover them via Protected Resource Metadata with no per-
@@ -232,7 +242,7 @@ export async function listAllActiveIssuers(): Promise<string[]> {
 export async function listTrustedIdps(tenant: string): Promise<TrustedIdp[]> {
   return runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
-    return knex('agent_idp_providers').where({ tenant }).orderBy('issuer');
+    return tenantDb(knex, tenant).table('agent_idp_providers').orderBy('issuer');
   });
 }
 
@@ -250,8 +260,9 @@ export async function getIdpSuggestions(tenant: string): Promise<IdpSuggestion> 
     const { knex } = await createTenantKnex(tenant);
     const hasProfiles = await knex.schema.hasTable('microsoft_profiles');
     if (hasProfiles) {
-      const prof = await knex('microsoft_profiles')
-        .where({ tenant, is_archived: false })
+      const prof = await tenantDb(knex, tenant)
+        .table('microsoft_profiles')
+        .where({ is_archived: false })
         .whereNotNull('tenant_id')
         .orderBy('is_default', 'desc')
         .first();
@@ -266,7 +277,8 @@ export async function getIdpSuggestions(tenant: string): Promise<IdpSuggestion> 
 /** Cross-tenant resolve of an agent by its IdP (issuer, subject) binding. */
 export async function resolveAgentByIdp(issuer: string, subject: string): Promise<ResolvedAgent | null> {
   const knex = await getConnection(null);
-  const agent = (await knex('agents')
+  const agent = (await tenantDb(knex, '__mcp_agent_idp_resolution__')
+    .unscoped('agents', 'MCP agent token validation resolves IdP binding across tenants')
     .where({ idp_issuer: issuer, idp_subject: subject, active: true })
     .first()) as AgentRecord | undefined;
   if (!agent) return null;
@@ -276,7 +288,7 @@ export async function resolveAgentByIdp(issuer: string, subject: string): Promis
 export async function getAgentRoleIds(tenant: string, agentId: string): Promise<string[]> {
   return runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
-    const rows = await knex('agent_roles').where({ tenant, agent_id: agentId }).select('role_id');
+    const rows = await tenantDb(knex, tenant).table('agent_roles').where({ agent_id: agentId }).select('role_id');
     return rows.map((r: { role_id: string }) => r.role_id);
   });
 }
@@ -291,8 +303,8 @@ export interface AssignableRole {
 export async function listAssignableRoles(tenant: string): Promise<AssignableRole[]> {
   return runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
-    return knex('roles')
-      .where({ tenant, msp: true })
+    return tenantDb(knex, tenant).table('roles')
+      .where({ msp: true })
       .select('role_id', 'role_name', 'description')
       .orderBy('role_name');
   });
@@ -315,14 +327,15 @@ export async function mintAgentSessionKey(params: {
   const hash = crypto.createHash('sha256').update(token).digest('hex');
   await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
+    const db = tenantDb(knex, tenant);
     // Opportunistically sweep this tenant's expired agent session keys so they
     // don't accumulate (each agent request mints a fresh short-lived key).
-    await knex('api_keys')
-      .where({ tenant, purpose: 'mcp_agent' })
+    await db.table('api_keys')
+      .where({ purpose: 'mcp_agent' })
       .whereNotNull('expires_at')
       .where('expires_at', '<', knex.fn.now())
       .del();
-    await knex('api_keys').insert({
+    await db.table('api_keys').insert({
       api_key: hash,
       user_id: userId,
       agent_id: agentId,
@@ -340,7 +353,8 @@ export async function mintAgentSessionKey(params: {
 /** Delete all expired agent session keys across all tenants (for a sweep job). */
 export async function cleanupExpiredAgentKeys(): Promise<number> {
   const knex = await getConnection(null);
-  return knex('api_keys')
+  return tenantDb(knex, '__mcp_expired_agent_key_cleanup__')
+    .unscoped('api_keys', 'MCP expired agent session key sweep deletes expired keys across all tenants')
     .where({ purpose: 'mcp_agent' })
     .whereNotNull('expires_at')
     .where('expires_at', '<', knex.fn.now())

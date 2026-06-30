@@ -46,8 +46,3 @@ export * from './constants/currency';
 
 // Types barrel export
 export * from './types/index';
-
-// Deletion infrastructure
-export * from './config/deletion/index';
-export * from './server/deletion/deletionValidation';
-export * from './server/deletion/deletionActions';

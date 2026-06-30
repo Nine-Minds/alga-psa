@@ -6,12 +6,24 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createEmailProvider } from '@alga-psa/integrations/actions';
 import { getCurrentTenant } from '../../lib/actions/tenantActions';
 
 let testDb: Knex;
 let testTenant: string;
+
+function tenantTable<Row extends object = Record<string, unknown>>(table: string) {
+  return tenantDb(testDb, testTenant).table<Row>(table);
+}
+
+function tenantFixtureTable() {
+  return tenantDb(testDb, testTenant).unscoped(
+    'tenants',
+    'Email provider creation test fixture creates and removes tenant rows'
+  );
+}
 
 // Mock the tenant functions to return our test tenant
 vi.mock('../../lib/actions/tenantActions', () => ({
@@ -33,7 +45,7 @@ describe('Email Provider Creation', () => {
     testTenant = uuidv4();
     
     // Create test tenant
-    await testDb('tenants').insert({
+    await tenantFixtureTable().insert({
       tenant: testTenant,
       client_name: 'Test Client',
       email: 'test@client.com',
@@ -47,8 +59,8 @@ describe('Email Provider Creation', () => {
 
   afterAll(async () => {
     // Cleanup
-    await testDb('email_provider_configs').where('tenant', testTenant).delete();
-    await testDb('tenants').where('tenant', testTenant).delete();
+    await tenantTable('email_provider_configs').delete();
+    await tenantFixtureTable().where('tenant', testTenant).delete();
     await testDb.destroy();
   });
 
@@ -91,7 +103,7 @@ describe('Email Provider Creation', () => {
       });
 
       // Verify it was saved to the database
-      const dbRecord = await testDb('email_provider_configs')
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('id', result.id)
         .first();
 
@@ -188,8 +200,7 @@ describe('Email Provider Creation', () => {
       });
 
       // Act - Query the database directly to verify
-      const providers = await testDb('email_provider_configs')
-        .where('tenant', testTenant)
+      const providers = await tenantTable('email_provider_configs')
         .select('*');
 
       // Assert

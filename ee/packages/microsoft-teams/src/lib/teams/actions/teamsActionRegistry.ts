@@ -1,4 +1,4 @@
-import { createTenantKnex, runWithTenant, type ServiceContext } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb, type ServiceContext } from '@alga-psa/db';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
 import type { IUserWithRoles } from '@alga-psa/types';
@@ -591,8 +591,9 @@ async function resolveTargetInternal(
 
 async function resolveDefaultPriorityIdForBoard(tenantId: string, boardId: string): Promise<string | null> {
   const { knex } = await createTenantKnex(tenantId);
-  const board = (await knex('boards')
-    .where({ tenant: tenantId, board_id: boardId, is_inactive: false })
+  const db = tenantDb(knex, tenantId);
+  const board = (await db.table('boards')
+    .where({ board_id: boardId, is_inactive: false })
     .select('default_priority_id', 'priority_type')
     .first()) as { default_priority_id?: string | null; priority_type?: string | null } | null;
 
@@ -602,9 +603,9 @@ async function resolveDefaultPriorityIdForBoard(tenantId: string, boardId: strin
   }
 
   const desiredPriorityType = normalizeOptionalString(board?.priority_type) || 'custom';
-  const primaryPriority = (await knex('priorities')
+  const primaryPriority = (await db.table('priorities')
     .select('priority_id')
-    .where({ tenant: tenantId, item_type: 'ticket' })
+    .where({ item_type: 'ticket' })
     .where(function filterPriorityType() {
       if (desiredPriorityType === 'itil') {
         this.where('is_from_itil_standard', true);
@@ -625,9 +626,9 @@ async function resolveDefaultPriorityIdForBoard(tenantId: string, boardId: strin
     return normalizeOptionalString(primaryPriority?.priority_id);
   }
 
-  const fallbackPriority = (await knex('priorities')
+  const fallbackPriority = (await db.table('priorities')
     .select('priority_id')
-    .where({ tenant: tenantId, item_type: 'ticket' })
+    .where({ item_type: 'ticket' })
     .orderBy('order_number', 'asc')
     .orderBy('priority_name', 'asc')
     .first()) as { priority_id?: string | null } | null;
@@ -640,8 +641,7 @@ async function findTicketByMessageActionIdempotencyKey(
   idempotencyKey: string
 ): Promise<{ ticketId: string; ticketNumber: string | null; title: string | null } | null> {
   const { knex } = await createTenantKnex(tenantId);
-  const row = (await knex('tickets')
-    .where({ tenant: tenantId })
+  const row = (await tenantDb(knex, tenantId).table('tickets')
     .whereRaw("(attributes::jsonb ->> 'idempotency_key') = ?", [idempotencyKey])
     .select('ticket_id', 'ticket_number', 'title')
     .first()) as { ticket_id?: string | null; ticket_number?: string | null; title?: string | null } | null;
@@ -666,23 +666,24 @@ async function validateCreateTicketMessageSelection(params: {
   contactId?: string;
 }): Promise<void> {
   const { knex } = await createTenantKnex(params.tenantId);
+  const db = tenantDb(knex, params.tenantId);
 
   const [board, status, client, contact] = await Promise.all([
-    knex('boards')
-      .where({ tenant: params.tenantId, board_id: params.boardId, is_inactive: false })
+    db.table('boards')
+      .where({ board_id: params.boardId, is_inactive: false })
       .select('board_id')
       .first(),
-    knex('statuses')
-      .where({ tenant: params.tenantId, status_id: params.statusId, status_type: 'ticket', is_closed: false })
+    db.table('statuses')
+      .where({ status_id: params.statusId, status_type: 'ticket', is_closed: false })
       .select('status_id')
       .first(),
-    knex('clients')
-      .where({ tenant: params.tenantId, client_id: params.clientId, is_inactive: false })
+    db.table('clients')
+      .where({ client_id: params.clientId, is_inactive: false })
       .select('client_id')
       .first(),
     params.contactId
-      ? knex('contacts')
-          .where({ tenant: params.tenantId, contact_name_id: params.contactId, is_inactive: false })
+      ? db.table('contacts')
+          .where({ contact_name_id: params.contactId, is_inactive: false })
           .select('contact_name_id', 'client_id')
           .first()
       : Promise.resolve(null),

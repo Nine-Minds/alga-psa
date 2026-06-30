@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { v4 as uuidv4 } from 'uuid';
@@ -494,26 +494,22 @@ async function loadObligationContext(input: {
   const { trx, tenant, obligationType, obligationId } = input;
 
   if (obligationType === 'contract_line') {
-    const row = await trx('contract_lines as cl')
-      .join('contracts as ct', function joinContracts(this: any) {
-        this.on('ct.contract_id', '=', 'cl.contract_id')
-          .andOn('ct.tenant', '=', 'cl.tenant');
-      })
-      .join('clients as c', function joinClients(this: any) {
-        this.on('c.client_id', '=', 'ct.owner_client_id')
-          .andOn('c.tenant', '=', 'ct.tenant');
-      })
-      .where('cl.tenant', tenant)
+    const db = tenantDb(trx, tenant);
+    const query = db.table('contract_lines as cl');
+    db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+    db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+
+    const row = await query
       .where('cl.contract_line_id', obligationId)
       .first(
-        'c.client_id',
-        'c.client_name',
-        'ct.contract_id',
-        'ct.contract_name',
-        'cl.contract_line_id',
-        'cl.contract_line_name',
-        'ct.is_system_managed_default',
-      );
+        'c.client_id as client_id',
+        'c.client_name as client_name',
+        'ct.contract_id as contract_id',
+        'ct.contract_name as contract_name',
+        'cl.contract_line_id as contract_line_id',
+        'cl.contract_line_name as contract_line_name',
+        'ct.is_system_managed_default as is_system_managed_default',
+      ) as ObligationContextRow | undefined;
 
     return {
       client_id: row?.client_id ?? null,
@@ -527,26 +523,22 @@ async function loadObligationContext(input: {
   }
 
   if (isClientCadencePostDropObligationType(obligationType)) {
-    const row = await trx('contract_lines as cl')
-      .join('contracts as ct', function joinContracts(this: any) {
-        this.on('ct.contract_id', '=', 'cl.contract_id')
-          .andOn('ct.tenant', '=', 'cl.tenant');
-      })
-      .join('clients as c', function joinClients(this: any) {
-        this.on('c.client_id', '=', 'ct.owner_client_id')
-          .andOn('c.tenant', '=', 'ct.tenant');
-      })
-      .where('cl.tenant', tenant)
+    const db = tenantDb(trx, tenant);
+    const query = db.table('contract_lines as cl');
+    db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+    db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+
+    const row = await query
       .where('cl.contract_line_id', obligationId)
       .first(
-        'c.client_id',
-        'c.client_name',
-        'ct.contract_id',
-        'ct.contract_name',
-        'cl.contract_line_id',
-        'cl.contract_line_name',
-        'ct.is_system_managed_default',
-      );
+        'c.client_id as client_id',
+        'c.client_name as client_name',
+        'ct.contract_id as contract_id',
+        'ct.contract_name as contract_name',
+        'cl.contract_line_id as contract_line_id',
+        'cl.contract_line_name as contract_line_name',
+        'ct.is_system_managed_default as is_system_managed_default',
+      ) as ObligationContextRow | undefined;
 
     return {
       client_id: row?.client_id ?? null,
@@ -596,37 +588,34 @@ async function loadLiveScheduleContext(input: {
     };
   }
 
-  const row = await trx('contract_lines as cl')
-    .join('contracts as ct', function joinContracts(this: any) {
-      this.on('ct.contract_id', '=', 'cl.contract_id')
-        .andOn('ct.tenant', '=', 'cl.tenant');
-    })
-    .join('clients as c', function joinClients(this: any) {
-      this.on('c.client_id', '=', 'ct.owner_client_id')
-        .andOn('c.tenant', '=', 'ct.tenant');
-    })
-    .leftJoin('client_contracts as cc', function joinClientContracts(this: any) {
-      this.on('cc.contract_id', '=', 'ct.contract_id')
-        .andOn('cc.tenant', '=', 'ct.tenant')
-        .andOn('cc.is_active', '=', trx.raw('?', [true]));
-    })
-    .where('cl.tenant', tenant)
+  const db = tenantDb(trx, tenant);
+  const query = db.table('contract_lines as cl');
+  db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+  db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+  db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'ct.contract_id', {
+    type: 'left',
+    on(join) {
+      join.andOn('cc.is_active', '=', trx.raw('?', [true]));
+    },
+  });
+
+  const row = await query
     .where('cl.contract_line_id', obligationId)
     .first(
-      'c.client_id',
-      'c.client_name',
-      'ct.contract_id',
-      'ct.contract_name',
-      'cl.contract_line_id',
-      'cl.contract_line_name',
-      'ct.is_system_managed_default',
-      'cl.contract_line_type',
-      'cl.cadence_owner',
-      'cl.billing_frequency',
-      'cl.billing_timing',
+      'c.client_id as client_id',
+      'c.client_name as client_name',
+      'ct.contract_id as contract_id',
+      'ct.contract_name as contract_name',
+      'cl.contract_line_id as contract_line_id',
+      'cl.contract_line_name as contract_line_name',
+      'ct.is_system_managed_default as is_system_managed_default',
+      'cl.contract_line_type as contract_line_type',
+      'cl.cadence_owner as cadence_owner',
+      'cl.billing_frequency as billing_frequency',
+      'cl.billing_timing as billing_timing',
       'cc.start_date as assignment_start_date',
       'cc.end_date as assignment_end_date',
-    );
+    ) as LiveScheduleContextRow | undefined;
 
   return {
     client_id: row?.client_id ?? null,
@@ -652,11 +641,8 @@ async function loadScheduleRows(input: {
 }): Promise<DbRecordRow[]> {
   const { trx, tenant, scheduleKey } = input;
 
-  return trx('recurring_service_periods')
-    .where({
-      tenant,
-      schedule_key: scheduleKey,
-    })
+  return tenantDb(trx, tenant).table('recurring_service_periods')
+    .where({ schedule_key: scheduleKey })
     .select([
       'record_id',
       'tenant',
@@ -689,22 +675,22 @@ async function loadScheduleRows(input: {
       'updated_at',
     ])
     .orderBy('service_period_start', 'asc')
-    .orderBy('revision', 'asc') as Promise<DbRecordRow[]>;
+    .orderBy('revision', 'asc') as unknown as Promise<DbRecordRow[]>;
 }
 
 async function loadLastInvoicedClientBillingBoundary(
   trx: any,
   params: { tenant: string; clientId: string },
 ) {
-  const lastInvoiced = await trx('client_billing_cycles as cbc')
-    .join('invoices as i', function (this: any) {
-      this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id').andOn('i.tenant', '=', 'cbc.tenant');
-    })
-    .where('cbc.tenant', params.tenant)
+  const db = tenantDb(trx, params.tenant);
+  const query = db.table('client_billing_cycles as cbc');
+  db.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id');
+
+  const lastInvoiced = await query
     .andWhere('cbc.client_id', params.clientId)
     .orderBy('cbc.period_end_date', 'desc')
     .first()
-    .select('cbc.period_end_date');
+    .select('cbc.period_end_date as period_end_date') as { period_end_date?: unknown } | undefined;
 
   return lastInvoiced?.period_end_date
     ? normalizeUtcMidnightDateValue(lastInvoiced.period_end_date)
@@ -720,8 +706,8 @@ async function persistRecurringServicePeriodRepair(
   },
 ) {
   for (const record of params.recordsToSupersede) {
-    await trx('recurring_service_periods')
-      .where({ tenant: params.tenant, record_id: record.recordId })
+    await tenantDb(trx, params.tenant).table('recurring_service_periods')
+      .where({ record_id: record.recordId })
       .update({
         lifecycle_state: record.lifecycleState,
         updated_at: record.updatedAt,
@@ -729,7 +715,7 @@ async function persistRecurringServicePeriodRepair(
   }
 
   if (params.recordsToInsert.length > 0) {
-    await trx('recurring_service_periods').insert(
+    await tenantDb(trx, params.tenant).table('recurring_service_periods').insert(
       params.recordsToInsert.map(serializeRecurringServicePeriodRecord),
     );
   }
@@ -1163,20 +1149,13 @@ export const listRecurringServicePeriodScheduleSummaries = withAuth(async (
   const normalizedLimit = Number.isFinite(limit) ? Math.min(Math.max(Math.trunc(limit), 1), 200) : 50;
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: any) => {
-    const rows = await trx('recurring_service_periods as rsp')
-      .leftJoin('contract_lines as cl', function (this: any) {
-        this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-          .andOn('cl.tenant', '=', 'rsp.tenant');
-      })
-      .leftJoin('contracts as ct', function (this: any) {
-        this.on('ct.contract_id', '=', 'cl.contract_id')
-          .andOn('ct.tenant', '=', 'cl.tenant');
-      })
-      .leftJoin('clients as c', function (this: any) {
-        this.on('c.client_id', '=', 'ct.owner_client_id')
-          .andOn('c.tenant', '=', 'ct.tenant');
-      })
-      .where('rsp.tenant', tenant)
+    const db = tenantDb(trx, tenant);
+    const query = db.table('recurring_service_periods as rsp');
+    db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id', { type: 'left' });
+    db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id', { type: 'left' });
+    db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id', { type: 'left' });
+
+    const rows = await query
       .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
       .whereNotIn('rsp.lifecycle_state', ['superseded', 'archived'])
       .where((builder: any) =>

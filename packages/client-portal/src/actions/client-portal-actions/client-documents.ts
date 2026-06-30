@@ -4,7 +4,7 @@ import { IDocument, IFolderNode } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { hasPermission, withAuth } from '@alga-psa/auth';
-import { getConnection, withTransaction } from '@alga-psa/db';
+import { getConnection, withTransaction, tenantDb, type TenantDb } from '@alga-psa/db';
 import { getAuthenticatedClientId } from '../../lib/clientAuth';
 
 export interface ClientDocumentFilters {
@@ -21,6 +21,155 @@ export interface PaginatedClientDocuments {
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+type ClientDocumentVisibilitySource = Exclude<NonNullable<ClientDocumentFilters['sourceType']>, 'all'>;
+
+const CLIENT_DOCUMENT_VISIBILITY_SOURCES: ClientDocumentVisibilitySource[] = [
+  'direct',
+  'ticket',
+  'project',
+  'contract',
+];
+
+function getClientDocumentVisibilitySources(
+  sourceType: ClientDocumentFilters['sourceType'] = 'all'
+): ClientDocumentVisibilitySource[] {
+  if (sourceType === 'all') {
+    return CLIENT_DOCUMENT_VISIBILITY_SOURCES;
+  }
+
+  return CLIENT_DOCUMENT_VISIBILITY_SOURCES.includes(sourceType as ClientDocumentVisibilitySource)
+    ? [sourceType as ClientDocumentVisibilitySource]
+    : [];
+}
+
+function buildDirectAssociationQuery(
+  scopedDb: TenantDb,
+  clientId: string,
+  documentAlias: string
+): Knex.QueryBuilder {
+  const query = scopedDb.table('document_associations as da')
+    .select('da.document_id')
+    .whereRaw('?? = ??', ['da.document_id', `${documentAlias}.document_id`])
+    .andWhere('da.entity_type', 'client')
+    .andWhere('da.entity_id', clientId);
+
+  return scopedDb.tenantWhereColumn(query, 'da.tenant', `${documentAlias}.tenant`);
+}
+
+function buildTicketAssociationQuery(
+  scopedDb: TenantDb,
+  clientId: string,
+  documentAlias: string
+): Knex.QueryBuilder {
+  const query = scopedDb.table('document_associations as da')
+    .select('da.document_id')
+    .whereRaw('?? = ??', ['da.document_id', `${documentAlias}.document_id`])
+    .andWhere('da.entity_type', 'ticket')
+    .andWhere('t.client_id', clientId);
+
+  scopedDb.tenantWhereColumn(query, 'da.tenant', `${documentAlias}.tenant`);
+  scopedDb.tenantJoin(query, 'tickets as t', 't.ticket_id', 'da.entity_id');
+
+  return query;
+}
+
+function buildProjectAssociationQuery(
+  scopedDb: TenantDb,
+  clientId: string,
+  documentAlias: string
+): Knex.QueryBuilder {
+  const query = scopedDb.table('document_associations as da')
+    .select('da.document_id')
+    .whereRaw('?? = ??', ['da.document_id', `${documentAlias}.document_id`])
+    .andWhere('da.entity_type', 'project_task')
+    .andWhere('p.client_id', clientId);
+
+  scopedDb.tenantWhereColumn(query, 'da.tenant', `${documentAlias}.tenant`);
+  scopedDb.tenantJoin(query, 'project_tasks as pt', 'pt.task_id', 'da.entity_id');
+  scopedDb.tenantJoin(query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
+  scopedDb.tenantJoin(query, 'projects as p', 'p.project_id', 'pp.project_id');
+
+  return query;
+}
+
+function buildContractAssociationQuery(
+  scopedDb: TenantDb,
+  clientId: string,
+  documentAlias: string
+): Knex.QueryBuilder {
+  const query = scopedDb.table('document_associations as da')
+    .select('da.document_id')
+    .whereRaw('?? = ??', ['da.document_id', `${documentAlias}.document_id`])
+    .andWhere('da.entity_type', 'contract')
+    .andWhere(function (this: Knex.QueryBuilder) {
+      this.whereNull('c.is_template').orWhere('c.is_template', false);
+    })
+    .andWhere('c.owner_client_id', clientId);
+
+  scopedDb.tenantWhereColumn(query, 'da.tenant', `${documentAlias}.tenant`);
+  scopedDb.tenantJoin(query, 'contracts as c', 'c.contract_id', 'da.entity_id');
+
+  return query;
+}
+
+function buildClientDocumentAssociationQuery(
+  scopedDb: TenantDb,
+  clientId: string,
+  documentAlias: string,
+  source: ClientDocumentVisibilitySource
+): Knex.QueryBuilder {
+  switch (source) {
+    case 'direct':
+      return buildDirectAssociationQuery(scopedDb, clientId, documentAlias);
+    case 'ticket':
+      return buildTicketAssociationQuery(scopedDb, clientId, documentAlias);
+    case 'project':
+      return buildProjectAssociationQuery(scopedDb, clientId, documentAlias);
+    case 'contract':
+      return buildContractAssociationQuery(scopedDb, clientId, documentAlias);
+  }
+}
+
+function applyClientDocumentVisibilityFilter(
+  query: Knex.QueryBuilder,
+  scopedDb: TenantDb,
+  clientId: string,
+  documentAlias: string,
+  sources: ClientDocumentVisibilitySource[] = CLIENT_DOCUMENT_VISIBILITY_SOURCES
+): Knex.QueryBuilder {
+  if (sources.length === 0) {
+    return query.whereRaw('FALSE');
+  }
+
+  return query.where(function (this: Knex.QueryBuilder) {
+    sources.forEach((source, index) => {
+      const associationQuery = buildClientDocumentAssociationQuery(scopedDb, clientId, documentAlias, source);
+
+      if (index === 0) {
+        this.whereExists(associationQuery);
+      } else {
+        this.orWhereExists(associationQuery);
+      }
+    });
+  });
+}
+
+function buildClientOwnedContractFolderQuery(
+  scopedDb: TenantDb,
+  clientId: string
+): Knex.QueryBuilder {
+  const query = scopedDb.table('contracts as c')
+    .select('c.contract_id')
+    .whereRaw('?? = ??', ['c.contract_id', 'document_folders.entity_id'])
+    .andWhere('document_folders.entity_type', 'contract')
+    .andWhere(function (this: Knex.QueryBuilder) {
+      this.whereNull('c.is_template').orWhere('c.is_template', false);
+    })
+    .andWhere('c.owner_client_id', clientId);
+
+  return scopedDb.tenantWhereColumn(query, 'c.tenant', 'document_folders.tenant');
 }
 
 /**
@@ -55,9 +204,9 @@ export const getClientDocuments = withAuth(
     const db = await getConnection(tenant);
 
     // Fetch real user record for permission check instead of hardcoding is_inactive
-    const userRecord = await db('users')
+    const userRecord = await tenantDb(db, tenant).table('users')
       .select('user_id', 'email', 'user_type', 'is_inactive')
-      .where({ user_id: user.user_id, tenant })
+      .where({ user_id: user.user_id })
       .first();
     const userForPermission = {
       user_id: user.user_id,
@@ -73,83 +222,18 @@ export const getClientDocuments = withAuth(
 
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const clientId = await getAuthenticatedClientId(trx, user.user_id, tenant);
+      const scopedDb = tenantDb(trx, tenant);
 
-      // Build source-type-specific EXISTS clauses based on filter
-      const sourceType = filters.sourceType || 'all';
-      const sourceClauses: string[] = [];
-      const sourceParams: string[] = [];
+      const baseQuery = scopedDb.table('documents as d')
+        .distinct('d.*')
+        .where('d.is_client_visible', true);
 
-      if (sourceType === 'all' || sourceType === 'direct') {
-        sourceClauses.push(`
-          EXISTS (
-            SELECT 1 FROM document_associations da
-            WHERE da.document_id = d.document_id
-              AND da.tenant = d.tenant
-              AND da.entity_type = 'client'
-              AND da.entity_id = ?
-          )
-        `);
-        sourceParams.push(clientId);
-      }
-
-      if (sourceType === 'all' || sourceType === 'ticket') {
-        sourceClauses.push(`
-          EXISTS (
-            SELECT 1 FROM document_associations da
-            JOIN tickets t ON t.ticket_id = da.entity_id AND t.tenant = da.tenant
-            WHERE da.document_id = d.document_id
-              AND da.tenant = d.tenant
-              AND da.entity_type = 'ticket'
-              AND t.client_id = ?
-          )
-        `);
-        sourceParams.push(clientId);
-      }
-
-      if (sourceType === 'all' || sourceType === 'project') {
-        sourceClauses.push(`
-          EXISTS (
-            SELECT 1 FROM document_associations da
-            JOIN project_tasks pt ON pt.task_id = da.entity_id AND pt.tenant = da.tenant
-            JOIN project_phases pp ON pp.phase_id = pt.phase_id AND pp.tenant = pt.tenant
-            JOIN projects p ON p.project_id = pp.project_id AND p.tenant = pp.tenant
-            WHERE da.document_id = d.document_id
-              AND da.tenant = d.tenant
-              AND da.entity_type = 'project_task'
-              AND p.client_id = ?
-          )
-        `);
-        sourceParams.push(clientId);
-      }
-
-      if (sourceType === 'all' || sourceType === 'contract') {
-        sourceClauses.push(`
-          EXISTS (
-            SELECT 1 FROM document_associations da
-            JOIN contracts c ON c.contract_id = da.entity_id AND c.tenant = da.tenant
-            WHERE da.document_id = d.document_id
-              AND da.tenant = d.tenant
-              AND da.entity_type = 'contract'
-              AND (c.is_template IS NULL OR c.is_template = false)
-              AND c.owner_client_id = ?
-          )
-        `);
-        sourceParams.push(clientId);
-      }
-
-      const sourceFilter = sourceClauses.length > 0
-        ? `(${sourceClauses.join(' OR ')})`
-        : 'FALSE';
-
-      const baseQuery = trx.raw(
-        `
-        SELECT DISTINCT d.*
-        FROM documents d
-        WHERE d.tenant = ?
-          AND d.is_client_visible = true
-          AND ${sourceFilter}
-        `,
-        [tenant, ...sourceParams]
+      applyClientDocumentVisibilityFilter(
+        baseQuery,
+        scopedDb,
+        clientId,
+        'd',
+        getClientDocumentVisibilitySources(filters.sourceType)
       );
 
       // Wrap in subquery for filtering and pagination
@@ -210,9 +294,9 @@ export const getClientDocumentFolders = withAuth(
 
     const db = await getConnection(tenant);
 
-    const userRecord = await db('users')
+    const userRecord = await tenantDb(db, tenant).table('users')
       .select('user_id', 'email', 'user_type', 'is_inactive')
-      .where({ user_id: user.user_id, tenant })
+      .where({ user_id: user.user_id })
       .first();
     const userForPermission = {
       user_id: user.user_id,
@@ -228,81 +312,28 @@ export const getClientDocumentFolders = withAuth(
 
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const clientId = await getAuthenticatedClientId(trx, user.user_id, tenant);
+      const scopedDb = tenantDb(trx, tenant);
 
       // Get folder paths from client-visible documents belonging to this client
-      const docFolderPaths = await trx.raw(
-        `
-        SELECT DISTINCT d.folder_path
-        FROM documents d
-        WHERE d.tenant = ?
-          AND d.is_client_visible = true
-          AND d.folder_path IS NOT NULL
-          AND (
-            EXISTS (
-              SELECT 1 FROM document_associations da
-              WHERE da.document_id = d.document_id
-                AND da.tenant = d.tenant
-                AND da.entity_type = 'client'
-                AND da.entity_id = ?
-            )
-            OR EXISTS (
-              SELECT 1 FROM document_associations da
-              JOIN tickets t ON t.ticket_id = da.entity_id AND t.tenant = da.tenant
-              WHERE da.document_id = d.document_id
-                AND da.tenant = d.tenant
-                AND da.entity_type = 'ticket'
-                AND t.client_id = ?
-            )
-            OR EXISTS (
-              SELECT 1 FROM document_associations da
-              JOIN project_tasks pt ON pt.task_id = da.entity_id AND pt.tenant = da.tenant
-              JOIN project_phases pp ON pp.phase_id = pt.phase_id AND pp.tenant = pt.tenant
-              JOIN projects p ON p.project_id = pp.project_id AND p.tenant = pp.tenant
-              WHERE da.document_id = d.document_id
-                AND da.tenant = d.tenant
-                AND da.entity_type = 'project_task'
-                AND p.client_id = ?
-            )
-            OR EXISTS (
-              SELECT 1 FROM document_associations da
-              JOIN contracts c ON c.contract_id = da.entity_id AND c.tenant = da.tenant
-              WHERE da.document_id = d.document_id
-                AND da.tenant = d.tenant
-                AND da.entity_type = 'contract'
-                AND (c.is_template IS NULL OR c.is_template = false)
-                AND c.owner_client_id = ?
-            )
-          )
-        `,
-        [tenant, clientId, clientId, clientId, clientId]
-      );
+      const docFolderPaths: Array<{ folder_path: string }> = await scopedDb.table<{ folder_path: string }>('documents as d')
+        .distinct('folder_path')
+        .where('d.is_client_visible', true)
+        .whereNotNull('d.folder_path')
+        .modify((query) => applyClientDocumentVisibilityFilter(query, scopedDb, clientId, 'd'));
 
       // Also get explicitly client-visible folders scoped to this client or one of the
       // client's owned contracts so portal navigation matches document visibility rules.
-      const explicitFolders = await trx.raw(
-        `
-        SELECT DISTINCT folder_path
-        FROM document_folders
-        WHERE tenant = ?
-          AND is_client_visible = true
-          AND (
-            (entity_id = ? AND entity_type = 'client')
-            OR EXISTS (
-              SELECT 1
-              FROM contracts c
-              WHERE c.tenant = document_folders.tenant
-                AND c.contract_id = document_folders.entity_id
-                AND document_folders.entity_type = 'contract'
-                AND (c.is_template IS NULL OR c.is_template = false)
-                AND c.owner_client_id = ?
-            )
-          )
-        `,
-        [tenant, clientId, clientId]
-      );
+      const explicitFolders = await scopedDb.table<{ folder_path: string }>('document_folders')
+        .distinct('folder_path')
+        .where('is_client_visible', true)
+        .where(function (this: Knex.QueryBuilder) {
+          this.where(function (this: Knex.QueryBuilder) {
+            this.where('entity_id', clientId).andWhere('entity_type', 'client');
+          }).orWhereExists(buildClientOwnedContractFolderQuery(scopedDb, clientId));
+        });
 
-      const docPaths = (docFolderPaths.rows || []).map((r: { folder_path: string }) => r.folder_path);
-      const explicitPaths = (explicitFolders.rows || []).map((r: { folder_path: string }) => r.folder_path);
+      const docPaths = docFolderPaths.map((r) => r.folder_path);
+      const explicitPaths = explicitFolders.map((r) => r.folder_path);
       const allPaths = Array.from(new Set([...docPaths, ...explicitPaths])).filter(Boolean).sort();
 
       return buildFolderTreeFromPaths(allPaths);
@@ -327,9 +358,9 @@ export const downloadClientDocument = withAuth(
 
     const db = await getConnection(tenant);
 
-    const userRecord = await db('users')
+    const userRecord = await tenantDb(db, tenant).table('users')
       .select('user_id', 'email', 'user_type', 'is_inactive')
-      .where({ user_id: user.user_id, tenant })
+      .where({ user_id: user.user_id })
       .first();
     const userForPermission = {
       user_id: user.user_id,
@@ -345,68 +376,22 @@ export const downloadClientDocument = withAuth(
 
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const clientId = await getAuthenticatedClientId(trx, user.user_id, tenant);
+      const scopedDb = tenantDb(trx, tenant);
 
-      // Check document exists, is client-visible, and belongs to this client
-      const document = await trx('documents as d')
+      const documentQuery = scopedDb.table('documents as d')
         .select('d.*')
         .where('d.document_id', documentId)
-        .andWhere('d.tenant', tenant)
-        .andWhere('d.is_client_visible', true)
-        .andWhere(function (this: Knex.QueryBuilder) {
-          this.whereExists(
-            trx('document_associations as da')
-              .whereRaw('da.document_id = d.document_id')
-              .andWhereRaw('da.tenant = d.tenant')
-              .andWhere('da.entity_type', 'client')
-              .andWhere('da.entity_id', clientId)
-          )
-            .orWhereExists(
-              trx('document_associations as da')
-                .join('tickets as t', function () {
-                  this.on('t.ticket_id', '=', 'da.entity_id').andOn('t.tenant', '=', 'da.tenant');
-                })
-                .whereRaw('da.document_id = d.document_id')
-                .andWhereRaw('da.tenant = d.tenant')
-                .andWhere('da.entity_type', 'ticket')
-                .andWhere('t.client_id', clientId)
-            )
-            .orWhereExists(
-              trx('document_associations as da')
-                .join('project_tasks as pt', function () {
-                  this.on('pt.task_id', '=', 'da.entity_id').andOn('pt.tenant', '=', 'da.tenant');
-                })
-                .join('project_phases as pp', function () {
-                  this.on('pp.phase_id', '=', 'pt.phase_id').andOn('pp.tenant', '=', 'pt.tenant');
-                })
-                .join('projects as p', function () {
-                  this.on('p.project_id', '=', 'pp.project_id').andOn('p.tenant', '=', 'pp.tenant');
-                })
-                .whereRaw('da.document_id = d.document_id')
-                .andWhereRaw('da.tenant = d.tenant')
-                .andWhere('da.entity_type', 'project_task')
-                .andWhere('p.client_id', clientId)
-            )
-            .orWhereExists(
-              trx('document_associations as da')
-                .join('contracts as c', function () {
-                  this.on('c.contract_id', '=', 'da.entity_id').andOn('c.tenant', '=', 'da.tenant');
-                })
-                .whereRaw('da.document_id = d.document_id')
-                .andWhereRaw('da.tenant = d.tenant')
-                .andWhere('da.entity_type', 'contract')
-                .andWhere(function (this: Knex.QueryBuilder) {
-                  this.whereNull('c.is_template').orWhere('c.is_template', false);
-                })
-                .andWhere('c.owner_client_id', clientId)
-            );
-        })
-        .first();
+        .andWhere('d.is_client_visible', true);
+
+      applyClientDocumentVisibilityFilter(documentQuery, scopedDb, clientId, 'd');
+
+      const document = await documentQuery.first();
 
       if (!document) {
         throw new Error('Document not found or access denied');
       }
 
-      return document as IDocument;
+      return document as unknown as IDocument;
     });
   }
 );

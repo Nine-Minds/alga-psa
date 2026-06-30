@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { hasPermission } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import {
   TICKET_ACTIVITY_ENTITY,
   TICKET_ACTIVITY_EVENT,
@@ -56,6 +57,14 @@ export type {
 
 const REQUIRED_FIELD_LABELS = CLOSE_RULE_REQUIRED_FIELD_LABELS;
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 /**
  * Evaluates the board's enabled gates against a ticket and returns the
  * failures (empty = closable). Non-throwing variant used by the UI's
@@ -83,8 +92,8 @@ async function evaluateGates(
   const ticketId = ticket.ticket_id;
 
   if (rules.require_resolution_comment) {
-    const resolutionComment = await trx('comments')
-      .where({ tenant, ticket_id: ticketId })
+    const resolutionComment = await tenantScopedTable(trx, 'comments', tenant)
+      .where({ ticket_id: ticketId })
       .where(function resolutionMarkers() {
         this.where('is_resolution', true).orWhereRaw("metadata->>'closes_ticket' = 'true'");
       })
@@ -98,8 +107,8 @@ async function evaluateGates(
   }
 
   if (rules.require_time_entry) {
-    const timeEntry = await trx('time_entries')
-      .where({ tenant, work_item_id: ticketId, work_item_type: 'ticket' })
+    const timeEntry = await tenantScopedTable(trx, 'time_entries', tenant)
+      .where({ work_item_id: ticketId, work_item_type: 'ticket' })
       .first();
     if (!timeEntry) {
       failures.push({
@@ -110,8 +119,8 @@ async function evaluateGates(
   }
 
   if (rules.require_checklist_complete) {
-    const incomplete = await trx('ticket_checklist_items')
-      .where({ tenant, ticket_id: ticketId, is_required: true, completed: false })
+    const incomplete = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
+      .where({ ticket_id: ticketId, is_required: true, completed: false })
       .count<{ count: string }[]>('* as count');
     const incompleteCount = Number(incomplete[0]?.count ?? 0);
     if (incompleteCount > 0) {
@@ -127,8 +136,8 @@ async function evaluateGates(
   }
 
   if (rules.require_no_open_children) {
-    const openChildren = await trx('tickets')
-      .where({ tenant, master_ticket_id: ticketId })
+    const openChildren = await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ master_ticket_id: ticketId })
       .whereNull('closed_at')
       .count<{ count: string }[]>('* as count');
     const openCount = Number(openChildren[0]?.count ?? 0);

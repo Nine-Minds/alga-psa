@@ -1,4 +1,4 @@
-import { getConnection } from '@alga-psa/db'
+import { getConnection, tenantDb } from '@alga-psa/db'
 import type { Knex } from 'knex'
 
 export interface ClientSummary {
@@ -63,6 +63,7 @@ export const __testOnly = {
 
 export async function listClientSummaries(tenantId: string, input: ClientsListInput): Promise<PaginatedClientsResult> {
   const knex = await getConnection(tenantId)
+  const db = tenantDb(knex, tenantId)
   const page = input.page ?? 1
   const pageSize = input.pageSize ?? 25
   const offset = (page - 1) * pageSize
@@ -71,30 +72,26 @@ export async function listClientSummaries(tenantId: string, input: ClientsListIn
     includeInactive: Boolean(input.includeInactive),
   }
 
-  const baseQuery = knex('clients as c').where({ 'c.tenant': tenantId })
+  const baseQuery = db.table('clients as c')
   applyClientFilters(baseQuery, normalized)
 
   const countRow = await baseQuery.clone().count<{ count: string }[]>({ count: '*' }).first()
   const totalCount = Number(countRow?.count ?? 0)
 
-  const rows = await applyClientFilters(
-    knex('clients as c')
-      .leftJoin('users as u', function () {
-        this.on('u.user_id', '=', 'c.account_manager_id').andOn('u.tenant', '=', 'c.tenant')
-      })
-      .where({ 'c.tenant': tenantId })
-      .select([
-        'c.client_id',
-        'c.client_name',
-        'c.client_type',
-        'c.is_inactive',
-        'c.default_currency_code',
-        'c.account_manager_id',
-        'c.billing_email',
-        knex.raw("NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), '') as account_manager_name"),
-      ]),
-    normalized,
-  )
+  const listQuery = db.table('clients as c')
+    .select([
+      'c.client_id',
+      'c.client_name',
+      'c.client_type',
+      'c.is_inactive',
+      'c.default_currency_code',
+      'c.account_manager_id',
+      'c.billing_email',
+      knex.raw("NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), '') as account_manager_name"),
+    ])
+  db.tenantJoin(listQuery, 'users as u', 'u.user_id', 'c.account_manager_id', { type: 'left' })
+
+  const rows = await applyClientFilters(listQuery, normalized)
     .orderBy('c.client_name', 'asc')
     .limit(pageSize)
     .offset(offset)
@@ -109,12 +106,9 @@ export async function listClientSummaries(tenantId: string, input: ClientsListIn
 
 export async function getClientSummaryById(tenantId: string, clientId: string): Promise<ClientSummary | null> {
   const knex = await getConnection(tenantId)
+  const db = tenantDb(knex, tenantId)
 
-  const row = await knex('clients as c')
-    .leftJoin('users as u', function () {
-      this.on('u.user_id', '=', 'c.account_manager_id').andOn('u.tenant', '=', 'c.tenant')
-    })
-    .where({ 'c.tenant': tenantId, 'c.client_id': clientId })
+  const query = db.table('clients as c')
     .first([
       'c.client_id',
       'c.client_name',
@@ -125,6 +119,9 @@ export async function getClientSummaryById(tenantId: string, clientId: string): 
       'c.billing_email',
       knex.raw("NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), '') as account_manager_name"),
     ])
+  db.tenantJoin(query, 'users as u', 'u.user_id', 'c.account_manager_id', { type: 'left' })
+
+  const row = await query.where({ 'c.client_id': clientId })
 
   if (!row) {
     return null

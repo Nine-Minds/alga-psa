@@ -1,4 +1,5 @@
 import { isValidEmail } from '@alga-psa/core';
+import { tenantDb } from '@alga-psa/db';
 import { getActiveWatchListEmails } from '@shared/lib/tickets/watchList';
 import type { Knex } from 'knex';
 
@@ -26,9 +27,9 @@ export async function resolveInternalWatcherEmails(
     return new Set<string>();
   }
 
-  const rows = await db('users')
+  const rows = await tenantDb(db, tenantId).table('users')
     .select('email')
-    .where({ tenant: tenantId, user_type: 'internal' })
+    .where({ user_type: 'internal' })
     .whereIn(db.raw('lower(email)') as unknown as string, normalized);
 
   return new Set<string>(rows.map((row: { email: string }) => normalizeRecipientEmail(row.email)));

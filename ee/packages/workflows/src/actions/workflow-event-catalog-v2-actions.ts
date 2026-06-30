@@ -2,9 +2,10 @@
 
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantKnex, auditLog } from '@alga-psa/db';
+import { createTenantKnex, auditLog, tenantDb } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { EventCatalogModel } from '../models/eventCatalog';
+import { workflowTenantTable } from '../lib/workflowTenantDb';
 import {
   getSchemaRegistry,
   initializeWorkflowRuntimeV2,
@@ -152,13 +153,13 @@ export const listEventCatalogCategoriesV2Action = withAuth(async (user, { tenant
   await requireWorkflowPermission(user, 'read', knex);
   if (!tenant) return { categories: [] as string[] };
 
-  const tenantRows = await knex('event_catalog')
+  const tenantRows = await workflowTenantTable(knex, tenant, 'event_catalog')
     .distinct('category')
     .whereNotNull('category')
-    .where({ tenant })
     .orderBy('category', 'asc');
 
-  const systemRows = await knex('system_event_catalog')
+  // system_event_catalog is a global workflow event catalog; tenant event categories are loaded above.
+  const systemRows = await tenantDb(knex, tenant).table('system_event_catalog')
     .distinct('category')
     .whereNotNull('category')
     .orderBy('category', 'asc');
@@ -298,10 +299,10 @@ export const listEventCatalogWithMetricsAction = withAuth(async (user, { tenant 
 
   const computeMapsForEventTypes = async (eventTypes: string[]) => {
     const attachedRows = eventTypes.length
-      ? await knex('workflow_definitions')
+      ? await workflowTenantTable(knex, tenant, 'workflow_definitions')
         .select(knex.raw("trigger->>'eventName' as event_type"))
         .count('* as count')
-        .where({ status: 'published', tenant: tenant })
+        .where({ status: 'published' })
         .whereRaw("trigger->>'eventName' is not null")
         .whereIn(knex.raw("trigger->>'eventName'") as any, eventTypes)
         .groupByRaw("trigger->>'eventName'")
@@ -311,10 +312,9 @@ export const listEventCatalogWithMetricsAction = withAuth(async (user, { tenant 
     attachedRows.forEach((row: any) => attachedMap.set(String(row.event_type), Number(row.count ?? 0)));
 
     const execRows = eventTypes.length
-      ? await knex('workflow_runtime_events')
+      ? await workflowTenantTable(knex, tenant, 'workflow_runtime_events')
         .select('event_name')
         .count('* as count')
-        .where({ tenant: tenant })
         .whereIn('event_name', eventTypes)
         .where('created_at', '>=', range.from)
         .where('created_at', '<=', range.to)
@@ -325,14 +325,13 @@ export const listEventCatalogWithMetricsAction = withAuth(async (user, { tenant 
     execRows.forEach((row: any) => execMap.set(String(row.event_name), Number(row.count ?? 0)));
 
     const runRows = eventTypes.length
-      ? await knex('workflow_runs')
+      ? await workflowTenantTable(knex, tenant, 'workflow_runs')
         .select(
           'event_type',
           knex.raw('count(*)::int as total'),
           knex.raw("count(case when status = 'SUCCEEDED' then 1 end)::int as succeeded"),
           knex.raw("avg(case when completed_at is not null then extract(epoch from (completed_at - started_at)) * 1000 end) as avg_ms")
         )
-        .where({ tenant: tenant })
         .whereIn('event_type', eventTypes)
         .where('started_at', '>=', range.from)
         .where('started_at', '<=', range.to)
@@ -438,8 +437,9 @@ export const listAttachedWorkflowsByEventTypeAction = withAuth(async (user, { te
   const parsed = z.object({ eventType: z.string().min(1) }).parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
+  if (!tenant) return { workflows: [] };
 
-  const rows = await knex('workflow_definitions')
+  const rows = await workflowTenantTable(knex, tenant, 'workflow_definitions')
     .select(
       'workflow_id',
       'name',
@@ -447,13 +447,13 @@ export const listAttachedWorkflowsByEventTypeAction = withAuth(async (user, { te
       'is_paused',
       'is_visible'
     )
-    .where({ status: 'published', tenant: tenant })
+    .where({ status: 'published' })
     .whereRaw("trigger->>'eventName' = ?", [parsed.eventType]);
 
   // published version is max from versions table
   const ids = rows.map((r: any) => r.workflow_id);
   const versions = ids.length
-    ? await knex('workflow_definition_versions')
+    ? await workflowTenantTable(knex, tenant, 'workflow_definition_versions')
       .select('workflow_id')
       .max('version as published_version')
       .whereIn('workflow_id', ids)
@@ -579,7 +579,7 @@ export const detachWorkflowTriggerFromEventAction = withAuth(async (user, { tena
     throw new Error('Workflow not found');
   }
   // Get latest published version definition.
-  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, parsed.workflowId);
+  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, parsed.workflowId, tenant);
   const latest = versions[0];
   if (!latest) {
     throw new Error('Workflow has no published versions');
@@ -685,39 +685,39 @@ export const getEventMetricsAction = withAuth(async (user, { tenant }, input: un
     to: parsed.to ?? buildDefaultRange().to
   };
 
-  const summaryRow = await knex('workflow_runtime_events')
+  const summaryRow = await workflowTenantTable(knex, tenant, 'workflow_runtime_events')
     .select(
       knex.raw('count(*)::int as total'),
       knex.raw('count(case when matched_run_id is not null then 1 end)::int as matched'),
       knex.raw("count(case when matched_run_id is null and error_message is null then 1 end)::int as unmatched"),
       knex.raw('count(case when error_message is not null then 1 end)::int as error')
     )
-    .where({ tenant: tenant, event_name: parsed.eventType })
+    .where({ event_name: parsed.eventType })
     .where('created_at', '>=', range.from)
     .where('created_at', '<=', range.to)
     .first() as unknown as { total: number; matched: number; unmatched: number; error: number } | undefined;
 
-  const seriesRows = await knex('workflow_runtime_events')
+  const seriesRows = await workflowTenantTable(knex, tenant, 'workflow_runtime_events')
     .select(knex.raw("date_trunc('day', created_at) as day"))
     .count('* as count')
-    .where({ tenant: tenant, event_name: parsed.eventType })
+    .where({ event_name: parsed.eventType })
     .where('created_at', '>=', range.from)
     .where('created_at', '<=', range.to)
     .groupByRaw("date_trunc('day', created_at)")
     .orderBy('day', 'asc');
 
-  const runStatsRow = await knex('workflow_runs')
+  const runStatsRow = await workflowTenantTable(knex, tenant, 'workflow_runs')
     .select(
       knex.raw('count(*)::int as total'),
       knex.raw("count(case when status = 'SUCCEEDED' then 1 end)::int as succeeded"),
       knex.raw("avg(case when completed_at is not null then extract(epoch from (completed_at - started_at)) * 1000 end) as avg_ms")
     )
-    .where({ tenant: tenant, event_type: parsed.eventType })
+    .where({ event_type: parsed.eventType })
     .where('started_at', '>=', range.from)
     .where('started_at', '<=', range.to)
     .first() as unknown as { total: number; succeeded: number; avg_ms: number | null } | undefined;
 
-  const recentRows = await knex('workflow_runtime_events')
+  const recentRows = await workflowTenantTable(knex, tenant, 'workflow_runtime_events')
     .select(
       'event_id',
       'event_name',
@@ -730,7 +730,7 @@ export const getEventMetricsAction = withAuth(async (user, { tenant }, input: un
       'error_message',
       'payload'
     )
-    .where({ tenant: tenant, event_name: parsed.eventType })
+    .where({ event_name: parsed.eventType })
     .where('created_at', '>=', range.from)
     .where('created_at', '<=', range.to)
     .orderBy('created_at', 'desc')

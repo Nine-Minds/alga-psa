@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import { flattenBlockNote } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
@@ -50,16 +51,12 @@ function toSearchDoc(tenant: string, row: ProjectTaskCommentSearchRow): SearchDo
 }
 
 function baseProjectTaskCommentQuery(knex: Knex, tenant: string) {
-  return knex<ProjectTaskCommentSearchRow>('project_task_comments as pc')
-    .join('project_tasks as pt', function() {
-      this.on('pt.tenant', 'pc.tenant').andOn('pt.task_id', 'pc.task_id');
-    })
-    .join('project_phases as ph', function() {
-      this.on('ph.tenant', 'pt.tenant').andOn('ph.phase_id', 'pt.phase_id');
-    })
-    .join('projects as p', function() {
-      this.on('p.tenant', 'ph.tenant').andOn('p.project_id', 'ph.project_id');
-    })
+  const query = createTenantScopedIndexerQuery<ProjectTaskCommentSearchRow>(knex, 'project_task_comments as pc', 'pc', tenant);
+  tenantJoinIndexerTable(knex, tenant, query, 'project_tasks as pt', 'pt.task_id', 'pc.task_id');
+  tenantJoinIndexerTable(knex, tenant, query, 'project_phases as ph', 'ph.phase_id', 'pt.phase_id');
+  tenantJoinIndexerTable(knex, tenant, query, 'projects as p', 'p.project_id', 'ph.project_id');
+
+  return query
     .select(
       'pc.task_comment_id',
       'pc.task_id',
@@ -72,8 +69,7 @@ function baseProjectTaskCommentQuery(knex: Knex, tenant: string) {
       'ph.project_id',
       'p.project_name',
       'p.client_id',
-    )
-    .where('pc.tenant', tenant);
+    );
 }
 
 export const projectTaskCommentIndexer: EntityIndexer = {

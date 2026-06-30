@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { ActionContext } from '../../registries/actionRegistry';
 
@@ -100,23 +101,29 @@ export async function setTenantContext(trx: Knex.Transaction, tenantId: string):
   await trx.raw(`select set_config('app.current_tenant', ?, true)`, [tenantId]);
 }
 
-export async function resolveRunActorUserId(trx: Knex.Transaction, runId: string): Promise<string | null> {
-  const row = await trx('workflow_runs as wr')
-    .leftJoin('workflow_definition_versions as wdv', function joinVersions() {
-      this.on('wr.workflow_id', 'wdv.workflow_id')
-        .andOn('wr.workflow_version', 'wdv.version')
-        .andOn('wr.tenant', 'wdv.tenant');
-    })
-    .leftJoin('workflow_definitions as wd', function joinDefinitions() {
-      this.on('wr.workflow_id', 'wd.workflow_id').andOn('wr.tenant', 'wd.tenant');
-    })
+export async function resolveRunActorUserId(trx: Knex.Transaction, tenantId: string, runId: string): Promise<string | null> {
+  const db = tenantDb(trx, tenantId);
+  const query = db.table('workflow_runs as wr');
+  db.tenantJoin(query, 'workflow_definition_versions as wdv', 'wr.workflow_id', 'wdv.workflow_id', {
+    type: 'left',
+    rootTenantColumn: 'wr.tenant'
+  });
+  db.tenantJoin(query, 'workflow_definitions as wd', 'wr.workflow_id', 'wd.workflow_id', {
+    type: 'left',
+    rootTenantColumn: 'wr.tenant'
+  });
+  const row = await query
     .select(
       'wd.workflow_id as matched_workflow_id',
       'wdv.published_by as published_by',
       'wd.created_by as created_by'
     )
     .where('wr.run_id', runId)
-    .first();
+    .first() as {
+      matched_workflow_id?: string | null;
+      published_by?: string | null;
+      created_by?: string | null;
+    } | undefined;
   if (!row?.matched_workflow_id) return null;
   return (row?.published_by as string | null) ?? (row?.created_by as string | null) ?? null;
 }
@@ -128,18 +135,19 @@ export async function hasPermissionByUserId(
   resource: string,
   action: string
 ): Promise<boolean> {
-  const row = await trx('user_roles as ur')
-    .join('roles as r', function joinRoles() {
-      this.on('ur.tenant', 'r.tenant').andOn('ur.role_id', 'r.role_id');
-    })
-    .join('role_permissions as rp', function joinRolePerms() {
-      this.on('r.tenant', 'rp.tenant').andOn('r.role_id', 'rp.role_id');
-    })
-    .join('permissions as p', function joinPerms() {
-      this.on('rp.tenant', 'p.tenant').andOn('rp.permission_id', 'p.permission_id');
-    })
+  const db = tenantDb(trx, tenantId);
+  const query = db.table('user_roles as ur');
+  db.tenantJoin(query, 'roles as r', 'ur.role_id', 'r.role_id', {
+    rootTenantColumn: 'ur.tenant'
+  });
+  db.tenantJoin(query, 'role_permissions as rp', 'r.role_id', 'rp.role_id', {
+    rootTenantColumn: 'ur.tenant'
+  });
+  db.tenantJoin(query, 'permissions as p', 'rp.permission_id', 'p.permission_id', {
+    rootTenantColumn: 'ur.tenant'
+  });
+  const row = await query
     .where({
-      'ur.tenant': tenantId,
       'ur.user_id': userId,
       'p.resource': resource,
       'p.action': action
@@ -172,7 +180,7 @@ export async function writeRunAudit(
   tx: TenantTxContext,
   params: { operation: string; changedData?: Record<string, unknown>; details?: Record<string, unknown> }
 ): Promise<void> {
-  await tx.trx('audit_logs').insert({
+  await tenantDb(tx.trx, tx.tenantId).table('audit_logs').insert({
     audit_id: uuidv4(),
     tenant: tx.tenantId,
     user_id: tx.actorUserId,
@@ -205,7 +213,7 @@ export async function withTenantTransaction<T>(
 
   return await knex.transaction(async (trx) => {
     await setTenantContext(trx, tenantId);
-    const actorUserId = await resolveRunActorUserId(trx, ctx.runId);
+    const actorUserId = await resolveRunActorUserId(trx, tenantId, ctx.runId);
     if (!actorUserId) {
       throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Workflow actor user not found' });
     }
@@ -248,8 +256,10 @@ export async function attachDocumentToTicket(
   ticketId: string,
   input: { source: AttachmentSource; filename?: string | null; visibility?: 'public' | 'internal' }
 ): Promise<{ document_id: string; file_id?: string | null; filename: string; content_type?: string | null }> {
+  const db = tenantDb(tx.trx, tx.tenantId);
+
   // Ensure ticket exists.
-  const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: ticketId }).first();
+  const ticket = await db.table('tickets').where({ ticket_id: ticketId }).first();
   if (!ticket) {
     throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: ticketId } });
   }
@@ -258,12 +268,12 @@ export async function attachDocumentToTicket(
 
   // If this is already a document, just associate it to the ticket.
   if (input.source.document_id) {
-    const doc = await tx.trx('documents').where({ tenant: tx.tenantId, document_id: input.source.document_id }).first();
+    const doc = await db.table('documents').where({ document_id: input.source.document_id }).first();
     if (!doc) {
       throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Document not found', details: { document_id: input.source.document_id } });
     }
 
-    await tx.trx('document_associations')
+    await db.table('document_associations')
       .insert({
         tenant: tx.tenantId,
         document_id: input.source.document_id,
@@ -285,7 +295,7 @@ export async function attachDocumentToTicket(
   // For file_id or url, ensure we have a file record (create one if url).
   let fileRecord: any | null = null;
   if (input.source.file_id) {
-    fileRecord = await tx.trx('external_files').where({ tenant: tx.tenantId, file_id: input.source.file_id, is_deleted: false }).first();
+    fileRecord = await db.table('external_files').where({ file_id: input.source.file_id, is_deleted: false }).first();
     if (!fileRecord) {
       throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'File not found', details: { file_id: input.source.file_id } });
     }
@@ -347,7 +357,7 @@ export async function attachDocumentToTicket(
 
     const fileId = uuidv4();
     const fileName = storagePath.split('/').pop() ?? filename;
-    await tx.trx('external_files').insert({
+    await db.table('external_files').insert({
       tenant: tx.tenantId,
       file_id: fileId,
       file_name: fileName,
@@ -379,7 +389,7 @@ export async function attachDocumentToTicket(
   // Create a document pointing at the file, then associate it to the ticket.
   const documentId = uuidv4();
   const documentName = input.filename ?? fileRecord.original_name ?? fileRecord.file_name ?? 'attachment';
-  await tx.trx('documents').insert({
+  await db.table('documents').insert({
     tenant: tx.tenantId,
     document_id: documentId,
     document_name: documentName,
@@ -395,7 +405,7 @@ export async function attachDocumentToTicket(
     file_size: fileRecord.file_size
   });
 
-  await tx.trx('document_associations').insert({
+  await db.table('document_associations').insert({
     tenant: tx.tenantId,
     document_id: documentId,
     entity_id: ticketId,

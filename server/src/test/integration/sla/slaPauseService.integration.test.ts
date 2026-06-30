@@ -12,6 +12,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { createTenant, createUser, createClient } from '../../../../test-utils/testDataFactory';
@@ -67,6 +68,9 @@ let handleStatusChange: typeof import('@alga-psa/sla/services').handleStatusChan
 let handleResponseStateChange: typeof import('@alga-psa/sla/services').handleResponseStateChange;
 let shouldSlaBePaused: typeof import('@alga-psa/sla/services').shouldSlaBePaused;
 let getPauseStats: typeof import('@alga-psa/sla/services').getPauseStats;
+
+const tenantTable = (dbOrTrx: Knex | Knex.Transaction, tenant: string, tableName: string) =>
+  tenantDb(dbOrTrx, tenant).table(tableName);
 
 describe('SLA Pause Service Integration Tests', () => {
   let db: Knex;
@@ -139,7 +143,7 @@ describe('SLA Pause Service Integration Tests', () => {
     await createSlaPolicyTarget(db, tenantId, slaPolicyId, priorityHighId, 60, 240); // 1hr response, 4hr resolution
 
     // Configure 'Pending' status to pause SLA
-    await db('status_sla_pause_config').insert({
+    await tenantTable(db, tenantId, 'status_sla_pause_config').insert({
       tenant: tenantId,
       config_id: uuidv4(),
       status_id: statusPendingId,
@@ -148,7 +152,7 @@ describe('SLA Pause Service Integration Tests', () => {
     });
 
     // Create SLA settings with pause_on_awaiting_client enabled
-    await db('sla_settings').insert({
+    await tenantTable(db, tenantId, 'sla_settings').insert({
       tenant: tenantId,
       pause_on_awaiting_client: true,
       created_at: db.fn.now(),
@@ -163,8 +167,8 @@ describe('SLA Pause Service Integration Tests', () => {
 
   beforeEach(async () => {
     // Clean up tickets and SLA audit logs before each test
-    await db('sla_audit_log').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('tickets').where({ tenant: tenantId }).delete().catch(() => undefined);
+    await tenantTable(db, tenantId, 'sla_audit_log').where({ tenant: tenantId }).delete().catch(() => undefined);
+    await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId }).delete().catch(() => undefined);
   });
 
   // ==========================================================================
@@ -199,11 +203,11 @@ describe('SLA Pause Service Integration Tests', () => {
       });
 
       // Verify ticket was updated
-      const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       expect(ticket.sla_paused_at).toBeDefined();
 
       // Verify audit log
-      const auditLog = await db('sla_audit_log')
+      const auditLog = await tenantTable(db, tenantId, 'sla_audit_log')
         .where({ tenant: tenantId, ticket_id: ticketId, event_type: 'sla_paused' })
         .first();
       expect(auditLog).toBeDefined();
@@ -231,7 +235,7 @@ describe('SLA Pause Service Integration Tests', () => {
       });
 
       // Manually set paused_at to simulate time passed
-      await db('tickets')
+      await tenantTable(db, tenantId, 'tickets')
         .where({ tenant: tenantId, ticket_id: ticketId })
         .update({ sla_paused_at: pausedAt });
 
@@ -247,12 +251,12 @@ describe('SLA Pause Service Integration Tests', () => {
       });
 
       // Verify ticket was updated
-      const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       expect(ticket.sla_paused_at).toBeNull();
       expect(ticket.sla_total_pause_minutes).toBeGreaterThanOrEqual(29);
 
       // Verify audit log
-      const auditLog = await db('sla_audit_log')
+      const auditLog = await tenantTable(db, tenantId, 'sla_audit_log')
         .where({ tenant: tenantId, ticket_id: ticketId, event_type: 'sla_resumed' })
         .first();
       expect(auditLog).toBeDefined();
@@ -351,7 +355,7 @@ describe('SLA Pause Service Integration Tests', () => {
       });
 
       // Verify ticket was updated
-      const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       expect(ticket.sla_paused_at).toBeDefined();
     });
 
@@ -394,7 +398,7 @@ describe('SLA Pause Service Integration Tests', () => {
       });
 
       // Verify ticket was updated
-      const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       expect(ticket.sla_paused_at).toBeNull();
     });
   });
@@ -436,7 +440,7 @@ describe('SLA Pause Service Integration Tests', () => {
       });
 
       // Verify ticket was updated
-      const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       expect(ticket.sla_paused_at).toBeDefined();
     });
 
@@ -477,7 +481,7 @@ describe('SLA Pause Service Integration Tests', () => {
       });
 
       // Verify ticket was updated
-      const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       expect(ticket.sla_paused_at).toBeNull();
     });
 
@@ -543,7 +547,7 @@ describe('SLA Pause Service Integration Tests', () => {
       });
 
       // First pause cycle - simulate 10 minutes
-      await db('tickets')
+      await tenantTable(db, tenantId, 'tickets')
         .where({ tenant: tenantId, ticket_id: ticketId })
         .update({ sla_paused_at: new Date(Date.now() - 10 * 60000) });
 
@@ -551,13 +555,13 @@ describe('SLA Pause Service Integration Tests', () => {
         await resumeSla(trx, tenantId, ticketId, internalUserId);
       });
 
-      let ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      let ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       const firstCyclePause = ticket.sla_total_pause_minutes || 0;
       expect(firstCyclePause).toBeGreaterThanOrEqual(9);
       expect(firstCyclePause).toBeLessThanOrEqual(11);
 
       // Second pause cycle - simulate 20 minutes
-      await db('tickets')
+      await tenantTable(db, tenantId, 'tickets')
         .where({ tenant: tenantId, ticket_id: ticketId })
         .update({ sla_paused_at: new Date(Date.now() - 20 * 60000) });
 
@@ -565,7 +569,7 @@ describe('SLA Pause Service Integration Tests', () => {
         await resumeSla(trx, tenantId, ticketId, internalUserId);
       });
 
-      ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       const totalPause = ticket.sla_total_pause_minutes || 0;
 
       // Total should be approximately 30 minutes (10 + 20)
@@ -600,7 +604,7 @@ describe('SLA Pause Service Integration Tests', () => {
       });
 
       // Manually set paused_at and total_pause_minutes
-      await db('tickets')
+      await tenantTable(db, tenantId, 'tickets')
         .where({ tenant: tenantId, ticket_id: ticketId })
         .update({
           sla_paused_at: pausedAt,
@@ -638,7 +642,7 @@ describe('SLA Pause Service Integration Tests', () => {
       });
 
       // Set some previous pause time
-      await db('tickets')
+      await tenantTable(db, tenantId, 'tickets')
         .where({ tenant: tenantId, ticket_id: ticketId })
         .update({ sla_total_pause_minutes: 45 });
 
@@ -730,7 +734,7 @@ describe('SLA Pause Service Integration Tests', () => {
 
 async function createContact(db: Knex, tenant: string, clientId: string, email: string): Promise<string> {
   const contactId = uuidv4();
-  await db('contacts').insert({
+  await tenantTable(db, tenant, 'contacts').insert({
     tenant,
     contact_name_id: contactId,
     full_name: 'Pause Test Contact',
@@ -744,7 +748,7 @@ async function createContact(db: Knex, tenant: string, clientId: string, email: 
 
 async function createBoard(db: Knex, tenant: string, name: string): Promise<string> {
   const boardId = uuidv4();
-  await db('boards').insert({
+  await tenantTable(db, tenant, 'boards').insert({
     tenant,
     board_id: boardId,
     name,
@@ -763,7 +767,7 @@ async function createStatus(
   isClosed: boolean
 ): Promise<string> {
   const statusId = uuidv4();
-  await db('statuses').insert({
+  await tenantTable(db, tenant, 'statuses').insert({
     tenant,
     status_id: statusId,
     board_id: boardId,
@@ -777,7 +781,7 @@ async function createStatus(
 
 async function createPriority(db: Knex, tenant: string, name: string, orderNumber: number, createdBy: string): Promise<string> {
   const priorityId = uuidv4();
-  await db('priorities').insert({
+  await tenantTable(db, tenant, 'priorities').insert({
     tenant,
     priority_id: priorityId,
     priority_name: name,
@@ -791,7 +795,7 @@ async function createPriority(db: Knex, tenant: string, name: string, orderNumbe
 
 async function createBusinessHoursSchedule(db: Knex, tenant: string, name: string): Promise<string> {
   const scheduleId = uuidv4();
-  await db('business_hours_schedules').insert({
+  await tenantTable(db, tenant, 'business_hours_schedules').insert({
     tenant,
     schedule_id: scheduleId,
     schedule_name: name,
@@ -812,7 +816,7 @@ async function createSlaPolicy(
   isDefault: boolean
 ): Promise<string> {
   const policyId = uuidv4();
-  await db('sla_policies').insert({
+  await tenantTable(db, tenant, 'sla_policies').insert({
     tenant,
     sla_policy_id: policyId,
     policy_name: name,
@@ -834,7 +838,7 @@ async function createSlaPolicyTarget(
   resolutionTimeMinutes: number
 ): Promise<string> {
   const targetId = uuidv4();
-  await db('sla_policy_targets').insert({
+  await tenantTable(db, tenant, 'sla_policy_targets').insert({
     tenant,
     target_id: targetId,
     sla_policy_id: slaPolicyId,
@@ -863,7 +867,7 @@ async function insertTicket(db: Knex, params: {
   boardId: string;
   responseState?: 'awaiting_client' | 'awaiting_internal' | null;
 }): Promise<void> {
-  await db('tickets').insert({
+  await tenantTable(db, params.tenant, 'tickets').insert({
     tenant: params.tenant,
     ticket_id: params.ticketId,
     ticket_number: params.ticketNumber,

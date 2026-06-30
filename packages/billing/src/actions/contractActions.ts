@@ -13,7 +13,7 @@ import {
   IContractTemplate,
   IContractTemplateWithLines,
 } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
@@ -35,7 +35,17 @@ import {
 } from '../repositories/contractLineRepository';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 
+type TenantScopedKnex = Knex | Knex.Transaction;
+
 const isBypassEnabled = (): boolean => process.env.E2E_AUTH_BYPASS === 'true';
+
+function tenantScopedTable(
+  conn: TenantScopedKnex,
+  tenant: string,
+  table: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
 
 function maybeUserActor(user: any) {
   const userId = user?.user_id;
@@ -116,9 +126,9 @@ async function attachContractClientLogos(
   }));
 }
 
-async function isTemplateContract(knex: Knex, tenant: string, contractId: string): Promise<boolean> {
-  const template = await knex('contract_templates')
-    .where({ tenant, template_id: contractId })
+async function isTemplateContract(knex: TenantScopedKnex, tenant: string, contractId: string): Promise<boolean> {
+  const template = await tenantScopedTable(knex, tenant, 'contract_templates')
+    .where({ template_id: contractId })
     .first();
   return Boolean(template);
 }
@@ -175,17 +185,13 @@ export const getDraftContracts = withAuth(async (user, { tenant }): Promise<ICon
     await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
-    const rows = await knex('contracts as co')
-      .leftJoin('client_contracts as cc', function () {
-        this.on('co.contract_id', '=', 'cc.contract_id').andOn('co.tenant', '=', 'cc.tenant');
-      })
-      .leftJoin('contract_templates as template', function () {
-        this.on('cc.template_contract_id', '=', 'template.template_id').andOn('cc.tenant', '=', 'template.tenant');
-      })
-      .leftJoin('clients as c', function () {
-        this.on('cc.client_id', '=', 'c.client_id').andOn('cc.tenant', '=', 'c.tenant');
-      })
-      .where({ 'co.tenant': tenant })
+    const facade = tenantDb(knex, tenant);
+    const query = facade.table('contracts as co');
+    facade.tenantJoin(query, 'client_contracts as cc', 'co.contract_id', 'cc.contract_id', { type: 'left' });
+    facade.tenantJoin(query, 'contract_templates as template', 'cc.template_contract_id', 'template.template_id', { type: 'left' });
+    facade.tenantJoin(query, 'clients as c', 'cc.client_id', 'c.client_id', { type: 'left' });
+
+    const rows = await query
       .andWhere((builder) => builder.whereNull('co.is_template').orWhere('co.is_template', false))
       .andWhere('co.status', 'draft')
       .select(
@@ -200,7 +206,7 @@ export const getDraftContracts = withAuth(async (user, { tenant }): Promise<ICon
       )
       .orderBy('co.updated_at', 'desc');
 
-    return await attachContractClientLogos(rows, tenant);
+    return await attachContractClientLogos(rows as unknown as IContractWithClient[], tenant);
   } catch (error) {
     console.error('Error fetching draft contracts:', error);
     if (error instanceof Error) {
@@ -536,8 +542,8 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
       throw new Error('System-managed default contracts cannot be deleted manually');
     }
 
-    const clientContracts = await knex('client_contracts')
-      .where({ tenant, contract_id: contractId })
+    const clientContracts = await tenantScopedTable(knex, tenant, 'client_contracts')
+      .where({ contract_id: contractId })
       .select('client_contract_id', 'client_id');
 
     await Contract.delete(knex, tenant, contractId);
@@ -615,20 +621,20 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
     await assertBillingPermission(user, 'read', 'view contract summary');
     const { knex } = await createTenantKnex();
 
-    const templateRecord = await knex('contract_templates')
-      .where({ tenant, template_id: contractId })
+    const templateRecord = await tenantScopedTable(knex, tenant, 'contract_templates')
+      .where({ template_id: contractId })
       .first();
 
     let lineCountRaw: string | undefined;
     if (templateRecord) {
-      const templateLineCount = await knex('contract_template_lines')
-        .where({ template_id: contractId, tenant })
+      const templateLineCount = await tenantScopedTable(knex, tenant, 'contract_template_lines')
+        .where({ template_id: contractId })
         .count('* as count')
         .first() as { count: string } | undefined;
       lineCountRaw = templateLineCount?.count;
     } else {
-      const result = await knex('contract_lines')
-        .where({ contract_id: contractId, tenant })
+      const result = await tenantScopedTable(knex, tenant, 'contract_lines')
+        .where({ contract_id: contractId })
         .count('* as count')
         .first() as { count: string } | undefined;
       lineCountRaw = result?.count;
@@ -644,12 +650,11 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
       'po_number'
     ];
 
-    const assignmentsRaw = await knex('client_contracts')
+    const assignmentsRaw = await tenantScopedTable(knex, tenant, 'client_contracts')
       .where({ contract_id: contractId })
-      .andWhere({ tenant })
       .select(assignmentColumns);
 
-    const assignments = assignmentsRaw.map((assignment: any) => ({
+    const assignments = (assignmentsRaw as any[]).map((assignment: any) => ({
       ...assignment,
       po_required: Boolean(assignment.po_required),
     }));
@@ -727,15 +732,13 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       'cc.renewal_ticket_status_id'
     ];
 
-    const rows = await knex('client_contracts as cc')
-      .leftJoin('clients as c', function joinClients() {
-        this.on('cc.client_id', '=', 'c.client_id').andOn('cc.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('default_billing_settings as dbs', function joinDefaults() {
-        this.on('cc.tenant', '=', 'dbs.tenant');
-      })
+    const facade = tenantDb(knex, tenant);
+    const query = facade.table('client_contracts as cc');
+    facade.tenantJoin(query, 'clients as c', 'cc.client_id', 'c.client_id', { type: 'left' });
+    facade.tenantJoin(query, 'default_billing_settings as dbs', 'cc.tenant', 'dbs.tenant', { type: 'left' });
+
+    const rows = await query
       .where({ 'cc.contract_id': contractId })
-      .andWhere({ 'cc.tenant': tenant })
       .select(selection)
       .orderBy('cc.start_date', 'asc');
 
@@ -857,8 +860,8 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
     const { knex } = await createTenantKnex();
 
     // Check if this is a template contract
-    const templateRecord = await knex('contract_templates')
-      .where({ tenant, template_id: contractId })
+    const templateRecord = await tenantScopedTable(knex, tenant, 'contract_templates')
+      .where({ template_id: contractId })
       .first();
 
     const isTemplate = Boolean(templateRecord);
@@ -866,8 +869,8 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
     // Get currency code - templates default to USD, contracts have their own currency
     let currencyCode = 'USD';
     if (!isTemplate) {
-      const contractRecord = await knex('contracts')
-        .where({ tenant, contract_id: contractId })
+      const contractRecord = await tenantScopedTable(knex, tenant, 'contracts')
+        .where({ contract_id: contractId })
         .select('currency_code')
         .first();
       if (contractRecord?.currency_code) {
@@ -879,12 +882,12 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
 
     if (isTemplate) {
       // Get template lines with their services
-      const lines = await knex('contract_template_lines as ctl')
-        .leftJoin('contract_template_line_fixed_config as tfc', function() {
-          this.on('ctl.template_line_id', '=', 'tfc.template_line_id')
-            .andOn('ctl.tenant', '=', 'tfc.tenant');
-        })
-        .where({ 'ctl.template_id': contractId, 'ctl.tenant': tenant })
+      const facade = tenantDb(knex, tenant);
+      const lineQuery = facade.table('contract_template_lines as ctl');
+      facade.tenantJoin(lineQuery, 'contract_template_line_fixed_config as tfc', 'ctl.template_line_id', 'tfc.template_line_id', { type: 'left' });
+
+      const lines = await lineQuery
+        .where({ 'ctl.template_id': contractId })
         .select([
           'ctl.template_line_id as contract_line_id',
           'ctl.template_line_name as contract_line_name',
@@ -897,12 +900,11 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
 
       // Get services for each line
       for (const line of lines) {
-        const services = await knex('contract_template_line_services as ctls')
-          .leftJoin('service_catalog as s', function() {
-            this.on('ctls.service_id', '=', 's.service_id')
-              .andOn('s.tenant', '=', knex.raw('?', [tenant]));
-          })
-          .where({ 'ctls.template_line_id': line.contract_line_id, 'ctls.tenant': tenant })
+        const serviceQuery = facade.table('contract_template_line_services as ctls');
+        facade.tenantJoin(serviceQuery, 'service_catalog as s', 'ctls.service_id', 's.service_id', { type: 'left' });
+
+        const services = await serviceQuery
+          .where({ 'ctls.template_line_id': line.contract_line_id })
           .select([
             'ctls.service_id',
             's.service_name',
@@ -912,11 +914,11 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           ]);
 
         // Get service configurations for rates
-        const configs = await knex('contract_template_line_service_configuration as config')
-          .where({ 'config.template_line_id': line.contract_line_id, 'config.tenant': tenant })
+        const configs = await tenantScopedTable(knex, tenant, 'contract_template_line_service_configuration as config')
+          .where({ 'config.template_line_id': line.contract_line_id })
           .select(['config.service_id', 'config.custom_rate', 'config.quantity']);
 
-        const configMap = new Map(configs.map(c => [c.service_id, c]));
+        const configMap = new Map<string, any>((configs as any[]).map((c: any) => [c.service_id, c]));
 
         contractLines.push({
           contract_line_id: line.contract_line_id,
@@ -925,7 +927,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           billing_frequency: line.billing_frequency || 'monthly',
           base_rate: line.base_rate ? Number(line.base_rate) : null,
           display_order: line.display_order ?? 0,
-          services: services.map(svc => {
+          services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
             return {
               service_id: svc.service_id,
@@ -941,8 +943,9 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
     } else {
       // Get regular contract lines with their services
       // Note: For regular contracts, custom_rate is stored directly on contract_lines table
-      const lines = await knex('contract_lines as cl')
-        .where({ 'cl.contract_id': contractId, 'cl.tenant': tenant })
+      const facade = tenantDb(knex, tenant);
+      const lines = await facade.table('contract_lines as cl')
+        .where({ 'cl.contract_id': contractId })
         .select([
           'cl.contract_line_id',
           'cl.contract_line_name',
@@ -955,12 +958,11 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
 
       // Get services for each line
       for (const line of lines) {
-        const services = await knex('contract_line_services as cls')
-          .leftJoin('service_catalog as s', function() {
-            this.on('cls.service_id', '=', 's.service_id')
-              .andOn('s.tenant', '=', knex.raw('?', [tenant]));
-          })
-          .where({ 'cls.contract_line_id': line.contract_line_id, 'cls.tenant': tenant })
+        const serviceQuery = facade.table('contract_line_services as cls');
+        facade.tenantJoin(serviceQuery, 'service_catalog as s', 'cls.service_id', 's.service_id', { type: 'left' });
+
+        const services = await serviceQuery
+          .where({ 'cls.contract_line_id': line.contract_line_id })
           .select([
             'cls.service_id',
             's.service_name',
@@ -969,11 +971,11 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           ]);
 
         // Get service configurations for rates
-        const configs = await knex('contract_line_service_configuration as config')
-          .where({ 'config.contract_line_id': line.contract_line_id, 'config.tenant': tenant })
+        const configs = await tenantScopedTable(knex, tenant, 'contract_line_service_configuration as config')
+          .where({ 'config.contract_line_id': line.contract_line_id })
           .select(['config.service_id', 'config.custom_rate', 'config.quantity']);
 
-        const configMap = new Map(configs.map(c => [c.service_id, c]));
+        const configMap = new Map<string, any>((configs as any[]).map((c: any) => [c.service_id, c]));
 
         contractLines.push({
           contract_line_id: line.contract_line_id,
@@ -982,7 +984,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           billing_frequency: line.billing_frequency || 'monthly',
           base_rate: line.base_rate ? Number(line.base_rate) : null,
           display_order: line.display_order ?? 0,
-          services: services.map(svc => {
+          services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
             return {
               service_id: svc.service_id,

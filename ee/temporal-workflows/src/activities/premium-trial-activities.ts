@@ -7,9 +7,11 @@
  */
 
 import { Context } from '@temporalio/activity';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin.js';
 
 const logger = () => Context.current().log;
+const PREMIUM_TRIAL_SWEEP_CONTEXT = 'premium-trial-expiry-sweep';
 
 export interface CheckExpiredPremiumTrialsResult {
   reverted: string[];
@@ -35,7 +37,8 @@ export async function checkExpiredPremiumTrialsActivity(): Promise<CheckExpiredP
   try {
     // Find subscriptions with an active (unconfirmed) premium trial that has expired.
     // premium_trial = 'true' means pending; 'confirmed' means the user already agreed.
-    const expiredTrials = await knex('stripe_subscriptions')
+    const expiredTrials = await tenantDb(knex, PREMIUM_TRIAL_SWEEP_CONTEXT)
+      .unscoped('stripe_subscriptions', 'premium trial expiry sweep scans subscriptions across tenants')
       .whereIn('status', ['active', 'trialing'])
       .whereRaw("metadata->>'premium_trial' = 'true'")
       .whereRaw("(metadata->>'premium_trial_end')::timestamptz < now()")
@@ -48,14 +51,14 @@ export async function checkExpiredPremiumTrialsActivity(): Promise<CheckExpiredP
         await retryOnAdminReadOnly(
           async () => {
             const k = await getAdminConnection();
+            const db = tenantDb(k, sub.tenant);
 
             // Revert tenant plan to pro
-            await k('tenants')
-              .where({ tenant: sub.tenant })
+            await db.table('tenants')
               .update({ plan: 'pro', updated_at: k.fn.now() });
 
             // Clear trial metadata on the subscription
-            const currentSub = await k('stripe_subscriptions')
+            const currentSub = await db.table('stripe_subscriptions')
               .where({ stripe_subscription_id: sub.stripe_subscription_id })
               .select('metadata')
               .first();
@@ -63,7 +66,7 @@ export async function checkExpiredPremiumTrialsActivity(): Promise<CheckExpiredP
             const metadata = currentSub?.metadata || {};
             const { premium_trial, premium_trial_started, premium_trial_end, ...remainingMetadata } = metadata;
 
-            await k('stripe_subscriptions')
+            await db.table('stripe_subscriptions')
               .where({ stripe_subscription_id: sub.stripe_subscription_id })
               .update({
                 metadata: {

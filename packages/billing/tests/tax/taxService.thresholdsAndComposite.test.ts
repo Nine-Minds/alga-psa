@@ -15,6 +15,10 @@ const h = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: h.knex, tenant: h.tenant })),
+  tenantDb: vi.fn((knex: any) => ({
+    table: (table: string) => knex(table),
+    unscoped: (table: string) => knex(table),
+  })),
 }));
 
 vi.mock('../../src/models/clientTaxSettings', () => ({

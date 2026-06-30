@@ -1,8 +1,8 @@
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-import { updateTicketInTransaction } from '@alga-psa/tickets/actions';
+import { updateTicketInTransaction } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import type { IUserWithRoles } from '@alga-psa/types';
 import {
@@ -71,52 +71,70 @@ interface PendingClose {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
+  return tenantDb(conn, tenant).table(table);
+}
+
 async function computePendingCloses(
-  knex: Knex,
+  conn: Knex | Knex.Transaction,
   tenant: string,
   ticketId?: string
 ): Promise<PendingClose[]> {
-  const bindings: Record<string, unknown> = { tenant };
-  let ticketFilter = '';
+  const db = tenantDb(conn, tenant);
+  const commentActivity = db.table('comments as c')
+    .select('c.tenant', 'c.ticket_id')
+    .max('c.created_at as last_comment_at')
+    .groupBy('c.tenant', 'c.ticket_id')
+    .as('comment_activity');
+  const auditActivity = db.table('ticket_audit_logs as a')
+    .select('a.tenant', 'a.ticket_id')
+    .max('a.occurred_at as last_audit_at')
+    .whereNotIn('a.event_type', NON_ACTIVITY_AUDIT_EVENTS)
+    .groupBy('a.tenant', 'a.ticket_id')
+    .as('audit_activity');
+
+  const pendingQuery = db.table('tickets as t');
+  db.tenantJoin(pendingQuery, 'board_auto_close_rules as r', 'r.board_id', 't.board_id', {
+    on(join) {
+      join
+        .andOn('r.trigger_status_id', '=', 't.status_id')
+        .andOnVal('r.is_enabled', '=', true);
+    },
+  });
+  db.tenantJoinSubquery(pendingQuery, commentActivity, 't.ticket_id', 'comment_activity.ticket_id', {
+    type: 'left',
+    rootTenantColumn: 't.tenant',
+    joinedTenantColumn: 'comment_activity.tenant',
+  });
+  db.tenantJoinSubquery(pendingQuery, auditActivity, 't.ticket_id', 'audit_activity.ticket_id', {
+    type: 'left',
+    rootTenantColumn: 't.tenant',
+    joinedTenantColumn: 'audit_activity.tenant',
+  });
+
   if (ticketId) {
-    ticketFilter = 'AND t.ticket_id = :ticketId';
-    bindings.ticketId = ticketId;
+    pendingQuery.where('t.ticket_id', ticketId);
   }
 
-  // NON_ACTIVITY_AUDIT_EVENTS are compile-time constants, safe to inline.
-  const nonActivityEventList = NON_ACTIVITY_AUDIT_EVENTS.map((e) => `'${e}'`).join(', ');
+  const rows = (await pendingQuery
+    .whereNull('t.closed_at')
+    .whereNull('t.master_ticket_id')
+    .select(
+      't.ticket_id',
+      'r.rule_id',
+      'r.inactivity_days',
+      'r.warning_days_before',
+      'r.close_to_status_id',
+      conn.raw(
+        `GREATEST(
+          COALESCE(comment_activity.last_comment_at, to_timestamp(0)),
+          COALESCE(audit_activity.last_audit_at, to_timestamp(0)),
+          COALESCE(t.entered_at, t.updated_at, now())
+        ) AS last_activity_at`
+      )
+    )) as Array<Record<string, any>>;
 
-  const result = await knex.raw(
-    `
-    SELECT
-      t.ticket_id,
-      r.rule_id,
-      r.inactivity_days,
-      r.warning_days_before,
-      r.close_to_status_id,
-      GREATEST(
-        COALESCE((SELECT MAX(c.created_at) FROM comments c
-                  WHERE c.tenant = t.tenant AND c.ticket_id = t.ticket_id), to_timestamp(0)),
-        COALESCE((SELECT MAX(a.occurred_at) FROM ticket_audit_logs a
-                  WHERE a.tenant = t.tenant AND a.ticket_id = t.ticket_id
-                    AND a.event_type NOT IN (${nonActivityEventList})), to_timestamp(0)),
-        COALESCE(t.entered_at, t.updated_at, now())
-      ) AS last_activity_at
-    FROM tickets t
-    JOIN board_auto_close_rules r
-      ON r.tenant = t.tenant
-     AND r.board_id = t.board_id
-     AND r.trigger_status_id = t.status_id
-     AND r.is_enabled = true
-    WHERE t.tenant = :tenant
-      AND t.closed_at IS NULL
-      AND t.master_ticket_id IS NULL
-      ${ticketFilter}
-    `,
-    bindings
-  );
-
-  return result.rows.map((row: Record<string, any>) => {
+  return rows.map((row: Record<string, any>) => {
     const lastActivity = new Date(row.last_activity_at);
     return {
       ticket_id: row.ticket_id,
@@ -135,8 +153,7 @@ async function syncAutoCloseState(
   tenant: string,
   pending: PendingClose[]
 ): Promise<void> {
-  const existing = await knex('ticket_auto_close_state')
-    .where({ tenant })
+  const existing = await tenantScopedTable(knex, 'ticket_auto_close_state', tenant)
     .select('ticket_id', 'rule_id', 'scheduled_close_at', 'warning_sent_at');
   const existingByTicket = new Map<string, (typeof existing)[number]>(
     existing.map((row: any) => [row.ticket_id, row])
@@ -150,8 +167,7 @@ async function syncAutoCloseState(
     .filter((row: any) => !pendingTicketIds.has(row.ticket_id))
     .map((row: any) => row.ticket_id);
   if (staleIds.length > 0) {
-    await knex('ticket_auto_close_state')
-      .where({ tenant })
+    await tenantScopedTable(knex, 'ticket_auto_close_state', tenant)
       .whereIn('ticket_id', staleIds)
       .del();
   }
@@ -159,7 +175,7 @@ async function syncAutoCloseState(
   for (const p of pending) {
     const current = existingByTicket.get(p.ticket_id);
     if (!current) {
-      await knex('ticket_auto_close_state')
+      await tenantScopedTable(knex, 'ticket_auto_close_state', tenant)
         .insert({
           tenant,
           ticket_id: p.ticket_id,
@@ -175,8 +191,8 @@ async function syncAutoCloseState(
     if (currentScheduled !== p.scheduled_close_at.getTime() || current.rule_id !== p.rule_id) {
       // Timer moved (new activity or rule change) — reset any pending warning
       // so the customer is warned again before the new deadline.
-      await knex('ticket_auto_close_state')
-        .where({ tenant, ticket_id: p.ticket_id })
+      await tenantScopedTable(knex, 'ticket_auto_close_state', tenant)
+        .where({ ticket_id: p.ticket_id })
         .update({
           rule_id: p.rule_id,
           scheduled_close_at: p.scheduled_close_at.toISOString(),
@@ -190,14 +206,12 @@ async function syncAutoCloseState(
 
 async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
   const now = new Date();
-  const due = await knex('ticket_auto_close_state as s')
-    .join('board_auto_close_rules as r', function joinRules() {
-      this.on('r.tenant', 's.tenant').andOn('r.rule_id', 's.rule_id');
-    })
-    .join('tickets as t', function joinTickets() {
-      this.on('t.tenant', 's.tenant').andOn('t.ticket_id', 's.ticket_id');
-    })
-    .where('s.tenant', tenant)
+  const db = tenantDb(knex, tenant);
+  const dueQuery = tenantScopedTable(knex, 'ticket_auto_close_state as s', tenant);
+  db.tenantJoin(dueQuery, 'board_auto_close_rules as r', 'r.rule_id', 's.rule_id');
+  db.tenantJoin(dueQuery, 'tickets as t', 't.ticket_id', 's.ticket_id');
+
+  const due = (await dueQuery
     .whereNull('s.warning_sent_at')
     .whereNotNull('r.warning_days_before')
     .whereRaw("s.scheduled_close_at - (r.warning_days_before * interval '1 day') <= now()")
@@ -211,7 +225,7 @@ async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
       't.contact_name_id',
       't.assigned_to',
       't.entered_by'
-    );
+    )) as Array<Record<string, any>>;
 
   if (!due.length) return;
 
@@ -237,8 +251,8 @@ async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
       });
 
       await withTransaction(knex, async (trx: Knex.Transaction) => {
-        await trx('ticket_auto_close_state')
-          .where({ tenant, ticket_id: row.ticket_id })
+        await tenantScopedTable(trx, 'ticket_auto_close_state', tenant)
+          .where({ ticket_id: row.ticket_id })
           .update({ warning_sent_at: now.toISOString(), updated_at: trx.fn.now() });
 
         await writeTicketActivity(trx, {
@@ -263,14 +277,19 @@ async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
 }
 
 async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: number; skipped: number }> {
-  const due = await knex('ticket_auto_close_state as s')
-    .join('board_auto_close_rules as r', function joinRules() {
-      this.on('r.tenant', 's.tenant').andOn('r.rule_id', 's.rule_id');
-    })
-    .where('s.tenant', tenant)
+  const db = tenantDb(knex, tenant);
+  const dueQuery = tenantScopedTable(knex, 'ticket_auto_close_state as s', tenant);
+  db.tenantJoin(dueQuery, 'board_auto_close_rules as r', 'r.rule_id', 's.rule_id');
+
+  const due = (await dueQuery
     .where('s.scheduled_close_at', '<=', knex.fn.now())
     .where('r.is_enabled', true)
-    .select('s.ticket_id', 's.rule_id', 'r.inactivity_days', 'r.close_to_status_id');
+    .select(
+      's.ticket_id',
+      's.rule_id',
+      'r.inactivity_days',
+      'r.close_to_status_id'
+    )) as Array<Record<string, any>>;
 
   let closed = 0;
   let skipped = 0;
@@ -282,14 +301,16 @@ async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: nu
         // must still match the rule and still be inactive past the deadline.
         const [stillPending] = await computePendingCloses(trx, tenant, row.ticket_id);
         if (!stillPending || stillPending.rule_id !== row.rule_id) {
-          await trx('ticket_auto_close_state').where({ tenant, ticket_id: row.ticket_id }).del();
+          await tenantScopedTable(trx, 'ticket_auto_close_state', tenant)
+            .where({ ticket_id: row.ticket_id })
+            .del();
           skipped++;
           return;
         }
         if (stillPending.scheduled_close_at.getTime() > Date.now()) {
           // Activity arrived after the scan snapshot — push the timer back.
-          await trx('ticket_auto_close_state')
-            .where({ tenant, ticket_id: row.ticket_id })
+          await tenantScopedTable(trx, 'ticket_auto_close_state', tenant)
+            .where({ ticket_id: row.ticket_id })
             .update({
               scheduled_close_at: stillPending.scheduled_close_at.toISOString(),
               warning_sent_at: null,
@@ -299,8 +320,8 @@ async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: nu
           return;
         }
 
-        const targetStatus = await trx('statuses')
-          .where({ tenant, status_id: row.close_to_status_id })
+        const targetStatus = await tenantScopedTable(trx, 'statuses', tenant)
+          .where({ status_id: row.close_to_status_id })
           .first();
         if (!targetStatus?.is_closed) {
           throw new Error(`Auto-close target status ${row.close_to_status_id} is missing or not closed`);
@@ -331,7 +352,9 @@ async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: nu
           { systemActor: true, bypassCloseRules: { source: 'auto_close' } }
         );
 
-        await trx('ticket_auto_close_state').where({ tenant, ticket_id: row.ticket_id }).del();
+        await tenantScopedTable(trx, 'ticket_auto_close_state', tenant)
+          .where({ ticket_id: row.ticket_id })
+          .del();
         closed++;
       });
     } catch (error) {

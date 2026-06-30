@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { workflowTenantTable } from '../lib/workflowTenantDb';
 
 export const WORKFLOW_AUDIT_CSV_HEADERS = [
   'timestamp',
@@ -233,10 +234,7 @@ export const buildActorMap = async (
   const ids = Array.from(new Set(userIds.filter(Boolean)));
   if (!ids.length) return new Map();
 
-  const query = knex('users').whereIn('user_id', ids);
-  if (tenant) {
-    query.andWhere('tenant', tenant);
-  }
+  const query = workflowTenantTable<ActorUserRow>(knex, tenant, 'users').whereIn('user_id', ids);
   const users = await query.select<ActorUserRow[]>('user_id', 'first_name', 'last_name', 'email');
 
   const map = new Map<string, string>();

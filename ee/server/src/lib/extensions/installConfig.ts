@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import type { Knex } from 'knex';
 
@@ -95,10 +96,9 @@ function mergeProviders(...sources: unknown[]): string[] {
 async function loadInstallRow(db: Knex, { tenantId, extensionId }: InstallLookupParams): Promise<InstallRow | null> {
   const slug = extensionId.toLowerCase();
   const isId = isUuid(extensionId);
-  const row = await db('tenant_extension_install as install')
+  const row = await tenantDb(db, tenantId).table('tenant_extension_install as install')
     .leftJoin('extension_registry as registry', 'registry.id', 'install.registry_id')
     .leftJoin('extension_version as version', 'version.id', 'install.version_id')
-    .where('install.tenant_id', tenantId)
     .andWhere((builder) => {
       if (isId) {
         builder.where('install.id', extensionId);
@@ -125,7 +125,16 @@ async function loadInstallRow(db: Knex, { tenantId, extensionId }: InstallLookup
 }
 
 async function loadInstallRowById(db: Knex, installId: string): Promise<InstallRow | null> {
-  const row = await db('tenant_extension_install as install')
+  // Explicit unscoped probe: scheduler/internal callers only pass installId, so
+  // discover the tenant before constructing the tenant facade.
+  const probe = await tenantDb(db, 'tenant-discovery')
+    .unscoped<{ tenant_id: string }>('tenant_extension_install', 'discover tenant for extension install config')
+    .where('id', installId)
+    .first(['tenant_id']);
+  const tenantId = probe?.tenant_id ? String(probe.tenant_id) : null;
+  if (!tenantId) return null;
+
+  const row = await tenantDb(db, tenantId).table('tenant_extension_install as install')
     .leftJoin('extension_registry as registry', 'registry.id', 'install.registry_id')
     .leftJoin('extension_version as version', 'version.id', 'install.version_id')
     .where('install.id', installId)
@@ -144,20 +153,20 @@ async function loadInstallRowById(db: Knex, installId: string): Promise<InstallR
   return row ?? null;
 }
 
-async function loadBundleContentHash(db: Knex, versionId: string): Promise<string | null> {
-  const bundle = await db('extension_bundle')
+async function loadBundleContentHash(db: Knex, tenantId: string, versionId: string): Promise<string | null> {
+  const bundle = await tenantDb(db, tenantId).table('extension_bundle')
     .where({ version_id: versionId })
     .orderBy('created_at', 'desc')
     .first(['content_hash']);
   return bundle?.content_hash ?? null;
 }
 
-async function loadConfigRow(db: Knex, installId: string) {
-  return db('tenant_extension_install_config').where({ install_id: installId }).first();
+async function loadConfigRow(db: Knex, tenantId: string, installId: string) {
+  return tenantDb(db, tenantId).table('tenant_extension_install_config').where({ install_id: installId }).first();
 }
 
-async function loadSecretsRow(db: Knex, installId: string) {
-  return db('tenant_extension_install_secrets').where({ install_id: installId }).first();
+async function loadSecretsRow(db: Knex, tenantId: string, installId: string) {
+  return tenantDb(db, tenantId).table('tenant_extension_install_secrets').where({ install_id: installId }).first();
 }
 
 function buildSecretEnvelope(row: any): SecretEnvelopePayload | null {
@@ -222,9 +231,9 @@ export async function getInstallConfigByInstallId(installId: string): Promise<In
 
 async function hydrateInstallConfig(db: Knex, installRow: InstallRow): Promise<InstallConfigResult> {
   const [bundleHash, configRow, secretsRow] = await Promise.all([
-    loadBundleContentHash(db, installRow.version_id),
-    loadConfigRow(db, installRow.install_id),
-    loadSecretsRow(db, installRow.install_id),
+    loadBundleContentHash(db, installRow.tenant_id, installRow.version_id),
+    loadConfigRow(db, installRow.tenant_id, installRow.install_id),
+    loadSecretsRow(db, installRow.tenant_id, installRow.install_id),
   ]);
 
   const installationConfig = combineConfigRow(configRow, installRow);
@@ -283,6 +292,7 @@ interface UpsertInstallSecretsResult {
 
 interface DeleteInstallSecretsInput {
   installId: string;
+  tenantId: string;
   connection?: DbConnection;
 }
 
@@ -439,7 +449,7 @@ export async function upsertInstallConfigRecord(input: UpsertInstallConfigInput)
     updated_at: connection.fn.now(),
   };
 
-  const rows = await connection('tenant_extension_install_config')
+  const rows = await tenantDb(connection, tenantId).table('tenant_extension_install_config')
     .insert(insertPayload)
     .onConflict('install_id')
     .merge({
@@ -533,7 +543,10 @@ export async function upsertInstallSecretsRecord(input: UpsertInstallSecretsInpu
   const connection = (await resolveConnection(input.connection)) as Knex;
 
   // Load existing secrets to merge
-  const existingRow = await connection('tenant_extension_install_secrets').where({ install_id: installId }).first();
+  const existingRow = await tenantDb(connection, tenantId)
+    .table('tenant_extension_install_secrets')
+    .where({ install_id: installId })
+    .first();
   let mergedSecrets = { ...input.secrets };
 
   if (existingRow) {
@@ -557,7 +570,7 @@ export async function upsertInstallSecretsRecord(input: UpsertInstallSecretsInpu
   });
 
   if (!envelope) {
-    await deleteInstallSecretsRecord({ installId, connection });
+    await deleteInstallSecretsRecord({ installId, tenantId, connection });
     return { version: null, algorithm: null, cleared: true };
   }
 
@@ -580,7 +593,7 @@ export async function upsertInstallSecretsRecord(input: UpsertInstallSecretsInpu
     updated_at: connection.fn.now(),
   };
 
-  const rows = await connection('tenant_extension_install_secrets')
+  const rows = await tenantDb(connection, tenantId).table('tenant_extension_install_secrets')
     .insert(insertPayload)
     .onConflict('install_id')
     .merge({
@@ -604,8 +617,8 @@ export async function upsertInstallSecretsRecord(input: UpsertInstallSecretsInpu
   };
 }
 
-export async function deleteInstallSecretsRecord({ installId, connection }: DeleteInstallSecretsInput): Promise<void> {
-  if (!installId) return;
+export async function deleteInstallSecretsRecord({ installId, tenantId, connection }: DeleteInstallSecretsInput): Promise<void> {
+  if (!installId || !tenantId) return;
   const db = (await resolveConnection(connection)) as Knex;
-  await db('tenant_extension_install_secrets').where({ install_id: installId }).del();
+  await tenantDb(db, tenantId).table('tenant_extension_install_secrets').where({ install_id: installId }).del();
 }

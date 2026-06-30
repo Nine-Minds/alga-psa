@@ -12,6 +12,7 @@
 import logger from '@alga-psa/core/logger';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import { rmmAlertRuleActionsSchema, providerLabel } from '@alga-psa/shared/rmm/alerts';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getConnection } from '../../db/db';
 import { getEventBus } from '../index';
@@ -48,15 +49,16 @@ async function handleAlertTriggered(event: unknown): Promise<void> {
 
   try {
     const knex = await getConnection(tenantId);
+    const db = tenantDb(knex, tenantId);
 
-    const alert = await knex('rmm_alerts')
-      .where({ tenant: tenantId, alert_id: alertId })
+    const alert = await db.table('rmm_alerts')
+      .where({ alert_id: alertId })
       .first('matched_rule_id', 'auto_ticket_created', 'ticket_id', 'device_name', 'severity', 'message');
     // Notify only when this alert just created its ticket.
     if (!alert?.auto_ticket_created || !alert.ticket_id || !alert.matched_rule_id) return;
 
-    const rule = await knex('rmm_alert_rules')
-      .where({ tenant: tenantId, rule_id: alert.matched_rule_id })
+    const rule = await db.table('rmm_alert_rules')
+      .where({ rule_id: alert.matched_rule_id })
       .first('actions');
     if (!rule) return;
     const parsed = rmmAlertRuleActionsSchema.safeParse(
@@ -65,8 +67,8 @@ async function handleAlertTriggered(event: unknown): Promise<void> {
     const notifyUserIds = parsed.success ? parsed.data.notifyUserIds ?? [] : [];
     if (notifyUserIds.length === 0) return;
 
-    const ticket = await knex('tickets')
-      .where({ tenant: tenantId, ticket_id: alert.ticket_id })
+    const ticket = await db.table('tickets')
+      .where({ ticket_id: alert.ticket_id })
       .first('ticket_number');
     const provider = typeof payload.provider === 'string' ? providerLabel(payload.provider) : 'RMM';
     const deviceName = alert.device_name ?? 'unknown device';
@@ -127,18 +129,20 @@ async function deliverEmail(
   context: Record<string, string>
 ): Promise<void> {
   try {
-    const settings = await knex('notification_settings').where({ tenant: tenantId }).first();
+    const db = tenantDb(knex, tenantId);
+
+    const settings = await db.table('notification_settings').first();
     if (settings && !settings.is_enabled) return;
 
-    const subtype = await knex('notification_subtypes').where({ name: SUBTYPE_NAME }).first();
+    const subtype = await db.table('notification_subtypes').where({ name: SUBTYPE_NAME }).first();
     if (!subtype || !subtype.is_enabled) return;
 
-    const preference = await knex('user_notification_preferences')
-      .where({ tenant: tenantId, user_id: userId, subtype_id: subtype.id })
+    const preference = await db.table('user_notification_preferences')
+      .where({ user_id: userId, subtype_id: subtype.id })
       .first();
     if (preference && !preference.is_enabled) return;
 
-    const user = await knex('users').where({ tenant: tenantId, user_id: userId }).first('email');
+    const user = await db.table('users').where({ user_id: userId }).first('email');
     if (!user?.email) return;
 
     await sendEventEmail({

@@ -19,7 +19,8 @@ describe('multi-active reporting/export/accounting audit wiring', () => {
     expect(invoiceQueriesSource).toContain('getClientContractPurchaseOrderContext({');
     expect(invoiceQueriesSource).toContain('getPurchaseOrderConsumedCents({ knex, tenant, clientContractId })');
 
-    expect(purchaseOrderServiceSource).toContain('.where({ tenant, client_contract_id: clientContractId })');
+    expect(purchaseOrderServiceSource).toContain("tenantDb(knex, tenant).table('invoices')");
+    expect(purchaseOrderServiceSource).toContain('.where({ client_contract_id: clientContractId })');
   });
 
   it('T048: confirms audited files do not include singleton active-contract selectors', () => {

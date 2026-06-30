@@ -1,7 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 export interface SchedulingProjectTaskDetailsRecord {
@@ -24,6 +24,14 @@ export interface SchedulingProjectTaskDetailsRecord {
   }>;
 }
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 export const getSchedulingProjectTaskById = withAuth(async (
   _user,
   { tenant },
@@ -32,26 +40,10 @@ export const getSchedulingProjectTaskById = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const task = await trx('project_tasks as pt')
-      .leftJoin('project_phases as pp', function joinPhases() {
-        this.on('pt.phase_id', '=', 'pp.phase_id')
-          .andOn('pt.tenant', '=', 'pp.tenant');
-      })
-      .leftJoin('projects as p', function joinProjects() {
-        this.on('pp.project_id', '=', 'p.project_id')
-          .andOn('pp.tenant', '=', 'p.tenant');
-      })
-      .leftJoin('project_status_mappings as psm', function joinStatuses() {
-        this.on('pt.project_status_mapping_id', '=', 'psm.project_status_mapping_id')
-          .andOn('pt.tenant', '=', 'psm.tenant');
-      })
-      .leftJoin('users as u', function joinUsers() {
-        this.on('pt.assigned_to', '=', 'u.user_id')
-          .andOn('pt.tenant', '=', 'u.tenant');
-      })
+    const tenantFacade = tenantDb(trx, tenant);
+    const taskQuery = tenantScopedTable(trx, 'project_tasks as pt', tenant)
       .where({
         'pt.task_id': taskId,
-        'pt.tenant': tenant,
       })
       .select(
         'pt.task_id',
@@ -68,17 +60,20 @@ export const getSchedulingProjectTaskById = withAuth(async (
         trx.raw(`CASE WHEN u.first_name IS NOT NULL OR u.last_name IS NOT NULL
           THEN TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')))
           ELSE u.username END as assigned_to_name`)
-      )
-      .first();
+      );
+    tenantFacade.tenantJoin(taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id', { type: 'left' });
+    tenantFacade.tenantJoin(taskQuery, 'projects as p', 'pp.project_id', 'p.project_id', { type: 'left' });
+    tenantFacade.tenantJoin(taskQuery, 'project_status_mappings as psm', 'pt.project_status_mapping_id', 'psm.project_status_mapping_id', { type: 'left' });
+    tenantFacade.tenantJoin(taskQuery, 'users as u', 'pt.assigned_to', 'u.user_id', { type: 'left' });
+    const task = await taskQuery.first();
 
     if (!task) {
       return null;
     }
 
-    const checklistItems = await trx('task_checklist_items')
+    const checklistItems = await tenantScopedTable(trx, 'task_checklist_items', tenant)
       .where({
         task_id: taskId,
-        tenant,
       })
       .select('checklist_item_id', 'item_name', 'completed')
       .orderBy('created_at', 'asc');

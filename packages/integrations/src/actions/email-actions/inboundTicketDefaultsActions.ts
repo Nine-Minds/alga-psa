@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { InboundTicketDefaults } from '@alga-psa/types';
 
@@ -10,9 +10,8 @@ const assertTicketStatusBelongsToBoard = async (
   boardId: string,
   statusId: string
 ): Promise<void> => {
-  const matchingStatus = await knex('statuses')
+  const matchingStatus = await tenantDb(knex, tenant).table('statuses')
     .where({
-      tenant,
       board_id: boardId,
       status_id: statusId,
       status_type: 'ticket',
@@ -31,8 +30,7 @@ export const getInboundTicketDefaults = withAuth(async (
   const { knex } = await createTenantKnex();
   
   try {
-    const defaults = await knex('inbound_ticket_defaults')
-      .where({ tenant })
+    const defaults = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
       .orderBy('created_at', 'desc')
       .select(
         'id',
@@ -91,7 +89,7 @@ export const createInboundTicketDefaults = withAuth(async (
 
     await assertTicketStatusBelongsToBoard(knex, tenant, data.board_id, data.status_id);
 
-    const [defaults] = await knex('inbound_ticket_defaults')
+    const [defaults] = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
       .insert({
         id: knex.raw('gen_random_uuid()'),
         tenant,
@@ -165,8 +163,8 @@ export const updateInboundTicketDefaults = withAuth(async (
     // If updating defaults, validate required fields
     if (data.board_id !== undefined || data.status_id !== undefined || data.priority_id !== undefined) {
       // Get current values to check if all required fields will be present after update
-      const current = await knex('inbound_ticket_defaults')
-        .where({ id, tenant })
+      const current = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
+        .where({ id })
         .select('board_id', 'status_id', 'priority_id')
         .first();
       
@@ -198,8 +196,8 @@ export const updateInboundTicketDefaults = withAuth(async (
     if (data.location_id !== undefined) updateData.location_id = data.location_id;
     if (data.is_active !== undefined) updateData.is_active = data.is_active;
 
-    const [defaults] = await knex('inbound_ticket_defaults')
-      .where({ id, tenant })
+    const [defaults] = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
+      .where({ id })
       .update(updateData)
       .returning([
         'id',
@@ -245,29 +243,29 @@ export const deleteInboundTicketDefaults = withAuth(async (
     const deletedCount = await knex.transaction<number>(async (trx) => {
       // Clear all known references before deleting the defaults row.
       // This keeps delete behavior consistent with nullable destination references.
-      await trx('email_providers')
-        .where({ tenant, inbound_ticket_defaults_id: id })
+      await tenantDb(trx, tenant).table('email_providers')
+        .where({ inbound_ticket_defaults_id: id })
         .update({
           inbound_ticket_defaults_id: null,
           updated_at: trx.fn.now(),
         });
 
-      await trx('clients')
-        .where({ tenant, inbound_ticket_defaults_id: id })
+      await tenantDb(trx, tenant).table('clients')
+        .where({ inbound_ticket_defaults_id: id })
         .update({
           inbound_ticket_defaults_id: null,
           updated_at: trx.fn.now(),
         });
 
-      await trx('contacts')
-        .where({ tenant, inbound_ticket_defaults_id: id })
+      await tenantDb(trx, tenant).table('contacts')
+        .where({ inbound_ticket_defaults_id: id })
         .update({
           inbound_ticket_defaults_id: null,
           updated_at: trx.fn.now(),
         });
 
-      const rowsDeleted = await trx('inbound_ticket_defaults')
-        .where({ id, tenant })
+      const rowsDeleted = await tenantDb(trx, tenant).table('inbound_ticket_defaults')
+        .where({ id })
         .delete();
 
       return Number(rowsDeleted);
@@ -290,8 +288,8 @@ export const getInboundTicketDefaultsById = withAuth(async (
   const { knex } = await createTenantKnex();
   
   try {
-    const defaults = await knex('inbound_ticket_defaults')
-      .where({ id, tenant })
+    const defaults = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
+      .where({ id })
       .select(
         'id',
         'tenant',

@@ -1,10 +1,39 @@
 import { BaseModel } from './BaseModel';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
+import { workflowTenantTable } from '../lib/workflowTenantDb';
 import {
   type ICreateEventCatalogEntry,
   type IEventCatalogEntry,
   type IUpdateEventCatalogEntry,
 } from '@alga-psa/workflows/types';
+
+const SYSTEM_EVENT_CATALOG_TENANT = '__workflow_system_event_catalog__';
+
+const assertTenant = (tenantId: string | null | undefined): string => {
+  const tenant = String(tenantId ?? '').trim();
+  if (!tenant) {
+    throw new Error('tenant is required for event catalog access');
+  }
+  return tenant;
+};
+
+const eventCatalog = (
+  knexOrTrx: Knex | Knex.Transaction,
+  tenantId: string
+): Knex.QueryBuilder<IEventCatalogEntry, IEventCatalogEntry[]> =>
+  workflowTenantTable<IEventCatalogEntry>(knexOrTrx, tenantId, 'event_catalog');
+
+const systemCatalogTenant = (tenantId: string | null | undefined): string => {
+  const tenant = String(tenantId ?? '').trim();
+  return tenant || SYSTEM_EVENT_CATALOG_TENANT;
+};
+
+const systemEventCatalog = (
+  knexOrTrx: Knex | Knex.Transaction,
+  tenantId: string | null | undefined
+): Knex.QueryBuilder<any, any[]> =>
+  tenantDb(knexOrTrx, systemCatalogTenant(tenantId)).table('system_event_catalog');
 
 /**
  * Model for event catalog entries
@@ -21,7 +50,8 @@ export class EventCatalogModel extends BaseModel {
     knexOrTrx: Knex | Knex.Transaction,
     data: ICreateEventCatalogEntry
   ): Promise<IEventCatalogEntry> {
-    const [entry] = await knexOrTrx('event_catalog')
+    const tenant = assertTenant(data.tenant);
+    const [entry] = await eventCatalog(knexOrTrx, tenant)
       .insert(data)
       .returning('*');
     
@@ -41,14 +71,15 @@ export class EventCatalogModel extends BaseModel {
     eventId: string,
     tenantId: string
   ): Promise<IEventCatalogEntry | null> {
-    const tenantEntry = await knexOrTrx('event_catalog')
-      .where({ event_id: eventId, tenant: tenantId })
+    const tenant = assertTenant(tenantId);
+    const tenantEntry = await eventCatalog(knexOrTrx, tenant)
+      .where({ event_id: eventId })
       .first();
 
     if (tenantEntry) return tenantEntry;
 
     // System event catalog entries are global (no tenant column).
-    const systemEntry = await knexOrTrx('system_event_catalog')
+    const systemEntry = await systemEventCatalog(knexOrTrx, tenant)
       .where({ event_id: eventId })
       .first();
 
@@ -68,14 +99,15 @@ export class EventCatalogModel extends BaseModel {
     eventType: string,
     tenantId: string
   ): Promise<IEventCatalogEntry | null> {
-    const tenantEntry = await knexOrTrx('event_catalog')
-      .where({ event_type: eventType, tenant: tenantId })
+    const tenant = assertTenant(tenantId);
+    const tenantEntry = await eventCatalog(knexOrTrx, tenant)
+      .where('event_type', eventType)
       .first();
 
     if (tenantEntry) return tenantEntry;
 
     // System event catalog entries are global (no tenant column).
-    const systemEntry = await knexOrTrx('system_event_catalog')
+    const systemEntry = await systemEventCatalog(knexOrTrx, tenant)
       .where({ event_type: eventType })
       .first();
 
@@ -102,21 +134,21 @@ export class EventCatalogModel extends BaseModel {
   ): Promise<IEventCatalogEntry[]> {
     const { category, isSystemEvent, limit = 100, offset = 0 } = options;
     
+    const tenant = assertTenant(tenantId);
     let query;
     if (isSystemEvent === true) {
-      query = knexOrTrx('system_event_catalog');
+      query = systemEventCatalog(knexOrTrx, tenant);
     } else if (isSystemEvent === false) {
-      query = knexOrTrx('event_catalog').where('tenant', tenantId);
+      query = eventCatalog(knexOrTrx, tenant);
     } else {
       // If isSystemEvent is undefined, query both tables and combine
-      const tenantEventsQuery = knexOrTrx('event_catalog')
-        .where('tenant', tenantId);
+      const tenantEventsQuery = eventCatalog(knexOrTrx, tenant);
       
       if (category !== undefined) {
         tenantEventsQuery.where('category', category);
       }
 
-      const systemEventsQuery = knexOrTrx('system_event_catalog');
+      const systemEventsQuery = systemEventCatalog(knexOrTrx, tenant);
 
       if (category !== undefined) {
         systemEventsQuery.where('category', category);
@@ -157,10 +189,10 @@ export class EventCatalogModel extends BaseModel {
     tenantId: string,
     data: IUpdateEventCatalogEntry
   ): Promise<IEventCatalogEntry | null> {
-    const [entry] = await knexOrTrx('event_catalog')
+    const tenant = assertTenant(tenantId);
+    const [entry] = await eventCatalog(knexOrTrx, tenant)
       .where({
-        event_id: eventId,
-        tenant: tenantId
+        event_id: eventId
       })
       .update({
         ...data,
@@ -184,10 +216,10 @@ export class EventCatalogModel extends BaseModel {
     eventId: string,
     tenantId: string
   ): Promise<boolean> {
-    const result = await knexOrTrx('event_catalog')
+    const tenant = assertTenant(tenantId);
+    const result = await eventCatalog(knexOrTrx, tenant)
       .where({
-        event_id: eventId,
-        tenant: tenantId
+        event_id: eventId
       })
       .delete();
     
@@ -206,7 +238,7 @@ export class EventCatalogModel extends BaseModel {
   ): Promise<void> {
     // Check if system events already exist for this tenant
     // Check if system events already exist
-    const existingEvents = await knexOrTrx('system_event_catalog')
+    const existingEvents = await systemEventCatalog(knexOrTrx, tenantId)
       .count('* as count')
       .first();
     
@@ -351,6 +383,6 @@ export class EventCatalogModel extends BaseModel {
 
     // Insert system events
     // Insert system events
-    await knexOrTrx('system_event_catalog').insert(systemEvents);
+    await systemEventCatalog(knexOrTrx, tenantId).insert(systemEvents);
   }
 }

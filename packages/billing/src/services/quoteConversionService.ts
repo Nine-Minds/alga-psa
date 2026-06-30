@@ -7,6 +7,7 @@ import type {
   QuoteConversionPreview,
   QuoteConversionPreviewItem,
 } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import Contract from '../models/contract';
@@ -32,6 +33,7 @@ async function getTableColumns(
 
 async function insertRowsUsingExistingColumns(
   knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
   tableName: string,
   rows: Record<string, unknown>[]
 ): Promise<void> {
@@ -44,7 +46,7 @@ async function insertRowsUsingExistingColumns(
     Object.entries(row).filter(([key, value]) => columns.has(key) && value !== undefined)
   ));
 
-  await knexOrTrx(tableName).insert(filteredRows);
+  await tenantDb(knexOrTrx, tenant).table(tableName).insert(filteredRows);
 }
 
 export interface QuoteToContractConversionResult {
@@ -106,8 +108,7 @@ async function resolveLocationNames(
     return new Map();
   }
 
-  const rows = await knexOrTrx('client_locations')
-    .where({ tenant })
+  const rows = await tenantDb(knexOrTrx, tenant).table('client_locations')
     .whereIn('location_id', locationIds)
     .select('location_id', 'location_name', 'address_line1');
 
@@ -332,7 +333,8 @@ export async function convertQuoteToDraftContract(
     contractLineType: mapQuoteItemToContractLineType(item),
   }));
 
-  await knexOrTrx('contract_lines').insert(
+  const db = tenantDb(knexOrTrx, tenant);
+  await db.table('contract_lines').insert(
     contractLineMappings.map(({ item, contractLineId, contractLineType }, index) => ({
       tenant,
       contract_line_id: contractLineId,
@@ -368,6 +370,7 @@ export async function convertQuoteToDraftContract(
 
   await insertRowsUsingExistingColumns(
     knexOrTrx,
+    tenant,
     'contract_line_services',
     configRows.map(({ contractLineId, serviceId, item }) => ({
       tenant,
@@ -381,7 +384,7 @@ export async function convertQuoteToDraftContract(
   );
 
   if (configRows.length > 0) {
-    await knexOrTrx('contract_line_service_configuration').insert(
+    await db.table('contract_line_service_configuration').insert(
       configRows.map(({ configId, contractLineId, contractLineType, serviceId, item }) => ({
         tenant,
         config_id: configId,
@@ -398,7 +401,7 @@ export async function convertQuoteToDraftContract(
 
   const fixedConfigRows = configRows.filter((row) => row.contractLineType === 'Fixed');
   if (fixedConfigRows.length > 0) {
-    await knexOrTrx('contract_line_service_fixed_config').insert(
+    await db.table('contract_line_service_fixed_config').insert(
       fixedConfigRows.map(({ configId, item }) => ({
         tenant,
         config_id: configId,
@@ -411,7 +414,7 @@ export async function convertQuoteToDraftContract(
 
   const hourlyConfigRows = configRows.filter((row) => row.contractLineType === 'Hourly');
   if (hourlyConfigRows.length > 0) {
-    await knexOrTrx('contract_line_service_hourly_config').insert(
+    await db.table('contract_line_service_hourly_config').insert(
       hourlyConfigRows.map(({ configId }) => ({
         tenant,
         config_id: configId,
@@ -427,7 +430,7 @@ export async function convertQuoteToDraftContract(
       }))
     );
 
-    await knexOrTrx('contract_line_service_hourly_configs').insert(
+    await db.table('contract_line_service_hourly_configs').insert(
       hourlyConfigRows.map(({ configId, item }) => ({
         tenant,
         config_id: configId,
@@ -442,7 +445,7 @@ export async function convertQuoteToDraftContract(
 
   const usageConfigRows = configRows.filter((row) => row.contractLineType === 'Usage');
   if (usageConfigRows.length > 0) {
-    await knexOrTrx('contract_line_service_usage_config').insert(
+    await db.table('contract_line_service_usage_config').insert(
       usageConfigRows.map(({ configId, item }) => ({
         tenant,
         config_id: configId,
@@ -457,7 +460,7 @@ export async function convertQuoteToDraftContract(
   }
 
   const clientContractId = uuidv4();
-  await knexOrTrx('client_contracts').insert({
+  await db.table('client_contracts').insert({
     tenant,
     client_contract_id: clientContractId,
     client_id: quote.client_id,
@@ -469,8 +472,8 @@ export async function convertQuoteToDraftContract(
     updated_at: nowIso,
   });
 
-  await knexOrTrx('quotes')
-    .where({ tenant, quote_id: quote.quote_id })
+  await db.table('quotes')
+    .where({ quote_id: quote.quote_id })
     .update({
       converted_contract_id: contract.contract_id,
       updated_by: performedBy ?? quote.updated_by ?? quote.created_by ?? null,
@@ -519,8 +522,9 @@ export async function convertQuoteToDraftInvoice(
   }
 
   if (quote.converted_invoice_id) {
-    const existingInvoice = await knexOrTrx('invoices')
-      .where({ tenant, invoice_id: quote.converted_invoice_id })
+    const db = tenantDb(knexOrTrx, tenant);
+    const existingInvoice = await db.table('invoices')
+      .where({ invoice_id: quote.converted_invoice_id })
       .first();
 
     if (existingInvoice) {
@@ -528,7 +532,7 @@ export async function convertQuoteToDraftInvoice(
         quote: await Quote.getById(knexOrTrx, tenant, quote.quote_id) as IQuote,
         invoice: {
           ...existingInvoice,
-          invoice_charges: await knexOrTrx('invoice_charges').where({ tenant, invoice_id: existingInvoice.invoice_id }),
+          invoice_charges: await db.table('invoice_charges').where({ invoice_id: existingInvoice.invoice_id }),
         } as IInvoice,
       };
     }
@@ -550,7 +554,8 @@ export async function convertQuoteToDraftInvoice(
   });
 
   const invoiceId = uuidv4();
-  await knexOrTrx('invoices').insert({
+  const db = tenantDb(knexOrTrx, tenant);
+  await db.table('invoices').insert({
     tenant,
     invoice_id: invoiceId,
     client_id: quote.client_id,
@@ -614,25 +619,25 @@ export async function convertQuoteToDraftInvoice(
       : null,
   }));
 
-  await insertRowsUsingExistingColumns(knexOrTrx, 'invoice_charges', invoiceChargeRows);
+  await insertRowsUsingExistingColumns(knexOrTrx, tenant, 'invoice_charges', invoiceChargeRows);
 
   const invoiceSubtotal = invoiceChargeRows.reduce((sum, row) => sum + Number(row.net_amount), 0);
   const invoiceTax = invoiceChargeRows.reduce((sum, row) => sum + Number(row.tax_amount), 0);
 
-  await knexOrTrx('invoices')
-    .where({ tenant, invoice_id: invoiceId })
+  await db.table('invoices')
+    .where({ invoice_id: invoiceId })
     .update({
       subtotal: Math.round(invoiceSubtotal),
       tax: Math.round(invoiceTax),
       total_amount: Math.round(invoiceSubtotal + invoiceTax),
     });
 
-  const invoice = await knexOrTrx('invoices')
-    .where({ tenant, invoice_id: invoiceId })
+  const invoice = await db.table('invoices')
+    .where({ invoice_id: invoiceId })
     .first();
 
-  await knexOrTrx('quotes')
-    .where({ tenant, quote_id: quote.quote_id })
+  await db.table('quotes')
+    .where({ quote_id: quote.quote_id })
     .update({
       converted_invoice_id: invoiceId,
       updated_by: performedBy ?? quote.updated_by ?? quote.created_by ?? null,
@@ -693,8 +698,8 @@ export async function convertQuoteToDraftContractAndInvoice(
   const invoiceResult = await convertQuoteToDraftInvoice(knexOrTrx, tenant, quoteId, performedBy);
   const nowIso = new Date().toISOString();
 
-  await knexOrTrx('quotes')
-    .where({ tenant, quote_id: quoteId })
+  await tenantDb(knexOrTrx, tenant).table('quotes')
+    .where({ quote_id: quoteId })
     .update({
       status: 'converted',
       converted_at: nowIso,

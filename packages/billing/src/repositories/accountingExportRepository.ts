@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
   AccountingExportBatch,
   AccountingExportError,
@@ -12,6 +12,12 @@ import {
 } from '@alga-psa/types';
 
 type Nullable<T> = T | null | undefined;
+
+interface InvoiceTaxSourceProjection {
+  tenant: string;
+  invoice_id: string;
+  tax_source: string | null;
+}
 
 const ACCOUNTING_EXPORT_SERVICE_PERIOD_SOURCES = new Set<AccountingExportServicePeriodSource>([
   'canonical_detail_periods',
@@ -231,11 +237,15 @@ export class AccountingExportRepository {
     return this.tenantId;
   }
 
+  private table<Row extends object = Record<string, unknown>>(tableExpression: string, tenant = this.requireTenant()) {
+    return tenantDb(this.knex, tenant).table<Row>(tableExpression);
+  }
+
   async createBatch(input: CreateExportBatchInput): Promise<AccountingExportBatch> {
     const tenant = this.requireTenant();
     const normalizedFilters = input.filters && Object.keys(input.filters).length > 0 ? input.filters : null;
 
-    const [batch] = await this.knex<AccountingExportBatch>('accounting_export_batches')
+    const [batch] = await this.table<AccountingExportBatch>('accounting_export_batches', tenant)
       .insert({
         ...input,
         tenant,
@@ -249,8 +259,8 @@ export class AccountingExportRepository {
 
   async getBatch(batchId: string): Promise<AccountingExportBatch | null> {
     const tenant = this.requireTenant();
-    const batch = await this.knex<AccountingExportBatch>('accounting_export_batches')
-      .where({ batch_id: batchId, tenant })
+    const batch = await this.table<AccountingExportBatch>('accounting_export_batches', tenant)
+      .where({ batch_id: batchId })
       .first();
 
     return batch || null;
@@ -258,8 +268,7 @@ export class AccountingExportRepository {
 
   async listBatches(params: { status?: AccountingExportStatus; adapter_type?: string } = {}): Promise<AccountingExportBatch[]> {
     const tenant = this.requireTenant();
-    const query = this.knex<AccountingExportBatch>('accounting_export_batches')
-      .where({ tenant })
+    const query = this.table<AccountingExportBatch>('accounting_export_batches', tenant)
       .orderBy('created_at', 'desc');
 
     if (params.status) {
@@ -273,8 +282,8 @@ export class AccountingExportRepository {
 
   async updateBatch(batchId: string, updates: Partial<AccountingExportBatch>): Promise<AccountingExportBatch | null> {
     const tenant = this.requireTenant();
-    const [batch] = await this.knex<AccountingExportBatch>('accounting_export_batches')
-      .where({ batch_id: batchId, tenant })
+    const [batch] = await this.table<AccountingExportBatch>('accounting_export_batches', tenant)
+      .where({ batch_id: batchId })
       .update(updates)
       .returning('*');
     return batch || null;
@@ -307,7 +316,7 @@ export class AccountingExportRepository {
 
   async addLine(input: CreateExportLineInput): Promise<AccountingExportLine> {
     const tenant = this.requireTenant();
-    const [line] = await this.knex<AccountingExportLine>('accounting_export_lines')
+    const [line] = await this.table<AccountingExportLine>('accounting_export_lines', tenant)
       .insert({
         ...input,
         tenant,
@@ -319,16 +328,16 @@ export class AccountingExportRepository {
 
   async listLines(batchId: string): Promise<AccountingExportLine[]> {
     const tenant = this.requireTenant();
-    const lines = await this.knex<AccountingExportLine>('accounting_export_lines')
-      .where({ batch_id: batchId, tenant })
+    const lines = await this.table<AccountingExportLine>('accounting_export_lines', tenant)
+      .where({ batch_id: batchId })
       .orderBy('created_at');
     return lines.map(normalizeExportLine);
   }
 
   async updateLine(lineId: string, updates: Partial<AccountingExportLine>): Promise<AccountingExportLine | null> {
     const tenant = this.requireTenant();
-    const [line] = await this.knex<AccountingExportLine>('accounting_export_lines')
-      .where({ line_id: lineId, tenant })
+    const [line] = await this.table<AccountingExportLine>('accounting_export_lines', tenant)
+      .where({ line_id: lineId })
       .update({ ...updates, updated_at: new Date().toISOString() })
       .returning('*');
     return line ? normalizeExportLine(line) : null;
@@ -336,7 +345,7 @@ export class AccountingExportRepository {
 
   async addError(input: CreateExportErrorInput): Promise<AccountingExportError> {
     const tenant = this.requireTenant();
-    const [error] = await this.knex<AccountingExportError>('accounting_export_errors')
+    const [error] = await this.table<AccountingExportError>('accounting_export_errors', tenant)
       .insert({
         ...input,
         tenant,
@@ -348,15 +357,15 @@ export class AccountingExportRepository {
 
   async listErrors(batchId: string): Promise<AccountingExportError[]> {
     const tenant = this.requireTenant();
-    return this.knex<AccountingExportError>('accounting_export_errors')
-      .where({ batch_id: batchId, tenant })
+    return this.table<AccountingExportError>('accounting_export_errors', tenant)
+      .where({ batch_id: batchId })
       .orderBy('created_at');
   }
 
   async updateError(errorId: string, updates: Partial<AccountingExportError>): Promise<AccountingExportError | null> {
     const tenant = this.requireTenant();
-    const [error] = await this.knex<AccountingExportError>('accounting_export_errors')
-      .where({ error_id: errorId, tenant })
+    const [error] = await this.table<AccountingExportError>('accounting_export_errors', tenant)
+      .where({ error_id: errorId })
       .update({ ...updates, resolved_at: updates.resolved_at ?? null })
       .returning('*');
     return error || null;
@@ -369,8 +378,8 @@ export class AccountingExportRepository {
     blockingStatuses: AccountingExportStatus[];
   }): Promise<AccountingExportBatch | null> {
     const tenant = this.requireTenant();
-    const query = this.knex<AccountingExportBatch>('accounting_export_batches')
-      .where({ tenant, adapter_type: params.adapterType, export_type: params.exportType })
+    const query = this.table<AccountingExportBatch>('accounting_export_batches', tenant)
+      .where({ adapter_type: params.adapterType, export_type: params.exportType })
       .whereIn('status', params.blockingStatuses)
       .orderBy('created_at', 'desc');
 
@@ -395,8 +404,7 @@ export class AccountingExportRepository {
       return 0;
     }
 
-    const updated = await this.knex('transactions')
-      .where({ tenant })
+    const updated = await this.table('transactions', tenant)
       .whereIn('transaction_id', uniqueIds)
       .update({
         accounting_export_batch_id: batchId
@@ -416,8 +424,7 @@ export class AccountingExportRepository {
     }
 
     const uniqueIds = Array.from(new Set(invoiceIds));
-    const invoices = await this.knex('invoices')
-      .where({ tenant })
+    const invoices = await this.table<InvoiceTaxSourceProjection>('invoices', tenant)
       .whereIn('invoice_id', uniqueIds)
       .select('invoice_id', 'tax_source');
 

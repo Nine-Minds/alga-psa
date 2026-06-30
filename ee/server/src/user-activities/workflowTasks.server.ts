@@ -4,7 +4,7 @@
 // (and to packages/user-activities/src/server/workflow-tasks.ts in CE). This is the
 // real query against `workflow_tasks`; gating is by build placement, not imports, so the
 // base CE package never depends on EE/workflow code.
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import {
   Activity,
@@ -63,20 +63,20 @@ export async function fetchWorkflowTaskActivities(
 
     // Execute queries in transaction
     const { workflowTasks } = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant);
+
       // Get user roles for role-based task assignment
-      const userRoles = await trx("user_roles")
-        .where("user_roles.tenant", tenant)
+      const userRoles = await scopedDb.table("user_roles")
         .where("user_roles.user_id", userId)
         .select("role_id");
 
       const roleIds = userRoles.map(role => role.role_id);
 
       // Go back to using the knex query builder instead of raw SQL to avoid binding issues
-      const workflowTasksQuery = trx("workflow_tasks as wt")
+      const workflowTasksQuery = scopedDb.table("workflow_tasks as wt")
       .select(
         "wt.*"
       )
-      .where("wt.tenant", tenant)
       .modify(function(queryBuilder) {
         // Filter for tasks assigned to the user or their roles
         queryBuilder.where(function() {

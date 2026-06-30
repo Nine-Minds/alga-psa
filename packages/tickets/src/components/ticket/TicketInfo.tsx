@@ -22,7 +22,7 @@ import { format, setHours, setMinutes } from 'date-fns';
 import { TagManager } from '@alga-psa/tags/components';
 import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
-import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
+import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '../../actions/ticketCategoryActions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { Pencil, Check, X, HelpCircle, Save, PauseCircle, Users, Mail, History } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';

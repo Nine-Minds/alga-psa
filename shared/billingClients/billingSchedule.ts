@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { BillingCycleType, ISO8601String, IClient } from '@alga-psa/types';
 import {
   ensureUtcMidnightIsoDate,
@@ -42,13 +43,14 @@ export async function getClientBillingCycleAnchor(
   tenant: string,
   clientId: string
 ): Promise<ClientBillingCycleAnchorConfig> {
-  const client = await knexOrTrx('clients').where({ tenant, client_id: clientId }).first().select('billing_cycle');
+  const db = tenantDb(knexOrTrx, tenant);
+  const client = await db.table('clients').where({ client_id: clientId }).first().select('billing_cycle');
   if (!client) {
     throw new Error('Client not found');
   }
 
-  const settings = await knexOrTrx('client_billing_settings')
-    .where({ tenant, client_id: clientId })
+  const settings = await db.table('client_billing_settings')
+    .where({ client_id: clientId })
     .first()
     .select(
       'billing_cycle_anchor_day_of_month',
@@ -105,21 +107,22 @@ async function updateInTransaction(
   input: UpdateClientBillingScheduleInput,
   normalized: NormalizedBillingCycleAnchorSettings
 ): Promise<void> {
-  const client = await trx('clients').where({ tenant, client_id: input.clientId }).first().select('client_id', 'billing_cycle');
+  const db = tenantDb(trx, tenant);
+  const client = await db.table('clients').where({ client_id: input.clientId }).first().select('client_id', 'billing_cycle');
   if (!client) {
     throw new Error('Client not found');
   }
 
   if (((client as any).billing_cycle ?? 'monthly') !== input.billingCycle) {
-    await trx('clients')
-      .where({ tenant, client_id: input.clientId })
+    await db.table('clients')
+      .where({ client_id: input.clientId })
       .update({ billing_cycle: input.billingCycle, updated_at: trx.fn.now() });
   }
 
   await ensureClientBillingSettingsRow(trx, { tenant, clientId: input.clientId });
 
-  await trx('client_billing_settings')
-    .where({ tenant, client_id: input.clientId })
+  await db.table('client_billing_settings')
+    .where({ client_id: input.clientId })
     .update({
       billing_cycle_anchor_day_of_month: normalized.dayOfMonth,
       billing_cycle_anchor_month_of_year: normalized.monthOfYear,
@@ -139,26 +142,23 @@ async function updateInTransaction(
     return;
   }
 
-  const lastInvoiced = await trx('client_billing_cycles as cbc')
-    .join('invoices as i', function () {
-      this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id').andOn('i.tenant', '=', 'cbc.tenant');
-    })
-    .where('cbc.tenant', tenant)
+  const lastInvoicedQuery = db.table('client_billing_cycles as cbc');
+  db.tenantJoin(lastInvoicedQuery, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id');
+  const lastInvoiced = await lastInvoicedQuery
     .andWhere('cbc.client_id', input.clientId)
     .orderBy('cbc.period_end_date', 'desc')
     .first()
-    .select('cbc.period_end_date');
+    .select({ period_end_date: 'cbc.period_end_date' });
 
   const cutoverStart: ISO8601String | null = lastInvoiced?.period_end_date ? normalizeDbIsoUtcMidnight(lastInvoiced.period_end_date) : null;
 
-  const nonInvoicedCycleQuery = trx('client_billing_cycles')
-    .where({ tenant, client_id: input.clientId, is_active: true })
-    .whereNotExists(function () {
-      this.select(1)
-        .from('invoices')
-        .whereRaw('invoices.tenant = client_billing_cycles.tenant')
-        .andWhereRaw('invoices.billing_cycle_id = client_billing_cycles.billing_cycle_id');
-    });
+  const nonInvoicedCycleQuery = db.table('client_billing_cycles')
+    .where({ client_id: input.clientId, is_active: true })
+    .whereNotExists(
+      db.subquery('invoices')
+        .select(trx.raw('1'))
+        .whereRaw('invoices.billing_cycle_id = client_billing_cycles.billing_cycle_id')
+    );
 
   if (cutoverStart) {
     await nonInvoicedCycleQuery.andWhere('period_start_date', '>=', cutoverStart).update({
@@ -218,29 +218,27 @@ export async function previewBillingHistoryBootstrap(
     anchor: normalizedAnchor,
   });
 
-  const earliestInvoiced = await knexOrTrx('client_billing_cycles as cbc')
-    .join('invoices as i', function () {
-      this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id').andOn('i.tenant', '=', 'cbc.tenant');
-    })
-    .where('cbc.tenant', tenant)
+  const db = tenantDb(knexOrTrx, tenant);
+  const earliestInvoicedQuery = db.table('client_billing_cycles as cbc');
+  db.tenantJoin(earliestInvoicedQuery, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id');
+  const earliestInvoiced = await earliestInvoicedQuery
     .andWhere('cbc.client_id', input.clientId)
     .orderBy('cbc.period_start_date', 'asc')
     .first()
-    .select('cbc.period_start_date');
+    .select({ period_start_date: 'cbc.period_start_date' });
 
   const earliestInvoicedBoundary = earliestInvoiced?.period_start_date
     ? normalizeDbIsoUtcMidnight(earliestInvoiced.period_start_date)
     : null;
 
-  const affectedUninvoicedRows = await knexOrTrx('client_billing_cycles')
-    .where({ tenant, client_id: input.clientId })
+  const affectedUninvoicedRows = await db.table('client_billing_cycles')
+    .where({ client_id: input.clientId })
     .andWhere('period_start_date', '>=', normalizedBoundary)
-    .whereNotExists(function () {
-      this.select(1)
-        .from('invoices')
-        .whereRaw('invoices.tenant = client_billing_cycles.tenant')
-        .andWhereRaw('invoices.billing_cycle_id = client_billing_cycles.billing_cycle_id');
-    })
+    .whereNotExists(
+      db.subquery('invoices')
+        .select(knexOrTrx.raw('1'))
+        .whereRaw('invoices.billing_cycle_id = client_billing_cycles.billing_cycle_id')
+    )
     .count<{ count: number | string }>('billing_cycle_id as count')
     .first();
 
@@ -287,15 +285,15 @@ async function regenerateHistoricalClientBillingCyclesFromBootstrap(
     throw new Error(preview.blockedReason ?? 'Billing history bootstrap is blocked by invoiced history.');
   }
 
-  const nonInvoicedCyclesFromBoundary = await trx('client_billing_cycles')
-    .where({ tenant: input.tenant, client_id: input.clientId })
+  const db = tenantDb(trx, input.tenant);
+  const nonInvoicedCyclesFromBoundary = await db.table('client_billing_cycles')
+    .where({ client_id: input.clientId })
     .andWhere('period_start_date', '>=', preview.normalizedHistoryStartBoundary)
-    .whereNotExists(function () {
-      this.select(1)
-        .from('invoices')
-        .whereRaw('invoices.tenant = client_billing_cycles.tenant')
-        .andWhereRaw('invoices.billing_cycle_id = client_billing_cycles.billing_cycle_id');
-    })
+    .whereNotExists(
+      db.subquery('invoices')
+        .select(trx.raw('1'))
+        .whereRaw('invoices.billing_cycle_id = client_billing_cycles.billing_cycle_id')
+    )
     .select('period_end_date');
 
   const furthestExistingNonInvoicedBoundary = nonInvoicedCyclesFromBoundary
@@ -303,15 +301,14 @@ async function regenerateHistoricalClientBillingCyclesFromBootstrap(
     .sort()
     .slice(-1)[0] ?? null;
 
-  await trx('client_billing_cycles')
-    .where({ tenant: input.tenant, client_id: input.clientId })
+  await db.table('client_billing_cycles')
+    .where({ client_id: input.clientId })
     .andWhere('period_start_date', '>=', preview.normalizedHistoryStartBoundary)
-    .whereNotExists(function () {
-      this.select(1)
-        .from('invoices')
-        .whereRaw('invoices.tenant = client_billing_cycles.tenant')
-        .andWhereRaw('invoices.billing_cycle_id = client_billing_cycles.billing_cycle_id');
-    })
+    .whereNotExists(
+      db.subquery('invoices')
+        .select(trx.raw('1'))
+        .whereRaw('invoices.billing_cycle_id = client_billing_cycles.billing_cycle_id')
+    )
     .del();
 
   const today = getTodayUtcMidnightIso();
@@ -329,26 +326,23 @@ async function regenerateHistoricalClientBillingCyclesFromBootstrap(
       getNextBillingBoundaryAfter(cursor, input.billingCycle, input.anchor),
     );
 
-    const existingInvoicedCycle = await trx('client_billing_cycles as cbc')
-      .join('invoices as i', function () {
-        this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id').andOn('i.tenant', '=', 'cbc.tenant');
-      })
-      .where('cbc.tenant', input.tenant)
+    const existingInvoicedCycleQuery = db.table('client_billing_cycles as cbc');
+    db.tenantJoin(existingInvoicedCycleQuery, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id');
+    const existingInvoicedCycle = await existingInvoicedCycleQuery
       .andWhere('cbc.client_id', input.clientId)
       .andWhere('cbc.period_start_date', cursor)
       .first('cbc.billing_cycle_id');
 
     if (!existingInvoicedCycle) {
-      const existingCycle = await trx('client_billing_cycles')
+      const existingCycle = await db.table('client_billing_cycles')
         .where({
-          tenant: input.tenant,
           client_id: input.clientId,
           period_start_date: cursor,
         })
         .first('billing_cycle_id');
 
       if (!existingCycle) {
-        await trx('client_billing_cycles').insert({
+        await db.table('client_billing_cycles').insert({
           tenant: input.tenant,
           client_id: input.clientId,
           billing_cycle: input.billingCycle,
@@ -411,7 +405,7 @@ export async function createNextBillingCycle(
   clientId: string,
   effectiveDate?: string
 ): Promise<BillingCycleCreationResult> {
-  const client = await knexOrTrx<IClient>('clients').where({ client_id: clientId, tenant }).first();
+  const client = await tenantDb(knexOrTrx, tenant).table<IClient>('clients').where({ client_id: clientId }).first();
   if (!client) {
     throw new Error('Client not found');
   }

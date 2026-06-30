@@ -22,6 +22,9 @@ const trxMock = vi.fn((table: string) => {
 vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
     withAdminTransactionMock(callback),
+  tenantDb: (trx: any) => ({
+    table: (tableName: string) => trx(tableName),
+  }),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({

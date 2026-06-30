@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 export type TeamsDeliveryStatus = 'skipped' | 'sent' | 'delivered' | 'failed';
 export type TeamsDeliveryDestinationType = 'user_activity' | 'chat' | 'channel' | 'bot_test';
@@ -158,7 +158,7 @@ export async function writeTeamsDeliveryRow(input: WriteTeamsDeliveryRowInput): 
       responded_at: normalizeTimestamp(input.respondedAt ?? null),
     };
 
-    const result = await knex('teams_notification_deliveries')
+    const result = await tenantDb(knex, scopedTenant).table('teams_notification_deliveries')
       .insert(row)
       .onConflict(['tenant', 'idempotency_key'])
       .ignore()

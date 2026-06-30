@@ -1,4 +1,4 @@
-import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
+import { createTenantKnex, getUserWithRoles, tenantDb } from '@alga-psa/db';
 import { getTeamsIntegrationExecutionStateImpl as getTeamsIntegrationExecutionState } from '../../actions/integrations/teamsActions';
 import { NextResponse } from 'next/server';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -445,12 +445,9 @@ async function resolveTicketAssignee(params: {
     };
   }
 
-  const rows = (await knex('users')
-    .where({
-      tenant: params.tenantId,
-      user_type: 'internal',
-      is_inactive: false,
-    })
+  const rows = (await tenantDb(knex, params.tenantId).table<TeamsAssignableUserSummary>('users')
+    .where('user_type', 'internal')
+    .andWhere('is_inactive', false)
     .select('user_id', 'username', 'email', 'first_name', 'last_name')) as TeamsAssignableUserSummary[];
 
   const normalizedReference = normalizeLookupToken(reference);

@@ -1,7 +1,7 @@
 'use server';
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { WorkflowDefinition } from '@alga-psa/workflows/runtime';
 import { getSchemaRegistry, emailWorkflowPayloadSchema } from '@alga-psa/workflows/runtime';
 import {
@@ -41,6 +41,7 @@ import {
   type CreateWorkflowScheduleInputShape,
   type UpdateWorkflowScheduleInputShape
 } from './workflow-schedule-v2-schemas';
+import { workflowTenantTable } from '../lib/workflowTenantDb';
 
 type WorkflowScheduleValidationFailure = {
   ok: false;
@@ -158,9 +159,10 @@ const requireWorkflowPermission = async (
 
 const getLatestPublishedWorkflowVersion = async (
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
-  workflowId: string
+  workflowId: string,
+  tenant: string
 ): Promise<WorkflowDefinitionVersionRecord | null> => {
-  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflowId);
+  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflowId, tenant);
   return versions[0] ?? null;
 };
 
@@ -299,7 +301,7 @@ const validateSchedulableWorkflow = async (
     return throwHttpError(404, 'Workflow not found');
   }
 
-  const latestVersion = await getLatestPublishedWorkflowVersion(knex, workflowId);
+  const latestVersion = await getLatestPublishedWorkflowVersion(knex, workflowId, tenant);
   if (!latestVersion) {
     return toWorkflowScheduleValidationFailure(
       'WORKFLOW_NOT_PUBLISHED',
@@ -387,8 +389,7 @@ export const listWorkflowScheduleBusinessHoursAction = withAuth(async (user) => 
     return throwHttpError(400, 'Tenant not found');
   }
 
-  const items = await knex('business_hours_schedules')
-    .where({ tenant })
+  const items = await workflowTenantTable(knex, tenant, 'business_hours_schedules')
     .select('schedule_id', 'schedule_name', 'timezone', 'is_default', 'is_24x7')
     .orderBy([{ column: 'is_default', order: 'desc' }, { column: 'schedule_name', order: 'asc' }]);
 
@@ -403,12 +404,13 @@ export const listWorkflowSchedulesAction = withAuth(async (user, _ctx, input: un
     return throwHttpError(400, 'Tenant not found');
   }
 
-  const query = knex('tenant_workflow_schedule as tws')
-    .leftJoin('workflow_definitions as wd', function () {
-      this.on('wd.workflow_id', 'tws.workflow_id').andOn('wd.tenant', 'tws.tenant');
-    })
-    .select('tws.*', 'wd.name as workflow_name')
-    .where('tws.tenant', tenant);
+  const db = tenantDb(knex, tenant);
+  const query = db.table('tenant_workflow_schedule as tws');
+  db.tenantJoin(query, 'workflow_definitions as wd', 'wd.workflow_id', 'tws.workflow_id', {
+    type: 'left',
+    rootTenantColumn: 'tws.tenant'
+  });
+  query.select('tws.*', 'wd.name as workflow_name');
 
   if (parsed.workflowId) {
     query.andWhere('tws.workflow_id', parsed.workflowId);

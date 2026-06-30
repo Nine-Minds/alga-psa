@@ -3,7 +3,7 @@
 'use server';
 
 import { Buffer } from 'node:buffer';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { ImportManager } from '@/lib/imports/ImportManager';
 import { ImportRegistry } from '@/lib/imports/ImportRegistry';
 import { CsvImporter } from '@/lib/imports/CsvImporter';
@@ -156,16 +156,17 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
   let fallbackClientId: string | null = null;
   try {
     const { knex } = await createTenantKnex(tenant);
-    const tenantClient = await knex('tenant_companies')
+    const db = tenantDb(knex, tenant);
+    const tenantClient = await db.table('tenant_companies')
       .select('client_id')
-      .where({ tenant, is_default: true })
+      .where({ is_default: true })
       .first();
     tenantClientId = tenantClient?.client_id ?? null;
 
     if (!tenantClientId) {
-      const fallbackClient = await knex('clients')
+      const fallbackClient = await db.table('clients')
         .select('client_id')
-        .where({ tenant, is_inactive: false })
+        .where({ is_inactive: false })
         .orderBy('created_at', 'asc')
         .first();
       fallbackClientId = fallbackClient?.client_id ?? null;

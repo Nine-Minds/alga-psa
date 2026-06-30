@@ -2,10 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hasPermissionAsyncMock = vi.fn();
 const createTenantKnexMock = vi.fn(async () => ({ knex: {} as any }));
+const tenantDbMock = vi.fn((conn: any, _tenant?: string) => ({
+  table: (table: string) => conn(table),
+}));
 const withTransactionMock = vi.fn();
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
+  tenantDb: (conn: any, tenant: string) => tenantDbMock(conn, tenant),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
 }));
 
@@ -30,6 +34,32 @@ vi.mock('../../lib/authHelpers', () => ({
       throw new Error(message);
     }
   },
+}));
+
+vi.mock('@alga-psa/tags/actions', () => ({
+  createTag: vi.fn(),
+}));
+
+vi.mock('@alga-psa/tags/lib/tagCleanup', () => ({
+  deleteEntityTags: vi.fn(),
+}));
+
+vi.mock('@alga-psa/shared/models/contactModel', () => ({
+  ContactModel: {},
+}));
+
+vi.mock('../../lib/documentsHelpers', () => ({
+  getContactAvatarUrlsBatchAsync: vi.fn(),
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(),
+}));
+
+vi.mock('@alga-psa/workflow-streams', () => ({
+  buildContactArchivedPayload: vi.fn(),
+  buildContactCreatedPayload: vi.fn(),
+  buildContactUpdatedPayload: vi.fn(),
 }));
 
 describe('contactActions visibility group assignment/delete guardrails', () => {
@@ -200,14 +230,17 @@ describe('contactActions visibility group assignment/delete guardrails', () => {
         }
 
         if (table === 'boards') {
+          const activeBoardChain = {
+            whereIn: vi.fn(() => ({
+              select: vi.fn(async () => [{ board_id: 'board-active' }]),
+            })),
+          };
+
           return {
             where: vi.fn(() => ({
-              andWhere: vi.fn(() => ({
-                whereIn: vi.fn(() => ({
-                  select: vi.fn(async () => [{ board_id: 'board-active' }]),
-                })),
-              })),
+              andWhere: vi.fn(() => activeBoardChain),
             })),
+            andWhere: vi.fn(() => activeBoardChain),
           };
         }
 

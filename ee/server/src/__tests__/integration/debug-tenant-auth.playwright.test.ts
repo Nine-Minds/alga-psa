@@ -3,9 +3,21 @@
  */
 
 import { test } from '@playwright/test';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { createTestTenant } from '../../lib/testing/tenant-test-factory';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
+
+const DEBUG_TENANT_DISCOVERY = '__debug_tenant_auth_discovery__';
+
+function tenantTable<Row extends object = Record<string, any>>(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table<Row>(table);
+}
+
+function discoveryTable<Row extends object = Record<string, any>>(db: Knex, table: string, reason: string) {
+  return tenantDb(db, DEBUG_TENANT_DISCOVERY).unscoped<Row>(table, reason);
+}
 
 test('debug tenant context in authentication', async ({ page }) => {
   const db = createTestDbConnection();
@@ -24,28 +36,27 @@ test('debug tenant context in authentication', async ({ page }) => {
     console.log('Created tenant:', tenantData.tenant.tenantId);
     
     // Check if there are other users with the same email in different tenants
-    const allUsersWithEmail = await db('users')
+    const allUsersWithEmail = await discoveryTable(db, 'users', 'debug tenant auth searches users across tenants for duplicate login emails')
       .where('email', tenantData.adminUser.email)
       .select('user_id', 'email', 'tenant', 'user_type', 'is_inactive');
     
     console.log('All users with this email:', allUsersWithEmail);
     
     // Check if there are other users with similar email patterns
-    const similarEmails = await db('users')
+    const similarEmails = await discoveryTable(db, 'users', 'debug tenant auth searches users across tenants for related debug email fixtures')
       .where('email', 'like', '%debug%')
       .select('user_id', 'email', 'tenant', 'user_type', 'is_inactive');
       
     console.log('Similar debug emails:', similarEmails);
     
     // Check tenant context by looking at tenant table
-    const tenantInfo = await db('tenants')
-      .where('tenant', tenantData.tenant.tenantId)
+    const tenantInfo = await tenantTable(db, tenantData.tenant.tenantId, 'tenants')
       .first() as { tenant: string; tenant_name: string; created_at: string } | undefined;
       
     console.log('Tenant info:', tenantInfo);
     
     // Check what the default tenant is in the system
-    const allTenants = await db('tenants')
+    const allTenants = await discoveryTable(db, 'tenants', 'debug tenant auth lists seeded tenants to inspect default tenant ordering')
       .select('tenant', 'tenant_name', 'created_at')
       .orderBy('created_at', 'asc')
       .limit(5);

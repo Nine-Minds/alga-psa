@@ -7,7 +7,7 @@
  * Uses the document system with a 1:1 relationship (contacts.notes_document_id).
  */
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
@@ -42,8 +42,8 @@ export const getContactNoteContent = withAuth(async (
 
   try {
     // Get the contact to find notes_document_id
-    const contact = await knex('contacts')
-      .where({ tenant, contact_name_id: contactId })
+    const contact = await tenantDb(knex, tenant).table('contacts')
+      .where({ contact_name_id: contactId })
       .select('notes_document_id')
       .first();
 
@@ -61,8 +61,8 @@ export const getContactNoteContent = withAuth(async (
     }
 
     // Get the document
-    const document = await knex('documents')
-      .where({ tenant, document_id: contact.notes_document_id })
+    const document = await tenantDb(knex, tenant).table('documents')
+      .where({ document_id: contact.notes_document_id })
       .first() as IDocument | undefined;
 
     if (!document) {
@@ -117,8 +117,8 @@ export const saveContactNote = withAuth(async (
 
   try {
     // Get the contact
-    const contact = await knex('contacts')
-      .where({ tenant, contact_name_id: contactId })
+    const contact = await tenantDb(knex, tenant).table('contacts')
+      .where({ contact_name_id: contactId })
       .select('contact_name_id', 'full_name', 'notes_document_id')
       .first();
 
@@ -145,8 +145,8 @@ export const saveContactNote = withAuth(async (
       });
 
       // Update contact with notes_document_id
-      await knex('contacts')
-        .where({ tenant, contact_name_id: contactId })
+      await tenantDb(knex, tenant).table('contacts')
+        .where({ contact_name_id: contactId })
         .update({
           notes_document_id: document_id,
           updated_at: knex.fn.now(),
@@ -192,8 +192,8 @@ export const deleteContactNote = withAuth(async (
 
   try {
     // Get the contact
-    const contact = await knex('contacts')
-      .where({ tenant, contact_name_id: contactId })
+    const contact = await tenantDb(knex, tenant).table('contacts')
+      .where({ contact_name_id: contactId })
       .select('notes_document_id')
       .first();
 
@@ -203,8 +203,8 @@ export const deleteContactNote = withAuth(async (
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Unlink the document from the contact
-      await trx('contacts')
-        .where({ tenant, contact_name_id: contactId })
+      await tenantDb(trx, tenant).table('contacts')
+        .where({ contact_name_id: contactId })
         .update({
           notes_document_id: null,
           updated_at: trx.fn.now(),
@@ -213,18 +213,18 @@ export const deleteContactNote = withAuth(async (
       // Optionally delete the document entirely
       if (deleteDocument) {
         // Delete block content first (due to FK)
-        await trx('document_block_content')
-          .where({ tenant, document_id: contact.notes_document_id })
+        await tenantDb(trx, tenant).table('document_block_content')
+          .where({ document_id: contact.notes_document_id })
           .delete();
 
         // Delete document associations
-        await trx('document_associations')
-          .where({ tenant, document_id: contact.notes_document_id })
+        await tenantDb(trx, tenant).table('document_associations')
+          .where({ document_id: contact.notes_document_id })
           .delete();
 
         // Delete the document
-        await trx('documents')
-          .where({ tenant, document_id: contact.notes_document_id })
+        await tenantDb(trx, tenant).table('documents')
+          .where({ document_id: contact.notes_document_id })
           .delete();
       }
     });
