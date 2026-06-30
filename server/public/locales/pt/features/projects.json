@@ -93,6 +93,12 @@
       "active": "Projetos ativos",
       "inactive": "Projetos inativos"
     },
+    "projectStatusOptions": {
+      "open": "Todos os estados abertos",
+      "all": "Todos os estados",
+      "closedSuffix": "{{name}} (fechado)"
+    },
+    "projectStatusPlaceholder": "Filtrar por estado",
     "columns": {
       "number": "Número",
       "projectName": "Nome do Projeto",

@@ -28,6 +28,8 @@ interface UserPickerProps {
   getUserAvatarUrlsBatch?: GetUserAvatarUrlsBatch;
   disabled?: boolean;
   className?: string;
+  /** Extra classes for the trigger button (e.g. to set a background). */
+  triggerClassName?: string;
   labelStyle?: 'bold' | 'medium' | 'normal' | 'none';
   buttonWidth?: 'fit' | 'full';
   placeholder?: string;
@@ -77,6 +79,7 @@ const UserPicker = ({
   getUserAvatarUrlsBatch,
   disabled,
   className,
+  triggerClassName = '',
   labelStyle = 'bold',
   buttonWidth = 'fit',
   placeholder = 'Not assigned',
@@ -468,7 +471,7 @@ const UserPicker = ({
             : 'p-2 h-10 text-sm'
         } ${
           buttonWidth === 'full' ? 'w-full' : size === 'xs' ? 'w-fit' : 'w-fit min-w-[150px]'
-        }`}
+        } ${triggerClassName}`}
       >
         <div className={`flex items-center flex-1 ${size === 'xs' ? 'gap-1' : 'gap-2'}`}>
           {currentUser && (

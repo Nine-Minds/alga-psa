@@ -62,6 +62,9 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       initialFilters.status = params.status;
     }
   }
+  if (params?.projectStatus && typeof params.projectStatus === 'string') {
+    initialFilters.projectStatus = params.projectStatus;
+  }
   if (params?.clientId && typeof params.clientId === 'string') {
     initialFilters.clientId = params.clientId;
   }
