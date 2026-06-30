@@ -7,6 +7,10 @@ let quoteStore: Record<string, any>;
 let quoteActivityLog: any[];
 let quoteItemUpdateLog: Array<{ criteria: Record<string, unknown>; payload: Record<string, unknown> }>;
 let rawQuoteUpdateLog: Array<{ criteria: Record<string, unknown>; payload: Record<string, unknown> }>;
+// Records every table scoped through the tenantDb facade so tenant-isolation can still
+// be asserted now that tenant scoping lives inside tenantDb(trx, tenant) rather than in
+// each query's WHERE/criteria.
+let tenantScopeLog: Array<{ tenant: string; table: string }> = [];
 
 const getConnectionMock = vi.fn();
 const withTransactionMock = vi.fn();
@@ -27,8 +31,11 @@ vi.mock('@alga-psa/db', () => ({
   getConnection: (...args: any[]) => getConnectionMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
   createTenantKnex: vi.fn(),
-  tenantDb: (conn: any, _tenant: string) => ({
-    table: (table: string) => conn(table),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => {
+      tenantScopeLog.push({ tenant, table });
+      return conn(table);
+    },
     unscoped: (table: string) => conn(table),
     tenantJoin: (query: any, _table?: string, _left?: string, _right?: string, options: any = {}) => {
       const join = options?.type === 'left' ? query.leftJoin : query.join;
@@ -277,6 +284,7 @@ describe('client quote billing actions', () => {
     quoteActivityLog = [];
     quoteItemUpdateLog = [];
     rawQuoteUpdateLog = [];
+    tenantScopeLog = [];
 
     getConnectionMock.mockResolvedValue({ tenant: 'tenant-1' });
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(buildTrx()));
@@ -350,10 +358,13 @@ describe('client quote billing actions', () => {
 
     const updatedQuote = await updateClientQuoteSelections('quote-1', []);
 
+    // Tenant scoping now lives in the tenantDb facade, so the criteria no longer
+    // carries tenant; assert the facade scoped the quote_items table to this tenant.
     expect(quoteItemUpdateLog).toContainEqual({
-      criteria: { tenant: 'tenant-1', quote_item_id: 'item-optional' },
+      criteria: { quote_item_id: 'item-optional' },
       payload: { is_selected: false, updated_at: 'db-now' },
     });
+    expect(tenantScopeLog).toContainEqual({ tenant: 'tenant-1', table: 'quote_items' });
     expect(recalculateQuoteFinancialsMock).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'quote-1');
     expect(updatedQuote.quote_items?.find((item) => item.quote_item_id === 'item-optional')?.is_selected).toBe(false);
     expect(updatedQuote.total_amount).toBe(15000);
@@ -418,10 +429,13 @@ describe('client quote billing actions', () => {
     const viewedQuote = await getClientQuoteById('quote-1');
 
     expect(viewedQuote.viewed_at).toEqual(expect.any(String));
+    // Tenant scoping now lives in the tenantDb facade, so the criteria no longer
+    // carries tenant; assert the facade scoped the quotes table to this tenant.
     expect(rawQuoteUpdateLog).toContainEqual({
-      criteria: { tenant: 'tenant-1', quote_id: 'quote-1' },
+      criteria: { quote_id: 'quote-1' },
       payload: { viewed_at: viewedQuote.viewed_at, updated_at: 'db-now', updated_by: 'portal-user-1' },
     });
+    expect(tenantScopeLog).toContainEqual({ tenant: 'tenant-1', table: 'quotes' });
     expect(createQuoteActivityMock).toHaveBeenCalledWith(
       expect.anything(),
       'tenant-1',

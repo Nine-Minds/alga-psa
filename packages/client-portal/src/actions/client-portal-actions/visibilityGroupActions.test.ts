@@ -6,6 +6,14 @@ const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const hasPermissionMock = vi.fn();
 const revalidatePathMock = vi.fn();
+const tenantDbMock = vi.fn((conn: any, _tenant: string) => ({
+  table: (table: string) => conn(table),
+  unscoped: (table: string) => conn(table),
+  tenantJoin: (query: any, _table?: string, _left?: string, _right?: string, options: any = {}) => {
+    const join = options?.type === 'left' ? query.leftJoin : query.join;
+    return typeof join === 'function' ? join.call(query) : query;
+  },
+}));
 const actorContactId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const targetContactId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const preconfiguredContactId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
@@ -21,14 +29,7 @@ const crossClientBoardId = '88888888-8888-4888-8888-888888888888';
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
-  tenantDb: (conn: any, _tenant: string) => ({
-    table: (table: string) => conn(table),
-    unscoped: (table: string) => conn(table),
-    tenantJoin: (query: any, _table?: string, _left?: string, _right?: string, options: any = {}) => {
-      const join = options?.type === 'left' ? query.leftJoin : query.join;
-      return typeof join === 'function' ? join.call(query) : query;
-    },
-  }),
+  tenantDb: (...args: any[]) => tenantDbMock(...(args as [any, string])),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -59,33 +60,26 @@ describe('client portal visibility group actions', () => {
       const trx = (table: string) => {
         if (table === 'contacts') {
           return {
-            where: vi.fn((filters: Record<string, any>) => {
-              if (filters.contact_name_id === actorContactId) {
-                return {
-                  select: vi.fn(() => ({
-                    first: vi.fn().mockResolvedValue({
-                      client_id: clientId,
-                      is_client_admin: true,
-                    }),
-                  })),
-                };
-              }
-
-              return {
-                whereIn: vi.fn(() => ({
-                  select: vi.fn(() => ({
-                    count: vi.fn(() => ({
-                      groupBy: vi.fn().mockResolvedValue([
-                        {
-                          portal_visibility_group_id: groupId,
-                          assigned_contact_count: 3,
-                        },
-                      ]),
-                    })),
-                  })),
+            where: vi.fn(() => ({
+              select: vi.fn(() => ({
+                first: vi.fn().mockResolvedValue({
+                  client_id: clientId,
+                  is_client_admin: true,
+                }),
+              })),
+            })),
+            whereIn: vi.fn(() => ({
+              select: vi.fn(() => ({
+                count: vi.fn(() => ({
+                  groupBy: vi.fn().mockResolvedValue([
+                    {
+                      portal_visibility_group_id: groupId,
+                      assigned_contact_count: 3,
+                    },
+                  ]),
                 })),
-              };
-            }),
+              })),
+            })),
           };
         }
 
@@ -108,14 +102,12 @@ describe('client portal visibility group actions', () => {
 
         if (table === 'client_portal_visibility_group_boards') {
           return {
-            where: vi.fn(() => ({
-              whereIn: vi.fn(() => ({
-                select: vi.fn(() => ({
-                  count: vi.fn(() => ({
-                    groupBy: vi.fn().mockResolvedValue([
-                      { group_id: groupId, board_count: 2 },
-                    ]),
-                  })),
+            whereIn: vi.fn(() => ({
+              select: vi.fn(() => ({
+                count: vi.fn(() => ({
+                  groupBy: vi.fn().mockResolvedValue([
+                    { group_id: groupId, board_count: 2 },
+                  ]),
                 })),
               })),
             })),
@@ -200,12 +192,10 @@ describe('client portal visibility group actions', () => {
 
   it('T002: client portal admin board loading returns active tenant boards without requiring board client ownership', async () => {
     const boardsWhereMock = vi.fn(() => ({
-      andWhere: vi.fn(() => ({
-        select: vi.fn().mockResolvedValue([
-          { board_id: boardIdOne, board_name: 'General Support' },
-          { board_id: boardIdTwo, board_name: 'Projects' },
-        ]),
-      })),
+      select: vi.fn().mockResolvedValue([
+        { board_id: boardIdOne, board_name: 'General Support' },
+        { board_id: boardIdTwo, board_name: 'Projects' },
+      ]),
     }));
 
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
@@ -238,7 +228,11 @@ describe('client portal visibility group actions', () => {
     const { getClientPortalVisibilityGroupBoards } = await import('./visibilityGroupActions');
     const boards = await getClientPortalVisibilityGroupBoards();
 
-    expect(boardsWhereMock).toHaveBeenCalledWith({ tenant: 'tenant-1' });
+    // Tenant isolation is now enforced by the tenantDb facade (tenantDb(trx, tenant))
+    // rather than an explicit .where({ tenant }) on the boards query. Verify the facade
+    // received the active tenant and that the boards query still filters to active boards.
+    expect(tenantDbMock).toHaveBeenCalledWith(expect.anything(), 'tenant-1');
+    expect(boardsWhereMock).toHaveBeenCalledWith('is_inactive', false);
     expect(boards).toEqual([
       { board_id: boardIdOne, board_name: 'General Support' },
       { board_id: boardIdTwo, board_name: 'Projects' },
@@ -269,13 +263,11 @@ describe('client portal visibility group actions', () => {
         if (table === 'boards') {
           return {
             where: vi.fn(() => ({
-              andWhere: vi.fn(() => ({
-                whereIn: vi.fn(() => ({
-                  select: vi.fn().mockResolvedValue([
-                    { board_id: boardIdOne },
-                    { board_id: boardIdTwo },
-                  ]),
-                })),
+              whereIn: vi.fn(() => ({
+                select: vi.fn().mockResolvedValue([
+                  { board_id: boardIdOne },
+                  { board_id: boardIdTwo },
+                ]),
               })),
             })),
           };
@@ -338,12 +330,10 @@ describe('client portal visibility group actions', () => {
         if (table === 'boards') {
           return {
             where: vi.fn(() => ({
-              andWhere: vi.fn(() => ({
-                whereIn: vi.fn(() => ({
-                  select: vi.fn().mockResolvedValue([
-                    { board_id: boardIdThree },
-                  ]),
-                })),
+              whereIn: vi.fn(() => ({
+                select: vi.fn().mockResolvedValue([
+                  { board_id: boardIdThree },
+                ]),
               })),
             })),
           };
@@ -416,10 +406,8 @@ describe('client portal visibility group actions', () => {
         if (table === 'boards') {
           return {
             where: vi.fn(() => ({
-              andWhere: vi.fn(() => ({
-                whereIn: vi.fn(() => ({
-                  select: vi.fn().mockResolvedValue([{ board_id: boardIdOne }]),
-                })),
+              whereIn: vi.fn(() => ({
+                select: vi.fn().mockResolvedValue([{ board_id: boardIdOne }]),
               })),
             })),
           };
@@ -462,10 +450,8 @@ describe('client portal visibility group actions', () => {
         if (table === 'boards') {
           return {
             where: vi.fn(() => ({
-              andWhere: vi.fn(() => ({
-                whereIn: vi.fn(() => ({
-                  select: vi.fn().mockResolvedValue([{ board_id: boardIdOne }]),
-                })),
+              whereIn: vi.fn(() => ({
+                select: vi.fn().mockResolvedValue([{ board_id: boardIdOne }]),
               })),
             })),
           };
@@ -512,10 +498,8 @@ describe('client portal visibility group actions', () => {
         if (table === 'boards') {
           return {
             where: vi.fn(() => ({
-              andWhere: vi.fn(() => ({
-                whereIn: vi.fn(() => ({
-                  select: vi.fn().mockResolvedValue([{ board_id: boardIdThree }]),
-                })),
+              whereIn: vi.fn(() => ({
+                select: vi.fn().mockResolvedValue([{ board_id: boardIdThree }]),
               })),
             })),
           };

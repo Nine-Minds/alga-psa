@@ -85,6 +85,27 @@ function makeTicket(overrides: Record<string, unknown> = {}) {
   };
 }
 
+// Generic chain-/thenable query-builder stand-in. Every builder method returns the
+// same builder (so the SUT can chain arbitrarily), `modify` invokes its callback, and
+// awaiting the builder resolves to `result`. Used for the ticket_resources/comments/
+// users subqueries the refactored SUT builds via tenantDb(trx, tenant).table(...) and
+// then awaits directly inside Promise.all.
+function makeChainable(result: any = []) {
+  const builder: any = {};
+  for (const method of [
+    'select', 'distinct', 'where', 'whereRaw', 'whereNotNull', 'whereIn',
+    'orWhereIn', 'join', 'leftJoin', 'innerJoin', 'orderBy', 'as', 'first',
+  ]) {
+    builder[method] = vi.fn(() => builder);
+  }
+  builder.modify = vi.fn((callback: (query: any) => void) => {
+    if (typeof callback === 'function') callback(builder);
+    return builder;
+  });
+  builder.then = (resolve: any, reject?: any) => Promise.resolve(result).then(resolve, reject);
+  return builder;
+}
+
 function buildTrx(params: { ticket: Record<string, unknown> | undefined }) {
   return Object.assign(
     (table: string) => {
@@ -107,16 +128,13 @@ function buildTrx(params: { ticket: Record<string, unknown> | undefined }) {
       }
 
       if (table === 'tickets as t') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          leftJoin: vi.fn().mockReturnThis(),
-          where: vi.fn().mockReturnThis(),
-          modify: vi.fn(function (this: any, callback: (query: any) => void) {
-            callback(this);
-            return this;
-          }),
-          first: vi.fn().mockResolvedValue(params.ticket),
-        };
+        // The SUT builds the ticket query then awaits the builder itself inside
+        // Promise.all (it no longer captures `.first()`), so the builder must be
+        // thenable and resolve to the ticket.
+        const builder = makeChainable();
+        builder.then = (resolve: any, reject?: any) =>
+          Promise.resolve(params.ticket).then(resolve, reject);
+        return builder;
       }
 
       if (table === 'comments') {
@@ -127,20 +145,18 @@ function buildTrx(params: { ticket: Record<string, unknown> | undefined }) {
         };
       }
 
-      if (table === 'documents as d') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          join: vi.fn().mockReturnThis(),
-          where: vi.fn().mockResolvedValue([]),
-        };
-      }
-
-      if (table === 'asset_associations as aa') {
-        return {
-          innerJoin: vi.fn().mockReturnThis(),
-          where: vi.fn().mockReturnThis(),
-          select: vi.fn().mockResolvedValue([]),
-        };
+      // Additional-agent / comment / assigned / involved-users subqueries plus the
+      // client-visible documents and linked-assets queries, all awaited directly.
+      if (
+        table === 'ticket_resources as tr' ||
+        table === 'ticket_resources as tr2' ||
+        table === 'comments as c' ||
+        table === 'tickets as assigned_ticket' ||
+        table === 'users as u' ||
+        table === 'documents as d' ||
+        table === 'asset_associations as aa'
+      ) {
+        return makeChainable();
       }
 
       throw new Error(`Unexpected table: ${table}`);

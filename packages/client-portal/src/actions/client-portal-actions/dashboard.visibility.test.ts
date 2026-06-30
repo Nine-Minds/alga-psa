@@ -27,6 +27,11 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('@alga-psa/tickets/lib', () => ({
   applyVisibilityBoardFilter: (...args: any[]) => applyVisibilityBoardFilterMock(...args),
+}));
+
+// The dashboard now imports the visibility context resolver from the `.server` subpath
+// (@alga-psa/tickets/lib/clientPortalVisibility.server), so it must be mocked there.
+vi.mock('@alga-psa/tickets/lib/clientPortalVisibility.server', () => ({
   getClientContactVisibilityContext: (...args: any[]) => getVisibilityContextMock(...args),
 }));
 

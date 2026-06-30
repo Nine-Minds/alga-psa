@@ -59,6 +59,13 @@ vi.mock('@alga-psa/tickets/lib', () => ({
   },
 }));
 
+// Production imports the visibility context resolver from the `.server` subpath
+// (@alga-psa/tickets/lib/clientPortalVisibility.server), so it must be mocked there
+// rather than only on the @alga-psa/tickets/lib index.
+vi.mock('@alga-psa/tickets/lib/clientPortalVisibility.server', () => ({
+  getClientContactVisibilityContext: (...args: any[]) => getVisibilityContextMock(...args),
+}));
+
 vi.mock('@shared/models/ticketModel', () => ({
   TicketModel: {
     createTicketWithRetry: (...args: any[]) => createTicketWithRetryMock(...args),
@@ -114,17 +121,35 @@ function makeListBuilder(rows: any[]) {
   };
 }
 
+// Generic chain-/thenable query-builder stand-in. Every builder method returns the
+// same builder (so the SUT can chain arbitrarily), `modify` invokes its callback so
+// applyVisibilityBoardFilter is still recorded, and awaiting the builder resolves to
+// `result`. Used for the ticket_resources/comments/users subqueries the refactored
+// SUT builds via tenantDb(trx, tenant).table(...) and then awaits directly.
+function makeChainable(result: any = []) {
+  const builder: any = {};
+  for (const method of [
+    'select', 'distinct', 'where', 'whereRaw', 'whereNotNull', 'whereIn',
+    'orWhereIn', 'join', 'leftJoin', 'innerJoin', 'orderBy', 'as', 'first',
+  ]) {
+    builder[method] = vi.fn(() => builder);
+  }
+  builder.modify = vi.fn((callback: (query: any) => void) => {
+    if (typeof callback === 'function') callback(builder);
+    return builder;
+  });
+  builder.then = (resolve: any, reject?: any) => Promise.resolve(result).then(resolve, reject);
+  return builder;
+}
+
 function makeDetailBuilder(ticket: any) {
-  return {
-    select: vi.fn().mockReturnThis(),
-    leftJoin: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    modify: vi.fn(function(callback: (query: any) => void) {
-      callback(this);
-      return this;
-    }),
-    first: vi.fn().mockResolvedValue(ticket),
-  };
+  // The SUT builds the ticket query then awaits the builder itself inside Promise.all
+  // (it no longer captures the `.first()` result), so the builder must be thenable.
+  // Override `then` directly so an absent ticket resolves to `undefined` (not the
+  // `[]` default), which the SUT treats as "not found / access denied".
+  const builder = makeChainable();
+  builder.then = (resolve: any, reject?: any) => Promise.resolve(ticket).then(resolve, reject);
+  return builder;
 }
 
 describe('client portal ticket visibility enforcement', () => {
@@ -153,17 +178,26 @@ describe('client portal ticket visibility enforcement', () => {
     ]);
 
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
-      const trx = (table: string) => {
-        if (table === 'users') {
-          return makeUserQuery();
-        }
+      const trx = Object.assign(
+        (table: string) => {
+          if (table === 'users') {
+            return makeUserQuery();
+          }
 
-        if (table === 'tickets as t') {
-          return ticketsBuilder;
-        }
+          if (table === 'tickets as t') {
+            return ticketsBuilder;
+          }
 
-        throw new Error(`Unexpected table: ${table}`);
-      };
+          // Additional-agent subqueries are built via tenantDb(trx, tenant)
+          // .table('ticket_resources as tr' | 'ticket_resources as tr2').
+          if (table === 'ticket_resources as tr' || table === 'ticket_resources as tr2') {
+            return makeChainable();
+          }
+
+          throw new Error(`Unexpected table: ${table}`);
+        },
+        { raw: vi.fn() }
+      );
 
       return callback(trx);
     });
@@ -188,17 +222,26 @@ describe('client portal ticket visibility enforcement', () => {
     const ticketsBuilder = makeListBuilder([]);
 
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
-      const trx = (table: string) => {
-        if (table === 'users') {
-          return makeUserQuery();
-        }
+      const trx = Object.assign(
+        (table: string) => {
+          if (table === 'users') {
+            return makeUserQuery();
+          }
 
-        if (table === 'tickets as t') {
-          return ticketsBuilder;
-        }
+          if (table === 'tickets as t') {
+            return ticketsBuilder;
+          }
 
-        throw new Error(`Unexpected table: ${table}`);
-      };
+          // Additional-agent subqueries are built via tenantDb(trx, tenant)
+          // .table('ticket_resources as tr' | 'ticket_resources as tr2').
+          if (table === 'ticket_resources as tr' || table === 'ticket_resources as tr2') {
+            return makeChainable();
+          }
+
+          throw new Error(`Unexpected table: ${table}`);
+        },
+        { raw: vi.fn() }
+      );
 
       return callback(trx);
     });
@@ -257,6 +300,19 @@ describe('client portal ticket visibility enforcement', () => {
               join: vi.fn().mockReturnThis(),
               where: vi.fn().mockResolvedValue([]),
             };
+          }
+
+          // Subqueries the detail SUT builds via tenantDb(trx, tenant).table(...):
+          // additional-agent aggregation plus the comment/assigned/additional user-id
+          // sources and the involved-users query (awaited directly in Promise.all).
+          if (
+            table === 'ticket_resources as tr' ||
+            table === 'ticket_resources as tr2' ||
+            table === 'comments as c' ||
+            table === 'tickets as assigned_ticket' ||
+            table === 'users as u'
+          ) {
+            return makeChainable();
           }
 
           if (table === 'asset_associations as aa') {
@@ -322,6 +378,19 @@ describe('client portal ticket visibility enforcement', () => {
               join: vi.fn().mockReturnThis(),
               where: vi.fn().mockResolvedValue([]),
             };
+          }
+
+          // Subqueries the detail SUT builds via tenantDb(trx, tenant).table(...):
+          // additional-agent aggregation plus the comment/assigned/additional user-id
+          // sources and the involved-users query (awaited directly in Promise.all).
+          if (
+            table === 'ticket_resources as tr' ||
+            table === 'ticket_resources as tr2' ||
+            table === 'comments as c' ||
+            table === 'tickets as assigned_ticket' ||
+            table === 'users as u'
+          ) {
+            return makeChainable();
           }
 
           if (table === 'asset_associations as aa') {
