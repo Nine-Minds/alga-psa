@@ -93,6 +93,13 @@
       "active": "Actieve projecten",
       "inactive": "Inactieve projecten"
     },
+    "projectStatusOptions": {
+      "all": "Alle statussen",
+      "open": "Open (gesloten verbergen)",
+      "closed": "Alleen gesloten",
+      "closedSuffix": "{{name}} (gesloten)"
+    },
+    "projectStatusPlaceholder": "Filteren op status",
     "columns": {
       "number": "Getal",
       "projectName": "Projectnaam",

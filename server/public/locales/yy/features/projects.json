@@ -76,6 +76,7 @@
     "openMenu": "55555",
     "searchPlaceholder": "55555",
     "statusPlaceholder": "55555",
+    "projectStatusPlaceholder": "55555",
     "contactPlaceholder": "55555",
     "managerPlaceholder": "55555",
     "deadlinePlaceholder": "55555",
@@ -92,6 +93,12 @@
       "all": "55555",
       "active": "55555",
       "inactive": "55555"
+    },
+    "projectStatusOptions": {
+      "all": "55555",
+      "open": "55555",
+      "closed": "55555",
+      "closedSuffix": "55555 {{name}} 55555"
     },
     "columns": {
       "number": "55555",

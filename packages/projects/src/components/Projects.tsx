@@ -43,6 +43,12 @@ import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboa
 export interface ProjectListFilters {
   searchQuery?: string;
   status?: 'all' | 'active' | 'inactive';
+  /**
+   * Filter by the project's workflow status (the `statuses` row referenced by
+   * `projects.status`). Accepts the convenience values 'all' | 'open' | 'closed'
+   * ('open' hides statuses whose `is_closed` flag is true) or a specific status id.
+   */
+  projectStatus?: string;
   clientId?: string;
   contactId?: string;
   managerId?: string;
@@ -59,6 +65,7 @@ function buildURLFromFilters(filters: ProjectListFilters): string {
 
   if (filters.searchQuery) params.set('searchQuery', filters.searchQuery);
   if (filters.status && filters.status !== 'active') params.set('status', filters.status);
+  if (filters.projectStatus && filters.projectStatus !== 'all') params.set('projectStatus', filters.projectStatus);
   if (filters.clientId) params.set('clientId', filters.clientId);
   if (filters.contactId) params.set('contactId', filters.contactId);
   if (filters.managerId) params.set('managerId', filters.managerId);
@@ -88,6 +95,9 @@ function parseFiltersFromSearch(search: string): ProjectListFilters {
   if (status === 'all' || status === 'active' || status === 'inactive') {
     filters.status = status;
   }
+
+  const projectStatus = params.get('projectStatus');
+  if (projectStatus) filters.projectStatus = projectStatus;
 
   const clientId = params.get('clientId');
   if (clientId) filters.clientId = clientId;
@@ -135,6 +145,7 @@ interface ProjectsProps {
 
 export const DEFAULT_PROJECT_FILTERS: ProjectListFilters = {
   status: 'active',
+  projectStatus: 'all',
   page: 1,
   pageSize: 10,
 };
@@ -409,7 +420,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
   }, [activeFilters.searchQuery]);
 
   const filteredProjects = useMemo(() => {
-    const { searchQuery, status, tags, clientId, contactId, managerId } = activeFilters;
+    const { searchQuery, status, projectStatus, tags, clientId, contactId, managerId } = activeFilters;
     const search = (searchQuery || '').toLowerCase();
 
     let filtered = projects.filter(project =>
@@ -424,6 +435,15 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
        (status === 'active' && !project.is_inactive) ||
        (status === 'inactive' && project.is_inactive))
     );
+
+    // Apply project status filter (by the project's workflow status / is_closed flag)
+    if (projectStatus && projectStatus !== 'all') {
+      filtered = filtered.filter(project => {
+        if (projectStatus === 'open') return project.is_closed !== true;
+        if (projectStatus === 'closed') return project.is_closed === true;
+        return project.status === projectStatus;
+      });
+    }
 
     // Apply tag filter if tags are selected
     if (tags && tags.length > 0) {
@@ -804,6 +824,32 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     { value: 'inactive', label: projectListT('statusOptions.inactive', 'Inactive projects') }
   ], [projectListT]);
 
+  // Build the workflow-status filter options from the statuses present on the
+  // loaded projects, plus convenience groupings (all / open / closed).
+  const projectStatusOptions = useMemo(() => {
+    const seen = new Map<string, { name: string; isClosed: boolean }>();
+    for (const project of projects) {
+      if (project.status && project.status_name && !seen.has(project.status)) {
+        seen.set(project.status, { name: project.status_name, isClosed: Boolean(project.is_closed) });
+      }
+    }
+    const statusItems = Array.from(seen.entries())
+      .sort((a, b) => a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' }))
+      .map(([statusId, info]) => ({
+        value: statusId,
+        label: info.isClosed
+          ? projectListT('projectStatusOptions.closedSuffix', '{{name}} (closed)', { name: info.name })
+          : info.name,
+      }));
+
+    return [
+      { value: 'all', label: projectListT('projectStatusOptions.all', 'All statuses') },
+      { value: 'open', label: projectListT('projectStatusOptions.open', 'Open (hide closed)') },
+      { value: 'closed', label: projectListT('projectStatusOptions.closed', 'Closed only') },
+      ...statusItems,
+    ];
+  }, [projects, projectListT]);
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -844,6 +890,20 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
               value={activeFilters.status || 'active'}
               onValueChange={(value) => handleFilterChange({ status: value as 'all' | 'active' | 'inactive' })}
               placeholder={projectListT('statusPlaceholder', 'Select status')}
+              customStyles={{
+                content: 'mt-1'
+              }}
+            />
+          </div>
+
+          {/* Project status filter (workflow status / closed flag) */}
+          <div className="relative z-10 shrink-0">
+            <CustomSelect
+              id="project-status-filter"
+              options={projectStatusOptions}
+              value={activeFilters.projectStatus || 'all'}
+              onValueChange={(value) => handleFilterChange({ projectStatus: value })}
+              placeholder={projectListT('projectStatusPlaceholder', 'Filter by status')}
               customStyles={{
                 content: 'mt-1'
               }}
