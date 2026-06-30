@@ -10,6 +10,10 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => {
     throw new Error('createTenantKnex must not be used by tenant-scoped model helpers in unit tests');
   }),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+    unscoped: (t: string, _reason?: string) => conn(t),
+  }),
 }));
 
 import {

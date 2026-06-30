@@ -30,6 +30,10 @@ vi.mock('@alga-psa/db', () => ({
     };
     return { knex, tenant: tenantId ?? dbState.tenant };
   }),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+    unscoped: (t: string, _reason?: string) => conn(t),
+  }),
 }));
 
 import { getPortalDomainStatusForTenant } from '../server/portalDomainStatus';
