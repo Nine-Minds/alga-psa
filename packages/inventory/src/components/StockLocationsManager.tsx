@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { toast } from 'react-hot-toast';
@@ -101,9 +102,21 @@ export function StockLocationsManager({ initialLocations }: { initialLocations: 
 
   const columns: ColumnDefinition<IStockLocation>[] = [
     { title: 'Name', dataIndex: 'name' },
-    { title: 'Type', dataIndex: 'location_type' },
+    {
+      title: 'Type',
+      dataIndex: 'location_type',
+      render: (v: any) => LOCATION_TYPE_LABELS[v as StockLocationType] ?? v,
+    },
     { title: 'Default', dataIndex: 'is_default', render: (v: any) => (v ? 'Yes' : '') },
-    { title: 'Status', dataIndex: 'is_active', render: (v: any) => (v ? 'Active' : 'Inactive') },
+    {
+      title: 'Status',
+      dataIndex: 'is_active',
+      render: (v: any) => (
+        <Badge variant={(v ? 'success' : 'secondary') as BadgeVariant} size="sm">
+          {v ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
     {
       title: 'Actions',
       dataIndex: 'location_id',
