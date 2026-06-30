@@ -8,6 +8,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where('tenant', tenant),
+  }),
 }));
 
 vi.mock('@alga-psa/search/upsert', () => ({

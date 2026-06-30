@@ -16,6 +16,9 @@ vi.mock('@alga-psa/db', () => ({
       }),
     }),
   }),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+  }),
 }));
 
 const VALID_SECRET = 'a'.repeat(64);

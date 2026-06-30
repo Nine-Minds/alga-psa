@@ -52,6 +52,14 @@ const makeListQuery = (rows: any[]) => {
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (builder: any, table: string, left: string, right: string, options: any = {}) =>
+      options.type === 'left'
+        ? builder.leftJoin(table, left, right)
+        : builder.join(table, left, right),
+  }),
 }));
 
 vi.mock('@alga-psa/auth/withAuth', () => ({

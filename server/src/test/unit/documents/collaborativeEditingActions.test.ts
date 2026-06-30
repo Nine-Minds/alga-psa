@@ -22,6 +22,9 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: unknown[]) => createTenantKnexMock(...args),
   withTransaction: (...args: unknown[]) => withTransactionMock(...args),
   runWithTenant: (_tenant: string, fn: () => unknown) => fn(),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+  }),
 }));
 
 vi.mock('@alga-psa/documents/cache/CacheFactory', () => ({

@@ -64,6 +64,20 @@ jobs:
       - name: Install ripgrep
         run: sudo apt-get update && sudo apt-get install -y ripgrep
 
+      # Build the shared infra libraries' dist before testing. Most package
+      # vitest configs alias @alga-psa/<lib> to src, but a handful (auth, sla,
+      # reporting, onboarding, reference-data) resolve @alga-psa/db et al. via the
+      # package "exports" -> dist, which nothing else builds in this job (the nx
+      # `test` target has no `dependsOn: ^build`). Without this their suites die at
+      # collection with `Failed to resolve entry for package "@alga-psa/db"`.
+      # `dependsOn: ^build` cascades to each lib's own deps, so this set covers the
+      # horizontal libs real-import tests pull in.
+      - name: Build shared libraries
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
       - name: Determine Nx base/head
         shell: bash
         run: |

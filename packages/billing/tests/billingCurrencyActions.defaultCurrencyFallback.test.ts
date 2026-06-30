@@ -40,11 +40,11 @@ function createMockKnex(state: MockTableState) {
     }
 
     if (table === 'default_billing_settings') {
+      // tenantDb.table applies the tenant scope internally, so the action no
+      // longer calls .where({ tenant }) on this builder.
       return {
-        where: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            first: vi.fn().mockResolvedValue(state.billingSettings),
-          }),
+        select: vi.fn().mockReturnValue({
+          first: vi.fn().mockResolvedValue(state.billingSettings),
         }),
       };
     }
@@ -55,6 +55,12 @@ function createMockKnex(state: MockTableState) {
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: createMockKnex(mockState) })),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (builder: any, table: string, left: string, right: string) =>
+      builder.join(table, left, right),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({

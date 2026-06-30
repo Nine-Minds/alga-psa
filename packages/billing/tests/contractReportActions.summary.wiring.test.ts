@@ -18,7 +18,13 @@ describe('contractReportActions summary wiring', () => {
     expect(source).toContain('atRiskDecisionCount: number;');
     expect(source).toContain('const summaryTodayDateOnly = today.toISOString().slice(0, 10);');
     expect(source).toContain("inNinetyDays.setUTCDate(inNinetyDays.getUTCDate() + 90);");
-    expect(source).toContain("const atRiskDecisions = await knex('client_contracts as cc')");
+    // Tenant scoping now lives in the facade: db.table() scopes the at-risk read to the
+    // tenant and db.tenantJoin() scopes the contracts join, replacing the raw knex('...') call.
+    expect(source).toContain("const atRiskDecisionQuery = db.table('client_contracts as cc')");
+    expect(source).toContain(
+      "db.tenantJoin(atRiskDecisionQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');"
+    );
+    expect(source).toContain('const atRiskDecisions = await atRiskDecisionQuery.first()');
     expect(source).toContain(".whereNotNull('cc.decision_due_date')");
     expect(source).toContain(".andWhere((builder) => {\n        builder.whereNull('cc.start_date').orWhere('cc.start_date', '<=', summaryTodayDateOnly);\n      })");
     expect(source).toContain(".andWhere((builder) => {\n        builder.whereNull('cc.end_date').orWhere('cc.end_date', '>=', summaryTodayDateOnly);\n      })");

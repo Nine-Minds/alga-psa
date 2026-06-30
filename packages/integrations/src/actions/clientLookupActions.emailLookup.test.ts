@@ -26,6 +26,13 @@ const trxMock = vi.fn((table: string) => {
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   withTransaction: async (knex: any, callback: any) => callback(knex),
+  // The mock-knex builder applies tenant scoping implicitly via its table
+  // resolver and expects the production chain (`.select().where().first()`),
+  // so delegate straight to the connection without a leading `.where({tenant})`.
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
