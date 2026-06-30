@@ -136,7 +136,12 @@ export function StockLocationsManager({
   };
 
   const columns: ColumnDefinition<IStockLocation>[] = [
-    { title: 'Name', dataIndex: 'name' },
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      // The row's identity — give it weight so it out-ranks the data beside it (matches siblings).
+      render: (v: any) => <span className="font-medium text-gray-900">{v}</span>,
+    },
     {
       title: 'Type',
       dataIndex: 'location_type',
@@ -251,7 +256,7 @@ export function StockLocationsManager({
           }
         />
       ) : (
-        <DataTable id="stock-locations-table" data={visible} columns={columns} onRowClick={openEdit} />
+        <DataTable id="stock-locations-table" data={visible} columns={columns} />
       )}
 
       <Dialog
