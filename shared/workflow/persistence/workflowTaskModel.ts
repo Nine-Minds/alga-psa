@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { WorkflowTaskStatus } from './workflowTaskStatus';
 
 /**
  * Interface for workflow task definition
@@ -49,16 +50,10 @@ export interface IWorkflowTask {
   response_data?: Record<string, any>;
 }
 
-/**
- * Enum for workflow task status
- */
-export enum WorkflowTaskStatus {
-  PENDING = 'pending',
-  CLAIMED = 'claimed',
-  COMPLETED = 'completed',
-  CANCELED = 'canceled',
-  EXPIRED = 'expired'
-}
+// WorkflowTaskStatus now lives in the client-safe ./workflowTaskStatus module
+// (imported above for internal use) and is re-exported here so existing
+// importers of this model keep working unchanged.
+export { WorkflowTaskStatus } from './workflowTaskStatus';
 
 type WorkflowTaskSearchEventType =
   | 'WORKFLOW_TASK_CREATED'

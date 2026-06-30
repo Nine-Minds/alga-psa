@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getUserTasks, claimTask, unclaimTask } from '@alga-psa/workflows/actions/workflow-actions/taskInboxActions';
-import { WorkflowTaskStatus, type TaskDetails, type TaskQueryParams } from '@alga-psa/workflows/persistence';
+import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence/workflowTaskStatus';
+import type { TaskDetails, TaskQueryParams } from '@alga-psa/workflows/persistence';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge, BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Card } from '@alga-psa/ui/components/Card';
