@@ -14,7 +14,7 @@ import { loadMcpRegistry } from '@/lib/mcp/loadRegistry';
 import { authenticateAgentToken, looksLikeJwt } from './idpToken';
 import { mintAgentSessionKey } from './agents';
 import { writeAgentAudit } from './agentAudit';
-import { resolvePublicBaseUrl } from './baseUrl';
+import { resolvePublicBaseUrl, resolveInternalBaseUrl } from './baseUrl';
 import { looksLikeAlgaToken, verifyAccessToken } from './oauth/tokens';
 import { isGrantActive } from './oauth/grants';
 import { mintUserSessionKey } from './oauth/userSession';
@@ -172,23 +172,37 @@ async function handleOne(m: JsonRpcMessage, ctx: DispatchCtx): Promise<object | 
     case 'tools/call': {
       const name = (m.params?.name as string) ?? '';
       const args = (m.params?.arguments as Record<string, unknown>) ?? {};
-      const out = await dispatchTool(name, args, ctx);
+      // A transient dispatch failure (e.g. a self-fetch network error, or an
+      // unresolved path param from buildRequest) must surface as a JSON-RPC
+      // tool error — NOT bubble up and become a bare HTTP 500 that aborts the
+      // whole MCP request. The MCP client can then see the error and retry.
+      let out: ToolOutcome;
+      try {
+        out = await dispatchTool(name, args, ctx);
+      } catch (err) {
+        out = toolErr(`Tool dispatch failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
       if (ctx.agentId && ctx.tenant) {
         const decision = !out.isError
           ? 'allow'
           : out.statusCode === 403 || out.statusCode === 401
             ? 'deny'
             : 'error';
-        await writeAgentAudit({
-          tenant: ctx.tenant,
-          agentId: ctx.agentId,
-          tool: name,
-          arguments: args,
-          ok: !out.isError,
-          statusCode: out.statusCode ?? null,
-          decision,
-          resultSummary: out.content?.[0]?.text,
-        });
+        // Audit is best-effort: a failed audit write must not 500 the tool call.
+        try {
+          await writeAgentAudit({
+            tenant: ctx.tenant,
+            agentId: ctx.agentId,
+            tool: name,
+            arguments: args,
+            ok: !out.isError,
+            statusCode: out.statusCode ?? null,
+            decision,
+            resultSummary: out.content?.[0]?.text,
+          });
+        } catch {
+          // swallow — auditing is non-critical to returning the tool result
+        }
       }
       return rpcResult(id, out);
     }
@@ -278,7 +292,9 @@ export async function handleMcpJsonRpc(req: NextRequest): Promise<NextResponse> 
   const ctx: DispatchCtx = {
     registry: entries,
     apiKey: auth.apiKey,
-    baseUrl: req.nextUrl.origin,
+    // In-pod loopback (plaintext HTTP), NOT the public origin — see
+    // resolveInternalBaseUrl(). The public origin is only for OAuth discovery.
+    baseUrl: resolveInternalBaseUrl(),
     agentId: auth.agentId,
     tenant: auth.tenant,
   };

@@ -29,3 +29,27 @@ export async function resolvePublicBaseUrl(req: NextRequest): Promise<string> {
     'http://localhost:3000';
   return base.replace(/\/$/, '');
 }
+
+/**
+ * INTERNAL base URL for dispatching MCP tool calls back into this server's own
+ * `/api/v1` surface. This is the opposite of the public discovery URL above: an
+ * in-pod loopback over plaintext HTTP that must NEVER be the public origin.
+ *
+ * Routing tool dispatch through the public hostname (`req.nextUrl.origin`) sends
+ * each call out via the ingress/TLS path and back into the pod; that round-trip
+ * intermittently fails the TLS handshake (`ERR_SSL_WRONG_VERSION_NUMBER` →
+ * `TypeError: fetch failed`) and surfaces to the MCP client as HTTP 500s. A
+ * fixed loopback target avoids the mesh/TLS path entirely. Port precedence
+ * mirrors `getSessionCookieName`'s server-port resolution.
+ *
+ * LEVERAGE: friction mcp-self-http-dispatch — dispatch needs an HTTP base at all
+ * only because `/api/v1` auth + rate-limit + RBAC are welded to `NextRequest` in
+ * `ApiBaseController`, and the registry maps tools to method+path, not to
+ * functions. The real fix is a transport-free `dispatch(entryId, args, authCtx)`
+ * core shared by the route handlers and this server (in-process, no HTTP hop).
+ */
+export function resolveInternalBaseUrl(): string {
+  const port =
+    process.env.PORT || process.env.APP_PORT || process.env.EXPOSE_SERVER_PORT || '3000';
+  return `http://127.0.0.1:${port}`;
+}
