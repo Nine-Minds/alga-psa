@@ -21,6 +21,10 @@ import {
 import type { PortalDomainStatusResponse } from '@alga-psa/tenancy/actions/tenant-actions/portalDomain.types';
 import type { PortalDomainStatus } from 'server/src/models/PortalDomainModel';
 
+// Operator-facing reverse-proxy setup guide for appliance ("direct") deployments.
+// TODO(appliance-portal-domains): point at the published docs URL once it lands.
+const PROXY_SETUP_DOC_URL = 'https://docs.algapsa.com/client-portal/appliance-custom-portal-domain';
+
 interface StatusBadgeConfig {
   label: string;
   variant: BadgeVariant;
@@ -216,6 +220,13 @@ const ClientPortalDomainSettings = () => {
 
   const isFailureState = portalStatus?.status === 'dns_failed' || portalStatus?.status === 'certificate_failed';
 
+  // Appliance ("direct") deployments do their own DNS/TLS/routing via an
+  // operator-managed reverse proxy, so the UI shows the proxy contract instead
+  // of the hosted CNAME-to-canonical instructions.
+  const isDirectMode = portalStatus?.mode === 'direct';
+  const showNeverSeenWarning = isDirectMode && Boolean(portalStatus?.neverSeenOnHost);
+  const proxyTargetHost = portalStatus?.domain ?? t('clientPortal.domain.checklist.canonicalHostFallback');
+
   return (
     <Card>
       <CardHeader>
@@ -323,11 +334,17 @@ const ClientPortalDomainSettings = () => {
                 <label htmlFor="client-portal-domain-input" className="text-sm font-medium text-gray-700">
                   {t('clientPortal.domain.form.label')}
                 </label>
-                <p className="text-xs text-gray-500">
-                  {t('clientPortal.domain.form.helpTextPrefix')}
-                  <code className="rounded bg-gray-100 px-1 py-0.5">{portalStatus?.canonicalHost}</code>
-                  {t('clientPortal.domain.form.helpTextSuffix')}
-                </p>
+                {isDirectMode ? (
+                  <p className="text-xs text-gray-500">
+                    {t('clientPortal.domain.appliance.helpText')}
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    {t('clientPortal.domain.form.helpTextPrefix')}
+                    <code className="rounded bg-gray-100 px-1 py-0.5">{portalStatus?.canonicalHost}</code>
+                    {t('clientPortal.domain.form.helpTextSuffix')}
+                  </p>
+                )}
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                   <Input
                     id="client-portal-domain-input"
@@ -375,20 +392,53 @@ const ClientPortalDomainSettings = () => {
               </div>
             </form>
 
-            <div className="rounded border border-dashed border-gray-200 bg-white p-4 text-sm text-gray-600">
-              <div className="font-medium text-gray-700">{t('clientPortal.domain.checklist.title')}</div>
-              <ol className="mt-2 list-decimal space-y-2 pl-4">
-                <li>
-                  {t('clientPortal.domain.checklist.step1Prefix')}
-                  <code className="rounded bg-gray-100 px-1 py-0.5">{portalStatus?.canonicalHost ?? t('clientPortal.domain.checklist.canonicalHostFallback')}</code>
-                  {t('clientPortal.domain.checklist.step1Suffix')}
-                </li>
-                <li>{t('clientPortal.domain.checklist.step2')}</li>
-                <li>
-                  {t('clientPortal.domain.checklist.step3')}
-                </li>
-              </ol>
-            </div>
+            {showNeverSeenWarning && (
+              <Alert variant="warning" className="text-sm" data-automation-id="client-portal-domain-never-seen-warning">
+                <AlertDescription>
+                  {t('clientPortal.domain.appliance.neverSeenWarning', { domain: portalStatus?.domain ?? '' })}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {isDirectMode ? (
+              <div className="rounded border border-dashed border-gray-200 bg-white p-4 text-sm text-gray-600">
+                <div className="font-medium text-gray-700">{t('clientPortal.domain.appliance.checklistTitle')}</div>
+                <ol className="mt-2 list-decimal space-y-2 pl-4">
+                  <li>
+                    {t('clientPortal.domain.appliance.step1Prefix')}
+                    <code className="rounded bg-gray-100 px-1 py-0.5">{proxyTargetHost}</code>
+                    {t('clientPortal.domain.appliance.step1Suffix')}
+                  </li>
+                  <li>{t('clientPortal.domain.appliance.step2')}</li>
+                  <li>{t('clientPortal.domain.appliance.step3')}</li>
+                  <li>{t('clientPortal.domain.appliance.step4')}</li>
+                </ol>
+                <a
+                  href={PROXY_SETUP_DOC_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-block text-blue-600 underline"
+                  data-automation-id="client-portal-domain-proxy-doc-link"
+                >
+                  {t('clientPortal.domain.appliance.docLinkText')}
+                </a>
+              </div>
+            ) : (
+              <div className="rounded border border-dashed border-gray-200 bg-white p-4 text-sm text-gray-600">
+                <div className="font-medium text-gray-700">{t('clientPortal.domain.checklist.title')}</div>
+                <ol className="mt-2 list-decimal space-y-2 pl-4">
+                  <li>
+                    {t('clientPortal.domain.checklist.step1Prefix')}
+                    <code className="rounded bg-gray-100 px-1 py-0.5">{portalStatus?.canonicalHost ?? t('clientPortal.domain.checklist.canonicalHostFallback')}</code>
+                    {t('clientPortal.domain.checklist.step1Suffix')}
+                  </li>
+                  <li>{t('clientPortal.domain.checklist.step2')}</li>
+                  <li>
+                    {t('clientPortal.domain.checklist.step3')}
+                  </li>
+                </ol>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

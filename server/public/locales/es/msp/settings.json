@@ -1171,6 +1171,17 @@
         "step3": "Use el botón Actualizar para consultar el progreso del aprovisionamiento. Enviaremos un correo electrónico a sus administradores si el aprovisionamiento falla.",
         "canonicalHostFallback": "host canónico"
       },
+      "appliance": {
+        "helpText": "Apunte este nombre de host a su appliance y haga que su proxy inverso reenvíe el encabezado Host original antes de guardar.",
+        "checklistTitle": "Configuración del proxy inverso",
+        "step1Prefix": "Apunte ",
+        "step1Suffix": " a este appliance (un registro A a su dirección o un CNAME a su host de appliance).",
+        "step2": "En su proxy inverso, termine TLS para el dominio y reenvíe a este appliance en el puerto 3000, preservando el encabezado Host original (p. ej. proxy_set_header Host $host) y enviando X-Forwarded-Proto: https.",
+        "step3": "Obtenga y mantenga el certificado TLS para el dominio en su proxy.",
+        "step4": "Guarde el dominio aquí — se activa de inmediato. Configure primero el DNS y su proxy, ya que los enlaces del portal cambian a este dominio de inmediato.",
+        "docLinkText": "Guía de configuración y resolución de problemas del proxy inverso",
+        "neverSeenWarning": "Aún no han llegado solicitudes a {{domain}}. Compruebe que su proxy inverso reenvía el encabezado Host original."
+      },
       "badges": {
         "pending_dns": "DNS pendiente",
         "verifying_dns": "Verificando DNS",

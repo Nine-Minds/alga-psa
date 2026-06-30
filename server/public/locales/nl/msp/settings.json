@@ -1171,6 +1171,17 @@
         "step3": "Gebruik de knop Vernieuwen om de voortgang van provisioning te volgen. We e-mailen uw beheerders als provisioning mislukt.",
         "canonicalHostFallback": "canonieke host"
       },
+      "appliance": {
+        "helpText": "Wijs deze hostnaam naar uw appliance en laat uw reverse proxy de oorspronkelijke Host-header doorsturen voordat u opslaat.",
+        "checklistTitle": "Reverse proxy instellen",
+        "step1Prefix": "Wijs ",
+        "step1Suffix": " naar deze appliance (een A-record naar het adres, of een CNAME naar uw appliance-host).",
+        "step2": "Beëindig op uw reverse proxy TLS voor het domein en stuur door naar deze appliance op poort 3000, met behoud van de oorspronkelijke Host-header (bijv. proxy_set_header Host $host) en het verzenden van X-Forwarded-Proto: https.",
+        "step3": "Verkrijg en onderhoud het TLS-certificaat voor het domein op uw proxy.",
+        "step4": "Sla het domein hier op — het wordt onmiddellijk geactiveerd. Configureer eerst DNS en uw proxy, omdat portallinks meteen naar dit domein overschakelen.",
+        "docLinkText": "Handleiding voor reverse proxy instellen en probleemoplossing",
+        "neverSeenWarning": "Er hebben nog geen verzoeken {{domain}} bereikt. Controleer of uw reverse proxy de oorspronkelijke Host-header doorstuurt."
+      },
       "badges": {
         "pending_dns": "DNS in behandeling",
         "verifying_dns": "DNS verifiëren",

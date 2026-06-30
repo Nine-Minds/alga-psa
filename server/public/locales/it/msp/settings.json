@@ -1171,6 +1171,17 @@
         "step3": "Utilizzi il pulsante Aggiorna per controllare l'avanzamento del provisioning. Invieremo un'email ai Suoi amministratori se il provisioning fallisce.",
         "canonicalHostFallback": "host canonico"
       },
+      "appliance": {
+        "helpText": "Punta questo nome host alla tua appliance e fai in modo che il tuo reverse proxy inoltri l'header Host originale prima di salvare.",
+        "checklistTitle": "Configurazione del reverse proxy",
+        "step1Prefix": "Punta ",
+        "step1Suffix": " a questa appliance (un record A al suo indirizzo o un CNAME al tuo host appliance).",
+        "step2": "Sul tuo reverse proxy, termina TLS per il dominio e inoltra a questa appliance sulla porta 3000, preservando l'header Host originale (es. proxy_set_header Host $host) e inviando X-Forwarded-Proto: https.",
+        "step3": "Ottieni e mantieni il certificato TLS per il dominio sul tuo proxy.",
+        "step4": "Salva il dominio qui — si attiva immediatamente. Configura prima il DNS e il tuo proxy, poiché i link del portale passano subito a questo dominio.",
+        "docLinkText": "Guida alla configurazione e risoluzione dei problemi del reverse proxy",
+        "neverSeenWarning": "Nessuna richiesta ha ancora raggiunto {{domain}}. Verifica che il tuo reverse proxy inoltri l'header Host originale."
+      },
       "badges": {
         "pending_dns": "DNS in attesa",
         "verifying_dns": "Verifica DNS in corso",

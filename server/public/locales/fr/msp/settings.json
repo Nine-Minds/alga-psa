@@ -1171,6 +1171,17 @@
         "step3": "Utilisez le bouton Actualiser pour suivre la progression du provisionnement. Nous enverrons un email à vos administrateurs si le provisionnement échoue.",
         "canonicalHostFallback": "hôte canonique"
       },
+      "appliance": {
+        "helpText": "Pointez ce nom d'hôte vers votre appliance et faites en sorte que votre proxy inverse transmette l'en-tête Host d'origine avant d'enregistrer.",
+        "checklistTitle": "Configuration du proxy inverse",
+        "step1Prefix": "Pointez ",
+        "step1Suffix": " vers cette appliance (un enregistrement A vers son adresse, ou un CNAME vers votre hôte d'appliance).",
+        "step2": "Sur votre proxy inverse, terminez TLS pour le domaine et transmettez à cette appliance sur le port 3000, en préservant l'en-tête Host d'origine (par ex. proxy_set_header Host $host) et en envoyant X-Forwarded-Proto: https.",
+        "step3": "Obtenez et maintenez le certificat TLS pour le domaine sur votre proxy.",
+        "step4": "Enregistrez le domaine ici — il s'active immédiatement. Configurez d'abord le DNS et votre proxy, car les liens du portail basculent immédiatement vers ce domaine.",
+        "docLinkText": "Guide de configuration et de dépannage du proxy inverse",
+        "neverSeenWarning": "Aucune requête n'a encore atteint {{domain}}. Vérifiez que votre proxy inverse transmet l'en-tête Host d'origine."
+      },
       "badges": {
         "pending_dns": "DNS en attente",
         "verifying_dns": "Vérification du DNS",

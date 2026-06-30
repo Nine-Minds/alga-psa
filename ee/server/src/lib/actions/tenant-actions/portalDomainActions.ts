@@ -7,11 +7,7 @@ import { withAuth, hasPermission } from '@alga-psa/auth';
 import {
   computeCanonicalHost,
   getPortalDomain,
-  updatePortalDomain,
-  upsertPortalDomain,
-  isTerminalStatus,
   type PortalDomainStatus,
-  type UpdatePortalDomainInput,
   normalizeHostname,
   type PortalDomain,
 } from 'server/src/models/PortalDomainModel';
@@ -20,9 +16,15 @@ import type {
   PortalDomainRegistrationRequest,
   PortalDomainRegistrationResult,
 } from '@alga-psa/tenancy/actions/tenant-actions/portalDomain.types';
-import { enqueuePortalDomainWorkflow } from '@ee/lib/portal-domains/workflowClient';
+import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
+import { getPortalDomainProvisioner } from '@ee/lib/portal-domains/provisioner';
+import { getPortalDomainLastSeen } from '@/lib/portal-domains/portalDomainSeen';
 import type { IUser } from 'server/src/interfaces/auth.interfaces';
 import { analytics } from '@/lib/analytics/posthog';
+
+// Grace period before an active appliance domain with no observed traffic is
+// flagged as "never seen on its Host" — long enough for DNS/proxy to be wired up.
+const NEVER_SEEN_GRACE_MS = 10 * 60 * 1000;
 
 const REQUIRED_RESOURCE = 'settings';
 const READ_ACTION = 'read';
@@ -51,6 +53,7 @@ function buildVerificationDetails(record: PortalDomain | null, canonicalHost: st
 
 function createStatusResponse(record: PortalDomain | null, canonicalHost: string): PortalDomainStatusResponse {
   const statusMessage = record?.statusMessage ?? 'No custom domain registered yet.';
+  const mode = resolveDeploymentCapabilities().portalDomain.provisioner;
 
   return {
     domain: record?.domain ?? null,
@@ -66,6 +69,7 @@ function createStatusResponse(record: PortalDomain | null, canonicalHost: string
     updatedAt: toIsoString(record?.updatedAt),
     isEditable: true,
     edition: 'ee',
+    mode,
   };
 }
 
@@ -114,10 +118,28 @@ function validateRequestedDomain(rawDomain: string, canonicalHost: string): stri
   return normalized;
 }
 
+async function computeNeverSeenOnHost(record: PortalDomain | null): Promise<boolean> {
+  // Appliance ("direct") only, and only once an active domain has had time to be wired up.
+  if (resolveDeploymentCapabilities().portalDomain.provisioner !== 'direct') {
+    return false;
+  }
+  if (!record || record.status !== 'active' || !record.domain) {
+    return false;
+  }
+  const activatedAt = record.createdAt ? new Date(record.createdAt).getTime() : Date.now();
+  if (Number.isFinite(activatedAt) && Date.now() - activatedAt < NEVER_SEEN_GRACE_MS) {
+    return false;
+  }
+  const lastSeen = await getPortalDomainLastSeen(record.domain);
+  return lastSeen === null;
+}
+
 async function fetchStatus(knex: Knex, tenant: string): Promise<PortalDomainStatusResponse> {
   const canonicalHost = computeCanonicalHost(tenant);
   const record = await getPortalDomain(knex, tenant);
-  return createStatusResponse(record, canonicalHost);
+  const response = createStatusResponse(record, canonicalHost);
+  response.neverSeenOnHost = await computeNeverSeenOnHost(record);
+  return response;
 }
 
 export const getPortalDomainStatusAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusResponse> => {
@@ -137,47 +159,25 @@ export const requestPortalDomainRegistrationAction = withAuth(async (
   const canonicalHost = computeCanonicalHost(tenant);
   const existing = await getPortalDomain(knex, tenant);
   const normalizedDomain = validateRequestedDomain(request.domain, canonicalHost);
-  const isNewDomain = !existing;
   const domainChanged = existing ? existing.domain !== normalizedDomain : false;
 
-  const record = await upsertPortalDomain(knex, tenant, {
+  const provisioner = getPortalDomainProvisioner();
+  const { enqueued } = await provisioner.register({
+    knex,
+    tenant,
+    canonicalHost,
     domain: normalizedDomain,
-    status: 'pending_dns',
-    statusMessage: domainChanged
-      ? `Updating custom domain. Waiting for DNS verification of ${normalizedDomain}.`
-      : `Waiting for DNS verification. Point a CNAME to ${canonicalHost}.`,
-    verificationDetails: {
-      expected_cname: canonicalHost,
-      requested_domain: normalizedDomain,
-      ...(existing && domainChanged ? { previous_domain: existing.domain } : {}),
-    },
-    lastCheckedAt: new Date().toISOString(),
-    certificateSecretName: null,
-    lastSyncedResourceVersion: null,
-  });
-
-  const workflowResult = await enqueuePortalDomainWorkflow({
-    tenantId: tenant,
-    portalDomainId: record.id,
-    trigger: domainChanged ? 'refresh' : 'register',
+    existing,
+    domainChanged,
   });
 
   analytics.capture('portal_domain.registration_enqueued', {
     tenant_id: tenant,
     domain: normalizedDomain,
-    workflow_enqueued: workflowResult.enqueued,
+    workflow_enqueued: enqueued,
     trigger: domainChanged ? 'refresh' : 'register',
     was_update: domainChanged,
   });
-
-  if (!workflowResult.enqueued) {
-    await updatePortalDomain(knex, tenant, {
-      status: 'pending_dns',
-      statusMessage: domainChanged
-        ? 'Saved domain change, but failed to enqueue provisioning. Please retry or contact support.'
-        : 'Saved domain, but failed to enqueue provisioning. Please try again or contact support.',
-    });
-  }
 
   const status = await fetchStatus(knex, tenant);
   return { status };
@@ -188,12 +188,8 @@ export const refreshPortalDomainStatusAction = withAuth(async (user, { tenant })
   await checkPermission(user, READ_ACTION, knex);
   const current = await getPortalDomain(knex, tenant);
 
-  if (current && !isTerminalStatus(current.status)) {
-    await enqueuePortalDomainWorkflow({
-      tenantId: tenant,
-      portalDomainId: current.id,
-      trigger: 'refresh',
-    }).catch(() => undefined);
+  if (current) {
+    await getPortalDomainProvisioner().refresh({ knex, tenant, existing: current });
   }
 
   const status = await fetchStatus(knex, tenant);
@@ -221,28 +217,7 @@ export const retryPortalDomainRegistrationAction = withAuth(async (user, { tenan
     throw new Error('Retry is only available after a failed registration.');
   }
 
-  const now = new Date().toISOString();
-  const nextStatus: UpdatePortalDomainInput = {
-    lastCheckedAt: now,
-  };
-
-  if (current.status === 'dns_failed') {
-    nextStatus.status = 'pending_dns';
-    nextStatus.statusMessage = `Retrying DNS verification. Ensure ${current.domain} points to ${current.canonicalHost}.`;
-  } else {
-    nextStatus.status = 'pending_certificate';
-    nextStatus.statusMessage = 'Retrying certificate provisioning. Verifying ACME challenge reachability.';
-  }
-
-  const updated = await updatePortalDomain(knex, tenant, nextStatus);
-
-  if (updated) {
-    await enqueuePortalDomainWorkflow({
-      tenantId: tenant,
-      portalDomainId: updated.id,
-      trigger: 'refresh',
-    }).catch(() => undefined);
-  }
+  await getPortalDomainProvisioner().retry({ knex, tenant, existing: current });
 
   const status = await fetchStatus(knex, tenant);
 
@@ -264,21 +239,7 @@ export const disablePortalDomainAction = withAuth(async (user, { tenant }): Prom
     return fetchStatus(knex, tenant);
   }
 
-  const updated = await updatePortalDomain(knex, tenant, {
-    status: 'disabled',
-    statusMessage: 'Custom domain disabled by administrator.',
-    lastCheckedAt: new Date().toISOString(),
-    certificateSecretName: null,
-    lastSyncedResourceVersion: null,
-  });
-
-  if (updated) {
-    await enqueuePortalDomainWorkflow({
-      tenantId: tenant,
-      portalDomainId: updated.id,
-      trigger: 'disable',
-    }).catch(() => undefined);
-  }
+  await getPortalDomainProvisioner().disable({ knex, tenant, existing });
 
   const status = await fetchStatus(knex, tenant);
 

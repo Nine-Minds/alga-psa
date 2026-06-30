@@ -1171,6 +1171,17 @@
         "step3": "Verwenden Sie die Schaltfläche „Aktualisieren“, um den Bereitstellungsfortschritt abzufragen. Wir benachrichtigen Ihre Administratoren per E-Mail, falls die Bereitstellung fehlschlägt.",
         "canonicalHostFallback": "kanonischer Host"
       },
+      "appliance": {
+        "helpText": "Richten Sie diesen Hostnamen auf Ihre Appliance aus und lassen Sie Ihren Reverse-Proxy den ursprünglichen Host-Header weiterleiten, bevor Sie speichern.",
+        "checklistTitle": "Reverse-Proxy-Einrichtung",
+        "step1Prefix": "Richten Sie ",
+        "step1Suffix": " auf diese Appliance aus (ein A-Record auf ihre Adresse oder ein CNAME auf Ihren Appliance-Host).",
+        "step2": "Terminieren Sie auf Ihrem Reverse-Proxy TLS für die Domain und leiten Sie an diese Appliance auf Port 3000 weiter, wobei der ursprüngliche Host-Header erhalten bleibt (z. B. proxy_set_header Host $host) und X-Forwarded-Proto: https gesendet wird.",
+        "step3": "Beschaffen und pflegen Sie das TLS-Zertifikat für die Domain auf Ihrem Proxy.",
+        "step4": "Speichern Sie die Domain hier — sie wird sofort aktiviert. Richten Sie zuerst DNS und Ihren Proxy ein, da Portal-Links sofort auf diese Domain umgestellt werden.",
+        "docLinkText": "Anleitung zur Reverse-Proxy-Einrichtung und Fehlerbehebung",
+        "neverSeenWarning": "Es haben noch keine Anfragen {{domain}} erreicht. Prüfen Sie, ob Ihr Reverse-Proxy den ursprünglichen Host-Header weiterleitet."
+      },
       "badges": {
         "pending_dns": "DNS ausstehend",
         "verifying_dns": "DNS wird verifiziert",

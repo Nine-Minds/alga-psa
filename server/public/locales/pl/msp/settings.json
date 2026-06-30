@@ -1177,6 +1177,17 @@
         "step3": "Użyj przycisku Odśwież, aby sprawdzać postęp wdrożenia. Wyślemy administratorom wiadomość e-mail, jeśli wdrożenie się nie powiedzie.",
         "canonicalHostFallback": "host kanoniczny"
       },
+      "appliance": {
+        "helpText": "Skieruj tę nazwę hosta na swoje urządzenie i skonfiguruj reverse proxy tak, aby przekazywał oryginalny nagłówek Host przed zapisaniem.",
+        "checklistTitle": "Konfiguracja reverse proxy",
+        "step1Prefix": "Skieruj ",
+        "step1Suffix": " na to urządzenie (rekord A na jego adres lub CNAME na host urządzenia).",
+        "step2": "Na swoim reverse proxy zakończ TLS dla domeny i przekaż do tego urządzenia na port 3000, zachowując oryginalny nagłówek Host (np. proxy_set_header Host $host) i wysyłając X-Forwarded-Proto: https.",
+        "step3": "Uzyskaj i utrzymuj certyfikat TLS dla domeny na swoim proxy.",
+        "step4": "Zapisz domenę tutaj — aktywuje się natychmiast. Najpierw skonfiguruj DNS i proxy, ponieważ linki portalu od razu przełączą się na tę domenę.",
+        "docLinkText": "Przewodnik konfiguracji i rozwiązywania problemów z reverse proxy",
+        "neverSeenWarning": "Żadne żądania nie dotarły jeszcze do {{domain}}. Sprawdź, czy Twój reverse proxy przekazuje oryginalny nagłówek Host."
+      },
       "badges": {
         "pending_dns": "Oczekuje na DNS",
         "verifying_dns": "Weryfikacja DNS",
