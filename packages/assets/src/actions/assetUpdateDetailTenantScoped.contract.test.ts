@@ -17,8 +17,8 @@ function sourceBetween(start: string, end: string): string {
 describe('asset update/detail tenant-scoped query contract', () => {
     it('uses structural tenant scoping for update asset and detail relationship roots', () => {
         const updateSection = sourceBetween(
+            'export async function updateAssetRecord',
             'export const updateAsset',
-            'export const deleteAsset',
         );
         const detailSection = sourceBetween(
             'async function getAssetWithExtensions',

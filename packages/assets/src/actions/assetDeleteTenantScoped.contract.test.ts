@@ -17,8 +17,8 @@ function sourceBetween(start: string, end: string): string {
 describe('asset delete tenant-scoped query contract', () => {
     it('uses structural tenant scoping for asset delete cleanup roots', () => {
         const deleteSection = sourceBetween(
+            'export async function deleteAssetRecord',
             'export const deleteAsset',
-            'export const bulkDeleteAssets',
         );
 
         expect(deleteSection).toContain("tenantScopedTable(trx as Knex.Transaction, 'assets', tenantId)");
