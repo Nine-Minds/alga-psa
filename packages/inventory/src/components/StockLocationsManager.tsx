@@ -89,15 +89,15 @@ export function StockLocationsManager({
     try {
       if (editing) {
         await updateStockLocation(editing.location_id, form);
-        toast.success('Location updated');
+        toast.success('Location updated.');
       } else {
         await createStockLocation(form);
-        toast.success('Location created');
+        toast.success('Location created.');
       }
       setDialogOpen(false);
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || 'Save failed');
+      toast.error(e?.message || "Couldn't save the location.");
     } finally {
       setSaving(false);
     }
@@ -106,17 +106,17 @@ export function StockLocationsManager({
   const deactivate = async (loc: IStockLocation) => {
     try {
       await deactivateStockLocation(loc.location_id);
-      toast.success('Location deactivated');
+      toast.success('Location deactivated.');
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || 'Deactivate failed');
+      toast.error(e?.message || "Couldn't deactivate the location.");
     }
   };
 
   const reactivate = async (loc: IStockLocation) => {
     try {
       await updateStockLocation(loc.location_id, { is_active: true });
-      toast.success('Location reactivated');
+      toast.success('Location reactivated.');
       await reload();
     } catch (e: any) {
       toast.error(e?.message || "Couldn't reactivate the location.");
@@ -272,13 +272,13 @@ export function StockLocationsManager({
             id="stock-location-type"
             label="Type"
             value={form.location_type}
-            placeholder="Select type…"
+            placeholder="Select a type…"
             options={LOCATION_TYPE_OPTIONS}
             onValueChange={(val: string) => setForm({ ...form, location_type: val as StockLocationType })}
           />
           <Checkbox
             id="stock-location-default"
-            label="Default location"
+            label="Make this the default location"
             checked={form.is_default}
             onChange={(e) => setForm({ ...form, is_default: e.target.checked })}
           />
@@ -287,7 +287,7 @@ export function StockLocationsManager({
               Cancel
             </Button>
             <Button id="stock-location-save" onClick={save} disabled={saving}>
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? 'Saving…' : editing ? 'Save' : 'Create'}
             </Button>
           </div>
         </div>
@@ -300,10 +300,11 @@ export function StockLocationsManager({
         title="Deactivate location"
         message={
           pendingDeactivate
-            ? `Are you sure you want to deactivate "${pendingDeactivate.name}"?`
+            ? `Deactivate "${pendingDeactivate.name}"? It will stop appearing as a stock destination.`
             : ''
         }
         confirmLabel="Deactivate"
+        cancelLabel="Keep active"
         onConfirm={async () => {
           if (pendingDeactivate) {
             await deactivate(pendingDeactivate);
