@@ -71,7 +71,7 @@ describe('client contract line mutation guards', () => {
 
     expect(knex).toHaveBeenCalledWith('invoice_charge_details as iid');
     expect(detailBuilder.andWhere).toHaveBeenCalledWith('clsc.contract_line_id', ASSIGNMENT_SCOPED_LINE_ID);
-    expect(detailBuilder.first).toHaveBeenCalledWith('iid.service_period_end');
+    expect(detailBuilder.first).toHaveBeenCalledWith({ service_period_end: 'iid.service_period_end' });
     expect(withTransaction).not.toHaveBeenCalled();
   });
 

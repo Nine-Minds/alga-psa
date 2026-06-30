@@ -1870,7 +1870,7 @@ describe('BillingEngine', () => {
 
   describe('Pricing Schedule Integration', () => {
     it('should query contract pricing schedules by contract id for the active service period overlap', () => {
-      expect(billingEngineSource).toContain('this.knex(\n          "contract_pricing_schedules",\n        )');
+      expect(billingEngineSource).toContain('db.table("contract_pricing_schedules")');
       expect(billingEngineSource).toContain('contract_id: clientContractLine.contract_id');
       expect(billingEngineSource).toContain('.where("effective_date", "<", servicePeriodEndExclusive)');
       expect(billingEngineSource).toContain('.orWhere("end_date", ">", servicePeriodStartExclusive);');
@@ -1888,7 +1888,7 @@ describe('BillingEngine', () => {
     });
 
     it('should still continue fixed-charge calculation when no pricing schedule row exists', () => {
-      expect(billingEngineSource).toContain('const activePricingSchedule = await this.knex(');
+      expect(billingEngineSource).toContain('const activePricingSchedule = await db.table("contract_pricing_schedules")');
       expect(billingEngineSource).toContain('.first();');
       expect(billingEngineSource).toContain('if (');
       expect(billingEngineSource).toContain('activePricingSchedule &&');

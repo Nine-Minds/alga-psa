@@ -61,17 +61,25 @@ type FakeQuery = {
   where: (..._args: any[]) => FakeQuery;
   first: () => Promise<any>;
   delete: () => Promise<number>;
+  then: (resolve: (value: any[]) => any, reject?: (reason: unknown) => any) => Promise<any>;
+  catch: (reject: (reason: unknown) => any) => Promise<any>;
 };
 
 function makeQuery(rows: any[] = [], firstRow?: any): FakeQuery {
-  return {
-    select: () => makeQuery(rows, firstRow),
-    whereIn: () => makeQuery(rows, firstRow),
+  const query: FakeQuery = {
+    select: () => query,
+    whereIn: () => query,
     andWhere: async () => rows,
-    where: () => makeQuery(rows, firstRow),
+    where: () => query,
     first: async () => firstRow,
     delete: async () => 0,
+    // The lookup chains now end at select().whereIn() and await the builder
+    // directly, so it must be thenable and resolve to the row set (matching a
+    // knex query builder) rather than relying on a terminal andWhere().
+    then: (resolve, reject) => Promise.resolve(rows).then(resolve, reject),
+    catch: (reject) => Promise.resolve(rows).catch(reject),
   };
+  return query;
 }
 
 function makeTrx(config: {

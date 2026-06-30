@@ -83,10 +83,10 @@ describe('invoiceQueries purchase order summary assignment scope', () => {
   it('T043: PO summary remains tied to invoice.client_contract_id and does not drift to sibling assignments', async () => {
     const result = await getInvoicePurchaseOrderSummary('invoice-1');
 
-    expect(mocks.invoiceBuilder.where).toHaveBeenCalledWith({
-      tenant: 'tenant-1',
-      invoice_id: 'invoice-1',
-    });
+    // Tenant scoping now lives in the tenantDb facade (applied as where({ tenant }))
+    // while the action adds the invoice predicate separately.
+    expect(mocks.invoiceBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-1' });
+    expect(mocks.invoiceBuilder.where).toHaveBeenCalledWith({ invoice_id: 'invoice-1' });
     expect(mocks.getClientContractPurchaseOrderContext).toHaveBeenCalledWith({
       knex: mocks.knex,
       tenant: 'tenant-1',

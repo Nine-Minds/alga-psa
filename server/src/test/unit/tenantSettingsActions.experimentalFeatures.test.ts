@@ -32,13 +32,37 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/db', () => ({
   getTenantContext: () => mockTenantContext,
   createTenantKnex: createTenantKnexMock,
-  tenantDb: (conn: any, _tenant: string) => ({
-    table: (t: string) => conn(t),
+  // The facade scopes tenant_settings by tenant; the SUT no longer issues its own
+  // .where({ tenant }) so the mock applies it here, keeping the tenant-isolation
+  // assertions (knexWhereMock called with { tenant }) meaningful.
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
     unscoped: (t: string) => conn(t),
     tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
       o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
   }),
 }));
+
+// The facade turns every tenant_settings access into knex('tenant_settings')
+// .where({ tenant }) and then chains .select()/.first()/.insert(); wire the shared
+// builder mocks to match that shape.
+function wireTenantSettingsChain() {
+  knexWhereMock.mockImplementation(() => ({
+    select: knexSelectMock,
+    first: vi.fn(async () => tenantSettingsRow),
+    insert: knexInsertMock,
+  }));
+  knexSelectMock.mockImplementation(() => ({
+    first: vi.fn(async () => tenantSettingsRow),
+  }));
+  knexInsertMock.mockImplementation(() => ({
+    onConflict: knexOnConflictMock,
+  }));
+  knexOnConflictMock.mockImplementation(() => ({
+    merge: knexMergeMock,
+  }));
+  knexMergeMock.mockResolvedValue(undefined);
+}
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: getCurrentUserMock,
@@ -76,17 +100,7 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
     featureFlagIsEnabledMock.mockReset();
     featureFlagIsEnabledMock.mockResolvedValue(true);
 
-    knexWhereMock.mockImplementation(() => ({
-      first: vi.fn(async () => tenantSettingsRow),
-    }));
-
-    knexFromMock.mockImplementation(() => ({
-      where: knexWhereMock,
-    }));
-
-    knexSelectMock.mockImplementation(() => ({
-      from: knexFromMock,
-    }));
+    wireTenantSettingsChain();
 
     createTenantKnexMock.mockImplementation(async () => {
       if (!allowTenantKnex) {
@@ -96,9 +110,7 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
       }
 
       return {
-        knex: {
-          select: knexSelectMock,
-        },
+        knex: vi.fn((_table: string) => ({ where: knexWhereMock })),
       };
     });
   });
@@ -179,34 +191,13 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
     } as any);
     getCurrentUserPermissionsMock.mockResolvedValue(['settings:update']);
 
-    knexWhereMock.mockImplementation(() => ({
-      first: vi.fn(async () => tenantSettingsRow),
-    }));
+    wireTenantSettingsChain();
 
-    knexFromMock.mockImplementation(() => ({
+    // The callable knex returns the where-scoped builder; the facade applies
+    // .where({ tenant }) before the SUT chains .select()/.insert().
+    tenantKnexTableMock.mockImplementation((_table: string) => ({
       where: knexWhereMock,
     }));
-
-    knexSelectMock.mockImplementation(() => ({
-      from: knexFromMock,
-    }));
-
-    knexMergeMock.mockResolvedValue(undefined);
-    knexOnConflictMock.mockImplementation(() => ({
-      merge: knexMergeMock,
-    }));
-
-    knexInsertMock.mockImplementation(() => ({
-      onConflict: knexOnConflictMock,
-    }));
-
-    tenantKnexTableMock.mockImplementation(() => ({
-      insert: knexInsertMock,
-    }));
-
-    const tenantKnex = Object.assign(tenantKnexTableMock, {
-      select: knexSelectMock,
-    });
 
     createTenantKnexMock.mockImplementation(async () => {
       if (!allowTenantKnex) {
@@ -214,7 +205,7 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
       }
 
       return {
-        knex: tenantKnex,
+        knex: tenantKnexTableMock,
       };
     });
   });
@@ -378,17 +369,7 @@ describe('tenantSettingsActions.isExperimentalFeatureEnabled', () => {
     featureFlagIsEnabledMock.mockReset();
     featureFlagIsEnabledMock.mockResolvedValue(true);
 
-    knexWhereMock.mockImplementation(() => ({
-      first: vi.fn(async () => tenantSettingsRow),
-    }));
-
-    knexFromMock.mockImplementation(() => ({
-      where: knexWhereMock,
-    }));
-
-    knexSelectMock.mockImplementation(() => ({
-      from: knexFromMock,
-    }));
+    wireTenantSettingsChain();
 
     createTenantKnexMock.mockImplementation(async () => {
       if (!allowTenantKnex) {
@@ -396,9 +377,7 @@ describe('tenantSettingsActions.isExperimentalFeatureEnabled', () => {
       }
 
       return {
-        knex: {
-          select: knexSelectMock,
-        },
+        knex: vi.fn((_table: string) => ({ where: knexWhereMock })),
       };
     });
   });

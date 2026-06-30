@@ -141,7 +141,14 @@ vi.mock('@alga-psa/db', () => {
     }
     builder.first = () => Promise.resolve(undefined);
     builder.pluck = () => Promise.resolve([]);
-    builder.count = () => Promise.resolve([{ count: '0' }]);
+    // count() now feeds either a direct await (resolves to the rows array) or a
+    // chained .first() (resolves to the single count row), so return a hybrid
+    // thenable rather than a bare Promise.
+    builder.count = () => ({
+      first: () => Promise.resolve({ count: '0' }),
+      then: (resolve: any, reject: any) => Promise.resolve([{ count: '0' }]).then(resolve, reject),
+      catch: (reject: any) => Promise.resolve([{ count: '0' }]).catch(reject),
+    });
     builder.insert = () => Promise.resolve([]);
     builder.update = () => Promise.resolve(0);
     builder.del = () => Promise.resolve(0);
@@ -161,6 +168,7 @@ vi.mock('@alga-psa/db', () => {
       knex: fakeKnex,
       tenant: '550e8400-e29b-41d4-a716-446655440000'
     }),
+    requireTenantId: vi.fn().mockResolvedValue('550e8400-e29b-41d4-a716-446655440000'),
     withTransaction: vi.fn().mockImplementation(async (_knex, callback) => callback(fakeKnex)),
     tenantDb: (conn: any, _tenant: string) => ({
       table: (t: string) => conn(t),

@@ -9,8 +9,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
-  tenantDb: (conn: any, _tenant: string) => ({
-    table: (t: string) => conn(t),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
     unscoped: (t: string) => conn(t),
     tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
       o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
@@ -116,7 +116,10 @@ describe('invoice inbound webhook actions', () => {
       'inv-42',
       { knex: trx },
     );
-    expect(invoicesQuery.where).toHaveBeenCalledWith({ tenant: 'tenant-a', invoice_id: 'invoice-1' });
+    // Tenant scoping is enforced by the tenantDb facade (where({ tenant })) while
+    // the action adds the invoice predicate separately.
+    expect(invoicesQuery.where).toHaveBeenCalledWith({ tenant: 'tenant-a' });
+    expect(invoicesQuery.where).toHaveBeenCalledWith({ invoice_id: 'invoice-1' });
     expect(invoicesQuery.update).toHaveBeenCalledWith({
       status: 'paid',
       custom_fields: {
@@ -204,7 +207,8 @@ describe('invoice inbound webhook actions', () => {
       },
     });
 
-    expect(invoicesQuery.where).toHaveBeenCalledWith({ tenant: 'tenant-a', invoice_id: 'invoice-1' });
+    expect(invoicesQuery.where).toHaveBeenCalledWith({ tenant: 'tenant-a' });
+    expect(invoicesQuery.where).toHaveBeenCalledWith({ invoice_id: 'invoice-1' });
     expect(invoicesQuery.first).toHaveBeenCalled();
     expect(invoicesQuery.update).not.toHaveBeenCalled();
     expect(invoicesQuery.returning).not.toHaveBeenCalled();

@@ -398,6 +398,19 @@ let currentDb: MockDb | null = null;
 // in a vi.hoisted holder to be referenceable from the @alga-psa/db factory.
 const dbHoisted = vi.hoisted(() => ({
   withTransactionSpy: undefined as unknown as ReturnType<typeof vi.fn>,
+  // Global (non-tenant) catalog tables, per @alga-psa/db's tenantTableMetadata
+  // (internal_notification_{templates,subtypes,categories} are scope: 'global').
+  // The facade leaves these unscoped so template/subtype/category lookups span
+  // tenants; every other table this suite touches is tenant-scoped.
+  globalTables: new Set<string>([
+    'internal_notification_templates',
+    'internal_notification_subtypes',
+    'internal_notification_categories',
+  ]),
+  baseTableOf: (expression: string): string => {
+    const match = expression.match(/^\s*([\w.]+)(?:\s+as\s+\w+)?\s*$/i);
+    return match ? match[1] : expression.trim();
+  },
 }));
 
 const withTransactionSpy = vi.fn(async (_knex: unknown, callback: (trx: MockTransaction) => Promise<unknown>) => {
@@ -413,8 +426,15 @@ vi.mock('@alga-psa/db', () => ({
   withTransaction: (...args: any[]) => dbHoisted.withTransactionSpy(...args),
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
   getConnection: vi.fn(),
-  tenantDb: (conn: any, _tenant: string) => ({
-    table: (t: string) => conn(t),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => {
+      const builder = conn(t);
+      // Mirror the real facade: tenant-scoped tables carry a tenant predicate so
+      // cross-tenant rows are excluded; global catalog tables stay unscoped.
+      return dbHoisted.globalTables.has(dbHoisted.baseTableOf(t))
+        ? builder
+        : builder.where({ tenant });
+    },
     unscoped: (t: string) => conn(t),
     tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
       o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),

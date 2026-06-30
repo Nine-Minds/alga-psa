@@ -123,6 +123,12 @@ describe('ContractLineService client-owned mutation paths', () => {
           join() {
             return builder;
           },
+          // knex's .modify(fn) runs fn(builder) then returns the builder; the
+          // facade uses it to attach the tenant-scoped contracts join.
+          modify(fn: (q: any) => void) {
+            fn(builder);
+            return builder;
+          },
           where() {
             return builder;
           },
