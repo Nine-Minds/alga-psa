@@ -84,6 +84,13 @@ export interface IStockLocation extends TenantEntity {
   location_type: StockLocationType;
   assigned_user_id?: string | null;
   manager_user_id?: string | null;
+  // Optional physical address (warehouse/office have one; a Vehicle location does not).
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_code?: string | null;
   is_default: boolean;
   is_active: boolean;
   created_at?: string | Date;

@@ -8,6 +8,27 @@ import { IStockLocation, StockLocationType } from '@alga-psa/types';
 
 const LOCATION_TYPES: StockLocationType[] = ['warehouse', 'van', 'office', 'other'];
 
+const ADDRESS_FIELDS = [
+  'address_line1',
+  'address_line2',
+  'city',
+  'state_province',
+  'postal_code',
+  'country_code',
+] as const;
+
+/** Pull the address fields out of an input, trimming to null so blanks don't store empty strings. */
+function pickAddress(input: Record<string, unknown>): Record<string, string | null> {
+  const out: Record<string, string | null> = {};
+  for (const f of ADDRESS_FIELDS) {
+    if (f in input) {
+      const v = input[f];
+      out[f] = typeof v === 'string' && v.trim() ? v.trim() : null;
+    }
+  }
+  return out;
+}
+
 async function requireLocationPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   // stock_location permissions are read/update/create/delete; reads also allowed for inventory readers.
   if (!(await hasPermission(user, 'stock_location', action))) {
@@ -99,7 +120,7 @@ export const createStockLocation = withAuth(
       assigned_user_id?: string | null;
       manager_user_id?: string | null;
       is_default?: boolean;
-    },
+    } & Partial<Record<(typeof ADDRESS_FIELDS)[number], string | null>>,
   ): Promise<IStockLocation> => {
     await requireLocationPerm(user, 'create');
     const name = (input.name ?? '').trim();
@@ -122,6 +143,7 @@ export const createStockLocation = withAuth(
           manager_user_id: input.manager_user_id ?? null,
           is_default: input.is_default ?? false,
           is_active: true,
+          ...pickAddress(input),
         })
         .returning('*');
       return row as IStockLocation;
@@ -134,7 +156,7 @@ export const updateStockLocation = withAuth(
     user,
     { tenant },
     locationId: string,
-    patch: Partial<Pick<IStockLocation, 'name' | 'location_type' | 'assigned_user_id' | 'manager_user_id' | 'is_default' | 'is_active'>>,
+    patch: Partial<Pick<IStockLocation, 'name' | 'location_type' | 'assigned_user_id' | 'manager_user_id' | 'is_default' | 'is_active' | (typeof ADDRESS_FIELDS)[number]>>,
   ): Promise<IStockLocation> => {
     await requireLocationPerm(user, 'update');
     if (patch.location_type && !LOCATION_TYPES.includes(patch.location_type)) {
@@ -148,7 +170,7 @@ export const updateStockLocation = withAuth(
           .andWhereNot({ location_id: locationId })
           .update({ is_default: false, updated_at: trx.fn.now() });
       }
-      const update: Record<string, unknown> = { updated_at: trx.fn.now() };
+      const update: Record<string, unknown> = { updated_at: trx.fn.now(), ...pickAddress(patch as Record<string, unknown>) };
       for (const k of ['name', 'location_type', 'assigned_user_id', 'manager_user_id', 'is_default', 'is_active'] as const) {
         if (k in patch) update[k] = (patch as any)[k];
       }

@@ -54,6 +54,12 @@ interface FormState {
   location_type: StockLocationType;
   is_default: boolean;
   assigned_user_id: string | null;
+  address_line1: string;
+  address_line2: string;
+  city: string;
+  state_province: string;
+  postal_code: string;
+  country_code: string;
 }
 
 const emptyForm = (): FormState => ({
@@ -61,7 +67,21 @@ const emptyForm = (): FormState => ({
   location_type: 'warehouse',
   is_default: false,
   assigned_user_id: null,
+  address_line1: '',
+  address_line2: '',
+  city: '',
+  state_province: '',
+  postal_code: '',
+  country_code: '',
 });
+
+/** One-line address for the row, e.g. "123 Main St, Seattle, WA 98101". Empty when no address. */
+function formatLocationAddress(loc: IStockLocation): string {
+  const cityState = [loc.city, [loc.state_province, loc.postal_code].filter(Boolean).join(' ')]
+    .filter((s) => s && s.trim())
+    .join(', ');
+  return [loc.address_line1, cityState].filter((s) => s && s.trim()).join(', ');
+}
 
 export function StockLocationsManager({
   initialLocations,
@@ -135,6 +155,12 @@ export function StockLocationsManager({
       location_type: loc.location_type,
       is_default: loc.is_default,
       assigned_user_id: loc.assigned_user_id ?? null,
+      address_line1: loc.address_line1 ?? '',
+      address_line2: loc.address_line2 ?? '',
+      city: loc.city ?? '',
+      state_province: loc.state_province ?? '',
+      postal_code: loc.postal_code ?? '',
+      country_code: loc.country_code ?? '',
     });
     setDialogOpen(true);
   };
@@ -199,17 +225,24 @@ export function StockLocationsManager({
       title: 'Name',
       dataIndex: 'name',
       // The row's identity — give it weight so it out-ranks the data beside it (matches siblings).
-      // The single default is marked here as a badge rather than burning a near-empty column on it.
-      render: (v: any, rec: IStockLocation) => (
-        <span className="flex items-center gap-2">
-          <span className="font-medium text-gray-900">{v}</span>
-          {rec.is_default && (
-            <Badge variant="primary" size="sm">
-              Default
-            </Badge>
-          )}
-        </span>
-      ),
+      // The single default is marked here as a badge rather than burning a near-empty column on it,
+      // and the address (where to drive) sits beneath as a muted second line when present.
+      render: (v: any, rec: IStockLocation) => {
+        const address = formatLocationAddress(rec);
+        return (
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-900">{v}</span>
+              {rec.is_default && (
+                <Badge variant="primary" size="sm">
+                  Default
+                </Badge>
+              )}
+            </div>
+            {address && <div className="text-xs text-gray-500">{address}</div>}
+          </div>
+        );
+      },
     },
     {
       title: 'Type',
@@ -426,6 +459,47 @@ export function StockLocationsManager({
             unassignedLabel="Not assigned"
             buttonWidth="full"
           />
+          {/* Optional address — blank for a Vehicle, filled for a warehouse/office so an engineer
+              knows where to drive. */}
+          <Input
+            id="stock-location-address1"
+            label="Address (optional)"
+            placeholder="Street address"
+            value={form.address_line1}
+            onChange={(e) => setForm({ ...form, address_line1: e.target.value })}
+          />
+          <Input
+            id="stock-location-address2"
+            placeholder="Suite, unit, floor (optional)"
+            value={form.address_line2}
+            onChange={(e) => setForm({ ...form, address_line2: e.target.value })}
+          />
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                id="stock-location-city"
+                placeholder="City"
+                value={form.city}
+                onChange={(e) => setForm({ ...form, city: e.target.value })}
+              />
+            </div>
+            <div className="w-20">
+              <Input
+                id="stock-location-state"
+                placeholder="State"
+                value={form.state_province}
+                onChange={(e) => setForm({ ...form, state_province: e.target.value })}
+              />
+            </div>
+            <div className="w-28">
+              <Input
+                id="stock-location-postal"
+                placeholder="ZIP"
+                value={form.postal_code}
+                onChange={(e) => setForm({ ...form, postal_code: e.target.value })}
+              />
+            </div>
+          </div>
           <Checkbox
             id="stock-location-default"
             label="Make this the default location"
