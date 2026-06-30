@@ -39,7 +39,8 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
-  getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue([])
+  getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue([]),
+  getCurrentUserAvatarUrl: vi.fn().mockResolvedValue(null)
 }));
 
 vi.mock('../TicketSelect', () => ({
