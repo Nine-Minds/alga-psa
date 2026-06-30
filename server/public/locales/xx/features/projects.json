@@ -95,9 +95,8 @@
       "inactive": "11111"
     },
     "projectStatusOptions": {
-      "all": "11111",
       "open": "11111",
-      "closed": "11111",
+      "all": "11111",
       "closedSuffix": "11111 {{name}} 11111"
     },
     "columns": {

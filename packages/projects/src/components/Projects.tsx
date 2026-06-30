@@ -20,7 +20,7 @@ import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
 import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink, FileText } from 'lucide-react';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { useDrawer, useClientDrawer } from "@alga-psa/ui";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -65,7 +65,7 @@ function buildURLFromFilters(filters: ProjectListFilters): string {
 
   if (filters.searchQuery) params.set('searchQuery', filters.searchQuery);
   if (filters.status && filters.status !== 'active') params.set('status', filters.status);
-  if (filters.projectStatus && filters.projectStatus !== 'all') params.set('projectStatus', filters.projectStatus);
+  if (filters.projectStatus && filters.projectStatus !== 'open') params.set('projectStatus', filters.projectStatus);
   if (filters.clientId) params.set('clientId', filters.clientId);
   if (filters.contactId) params.set('contactId', filters.contactId);
   if (filters.managerId) params.set('managerId', filters.managerId);
@@ -145,7 +145,8 @@ interface ProjectsProps {
 
 export const DEFAULT_PROJECT_FILTERS: ProjectListFilters = {
   status: 'active',
-  projectStatus: 'all',
+  // Hide closed statuses by default, matching the tickets dashboard.
+  projectStatus: 'open',
   page: 1,
   pageSize: 10,
 };
@@ -436,11 +437,11 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
        (status === 'inactive' && project.is_inactive))
     );
 
-    // Apply project status filter (by the project's workflow status / is_closed flag)
+    // Apply project status filter. 'open' hides closed statuses (default, like the
+    // tickets dashboard), 'all' shows everything, any other value is a specific status id.
     if (projectStatus && projectStatus !== 'all') {
       filtered = filtered.filter(project => {
         if (projectStatus === 'open') return project.is_closed !== true;
-        if (projectStatus === 'closed') return project.is_closed === true;
         return project.status === projectStatus;
       });
     }
@@ -733,8 +734,8 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       dataIndex: 'actions',
       width: '5%',
       render: (_: unknown, record: IProject) => (
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
               id={`project-actions-${record.project_id}`}
               variant="ghost"
@@ -745,10 +746,10 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
               <span className="sr-only">{projectListT('openMenu', 'Open menu')}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1 z-50">
-            <DropdownMenu.Item
-              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              className="cursor-pointer"
               onSelect={(e) => {
                 e.stopPropagation();
                 handleEditProject(record);
@@ -756,9 +757,9 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
             >
               <Pen size={14} className="mr-2" />
               {t('common:actions.edit', 'Edit')}
-            </DropdownMenu.Item>
-            <DropdownMenu.Item
-              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center text-destructive"
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer text-destructive focus:text-destructive"
               onSelect={(e) => {
                 e.stopPropagation();
                 handleDelete(record);
@@ -766,9 +767,9 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
             >
               <Trash2 size={14} className="mr-2" />
               {t('common:actions.delete', 'Delete')}
-            </DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];
@@ -843,9 +844,8 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       }));
 
     return [
+      { value: 'open', label: projectListT('projectStatusOptions.open', 'All open statuses') },
       { value: 'all', label: projectListT('projectStatusOptions.all', 'All statuses') },
-      { value: 'open', label: projectListT('projectStatusOptions.open', 'Open (hide closed)') },
-      { value: 'closed', label: projectListT('projectStatusOptions.closed', 'Closed only') },
       ...statusItems,
     ];
   }, [projects, projectListT]);
@@ -901,7 +901,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
             <CustomSelect
               id="project-status-filter"
               options={projectStatusOptions}
-              value={activeFilters.projectStatus || 'all'}
+              value={activeFilters.projectStatus || 'open'}
               onValueChange={(value) => handleFilterChange({ projectStatus: value })}
               placeholder={projectListT('projectStatusPlaceholder', 'Filter by status')}
               customStyles={{
@@ -921,6 +921,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
             clientTypeFilter={clientClientTypeFilter}
             onClientTypeFilterChange={setClientClientTypeFilter}
             fitContent={true}
+            triggerButtonClassName="bg-white dark:bg-[rgb(var(--color-card))]"
           />
 
           {/* Contact filter */}
@@ -963,6 +964,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
             placeholder={projectListT('managerPlaceholder', 'All managers')}
             buttonWidth="fit"
             labelStyle="none"
+            triggerClassName="bg-white dark:bg-[rgb(var(--color-card))]"
           />
 
           {/* Deadline filter */}
@@ -999,6 +1001,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
               handleFilterChange({ tags: newTags.length > 0 ? newTags : undefined });
             }}
             onClearTags={() => handleFilterChange({ tags: undefined })}
+            triggerClassName="bg-white dark:bg-[rgb(var(--color-card))]"
           />
 
           <Button

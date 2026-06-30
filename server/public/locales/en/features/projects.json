@@ -95,9 +95,8 @@
       "inactive": "Inactive projects"
     },
     "projectStatusOptions": {
+      "open": "All open statuses",
       "all": "All statuses",
-      "open": "Open (hide closed)",
-      "closed": "Closed only",
       "closedSuffix": "{{name}} (closed)"
     },
     "columns": {

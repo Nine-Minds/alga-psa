@@ -94,9 +94,8 @@
       "inactive": "Inactieve projecten"
     },
     "projectStatusOptions": {
+      "open": "Alle open statussen",
       "all": "Alle statussen",
-      "open": "Open (gesloten verbergen)",
-      "closed": "Alleen gesloten",
       "closedSuffix": "{{name}} (gesloten)"
     },
     "projectStatusPlaceholder": "Filteren op status",
