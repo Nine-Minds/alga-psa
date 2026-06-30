@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -20,8 +20,10 @@ import {
   createStockLocation,
   updateStockLocation,
   deactivateStockLocation,
+  getStockAtLocation,
 } from '../actions';
-import { formatOnHand, isLocationOccupied } from '../lib/stockLocationDisplay';
+import type { LocationStockRow } from '../actions';
+import { formatStock, formatStockSummary, isLocationOccupied } from '../lib/stockLocationDisplay';
 
 const LOCATION_TYPE_LABELS: Record<StockLocationType, string> = {
   warehouse: 'Warehouse',
@@ -80,6 +82,34 @@ export function StockLocationsManager({
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [pendingDeactivate, setPendingDeactivate] = useState<IStockLocation | null>(null);
+  // Per-location stock drill-in: the itemized contents (search + paginate so it survives many SKUs).
+  const [stockTarget, setStockTarget] = useState<IStockLocation | null>(null);
+  const [stockRows, setStockRows] = useState<LocationStockRow[]>([]);
+  const [stockLoading, setStockLoading] = useState(false);
+  const [stockSearch, setStockSearch] = useState('');
+
+  useEffect(() => {
+    if (!stockTarget) {
+      setStockRows([]);
+      setStockSearch('');
+      return;
+    }
+    let cancelled = false;
+    setStockLoading(true);
+    getStockAtLocation(stockTarget.location_id)
+      .then((rows) => {
+        if (!cancelled) setStockRows(rows);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error("Couldn't load the location's stock.");
+      })
+      .finally(() => {
+        if (!cancelled) setStockLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [stockTarget]);
 
   const reload = useCallback(async () => {
     try {
@@ -187,11 +217,18 @@ export function StockLocationsManager({
       render: (v: any) => LOCATION_TYPE_LABELS[v as StockLocationType] ?? v,
     },
     {
-      title: 'On hand',
-      dataIndex: 'on_hand_qty',
+      title: 'Stock',
+      dataIndex: 'item_type_count',
       render: (_: any, rec: IStockLocation) =>
         isLocationOccupied(rec) ? (
-          <span>{formatOnHand(rec)}</span>
+          <button
+            id={`view-stock-${rec.location_id}`}
+            type="button"
+            className="text-primary-600 hover:underline"
+            onClick={() => setStockTarget(rec)}
+          >
+            {formatStock(rec)}
+          </button>
         ) : (
           <span className="text-gray-400">Empty</span>
         ),
@@ -255,6 +292,21 @@ export function StockLocationsManager({
   const q = search.trim().toLowerCase();
   const byStatus = showInactive ? locations : locations.filter((l) => l.is_active);
   const visible = q ? byStatus.filter((l) => l.name.toLowerCase().includes(q)) : byStatus;
+
+  // Drill-in: the itemized stock at the selected location, filtered by product / SKU.
+  const stockColumns: ColumnDefinition<LocationStockRow>[] = [
+    { title: 'Product', dataIndex: 'service_name', render: (v: any) => v || <span className="text-gray-400">—</span> },
+    { title: 'SKU', dataIndex: 'sku', render: (v: any) => v || <span className="text-gray-400">—</span> },
+    { title: 'On hand', dataIndex: 'quantity_on_hand' },
+    { title: 'Available', dataIndex: 'available' },
+  ];
+  const sq = stockSearch.trim().toLowerCase();
+  const stockVisible = sq
+    ? stockRows.filter(
+        (r) =>
+          (r.service_name ?? '').toLowerCase().includes(sq) || (r.sku ?? '').toLowerCase().includes(sq),
+      )
+    : stockRows;
 
   return (
     <div className="p-6 space-y-4" id="stock-locations-page">
@@ -410,6 +462,35 @@ export function StockLocationsManager({
           setPendingDeactivate(null);
         }}
       />
+
+      <Dialog
+        isOpen={stockTarget !== null}
+        onClose={() => setStockTarget(null)}
+        title={stockTarget ? `Stock at ${stockTarget.name}` : 'Stock'}
+        id="location-stock-dialog"
+      >
+        <div className="space-y-3 p-1" style={{ minWidth: 560 }}>
+          {stockTarget && <p className="text-sm text-gray-500">{formatStockSummary(stockTarget)}</p>}
+          {!stockLoading && stockRows.length > 0 && (
+            <div className="w-72">
+              <SearchInput
+                id="location-stock-search"
+                placeholder="Search product or SKU"
+                value={stockSearch}
+                onChange={(e) => setStockSearch(e.target.value)}
+                onClear={() => setStockSearch('')}
+              />
+            </div>
+          )}
+          {stockLoading ? (
+            <p className="py-8 text-center text-sm text-gray-500">Loading…</p>
+          ) : stockRows.length === 0 ? (
+            <p className="py-8 text-center text-sm text-gray-500">Nothing on hand at this location.</p>
+          ) : (
+            <DataTable id="location-stock-table" data={stockVisible} columns={stockColumns} pageSize={10} />
+          )}
+        </div>
+      </Dialog>
     </div>
   );
 }

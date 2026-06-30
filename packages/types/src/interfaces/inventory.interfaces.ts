@@ -88,7 +88,13 @@ export interface IStockLocation extends TenantEntity {
   is_active: boolean;
   created_at?: string | Date;
   updated_at?: string | Date;
-  /** Occupancy, populated only on list reads with includeStock: bulk on-hand qty + serialized units. */
+  /**
+   * Occupancy, populated only on list reads with includeStock.
+   * - item_type_count: distinct products on hand (what the row shows — meaningful across many types).
+   * - on_hand_qty: total pieces on hand (coarse; shown in the drill-in header, not the row).
+   * - unit_count: present serialized units (gates Deactivate; flags allocated / in-transit).
+   */
+  item_type_count?: number;
   on_hand_qty?: number;
   unit_count?: number;
 }

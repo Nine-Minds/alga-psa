@@ -31,16 +31,19 @@ export const listStockLocations = withAuth(
         return (await q.orderBy('name', 'asc')) as IStockLocation[];
       }
 
-      // Occupancy per location in one round-trip. on_hand_qty (SUM of quantity_on_hand) is the
-      // CANONICAL total — the on-hand cache already folds serialized in-stock units in (it's
-      // recomputed from their count), so this alone is what the column displays. unit_count (present
-      // serialized units) is NOT added to it (that would double-count serialized stock); it exists
-      // only to gate Deactivate and to flag units present-but-not-on-hand (allocated / in transit).
-      // Both mirror what the deactivate guard checks. COALESCE so empty locations read 0.
+      // Occupancy per location in one round-trip. The row displays item_type_count — the number of
+      // DISTINCT products on hand — because a summed piece-count across unlike items (phones + cables)
+      // isn't a meaningful quantity, whereas "how many kinds are here" is, and it stays legible from 3
+      // to 750 types. on_hand_qty (SUM of quantity_on_hand, which already folds serialized in-stock
+      // units in via the recompute) is kept as a coarse total for the drill-in header. unit_count
+      // (present serialized units) is kept only to gate Deactivate and flag units present-but-not-on-
+      // hand (allocated / in transit). COALESCE so empty locations read 0.
       const levelAgg = trx('stock_levels')
         .select('location_id')
+        .countDistinct({ item_type_count: 'service_id' })
         .sum({ on_hand_qty: 'quantity_on_hand' })
         .where({ tenant })
+        .andWhere('quantity_on_hand', '>', 0)
         .groupBy('location_id')
         .as('lvl');
       const unitAgg = trx('stock_units')
@@ -61,11 +64,13 @@ export const listStockLocations = withAuth(
         .orderBy('loc.name', 'asc')
         .select(
           'loc.*',
+          trx.raw('COALESCE(lvl.item_type_count, 0) as item_type_count'),
           trx.raw('COALESCE(lvl.on_hand_qty, 0) as on_hand_qty'),
           trx.raw('COALESCE(un.unit_count, 0) as unit_count'),
         );
       return rows.map((r: any) => ({
         ...r,
+        item_type_count: Number(r.item_type_count),
         on_hand_qty: Number(r.on_hand_qty),
         unit_count: Number(r.unit_count),
       })) as IStockLocation[];
