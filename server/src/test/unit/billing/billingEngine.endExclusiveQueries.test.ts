@@ -9,6 +9,12 @@ vi.mock('@/lib/db/db');
 vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(async (_knex, callback) => callback(_knex)),
   withAdminTransaction: vi.fn(async (_callback, existing) => _callback(existing)),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(() => Promise.resolve({ user: { id: 'mock-user-id' } })),

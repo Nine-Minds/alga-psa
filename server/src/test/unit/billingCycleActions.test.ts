@@ -54,6 +54,12 @@ vi.mock('@alga-psa/db', () => ({
   getTenantContext: vi.fn(async () => 'test-tenant'),
   getTenantIdBySlug: vi.fn(async () => 'test-tenant'),
   registerAfterCommit: vi.fn(),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 // Heavy sibling modules pulled in by billingCycleActions' module graph.

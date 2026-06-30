@@ -9,6 +9,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/shared/inboundWebhooks/externalEntityMappings', () => ({

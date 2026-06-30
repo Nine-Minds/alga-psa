@@ -16,6 +16,12 @@ import type { IUser } from '@alga-psa/types';
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
   withTransaction: async (knex: any, callback: (trx: any) => Promise<unknown>) => callback(knex),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => {

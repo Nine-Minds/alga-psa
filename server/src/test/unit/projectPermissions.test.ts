@@ -162,6 +162,12 @@ vi.mock('@alga-psa/db', () => {
       tenant: '550e8400-e29b-41d4-a716-446655440000'
     }),
     withTransaction: vi.fn().mockImplementation(async (_knex, callback) => callback(fakeKnex)),
+    tenantDb: (conn: any, _tenant: string) => ({
+      table: (t: string) => conn(t),
+      unscoped: (t: string) => conn(t),
+      tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+        o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    }),
   };
 });
 

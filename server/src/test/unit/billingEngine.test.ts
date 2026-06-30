@@ -19,6 +19,11 @@ vi.mock('server/src/lib/db/db', () => ({
 vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(async (_knex, callback) => callback(_knex)),
   withAdminTransaction: vi.fn(async (_callback, existing) => _callback(existing)),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t, () => {}) ?? q) : (q.join?.(t, () => {}) ?? q),
+  }),
 }));
 vi.mock('@alga-psa/auth', async (importOriginal) => {
   const actual = await importOriginal<any>();

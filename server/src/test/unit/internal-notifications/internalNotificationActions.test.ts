@@ -412,7 +412,13 @@ dbHoisted.withTransactionSpy = withTransactionSpy;
 vi.mock('@alga-psa/db', () => ({
   withTransaction: (...args: any[]) => dbHoisted.withTransactionSpy(...args),
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
-  getConnection: vi.fn()
+  getConnection: vi.fn(),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/notifications/realtime/internalNotificationBroadcaster', () => ({

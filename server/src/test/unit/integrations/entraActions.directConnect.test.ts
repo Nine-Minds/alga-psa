@@ -59,6 +59,19 @@ vi.mock('@alga-psa/core/secrets', async (importOriginal) => {
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => {
+      const builder = conn(t);
+      if (builder && typeof builder.where === 'function') {
+        const originalWhere = builder.where.bind(builder);
+        builder.where = (criteria: any, ...rest: any[]) =>
+          rest.length === 0 && criteria && typeof criteria === 'object' && !Array.isArray(criteria)
+            ? originalWhere({ tenant, ...criteria })
+            : originalWhere(criteria, ...rest);
+      }
+      return builder;
+    },
+  }),
 }));
 
 vi.mock('@enterprise/app/api/integrations/entra/discovery/route', () => ({

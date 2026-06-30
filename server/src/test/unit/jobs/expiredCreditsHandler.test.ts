@@ -11,6 +11,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@alga-psa/db', () => ({
   runWithTenant: mocks.runWithTenant,
   getConnection: mocks.getConnection,
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('../../../../../packages/jobs/src/lib/handler-utils/auditLog', () => ({
