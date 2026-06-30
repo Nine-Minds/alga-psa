@@ -30,11 +30,20 @@ db:
     name: db-credentials
     key: DB_PASSWORD_SUPERUSER
 
+# Liveness/readiness probes hit the worker's /health server (:4000) — 200 once
+# every sub-worker (including the Temporal connection) is up, 503/refused before.
+# These MUST stay enabled: the worker exits if Temporal isn't reachable at
+# startup, and with no liveness probe k8s never restarts the wedged container
+# (it falsely reports Ready because the entrypoint stays alive). The liveness
+# initialDelay is widened for single-node cold boot, where Temporal and the
+# worker come up together. See entrypoint.sh wait_for_temporal for the first
+# line of defense against the startup-ordering race.
 livenessProbe:
-  enabled: false
+  enabled: true
+  initialDelaySeconds: 90
 
 readinessProbe:
-  enabled: false
+  enabled: true
 
 extraEnv:
   - name: TEMPORAL_ADDRESS
