@@ -498,6 +498,31 @@ const manageKube = {
   }
 };
 
+// Resolve the channel's current release manifest (best-effort, cached 60s).
+// /api/manage/status is polled by the Manage view and, since the Overview
+// gained an "update available" banner, by the status page too — without this
+// cache every poll would hit the OCI registry twice. On a resolve failure the
+// last-known-good value is kept so update availability doesn't flap during
+// transient registry hiccups.
+// LEVERAGE: pattern appliance-channel-digest-drift — same TTL/last-good shape
+// as resolveControlPlaneRef below.
+const RELEASE_RESOLVE_TTL_MS = 60_000;
+const releaseResolveCache = new Map();
+function resolveReleaseManifestCached(reference, options = {}) {
+  const key = `${options.registryHost || ''}|${options.releaseRepository || ''}|${String(reference || 'stable')}`;
+  const cached = releaseResolveCache.get(key);
+  if (cached && (Date.now() - cached.at) < RELEASE_RESOLVE_TTL_MS) {
+    return Promise.resolve(cached.value);
+  }
+  return resolveReleaseManifest(reference, options).then((value) => {
+    releaseResolveCache.set(key, { value, at: Date.now() });
+    return value;
+  }).catch((error) => {
+    if (cached) return cached.value;
+    throw error;
+  });
+}
+
 // Resolve the channel-pinned control-plane image ref (best-effort, cached 60s)
 // by running the same resolver bootstrap-control-plane.sh uses.
 const CP_RESOLVE_TTL_MS = 60_000;
@@ -985,7 +1010,7 @@ const server = http.createServer(async (req, res) => {
       installStateFile: stateFile,
       cpUpgradeStatusFile,
       resolveControlPlaneRef,
-      resolveReleaseManifest
+      resolveReleaseManifest: resolveReleaseManifestCached
     });
     jsonResponse(res, 200, status);
     return;

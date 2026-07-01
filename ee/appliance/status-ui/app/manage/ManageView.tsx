@@ -128,6 +128,11 @@ function UpdatesTab({
   return (
     <div className={styles.manageSection}>
       <h2>App updates</h2>
+      <p className={styles.helpText}>
+        The appliance checks the {app.channel} release channel for newer
+        versions but never applies them automatically — updates run only when
+        you start them here.
+      </p>
       <dl className={styles.kv}>
         <div>
           <dt>Current version</dt>
@@ -751,20 +756,35 @@ export function ManageView() {
     <div className={styles.manageView}>
       {/* Sub-tab strip */}
       <div className={styles.manageTabStrip} role="tablist" aria-label="Manage sections">
-        {manageTabs.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            id={`manage-tab-${value}`}
-            aria-selected={activeTab === value}
-            aria-controls={`manage-panel-${value}`}
-            className={`${styles.manageTabButton} ${activeTab === value ? styles.manageTabActive : ""}`}
-            onClick={() => setActiveTab(value)}
-          >
-            {label}
-          </button>
-        ))}
+        {manageTabs.map(({ value, label }) => {
+          // Dot the tab that has something to apply, so "update available" is
+          // visible from any Manage sub-tab without opening each one.
+          const hasUpdate =
+            (value === "updates" && Boolean(manageStatus?.app.updateAvailable)) ||
+            (value === "control-plane" &&
+              Boolean(manageStatus?.controlPlane.upgradeAvailable));
+          return (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              id={`manage-tab-${value}`}
+              aria-selected={activeTab === value}
+              aria-controls={`manage-panel-${value}`}
+              className={`${styles.manageTabButton} ${activeTab === value ? styles.manageTabActive : ""}`}
+              onClick={() => setActiveTab(value)}
+            >
+              {label}
+              {hasUpdate ? (
+                <span
+                  className={styles.updateDot}
+                  title="Update available"
+                  aria-label="Update available"
+                />
+              ) : null}
+            </button>
+          );
+        })}
         <button
           type="button"
           className={styles.manageRefreshButton}
