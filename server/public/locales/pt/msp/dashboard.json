@@ -6,23 +6,23 @@
   },
   "welcome": {
     "title": "Bem-vindo ao seu centro de comando MSP",
-    "description": "Acompanhe o progresso da integração, configure serviços críticos e mantenha a consistência de cada experiência do cliente.",
+    "description": "Acompanhe o progresso do onboarding, configure serviços críticos e mantenha a consistência de cada experiência do cliente.",
     "titleCommunity": "bem vindo de volta",
-    "descriptionCommunity": "Acesse chamados, agendamentos, projetos e relatórios no seu painel."
+    "descriptionCommunity": "Acesse tickets, agendamentos, projetos e relatórios no seu painel."
   },
   "algadesk": {
     "welcome": {
       "title": "Bem-vindo ao AlgaDesk",
-      "description": "Acompanhe a carga de trabalho dos chamados, monitore a integridade do canal de e-mail e fique por dentro de todas as conversas."
+      "description": "Acompanhe a carga de trabalho dos tickets, monitore a integridade do canal de e-mail e fique por dentro de todas as conversas."
     },
     "metrics": {
-      "openTickets": "Abrir chamados",
+      "openTickets": "Abrir tickets",
       "awaitingCustomer": "Aguardando cliente",
       "awaitingInternal": "Aguardando interno",
       "activeEmailChannels": "Canais de e-mail ativos"
     },
     "aging": {
-      "title": "Envelhecimento do chamado",
+      "title": "Envelhecimento do ticket",
       "under2Days": "Menos de 2 dias",
       "days2To7": "2 a 7 dias",
       "over7Days": "Mais de 7 dias"
@@ -33,15 +33,15 @@
       "totalConfigured": "Total de canais configurados: {{total}}"
     },
     "recentTickets": {
-      "title": "Chamados atualizados recentemente",
-      "empty": "Nenhuma atividade recente de chamados."
+      "title": "Tickets atualizados recentemente",
+      "empty": "Nenhuma atividade recente de tickets."
     }
   },
   "features": {
     "heading": "Recursos da plataforma",
     "comingSoon": "Em breve!",
     "tickets": {
-      "title": "Gerenciamento de chamados",
+      "title": "Gerenciamento de tickets",
       "description": "Simplifique o suporte com roteamento, rastreamento de SLA e fluxos de trabalho guiados."
     },
     "monitoring": {
@@ -54,7 +54,7 @@
     },
     "projects": {
       "title": "Gerenciamento de projetos",
-      "description": "Organize planos de entrega, tarefas e marcos para cada compromisso."
+      "description": "Organize planos de entrega, tarefas e metas para cada compromisso."
     },
     "reports": {
       "title": "Relatórios e análises",
@@ -94,7 +94,7 @@
     }
   },
   "onboarding": {
-    "completeTitle": "Integração concluída",
+    "completeTitle": "Onboarding concluído",
     "incompleteTitle": "Conclua sua configuração",
     "completeDescription": "Você está pronto para usar a experiência completa do painel MSP.",
     "incompleteDescription": "Trabalhe em cada etapa para desbloquear a experiência completa do painel MSP.",
@@ -146,12 +146,12 @@
       "titleCombined": "Cartas ocultas ({{count}})"
     },
     "checklist": {
-      "title": "Lista de verificação de integração",
+      "title": "Lista de verificação de onboarding",
       "progress": "{{completed}} de tarefas {{total}} concluídas",
       "completeTitle": "Configuração concluída",
       "completeDescription": "Convide clientes para experimentar o portal da sua marca.",
       "inviteCta": "Convide clientes",
-      "viewButton": "Veja a lista de verificação de integração"
+      "viewButton": "Veja a lista de verificação de onboarding"
     },
     "steps": {
       "identity": {
@@ -176,7 +176,7 @@
       },
       "email": {
         "title": "Configurar e-mail",
-        "description": "Configure o e-mail de chamado de entrada e verifique um domínio de envio de saída para uma entrega confiável.",
+        "description": "Configure o e-mail de ticket de entrada e verifique um domínio de envio de saída para uma entrega confiável.",
         "cta": "Configurar e-mail"
       }
     },
@@ -200,14 +200,14 @@
       },
       "email": {
         "enterpriseOnly": "Os domínios de e-mail gerenciados estão disponíveis apenas na edição Enterprise.",
-        "tenantRequired": "O contexto do locatário é necessário para carregar o status de integração do email.",
+        "tenantRequired": "O contexto do locatário é necessário para carregar o status de onboarding do email.",
         "loadFailed": "Não foi possível carregar domínios de e-mail gerenciados.",
         "verificationFailed": "A verificação para {{domain}} falhou."
       }
     },
     "errors": {
-      "dismissFailed": "Falha ao dispensar a etapa de integração.",
-      "restoreFailed": "Falha ao restaurar a etapa de integração."
+      "dismissFailed": "Falha ao dispensar a etapa de onboarding.",
+      "restoreFailed": "Falha ao restaurar a etapa de onboarding."
     }
   },
   "mspDashboard": "Painel MSP"

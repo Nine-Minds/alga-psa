@@ -170,13 +170,36 @@ describe('SMTPEmailProvider config validation', () => {
   it('rejects configs with missing required fields', async () => {
     const provider = new SMTPEmailProvider('smtp-test');
 
+    // username/password are optional (unauthenticated relays); host/port/from remain required.
     await expect(provider.initialize({ host: 'smtp.example.com' })).rejects.toMatchObject({
       name: 'EmailProviderError',
       errorCode: 'INIT_FAILED'
     });
     await expect(provider.initialize({ host: 'smtp.example.com' })).rejects.toThrow(
-      /Missing required SMTP configuration fields: port, username, password, from/
+      /Missing required SMTP configuration fields: port, from/
     );
+  });
+
+  it('omits AUTH when no credentials are supplied (unauthenticated relay)', async () => {
+    const provider = new SMTPEmailProvider('smtp-noauth');
+    const { username, password, ...noAuthConfig } = validConfig;
+    await provider.initialize(noAuthConfig);
+
+    expect(createTransportMock.mock.calls.at(-1)![0].auth).toBeUndefined();
+  });
+
+  it('sends AUTH when username and password are supplied', async () => {
+    const provider = new SMTPEmailProvider('smtp-auth');
+    await provider.initialize(validConfig);
+
+    expect(createTransportMock.mock.calls.at(-1)![0].auth).toEqual({ user: 'mailer', pass: 'secret' });
+  });
+
+  it('rejects a username without a matching password', async () => {
+    const provider = new SMTPEmailProvider('smtp-halfauth');
+    const { password, ...halfAuthConfig } = validConfig;
+
+    await expect(provider.initialize(halfAuthConfig)).rejects.toThrow(/username and password/i);
   });
 
   it('rejects invalid port numbers', async () => {

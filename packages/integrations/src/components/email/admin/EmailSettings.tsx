@@ -22,7 +22,8 @@ import {
 } from '@alga-psa/types';
 import {
   getEmailSettings,
-  updateEmailSettings
+  updateEmailSettings,
+  testOutboundEmail
 } from '../../../actions/email-actions/emailSettingsActions';
 import {
   getEmailDomains,
@@ -63,6 +64,9 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [activeTab, setActiveTab] = useState('inbound');
+  const [testRecipient, setTestRecipient] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
 
   useEffect(() => {
     loadEmailSettings();
@@ -108,6 +112,27 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
       setError(err.message || t('email.errors.saveSettings', { defaultValue: 'Failed to save settings' }));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const runOutboundTest = async () => {
+    if (!settings) return;
+
+    setTesting(true);
+    setTestResult(null);
+    try {
+      // Persist current edits first so the test reflects what's on screen.
+      // The masked password ('***') is resolved to the stored secret server-side.
+      await updateEmailSettings(settings);
+      const result = await testOutboundEmail(testRecipient.trim() || undefined);
+      setTestResult(result);
+    } catch (err: any) {
+      setTestResult({
+        success: false,
+        error: err?.message || t('email.errors.testOutbound', { defaultValue: 'Failed to test outbound email' })
+      });
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -248,6 +273,12 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
           </div>
         </div>
 
+        <p className="text-sm text-muted-foreground">
+          {t('email.smtp.authHint', {
+            defaultValue: 'Leave username and password blank if your relay accepts mail without authentication.'
+          })}
+        </p>
+
         <div>
           <Label htmlFor="smtp-from">{t('email.smtp.fromAddress.label', { defaultValue: 'From Address' })}</Label>
           <Input
@@ -256,6 +287,50 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
             placeholder={t('email.smtp.fromAddress.placeholder', { defaultValue: 'noreply@example.com' })}
             onChange={(e) => updateProviderConfig(config.providerId, { from: e.target.value })}
           />
+        </div>
+
+        <div className="border-t pt-4 space-y-4">
+          <h4 className="text-sm font-medium">
+            {t('email.smtp.security.title', { defaultValue: 'Connection Security' })}
+          </h4>
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="smtp-secure"
+              checked={config.config.secure ?? (Number(config.config.port) === 465)}
+              onCheckedChange={(checked: boolean) => updateProviderConfig(config.providerId, { secure: checked })}
+            />
+            <Label htmlFor="smtp-secure">
+              {t('email.smtp.security.secure', { defaultValue: 'Use implicit TLS (SSL on connect, typically port 465)' })}
+            </Label>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="smtp-require-tls"
+              checked={config.config.requireTLS ?? false}
+              onCheckedChange={(checked: boolean) => updateProviderConfig(config.providerId, { requireTLS: checked })}
+            />
+            <Label htmlFor="smtp-require-tls">
+              {t('email.smtp.security.requireTls', { defaultValue: 'Require STARTTLS upgrade (ports 587 / 25)' })}
+            </Label>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="smtp-reject-unauthorized"
+              checked={config.config.rejectUnauthorized !== false}
+              onCheckedChange={(checked: boolean) => updateProviderConfig(config.providerId, { rejectUnauthorized: checked })}
+            />
+            <Label htmlFor="smtp-reject-unauthorized">
+              {t('email.smtp.security.verifyCert', { defaultValue: 'Verify server certificate' })}
+            </Label>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {t('email.smtp.security.verifyCertHint', {
+              defaultValue: 'Turn this off only for a trusted relay on your own network that uses a self-signed certificate.'
+            })}
+          </p>
         </div>
       </div>
     );
@@ -508,6 +583,55 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
           </Card>
 
 
+
+            {/* Connection Test */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Send className="h-5 w-5" />
+                  {t('email.test.title', { defaultValue: 'Test Outbound Email' })}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  {t('email.test.description', {
+                    defaultValue: 'Saves the current settings, then verifies the provider connection. Enter an address to also send a test message.'
+                  })}
+                </p>
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Label htmlFor="test-recipient">
+                      {t('email.test.recipientLabel', { defaultValue: 'Send test to (optional)' })}
+                    </Label>
+                    <Input
+                      id="test-recipient"
+                      type="email"
+                      value={testRecipient}
+                      placeholder={t('email.test.recipientPlaceholder', { defaultValue: 'you@example.com' })}
+                      onChange={(e) => setTestRecipient(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    id="test-outbound-email"
+                    variant="outline"
+                    onClick={runOutboundTest}
+                    disabled={testing || !settings}
+                  >
+                    {testing
+                      ? t('email.test.testing', { defaultValue: 'Testing...' })
+                      : t('email.test.run', { defaultValue: 'Test Connection' })}
+                  </Button>
+                </div>
+                {testResult && (
+                  <div className={`flex items-start gap-2 text-sm ${testResult.success ? 'text-green-600' : 'text-red-600'}`}>
+                    {testResult.success
+                      ? <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                      : <XCircle className="h-4 w-4 mt-0.5 shrink-0" />}
+                    <span>{testResult.success ? testResult.message : testResult.error}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Save Button */}
             <div className="flex justify-end">

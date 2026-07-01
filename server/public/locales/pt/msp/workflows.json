@@ -949,8 +949,8 @@
       },
       "groups": {
         "ticket": {
-          "label": "Chamado",
-          "description": "Ações de chamados"
+          "label": "Ticket",
+          "description": "Ações de tickets"
         },
         "contact": {
           "label": "Contato",
@@ -1109,9 +1109,9 @@
   },
   "actionInputFixedPicker": {
     "loadingOptions": "Carregando opções...",
-    "ticketSearchPlaceholder": "Pesquise chamados por número ou título",
-    "ticketSelect": "Selecione o chamado",
-    "ticketTypeAbove": "Digite acima para pesquisar chamados",
+    "ticketSearchPlaceholder": "Pesquise tickets por número ou título",
+    "ticketSelect": "Selecione o ticket",
+    "ticketTypeAbove": "Digite acima para pesquisar tickets",
     "placeholders": {
       "board": "Selecione o quadro",
       "client": "Selecione o cliente",
@@ -1120,8 +1120,8 @@
       "userOrTeam": "Selecione usuário ou equipe"
     },
     "errors": {
-      "loadTicket": "Falha ao carregar o chamado",
-      "searchTickets": "Falha ao pesquisar chamados",
+      "loadTicket": "Falha ao carregar o ticket",
+      "searchTickets": "Falha ao pesquisar tickets",
       "loadOptions": "Falha ao carregar opções"
     },
     "dependencyHints": {
@@ -1136,7 +1136,7 @@
       },
       "ticket-status": {
         "board_id": "Escolha primeiro um quadro fixo para carregar as opções de status.",
-        "ticket_id": "Escolha primeiro um chamado fixo para carregar as opções de status."
+        "ticket_id": "Escolha primeiro um ticket fixo para carregar as opções de status."
       },
       "ticket-subcategory": {
         "board_id": "Escolha primeiro um quadro fixo para carregar as opções de subcategoria.",
@@ -1592,7 +1592,7 @@
       "refresh": "Atualizar"
     },
     "status": {
-      "running": "Correndo",
+      "running": "Em execução",
       "succeeded": "Sucesso",
       "retrying": "Tentando novamente",
       "failed": "Fracassado",
@@ -2001,7 +2001,7 @@
   },
   "enums": {
     "workflowRunStatus": {
-      "RUNNING": "Correndo",
+      "RUNNING": "Em execução",
       "WAITING": "Esperando",
       "SUCCEEDED": "Sucesso",
       "FAILED": "Fracassado",
@@ -2072,7 +2072,7 @@
     },
     "workflowEntityType": {
       "project_task": "Tarefa do projeto",
-      "ticket": "Chamado",
+      "ticket": "Ticket",
       "contact": "Contato",
       "client": "Cliente",
       "project": "Projeto",
@@ -2107,7 +2107,7 @@
       "triggers": {
         "event": {
           "title": "Baseado em eventos",
-          "description": "Acionado automaticamente quando ocorrem eventos específicos (por exemplo, chamado criado, fatura paga)."
+          "description": "Acionado automaticamente quando ocorrem eventos específicos (por exemplo, ticket criado, fatura paga)."
         },
         "scheduled": {
           "title": "Agendado",
@@ -2221,7 +2221,7 @@
         "managePermissionTitle": "Requer permissão de fluxo de trabalho:gerenciar"
       },
       "filters": {
-        "searchPlaceholder": "Pesquisar eventos (por exemplo, chamado.create, email.receive)...",
+        "searchPlaceholder": "Pesquisar eventos (por exemplo, ticket.create, email.receive)...",
         "allCategories": "Todas as categorias",
         "status": "Status",
         "statusOptions": {
@@ -2410,11 +2410,11 @@
         "submitting": "Criando…",
         "fields": {
           "eventType": "Tipo de evento",
-          "eventTypePlaceholder": "por exemplo chamado.criado",
+          "eventTypePlaceholder": "por exemplo ticket.criado",
           "name": "Nome",
           "namePlaceholder": "Nome amigável",
           "category": "Categoria",
-          "categoryPlaceholder": "por exemplo Chamados",
+          "categoryPlaceholder": "por exemplo Tickets",
           "description": "Descrição",
           "descriptionPlaceholder": "Descrição opcional",
           "useSchemaRef": "Usar referência de esquema",
@@ -2448,9 +2448,9 @@
       "fallbacks": {
         "loadingOptions": "Carregando opções...",
         "selectName": "Selecione {{name}}",
-        "ticketSearchPlaceholder": "Pesquise chamados por número ou título",
-        "ticketSelect": "Selecione o chamado",
-        "ticketTypeAbove": "Digite acima para pesquisar chamados",
+        "ticketSearchPlaceholder": "Pesquise tickets por número ou título",
+        "ticketSelect": "Selecione o ticket",
+        "ticketTypeAbove": "Digite acima para pesquisar tickets",
         "selectBoard": "Selecione o quadro",
         "selectClient": "Selecione o cliente",
         "selectContact": "Selecione Contato",
@@ -2458,8 +2458,8 @@
         "selectUserOrTeam": "Selecione usuário ou equipe"
       },
       "errors": {
-        "loadTicket": "Falha ao carregar o chamado",
-        "searchTickets": "Falha ao pesquisar chamados",
+        "loadTicket": "Falha ao carregar o ticket",
+        "searchTickets": "Falha ao pesquisar tickets",
         "loadOptions": "Falha ao carregar opções"
       },
       "dependencyHints": {
@@ -2467,7 +2467,7 @@
         "locationClient": "Escolha primeiro um cliente fixo para carregar as opções de localização.",
         "categoryBoard": "Escolha primeiro um quadro fixo para carregar as opções de categoria.",
         "statusBoard": "Escolha primeiro um quadro fixo para carregar as opções de status.",
-        "statusTicket": "Escolha primeiro um chamado fixo para carregar as opções de status.",
+        "statusTicket": "Escolha primeiro um ticket fixo para carregar as opções de status.",
         "subcategoryBoard": "Escolha primeiro um quadro fixo para carregar as opções de subcategoria.",
         "subcategoryCategory": "Escolha primeiro uma categoria fixa para carregar as opções de subcategoria."
       }
@@ -2513,8 +2513,8 @@
         "defaultOutputProp": "Saída padrão"
       },
       "ticketCreator": {
-        "ticketTitle": "Título do chamado:",
-        "ticketDescription": "Descrição do chamado:",
+        "ticketTitle": "Título do ticket:",
+        "ticketDescription": "Descrição do ticket:",
         "selectBoard": "Selecione ou insira um quadro",
         "selectPriority": "Selecione ou insira uma prioridade"
       }

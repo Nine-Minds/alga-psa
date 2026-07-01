@@ -13,7 +13,7 @@
     "users": "Usuários",
     "teams": "Teams",
     "language": "Linguagem",
-    "ticketing": "Chamados",
+    "ticketing": "Tickets",
     "projects": "Projetos",
     "interactions": "Interações",
     "notifications": "Notificações",
@@ -24,8 +24,8 @@
     "email": "E-mail",
     "integrations": "Integrações",
     "extensions": "Extensões",
-    "ticketingSettings": "Configurações de chamados",
-    "loadingTicketing": "Carregando configuração de chamado...",
+    "ticketingSettings": "Configurações de tickets",
+    "loadingTicketing": "Carregando configuração de ticket...",
     "teamManagement": "Gestão de Equipe",
     "loadingTeam": "Carregando configuração da equipe...",
     "loadingExperimental": "Carregando configuração de recurso experimental...",
@@ -379,10 +379,10 @@
     }
   },
   "ticketing": {
-    "title": "Configurações de chamado",
+    "title": "Configurações de ticket",
     "tabs": {
       "display": "Mostrar",
-      "ticketNumbering": "Numeração de chamados",
+      "ticketNumbering": "Numeração de tickets",
       "boards": "Quadros",
       "priorities": "Prioridades",
       "categories": "Categorias",
@@ -393,9 +393,9 @@
       "description": "Defina o prefixo, preenchimento de dígitos e sequência atual",
       "fields": {
         "prefix": {
-          "label": "Prefixo do número do chamado",
+          "label": "Prefixo do número do ticket",
           "placeholder": "TK-",
-          "help": "Prefixo opcional para números de chamados. Deixe em branco para não ter prefixo ou insira um prefixo personalizado (por exemplo, 'TK-')"
+          "help": "Prefixo opcional para números de tickets. Deixe em branco para não ter prefixo ou insira um prefixo personalizado (por exemplo, 'TK-')"
         },
         "minimumDigits": {
           "label": "Dígitos Mínimos",
@@ -411,8 +411,8 @@
           "help": "O último número atribuído. O próximo número será um valor maior que este valor."
         },
         "nextPreview": {
-          "label": "Visualização do próximo número do chamado",
-          "help": "Este é o número que será atribuído ao próximo chamado"
+          "label": "Visualização do próximo número do ticket",
+          "help": "Este é o número que será atribuído ao próximo ticket"
         }
       },
       "actions": {
@@ -420,28 +420,28 @@
         "cancel": "Cancelar"
       },
       "dialog": {
-        "title": "Atualizar configurações de número de chamado",
-        "message": "A alteração dessas configurações afetará a forma como os novos números de chamados serão gerados. Esta alteração não afetará os chamados existentes. Tem certeza de que deseja prosseguir?",
+        "title": "Atualizar configurações de número de ticket",
+        "message": "A alteração dessas configurações afetará a forma como os novos números de tickets serão gerados. Esta alteração não afetará os tickets existentes. Tem certeza de que deseja prosseguir?",
         "confirm": "Atualizar configurações"
       },
       "loading": "Carregando...",
       "messages": {
         "error": {
-          "noSettings": "Nenhuma configuração de numeração de chamado encontrada. Entre em contato com seu administrador.",
-          "loadFailed": "Falha ao carregar as configurações de numeração de chamados",
+          "noSettings": "Nenhuma configuração de numeração de ticket encontrada. Entre em contato com seu administrador.",
+          "loadFailed": "Falha ao carregar as configurações de numeração de tickets",
           "updateFailed": "Falha ao atualizar as configurações",
           "updatePaddingFailed": "Falha ao atualizar o comprimento do preenchimento",
           "updateLastNumberFailed": "Falha ao atualizar o último número",
           "updateInitialValueFailed": "Falha ao atualizar o valor inicial"
         },
         "success": {
-          "updated": "Configurações de numeração de chamados atualizadas com sucesso"
+          "updated": "Configurações de numeração de tickets atualizadas com sucesso"
         }
       }
     },
     "statuses": {
-      "title": "Status dos chamados",
-      "alert": "Status padrão: quando os clientes criam chamados por meio do portal do cliente, eles receberão automaticamente o status marcado como padrão. Somente um status pode ser definido como padrão por vez.",
+      "title": "Status dos tickets",
+      "alert": "Status padrão: quando os clientes criam tickets por meio do portal do cliente, eles receberão automaticamente o status marcado como padrão. Somente um status pode ser definido como padrão por vez.",
       "table": {
         "name": "Nome",
         "status": "Status",
@@ -452,9 +452,9 @@
       "statusLabels": {
         "closed": "Fechado",
         "open": "Abrir",
-        "closedHelp": "Chamados com esse status serão marcados como fechados",
-        "openHelp": "Os chamados com este status permanecerão abertos",
-        "defaultHelp": "Status padrão para novos chamados do portal do cliente"
+        "closedHelp": "Tickets com esse status serão marcados como fechados",
+        "openHelp": "Os tickets com este status permanecerão abertos",
+        "defaultHelp": "Status padrão para novos tickets do portal do cliente"
       },
       "actions": {
         "addStatus": "Adicionar status",
@@ -462,7 +462,7 @@
         "edit": "Editar",
         "delete": "Excluir"
       },
-      "retiredAlert": "Os status dos chamados agora são gerenciados dentro de cada quadro. Use a guia Quadros para editar os ciclos de vida dos chamados de um quadro específico.",
+      "retiredAlert": "Os status dos tickets agora são gerenciados dentro de cada quadro. Use a guia Quadros para editar os ciclos de vida dos tickets de um quadro específico.",
       "messages": {
         "success": {
           "deleted": "Status excluído com sucesso",
@@ -477,7 +477,7 @@
     },
     "boards": {
       "title": "Quadros",
-      "alert": "Os quadros organizam os chamados em grupos lógicos. Cada conselho pode ter seu próprio agente padrão, prioridade e política de SLA.",
+      "alert": "Os quadros organizam os tickets em grupos lógicos. Cada conselho pode ter seu próprio agente padrão, prioridade e política de SLA.",
       "table": {
         "name": "Nome",
         "description": "Descrição",
@@ -537,50 +537,50 @@
         "defaultAssignedAgent": {
           "label": "Agente atribuído padrão",
           "placeholder": "Selecione o agente padrão",
-          "help": "Novos chamados neste quadro serão atribuídos a este agente por padrão"
+          "help": "Novos tickets neste quadro serão atribuídos a este agente por padrão"
         },
         "defaultPriority": {
           "label": "Prioridade padrão",
           "placeholder": "Selecione a prioridade padrão",
-          "help": "Novos chamados neste quadro usarão esta prioridade por padrão",
+          "help": "Novos tickets neste quadro usarão esta prioridade por padrão",
           "none": "Nenhum"
         },
         "slaPolicy": {
           "label": "Política de SLA",
           "placeholder": "Selecione a política de SLA",
-          "help": "A política de SLA a ser aplicada aos chamados neste quadro",
+          "help": "A política de SLA a ser aplicada aos tickets neste quadro",
           "none": "Nenhum"
         },
         "ticketStatusSetup": {
-          "label": "Configuração do status do chamado",
+          "label": "Configuração do status do ticket",
           "help": "Escolha se este quadro começa a partir de um ciclo de vida existente ou de uma nova lista de status embutida.",
           "copyExisting": "Copiar do quadro existente",
           "createInline": "Crie status in-line"
         },
         "copyTicketStatuses": {
-          "label": "Copiar status de chamados de",
-          "help": "Novos quadros clonam o ciclo de vida de seus chamados a partir de um quadro existente.",
+          "label": "Copiar status de tickets de",
+          "help": "Novos quadros clonam o ciclo de vida de seus tickets a partir de um quadro existente.",
           "selectSource": "Selecione um quadro de origem",
           "noSourceAvailable": "Nenhum quadro de origem disponível",
           "unnamedBoard": "Quadro sem nome"
         },
         "ticketStatuses": {
-          "labelEditing": "Status dos chamados de embarque",
-          "labelCopied": "Status de chamados copiados",
-          "labelInline": "Status de chamados in-line",
-          "helpEditing": "Edite o ciclo de vida do chamado apenas para este quadro.",
+          "labelEditing": "Status dos tickets de embarque",
+          "labelCopied": "Status de tickets copiados",
+          "labelInline": "Status de tickets in-line",
+          "helpEditing": "Edite o ciclo de vida do ticket apenas para este quadro.",
           "helpCopied": "Revise e ajuste o ciclo de vida copiado antes de salvar o novo quadro.",
-          "helpInline": "Crie o ciclo de vida inicial do chamado do quadro antes de salvá-lo.",
-          "loading": "Carregando status de chamados de bordo…",
+          "helpInline": "Crie o ciclo de vida inicial do ticket do quadro antes de salvá-lo.",
+          "loading": "Carregando status de tickets de bordo…",
           "statusName": "Nome do status",
           "closed": "Fechado",
           "default": "Padrão"
         },
         "inboundReplyReopen": {
-          "enabledLabel": "Reabrir chamados fechados em respostas recebidas",
-          "enabledHelp": "Aplica-se a respostas encadeadas correspondentes a chamados já fechados neste quadro.",
+          "enabledLabel": "Reabrir tickets fechados em respostas recebidas",
+          "enabledHelp": "Aplica-se a respostas encadeadas correspondentes a tickets já fechados neste quadro.",
           "cutoffHoursLabel": "Reabertura de corte (horas)",
-          "cutoffHoursHelp": "As respostas recebidas após esta janela criam novos chamados em vez de reabrir os antigos.",
+          "cutoffHoursHelp": "As respostas recebidas após esta janela criam novos tickets em vez de reabrir os antigos.",
           "statusLabel": "Status de reabertura (opcional)",
           "statusPlaceholder": "Selecione o status de reabertura",
           "statusUseDefault": "Usar o status aberto padrão do quadro",
@@ -588,8 +588,8 @@
           "suppressAiHelp": "Somente complemento Enterprise IA Assistant. Se não estiver disponível, as respostas reabrem normalmente."
         },
         "liveTimer": {
-          "label": "Ativar cronômetro de chamado ao vivo",
-          "help": "Mostra o cronômetro ao vivo e os intervalos rastreados nos chamados neste quadro. A entrada manual de hora permanece disponível."
+          "label": "Ativar cronômetro de ticket ao vivo",
+          "help": "Mostra o cronômetro ao vivo e os intervalos rastreados nos tickets neste quadro. A entrada manual de hora permanece disponível."
         },
         "defaultBoard": {
           "label": "Quadro padrão para tickets do portal do cliente",
@@ -676,12 +676,12 @@
           "nameRequired": "O nome do conselho é obrigatório",
           "saveFailed": "Falha ao salvar o quadro",
           "lastDefault": "Não é possível remover o último quadro padrão",
-          "statusRequired": "Adicione pelo menos um status de chamado antes de salvar o quadro.",
-          "duplicateStatusName": "Os nomes de status dos chamados devem ser exclusivos em um quadro.",
-          "invalidOpenDefault": "Selecione exatamente um status de chamado padrão aberto antes de salvar o quadro.",
+          "statusRequired": "Adicione pelo menos um status de ticket antes de salvar o quadro.",
+          "duplicateStatusName": "Os nomes de status dos tickets devem ser exclusivos em um quadro.",
+          "invalidOpenDefault": "Selecione exatamente um status de ticket padrão aberto antes de salvar o quadro.",
           "nameAlreadyExists": "Já existe um quadro com este nome.",
-          "selectBoardToCopy": "Selecione um quadro existente para copiar o status dos chamados.",
-          "fetchStatusesFailed": "Falha ao carregar os status dos chamados do quadro.",
+          "selectBoardToCopy": "Selecione um quadro existente para copiar o status dos tickets.",
+          "fetchStatusesFailed": "Falha ao carregar os status dos tickets do quadro.",
           "deleteFailed": "Falha ao excluir o quadro",
           "importFailed": "Falha ao importar quadros",
           "updateStatusFailed": "Falha ao atualizar o status do quadro",
@@ -690,21 +690,21 @@
       },
       "closeRules": {
         "enabledLabel": "Fechar regras",
-        "enabledHelp": "Exigir que as condições sejam atendidas antes que os chamados deste quadro possam ser fechados.",
+        "enabledHelp": "Exigir que as condições sejam atendidas antes que os tickets deste quadro possam ser fechados.",
         "requireResolutionCommentLabel": "Exigir um comentário de resolução",
-        "requireResolutionCommentHelp": "Um comentário de resolução deve existir antes que o chamado possa ser fechado.",
+        "requireResolutionCommentHelp": "Um comentário de resolução deve existir antes que o ticket possa ser fechado.",
         "requireTimeEntryLabel": "Exigir uma entrada de tempo",
-        "requireTimeEntryHelp": "Pelo menos uma entrada de horário deve ser registrada antes que o chamado possa ser fechado.",
+        "requireTimeEntryHelp": "Pelo menos uma entrada de horário deve ser registrada antes que o ticket possa ser fechado.",
         "requireChecklistCompleteLabel": "Exigir o preenchimento da lista de verificação",
-        "requireChecklistCompleteHelp": "Todos os itens obrigatórios da lista de verificação devem ser verificados antes que o chamado possa ser fechado.",
-        "requireNoOpenChildrenLabel": "Exigir chamados agrupados fechados",
-        "requireNoOpenChildrenHelp": "Um pacote mestre não pode ser fechado enquanto os chamados secundários do pacote ainda estiverem abertos.",
+        "requireChecklistCompleteHelp": "Todos os itens obrigatórios da lista de verificação devem ser verificados antes que o ticket possa ser fechado.",
+        "requireNoOpenChildrenLabel": "Exigir tickets agrupados fechados",
+        "requireNoOpenChildrenHelp": "Um pacote mestre não pode ser fechado enquanto os tickets secundários do pacote ainda estiverem abertos.",
         "requiredFieldsLabel": "Campos obrigatórios no fechamento",
-        "requiredFieldsHelp": "Esses campos do chamado devem ser preenchidos antes que o chamado possa ser fechado.",
+        "requiredFieldsHelp": "Esses campos do ticket devem ser preenchidos antes que o ticket possa ser fechado.",
         "autoCloseLabel": "Regras de fechamento automático",
-        "autoCloseHelp": "Fecha automaticamente chamados que estão em status sem atividade. Um e-mail de aviso opcional vai para o contato antes de fechar.",
+        "autoCloseHelp": "Fecha automaticamente tickets que estão em status sem atividade. Um e-mail de aviso opcional vai para o contato antes de fechar.",
         "addAutoCloseRule": "Adicionar regra",
-        "triggerStatusLabel": "Quando o chamado está em status",
+        "triggerStatusLabel": "Quando o ticket está em status",
         "triggerStatusPlaceholder": "Selecione o status",
         "targetStatusLabel": "Perto do status",
         "targetStatusPlaceholder": "Selecione o status fechado",
@@ -750,7 +750,7 @@
     },
     "priorities": {
       "title": {
-        "ticket": "Prioridades de chamados",
+        "ticket": "Prioridades de tickets",
         "projectTask": "Prioridades das tarefas do projeto"
       },
       "alert": {
@@ -769,7 +769,7 @@
         "itilProtected": "Protegido"
       },
       "itemTypes": {
-        "ticket": "Chamado",
+        "ticket": "Ticket",
         "projectTask": "Tarefa do Projeto"
       },
       "actions": {
@@ -805,7 +805,7 @@
       "import": {
         "title": "Importar prioridades padrão",
         "submit": "Importar ({{count}})",
-        "allImportedTicket": "Todas as prioridades padrão já foram importadas para chamados.",
+        "allImportedTicket": "Todas as prioridades padrão já foram importadas para tickets.",
         "allImportedProjectTask": "Todas as prioridades padrão já foram importadas para tarefas do projeto.",
         "instructions": "Selecione as prioridades padrão que deseja importar. Eles serão copiados para as prioridades da sua organização."
       },
@@ -830,7 +830,7 @@
     },
     "checklistTemplates": {
       "title": "Modelos de lista de verificação",
-      "alert": "Os modelos de lista de verificação definem listas de verificação reutilizáveis ​​para chamados. Os itens do modelo são copiados nos chamados quando aplicados, portanto, a edição de um modelo nunca altera as listas de verificação já existentes nos chamados.",
+      "alert": "Os modelos de lista de verificação definem listas de verificação reutilizáveis ​​para tickets. Os itens do modelo são copiados nos tickets quando aplicados, portanto, a edição de um modelo nunca altera as listas de verificação já existentes nos tickets.",
       "table": {
         "name": "Nome",
         "description": "Descrição",
@@ -868,7 +868,7 @@
         "active": "Ativo",
         "items": {
           "label": "Itens da lista de verificação",
-          "help": "Os itens são adicionados aos chamados nesta ordem quando o modelo é aplicado.",
+          "help": "Os itens são adicionados aos tickets nesta ordem quando o modelo é aplicado.",
           "itemName": "Nome do item",
           "required": "Obrigatório",
           "newItemLabel": "Novo item",
@@ -876,8 +876,8 @@
         },
         "rules": {
           "label": "Regras de aplicação automática",
-          "help": "O modelo é aplicado automaticamente a novos chamados que correspondam a qualquer uma dessas regras. Deixe um campo como \"Qualquer\" para corresponder a todos os valores.",
-          "empty": "Sem regras de aplicação automática. Este modelo ainda pode ser aplicado aos chamados manualmente.",
+          "help": "O modelo é aplicado automaticamente a novos tickets que correspondam a qualquer uma dessas regras. Deixe um campo como \"Qualquer\" para corresponder a todos os valores.",
+          "empty": "Sem regras de aplicação automática. Este modelo ainda pode ser aplicado aos tickets manualmente.",
           "board": "Quadro",
           "category": "Categoria",
           "subcategory": "Subcategoria",
@@ -890,7 +890,7 @@
         "editTemplate": "Editar modelo de lista de verificação",
         "createFirstHelp": "Crie o modelo primeiro e, em seguida, adicione itens da lista de verificação e aplique regras automaticamente.",
         "deleteTitle": "Excluir modelo de lista de verificação",
-        "deleteMessage": "Tem certeza de que deseja excluir \"{{name}}\"? As listas de verificação já adicionadas aos chamados não serão afetadas."
+        "deleteMessage": "Tem certeza de que deseja excluir \"{{name}}\"? As listas de verificação já adicionadas aos tickets não serão afetadas."
       },
       "messages": {
         "success": {
@@ -1007,7 +1007,7 @@
       "fields": {
         "name": {
           "label": "Nome do tipo de interação:",
-          "placeholder": "por exemplo, 'Chamada de integração do cliente', 'Demonstração de vendas', 'Revisão do projeto'"
+          "placeholder": "por exemplo, 'Chamada de onboarding do cliente', 'Demonstração de vendas', 'Revisão do projeto'"
         },
         "displayOrder": {
           "label": "Ordem de exibição:",
@@ -1073,19 +1073,19 @@
       "title": "Seu Portal do Cliente",
       "welcome": "Bem vindo de volta!",
       "subtitle": "Esta é uma visão geral da atividade da sua conta",
-      "openTickets": "Chamados abertos",
+      "openTickets": "Tickets abertos",
       "activeProjects": "Projetos Ativos",
       "invoices": "Faturas",
       "urgent": "{{count}} urgente",
       "nearDeadline": "{{count}} perto do prazo",
       "dueThisMonth": "Vencimento este mês",
       "recentActivity": "Atividade recente",
-      "ticketUpdated": "O chamado nº 1234 foi atualizado",
+      "ticketUpdated": "O ticket nº 1234 foi atualizado",
       "hoursAgo": "{{count}} horas atrás",
       "newInvoice": "Nova fatura gerada",
-      "milestoneCompleted": "Marco do projeto concluído",
+      "milestoneCompleted": "Meta do projeto concluída",
       "dayAgo": "1 dia atrás",
-      "createTicket": "Criar chamado",
+      "createTicket": "Criar ticket",
       "viewProjects": "Ver projetos",
       "activeDevices": "Dispositivos ativos",
       "basicSupport": "Suporte Básico",
@@ -1096,7 +1096,7 @@
       "navDevices": "Meus dispositivos",
       "navProjects": "Projetos",
       "navServiceRequests": "Solicitações de serviço",
-      "navTickets": "Chamados",
+      "navTickets": "Tickets",
       "serviceRequests": "Solicitações de serviço",
       "upcomingShort": "Por vir",
       "upcomingVisits": "Próximas visitas",
@@ -1106,18 +1106,18 @@
     "signInPreview": {
       "portalTitle": "Portal do cliente",
       "welcome": "Bem-vindo ao seu portal do cliente",
-      "subtitle": "Gerencie seus chamados de suporte e fique conectado",
+      "subtitle": "Gerencie seus tickets de suporte e fique conectado",
       "features": {
         "submitTickets": {
-          "title": "Enviar chamados de suporte",
+          "title": "Enviar tickets de suporte",
           "description": "Crie e gerencie suas solicitações de suporte"
         },
         "trackStatus": {
-          "title": "Rastrear status do chamado",
+          "title": "Rastrear status do ticket",
           "description": "Monitore o progresso em tempo real"
         },
         "ticketHistory": {
-          "title": "Histórico de chamados",
+          "title": "Histórico de tickets",
           "description": "Acesse seu histórico completo de suporte"
         },
         "documentation": {
@@ -1988,7 +1988,7 @@
       },
       "communication": {
         "label": "Comunicação",
-        "description": "Conecte caixas de entrada e superfícies de colaboração para processamento de chamados, fluxos de trabalho de operadores e acesso ao Microsoft Teams."
+        "description": "Conecte caixas de entrada e superfícies de colaboração para processamento de tickets, fluxos de trabalho de operadores e acesso ao Microsoft Teams."
       },
       "calendar": {
         "label": "Calendário",
@@ -2025,9 +2025,9 @@
       },
       "email": {
         "name": "E-mail de entrada",
-        "description": "Processe e-mails recebidos em chamados",
+        "description": "Processe e-mails recebidos em tickets",
         "cardTitle": "Integração de e-mail de entrada",
-        "cardDescription": "Configure provedores de e-mail para processar automaticamente e-mails recebidos em chamados"
+        "cardDescription": "Configure provedores de e-mail para processar automaticamente e-mails recebidos em tickets"
       },
       "teams": {
         "name": "Equipes da Microsoft",

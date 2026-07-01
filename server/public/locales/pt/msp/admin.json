@@ -102,7 +102,7 @@
     },
     "descriptions": {
       "outbound": "Defina as configurações de SMTP ou API para enviar e-mails do seu aplicativo",
-      "inbound": "Configure provedores de e-mail para receber e processar e-mails como chamados"
+      "inbound": "Configure provedores de e-mail para receber e processar e-mails como tickets"
     },
     "providerConfig": {
       "title": "Configuração do provedor de e-mail",
@@ -140,6 +140,14 @@
       "fromAddress": {
         "label": "Do endereço",
         "placeholder": "noreply@example.com"
+      },
+      "authHint": "Deixe o nome de usuário e a senha em branco se o seu relay aceitar e-mails sem autenticação.",
+      "security": {
+        "title": "Segurança da conexão",
+        "secure": "Usar TLS implícito (SSL ao conectar, normalmente a porta 465)",
+        "requireTls": "Exigir atualização STARTTLS (portas 587 / 25)",
+        "verifyCert": "Verificar o certificado do servidor",
+        "verifyCertHint": "Desative isto apenas para um relay confiável na sua própria rede que use um certificado autoassinado."
       }
     },
     "resend": {
@@ -169,7 +177,16 @@
       "loadEmailSettings": "Falha ao carregar as configurações de e-mail",
       "saveSettings": "Falha ao salvar as configurações",
       "addDomain": "Falha ao adicionar domínio",
-      "verifyDomain": "Falha ao verificar o domínio"
+      "verifyDomain": "Falha ao verificar o domínio",
+      "testOutbound": "Falha ao testar o e-mail de saída"
+    },
+    "test": {
+      "title": "Testar e-mail de saída",
+      "description": "Salva as configurações atuais e depois verifica a conexão com o provedor. Insira um endereço para também enviar uma mensagem de teste.",
+      "recipientLabel": "Enviar teste para (opcional)",
+      "recipientPlaceholder": "voce@exemplo.com",
+      "run": "Testar conexão",
+      "testing": "Testando..."
     }
   },
   "microsoft365": {
@@ -206,22 +223,22 @@
     }
   },
   "inboundDefaults": {
-    "loading": "Carregando padrões de chamado...",
+    "loading": "Carregando padrões de ticket...",
     "header": {
-      "title": "Padrões de chamados de entrada",
-      "description": "Configurar valores padrão para chamados criados a partir do processamento de email"
+      "title": "Padrões de tickets de entrada",
+      "description": "Configurar valores padrão para tickets criados a partir do processamento de email"
     },
     "actions": {
       "addDefaults": "Adicionar padrões"
     },
     "form": {
-      "editTitle": "Editar padrões de chamado",
-      "createTitle": "Criar padrões de chamado",
-      "description": "Configure os valores padrão que serão aplicados aos chamados criados no processamento de email"
+      "editTitle": "Editar padrões de ticket",
+      "createTitle": "Criar padrões de ticket",
+      "description": "Configure os valores padrão que serão aplicados aos tickets criados no processamento de email"
     },
     "empty": {
-      "title": "Nenhum padrão de chamado configurado",
-      "description": "Crie sua primeira configuração para definir valores padrão para chamados gerados por email"
+      "title": "Nenhum padrão de ticket configurado",
+      "description": "Crie sua primeira configuração para definir valores padrão para tickets gerados por email"
     },
     "badges": {
       "active": "Ativo",
@@ -245,20 +262,20 @@
     "help": {
       "title": "Como funciona",
       "items": {
-        "providerReference": "• Cada provedor de e-mail pode fazer referência a uma configuração padrão de chamado",
-        "requiredValues": "• Quando um email cria um chamado, esses padrões fornecem valores de campo obrigatórios",
-        "systemCreator": "• Chamados gerados pelo sistema mostrarão \"System\" como o criador quando enter_by for nulo",
+        "providerReference": "• Cada provedor de e-mail pode fazer referência a uma configuração padrão de ticket",
+        "requiredValues": "• Quando um email cria um ticket, esses padrões fornecem valores de campo obrigatórios",
+        "systemCreator": "• Tickets gerados pelo sistema mostrarão \"System\" como o criador quando enter_by for nulo",
         "scenarios": "• Você pode criar diferentes padrões para diferentes cenários de e-mail (suporte, cobrança, etc.)"
       }
     },
     "errors": {
-      "load": "Falha ao carregar padrões de chamado",
-      "delete": "Falha ao excluir padrões de chamado"
+      "load": "Falha ao carregar padrões de ticket",
+      "delete": "Falha ao excluir padrões de ticket"
     }
   },
   "policyManagement": {
     "resourceSections": {
-      "tickets": "Chamados",
+      "tickets": "Tickets",
       "documents": "Documentos",
       "time": "Tempo",
       "projects": "Projetos",
@@ -519,7 +536,7 @@
       "simulator": {
         "unsupportedAction": "O simulador atualmente suporta apenas verificações de leitura e aprovação. Escolha uma dessas ações e tente novamente.",
         "unsupportedResource": "Este tipo de registro ainda não está disponível no simulador. Escolha um tipo de registro compatível e tente novamente.",
-        "clientTicketNotSupported": "As verificações de chamados para usuários clientes ainda não estão disponíveis no simulador porque a visibilidade do quadro de chamados não está incluída. Experimente um usuário interno ou verifique o acesso ao chamado do cliente no aplicativo."
+        "clientTicketNotSupported": "As verificações de tickets para usuários clientes ainda não estão disponíveis no simulador porque a visibilidade do quadro de tickets não está incluída. Experimente um usuário interno ou verifique o acesso ao ticket do cliente no aplicativo."
       }
     }
   },
@@ -539,8 +556,8 @@
       "status": "Status",
       "recipient": "Destinatário",
       "recipientPlaceholder": "Pesquisar e-mail…",
-      "ticket": "Chamado",
-      "ticketPlaceholder": "Chamado #…",
+      "ticket": "Ticket",
+      "ticketPlaceholder": "Ticket #…",
       "statusOptions": {
         "all": "Todos",
         "sent": "Enviado",
@@ -549,7 +566,7 @@
     },
     "table": {
       "time": "Tempo",
-      "ticket": "Chamado",
+      "ticket": "Ticket",
       "recipient": "Destinatário",
       "subject": "Assunto",
       "status": "Status"

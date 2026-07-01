@@ -412,6 +412,10 @@ function deriveOutboundMessageIds(result: ProviderEmailSendResult, message?: Pro
 export abstract class BaseEmailService {
   protected initialized: boolean = false;
   protected emailProvider: IEmailProvider | null = null;
+  // Real reason the provider could not be initialized (e.g. SMTP auth/TLS
+  // failure). Set by subclasses when an explicitly-configured provider fails,
+  // so send attempts report the actual cause instead of a generic "disabled".
+  protected providerInitError: string | null = null;
   protected static readonly EMAIL_LOG_TABLE = 'email_sending_logs';
 
   /**
@@ -435,6 +439,7 @@ export abstract class BaseEmailService {
   public async initialize(): Promise<void> {
     if (this.initialized) return;
 
+    this.providerInitError = null;
     try {
       this.emailProvider = await this.getEmailProvider();
       if (!this.emailProvider) {
@@ -445,6 +450,7 @@ export abstract class BaseEmailService {
     } catch (error) {
       logger.error(`[${this.getServiceName()}] Failed to initialize email provider:`, error);
       this.emailProvider = null;
+      this.providerInitError = error instanceof Error ? error.message : String(error);
     }
 
     this.initialized = true;
@@ -459,6 +465,13 @@ export abstract class BaseEmailService {
     }
 
     if (!this.emailProvider) {
+      if (this.providerInitError) {
+        logger.warn(`[${this.getServiceName()}] Email provider failed to initialize: ${this.providerInitError}`);
+        return {
+          success: false,
+          error: `Email provider not ready: ${this.providerInitError}`
+        };
+      }
       logger.warn(`[${this.getServiceName()}] Service disabled or not configured`);
       return {
         success: false,
@@ -862,6 +875,19 @@ export abstract class BaseEmailService {
       await this.initialize();
     }
     return this.emailProvider !== null;
+  }
+
+  /**
+   * Real reason the provider could not be initialized, if any (e.g. an SMTP
+   * auth/TLS/connection failure). Null when no provider is configured at all or
+   * when a provider initialized successfully. Callers can surface this to admins
+   * instead of a generic "disabled or not configured" message.
+   */
+  public async getInitializationError(): Promise<string | null> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+    return this.providerInitError;
   }
 
   /**

@@ -31,12 +31,12 @@
     "description": "Escolha o serviço com o qual você precisa de ajuda",
     "selectService": "Selecione um serviço",
     "serviceLabel": "Serviço",
-    "ticketLabel": "Link para chamado existente (opcional)",
-    "selectTicket": "Selecione um chamado",
-    "noTicket": "Sem chamado",
-    "searchTickets": "Pesquisar chamados...",
-    "noTicketsFound": "Nenhum chamado encontrado correspondente à sua pesquisa",
-    "ticketHint": "Opcionalmente, vincule este compromisso a um chamado de suporte existente"
+    "ticketLabel": "Link para ticket existente (opcional)",
+    "selectTicket": "Selecione um ticket",
+    "noTicket": "Sem ticket",
+    "searchTickets": "Pesquisar tickets...",
+    "noTicketsFound": "Nenhum ticket encontrado correspondente à sua pesquisa",
+    "ticketHint": "Opcionalmente, vincule este compromisso a um ticket de suporte existente"
   },
   "step2": {
     "title": "Escolha a data",
@@ -65,7 +65,7 @@
     "at": "no",
     "duration": "Duração",
     "technician": "Técnico preferencial",
-    "linkedTicket": "Chamado vinculado",
+    "linkedTicket": "Ticket vinculado",
     "approvalNote": "Sua solicitação de agendamento será submetida para aprovação. Você receberá uma confirmação por e-mail assim que for aprovado.",
     "submit": "Solicitar agendamento",
     "update": "Atualizar compromisso"
@@ -132,7 +132,7 @@
     "teamsMeeting": "Reunião de equipes",
     "joinTeamsMeeting": "Participe da reunião de equipes",
     "technician": "Técnico Designado",
-    "linkedTicket": "Chamado vinculado",
+    "linkedTicket": "Ticket vinculado",
     "description": "Descrição",
     "created": "Solicitado",
     "approved": "Aprovado",

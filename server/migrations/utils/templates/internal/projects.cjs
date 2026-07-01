@@ -69,7 +69,7 @@ const TEMPLATES = [
       nl: { title: 'Mijlpaal voltooid', message: 'De mijlpaal "{{milestoneName}}" in project "{{projectName}}" is voltooid' },
       it: { title: 'Traguardo completato', message: 'La milestone "{{milestoneName}}" del progetto "{{projectName}}" è stata completata' },
       pl: { title: 'Kamień milowy ukończony', message: 'Kamień milowy "{{milestoneName}}" w projekcie "{{projectName}}" został ukończony' },
-      pt: { title: 'Marco concluído', message: 'O marco "{{milestoneName}}" no projeto "{{projectName}}" foi concluído' },
+      pt: { title: 'Meta concluída', message: 'A meta "{{milestoneName}}" no projeto "{{projectName}}" foi concluída' },
     },
   },
   {

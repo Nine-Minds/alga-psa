@@ -362,7 +362,7 @@ COPY.pt = {
   greeting: 'Olá {{contactName}},',
   intro: 'Ótima notícia! Você foi convidado(a) a acessar o portal do cliente de <strong>{{clientName}}</strong>. Este portal seguro oferece acesso imediato a:',
   infoBoxTitle: '🎯 O que você pode acessar',
-  feature1: '✓ Visualizar e acompanhar seus chamados de suporte',
+  feature1: '✓ Visualizar e acompanhar seus tickets de suporte',
   feature2: '✓ Revisar atualizações e documentação de projetos',
   feature3: '✓ Comunicar-se diretamente com sua equipe de suporte',
   tagline: 'Tenha uma gestão de serviços simples e integrada com nosso portal intuitivo. Tudo o que você precisa para se manter informado e conectado em um local seguro.',

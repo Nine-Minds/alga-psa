@@ -2,7 +2,7 @@
   "nav": {
     "home": "Início",
     "userActivities": "Atividades do usuário",
-    "tickets": "Chamados",
+    "tickets": "Tickets",
     "serviceRequests": "Solicitações de serviço",
     "surveys": "Pesquisas",
     "projects": "Projetos",
@@ -45,7 +45,7 @@
       "accountingExports": "Exportações Contábeis"
     },
     "schedule": "Agendar",
-    "technicianDispatch": "Despacho Técnico",
+    "technicianDispatch": "Alocação de Técnicos",
     "automationHub": "Fluxos de trabalho",
     "workflows": "Fluxos de trabalho",
     "controlPanel": "Painel de controle",
@@ -85,7 +85,7 @@
       "teams": "Teams",
       "language": "Linguagem",
       "clientPortal": "Portal do cliente",
-      "ticketing": "Chamados",
+      "ticketing": "Tickets",
       "sla": "SLA",
       "projects": "Projetos",
       "interactions": "Interações",
@@ -103,7 +103,7 @@
     }
   },
   "dashboard": {
-    "onboardingWizard": "Assistente de integração"
+    "onboardingWizard": "Assistente de onboarding"
   },
   "header": {
     "userFallback": "Usuário",
@@ -122,8 +122,8 @@
       "heading": "Criar",
       "options": {
         "ticket": {
-          "label": "Chamado",
-          "description": "Crie um novo chamado de suporte"
+          "label": "Ticket",
+          "description": "Crie um novo ticket de suporte"
         },
         "client": {
           "label": "Cliente",
@@ -213,7 +213,7 @@
   "quickCreate": {
     "success": {
       "asset": "Recurso criado com sucesso",
-      "ticket": "Chamado #{{number}} criado com sucesso",
+      "ticket": "Ticket #{{number}} criado com sucesso",
       "client": "Cliente \"{{name}}\" criado com sucesso",
       "contact": "{{name}} adicionado com sucesso",
       "project": "Projeto \"{{name}}\" criado com sucesso",
@@ -242,7 +242,7 @@
     }
   },
   "search": {
-    "placeholder": "Pesquise clientes, chamados, documentos...",
+    "placeholder": "Pesquise clientes, tickets, documentos...",
     "shortcutHint": "Cmd/Ctrl+K",
     "loading": "Procurando...",
     "pageTitle": "Procurar",
@@ -262,8 +262,8 @@
       "client": "Clientes",
       "contact": "Contatos",
       "user": "Membros da equipe",
-      "ticket": "Chamados",
-      "ticket_comment": "Comentários sobre chamados",
+      "ticket": "Tickets",
+      "ticket_comment": "Comentários sobre tickets",
       "project": "Projetos",
       "project_phase": "Fases do projeto",
       "project_task": "Tarefas do projeto",
@@ -292,8 +292,8 @@
       "client": "Clientes",
       "contact": "Contatos",
       "user": "Membros da equipe",
-      "ticket": "Chamados",
-      "ticket_comment": "Comentários sobre chamados",
+      "ticket": "Tickets",
+      "ticket_comment": "Comentários sobre tickets",
       "project": "Projetos",
       "project_phase": "Fases do projeto",
       "project_task": "Tarefas do projeto",

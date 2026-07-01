@@ -50,7 +50,7 @@
     "activityTypes": {
       "schedule": "Agendar",
       "projectTask": "Tarefa do Projeto",
-      "ticket": "Chamado",
+      "ticket": "Ticket",
       "timeEntry": "Entrada de tempo",
       "workflowTask": "Tarefa de Fluxo de Trabalho",
       "notification": "Notificação",
@@ -68,7 +68,7 @@
       "addButton": "Adicionar",
       "markDone": "Marcar como concluído",
       "markNotDone": "Marcar como não concluído",
-      "convertToTicket": "Converter em chamado",
+      "convertToTicket": "Converter em ticket",
       "convertToTask": "Converter em tarefa de projeto"
     },
     "viewingUser": {
@@ -101,7 +101,7 @@
     "noAdditionalDetails": "Nenhum detalhe adicional disponível.",
     "failedToLoadDocument": "Falha ao carregar o conteúdo do documento",
     "notificationNotFound": "Notificação não encontrada",
-    "failedToLoadTicket": "Falha ao carregar detalhes do chamado",
+    "failedToLoadTicket": "Falha ao carregar detalhes do ticket",
     "failedToLoadTask": "Falha ao carregar detalhes da tarefa",
     "unsupportedTitle": "Tipo de atividade não compatível",
     "unsupportedDescription": "Este tipo de atividade ({{activityType}}) não é compatível com o visualizador de detalhes.",
@@ -221,7 +221,7 @@
       }
     },
     "tickets": {
-      "title": "Chamados",
+      "title": "Tickets",
       "actions": {
         "refresh": "Atualizar",
         "filter": "Filtro",
@@ -229,22 +229,22 @@
         "viewAll": "Ver tudo"
       },
       "ariaLabels": {
-        "refresh": "Atualizar chamados",
-        "filter": "Filtrar chamados"
+        "refresh": "Atualizar tickets",
+        "filter": "Filtrar tickets"
       },
       "states": {
-        "loading": "Carregando atividades de chamados...",
-        "empty": "Nenhuma atividade de chamado encontrada"
+        "loading": "Carregando atividades de tickets...",
+        "empty": "Nenhuma atividade de ticket encontrada"
       },
       "errors": {
-        "loadFailed": "Falha ao carregar atividades de chamado. Por favor, tente novamente mais tarde."
+        "loadFailed": "Falha ao carregar atividades de ticket. Por favor, tente novamente mais tarde."
       },
       "filterDialog": {
-        "title": "Filtrar chamados",
-        "description": "Selecione critérios para filtrar atividades de chamado.",
+        "title": "Filtrar tickets",
+        "description": "Selecione critérios para filtrar atividades de ticket.",
         "fields": {
           "search": "Procurar",
-          "searchPlaceholder": "Título de pesquisa, descrição, número do chamado",
+          "searchPlaceholder": "Título de pesquisa, descrição, número do ticket",
           "client": "Cliente",
           "contact": "Contato",
           "status": "Status",
@@ -255,7 +255,7 @@
           "allPriorities": "Todas as prioridades",
           "dueDateRange": "Intervalo de datas de vencimento",
           "createdDateRange": "Intervalo de datas de criação",
-          "showClosedTickets": "Mostrar chamados fechados"
+          "showClosedTickets": "Mostrar tickets fechados"
         },
         "actions": {
           "reset": "Reiniciar",
@@ -361,7 +361,7 @@
           "workItemType": "Tipo de item de trabalho relacionado",
           "workItemTypePlaceholder": "Selecione o tipo de item de trabalho...",
           "allTypes": "Todos os tipos",
-          "ticket": "Chamado",
+          "ticket": "Ticket",
           "projectTask": "Tarefa do Projeto",
           "workflowTask": "Tarefa de Fluxo de Trabalho",
           "showClosedEntries": "Mostrar entradas fechadas",
@@ -409,7 +409,7 @@
           "categoryPlaceholder": "Selecione Categoria...",
           "allCategories": "Todas as categorias",
           "categories": {
-            "tickets": "Chamados",
+            "tickets": "Tickets",
             "projects": "Projetos",
             "invoices": "Faturas",
             "system": "Sistema"
@@ -439,7 +439,7 @@
   "filters": {
     "labels": {
       "types": "Tipos:",
-      "tickets": "Chamados:",
+      "tickets": "Tickets:",
       "tasks": "Tarefas:",
       "priority": "Prioridade",
       "search": "Procurar",
@@ -451,12 +451,12 @@
       "tags": "Etiquetas",
       "tagsSelected": "Etiquetas {{count}}",
       "tasksCompact": "Tarefas",
-      "ticketsCompact": "Chamados"
+      "ticketsCompact": "Tickets"
     },
     "activityTypeOptions": {
       "schedule": "Agendar",
       "projectTask": "Tarefas do Projeto",
-      "ticket": "Chamados",
+      "ticket": "Tickets",
       "workflowTask": "Tarefas de fluxo de trabalho"
     },
     "placeholders": {
@@ -472,7 +472,7 @@
       "allClients": "Todos os clientes",
       "fromDateShort": "De",
       "projectTaskTags": "Filtrar tags de tarefas...",
-      "ticketTags": "Filtrar tags de chamado...",
+      "ticketTags": "Filtrar tags de ticket...",
       "toDateShort": "Para"
     },
     "actions": {

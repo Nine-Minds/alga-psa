@@ -63,7 +63,7 @@
         "description": "Remova todos os filtros ativos e termos de pesquisa"
       }
     },
-    "searchPlaceholder": "Pesquise ativos, clientes, chamados…",
+    "searchPlaceholder": "Pesquise ativos, clientes, tickets…",
     "empty": "Nenhuma correspondência ainda. Experimente uma palavra-chave diferente.",
     "groups": {
       "quickActions": "Ações rápidas",
@@ -71,7 +71,7 @@
       "hints": "Dicas"
     },
     "hint": {
-      "body": "Continue digitando para pesquisar na lista completa de ativos. Os chamados e a pesquisa do cliente chegarão posteriormente.",
+      "body": "Continue digitando para pesquisar na lista completa de ativos. Os tickets e a pesquisa do cliente chegarão posteriormente.",
       "badge": "Em breve"
     },
     "values": {
@@ -110,7 +110,7 @@
       "openActionsForAsset": "Ações abertas para o ativo {{name}}",
       "viewDetails": "Ver detalhes",
       "editAsset": "Editar recurso",
-      "createTicket": "Criar chamado",
+      "createTicket": "Criar ticket",
       "refreshData": "Atualizar dados"
     },
     "table": {
@@ -277,7 +277,7 @@
     "tabs": {
       "overview": "Visão geral",
       "maintenance": "Manutenção",
-      "tickets": "Chamados",
+      "tickets": "Tickets",
       "configuration": "Configuração",
       "documents": "Documentos"
     },
@@ -323,11 +323,11 @@
       "noLogs": "Os registros de manutenção aparecerão aqui após a primeira entrada de serviço."
     },
     "tickets": {
-      "empty": "Ainda não há chamados vinculados a este ativo. Use a ação rápida para criar um.",
+      "empty": "Ainda não há tickets vinculados a este ativo. Use a ação rápida para criar um.",
       "linked": "Vinculado {{date}}",
       "client": "Cliente: {{name}}",
       "assignee": "Responsável: {{name}}",
-      "openTicket": "Abrir chamado"
+      "openTicket": "Abrir ticket"
     },
     "configuration": {
       "coreAttributes": "Atributos principais",
@@ -399,7 +399,7 @@
     "backToAssets": "Voltar para Ativos",
     "assetTag": "Etiqueta de ativo: {{tag}}",
     "actions": {
-      "createTicket": "Criar chamado",
+      "createTicket": "Criar ticket",
       "menu": "Ações",
       "refreshing": "Refrescante...",
       "refreshData": "Atualizar dados",
@@ -656,10 +656,10 @@
   },
   "assetMetricsBanner": {
     "title": "Banner de métricas de ativos",
-    "description": "Cartões de métricas e rollups para chamados, manutenção, tempo de atividade e indicadores de integridade de ativos",
+    "description": "Cartões de métricas e rollups para tickets, manutenção, tempo de atividade e indicadores de integridade de ativos",
     "labels": {
       "healthStatus": "Estado de saúde",
-      "openTickets": "Chamados abertos",
+      "openTickets": "Tickets abertos",
       "securityStatus": "Status de segurança",
       "warranty": "Garantia"
     },
@@ -777,7 +777,7 @@
       "removed": "Associação de recursos removida"
     },
     "empty": {
-      "noneAssociated": "Nenhum ativo associado a este chamado.",
+      "noneAssociated": "Nenhum ativo associado a este ticket.",
       "unknownAsset": "Ativo desconhecido"
     },
     "dialog": {
@@ -824,16 +824,16 @@
     }
   },
   "createTicketFromAssetButton": {
-    "title": "Criar chamado a partir do ativo",
-    "description": "Fluxo de criação de chamados iniciado a partir de um ativo com seleção de quadro, status e categoria",
+    "title": "Criar ticket a partir do ativo",
+    "description": "Fluxo de criação de tickets iniciado a partir de um ativo com seleção de quadro, status e categoria",
     "register": {
-      "label": "Criar chamado a partir do ativo",
-      "title": "Criar chamado a partir do ativo"
+      "label": "Criar ticket a partir do ativo",
+      "title": "Criar ticket a partir do ativo"
     },
     "defaultTitle": "Problema com {{name}}",
     "actions": {
-      "open": "Criar chamado",
-      "create": "Criar chamado",
+      "open": "Criar ticket",
+      "create": "Criar ticket",
       "creating": "Criando..."
     },
     "fields": {
@@ -844,7 +844,7 @@
       "priority": "Prioridade"
     },
     "placeholders": {
-      "title": "Insira o título do chamado",
+      "title": "Insira o título do ticket",
       "description": "Descreva o problema...",
       "loadingBoards": "Carregando quadros...",
       "selectBoard": "Selecione o quadro...",
@@ -859,10 +859,10 @@
       "loadBoards": "Falha ao carregar quadros",
       "loadStatuses": "Falha ao carregar status",
       "requiredFields": "Preencha título, quadro, status e prioridade",
-      "createFailed": "Falha ao criar chamado"
+      "createFailed": "Falha ao criar ticket"
     },
     "success": {
-      "created": "Chamado criado com sucesso"
+      "created": "Ticket criado com sucesso"
     }
   },
   "deleteAssetButton": {
@@ -1300,18 +1300,18 @@
   },
   "serviceHistoryTab": {
     "title": "Histórico de serviço",
-    "description": "Guia Histórico de serviços que resume a atividade de manutenção e chamados do ativo",
+    "description": "Guia Histórico de serviços que resume a atividade de manutenção e tickets do ativo",
     "actions": {
-      "createTicket": "Criar chamado"
+      "createTicket": "Criar ticket"
     },
     "table": {
-      "ticketId": "ID do chamado",
+      "ticketId": "ID do ticket",
       "subject": "Assunto",
       "status": "Status",
       "priority": "Prioridade",
       "dateLinked": "Data vinculada"
     },
-    "empty": "Nenhum chamado vinculado a este ativo.",
+    "empty": "Nenhum ticket vinculado a este ativo.",
     "clientFallback": "Cliente desconhecido"
   },
   "softwareInventoryTab": {
@@ -1344,12 +1344,12 @@
     "messages": {
       "alertAcknowledged": "Alerta reconhecido",
       "acknowledgeFailed": "Falha ao reconhecer o alerta",
-      "ticketCreated": "Chamado criado com sucesso",
-      "ticketCreateFailed": "Falha ao criar chamado"
+      "ticketCreated": "Ticket criado com sucesso",
+      "ticketCreateFailed": "Falha ao criar ticket"
     },
     "activeAlerts": "Alertas ativos",
     "acknowledge": "Reconhecer",
-    "createTicket": "Criar chamado"
+    "createTicket": "Criar ticket"
   },
   "actions": {
     "print": "Imprimir",
@@ -1357,8 +1357,8 @@
     "printSelected": "Imprimir selecionado ({{count}})"
   },
   "crossFeature": {
-    "loadTicketFailed": "Falha ao carregar o chamado",
-    "openTicketFailed": "Falha ao abrir chamado"
+    "loadTicketFailed": "Falha ao carregar o ticket",
+    "openTicketFailed": "Falha ao abrir ticket"
   },
   "assetTypeBreakdown": {
     "title": "Ativos por tipo"
