@@ -16,7 +16,7 @@
   "settings": {
     "tabLabel": "Pesquisas",
     "title": "Pesquisas de satisfação do cliente",
-    "subtitle": "Configure modelos, gatilhos e entrega para coletar feedback pós-chamado.",
+    "subtitle": "Configure modelos, gatilhos e entrega para coletar feedback pós-ticket.",
     "tabs": {
       "templates": "Modelos",
       "triggers": "Gatilhos"
@@ -103,10 +103,10 @@
     },
     "triggerList": {
       "title": "Gatilhos de pesquisa",
-      "description": "Envie convites automaticamente quando chamados ou projetos forem concluídos.",
+      "description": "Envie convites automaticamente quando tickets ou projetos forem concluídos.",
       "createButton": "Novo gatilho",
       "emptyTitle": "Nenhum acionador de pesquisa configurado",
-      "emptyDescription": "Crie um gatilho para enviar pesquisas quando os chamados forem fechados ou os projetos terminarem.",
+      "emptyDescription": "Crie um gatilho para enviar pesquisas quando os tickets forem fechados ou os projetos terminarem.",
       "table": {
         "template": "Modelo",
         "type": "Acionar",
@@ -120,7 +120,7 @@
         "disabled": "Desabilitado"
       },
       "conditions": {
-        "unrestricted": "Aplica-se a todos os chamados e projetos",
+        "unrestricted": "Aplica-se a todos os tickets e projetos",
         "boards": "Quadros",
         "statuses": "Status",
         "priorities": "Prioridades",
@@ -143,7 +143,7 @@
       "titleCreate": "Criar gatilho de pesquisa",
       "titleEdit": "Editar gatilho de pesquisa",
       "triggerTypes": {
-        "ticket_closed": "Chamado fechado",
+        "ticket_closed": "Ticket fechado",
         "project_completed": "Projeto concluído"
       },
       "labels": {
@@ -263,7 +263,7 @@
         "client": "Cliente",
         "contact": "Contato",
         "technician": "Técnico",
-        "ticket": "Chamado",
+        "ticket": "Ticket",
         "rating": "Avaliação",
         "comment": "Comentário"
       },
@@ -311,7 +311,7 @@
         "technician": "Técnico",
         "rating": "Avaliação",
         "comment": "Comentário",
-        "ticket": "Chamado"
+        "ticket": "Ticket"
       },
       "fallbacks": {
         "unknownClient": "Cliente desconhecido",
@@ -339,7 +339,7 @@
       "emptyDescription": "Este é um bom sinal! Continue com o excelente trabalho.",
       "fallbacks": {
         "unknownClient": "Cliente desconhecido",
-        "ticket": "Chamado {{ticket}}",
+        "ticket": "Ticket {{ticket}}",
         "noComment": "Nenhum comentário deixado.",
         "assignedTo": "Atribuído a: {{name}}"
       }
@@ -399,7 +399,7 @@
   },
   "clientSummary": {
     "title": "Resumo do CSAT",
-    "empty": "Ainda não há dados de pesquisa disponíveis para este cliente. As pesquisas enviadas após o fechamento do chamado preencherão esta visualização.",
+    "empty": "Ainda não há dados de pesquisa disponíveis para este cliente. As pesquisas enviadas após o fechamento do ticket preencherão esta visualização.",
     "labels": {
       "averageRating": "Avaliação Média",
       "responseRate": "Taxa de resposta",
@@ -414,7 +414,7 @@
   },
   "ticketSummary": {
     "title": "Feedback do cliente",
-    "empty": "Nenhuma resposta de pesquisa recebida para este chamado ainda.",
+    "empty": "Nenhuma resposta de pesquisa recebida para este ticket ainda.",
     "labels": {
       "latestRating": "Avaliação mais recente",
       "comment": "Comentário",

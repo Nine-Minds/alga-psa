@@ -191,11 +191,11 @@ const COPY = {
     textView: 'Zobacz zgłoszenie',
   },
 };
-SUBJECTS.pt = 'Novo chamado • {{ticket.title}} ({{ticket.priority}})';
+SUBJECTS.pt = 'Novo ticket • {{ticket.title}} ({{ticket.priority}})';
 COPY.pt = {
-  headerLabel: 'Novo chamado criado',
-  intro: 'Um novo chamado foi registrado para <strong>{{ticket.clientName}}</strong>. Revise o resumo abaixo e acesse o link para tomar as próximas ações.',
-  badgePrefix: 'Chamado #',
+  headerLabel: 'Novo ticket criado',
+  intro: 'Um novo ticket foi registrado para <strong>{{ticket.clientName}}</strong>. Revise o resumo abaixo e acesse o link para tomar as próximas ações.',
+  badgePrefix: 'Ticket #',
   priority: 'Prioridade',
   status: 'Status',
   created: 'Criado',
@@ -206,14 +206,14 @@ COPY.pt = {
   location: 'Localização',
   descriptionLabel: 'Descrição',
   descriptionVar: '{{{ticket.description}}}',
-  viewButton: 'Ver chamado',
+  viewButton: 'Ver ticket',
   footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
-  textHeader: 'Novo chamado criado para {{ticket.clientName}}',
+  textHeader: 'Novo ticket criado para {{ticket.clientName}}',
   textCreated: 'Criado',
   textAssigned: 'Atribuído a',
   textRequester: 'Solicitante',
   textDescription: 'Descrição',
-  textView: 'Ver chamado',
+  textView: 'Ver ticket',
 };
 
 /* eslint-enable max-len */

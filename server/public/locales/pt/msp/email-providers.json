@@ -20,8 +20,8 @@
     "header": {
       "title": "Configuração do provedor de e-mail",
       "description": {
-        "enterprise": "Configure provedores do Gmail, Microsoft 365 ou IMAP para receber e processar emails de entrada como chamados",
-        "standard": "Configure provedores Gmail ou IMAP para receber e processar e-mails recebidos como chamados"
+        "enterprise": "Configure provedores do Gmail, Microsoft 365 ou IMAP para receber e processar emails de entrada como tickets",
+        "standard": "Configure provedores Gmail ou IMAP para receber e processar e-mails recebidos como tickets"
       },
       "counts": {
         "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
@@ -173,7 +173,7 @@
       "lastSync": "Última sincronização",
       "created": "Criado",
       "subscription": "Subscrição",
-      "defaults": "Padrões de chamado",
+      "defaults": "Padrões de ticket",
       "error": "Erro:"
     },
     "values": {
@@ -192,7 +192,7 @@
       "labels": "Marcadores: {{filters}}"
     },
     "warnings": {
-      "inboundDefaults": "Os padrões de chamado de entrada são obrigatórios e os e-mails não serão processados ​​até que um seja selecionado."
+      "inboundDefaults": "Os padrões de ticket de entrada são obrigatórios e os e-mails não serão processados ​​até que um seja selecionado."
     },
     "defaults": {
       "placeholder": "Selecione os padrões...",
@@ -200,7 +200,7 @@
     },
     "empty": {
       "title": "Nenhum provedor de e-mail configurado",
-      "description": "Adicione um provedor de e-mail para começar a receber e processar e-mails recebidos como chamados.",
+      "description": "Adicione um provedor de e-mail para começar a receber e processar e-mails recebidos como tickets.",
       "action": "Adicionar provedor de e-mail"
     }
   },
@@ -221,9 +221,9 @@
         "fixHighlightedFields": "Corrija os campos destacados e tente novamente."
       },
       "ticketDefaults": {
-        "title": "Padrões de chamado",
-        "description": "Selecione os padrões a serem aplicados aos chamados criados por e-mail",
-        "label": "Padrões de chamados de entrada",
+        "title": "Padrões de ticket",
+        "description": "Selecione os padrões a serem aplicados aos tickets criados por e-mail",
+        "label": "Padrões de tickets de entrada",
         "placeholder": "Selecione padrões (opcional)",
         "empty": "Nenhum padrão disponível"
       },
@@ -261,7 +261,7 @@
         "providerNameHelp": "Nome interno usado para identificar esta configuração. Não mostrado em e-mails enviados.",
         "senderDisplayNameLabel": "Nome de exibição do remetente",
         "senderDisplayNamePlaceholder": "por exemplo, Suporte Acme",
-        "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De em e-mails de chamado de saída (respostas, encerramentos). Aplicado somente quando esta caixa de correio corresponde ao endereço emissor de emissão de chamados do locatário. Deixe em branco para retornar ao nome do quadro do chamado."
+        "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De em e-mails de ticket de saída (respostas, encerramentos). Aplicado somente quando esta caixa de correio corresponde ao endereço emissor de emissão de tickets do locatário. Deixe em branco para retornar ao nome do quadro do ticket."
       },
       "oauth": {
         "sectionTitle": "Configuração do Microsoft OAuth",
@@ -315,7 +315,7 @@
         "providerNameHelp": "Nome interno usado para identificar esta configuração. Não mostrado em e-mails enviados.",
         "senderDisplayNameLabel": "Nome de exibição do remetente",
         "senderDisplayNamePlaceholder": "por exemplo, Suporte Acme",
-        "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De em e-mails de chamado de saída (respostas, encerramentos). Aplicado somente quando esta caixa de correio corresponde ao endereço emissor de emissão de chamados do locatário. Deixe em branco para retornar ao nome do quadro do chamado."
+        "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De em e-mails de ticket de saída (respostas, encerramentos). Aplicado somente quando esta caixa de correio corresponde ao endereço emissor de emissão de tickets do locatário. Deixe em branco para retornar ao nome do quadro do ticket."
       },
       "oauth": {
         "sectionTitle": "Google OAuth",
@@ -365,7 +365,7 @@
         "providerNameHelp": "Nome interno usado para identificar esta configuração. Não mostrado em e-mails enviados.",
         "senderDisplayName": "Nome de exibição do remetente",
         "senderDisplayNamePlaceholder": "por exemplo, Suporte Acme",
-        "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De em e-mails de chamado de saída (respostas, encerramentos). Aplicado somente quando esta caixa de correio corresponde ao endereço emissor de emissão de chamados do locatário. Deixe em branco para retornar ao nome do quadro do chamado."
+        "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De em e-mails de ticket de saída (respostas, encerramentos). Aplicado somente quando esta caixa de correio corresponde ao endereço emissor de emissão de tickets do locatário. Deixe em branco para retornar ao nome do quadro do ticket."
       },
       "auth": {
         "title": "Autenticação",
@@ -391,7 +391,7 @@
         "title": "Configurações de processamento",
         "description": "Escolha pastas e comportamento de processamento.",
         "folderFilters": "Filtros de pasta",
-        "folderFiltersPlaceholder": "Caixa de entrada, suporte, chamados",
+        "folderFiltersPlaceholder": "Caixa de entrada, suporte, tickets",
         "active": "Ativo"
       }
     }
@@ -459,11 +459,11 @@
       "enteredBy": {
         "label": "Inserido por",
         "placeholder": "Sistema (nulo)",
-        "help": "Usado apenas quando não conseguimos encontrar um contato ou cliente. Os chamados do sistema mostrarão \"Sistema\" como criador."
+        "help": "Usado apenas quando não conseguimos encontrar um contato ou cliente. Os tickets do sistema mostrarão \"Sistema\" como criador."
       }
     },
     "section": {
-      "ticketDefaults": "Padrões de chamado"
+      "ticketDefaults": "Padrões de ticket"
     },
     "optionSuffix": {
       "default": "(Padrão)"
@@ -508,16 +508,16 @@
       "oauthScopes": "Escopos OAuth",
       "oauthScopesPlaceholder": "escopos delimitados por espaço",
       "folderFilters": "Filtros de pasta",
-      "folderFiltersPlaceholder": "Caixa de entrada, suporte, chamados",
+      "folderFiltersPlaceholder": "Caixa de entrada, suporte, tickets",
       "active": "Ativo",
-      "ticketDefaultsLabel": "Padrões de chamado",
+      "ticketDefaultsLabel": "Padrões de ticket",
       "ticketDefaultsPlaceholder": "Selecione os padrões...",
       "ticketDefaultsEmpty": "Nenhum padrão disponível",
       "providerNamePlaceholder": "por exemplo, suporte IMAP (interno)",
       "providerNameHelp": "Nome interno usado para identificar esta configuração. Não mostrado em e-mails enviados.",
       "senderDisplayName": "Nome de exibição do remetente",
       "senderDisplayNamePlaceholder": "por exemplo, Suporte Acme",
-      "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De em e-mails de chamado de saída (respostas, encerramentos). Aplicado somente quando esta caixa de correio corresponde ao endereço emissor de emissão de chamados do locatário. Deixe em branco para retornar ao nome do quadro do chamado."
+      "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De em e-mails de ticket de saída (respostas, encerramentos). Aplicado somente quando esta caixa de correio corresponde ao endereço emissor de emissão de tickets do locatário. Deixe em branco para retornar ao nome do quadro do ticket."
     },
     "authOptions": {
       "password": "Senha",
@@ -562,8 +562,8 @@
         "description": "Configure como os e-mails são processados ​​e importados"
       },
       "ticketDefaults": {
-        "title": "Padrões de chamado",
-        "description": "Selecione os padrões a serem aplicados aos chamados criados por e-mail"
+        "title": "Padrões de ticket",
+        "description": "Selecione os padrões a serem aplicados aos tickets criados por e-mail"
       }
     },
     "fields": {
@@ -577,12 +577,12 @@
       "foldersHelp": "Lista separada por vírgulas de pastas a serem monitoradas (padrão: Caixa de entrada)",
       "maxEmailsLabel": "Máximo de e-mails por sincronização",
       "maxEmailsHelp": "Número máximo de e-mails a serem processados ​​em cada sincronização (1-1000)",
-      "inboundDefaultsLabel": "Padrões de chamados de entrada",
+      "inboundDefaultsLabel": "Padrões de tickets de entrada",
       "inboundDefaultsPlaceholder": "Selecione padrões (opcional)",
       "providerNameHelp": "Nome interno usado para identificar esta configuração. Não mostrado em e-mails enviados.",
       "senderDisplayNameLabel": "Nome de exibição do remetente",
       "senderDisplayNamePlaceholder": "por exemplo, Suporte Acme",
-      "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De em e-mails de chamado de saída (respostas, encerramentos). Aplicado somente quando esta caixa de correio corresponde ao endereço emissor de emissão de chamados do locatário. Deixe em branco para retornar ao nome do quadro do chamado."
+      "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De em e-mails de ticket de saída (respostas, encerramentos). Aplicado somente quando esta caixa de correio corresponde ao endereço emissor de emissão de tickets do locatário. Deixe em branco para retornar ao nome do quadro do ticket."
     },
     "oauth": {
       "connectionTitle": "Conexão Microsoft 365",
@@ -649,10 +649,10 @@
       "description": "Configure como os e-mails são processados ​​e importados"
     },
     "ticketDefaults": {
-      "title": "Padrões de chamado",
-      "description": "Selecione os padrões a serem aplicados aos chamados criados por e-mail",
+      "title": "Padrões de ticket",
+      "description": "Selecione os padrões a serem aplicados aos tickets criados por e-mail",
       "manageDefaults": "Gerenciar padrões",
-      "inboundDefaultsLabel": "Padrões de chamados de entrada",
+      "inboundDefaultsLabel": "Padrões de tickets de entrada",
       "inboundDefaultsPlaceholder": "Selecione padrões (opcional)",
       "refreshList": "Atualizar lista"
     },
@@ -691,10 +691,10 @@
     "messages": {
       "loadDomainsFailed": "Falha ao carregar domínios gerenciados",
       "loadOutboundSettingsFailed": "Falha ao carregar as configurações de e-mail de saída",
-      "ticketingFromUpdated": "Emissão de chamados do endereço atualizado",
-      "ticketingFromSaveFailed": "Falha ao salvar o chamado do endereço",
-      "ticketingFromCleared": "Emissão de chamados do endereço apagado",
-      "ticketingFromClearFailed": "Falha ao limpar o chamado do endereço",
+      "ticketingFromUpdated": "Emissão de tickets do endereço atualizado",
+      "ticketingFromSaveFailed": "Falha ao salvar o ticket do endereço",
+      "ticketingFromCleared": "Emissão de tickets do endereço apagado",
+      "ticketingFromClearFailed": "Falha ao limpar o ticket do endereço",
       "switchProviderFailed": "Falha ao mudar de provedor",
       "smtpHostRequired": "O host SMTP é obrigatório",
       "fromAddressRequired": "O endereço do remetente é obrigatório",
@@ -706,7 +706,7 @@
       "verificationRecheckScheduled": "Nova verificação de verificação agendada",
       "refreshStatusFailed": "Falha ao atualizar o status do domínio",
       "domainRemovalScheduled": "Remoção de domínio agendada",
-      "domainRemovalScheduledWithClear": "Remoção de domínio agendada e emissão de chamados Do endereço apagado",
+      "domainRemovalScheduledWithClear": "Remoção de domínio agendada e emissão de tickets Do endereço apagado",
       "removeDomainFailed": "Falha ao remover o domínio"
     },
     "tabs": {
@@ -748,14 +748,14 @@
         "saveButton": "Salvar configurações SMTP"
       },
       "ticketingFrom": {
-        "title": "Emissão de chamados no endereço",
-        "description": "Escolha o endereço de e-mail que aparecerá no cabeçalho De nas notificações de chamados.",
+        "title": "Emissão de tickets no endereço",
+        "description": "Escolha o endereço de e-mail que aparecerá no cabeçalho De nas notificações de tickets.",
         "smtpHint": "O endereço deve usar um domínio associado ao seu servidor SMTP ({{domain}}). As respostas funcionam melhor quando você usa uma caixa de entrada conectada.",
         "managedHint": "O endereço deve usar seu domínio de saída ({{domain}}). As respostas funcionam melhor quando você usa uma caixa de entrada conectada.",
         "domainNotSet": "não definido",
         "outboundRequiredTitle": "Domínio de saída obrigatório",
-        "smtpRequiredMessage": "Salve sua configuração SMTP com um endereço de antes de selecionar um endereço de chamado.",
-        "managedRequiredMessage": "Adicione e verifique um domínio gerenciado antes de selecionar um endereço de emissão de chamados.",
+        "smtpRequiredMessage": "Salve sua configuração SMTP com um endereço de antes de selecionar um endereço de ticket.",
+        "managedRequiredMessage": "Adicione e verifique um domínio gerenciado antes de selecionar um endereço de emissão de tickets.",
         "connectedInboxLabel": "Caixa de entrada conectada",
         "customOptionLabel": "Outro endereço em {{domain}}",
         "selectPlaceholder": "Selecione no endereço",
@@ -763,7 +763,7 @@
         "customLabel": "Do endereço",
         "customPlaceholder": "suporte@{{domain}}",
         "customSmtpHelp": "Use um domínio do qual seu servidor SMTP esteja autorizado a enviar. Usar um domínio incompatível pode causar falhas na entrega ou filtragem de spam.",
-        "customManagedHelp": "Deve corresponder a {{domain}}. Se esta não for uma de suas caixas de entrada, o processamento de chamados de entrada poderá não funcionar.",
+        "customManagedHelp": "Deve corresponder a {{domain}}. Se esta não for uma de suas caixas de entrada, o processamento de tickets de entrada poderá não funcionar.",
         "warningTitle": "Atenção",
         "errorTitle": "Corrigir o endereço de origem",
         "clearButton": "Limpar do endereço",
@@ -776,13 +776,13 @@
     },
     "dialogs": {
       "clearTicketingFrom": {
-        "title": "Limpar emissão de chamados do endereço",
-        "message": "Limpar o endereço De do chamado salvo? As notificações de chamados deixarão de usar um endereço De personalizado até que você salve um novo.",
+        "title": "Limpar emissão de tickets do endereço",
+        "message": "Limpar o endereço De do ticket salvo? As notificações de tickets deixarão de usar um endereço De personalizado até que você salve um novo.",
         "confirm": "Limpar do endereço"
       },
       "removeDomain": {
         "title": "Remover domínio gerenciado",
-        "messageWithClear": "Remover {{domain}}? Isso também limpará o endereço De do chamado salvo porque este domínio está atualmente ativo para e-mails de saída.",
+        "messageWithClear": "Remover {{domain}}? Isso também limpará o endereço De do ticket salvo porque este domínio está atualmente ativo para e-mails de saída.",
         "message": "Remover {{domain}}?",
         "fallbackDomain": "este domínio",
         "confirm": "Remover domínio"
@@ -795,9 +795,9 @@
       "addOutboundFirst": "Adicione e verifique um domínio de saída antes de escolher um endereço de origem",
       "invalidEmail": "Insira um endereço de e-mail válido",
       "mustMatchDomain": "O endereço do remetente deve usar @{{domain}}",
-      "customAddressThreadWarning": "Usar um endereço personalizado pode impedir que as respostas dos chamados de entrada sejam encadeadas corretamente.",
+      "customAddressThreadWarning": "Usar um endereço personalizado pode impedir que as respostas dos tickets de entrada sejam encadeadas corretamente.",
       "smtpDomainMismatchWarning": "Este domínio não corresponde ao seu domínio de endereço SMTP ({{domain}}). Os e-mails podem não ser entregues ou ser sinalizados como spam se o seu servidor SMTP não estiver autorizado a enviar deste domínio.",
-      "notConnectedWarning": "O processamento de chamados de entrada pode não funcionar com esse endereço porque ele não é uma das suas caixas de entrada conectadas."
+      "notConnectedWarning": "O processamento de tickets de entrada pode não funcionar com esse endereço porque ele não é uma das suas caixas de entrada conectadas."
     },
     "domainList": {
       "loading": "Carregando domínios…",
@@ -853,13 +853,13 @@
       "aiClassifyUpsell": "Requer o complemento IA Assistant",
       "extractAssign": "Atribuir cliente do texto extraído",
       "setDestination": "Rota até o destino",
-      "skip": "Ignorar e-mail (sem chamado)"
+      "skip": "Ignorar e-mail (sem ticket)"
     },
     "badges": {
       "allMailboxes": "Todas as caixas de correio"
     },
     "empty": {
-      "description": "Crie uma regra para ignorar e-mails de atualização de status ou atribuir chamados a clientes nomeados na linha de assunto.",
+      "description": "Crie uma regra para ignorar e-mails de atualização de status ou atribuir tickets a clientes nomeados na linha de assunto.",
       "title": "Nenhuma regra de entrada configurada"
     },
     "errors": {
@@ -898,7 +898,7 @@
       "create": "Criar regra",
       "createTitle": "Criar regra de entrada",
       "description": "Defina quando a regra corresponde e o que acontece com o email. Use o testador abaixo para verificar uma amostra antes de salvar.",
-      "destination": "Destino (padrões do chamado)",
+      "destination": "Destino (padrões do ticket)",
       "destinationPlaceholder": "Selecione um conjunto de padrões",
       "editTitle": "Editar regra de entrada",
       "endDelimiter": "Delimitador final",
@@ -936,7 +936,7 @@
         "aliases": "• Os nomes extraídos correspondem aos nomes e aliases dos clientes. Gerencie aliases no registro do cliente ou adicione-os no testador de regras.",
         "audit": "• Os e-mails ignorados permanecem auditáveis ​​no diagnóstico de processamento de e-mail, marcados com a regra que os ignorou.",
         "order": "• As regras são executadas de cima para baixo em novos e-mails recebidos; a primeira regra de correspondência se aplica.",
-        "replies": "• As respostas aos chamados existentes sempre se transformam em comentários — as regras nunca os afetam."
+        "replies": "• As respostas aos tickets existentes sempre se transformam em comentários — as regras nunca os afetam."
       },
       "title": "Como funciona"
     },
@@ -957,7 +957,7 @@
       "aiClassify": "Classifique com IA",
       "extractAssign": "Atribuir cliente de {{source}}",
       "setDestination": "Rota até o destino",
-      "skip": "Ignorar e-mail (sem chamado)"
+      "skip": "Ignorar e-mail (sem ticket)"
     },
     "tester": {
       "alias": "apelido",
@@ -973,11 +973,11 @@
       "from": "De",
       "noClient": "Nenhum cliente correspondente",
       "outcome": {
-        "assignClient": "Chamado atribuído ao cliente \"{{client}}\"",
-        "fallback": "Nenhum cliente correspondido — chamado roteado para o destino substituto",
+        "assignClient": "Ticket atribuído ao cliente \"{{client}}\"",
+        "fallback": "Nenhum cliente correspondido — ticket roteado para o destino substituto",
         "none": "A regra não foi resolvida — o processamento normal continua",
         "setDestination": "Passagem encaminhada para o destino selecionado",
-        "skip": "E-mail ignorado – nenhum chamado foi criado"
+        "skip": "E-mail ignorado – nenhum ticket foi criado"
       },
       "run": "Executar teste",
       "running": "Testando…",

@@ -215,11 +215,11 @@ const COPY = {
     hasPriority: true,
   },
 };
-SUBJECTS.pt = 'Chamado encerrado • {{ticket.title}}';
+SUBJECTS.pt = 'Ticket encerrado • {{ticket.title}}';
 COPY.pt = {
-  headerLabel: 'Chamado encerrado',
-  intro: 'Um chamado para <strong>{{ticket.clientName}}</strong> foi resolvido e encerrado. Revise os detalhes da resolução abaixo.',
-  badgePrefix: 'Chamado #',
+  headerLabel: 'Ticket encerrado',
+  intro: 'Um ticket para <strong>{{ticket.clientName}}</strong> foi resolvido e encerrado. Revise os detalhes da resolução abaixo.',
+  badgePrefix: 'Ticket #',
   status: 'Status',
   closedStatusLabel: 'Encerrado',
   closedBy: 'Encerrado por',
@@ -231,16 +231,16 @@ COPY.pt = {
   location: 'Localização',
   resolutionLabel: 'Resolução',
   resolutionVar: '{{{ticket.resolution}}}',
-  viewButton: 'Ver chamado',
+  viewButton: 'Ver ticket',
   footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
-  textHeader: 'Chamado encerrado',
+  textHeader: 'Ticket encerrado',
   textClosedBy: 'Encerrado por',
   textStatus: 'Status',
   textClosedStatus: 'Encerrado',
   textAssigned: 'Atribuído a',
   textRequester: 'Solicitante',
   textResolution: 'Resolução',
-  textView: 'Ver chamado',
+  textView: 'Ver ticket',
 };
 
 /* eslint-enable max-len */

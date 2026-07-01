@@ -100,7 +100,7 @@
     },
     "tabs": {
       "details": "Detalhes",
-      "tickets": "Chamados",
+      "tickets": "Tickets",
       "documents": "Documentos",
       "interactions": "Interações",
       "notes": "Notas",
@@ -111,7 +111,7 @@
       "client": "Cliente",
       "email": "E-mail",
       "role": "Papel",
-      "inboundTicketDestinationOverride": "Substituição do destino do chamado de entrada",
+      "inboundTicketDestinationOverride": "Substituição do destino do ticket de entrada",
       "useClientDestination": "Usar destino do cliente",
       "inboundTicketDestinationHelp": "Se definido, isso substitui o destino do cliente para esse contato remetente exato. Precedência: Substituição de contato -> Destino do cliente -> Padrão do provedor.",
       "tags": "Etiquetas",
@@ -127,7 +127,7 @@
     },
     "loading": {
       "destinations": "Carregando destinos...",
-      "ticketFilters": "Carregando filtros de chamados..."
+      "ticketFilters": "Carregando filtros de tickets..."
     },
     "empty": {
       "notSet": "Não definido",
@@ -494,7 +494,7 @@
       "role": "Papel",
       "rolePlaceholder": "por exemplo, gerente, desenvolvedor, etc.",
       "phoneNumbers": "Números de telefone:",
-      "inboundTicketDestinationOverride": "Substituição do destino do chamado de entrada:",
+      "inboundTicketDestinationOverride": "Substituição do destino do ticket de entrada:",
       "inboundTicketDestinationHelp": "Precedência: Substituição de contato -> Destino do cliente -> Padrão do provedor.",
       "useClientDestination": "Usar destino do cliente",
       "client": "Cliente:",
@@ -626,27 +626,27 @@
   },
   "contactTabs": {
     "tickets": {
-      "addTicket": "Adicionar chamado",
-      "empty": "Nenhum chamado encontrado para este contato",
+      "addTicket": "Adicionar ticket",
+      "empty": "Nenhum ticket encontrado para este contato",
       "filters": {
         "allAssignees": "Todos os responsáveis",
         "allPriorities": "Todas as prioridades",
         "categoryPlaceholder": "Filtrar por categoria",
         "reset": "Reiniciar",
-        "searchPlaceholder": "Pesquisar chamados...",
+        "searchPlaceholder": "Pesquisar tickets...",
         "statusPlaceholder": "Selecione o status"
       },
       "loadMore": {
-        "label": "Carregar mais chamados",
+        "label": "Carregar mais tickets",
         "loading": "Carregando..."
       },
       "loading": "Carregando...",
-      "title": "Chamados de contato",
+      "title": "Tickets de contato",
       "toasts": {
         "clientNotFound": "Cliente não encontrado",
         "loadClientFailed": "Falha ao carregar detalhes do cliente",
-        "loadTicketFailed": "Falha ao carregar o chamado",
-        "openTicketFailed": "Falha ao abrir chamado",
+        "loadTicketFailed": "Falha ao carregar o ticket",
+        "openTicketFailed": "Falha ao abrir ticket",
         "userNotAuthenticated": "Usuário não autenticado"
       }
     }

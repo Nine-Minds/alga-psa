@@ -1,6 +1,6 @@
 {
   "page": {
-    "title": "Despacho Técnico",
+    "title": "Alocação de Técnicos",
     "filteredWorkItems": "Mostrando itens de trabalho filtrados"
   },
   "workItems": {
@@ -69,7 +69,7 @@
     "toasts": {
       "noUsersAvailable": "Nenhum usuário disponível no sistema",
       "noUserSession": "Nenhuma sessão de usuário encontrada",
-      "failedToLoadTicketData": "Falha ao carregar dados do chamado",
+      "failedToLoadTicketData": "Falha ao carregar dados do ticket",
       "failedToLoadProjectTaskData": "Falha ao carregar os dados da tarefa do projeto",
       "failedToLoadAdHocEntryData": "Falha ao carregar dados de entrada ad hoc",
       "failedToLoadInteractionData": "Falha ao carregar dados de interação",
@@ -140,7 +140,7 @@
     }
   },
   "badges": {
-    "needsDispatch": "Precisa de despacho",
+    "needsDispatch": "Precisa de alocação",
     "needsDispatchFor": "Precisa de envio para: {{agents}}"
   },
   "time": {

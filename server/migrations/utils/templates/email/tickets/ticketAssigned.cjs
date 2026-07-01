@@ -191,11 +191,11 @@ const COPY = {
     textView: 'Zobacz zgłoszenie',
   },
 };
-SUBJECTS.pt = 'Chamado atribuído • {{ticket.title}} ({{ticket.priority}})';
+SUBJECTS.pt = 'Ticket atribuído • {{ticket.title}} ({{ticket.priority}})';
 COPY.pt = {
-  headerLabel: 'Chamado atribuído',
-  intro: 'Você foi atribuído a um chamado para <strong>{{ticket.clientName}}</strong>. Revise os detalhes abaixo e tome as próximas ações.',
-  badgePrefix: 'Chamado #',
+  headerLabel: 'Ticket atribuído',
+  intro: 'Você foi atribuído a um ticket para <strong>{{ticket.clientName}}</strong>. Revise os detalhes abaixo e tome as próximas ações.',
+  badgePrefix: 'Ticket #',
   priority: 'Prioridade',
   status: 'Status',
   assignedBy: 'Atribuído por',
@@ -206,14 +206,14 @@ COPY.pt = {
   location: 'Localização',
   descriptionLabel: 'Descrição',
   descriptionVar: '{{{ticket.description}}}',
-  viewButton: 'Ver chamado',
+  viewButton: 'Ver ticket',
   footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
-  textHeader: 'Chamado atribuído a você',
+  textHeader: 'Ticket atribuído a você',
   textAssignedBy: 'Atribuído por',
   textAssigned: 'Atribuído a',
   textRequester: 'Solicitante',
   textDescription: 'Descrição',
-  textView: 'Ver chamado',
+  textView: 'Ver ticket',
 };
 
 /* eslint-enable max-len */

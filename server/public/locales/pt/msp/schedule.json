@@ -32,7 +32,7 @@
   "calendar": {
     "legend": {
       "types": {
-        "ticket": "Chamado",
+        "ticket": "Ticket",
         "projectTask": "Tarefa do projeto",
         "nonBillableCategory": "Categoria não faturável",
         "adHoc": "Entrada ad hoc",
@@ -124,8 +124,8 @@
   "requests": {
     "errors": {
       "load": "Falha ao carregar solicitações de agendamento",
-      "ticketNotFound": "Chamado não encontrado",
-      "loadTicket": "Falha ao carregar o chamado",
+      "ticketNotFound": "Ticket não encontrado",
+      "loadTicket": "Falha ao carregar o ticket",
       "assignTechnicianRequired": "Por favor atribua um técnico",
       "approve": "Falha ao aprovar a solicitação",
       "declineReasonRequired": "Forneça um motivo para recusar",
@@ -154,7 +154,7 @@
       "loading": "Carregando solicitações...",
       "empty": "Nenhuma solicitação {{status}} encontrada",
       "duration": "{{count}} minutos",
-      "ticketFallback": "Chamado #{{ticket}}",
+      "ticketFallback": "Ticket #{{ticket}}",
       "fallbacks": {
         "publicRequest": "Solicitação pública"
       }
@@ -177,7 +177,7 @@
         "duration": "Duração",
         "teamsMeeting": "Reunião de equipes",
         "status": "Status",
-        "linkedTicket": "Chamado vinculado",
+        "linkedTicket": "Ticket vinculado",
         "description": "Descrição"
       },
       "actions": {
@@ -191,12 +191,12 @@
         "finalDateTime": "Data e hora finais",
         "generateTeamsMeeting": "Gerar link de reunião do Microsoft Teams",
         "internalNotes": "Notas internas (opcional)",
-        "linkedTicket": "Link para chamado (opcional)"
+        "linkedTicket": "Link para ticket (opcional)"
       },
       "placeholders": {
         "assignedTechnician": "Selecione o técnico",
         "internalNotes": "Adicione quaisquer notas internas...",
-        "linkedTicket": "Insira o ID do chamado para vincular..."
+        "linkedTicket": "Insira o ID do ticket para vincular..."
       },
       "actions": {
         "approve": "Aprovar",

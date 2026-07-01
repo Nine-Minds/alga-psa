@@ -88,23 +88,23 @@
       "fields": {
         "dueDateAction": {
           "label": "Ação de data de vencimento",
-          "help": "Escolha se as datas de vencimento da renovação devem criar chamados ou permanecer apenas na fila por padrão."
+          "help": "Escolha se as datas de vencimento da renovação devem criar tickets ou permanecer apenas na fila por padrão."
         },
         "ticketBoard": {
-          "label": "Quadro de Renovação de Chamados",
+          "label": "Quadro de Renovação de Tickets",
           "placeholderLoading": "Carregando quadros...",
           "placeholderSelect": "Selecione o quadro"
         },
         "ticketStatus": {
-          "label": "Status de renovação do chamado",
+          "label": "Status de renovação do ticket",
           "placeholderLoading": "Carregando status...",
           "placeholderSelect": "Selecione o status",
           "placeholderSelectBoardFirst": "Selecione um quadro primeiro",
-          "help": "Os status de renovação dos chamados têm como escopo o quadro selecionado."
+          "help": "Os status de renovação dos tickets têm como escopo o quadro selecionado."
         }
       },
       "options": {
-        "createTicket": "Criar chamado",
+        "createTicket": "Criar ticket",
         "queueOnly": "Somente fila"
       },
       "states": {
@@ -119,7 +119,7 @@
       },
       "errors": {
         "load": "Falha ao carregar as configurações de automação de renovação",
-        "loadStatuses": "Falha ao carregar status de chamados de renovação",
+        "loadStatuses": "Falha ao carregar status de tickets de renovação",
         "save": "Falha ao salvar as configurações de automação de renovação"
       }
     }

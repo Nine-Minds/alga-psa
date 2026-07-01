@@ -1,7 +1,7 @@
 {
   "nav": {
     "dashboard": "Painel",
-    "tickets": "Chamados",
+    "tickets": "Tickets",
     "projects": "Projetos",
     "appointments": "Compromissos",
     "billing": "Cobrança",
@@ -18,7 +18,7 @@
     "knowledgeBase": "Base de conhecimento",
     "requestServices": "Solicitações de serviço",
     "home": "Início",
-    "myTickets": "Meus chamados",
+    "myTickets": "Meus tickets",
     "newRequest": "Nova solicitação",
     "schedule": "Agendar",
     "myDevices": "Meus dispositivos",
@@ -81,8 +81,8 @@
     },
     "notAvailable": "N / D",
     "detailsTitle": "Detalhes do recurso",
-    "createTicket": "Criar chamado",
-    "createTicketForDevice": "Crie um chamado para este dispositivo",
+    "createTicket": "Criar ticket",
+    "createTicketForDevice": "Crie um ticket para este dispositivo",
     "rowActionsLabel": "Ações de linha"
   },
   "dashboard": {
@@ -91,7 +91,7 @@
     "loading": "Carregando painel...",
     "error": "Ocorreu um erro ao carregar o painel. Por favor, tente novamente mais tarde.",
     "metrics": {
-      "openTickets": "Chamados de suporte abertos",
+      "openTickets": "Tickets de suporte abertos",
       "activeProjects": "Projetos abertos",
       "pendingInvoices": "Faturas pendentes",
       "activeAssets": "Ativos ativos",
@@ -104,7 +104,7 @@
       "deviceStatusHint": "Terminais gerenciados",
       "serviceRequests": "Solicitações de serviço",
       "serviceRequestsHint": "Total de envios",
-      "openTicketsDescription": "Chamados de suporte nos quais ainda estamos trabalhando.",
+      "openTicketsDescription": "Tickets de suporte nos quais ainda estamos trabalhando.",
       "activeProjectsDescription": "Projetos que estamos entregando para sua equipe.",
       "serviceRequestsDescription": "Solicitações estruturadas que você enviou do catálogo.",
       "upcomingVisitsDescription": "Consultas agendadas com nossos técnicos.",
@@ -120,24 +120,24 @@
     "nextToday": "Hoje",
     "nextTomorrow": "Amanhã",
     "recentTickets": {
-      "title": "Chamados recentes",
+      "title": "Tickets recentes",
       "viewAll": "Ver tudo",
       "id": "ID",
       "subject": "Assunto",
       "status": "Status",
       "priority": "Prioridade",
       "updated": "Atualizado",
-      "empty": "Nenhum chamado ativo – legal!",
+      "empty": "Nenhum ticket ativo – legal!",
       "countLabel": "{{count}} mostrado"
     },
     "activity": {
       "title": "Atividade recente",
       "subtitle": "Últimas atualizações em sua conta",
       "empty": "Nenhuma atividade recente ainda",
-      "emptyHint": "Quando os chamados forem atualizados ou as faturas chegarem, você os verá aqui.",
-      "viewTickets": "Ver todos os chamados",
+      "emptyHint": "Quando os tickets forem atualizados ou as faturas chegarem, você os verá aqui.",
+      "viewTickets": "Ver todos os tickets",
       "titles": {
-        "ticket": "Novo chamado: {{name}}",
+        "ticket": "Novo ticket: {{name}}",
         "invoice": "Fatura {{name}} gerada",
         "asset": "Manutenção de ativos: {{name}}",
         "project": "Projeto atualizado: {{name}}",
@@ -162,7 +162,7 @@
           "cancelled": "Consulta cancelada: {{name}}"
         }
       },
-      "algadeskEmptyHint": "Quando os chamados forem atualizados, você os verá aqui."
+      "algadeskEmptyHint": "Quando os tickets forem atualizados, você os verá aqui."
     },
     "devices": {
       "title": "Seus dispositivos",
@@ -176,7 +176,7 @@
     },
     "quickActions": {
       "title": "Ações rápidas",
-      "createTicket": "Criar chamado",
+      "createTicket": "Criar ticket",
       "requestAppointment": "Solicitar agendamento",
       "viewLatestInvoice": "Ver última fatura",
       "newServiceRequest": "Nova solicitação de serviço"
@@ -229,7 +229,7 @@
     "loginError": "Ocorreu um erro durante o login",
     "sessionExpired": "Sua sessão expirou. Faça login novamente.",
     "welcomeTitle": "Bem-vindo ao seu portal do cliente",
-    "welcomeSubtitle": "Gerencie seus chamados de suporte e fique conectado",
+    "welcomeSubtitle": "Gerencie seus tickets de suporte e fique conectado",
     "signInDescription": "Por favor, insira suas credenciais para acessar sua conta.",
     "clientLogin": "Login do cliente",
     "mspStaffLogin": "Pessoal do PSM? Faça login aqui →",
@@ -303,15 +303,15 @@
     },
     "features": {
       "submitTickets": {
-        "title": "Enviar chamados de suporte",
+        "title": "Enviar tickets de suporte",
         "description": "Crie e gerencie suas solicitações de suporte"
       },
       "trackStatus": {
-        "title": "Rastrear status do chamado",
+        "title": "Rastrear status do ticket",
         "description": "Monitore o progresso em tempo real"
       },
       "ticketHistory": {
-        "title": "Histórico de chamados",
+        "title": "Histórico de tickets",
         "description": "Acesse seu histórico completo de suporte"
       },
       "documentation": {
@@ -491,7 +491,7 @@
       "unreadCount_other": "Notificações não lidas {{count}}",
       "title": "Configurações de notificação",
       "email": "Notificações por e-mail",
-      "ticketUpdates": "Atualizações de chamados",
+      "ticketUpdates": "Atualizações de tickets",
       "projectUpdates": "Atualizações do projeto",
       "invoices": "Notificações de fatura",
       "announcements": "Anúncios do sistema",
@@ -636,7 +636,7 @@
     },
     "visibilityGroups": {
       "title": "Grupos de visibilidade",
-      "description": "Gerencie quais quadros de chamados cada contato do portal do cliente pode acessar.",
+      "description": "Gerencie quais quadros de tickets cada contato do portal do cliente pode acessar.",
       "nameLabel": "Nome",
       "descriptionLabel": "Descrição",
       "boardLabel": "Quadros",
@@ -693,7 +693,7 @@
       "internalPreferences": "Preferências internas"
     },
     "categories": {
-      "tickets": "Chamados",
+      "tickets": "Tickets",
       "invoices": "Faturas",
       "messages": "Mensagens",
       "projects": "Projetos",

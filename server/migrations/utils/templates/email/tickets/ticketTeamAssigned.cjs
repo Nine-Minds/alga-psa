@@ -25,7 +25,7 @@ const SUBJECTS = {
   nl: 'Team toegewezen aan uw ticket • {{ticket.title}}',
   it: 'Team assegnato al suo ticket • {{ticket.title}}',
   pl: 'Zespół przypisany do Twojego zgłoszenia • {{ticket.title}}',
-  pt: 'Equipe atribuída ao seu chamado • {{ticket.title}}',
+  pt: 'Equipe atribuída ao seu ticket • {{ticket.title}}',
 };
 
 /* eslint-disable max-len */
@@ -193,8 +193,8 @@ const COPY = {
   },
   pt: {
     headerLabel: 'Equipe Atribuída',
-    intro: 'A equipe <strong>{{ticket.teamName}}</strong> foi atribuída ao seu chamado para <strong>{{ticket.clientName}}</strong>. Nossa equipe está analisando sua solicitação e responderá em breve.',
-    badgePrefix: 'Chamado #',
+    intro: 'A equipe <strong>{{ticket.teamName}}</strong> foi atribuída ao seu ticket para <strong>{{ticket.clientName}}</strong>. Nossa equipe está analisando sua solicitação e responderá em breve.',
+    badgePrefix: 'Ticket #',
     priority: 'Prioridade',
     status: 'Status',
     team: 'Equipe atribuída',
@@ -205,14 +205,14 @@ const COPY = {
     location: 'Localização',
     descriptionLabel: 'Descrição',
     descriptionVar: '{{{ticket.description}}}',
-    viewButton: 'Ver chamado',
+    viewButton: 'Ver ticket',
     footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
-    textHeader: 'Equipe atribuída ao seu chamado',
+    textHeader: 'Equipe atribuída ao seu ticket',
     textTeam: 'Equipe atribuída',
     textAssignedBy: 'Atribuído por',
     textRequester: 'Solicitante',
     textDescription: 'Descrição',
-    textView: 'Ver chamado',
+    textView: 'Ver ticket',
   },
 };
 /* eslint-enable max-len */

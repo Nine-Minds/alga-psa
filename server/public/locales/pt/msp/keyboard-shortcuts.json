@@ -157,8 +157,8 @@
     },
     "navigation": {
       "goTickets": {
-        "label": "Ir para chamados",
-        "description": "Navegue até a página de chamados."
+        "label": "Ir para tickets",
+        "description": "Navegue até a página de tickets."
       },
       "goAssets": {
         "label": "Ir para ativos",
