@@ -14,7 +14,7 @@
  * must never be registered as client-callable server actions.
  */
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getFormRegistry } from '@shared/task-inbox';
@@ -27,6 +27,21 @@ import {
   type TaskSubmissionParams,
 } from '@alga-psa/workflows/persistence';
 import { Knex } from 'knex';
+import { workflowTenantTable } from '../../lib/workflowTenantDb';
+
+const SYSTEM_WORKFLOW_CATALOG_TENANT = '__workflow_system_catalog__';
+
+// system_workflow_task_definitions is a global table; the facade only needs a
+// non-empty tenant to route it unscoped.
+const systemCatalogTenant = (tenant: string | null | undefined): string => {
+  const value = String(tenant ?? '').trim();
+  return value || SYSTEM_WORKFLOW_CATALOG_TENANT;
+};
+
+const systemWorkflowTaskDefinitions = (
+  conn: Knex | Knex.Transaction,
+  tenant: string | null | undefined
+) => tenantDb(conn, systemCatalogTenant(tenant)).table('system_workflow_task_definitions');
 
 /**
  * Submit a task form. Validates `formData` against the task's form schema via the form
@@ -61,7 +76,7 @@ export async function submitTaskFormForApi(
         if (!task.system_task_definition_task_type) {
           throw new Error(`System task ${taskId} is missing system_task_definition_task_type.`);
         }
-        taskDefinition = await trx('system_workflow_task_definitions')
+        taskDefinition = await systemWorkflowTaskDefinitions(trx, tenant)
           .where({
             task_type: task.system_task_definition_task_type,
           })
@@ -71,10 +86,9 @@ export async function submitTaskFormForApi(
         if (!task.tenant_task_definition_id) {
           throw new Error(`Tenant task ${taskId} is missing tenant_task_definition_id.`);
         }
-        taskDefinition = await trx('workflow_task_definitions')
+        taskDefinition = await workflowTenantTable(trx, tenant, 'workflow_task_definitions')
           .where({
             task_definition_id: task.tenant_task_definition_id,
-            tenant,
           })
           .first();
       }
@@ -170,8 +184,7 @@ export async function getUserTasksForApi(
     // jsonb `@>` is bound as a JSON string + ::jsonb cast — a raw JS-array bind is sent to
     // Postgres as an array and rejected with "invalid input syntax for type json".
     const allTasks = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('workflow_tasks')
-        .where('tenant', tenant)
+      return await workflowTenantTable<Record<string, any>>(trx, tenant, 'workflow_tasks')
         .where('is_hidden', false)
         .whereIn('status', statusList)
         .where(function () {
@@ -275,7 +288,7 @@ export async function getTaskDetailsForApi(
         throw new Error(`System task ${taskId} is missing system_task_definition_task_type.`);
       }
       taskDefinition = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('system_workflow_task_definitions')
+        return await systemWorkflowTaskDefinitions(trx, tenant)
           .where({
             task_type: task.system_task_definition_task_type,
           })
@@ -287,10 +300,9 @@ export async function getTaskDetailsForApi(
         throw new Error(`Tenant task ${taskId} is missing tenant_task_definition_id.`);
       }
       taskDefinition = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('workflow_task_definitions')
+        return await workflowTenantTable(trx, tenant, 'workflow_task_definitions')
           .where({
             task_definition_id: task.tenant_task_definition_id,
-            tenant,
           })
           .first();
       });

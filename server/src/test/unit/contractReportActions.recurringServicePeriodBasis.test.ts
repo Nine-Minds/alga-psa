@@ -209,7 +209,9 @@ describe('contractReportActions recurring service-period basis', () => {
     expect(canonicalOutput).toEqual([
       {
         contract_name: 'Managed Services',
+        client_id: 'client-1',
         client_name: 'Acme Industries',
+        logoUrl: null,
         monthly_recurring: 20000,
         total_billed_ytd: 12000,
         status: 'active',
