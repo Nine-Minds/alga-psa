@@ -43,6 +43,22 @@ import {
   getDraftTabBadgeCount,
   normalizeContractSubtab,
 } from './contractsTabs';
+import { toPlainDate } from '@alga-psa/core';
+
+// start_date/end_date are calendar dates. Parsing them with `new Date()` reads a
+// date-only/UTC-midnight value as UTC, so `.toLocaleDateString()` renders the
+// previous day in negative-offset timezones. Pin to noon UTC to stay on the
+// intended calendar day regardless of the viewer's timezone.
+const formatCalendarDate = (value: unknown): string | null => {
+  if (value === null || value === undefined || value === '') return null;
+  try {
+    const plainDate = toPlainDate(value as string | Date);
+    const displayDate = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
+    return displayDate.toLocaleDateString();
+  } catch {
+    return null;
+  }
+};
 
 const Contracts: React.FC = () => {
   const { t } = useTranslation('msp/contracts');
@@ -382,28 +398,14 @@ const Contracts: React.FC = () => {
     {
       title: t('contractsList.columns.startDate', { defaultValue: 'Start Date' }),
       dataIndex: 'start_date',
-      render: (value: any) => {
-        if (!value) return t('contractsList.empty.dash', { defaultValue: '—' });
-        try {
-          const date = new Date(value);
-          return isNaN(date.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : date.toLocaleDateString();
-        } catch {
-          return t('contractsList.empty.dash', { defaultValue: '—' });
-        }
-      },
+      render: (value: any) =>
+        formatCalendarDate(value) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
       title: t('contractsList.columns.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
-      render: (value: any) => {
-        if (!value) return t('contractsList.empty.dash', { defaultValue: '—' });
-        try {
-          const date = new Date(value);
-          return isNaN(date.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : date.toLocaleDateString();
-        } catch {
-          return t('contractsList.empty.dash', { defaultValue: '—' });
-        }
-      },
+      render: (value: any) =>
+        formatCalendarDate(value) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
       title: t('contractsList.columns.status', { defaultValue: 'Status' }),
