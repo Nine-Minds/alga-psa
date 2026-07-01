@@ -23,7 +23,7 @@
   },
   "nav": {
     "dashboard": "Painel",
-    "tickets": "Chamados",
+    "tickets": "Tickets",
     "clients": "Clientes",
     "projects": "Projetos",
     "billing": "Cobrança",
@@ -140,11 +140,11 @@
     },
     "permissions": {
       "tickets": {
-        "read": "Permissões insuficientes para visualizar chamados",
-        "readDetails": "Permissões insuficientes para visualizar detalhes do chamado",
-        "create": "Permissões insuficientes para criar chamados",
-        "update": "Permissões insuficientes para atualizar chamados",
-        "updateStatus": "Permissões insuficientes para atualizar o status do chamado",
+        "read": "Permissões insuficientes para visualizar tickets",
+        "readDetails": "Permissões insuficientes para visualizar detalhes do ticket",
+        "create": "Permissões insuficientes para criar tickets",
+        "update": "Permissões insuficientes para atualizar tickets",
+        "updateStatus": "Permissões insuficientes para atualizar o status do ticket",
         "addComments": "Permissões insuficientes para adicionar comentários",
         "updateComments": "Permissões insuficientes para atualizar comentários",
         "deleteComments": "Permissões insuficientes para excluir comentários"
@@ -617,7 +617,7 @@
         "Authentication": "Autenticação",
         "Invoices": "Faturas",
         "Projects": "Projetos",
-        "Tickets": "Chamados",
+        "Tickets": "Tickets",
         "Time Entries": "Entradas de tempo"
       }
     },
@@ -674,7 +674,7 @@
     "settings": {
       "tabLabel": "Pesquisas",
       "title": "Pesquisas de satisfação do cliente",
-      "subtitle": "Configure modelos, gatilhos e entrega para coletar feedback pós-chamado.",
+      "subtitle": "Configure modelos, gatilhos e entrega para coletar feedback pós-ticket.",
       "tabs": {
         "templates": "Modelos",
         "triggers": "Gatilhos"
@@ -743,10 +743,10 @@
       },
       "triggerList": {
         "title": "Gatilhos de pesquisa",
-        "description": "Envie convites automaticamente quando chamados ou projetos forem concluídos.",
+        "description": "Envie convites automaticamente quando tickets ou projetos forem concluídos.",
         "createButton": "Novo gatilho",
         "emptyTitle": "Nenhum acionador de pesquisa configurado",
-        "emptyDescription": "Crie um gatilho para enviar pesquisas quando os chamados forem fechados ou os projetos terminarem.",
+        "emptyDescription": "Crie um gatilho para enviar pesquisas quando os tickets forem fechados ou os projetos terminarem.",
         "table": {
           "template": "Modelo",
           "type": "Acionar",
@@ -760,7 +760,7 @@
           "statuses": "Status",
           "priorities": "Prioridades",
           "any": "Qualquer",
-          "unrestricted": "Aplica-se a todos os chamados e projetos"
+          "unrestricted": "Aplica-se a todos os tickets e projetos"
         },
         "status": {
           "enabled": "Habilitado",
@@ -803,7 +803,7 @@
           "delete": "Excluir gatilho"
         },
         "triggerTypes": {
-          "ticket_closed": "Chamado fechado",
+          "ticket_closed": "Ticket fechado",
           "project_completed": "Projeto concluído"
         },
         "errors": {
@@ -917,7 +917,7 @@
       "requestedDateTime": "Data e hora solicitadas",
       "duration": "Duração",
       "preferredTechnician": "Técnico preferencial",
-      "linkedTicket": "Chamado vinculado",
+      "linkedTicket": "Ticket vinculado",
       "actions": "Ações"
     },
     "approvalModal": {
@@ -925,7 +925,7 @@
       "confirmDateTime": "Confirmar data e hora",
       "modifyDateTime": "Modificar data e hora",
       "assignedUser": "Técnico Designado",
-      "linkToTicket": "Link para chamado",
+      "linkToTicket": "Link para ticket",
       "internalNotes": "Notas internas",
       "approve": "Aprovar e criar entrada de agendamento",
       "approving": "Aprovando..."
@@ -1142,7 +1142,7 @@
     },
     "loading": {
       "billingDashboard": "Carregando painel de faturamento...",
-      "onboarding": "Carregando integração...",
+      "onboarding": "Carregando onboarding...",
       "extension": "Carregando extensão...",
       "extensionSettings": "Carregando configurações de extensão...",
       "ssoSettings": "Carregando configurações de SSO..."
@@ -1174,8 +1174,8 @@
           "summary": "A guia pessoal do Teams está pronta para carregar a fila de trabalho do PSA."
         },
         "ticket": {
-          "title": "Chamado {{ticketId}}",
-          "summary": "Você está abrindo o chamado {{ticketId}} do Teams."
+          "title": "Ticket {{ticketId}}",
+          "summary": "Você está abrindo o ticket {{ticketId}} do Teams."
         },
         "projectTask": {
           "title": "Tarefa do projeto {{taskId}}",

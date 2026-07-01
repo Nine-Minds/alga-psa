@@ -66,8 +66,8 @@
     },
     "types": {
       "all": "Todos os tipos",
-      "ticket": "Chamado",
-      "tickets": "Chamados",
+      "ticket": "Ticket",
+      "tickets": "Tickets",
       "projectTask": "Tarefa do Projeto",
       "projectTasks": "Tarefas do Projeto",
       "interaction": "Interação",
@@ -102,9 +102,9 @@
       "selectedCount": "{{count}} selecionado"
     },
     "delete": {
-      "success": "Planilhas de ponto {{count}} removidas",
+      "success": "Planilhas de horas {{count}} removidas",
       "partialFailure": "Não foi possível remover planilha(s) de horas {{count}}",
-      "error": "Falha ao remover planilha(s) de ponto"
+      "error": "Falha ao remover planilha(s) de horas"
     },
     "removePeriod": {
       "success": "Período(s) {{count}} removido(s)",
@@ -114,7 +114,7 @@
     "remove": {
       "title": "Remova itens não utilizados",
       "message": "Remover período(s) selecionado(s) {{count}}? Os períodos de pagamento não utilizados são removidos para toda a organização, juntamente com qualquer tempo de rascunho vazio registrado neles. Isto não pode ser desfeito.",
-      "timesheetMessage": "Remover planilha(s) de ponto não utilizado(s) {{count}}? Somente rascunhos de planilhas de horas vazias são removidos e isso não pode ser desfeito."
+      "timesheetMessage": "Remover planilha(s) de horas não utilizada(s) {{count}}? Somente rascunhos de planilhas de horas vazias são removidos e isso não pode ser desfeito."
     }
   },
   "timeEntryForm": {
@@ -194,8 +194,8 @@
     "currentSelection": "Item de trabalho atual"
   },
   "timeSheetHeader": {
-    "title": "Folha de ponto",
-    "titleFor": "Folha de ponto para {{name}}",
+    "title": "Planilha de horas",
+    "titleFor": "Planilha de horas para {{name}}",
     "editedBy": "Editado por {{name}}",
     "aria": {
       "previousWeek": "Semana anterior",
@@ -280,7 +280,7 @@
   "managerDashboard": {
     "access": {
       "title": "Acesso de líder de equipe necessário",
-      "description": "Para aprovar planilhas de ponto para os membros da sua equipe, você precisa ser um líder da equipe.",
+      "description": "Para aprovar planilhas de horas para os membros da sua equipe, você precisa ser um líder da equipe.",
       "goToTeamSettings": "Vá para configurações da equipe"
     },
     "title": "Aprovações de planilha de horas",
@@ -309,7 +309,7 @@
       "failedInteraction": "Falha ao carregar detalhes da interação",
       "interactionNotFound": "Interação não encontrada",
       "noUserSession": "Nenhuma sessão de usuário encontrada",
-      "failedTicket": "Falha ao carregar o chamado",
+      "failedTicket": "Falha ao carregar o ticket",
       "failedTask": "Falha ao carregar a tarefa",
       "failedTaskPhase": "Falha ao carregar a fase da tarefa",
       "failedTaskProjectMetadata": "Falha ao carregar metadados do projeto de tarefa",
@@ -320,10 +320,10 @@
   "timeSheetClient": {
     "errors": {
       "delegationDisabled": "A entrada de tempo delegado está desativada",
-      "failedReopen": "Falha ao reabrir planilha de ponto"
+      "failedReopen": "Falha ao reabrir planilha de horas"
     },
     "reopen": {
-      "success": "Planilha de ponto reaberta para edições",
+      "success": "Planilha de horas reaberta para edições",
       "reason": "Reaberto para edições",
       "title": "Reabrir para edições?",
       "message": "Isso moverá a planilha de horas de volta para Alterações solicitadas para que as entradas de horas possam ser editadas."
@@ -392,7 +392,7 @@
     "createdFromNote_other": "Criado a partir de intervalos {{count}}",
     "selectedCount_one": "Intervalo {{count}} selecionado",
     "selectedCount_other": "Intervalos {{count}} selecionados",
-    "title": "Intervalos de tempo do chamado",
+    "title": "Intervalos de tempo do ticket",
     "hideShortIntervals": "Ocultar intervalos inferiores a 1 minuto",
     "totalTime": "Tempo total: {{value}}",
     "selectedOne": "Intervalo {{count}} selecionado",
@@ -410,15 +410,15 @@
     "states": {
       "loading": "Carregando intervalos...",
       "noIntervalsThisPeriod": "Nenhum intervalo encontrado para este período",
-      "noIntervalsThisTicket": "Nenhum intervalo encontrado para este chamado",
+      "noIntervalsThisTicket": "Nenhum intervalo encontrado para este ticket",
       "noIntervalsLongerThanMinute": "Nenhum intervalo maior que 1 minuto encontrado"
     },
-    "entryName": "Entrada de tempo de chamado",
+    "entryName": "Entrada de tempo de ticket",
     "messages": {
       "cannotFindTimeSheet": "Não é possível criar a entrada de horas - não foi possível encontrar ou criar a planilha de horas",
       "mergeFirst": "Por favor, mescle os intervalos antes de criar uma entrada de tempo",
-      "sameTicketOnly": "Só é possível criar entradas de tempo a partir de intervalos do mesmo chamado",
-      "mergeSameTicketOnly": "Só é possível mesclar intervalos do mesmo chamado",
+      "sameTicketOnly": "Só é possível criar entradas de tempo a partir de intervalos do mesmo ticket",
+      "mergeSameTicketOnly": "Só é possível mesclar intervalos do mesmo ticket",
       "mergeSuccess": "Intervalos mesclados com sucesso",
       "failedMerge": "Falha ao mesclar intervalos",
       "noActivePeriod": "Nenhum período ativo encontrado",
@@ -430,7 +430,7 @@
   },
   "addWorkItemDialog": {
     "title": "Adicionar item de trabalho",
-    "description": "Selecione um item de trabalho para adicionar ao quadro de horários",
+    "description": "Selecione um item de trabalho para adicionar à planilha de horas",
     "close": "Fechar caixa de diálogo para adicionar item de trabalho",
     "focus": "Concentre-se na caixa de diálogo Adicionar item de trabalho"
   },
@@ -451,7 +451,7 @@
     "workItemDeleted": "Item de trabalho excluído com sucesso"
   },
   "bundleNotice": {
-    "withNumber": "Este chamado está agrupado em {{number}}. O tempo do pacote geralmente é registrado no chamado mestre.",
-    "withoutNumber": "Este chamado faz parte de um pacote. O tempo do pacote geralmente é registrado no chamado mestre."
+    "withNumber": "Este ticket está agrupado em {{number}}. O tempo do pacote geralmente é registrado no ticket mestre.",
+    "withoutNumber": "Este ticket faz parte de um pacote. O tempo do pacote geralmente é registrado no ticket mestre."
   }
 }

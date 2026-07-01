@@ -385,7 +385,7 @@
         },
         "currentStep": {
           "connect": {
-            "guidance": "Selecione uma opção de conexão para continuar a integração.",
+            "guidance": "Selecione uma opção de conexão para continuar o onboarding.",
             "title": "Etapa 1: conectar"
           },
           "connectionsBelow": "As opções de conexão aparecem abaixo.",
@@ -452,7 +452,7 @@
           "complete": "completo",
           "locked": "bloqueado",
           "stepLabel": "Etapa {{number}}",
-          "thisIsCurrent": "Esta é a sua etapa de integração atual."
+          "thisIsCurrent": "Esta é a sua etapa de onboarding atual."
         },
         "initialSync": {
           "failed": "Falha ao iniciar a sincronização inicial do Entra.",
@@ -475,11 +475,11 @@
           "title": "Mapear inquilinos para clientes"
         },
         "onboarding": {
-          "description": "Conclua cada etapa de integração na ordem: conectar, descobrir, mapear e executar sua primeira sincronização.",
+          "description": "Conclua cada etapa de onboarding na ordem: conectar, descobrir, mapear e executar sua primeira sincronização.",
           "title": "Modo de configuração"
         },
         "ongoing": {
-          "description": "Use esses controles para operações de sincronização manual após a conclusão das etapas de integração.",
+          "description": "Use esses controles para operações de sincronização manual após a conclusão das etapas de onboarding.",
           "title": "Operações em andamento"
         },
         "overview": {
@@ -1774,7 +1774,7 @@
           "organization": "Organização Caçadora",
           "client": "Cliente Alga",
           "defaultContact": "Contato padrão",
-          "createTickets": "Criar chamados",
+          "createTickets": "Criar tickets",
           "status": "Status"
         },
         "selectContact": "Selecione o contato",
@@ -1919,8 +1919,8 @@
             "label": "Resposta de aprovação"
           },
           "assignTicket": {
-            "description": "Permitir ações rápidas de atribuição de chamados.",
-            "label": "Atribuir chamado"
+            "description": "Permitir ações rápidas de atribuição de tickets.",
+            "label": "Atribuir ticket"
           },
           "deactivate": "Desativar",
           "logTime": {
@@ -1943,7 +1943,7 @@
             "label": "Notificações de atividades"
           },
           "groupChatBot": {
-            "description": "Permita que o bot responda em chats de grupo do Teams. As respostas do bot (incluindo detalhes do chamado) ficam visíveis para todos os membros do chat.",
+            "description": "Permita que o bot responda em chats de grupo do Teams. As respostas do bot (incluindo detalhes do ticket) ficam visíveis para todos os membros do chat.",
             "label": "Bot de bate-papo em grupo"
           },
           "messageExtension": {
@@ -2045,7 +2045,7 @@
           "packageVersion": "Versão do pacote",
           "projectTaskTemplate": "Modelo de tarefa de projeto",
           "section": "Pacote",
-          "ticketTemplate": "Modelo de chamado",
+          "ticketTemplate": "Modelo de ticket",
           "title": "Pacote de equipes",
           "validDomains": "Domínios válidos",
           "webResource": "Recurso de aplicativo da web"
@@ -2073,7 +2073,7 @@
           "title": "Mensagem de diagnóstico e teste",
           "description": "Verifique a configuração do Teams e envie uma mensagem de teste proativa para a conversa do bot do Teams.",
           "run": "Executar diagnóstico",
-          "running": "Correndo...",
+          "running": "Em execução...",
           "sendTest": "Enviar mensagem de teste",
           "sending": "Enviando...",
           "disabled": "Mensagens de diagnóstico e teste ficam disponíveis depois que a integração do Teams está ativa.",

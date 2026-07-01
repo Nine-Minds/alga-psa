@@ -130,8 +130,8 @@
       "renewalHandling": "Tratamento de renovação",
       "renewalTermMonths": "Prazo de renovação (meses)",
       "renewalTermPlaceholder": "por exemplo, 12",
-      "renewalTicketBoard": "Quadro de Renovação de Chamados",
-      "renewalTicketStatus": "Status de renovação do chamado",
+      "renewalTicketBoard": "Quadro de Renovação de Tickets",
+      "renewalTicketStatus": "Status de renovação do ticket",
       "required": "Obrigatório",
       "selectBoard": "Selecione o quadro",
       "selectBoardFirst": "Selecione um quadro primeiro",
@@ -1099,7 +1099,7 @@
     "form": {
       "currencyPlaceholder": "Selecione a moeda",
       "internalNotesLabel": "Notas internas",
-      "internalNotesPlaceholder": "Descreva onde este modelo se aplica, dicas de integração ou requisitos de aprovação.",
+      "internalNotesPlaceholder": "Descreva onde este modelo se aplica, dicas de onboarding ou requisitos de aprovação.",
       "recommendedBillingFrequencyLabel": "Frequência de cobrança recomendada *",
       "recommendedBillingFrequencyPlaceholder": "Selecione a cadência de faturamento",
       "templateNameLabel": "Nome do modelo *",
@@ -1111,7 +1111,7 @@
       "recommendedCadencePlaceholder": "Selecione uma cadência",
       "tagsHint": "As tags ajudam as equipes a encontrar modelos relevantes rapidamente.",
       "tagsLabel": "Etiquetas",
-      "tagsPlaceholder": "Separados por vírgulas (por exemplo, integração, finanças)",
+      "tagsPlaceholder": "Separados por vírgulas (por exemplo, onboarding, finanças)",
       "title": "Orientação de modelo",
       "usageNotesLabel": "Notas de uso",
       "usageNotesPlaceholder": "Adicione orientações para ajudar outras pessoas a entender como usar este modelo."
@@ -1804,7 +1804,7 @@
     },
     "placeholders": {
       "templateName": "Starter de serviços gerenciados, pacote de suporte premium, etc.",
-      "internalNotes": "Descreva onde este modelo se aplica, dicas de integração ou requisitos de aprovação.",
+      "internalNotes": "Descreva onde este modelo se aplica, dicas de onboarding ou requisitos de aprovação.",
       "billingFrequency": "Selecione a cadência de faturamento"
     },
     "help": {

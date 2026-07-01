@@ -63,7 +63,7 @@
       "pending": "Pendente",
       "processing": "Processamento",
       "queued": "Na fila",
-      "running": "Correndo",
+      "running": "Em execução",
       "pgboss": "Chefe do PG",
       "temporal": "Temporal"
     },

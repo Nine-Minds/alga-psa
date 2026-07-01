@@ -53,7 +53,7 @@
     },
     "empty": {
       "noData": "Não há dados para este relatório.",
-      "noOpenTicketsInRange": "Não há chamados abertos nesta faixa.",
+      "noOpenTicketsInRange": "Não há tickets abertos nesta faixa.",
       "noDate": "Sem data",
       "notAvailable": "n / D",
       "noEmailChannels": "Nenhum canal de e-mail está configurado."
@@ -79,10 +79,10 @@
       "healthyChannels": "Canais saudáveis",
       "problemChannels": "Canais problemáticos",
       "emailsProcessed": "E-mails processados",
-      "ticketsFromEmail": "Chamados por e-mail",
+      "ticketsFromEmail": "Tickets por e-mail",
       "failedEmails": "E-mails com falha",
       "avgProcessingTime": "Média tempo de processamento",
-      "avgTicketCreationTime": "Média tempo de e-mail para chamado",
+      "avgTicketCreationTime": "Média tempo de e-mail para ticket",
       "totalHours": "Total de horas",
       "billableHours": "Horas faturáveis",
       "nonBillableHours": "Horas não faturáveis",
@@ -103,7 +103,7 @@
       "openByAssignee": "Aberto pelo responsável",
       "ageDistribution": "Distribuição etária",
       "responseOwnership": "Propriedade da resposta",
-      "oldestOpenTickets": "Chamados abertos mais antigos",
+      "oldestOpenTickets": "Tickets abertos mais antigos",
       "emailProcessingStatus": "Status de processamento",
       "emailChannels": "Canais de e-mail",
       "timeByUser": "Tempo por usuário",
@@ -117,16 +117,16 @@
     },
     "reportCatalog": {
       "ticketWorkload": {
-        "title": "Carga de trabalho de chamados",
-        "description": "Chamados criados, fechados e atualmente abertos agrupados por status, prioridade e responsável."
+        "title": "Carga de trabalho de tickets",
+        "description": "Tickets criados, fechados e atualmente abertos agrupados por status, prioridade e responsável."
       },
       "ticketAging": {
-        "title": "Envelhecimento do chamado",
-        "description": "Intervalos de idade de chamados abertos, propriedade de respostas e chamados ativos mais antigos."
+        "title": "Envelhecimento do ticket",
+        "description": "Intervalos de idade de tickets abertos, propriedade de respostas e tickets ativos mais antigos."
       },
       "emailChannelHealth": {
         "title": "Integridade do canal de e-mail",
-        "description": "Volume de entrada de e-mail, velocidade de criação de chamados e integridade da conexão da caixa de correio."
+        "description": "Volume de entrada de e-mail, velocidade de criação de tickets e integridade da conexão da caixa de correio."
       },
       "timeUtilization": {
         "title": "Utilização do tempo",
@@ -145,8 +145,8 @@
       "channel": "Canal",
       "status": "Status",
       "processed": "Processado",
-      "tickets": "Chamados",
-      "avgEmailToTicket": "Média de email para chamado",
+      "tickets": "Tickets",
+      "avgEmailToTicket": "Média de email para ticket",
       "assignee": "Responsável",
       "created": "Criado",
       "closed": "Fechado",
@@ -156,7 +156,7 @@
       "totalHours": "Total de horas",
       "billableHours": "Horas faturáveis",
       "entries": "Entradas",
-      "ticket": "Chamado",
+      "ticket": "Ticket",
       "entered": "Entrou",
       "age": "Idade"
     },

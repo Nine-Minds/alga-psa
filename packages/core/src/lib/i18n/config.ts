@@ -120,7 +120,7 @@ export const PSEUDO_LOCALES: ReadonlyArray<SupportedLocale> = ['xx', 'yy'];
  * translations, not QA fills. Promote to a production locale by removing the
  * code from this list once review passes.
  */
-export const PREVIEW_LOCALES: ReadonlyArray<SupportedLocale> = ['pt'];
+export const PREVIEW_LOCALES: ReadonlyArray<SupportedLocale> = [];
 
 /**
  * Locales whose translation packs are still in progress and should never be

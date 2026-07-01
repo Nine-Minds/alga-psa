@@ -5,7 +5,7 @@ import { ROUTE_NAMESPACES } from '@alga-psa/core/i18n/config';
 import { STEP_DEFINITIONS } from '@alga-psa/onboarding/lib';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
-const productionLocales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'] as const;
+const productionLocales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt'] as const;
 const pseudoLocales = ['xx', 'yy'] as const;
 
 const readJson = (relativePath: string): Record<string, unknown> =>

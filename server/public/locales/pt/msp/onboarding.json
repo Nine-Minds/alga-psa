@@ -23,11 +23,11 @@
     "yes": "Sim"
   },
   "onboardingProvider": {
-    "title": "Provedor de integração",
-    "description": "Gate de integração em nível de rota que verifica o estado de conclusão do locatário e redireciona locatários incompletos para o assistente"
+    "title": "Provedor de onboarding",
+    "description": "Gate de onboarding em nível de rota que verifica o estado de conclusão do locatário e redireciona locatários incompletos para o assistente"
   },
   "onboardingWizard": {
-    "title": "Assistente de integração",
+    "title": "Assistente de onboarding",
     "description": "Shell do assistente para configuração de locatário MSP com diálogo/apresentação de página inteira, progresso, validação e fluxos de conclusão",
     "steps": {
       "clientInfo": "Informações do cliente",
@@ -35,7 +35,7 @@
       "addClient": "Adicionar cliente",
       "clientContact": "Contato do cliente",
       "billing": "Cobrança",
-      "ticketing": "Chamados",
+      "ticketing": "Tickets",
       "algadeskWorkspace": "Espaço de trabalho"
     },
     "errors": {
@@ -46,8 +46,8 @@
       "setupBilling": "Falha ao configurar o faturamento",
       "unknown": "Erro desconhecido",
       "validationFailed": "Falha na validação",
-      "configureTicketing": "Falha ao configurar a emissão de chamados",
-      "completeOnboarding": "Falha ao concluir a integração"
+      "configureTicketing": "Falha ao configurar a emissão de tickets",
+      "completeOnboarding": "Falha ao concluir o onboarding"
     },
     "debug": {
       "title": "Informações de depuração:",
@@ -65,12 +65,12 @@
       "title": "Configure seu sistema",
       "description": "Vamos configurar seu espaço de trabalho e deixá-lo pronto para uso.",
       "algadeskTitle": "Configurar o AlgaDesk",
-      "algadeskDescription": "Configure seu espaço de trabalho de suporte técnico, clientes e padrões de chamados."
+      "algadeskDescription": "Configure seu espaço de trabalho de suporte técnico, clientes e padrões de tickets."
     }
   },
   "addClientStep": {
     "title": "Adicionar etapa do cliente",
-    "description": "Etapa do assistente para criar ou revisitar o registro do cliente principal durante a integração",
+    "description": "Etapa do assistente para criar ou revisitar o registro do cliente principal durante o onboarding",
     "validation": {
       "email": {
         "invalid": "Por favor insira um endereço de e-mail válido"
@@ -369,7 +369,7 @@
   },
   "teamMembersStep": {
     "title": "Etapa dos membros da equipe",
-    "description": "Etapa do assistente para convidar os primeiros membros da equipe e atribuir funções de integração",
+    "description": "Etapa do assistente para convidar os primeiros membros da equipe e atribuir funções de onboarding",
     "license": {
       "limitReached": "Limite de licença atingido ({{current}}/{{limit}}). Entre em contato com o suporte para aumentar seu limite de licença.",
       "remaining": {
@@ -451,8 +451,8 @@
     }
   },
   "ticketingConfigStep": {
-    "title": "Etapa de configuração de chamados",
-    "description": "Etapa do assistente para configurar quadros, status, prioridades, categorias e padrões de SLA durante a integração",
+    "title": "Etapa de configuração de tickets",
+    "description": "Etapa do assistente para configurar quadros, status, prioridades, categorias e padrões de SLA durante o onboarding",
     "boards": {
       "toasts": {
         "firstDefaultSet": "Primeiro quadro definido automaticamente como padrão",
@@ -471,7 +471,7 @@
         "fallbackEntity": "este quadro"
       },
       "title": "Quadros",
-      "description": "Os quadros ajudam a organizar chamados por departamento, equipe ou tipo de fluxo de trabalho. Quando os clientes criam chamados através do portal do cliente, eles serão automaticamente atribuídos ao quadro marcado como padrão.",
+      "description": "Os quadros ajudam a organizar tickets por departamento, equipe ou tipo de fluxo de trabalho. Quando os clientes criam tickets através do portal do cliente, eles serão automaticamente atribuídos ao quadro marcado como padrão.",
       "tip": "Clique na estrela na coluna Padrão para alterar qual quadro é padrão.",
       "actions": {
         "import": "Importar do Padrão",
@@ -551,7 +551,7 @@
       },
       "title": "Categorias",
       "requiresBoard": "(requer quadro)",
-      "description": "As categorias ajudam a organizar os chamados por tipo de problema ou solicitação. Você pode criar categorias principais com subcategorias para melhor organização. Os exemplos incluem Suporte Técnico (com subcategorias como Hardware, Software, Rede) ou Solicitações de Serviço.",
+      "description": "As categorias ajudam a organizar os tickets por tipo de problema ou solicitação. Você pode criar categorias principais com subcategorias para melhor organização. Os exemplos incluem Suporte Técnico (com subcategorias como Hardware, Software, Rede) ou Solicitações de Serviço.",
       "actions": {
         "import": "Importar do Padrão",
         "add": "Adicionar nova categoria",
@@ -611,7 +611,7 @@
         "create": "Falha ao criar status. Por favor, tente novamente."
       },
       "title": "Status",
-      "description": "Os status são configurados por quadro. Selecione um quadro abaixo para definir o ciclo de vida dos chamados nesse quadro. O status aberto padrão do quadro selecionado é atribuído automaticamente aos novos chamados criados nesse quadro.",
+      "description": "Os status são configurados por quadro. Selecione um quadro abaixo para definir o ciclo de vida dos tickets nesse quadro. O status aberto padrão do quadro selecionado é atribuído automaticamente aos novos tickets criados nesse quadro.",
       "tip": "Os conselhos não compartilham status. Troque de quadro aqui para revisar ou alterar o conjunto de status de cada quadro.",
       "fields": {
         "board": {
@@ -640,8 +640,8 @@
           "state": {
             "closedLabel": "Status Fechado",
             "openLabel": "Status aberto",
-            "closedHelp": "Este status indica que o chamado foi resolvido e fechado",
-            "openHelp": "Este status indica que o chamado ainda está aberto e precisa de atenção"
+            "closedHelp": "Este status indica que o ticket foi resolvido e fechado",
+            "openHelp": "Este status indica que o ticket ainda está aberto e precisa de atenção"
           }
         }
       },
@@ -673,7 +673,7 @@
         "removeTitle": "Remover status"
       },
       "empty": {
-        "forBoard": "{{boardName}} ainda não possui nenhum status. Adicione ou importe pelo menos um status padrão aberto antes de concluir a integração.",
+        "forBoard": "{{boardName}} ainda não possui nenhum status. Adicione ou importe pelo menos um status padrão aberto antes de concluir o onboarding.",
         "noBoardSelected": "Selecione um quadro para configurar seus status."
       }
     },
@@ -691,7 +691,7 @@
         "deleted": "Prioridade excluída com sucesso"
       },
       "title": "Prioridades",
-      "description": "As prioridades ajudam a determinar a urgência de chamados e acordos de nível de serviço (SLAs). Cada prioridade possui uma cor para rápida identificação visual. As prioridades típicas incluem Crítica (vermelho), Alta (laranja), Média (azul) e Baixa (verde).",
+      "description": "As prioridades ajudam a determinar a urgência de tickets e acordos de nível de serviço (SLAs). Cada prioridade possui uma cor para rápida identificação visual. As prioridades típicas incluem Crítica (vermelho), Alta (laranja), Média (azul) e Baixa (verde).",
       "actions": {
         "import": "Importar do Padrão",
         "add": "Adicionar nova prioridade",
@@ -749,20 +749,20 @@
       }
     },
     "header": {
-      "title": "Configurar sistema de chamados",
-      "description": "Configure seu sistema de chamados de suporte. Importe configurações padrão ou crie as suas próprias."
+      "title": "Configurar sistema de tickets",
+      "description": "Configure seu sistema de tickets de suporte. Importe configurações padrão ou crie as suas próprias."
     },
     "loading": {
       "description": "Carregando configuração existente..."
     },
     "numbering": {
-      "title": "Numeração de chamados",
-      "description": "Configure como os números dos chamados são gerados. Cada chamado terá um identificador exclusivo que consiste em um prefixo opcional e um número sequencial com preenchimento de zeros opcional.",
+      "title": "Numeração de tickets",
+      "description": "Configure como os números dos tickets são gerados. Cada ticket terá um identificador exclusivo que consiste em um prefixo opcional e um número sequencial com preenchimento de zeros opcional.",
       "fields": {
         "prefix": {
-          "label": "Prefixo do chamado",
+          "label": "Prefixo do ticket",
           "placeholder": "TK-",
-          "help": "Opcional. Deixe em branco para não ter prefixo ou insira um prefixo personalizado (por exemplo, \"TK-\", \"Chamado-\")"
+          "help": "Opcional. Deixe em branco para não ter prefixo ou insira um prefixo personalizado (por exemplo, \"TK-\", \"Ticket-\")"
         },
         "paddingLength": {
           "label": "Comprimento do preenchimento",
@@ -861,11 +861,11 @@
     "supportEmail": {
       "label": "E-mail de suporte",
       "placeholder": "suporte@seucliente.com",
-      "help": "Este endereço de e-mail será usado para criar chamados de suporte. Os e-mails enviados para este endereço gerarão chamados automaticamente em seu sistema."
+      "help": "Este endereço de e-mail será usado para criar tickets de suporte. Os e-mails enviados para este endereço gerarão tickets automaticamente em seu sistema."
     },
     "finalRequirement": {
       "label": "Obrigatório:",
-      "description": "Configure pelo menos um quadro e uma prioridade para concluir a configuração. Importe configurações padrão para configurar rapidamente seu sistema de chamados."
+      "description": "Configure pelo menos um quadro e uma prioridade para concluir a configuração. Importe configurações padrão para configurar rapidamente seu sistema de tickets."
     }
   }
 }

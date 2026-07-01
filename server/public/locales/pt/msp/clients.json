@@ -129,8 +129,8 @@
     "dependency": {
       "contact": "contato",
       "contacts": "contatos",
-      "ticket": "chamado",
-      "tickets": "chamados",
+      "ticket": "ticket",
+      "tickets": "tickets",
       "project": "projeto",
       "projects": "projetos",
       "invoice": "fatura",
@@ -179,7 +179,7 @@
     "title": "Detalhes do cliente",
     "backToClients": "Voltar para Clientes",
     "openInNewTab": "Abrir em nova aba",
-    "addTicket": "Adicionar chamado",
+    "addTicket": "Adicionar ticket",
     "details": "Detalhes",
     "contacts": "Contatos",
     "assets": "Ativos",
@@ -208,14 +208,14 @@
     "inboundEmailDomains": "Domínios de e-mail de entrada",
     "inboundEmailDomainsHelp": "Somente esses domínios serão usados ​​para correspondência de domínios de e-mail de entrada (por exemplo, acme.com). Os domínios devem ser exclusivos entre clientes.",
     "noInboundDomains": "Nenhum domínio de e-mail de entrada configurado. A correspondência de domínio não será usada.",
-    "inboundTicketDestination": "Destino do chamado de entrada",
+    "inboundTicketDestination": "Destino do ticket de entrada",
     "inboundDestinationPrecedence": "Precedência: Substituição de contato -> Destino do cliente -> Padrão do provedor.",
     "manageLocations": "Gerenciar locais",
     "loadingUsers": "Carregando usuários...",
     "loadingPolicies": "Carregando políticas...",
     "loadingDestinations": "Carregando destinos...",
     "loadingTaxSettings": "Carregando configurações fiscais...",
-    "loadingTicketFilters": "Carregando filtros de chamados...",
+    "loadingTicketFilters": "Carregando filtros de tickets...",
     "saveSuccess": "Detalhes do cliente salvos com sucesso.",
     "saveError": "Falha ao salvar os detalhes do cliente. Por favor, tente novamente.",
     "deleteSuccess": "O cliente foi excluído com sucesso.",
@@ -248,7 +248,7 @@
     "timezoneHelper": "Selecione o fuso horário para este cliente",
     "taxSettings": "Configurações fiscais",
     "additionalInfo": "Informações Adicionais",
-    "tickets": "Chamados",
+    "tickets": "Tickets",
     "saveChanges": "Salvar alterações",
     "requiredFields": "Por favor preencha todos os campos obrigatórios",
     "syncEntraNow": "Sincronize o Entra agora",
@@ -1315,24 +1315,24 @@
       }
     },
     "tickets": {
-      "addTicket": "Adicionar chamado",
+      "addTicket": "Adicionar ticket",
       "filters": {
         "allAssignees": "Todos os responsáveis",
         "allPriorities": "Todas as prioridades",
         "categoryPlaceholder": "Filtrar por categoria",
         "reset": "Reiniciar",
-        "searchPlaceholder": "Pesquisar chamados...",
+        "searchPlaceholder": "Pesquisar tickets...",
         "statusPlaceholder": "Selecione o status"
       },
       "loadMore": {
-        "label": "Carregar mais chamados",
+        "label": "Carregar mais tickets",
         "loading": "Carregando..."
       },
-      "loading": "Carregando chamados...",
-      "title": "Chamados de cliente",
+      "loading": "Carregando tickets...",
+      "title": "Tickets de cliente",
       "toasts": {
-        "loadTicketFailed": "Falha ao carregar o chamado",
-        "openTicketFailed": "Falha ao abrir chamado",
+        "loadTicketFailed": "Falha ao carregar o ticket",
+        "openTicketFailed": "Falha ao abrir ticket",
         "userNotAuthenticated": "Usuário não autenticado"
       }
     }
