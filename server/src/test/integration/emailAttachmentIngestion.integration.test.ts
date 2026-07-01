@@ -110,14 +110,16 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
   const HOOK_TIMEOUT = 180_000;
 
   beforeAll(async () => {
-    // Force DB connection to the known local test Postgres (see existing e2e containers)
-    process.env.DB_HOST = 'localhost';
-    process.env.DB_PORT = '5432';
-    process.env.DB_USER_ADMIN = 'postgres';
-    process.env.DB_PASSWORD_ADMIN = 'postpass123';
+    // Default DB connection for standalone runs. Fallback-only (||): the suite
+    // runs in one fork, so unconditional writes here poison every later file's
+    // bootstrap with the wrong credentials (this took out ~60 nightly files).
+    process.env.DB_HOST = process.env.DB_HOST || 'localhost';
+    process.env.DB_PORT = process.env.DB_PORT || '5432';
+    process.env.DB_USER_ADMIN = process.env.DB_USER_ADMIN || 'postgres';
+    process.env.DB_PASSWORD_ADMIN = process.env.DB_PASSWORD_ADMIN || 'postpass123';
     process.env.DB_USER_SERVER = process.env.DB_USER_SERVER || 'app_user';
     process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'postpass123';
-    process.env.DB_NAME_SERVER = 'test_database';
+    process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'test_database';
     process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 
     db = await createTestDbConnection();
