@@ -282,6 +282,109 @@ export class TemporalJobRunner implements IJobRunner {
     const scheduleId =
       options?.singletonKey ?? `recurring-${jobName}-${data.tenantId}`;
 
+    const scheduleSpec = this.parseScheduleSpec(interval);
+    const ianaTimeZone = (options?.metadata as { timezone?: unknown })?.timezone;
+    const spec: Record<string, unknown> = { ...scheduleSpec };
+    if (typeof ianaTimeZone === 'string' && ianaTimeZone.trim().length > 0) {
+      // @temporalio/client encodeScheduleSpec reads `timezone` and maps it to protobuf timezoneName.
+      spec.timezone = ianaTimeZone.trim();
+    }
+
+    // Upsert, existence-first: convergence loops (RMM reconciler, accounting
+    // startup) re-invoke this with the same singletonKey on every pass. The
+    // tracker row is only created once we know the schedule needs it —
+    // creating it up-front leaked an orphan row per pass when the schedule
+    // already existed.
+    const existingHandle = this.client.schedule.getHandle(scheduleId);
+    let existingDescription: { action: { args?: unknown[] } } | null = null;
+    try {
+      existingDescription = (await existingHandle.describe()) as unknown as {
+        action: { args?: unknown[] };
+      };
+    } catch {
+      // Schedule doesn't exist, create it below
+    }
+
+    if (existingDescription) {
+      const bakedArgs = existingDescription.action.args?.[0] as
+        | { jobId?: string }
+        | undefined;
+      const bakedJobId = bakedArgs?.jobId;
+      const trackerExists = bakedJobId
+        ? await runWithTenant(data.tenantId, async () => {
+            const { knex } = await createTenantKnex();
+            const row = await tenantScopedTable(knex, 'jobs', data.tenantId)
+              .where({ job_id: bakedJobId })
+              .first('job_id');
+            return Boolean(row);
+          })
+        : false;
+
+      if (trackerExists && bakedJobId) {
+        await existingHandle.update((prev) => ({ ...prev, spec }));
+        logger.info('Updated existing recurring job schedule', {
+          scheduleId,
+          jobName,
+          interval,
+        });
+        return {
+          jobId: bakedJobId,
+          externalId: scheduleId,
+        };
+      }
+
+      // The schedule's baked-in jobId has no tracker row in this database
+      // (e.g. it was created against another environment): every fire fails
+      // its bookkeeping until the args are re-pointed at a row that exists.
+      const jobRecord = await this.createJobRecord(jobName, data, {
+        ...options,
+        singletonKey: scheduleId,
+        metadata: {
+          ...options?.metadata,
+          recurring: true,
+          interval,
+        },
+      });
+      try {
+        await existingHandle.update((prev) => ({
+          ...prev,
+          spec,
+          action: {
+            ...prev.action,
+            args: [
+              {
+                jobId: jobRecord.jobId,
+                jobName,
+                tenantId: data.tenantId,
+                data,
+              },
+            ],
+          } as typeof prev.action,
+        }));
+        await this.updateJobExternalIds(
+          jobRecord.jobId,
+          scheduleId,
+          null,
+          data.tenantId
+        );
+        logger.warn('Re-pointed recurring job schedule at a fresh tracker row', {
+          scheduleId,
+          jobName,
+          previousJobId: bakedJobId ?? null,
+          jobId: jobRecord.jobId,
+        });
+        return {
+          jobId: jobRecord.jobId,
+          externalId: scheduleId,
+        };
+      } catch (error) {
+        await this.updateJobStatus(jobRecord.jobId, data.tenantId, JobStatus.Failed, {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+    }
+
     // Create job record in database
     const jobRecord = await this.createJobRecord(jobName, data, {
       ...options,
@@ -294,33 +397,6 @@ export class TemporalJobRunner implements IJobRunner {
     });
 
     try {
-      const scheduleSpec = this.parseScheduleSpec(interval);
-      const ianaTimeZone = (options?.metadata as { timezone?: unknown })?.timezone;
-      const spec: Record<string, unknown> = { ...scheduleSpec };
-      if (typeof ianaTimeZone === 'string' && ianaTimeZone.trim().length > 0) {
-        // @temporalio/client encodeScheduleSpec reads `timezone` and maps it to protobuf timezoneName.
-        spec.timezone = ianaTimeZone.trim();
-      }
-
-      // Upsert: callers (e.g. the RMM polling reconciler) re-invoke this with
-      // the same singletonKey when an interval changes, so an existing
-      // schedule gets its spec updated rather than being silently kept as-is.
-      try {
-        const existingHandle = this.client.schedule.getHandle(scheduleId);
-        await existingHandle.describe();
-        await existingHandle.update((prev) => ({ ...prev, spec }));
-        logger.info('Updated existing recurring job schedule', {
-          scheduleId,
-          jobName,
-          interval,
-        });
-        return {
-          jobId: jobRecord.jobId,
-          externalId: scheduleId,
-        };
-      } catch {
-        // Schedule doesn't exist, create it
-      }
       await this.client.schedule.create({
         scheduleId,
         spec,
@@ -400,6 +476,13 @@ export class TemporalJobRunner implements IJobRunner {
         }
         await this.updateJobStatus(jobId, tenantId, JobStatus.Failed, {
           error: 'Schedule cancelled',
+        });
+        // Null external_id so reconcilers see the tracker as torn down
+        // (pg-boss parity — external_id is the cross-backend liveness marker).
+        await runWithTenant(tenantId, async () => {
+          await tenantScopedTable(knex, 'jobs', tenantId)
+            .where({ job_id: jobId })
+            .update({ external_id: null, updated_at: new Date() });
         });
         return true;
       }
