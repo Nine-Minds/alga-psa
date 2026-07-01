@@ -648,6 +648,10 @@ export async function fetchProjectActivities(
           db.raw(
             "COALESCE(custom_statuses.is_closed, standard_statuses.is_closed, false) as is_closed"
           ),
+          // Whether the parent PROJECT itself is closed (its status maps to a closed status).
+          db.raw(
+            "COALESCE(project_statuses.is_closed, false) as project_is_closed"
+          ),
           "priorities.priority_name",
           "priorities.color as priority_color",
           db.raw("'#3b82f6' as status_color") // Blue color for consistency
@@ -655,6 +659,7 @@ export async function fetchProjectActivities(
 
       scopedDb.tenantJoin(projectTasksQuery, "project_phases", "project_tasks.phase_id", "project_phases.phase_id", { type: "left" });
       scopedDb.tenantJoin(projectTasksQuery, "projects", "project_phases.project_id", "projects.project_id", { type: "left" });
+      scopedDb.tenantJoin(projectTasksQuery, "statuses as project_statuses", "projects.status", "project_statuses.status_id", { type: "left" });
       scopedDb.tenantJoin(projectTasksQuery, "priorities", "project_tasks.priority_id", "priorities.priority_id", { type: "left" });
       scopedDb.tenantJoin(
         projectTasksQuery,
@@ -755,6 +760,11 @@ export async function fetchProjectActivities(
                 openStatusMappingIds
               );
           });
+
+          // Also hide tasks whose parent PROJECT is closed. When the whole project is
+          // done, its tasks shouldn't surface in the open activities view regardless of
+          // each task's own status. Projects with a NULL/open status are treated as open.
+          queryBuilder.whereRaw("COALESCE(project_statuses.is_closed, false) = false");
         }
         
         // Client filter
@@ -872,6 +882,8 @@ export async function fetchProjectActivities(
         type: ActivityType.PROJECT_TASK,
         status: task.status_name || 'To Do', // Use the status name from standard_statuses
         statusColor: task.status_color || '#3b82f6', // Use the blue color for consistency
+        // A task is effectively closed when its own status is closed OR its project is closed.
+        isClosed: Boolean(task.is_closed) || Boolean(task.project_is_closed),
         priority,
         priorityName: task.priority_name || undefined,
         priorityColor: task.priority_color || undefined,
