@@ -248,7 +248,12 @@ export default defineConfig({
       // so the real client would open a live connection and hang unit tests.
       // Tests that need specific Redis behavior still override this with their
       // own vi.mock/vi.doMock('redis').
-      { find: /^redis$/, replacement: path.resolve(__dirname, './src/test/stubs/redis.ts') },
+      // REAL_REDIS=1 (integration CI, which runs a Redis service) skips the
+      // stub entirely: the event-bus paths those tests exercise need stream
+      // commands the stub cannot meaningfully fake.
+      ...(process.env.REAL_REDIS === '1'
+        ? []
+        : [{ find: /^redis$/, replacement: path.resolve(__dirname, './src/test/stubs/redis.ts') }]),
       { find: 'next/server', replacement: path.resolve(__dirname, './src/test/stubs/next-server.ts') },
       { find: /^ajv\/dist\/2020$/, replacement: path.resolve(__dirname, '../node_modules/ajv/dist/2020.js') },
       {

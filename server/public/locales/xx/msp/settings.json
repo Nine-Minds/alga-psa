@@ -1180,7 +1180,7 @@
         "step3": "11111",
         "step4": "11111",
         "docLinkText": "11111",
-        "neverSeenWarning": "11111"
+        "neverSeenWarning": "11111 {{domain}} 11111"
       },
       "badges": {
         "pending_dns": "11111",

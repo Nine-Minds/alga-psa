@@ -23,6 +23,13 @@ vi.mock('@alga-psa/billing/actions/recurringServicePeriodActions', () => ({
   repairMissingRecurringServicePeriods: mocks.repairMissingRecurringServicePeriods,
 }));
 
+// TagContext consumers in the rendered tree fire refetchTags; the real action
+// rejects without a DB and the unhandled rejection fails the suite run.
+vi.mock('@alga-psa/tags/actions', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  getAllTags: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
     t: (key: string, options?: string | Record<string, unknown>) => {

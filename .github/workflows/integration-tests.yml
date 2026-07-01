@@ -77,6 +77,17 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      # Event-bus integration paths need real Redis streams; the suite-wide
+      # `redis` stub alias is skipped via REAL_REDIS below.
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
       DB_HOST: localhost
@@ -90,6 +101,11 @@ jobs:
       # Fail loudly instead of describe.skip when the DB is unreachable (see server/test-utils/requireDb.ts).
       REQUIRE_DB: '1'
       VITEST_SEED: '20260610'
+      # Use the real Redis service instead of the unit-suite stub alias
+      # (vitest.config.ts skips the `redis` stub when this is set).
+      REAL_REDIS: '1'
+      REDIS_HOST: localhost
+      REDIS_PORT: '6379'
 
     steps:
       - name: Checkout
