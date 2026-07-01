@@ -707,7 +707,8 @@
       "refreshStatusFailed": "Kan domeinstatus niet vernieuwen",
       "domainRemovalScheduled": "Domeinverwijdering gepland",
       "domainRemovalScheduledWithClear": "Domeinverwijdering gepland en afzenderadres voor ticketing gewist",
-      "removeDomainFailed": "Kan domein niet verwijderen"
+      "removeDomainFailed": "Kan domein niet verwijderen",
+      "testOutboundFailed": "Testen van uitgaande e-mail mislukt"
     },
     "tabs": {
       "inboundEmail": "Inkomende e-mail",
@@ -741,11 +742,27 @@
         "usernamePlaceholder": "uw-email@voorbeeld.nl",
         "passwordLabel": "Wachtwoord",
         "passwordPlaceholder": "Voer wachtwoord in",
+        "authHint": "Laat gebruikersnaam en wachtwoord leeg als uw relay e-mail zonder authenticatie accepteert.",
         "fromLabel": "Afzenderadres",
         "fromPlaceholder": "noreply@voorbeeld.nl",
         "fromHelp": "Het standaard afzenderadres voor uitgaande e-mails.",
+        "security": {
+          "title": "Verbindingsbeveiliging",
+          "secure": "Impliciete TLS gebruiken (SSL bij verbinden, doorgaans poort 465)",
+          "requireTls": "STARTTLS-upgrade vereisen (poorten 587 / 25)",
+          "verifyCert": "Servercertificaat verifiëren",
+          "verifyCertHint": "Schakel dit alleen uit voor een vertrouwde relay op uw eigen netwerk met een zelfondertekend certificaat."
+        },
         "savingButton": "Opslaan…",
-        "saveButton": "SMTP-instellingen opslaan"
+        "saveButton": "SMTP-instellingen opslaan",
+        "test": {
+          "title": "Uitgaande e-mail testen",
+          "description": "Slaat de huidige instellingen op en verifieert vervolgens de verbinding met de provider. Voer een adres in om ook een testbericht te verzenden.",
+          "recipientLabel": "Test verzenden naar (optioneel)",
+          "recipientPlaceholder": "jij@voorbeeld.com",
+          "testingButton": "Bezig met testen...",
+          "runButton": "Verbinding testen"
+        }
       },
       "ticketingFrom": {
         "title": "Afzenderadres voor ticketing",

@@ -707,7 +707,8 @@
       "refreshStatusFailed": "Error al actualizar el estado del dominio",
       "domainRemovalScheduled": "Eliminación de dominio programada",
       "domainRemovalScheduledWithClear": "Eliminación de dominio programada y dirección de remitente de tickets eliminada",
-      "removeDomainFailed": "Error al eliminar el dominio"
+      "removeDomainFailed": "Error al eliminar el dominio",
+      "testOutboundFailed": "Error al probar el correo saliente"
     },
     "tabs": {
       "inboundEmail": "Correo entrante",
@@ -741,11 +742,27 @@
         "usernamePlaceholder": "su-correo@ejemplo.com",
         "passwordLabel": "Contraseña",
         "passwordPlaceholder": "Introduzca la contraseña",
+        "authHint": "Deje el nombre de usuario y la contraseña en blanco si su retransmisor acepta correo sin autenticación.",
         "fromLabel": "Dirección de remitente",
         "fromPlaceholder": "noreply@ejemplo.com",
         "fromHelp": "Dirección de remitente predeterminada para los correos salientes.",
+        "security": {
+          "title": "Seguridad de la conexión",
+          "secure": "Usar TLS implícito (SSL al conectar, normalmente el puerto 465)",
+          "requireTls": "Requerir actualización STARTTLS (puertos 587 / 25)",
+          "verifyCert": "Verificar el certificado del servidor",
+          "verifyCertHint": "Desactive esto solo para un retransmisor de confianza en su propia red que use un certificado autofirmado."
+        },
         "savingButton": "Guardando…",
-        "saveButton": "Guardar configuración SMTP"
+        "saveButton": "Guardar configuración SMTP",
+        "test": {
+          "title": "Probar correo saliente",
+          "description": "Guarda la configuración actual y luego verifica la conexión con el proveedor. Introduzca una dirección para enviar también un mensaje de prueba.",
+          "recipientLabel": "Enviar prueba a (opcional)",
+          "recipientPlaceholder": "tu@ejemplo.com",
+          "testingButton": "Probando...",
+          "runButton": "Probar conexión"
+        }
       },
       "ticketingFrom": {
         "title": "Dirección de remitente de tickets",
