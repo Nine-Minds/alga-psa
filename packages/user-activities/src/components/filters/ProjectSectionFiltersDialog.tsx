@@ -124,6 +124,18 @@ useEffect(() => {
     }));
   };
 
+  // Created ("date entered") range. Unlike due date, both bounds are open-ended (no
+  // "default from = now" fallback), since creation dates always live in the past.
+  const handleCreatedDateChange = (range: { from: string; to: string }) => {
+    const startDate = range.from ? new Date(range.from + 'T00:00:00Z') : undefined;
+    const endDate = range.to ? new Date(range.to + 'T23:59:59Z') : undefined;
+    setLocalFilters((prev) => ({
+      ...prev,
+      createdAtStart: startDate?.toISOString() as ISO8601String | undefined,
+      createdAtEnd: endDate?.toISOString() as ISO8601String | undefined,
+    }));
+  };
+
   const handleApply = () => {
     // Construct the final filters object, converting single selects back to arrays
     const filtersToApply: Partial<ActivityFilters> = {
@@ -146,6 +158,8 @@ useEffect(() => {
       isClosed: undefined,
       dueDateStart: undefined,
       dueDateEnd: undefined,
+      createdAtStart: undefined,
+      createdAtEnd: undefined,
       search: undefined,
     };
     setLocalFilters(clearedFilters);
@@ -253,8 +267,21 @@ useEffect(() => {
           </div>
 
           {/* Due Date Range */}
+          {/* LEVERAGE: pattern activity-dialog-date-range — see TicketSectionFiltersDialog; same block duplicated here. */}
           <div className="space-y-1">
-             <Label htmlFor="project-due-date-range" className="text-base font-semibold">{t('sections.projects.filterDialog.fields.dueDateRange', { defaultValue: 'Due Date Range' })}</Label>
+             <div className="flex items-center justify-between">
+               <Label htmlFor="project-due-date-range" className="text-base font-semibold">{t('sections.projects.filterDialog.fields.dueDateRange', { defaultValue: 'Due Date Range' })}</Label>
+               {(localFilters.dueDateStart || localFilters.dueDateEnd) && (
+                 <Button
+                   id="project-due-date-clear"
+                   variant="ghost"
+                   size="sm"
+                   onClick={() => setLocalFilters(prev => ({ ...prev, dueDateStart: undefined, dueDateEnd: undefined }))}
+                 >
+                   {t('sections.projects.filterDialog.actions.clearDates', { defaultValue: 'Clear' })}
+                 </Button>
+               )}
+             </div>
              <StringDateRangePicker
                 id="project-due-date-range"
                 value={{
@@ -262,6 +289,31 @@ useEffect(() => {
                     to: localFilters.dueDateEnd ? localFilters.dueDateEnd.split('T')[0] : '',
                 }}
                 onChange={handleDateChange}
+             />
+          </div>
+
+          {/* Created Date Range */}
+          <div className="space-y-1">
+             <div className="flex items-center justify-between">
+               <Label htmlFor="project-created-date-range" className="text-base font-semibold">{t('sections.projects.filterDialog.fields.createdDateRange', { defaultValue: 'Created Date Range' })}</Label>
+               {(localFilters.createdAtStart || localFilters.createdAtEnd) && (
+                 <Button
+                   id="project-created-date-clear"
+                   variant="ghost"
+                   size="sm"
+                   onClick={() => setLocalFilters(prev => ({ ...prev, createdAtStart: undefined, createdAtEnd: undefined }))}
+                 >
+                   {t('sections.projects.filterDialog.actions.clearDates', { defaultValue: 'Clear' })}
+                 </Button>
+               )}
+             </div>
+             <StringDateRangePicker
+                id="project-created-date-range"
+                value={{
+                    from: localFilters.createdAtStart ? localFilters.createdAtStart.split('T')[0] : '',
+                    to: localFilters.createdAtEnd ? localFilters.createdAtEnd.split('T')[0] : '',
+                }}
+                onChange={handleCreatedDateChange}
              />
           </div>
 

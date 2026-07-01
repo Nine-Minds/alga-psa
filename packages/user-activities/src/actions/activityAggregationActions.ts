@@ -721,7 +721,17 @@ export async function fetchProjectActivities(
         if (filters.dueDateEnd) {
           queryBuilder.where("project_tasks.due_date", "<=", toPlainDate(filters.dueDateEnd));
         }
-        
+
+        // Apply created-date ("date entered") filter if provided. created_at is a full
+        // timestamp, so compare against the raw ISO bounds (not toPlainDate, which would
+        // truncate the time-of-day and drop rows created later on the end day).
+        if (filters.createdAtStart) {
+          queryBuilder.where("project_tasks.created_at", ">=", filters.createdAtStart);
+        }
+        if (filters.createdAtEnd) {
+          queryBuilder.where("project_tasks.created_at", "<=", filters.createdAtEnd);
+        }
+
         // Apply closed filter if provided
         if (filters.isClosed === false) {
           // If isClosed is false, only show open tasks. A task is "closed" when
@@ -993,6 +1003,16 @@ export async function fetchTicketActivities(
           queryBuilder.where("tickets.due_date", "<=", toPlainDate(filters.dueDateEnd));
         }
 
+        // Created-date ("date entered") filter. Tickets record their creation time in
+        // `entered_at` (there is no `created_at` column). It is a full timestamp, so compare
+        // against the raw ISO bounds (the UI snaps `end` to 23:59:59.999 of the chosen day).
+        if (filters.createdAtStart) {
+          queryBuilder.where("tickets.entered_at", ">=", filters.createdAtStart);
+        }
+        if (filters.createdAtEnd) {
+          queryBuilder.where("tickets.entered_at", "<=", filters.createdAtEnd);
+        }
+
         // Closed filter
         if (filters.isClosed === false) {
           // If isClosed is false, only show open tickets
@@ -1082,7 +1102,9 @@ export async function fetchTicketActivities(
           { id: 'edit', label: 'Edit' }
         ],
         tenant: ticket.tenant,
-        createdAt: ticket.created_at ? (new Date(ticket.created_at).toString() !== 'Invalid Date' ? new Date(ticket.created_at).toISOString() : new Date().toISOString()) as ISO8601String : new Date().toISOString() as ISO8601String,
+        // Tickets store their creation time in `entered_at` (no `created_at` column). Reading
+        // the wrong field silently fell back to "now", which broke created-date filtering/sort.
+        createdAt: ticket.entered_at ? (new Date(ticket.entered_at).toString() !== 'Invalid Date' ? new Date(ticket.entered_at).toISOString() : new Date().toISOString()) as ISO8601String : new Date().toISOString() as ISO8601String,
         updatedAt: ticket.updated_at ? (new Date(ticket.updated_at).toString() !== 'Invalid Date' ? new Date(ticket.updated_at).toISOString() : new Date().toISOString()) as ISO8601String : new Date().toISOString() as ISO8601String
       };
     });
@@ -1263,6 +1285,29 @@ function processActivities(
     });
   }
   
+  // Apply created-date ("date entered") range filter if provided. createdAt is present on
+  // every activity type, so this covers the types not filtered at the SQL level above
+  // (schedule, workflow tasks, time entries, notifications, ad-hoc, documents).
+  if (filters.createdAtStart || filters.createdAtEnd) {
+    filteredActivities = filteredActivities.filter(activity => {
+      if (!activity.createdAt) return false;
+
+      const createdAt = new Date(activity.createdAt).getTime();
+
+      if (filters.createdAtStart) {
+        const startDate = new Date(filters.createdAtStart).getTime();
+        if (createdAt < startDate) return false;
+      }
+
+      if (filters.createdAtEnd) {
+        const endDate = new Date(filters.createdAtEnd).getTime();
+        if (createdAt > endDate) return false;
+      }
+
+      return true;
+    });
+  }
+
   // Apply assigned to filter if provided
   if (filters.assignedTo && filters.assignedTo.length > 0) {
     filteredActivities = filteredActivities.filter(activity => {

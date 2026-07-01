@@ -41,6 +41,8 @@ export async function GET(req: NextRequest) {
     if (query.priorityIds) filters.priorityIds = query.priorityIds;
     if (query.dueDateStart) filters.dueDateStart = query.dueDateStart;
     if (query.dueDateEnd) filters.dueDateEnd = query.dueDateEnd;
+    if (query.createdAtStart) filters.createdAtStart = query.createdAtStart;
+    if (query.createdAtEnd) filters.createdAtEnd = query.createdAtEnd;
     if (query.sortBy) filters.sortBy = query.sortBy;
     if (query.sortDirection) filters.sortDirection = query.sortDirection;
 

@@ -80,6 +80,16 @@ export function registerActivitiesV1Routes(registry: ApiOpenApiRegistry) {
         .datetime({ offset: true })
         .optional()
         .describe('ISO 8601 upper bound of the due-date filter.'),
+      createdAtStart: zOpenApi
+        .string()
+        .datetime({ offset: true })
+        .optional()
+        .describe('ISO 8601 lower bound of the created-date ("date entered") filter. Applies to every activity type.'),
+      createdAtEnd: zOpenApi
+        .string()
+        .datetime({ offset: true })
+        .optional()
+        .describe('ISO 8601 upper bound of the created-date ("date entered") filter.'),
       sortBy: zOpenApi
         .enum(['type', 'title', 'status', 'priority', 'dueDate'])
         .optional()

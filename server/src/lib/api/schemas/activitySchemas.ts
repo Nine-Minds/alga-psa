@@ -115,6 +115,9 @@ export const listActivitiesQuerySchema = z.object({
   // Due-date window (ISO 8601), independent of the schedule date window above.
   dueDateStart: z.preprocess(emptyToUndefined, z.string().datetime({ offset: true }).optional()),
   dueDateEnd: z.preprocess(emptyToUndefined, z.string().datetime({ offset: true }).optional()),
+  // Created-date ("date entered") window (ISO 8601), independent of the due-date and schedule windows.
+  createdAtStart: z.preprocess(emptyToUndefined, z.string().datetime({ offset: true }).optional()),
+  createdAtEnd: z.preprocess(emptyToUndefined, z.string().datetime({ offset: true }).optional()),
   sortBy: z.preprocess(emptyToUndefined, activitySortBySchema.optional()),
   sortDirection: z.preprocess(emptyToUndefined, activitySortDirectionSchema.optional()),
   // When present, the response is grouped by this dimension instead of paginated.

@@ -362,6 +362,44 @@ describe('User Activities v1 API — ad-hoc CRUD, list, and the API-key bridge',
     void b;
   });
 
+  it('filters activities by created-date ("date entered") range, independently of due date', async () => {
+    const onlySchedule = { types: [ActivityType.SCHEDULE] };
+
+    const oldItem = await createAdHocActivityForApi(ctx.user, tenantId, { title: 'Old created item' });
+    await createAdHocActivityForApi(ctx.user, tenantId, { title: 'New created item' });
+
+    // Both items are otherwise created ~now; backdate one so the pair straddles the
+    // filter boundary. Ad-hoc items surface through the schedule source regardless of
+    // the schedule date window, so created-date is the only thing under test here.
+    await ctx.db('schedule_entries')
+      .where({ tenant: tenantId, entry_id: oldItem.id })
+      .update({ created_at: '2020-01-01T00:00:00.000Z' });
+
+    // Upper bound only: keep items created on/before 2020 → only the backdated one.
+    const throughOldYear = await fetchUserActivitiesForApi(
+      ctx.user,
+      tenantId,
+      { ...onlySchedule, createdAtEnd: '2020-12-31T23:59:59.999Z' as any },
+      1,
+      25,
+    );
+    const oldTitles = throughOldYear.activities.map((x) => x.title);
+    expect(oldTitles).toContain('Old created item');
+    expect(oldTitles).not.toContain('New created item');
+
+    // Lower bound only: keep items created on/after 2021 → only the recent one.
+    const fromRecentYear = await fetchUserActivitiesForApi(
+      ctx.user,
+      tenantId,
+      { ...onlySchedule, createdAtStart: '2021-01-01T00:00:00.000Z' as any },
+      1,
+      25,
+    );
+    const recentTitles = fromRecentYear.activities.map((x) => x.title);
+    expect(recentTitles).toContain('New created item');
+    expect(recentTitles).not.toContain('Old created item');
+  });
+
   // ── Grouped view (fetchUserActivitiesGroupedForApi) ──────────────────────────
 
   it('groups ad-hoc activities by type with a single counted schedule bucket', async () => {
