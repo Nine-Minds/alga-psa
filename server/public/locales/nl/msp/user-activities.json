@@ -209,12 +209,14 @@
           "priorityPlaceholder": "Selecteer prioriteit...",
           "allPriorities": "Alle prioriteiten",
           "dueDateRange": "Bereik vervaldatum",
+          "createdDateRange": "Bereik aanmaakdatum",
           "showClosedTasks": "Gesloten taken weergeven"
         },
         "actions": {
           "reset": "Resetten",
           "cancel": "Annuleren",
-          "apply": "Filters toepassen"
+          "apply": "Filters toepassen",
+          "clearDates": "Wissen"
         }
       }
     },
@@ -252,12 +254,14 @@
           "priorityPlaceholder": "Selecteer prioriteit...",
           "allPriorities": "Alle prioriteiten",
           "dueDateRange": "Bereik vervaldatum",
+          "createdDateRange": "Bereik aanmaakdatum",
           "showClosedTickets": "Gesloten tickets weergeven"
         },
         "actions": {
           "reset": "Resetten",
           "cancel": "Annuleren",
-          "apply": "Filters toepassen"
+          "apply": "Filters toepassen",
+          "clearDates": "Wissen"
         }
       }
     },
@@ -297,13 +301,15 @@
           "priorityMedium": "Gemiddeld",
           "priorityLow": "Laag",
           "dueDateRange": "Bereik vervaldatum",
+          "createdDateRange": "Bereik aanmaakdatum",
           "showClosedTasks": "Gesloten taken weergeven",
           "includeHiddenTasks": "Verborgen taken opnemen"
         },
         "actions": {
           "reset": "Resetten",
           "cancel": "Annuleren",
-          "apply": "Filters toepassen"
+          "apply": "Filters toepassen",
+          "clearDates": "Wissen"
         }
       },
       "listDrawer": {
@@ -441,6 +447,7 @@
       "search": "Zoeken",
       "client": "Klant",
       "dueDateShort": "Vervalt",
+      "createdShort": "Aangemaakt",
       "tags": "Tags",
       "tagsSelected": "{{count}} tags",
       "tasksCompact": "Taken",
@@ -470,7 +477,9 @@
     },
     "actions": {
       "reset": "Resetten",
-      "clearClient": "Klantfilter wissen"
+      "clearClient": "Klantfilter wissen",
+      "clearDueDate": "Filter vervaldatum wissen",
+      "clearCreatedDate": "Filter aanmaakdatum wissen"
     },
     "statusClosedSuffix": " (gesloten)",
     "summary": {

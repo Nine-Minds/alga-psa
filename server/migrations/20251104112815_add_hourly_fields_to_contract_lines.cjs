@@ -10,7 +10,7 @@ const CONTRACT_LINE_HOURLY_BACKFILL_REASON = 'discover hourly contract lines nee
 const CITUS_METADATA_CHECK_REASON = 'Citus extension and distribution metadata checks for contract line hourly backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 const isCitusEnabled = async (knex, migrationDb) => {

@@ -4,7 +4,7 @@ const DEPRECATED_PERMISSION_CLEANUP_REASON = 'all-tenant deprecated permission c
 const CLIENT_PORTAL_PERMISSION_UPDATE_REASON = 'all-tenant client portal permission flag normalization';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 /**

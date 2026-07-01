@@ -652,7 +652,7 @@ describe('contact workflow runtime DB-backed action handlers', () => {
       })
       .select('td.tag_text');
 
-    expect(mappings.map((row: { tag_text: string }) => row.tag_text).sort()).toEqual(['managed', 'priority']);
+    expect(mappings.map((row) => (row as unknown as { tag_text: string }).tag_text).sort()).toEqual(['managed', 'priority']);
     expect(mappings.length).toBe(2);
   });
 

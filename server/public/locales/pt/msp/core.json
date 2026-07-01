@@ -1,335 +1,335 @@
 {
   "nav": {
     "home": "Início",
-    "userActivities": "User Activities",
+    "userActivities": "Atividades do usuário",
     "tickets": "Tickets",
     "serviceRequests": "Solicitações de serviço",
-    "surveys": "Surveys",
-    "projects": "Projects",
-    "projectsAll": "All Projects",
-    "projectsTemplates": "Templates",
-    "clients": "Clients",
-    "contacts": "Contacts",
-    "documents": "Documents",
-    "documentsAll": "All Documents",
-    "knowledgeBase": "Knowledge Base",
-    "assets": "Assets",
-    "timeManagement": "Time Management",
-    "timeEntry": "Time Entry",
-    "approvals": "Approvals",
+    "surveys": "Pesquisas",
+    "projects": "Projetos",
+    "projectsAll": "Todos os projetos",
+    "projectsTemplates": "Modelos",
+    "clients": "Clientes",
+    "contacts": "Contatos",
+    "documents": "Documentos",
+    "documentsAll": "Todos os documentos",
+    "knowledgeBase": "Base de conhecimento",
+    "assets": "Ativos",
+    "timeManagement": "Gerenciamento de tempo",
+    "timeEntry": "Lançamento de horas",
+    "approvals": "Aprovações",
     "billing": {
-      "label": "Billing",
+      "label": "Cobrança",
       "sections": {
-        "contracts": "Contracts",
-        "invoicing": "Invoicing",
-        "quotes": "Quotes",
-        "pricing": "Pricing",
-        "trackingReports": "Tracking & Reports"
+        "contracts": "Contratos",
+        "invoicing": "Faturamento",
+        "quotes": "Citações",
+        "pricing": "Preços",
+        "trackingReports": "Rastreamento e Relatórios"
       },
-      "contractTemplates": "Contract Templates",
-      "clientContracts": "Client Contracts",
-      "quotes": "Quotes",
-      "quoteBusinessTemplates": "Quote Templates",
-      "quoteLayouts": "Quote Layouts",
-      "contractLinePresets": "Contract Line Presets",
-      "invoicing": "Invoicing",
-      "invoiceLayouts": "Invoice Layouts",
-      "billingCycles": "Billing Cycles",
-      "servicePeriods": "Service Periods",
-      "serviceTypes": "Service Types",
-      "serviceCatalog": "Services",
-      "products": "Products",
-      "taxRates": "Tax Rates",
-      "usageTracking": "Usage Tracking",
-      "reports": "Reports",
-      "accountingExports": "Accounting Exports"
+      "contractTemplates": "Modelos de contrato",
+      "clientContracts": "Contratos de clientes",
+      "quotes": "Citações",
+      "quoteBusinessTemplates": "Modelos de cotação",
+      "quoteLayouts": "Layouts de cotação",
+      "contractLinePresets": "Predefinições de linha de contrato",
+      "invoicing": "Faturamento",
+      "invoiceLayouts": "Layouts de fatura",
+      "billingCycles": "Ciclos de cobrança",
+      "servicePeriods": "Períodos de serviço",
+      "serviceTypes": "Tipos de serviço",
+      "serviceCatalog": "Serviços",
+      "products": "Produtos",
+      "taxRates": "Taxas de imposto",
+      "usageTracking": "Rastreamento de uso",
+      "reports": "Relatórios",
+      "accountingExports": "Exportações Contábeis"
     },
-    "schedule": "Schedule",
-    "technicianDispatch": "Technician Dispatch",
-    "automationHub": "Workflows",
-    "workflows": "Workflows",
-    "controlPanel": "Control Panel",
-    "workflowEditor": "Workflow Editor",
-    "runs": "Runs",
-    "events": "Events",
-    "deadLetter": "Dead Letter",
-    "systemMonitor": "System Monitor",
-    "systemMonitoring": "System Monitoring",
-    "jobMonitoring": "Job Monitoring",
-    "jobs": "Jobs",
-    "emailLogs": "Email Logs",
-    "extensions": "Extensions"
+    "schedule": "Agendar",
+    "technicianDispatch": "Alocação de Técnicos",
+    "automationHub": "Fluxos de trabalho",
+    "workflows": "Fluxos de trabalho",
+    "controlPanel": "Painel de controle",
+    "workflowEditor": "Editor de fluxo de trabalho",
+    "runs": "Corre",
+    "events": "Eventos",
+    "deadLetter": "Carta Morta",
+    "systemMonitor": "Monitor do sistema",
+    "systemMonitoring": "Monitoramento do sistema",
+    "jobMonitoring": "Monitoramento de Trabalho",
+    "jobs": "Empregos",
+    "emailLogs": "Registros de e-mail",
+    "extensions": "Extensões"
   },
   "sidebar": {
-    "backToMain": "Back to Main",
-    "searchPlaceholder": "Search",
-    "settings": "Settings",
-    "support": "Support",
-    "goToDashboard": "Go to dashboard",
-    "logoAlt": "AlgaPSA Logo",
-    "expandSidebar": "Expand sidebar",
-    "collapseSidebar": "Collapse sidebar"
+    "backToMain": "Voltar ao principal",
+    "searchPlaceholder": "Procurar",
+    "settings": "Configurações",
+    "support": "Apoiar",
+    "goToDashboard": "Vá para o painel",
+    "logoAlt": "Alga Logo",
+    "expandSidebar": "Expandir barra lateral",
+    "collapseSidebar": "Recolher barra lateral"
   },
   "settings": {
     "sections": {
-      "organizationAccess": "Organization & Access",
-      "workManagement": "Work Management",
-      "timeBilling": "Time & Billing",
-      "communication": "Communication",
-      "dataIntegration": "Data & Integration",
+      "organizationAccess": "Organização e Acesso",
+      "workManagement": "Gestão de Trabalho",
+      "timeBilling": "Tempo e faturamento",
+      "communication": "Comunicação",
+      "dataIntegration": "Dados e Integração",
       "experimental": "Experimental"
     },
     "tabs": {
-      "general": "General",
-      "users": "Users",
+      "general": "Em geral",
+      "users": "Usuários",
       "teams": "Teams",
-      "language": "Language",
-      "clientPortal": "Client Portal",
-      "ticketing": "Ticketing",
+      "language": "Linguagem",
+      "clientPortal": "Portal do cliente",
+      "ticketing": "Tickets",
       "sla": "SLA",
-      "projects": "Projects",
-      "interactions": "Interactions",
-      "notifications": "Notifications",
-      "timeEntry": "Time Entry",
-      "billing": "Billing",
-      "secrets": "Secrets",
-      "importExport": "Import/Export",
-      "email": "Email",
-      "integrations": "Integrations",
-      "extensions": "Extensions",
-      "experimentalFeatures": "Experimental Features",
-      "profile": "Profile",
-      "security": "Security"
+      "projects": "Projetos",
+      "interactions": "Interações",
+      "notifications": "Notificações",
+      "timeEntry": "Entrada de tempo",
+      "billing": "Cobrança",
+      "secrets": "Segredos",
+      "importExport": "Importar/Exportar",
+      "email": "E-mail",
+      "integrations": "Integrações",
+      "extensions": "Extensões",
+      "experimentalFeatures": "Recursos experimentais",
+      "profile": "Perfil",
+      "security": "Segurança"
     }
   },
   "dashboard": {
-    "onboardingWizard": "Onboarding Wizard"
+    "onboardingWizard": "Assistente de onboarding"
   },
   "header": {
-    "userFallback": "User",
-    "quickAccess": "Quick access to profile & account.",
-    "profile": "Profile",
-    "account": "Account",
-    "signOut": "Sign out",
+    "userFallback": "Usuário",
+    "quickAccess": "Acesso rápido ao perfil e conta.",
+    "profile": "Perfil",
+    "account": "Conta",
+    "signOut": "sair",
+    "quickAsk": {
+      "ariaLabel": "Pergunte à IA sobre este fluxo de trabalho",
+      "title": "Pergunte à IA",
+      "shortcutHint": "Abra o Quick Ask para obter orientação sobre o fluxo de trabalho"
+    },
     "quickCreate": {
-      "ariaLabel": "Open quick create",
-      "title": "Quick Create",
-      "heading": "Create",
+      "ariaLabel": "Abra a criação rápida",
+      "title": "Criação rápida",
+      "heading": "Criar",
       "options": {
         "ticket": {
           "label": "Ticket",
-          "description": "Create a new support ticket"
+          "description": "Crie um novo ticket de suporte"
         },
         "client": {
-          "label": "Client",
-          "description": "Add a new client to your system"
+          "label": "Cliente",
+          "description": "Adicione um novo cliente ao seu sistema"
         },
         "contact": {
-          "label": "Contact",
-          "description": "Add a new contact person"
+          "label": "Contato",
+          "description": "Adicione uma nova pessoa de contato"
         },
         "project": {
-          "label": "Project",
-          "description": "Start a new project"
+          "label": "Projeto",
+          "description": "Iniciar um novo projeto"
         },
         "asset": {
-          "label": "Asset",
-          "description": "Add a new device to your workspace"
+          "label": "Ativo",
+          "description": "Adicione um novo dispositivo ao seu espaço de trabalho"
         },
         "service": {
-          "label": "Service",
-          "description": "Add a new billable service"
+          "label": "Serviço",
+          "description": "Adicione um novo serviço faturável"
         },
         "product": {
-          "label": "Product",
-          "description": "Add a new product to your catalog"
+          "label": "Produto",
+          "description": "Adicione um novo produto ao seu catálogo"
         }
       }
     },
     "jobs": {
-      "ariaLabel": "View background job activity",
-      "title": "Background Jobs",
-      "description": "Track imports, automation runs, and scheduled work.",
-      "active": "Active jobs",
-      "queued": "Queued jobs",
-      "failedLast24h": "Failed last 24h",
-      "openJobCenter": "Open Job Center"
+      "ariaLabel": "Ver atividade de trabalho em segundo plano",
+      "title": "Trabalhos em segundo plano",
+      "description": "Acompanhe importações, execuções de automação e trabalhos agendados.",
+      "active": "Trabalhos ativos",
+      "queued": "Trabalhos em fila",
+      "failedLast24h": "Falha nas últimas 24h",
+      "openJobCenter": "Abrir central de trabalhos"
     },
     "breadcrumb": {
-      "label": "Caminho de navegação",
-      "dashboard": "Dashboard",
+      "label": "Trilha de navegação",
+      "dashboard": "Painel",
       "home": "Início"
     },
     "tenantBadge": {
-      "ariaLabel": "Active tenant {{tenant}}"
+      "ariaLabel": "Inquilino ativo {{tenant}}"
     },
     "themeToggle": {
-      "ariaLabel": "Theme toggle",
-      "light": "Light",
-      "dark": "Dark",
-      "system": "System",
-      "selected": "Selected"
+      "ariaLabel": "Alternar tema",
+      "light": "Luz",
+      "dark": "Escuro",
+      "system": "Sistema",
+      "selected": "Selecionado"
     },
-    "openUserMenu": "Abrir menu do usuário",
-    "quickAsk": {
-      "ariaLabel": "Perguntar à IA sobre este workflow",
-      "title": "Perguntar à IA",
-      "shortcutHint": "Abrir Quick Ask para obter ajuda sobre o workflow"
-    }
+    "openUserMenu": "Abrir menu do usuário"
   },
   "dialogs": {
     "aiInterrupt": {
       "navigate": {
-        "title": "Leave page and cancel AI response?",
-        "message": "An AI response or tool action is still in progress. Leaving this page now will cancel it.",
-        "confirm": "Leave page",
-        "cancel": "Stay on page"
+        "title": "Sair da página e cancelar a resposta da IA?",
+        "message": "Uma resposta de IA ou ação de ferramenta ainda está em andamento. Sair desta página agora irá cancelá-la.",
+        "confirm": "Sair da página",
+        "cancel": "Fique na página"
       },
       "closeChat": {
-        "title": "Close chat and cancel AI response?",
-        "message": "An AI response or tool action is still in progress. Closing the chat now will cancel it.",
-        "confirm": "Close chat",
-        "cancel": "Keep chat open"
+        "title": "Fechar o chat e cancelar a resposta da IA?",
+        "message": "Uma resposta de IA ou ação de ferramenta ainda está em andamento. Fechar o chat agora irá cancelá-lo.",
+        "confirm": "Fechar bate-papo",
+        "cancel": "Mantenha o bate-papo aberto"
       }
     }
   },
   "banners": {
     "trial": {
-      "premiumConfirmed": "Premium confirmed — starts next billing cycle",
-      "dayLeft": "1 day left",
-      "daysLeft": "{{count}} days left",
-      "premiumTrial": "Premium Trial: {{daysLabel}} — confirm to keep",
-      "stripeTrial": "{{tier}} Trial: {{daysLabel}}"
+      "premiumConfirmed": "Premium confirmado – inicia o próximo ciclo de faturamento",
+      "dayLeft": "Falta 1 dia",
+      "daysLeft": "{{count}} dias restantes",
+      "premiumTrial": "Avaliação Premium: {{daysLabel}} – confirme para manter",
+      "stripeTrial": "Teste {{tier}}: {{daysLabel}}"
     },
     "paymentFailed": {
-      "message": "Payment failed — Update payment method",
-      "portalError": "Failed to open billing portal"
+      "message": "Falha no pagamento — Atualizar forma de pagamento",
+      "portalError": "Falha ao abrir o portal de faturamento"
     },
     "platformNotification": {
-      "learnMore": "Learn More",
-      "dismiss": "Dismiss notification"
+      "learnMore": "Saber mais",
+      "dismiss": "Ignorar notificação"
     }
   },
   "quickCreate": {
     "success": {
-      "asset": "Asset created successfully",
-      "ticket": "Ticket #{{number}} created successfully",
-      "client": "Client \"{{name}}\" created successfully",
-      "contact": "{{name}} added successfully",
-      "project": "Project \"{{name}}\" created successfully",
-      "service": "Service created successfully",
-      "product": "Product created successfully"
+      "asset": "Recurso criado com sucesso",
+      "ticket": "Ticket #{{number}} criado com sucesso",
+      "client": "Cliente \"{{name}}\" criado com sucesso",
+      "contact": "{{name}} adicionado com sucesso",
+      "project": "Projeto \"{{name}}\" criado com sucesso",
+      "service": "Serviço criado com sucesso",
+      "product": "Produto criado com sucesso"
     },
     "errors": {
-      "loadClients": "Failed to load clients",
-      "loadServiceTypes": "Failed to load service types"
+      "loadClients": "Falha ao carregar clientes",
+      "loadServiceTypes": "Falha ao carregar tipos de serviço"
     },
     "dialogTitles": {
-      "contact": "Add New Contact",
-      "project": "Add New Project",
-      "service": "Add New Service"
+      "contact": "Adicionar novo contato",
+      "project": "Adicionar novo projeto",
+      "service": "Adicionar novo serviço"
     }
   },
   "rightSidebar": {
-    "title": "Chat",
-    "enterpriseOnly": "The chat feature is only available in the Enterprise Edition."
+    "title": "Bater papo",
+    "enterpriseOnly": "O recurso de bate-papo está disponível apenas na Enterprise Edition."
   },
   "notifications": {
     "messages": {
       "error": {
-        "loadFailed": "Falha ao carregar as notificações"
+        "loadFailed": "Falha ao carregar notificações"
       }
     }
   },
   "search": {
-    "placeholder": "Pesquisar clientes, tickets e documentos...",
+    "placeholder": "Pesquise clientes, tickets, documentos...",
     "shortcutHint": "Cmd/Ctrl+K",
-    "loading": "Searching...",
-    "pageTitle": "Search",
-    "helperText": "Search across the workspace.",
-    "resultSummary": "{{count}} results for \"{{query}}\"",
-    "resultsRegionLabel": "Search results",
-    "filtersLabel": "Search filters",
-    "sortLabel": "Sort results",
-    "paginationLabel": "Search pagination",
-    "seeAllResults": "See all {{count}} results",
-    "noResults": "No results for \"{{query}}\"",
-    "emptyBroadenQuery": "Try a broader query.",
-    "emptyRemoveFilter": "Try removing the type filter.",
-    "error": "Search failed. Try again.",
+    "loading": "Procurando...",
+    "pageTitle": "Procurar",
+    "helperText": "Pesquise no espaço de trabalho.",
+    "resultSummary": "{{count}} resultados para \"{{query}}\"",
+    "resultsRegionLabel": "Resultados da pesquisa",
+    "filtersLabel": "Filtros de pesquisa",
+    "sortLabel": "Classificar resultados",
+    "paginationLabel": "Paginação de pesquisa",
+    "seeAllResults": "Veja todos os resultados de {{count}}",
+    "noResults": "Nenhum resultado para \"{{query}}\"",
+    "emptyBroadenQuery": "Tente uma consulta mais ampla.",
+    "emptyRemoveFilter": "Tente remover o filtro de tipo.",
+    "error": "A pesquisa falhou. Tente novamente.",
     "filters": {
-      "all": "All",
-      "client": "Clients",
-      "contact": "Contacts",
-      "user": "Team members",
+      "all": "Todos",
+      "client": "Clientes",
+      "contact": "Contatos",
+      "user": "Membros da equipe",
       "ticket": "Tickets",
-      "ticket_comment": "Ticket comments",
-      "project": "Projects",
-      "project_phase": "Project phases",
-      "project_task": "Project tasks",
-      "project_task_comment": "Project task comments",
-      "asset": "Assets",
-      "invoice": "Invoices",
-      "invoice_item": "Invoice line items",
-      "invoice_annotation": "Invoice annotations",
-      "contract": "Contracts",
-      "client_contract": "Client contracts",
-      "document": "Documents",
-      "kb_article": "KB articles",
-      "service_catalog": "Service catalog",
-      "service_request_submission": "Service requests",
-      "service_request_definition": "Service request definitions",
-      "workflow_task": "Workflow tasks",
-      "interaction": "Interactions",
-      "schedule_entry": "Schedule entries",
-      "time_entry": "Time entries",
-      "board": "Boards",
-      "category": "Categories",
-      "tag": "Tags",
+      "ticket_comment": "Comentários sobre tickets",
+      "project": "Projetos",
+      "project_phase": "Fases do projeto",
+      "project_task": "Tarefas do projeto",
+      "project_task_comment": "Comentários da tarefa do projeto",
+      "asset": "Ativos",
+      "invoice": "Faturas",
+      "invoice_item": "Itens de linha da fatura",
+      "invoice_annotation": "Anotações de fatura",
+      "contract": "Contratos",
+      "client_contract": "Contratos de clientes",
+      "document": "Documentos",
+      "kb_article": "Artigos da base de conhecimento",
+      "service_catalog": "Catálogo de serviços",
+      "service_request_submission": "Solicitações de serviço",
+      "service_request_definition": "Definições de solicitação de serviço",
+      "workflow_task": "Tarefas de fluxo de trabalho",
+      "interaction": "Interações",
+      "schedule_entry": "Agendar entradas",
+      "time_entry": "Entradas de tempo",
+      "board": "Quadros",
+      "category": "Categorias",
+      "tag": "Etiquetas",
       "status": "Status"
     },
     "groups": {
-      "client": "Clients",
-      "contact": "Contacts",
-      "user": "Team members",
+      "client": "Clientes",
+      "contact": "Contatos",
+      "user": "Membros da equipe",
       "ticket": "Tickets",
-      "ticket_comment": "Ticket comments",
-      "project": "Projects",
-      "project_phase": "Project phases",
-      "project_task": "Project tasks",
-      "project_task_comment": "Project task comments",
-      "asset": "Assets",
-      "invoice": "Invoices",
-      "invoice_item": "Invoice line items",
-      "invoice_annotation": "Invoice annotations",
-      "contract": "Contracts",
-      "client_contract": "Client contracts",
-      "document": "Documents",
-      "kb_article": "KB articles",
-      "service_catalog": "Service catalog",
-      "service_request_submission": "Service requests",
-      "service_request_definition": "Service request definitions",
-      "workflow_task": "Workflow tasks",
-      "interaction": "Interactions",
-      "schedule_entry": "Schedule entries",
-      "time_entry": "Time entries",
-      "board": "Boards",
-      "category": "Categories",
-      "tag": "Tags",
+      "ticket_comment": "Comentários sobre tickets",
+      "project": "Projetos",
+      "project_phase": "Fases do projeto",
+      "project_task": "Tarefas do projeto",
+      "project_task_comment": "Comentários da tarefa do projeto",
+      "asset": "Ativos",
+      "invoice": "Faturas",
+      "invoice_item": "Itens de linha da fatura",
+      "invoice_annotation": "Anotações de fatura",
+      "contract": "Contratos",
+      "client_contract": "Contratos de clientes",
+      "document": "Documentos",
+      "kb_article": "Artigos da base de conhecimento",
+      "service_catalog": "Catálogo de serviços",
+      "service_request_submission": "Solicitações de serviço",
+      "service_request_definition": "Definições de solicitação de serviço",
+      "workflow_task": "Tarefas de fluxo de trabalho",
+      "interaction": "Interações",
+      "schedule_entry": "Agendar entradas",
+      "time_entry": "Entradas de tempo",
+      "board": "Quadros",
+      "category": "Categorias",
+      "tag": "Etiquetas",
       "status": "Status"
     },
     "sort": {
-      "relevance": "Relevance",
-      "recent": "Recent"
+      "relevance": "Relevância",
+      "recent": "Recente"
     },
     "pagination": {
-      "previous": "Previous",
-      "next": "Next"
+      "previous": "Anterior",
+      "next": "Próximo"
     }
   },
   "onboardingRedirect": {
     "title": "Levando você para a configuração",
-    "description": "Seu espaço de trabalho precisa de uma configuração rápida antes que você possa usar o painel.",
-    "action": "Continuar para a configuração"
+    "description": "Seu espaço de trabalho precisa de uma configuração rápida antes de você poder usar o painel.",
+    "action": "Continuar a configuração"
   }
 }

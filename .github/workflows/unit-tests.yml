@@ -59,6 +59,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # A few contract tests shell out to ripgrep (execFileSync('rg', ...)) to
+      # assert on source layout; it isn't on the runner by default.
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      # Build the shared infra libraries' dist before testing. Most package
+      # vitest configs alias @alga-psa/<lib> to src, but a handful (auth, sla,
+      # reporting, onboarding, reference-data) resolve @alga-psa/db et al. via the
+      # package "exports" -> dist, which nothing else builds in this job (the nx
+      # `test` target has no `dependsOn: ^build`). Without this their suites die at
+      # collection with `Failed to resolve entry for package "@alga-psa/db"`.
+      # `dependsOn: ^build` cascades to each lib's own deps, so this set covers the
+      # horizontal libs real-import tests pull in.
+      - name: Build shared libraries
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
       - name: Determine Nx base/head
         shell: bash
         run: |
@@ -110,6 +129,8 @@ jobs:
   # Informational coverage report for the server unit suite. Push-to-main only
   # (it re-runs the whole suite with instrumentation, too slow for every PR) and
   # non-blocking while baselines are established.
+  # Scope is src/test/unit only: src/test/infrastructure is DB-backed and runs
+  # in its own job below with a Postgres service.
   coverage-report:
     name: Server unit coverage (informational)
     if: github.event_name == 'push'
@@ -125,9 +146,12 @@ jobs:
         run: npm install -g npm@11
       - name: Install dependencies
         run: npm ci
+      # A few contract tests shell out to ripgrep; it isn't on the runner by default.
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
       - name: Run server unit tests with coverage
         working-directory: ./server
-        run: npx vitest run src/test/unit src/test/infrastructure --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov
+        run: npx vitest run src/test/unit --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov
         env:
           NODE_OPTIONS: '--max-old-space-size=14336'
           VITEST_SEED: '20260610'
@@ -137,3 +161,6 @@ jobs:
           name: server-unit-coverage
           path: server/coverage/lcov.info
           retention-days: 30
+
+  # DB-backed infrastructure tests run inside integration-tests.yml (sharing its
+  # Postgres job): Tier-1 subset on PRs, full suite nightly — both non-blocking.

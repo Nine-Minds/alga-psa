@@ -27,10 +27,10 @@ import {
 } from '../../../../test-utils/errorUtils';
 import { tenantDb } from '@alga-psa/db';
 
-vi.mock('@alga-psa/auth', () => ({
-  getCurrentUser: vi.fn(),
-  hasPermission: vi.fn(),
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../test-utils/testMocks');
+  return createAuthModuleMock();
+});
 
 describe('Project Permissions Infrastructure', () => {
   const context = new TestContext({

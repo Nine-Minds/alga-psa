@@ -73,6 +73,13 @@ vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: hoisted.getAdminConnectionMock,
 }));
 
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    unscoped: (table: string) => conn(table),
+  }),
+}));
+
 import { resolveTeamsMicrosoftProviderConfig } from './teamsMicrosoftProviderResolution';
 
 describe('resolveTeamsMicrosoftProviderConfig', () => {

@@ -183,7 +183,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       .where({ invoice_id: params.invoiceId })
       .sum('amount as total_paid');
 
-    const totalPayments = Number(payments[0]?.total_paid || 0);
+    const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
     const amountDue = params.totalAmount - (params.creditApplied + totalPayments);
     return Math.max(0, amountDue);
   }
@@ -1126,7 +1126,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
 
-      const totalPayments = Number(payments[0]?.total_paid || 0);
+      const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
       // Include credits in total paid calculation
       const creditApplied = Number(invoice.credit_applied || 0);
@@ -1253,7 +1253,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const payments = await tenantDb(trx, context.tenant).table('invoice_payments')
         .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
-      const totalPayments = Number(payments[0]?.total_paid || 0);
+      const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
       // Total paid includes both credits and payments
       const totalPaid = newCreditApplied + totalPayments;
@@ -1370,7 +1370,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const payments = await tenantDb(trx, context.tenant).table('invoice_payments')
         .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
-      const totalPayments = Number(payments[0]?.total_paid || 0);
+      const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
       if (data.refund_amount > totalPayments) {
         throw new Error('Refund amount cannot exceed total payments');
@@ -1415,7 +1415,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const netPayments = await tenantDb(trx, context.tenant).table('invoice_payments')
         .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
-      const netPaid = Number(netPayments[0]?.total_paid || 0);
+      const netPaid = Number((netPayments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
       // Include credits in total paid
       const creditApplied = Number(invoice.credit_applied || 0);

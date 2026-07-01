@@ -475,7 +475,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 <ClientAvatar
                   clientId={record.client_id || value}
                   clientName={value}
-                  logoUrl={null}
+                  logoUrl={record.client_logo_url ?? null}
                   size="xs"
                 />
               ) : (

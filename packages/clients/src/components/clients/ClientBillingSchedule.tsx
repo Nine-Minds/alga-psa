@@ -10,7 +10,11 @@ import { Info } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import type { BillingCycleType } from '@alga-psa/types';
-import { CLIENT_CADENCE_SCHEDULE_CONTEXT } from '@alga-psa/shared/billingClients';
+// Import the constant from its specific client-safe module, not the
+// '@alga-psa/shared/billingClients' barrel: the barrel `export *`s server-only
+// data-access modules (which import @alga-psa/db -> knex/secrets), which would
+// pull the server chain into this client component's browser bundle.
+import { CLIENT_CADENCE_SCHEDULE_CONTEXT } from '@alga-psa/shared/billingClients/clientCadenceScheduleContext';
 import {
   createNextBillingCycleAsync,
   getClientBillingCycleAnchorAsync,

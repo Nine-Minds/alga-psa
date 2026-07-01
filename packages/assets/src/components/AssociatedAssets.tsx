@@ -622,7 +622,6 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                     checked={areAllCurrentPageSelected()}
                                                     indeterminate={areSomeCurrentPageSelected()}
                                                     onChange={handleSelectAll}
-                                                    containerClassName="mb-0"
                                                 />
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -654,7 +653,6 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                             id={`select-asset-${asset.asset_id}`}
                                                             checked={isSelected}
                                                             onChange={() => handleAssetToggle(asset)}
-                                                            containerClassName="mb-0"
                                                         />
                                                     </td>
                                                     <td className="px-4 py-3">

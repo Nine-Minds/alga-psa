@@ -110,7 +110,7 @@ export class CategoryService extends BaseService {
 
       // Get total count
       const countQuery = query.clone();
-      const [{ count: total }] = await countQuery.count('* as count');
+      const [{ count: total }] = (await countQuery.count('* as count')) as Array<{ count: string }>;
 
       // Apply pagination
       if (filters.limit) {
@@ -286,7 +286,7 @@ export class CategoryService extends BaseService {
 
       // Get total count
       const countQuery = query.clone();
-      const [{ count: total }] = await countQuery.count('* as count');
+      const [{ count: total }] = (await countQuery.count('* as count')) as Array<{ count: string }>;
 
       // Apply pagination
       if (filters.limit) {
@@ -633,7 +633,7 @@ export class CategoryService extends BaseService {
 
       // Get total count
       const countQuery = query.clone();
-      const [{ count: total }] = await countQuery.count('* as count');
+      const [{ count: total }] = (await countQuery.count('* as count')) as Array<{ count: string }>;
 
       // Apply pagination
       if (filters.limit) {

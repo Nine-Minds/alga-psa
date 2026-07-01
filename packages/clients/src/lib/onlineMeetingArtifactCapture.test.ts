@@ -158,8 +158,8 @@ describe('online meeting artifact capture', () => {
 
     const source = fs.readFileSync(path.resolve(__dirname, './onlineMeetingArtifactCapture.ts'), 'utf8');
     expect(source).not.toContain('uploadDocument');
-    expect(source).toContain("trx('documents').insert");
-    expect(source).toContain("trx('document_associations').insert");
+    expect(source).toContain("tenantDb(trx, input.tenantId).table('documents').insert");
+    expect(source).toContain("tenantDb(trx, input.tenantId).table('document_associations').insert");
     expect(source).toContain('is_client_visible: input.isClientVisible');
   });
 

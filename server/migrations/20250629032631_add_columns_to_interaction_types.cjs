@@ -3,7 +3,7 @@ const INTERACTION_TYPE_ORDER_BACKFILL_REASON = 'discover tenants with interactio
 const INTERACTION_TYPE_SCHEMA_CHECK_REASON = 'schema constraint existence check for interaction type display order unique constraint';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 /**

@@ -1017,6 +1017,27 @@
         },
         "toasts": {
           "errorTitle": "Hudu-verbindingsfout"
+        },
+        "sync": {
+          "title": "Synchronisatie en automatisering",
+          "description": "Importeer activa voor alle gekoppelde klanten in één keer en houd ze automatisch up-to-date. Het koppelen van een bedrijf of lay-out configureert alleen de integratie — activa verschijnen pas na een import.",
+          "summary": "{{created}} aangemaakt · {{updated}} bijgewerkt · {{skipped}} overgeslagen · {{failed}} mislukt",
+          "toastErrorTitle": "Hudu-synchronisatiefout",
+          "importDoneTitle": "Hudu-import voltooid",
+          "syncDoneTitle": "Hudu-synchronisatie voltooid",
+          "importing": "Bezig met importeren…",
+          "importAll": "Alle gekoppelde klanten importeren",
+          "syncing2": "Bezig met synchroniseren…",
+          "syncAll": "Alles synchroniseren",
+          "autoSyncLabel": "Dagelijkse automatische synchronisatie",
+          "autoSyncHint": "Importeert automatisch nieuwe activa en vernieuwt bestaande één keer per dag voor elke gekoppelde klant.",
+          "neverRun": "Nog geen tenant-brede uitvoering.",
+          "lastRun": "Laatste uitvoering {{at}}: {{created}} aangemaakt · {{updated}} bijgewerkt · {{skipped}} overgeslagen · {{failed}} mislukt",
+          "status": {
+            "syncing": "Bezig…",
+            "completed": "Voltooid",
+            "error": "Fout"
+          }
         }
       }
     },
@@ -1334,6 +1355,8 @@
           },
           "connected": "Verbonden met NinjaOne",
           "connectedWithErrors": "NinjaOne verbonden met synchronisatiefouten",
+          "reconnectRequired": "NinjaOne opnieuw verbinden vereist",
+          "reconnectRequiredDescription": "De NinjaOne-autorisatie kan niet meer worden vernieuwd (token verlopen of ingetrokken). Maak opnieuw verbinding om apparaatsynchronisatie, meldingen en externe toegang te herstellen.",
           "instanceLabel": "Instantie:",
           "organizations": "{{count}} organisaties",
           "devices": "{{count}} apparaten",

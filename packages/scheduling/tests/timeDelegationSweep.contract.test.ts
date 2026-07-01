@@ -28,7 +28,7 @@ describe('time/delegation narrowing sweep contracts', () => {
     expect(timeSheetSource).toContain('if (!isOwner) {');
     expect(timeSheetSource).toContain('await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);');
     expect(timeSheetSource).toContain('export const fetchTimeSheetComments = withAuth(async');
-    expect(timeSheetSource).toContain(".first<{ user_id: string; first_name: string; last_name: string; email: string }>()");
+    expect(timeSheetSource).toContain("const timeSheet: { user_id: string; first_name: string; last_name: string; email: string } | undefined = await timeSheetQuery.first();");
     expect(timeSheetSource).toContain('await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);');
     expect(timeSheetSource).toContain('export const requestChangesForTimeSheet = withAuth(async');
     expect(timeSheetSource).toContain("if (approverId !== user.user_id) {");

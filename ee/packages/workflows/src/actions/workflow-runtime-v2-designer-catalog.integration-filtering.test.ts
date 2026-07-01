@@ -56,7 +56,13 @@ knexMock.schema = {
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: knexMock, tenant: fixture.tenant })),
-  auditLog: vi.fn().mockResolvedValue(undefined)
+  auditLog: vi.fn().mockResolvedValue(undefined),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      (o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q))
+  })
 }));
 
 vi.mock('@alga-psa/auth', () => ({

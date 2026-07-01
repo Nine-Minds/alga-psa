@@ -99,14 +99,7 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
 
       const db = tenantDb(trx, tenantId);
       const expirableQuotesQuery = db.table('quotes as q')
-        .select(
-          'q.quote_id',
-          'q.quote_number',
-          'q.title',
-          'q.valid_until',
-          'q.created_by',
-          'u.email as creator_email'
-        )
+        .select({ quote_id: 'q.quote_id', quote_number: 'q.quote_number', title: 'q.title', valid_until: 'q.valid_until', created_by: 'q.created_by', creator_email: 'u.email' })
         .where('q.is_template', false)
         .where('q.status', 'sent')
         .whereNotNull('q.valid_until')

@@ -2,7 +2,7 @@ const MIGRATION_TENANT = 'migration:20250220134600_add_registration_permissions'
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for registration permission backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 /**

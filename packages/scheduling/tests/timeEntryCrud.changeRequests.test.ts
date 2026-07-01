@@ -20,6 +20,15 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   resolveUserTimeZone: (...args: any[]) => resolveUserTimeZoneMock(...args),
   computeWorkDateFields: (...args: any[]) => computeWorkDateFieldsMock(...args),
+  truncateToMinute: (value: string | Date) =>
+    new Date(Math.floor(new Date(value).getTime() / 60000) * 60000),
+  tenantDb: (conn: any, tenant: string) => ({
+    tenant,
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (query: any, table: string, _left?: string, _right?: string, opts?: any) =>
+      opts?.type === 'left' ? query.leftJoin?.(table) ?? query : query.join?.(table) ?? query,
+  }),
 }));
 
 vi.mock('../src/actions/timeEntryDelegationAuth', () => ({

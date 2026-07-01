@@ -2,7 +2,7 @@ const MIGRATION_TENANT = 'migration:20250217204648_update_user_based_comments';
 const COMMENT_TENANT_DISCOVERY_REASON = 'discover tenants with historical comments for user author backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 exports.up = async function(knex) {

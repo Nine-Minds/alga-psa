@@ -85,6 +85,16 @@ function mapTacticalSeverity(input: unknown): NormalizedRmmAlertEvent['severity'
 }
 
 function toIso(value: unknown): string {
+  // Tactical RMM may send timestamps as epoch seconds/ms (number or numeric
+  // string, e.g. "1776073284"). new Date(<numeric string>) misparses those and
+  // the raw value reaches the rmm_alerts timestamp column → Postgres
+  // "date/time field value out of range". Normalize epochs explicitly.
+  if (typeof value === 'number' || (typeof value === 'string' && /^\d{10,13}$/.test(value.trim()))) {
+    const num = Number(value);
+    const ms = Math.abs(num) < 1e12 ? num * 1000 : num; // 10-digit → seconds, 13-digit → ms
+    const d = new Date(ms);
+    if (!Number.isNaN(d.getTime())) return d.toISOString();
+  }
   const parsed = new Date(String(value));
   return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
 }

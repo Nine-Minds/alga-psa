@@ -1996,7 +1996,6 @@ export default function TaskForm({
                           checked={item.completed}
                           onChange={(e) => updateChecklistItem(index, 'completed', e.target.checked)}
                           className="flex-none"
-                          containerClassName=""
                         />
                         {isItemEditing ? (
                           <div className="flex-1">

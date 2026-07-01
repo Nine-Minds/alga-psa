@@ -22,6 +22,9 @@
  * distribution so prior behaviour — every internal user can at least read interactions
  * — is restored. Idempotent: safe to re-run and safe for tenants that already have
  * some/all of the rows. Adjust ROLE_ACTIONS if a tenant uses custom role names.
+ *
+ * Uses raw knex (every query already passes `tenant` explicitly) so the migration
+ * runner does not load the @alga-psa/db ESM package.
  */
 
 const INTERACTION_PERMISSION_DEFS = [
@@ -42,21 +45,15 @@ const ROLE_ACTIONS = {
   'Dispatcher': ['create', 'read', 'update'],
   'Technician': ['create', 'read', 'update'],
 };
-const MIGRATION_TENANT = 'migration:20260622120000_add_interaction_permissions';
-const TENANT_ENUMERATION_REASON = 'enumerate tenants for interaction permission backfill';
 
-async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
-}
-
-async function ensurePermission(knex, db, tenant, def) {
-  const existing = await db.table('permissions')
+async function ensurePermission(knex, tenant, def) {
+  const existing = await knex('permissions')
     .where({ tenant, resource: def.resource, action: def.action })
     .first();
 
   if (existing) {
     if (existing.msp !== def.msp || existing.client !== def.client || existing.description !== def.description) {
-      await db.table('permissions')
+      await knex('permissions')
         .where({ tenant, permission_id: existing.permission_id })
         .update({
           msp: def.msp,
@@ -69,7 +66,7 @@ async function ensurePermission(knex, db, tenant, def) {
     return existing.permission_id;
   }
 
-  const [inserted] = await db.table('permissions')
+  const [inserted] = await knex('permissions')
     .insert({
       tenant,
       resource: def.resource,
@@ -84,8 +81,8 @@ async function ensurePermission(knex, db, tenant, def) {
   return inserted.permission_id;
 }
 
-async function assignPermission(knex, db, tenant, roleId, permissionId) {
-  const existing = await db.table('role_permissions')
+async function assignPermission(knex, tenant, roleId, permissionId) {
+  const existing = await knex('role_permissions')
     .where({ tenant, role_id: roleId, permission_id: permissionId })
     .first('tenant');
 
@@ -93,7 +90,7 @@ async function assignPermission(knex, db, tenant, roleId, permissionId) {
     return;
   }
 
-  await db.table('role_permissions').insert({
+  await knex('role_permissions').insert({
     tenant,
     role_id: roleId,
     permission_id: permissionId,
@@ -102,20 +99,17 @@ async function assignPermission(knex, db, tenant, roleId, permissionId) {
 }
 
 exports.up = async function up(knex) {
-  const tenantDb = await loadTenantDb();
-  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
-  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
+  const tenants = await knex('tenants').select('tenant');
 
   for (const { tenant } of tenants) {
-    const db = tenantDb(knex, tenant);
     // 1) Ensure all four interaction permission rows exist for this tenant.
     const permissionIdByAction = {};
     for (const def of INTERACTION_PERMISSION_DEFS) {
-      permissionIdByAction[def.action] = await ensurePermission(knex, db, tenant, def);
+      permissionIdByAction[def.action] = await ensurePermission(knex, tenant, def);
     }
 
     // 2) Grant the per-role action set to each matching MSP role.
-    const roles = await db.table('roles')
+    const roles = await knex('roles')
       .where({ tenant, msp: true })
       .whereIn('role_name', Object.keys(ROLE_ACTIONS))
       .select('role_id', 'role_name');
@@ -125,7 +119,7 @@ exports.up = async function up(knex) {
       for (const action of actions) {
         const permissionId = permissionIdByAction[action];
         if (permissionId) {
-          await assignPermission(knex, db, tenant, role.role_id, permissionId);
+          await assignPermission(knex, tenant, role.role_id, permissionId);
         }
       }
     }
@@ -133,14 +127,11 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
-  const tenantDb = await loadTenantDb();
-  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
-  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
+  const tenants = await knex('tenants').select('tenant');
   const actions = INTERACTION_PERMISSION_DEFS.map((def) => def.action);
 
   for (const { tenant } of tenants) {
-    const db = tenantDb(knex, tenant);
-    const permissionIds = await db.table('permissions')
+    const permissionIds = await knex('permissions')
       .where({ tenant, resource: 'interaction' })
       .whereIn('action', actions)
       .pluck('permission_id');
@@ -149,12 +140,12 @@ exports.down = async function down(knex) {
       continue;
     }
 
-    await db.table('role_permissions')
+    await knex('role_permissions')
       .where({ tenant })
       .whereIn('permission_id', permissionIds)
       .del();
 
-    await db.table('permissions')
+    await knex('permissions')
       .where({ tenant, resource: 'interaction' })
       .whereIn('action', actions)
       .del();

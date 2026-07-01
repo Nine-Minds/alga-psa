@@ -4,7 +4,7 @@ const STANDARD_CHANNELS_GLOBAL_REASON = 'standard_channels global reference tabl
 const CHANNELS_ORDER_BACKFILL_REASON = 'historical channel display order backfill; channels is not registered in tenantDb metadata';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 /**

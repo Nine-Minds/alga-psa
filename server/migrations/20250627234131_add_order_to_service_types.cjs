@@ -2,7 +2,7 @@ const MIGRATION_TENANT = 'migration:20250627234131_add_order_to_service_types';
 const SERVICE_TYPE_TENANT_DISCOVERY_REASON = 'discover tenants with service types for order backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 /**

@@ -449,9 +449,14 @@ export const sendPortalInvitation = withAuth(async (
       const systemEmailService = await getSystemEmailService();
       emailConfigured = await systemEmailService.isConfigured();
       if (!emailConfigured) {
+        // If a provider was configured but failed to initialize (e.g. an SMTP
+        // auth/TLS error), report the real cause instead of "disabled".
+        const initError = await tenantEmailService.getInitializationError();
         return {
           success: false,
-          error: 'Email service is disabled or not configured',
+          error: initError
+            ? `Email provider not ready: ${initError}`
+            : 'Email service is disabled or not configured',
           errorCode: 'EMAIL_NOT_CONFIGURED'
         };
       }

@@ -1282,7 +1282,7 @@ export class ProjectService extends BaseService<IProject> {
     }
 
     const db = tenantDb(knex, context.tenant);
-    const query = db.table<IProjectStatusMapping>('project_status_mappings as psm')
+    const query = db.table('project_status_mappings as psm')
       .where({ 'psm.project_id': projectId });
     db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
     db.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
@@ -1320,7 +1320,7 @@ export class ProjectService extends BaseService<IProject> {
 
     // Get total count
     const countQuery = baseQuery.clone().clearSelect().count('* as count');
-    const [{ count }] = await countQuery;
+    const [{ count }] = (await countQuery) as Array<{ count: string }>;
 
     // Apply pagination
     const page = pagination.page || 1;

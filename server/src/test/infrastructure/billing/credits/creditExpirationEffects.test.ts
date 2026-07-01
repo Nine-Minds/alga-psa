@@ -16,8 +16,6 @@ import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { createClient } from '../../../../../test-utils/testDataFactory';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
-let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-let mockedUserId = 'mock-user-id';
 
 vi.mock('server/src/lib/analytics/posthog', () => ({
   analytics: {
@@ -37,14 +35,10 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   };
 });
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  return createAuthModuleMock();
+});
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -108,26 +102,22 @@ describe('Credit Expiration Effects Tests', () => {
       userType: 'internal'
     });
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await setupDefaultTax();
   }, 60000);
 
   beforeEach(async () => {
     context = await resetContext();
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
     await setupDefaultTax();
   }, 30000);
 

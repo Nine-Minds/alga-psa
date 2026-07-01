@@ -261,6 +261,18 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    scoped: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    parentScopedTable: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantWhereColumn: (q: any) => q,
+  }),
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
   runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),

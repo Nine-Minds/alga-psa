@@ -8,7 +8,7 @@ const MIGRATION_TENANT = 'migration:20260425200000_add_tenant_id_to_workflow_def
 const WORKFLOW_TENANT_BACKFILL_REASON = 'workflow tenant_id backfill before facade tenant column is available';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 const ensureSequentialMode = async (knex) => {

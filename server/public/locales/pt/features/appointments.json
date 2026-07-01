@@ -1,161 +1,161 @@
 {
-  "modal": {
-    "title": "Request Appointment",
-    "editTitle": "Edit Appointment Request",
-    "step": "Step",
-    "of": "of"
-  },
-  "steps": {
-    "service": "Service",
-    "date": "Date",
-    "time": "Time",
-    "confirm": "Confirm"
-  },
-  "step1": {
-    "title": "Select Service",
-    "description": "Choose the service you need assistance with",
-    "selectService": "Select a service",
-    "serviceLabel": "Service",
-    "ticketLabel": "Link to Existing Ticket (Optional)",
-    "selectTicket": "Select a ticket",
-    "noTicket": "No ticket",
-    "searchTickets": "Search tickets...",
-    "noTicketsFound": "No tickets found matching your search",
-    "ticketHint": "Optionally link this appointment to an existing support ticket"
-  },
-  "step2": {
-    "title": "Choose Date",
-    "description": "Select your preferred appointment date",
-    "selectDate": "Select an available date",
-    "selectedDate": "Selected date"
-  },
-  "step3": {
-    "title": "Select Time & Technician",
-    "description": "Choose your preferred time slot and optionally select a technician",
-    "selectTime": "Available Time Slots",
-    "minutes": "min",
-    "noTimeSlotsAvailable": "No time slots available for this date. Please select a different date.",
-    "technicianLabel": "Preferred Technician (Optional)",
-    "selectTechnician": "Select a technician",
-    "noPreference": "No preference",
-    "technicianHint": "This is a preference and may be adjusted based on availability"
-  },
-  "step4": {
-    "title": "Review & Confirm",
-    "description": "Add any additional details and review your appointment request",
-    "descriptionPlaceholder": "Please provide any additional details about your request...",
-    "summaryTitle": "Appointment Summary",
-    "service": "Service",
-    "dateTime": "Date & Time",
-    "at": "at",
-    "duration": "Duration",
-    "technician": "Preferred Technician",
-    "linkedTicket": "Linked Ticket",
-    "approvalNote": "Your appointment request will be submitted for approval. You'll receive an email confirmation once approved.",
-    "submit": "Request Appointment",
-    "update": "Update Appointment"
-  },
-  "status": {
-    "pending": "Pending Approval",
-    "approved": "Confirmed",
-    "declined": "Declined",
-    "cancelled": "Cancelled"
-  },
-  "errors": {
-    "loadServicesFailed": "Failed to load available services. Please try again.",
-    "loadDatesFailed": "Failed to load available dates. Please try again.",
-    "loadSlotsFailed": "Failed to load available time slots. Please try again.",
-    "createFailed": "Failed to create appointment request. Please try again.",
-    "updateFailed": "Failed to update appointment request. Please try again.",
-    "loadFailed": "Failed to load appointments. Please try again.",
-    "notFound": "Appointment request not found"
-  },
-  "messages": {
-    "requestSuccess": "Appointment request submitted successfully!",
-    "requestSuccessDetail": "We'll review your request and send you a confirmation email once approved.",
-    "updateSuccess": "Appointment request updated successfully!",
-    "updateSuccessDetail": "Your appointment request has been updated.",
-    "cancelSuccess": "Appointment cancelled successfully.",
-    "cancelFailed": "Failed to cancel appointment. Please try again."
-  },
-  "page": {
-    "title": "My Appointments",
-    "subtitle": "View and manage your appointment requests",
-    "requestButton": "Request New Appointment",
-    "noAppointments": "No appointments found",
-    "noAppointmentsDescription": "You haven't requested any appointments yet. Request one now to get started!"
-  },
-  "filters": {
-    "all": "All",
-    "pending": "Pending",
-    "approved": "Approved",
-    "declined": "Declined"
-  },
-  "table": {
-    "service": "Service",
-    "dateTime": "Date & Time",
-    "status": "Status",
-    "technician": "Technician",
-    "actions": "Actions",
-    "minutes": "min",
-    "notAssigned": "Not assigned",
-    "viewDetails": "View Details",
-    "edit": "Edit",
-    "cancel": "Cancel",
-    "rowActionsLabel": "Ações da linha"
-  },
-  "details": {
-    "title": "Appointment Details",
-    "statusApproved": "This appointment has been confirmed",
-    "statusPending": "This appointment is pending approval",
-    "statusDeclined": "This appointment request was declined",
-    "statusCancelled": "This appointment was cancelled",
-    "reason": "Reason",
-    "reference": "Reference",
-    "service": "Service",
-    "dateTime": "Date & Time",
-    "technician": "Assigned Technician",
-    "linkedTicket": "Linked Ticket",
-    "description": "Description",
-    "created": "Requested",
-    "approved": "Approved",
-    "cancelButton": "Cancel Appointment",
-    "teamsMeeting": "Reunião do Teams",
-    "joinTeamsMeeting": "Participar na reunião do Teams",
-    "downloadRecording": "Baixar gravação",
-    "viewTranscript": "Ver transcrição"
-  },
-  "cancel": {
-    "title": "Cancel Appointment",
-    "message": "Are you sure you want to cancel this appointment request? This action cannot be undone.",
-    "confirm": "Yes, Cancel",
-    "messageWithTeamsWarning": "Tem a certeza de que pretende cancelar este pedido de marcação? Esta ação não pode ser anulada. A reunião associada do Microsoft Teams também será eliminada."
-  },
-  "ticketSection": {
-    "title": "Appointment Requests",
-    "service": "Service",
-    "publicRequest": "Public Request",
-    "minutes": "minutes",
-    "preferred": "Preferred:",
-    "approvedBy": "Approved by",
-    "on": "on",
-    "declined": "Declined:",
-    "invalidDateTime": "Invalid date/time"
-  },
   "views": {
     "list": "Lista",
     "calendar": "Calendário",
-    "label": "Mudar vista"
+    "label": "Alternar visualização"
   },
   "calendar": {
     "today": "Hoje",
     "more": "mais",
-    "label": "Calendário de agendamentos",
+    "label": "Calendário de compromissos",
     "previousMonth": "Mês anterior",
     "nextMonth": "Próximo mês",
-    "cellWithCount": "{{date}}, {{count}} agendamentos",
-    "moreAria": "Mostrar mais {{count}} em {{date}}",
-    "requestOnDate": "Pedir consulta em {{date}}"
+    "cellWithCount": "Nomeações {{date}}, {{count}}",
+    "moreAria": "Mostre {{count}} mais em {{date}}",
+    "requestOnDate": "Solicitar agendamento em {{date}}"
   },
-  "backToAppointments": "Voltar para os agendamentos"
+  "modal": {
+    "title": "Solicitar agendamento",
+    "editTitle": "Editar solicitação de agendamento",
+    "step": "Etapa",
+    "of": "de"
+  },
+  "steps": {
+    "service": "Serviço",
+    "date": "Data",
+    "time": "Tempo",
+    "confirm": "Confirmar"
+  },
+  "step1": {
+    "title": "Selecione o serviço",
+    "description": "Escolha o serviço com o qual você precisa de ajuda",
+    "selectService": "Selecione um serviço",
+    "serviceLabel": "Serviço",
+    "ticketLabel": "Link para ticket existente (opcional)",
+    "selectTicket": "Selecione um ticket",
+    "noTicket": "Sem ticket",
+    "searchTickets": "Pesquisar tickets...",
+    "noTicketsFound": "Nenhum ticket encontrado correspondente à sua pesquisa",
+    "ticketHint": "Opcionalmente, vincule este compromisso a um ticket de suporte existente"
+  },
+  "step2": {
+    "title": "Escolha a data",
+    "description": "Selecione a data de agendamento de sua preferência",
+    "selectDate": "Selecione uma data disponível",
+    "selectedDate": "Data selecionada"
+  },
+  "step3": {
+    "title": "Selecione Tempo e Técnico",
+    "description": "Escolha o horário de sua preferência e, opcionalmente, selecione um técnico",
+    "selectTime": "Horários disponíveis",
+    "minutes": "min",
+    "noTimeSlotsAvailable": "Não há horários disponíveis para esta data. Selecione uma data diferente.",
+    "technicianLabel": "Técnico preferencial (opcional)",
+    "selectTechnician": "Selecione um técnico",
+    "noPreference": "Sem preferência",
+    "technicianHint": "Esta é uma preferência e pode ser ajustada com base na disponibilidade"
+  },
+  "step4": {
+    "title": "Revise e confirme",
+    "description": "Adicione quaisquer detalhes adicionais e revise sua solicitação de agendamento",
+    "descriptionPlaceholder": "Forneça quaisquer detalhes adicionais sobre sua solicitação...",
+    "summaryTitle": "Resumo do compromisso",
+    "service": "Serviço",
+    "dateTime": "Data e hora",
+    "at": "no",
+    "duration": "Duração",
+    "technician": "Técnico preferencial",
+    "linkedTicket": "Ticket vinculado",
+    "approvalNote": "Sua solicitação de agendamento será submetida para aprovação. Você receberá uma confirmação por e-mail assim que for aprovado.",
+    "submit": "Solicitar agendamento",
+    "update": "Atualizar compromisso"
+  },
+  "status": {
+    "pending": "Aprovação pendente",
+    "approved": "Confirmado",
+    "declined": "Recusado",
+    "cancelled": "Cancelado"
+  },
+  "errors": {
+    "loadServicesFailed": "Falha ao carregar os serviços disponíveis. Por favor, tente novamente.",
+    "loadDatesFailed": "Falha ao carregar as datas disponíveis. Por favor, tente novamente.",
+    "loadSlotsFailed": "Falha ao carregar os horários disponíveis. Por favor, tente novamente.",
+    "createFailed": "Falha ao criar solicitação de agendamento. Por favor, tente novamente.",
+    "updateFailed": "Falha ao atualizar a solicitação de agendamento. Por favor, tente novamente.",
+    "loadFailed": "Falha ao carregar compromissos. Por favor, tente novamente.",
+    "notFound": "Solicitação de agendamento não encontrada"
+  },
+  "messages": {
+    "requestSuccess": "Pedido de agendamento enviado com sucesso!",
+    "requestSuccessDetail": "Analisaremos sua solicitação e enviaremos um e-mail de confirmação assim que for aprovado.",
+    "updateSuccess": "Solicitação de agendamento atualizada com sucesso!",
+    "updateSuccessDetail": "Sua solicitação de agendamento foi atualizada.",
+    "cancelSuccess": "Compromisso cancelado com sucesso.",
+    "cancelFailed": "Falha ao cancelar compromisso. Por favor, tente novamente."
+  },
+  "page": {
+    "title": "Meus compromissos",
+    "subtitle": "Visualize e gerencie suas solicitações de agendamento",
+    "requestButton": "Solicitar novo compromisso",
+    "noAppointments": "Nenhum compromisso encontrado",
+    "noAppointmentsDescription": "Você ainda não solicitou nenhum agendamento. Solicite um agora para começar!"
+  },
+  "filters": {
+    "all": "Todos",
+    "pending": "Pendente",
+    "approved": "Aprovado",
+    "declined": "Recusado"
+  },
+  "table": {
+    "service": "Serviço",
+    "dateTime": "Data e hora",
+    "status": "Status",
+    "technician": "Técnico",
+    "actions": "Ações",
+    "minutes": "min",
+    "notAssigned": "Não atribuído",
+    "viewDetails": "Ver detalhes",
+    "edit": "Editar",
+    "cancel": "Cancelar",
+    "rowActionsLabel": "Ações de linha"
+  },
+  "details": {
+    "title": "Detalhes do compromisso",
+    "statusApproved": "Esta nomeação foi confirmada",
+    "statusPending": "Esta nomeação está pendente de aprovação",
+    "statusDeclined": "Esta solicitação de agendamento foi recusada",
+    "statusCancelled": "Este compromisso foi cancelado",
+    "reason": "Razão",
+    "reference": "Referência",
+    "service": "Serviço",
+    "dateTime": "Data e hora",
+    "teamsMeeting": "Reunião de equipes",
+    "joinTeamsMeeting": "Participe da reunião de equipes",
+    "technician": "Técnico Designado",
+    "linkedTicket": "Ticket vinculado",
+    "description": "Descrição",
+    "created": "Solicitado",
+    "approved": "Aprovado",
+    "cancelButton": "Cancelar compromisso",
+    "downloadRecording": "Baixar gravação",
+    "viewTranscript": "Ver transcrição"
+  },
+  "cancel": {
+    "title": "Cancelar compromisso",
+    "message": "Tem certeza de que deseja cancelar esta solicitação de agendamento? Esta ação não pode ser desfeita.",
+    "messageWithTeamsWarning": "Tem certeza de que deseja cancelar esta solicitação de agendamento? Esta ação não pode ser desfeita. Isso também excluirá a reunião do Microsoft Teams.",
+    "confirm": "Sim, cancelar"
+  },
+  "ticketSection": {
+    "title": "Solicitações de agendamento",
+    "service": "Serviço",
+    "publicRequest": "Solicitação pública",
+    "minutes": "minutos",
+    "preferred": "Preferido:",
+    "approvedBy": "Aprovado por",
+    "on": "sobre",
+    "declined": "Recusado:",
+    "invalidDateTime": "Data/hora inválida"
+  },
+  "backToAppointments": "Voltar para compromissos"
 }

@@ -118,6 +118,16 @@ vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: hoisted.getAdminConnectionMock,
 }));
 
+// Mock tenantDb so resolution runs against the simple in-memory db builder
+// instead of the real scoped-query machinery (which applies an alias-qualified
+// tenant predicate the builder cannot match).
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    unscoped: (table: string) => conn(table),
+  }),
+}));
+
 import { resolveMicrosoftConsumerProfileConfig } from './microsoftConsumerProfileResolution';
 
 describe('resolveMicrosoftConsumerProfileConfig', () => {

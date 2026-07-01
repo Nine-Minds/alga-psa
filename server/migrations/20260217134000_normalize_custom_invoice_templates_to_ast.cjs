@@ -14,7 +14,7 @@ const TEMPLATE_AST_BACKFILL_REASON = 'all-tenant invoice template AST backfill';
 const CUSTOM_SIGNAL_TENANT_DISCOVERY_REASON = 'discover tenants with custom invoice template signals';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 const TRANSPARENT_PIXEL_DATA_URI = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';

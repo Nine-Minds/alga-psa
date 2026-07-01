@@ -6,7 +6,7 @@ const MIGRATION_TENANT = 'migration:20250922113000_backfill_settings_permissions
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for settings permission action backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 exports.up = async function up(knex) {

@@ -4,29 +4,29 @@
       "empty": "-"
     },
     "statusLabels": {
-      "completed": "Completed",
-      "failed": "Failed",
-      "processing": "Processing",
-      "pending": "Pending"
+      "completed": "Concluído",
+      "failed": "Fracassado",
+      "processing": "Processamento",
+      "pending": "Pendente"
     },
     "runnerLabels": {
       "temporal": "Temporal",
-      "pgboss": "PG Boss"
+      "pgboss": "Chefe do PG"
     }
   },
   "recentTable": {
     "columns": {
-      "jobName": "Job Name",
-      "runner": "Runner",
+      "jobName": "Nome do trabalho",
+      "runner": "Corredor",
       "status": "Status",
-      "duration": "Duration",
-      "started": "Started",
-      "completed": "Terminada"
+      "duration": "Duração",
+      "started": "Iniciado",
+      "completed": "Terminou"
     },
     "time": {
-      "justNow": "Just now",
-      "minutesAgo": "{{count}}m ago",
-      "hoursAgo": "{{count}}h ago"
+      "justNow": "Agora mesmo",
+      "minutesAgo": "{{count}}m atrás",
+      "hoursAgo": "{{count}}h atrás"
     },
     "duration": {
       "milliseconds": "{{count}}ms",
@@ -36,70 +36,70 @@
     },
     "externalId": "ID: {{id}}...",
     "print": {
-      "title": "Jobs recentes",
-      "subtitle": "{{count}} jobs",
-      "noJobs": "Nenhum job para imprimir",
+      "title": "Empregos recentes",
+      "subtitle": "{{count}} trabalhos",
+      "noJobs": "Não há trabalhos para imprimir",
       "columns": {
-        "jobName": "Nome do job",
-        "runner": "Executor",
+        "jobName": "Nome do trabalho",
+        "runner": "Corredor",
         "status": "Status",
         "duration": "Duração",
         "started": "Iniciado",
-        "completed": "Terminada"
+        "completed": "Terminou"
       },
       "optionsDialog": {
         "title": "Opções de impressão",
-        "description": "Escolha quais colunas incluir ao imprimir os jobs recentes."
+        "description": "Escolha quais colunas incluir ao imprimir trabalhos recentes."
       }
     }
   },
   "metrics": {
     "labels": {
-      "totalJobs": "Total Jobs",
-      "totalJobsPgBoss": "Total Jobs (PG Boss)",
-      "totalJobsTemporal": "Total Jobs (Temporal)",
-      "completed": "Completed",
-      "failed": "Failed",
-      "pending": "Pending",
-      "processing": "Processing",
-      "pgboss": "PG Boss",
-      "temporal": "Temporal",
-      "queued": "Em fila",
-      "running": "Em execução"
+      "totalJobs": "Total de trabalhos",
+      "totalJobsPgBoss": "Total de trabalhos (PG Boss)",
+      "totalJobsTemporal": "Total de trabalhos (Temporal)",
+      "completed": "Concluído",
+      "failed": "Fracassado",
+      "pending": "Pendente",
+      "processing": "Processamento",
+      "queued": "Na fila",
+      "running": "Em execução",
+      "pgboss": "Chefe do PG",
+      "temporal": "Temporal"
     },
-    "successRate": "{{count}}% success rate",
-    "successRateNone": "Ainda não há tarefas concluídas"
+    "successRate": "Taxa de sucesso de {{count}}%",
+    "successRateNone": "Ainda não há trabalhos concluídos"
   },
   "historyTable": {
     "columns": {
-      "jobName": "Job Name",
+      "jobName": "Nome do trabalho",
       "status": "Status",
-      "created": "Created",
-      "started": "Started",
-      "completed": "Completed"
+      "created": "Criado",
+      "started": "Iniciado",
+      "completed": "Concluído"
     }
   },
   "progress": {
-    "loading": "Loading job details...",
+    "loading": "Carregando detalhes do trabalho...",
     "labels": {
-      "created": "Created:",
-      "jobData": "Job Data"
+      "created": "Criado:",
+      "jobData": "Dados do trabalho"
     }
   },
   "drawer": {
-    "title": "Job Details",
+    "title": "Detalhes do trabalho",
     "jobId": "ID: {{id}}",
     "sections": {
-      "progress": "Job Progress",
-      "metrics": "Job Metrics",
-      "history": "Job History"
+      "progress": "Progresso do Trabalho",
+      "metrics": "Métricas de Trabalho",
+      "history": "Histórico de trabalho"
     }
   },
   "stepHistory": {
-    "title": "Job Steps",
+    "title": "Etapas do trabalho",
     "labels": {
-      "processed": "Processed:",
-      "retries": "Retries:"
+      "processed": "Processado:",
+      "retries": "Novas tentativas:"
     }
   },
   "actions": {
@@ -109,32 +109,32 @@
   "clearHistory": {
     "button": "Limpar histórico",
     "dialog": {
-      "title": "Limpar histórico de tarefas",
-      "warning": "Isto remove permanentemente o histórico de tarefas desta lista e não pode ser desfeito. Não para nem cancela as tarefas que ainda estão em execução.",
+      "title": "Limpar histórico de trabalho",
+      "warning": "Esta ação remove permanentemente o histórico de trabalhos desta lista e não pode ser desfeita. Ele não interrompe nem cancela trabalhos que ainda estão em execução.",
       "daysLabel": "Idade em dias",
       "daysError": "Insira um número inteiro de dias (1 ou mais).",
       "cancel": "Cancelar",
-      "clearing": "A limpar…",
+      "clearing": "Limpando…",
       "confirm": "Limpar histórico"
     },
     "scope": {
       "finished": {
-        "label": "Apenas concluídas",
-        "description": "Tarefas concluídas e com falha. As tarefas pendentes, em fila e em execução são mantidas."
+        "label": "Concluído apenas",
+        "description": "Trabalhos concluídos e com falha. Os trabalhos pendentes, enfileirados e em execução são mantidos."
       },
       "all": {
-        "label": "Todos os estados",
-        "description": "Todas as tarefas, incluindo as pendentes, em fila e ainda em execução."
+        "label": "Todos os status",
+        "description": "Todos os trabalhos, incluindo os pendentes, em fila e ainda em execução."
       }
     },
     "age": {
-      "toggle": "Eliminar apenas tarefas mais antigas do que uma idade definida"
+      "toggle": "Exclua apenas trabalhos com idade superior à definida"
     },
     "toast": {
-      "none": "Nenhuma tarefa correspondente para limpar.",
-      "error": "Falha ao limpar o histórico de tarefas. Tente novamente.",
-      "success_one": "{{count}} tarefa removida do histórico.",
-      "success_other": "{{count}} tarefas removidas do histórico."
+      "none": "Não há trabalhos correspondentes para limpar.",
+      "error": "Falha ao limpar o histórico do trabalho. Por favor, tente novamente.",
+      "success_one": "Trabalho {{count}} apagado do histórico.",
+      "success_other": "Trabalhos {{count}} apagados do histórico."
     }
   }
 }

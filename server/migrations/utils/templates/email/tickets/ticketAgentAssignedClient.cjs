@@ -28,6 +28,7 @@ const SUBJECTS = {
   nl: 'Uw ticket wordt behandeld \u2022 {{ticket.title}}',
   it: 'Il suo ticket \u00e8 in lavorazione \u2022 {{ticket.title}}',
   pl: 'Twoje zg\u0142oszenie jest w trakcie obs\u0142ugi \u2022 {{ticket.title}}',
+  pt: 'Seu ticket está em atendimento • {{ticket.title}}',
 };
 
 /* eslint-disable max-len */
@@ -150,6 +151,23 @@ const COPY = {
     textAssigned: 'Przypisane do',
     textRequester: 'Zg\u0142aszaj\u0105cy',
     textView: 'Zobacz zg\u0142oszenie',
+  },
+  pt: {
+    headerLabel: 'Agente atribuído',
+    intro: '<strong>{{ticket.assignedToName}}</strong> foi atribuído ao seu ticket para <strong>{{ticket.clientName}}</strong>. Ele entrará em contato em breve com atualizações.',
+    badgePrefix: 'Ticket #',
+    priority: 'Prioridade',
+    status: 'Status',
+    assignedTo: 'Atribuído a',
+    board: 'Quadro',
+    category: 'Categoria',
+    requester: 'Solicitante',
+    viewButton: 'Ver ticket',
+    footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+    textHeader: 'Seu ticket está em atendimento',
+    textAssigned: 'Atribuído a',
+    textRequester: 'Solicitante',
+    textView: 'Ver ticket',
   },
 };
 /* eslint-enable max-len */

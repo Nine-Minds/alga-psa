@@ -128,6 +128,15 @@
   color: var(--appliance-sidebar-text);
 }
 
+/* The toolbar/log-control buttons sit on light panels, not the dark sidebar, so
+   the shared hover above (which uses the near-white --appliance-sidebar-text)
+   renders light-on-light. Keep the purple-tint background but use readable dark
+   text. Same selector specificity, declared later, so only color is overridden. */
+.toolbar button:hover,
+.logControls button:hover:not(:disabled) {
+  color: var(--appliance-text);
+}
+
 .activeTab,
 .setupLink[aria-current="page"] {
   border-color: color-mix(

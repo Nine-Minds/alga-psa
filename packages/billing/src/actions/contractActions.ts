@@ -16,6 +16,7 @@ import {
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
@@ -104,6 +105,27 @@ const mapTemplateToContract = (template: IContractTemplate): IContract => ({
   updated_at: template.updated_at,
 });
 
+async function attachContractClientLogos(
+  rows: IContractWithClient[],
+  tenant: string,
+): Promise<IContractWithClient[]> {
+  const clientIds = Array.from(
+    new Set(
+      rows
+        .map((row) => row.client_id)
+        .filter((clientId): clientId is string => Boolean(clientId)),
+    ),
+  );
+  if (clientIds.length === 0) {
+    return rows;
+  }
+  const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+  return rows.map((row) => ({
+    ...row,
+    logoUrl: row.client_id ? logoUrlsMap.get(row.client_id) ?? null : null,
+  }));
+}
+
 async function isTemplateContract(knex: TenantScopedKnex, tenant: string, contractId: string): Promise<boolean> {
   const template = await tenantScopedTable(knex, tenant, 'contract_templates')
     .where({ template_id: contractId })
@@ -147,7 +169,8 @@ export const getContractsWithClients = withAuth(async (user, { tenant }): Promis
     await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
-    return await Contract.getAllWithClients(knex, tenant);
+    const rows = await Contract.getAllWithClients(knex, tenant);
+    return await attachContractClientLogos(rows, tenant);
   } catch (error) {
     console.error('Error fetching contracts with clients:', error);
     if (error instanceof Error) {
@@ -183,7 +206,7 @@ export const getDraftContracts = withAuth(async (user, { tenant }): Promise<ICon
       )
       .orderBy('co.updated_at', 'desc');
 
-    return rows as unknown as IContractWithClient[];
+    return await attachContractClientLogos(rows as unknown as IContractWithClient[], tenant);
   } catch (error) {
     console.error('Error fetching draft contracts:', error);
     if (error instanceof Error) {

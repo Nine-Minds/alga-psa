@@ -12,6 +12,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import ConnectedClientsCard from './ConnectedClientsCard';
 import type { ColumnDefinition } from '@alga-psa/types';
 import type { TrustedIdp, Agent, Role, AuditRow, PlatformProvider, ConnectIdentity } from './mcpTypes';
 import { getMcpDemoMode, demoState, demoAuditPage, demoConnectResult } from './mcpDemoData';
@@ -676,6 +677,9 @@ export default function McpServerSettings() {
           </CardContent>
         </Card>
       )}
+
+      {/* Connected MCP clients (interactive OAuth — Alga as Authorization Server) */}
+      <ConnectedClientsCard />
 
       <ConfirmationDialog
         id="mcp-remove-agent-dialog"

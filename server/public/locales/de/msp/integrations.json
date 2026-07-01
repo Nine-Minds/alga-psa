@@ -1017,6 +1017,27 @@
         },
         "toasts": {
           "errorTitle": "Hudu-Verbindungsfehler"
+        },
+        "sync": {
+          "title": "Synchronisierung & Automatisierung",
+          "description": "Importieren Sie Assets für alle zugeordneten Kunden auf einmal und halten Sie sie automatisch aktuell. Das Zuordnen eines Unternehmens oder Layouts konfiguriert nur die Integration – Assets erscheinen erst nach einem Import.",
+          "summary": "{{created}} erstellt · {{updated}} aktualisiert · {{skipped}} übersprungen · {{failed}} fehlgeschlagen",
+          "toastErrorTitle": "Hudu-Synchronisierungsfehler",
+          "importDoneTitle": "Hudu-Import abgeschlossen",
+          "syncDoneTitle": "Hudu-Synchronisierung abgeschlossen",
+          "importing": "Wird importiert…",
+          "importAll": "Alle zugeordneten Kunden importieren",
+          "syncing2": "Wird synchronisiert…",
+          "syncAll": "Alle synchronisieren",
+          "autoSyncLabel": "Tägliche automatische Synchronisierung",
+          "autoSyncHint": "Importiert täglich automatisch neue Assets und aktualisiert bestehende für jeden zugeordneten Kunden.",
+          "neverRun": "Noch kein mandantenweiter Lauf.",
+          "lastRun": "Letzter Lauf {{at}}: {{created}} erstellt · {{updated}} aktualisiert · {{skipped}} übersprungen · {{failed}} fehlgeschlagen",
+          "status": {
+            "syncing": "Läuft…",
+            "completed": "Abgeschlossen",
+            "error": "Fehler"
+          }
         }
       }
     },
@@ -1334,6 +1355,8 @@
           },
           "connected": "Mit NinjaOne verbunden",
           "connectedWithErrors": "NinjaOne verbunden mit Synchronisierungsfehlern",
+          "reconnectRequired": "NinjaOne-Neuverbindung erforderlich",
+          "reconnectRequiredDescription": "Die NinjaOne-Autorisierung kann nicht mehr aktualisiert werden (Token abgelaufen oder widerrufen). Stellen Sie die Verbindung erneut her, um Gerätesynchronisierung, Warnungen und Fernzugriff wiederherzustellen.",
           "instanceLabel": "Instanz:",
           "organizations": "{{count}} Organisationen",
           "devices": "{{count}} Geräte",

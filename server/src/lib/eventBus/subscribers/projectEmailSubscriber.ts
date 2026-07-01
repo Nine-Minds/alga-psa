@@ -156,7 +156,7 @@ async function fetchProjectForEmail(
 
   return query
     .where('p.project_id', projectId)
-    .first<any>();
+    .first();
 }
 
 async function fetchTaskResourceEmails(
@@ -166,7 +166,7 @@ async function fetchTaskResourceEmails(
 ): Promise<Array<{ email?: string | null; user_id?: string | null }>> {
   const scopedDb = tenantDb(db, tenantId);
   const query = scopedDb.table('task_resources as tr')
-    .select('u.email', 'u.user_id');
+    .select({ email: 'u.email', user_id: 'u.user_id' });
 
   scopedDb.tenantJoin(query, 'users as u', 'u.user_id', 'tr.additional_user_id', {
     type: 'left',
@@ -177,7 +177,7 @@ async function fetchTaskResourceEmails(
 
   return query
     .where('tr.task_id', taskId)
-    .whereNotNull('tr.additional_user_id') as unknown as Promise<Array<{ email?: string | null; user_id?: string | null }>>;
+    .whereNotNull('tr.additional_user_id');
 }
 
 /**
@@ -1084,7 +1084,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
 
     const project = await query
       .where('p.project_id', payload.projectId)
-      .first<any>();
+      .first();
 
     // Log the project details for debugging
     logger.info('[ProjectEmailSubscriber] Project details:', {
@@ -1186,18 +1186,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
     // Note: We removed the 'users as au' join for the assigner because it caused
     // Citus errors with complex joins. The assigner name is now passed in the event payload.
     const query = scopedDb.table('project_tasks as t')
-      .select(
-        't.task_id',
-        't.task_name',
-        't.description',
-        't.due_date',
-        't.phase_id',
-        'p.project_name',
-        'p.project_id',
-        'u.email as user_email',
-        'u.first_name as user_first_name',
-        'u.last_name as user_last_name'
-      );
+      .select({ task_id: 't.task_id', task_name: 't.task_name', description: 't.description', due_date: 't.due_date', phase_id: 't.phase_id', project_name: 'p.project_name', project_id: 'p.project_id', user_email: 'u.email', user_first_name: 'u.first_name', user_last_name: 'u.last_name' });
     scopedDb.tenantJoin(query, 'project_phases as ph', 'ph.phase_id', 't.phase_id', { type: 'left' });
     scopedDb.tenantJoin(query, 'projects as p', 'p.project_id', 'ph.project_id', {
       type: 'left',
@@ -1217,7 +1206,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
     });
 
     const task = await query
-      .first<any>();
+      .first();
 
     if (!task) {
       logger.warn('Could not send task assigned email - task not found:', {
@@ -1268,7 +1257,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
         if (!isValidEmail(user.email)) {
           return acc;
         }
-        const key = user.user_id || user.email;
+        const key = (user.user_id || user.email) as string;
         if (!acc.has(key)) {
           acc.set(key, user);
         }
@@ -1296,7 +1285,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
         replyContext: {
           projectId: task.project_id || payload.projectId
         }
-      }, 'Project Task Assigned', additionalUser.user_id);
+      }, 'Project Task Assigned', additionalUser.user_id ?? '');
     }
 
   } catch (error) {
@@ -1322,14 +1311,7 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
 
     // Get task and project details
     const taskQuery = scopedDb.table('project_tasks as t')
-      .select(
-        't.task_id',
-        't.task_name',
-        't.assigned_to',
-        't.phase_id',
-        'p.project_name',
-        'p.project_id'
-      );
+      .select({ task_id: 't.task_id', task_name: 't.task_name', assigned_to: 't.assigned_to', phase_id: 't.phase_id', project_name: 'p.project_name', project_id: 'p.project_id' });
     scopedDb.tenantJoin(taskQuery, 'project_phases as ph', 'ph.phase_id', 't.phase_id', { type: 'left' });
     scopedDb.tenantJoin(taskQuery, 'projects as p', 'p.project_id', 'ph.project_id', {
       type: 'left',
@@ -1338,7 +1320,7 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
 
     const task = await taskQuery
       .where('t.task_id', taskId)
-      .first<any>();
+      .first();
 
     if (!task) {
       logger.warn('[ProjectEmailSubscriber] Could not send task comment email - task not found:', {
@@ -1409,9 +1391,9 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
       const primaryAssignee = await scopedDb.table('users')
         .select('user_id', 'email')
         .where({ user_id: task.assigned_to, is_inactive: false })
-        .first<any>();
+        .first();
       if (primaryAssignee && isValidEmail(primaryAssignee.email)) {
-        assignees.push({ user_id: primaryAssignee.user_id, email: primaryAssignee.email });
+        assignees.push(primaryAssignee);
       }
     }
 
@@ -1419,8 +1401,8 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
     const additionalAgents = await fetchTaskResourceEmails(db, tenantId, taskId);
 
     for (const agent of additionalAgents) {
-      if (agent.email && isValidEmail(agent.email) && agent.user_id && !assignees.some(a => a.user_id === agent.user_id)) {
-        assignees.push({ user_id: agent.user_id, email: agent.email });
+      if (agent.email && isValidEmail(agent.email) && !assignees.some(a => a.user_id === agent.user_id)) {
+        assignees.push(agent as { user_id: string; email: string });
       }
     }
 

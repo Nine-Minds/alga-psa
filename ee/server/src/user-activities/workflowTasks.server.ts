@@ -115,6 +115,16 @@ export async function fetchWorkflowTaskActivities(
           queryBuilder.where("wt.due_date", "<=", toPlainDate(filters.dueDateEnd));
         }
 
+        // Apply created-date ("date entered") filter if provided. created_at is a full
+        // timestamp, so compare against the raw ISO bounds (not toPlainDate, which would
+        // truncate the time-of-day and drop rows created later on the end day).
+        if (filters.createdAtStart) {
+          queryBuilder.where("wt.created_at", ">=", filters.createdAtStart);
+        }
+        if (filters.createdAtEnd) {
+          queryBuilder.where("wt.created_at", "<=", filters.createdAtEnd);
+        }
+
         // Apply closed filter if provided
         if (filters.isClosed !== undefined) {
           if (filters.isClosed) {

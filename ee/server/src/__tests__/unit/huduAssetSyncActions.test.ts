@@ -7,7 +7,7 @@
  * Helper persistence (stale metadata merge, last_synced_at stamping, and the
  * assets.attributes jsonb merge) runs against the REAL local dev DB exactly
  * like huduAssetMappingActions.test.ts (shared advisory lock, importActual).
- * The action layer is unit-mocked like the sibling: auth, flag, tiers, knex,
+ * The action layer is unit-mocked like the sibling: auth, tiers, knex,
  * huduDataActions, updateAsset and the mapping-row functions are fakes; the
  * attributes helpers (assetAttributes) stay REAL.
  */
@@ -33,7 +33,6 @@ const HUDU_COMPANY_ID = '55';
 const internalUser = { user_id: 'user-1', tenant: TENANT, user_type: 'internal' };
 
 const hasPermissionMock = vi.fn();
-const isEnabledMock = vi.fn();
 const assertTierAccessMock = vi.fn();
 
 const createTenantKnexMock = vi.fn();
@@ -88,10 +87,6 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: hasPermissionMock,
 }));
 
-vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
-  featureFlags: { isEnabled: isEnabledMock },
-}));
-
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
   assertTierAccess: assertTierAccessMock,
 }));
@@ -100,12 +95,17 @@ vi.mock('server/src/lib/db', () => ({
   createTenantKnex: createTenantKnexMock,
 }));
 
-vi.mock('@ee/lib/actions/integrations/huduDataActions', () => ({
-  getHuduCompanyAssets: getHuduCompanyAssetsMock,
+// The sync core fetches via the session-free huduDataCore now.
+vi.mock('@ee/lib/integrations/hudu/huduDataCore', () => ({
+  fetchHuduCompanyAssets: getHuduCompanyAssetsMock,
 }));
 
+// The core writes through the actor-injectable updateAssetRecord (knex, tenant,
+// actor, assetId, changes, opts). Forward (assetId, changes) to the existing
+// fake so the payload assertions stay as-is.
 vi.mock('@alga-psa/assets/actions/assetActions', () => ({
-  updateAsset: updateAssetMock,
+  updateAssetRecord: (_knex: unknown, _tenant: unknown, _actor: unknown, assetId: unknown, changes: unknown) =>
+    updateAssetMock(assetId, changes),
 }));
 
 // Keep the REAL module (the DB block reaches it via importActual); fake only
@@ -163,7 +163,6 @@ beforeEach(() => {
   attributeUpdates = [];
 
   hasPermissionMock.mockResolvedValue(true);
-  isEnabledMock.mockResolvedValue(true);
   assertTierAccessMock.mockResolvedValue(undefined);
 
   createTenantKnexMock.mockResolvedValue({ knex: knexCallableMock, tenant: TENANT });
@@ -403,7 +402,7 @@ describe('T224/T225: syncHuduClientAssets synced fields', () => {
     const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
 
     // The sync sees current data: cache bypassed via refresh.
-    expect(getHuduCompanyAssetsMock).toHaveBeenCalledWith(CLIENT_1, { refresh: true });
+    expect(getHuduCompanyAssetsMock).toHaveBeenCalledWith(TENANT, CLIENT_1, { refresh: true });
     expect(getHuduAssetMappingRowsMock).toHaveBeenCalledWith(knexCallableMock, TENANT, {
       huduCompanyId: HUDU_COMPANY_ID,
     });
@@ -929,13 +928,5 @@ describe('T229: guard chain', () => {
     expect(hasPermissionMock).toHaveBeenCalledWith(internalUser, 'asset', 'update');
     expect(getHuduCompanyAssetsMock).not.toHaveBeenCalled();
     expect(updateAssetMock).not.toHaveBeenCalled();
-  });
-
-  it('rejects when the hudu-integration flag is off (404 semantics)', async () => {
-    isEnabledMock.mockResolvedValue(false);
-    const { syncHuduClientAssets } = await importActions();
-
-    await expect(syncHuduClientAssets({ clientId: CLIENT_1 })).rejects.toThrow(/disabled for this tenant/);
-    expect(getHuduCompanyAssetsMock).not.toHaveBeenCalled();
   });
 });

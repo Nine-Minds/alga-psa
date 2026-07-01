@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db/workDate';
+import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from '@alga-psa/db/workDate';
 import { Temporal } from '@js-temporal/polyfill';
 import { toISODate, toPlainDate } from '@alga-psa/core';
 import { hasPermissionByUserId } from './shared';
@@ -1158,7 +1158,10 @@ export async function createWorkflowTimeEntry(params: {
     });
   }
 
-  const totalMinutes = Math.round((computedEndDate.getTime() - startDate.getTime()) / 60000);
+  // LEVERAGE: pattern time-entry-duration-persist — same normalize-to-minute + round shape.
+  const startMinute = truncateToMinute(startDate);
+  const endMinute = truncateToMinute(computedEndDate);
+  const totalMinutes = Math.round((endMinute.getTime() - startMinute.getTime()) / 60000);
 
   const billableMinutesInput = input.billable_duration_minutes;
   if (billableMinutesInput !== undefined) {
@@ -1199,8 +1202,8 @@ export async function createWorkflowTimeEntry(params: {
 
   const entryId = uuidv4();
   const nowIso = new Date().toISOString();
-  const startIso = startDate.toISOString();
-  const endIso = computedEndDate.toISOString();
+  const startIso = startMinute.toISOString();
+  const endIso = endMinute.toISOString();
 
   const inserted = await tenantScopedTable(trx, 'time_entries', tenantId)
     .insert({
@@ -1464,7 +1467,10 @@ export async function updateWorkflowTimeEntry(params: {
     });
   }
 
-  const totalMinutes = Math.round((computedEndDate.getTime() - startDate.getTime()) / 60000);
+  // LEVERAGE: pattern time-entry-duration-persist — same normalize-to-minute + round shape.
+  const startMinute = truncateToMinute(startDate);
+  const endMinute = truncateToMinute(computedEndDate);
+  const totalMinutes = Math.round((endMinute.getTime() - startMinute.getTime()) / 60000);
   const existingBillableMinutes = Number(existing.billable_duration ?? 0);
   const billableMinutes = input.billable === false
     ? 0
@@ -1521,8 +1527,8 @@ export async function updateWorkflowTimeEntry(params: {
       service_id: resolvedServiceId,
       contract_line_id: resolvedContractLineId,
       tax_rate_id: hasOwnProperty(input, 'tax_rate_id') ? (input.tax_rate_id ?? null) : existing.tax_rate_id,
-      start_time: startDate.toISOString(),
-      end_time: computedEndDate.toISOString(),
+      start_time: startMinute.toISOString(),
+      end_time: endMinute.toISOString(),
       work_date,
       work_timezone,
       billable_duration: billableMinutes,

@@ -9,7 +9,7 @@ const MIGRATION_TENANT = 'migration:20251016120000_update_billing_method_to_text
 const BILLING_METHOD_NORMALIZATION_REASON = 'all-tenant billing method normalization';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 exports.up = async function(knex) {

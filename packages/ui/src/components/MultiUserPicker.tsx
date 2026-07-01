@@ -385,7 +385,7 @@ const MultiUserPicker = ({
                 userId={user.user_id}
                 userName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
                 avatarUrl={avatarUrls[user.user_id] || null}
-                size={size === 'sm' ? 'sm' : 'md'}
+                size="xs"
               />
               <span>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}</span>
             </div>
@@ -445,7 +445,7 @@ const MultiUserPicker = ({
         {/* Unassigned option (filter mode only) */}
         {filterMode && (
           <div
-            className="px-3 py-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]"
+            className="px-3 py-1.5 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]"
             onClick={handleUnassignedToggle}
           >
             <Checkbox
@@ -510,7 +510,7 @@ const MultiUserPicker = ({
                       <div
                         key={user.user_id}
                         className={`
-                          relative flex items-center px-3 py-2 text-sm rounded cursor-pointer
+                          relative flex items-center px-3 py-1.5 text-sm rounded cursor-pointer
                           hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''}
                         `}
                         onClick={() => handleUserToggle(user.user_id)}
@@ -520,14 +520,14 @@ const MultiUserPicker = ({
                             id={`user-${user.user_id}`}
                             checked={isSelected}
                             onChange={() => handleUserToggle(user.user_id)}
-                            className="mr-3"
+                            className="mr-2"
                           />
                         </div>
                         <UserAvatar
                           userId={user.user_id}
                           userName={userName}
                           avatarUrl={avatarUrls[user.user_id] || null}
-                          size="sm"
+                          size="xs"
                         />
                         <span className="ml-2">{userName}</span>
                       </div>

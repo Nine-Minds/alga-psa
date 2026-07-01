@@ -1017,6 +1017,27 @@
         },
         "toasts": {
           "errorTitle": "Error de conexión de Hudu"
+        },
+        "sync": {
+          "title": "Sincronización y automatización",
+          "description": "Importe activos de todos los clientes asignados a la vez y manténgalos actualizados automáticamente. Asignar una empresa o un diseño solo configura la integración: los activos aparecen únicamente tras una importación.",
+          "summary": "{{created}} creados · {{updated}} actualizados · {{skipped}} omitidos · {{failed}} con error",
+          "toastErrorTitle": "Error de sincronización de Hudu",
+          "importDoneTitle": "Importación de Hudu finalizada",
+          "syncDoneTitle": "Sincronización de Hudu finalizada",
+          "importing": "Importando…",
+          "importAll": "Importar todos los clientes asignados",
+          "syncing2": "Sincronizando…",
+          "syncAll": "Sincronizar todo",
+          "autoSyncLabel": "Sincronización automática diaria",
+          "autoSyncHint": "Importa automáticamente activos nuevos y actualiza los existentes una vez al día para cada cliente asignado.",
+          "neverRun": "Aún no hay ninguna ejecución para todo el inquilino.",
+          "lastRun": "Última ejecución {{at}}: {{created}} creados · {{updated}} actualizados · {{skipped}} omitidos · {{failed}} con error",
+          "status": {
+            "syncing": "En ejecución…",
+            "completed": "Completada",
+            "error": "Error"
+          }
         }
       }
     },
@@ -1334,6 +1355,8 @@
           },
           "connected": "Connected to NinjaOne",
           "connectedWithErrors": "NinjaOne connected with sync errors",
+          "reconnectRequired": "Se requiere volver a conectar NinjaOne",
+          "reconnectRequiredDescription": "La autorización de NinjaOne ya no se puede actualizar (token caducado o revocado). Vuelve a conectar para restaurar la sincronización de dispositivos, las alertas y el acceso remoto.",
           "instanceLabel": "Instance:",
           "organizations": "{{count}} organizations",
           "devices": "{{count}} devices",

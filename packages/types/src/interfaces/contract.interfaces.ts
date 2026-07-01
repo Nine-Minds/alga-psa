@@ -35,6 +35,8 @@ export interface IContract extends TenantEntity {
 export interface IContractWithClient extends IContract {
   client_id?: string;
   client_name?: string;
+  /** Real uploaded client logo URL (batched); null when none. */
+  logoUrl?: string | null;
   owner_client_name?: string | null;
   client_contract_id?: string;
   assignment_status?: ContractStatus;

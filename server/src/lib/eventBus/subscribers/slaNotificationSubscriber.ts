@@ -63,19 +63,8 @@ async function handleSlaThresholdReachedEvent(event: unknown): Promise<void> {
 
         const ticket = await ticketQuery
           .where('t.ticket_id', ticketId)
-          .select(
-            't.ticket_id',
-            't.ticket_number',
-            't.title',
-            't.assigned_to',
-            't.board_id',
-            't.sla_policy_id',
-            't.sla_response_due_at',
-            't.sla_resolution_due_at',
-            'c.client_name as client_name',
-            'p.priority_name'
-          )
-          .first<any>();
+          .select({ ticket_id: 't.ticket_id', ticket_number: 't.ticket_number', title: 't.title', assigned_to: 't.assigned_to', board_id: 't.board_id', sla_policy_id: 't.sla_policy_id', sla_response_due_at: 't.sla_response_due_at', sla_resolution_due_at: 't.sla_resolution_due_at', client_name: 'c.client_name', priority_name: 'p.priority_name' })
+          .first();
 
         if (!ticket || !ticket.sla_policy_id) {
           logger.warn('[SlaNotificationSubscriber] Ticket or SLA policy missing, skipping', {

@@ -233,7 +233,6 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
                       checked={selectedFields.has(field.key)}
                       onChange={() => toggleField(field.key)}
                       size="sm"
-                      containerClassName="mb-0"
                       skipRegistration
                     />
                   ))}

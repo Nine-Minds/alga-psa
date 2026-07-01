@@ -11,6 +11,7 @@ import scheduleEn from "./locales/en/schedule.json";
 import timeEntriesEn from "./locales/en/timeEntries.json";
 import clientsEn from "./locales/en/clients.json";
 import contactsEn from "./locales/en/contacts.json";
+import userActivitiesEn from "./locales/en/userActivities.json";
 
 function resolveDeviceLocale(): SupportedLocale {
   const tag = Localization.getLocales()[0]?.languageTag;
@@ -33,6 +34,7 @@ const resources = {
     timeEntries: timeEntriesEn,
     clients: clientsEn,
     contacts: contactsEn,
+    userActivities: userActivitiesEn,
   },
 } as const;
 

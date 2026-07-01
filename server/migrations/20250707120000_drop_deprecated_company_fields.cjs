@@ -3,7 +3,7 @@ const COMPANY_FIELD_BACKFILL_REASON = 'discover tenants with deprecated company 
 const COMPANY_LOCATIONS_BACKFILL_REASON = 'historical company location backfill; company_locations is not registered in tenantDb metadata';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 /**

@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
-import { ITimePeriodSettings, ITimePeriod } from '../../interfaces/timeEntry.interfaces';
+import { ITimePeriodSettings, ITimePeriod } from '../../../interfaces/timeEntry.interfaces';
 import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods, createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
-import { ISO8601String } from '../../types/types.d';
-import * as tenantModule from '../../lib/tenant';
+import { ISO8601String } from '../../../types/types.d';
+import * as tenantModule from '../../../lib/tenant';
 import { TestContext } from '../../../../test-utils/testContext';
 import {
   setupCommonMocks,

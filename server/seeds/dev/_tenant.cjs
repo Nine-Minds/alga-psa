@@ -1,5 +1,12 @@
-async function getTenantDb(knex, tenantId) {
-  const { tenantDb } = await import('@alga-psa/db');
+// Shared helper for the dev seeds (not a seed itself).
+//
+// Uses the migration tenantDb shim rather than @alga-psa/db so seeds run in
+// environments that don't build the workspace package (the integration test
+// harness runs knex seed.run() directly) — same reason the migrations use it,
+// see server/migrations/utils/tenantDb.cjs.
+const { tenantDb } = require('../../migrations/utils/tenantDb.cjs');
+
+function getTenantDb(knex, tenantId) {
   return tenantDb(knex, tenantId);
 }
 
@@ -26,12 +33,17 @@ async function getFirstTenantSeedContext(knex, options = {}) {
 
   return {
     tenantId,
-    db: await getTenantDb(knex, tenantId),
+    db: getTenantDb(knex, tenantId),
   };
 }
+
+// No-op seed: this is a helper module, but knex's directory-wide seed.run()
+// loads every file here and requires each to export a `seed` function.
+async function seed() {}
 
 module.exports = {
   getFirstTenantId,
   getFirstTenantSeedContext,
   getTenantDb,
+  seed,
 };

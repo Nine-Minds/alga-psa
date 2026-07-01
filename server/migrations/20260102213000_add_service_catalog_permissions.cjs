@@ -9,7 +9,7 @@ const MIGRATION_TENANT = 'migration:20260102213000_add_service_catalog_permissio
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for service catalog permission backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 exports.up = async function up(knex) {

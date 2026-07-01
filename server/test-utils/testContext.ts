@@ -2,7 +2,6 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from './dbConfig';
-import { resetDatabase } from './dbReset';
 import { createTenant, createClient, createUser } from './testDataFactory';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IUserWithRoles } from '../src/interfaces/auth.interfaces';
@@ -141,16 +140,11 @@ export class TestContext {
    */
   async initialize(): Promise<void> {
     try {
-      const setupDb = await createTestDbConnection();
-
-      await resetDatabase(setupDb, {
-        runSeeds: this.options.runSeeds,
-        cleanupTables: this.options.cleanupTables,
-        preSetupCommands: this.options.setupCommands
-      });
-
-      await setupDb.destroy();
-
+      // Single bootstrap per file: createTestDbConnection drops, recreates,
+      // migrates and seeds test_database. The old setupDb + resetDatabase pair
+      // rebuilt the same schema two more times and rootDb's rebuild discarded
+      // both; cleanupTables/setupCommands are still applied in
+      // prepareTransactionalState() below.
       this.rootDb = await createTestDbConnection();
 
       await this.ensureTenantInitialized();

@@ -2,7 +2,7 @@ const MIGRATION_TENANT = 'migration:20250430170700_add_dispatcher_role';
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for dispatcher role backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 /**

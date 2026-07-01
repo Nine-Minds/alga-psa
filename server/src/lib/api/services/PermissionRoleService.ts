@@ -413,7 +413,7 @@ export class PermissionRoleService extends BaseService<IRole> {
     if (filters.permission_resource || filters.permission_action) {
       let permissionSubQuery = scopedDb.table('role_permissions as rp')
         .modify((q) => scopedDb.tenantJoin(q, 'permissions as p', 'rp.permission_id', 'p.permission_id'))
-        .select('rp.role_id');
+        .select({ role_id: 'rp.role_id' });
 
       if (filters.permission_resource) {
         permissionSubQuery = permissionSubQuery.where('p.resource', filters.permission_resource);
@@ -995,7 +995,7 @@ export class PermissionRoleService extends BaseService<IRole> {
     userQuery = userQuery.orderBy(`u.${sortField}`, sortOrder);
 
     // Get total count
-    const [{ count }] = await userQuery.clone().count('* as count');
+    const [{ count }] = (await userQuery.clone().count('* as count')) as Array<{ count: string }>;
     
     // Apply pagination
     const users = await userQuery
@@ -1514,7 +1514,7 @@ export class PermissionRoleService extends BaseService<IRole> {
       return q;
     };
 
-    const [{ count }] = await buildQuery().count('* as count');
+    const [{ count }] = (await buildQuery().count('* as count')) as Array<{ count: string }>;
     const data = await buildQuery()
       .orderBy('timestamp', 'desc')
       .limit(limit)

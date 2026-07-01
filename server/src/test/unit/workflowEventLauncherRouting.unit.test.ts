@@ -169,7 +169,8 @@ describe('Workflow event launcher routing', () => {
       'event-1',
       expect.objectContaining({
         matched_run_id: 'run-1'
-      })
+      }),
+      'tenant-1'
     );
     expect(launchPublishedWorkflowRun).toHaveBeenCalledWith(
       knexMock,
@@ -212,12 +213,14 @@ describe('Workflow event launcher routing', () => {
     expect(workflowEvents.update).not.toHaveBeenCalledWith(
       knexMock,
       'event-1',
-      expect.objectContaining({ matched_run_id: 'run-wait-1' })
+      expect.objectContaining({ matched_run_id: 'run-wait-1' }),
+      'tenant-1'
     );
     expect(workflowEvents.update).toHaveBeenCalledWith(
       knexMock,
       'event-1',
-      expect.objectContaining({ error_message: expect.stringContaining('signal failed') })
+      expect.objectContaining({ error_message: expect.stringContaining('signal failed') }),
+      'tenant-1'
     );
   });
 
@@ -239,7 +242,8 @@ describe('Workflow event launcher routing', () => {
       'event-1',
       expect.objectContaining({
         error_message: expect.stringContaining('temporal unavailable')
-      })
+      }),
+      'tenant-1'
     );
   });
 });

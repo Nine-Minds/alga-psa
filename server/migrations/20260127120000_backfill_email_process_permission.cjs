@@ -2,7 +2,7 @@ const MIGRATION_TENANT = 'migration:20260127120000_backfill_email_process_permis
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for email process permission backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 exports.up = async function (knex) {

@@ -21,7 +21,14 @@ export interface TenantSubqueryJoinOptions {
   on?: (join: Knex.JoinClause) => void;
 }
 
-type DynamicTenantRow = Record<string, any>;
+// Default row type for facade queries. `any` (not `Record<string, any>`) is
+// deliberate: knex narrows `.select('alias.col')` over a Record to
+// `Pick<Record, "alias.col">`, keying the row by the literal alias-qualified
+// string — but Postgres returns the column unprefixed (`col`), so `row.col`
+// would not typecheck. With `any`, `.select(...)` does not narrow and rows stay
+// untyped (they already were value-wise). Opt into precise typing per call with
+// `db.table<Row>(...)` or knex object-form selects (`.select({ col: 'a.col' })`).
+type DynamicTenantRow = any;
 
 export interface TenantDb {
   readonly tenant: string;
@@ -59,7 +66,7 @@ export interface TenantDb {
   ): Knex.QueryBuilder<Row, Row[]>;
 }
 
-function assertTenant(tenant: string): void {
+function assertTenant(tenant: string | null | undefined): asserts tenant is string {
   if (!tenant || !tenant.trim()) {
     throw new Error('tenantDb requires a tenant id');
   }
@@ -99,8 +106,11 @@ function inferRootTenantColumn(parsed: ParsedTableExpression, left: string, righ
   );
 }
 
-export function tenantDb(conn: Knex | Knex.Transaction, tenant: string): TenantDb {
-  assertTenant(tenant);
+export function tenantDb(conn: Knex | Knex.Transaction, tenantInput: string | null | undefined): TenantDb {
+  assertTenant(tenantInput);
+  // Capture the narrowed value in a const so the nested closures below (which
+  // capture `tenant`) see `string`, not the nullable param re-widened in closures.
+  const tenant: string = tenantInput;
 
   function scoped(tableExpression: string): TenantScopedQuery {
     const parsed = parseTableExpression(tableExpression);

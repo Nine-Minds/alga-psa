@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { XCircle } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
-import { Input } from '@alga-psa/ui/components/Input';
+import { SearchInput } from '@alga-psa/ui/components/SearchInput';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -67,12 +69,16 @@ type WorkflowEventSummary = {
   error: number;
 };
 
-type EventFilters = {
+type WorkflowEventQuery = {
   eventName: string;
   correlationKey: string;
   status: string;
   from: string;
   to: string;
+  page: number;
+  pageSize: number;
+  sortBy: WorkflowEventSortBy;
+  sortDirection: 'asc' | 'desc';
 };
 
 const EVENT_STATUS_VARIANTS: Record<WorkflowEventRecord['status'], 'success' | 'warning' | 'error'> = {
@@ -81,12 +87,35 @@ const EVENT_STATUS_VARIANTS: Record<WorkflowEventRecord['status'], 'success' | '
   error: 'error'
 };
 
-const DEFAULT_FILTERS: EventFilters = {
+const DEFAULT_QUERY: WorkflowEventQuery = {
   eventName: '',
   correlationKey: '',
   status: 'all',
   from: '',
-  to: ''
+  to: '',
+  page: 1,
+  pageSize: 25,
+  sortBy: 'created_at',
+  sortDirection: 'desc'
+};
+
+const FILTER_DEBOUNCE_MS = 300;
+
+// DatePicker works in Date objects; the query/server contract stays 'YYYY-MM-DD' strings.
+// Parse/format in local time so the calendar day round-trips regardless of timezone.
+const parseIsoDate = (value: string): Date | undefined => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return undefined;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
+
+const formatIsoDate = (value: Date | undefined): string => {
+  if (!value) return '';
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 const useFormatDateTime = () => {
@@ -119,21 +148,24 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
   const formatDateTime = useFormatDateTime();
   const formatWorkflowEventStatus = useFormatWorkflowEventStatus();
   const workflowEventStatusOptions = useWorkflowEventStatusOptions();
-  const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
-  const [appliedFilters, setAppliedFilters] = useState<EventFilters>(DEFAULT_FILTERS);
+
+  // Single source of truth for everything that drives a fetch (filters, sort, page).
+  const [query, setQuery] = useState<WorkflowEventQuery>(DEFAULT_QUERY);
+  // Local, immediate text-input state; debounced into `query` so typing stays responsive.
+  const [eventNameInput, setEventNameInput] = useState('');
+  const [correlationKeyInput, setCorrelationKeyInput] = useState('');
+
   const [events, setEvents] = useState<WorkflowEventRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [summary, setSummary] = useState<WorkflowEventSummary | null>(null);
+  const [totalItems, setTotalItems] = useState(0);
+
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [eventDetail, setEventDetail] = useState<WorkflowEventDetailResponse | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const handleRunDetailsClose = useCallback(() => setSelectedRunId(null), []);
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 25;
-  const [totalItems, setTotalItems] = useState(0);
-  const [sortBy, setSortBy] = useState<WorkflowEventSortBy>('created_at');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
   const statusOptions = useMemo<SelectOption[]>(
     () => [
       {
@@ -145,60 +177,94 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
     [t, workflowEventStatusOptions]
   );
 
-  const fetchEvents = useCallback(
-    async (override?: {
-      page?: number;
-      sortBy?: WorkflowEventSortBy;
-      sortDirection?: 'asc' | 'desc';
-      filters?: EventFilters;
-    }) => {
-      const activeFilters = override?.filters ?? appliedFilters;
-      const page = override?.page ?? currentPage;
-      const nextSortBy = override?.sortBy ?? sortBy;
-      const nextSortDirection = override?.sortDirection ?? sortDirection;
-      setIsLoading(true);
-      try {
-        const data = await listWorkflowEventsPagedAction({
-          eventName: activeFilters.eventName || undefined,
-          correlationKey: activeFilters.correlationKey || undefined,
-          status: activeFilters.status || 'all',
-          from: activeFilters.from || undefined,
-          to: activeFilters.to || undefined,
-          page,
-          pageSize,
-          sortBy: nextSortBy,
-          sortDirection: nextSortDirection
-        });
+  const hasActiveFilters =
+    query.eventName !== '' ||
+    query.correlationKey !== '' ||
+    query.status !== 'all' ||
+    query.from !== '' ||
+    query.to !== '';
+
+  // Debounce the text filters into the query (and reset to page 1) without blocking keystrokes.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setQuery((prev) => {
+        if (prev.eventName === eventNameInput && prev.correlationKey === correlationKeyInput) {
+          return prev;
+        }
+        return { ...prev, eventName: eventNameInput, correlationKey: correlationKeyInput, page: 1 };
+      });
+    }, FILTER_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [eventNameInput, correlationKeyInput]);
+
+  // One effect owns the event list. It re-runs whenever any query field changes — filters,
+  // sort, and pagination all flow through here, so they never fight each other.
+  useEffect(() => {
+    if (!isActive) return;
+    let cancelled = false;
+    setIsLoading(true);
+    listWorkflowEventsPagedAction({
+      eventName: query.eventName || undefined,
+      correlationKey: query.correlationKey || undefined,
+      status: query.status || 'all',
+      from: query.from || undefined,
+      to: query.to || undefined,
+      page: query.page,
+      pageSize: query.pageSize,
+      sortBy: query.sortBy,
+      sortDirection: query.sortDirection
+    })
+      .then((data) => {
+        if (cancelled) return;
         setEvents((data as any)?.items ?? []);
         setTotalItems(Number((data as any)?.totalItems ?? 0));
-      } catch (error) {
+      })
+      .catch((error) => {
+        if (cancelled) return;
         toast.error(mapWorkflowServerError(t, error, t('eventList.toasts.loadEventsFailed', {
           defaultValue: 'Failed to load workflow events',
         })));
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [appliedFilters, currentPage, sortBy, sortDirection, t]
-  );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isActive,
+    query.eventName,
+    query.correlationKey,
+    query.status,
+    query.from,
+    query.to,
+    query.page,
+    query.pageSize,
+    query.sortBy,
+    query.sortDirection,
+    t
+  ]);
 
-  const fetchSummary = useCallback(
-    async (overrideFilters?: EventFilters) => {
-      const activeFilters = overrideFilters ?? filters;
-      try {
-        const data = (await listWorkflowEventSummaryAction({
-          eventName: activeFilters.eventName || undefined,
-          correlationKey: activeFilters.correlationKey || undefined,
-          from: activeFilters.from || undefined,
-          to: activeFilters.to || undefined
-        })) as WorkflowEventSummary;
-        setSummary(data);
-      } catch (error) {
-        setSummary(null);
-      }
-    },
-    [filters]
-  );
+  // Summary is a breakdown of every status, so it ignores the status filter and pagination.
+  useEffect(() => {
+    if (!isActive) return;
+    let cancelled = false;
+    listWorkflowEventSummaryAction({
+      eventName: query.eventName || undefined,
+      correlationKey: query.correlationKey || undefined,
+      from: query.from || undefined,
+      to: query.to || undefined
+    })
+      .then((data) => {
+        if (!cancelled) setSummary(data as WorkflowEventSummary);
+      })
+      .catch(() => {
+        if (!cancelled) setSummary(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isActive, query.eventName, query.correlationKey, query.from, query.to]);
 
   const fetchEventDetail = useCallback(async (eventId: string) => {
     setDetailLoading(true);
@@ -218,13 +284,6 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
   }, [t]);
 
   useEffect(() => {
-    if (!isActive) return;
-    setCurrentPage(1);
-    fetchEvents({ page: 1, filters: appliedFilters });
-    fetchSummary(appliedFilters);
-  }, [appliedFilters, fetchEvents, fetchSummary, isActive]);
-
-  useEffect(() => {
     if (!selectedEventId) {
       setEventDetail(null);
       return;
@@ -232,30 +291,30 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
     fetchEventDetail(selectedEventId);
   }, [fetchEventDetail, selectedEventId]);
 
-  const handleApplyFilters = () => {
-    setCurrentPage(1);
-    setAppliedFilters(filters);
-    fetchEvents({ page: 1, filters });
-    fetchSummary(filters);
-  };
+  const handleStatusChange = (value: string) =>
+    setQuery((prev) => ({ ...prev, status: value, page: 1 }));
+
+  const handleFromChange = (value: string) =>
+    setQuery((prev) => ({ ...prev, from: value, page: 1 }));
+
+  const handleToChange = (value: string) =>
+    setQuery((prev) => ({ ...prev, to: value, page: 1 }));
 
   const handleResetFilters = () => {
-    setFilters(DEFAULT_FILTERS);
-    setAppliedFilters(DEFAULT_FILTERS);
-    setCurrentPage(1);
-    fetchEvents({ page: 1, filters: DEFAULT_FILTERS });
-    fetchSummary(DEFAULT_FILTERS);
+    setEventNameInput('');
+    setCorrelationKeyInput('');
+    setQuery(DEFAULT_QUERY);
   };
 
   const handleExport = async (format: 'csv' | 'json') => {
     try {
       const result = await exportWorkflowEventsAction({
         format,
-        eventName: filters.eventName || undefined,
-        correlationKey: filters.correlationKey || undefined,
-        status: filters.status !== 'all' ? (filters.status as any) : undefined,
-        from: filters.from || undefined,
-        to: filters.to || undefined,
+        eventName: query.eventName || undefined,
+        correlationKey: query.correlationKey || undefined,
+        status: query.status !== 'all' ? (query.status as any) : undefined,
+        from: query.from || undefined,
+        to: query.to || undefined,
         limit: 1000,
         cursor: 0
       });
@@ -360,12 +419,79 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
         )
       }
     ];
-  }, [formatWorkflowEventStatus, t]);
+  }, [formatDateTime, formatWorkflowEventStatus, t]);
 
   return (
     <div className="flex h-full gap-4">
       <div className="flex-1 min-h-0 flex flex-col gap-3">
-        <Card className="p-4 space-y-3">
+        <Card className="p-3 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <SearchInput
+              id="workflow-events-name"
+              value={eventNameInput}
+              onChange={(event) => setEventNameInput(event.target.value)}
+              onClear={() => setEventNameInput('')}
+              placeholder={t('eventList.filters.eventNamePlaceholder', { defaultValue: 'Event name…' })}
+              className="w-56 h-[38px]"
+            />
+            <SearchInput
+              id="workflow-events-correlation"
+              value={correlationKeyInput}
+              onChange={(event) => setCorrelationKeyInput(event.target.value)}
+              onClear={() => setCorrelationKeyInput('')}
+              placeholder={t('eventList.filters.correlationKeyPlaceholder', { defaultValue: 'Correlation key…' })}
+              className="w-48 h-[38px]"
+            />
+            <CustomSelect
+              id="workflow-events-status"
+              options={statusOptions}
+              value={query.status}
+              onValueChange={handleStatusChange}
+              className="min-w-[150px]"
+            />
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-[rgb(var(--color-text-500))]">{t('eventList.filters.fromLabel', { defaultValue: 'From' })}</span>
+              <DatePicker
+                id="workflow-events-from"
+                value={parseIsoDate(query.from)}
+                onChange={(date) => handleFromChange(formatIsoDate(date))}
+                clearable
+                placeholder={t('eventList.filters.datePlaceholder', { defaultValue: 'Any date' })}
+                className="w-[150px]"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-[rgb(var(--color-text-500))]">{t('eventList.filters.toLabel', { defaultValue: 'To' })}</span>
+              <DatePicker
+                id="workflow-events-to"
+                value={parseIsoDate(query.to)}
+                onChange={(date) => handleToChange(formatIsoDate(date))}
+                clearable
+                placeholder={t('eventList.filters.datePlaceholder', { defaultValue: 'Any date' })}
+                className="w-[150px]"
+              />
+            </div>
+            {hasActiveFilters && (
+              <Button
+                id="workflow-events-reset"
+                variant="ghost"
+                size="sm"
+                onClick={handleResetFilters}
+                className="flex items-center gap-1 text-gray-500 hover:text-gray-700"
+              >
+                <XCircle className="h-4 w-4" />
+                {t('eventList.actions.reset', { defaultValue: 'Reset' })}
+              </Button>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              <Button id="workflow-events-export-csv" variant="outline" size="sm" onClick={() => handleExport('csv')}>
+                {t('eventList.actions.exportCsv', { defaultValue: 'Export CSV' })}
+              </Button>
+              <Button id="workflow-events-export-json" variant="outline" size="sm" onClick={() => handleExport('json')}>
+                {t('eventList.actions.exportJson', { defaultValue: 'Export JSON' })}
+              </Button>
+            </div>
+          </div>
           {summary && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
               <span>{t('eventList.summary.total', { defaultValue: 'Total' })}: {summary.total}</span>
@@ -374,57 +500,6 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
               <Badge variant="error">{t('eventList.summary.errors', { defaultValue: 'Errors' })}: {summary.error}</Badge>
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input
-              id="workflow-events-name"
-              label={t('eventList.filters.eventNameLabel', { defaultValue: 'Event name' })}
-              value={filters.eventName}
-              onChange={(event) => setFilters((prev) => ({ ...prev, eventName: event.target.value }))}
-              placeholder={t('eventList.filters.eventNamePlaceholder', { defaultValue: 'workflow.event' })}
-            />
-            <Input
-              id="workflow-events-correlation"
-              label={t('eventList.filters.correlationKeyLabel', { defaultValue: 'Correlation key' })}
-              value={filters.correlationKey}
-              onChange={(event) => setFilters((prev) => ({ ...prev, correlationKey: event.target.value }))}
-              placeholder={t('eventList.filters.correlationKeyPlaceholder', { defaultValue: 'corr-123' })}
-            />
-            <CustomSelect
-              id="workflow-events-status"
-              label={t('eventList.filters.statusLabel', { defaultValue: 'Status' })}
-              options={statusOptions}
-              value={filters.status}
-              onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
-            />
-            <Input
-              id="workflow-events-from"
-              label={t('eventList.filters.fromLabel', { defaultValue: 'From' })}
-              type="date"
-              value={filters.from}
-              onChange={(event) => setFilters((prev) => ({ ...prev, from: event.target.value }))}
-            />
-            <Input
-              id="workflow-events-to"
-              label={t('eventList.filters.toLabel', { defaultValue: 'To' })}
-              type="date"
-              value={filters.to}
-              onChange={(event) => setFilters((prev) => ({ ...prev, to: event.target.value }))}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Button id="workflow-events-apply" onClick={handleApplyFilters} disabled={isLoading}>
-              {t('eventList.actions.applyFilters', { defaultValue: 'Apply filters' })}
-            </Button>
-            <Button id="workflow-events-reset" variant="outline" onClick={handleResetFilters} disabled={isLoading}>
-              {t('eventList.actions.reset', { defaultValue: 'Reset' })}
-            </Button>
-            <Button id="workflow-events-export-csv" variant="outline" onClick={() => handleExport('csv')}>
-              {t('eventList.actions.exportCsv', { defaultValue: 'Export CSV' })}
-            </Button>
-            <Button id="workflow-events-export-json" variant="outline" onClick={() => handleExport('json')}>
-              {t('eventList.actions.exportJson', { defaultValue: 'Export JSON' })}
-            </Button>
-          </div>
         </Card>
 
         <Card className="p-4 flex-1 min-h-0 overflow-y-auto">
@@ -435,16 +510,15 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
           )}
 
           <DataTable
+            key={`${query.page}-${query.pageSize}`}
             id="workflow-events-table"
             data={events}
             columns={columns}
             pagination={true}
-            currentPage={currentPage}
-            onPageChange={(page) => {
-              setCurrentPage(page);
-              fetchEvents({ page });
-            }}
-            pageSize={pageSize}
+            currentPage={query.page}
+            onPageChange={(page) => setQuery((prev) => ({ ...prev, page }))}
+            pageSize={query.pageSize}
+            onItemsPerPageChange={(size) => setQuery((prev) => ({ ...prev, pageSize: size, page: 1 }))}
             totalItems={totalItems}
             onRowClick={(row) => setSelectedEventId((row as WorkflowEventRecord).event_id)}
             rowClassName={(row) =>
@@ -453,13 +527,15 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
                 : ''
             }
             manualSorting={true}
-            sortBy={sortBy}
-            sortDirection={sortDirection}
+            sortBy={query.sortBy}
+            sortDirection={query.sortDirection}
             onSortChange={(nextSortBy, nextSortDirection) => {
-              setSortBy(nextSortBy as WorkflowEventSortBy);
-              setSortDirection(nextSortDirection);
-              setCurrentPage(1);
-              fetchEvents({ page: 1, sortBy: nextSortBy as WorkflowEventSortBy, sortDirection: nextSortDirection });
+              setQuery((prev) => ({
+                ...prev,
+                sortBy: nextSortBy as WorkflowEventSortBy,
+                sortDirection: nextSortDirection,
+                page: 1
+              }));
             }}
           />
         </Card>

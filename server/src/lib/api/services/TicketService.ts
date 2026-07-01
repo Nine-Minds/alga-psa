@@ -1525,7 +1525,7 @@ export class TicketService extends BaseService<ITicket> {
 
       reactionsMap = aggregateReactions(reactionRows, 'comment_id', context.userId);
 
-      const reactionUserIds = [...new Set(reactionRows.map(r => r.user_id))];
+      const reactionUserIds = [...new Set(reactionRows.map((r: any) => r.user_id))] as string[];
       if (reactionUserIds.length > 0) {
         const reactionUsers = await tenantScopedTable(knex, 'users', context.tenant)
           .whereIn('user_id', reactionUserIds)
@@ -2269,7 +2269,7 @@ export class TicketService extends BaseService<ITicket> {
         .select('ticket_id', 'ticket_number', 'master_ticket_id')
         .whereIn('ticket_id', [params.masterTicketId, ...uniqueChildIds]);
 
-      const byId = new Map(tickets.map((t: any) => [t.ticket_id, t]));
+      const byId = new Map<string, any>(tickets.map((t: any) => [t.ticket_id, t]));
       if (!byId.has(params.masterTicketId)) {
         throw new NotFoundError('Master ticket not found.');
       }
@@ -2352,7 +2352,7 @@ export class TicketService extends BaseService<ITicket> {
       const children = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'ticket_number', 'master_ticket_id')
         .whereIn('ticket_id', childIds);
-      const byId = new Map(children.map((t: any) => [t.ticket_id, t]));
+      const byId = new Map<string, any>(children.map((t: any) => [t.ticket_id, t]));
       for (const childId of childIds) {
         const child = byId.get(childId);
         if (!child) throw new NotFoundError(`Child ticket not found: ${childId}`);

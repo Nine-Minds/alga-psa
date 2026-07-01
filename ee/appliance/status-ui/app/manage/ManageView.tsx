@@ -13,6 +13,9 @@ type ManageStatus = {
     version: string;
     channel: "stable" | "nightly";
     updateAvailable: boolean;
+    availableVersion?: string | null;
+    pinnedReleaseDigest?: string | null;
+    resolvedReleaseDigest?: string | null;
     update: { status: "idle" | "running" | "complete" | "blocked"; message: string | null };
   };
   controlPlane: {
@@ -136,7 +139,11 @@ function UpdatesTab({
         </div>
         <div>
           <dt>Update available</dt>
-          <dd>{app.updateAvailable ? "Yes" : "No"}</dd>
+          <dd>
+            {app.updateAvailable
+              ? `Yes${app.availableVersion ? ` — ${app.availableVersion}` : ""}`
+              : "No"}
+          </dd>
         </div>
         {(updateRunning || updateDone || updateBlocked || app.update.message) ? (
           <div>
@@ -160,11 +167,14 @@ function UpdatesTab({
       {error ? <div className={styles.alert}>{error}</div> : null}
       {result ? <p className={styles.manageResult}>{result}</p> : null}
 
-      {!app.updateAvailable && !updateRunning ? (
+      {!app.updateAvailable && !updateRunning && !updateBlocked ? (
         <p className={styles.muted}>No update is available on the {app.channel} channel.</p>
       ) : null}
 
-      {app.updateAvailable || updateRunning ? (
+      {/* A blocked status stays retryable even when no new version is available —
+          otherwise an operator whose update blocked (e.g. a transient reconcile)
+          has no way to re-run it from here once updateAvailable flips back to No. */}
+      {app.updateAvailable || updateRunning || updateBlocked ? (
         <div className={styles.toolbar}>
           <button
             type="button"
@@ -178,7 +188,9 @@ function UpdatesTab({
             {busy || updateRunning
               ? "Updating…"
               : confirm
-              ? "Confirm update"
+              ? (updateBlocked ? "Confirm retry" : "Confirm update")
+              : updateBlocked
+              ? "Retry update"
               : "Run update"}
           </button>
           {confirm && !busy && !updateRunning ? (
@@ -258,7 +270,21 @@ function ControlPlaneTab({
       });
       if (response.status === 401) { window.location.reload(); return; }
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "Failed to start upgrade.");
+      if (!response.ok) {
+        // Older installs ship a host-agent that predates the in-place upgrade
+        // route (/v1/control-plane/upgrade), so this POST comes back as a relayed
+        // 404 {"error":"not found"}. The host-agent is a host systemd service
+        // baked at install — it is NOT delivered via the OCI release channel, so a
+        // channel/control-plane bump can't add the route. A reboot applies the
+        // channel's current control-plane image via the boot bootstrap, which
+        // doesn't go through the host-agent.
+        if (response.status === 404 && String(data.error || "").toLowerCase() === "not found") {
+          throw new Error(
+            "This appliance's host agent predates in-place control-plane upgrade, so the upgrade button can't apply it. Reboot the appliance to apply the latest control plane — the boot process pulls it directly (no host agent needed).",
+          );
+        }
+        throw new Error(data.error || "Failed to start upgrade.");
+      }
       setReconnecting(true);
       pollStartRef.current = Date.now();
       // Poll every 3 s, tolerating fetch failures while the pod restarts.
@@ -675,6 +701,10 @@ export function ManageView() {
   const [manageStatus, setManageStatus] = useState<ManageStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Latest poll failed but we still have a prior snapshot to keep showing.
+  const [reconnecting, setReconnecting] = useState(false);
+  // Mirror of manageStatus, readable inside the (stable) loader closure.
+  const manageStatusRef = useRef<ManageStatus | null>(null);
 
   const loadManageStatus = useCallback(async () => {
     try {
@@ -687,10 +717,27 @@ export function ManageView() {
         return;
       }
       if (!response.ok) throw new Error("Manage status unavailable.");
-      setManageStatus(await response.json());
+      const data = (await response.json()) as ManageStatus;
+      manageStatusRef.current = data;
+      setManageStatus(data);
       setError(null);
+      setReconnecting(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      // Flux/Helm churn — and the control-plane pod restarting during its own
+      // upgrade — make individual status polls fail transiently. Once we have a
+      // snapshot, ride the blip out: keep the last-good view and show a quiet
+      // "reconnecting" strip instead of replacing the whole Manage UI (and the
+      // tabs' own progress banners) with a fatal error. A fatal error is only for
+      // the initial load, when there is nothing to show yet.
+      // LEVERAGE: pattern appliance-resilient-status-poll — the status page
+      // (app/page.tsx) hand-rolls this same "keep last-good snapshot across
+      // transient poll failures" behavior separately; a shared usePolledResource
+      // hook would unify both surfaces.
+      if (manageStatusRef.current) {
+        setReconnecting(true);
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
     } finally {
       setLoading(false);
     }
@@ -738,10 +785,16 @@ export function ManageView() {
             ))}
           </div>
         </div>
-      ) : error ? (
+      ) : error && !manageStatus ? (
         <div className={styles.alert}>{error}</div>
       ) : manageStatus ? (
         <>
+          {reconnecting ? (
+            <div className={`${styles.alert} ${styles.alertInfo}`}>
+              Reconnecting to the appliance… showing the last known status. This is
+              expected while services reconcile or the control plane restarts.
+            </div>
+          ) : null}
           {activeTab === "updates" ? (
             <div
               id="manage-panel-updates"

@@ -138,7 +138,7 @@ export class ExtensionAuditService {
           workflow_id: input.workflowId || null,
           status: input.status || null,
           error_message: input.errorMessage || null,
-          details: input.details ? (JSON.stringify(input.details) as any) : null,
+          details: (input.details ? JSON.stringify(input.details) : null) as any,
           ip_address: input.ipAddress || null,
           user_agent: input.userAgent || null,
         })
@@ -252,14 +252,14 @@ export class ExtensionAuditService {
     const knex = await getAdminConnection();
 
     // Total events
-    const [{ count: totalEvents }] = await this.auditLogs(knex)
-      .count('* as count') as any[];
+    const [{ count: totalEvents }] = (await this.auditLogs(knex)
+      .count('* as count')) as unknown as Array<{ count: string }>;
 
     // Events by type
-    const eventsByTypeRows = await this.auditLogs(knex)
+    const eventsByTypeRows = (await this.auditLogs(knex)
       .select('event_type')
       .count('* as count')
-      .groupBy('event_type') as any[];
+      .groupBy('event_type')) as unknown as Array<{ event_type: string; count: string }>;
 
     const eventsByType: Record<string, number> = {};
     for (const row of eventsByTypeRows) {
@@ -270,14 +270,14 @@ export class ExtensionAuditService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const recentUsers = await this.auditLogs(knex)
+    const recentUsers = (await this.auditLogs(knex)
       .where('created_at', '>=', thirtyDaysAgo)
       .whereNotNull('user_id')
       .select('user_id', 'user_email')
       .count('* as event_count')
       .groupBy('user_id', 'user_email')
       .orderBy('event_count', 'desc')
-      .limit(10) as any[];
+      .limit(10)) as unknown as Array<{ user_id: string; user_email: string; event_count: string }>;
 
     return {
       totalEvents: Number(totalEvents),

@@ -10,7 +10,7 @@ const MIGRATION_TENANT = 'migration:20260306120000_add_sla_policy_permissions';
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for SLA policy permission backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 exports.up = async function up(knex) {

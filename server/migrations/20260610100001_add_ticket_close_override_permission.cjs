@@ -16,7 +16,7 @@ const TENANT_ENUMERATION_REASON = 'enumerate tenants for ticket close override p
 const PERMISSION_DISCOVERY_REASON = 'discover ticket close override permissions for rollback';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 exports.up = async function (knex) {

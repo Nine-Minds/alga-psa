@@ -12,7 +12,7 @@ describe('InteractionModel online meeting enrichment', () => {
     expect(source).toContain('withOnlineMeeting(');
     expect(source).toContain('OnlineMeetingModel.getByInteractionId(interaction.interaction_id, tenantId)');
     expect(source).toContain('online_meeting: onlineMeeting');
-    expect(source).toContain('return await this.withOnlineMeetings(interactions, tenant ?? tenantId)');
+    expect(source).toContain('return await this.withOnlineMeetings(interactions, scopedTenant)');
     expect(source).toContain('return await this.withOnlineMeeting({');
   });
 });

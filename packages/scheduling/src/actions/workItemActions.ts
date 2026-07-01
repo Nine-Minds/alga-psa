@@ -731,7 +731,7 @@ export const createWorkItem = withAuth(async (
     }
 
     // Create schedule entry with current user assigned
-    const scheduleEntry = await ScheduleEntry.create(db, {
+    const scheduleEntry = await ScheduleEntry.create(db, tenant, {
       title: item.title || 'Ad-hoc Entry',
       notes: item.description,
       scheduled_start: item.startTime,

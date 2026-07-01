@@ -34,6 +34,7 @@ import ContactDetailsEdit from './ContactDetailsEdit';
 import ContactsImportDialog from './ContactsImportDialog';
 import ClientQuickView from '../clients/ClientQuickView';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { ColumnDefinition } from '@alga-psa/types';
 import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
@@ -690,16 +691,12 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       render: (value, record): React.ReactNode => {
         const clientId = record.client_id;
         if (typeof clientId !== 'string' || !clientId) {
-          return (
-            <span className="text-gray-500">
-              {t('contactsPage.noClient', { defaultValue: 'No Client' })}
-            </span>
-          );
+          return <ClientNameCell clientName={null} />;
         }
 
         const client = clients.find(c => c.client_id === clientId);
         if (!client) {
-          return <span className="text-gray-500">{getClientName(clientId)}</span>;
+          return <ClientNameCell clientId={clientId} clientName={getClientName(clientId)} />;
         }
 
         const handleClientOpen = () => {
@@ -717,20 +714,22 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         };
 
         return (
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={handleClientOpen}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleClientOpen();
-              }
-            }}
-            className="text-blue-600 hover:underline cursor-pointer"
-          >
-            {client.client_name}
-          </div>
+          <ClientNameCell clientId={client.client_id} clientName={client.client_name} logoUrl={client.logoUrl ?? null}>
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={handleClientOpen}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleClientOpen();
+                }
+              }}
+              className="text-blue-600 hover:underline cursor-pointer truncate"
+            >
+              {client.client_name}
+            </div>
+          </ClientNameCell>
         );
       },
     },

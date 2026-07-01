@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -37,6 +38,7 @@ import {
   type RenewalQueueRow,
 } from '@alga-psa/billing/actions/renewalsQueueActions';
 import { updateClientContractForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { toPlainDate } from '@alga-psa/core';
 import { ContractWizard } from './ContractWizard';
 import { ContractDialog } from './ContractDialog';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -264,25 +266,20 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
   };
 
   const formatDateValue = (value: unknown): string => {
-    if (!value) return t('contractsList.empty.dash', { defaultValue: '—' });
-    if (!(typeof value === 'string' || typeof value === 'number' || value instanceof Date)) {
+    if (value === null || value === undefined || value === '') {
       return t('contractsList.empty.dash', { defaultValue: '—' });
     }
 
-    // Treat YYYY-MM-DD as a date-only value to avoid timezone shifts.
-    if (typeof value === 'string') {
-      const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (dateOnlyMatch) {
-        const year = Number(dateOnlyMatch[1]);
-        const month = Number(dateOnlyMatch[2]);
-        const day = Number(dateOnlyMatch[3]);
-        const dateOnly = new Date(Date.UTC(year, month - 1, day, 12));
-        return isNaN(dateOnly.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : dateOnly.toLocaleDateString();
-      }
+    // start_date/end_date are stored as timestamps but represent calendar dates.
+    // toPlainDate reads both YYYY-MM-DD strings and ISO timestamps in UTC; pinning
+    // to noon UTC keeps the intended day regardless of the viewer's timezone.
+    try {
+      const plainDate = toPlainDate(value as string | Date);
+      const dateOnly = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
+      return dateOnly.toLocaleDateString();
+    } catch {
+      return t('contractsList.empty.dash', { defaultValue: '—' });
     }
-
-    const date = new Date(value);
-    return isNaN(date.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : date.toLocaleDateString();
   };
 
   const clientContractColumns: ColumnDefinition<IContractWithClient>[] = [
@@ -292,10 +289,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       width: '15%',
       headerClassName: 'min-w-[11rem]',
       cellClassName: 'min-w-[11rem] max-w-none',
-      render: (value: string | null) =>
-        typeof value === 'string' && value.trim().length > 0
-          ? value
-          : t('contractsList.empty.dash', { defaultValue: '—' }),
+      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />,
     },
     {
       title: t('clientContracts.columns.sourceTemplate', { defaultValue: 'Source Template' }),
@@ -579,8 +573,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     {
       title: t('clientContracts.upcoming.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
-      render: (value: string | null, record) =>
-        typeof value === 'string' && value.trim().length > 0 ? value : record.client_id,
+      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />,
     },
     {
       title: t('clientContracts.upcoming.columns.contract', { defaultValue: 'Contract' }),

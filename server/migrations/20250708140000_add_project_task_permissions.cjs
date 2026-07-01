@@ -6,7 +6,7 @@ const MIGRATION_TENANT = 'migration:20250708140000_add_project_task_permissions'
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for project task permission backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 exports.up = async function(knex) {

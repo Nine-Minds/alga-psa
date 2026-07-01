@@ -1,9 +1,12 @@
 import type { EntityDeletionConfig } from '@alga-psa/types';
-import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
+// Raw tenant scoping (not @alga-psa/db's tenantDb) so @alga-psa/core does not
+// depend on @alga-psa/db — that import direction creates a core<->db build cycle.
+// Every table referenced here is a standard `tenant`-column table, so qualifying
+// the predicate by table name matches tenantDb.table()'s behaviour exactly.
 const tenantScopedTable = (trx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder =>
-  tenantDb(trx, tenant).table(table);
+  trx(table).where(`${table}.tenant`, tenant);
 
 const countDocumentAssociations = (entityType: string) => {
   return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
@@ -38,11 +41,12 @@ const countContractLineServiceDeps = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
 ): Promise<number> => {
-  const db = tenantDb(trx, options.tenant);
-  const query = db.table('contract_line_services as cls');
-  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'cls.contract_line_id');
-
-  const result = await query
+  const result = await trx('contract_line_services as cls')
+    .where('cls.tenant', options.tenant)
+    .join('contract_lines as cl', function () {
+      this.on('cl.contract_line_id', '=', 'cls.contract_line_id')
+        .andOn('cl.tenant', '=', 'cls.tenant');
+    })
     .where({ 'cls.service_id': options.entityId })
     .count<{ count: string }>('* as count')
     .first();
@@ -250,11 +254,12 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'schedule_entries',
         label: 'schedule entry',
         countQuery: async (trx, options) => {
-          const db = tenantDb(trx, options.tenant);
-          const taskQuery = db.table('project_tasks');
-          db.tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
-
-          const taskIds = await taskQuery
+          const taskIds = await trx('project_tasks')
+            .where('project_tasks.tenant', options.tenant)
+            .join('project_phases', function () {
+              this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+                .andOn('project_phases.tenant', '=', 'project_tasks.tenant');
+            })
             .where({ 'project_phases.project_id': options.entityId })
             .pluck('project_tasks.task_id');
           if (taskIds.length === 0) return 0;

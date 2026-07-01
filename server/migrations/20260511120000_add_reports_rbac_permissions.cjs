@@ -18,7 +18,7 @@ const MIGRATION_TENANT = 'migration:20260511120000_add_reports_rbac_permissions'
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for reports RBAC permission backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 async function ensurePermission(knex, db, tenant, def) {

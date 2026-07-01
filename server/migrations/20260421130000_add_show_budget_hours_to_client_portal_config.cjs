@@ -11,7 +11,7 @@ const PROJECT_CLIENT_PORTAL_CONFIG_ROLLBACK_REASON = 'discover projects needing 
 const TEMPLATE_CLIENT_PORTAL_CONFIG_ROLLBACK_REASON = 'discover project templates needing show_budget_hours client portal config rollback';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 const NEW_DEFAULT_CLIENT_PORTAL_CONFIG = {

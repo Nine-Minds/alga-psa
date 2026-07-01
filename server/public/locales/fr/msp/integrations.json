@@ -1017,6 +1017,27 @@
         },
         "toasts": {
           "errorTitle": "Erreur de connexion Hudu"
+        },
+        "sync": {
+          "title": "Synchronisation et automatisation",
+          "description": "Importez les actifs de tous les clients associés en une seule fois et maintenez-les à jour automatiquement. Associer une entreprise ou une mise en page configure uniquement l'intégration — les actifs n'apparaissent qu'après un import.",
+          "summary": "{{created}} créés · {{updated}} mis à jour · {{skipped}} ignorés · {{failed}} en échec",
+          "toastErrorTitle": "Erreur de synchronisation Hudu",
+          "importDoneTitle": "Import Hudu terminé",
+          "syncDoneTitle": "Synchronisation Hudu terminée",
+          "importing": "Import en cours…",
+          "importAll": "Importer tous les clients associés",
+          "syncing2": "Synchronisation…",
+          "syncAll": "Tout synchroniser",
+          "autoSyncLabel": "Synchronisation automatique quotidienne",
+          "autoSyncHint": "Importe automatiquement les nouveaux actifs et actualise les actifs existants une fois par jour pour chaque client associé.",
+          "neverRun": "Aucune exécution à l'échelle du locataire pour l'instant.",
+          "lastRun": "Dernière exécution {{at}} : {{created}} créés · {{updated}} mis à jour · {{skipped}} ignorés · {{failed}} en échec",
+          "status": {
+            "syncing": "En cours…",
+            "completed": "Terminée",
+            "error": "Erreur"
+          }
         }
       }
     },
@@ -1334,6 +1355,8 @@
           },
           "connected": "Connecté à NinjaOne",
           "connectedWithErrors": "NinjaOne connecté avec des erreurs de synchronisation",
+          "reconnectRequired": "Reconnexion à NinjaOne requise",
+          "reconnectRequiredDescription": "L'autorisation NinjaOne ne peut plus être actualisée (jeton expiré ou révoqué). Reconnectez-vous pour rétablir la synchronisation des appareils, les alertes et l'accès à distance.",
           "instanceLabel": "Instance :",
           "organizations": "{{count}} organisations",
           "devices": "{{count}} appareils",

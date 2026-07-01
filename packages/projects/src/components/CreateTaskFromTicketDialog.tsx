@@ -274,7 +274,6 @@ export default function CreateTaskFromTicketDialog({
             checked={shouldLink}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setShouldLink(e.target.checked)}
             label={t('dialogs.createTaskFromTicket.linkTicketLabel', 'Link ticket to the created task')}
-            containerClassName="mb-0"
           />
         </div>
       </Dialog>

@@ -837,7 +837,13 @@
       "missingHelp": "55555",
       "mismatchHelp": "55555",
       "matchedHelp": "55555",
-      "unknownHelp": "55555"
+      "unknownHelp": "55555",
+      "hostLabel": "55555",
+      "fqdnLabel": "55555",
+      "valueLabel": "55555",
+      "copyHostAriaLabel": "55555",
+      "copyFqdnAriaLabel": "55555",
+      "hostHint": "55555 {{domain}} 55555 {{domain}} 55555 {{domain}} 55555"
     }
   },
   "inboundRules": {

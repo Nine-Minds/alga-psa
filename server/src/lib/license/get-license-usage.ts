@@ -35,7 +35,7 @@ export async function getLicenseUsage(
     })
     .count('* as count');
   
-  const used = parseInt(usedResult[0].count as string, 10);
+  const used = parseInt((usedResult as Array<{ count: string }>)[0].count, 10);
   const limit = tenant.licensed_user_count;
   const remaining = limit !== null ? Math.max(0, limit - used) : null;
   

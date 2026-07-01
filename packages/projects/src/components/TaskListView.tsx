@@ -1523,7 +1523,6 @@ export default function TaskListView({
                                       indeterminate={someStatusSelected && !allStatusSelected}
                                       onChange={() => setTasksSelected(statusTaskIds, !allStatusSelected)}
                                       size="sm"
-                                      containerClassName="mb-0"
                                       skipRegistration
                                     />
                                   </div>
@@ -1596,7 +1595,6 @@ export default function TaskListView({
                                                 checked={isSelected(task.task_id)}
                                                 onChange={() => toggleTask(task.task_id)}
                                                 size="sm"
-                                                containerClassName="mb-0"
                                                 skipRegistration
                                               />
                                             </div>

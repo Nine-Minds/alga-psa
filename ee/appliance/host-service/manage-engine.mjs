@@ -228,6 +228,12 @@ export async function applyAppUrl(deps) {
 
 // --- Control-plane upgrade request (-> host-agent over the socket) ----------
 
+// LEVERAGE: friction appliance-host-agent-out-of-band — the control plane is
+// delivered via the OCI release channel, but this upgrade hops to the host-agent
+// (a host systemd service baked at install) which the channel can't update. So a
+// new control-plane image can call a host-agent route an older install lacks
+// (-> relayed 404 {"error":"not found"}). The host should be inside the update
+// plane, or the upgrade shouldn't depend on a separately-shipped host-agent route.
 export function requestControlPlaneUpgrade(deps) {
   const { hostAgentSocket = '/run/alga-appliance/host-agent.sock', timeoutMs = 10000 } = deps;
   return new Promise((resolve) => {
@@ -281,6 +287,21 @@ function digestOf(imageRef) {
   return at >= 0 ? imageRef.slice(at + 1) : null;
 }
 
+// Live readiness of a HelmRelease's Ready condition. Returns true/false, or null
+// when it cannot be determined (kube error / not found) — callers must treat null
+// as "unknown" and not as a failure.
+async function isHelmReleaseReady(kube, namespace, name) {
+  try {
+    const res = await kube.json(`get helmrelease ${name} -n ${namespace}`);
+    if (!res || !res.ok || !res.value) return null;
+    const condition = (res.value.status?.conditions || []).find((c) => c.type === 'Ready');
+    if (!condition) return null;
+    return condition.status === 'True';
+  } catch {
+    return null;
+  }
+}
+
 export async function collectManageStatus(deps) {
   const {
     kube,
@@ -292,6 +313,9 @@ export async function collectManageStatus(deps) {
     cpNamespace = 'alga-appliance-control-plane',
     cpDeployment = 'appliance-control-plane',
     resolveControlPlaneRef,
+    resolveReleaseManifest,
+    appHelmReleaseNamespace = 'alga-system',
+    appHelmReleaseName = 'alga-core',
     licenseNamespace = 'msp',
     licenseSecretName = 'appliance-license-seed'
   } = deps;
@@ -317,6 +341,32 @@ export async function collectManageStatus(deps) {
   const resolvedDigest = digestOf(resolvedRef) || (resolvedRef && resolvedRef.includes('sha256:') ? resolvedRef.split('@').pop() : null);
   const upgradeAvailable = Boolean(runningDigest && resolvedDigest && runningDigest !== resolvedDigest);
 
+  // App release update availability. The box pins the channel -> release-manifest
+  // digest at install time (selection.manifestDigest). Re-resolve the channel's
+  // *current* manifest digest and compare: a moved channel tag (e.g. a published
+  // pointer-update) points at new app images but never reaches an installed box
+  // until an operator runs an update. Without this, app.updateAvailable was a
+  // hardcoded false, so the Manage UI could never surface — or offer — an update.
+  // LEVERAGE: pattern appliance-channel-digest-drift — "resolve channel ref, diff
+  // against the installed/pinned digest -> available?" is now written twice here
+  // (control-plane image above, app release below). A shared helper
+  // (installedDigest + resolver -> { available, resolvedDigest }) would dedupe it.
+  let resolvedReleaseDigest = null;
+  let resolvedReleaseVersion = null;
+  try {
+    if (resolveReleaseManifest && selection.manifestDigest) {
+      const resolved = await resolveReleaseManifest(channel, {
+        registryHost: selection.registryHost,
+        releaseRepository: selection.repository
+      });
+      resolvedReleaseDigest = resolved?.manifestDigest || null;
+      resolvedReleaseVersion = resolved?.manifest?.version || null;
+    }
+  } catch { /* best effort — leave updateAvailable false when the registry is unreachable */ }
+  const updateAvailable = Boolean(
+    selection.manifestDigest && resolvedReleaseDigest && selection.manifestDigest !== resolvedReleaseDigest
+  );
+
   // App URL / DNS (from persisted operator intent).
   const runtime = selection.runtime || {};
   const appUrl = {
@@ -332,12 +382,27 @@ export async function collectManageStatus(deps) {
     license = await readLicenseStatus({ kube, namespace: licenseNamespace, secretName: licenseSecretName });
   } catch { /* best effort */ }
 
+  // App-update status, reconciled against live reality. install-state persists the
+  // *last* update attempt's outcome, which goes stale: a block that has since
+  // converged (or a transient that recovered) must not keep showing as a current
+  // error. If the alga-core HelmRelease is actually Ready, the app is healthy and
+  // there is no error to show — surface no failure rather than a stale one.
+  let appUpdateStatus = mapUpdateStatus(installState.status);
+  let appUpdateMessage = installState.lastAction || null;
+  if (appUpdateStatus === 'blocked' && (await isHelmReleaseReady(kube, appHelmReleaseNamespace, appHelmReleaseName)) === true) {
+    appUpdateStatus = 'idle';
+    appUpdateMessage = null;
+  }
+
   return {
     app: {
       version: selection.selectedReleaseVersion || null,
       channel,
-      updateAvailable: false,
-      update: { status: mapUpdateStatus(installState.status), message: installState.lastAction || null }
+      updateAvailable,
+      availableVersion: updateAvailable ? resolvedReleaseVersion : null,
+      pinnedReleaseDigest: selection.manifestDigest || null,
+      resolvedReleaseDigest,
+      update: { status: appUpdateStatus, message: appUpdateMessage }
     },
     controlPlane: {
       channel,

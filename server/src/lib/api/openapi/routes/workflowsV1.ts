@@ -41,13 +41,12 @@ export function registerWorkflowV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/workflows/export', summary: 'Export workflows' },
     { method: 'post', path: '/api/v1/workflows/import', summary: 'Import workflows' },
     { method: 'get', path: '/api/v1/workflows/search', summary: 'Search workflows' },
-    { method: 'get', path: '/api/v1/workflows/tasks', summary: 'List workflow tasks' },
+    // NOTE: GET /tasks, GET /tasks/{id}, POST /tasks/{id}/claim and POST /tasks/{id}/complete
+    // now have real handlers and are registered in `workflowTasksV1.ts`. The verbs below remain
+    // inventory-only — no handler exists for them yet.
     { method: 'post', path: '/api/v1/workflows/tasks', summary: 'Create workflow task' },
     { method: 'post', path: '/api/v1/workflows/tasks/bulk-assign', summary: 'Bulk assign workflow tasks' },
-    { method: 'get', path: '/api/v1/workflows/tasks/{id}', summary: 'Get workflow task by id' },
     { method: 'put', path: '/api/v1/workflows/tasks/{id}', summary: 'Update workflow task' },
-    { method: 'post', path: '/api/v1/workflows/tasks/{id}/claim', summary: 'Claim workflow task' },
-    { method: 'post', path: '/api/v1/workflows/tasks/{id}/complete', summary: 'Complete workflow task' },
     { method: 'get', path: '/api/v1/workflows/templates', summary: 'List workflow templates' },
     { method: 'post', path: '/api/v1/workflows/templates', summary: 'Create workflow template' },
     { method: 'delete', path: '/api/v1/workflows/templates/{id}', summary: 'Delete workflow template' },

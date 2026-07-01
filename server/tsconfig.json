@@ -291,6 +291,15 @@
       "@alga-psa/jobs/runners/*": [
         "../packages/jobs/src/lib/jobs/runners/*"
       ],
+      "@alga-psa/jobs/fanout": [
+        "../packages/jobs/src/lib/fanout"
+      ],
+      "@alga-psa/jobs/runner": [
+        "../packages/jobs/src/lib/jobRunnerAccessor"
+      ],
+      "@alga-psa/jobs/scheduler": [
+        "../packages/jobs/src/lib/jobSchedulerAccessor"
+      ],
       "@alga-psa/jobs/*": [
         "../packages/jobs/src/*"
       ],

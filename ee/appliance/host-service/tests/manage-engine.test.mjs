@@ -180,3 +180,115 @@ test('collectManageStatus: no upgrade when digests match', async () => {
   assert.equal(status.controlPlane.upgradeAvailable, false);
   assert.equal(status.app.update.status, 'idle');
 });
+
+test('collectManageStatus: app.updateAvailable true when channel digest moved past the pinned one', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-app-upd-'));
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({
+    selectedChannel: 'stable',
+    selectedReleaseVersion: 'old-version',
+    manifestDigest: 'sha256:PINNED',
+    registryHost: 'ghcr.io',
+    repository: 'nine-minds/alga-appliance-release'
+  }));
+  const kube = fakeKube({});
+  const status = await collectManageStatus({
+    kube,
+    releaseSelectionFile,
+    installStateFile: path.join(tmp, 'nope.json'),
+    cpUpgradeStatusFile: path.join(tmp, 'nope2.json'),
+    resolveControlPlaneRef: async () => null,
+    resolveReleaseManifest: async (ref, opts) => {
+      assert.equal(ref, 'stable');
+      assert.equal(opts.registryHost, 'ghcr.io');
+      assert.equal(opts.releaseRepository, 'nine-minds/alga-appliance-release');
+      return { manifestDigest: 'sha256:NEW', manifest: { version: 'new-version' } };
+    }
+  });
+  assert.equal(status.app.updateAvailable, true);
+  assert.equal(status.app.availableVersion, 'new-version');
+  assert.equal(status.app.pinnedReleaseDigest, 'sha256:PINNED');
+  assert.equal(status.app.resolvedReleaseDigest, 'sha256:NEW');
+});
+
+test('collectManageStatus: app.updateAvailable false when channel digest matches the pinned one', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-app-noupd-'));
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({
+    selectedChannel: 'stable',
+    manifestDigest: 'sha256:SAME'
+  }));
+  const status = await collectManageStatus({
+    kube: fakeKube({}),
+    releaseSelectionFile,
+    installStateFile: path.join(tmp, 'nope.json'),
+    cpUpgradeStatusFile: path.join(tmp, 'nope2.json'),
+    resolveControlPlaneRef: async () => null,
+    resolveReleaseManifest: async () => ({ manifestDigest: 'sha256:SAME', manifest: { version: 'v' } })
+  });
+  assert.equal(status.app.updateAvailable, false);
+  assert.equal(status.app.availableVersion, null);
+});
+
+test('collectManageStatus clears a stale blocked app-update when the alga-core HelmRelease is Ready', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-stale-ok-'));
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable' }));
+  const installStateFile = path.join(tmp, 'install-state.json');
+  fs.writeFileSync(installStateFile, JSON.stringify({ status: 'update-blocked', lastAction: 'HelmRelease reconcile failed during app update.' }));
+  const kube = fakeKube({
+    json: (args) => args.includes('helmrelease alga-core')
+      ? { ok: true, value: { status: { conditions: [{ type: 'Ready', status: 'True', reason: 'ReconciliationSucceeded' }] } } }
+      : { ok: true, value: {} }
+  });
+  const status = await collectManageStatus({
+    kube,
+    releaseSelectionFile,
+    installStateFile,
+    cpUpgradeStatusFile: path.join(tmp, 'cp.json'),
+    resolveControlPlaneRef: async () => null
+  });
+  // Healthy app + stale failure record -> show no error.
+  assert.equal(status.app.update.status, 'idle');
+  assert.equal(status.app.update.message, null);
+});
+
+test('collectManageStatus keeps a blocked app-update when the alga-core HelmRelease is not Ready', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-stale-bad-'));
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable' }));
+  const installStateFile = path.join(tmp, 'install-state.json');
+  fs.writeFileSync(installStateFile, JSON.stringify({ status: 'update-blocked', lastAction: 'HelmRelease reconcile failed during app update.' }));
+  const kube = fakeKube({
+    json: (args) => args.includes('helmrelease alga-core')
+      ? { ok: true, value: { status: { conditions: [{ type: 'Ready', status: 'False', reason: 'UpgradeFailed' }] } } }
+      : { ok: true, value: {} }
+  });
+  const status = await collectManageStatus({
+    kube,
+    releaseSelectionFile,
+    installStateFile,
+    cpUpgradeStatusFile: path.join(tmp, 'cp.json'),
+    resolveControlPlaneRef: async () => null
+  });
+  assert.equal(status.app.update.status, 'blocked');
+});
+
+test('collectManageStatus: app.updateAvailable false (not a crash) when the registry is unreachable', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-app-err-'));
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({
+    selectedChannel: 'stable',
+    manifestDigest: 'sha256:PINNED'
+  }));
+  const status = await collectManageStatus({
+    kube: fakeKube({}),
+    releaseSelectionFile,
+    installStateFile: path.join(tmp, 'nope.json'),
+    cpUpgradeStatusFile: path.join(tmp, 'nope2.json'),
+    resolveControlPlaneRef: async () => null,
+    resolveReleaseManifest: async () => { throw new Error('registry unreachable'); }
+  });
+  assert.equal(status.app.updateAvailable, false);
+  assert.equal(status.app.resolvedReleaseDigest, null);
+});

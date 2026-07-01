@@ -51,6 +51,23 @@ export default function CreateTicketRouteClient({ closeMode, prefill }: CreateTi
     close();
   };
 
+  // "Create + View Ticket": navigate straight to the new ticket in a SINGLE step. We must NOT
+  // also run handleTicketAdded's close (router.back) — a back() racing this navigation is the
+  // bug that aborted one or the other (stranding the user on the list, or leaving the dialog
+  // stuck over the detail page). router.replace swaps the intercept URL (/msp/create-ticket)
+  // for the ticket detail, which both dismisses this modal route and lands on the ticket.
+  const handleViewCreatedTicket = (ticket: ITicket) => {
+    if (closedRef.current) return;
+    closedRef.current = true;
+    toast.success(
+      t('quickCreate.success.ticket', {
+        defaultValue: 'Ticket #{{number}} created successfully',
+        number: ticket.ticket_number,
+      }),
+    );
+    router.replace(`/msp/tickets/${ticket.ticket_id}`);
+  };
+
   return (
     <QuickAddTicket
       open={true}
@@ -58,6 +75,7 @@ export default function CreateTicketRouteClient({ closeMode, prefill }: CreateTi
         if (!open) close();
       }}
       onTicketAdded={handleTicketAdded}
+      onViewCreatedTicket={handleViewCreatedTicket}
       prefilledClient={prefill.client}
       prefilledContact={prefill.contact}
       prefilledDescription={prefill.description}

@@ -1,79 +1,108 @@
 {
+  "clientNameCell": {
+    "noClient": "Nenhum cliente"
+  },
   "reactions": {
-    "ariaSummary_one": "{{emoji}} {{count}} reaction",
-    "ariaSummary_other": "{{emoji}} {{count}} reactions",
-    "ariaYouReacted": ", you reacted"
+    "ariaSummary_one": "Reação {{emoji}} {{count}}",
+    "ariaSummary_other": "Reações {{emoji}} {{count}}",
+    "ariaYouReacted": ", você reagiu"
   },
   "credits": {
-    "expiresInDaysOn_one": "Expires in {{count}} day on {{date}}",
-    "expiresInDaysOn_other": "Expires in {{count}} days on {{date}}",
-    "expiringForClient_one": "{{count}} credit for {{clientName}} will expire soon",
-    "expiringForClient_other": "{{count}} credits for {{clientName}} will expire soon"
+    "expiresInDaysOn_one": "Expira no dia {{count}} em {{date}}",
+    "expiresInDaysOn_other": "Expira em dias {{count}} em {{date}}",
+    "expiringForClient_one": "O crédito {{count}} para {{clientName}} expirará em breve",
+    "expiringForClient_other": "Os créditos {{count}} para {{clientName}} expirarão em breve"
   },
   "licenseBanner": {
-    "trialExpiresIn_one": "Enterprise trial expires in {{count}} day. Enter a license key to keep Enterprise features.",
-    "trialExpiresIn_other": "Enterprise trial expires in {{count}} days. Enter a license key to keep Enterprise features.",
-    "trialDaysRemaining_one": "Enterprise trial active — {{count}} day remaining.",
-    "trialDaysRemaining_other": "Enterprise trial active — {{count}} days remaining.",
-    "licenseExpiresIn_one": "License expires in {{count}} day. Renew to avoid service interruption.",
-    "licenseExpiresIn_other": "License expires in {{count}} days. Renew to avoid service interruption."
+    "trialExpiresIn_one": "A avaliação empresarial expira no dia {{count}}. Insira uma chave de licença para manter os recursos empresariais.",
+    "trialExpiresIn_other": "A avaliação empresarial expira em {{count}} dias. Insira uma chave de licença para manter os recursos empresariais.",
+    "trialDaysRemaining_one": "Avaliação empresarial ativa — {{count}} dias restantes.",
+    "trialDaysRemaining_other": "Avaliação empresarial ativa — {{count}} dias restantes.",
+    "licenseExpiresIn_one": "A licença expira no dia {{count}}. Renove para evitar interrupção do serviço.",
+    "licenseExpiresIn_other": "A licença expira em {{count}} dias. Renove para evitar interrupção do serviço."
   },
   "nav": {
-    "dashboard": "Dashboard",
+    "dashboard": "Painel",
     "tickets": "Tickets",
-    "clients": "Clients",
-    "projects": "Projects",
-    "billing": "Billing",
-    "reports": "Reports",
-    "settings": "Settings",
-    "profile": "Profile",
-    "logout": "Logout",
-    "help": "Help"
+    "clients": "Clientes",
+    "projects": "Projetos",
+    "billing": "Cobrança",
+    "reports": "Relatórios",
+    "settings": "Configurações",
+    "profile": "Perfil",
+    "logout": "Sair",
+    "help": "Ajuda"
   },
   "actions": {
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "edit": "Edit",
-    "create": "Create",
-    "update": "Update",
-    "submit": "Submit",
-    "back": "Back",
-    "next": "Next",
-    "previous": "Previous",
-    "search": "Search",
-    "filter": "Filter",
-    "export": "Export",
-    "import": "Import",
-    "download": "Download",
-    "upload": "Upload",
-    "refresh": "Refresh",
-    "close": "Close",
-    "confirm": "Confirm",
-    "add": "Add",
-    "remove": "Remove",
-    "clear": "Clear",
-    "reset": "Reset",
-    "view": "View",
-    "copy": "Copy",
-    "duplicate": "Duplicate",
-    "openMenu": "Open menu",
-    "confirmDeletion": "Confirm Deletion",
-    "saving": "Saving...",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "create": "Criar",
+    "update": "Atualizar",
+    "submit": "Enviar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "search": "Procurar",
+    "filter": "Filtro",
+    "export": "Exportar",
+    "import": "Importar",
+    "download": "Baixar",
+    "upload": "Carregar",
+    "refresh": "Atualizar",
+    "close": "Fechar",
+    "confirm": "Confirmar",
+    "add": "Adicionar",
+    "remove": "Remover",
+    "clear": "Limpar",
+    "reset": "Reiniciar",
+    "view": "Visualizar",
+    "copy": "Copiar",
+    "duplicate": "Duplicar",
+    "openMenu": "Abrir menu",
+    "confirmDeletion": "Confirmar exclusão",
+    "saving": "Salvando...",
     "print": "Imprimir",
     "printSelected_one": "Imprimir selecionado ({{count}})",
-    "printSelected_other": "Imprimir selecionados ({{count}})",
+    "printSelected_other": "Imprimir selecionado ({{count}})",
     "printOptions": "Opções de impressão",
     "resetPrintOptions": "Redefinir opções de impressão",
     "share": "Compartilhar",
-    "done": "Concluído",
+    "done": "Feito",
     "continue": "Continuar",
-    "printSelected": "Imprimir selecionados ({{count}})"
+    "printSelected": "Imprimir selecionado ({{count}})"
+  },
+  "form": {
+    "selectPlaceholder": "Selecione...",
+    "clearSelection": "Limpar seleção",
+    "fromDate": "A partir da data",
+    "toDate": "A data",
+    "noResults": "Nenhum resultado encontrado",
+    "searchPlaceholder": "Procurar..."
+  },
+  "pickers": {
+    "addNewClient": "Adicionar novo cliente",
+    "addNewContact": "Adicionar novo contato",
+    "loadingUsers": "Carregando usuários...",
+    "errorLoadingUsers": "Erro ao carregar usuários",
+    "searchUsers": "Pesquisar usuários...",
+    "unassigned": "Não atribuído",
+    "noUsersAvailable": "Nenhum usuário disponível",
+    "searchBoards": "Painéis de pesquisa...",
+    "searchBoardsLabel": "Quadros de pesquisa",
+    "noBoardsFound": "Nenhuma quadro encontrada"
+  },
+  "tagFilter": {
+    "placeholder": "Filtrar por tags...",
+    "filter": "Filtro",
+    "selectedCount": "{{count}} selecionado",
+    "clearAll": "Limpar tudo"
   },
   "status": {
     "loading": "Carregando...",
     "saving": "Salvando...",
-    "processing": "Processando...",
+    "processing": "Processamento...",
     "success": "Sucesso",
     "error": "Erro",
     "warning": "Aviso",
@@ -85,147 +114,147 @@
     "cancelled": "Cancelado"
   },
   "messages": {
-    "welcome": "Welcome",
-    "confirmDelete": "Are you sure you want to delete this item?",
-    "confirmDeletion": "Confirm Deletion",
-    "saveSuccess": "Changes saved successfully",
-    "saveError": "Failed to save changes",
-    "loadError": "Failed to load data",
-    "noData": "No data available",
-    "required": "This field is required",
-    "invalidEmail": "Invalid email address",
-    "invalidPassword": "Invalid password",
-    "passwordMismatch": "Passwords do not match"
+    "welcome": "Bem-vindo",
+    "confirmDelete": "Tem certeza de que deseja excluir este item?",
+    "confirmDeletion": "Confirmar exclusão",
+    "saveSuccess": "Alterações salvas com sucesso",
+    "saveError": "Falha ao salvar as alterações",
+    "loadError": "Falha ao carregar dados",
+    "noData": "Não há dados disponíveis",
+    "required": "Este campo é obrigatório",
+    "invalidEmail": "Endereço de e-mail inválido",
+    "invalidPassword": "Senha inválida",
+    "passwordMismatch": "As senhas não coincidem"
   },
   "errors": {
     "auth": {
-      "notAuthenticated": "Not authenticated",
-      "accessDenied": "Access denied",
-      "clientPortalOnly": "Access denied: Client portal actions are restricted to client users",
-      "insufficientPermissions": "Insufficient permissions",
-      "userIdNotFound": "User ID not found in session",
-      "tenantNotFound": "Tenant not found in session. Please log out and log back in.",
-      "userNotFound": "User not found",
-      "contactNotFound": "User not associated with a contact",
-      "clientNotFound": "Contact not associated with a client"
+      "notAuthenticated": "Não autenticado",
+      "accessDenied": "Acesso negado",
+      "clientPortalOnly": "Acesso negado: as ações do portal do cliente são restritas a usuários clientes",
+      "insufficientPermissions": "Permissões insuficientes",
+      "userIdNotFound": "ID do usuário não encontrado na sessão",
+      "tenantNotFound": "Inquilino não encontrado na sessão. Por favor, saia e faça login novamente.",
+      "userNotFound": "Usuário não encontrado",
+      "contactNotFound": "Usuário não associado a um contato",
+      "clientNotFound": "Contato não associado a um cliente"
     },
     "permissions": {
       "tickets": {
-        "read": "Insufficient permissions to view tickets",
-        "readDetails": "Insufficient permissions to view ticket details",
-        "create": "Insufficient permissions to create tickets",
-        "update": "Insufficient permissions to update tickets",
-        "updateStatus": "Insufficient permissions to update ticket status",
-        "addComments": "Insufficient permissions to add comments",
-        "updateComments": "Insufficient permissions to update comments",
-        "deleteComments": "Insufficient permissions to delete comments"
+        "read": "Permissões insuficientes para visualizar tickets",
+        "readDetails": "Permissões insuficientes para visualizar detalhes do ticket",
+        "create": "Permissões insuficientes para criar tickets",
+        "update": "Permissões insuficientes para atualizar tickets",
+        "updateStatus": "Permissões insuficientes para atualizar o status do ticket",
+        "addComments": "Permissões insuficientes para adicionar comentários",
+        "updateComments": "Permissões insuficientes para atualizar comentários",
+        "deleteComments": "Permissões insuficientes para excluir comentários"
       }
     }
   },
   "fields": {
-    "notes": "Notes"
+    "notes": "Notas"
   },
   "auth": {
     "messages": {
       "handoffMissingToken": "O token de transferência de login está ausente ou é inválido. Faça login novamente.",
       "handoffFinalizeFailed": "Não foi possível finalizar seu login. Tente fazer login novamente.",
-      "handoffNetworkIssue": "Problema de rede detectado ao finalizar seu login. Tente novamente."
+      "handoffNetworkIssue": "Problema de rede detectado ao finalizar seu login. Por favor, tente novamente."
     },
     "checkEmail": {
-      "resendSuccess": "E-mail enviado! Verifique a sua caixa de entrada.",
-      "resendFailed": "Falha ao reenviar o e-mail. Tente novamente.",
-      "whatsNext": "Próximos passos?",
+      "resendSuccess": "E-mail enviado! Por favor, verifique sua caixa de entrada.",
+      "resendFailed": "Falha ao reenviar e-mail. Por favor, tente novamente.",
+      "whatsNext": "O que vem a seguir?",
       "didntReceive": "Não recebeu o e-mail?"
     }
   },
   "share": {
     "errors": {
-      "loadFailed": "Falha ao carregar o link de partilha",
-      "connectionFailed": "Falha ao ligar ao servidor",
-      "passwordRequired": "Palavra-passe necessária",
-      "invalidPassword": "Palavra-passe inválida",
-      "downloadFailedRetry": "Falha no download. Tente novamente.",
+      "loadFailed": "Falha ao carregar o link de compartilhamento",
+      "connectionFailed": "Falha ao conectar ao servidor",
+      "passwordRequired": "Senha obrigatória",
+      "invalidPassword": "Senha inválida",
+      "downloadFailedRetry": "Falha no download. Por favor, tente novamente.",
       "downloadFailed": "Falha no download",
-      "linkNotAvailable": "Link indisponível",
-      "linkExpired": "Este link de partilha expirou.",
-      "downloadLimitReached": "O limite de downloads foi atingido."
+      "linkNotAvailable": "Link não disponível",
+      "linkExpired": "Este link de compartilhamento expirou.",
+      "downloadLimitReached": "O limite de download foi atingido."
     },
     "downloadStarted": "Download iniciado com sucesso!",
     "enterPassword": "Digite a senha"
   },
   "tickets": {
     "origin": {
-      "internal": "Created Internally",
-      "clientPortal": "Created via Client Portal",
-      "inboundEmail": "Created via Inbound Email",
-      "api": "Created via API",
-      "other": "Created via Other"
+      "internal": "Criado internamente",
+      "clientPortal": "Criado via Portal do Cliente",
+      "inboundEmail": "Criado via e-mail de entrada",
+      "api": "Criado via API",
+      "other": "Criado por outro"
     },
     "responseSource": {
-      "clientPortal": "Received via Client Portal",
-      "inboundEmail": "Received via Inbound Email"
+      "clientPortal": "Recebido via Portal do Cliente",
+      "inboundEmail": "Recebido via e-mail de entrada"
     }
   },
   "time": {
-    "today": "Today",
-    "yesterday": "Yesterday",
-    "tomorrow": "Tomorrow",
-    "thisWeek": "This Week",
-    "lastWeek": "Last Week",
-    "thisMonth": "This Month",
-    "lastMonth": "Last Month",
-    "thisYear": "This Year",
-    "lastYear": "Last Year",
-    "seconds": "seconds",
-    "minutes": "minutes",
-    "hours": "hours",
-    "days": "days",
-    "weeks": "weeks",
-    "months": "months",
-    "years": "years"
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "tomorrow": "Amanhã",
+    "thisWeek": "Essa semana",
+    "lastWeek": "Semana passada",
+    "thisMonth": "Este mês",
+    "lastMonth": "Mês passado",
+    "thisYear": "Este ano",
+    "lastYear": "Ano passado",
+    "seconds": "segundos",
+    "minutes": "minutos",
+    "hours": "horas",
+    "days": "dias",
+    "weeks": "semanas",
+    "months": "meses",
+    "years": "anos"
   },
   "language": {
-    "selectLanguage": "Select Language",
-    "changeLanguage": "Change Language",
-    "currentLanguage": "Current Language",
+    "selectLanguage": "Selecione o idioma",
+    "changeLanguage": "Alterar idioma",
+    "currentLanguage": "Idioma atual",
     "preference": {
-      "label": "Language Preference",
-      "helper": "Select your preferred language for the interface and email notifications",
-      "placeholder": "Select a language",
-      "cleared": "Language preference cleared. Using default language...",
-      "updating": "Updating language preference...",
-      "notSet": "Not set",
-      "notSetWithSource": "Not set (Uses {{source}}: {{languageName}} - {{locale}})",
+      "label": "Preferência de idioma",
+      "helper": "Selecione seu idioma preferido para a interface e notificações por e-mail. Substitui os padrões da organização e do portal do cliente para você.",
+      "placeholder": "Selecione um idioma",
+      "cleared": "Preferência de idioma apagada. Usando o idioma padrão...",
+      "updating": "Atualizando preferência de idioma...",
+      "notSet": "Não definido",
+      "notSetWithSource": "Não definido (usa {{source}}: {{languageName}} - {{locale}})",
       "source": {
-        "client": "client default",
-        "tenant": "tenant default",
-        "system": "system default"
+        "client": "padrão do cliente",
+        "tenant": "padrão do inquilino",
+        "system": "padrão do sistema"
       }
     },
     "hierarchyTable": {
       "title": "Hierarquia de preferência de idioma",
-      "description": "Ao determinar qual idioma usar para a interface e notificações por email, o Alga verifica estes itens em ordem e para na primeira correspondência.",
+      "description": "Ao decidir qual idioma usar para a interface e notificações por e-mail, Alga os verifica em ordem e para na primeira partida.",
       "columns": {
         "priority": "Prioridade",
-        "source": "Origem do idioma",
+        "source": "Fonte do idioma",
         "appliesTo": "Aplica-se a",
-        "whereSet": "Onde configurar"
+        "whereSet": "Onde está definido"
       },
       "rows": {
         "userPreference": {
           "source": "Preferência individual do usuário",
           "appliesTo": "Todos os usuários",
-          "whereSet": "Perfil do usuário"
+          "whereSet": "Perfil de usuário"
         },
         "clientUserLanguage": {
-          "source": "Idioma específico do cliente",
+          "source": "Idioma do usuário específico do cliente",
           "appliesTo": "Usuários do portal do cliente (por cliente específico)",
           "whereSet": "Detalhes do cliente"
         },
         "clientPortalDefault": {
-          "source": "Padrão do portal do cliente",
+          "source": "Padrão do Portal do Cliente",
           "appliesTo": "Todos os usuários do portal do cliente",
-          "whereSet": "Configurações MSP → Portal do cliente"
+          "whereSet": "Configurações MSP → Portal do Cliente"
         },
         "organizationDefault": {
           "source": "Padrão da organização",
@@ -234,403 +263,403 @@
         },
         "systemDefault": {
           "source": "Padrão do sistema (inglês)",
-          "appliesTo": "Alternativa",
+          "appliesTo": "Cair pra trás",
           "whereSet": "Definido pelo sistema"
         }
       }
     }
   },
-  "yes": "Yes",
-  "no": "No",
+  "yes": "Sim",
+  "no": "Não",
   "clients": {
     "locations": {
-      "sectionTitle": "Client Locations",
-      "manageButton": "Manage Locations",
-      "dialogTitle": "Manage Locations - {{client}}",
-      "managerLabel": "Client Locations Manager",
-      "listTitle": "Locations",
+      "sectionTitle": "Locais de clientes",
+      "manageButton": "Gerenciar locais",
+      "dialogTitle": "Gerenciar locais - {{client}}",
+      "managerLabel": "Gerente de Locais de Clientes",
+      "listTitle": "Locais",
       "buttons": {
-        "add": "Add Location",
-        "save": "Save Location"
+        "add": "Adicionar local",
+        "save": "Salvar localização"
       },
       "card": {
-        "unnamed": "Unnamed Location",
-        "setDefault": "Set as default",
-        "edit": "Edit location",
-        "delete": "Delete location",
-        "addressLabel": "Address",
-        "addressHelper": "Full address for this location",
-        "phoneLabel": "Phone",
-        "phoneHelper": "Phone number for this location",
-        "phoneValue": "Phone: {{phone}}",
-        "emailLabel": "Email",
-        "emailHelper": "Email address for this location",
-        "emailValue": "Email: {{email}}",
-        "billingTag": "Billing",
-        "shippingTag": "Shipping",
-        "notesLabel": "Notes",
-        "notesHelper": "Additional notes for this location"
+        "unnamed": "Localização sem nome",
+        "setDefault": "Definir como padrão",
+        "edit": "Editar local",
+        "delete": "Excluir local",
+        "addressLabel": "Endereço",
+        "addressHelper": "Endereço completo deste local",
+        "phoneLabel": "Telefone",
+        "phoneHelper": "Número de telefone deste local",
+        "phoneValue": "Telefone: {{phone}}",
+        "emailLabel": "E-mail",
+        "emailHelper": "Endereço de e-mail deste local",
+        "emailValue": "E-mail: {{email}}",
+        "billingTag": "Cobrança",
+        "shippingTag": "Envio",
+        "notesLabel": "Notas",
+        "notesHelper": "Notas adicionais para este local"
       },
       "form": {
-        "locationName": "Location Name",
-        "locationNameHelper": "Name for this location (e.g., Main Office, Warehouse)",
-        "addressLine1": "Address Line 1",
-        "addressLine1Helper": "Primary address line (required)",
-        "addressLine2": "Address Line 2",
-        "addressLine2Helper": "Additional address information (optional)",
-        "addressLine3": "Address Line 3",
-        "city": "City",
-        "cityHelper": "City name (required)",
-        "stateProvince": "State/Province",
-        "stateProvinceHelper": "State or province name",
-        "postalCode": "Postal Code",
-        "postalCodeHelper": "ZIP or postal code",
-        "country": "Country",
-        "countryHelper": "Select country (required)",
-        "phone": "Phone",
-        "phoneHelper": "Phone number for this location",
-        "email": "Email",
-        "emailHelper": "Email address for this location",
-        "taxRegion": "Tax Region",
-        "taxRegionHelper": "Select the applicable tax region",
-        "notes": "Notes",
-        "notesHelper": "Additional notes about this location",
-        "defaultLocation": "Default Location",
-        "defaultLocationHelper": "Mark this as the default location for the client",
-        "billingAddress": "Billing Address",
-        "billingAddressHelper": "Use this location as the billing address",
-        "shippingAddress": "Shipping Address",
-        "shippingAddressHelper": "Use this location as the shipping address",
+        "locationName": "Nome do local",
+        "locationNameHelper": "Nome deste local (por exemplo, escritório principal, armazém)",
+        "addressLine1": "Endereço Linha 1",
+        "addressLine1Helper": "Linha de endereço principal (obrigatório)",
+        "addressLine2": "Linha de endereço 2",
+        "addressLine2Helper": "Informações adicionais de endereço (opcional)",
+        "addressLine3": "Linha de endereço 3",
+        "city": "Cidade",
+        "cityHelper": "Nome da cidade (obrigatório)",
+        "stateProvince": "Estado/Província",
+        "stateProvinceHelper": "Nome do estado ou província",
+        "postalCode": "Código postal",
+        "postalCodeHelper": "CEP ou código postal",
+        "country": "País",
+        "countryHelper": "Selecione o país (obrigatório)",
+        "phone": "Telefone",
+        "phoneHelper": "Número de telefone deste local",
+        "email": "E-mail",
+        "emailHelper": "Endereço de e-mail deste local",
+        "taxRegion": "Região Fiscal",
+        "taxRegionHelper": "Selecione a região fiscal aplicável",
+        "notes": "Notas",
+        "notesHelper": "Notas adicionais sobre este local",
+        "defaultLocation": "Localização padrão",
+        "defaultLocationHelper": "Marque este como o local padrão para o cliente",
+        "billingAddress": "Endereço de Cobrança",
+        "billingAddressHelper": "Use este local como endereço de cobrança",
+        "shippingAddress": "Endereço para envio",
+        "shippingAddressHelper": "Use este local como endereço de entrega",
         "placeholder": {
-          "locationName": "e.g., Main Office, Warehouse",
-          "addressLine1": "Enter address *",
-          "city": "Enter city *",
-          "country": "Select Country *",
+          "locationName": "por exemplo, escritório principal, armazém",
+          "addressLine1": "Insira o endereço *",
+          "city": "Insira a cidade *",
+          "country": "Selecione o país *",
           "loadingCountries": "Carregando países...",
-          "taxRegionOption": "Select a tax region...",
-          "taxRegion": "Select a tax region..."
+          "taxRegionOption": "Selecione uma região fiscal...",
+          "taxRegion": "Selecione uma região fiscal..."
         }
       },
       "validation": {
-        "title": "Please fill in the required fields:"
+        "title": "Por favor preencha os campos obrigatórios:"
       },
       "errors": {
-        "loadTaxRegions": "Failed to load tax regions",
-        "loadCountries": "Failed to load countries",
-        "loadLocations": "Failed to load client locations",
-        "save": "Failed to save location",
-        "delete": "Failed to delete location",
-        "setDefault": "Failed to set default location"
+        "loadTaxRegions": "Falha ao carregar regiões fiscais",
+        "loadCountries": "Falha ao carregar países",
+        "loadLocations": "Falha ao carregar locais de clientes",
+        "save": "Falha ao salvar o local",
+        "delete": "Falha ao excluir local",
+        "setDefault": "Falha ao definir o local padrão"
       },
       "success": {
-        "create": "Location created successfully",
-        "update": "Location updated successfully",
-        "delete": "Location deleted successfully",
-        "setDefault": "Default location updated"
+        "create": "Local criado com sucesso",
+        "update": "Localização atualizada com sucesso",
+        "delete": "Local excluído com sucesso",
+        "setDefault": "Local padrão atualizado"
       },
       "dialog": {
-        "addTitle": "Add New Location",
-        "editTitle": "Edit Location",
-        "deleteTitle": "Delete Location",
-        "deleteMessage": "Are you sure you want to delete the location \"{{name}}\"? This action cannot be undone."
+        "addTitle": "Adicionar novo local",
+        "editTitle": "Editar local",
+        "deleteTitle": "Excluir local",
+        "deleteMessage": "Tem certeza de que deseja excluir o local \"{{name}}\"? Esta ação não pode ser desfeita."
       },
       "empty": {
-        "title": "No locations added yet",
-        "description": "Click \"Add Location\" to get started"
+        "title": "Nenhum local adicionado ainda",
+        "description": "Clique em \"Adicionar local\" para começar"
       }
     }
   },
   "commentThread": {
-    "replies_one": "{{count}} resposta",
-    "replies_other": "{{count}} respostas",
-    "collapse": "Recolher",
+    "replies_one": "Resposta {{count}}",
+    "replies_other": "Respostas {{count}}",
+    "collapse": "Colapso",
     "expand": "Expandir",
-    "showInDrawer": "Mostrar no painel"
+    "showInDrawer": "Mostrar na gaveta"
   },
   "pagination": {
-    "previous": "Previous",
-    "next": "Next",
-    "pageInfo": "Page {{current}} of {{total}} ({{count}} total records)",
-    "page": "Page",
-    "of": "of",
-    "showing": "Showing {{from}} to {{to}} of {{total}} results",
-    "rowsPerPage": "Rows per page",
-    "first": "First",
-    "last": "Last",
-    "itemsLabel": "items",
-    "itemsPerPageOption": "{{count}} items/page",
-    "itemsPerPagePlaceholder": "Items per page",
-    "reflectionLabel": "Pagination",
-    "range": "{{from}} - {{to}} of {{total}} {{itemLabel}}",
-    "ariaLabel": "Pagination",
-    "totalItems": "{{count}} {{itemLabel}} total",
-    "totalRecordsInline": "({{count}} total records)",
-    "pageOf": "Page {{current}} of {{total}}"
+    "previous": "Anterior",
+    "next": "Próximo",
+    "pageInfo": "Página {{current}} de {{total}} (total de registros {{count}})",
+    "page": "Página",
+    "of": "de",
+    "showing": "Mostrando resultados de {{from}} a {{to}} de {{total}}",
+    "rowsPerPage": "Linhas por página",
+    "first": "Primeiro",
+    "last": "Último",
+    "itemsLabel": "Unid",
+    "itemsPerPageOption": "Itens/página {{count}}",
+    "itemsPerPagePlaceholder": "Itens por página",
+    "reflectionLabel": "Paginação",
+    "range": "{{from}} - {{to}} de {{total}} {{itemLabel}}",
+    "ariaLabel": "Paginação",
+    "totalItems": "{{count}} {{itemLabel}} no total",
+    "totalRecordsInline": "(total de registros {{count}})",
+    "pageOf": "Página {{current}} de {{total}}"
   },
   "documents": {
-    "title": "Documents",
-    "noDocuments": "No documents attached",
-    "upload": "Upload Document",
-    "download": "Download",
-    "remove": "Remove",
-    "detach": "Detach",
-    "preview": "Preview",
-    "linkDocuments": "Link Documents",
-    "editDocument": "Edit Document",
-    "viewDocument": "View Document",
-    "downloadToPlay": "Download to Play",
-    "delete": "Delete",
-    "deletePermanently": "Delete Permanently",
-    "previewUnavailable": "Preview unavailable",
-    "newDocument": "New Document",
-    "uploadFile": "Upload File",
-    "deleteTitle": "Permanently Delete Document",
-    "deleteMessage": "Are you sure you want to permanently delete \"{{name}}\" from the system?\\n\\nThis will remove the file entirely and it will no longer be available anywhere. This action cannot be undone.",
-    "deleteVideoTitle": "Permanently Delete Video",
-    "deleteVideoMessage": "Are you sure you want to permanently delete the video \"{{name}}\" from the system?\\n\\nThis will remove the file entirely and it will no longer be available anywhere. This action cannot be undone.",
-    "removeTitle": "Detach Document",
-    "removeMessage": "Are you sure you want to detach \"{{name}}\" from this item?\\n\\nThis only removes the link — the document will remain in the document library and can be attached to other items.",
-    "removeVideoTitle": "Detach Video",
-    "removeVideoMessage": "Are you sure you want to detach the video \"{{name}}\" from this item?\\n\\nThis only removes the link — the file will remain in the document library and can be attached to other items.",
-    "downloadFile": "Download File",
-    "videoUnsupported": "Video format ({{mimeType}}) not supported for browser playback",
-    "videoTagUnsupported": "Your browser does not support the video tag.",
-    "unnamed": "Untitled",
-    "videoDownloadInfo": "The video will be downloaded and can be played with your system's default video player",
-    "previewUnavailableNoId": "Preview not available (no identifier)",
-    "previewLoadFailed": "Failed to load preview",
-    "videoCodecWarning": "Chrome may not support this video codec. Try downloading or use Safari/Edge.",
+    "title": "Documentos",
+    "noDocuments": "Nenhum documento anexado",
+    "upload": "Carregar documento",
+    "download": "Baixar",
+    "remove": "Remover",
+    "detach": "Desanexar",
+    "preview": "Visualização",
+    "linkDocuments": "Vincular documentos",
+    "editDocument": "Editar documento",
+    "viewDocument": "Ver documento",
+    "downloadToPlay": "Baixar para reproduzir",
+    "delete": "Excluir",
+    "deletePermanently": "Excluir permanentemente",
+    "previewUnavailable": "Visualização indisponível",
+    "newDocument": "Novo Documento",
+    "uploadFile": "Carregar arquivo",
+    "deleteTitle": "Excluir documento permanentemente",
+    "deleteMessage": "Tem certeza de que deseja excluir permanentemente \"{{name}}\" do sistema?\\n\\nIsso removerá o arquivo completamente e ele não estará mais disponível em nenhum lugar. Esta ação não pode ser desfeita.",
+    "deleteVideoTitle": "Excluir vídeo permanentemente",
+    "deleteVideoMessage": "Tem certeza de que deseja excluir permanentemente o vídeo \"{{name}}\" do sistema?\\n\\nIsso removerá o arquivo completamente e ele não estará mais disponível em nenhum lugar. Esta ação não pode ser desfeita.",
+    "removeTitle": "Desanexar documento",
+    "removeMessage": "Tem certeza de que deseja desanexar \"{{name}}\" deste item?\\n\\nIsso apenas remove o link — o documento permanecerá na biblioteca de documentos e poderá ser anexado a outros itens.",
+    "removeVideoTitle": "Desanexar vídeo",
+    "removeVideoMessage": "Tem certeza de que deseja desanexar o vídeo \"{{name}}\" deste item?\\n\\nIsso apenas remove o link — o arquivo permanecerá na biblioteca de documentos e poderá ser anexado a outros itens.",
+    "downloadFile": "Baixar arquivo",
+    "videoUnsupported": "Formato de vídeo ({{mimeType}}) não suportado para reprodução no navegador",
+    "videoTagUnsupported": "Seu navegador não suporta a tag de vídeo.",
+    "unnamed": "Sem título",
+    "videoDownloadInfo": "O vídeo será baixado e poderá ser reproduzido com o player de vídeo padrão do seu sistema",
+    "previewUnavailableNoId": "Visualização não disponível (sem identificador)",
+    "previewLoadFailed": "Falha ao carregar a visualização",
+    "videoCodecWarning": "O Chrome pode não suportar este codec de vídeo. Tente baixar ou usar o Safari/Edge.",
     "messages": {
-      "fetchFailed": "Failed to fetch documents.",
-      "folderCreated": "Folder \"{{name}}\" created successfully",
-      "folderCreateFailed": "Failed to create folder",
-      "moveDocumentsSuccess_one": "{{count}} document moved to {{destination}}",
-      "moveDocumentsSuccess_other": "{{count}} documents moved to {{destination}}",
-      "moveDocumentsFailed": "Failed to move documents",
-      "deleteSuccess": "Document \"{{name}}\" deleted successfully",
-      "deleteFailed": "Failed to delete document",
-      "removeAssociationFailed": "Failed to remove document association",
-      "moveDocumentSuccess": "Document \"{{name}}\" moved successfully",
-      "moveDocumentFailed": "Failed to move document",
-      "createFailed": "Failed to create document",
-      "saveFailed": "Failed to save document",
-      "loadContentFailed": "Failed to load document content",
-      "downloadFailed": "Failed to download document",
-      "bulkDeleteFailed": "Failed to delete some documents",
-      "bulkDeleteSuccess_one": "{{count}} document deleted successfully",
-      "bulkDeleteSuccess_other": "{{count}} documents deleted successfully"
+      "fetchFailed": "Falha ao buscar documentos.",
+      "folderCreated": "Pasta \"{{name}}\" criada com sucesso",
+      "folderCreateFailed": "Falha ao criar pasta",
+      "moveDocumentsSuccess_one": "Documento {{count}} movido para {{destination}}",
+      "moveDocumentsSuccess_other": "Documentos {{count}} movidos para {{destination}}",
+      "moveDocumentsFailed": "Falha ao mover documentos",
+      "deleteSuccess": "Documento \"{{name}}\" excluído com sucesso",
+      "deleteFailed": "Falha ao excluir documento",
+      "removeAssociationFailed": "Falha ao remover a associação do documento",
+      "moveDocumentSuccess": "Documento \"{{name}}\" movido com sucesso",
+      "moveDocumentFailed": "Falha ao mover o documento",
+      "createFailed": "Falha ao criar documento",
+      "saveFailed": "Falha ao salvar o documento",
+      "loadContentFailed": "Falha ao carregar o conteúdo do documento",
+      "downloadFailed": "Falha ao baixar o documento",
+      "bulkDeleteFailed": "Falha ao excluir alguns documentos",
+      "bulkDeleteSuccess_one": "Documento {{count}} excluído com sucesso",
+      "bulkDeleteSuccess_other": "Documentos {{count}} excluídos com sucesso"
     },
     "empty": {
-      "default": "No documents found",
-      "folder": "No documents found in this folder"
+      "default": "Nenhum documento encontrado",
+      "folder": "Nenhum documento encontrado nesta pasta"
     },
     "validation": {
-      "nameRequired": "Document name is required"
+      "nameRequired": "O nome do documento é obrigatório"
     },
     "bulkActions": {
-      "selected_one": "{{count}} document selected",
-      "selected_other": "{{count}} documents selected",
-      "moveToFolder": "Move to Folder",
-      "deleteSelected": "Delete Selected",
-      "clearSelection": "Clear Selection"
+      "selected_one": "Documento {{count}} selecionado",
+      "selected_other": "Documentos {{count}} selecionados",
+      "moveToFolder": "Mover para pasta",
+      "deleteSelected": "Excluir selecionado",
+      "clearSelection": "Limpar seleção"
     },
     "prompts": {
-      "confirmBulkDelete_one": "Are you sure you want to delete {{count}} document?",
-      "confirmBulkDelete_other": "Are you sure you want to delete {{count}} documents?"
+      "confirmBulkDelete_one": "Tem certeza de que deseja excluir o documento {{count}}?",
+      "confirmBulkDelete_other": "Tem certeza de que deseja excluir documentos {{count}}?"
     },
     "pagination": {
-      "perPage": "{{count}} per page"
+      "perPage": "{{count}} por página"
     },
     "folderSelector": {
-      "defaultTitle": "Select Destination Folder",
-      "defaultDescription": "Choose where to save this document",
-      "singleDescription": "Where would you like to save \"{{fileName}}\"?",
-      "multipleDescription": "Where would you like to save these {{count}} files?",
-      "newDocumentTitle": "Select Folder for New Document",
-      "newDocumentDescription": "Choose where to save this new document",
-      "moveTitle": "Move Document",
-      "moveDescriptionWithName": "Select destination folder for \"{{name}}\"",
-      "moveDescription": "Select destination folder",
-      "bulkMoveTitle": "Move Selected Documents",
-      "bulkMoveDescription_one": "Select destination folder for {{count}} document",
-      "bulkMoveDescription_other": "Select destination folder for {{count}} documents",
+      "defaultTitle": "Selecione a pasta de destino",
+      "defaultDescription": "Escolha onde salvar este documento",
+      "singleDescription": "Onde você gostaria de salvar \"{{fileName}}\"?",
+      "multipleDescription": "Onde você gostaria de salvar esses arquivos {{count}}?",
+      "newDocumentTitle": "Selecione a pasta para o novo documento",
+      "newDocumentDescription": "Escolha onde salvar este novo documento",
+      "moveTitle": "Mover documento",
+      "moveDescriptionWithName": "Selecione a pasta de destino para \"{{name}}\"",
+      "moveDescription": "Selecione a pasta de destino",
+      "bulkMoveTitle": "Mover documentos selecionados",
+      "bulkMoveDescription_one": "Selecione a pasta de destino para o documento {{count}}",
+      "bulkMoveDescription_other": "Selecione a pasta de destino para documentos {{count}}",
       "errors": {
-        "nameRequired": "Please enter a folder name",
-        "invalidCharacters": "Folder name cannot contain \"/\"",
-        "createFailed": "Failed to create folder"
+        "nameRequired": "Por favor insira um nome de pasta",
+        "invalidCharacters": "O nome da pasta não pode conter \"/\"",
+        "createFailed": "Falha ao criar pasta"
       },
-      "creating": "Creating...",
-      "createButton": "Create Folder",
-      "newFolderButton": "New Folder",
-      "parentLabel": "Parent folder: {{folder}}",
-      "rootLabel": "/ (Root)",
-      "namePlaceholder": "Enter folder name",
+      "creating": "Criando...",
+      "createButton": "Criar pasta",
+      "newFolderButton": "Nova pasta",
+      "parentLabel": "Pasta pai: {{folder}}",
+      "rootLabel": "/ (Raiz)",
+      "namePlaceholder": "Digite o nome da pasta",
       "loading": "Carregando pastas...",
-      "rootOption": "Root (No folder)",
-      "empty": "No folders available. Documents will be saved to root.",
-      "showAllFolders": "Show all folders",
-      "showEntityFolders": "Show entity folders"
+      "rootOption": "Raiz (sem pasta)",
+      "empty": "Nenhuma pasta disponível. Os documentos serão salvos na raiz.",
+      "showAllFolders": "Mostrar todas as pastas",
+      "showEntityFolders": "Mostrar pastas de entidades"
     },
     "filters": {
-      "searchLabel": "Search Documents",
-      "searchPlaceholder": "Search by document name...",
-      "typeLabel": "Document Type",
-      "entityTypeLabel": "Associated Entity Type",
-      "uploadedByLabel": "Uploaded By",
-      "uploadedByPlaceholder": "All Users",
-      "updatedStartLabel": "Updated Date Start",
-      "updatedEndLabel": "Updated Date End",
-      "startDatePlaceholder": "Select start date",
-      "endDatePlaceholder": "Select end date",
-      "sortByLabel": "Sort By",
-      "clear": "Clear Filters",
-      "showAllDocuments": "Show All Documents",
+      "searchLabel": "Pesquisar documentos",
+      "searchPlaceholder": "Pesquisar pelo nome do documento...",
+      "typeLabel": "Tipo de documento",
+      "entityTypeLabel": "Tipo de entidade associada",
+      "uploadedByLabel": "Enviado por",
+      "uploadedByPlaceholder": "Todos os usuários",
+      "updatedStartLabel": "Data de início atualizada",
+      "updatedEndLabel": "Data final atualizada",
+      "startDatePlaceholder": "Selecione a data de início",
+      "endDatePlaceholder": "Selecione a data de término",
+      "sortByLabel": "Ordenar por",
+      "clear": "Limpar filtros",
+      "showAllDocuments": "Mostrar todos os documentos",
       "typeOptions": {
-        "all": "All Document Types",
+        "all": "Todos os tipos de documentos",
         "pdf": "PDF",
-        "image": "Images",
-        "text": "Documents",
-        "video": "Video",
-        "other": "Other"
+        "image": "Imagens",
+        "text": "Documentos",
+        "video": "Vídeo",
+        "other": "Outro"
       },
       "sortOptions": {
-        "updated_at": "Date",
-        "document_name": "Document name",
-        "file_size": "File size",
-        "created_by_full_name": "Created By"
+        "updated_at": "Data",
+        "document_name": "Nome do documento",
+        "file_size": "Tamanho do arquivo",
+        "created_by_full_name": "Criado por"
       },
       "sortOrder": {
         "default": {
-          "asc": "Show ascending order",
-          "desc": "Show descending order"
+          "asc": "Mostrar ordem crescente",
+          "desc": "Mostrar ordem decrescente"
         },
         "document_name": {
-          "asc": "Show A-Z",
-          "desc": "Show Z-A"
+          "asc": "Mostrar A-Z",
+          "desc": "Mostrar Z-A"
         },
         "updated_at": {
-          "asc": "Show Oldest First",
-          "desc": "Show Newest First"
+          "asc": "Mostrar o mais antigo primeiro",
+          "desc": "Mostrar o mais recente primeiro"
         },
         "file_size": {
-          "asc": "Show Smallest First",
-          "desc": "Show Largest First"
+          "asc": "Mostrar o menor primeiro",
+          "desc": "Mostrar o maior primeiro"
         },
         "created_by_full_name": {
-          "asc": "Show A-Z",
-          "desc": "Show Z-A"
+          "asc": "Mostrar A-Z",
+          "desc": "Mostrar Z-A"
         }
       },
       "clientVisibility": {
-        "all": "All",
-        "visible": "Client Visible",
-        "hidden": "Internal Only"
+        "all": "Todos",
+        "visible": "Cliente visível",
+        "hidden": "Apenas interno"
       },
-      "clientVisibilityLabel": "Client Visibility",
+      "clientVisibilityLabel": "Visibilidade do cliente",
       "entityOptions": {
         "all": "Todas as entidades"
       }
     },
     "selector": {
-      "title": "Select Documents",
-      "reflectionLabel": "Document Selector",
-      "searchPlaceholder": "Search documents...",
-      "foldersLabel": "Folders",
-      "folderHint": "in folder \"{{folder}}\"",
-      "saving": "Saving...",
-      "selectDocument": "Select Document",
-      "associateSelected": "Associate Selected",
+      "title": "Selecione Documentos",
+      "reflectionLabel": "Seletor de documentos",
+      "searchPlaceholder": "Pesquisar documentos...",
+      "foldersLabel": "Pastas",
+      "folderHint": "na pasta \"{{folder}}\"",
+      "saving": "Salvando...",
+      "selectDocument": "Selecione o documento",
+      "associateSelected": "Associado selecionado",
       "errors": {
-        "configuration": "Configuration error: Missing entity information",
-        "invalidData": "Invalid document data received",
-        "load": "Failed to load documents",
-        "save": "Failed to save document selection"
+        "configuration": "Erro de configuração: informações de entidade ausentes",
+        "invalidData": "Dados de documento inválidos recebidos",
+        "load": "Falha ao carregar documentos",
+        "save": "Falha ao salvar a seleção do documento"
       },
-      "configErrorTitle": "Configuration Error",
-      "configErrorMessage": "Missing required configuration. Please contact support."
+      "configErrorTitle": "Erro de configuração",
+      "configErrorMessage": "Configuração necessária ausente. Entre em contato com o suporte."
     },
     "uploadSection": {
-      "reflectionLabel": "Document Upload",
-      "dragDrop": "Drag and drop your files here, or",
-      "browse": "Browse Files",
-      "uploading": "Uploading...",
-      "uploadingProgress": "Uploading {{current}} of {{total}}",
-      "pending": "Pending",
-      "error": "Failed to upload document",
-      "fileError": "Failed to upload file",
-      "associatedEntityTypeLabel": "Associar a",
-      "noAssociation": "Sem associação",
+      "reflectionLabel": "Upload de documentos",
+      "dragDrop": "Arraste e solte seus arquivos aqui ou",
+      "browse": "Navegar pelos arquivos",
+      "uploading": "Fazendo upload...",
+      "uploadingProgress": "Carregando {{current}} de {{total}}",
+      "pending": "Pendente",
+      "error": "Falha ao carregar o documento",
+      "fileError": "Falha ao carregar o arquivo",
+      "associatedEntityTypeLabel": "Associar-se a",
+      "noAssociation": "Nenhuma associação",
       "selectAssociatedEntityError": "Selecione uma entidade associada antes de fazer upload."
     },
     "folders": {
-      "root": "Root",
-      "loadFailed": "Failed to load folder tree",
-      "deleteConfirm": "Are you sure you want to delete the folder \"{{name}}\"? This will only work if the folder is empty.",
-      "deleteSuccess": "Folder \"{{name}}\" deleted successfully",
-      "deleteFailed": "Failed to delete folder",
-      "deleteAction": "Delete folder",
+      "root": "Raiz",
+      "loadFailed": "Falha ao carregar a árvore de pastas",
+      "deleteConfirm": "Tem certeza de que deseja excluir a pasta \"{{name}}\"? Isso só funcionará se a pasta estiver vazia.",
+      "deleteSuccess": "Pasta \"{{name}}\" excluída com sucesso",
+      "deleteFailed": "Falha ao excluir pasta",
+      "deleteAction": "Excluir pasta",
       "loading": "Carregando pastas...",
-      "title": "Folders",
-      "collapse": "Collapse folders",
-      "allDocuments": "All Documents",
-      "expand": "Show folders",
-      "deleteTitle": "Delete Folder"
+      "title": "Pastas",
+      "collapse": "Recolher pastas",
+      "allDocuments": "Todos os documentos",
+      "expand": "Mostrar pastas",
+      "deleteTitle": "Excluir pasta"
     },
     "folderManager": {
-      "title": "Create New Folder",
-      "nameLabel": "Folder Name",
-      "namePlaceholder": "Enter folder name",
-      "willCreateIn": "Will be created in: {{folder}}"
+      "title": "Criar nova pasta",
+      "nameLabel": "Nome da pasta",
+      "namePlaceholder": "Digite o nome da pasta",
+      "willCreateIn": "Será criado em: {{folder}}"
     },
     "notifications": {
-      "viewAll": "View all notifications",
+      "viewAll": "Ver todas as notificações",
       "categories": {
-        "Authentication": "Authentication",
-        "Invoices": "Invoices",
-        "Projects": "Projects",
+        "Authentication": "Autenticação",
+        "Invoices": "Faturas",
+        "Projects": "Projetos",
         "Tickets": "Tickets",
-        "Time Entries": "Time Entries"
+        "Time Entries": "Entradas de tempo"
       }
     },
     "list": {
-      "name": "Name",
-      "folder": "Folder",
-      "size": "Size",
-      "modified": "Modified",
-      "visibility": "Visibility",
-      "actions": "Actions"
+      "name": "Nome",
+      "folder": "Pasta",
+      "size": "Tamanho",
+      "modified": "Modificado",
+      "visibility": "Visibilidade",
+      "actions": "Ações"
     },
-    "hasShareLinks": "Has active share links",
+    "hasShareLinks": "Possui links de compartilhamento ativos",
     "visibility": {
-      "clientVisible": "Client visible",
-      "internalOnly": "Internal",
-      "markedVisible": "\"{{name}}\" is now visible in client portal",
-      "markedHidden": "\"{{name}}\" is now hidden from client portal",
-      "toggleFailed": "Failed to update folder visibility",
-      "cascadeTitle": "Update document visibility",
-      "cascadeMakeVisible": "Would you also like to make all {{count}} document(s) in \"{{name}}\" visible to the client portal?",
-      "cascadeMakeHidden": "Would you also like to hide all {{count}} document(s) in \"{{name}}\" from the client portal?",
-      "cascadeYes": "Yes, update documents",
-      "cascadeNo": "No, folder only"
+      "clientVisible": "Cliente visível",
+      "internalOnly": "Interno",
+      "markedVisible": "\"{{name}}\" agora está visível no portal do cliente",
+      "markedHidden": "\"{{name}}\" agora está oculto no portal do cliente",
+      "toggleFailed": "Falha ao atualizar a visibilidade da pasta",
+      "cascadeTitle": "Atualizar a visibilidade do documento",
+      "cascadeMakeVisible": "Você também gostaria de tornar todos os documentos {{count}} em \"{{name}}\" visíveis para o portal do cliente?",
+      "cascadeMakeHidden": "Você também gostaria de ocultar todos os documentos {{count}} em \"{{name}}\" do portal do cliente?",
+      "cascadeYes": "Sim, atualizar documentos",
+      "cascadeNo": "Não, apenas pasta"
     },
-    "share": "Share",
-    "videoPlaybackFailed": "Unable to play this video in the browser",
-    "videoPlaybackIssue": "Having trouble playing the video?",
-    "downloadVideo": "Download Video",
-    "downloadAsPdf": "Download as PDF",
-    "downloadAsMarkdown": "Download as Markdown",
-    "move": "Move",
+    "share": "Compartilhar",
+    "videoPlaybackFailed": "Não é possível reproduzir este vídeo no navegador",
+    "videoPlaybackIssue": "Está tendo problemas para reproduzir o vídeo?",
+    "downloadVideo": "Baixar vídeo",
+    "downloadAsPdf": "Baixe como PDF",
+    "downloadAsMarkdown": "Baixar como Markdown",
+    "move": "Mover",
     "associatedEntityPicker": {
       "allEntities": "Todas as entidades",
       "loadingClients": "Carregando clientes...",
       "loadingContacts": "Carregando contatos...",
       "noEntityTypes": "Nenhum tipo de entidade encontrado",
       "typeLabel": "Tipo de entidade associada",
-      "typePlaceholder": "Selecionar tipo de entidade",
+      "typePlaceholder": "Selecione o tipo de entidade",
       "typeSearchPlaceholder": "Pesquisar tipos de entidade...",
       "entityLabel": "{{entityType}}",
-      "entityPlaceholder": "Selecionar {{entityType}}",
-      "entitySearchPlaceholder": "Pesquisar {{entityType}}...",
+      "entityPlaceholder": "Selecione {{entityType}}",
+      "entitySearchPlaceholder": "Procurar {{entityType}}...",
       "noEntities": "Nenhum {{entityType}} encontrado"
     },
     "huduTab": {
@@ -643,467 +672,441 @@
       "loading": "Carregando..."
     },
     "settings": {
-      "tabLabel": "Surveys",
-      "title": "Customer Satisfaction Surveys",
-      "subtitle": "Configure templates, triggers, and delivery to collect post-ticket feedback.",
+      "tabLabel": "Pesquisas",
+      "title": "Pesquisas de satisfação do cliente",
+      "subtitle": "Configure modelos, gatilhos e entrega para coletar feedback pós-ticket.",
       "tabs": {
-        "templates": "Templates",
-        "triggers": "Triggers"
+        "templates": "Modelos",
+        "triggers": "Gatilhos"
       },
       "templateList": {
-        "title": "Survey templates",
-        "description": "Manage the prompts and rating scales sent to your clients.",
-        "createButton": "New template",
-        "emptyTitle": "No survey templates yet",
-        "emptyDescription": "Create your first template to define the survey wording and rating scale.",
+        "title": "Modelos de pesquisa",
+        "description": "Gerencie as solicitações e escalas de avaliação enviadas aos seus clientes.",
+        "createButton": "Novo modelo",
+        "emptyTitle": "Ainda não há modelos de pesquisa",
+        "emptyDescription": "Crie seu primeiro modelo para definir o texto da pesquisa e a escala de classificação.",
         "table": {
-          "name": "Template",
-          "rating": "Rating scale",
+          "name": "Modelo",
+          "rating": "Escala de avaliação",
           "status": "Status",
-          "updated": "Updated",
-          "actions": "Actions"
+          "updated": "Atualizado",
+          "actions": "Ações"
         },
-        "defaultBadge": "Default",
+        "defaultBadge": "Padrão",
         "status": {
-          "enabled": "Enabled",
-          "disabled": "Disabled"
+          "enabled": "Habilitado",
+          "disabled": "Desabilitado"
         },
         "toasts": {
-          "created": "Template created",
-          "updated": "Template updated",
-          "deleted": "Template deleted",
-          "setDefault": "Default template updated",
-          "error": "Unable to save template",
-          "deleteError": "Unable to delete template"
+          "created": "Modelo criado",
+          "updated": "Modelo atualizado",
+          "deleted": "Modelo excluído",
+          "setDefault": "Modelo padrão atualizado",
+          "error": "Não foi possível salvar o modelo",
+          "deleteError": "Não foi possível excluir o modelo"
         },
         "errors": {
-          "load": "Unable to load survey templates."
+          "load": "Não foi possível carregar modelos de pesquisa."
         },
-        "deleteConfirm": "Delete this template? Invitations already sent will not be affected."
+        "deleteConfirm": "Excluir este modelo? Os convites já enviados não serão afetados."
       },
       "templateForm": {
-        "titleCreate": "Create survey template",
-        "titleEdit": "Edit survey template",
+        "titleCreate": "Criar modelo de pesquisa",
+        "titleEdit": "Editar modelo de pesquisa",
         "labels": {
-          "name": "Template name",
-          "ratingType": "Rating type",
-          "ratingScale": "Rating scale",
-          "ratingLabels": "Rating labels",
-          "promptText": "Survey prompt",
-          "commentPrompt": "Comment prompt",
-          "thankYouText": "Thank-you message",
-          "isDefault": "Set as default template",
-          "enabled": "Template enabled"
+          "name": "Nome do modelo",
+          "ratingType": "Tipo de classificação",
+          "ratingScale": "Escala de avaliação",
+          "ratingLabels": "Etiquetas de classificação",
+          "promptText": "Solicitação de pesquisa",
+          "commentPrompt": "Solicitação de comentário",
+          "thankYouText": "Mensagem de agradecimento",
+          "isDefault": "Definir como modelo padrão",
+          "enabled": "Modelo ativado"
         },
         "placeholders": {
-          "ratingLabels": "Example:\\n1 = Very dissatisfied\\n2 = Dissatisfied\\n3 = Neutral\\n4 = Satisfied\\n5 = Very satisfied"
+          "ratingLabels": "Exemplo:\\n1 = Muito insatisfeito\\n2 = Insatisfeito\\n3 = Neutro\\n4 = Satisfeito\\n5 = Muito satisfeito"
         },
         "help": {
-          "ratingLabels": "Provide one label per score using “value = label” on separate lines."
+          "ratingLabels": "Forneça um rótulo por pontuação usando “valor = rótulo” em linhas separadas."
         },
         "ratingTypes": {
-          "stars": "Stars",
-          "numbers": "Numbers",
+          "stars": "Estrelas",
+          "numbers": "Números",
           "emojis": "Emojis"
         },
         "actions": {
-          "create": "Create template",
-          "save": "Save changes",
-          "delete": "Delete template"
+          "create": "Criar modelo",
+          "save": "Salvar alterações",
+          "delete": "Excluir modelo"
         }
       },
       "triggerList": {
-        "title": "Survey triggers",
-        "description": "Automatically send invitations when tickets or projects reach completion.",
-        "createButton": "New trigger",
-        "emptyTitle": "No survey triggers configured",
-        "emptyDescription": "Create a trigger to send surveys when tickets close or projects finish.",
+        "title": "Gatilhos de pesquisa",
+        "description": "Envie convites automaticamente quando tickets ou projetos forem concluídos.",
+        "createButton": "Novo gatilho",
+        "emptyTitle": "Nenhum acionador de pesquisa configurado",
+        "emptyDescription": "Crie um gatilho para enviar pesquisas quando os tickets forem fechados ou os projetos terminarem.",
         "table": {
-          "template": "Template",
-          "type": "Trigger",
-          "conditions": "Conditions",
+          "template": "Modelo",
+          "type": "Acionar",
+          "conditions": "Condições",
           "status": "Status",
-          "updated": "Updated",
-          "actions": "Actions"
+          "updated": "Atualizado",
+          "actions": "Ações"
         },
         "conditions": {
-          "boards": "Boards",
-          "statuses": "Statuses",
-          "priorities": "Priorities",
-          "any": "Any",
-          "unrestricted": "Applies to every ticket and project"
+          "boards": "Quadros",
+          "statuses": "Status",
+          "priorities": "Prioridades",
+          "any": "Qualquer",
+          "unrestricted": "Aplica-se a todos os tickets e projetos"
         },
         "status": {
-          "enabled": "Enabled",
-          "disabled": "Disabled"
+          "enabled": "Habilitado",
+          "disabled": "Desabilitado"
         },
         "toasts": {
-          "created": "Trigger created",
-          "updated": "Trigger updated",
-          "deleted": "Trigger deleted",
-          "error": "Unable to save trigger",
-          "deleteError": "Unable to delete trigger"
+          "created": "Gatilho criado",
+          "updated": "Gatilho atualizado",
+          "deleted": "Gatilho excluído",
+          "error": "Não foi possível salvar o gatilho",
+          "deleteError": "Não foi possível excluir o gatilho"
         },
         "errors": {
-          "load": "Unable to load survey triggers."
+          "load": "Não foi possível carregar os acionadores de pesquisa."
         },
-        "deleteConfirm": "Delete this trigger? Invitations already queued will still be sent."
+        "deleteConfirm": "Excluir este gatilho? Os convites já na fila ainda serão enviados."
       },
       "triggerForm": {
-        "titleCreate": "Create survey trigger",
-        "titleEdit": "Edit survey trigger",
+        "titleCreate": "Criar gatilho de pesquisa",
+        "titleEdit": "Editar gatilho de pesquisa",
         "labels": {
-          "template": "Survey template",
-          "triggerType": "Trigger type",
-          "boardIds": "Board IDs",
-          "statusIds": "Status IDs",
-          "priorities": "Priorities",
-          "enabled": "Trigger enabled"
+          "template": "Modelo de pesquisa",
+          "triggerType": "Tipo de gatilho",
+          "boardIds": "IDs do quadro",
+          "statusIds": "IDs de status",
+          "priorities": "Prioridades",
+          "enabled": "Gatilho ativado"
         },
         "placeholders": {
-          "boardIds": "Select board",
-          "statusIds": "Add status",
-          "priorities": "Add priority"
+          "boardIds": "Selecione o quadro",
+          "statusIds": "Adicionar status",
+          "priorities": "Adicionar prioridade"
         },
         "help": {
-          "conditions": "Leave a field blank to match any value."
+          "conditions": "Deixe um campo em branco para corresponder a qualquer valor."
         },
         "actions": {
-          "create": "Create trigger",
-          "save": "Save changes",
-          "delete": "Delete trigger"
+          "create": "Criar gatilho",
+          "save": "Salvar alterações",
+          "delete": "Excluir gatilho"
         },
         "triggerTypes": {
-          "ticket_closed": "Ticket closed",
-          "project_completed": "Project completed"
+          "ticket_closed": "Ticket fechado",
+          "project_completed": "Projeto concluído"
         },
         "errors": {
-          "reference": "Unable to load trigger options. Please try again."
+          "reference": "Não foi possível carregar as opções do acionador. Por favor, tente novamente."
         },
-        "noTemplates": "Create a survey template before adding triggers.",
-        "prioritiesMixed": "Selected boards use different priority types. Showing all priorities."
+        "noTemplates": "Crie um modelo de pesquisa antes de adicionar gatilhos.",
+        "prioritiesMixed": "Os painéis selecionados usam diferentes tipos de prioridade. Mostrando todas as prioridades."
       },
       "preview": {
-        "heading": "Response page preview",
+        "heading": "Visualização da página de resposta",
         "tabs": {
-          "survey": "Survey form",
-          "thankYou": "Thank you"
+          "survey": "Formulário de pesquisa",
+          "thankYou": "Obrigado"
         },
-        "noPrompt": "Survey prompt",
-        "commentPlaceholder": "Customer comments will appear here...",
-        "noThankYou": "Thank you message",
-        "notice": "This preview shows what customers see after clicking the survey link in their email.",
-        "editEmailTemplate": "Edit survey email template"
+        "noPrompt": "Solicitação de pesquisa",
+        "commentPlaceholder": "Os comentários dos clientes aparecerão aqui...",
+        "noThankYou": "mensagem de agradecimento",
+        "notice": "Esta visualização mostra o que os clientes veem depois de clicar no link da pesquisa no e-mail.",
+        "editEmailTemplate": "Editar modelo de e-mail de pesquisa"
       }
     },
     "response": {
-      "pageTitle": "Customer Satisfaction Survey",
-      "invalidTitle": "Survey unavailable",
-      "invalidMessage": "This feedback link is no longer valid or has already been used.",
-      "ratingPrompt": "How was your experience?",
-      "ratingAssistive": "Select a score from 1 to {{scale}}",
-      "commentLabel": "Additional comments (optional)",
-      "submitButton": "Submit feedback",
-      "submitting": "Submitting feedback…",
-      "submittedTitle": "Thank you for your response!",
+      "pageTitle": "Pesquisa de satisfação do cliente",
+      "invalidTitle": "Pesquisa indisponível",
+      "invalidMessage": "Este link de feedback não é mais válido ou já foi usado.",
+      "ratingPrompt": "Como foi sua experiência?",
+      "ratingAssistive": "Selecione uma pontuação de 1 a {{scale}}",
+      "commentLabel": "Comentários adicionais (opcional)",
+      "submitButton": "Enviar comentários",
+      "submitting": "Enviando comentários…",
+      "submittedTitle": "Obrigado pela sua resposta!",
       "submittedMessage": "{{thankYouText}}",
-      "retryButton": "Try again",
-      "ratingSubmitted": "Feedback submitted",
-      "errorMessage": "We could not record your feedback. Please try again.",
-      "selectRatingError": "Select a rating before submitting.",
-      "supportMessage": "If you have questions, please contact your technician."
+      "retryButton": "Tente novamente",
+      "ratingSubmitted": "Feedback enviado",
+      "errorMessage": "Não foi possível registrar seu feedback. Por favor, tente novamente.",
+      "selectRatingError": "Selecione uma classificação antes de enviar.",
+      "supportMessage": "Se você tiver dúvidas, entre em contato com seu técnico."
     }
   },
   "availability": {
     "settings": {
-      "title": "Availability Settings",
-      "description": "Configure appointment availability rules and schedules"
+      "title": "Configurações de disponibilidade",
+      "description": "Configurar regras e programações de disponibilidade de compromissos"
     },
     "tabs": {
-      "general": "General Settings",
-      "userHours": "User Hours",
-      "serviceRules": "Service Rules",
-      "exceptions": "Exceptions"
+      "general": "Configurações Gerais",
+      "userHours": "Horário do usuário",
+      "serviceRules": "Regras de serviço",
+      "exceptions": "Exceções"
     },
     "general": {
-      "advanceBookingDays": "Advance Booking Days",
-      "advanceBookingDaysHelper": "How far in advance clients can book appointments",
-      "minimumNoticeHours": "Minimum Notice Hours",
-      "minimumNoticeHoursHelper": "Minimum time required before an appointment",
-      "defaultBufferBefore": "Default Buffer Before (minutes)",
-      "defaultBufferAfter": "Default Buffer After (minutes)",
-      "bufferHelper": "Time buffer between appointments"
+      "advanceBookingDays": "Dias de reserva antecipada",
+      "advanceBookingDaysHelper": "Com que antecedência os clientes podem marcar consultas",
+      "minimumNoticeHours": "Horas Mínimas de Notificação",
+      "minimumNoticeHoursHelper": "Tempo mínimo necessário antes de uma consulta",
+      "defaultBufferBefore": "Buffer padrão antes (minutos)",
+      "defaultBufferAfter": "Buffer padrão após (minutos)",
+      "bufferHelper": "Intervalo de tempo entre compromissos"
     },
     "userHours": {
-      "selectUser": "Select User",
-      "dayOfWeek": "Day of Week",
-      "startTime": "Start Time",
-      "endTime": "End Time",
-      "available": "Available",
-      "cloneSettings": "Clone to Other Users",
-      "maxAppointmentsPerDay": "Max Appointments Per Day"
+      "selectUser": "Selecione o usuário",
+      "dayOfWeek": "Dia da semana",
+      "startTime": "Hora de início",
+      "endTime": "Hora de término",
+      "available": "Disponível",
+      "cloneSettings": "Clonar para outros usuários",
+      "maxAppointmentsPerDay": "Máximo de compromissos por dia"
     },
     "serviceRules": {
-      "selectService": "Select Service",
-      "allowWithoutContract": "Allow Without Contract",
-      "advanceBooking": "Advance Booking Days",
-      "maxAppointments": "Max Appointments Per Day"
+      "selectService": "Selecione o serviço",
+      "allowWithoutContract": "Permitir sem contrato",
+      "advanceBooking": "Dias de reserva antecipada",
+      "maxAppointments": "Máximo de compromissos por dia"
     },
     "exceptions": {
-      "addException": "Add Exception",
-      "date": "Date",
-      "reason": "Reason",
-      "userSpecific": "User Specific",
-      "companyWide": "Company Wide"
+      "addException": "Adicionar exceção",
+      "date": "Data",
+      "reason": "Razão",
+      "userSpecific": "Específico do usuário",
+      "companyWide": "Toda a empresa"
     },
     "messages": {
-      "saveSuccess": "Availability settings saved successfully",
-      "saveFailed": "Failed to save availability settings",
-      "loadFailed": "Failed to load availability settings"
+      "saveSuccess": "Configurações de disponibilidade salvas com sucesso",
+      "saveFailed": "Falha ao salvar as configurações de disponibilidade",
+      "loadFailed": "Falha ao carregar as configurações de disponibilidade"
     }
   },
   "appointments": {
     "requests": {
-      "title": "Appointment Requests",
-      "viewAll": "View All Requests",
-      "approve": "Approve & Schedule",
-      "decline": "Decline",
-      "assignTech": "Assign Technician",
-      "internalNotes": "Internal Notes",
-      "pendingCount": "{{count}} pending requests",
-      "filterByStatus": "Filter by Status",
-      "filterByService": "Filter by Service",
-      "filterByDate": "Filter by Date"
+      "title": "Solicitações de agendamento",
+      "viewAll": "Ver todas as solicitações",
+      "approve": "Aprovar e agendar",
+      "decline": "Declínio",
+      "assignTech": "Atribuir Técnico",
+      "internalNotes": "Notas internas",
+      "pendingCount": "{{count}} solicitações pendentes",
+      "filterByStatus": "Filtrar por status",
+      "filterByService": "Filtrar por serviço",
+      "filterByDate": "Filtrar por data"
     },
     "panel": {
-      "title": "Appointment Requests",
-      "description": "Review and manage appointment requests from clients",
-      "noRequests": "No appointment requests found",
+      "title": "Solicitações de agendamento",
+      "description": "Revise e gerencie solicitações de agendamento de clientes",
+      "noRequests": "Nenhuma solicitação de agendamento encontrada",
       "loadingRequests": "Carregando solicitações..."
     },
     "card": {
-      "requesterName": "Requester",
-      "companyName": "Company",
-      "service": "Service",
-      "requestedDateTime": "Requested Date & Time",
-      "duration": "Duration",
-      "preferredTechnician": "Preferred Technician",
-      "linkedTicket": "Linked Ticket",
-      "actions": "Actions"
+      "requesterName": "Solicitante",
+      "companyName": "Empresa",
+      "service": "Serviço",
+      "requestedDateTime": "Data e hora solicitadas",
+      "duration": "Duração",
+      "preferredTechnician": "Técnico preferencial",
+      "linkedTicket": "Ticket vinculado",
+      "actions": "Ações"
     },
     "approvalModal": {
-      "title": "Approve Appointment Request",
-      "confirmDateTime": "Confirm Date & Time",
-      "modifyDateTime": "Modify Date & Time",
-      "assignedUser": "Assigned Technician",
-      "linkToTicket": "Link to Ticket",
-      "internalNotes": "Internal Notes",
-      "approve": "Approve & Create Schedule Entry",
-      "approving": "Approving..."
+      "title": "Aprovar solicitação de agendamento",
+      "confirmDateTime": "Confirmar data e hora",
+      "modifyDateTime": "Modificar data e hora",
+      "assignedUser": "Técnico Designado",
+      "linkToTicket": "Link para ticket",
+      "internalNotes": "Notas internas",
+      "approve": "Aprovar e criar entrada de agendamento",
+      "approving": "Aprovando..."
     },
     "declineModal": {
-      "title": "Decline Appointment Request",
-      "reason": "Reason for Declining",
-      "reasonRequired": "Please provide a reason",
-      "reasonPlaceholder": "Explain why this request is being declined...",
-      "decline": "Decline Request",
-      "declining": "Declining..."
+      "title": "Recusar solicitação de agendamento",
+      "reason": "Razão para recusar",
+      "reasonRequired": "Forneça um motivo",
+      "reasonPlaceholder": "Explique por que esta solicitação está sendo recusada...",
+      "decline": "Recusar solicitação",
+      "declining": "Declinando..."
     },
     "detailsModal": {
-      "title": "Request Details",
-      "requesterInfo": "Requester Information",
-      "requestInfo": "Request Information",
+      "title": "Detalhes da solicitação",
+      "requesterInfo": "Informações do solicitante",
+      "requestInfo": "Solicitar informações",
       "status": "Status",
-      "createdAt": "Requested At",
-      "approvedAt": "Approved At",
-      "approvedBy": "Approved By",
-      "declinedReason": "Decline Reason"
+      "createdAt": "Solicitado em",
+      "approvedAt": "Aprovado em",
+      "approvedBy": "Aprovado por",
+      "declinedReason": "Motivo da recusa"
     },
     "status": {
-      "pending": "Pending",
-      "approved": "Approved",
-      "declined": "Declined",
-      "cancelled": "Cancelled"
+      "pending": "Pendente",
+      "approved": "Aprovado",
+      "declined": "Recusado",
+      "cancelled": "Cancelado"
     },
     "messages": {
-      "approveSuccess": "Appointment request approved successfully",
-      "approveFailed": "Failed to approve appointment request",
-      "declineSuccess": "Appointment request declined",
-      "declineFailed": "Failed to decline appointment request",
-      "loadFailed": "Failed to load appointment requests",
-      "scheduleEntryCreated": "Schedule entry created successfully"
+      "approveSuccess": "Solicitação de agendamento aprovada com sucesso",
+      "approveFailed": "Falha ao aprovar solicitação de agendamento",
+      "declineSuccess": "Solicitação de agendamento recusada",
+      "declineFailed": "Falha ao recusar solicitação de agendamento",
+      "loadFailed": "Falha ao carregar solicitações de agendamento",
+      "scheduleEntryCreated": "Entrada de agendamento criada com sucesso"
     }
   },
   "common": {
-    "actions": "Actions",
-    "active": "Active",
-    "inactive": "Inactive",
+    "actions": "Ações",
+    "active": "Ativo",
+    "inactive": "Inativo",
     "loading": "Carregando...",
-    "uploading": "Enviando...",
-    "error": "An error occurred",
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "edit": "Edit",
-    "close": "Close",
-    "confirm": "Confirm",
-    "yes": "Yes",
-    "no": "No",
-    "search": "Search",
-    "filter": "Filter",
-    "resetFilters": "Reset",
-    "sort": "Sort",
-    "refresh": "Refresh",
-    "export": "Export",
-    "import": "Import",
-    "download": "Download",
-    "upload": "Upload",
-    "selectAll": "Select All",
-    "clearSelection": "Clear Selection",
-    "view": "View",
-    "back": "Back",
-    "next": "Next",
-    "previous": "Previous",
-    "submit": "Submit",
-    "submitting": "Submitting...",
-    "reset": "Reset",
-    "noData": "No data available",
-    "required": "Required",
-    "optional": "Optional",
-    "notSpecified": "Not specified",
-    "unknown": "Unknown",
-    "edited": "edited",
-    "editComment": "Edit comment",
-    "deleteCommentAriaLabel": "Delete comment",
-    "deleteComment": "Delete Comment",
-    "deleteCommentConfirmation": "Are you sure you want to delete this comment? This action cannot be undone.",
+    "uploading": "Fazendo upload...",
+    "error": "Ocorreu um erro",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "close": "Fechar",
+    "confirm": "Confirmar",
+    "yes": "Sim",
+    "no": "Não",
+    "search": "Procurar",
+    "filter": "Filtro",
+    "resetFilters": "Reiniciar",
+    "sort": "Organizar",
+    "refresh": "Atualizar",
+    "export": "Exportar",
+    "import": "Importar",
+    "download": "Baixar",
+    "upload": "Carregar",
+    "selectAll": "Selecionar tudo",
+    "clearSelection": "Limpar seleção",
+    "view": "Visualizar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "submit": "Enviar",
+    "submitting": "Enviando...",
+    "reset": "Reiniciar",
+    "noData": "Não há dados disponíveis",
+    "required": "Obrigatório",
+    "optional": "Opcional",
+    "notSpecified": "Não especificado",
+    "unknown": "Desconhecido",
+    "edited": "editado",
+    "editComment": "Editar comentário",
+    "deleteCommentAriaLabel": "Excluir comentário",
+    "deleteComment": "Excluir comentário",
+    "deleteCommentConfirmation": "Tem certeza de que deseja excluir este comentário? Esta ação não pode ser desfeita.",
     "update": "Atualizar",
     "create": "Criar",
     "replyComment": "Responder ao comentário",
     "saving": "Salvando..."
   },
   "sessionManagement": {
-    "title": "Active Sessions",
-    "description": "Manage your active login sessions across all devices (max 5 sessions)",
+    "title": "Sessões ativas",
+    "description": "Gerencie suas sessões de login ativas em todos os dispositivos (máximo de 5 sessões)",
     "states": {
       "loading": "Carregando sessões...",
-      "noSessions": "No active sessions found"
+      "noSessions": "Nenhuma sessão ativa encontrada"
     },
     "labels": {
-      "unknownDevice": "Unknown Device",
-      "currentSession": "Current Session",
-      "yourSession": "Your Session",
-      "lastActive": "Last active"
+      "unknownDevice": "Dispositivo desconhecido",
+      "currentSession": "Sessão Atual",
+      "yourSession": "Sua sessão",
+      "lastActive": "Último ativo"
     },
     "loginMethods": {
-      "password": "Password",
+      "password": "Senha",
       "googleOAuth": "Google OAuth",
       "microsoftOAuth": "Microsoft OAuth",
-      "keycloak": "Keycloak"
+      "keycloak": "Capa de chave"
     },
     "userTypes": {
-      "internal": "Internal",
-      "client": "Client"
+      "internal": "Interno",
+      "client": "Cliente"
     },
     "actions": {
-      "logout": "Logout",
-      "revoke": "Revoke",
-      "revoking": "Revoking...",
-      "loggingOut": "Logging out...",
-      "logoutFromOther_one": "Logout from {{count}} other device",
-      "logoutFromOther_other": "Logout from {{count}} other devices"
+      "logout": "Sair",
+      "revoke": "Revogar",
+      "revoking": "Revogando...",
+      "loggingOut": "Saindo...",
+      "logoutFromOther_one": "Sair de outro dispositivo {{count}}",
+      "logoutFromOther_other": "Sair de outros dispositivos {{count}}"
     },
     "confirmations": {
-      "logoutCurrent": "This will log you out of your current session. Are you sure?",
-      "logoutAllOther": "This will log you out from all other devices. Are you sure?"
+      "logoutCurrent": "Isso irá desconectá-lo da sessão atual. Tem certeza?",
+      "logoutAllOther": "Isso desconectará você de todos os outros dispositivos. Tem certeza?"
     },
     "prompts": {
-      "enter2FA": "Please enter your 2FA code:"
+      "enter2FA": "Por favor, insira seu código 2FA:"
     },
     "messages": {
-      "loggingOut": "Logging out...",
-      "sessionRevoked": "Session revoked successfully"
+      "loggingOut": "Saindo...",
+      "sessionRevoked": "Sessão revogada com sucesso"
     },
     "warnings": {
-      "oauthLogout": "This will log you out of Alga PSA only. You'll remain signed into {{provider}}."
+      "oauthLogout": "Isso irá desconectá-lo apenas do Alga PSA. Você permanecerá conectado ao {{provider}}."
     },
     "errors": {
-      "fetchFailed": "Failed to fetch sessions",
-      "loadFailed": "Failed to load active sessions",
-      "revokeFailed": "Failed to revoke session",
-      "revokeAllFailed": "Failed to revoke sessions",
-      "logoutAllFailed": "Failed to logout from other devices",
-      "adminAccessRequired": "Insufficient permissions to view all sessions"
+      "fetchFailed": "Falha ao buscar sessões",
+      "loadFailed": "Falha ao carregar sessões ativas",
+      "revokeFailed": "Falha ao revogar sessão",
+      "revokeAllFailed": "Falha ao revogar sessões",
+      "logoutAllFailed": "Falha ao sair de outros dispositivos",
+      "adminAccessRequired": "Permissões insuficientes para visualizar todas as sessões"
     },
     "admin": {
-      "title": "All User Sessions",
-      "description": "{{sessionCount}} active sessions from {{userCount}} users",
-      "searchPlaceholder": "Search by user name, email, device, or IP address...",
-      "noResults": "No sessions match your search"
+      "title": "Todas as sessões de usuário",
+      "description": "Sessões ativas {{sessionCount}} de usuários {{userCount}}",
+      "searchPlaceholder": "Pesquise por nome de usuário, e-mail, dispositivo ou endereço IP...",
+      "noResults": "Nenhuma sessão corresponde à sua pesquisa"
     }
   },
   "projects": {
     "task": {
       "comments": {
-        "title": "Comments",
-        "internal_only": "Internal Only",
-        "placeholder": "Add a comment... Use @ to mention teammates",
-        "add_comment": "Add Comment",
-        "no_comments": "No comments yet. Be the first to comment!",
-        "edited": "Edited",
-        "error_creating": "Failed to create comment. Please try again.",
-        "error_updating": "Failed to update comment. Please try again.",
-        "error_deleting": "Failed to delete comment. Please try again.",
-        "confirm_delete": "Are you sure you want to delete this comment?"
+        "title": "Comentários",
+        "internal_only": "Apenas interno",
+        "placeholder": "Adicione um comentário... Use @ para mencionar colegas de equipe",
+        "add_comment": "Adicionar comentário",
+        "no_comments": "Nenhum comentário ainda. Seja o primeiro a comentar!",
+        "edited": "Editado",
+        "error_creating": "Falha ao criar comentário. Por favor, tente novamente.",
+        "error_updating": "Falha ao atualizar o comentário. Por favor, tente novamente.",
+        "error_deleting": "Falha ao excluir o comentário. Por favor, tente novamente.",
+        "confirm_delete": "Tem certeza de que deseja excluir este comentário?"
       }
     }
   },
   "enums": {
     "addOnDescription": {
-      "ai_assistant": "Unlock AI chat, document assistance, sidebar help, and workflow AI tools for your team."
+      "ai_assistant": "Desbloqueie bate-papo de IA, assistência a documentos, ajuda da barra lateral e ferramentas de IA de fluxo de trabalho para sua equipe."
     }
   },
-  "form": {
-    "selectPlaceholder": "Selecionar...",
-    "clearSelection": "Limpar seleção",
-    "fromDate": "De",
-    "toDate": "Até",
-    "noResults": "Nenhum resultado encontrado",
-    "searchPlaceholder": "Pesquisar..."
-  },
-  "pickers": {
-    "addNewClient": "Adicionar novo cliente",
-    "addNewContact": "Adicionar novo contato",
-    "loadingUsers": "Carregando usuários...",
-    "errorLoadingUsers": "Erro ao carregar usuários",
-    "searchUsers": "Pesquisar usuários...",
-    "unassigned": "Não atribuído",
-    "noUsersAvailable": "Nenhum usuário disponível",
-    "searchBoards": "Pesquisar quadros...",
-    "searchBoardsLabel": "Pesquisar quadros",
-    "noBoardsFound": "Nenhum quadro encontrado"
-  },
-  "tagFilter": {
-    "placeholder": "Filtrar por etiquetas...",
-    "filter": "Filtrar",
-    "selectedCount": "{{count}} selecionado(s)",
-    "clearAll": "Limpar tudo"
-  },
   "timezonePicker": {
-    "selectPlaceholder": "Selecionar fuso horário...",
-    "searchPlaceholder": "Pesquisar fusos horários ou abreviaturas (p. ex. EST)...",
+    "selectPlaceholder": "Selecione o fuso horário...",
+    "searchPlaceholder": "Pesquise fusos horários ou abreviações (por exemplo, EST)...",
     "noResults": "Nenhum fuso horário encontrado",
-    "matchingGroup": "Correspondências a \"{{query}}\"",
+    "matchingGroup": "Correspondente \"{{query}}\"",
     "regions": {
       "Africa": "África",
       "America": "América",
-      "Antarctica": "Antártida",
-      "Arctic": "Ártico",
+      "Antarctica": "Antártica",
+      "Arctic": "ártico",
       "Asia": "Ásia",
-      "Atlantic": "Atlântico",
+      "Atlantic": "atlântico",
       "Australia": "Austrália",
       "Europe": "Europa",
-      "Indian": "Oceano Índico",
+      "Indian": "indiano",
       "Pacific": "Pacífico",
       "Etc": "Outro"
     }
@@ -1111,71 +1114,71 @@
   "pages": {
     "errors": {
       "somethingWentWrong": "Algo deu errado!",
-      "genericError": "Ocorreu um erro. Tente novamente mais tarde.",
+      "genericError": "Ocorreu um erro. Por favor, tente novamente mais tarde.",
       "notFoundTitle": "404 - Página não encontrada",
       "notFoundDescription": "A página que você procura não existe.",
       "userNotAuthenticated": "Usuário não autenticado",
-      "userNotAuthenticatedError": "Erro: Usuário não autenticado",
+      "userNotAuthenticatedError": "Erro: usuário não autenticado",
       "missingRunId": "ID de execução ausente.",
       "teamLeadAccessRequired": "Acesso de líder de equipe necessário",
-      "teamsTabUnavailable": "Guia do Teams indisponível",
-      "teamsSignInUnavailable": "Login no Teams indisponível",
-      "assetNotFound": "Ativo não encontrado",
+      "teamsTabUnavailable": "Guia Equipes indisponível",
+      "teamsSignInUnavailable": "Login das equipes indisponível",
+      "teamsSetupNotFinished": "A configuração das equipes não foi concluída",
+      "teamsSetupNotFinishedHint": "Peça a um administrador do PSA para concluir a configuração do Teams e reabrir a guia pessoal.",
+      "teamsTabAdminHint": "Peça a um administrador do PSA para concluir a configuração do Teams e reabra a guia.",
+      "assetNotFound": "Recurso não encontrado",
       "contactNotFound": "Contato não encontrado",
       "templateNotFound": "Modelo não encontrado",
-      "contactLoadError": "Erro ao carregar o contato",
+      "contactLoadError": "Erro ao carregar contato",
       "unknownError": "Ocorreu um erro desconhecido",
       "templateNotFoundDetail": "O modelo que você procura não existe ou foi excluído.",
-      "teamLeadAccessDetail": "Para aprovar planilhas de tempo de membros da sua equipe, você precisa ser um líder de equipe.",
-      "teamsTabEnableHint": "Peça a um administrador PSA para habilitar a integração do Teams para este tenant antes de reabrir a guia.",
-      "teamsSetupNotFinished": "Configuração do Teams não finalizada",
-      "teamsSetupNotFinishedHint": "Peça a um administrador PSA para finalizar a configuração do Teams e depois reabra a guia pessoal.",
-      "teamsTabAdminHint": "Peça a um administrador PSA para finalizar a configuração do Teams e depois reabra a guia."
+      "teamLeadAccessDetail": "Para aprovar planilhas de ponto para os membros da sua equipe, você precisa ser um líder da equipe.",
+      "teamsTabEnableHint": "Peça a um administrador do PSA para habilitar a integração do Teams para esse locatário antes de reabrir a guia."
     },
     "actions": {
-      "tryAgain": "Tentar novamente",
-      "goToTeamSettings": "Ir para configurações da equipe",
-      "selectDateRange": "Selecionar intervalo de datas"
+      "tryAgain": "Tente novamente",
+      "goToTeamSettings": "Vá para configurações da equipe",
+      "selectDateRange": "Selecione o período"
     },
     "loading": {
       "billingDashboard": "Carregando painel de faturamento...",
       "onboarding": "Carregando onboarding...",
       "extension": "Carregando extensão...",
-      "extensionSettings": "Carregando configurações da extensão...",
+      "extensionSettings": "Carregando configurações de extensão...",
       "ssoSettings": "Carregando configurações de SSO..."
     },
     "titles": {
-      "emailLogs": "Logs de e-mail",
-      "editAsset": "Editar ativo",
+      "emailLogs": "Registros de e-mail",
+      "editAsset": "Editar recurso",
       "slaSettings": "Configurações de SLA",
       "documentEditor": "Editor de documentos",
-      "accountManagement": "Gestão da conta"
+      "accountManagement": "Gerenciamento de contas"
     },
     "teamsTab": {
       "signedInAs": "Conectado como {{name}}",
-      "openInFullPsa": "Abrir no PSA completo",
-      "iframeTitle": "{{destination}} no Alga PSA",
-      "fullPsaHint": "Use \"Abrir no PSA completo\" para mais contexto do que um cartão do Teams pode mostrar.",
+      "openInFullPsa": "Aberto em PSA completo",
+      "iframeTitle": "{{destination}} em Alga PSA",
+      "fullPsaHint": "Use \"Abrir em PSA completo\" para obter um contexto mais rico do que um cartão do Teams pode mostrar.",
       "fallback": {
         "label": "Registro solicitado indisponível:",
         "showingInstead": "Mostrando sua lista de trabalho do Teams em vez de {{destination}}."
       },
       "entrySource": {
-        "bot": "Aberto a partir de um resultado do bot do Teams.",
-        "messageExtension": "Aberto a partir de um resultado da extensão de mensagens do Teams.",
+        "bot": "Aberto a partir de um resultado de bot do Teams.",
+        "messageExtension": "Aberto a partir de um resultado de extensão de mensagem do Teams.",
         "notification": "Aberto a partir de uma notificação de atividade do Teams."
       },
       "destinations": {
         "myWork": {
           "title": "Meu trabalho",
-          "summary": "Sua guia pessoal do Teams está pronta para carregar sua fila de trabalho do PSA."
+          "summary": "A guia pessoal do Teams está pronta para carregar a fila de trabalho do PSA."
         },
         "ticket": {
           "title": "Ticket {{ticketId}}",
           "summary": "Você está abrindo o ticket {{ticketId}} do Teams."
         },
         "projectTask": {
-          "title": "Tarefa de projeto {{taskId}}",
+          "title": "Tarefa do projeto {{taskId}}",
           "summary": "Você está abrindo a tarefa {{taskId}} no projeto {{projectId}}."
         },
         "approval": {
@@ -1183,8 +1186,8 @@
           "summary": "Você está abrindo a aprovação {{approvalId}} do Teams."
         },
         "timeEntry": {
-          "title": "Lançamento de tempo {{entryId}}",
-          "summary": "Você está abrindo o lançamento de tempo {{entryId}} do Teams."
+          "title": "Entrada de hora {{entryId}}",
+          "summary": "Você está abrindo a entrada de horário {{entryId}} do Teams."
         },
         "contact": {
           "title": "Contato {{contactId}}",
@@ -1195,47 +1198,47 @@
     }
   },
   "feedback": {
-    "providePlaceholder": "Por favor, forneça um comentário"
+    "providePlaceholder": "Forneça comentários"
   },
   "presence": {
     "noOneElseEditing": "Ninguém mais está editando",
     "conflict": {
       "changedField": "{{author}} acabou de alterar este campo {{time}}.",
       "remoteValue": "Valor remoto:",
-      "keepYours": "Manter o seu",
-      "takeTheirs": "Usar o remoto"
+      "keepYours": "Mantenha o seu",
+      "takeTheirs": "Pegue o deles"
     }
   },
   "labels": {
-    "printColumns": "Colunas de impressão"
+    "printColumns": "Imprimir colunas"
   },
   "deleteEntity": {
-    "checkingDependenciesTitle": "Verificando dependências",
+    "checkingDependenciesTitle": "Verificando Dependências",
     "deleteTitle": "Excluir {{entityName}}",
     "cannotDeleteTitle": "Não é possível excluir",
     "deleting": "Excluindo...",
     "checkingDependenciesMessage": "Verificando dependências...",
-    "fallbackBlockMessage": "Remova ou reatribua estes itens antes de excluir.",
+    "fallbackBlockMessage": "Remova ou reatribua esses itens antes de excluí-los.",
     "confirmationMessage": "Tem certeza de que deseja excluir \"{{entityName}}\"? Esta ação não pode ser desfeita.",
     "alternatives": {
       "deactivate": {
         "label": "Marcar como inativo",
         "description": "Desativa o registro sem excluir seus dados.",
-        "warning": "Registros inativos não poderão mais ser selecionados em novos fluxos de trabalho."
+        "warning": "Os registros inativos não poderão mais ser selecionados em novos fluxos de trabalho."
       },
       "archive": {
-        "label": "Arquivar",
-        "description": "Move o registro para fora do uso ativo preservando o histórico.",
-        "warning": "Registros arquivados ficam ocultos nas visualizações padrão."
+        "label": "Arquivo",
+        "description": "Tira o registro do uso ativo enquanto preserva o histórico.",
+        "warning": "Os registros arquivados ficam ocultos nas visualizações padrão."
       }
     }
   },
   "dataTable": {
-    "columnsHidden_one": "{{count}} coluna oculta devido ao espaço limitado.",
-    "columnsHidden_other": "{{count}} colunas ocultas devido ao espaço limitado.",
+    "columnsHidden_one": "Coluna {{count}} ocultada devido ao espaço limitado.",
+    "columnsHidden_other": "Colunas {{count}} ocultadas devido ao espaço limitado.",
     "showAll": "Mostrar tudo",
-    "showingAllColumns": "Mostrando todas as colunas; role horizontalmente para vê-las.",
+    "showingAllColumns": "Mostrando todas as colunas; role horizontalmente para vê-los.",
     "showLess": "Mostrar menos",
-    "columnsHidden": "{{count}} colunas ocultas devido ao espaço limitado."
+    "columnsHidden": "Colunas {{count}} ocultadas devido ao espaço limitado."
   }
 }

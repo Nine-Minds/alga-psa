@@ -16,7 +16,7 @@ vi.mock('@alga-psa/db', () => ({
   withTransaction: (...args: any[]) => withTransactionMock(...args),
 }));
 
-vi.mock('@alga-psa/core', () => ({
+vi.mock('@alga-psa/core/server', () => ({
   deleteEntityWithValidation: vi.fn(),
 }), { virtual: true });
 
