@@ -36,9 +36,16 @@ describe('teams observability tenant deletion ordering', () => {
 
   it('deletes tenant-scoped tables through the parent table with an explicit tenant filter', () => {
     expect(source).toContain('for (const tableName of TENANT_TABLES_DELETION_ORDER)');
-    expect(source).toContain('const tenantColumn = await getTableTenantColumn(adminKnex, tableName)');
-    expect(source).toContain('.where({ [tenantColumn]: tenantId })');
+    // Per-table tenant scoping now resolves through the deletion boundary helper:
+    // metadata-scoped tables go through tenantDb.table(), everything else keeps
+    // an explicit unscoped(reason) + tenant-column filter.
+    expect(source).toContain('const tableBoundary = await resolveTenantDeletionTableBoundary(');
+    expect(source).toContain('const tenantColumn = await getTableTenantColumn(knex, tableName);');
+    expect(source).toContain('const scopedDb = tenantDb(knex, tenantId);');
+    expect(source).toContain('return scopedDb.table(boundary.tableName);');
+    expect(source).toContain('.unscoped(boundary.tableName, boundary.reason)');
+    expect(source).toContain('.where({ [boundary.tenantColumn]: tenantId });');
     expect(source).toContain('if (count > 0)');
-    expect(source).toContain("(k) => k(tableName).where({ [tenantColumn]: tenantId }).delete()");
+    expect(source).toContain('(k) => explicitTenantDeletionTableQuery(k, tenantId, tableBoundary).delete(),');
   });
 });

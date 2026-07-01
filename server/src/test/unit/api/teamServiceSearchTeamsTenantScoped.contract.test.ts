@@ -21,7 +21,7 @@ describe('team service searchTeams tenant-scoped query contract', () => {
 
     expect(section).toContain('tenantDb(');
     expect(section).toContain(".table('teams')");
-    expect(section).toContain(".andOn('teams.tenant', '=', 'manager.tenant')");
+    expect(section).toContain(".tenantJoin(query, 'users as manager', 'teams.manager_id', 'manager.user_id', { type: 'left' })");
 
     expect(section).not.toMatch(/knex\('teams'\)\s*\./);
     expect(section).not.toMatch(/\.where\('teams\.tenant', context\.tenant\)/);

@@ -22,7 +22,7 @@ describe('time sheet service period settings tenant-scoped query contract', () =
     expect(section).toContain('tenantDb(');
     expect(section).toContain('tenantDb(');
     expect(section).toContain(".table('time_period_settings')");
-    expect(section).toContain("const [settings] = await trx('time_period_settings')");
+    expect(section).toContain("const [settings] = await tenantDb(trx, context.tenant).table('time_period_settings')");
 
     expect(section).not.toMatch(/knex\('time_period_settings'\)\s*\.(?:where|orderBy)/);
     expect(section).not.toMatch(/trx\('time_period_settings'\)\s*[\r\n]+\s*\.where/);

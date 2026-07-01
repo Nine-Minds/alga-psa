@@ -163,6 +163,14 @@ const servicePeriodPostInventoryRefs = new Set([
   'shared/workflow/expression-authoring/adapters/invoiceContextAdapter.ts',
 ]);
 
+// Files whose persisted service-period field references were removed after the
+// pass-0 inventory snapshot was taken (the tenant-facade migration replaced the
+// raw SQL strings these wiring tests asserted); the snapshot remains an
+// accurate record of its point in time.
+const servicePeriodPostInventoryRemovals = new Set([
+  'packages/billing/tests/invoiceQueries.recurringDetailRefresh.wiring.test.ts',
+]);
+
 describe('service-period-first billing plan artifacts', () => {
   it('T001: inventory captures every live resolveServicePeriod reference in recurring timing paths', () => {
     expect(inventory.timingControls.resolveServicePeriodRefs.slice().sort()).toEqual(
@@ -193,6 +201,7 @@ describe('service-period-first billing plan artifacts', () => {
     expect(
       inventory.periodFieldInventory.servicePeriodFieldRefs
         .filter((file) => file !== 'packages/billing/src/lib/billing/billingEngine.ts')
+        .filter((file) => !servicePeriodPostInventoryRemovals.has(file))
         .slice()
         .sort()
     ).toEqual(outsideEngine);

@@ -22,8 +22,10 @@ describe('Document content route contract', () => {
   it('T065: reads both block and text in-app document content tables', () => {
     const source = readRouteSource();
 
-    expect(source).toContain("knex('document_block_content')");
-    expect(source).toContain("knex('document_content')");
+    // Tenant scoping now lives in the tenantDb facade: db.table() scopes both reads.
+    expect(source).toContain('const db = tenantDb(knex, tenantId);');
+    expect(source).toContain("db.table('document_block_content')");
+    expect(source).toContain("db.table('document_content')");
     expect(source).toContain('convertBlockNoteToMarkdown');
   });
 });

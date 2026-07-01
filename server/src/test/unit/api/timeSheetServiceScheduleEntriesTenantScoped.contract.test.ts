@@ -23,7 +23,7 @@ describe('time sheet service schedule entries tenant-scoped query contract', () 
     expect(section).toContain('tenantDb(');
     expect(section).toContain(".table('schedule_entries')");
     expect(section).toContain(".table('schedule_entry_assignees')");
-    expect(section).toContain("await trx('schedule_entry_assignees').insert(assigneeData)");
+    expect(section).toContain("await tenantDb(trx, context.tenant).table('schedule_entry_assignees').insert(assigneeData)");
 
     expect(section).not.toMatch(/knex\('schedule_entries'\)\s*\./);
     expect(section).not.toMatch(/trx\('schedule_entries'\)\s*[\r\n]+\s*\./);

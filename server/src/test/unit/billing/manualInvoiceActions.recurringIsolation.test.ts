@@ -7,12 +7,13 @@ const mocks = vi.hoisted(() => {
       throw new Error(`Unexpected table ${tableName}`);
     }
 
-    return {
-      insert: vi.fn(async (payload: Record<string, any>) => {
-        insertedInvoices.push(payload);
-        return [payload];
-      }),
-    };
+    const builder: Record<string, any> = {};
+    builder.where = vi.fn(() => builder);
+    builder.insert = vi.fn(async (payload: Record<string, any>) => {
+      insertedInvoices.push(payload);
+      return [payload];
+    });
+    return builder;
   });
 
   const knex = {

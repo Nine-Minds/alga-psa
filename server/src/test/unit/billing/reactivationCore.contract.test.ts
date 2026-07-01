@@ -41,7 +41,7 @@ describe('reactivation core contract', () => {
 
     expect(activities).toContain('existingActiveSubscription');
     expect(activities).toContain(".whereIn('status', ['active', 'trialing'])");
-    expect(activities).toContain("trx('stripe_customers')");
+    expect(activities).toContain("tenantScopedTrx.table('stripe_customers')");
     expect(activities).toContain('insertStripeSubscriptionForTenant(trx');
     expect(tenantOps).toContain('export async function insertStripeSubscriptionForTenant');
     expect(tenantOps).toContain('stripe_customer_id: input.stripeCustomerInternalId');

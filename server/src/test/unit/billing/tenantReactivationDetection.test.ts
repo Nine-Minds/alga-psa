@@ -15,7 +15,9 @@ function createFakeKnex(tables: Record<string, Row[]>) {
     const builder = {
       where(criteria: string | Row, value?: unknown) {
         if (typeof criteria === 'string') {
-          rows = rows.filter((row) => row[criteria] === value);
+          // tenantDb qualifies its tenant predicate (`<table>.tenant`); rows are keyed bare.
+          const column = criteria.includes('.') ? criteria.split('.').pop()! : criteria;
+          rows = rows.filter((row) => row[column] === value);
         } else {
           rows = rows.filter((row) =>
             Object.entries(criteria).every(([key, expected]) => row[key] === expected),

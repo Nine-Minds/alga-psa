@@ -21,9 +21,9 @@ describe('invoiceService recurring detail persistence regression guards', () => 
   it('links and marks source usage and time records when invoice charges are persisted', () => {
     expect(source).toContain("async function linkAndMarkSourceBillingRecord");
     expect(source).toContain("tenantScopedTable(tx, tenant, 'time_entries')");
-    expect(source).toContain("tx('invoice_time_entries').insert");
+    expect(source).toContain("tenantScopedTable(tx, tenant, 'invoice_time_entries').insert");
     expect(source).toContain("tenantScopedTable(tx, tenant, 'usage_tracking')");
-    expect(source).toContain("tx('invoice_usage_records').insert");
+    expect(source).toContain("tenantScopedTable(tx, tenant, 'invoice_usage_records').insert");
     expect(source).toContain("await linkAndMarkSourceBillingRecord({");
   });
 });

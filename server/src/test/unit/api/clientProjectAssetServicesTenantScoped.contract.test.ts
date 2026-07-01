@@ -37,7 +37,9 @@ describe('client, project, and asset API services tenant-scoped query contract',
     expect(clientSource).toContain("db.tenantJoin(dataQuery, 'client_locations as cl'");
     expect(clientSource).toContain('deleteFromTenantTableIfExists');
 
-    expect(projectSource).toContain("db.table<IProjectStatusMapping>('project_status_mappings as psm')");
+    // row type moved to the method signature; the read keeps the facade root
+    expect(projectSource).toContain('Promise<IProjectStatusMapping[]>');
+    expect(projectSource).toContain("db.table('project_status_mappings as psm')");
     expect(projectSource).toContain("db.tenantJoin(query, 'statuses as s'");
     expect(projectSource).toContain("db.tenantJoin(query, 'project_phases'");
 
