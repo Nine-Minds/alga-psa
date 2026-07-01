@@ -18,8 +18,10 @@ interface SMTPConfig {
   host: string;
   port: number;
   secure?: boolean; // true for 465, false for other ports
-  username: string;
-  password: string;
+  // Optional: some relays (e.g. an on-LAN smtp-oauth-relay) accept mail
+  // without client authentication. When omitted, no AUTH is attempted.
+  username?: string;
+  password?: string;
   from: string;
   rejectUnauthorized?: boolean;
   requireTLS?: boolean;
@@ -163,11 +165,20 @@ export class SMTPEmailProvider implements IEmailProvider {
   }
 
   private validateConfig(config: Record<string, any>): SMTPConfig {
-    const requiredFields = ['host', 'port', 'username', 'password', 'from'];
+    // username/password are intentionally not required: relays that accept
+    // unauthenticated mail can be configured with host/port/from only.
+    const requiredFields = ['host', 'port', 'from'];
     const missingFields = requiredFields.filter(field => !config[field]);
-    
+
     if (missingFields.length > 0) {
       throw new Error(`Missing required SMTP configuration fields: ${missingFields.join(', ')}`);
+    }
+
+    // If either credential is supplied, both must be, otherwise AUTH is malformed.
+    const hasUsername = Boolean(config.username);
+    const hasPassword = Boolean(config.password);
+    if (hasUsername !== hasPassword) {
+      throw new Error('SMTP username and password must be provided together (or both omitted for an unauthenticated relay)');
     }
 
     // Validate port
@@ -180,8 +191,8 @@ export class SMTPEmailProvider implements IEmailProvider {
       host: config.host,
       port,
       secure: config.secure ?? (port === 465),
-      username: config.username,
-      password: config.password,
+      username: hasUsername ? config.username : undefined,
+      password: hasPassword ? config.password : undefined,
       from: config.from,
       rejectUnauthorized: config.rejectUnauthorized ?? true,
       requireTLS: config.requireTLS ?? false
@@ -197,14 +208,19 @@ export class SMTPEmailProvider implements IEmailProvider {
       host: this.config.host,
       port: this.config.port,
       secure: this.config.secure,
-      auth: {
-        user: this.config.username,
-        pass: this.config.password
-      },
       tls: {
         rejectUnauthorized: this.config.rejectUnauthorized
       }
     };
+
+    // Only send AUTH when credentials are configured. Relays that expect
+    // unauthenticated mail reject an AUTH handshake outright.
+    if (this.config.username && this.config.password) {
+      transportOptions.auth = {
+        user: this.config.username,
+        pass: this.config.password
+      };
+    }
 
     if (this.config.requireTLS) {
       transportOptions.requireTLS = true;
