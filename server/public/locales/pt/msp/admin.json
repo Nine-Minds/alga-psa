@@ -140,6 +140,14 @@
       "fromAddress": {
         "label": "Do endereço",
         "placeholder": "noreply@example.com"
+      },
+      "authHint": "Deixe o nome de usuário e a senha em branco se o seu relay aceitar e-mails sem autenticação.",
+      "security": {
+        "title": "Segurança da conexão",
+        "secure": "Usar TLS implícito (SSL ao conectar, normalmente a porta 465)",
+        "requireTls": "Exigir atualização STARTTLS (portas 587 / 25)",
+        "verifyCert": "Verificar o certificado do servidor",
+        "verifyCertHint": "Desative isto apenas para um relay confiável na sua própria rede que use um certificado autoassinado."
       }
     },
     "resend": {
@@ -169,7 +177,16 @@
       "loadEmailSettings": "Falha ao carregar as configurações de e-mail",
       "saveSettings": "Falha ao salvar as configurações",
       "addDomain": "Falha ao adicionar domínio",
-      "verifyDomain": "Falha ao verificar o domínio"
+      "verifyDomain": "Falha ao verificar o domínio",
+      "testOutbound": "Falha ao testar o e-mail de saída"
+    },
+    "test": {
+      "title": "Testar e-mail de saída",
+      "description": "Salva as configurações atuais e depois verifica a conexão com o provedor. Insira um endereço para também enviar uma mensagem de teste.",
+      "recipientLabel": "Enviar teste para (opcional)",
+      "recipientPlaceholder": "voce@exemplo.com",
+      "run": "Testar conexão",
+      "testing": "Testando..."
     }
   },
   "microsoft365": {

@@ -140,6 +140,14 @@
       "fromAddress": {
         "label": "Afzenderadres",
         "placeholder": "noreply@example.com"
+      },
+      "authHint": "Laat gebruikersnaam en wachtwoord leeg als uw relay e-mail zonder authenticatie accepteert.",
+      "security": {
+        "title": "Verbindingsbeveiliging",
+        "secure": "Impliciete TLS gebruiken (SSL bij verbinden, doorgaans poort 465)",
+        "requireTls": "STARTTLS-upgrade vereisen (poorten 587 / 25)",
+        "verifyCert": "Servercertificaat verifiëren",
+        "verifyCertHint": "Schakel dit alleen uit voor een vertrouwde relay op uw eigen netwerk met een zelfondertekend certificaat."
       }
     },
     "resend": {
@@ -169,7 +177,16 @@
       "loadEmailSettings": "Kan e-mailinstellingen niet laden",
       "saveSettings": "Kan instellingen niet opslaan",
       "addDomain": "Kan domein niet toevoegen",
-      "verifyDomain": "Kan domein niet verifiëren"
+      "verifyDomain": "Kan domein niet verifiëren",
+      "testOutbound": "Testen van uitgaande e-mail mislukt"
+    },
+    "test": {
+      "title": "Uitgaande e-mail testen",
+      "description": "Slaat de huidige instellingen op en verifieert vervolgens de verbinding met de provider. Voer een adres in om ook een testbericht te verzenden.",
+      "recipientLabel": "Test verzenden naar (optioneel)",
+      "recipientPlaceholder": "jij@voorbeeld.com",
+      "run": "Verbinding testen",
+      "testing": "Bezig met testen..."
     }
   },
   "microsoft365": {
