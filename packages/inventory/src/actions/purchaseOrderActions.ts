@@ -137,6 +137,35 @@ export const listPurchaseOrders = withAuth(
   },
 );
 
+/**
+ * Vendor price-list defaulting for a PO line (F056): when the caller doesn't supply
+ * a cost, price from the PO vendor's offer (matching currency), else the product's
+ * average/catalog cost. Returns the vendor SKU snapshot for the paperwork (F057).
+ */
+async function resolvePoLineDefaults(
+  trx: Knex.Transaction,
+  tenant: string,
+  vendorId: string,
+  serviceId: string,
+  poCurrency: string,
+  explicitCost?: number | null,
+): Promise<{ unit_cost: number; vendor_sku: string | null }> {
+  const offer = await trx('vendor_products')
+    .where({ tenant, vendor_id: vendorId, service_id: serviceId })
+    .first();
+  const vendorSku: string | null = offer?.vendor_sku ?? null;
+  if (explicitCost != null) return { unit_cost: Number(explicitCost), vendor_sku: vendorSku };
+  if (offer?.unit_cost != null && offer.cost_currency === poCurrency) {
+    return { unit_cost: Number(offer.unit_cost), vendor_sku: vendorSku };
+  }
+  const pis = await trx('product_inventory_settings')
+    .where({ tenant, service_id: serviceId })
+    .select('average_cost')
+    .first();
+  const sc = await trx('service_catalog').where({ tenant, service_id: serviceId }).select('cost').first();
+  return { unit_cost: Number(pis?.average_cost ?? sc?.cost ?? 0), vendor_sku: vendorSku };
+}
+
 export const createPurchaseOrder = withAuth(
   async (
     user,
@@ -151,7 +180,7 @@ export const createPurchaseOrder = withAuth(
       drop_ship_client_id?: string | null;
       drop_ship_address?: Record<string, unknown> | null;
       notes?: string | null;
-      lines?: Array<{ service_id: string; quantity_ordered: number; unit_cost: number; cost_currency?: string }>;
+      lines?: Array<{ service_id: string; quantity_ordered: number; unit_cost?: number | null; cost_currency?: string }>;
     },
   ): Promise<IPurchaseOrder> => {
     await requirePoPerm(user, 'create');
@@ -192,6 +221,14 @@ export const createPurchaseOrder = withAuth(
           throw new Error(`Line cost_currency (${lineCurrency}) must match PO currency_code (${currency})`);
         }
         if (!(Number(l.quantity_ordered) > 0)) throw new Error('quantity_ordered must be greater than 0');
+        const defaults = await resolvePoLineDefaults(
+          trx,
+          tenant,
+          input.vendor_id,
+          l.service_id,
+          currency,
+          l.unit_cost,
+        );
         const [row] = await trx('purchase_order_lines')
           .insert({
             tenant,
@@ -199,7 +236,8 @@ export const createPurchaseOrder = withAuth(
             service_id: l.service_id,
             quantity_ordered: l.quantity_ordered,
             quantity_received: 0,
-            unit_cost: l.unit_cost,
+            unit_cost: defaults.unit_cost,
+            vendor_sku: defaults.vendor_sku,
             cost_currency: lineCurrency,
           })
           .returning('*');
@@ -216,7 +254,7 @@ export const addPoLine = withAuth(
     user,
     { tenant },
     poId: string,
-    input: { service_id: string; quantity_ordered: number; unit_cost: number; cost_currency?: string; source_so_line_id?: string | null },
+    input: { service_id: string; quantity_ordered: number; unit_cost?: number | null; cost_currency?: string; source_so_line_id?: string | null },
   ): Promise<IPurchaseOrderLine> => {
     await requirePoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
@@ -231,6 +269,16 @@ export const addPoLine = withAuth(
       }
       if (!(Number(input.quantity_ordered) > 0)) throw new Error('quantity_ordered must be greater than 0');
 
+      // Price from the vendor's offer when the caller didn't specify a cost (F056).
+      const defaults = await resolvePoLineDefaults(
+        trx,
+        tenant,
+        po.vendor_id,
+        input.service_id,
+        po.currency_code,
+        input.unit_cost,
+      );
+
       const [row] = await trx('purchase_order_lines')
         .insert({
           tenant,
@@ -238,7 +286,8 @@ export const addPoLine = withAuth(
           service_id: input.service_id,
           quantity_ordered: input.quantity_ordered,
           quantity_received: 0,
-          unit_cost: input.unit_cost,
+          unit_cost: defaults.unit_cost,
+          vendor_sku: defaults.vendor_sku,
           cost_currency: lineCurrency,
           source_so_line_id: input.source_so_line_id ?? null,
         })

@@ -10,6 +10,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IVendor } from '@alga-psa/types';
 import { listVendors, createVendor, updateVendor, deactivateVendor } from '../actions';
+import { VendorPriceList } from './VendorPriceList';
 
 interface FormState {
   vendor_name: string;
@@ -30,6 +31,7 @@ const EMPTY_FORM: FormState = {
 };
 
 export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }) {
+  const [priceListVendor, setPriceListVendor] = useState<IVendor | null>(null);
   const [vendors, setVendors] = useState<IVendor[]>(initialVendors || []);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<IVendor | null>(null);
@@ -131,6 +133,14 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
             Edit
           </Button>
           <Button
+            id={`price-list-vendor-${rec.vendor_id}`}
+            variant="outline"
+            size="sm"
+            onClick={() => setPriceListVendor(rec)}
+          >
+            Price list
+          </Button>
+          <Button
             id={`deactivate-vendor-${rec.vendor_id}`}
             variant="ghost"
             size="sm"
@@ -154,6 +164,8 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
       </div>
 
       <DataTable id="vendors-table" data={vendors} columns={columns} onRowClick={openEdit} />
+
+      <VendorPriceList vendor={priceListVendor} onClose={() => setPriceListVendor(null)} />
 
       <Dialog
         isOpen={dialogOpen}

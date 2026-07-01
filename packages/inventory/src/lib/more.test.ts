@@ -32,11 +32,11 @@ beforeAll(async () => {
   const e = readEnv();
   knex = knexLib({
     client: 'pg',
-    connection: { host: 'localhost', port: 5472, user: e.DB_USER_ADMIN, password: e.DB_PASSWORD_ADMIN, database: 'server' },
+    connection: { host: 'localhost', port: 5432, user: e.DB_USER_ADMIN, password: e.DB_PASSWORD_ADMIN, database: 'server' },
     pool: { min: 1, max: 4 },
   });
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
-  const svcs = await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).orderBy('service_id').limit(2).select('service_id');
+  const svcs = await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).whereRaw("NOT EXISTS (SELECT 1 FROM stock_levels sl WHERE sl.tenant = service_catalog.tenant AND sl.service_id = service_catalog.service_id) AND NOT EXISTS (SELECT 1 FROM stock_units su WHERE su.tenant = service_catalog.tenant AND su.service_id = service_catalog.service_id)").orderBy('service_id').limit(2).select('service_id'); // seed-independent: skip services carrying real stock
   SERVICE = svcs[0].service_id;
   SER_SERVICE = svcs[1].service_id;
   LOCATION = (await knex('stock_locations').where({ tenant: TENANT, is_default: true }).first()).location_id;
@@ -109,8 +109,12 @@ describe('inventory — COGS, drop-ship, invoicing, scope (real DB, rolled back)
       await expect(assertLocationWritable(trx, TENANT, OTHER, van.location_id)).rejects.toThrow();
       // the assigned tech is allowed
       await expect(assertLocationWritable(trx, TENANT, USER, van.location_id)).resolves.toBeUndefined();
-      // an unassigned warehouse is writable by anyone
-      await expect(assertLocationWritable(trx, TENANT, OTHER, LOCATION)).resolves.toBeUndefined();
+      // an unassigned warehouse is writable by anyone (own fixture — the tenant's
+      // default location may legitimately carry an assignee in demo data)
+      const [warehouse] = await trx('stock_locations')
+        .insert({ tenant: TENANT, name: 'Scoped Unassigned WH', location_type: 'warehouse', is_default: false, is_active: true })
+        .returning('location_id');
+      await expect(assertLocationWritable(trx, TENANT, OTHER, warehouse.location_id)).resolves.toBeUndefined();
     });
   });
 });

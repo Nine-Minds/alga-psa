@@ -39,6 +39,7 @@ const EMPTY: InventoryDashboardData = {
   on_hand: { total_units: 0, serialized_units: 0 },
   on_order: { open_po_count: 0, on_order_value: 0, arriving_today: 0 },
   margin_mtd: { revenue: 0, cogs: 0, margin: 0, margin_pct: 0 },
+  vendor_bills: { open_count: 0, open_total: 0, overdue_count: 0, overdue_total: 0 },
   this_week: { received: 0, deployed: 0, transfers: 0, rmas_opened: 0 },
   attention: [],
   receiving_queue: [],
@@ -253,6 +254,7 @@ function MovementLine({ m }: { m: DashboardMovement }) {
 export function InventoryDashboard({ data }: InventoryDashboardProps) {
   const d = data || EMPTY;
   const iv = d.inventory_value || EMPTY.inventory_value;
+  const bills = d.vendor_bills || EMPTY.vendor_bills;
   const attention = d.attention || [];
   const queue = d.receiving_queue || [];
   const movements = d.recent_movements || [];
@@ -329,6 +331,29 @@ export function InventoryDashboard({ data }: InventoryDashboardProps) {
           }
         />
       </div>
+
+      {/* vendor bills aging (F082) — the AP tie-out at a glance */}
+      {bills.open_count > 0 && (
+        <div
+          className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white shadow-sm px-[18px] py-3"
+          id="inventory-vendor-bills-widget"
+        >
+          <span className="text-[13.5px] font-semibold text-gray-900">Vendor bills owed</span>
+          <span className="text-[13.5px] tabular-nums text-gray-700">
+            {money(bills.open_total)} across {bills.open_count} bill{bills.open_count === 1 ? '' : 's'}
+          </span>
+          {bills.overdue_count > 0 ? (
+            <span className="text-[12.5px] font-semibold text-red-600">
+              {bills.overdue_count} overdue · {money(bills.overdue_total)}
+            </span>
+          ) : (
+            <span className="text-[12.5px] text-gray-400">nothing overdue</span>
+          )}
+          <a href="/msp/inventory/vendor-bills" className="ml-auto text-[12.5px] font-semibold text-primary-600 hover:underline">
+            View bills
+          </a>
+        </div>
+      )}
 
       {/* attention + receiving */}
       <div className="grid grid-cols-1 lg:grid-cols-[1.55fr_1fr] gap-[18px]">

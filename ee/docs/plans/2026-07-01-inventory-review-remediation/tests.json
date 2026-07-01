@@ -64,7 +64,7 @@
   {
     "id": "T008",
     "description": "[db] Manufactured reserved/held drift is repaired by reconcileStockLevels; the admin rebuild action reports the corrections it made",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F028"
@@ -118,7 +118,7 @@
   {
     "id": "T014",
     "description": "[db][migration] New CHECKs reject negative reserved/held, zero/negative line quantities, and fulfilled/invoiced > ordered; migration pre-clamps seeded violating rows then applies cleanly and rolls back",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F031"
@@ -164,7 +164,7 @@
   {
     "id": "T019",
     "description": "[db][migration] rma_cases CHECK no longer admits 'dead_unit_returned'; existing rows and the advance-replacement happy path are unaffected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
@@ -196,7 +196,7 @@
   {
     "id": "T023",
     "description": "[db][migration] tax_rate FK rejects an orphan tax_rate_id; soft-link FKs reject orphan references and SET NULL on parent delete; new hot-path indexes exist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046",
       "F048",
@@ -206,7 +206,7 @@
   {
     "id": "T024",
     "description": "[db] UPDATE and DELETE on stock_movements raise from the immutability trigger; INSERT still works",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]

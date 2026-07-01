@@ -410,7 +410,7 @@
   {
     "id": "F052",
     "description": "[vendor-pricing] Migration creates vendor_products: PK (tenant, vendor_id, service_id), vendor_sku, unit_cost (cents), cost_currency, lead_time_days, is_preferred, with composite FKs and a partial unique index enforcing one preferred offer per (tenant, service_id)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a78"
     ]
@@ -418,7 +418,7 @@
   {
     "id": "F053",
     "description": "[vendor-pricing] CRUD server actions for vendor_products gated by vendor read/update permissions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a78"
     ]
@@ -426,7 +426,7 @@
   {
     "id": "F054",
     "description": "[vendor-pricing] Vendor detail UI gains a price-list tab: list/add/edit/remove product offers with vendor SKU, cost, currency, lead time, preferred flag",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a78"
     ]
@@ -434,7 +434,7 @@
   {
     "id": "F055",
     "description": "[vendor-pricing] Product inventory settings panel shows that product's vendor offers (read-only)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a78"
     ]
@@ -442,7 +442,7 @@
   {
     "id": "F056",
     "description": "[vendor-pricing] Adding a PO line defaults unit_cost, currency, and vendor SKU from the PO vendor's vendor_products row when present (fallback: existing average/catalog cost)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a78"
     ]
@@ -450,7 +450,7 @@
   {
     "id": "F057",
     "description": "[vendor-pricing] PO line UI displays the vendor SKU when known",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a78"
     ]
@@ -458,7 +458,7 @@
   {
     "id": "F058",
     "description": "[vendor-pricing] createPoFromLowStock and suggestPoFromBackorder price suggested lines from the preferred vendor's offer (cost + currency) when one exists",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a78"
     ]
@@ -466,7 +466,7 @@
   {
     "id": "F059",
     "description": "[cycle-count] Migration creates count_sessions (location, status draft/in_progress/review/approved/cancelled, created_by, approved_by, timestamps) and count_lines (service, expected snapshot, counted_qty, counted serials, variance) with composite FKs and status CHECKs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a79"
     ]
@@ -474,7 +474,7 @@
   {
     "id": "F060",
     "description": "[cycle-count] New cycle_count permission resource (create/read/update/delete) seeded to admin/manager roles",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a79"
     ]
@@ -482,7 +482,7 @@
   {
     "id": "F061",
     "description": "[cycle-count] Start-count action snapshots expected on-hand per tracked product at the location into count_lines",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a79"
     ]
@@ -490,7 +490,7 @@
   {
     "id": "F062",
     "description": "[cycle-count] Count entry UI: per-product counted-quantity entry with in-session search; expected quantities hidden from counters (blind count)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a79"
     ]
@@ -498,7 +498,7 @@
   {
     "id": "F063",
     "description": "[cycle-count] Serialized count lines accept a serial list; expected-but-unscanned units are flagged missing and unexpected serials flagged for disposition",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a79"
     ]
@@ -506,7 +506,7 @@
   {
     "id": "F064",
     "description": "[cycle-count] Variance review screen (approver-only) shows counted vs expected with quantity delta and value at average cost",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a79"
     ]
@@ -514,7 +514,7 @@
   {
     "id": "F065",
     "description": "[cycle-count] Approval (cycle_count permission + location scope) writes adjust movements with reason 'cycle_count' per variance and closes the session; counting respects location scoping",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a79"
     ]
@@ -522,7 +522,7 @@
   {
     "id": "F066",
     "description": "[cycle-count] On approval, missing serialized units are retired; unexpected serials require explicit disposition (add with real serial or exclude)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a79"
     ]
@@ -530,7 +530,7 @@
   {
     "id": "F067",
     "description": "[cycle-count] Stock mutations at the location during an open session mark affected count lines stale (recount prompt) instead of corrupting variance math",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a79"
     ]
@@ -538,7 +538,7 @@
   {
     "id": "F068",
     "description": "[cycle-count] Sessions list + per-location history (counter, approver, net variance); cancelling a session discards it with no stock effect",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a79"
     ]
@@ -546,7 +546,7 @@
   {
     "id": "F069",
     "description": "[landed-cost] Migration creates po_landed_costs: cost_type (freight/duty/other), amount (cents), currency matching the PO, allocation_method (value/quantity), applied flag",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a710"
     ]
@@ -554,7 +554,7 @@
   {
     "id": "F070",
     "description": "[landed-cost] Actions + PO UI to add/edit/remove landed-cost entries while unapplied",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a710"
     ]
@@ -562,7 +562,7 @@
   {
     "id": "F071",
     "description": "[landed-cost] Apply-landed-cost action allocates entries across received line quantities by the chosen method; idempotent via the applied flag",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a710"
     ]
@@ -570,7 +570,7 @@
   {
     "id": "F072",
     "description": "[landed-cost] Application adjusts the non-serialized moving-average cost via a cost-only adjustment (no phantom quantity movement)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a710"
     ]
@@ -578,7 +578,7 @@
   {
     "id": "F073",
     "description": "[landed-cost] Application bumps unit_cost on serialized units received from that PO",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a710"
     ]
@@ -586,7 +586,7 @@
   {
     "id": "F074",
     "description": "[landed-cost] PO detail shows the landed-cost total and per-line effective unit cost (base + allocated)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a710"
     ]
@@ -594,7 +594,7 @@
   {
     "id": "F075",
     "description": "[vendor-bills] Migration creates vendor_bills (vendor, bill_number unique per tenant+vendor, bill_date, due_date, currency, status draft/open/paid/void, nullable po_id, total cents) and vendor_bill_lines, with composite FKs and status CHECKs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a711"
     ]
@@ -602,7 +602,7 @@
   {
     "id": "F076",
     "description": "[vendor-bills] New vendor_bill permission resource (CRUD) seeded to admin/back-office roles",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a711"
     ]
@@ -610,7 +610,7 @@
   {
     "id": "F077",
     "description": "[vendor-bills] CRUD actions incl. status transitions draft\u2192open\u2192paid and void",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a711"
     ]
@@ -618,7 +618,7 @@
   {
     "id": "F078",
     "description": "[vendor-bills] Create-bill-from-PO prefills lines from received quantities and costs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a711"
     ]
@@ -626,7 +626,7 @@
   {
     "id": "F079",
     "description": "[vendor-bills] Due date defaults from the vendor's payment_terms (e.g., net30 \u2192 bill_date + 30 days)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a711"
     ]
@@ -634,7 +634,7 @@
   {
     "id": "F080",
     "description": "[vendor-bills] Bill shows a non-blocking 2-way variance indicator vs the PO's received value",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a711"
     ]
@@ -642,7 +642,7 @@
   {
     "id": "F081",
     "description": "[vendor-bills] Vendor bills list UI with status filter, mark-paid, and void",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a711"
     ]
@@ -650,7 +650,7 @@
   {
     "id": "F082",
     "description": "[vendor-bills] Dashboard widget: open vendor bills with aging (due / overdue buckets)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "\u00a711"
     ]

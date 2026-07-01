@@ -23,6 +23,7 @@ import {
   updateInventorySettings,
   setProductSerialized,
   setProductKit,
+  listVendorProducts,
 } from '@alga-psa/inventory/actions';
 import toast from 'react-hot-toast';
 import { ITaxRate } from '@alga-psa/types';
@@ -147,6 +148,18 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       setFormPrices([{ currency_code: defaultCurrency, rate: 0 }]);
       setPriceInput('');
       setCostInput('');
+    }
+  }, [isOpen, product]);
+
+  // Vendor price-list offers for this product (read-only view — F055).
+  const [vendorOffers, setVendorOffers] = useState<any[]>([]);
+  useEffect(() => {
+    if (isOpen && product && (product.item_kind ?? 'product') === 'product') {
+      listVendorProducts({ service_id: product.service_id })
+        .then(setVendorOffers)
+        .catch(() => setVendorOffers([])); // decoration only — never block the dialog
+    } else {
+      setVendorOffers([]);
     }
   }, [isOpen, product]);
 
@@ -930,6 +943,32 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                           />
                         </div>
                       </div>
+
+                      {/* Vendor offers (read-only — F055): managed on the Vendor's price list. */}
+                      {vendorOffers.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                            Vendor offers
+                          </label>
+                          <div className="space-y-1" id="quick-add-product-vendor-offers">
+                            {vendorOffers.map((o) => (
+                              <div
+                                key={`${o.vendor_id}-${o.service_id}`}
+                                className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-700))]"
+                              >
+                                <span className="font-medium">{o.vendor_name || o.vendor_id}</span>
+                                {o.vendor_sku && <span className="font-mono text-xs text-gray-500">{o.vendor_sku}</span>}
+                                <span className="ml-auto tabular-nums">
+                                  {o.unit_cost != null ? `$${(Number(o.unit_cost) / 100).toFixed(2)} ${o.cost_currency}` : '—'}
+                                </span>
+                                {o.is_preferred && (
+                                  <span className="text-xs rounded bg-green-100 text-green-800 px-1.5 py-0.5">Preferred</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {inv.is_kit && (
                         <div>

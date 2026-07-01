@@ -64,6 +64,8 @@ export interface InventoryDashboardData {
   on_order: { open_po_count: number; on_order_value: number; arriving_today: number };
   margin_mtd: { revenue: number; cogs: number; margin: number; margin_pct: number };
   this_week: { received: number; deployed: number; transfers: number; rmas_opened: number };
+  /** Open vendor bills with aging buckets (F082). */
+  vendor_bills: { open_count: number; open_total: number; overdue_count: number; overdue_total: number };
   attention: AttentionItem[];
   receiving_queue: ReceivingPo[];
   recent_movements: DashboardMovement[];
@@ -399,6 +401,24 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
       created_at: m.created_at,
     }));
 
+    // Open vendor bills + aging (F082). draft/open both count as "owed".
+    const billRows = await trx('vendor_bills')
+      .where({ tenant })
+      .whereIn('status', ['draft', 'open'])
+      .select('total_amount', 'due_date');
+    const nowMs = Date.now();
+    let openTotal = 0;
+    let overdueCount = 0;
+    let overdueTotal = 0;
+    for (const b of billRows as any[]) {
+      const amount = Number(b.total_amount ?? 0);
+      openTotal += amount;
+      if (b.due_date && new Date(b.due_date).getTime() < nowMs) {
+        overdueCount += 1;
+        overdueTotal += amount;
+      }
+    }
+
     return {
       location_count: locations.length,
       van_count,
@@ -407,6 +427,12 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
       on_order: { open_po_count: receiving_queue.length, on_order_value, arriving_today },
       margin_mtd: { revenue, cogs, margin, margin_pct },
       this_week,
+      vendor_bills: {
+        open_count: billRows.length,
+        open_total: openTotal,
+        overdue_count: overdueCount,
+        overdue_total: overdueTotal,
+      },
       attention,
       receiving_queue,
       recent_movements,

@@ -133,6 +133,56 @@ remediation + completion plan. Parent plans:
 - **D10**: Client-owned/consignment stock, bins, barcode, multi-level BOM, full per-warehouse
   RBAC stay deferred (unchanged from parent design non-goals).
 
+## Implementation notes (added 2026-07-01 while building)
+
+- **D11 — per-line reservation attribution.** F024's min(available, remaining) made the
+  old "release outstanding" wrong (it would drain OTHER orders' reservations), so
+  `sales_order_lines` gained `quantity_reserved` + `reserved_location_id`
+  (20260701090000). Allocation writes them; release/fulfill drain exactly them;
+  backorder math adds them back; reconcile recomputes counters from them
+  (open SOs = confirmed/partially_fulfilled). Serialized lines keep 0 — their claim
+  is `stock_units.allocated_so_line_id`.
+- **D12 — billing actions ride in as props.** Inventory components can't import
+  billing (dependency direction), so the sales-orders page passes
+  `fulfillAndInvoiceSoLine` / `generateInvoiceForSalesOrder` server-action references
+  as props into `SalesOrdersManager` → `SalesOrderDetail`. Same pattern available for
+  the RMA charge (`chargeRmaForUnreturned` in billing) when its UI is built.
+- **D13 — invoice_items is a VIEW.** The SO backlink column lives on the base table
+  `invoice_charges` (`so_line_id`), populated by `persistManualInvoiceCharges` via a
+  new `ManualInvoiceItemInput.so_line_id`. Per-line tax rides the same path:
+  `tax_rate_id` on the item input overrides the service default when deriving
+  tax_region at insert.
+- **D14 — lock order convention.** SO header → PO header → lines, everywhere
+  (fulfill, drop-ship confirm, receive). RMA locks in loadRma (every caller is a
+  transition). `loadTrackedSettings` locks product_inventory_settings because
+  moving-average updates are read-modify-write.
+- **D15 — landed-cost audit line.** Application writes a quantity-0 'adjust' movement
+  (no on-hand effect, survives reconcile replay) carrying the allocated cents, since
+  the ledger is now UPDATE/DELETE-protected by trigger.
+- **F051 UI note.** There is no manual-adjustment screen anywhere (pre-existing);
+  the found-serial entry UI lives in the cycle-count disposition flow (F066), which
+  is the realistic path found units actually take.
+- **RMA later-stage transitions still have no UI** (resolve*/deploy/markDeadUnitOwed/
+  charge) — pre-existing gap, out of plan scope; actions are complete. Proposal for
+  a follow-up plan.
+- **Test harness gap (T-flags).** All existing tests are lib-level with direct DB
+  transactions; there is NO auth/session harness for calling withAuth actions from
+  vitest. remediation.test.ts therefore covers the DB-enforceable tests
+  (T008/T014/T019/T023/T024 marked implemented) plus the locking/cap SQL mechanics
+  of T002/T003 and the math invariant of T032. The remaining plan tests need an
+  action-level harness (mock session injection) — genuine infra work, listed as the
+  top follow-up.
+- **Test port fix.** devstack maps postgres to 5432 (5472 was stale in every test
+  file — they could not have run in this environment). All test files now use 5432.
+- **Seed-independence.** The demo seed (session earlier) put stock on the default
+  location and assigned Dorothy to Main Warehouse, which broke three tests that
+  assumed a pristine baseline. Service selection in the DB tests now skips services
+  carrying stock, and T037 creates its own unassigned warehouse fixture.
+- **Migrations applied to dev** (batches 3–10): address, integrity checks, low-stock
+  notification template, schema hardening, vendor_products, cycle counts, landed
+  costs, vendor bills. Admin creds came from server/.env.local (DB_USER_ADMIN@5432)
+  — the scratchpad's earlier "cannot apply DDL" blocker is RESOLVED.
+
 ## Gotchas / constraints
 
 - `'use server'` files may export ONLY async functions — no const/object exports (bit us in

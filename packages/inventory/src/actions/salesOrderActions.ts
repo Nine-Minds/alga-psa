@@ -719,7 +719,12 @@ export const suggestPoFromBackorder = withAuth(
 
         const poLines: IPurchaseOrderLine[] = [];
         for (const it of items) {
-          const unitCost = it.meta.average_cost ?? it.meta.catalog_cost ?? 0;
+          // Preferred-vendor contract price wins over average/catalog cost (F058).
+          const offer = await trx('vendor_products')
+            .where({ tenant, vendor_id: vendorId, service_id: it.line.service_id })
+            .first();
+          const unitCost =
+            offer?.unit_cost != null ? Number(offer.unit_cost) : it.meta.average_cost ?? it.meta.catalog_cost ?? 0;
           const [row] = await trx('purchase_order_lines')
             .insert({
               tenant,
@@ -728,7 +733,8 @@ export const suggestPoFromBackorder = withAuth(
               quantity_ordered: it.quantity,
               quantity_received: 0,
               unit_cost: unitCost,
-              cost_currency: it.meta.cost_currency ?? so.currency_code,
+              vendor_sku: offer?.vendor_sku ?? null,
+              cost_currency: offer?.unit_cost != null ? offer.cost_currency : it.meta.cost_currency ?? so.currency_code,
               source_so_line_id: it.line.so_line_id,
             })
             .returning('*');

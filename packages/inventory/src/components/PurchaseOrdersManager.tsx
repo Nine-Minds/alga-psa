@@ -12,6 +12,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
+import { PoLandedCostDialog } from './PoLandedCostDialog';
 import type {
   ColumnDefinition,
   IPurchaseOrder,
@@ -157,6 +158,7 @@ export function PurchaseOrdersManager({
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [pendingCancel, setPendingCancel] = useState<IPurchaseOrder | null>(null);
+  const [landedCostPo, setLandedCostPo] = useState<IPurchaseOrder | null>(null);
 
   // Receive flow state.
   const [receiveOpen, setReceiveOpen] = useState(false);
@@ -461,6 +463,16 @@ export function PurchaseOrdersManager({
                 Receive
               </Button>
             )}
+            {(rec.status === 'partially_received' || rec.status === 'received') && (
+              <Button
+                id={`landed-cost-po-${rec.po_id}`}
+                variant="outline"
+                size="sm"
+                onClick={() => setLandedCostPo(rec)}
+              >
+                Landed cost
+              </Button>
+            )}
             {canCancel && (
               <Button id={`cancel-po-${rec.po_id}`} variant="ghost" size="sm" onClick={() => setPendingCancel(rec)}>
                 Cancel
@@ -716,7 +728,13 @@ export function PurchaseOrdersManager({
                   id={`receive-line-${line.po_line_id}`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-900">{productName(line.service_id)}</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {productName(line.service_id)}
+                      {line.vendor_sku && (
+                        // The distributor's part number — what the vendor's paperwork shows (F057).
+                        <span className="ml-2 text-xs text-gray-500 font-mono">{line.vendor_sku}</span>
+                      )}
+                    </span>
                     <span className="text-sm text-gray-600 tabular-nums">
                       {Number(line.quantity_received)} of {Number(line.quantity_ordered)} received
                     </span>
@@ -777,6 +795,13 @@ export function PurchaseOrdersManager({
           </div>
         </div>
       </Dialog>
+
+      <PoLandedCostDialog
+        po={landedCostPo}
+        onClose={() => setLandedCostPo(null)}
+        onChanged={reload}
+        productName={productName}
+      />
 
       <ConfirmationDialog
         id="cancel-po-confirm"

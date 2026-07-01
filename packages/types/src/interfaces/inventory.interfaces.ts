@@ -219,6 +219,8 @@ export interface IPurchaseOrderLine extends TenantEntity {
   quantity_received: number;
   unit_cost: number;
   cost_currency: string;
+  /** The distributor's part number, snapshotted from the vendor's price list (F057). */
+  vendor_sku?: string | null;
   source_so_line_id?: string | null;
   created_at?: string | Date;
   updated_at?: string | Date;
@@ -261,6 +263,102 @@ export interface ISalesOrderLine extends TenantEntity {
   tax_rate_id?: string | null;
   fulfillment_type: SalesOrderLineFulfillmentType;
   parent_so_line_id?: string | null;
+  created_at?: string | Date;
+  updated_at?: string | Date;
+}
+
+export type VendorBillStatus = 'draft' | 'open' | 'paid' | 'void';
+
+/** Light AP: what the vendor invoiced, optionally against a PO (F075, D9 — no GL). */
+export interface IVendorBill extends TenantEntity {
+  bill_id: string;
+  vendor_id: string;
+  po_id?: string | null;
+  bill_number: string;
+  bill_date?: string | Date;
+  due_date?: string | Date | null;
+  currency_code: string;
+  status: VendorBillStatus;
+  /** Cents. */
+  total_amount: number;
+  paid_at?: string | Date | null;
+  notes?: string | null;
+  created_by?: string | null;
+  created_at?: string | Date;
+  updated_at?: string | Date;
+}
+
+export interface IVendorBillLine extends TenantEntity {
+  bill_line_id: string;
+  bill_id: string;
+  service_id?: string | null;
+  description?: string | null;
+  quantity: number;
+  unit_cost: number;
+  amount: number;
+  created_at?: string | Date;
+  updated_at?: string | Date;
+}
+
+/** Freight/duty/other attached to a PO, applied across received quantities (F069). */
+export interface IPoLandedCost extends TenantEntity {
+  landed_cost_id: string;
+  po_id: string;
+  cost_type: 'freight' | 'duty' | 'other';
+  /** Cents, in the PO's currency. */
+  amount: number;
+  currency_code: string;
+  allocation_method: 'value' | 'quantity';
+  description?: string | null;
+  applied: boolean;
+  applied_at?: string | Date | null;
+  created_at?: string | Date;
+  updated_at?: string | Date;
+}
+
+export type CountSessionStatus = 'draft' | 'in_progress' | 'review' | 'approved' | 'cancelled';
+
+/** A per-location stock-take session (F059). Counts are blind; approval applies variances via 'adjust' movements with reason 'cycle_count'. */
+export interface ICountSession extends TenantEntity {
+  session_id: string;
+  location_id: string;
+  status: CountSessionStatus;
+  created_by?: string | null;
+  approved_by?: string | null;
+  started_at?: string | Date | null;
+  submitted_at?: string | Date | null;
+  approved_at?: string | Date | null;
+  notes?: string | null;
+  created_at?: string | Date;
+  updated_at?: string | Date;
+}
+
+export interface ICountLine extends TenantEntity {
+  count_line_id: string;
+  session_id: string;
+  service_id: string;
+  /** On-hand snapshot at session start (withheld from counters — blind count). */
+  expected_qty: number;
+  expected_serials?: string[] | null;
+  counted_qty?: number | null;
+  counted_serials?: string[] | null;
+  counted_at?: string | Date | null;
+  counted_by?: string | null;
+  created_at?: string | Date;
+  updated_at?: string | Date;
+}
+
+/** A vendor's offer for a product: the distributor's SKU + contract cost (F052). */
+export interface IVendorProduct extends TenantEntity {
+  vendor_id: string;
+  service_id: string;
+  vendor_sku?: string | null;
+  /** Contract cost in cents. */
+  unit_cost?: number | null;
+  cost_currency: string;
+  lead_time_days?: number | null;
+  /** At most one preferred offer per (tenant, product) — DB-enforced. */
+  is_preferred: boolean;
   created_at?: string | Date;
   updated_at?: string | Date;
 }
