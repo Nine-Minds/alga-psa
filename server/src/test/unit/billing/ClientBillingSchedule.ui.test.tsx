@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ClientBillingSchedule } from '../../../../../packages/clients/src/components/clients/ClientBillingSchedule';
 
 vi.mock('react-hot-toast', () => ({
@@ -108,6 +108,12 @@ vi.mock('../../../../../packages/clients/src/lib/billingHelpers', () => ({
 }));
 
 describe('ClientBillingSchedule', () => {
+  // RTL auto-cleanup only registers for the first test file in the shared fork,
+  // so clean up explicitly to avoid this file's render leaking into the next file.
+  afterEach(() => {
+    cleanup();
+  });
+
   it('saves a monthly day-of-month anchor via updateClientBillingSchedule', async () => {
     render(<ClientBillingSchedule clientId="client-1" />);
 

@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import {
   buildServicePeriodRecurringDueWorkRow,
@@ -240,9 +240,19 @@ describe('AutomaticInvoices non-contract selection UI', () => {
   const nonContractMember = createNonContractMember();
   const defaultContractMember = createSystemManagedDefaultMember();
 
+  // Unmount after every test (not just before the next): the jsdom document can
+  // be reused across test files, and a tree left mounted by this file's last
+  // test leaks stale interactive buttons into later files' queries.
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
+    // The jsdom URL persists across test files; drop any leaked
+    // automaticClientFilter param so AutomaticInvoices renders all rows.
+    window.history.replaceState({}, '', '/msp/billing?tab=invoicing&subtab=generate');
 
     getAvailableRecurringDueWorkMock.mockResolvedValue({
       invoiceCandidates: [buildCandidate([contractMember, nonContractMember])],
@@ -360,19 +370,34 @@ describe('AutomaticInvoices non-contract selection UI', () => {
 
     expect(
       screen.getByTestId('contract-metadata-warning-candidate-mixed-1'),
-    ).toHaveTextContent('Assignment attribution metadata missing (1 obligation)');
+    ).toHaveTextContent('Assignment attribution metadata missing (1 line item)');
 
-    const generateButton = screen.getByRole('button', { name: /Generate Invoices for Selected Periods/i });
-    fireEvent.click(generateButton);
+    // The metadata-gap row cannot be selected, and generation (the action bar only
+    // appears once something is selected) never includes its selector input.
+    const parentGroupKey = 'parent-group:client-1:2025-03-01:2025-04-01';
+    const blockedChildCheckbox = document.getElementById(
+      `select-child-${parentGroupKey}-${metadataGapMember.executionIdentityKey}`,
+    ) as HTMLInputElement;
+    expect(blockedChildCheckbox.disabled).toBe(true);
 
+    const eligibleChildCheckbox = document.getElementById(
+      `select-child-${parentGroupKey}-${defaultAttributionOnlyMember.executionIdentityKey}`,
+    ) as HTMLInputElement;
+    fireEvent.click(eligibleChildCheckbox);
+    fireEvent.click(screen.getByRole('button', { name: /Generate Invoices \(1\)/i }));
+
+    // Exactly one target is submitted, keyed to the eligible child — the
+    // metadata-gap obligation never becomes a generation target. (The cloned
+    // members share structurally-equal selector inputs, so discriminate on the
+    // per-child group key rather than the selector input itself.)
     await waitFor(() => {
-      expect(generateGroupedInvoicesAsRecurringBillingRunMock).not.toHaveBeenCalledWith(
+      expect(generateGroupedInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          groupedTargets: expect.arrayContaining([
+          groupedTargets: [
             expect.objectContaining({
-              selectorInputs: expect.arrayContaining([metadataGapMember.selectorInput]),
+              groupKey: `child-selection:${defaultAttributionOnlyMember.executionIdentityKey}`,
             }),
-          ]),
+          ],
         }),
       );
     });
@@ -389,7 +414,7 @@ describe('AutomaticInvoices non-contract selection UI', () => {
       `select-child-${parentGroupKey}-${contractMember.executionIdentityKey}`,
     ) as HTMLInputElement;
     fireEvent.click(contractChildCheckbox);
-    fireEvent.click(screen.getByRole('button', { name: /Generate Invoices for Selected Periods/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Generate Invoices \(1\)/i }));
 
     await waitFor(() => {
       expect(generateGroupedInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith(
@@ -417,7 +442,7 @@ describe('AutomaticInvoices non-contract selection UI', () => {
       `select-child-${parentGroupKey}-${nonContractMember.executionIdentityKey}`,
     ) as HTMLInputElement;
     fireEvent.click(nonContractChildCheckbox);
-    fireEvent.click(screen.getByRole('button', { name: /Generate Invoices for Selected Periods/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Generate Invoices \(1\)/i }));
 
     await waitFor(() => {
       expect(generateGroupedInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith(
@@ -478,7 +503,7 @@ describe('AutomaticInvoices non-contract selection UI', () => {
     expect(parentCheckbox.disabled).toBe(false);
 
     fireEvent.click(parentCheckbox);
-    fireEvent.click(screen.getByRole('button', { name: /Generate Invoices for Selected Periods/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Generate Invoices \(2\)/i }));
 
     await waitFor(() => {
       expect(generateGroupedInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith(
@@ -564,9 +589,10 @@ describe('AutomaticInvoices non-contract selection UI', () => {
 
     const clientRows = await screen.findAllByText('Acme Co');
     expect(clientRows.length).toBeGreaterThanOrEqual(2);
-    const expandButtons = screen.getAllByLabelText('Expand');
-    fireEvent.click(expandButtons[0]);
-    fireEvent.click(expandButtons[1]);
+    // Expanding injects member rows and re-renders the grid, so re-query the
+    // remaining collapsed group's Expand button after the first click.
+    fireEvent.click(screen.getAllByLabelText('Expand')[0]);
+    fireEvent.click(screen.getAllByLabelText('Expand')[0]);
 
     const compatibleParentCheckbox = document.getElementById(
       'select-parent-group:client-1:2025-03-01:2025-04-01',
@@ -586,7 +612,7 @@ describe('AutomaticInvoices non-contract selection UI', () => {
     ) as HTMLInputElement;
     fireEvent.click(compatibleParentCheckbox);
     fireEvent.click(incompatibleChildCheckbox);
-    fireEvent.click(screen.getByRole('button', { name: /Generate Invoices for Selected Periods/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Generate Invoices \(3\)/i }));
 
     await waitFor(() => {
       expect(generateGroupedInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith(

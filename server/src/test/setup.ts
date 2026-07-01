@@ -1,7 +1,18 @@
 import '@testing-library/jest-dom'
 import path from 'node:path';
 import { mkdirSync } from 'node:fs';
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
+
+// @testing-library/react is externalized, so its module-level auto-cleanup
+// afterEach registers only in the first file that imports it per fork
+// (singleFork runs the whole suite in one process). Every later jsdom file
+// would stack renders within itself and leak mounted trees into the files
+// after it. Register cleanup here instead — setup runs per test file.
+afterEach(async () => {
+  if (typeof document === 'undefined') return;
+  const { cleanup } = await import('@testing-library/react');
+  cleanup();
+});
 
 process.env.NEXTAUTH_SECRET ??= 'localtest-nextauth-secret';
 

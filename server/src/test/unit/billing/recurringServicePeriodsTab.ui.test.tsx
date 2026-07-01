@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import { buildRecurringServicePeriodRecord } from '../../test-utils/recurringTimingFixtures';
 
@@ -205,6 +205,14 @@ describe('RecurringServicePeriodsTab UI', () => {
       supersededRows: 0,
       activeRows: 2,
     });
+  });
+
+  // RTL's auto-cleanup registers only in the first test file that imports it
+  // per fork (it is externalized, so its module state is process-wide). When
+  // another file runs first, renders leak across tests here and getByTestId
+  // finds duplicate tables. Clean up explicitly, like the sibling ui tests.
+  afterEach(() => {
+    cleanup();
   });
 
   it('T065: billing dashboard keeps the service-period management surface wired for recurring troubleshooting and repair', async () => {

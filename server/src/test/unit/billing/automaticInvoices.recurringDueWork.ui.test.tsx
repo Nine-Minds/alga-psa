@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import {
   buildServicePeriodRecurringDueWorkRow,
@@ -477,6 +477,16 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     'hardDeleteRecurringInvoice',
   );
 
+  // Unmount after every test (not just before the next): the jsdom document can
+  // be reused across test files, and a tree left mounted by this file's last
+  // test leaks stale interactive buttons into later files' queries. Same for the
+  // URL: the client-filter test writes automaticClientFilter into it, and a
+  // leftover filter makes AutomaticInvoices render zero rows in later files.
+  afterEach(() => {
+    cleanup();
+    window.history.replaceState({}, '', '/msp/billing?tab=invoicing&subtab=generate');
+  });
+
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -666,7 +676,9 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(getRecurringInvoiceHistoryPaginatedMock).toHaveBeenCalled();
     });
 
-    expect(screen.getByText('Ready to Invoice')).toBeInTheDocument();
+    // The data-first redesign replaced the "Ready to Invoice" heading with the
+    // saved-view toolbar; its tabs still render (with zero counts) when empty.
+    expect(screen.getByRole('button', { name: 'All 0' })).toBeInTheDocument();
     expect(screen.getByText('Recurring Invoice History')).toBeInTheDocument();
   });
 
@@ -711,12 +723,6 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
 
     const needsApprovalSection = await screen.findByTestId('needs-approval-section');
-    const sectionHeadings = screen
-      .getAllByRole('heading', { level: 2 })
-      .map((heading) => heading.textContent?.trim());
-    expect(sectionHeadings.indexOf('Needs Approval')).toBeLessThan(
-      sectionHeadings.indexOf('Ready to Invoice'),
-    );
     expect(within(needsApprovalSection).getByText('Blocked Co')).toBeInTheDocument();
     expect(within(needsApprovalSection).getByText('2 unapproved entries')).toBeInTheDocument();
     expect(
@@ -727,6 +733,11 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     );
 
     const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    // The ready grid lost its "Ready to Invoice" heading in the data-first
+    // redesign; assert Needs Approval renders above the grid via DOM position.
+    expect(
+      needsApprovalSection.compareDocumentPosition(readyTable) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(within(readyTable).queryByText('Blocked Co')).toBeNull();
     expect(within(readyTable).getByText('Ready Co')).toBeInTheDocument();
   });
@@ -758,10 +769,13 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     const needsApprovalSection = await screen.findByTestId('needs-approval-section');
     expect(within(needsApprovalSection).getByText('Blocked Only Co')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Preview Selected/i })).toBeDisabled();
+    // With nothing selectable the redesigned summary bar rests on a hint and
+    // renders no Preview/Generate actions at all.
+    expect(screen.queryByRole('button', { name: /Preview Selected/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Generate Invoices/i })).toBeNull();
     expect(
-      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(0\)/i }),
-    ).toBeDisabled();
+      screen.getByText('Select groups or line items to preview or generate invoices.'),
+    ).toBeInTheDocument();
   });
 
   it('persists the automatic client filter in the URL and scopes it to needs/ready rows only', async () => {
@@ -880,14 +894,20 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Contract anniversary')).toBeInTheDocument();
+      expect(screen.getByText('Zenith Health')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('2025-03-08 to 2025-04-08')).toBeInTheDocument();
-    expect(screen.getByText('2025-04-08 to 2025-05-08')).toBeInTheDocument();
-    expect(screen.getByText('1 contract')).toBeInTheDocument();
-    expect(screen.getByText('1 line')).toBeInTheDocument();
-    expect(screen.getAllByText('Service-period-backed').length).toBeGreaterThan(0);
+    // Contract context: a single-member group surfaces its contract line name
+    // directly on the collapsed row in the pro-grid redesign.
+    expect(screen.getByText('Managed Services')).toBeInTheDocument();
+    // Service periods render as compact formatted labels now.
+    expect(screen.getAllByText('Mar 8 – Apr 8, 2025').length).toBeGreaterThan(0);
+
+    // Cadence source moved onto the expandable member rows.
+    const zenithRow = screen.getByText('Zenith Health').closest('tr')!;
+    fireEvent.click(within(zenithRow).getByLabelText('Expand'));
+    expect(screen.getByText(/Contract anniversary/)).toBeInTheDocument();
+    expect(screen.getByText('Zenith Annual Support')).toBeInTheDocument();
 
     const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
     fireEvent.click(within(readyTable).getAllByRole('checkbox')[0]!);
@@ -897,7 +917,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         screen.getByRole('button', { name: /Preview Selected/i }),
       ).not.toBeDisabled();
       expect(
-        screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+        screen.getByRole('button', { name: /Generate Invoices \(1\)/i }),
       ).not.toBeDisabled();
     });
   });
@@ -909,8 +929,12 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(screen.getByText('Acme Co')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Client schedule')).toBeInTheDocument();
-    expect(screen.getAllByText('2025-03-01 to 2025-04-01').length).toBeGreaterThan(0);
+    // Cadence source now lives on the expanded member row.
+    const acmeRow = screen.getByText('Acme Co').closest('tr')!;
+    fireEvent.click(within(acmeRow).getByLabelText('Expand'));
+    expect(screen.getByText(/Client schedule/)).toBeInTheDocument();
+    // Whole-month service periods collapse to a "Mar 2025"-style label.
+    expect(screen.getAllByText('Mar 2025').length).toBeGreaterThan(0);
   });
 
   it('removes bridge-only row menus from ready service-period work', async () => {
@@ -992,13 +1016,15 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(screen.getByText('Acme Co')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Client schedule')).toBeInTheDocument();
-    expect(screen.getAllByText('Service-period-backed').length).toBeGreaterThan(0);
+    // Cadence source now lives on the expanded member row; the ready grid no
+    // longer carries the Service-period-backed badge (history still does).
+    const clientRowElement = screen.getByText('Acme Co').closest('tr');
+    expect(clientRowElement).toBeTruthy();
+    fireEvent.click(within(clientRowElement!).getByLabelText('Expand'));
+    expect(screen.getByText(/Client schedule/)).toBeInTheDocument();
     expect(clientRow.billingCycleId).toBeNull();
     expect(clientRow.selectorInput.billingCycleId).toBeUndefined();
 
-    const clientRowElement = screen.getByText('Acme Co').closest('tr');
-    expect(clientRowElement).toBeTruthy();
     fireEvent.click(within(clientRowElement!).getByRole('checkbox'));
     fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
 
@@ -1013,7 +1039,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Close Preview/i }));
     fireEvent.click(
-      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+      screen.getByRole('button', { name: /Generate Invoices \(1\)/i }),
     );
 
     await waitFor(() => {
@@ -1067,7 +1093,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Close Preview/i }));
     fireEvent.click(
-      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+      screen.getByRole('button', { name: /Generate Invoices \(1\)/i }),
     );
 
     await waitFor(() => {
@@ -1230,8 +1256,14 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(screen.getByText('Zenith Health')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('1 contract')).toBeInTheDocument();
-    expect(screen.getByText('1 line')).toBeInTheDocument();
+    // The pro-grid summarizes members as line items on the collapsed row and
+    // derives per-member contract context when expanded, instead of the old
+    // "N contract / N line" copy.
+    expect(screen.getByText('2 line items')).toBeInTheDocument();
+    const zenithRow = screen.getByText('Zenith Health').closest('tr')!;
+    fireEvent.click(within(zenithRow).getByLabelText('Expand'));
+    expect(screen.getByText('Zenith Annual Support')).toBeInTheDocument();
+    expect(screen.getByText('Assigned contract line')).toBeInTheDocument();
     expect(screen.queryByText('No contract context')).toBeNull();
   });
 
@@ -1281,7 +1313,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     expect(
       screen.getByTestId('contract-metadata-warning-candidate-contract-metadata-t100'),
-    ).toHaveTextContent('Assignment attribution metadata missing (1 obligation)');
+    ).toHaveTextContent('Assignment attribution metadata missing (1 line item)');
   });
 
   it('T101: cadence-source rendering is exhaustive and unknown values render explicit unknown-state copy', async () => {
@@ -1310,8 +1342,12 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
     const row = within(readyTable).getByText('Zenith Health').closest('tr');
     expect(row).toBeTruthy();
-    expect(within(row!).getByText('Unknown cadence source (legacy_contract_window)')).toBeInTheDocument();
-    expect(within(row!).queryByText('Client schedule')).toBeNull();
+    // Cadence source renders on the expanded member row in the pro-grid.
+    fireEvent.click(within(row!).getByLabelText('Expand'));
+    expect(
+      within(readyTable).getByText(/Unknown cadence source \(legacy_contract_window\)/),
+    ).toBeInTheDocument();
+    expect(within(readyTable).queryByText(/Client schedule/)).toBeNull();
   });
 
   it('T032: AutomaticInvoices preview opens for a client-cadence row through the selector-input preview path', async () => {
@@ -1409,7 +1445,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
     fireEvent.click(within(readyTable).getAllByRole('checkbox')[0]!);
     fireEvent.click(
-      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+      screen.getByRole('button', { name: /Generate Invoices \(1\)/i }),
     );
 
     await waitFor(() => {
@@ -1469,7 +1505,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     fireEvent.click(checkboxes[1]!);
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(2\)/i }),
+      screen.getByRole('button', { name: /Generate Invoices \(2\)/i }),
     );
 
     await waitFor(() => {
@@ -1523,14 +1559,16 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
 
+    // The collapsed group row surfaces the contract line name (client name is
+    // empty here; cadence copy only renders on expanded member rows now).
     await waitFor(() => {
-      expect(screen.getByText('Contract anniversary')).toBeInTheDocument();
+      expect(screen.getByText('Managed Services')).toBeInTheDocument();
     });
 
     const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
     fireEvent.click(within(readyTable).getAllByRole('checkbox')[0]!);
     fireEvent.click(
-      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+      screen.getByRole('button', { name: /Generate Invoices \(1\)/i }),
     );
 
     await waitFor(() => {
@@ -1570,7 +1608,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+        screen.getByRole('button', { name: /Generate Invoices \(1\)/i }),
       ).not.toBeDisabled();
     });
 
@@ -1587,10 +1625,10 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       });
     });
 
+    // Selection cleared: the redesigned summary bar returns to its resting
+    // hint and the Generate action disappears entirely.
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(0\)/i }),
-      ).toBeDisabled();
+      expect(screen.queryByRole('button', { name: /Generate Invoices/i })).toBeNull();
     });
   });
 
