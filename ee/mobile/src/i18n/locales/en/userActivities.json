@@ -60,6 +60,7 @@
     "asc": "Ascending",
     "desc": "Descending",
     "clearAll": "Clear all",
+    "removeFilter": "Remove {{label}} filter",
     "viewResults": "View results",
     "viewResultsCount_one": "View {{count}} result",
     "viewResultsCount_other": "View {{count}} results",

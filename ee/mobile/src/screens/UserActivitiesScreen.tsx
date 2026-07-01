@@ -751,7 +751,7 @@ export function UserActivitiesScreen({ navigation }: Props) {
         />
       </View>
 
-      <FilterChipBar theme={theme} filters={filters} onPress={() => setFiltersOpen(true)} onClearAll={clearAllFilters} />
+      <FilterChipBar theme={theme} filters={filters} setFilters={setFilters} onPress={() => setFiltersOpen(true)} onClearAll={clearAllFilters} />
 
       {resultsTotal !== null ? (
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
@@ -1022,34 +1022,115 @@ function GroupHeader({
 function FilterChipBar({
   theme,
   filters,
+  setFilters,
   onPress,
   onClearAll,
 }: {
   theme: Theme;
   filters: ActivitiesFilterState;
+  setFilters: Dispatch<SetStateAction<ActivitiesFilterState>>;
   onPress: () => void;
   onClearAll: () => void;
 }) {
   const { t } = useTranslation("userActivities");
-  const chips: string[] = [];
+  // Each chip carries its own reset so a single filter can be discarded without touching
+  // the others (the "Clear all" chip still resets everything at once).
+  const chips: { key: string; label: string; onRemove: () => void }[] = [];
   if (filters.status !== DEFAULT_ACTIVITY_FILTERS.status) {
-    chips.push(t(`filters.${filters.status}`, { defaultValue: filters.status }));
+    chips.push({
+      key: "status",
+      label: t(`filters.${filters.status}`, { defaultValue: filters.status }),
+      onRemove: () => setFilters((prev) => ({ ...prev, status: DEFAULT_ACTIVITY_FILTERS.status })),
+    });
   }
-  if (filters.types.length > 0) chips.push(t("filters.typesCount", { count: filters.types.length, defaultValue: "Types ({{count}})" }));
-  if (filters.priorityIds.length > 0) chips.push(t("filters.priorityCount", { count: filters.priorityIds.length, defaultValue: "Priority ({{count}})" }));
-  if (filters.due !== "any") chips.push(t(`filters.due.${filters.due}`, { defaultValue: filters.due }));
+  if (filters.types.length > 0) {
+    chips.push({
+      key: "types",
+      label: t("filters.typesCount", { count: filters.types.length, defaultValue: "Types ({{count}})" }),
+      onRemove: () => setFilters((prev) => ({ ...prev, types: [] })),
+    });
+  }
+  if (filters.priorityIds.length > 0) {
+    chips.push({
+      key: "priority",
+      label: t("filters.priorityCount", { count: filters.priorityIds.length, defaultValue: "Priority ({{count}})" }),
+      onRemove: () => setFilters((prev) => ({ ...prev, priorityIds: [] })),
+    });
+  }
+  if (filters.due !== "any") {
+    chips.push({
+      key: "due",
+      label: t(`filters.due.${filters.due}`, { defaultValue: filters.due }),
+      onRemove: () => setFilters((prev) => ({ ...prev, due: "any" })),
+    });
+  }
   // Grouping (incl. "My groups") is shown by the dedicated toggle pill, not as a chip here.
   if (filters.sortField !== "default") {
-    chips.push(t("filters.sortedBy", { field: t(`filters.sort.${filters.sortField}`, { defaultValue: filters.sortField }), defaultValue: "Sort: {{field}}" }));
+    chips.push({
+      key: "sort",
+      label: t("filters.sortedBy", { field: t(`filters.sort.${filters.sortField}`, { defaultValue: filters.sortField }), defaultValue: "Sort: {{field}}" }),
+      onRemove: () => setFilters((prev) => ({ ...prev, sortField: "default", sortOrder: DEFAULT_ACTIVITY_FILTERS.sortOrder })),
+    });
   }
 
   if (chips.length === 0) return null;
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm, gap: theme.spacing.sm }}>
-      {chips.map((label) => (
-        <QuickChip key={label} theme={theme} label={label} onPress={onPress} />
+      {chips.map((chip) => (
+        <RemovableChip
+          key={chip.key}
+          theme={theme}
+          label={chip.label}
+          onPress={onPress}
+          onRemove={chip.onRemove}
+          removeAccessibilityLabel={t("filters.removeFilter", { label: chip.label, defaultValue: "Remove {{label}} filter" })}
+        />
       ))}
       <QuickChip theme={theme} label={t("filters.clearAll", { defaultValue: "Clear all" })} onPress={onClearAll} emphasized />
+    </View>
+  );
+}
+
+function RemovableChip({
+  theme,
+  label,
+  onPress,
+  onRemove,
+  removeAccessibilityLabel,
+}: {
+  theme: Theme;
+  label: string;
+  onPress: () => void;
+  onRemove: () => void;
+  removeAccessibilityLabel: string;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        paddingLeft: theme.spacing.md,
+        paddingRight: theme.spacing.xs,
+        paddingVertical: 6,
+        borderRadius: theme.borderRadius.full,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.card,
+        gap: theme.spacing.xs,
+      }}
+    >
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.text, fontWeight: "600" }}>{label}</Text>
+      </Pressable>
+      <Pressable
+        onPress={onRemove}
+        accessibilityRole="button"
+        accessibilityLabel={removeAccessibilityLabel}
+        hitSlop={8}
+        style={{ padding: 2 }}
+      >
+        <Feather name="x" size={14} color={theme.colors.textSecondary} />
+      </Pressable>
     </View>
   );
 }
