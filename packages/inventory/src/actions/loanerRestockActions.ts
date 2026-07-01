@@ -5,7 +5,7 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IStockMovement, IStockUnit, IProductInventorySettings } from '@alga-psa/types';
-import { recordStockMovement, ensureStockLevel } from '../lib';
+import { recordStockMovement, ensureStockLevel, assertLocationWritable } from '../lib';
 
 async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'inventory', action))) {
@@ -34,6 +34,8 @@ export const loanOut = withAuth(
       if (unit.status !== 'in_stock') {
         throw new Error(`Unit must be in_stock to loan out (current status: ${unit.status})`);
       }
+      // A tech can't loan stock out of another tech's van (F036).
+      await assertLocationWritable(trx, tenant, (user as any)?.user_id, unit.location_id);
       return recordStockMovement(trx, tenant, {
         movement_type: 'loan_out',
         service_id: unit.service_id,
@@ -68,6 +70,8 @@ export const loanReturn = withAuth(
       if (unit.status !== 'on_loan') {
         throw new Error(`Unit must be on_loan to return (current status: ${unit.status})`);
       }
+      // Returning into a location writes there — same van scoping applies (F036).
+      await assertLocationWritable(trx, tenant, (user as any)?.user_id, input.location_id);
       await ensureStockLevel(trx, tenant, unit.service_id, input.location_id);
       return recordStockMovement(trx, tenant, {
         movement_type: 'loan_in',
@@ -175,6 +179,8 @@ export const restockReturn = withAuth(
         }
         const targetLocation = input.location_id ?? unit.location_id ?? null;
         if (!targetLocation) throw new Error('location_id is required to restock this unit');
+        // Restocking writes into the location — van scoping applies (F036).
+        await assertLocationWritable(trx, tenant, (user as any)?.user_id, targetLocation);
         await ensureStockLevel(trx, tenant, unit.service_id, targetLocation);
         const movement = await recordStockMovement(trx, tenant, {
           movement_type: 'return_restock',
@@ -210,6 +216,8 @@ export const restockReturn = withAuth(
       if (settings?.is_serialized) {
         throw new Error('This product is serialized; provide unit_id to restock a specific unit');
       }
+      // Restocking writes into the location — van scoping applies (F036).
+      await assertLocationWritable(trx, tenant, (user as any)?.user_id, input.location_id);
       await ensureStockLevel(trx, tenant, input.service_id, input.location_id);
       const movement = await recordStockMovement(trx, tenant, {
         movement_type: 'return_restock',

@@ -37,6 +37,7 @@ export * from './invoiceJobActions';
 export * from './invoiceTemplates';
 export * from './manualInvoiceActions';
 export * from './salesOrderInvoicingActions';
+export * from './rmaChargeActions';
 export * from './salesOrderDocumentActions';
 export * from './documentTemplateActions';
 export * from './materialActions';

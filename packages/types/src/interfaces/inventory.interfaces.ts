@@ -252,6 +252,10 @@ export interface ISalesOrderLine extends TenantEntity {
   quantity_ordered: number;
   quantity_fulfilled: number;
   quantity_invoiced: number;
+  /** Non-serialized reservation this line holds (capped at availability on confirm). Serialized lines stay 0 — their claim lives on stock_units.allocated_so_line_id. */
+  quantity_reserved?: number;
+  /** Location the reservation was placed at (drained exactly on release/fulfill). */
+  reserved_location_id?: string | null;
   unit_price: number;
   cost_snapshot?: number | null;
   tax_rate_id?: string | null;
@@ -307,6 +311,8 @@ export interface IRmaCase extends TenantEntity {
   replacement_unit_id?: string | null;
   dead_unit_due_date?: string | Date | null;
   dead_unit_returned_at?: string | Date | null;
+  /** Draft invoice created when the client was charged for an unreturned dead unit (F040). */
+  charge_invoice_id?: string | null;
   opened_at?: string | Date | null;
   closed_at?: string | Date | null;
   created_by?: string | null;

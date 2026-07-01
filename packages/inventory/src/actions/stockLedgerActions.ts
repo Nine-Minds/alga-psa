@@ -30,7 +30,11 @@ export interface StockWarning {
   available: number;
 }
 
-/** Load inventory settings, asserting the product is stock-tracked. */
+/**
+ * Load inventory settings, asserting the product is stock-tracked. Locked: several
+ * callers recompute the moving average (a read-modify-write on this row), so
+ * concurrent receipts must serialize on it (F020).
+ */
 async function loadTrackedSettings(
   trx: Knex.Transaction,
   tenant: string,
@@ -38,6 +42,7 @@ async function loadTrackedSettings(
 ): Promise<IProductInventorySettings> {
   const settings = (await trx('product_inventory_settings')
     .where({ tenant, service_id: serviceId })
+    .forUpdate()
     .first()) as IProductInventorySettings | undefined;
   if (!settings) throw new Error('Inventory not enabled for this product');
   if (!settings.track_stock) throw new Error('Stock tracking is disabled for this product');
@@ -101,6 +106,8 @@ export const receiveStockManual = withAuth(
 
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+      // A tech can't receive into another tech's van (F032).
+      await assertLocationWritable(trx, tenant, (user as any)?.user_id, input.location_id);
       const settings = await loadTrackedSettings(trx, tenant, input.service_id);
       const costCurrency = input.cost_currency ?? settings.cost_currency;
       if (input.cost_currency && input.cost_currency !== settings.cost_currency) {
@@ -221,7 +228,8 @@ export interface AdjustStockResult {
  * - Non-serialized: a single `adjust` movement (to_location for +, from_location for −).
  *   A removal that would drive on-hand negative is surfaced as a soft warning, not blocked.
  * - Serialized: a removal retires the oldest in_stock units at the location; an increase
- *   creates new in_stock units (placeholder serials) — one `adjust` movement per unit.
+ *   REQUIRES the real serial numbers of the found units (F051 — fabricated ADJ-*
+ *   placeholders polluted serial search and advisory lookups) — one movement per unit.
  */
 export const adjustStock = withAuth(
   async (
@@ -231,6 +239,7 @@ export const adjustStock = withAuth(
     locationId: string,
     delta: number,
     reason: string,
+    opts?: { serials?: Array<{ serial_number: string; mac_address?: string | null }> },
   ): Promise<AdjustStockResult> => {
     await requireInvPerm(user, 'update');
     if (!serviceId) throw new Error('service_id is required');
@@ -283,14 +292,37 @@ export const adjustStock = withAuth(
             unitIds.push(unit.unit_id);
           }
         } else {
-          // Found: create new in_stock units (placeholder serials) and record per-unit adjust.
-          for (let i = 0; i < magnitude; i++) {
-            const serial = `ADJ-${Date.now()}-${i}`;
+          // Found: create new in_stock units carrying the units' REAL serials (F051).
+          const serials = (opts?.serials ?? []).map((s) => ({
+            serial_number: (s.serial_number ?? '').trim(),
+            mac_address: s.mac_address ? String(s.mac_address).trim() : null,
+          }));
+          if (serials.length !== magnitude || serials.some((s) => !s.serial_number)) {
+            throw new Error(
+              `A positive serialized adjustment requires exactly ${magnitude} real serial number(s); got ${serials.filter((s) => s.serial_number).length}`,
+            );
+          }
+          // Uniqueness: serial per product, MAC tenant-wide (same rules as receiving).
+          const seen = new Set<string>();
+          for (const s of serials) {
+            if (seen.has(s.serial_number)) throw new Error(`Duplicate serial_number in batch: ${s.serial_number}`);
+            seen.add(s.serial_number);
+            const existing = await trx('stock_units')
+              .where({ tenant, service_id: serviceId, serial_number: s.serial_number })
+              .first();
+            if (existing) throw new Error(`Serial number already exists: ${s.serial_number}`);
+            if (s.mac_address) {
+              const existingMac = await trx('stock_units').where({ tenant, mac_address: s.mac_address }).first();
+              if (existingMac) throw new Error(`MAC address already exists: ${s.mac_address}`);
+            }
+          }
+          for (const s of serials) {
             const [unit] = (await trx('stock_units')
               .insert({
                 tenant,
                 service_id: serviceId,
-                serial_number: serial,
+                serial_number: s.serial_number,
+                mac_address: s.mac_address,
                 status: 'in_stock',
                 location_id: locationId,
                 unit_cost: settings.average_cost ?? null,
@@ -393,6 +425,8 @@ export const retireStock = withAuth(
 
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+      // A tech can't retire stock out of another tech's van (F033).
+      await assertLocationWritable(trx, tenant, (user as any)?.user_id, input.location_id);
       const settings = await loadTrackedSettings(trx, tenant, input.service_id);
       await ensureStockLevel(trx, tenant, input.service_id, input.location_id);
       const movements: IStockMovement[] = [];

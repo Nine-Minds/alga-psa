@@ -342,6 +342,10 @@ interface ManualInvoiceItemInput extends NetAmountItem {
   applies_to_service_id?: string;
   discount_percentage?: number;
   location_id?: string | null;
+  /** Sales-order line this charge bills (reconciliation backlink — F047). */
+  so_line_id?: string | null;
+  /** Per-line tax override: takes precedence over the service's tax_rate_id (F045). */
+  tax_rate_id?: string | null;
 }
 
 
@@ -467,23 +471,26 @@ export async function persistManualInvoiceCharges(
         throw new Error(`Service not found: ${requestItem.service_id}`);
       }
     }
-    // --- Determine Tax Info based on Service's Tax Rate ID ---
+    // --- Determine Tax Info based on the item's (or service's) Tax Rate ID ---
+    // A per-item tax_rate_id (e.g. from a sales-order line — F045) overrides the
+    // service default.
+    const effectiveTaxRateId = requestItem.tax_rate_id ?? service?.tax_rate_id ?? null;
     let serviceTaxRegion: string | null = null;
     let serviceIsTaxable = true; // Default for purely manual items if no service
     if (service) {
-      if (service.tax_rate_id) {
+      if (effectiveTaxRateId) {
         const taxRateInfo = await tx('tax_rates')
-          .where({ tax_rate_id: service.tax_rate_id, tenant })
+          .where({ tax_rate_id: effectiveTaxRateId, tenant })
           // Add validity checks if needed (e.g., is_active, date range)
           // For now, just fetch the region code associated with the ID
           .select('region_code')
           .first();
         if (taxRateInfo) {
           serviceTaxRegion = taxRateInfo.region_code;
-          serviceIsTaxable = true; // Service with a valid tax_rate_id is taxable
+          serviceIsTaxable = true; // A valid tax_rate_id means taxable
         } else {
           // tax_rate_id exists but doesn't link to a valid rate? Treat as non-taxable.
-          console.warn(`Service ${service.service_id} has tax_rate_id ${service.tax_rate_id} but no matching tax_rate found.`);
+          console.warn(`Service ${service.service_id} has tax_rate_id ${effectiveTaxRateId} but no matching tax_rate found.`);
           serviceIsTaxable = false;
           serviceTaxRegion = null;
         }
@@ -529,6 +536,7 @@ export async function persistManualInvoiceCharges(
       applies_to_item_id: null, // Manual non-discounts don't apply to others
       applies_to_service_id: null,
       location_id: requestItem.location_id ?? null,
+      so_line_id: requestItem.so_line_id ?? null,
       created_by: session.user.id,
       created_at: now,
       tenant

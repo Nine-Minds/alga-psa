@@ -65,8 +65,17 @@ async function getProductMeta(trx: Knex.Transaction, tenant: string, serviceId: 
   };
 }
 
-async function getSoOrThrow(trx: Knex.Transaction, tenant: string, soId: string): Promise<ISalesOrder> {
-  const row = await trx('sales_orders').where({ tenant, so_id: soId }).first();
+async function getSoOrThrow(
+  trx: Knex.Transaction,
+  tenant: string,
+  soId: string,
+  opts?: { forUpdate?: boolean },
+): Promise<ISalesOrder> {
+  const q = trx('sales_orders').where({ tenant, so_id: soId });
+  // The header row lock is the transition mutex: every status change locks first,
+  // so the status guard that follows is authoritative under concurrency (F018).
+  if (opts?.forUpdate) q.forUpdate();
+  const row = await q.first();
   if (!row) throw new Error('Sales order not found');
   return row as ISalesOrder;
 }
@@ -114,8 +123,12 @@ async function allocateLine(
   if (meta.is_serialized) {
     const preferred = await resolveAllocationLocation(trx, tenant, line.service_id, meta);
     // Pick in_stock units, preferring the resolved location, then FIFO by received_at.
+    // FOR UPDATE SKIP LOCKED: a unit mid-claim by a concurrent confirm/fulfill is
+    // invisible here, so two orders can never allocate the same unit (F022).
     const q = trx('stock_units')
       .where({ tenant, service_id: line.service_id, status: 'in_stock' })
+      .forUpdate()
+      .skipLocked()
       .limit(remaining);
     const units = preferred
       ? ((await q.orderByRaw('CASE WHEN location_id = ? THEN 0 ELSE 1 END ASC, received_at ASC NULLS LAST', [preferred])) as any[])
@@ -132,11 +145,30 @@ async function allocateLine(
     return;
   }
 
-  // Non-serialized: bump the per-location reserved (soft) / held (hard) counter.
+  // Non-serialized: bump the per-location reserved (soft) / held (hard) counter,
+  // capped at what is actually available there (F024) — a reservation is a claim on
+  // real stock, not a wish; the un-reservable remainder is the backorder. The level
+  // row is locked first so concurrent confirms serialize on the availability read.
   const location = await resolveAllocationLocation(trx, tenant, line.service_id, meta);
   if (!location) return; // nothing on hand anywhere → backorder
+  const level = await trx('stock_levels')
+    .where({ tenant, service_id: line.service_id, location_id: location })
+    .forUpdate()
+    .first();
+  const available = level ? availableQuantity(level) : 0;
+  const reserve = Math.max(0, Math.min(available, remaining));
+  if (reserve <= 0) return;
   const column = so.allocation_mode === 'hard' ? 'held_quantity' : 'reserved_quantity';
-  await applyAllocationDelta(trx, tenant, line.service_id, location, column, remaining);
+  await applyAllocationDelta(trx, tenant, line.service_id, location, column, reserve);
+  // Attribute the reservation to the line so release/fulfill can drain exactly what
+  // was reserved, and backorder math can add back the line's own claim (F025).
+  await trx('sales_order_lines')
+    .where({ tenant, so_line_id: line.so_line_id })
+    .update({
+      quantity_reserved: trx.raw('quantity_reserved + ?', [reserve]),
+      reserved_location_id: location,
+      updated_at: trx.fn.now(),
+    });
 }
 
 /** Decrement a per-location allocation counter for a service by `amount`, draining from the rows that hold it. */
@@ -184,25 +216,63 @@ async function releaseAllocations(
     }
   }
 
-  // Non-serialized: drain the reserved/held counter by each line's outstanding quantity.
+  // Non-serialized: drain exactly what each line reserved (quantity_reserved at
+  // reserved_location_id) — draining "outstanding" would poach other orders'
+  // reservations now that reservations are capped at availability (F024/F025).
   const column = so.allocation_mode === 'hard' ? 'held_quantity' : 'reserved_quantity';
   for (const line of lines) {
     const meta = await getProductMeta(trx, tenant, line.service_id);
     if (meta.is_serialized || meta.is_kit) continue;
     if (line.fulfillment_type === 'drop_ship') continue;
-    const outstanding = Number(line.quantity_ordered) - Number(line.quantity_fulfilled ?? 0);
-    await reverseAllocationCounter(trx, tenant, line.service_id, column, outstanding);
+    const reserved = Number(line.quantity_reserved ?? 0);
+    if (reserved > 0) {
+      if (line.reserved_location_id) {
+        await applyAllocationDelta(trx, tenant, line.service_id, line.reserved_location_id, column, -reserved);
+      } else {
+        await reverseAllocationCounter(trx, tenant, line.service_id, column, reserved);
+      }
+    }
+    await trx('sales_order_lines')
+      .where({ tenant, so_line_id: line.so_line_id })
+      .update({ quantity_reserved: 0, reserved_location_id: null, updated_at: trx.fn.now() });
   }
 }
 
+/** SO line enriched with product display fields for the detail UI. */
+export interface SalesOrderLineDetail extends ISalesOrderLine {
+  service_name: string | null;
+  sku: string | null;
+  is_serialized: boolean;
+  track_stock: boolean;
+}
+
+/** ISalesOrder with detail lines (Omit avoids intersecting the base `lines?` type). */
+export type SalesOrderWithDetail = Omit<ISalesOrder, 'lines'> & { lines: SalesOrderLineDetail[] };
+
 export const getSalesOrder = withAuth(
-  async (user, { tenant }, soId: string): Promise<(ISalesOrder & { lines: ISalesOrderLine[] }) | null> => {
+  async (user, { tenant }, soId: string): Promise<SalesOrderWithDetail | null> => {
     await requireSoPerm(user, 'read');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const row = await trx('sales_orders').where({ tenant, so_id: soId }).first();
       if (!row) return null;
-      const lines = await loadLines(trx, tenant, soId);
+      const lines = (await trx('sales_order_lines as sol')
+        .leftJoin('service_catalog as sc', function () {
+          this.on('sc.service_id', '=', 'sol.service_id').andOn('sc.tenant', '=', 'sol.tenant');
+        })
+        .leftJoin('product_inventory_settings as pis', function () {
+          this.on('pis.service_id', '=', 'sol.service_id').andOn('pis.tenant', '=', 'sol.tenant');
+        })
+        .where('sol.tenant', tenant)
+        .andWhere('sol.so_id', soId)
+        .orderBy('sol.created_at', 'asc')
+        .select(
+          'sol.*',
+          'sc.service_name',
+          'sc.sku',
+          trx.raw('COALESCE(pis.is_serialized, false) as is_serialized'),
+          trx.raw('COALESCE(pis.track_stock, false) as track_stock'),
+        )) as SalesOrderLineDetail[];
       return { ...(row as ISalesOrder), lines };
     });
   },
@@ -429,7 +499,7 @@ export const confirmSalesOrder = withAuth(
     await requireSoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const so = await getSoOrThrow(trx, tenant, soId);
+      const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
       if (so.status !== 'draft') throw new Error(`Only draft sales orders can be confirmed (current: ${so.status})`);
 
       const lines = await loadLines(trx, tenant, soId);
@@ -456,7 +526,7 @@ export const releaseSalesOrderAllocation = withAuth(
     await requireSoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const so = await getSoOrThrow(trx, tenant, soId);
+      const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
       const lines = await loadLines(trx, tenant, soId);
       await releaseAllocations(trx, tenant, so, lines);
       return { released: true };
@@ -464,11 +534,63 @@ export const releaseSalesOrderAllocation = withAuth(
   },
 );
 
+/**
+ * Return a confirmed sales order to draft so its lines can be edited (F015). Only
+ * possible while nothing has shipped or been billed — after that, cancel is the
+ * escape hatch. Releases all allocations.
+ */
+export const reopenSalesOrder = withAuth(
+  async (user, { tenant }, soId: string): Promise<ISalesOrder & { lines: ISalesOrderLine[] }> => {
+    await requireSoPerm(user, 'update');
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
+      if (so.status !== 'confirmed') {
+        throw new Error(`Only confirmed sales orders can be reopened (current: ${so.status})`);
+      }
+      const lines = await loadLines(trx, tenant, soId);
+      for (const line of lines) {
+        if (Number(line.quantity_fulfilled ?? 0) > 0) throw new Error('Cannot reopen a sales order with fulfilled lines');
+        if (Number(line.quantity_invoiced ?? 0) > 0) throw new Error('Cannot reopen a sales order with invoiced lines');
+      }
+      await releaseAllocations(trx, tenant, so, lines);
+      const [updated] = await trx('sales_orders')
+        .where({ tenant, so_id: soId })
+        .update({ status: 'draft', updated_at: trx.fn.now() })
+        .returning('*');
+      return { ...(updated as ISalesOrder), lines: await loadLines(trx, tenant, soId) };
+    });
+  },
+);
+
+/**
+ * Quantity this line has already secured for itself: allocated units (serialized)
+ * or its own capped reservation (non-serialized). Backorder math must add this
+ * back — `available` has already been depressed by it (F025).
+ */
+async function lineSecuredQuantity(
+  trx: Knex.Transaction,
+  tenant: string,
+  line: ISalesOrderLine,
+  meta: ProductMeta,
+): Promise<number> {
+  if (meta.is_serialized) {
+    const r = await trx('stock_units')
+      .where({ tenant, allocated_so_line_id: line.so_line_id, status: 'allocated' })
+      .count<{ c: string }>('* as c')
+      .first();
+    return Number(r?.c ?? 0);
+  }
+  return Number(line.quantity_reserved ?? 0);
+}
+
 export interface BackorderLine {
   so_line_id: string;
   service_id: string;
   quantity_ordered: number;
   quantity_fulfilled: number;
+  /** Quantity already secured for this line (allocated units / own reservation). */
+  secured: number;
   available: number;
   shortfall: number;
   backordered: boolean;
@@ -488,13 +610,17 @@ export const computeBackorder = withAuth(
         const meta = await getProductMeta(trx, tenant, line.service_id);
         if (meta.is_kit) continue;
         const outstanding = Number(line.quantity_ordered) - Number(line.quantity_fulfilled ?? 0);
+        const secured = await lineSecuredQuantity(trx, tenant, line, meta);
         const available = await totalAvailable(trx, tenant, line.service_id);
-        const shortfall = Math.max(0, outstanding - available);
+        // The line's own allocation already depressed `available`; add it back so a
+        // confirmed order doesn't count its own claim as a shortage (F025).
+        const shortfall = Math.max(0, outstanding - secured - Math.max(0, available));
         result.push({
           so_line_id: line.so_line_id,
           service_id: line.service_id,
           quantity_ordered: Number(line.quantity_ordered),
           quantity_fulfilled: Number(line.quantity_fulfilled ?? 0),
+          secured,
           available,
           shortfall,
           backordered: shortfall > 0,
@@ -510,7 +636,7 @@ export const cancelSalesOrder = withAuth(
     await requireSoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const so = await getSoOrThrow(trx, tenant, soId);
+      const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
       if (so.status === 'cancelled') return so;
       const lines = await loadLines(trx, tenant, soId);
       // Guard: a sales order with any fulfilled or invoiced quantity cannot be cancelled.
@@ -559,8 +685,10 @@ export const suggestPoFromBackorder = withAuth(
         const meta = await getProductMeta(trx, tenant, line.service_id);
         if (meta.is_kit) continue;
         const outstanding = Number(line.quantity_ordered) - Number(line.quantity_fulfilled ?? 0);
+        const secured = await lineSecuredQuantity(trx, tenant, line, meta);
         const available = await totalAvailable(trx, tenant, line.service_id);
-        const shortfall = Math.max(0, outstanding - available);
+        // Same add-back as computeBackorder (F025): don't buy stock the line already holds.
+        const shortfall = Math.max(0, outstanding - secured - Math.max(0, available));
         if (shortfall <= 0) continue;
         if (!meta.preferred_vendor_id) {
           unassigned.push({ so_line_id: line.so_line_id, service_id: line.service_id, quantity: shortfall });

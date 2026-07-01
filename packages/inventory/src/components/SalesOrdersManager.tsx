@@ -20,6 +20,7 @@ import { toast } from 'react-hot-toast';
 import type {
   ColumnDefinition,
   ISalesOrder,
+  IStockLocation,
   SalesOrderInvoiceMode,
   SalesOrderAllocationMode,
 } from '@alga-psa/types';
@@ -29,6 +30,11 @@ import {
   confirmSalesOrder,
   cancelSalesOrder,
 } from '../actions';
+import {
+  SalesOrderDetail,
+  type FulfillAndInvoiceFn,
+  type GenerateInvoiceFn,
+} from './SalesOrderDetail';
 
 /**
  * The Sales Order document types a user can download. All three render from the same SO data;
@@ -122,7 +128,21 @@ const emptyForm = (): FormState => ({
   lines: [emptyLine()],
 });
 
-export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }) {
+export interface SalesOrdersManagerProps {
+  initialSos: ISalesOrder[];
+  /** Active stock locations for the fulfill dialog's source selector. */
+  locations?: IStockLocation[];
+  /** Billing-owned actions passed from the page (billing → inventory dependency). */
+  fulfillAndInvoice: FulfillAndInvoiceFn;
+  generateInvoice: GenerateInvoiceFn;
+}
+
+export function SalesOrdersManager({
+  initialSos,
+  locations = [],
+  fulfillAndInvoice,
+  generateInvoice,
+}: SalesOrdersManagerProps) {
   const [sos, setSos] = useState<ISalesOrder[]>(initialSos || []);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
@@ -130,6 +150,10 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
   const [cancelTarget, setCancelTarget] = useState<ISalesOrder | null>(null);
   const [emailTarget, setEmailTarget] = useState<ISalesOrder | null>(null);
   const [emailing, setEmailing] = useState(false);
+  const [detailSoId, setDetailSoId] = useState<string | null>(null);
+  // One in-flight mutation at a time (F017): a double-click cannot fire twice, and
+  // every action button disables while any mutation is pending.
+  const [busy, setBusy] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -199,16 +223,22 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
   };
 
   const confirm = async (so: ISalesOrder) => {
+    if (busy) return;
+    setBusy(`confirm:${so.so_id}`);
     try {
       await confirmSalesOrder(so.so_id);
       toast.success('Sales order confirmed');
       await reload();
     } catch (e: any) {
       toast.error(e?.message || 'Confirm failed');
+    } finally {
+      setBusy(null);
     }
   };
 
   const cancel = async (so: ISalesOrder) => {
+    if (busy) return;
+    setBusy(`cancel:${so.so_id}`);
     try {
       await cancelSalesOrder(so.so_id);
       toast.success('Sales order cancelled');
@@ -216,6 +246,7 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
     } catch (e: any) {
       toast.error(e?.message || 'Cancel failed');
     } finally {
+      setBusy(null);
       setCancelTarget(null);
     }
   };
@@ -245,7 +276,20 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
   };
 
   const columns: ColumnDefinition<ISalesOrder>[] = [
-    { title: 'SO Number', dataIndex: 'so_number' },
+    {
+      title: 'SO Number',
+      dataIndex: 'so_number',
+      render: (_: any, rec: ISalesOrder) => (
+        <button
+          id={`view-so-${rec.so_id}`}
+          type="button"
+          className="text-primary-600 hover:underline font-medium"
+          onClick={() => setDetailSoId(rec.so_id)}
+        >
+          {rec.so_number}
+        </button>
+      ),
+    },
     {
       title: 'Client',
       dataIndex: 'client_name',
@@ -279,9 +323,9 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
             variant="soft"
             size="sm"
             onClick={() => confirm(rec)}
-            disabled={rec.status !== 'draft'}
+            disabled={rec.status !== 'draft' || busy !== null}
           >
-            Confirm
+            {busy === `confirm:${rec.so_id}` ? 'Confirming…' : 'Confirm'}
           </Button>
           {/* SO documents (confirmation / packing slip / pick list) — each renders from the same SO
               data via the server PDF route (inventory can't import billing, so the browser fetches
@@ -323,7 +367,7 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
             variant="ghost"
             size="sm"
             onClick={() => setCancelTarget(rec)}
-            disabled={rec.status === 'cancelled'}
+            disabled={rec.status === 'cancelled' || busy !== null}
           >
             Cancel
           </Button>
@@ -447,7 +491,7 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
       <ConfirmationDialog
         id="cancel-so-confirm"
         isOpen={cancelTarget !== null}
-        onClose={() => setCancelTarget(null)}
+        onClose={() => (busy ? undefined : setCancelTarget(null))}
         onConfirm={() => (cancelTarget ? cancel(cancelTarget) : undefined)}
         title="Cancel sales order"
         message={
@@ -457,6 +501,16 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
         }
         confirmLabel="Cancel sales order"
         cancelLabel="Keep order"
+        isConfirming={busy?.startsWith('cancel:') ?? false}
+      />
+
+      <SalesOrderDetail
+        soId={detailSoId}
+        onClose={() => setDetailSoId(null)}
+        onChanged={reload}
+        locations={locations}
+        fulfillAndInvoice={fulfillAndInvoice}
+        generateInvoice={generateInvoice}
       />
 
       <ConfirmationDialog

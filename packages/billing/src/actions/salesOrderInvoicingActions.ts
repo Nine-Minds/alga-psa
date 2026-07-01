@@ -4,6 +4,11 @@ import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  fulfillSalesOrderLine,
+  FulfillSalesOrderLineInput,
+  FulfillSalesOrderLineResult,
+} from '@alga-psa/inventory/actions';
 import { generateManualInvoice } from './manualInvoiceActions';
 
 /**
@@ -53,6 +58,9 @@ export const generateInvoiceForSalesOrder = withAuth(
       quantity: b.qty,
       description: `Sales Order ${so.so_number}`,
       rate: Number(b.line.unit_price),
+      // Backlink for SO↔invoice reconciliation (F047) and the line's own tax choice (F045).
+      so_line_id: b.line.so_line_id,
+      tax_rate_id: b.line.tax_rate_id ?? null,
     }));
 
     const result: any = await generateManualInvoice({
@@ -87,5 +95,50 @@ export const generateInvoiceForSalesOrder = withAuth(
       invoiced: billable.reduce((s: number, b: any) => s + b.qty, 0),
       invoiceId: result?.invoice?.invoice_id ?? result?.invoiceId,
     };
+  },
+);
+
+export interface FulfillAndInvoiceResult {
+  fulfillment: FulfillSalesOrderLineResult;
+  /** Invoice outcome when the SO's invoice_mode is 'on_fulfillment'; null for manual mode. */
+  invoice: { success: boolean; invoiced: number; invoiceId?: string; error?: string } | null;
+}
+
+/**
+ * Fulfill an SO line and, when the order's invoice_mode is 'on_fulfillment' (the
+ * default), immediately bill the newly fulfilled quantity (F008/F009). Lives in
+ * billing because the dependency direction is billing → inventory — inventory's
+ * fulfill action cannot call the invoice engine itself.
+ *
+ * An invoicing failure does NOT unwind the fulfillment (the stock genuinely moved);
+ * it is returned as invoice.error and remains billable via "Generate invoice".
+ */
+export const fulfillAndInvoiceSoLine = withAuth(
+  async (
+    user,
+    { tenant },
+    soLineId: string,
+    input?: FulfillSalesOrderLineInput,
+  ): Promise<FulfillAndInvoiceResult> => {
+    // Both composed actions enforce their own permissions (sales_order update).
+    const fulfillment = await fulfillSalesOrderLine(soLineId, input);
+
+    const { knex: db } = await createTenantKnex();
+    const so = await withTransaction(db, async (trx: Knex.Transaction) =>
+      trx('sales_orders').where({ tenant, so_id: fulfillment.so_id }).select('invoice_mode').first(),
+    );
+    if (so?.invoice_mode !== 'on_fulfillment') {
+      return { fulfillment, invoice: null };
+    }
+
+    try {
+      const invoice = await generateInvoiceForSalesOrder(fulfillment.so_id, { mode: 'fulfilled' });
+      return { fulfillment, invoice };
+    } catch (e) {
+      return {
+        fulfillment,
+        invoice: { success: false, invoiced: 0, error: e instanceof Error ? e.message : String(e) },
+      };
+    }
   },
 );

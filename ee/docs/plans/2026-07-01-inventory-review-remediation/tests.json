@@ -1,0 +1,342 @@
+[
+  {
+    "id": "T001",
+    "description": "[db][concurrency] Two concurrent confirmSalesOrder calls on one draft SO: exactly one succeeds; reserved_quantity equals min(available, ordered) \u2014 never doubled",
+    "implemented": false,
+    "featureIds": [
+      "F018",
+      "F024"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "[db][concurrency] Two SOs confirmed concurrently for the same serialized product cannot claim the same unit; the loser sees the unit unavailable (backorder), no silent allocated_so_line_id overwrite",
+    "implemented": false,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "[db][concurrency] Two concurrent fulfills of one line: total fulfilled never exceeds quantity_ordered and each physical unit yields at most one consume movement and one delivered status",
+    "implemented": false,
+    "featureIds": [
+      "F022",
+      "F023"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "[db][concurrency] Concurrent receiveTransfer + cancelTransfer: exactly one applies; source/destination on-hand consistent with a single application (no fabricated stock)",
+    "implemented": false,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "[db][concurrency] Concurrent duplicate receivePoLine calls cannot double-receive beyond the second call's post-lock guard; RMA transition race rejected by post-lock status assert",
+    "implemented": false,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "[db] Order 10 with 3 on hand: confirm reserves 3 (not 10), available stays >= 0, computeBackorder/suggestPoFromBackorder propose exactly 7",
+    "implemented": false,
+    "featureIds": [
+      "F013",
+      "F014",
+      "F024",
+      "F025"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "[db] Serialized hard-mode confirm + fulfill round-trip leaves held_quantity at 0 throughout (symmetric accounting)",
+    "implemented": false,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "[db] Manufactured reserved/held drift is repaired by reconcileStockLevels; the admin rebuild action reports the corrections it made",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "[db][e2e] on_fulfillment SO: fulfill 2 of 5 \u2192 invoice for 2 auto-created with correct amounts; fulfill remaining 3 \u2192 second invoice; re-invoking bills nothing (idempotent cap)",
+    "implemented": false,
+    "featureIds": [
+      "F008",
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "[db] Manual-mode Generate invoice bills ordered\u2212invoiced once; created invoice items carry so_line_id backlink and the line's tax_rate_id",
+    "implemented": false,
+    "featureIds": [
+      "F011",
+      "F045",
+      "F047"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "[db] Drop-ship confirm creates a delivered unit + linked asset, marks the line fulfilled, and leaves quantity_on_hand untouched at every location",
+    "implemented": false,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "[db] Reopen-to-draft releases allocations (reserved back to 0 / units back to in_stock) and permits line edits; reopen is rejected once any quantity is fulfilled or invoiced",
+    "implemented": false,
+    "featureIds": [
+      "F015",
+      "F016"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "[db] Multi-unit serialized fulfill with a mid-flight failure rolls back completely: no movement, no delivered unit, and no orphan asset row persists",
+    "implemented": false,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "[db][migration] New CHECKs reject negative reserved/held, zero/negative line quantities, and fulfilled/invoiced > ordered; migration pre-clamps seeded violating rows then applies cleanly and rolls back",
+    "implemented": false,
+    "featureIds": [
+      "F030",
+      "F031"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "[db] Location scoping matrix: a tech assigned to van A is denied receive/retire/dispatch/fulfill/loan against van B but allowed on van A; an unassigned warehouse is writable; manager acts anywhere",
+    "implemented": false,
+    "featureIds": [
+      "F032",
+      "F033",
+      "F034",
+      "F035",
+      "F036"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "[db] Low-stock job across two managed locations + one unmanaged: exactly one notification per manager scoped to their location, none for the unmanaged one",
+    "implemented": false,
+    "featureIds": [
+      "F037",
+      "F038"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "[db][e2e] Standard RMA: return \u2192 sent_to_vendor \u2192 resolveReplacement \u2192 deployReplacement delivers the new unit and relinks the client asset (serial/MAC updated); old unit stays out of sellable stock",
+    "implemented": false,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "[db] chargeForUnreturned creates one draft invoice linked on the case; invoking twice does not duplicate the charge",
+    "implemented": false,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "[db][migration] rma_cases CHECK no longer admits 'dead_unit_returned'; existing rows and the advance-replacement happy path are unaffected",
+    "implemented": false,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "[db] receivePoLine with a cost currency differing from the product's cost_currency throws and leaves average_cost unchanged",
+    "implemented": false,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "[db] Low stock across USD and EUR products yields one PO per (vendor, currency), each with matching header/line currency and receivable end-to-end",
+    "implemented": false,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "[db] Serialized ticket-material consumption with creates_asset_on_delivery=true creates + links an asset; with the flag off it does not",
+    "implemented": false,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "[db][migration] tax_rate FK rejects an orphan tax_rate_id; soft-link FKs reject orphan references and SET NULL on parent delete; new hot-path indexes exist",
+    "implemented": false,
+    "featureIds": [
+      "F046",
+      "F048",
+      "F049"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "[db] UPDATE and DELETE on stock_movements raise from the immutability trigger; INSERT still works",
+    "implemented": false,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "[db] Positive serialized adjust without serials is rejected; with serials it creates units carrying exactly those serials (no ADJ-* fabrication)",
+    "implemented": false,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "[ui] Double-click on Confirm dispatches exactly one action call (in-flight guard), and the fulfill dialog renders lines with remaining quantities and submits selected units",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F017"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "[db] PO line for a vendor with a price-list row defaults cost/currency/vendor-SKU from vendor_products; without one it falls back to average/catalog cost; partial unique index blocks a second preferred offer",
+    "implemented": false,
+    "featureIds": [
+      "F052",
+      "F053",
+      "F054",
+      "F055",
+      "F056",
+      "F057"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "[db] Low-stock suggestion prices lines from the preferred vendor's offer (cost + currency) when present",
+    "implemented": false,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "[db][e2e] Cycle count: start snapshots expected, blind entry records counts, variance computes, approval writes 'cycle_count' adjust movements, and post-approval on-hand equals counted quantities",
+    "implemented": false,
+    "featureIds": [
+      "F059",
+      "F061",
+      "F062",
+      "F064",
+      "F065"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "[db] Serialized count: expected-but-unscanned unit is retired on approval; an unexpected serial blocks approval until dispositioned",
+    "implemented": false,
+    "featureIds": [
+      "F063",
+      "F066"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "[db] A stock movement at the location mid-session marks the affected count line stale; cancelling a session leaves stock untouched; counter without the cycle_count permission cannot approve",
+    "implemented": false,
+    "featureIds": [
+      "F060",
+      "F067",
+      "F068"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "[db] Landed cost: $100 freight allocated by value across two received lines adjusts moving-average and serialized unit_cost proportionally; a second apply is a no-op",
+    "implemented": false,
+    "featureIds": [
+      "F069",
+      "F070",
+      "F071",
+      "F072",
+      "F073",
+      "F074"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "[db] Create-bill-from-PO prefills received quantities/costs; due date honors net-30 terms; variance indicator fires when bill total \u2260 received value",
+    "implemented": false,
+    "featureIds": [
+      "F075",
+      "F076",
+      "F077",
+      "F078",
+      "F079",
+      "F080"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "[db] Vendor bill lifecycle draft\u2192open\u2192paid and void enforce valid transitions; dashboard aging buckets classify due vs overdue correctly",
+    "implemented": false,
+    "featureIds": [
+      "F077",
+      "F081",
+      "F082"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "[db][migration] All new migrations in this plan apply up() and roll back down() cleanly in sequence on the migrated schema",
+    "implemented": false,
+    "featureIds": [
+      "F030",
+      "F046",
+      "F047",
+      "F048",
+      "F049",
+      "F050",
+      "F052",
+      "F059",
+      "F069",
+      "F075"
+    ]
+  }
+]

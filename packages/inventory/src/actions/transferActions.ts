@@ -5,7 +5,7 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IStockTransfer, IStockTransferLine } from '@alga-psa/types';
-import { recordStockMovement, availableQuantity } from '../lib';
+import { recordStockMovement, availableQuantity, assertLocationWritable } from '../lib';
 
 /**
  * Stock transfers — two-step, in-transit moves between locations (design §6.C).
@@ -62,6 +62,8 @@ export const dispatchTransfer = withAuth(
 
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+      // A tech can't dispatch stock out of another tech's van (F034).
+      await assertLocationWritable(trx, tenant, (user as any)?.user_id, fromLocation);
       const [transfer] = await trx('stock_transfers')
         .insert({
           tenant,
@@ -80,16 +82,19 @@ export const dispatchTransfer = withAuth(
         if (!Number.isFinite(quantity) || quantity <= 0) throw new Error('Transfer line quantity must be positive');
 
         if (line.unit_id) {
-          // Serialized: the unit must be in_stock at the source location.
-          const unit = await trx('stock_units').where({ tenant, unit_id: line.unit_id }).first();
+          // Serialized: the unit must be in_stock at the source location. Locked so a
+          // concurrent dispatch/fulfill cannot claim the same unit (F022).
+          const unit = await trx('stock_units').where({ tenant, unit_id: line.unit_id }).forUpdate().first();
           if (!unit) throw new Error(`Stock unit ${line.unit_id} not found`);
           if (unit.service_id !== line.service_id) throw new Error('Stock unit does not match line service_id');
           if (unit.status !== 'in_stock') throw new Error('Only in_stock units can be transferred');
           if (unit.location_id !== fromLocation) throw new Error('Stock unit is not at the transfer source location');
         } else {
-          // Non-serialized: source must have enough available stock.
+          // Non-serialized: source must have enough available stock. Locked so
+          // concurrent dispatches serialize on the availability read (F019).
           const level = await trx('stock_levels')
             .where({ tenant, service_id: line.service_id, location_id: fromLocation })
+            .forUpdate()
             .first();
           const available = level ? availableQuantity(level) : 0;
           if (available < quantity) {
@@ -129,7 +134,9 @@ export const receiveTransfer = withAuth(
     await requireTransferPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const transfer = await trx('stock_transfers').where({ tenant, transfer_id: transferId }).first();
+      // Header row lock = transition mutex: a concurrent duplicate receive (or a
+      // racing cancel) blocks here and is then rejected by the status guard (F019).
+      const transfer = await trx('stock_transfers').where({ tenant, transfer_id: transferId }).forUpdate().first();
       if (!transfer) throw new Error('Transfer not found');
       if (transfer.status !== 'dispatched') throw new Error(`Cannot receive a transfer in status '${transfer.status}'`);
 
@@ -166,7 +173,8 @@ export const cancelTransfer = withAuth(
     await requireTransferPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const transfer = await trx('stock_transfers').where({ tenant, transfer_id: transferId }).first();
+      // Same mutex as receiveTransfer: cancel-vs-receive races resolve to exactly one (F019).
+      const transfer = await trx('stock_transfers').where({ tenant, transfer_id: transferId }).forUpdate().first();
       if (!transfer) throw new Error('Transfer not found');
       if (transfer.status !== 'dispatched') throw new Error(`Cannot cancel a transfer in status '${transfer.status}'`);
 

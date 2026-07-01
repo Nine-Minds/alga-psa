@@ -6,3 +6,4 @@ export * from './movements';
 export * from './reconcile';
 export * from './consume';
 export * from './scope';
+export * from './assetLink';

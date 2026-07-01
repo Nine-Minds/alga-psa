@@ -6,7 +6,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { ITicketMaterial, IProjectMaterial } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { recordStockConsumption, reverseStockConsumption } from '@alga-psa/inventory/lib';
+import { recordStockConsumption, reverseStockConsumption, createAndLinkDeliveredAsset } from '@alga-psa/inventory/lib';
 
 export const listTicketMaterials = withAuth(async (user, { tenant }, ticketId: string): Promise<ITicketMaterial[]> => {
   if (!await hasPermission(user, 'billing', 'read')) {
@@ -43,7 +43,7 @@ export const addTicketMaterial = withAuth(async (user, { tenant }, input: {
     throw new Error('Permission denied: billing create required');
   }
   const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const { row, pendingAsset } = await withTransaction(db, async (trx: Knex.Transaction) => {
     const [row] = await trx('ticket_materials')
       .insert({
         tenant,
@@ -58,7 +58,7 @@ export const addTicketMaterial = withAuth(async (user, { tenant }, input: {
       })
       .returning('*');
     // Inventory: decrement stock for track_stock (non-serialized) products. No-op otherwise.
-    await recordStockConsumption(trx, tenant, {
+    const consumption = await recordStockConsumption(trx, tenant, {
       service_id: row.service_id,
       quantity: row.quantity,
       source_doc_type: 'ticket_material',
@@ -67,8 +67,18 @@ export const addTicketMaterial = withAuth(async (user, { tenant }, input: {
       unit_id: input.unit_id ?? null,
       client_id: input.client_id,
     });
-    return row as ITicketMaterial;
+    return { row, pendingAsset: consumption.pending_asset_link ?? null };
   });
+  // F044: a serialized install creates the managed asset like SO fulfillment does —
+  // after commit (F029), and never failing the material itself.
+  if (pendingAsset) {
+    try {
+      await createAndLinkDeliveredAsset(db, tenant, pendingAsset);
+    } catch (e) {
+      console.error('Asset creation for delivered ticket-material unit failed:', e);
+    }
+  }
+  return row as ITicketMaterial;
 });
 
 export const deleteTicketMaterial = withAuth(async (user, { tenant }, ticketMaterialId: string): Promise<void> => {
@@ -137,7 +147,7 @@ export const addProjectMaterial = withAuth(async (user, { tenant }, input: {
     throw new Error('Permission denied: billing create required');
   }
   const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const { row, pendingAsset } = await withTransaction(db, async (trx: Knex.Transaction) => {
     const [row] = await trx('project_materials')
       .insert({
         tenant,
@@ -152,7 +162,7 @@ export const addProjectMaterial = withAuth(async (user, { tenant }, input: {
       })
       .returning('*');
     // Inventory: decrement stock for track_stock (non-serialized) products. No-op otherwise.
-    await recordStockConsumption(trx, tenant, {
+    const consumption = await recordStockConsumption(trx, tenant, {
       service_id: row.service_id,
       quantity: row.quantity,
       source_doc_type: 'project_material',
@@ -161,8 +171,17 @@ export const addProjectMaterial = withAuth(async (user, { tenant }, input: {
       unit_id: input.unit_id ?? null,
       client_id: input.client_id,
     });
-    return row as IProjectMaterial;
+    return { row, pendingAsset: consumption.pending_asset_link ?? null };
   });
+  // F044: see addTicketMaterial — asset creation runs post-commit, best-effort.
+  if (pendingAsset) {
+    try {
+      await createAndLinkDeliveredAsset(db, tenant, pendingAsset);
+    } catch (e) {
+      console.error('Asset creation for delivered project-material unit failed:', e);
+    }
+  }
+  return row as IProjectMaterial;
 });
 
 export const deleteProjectMaterial = withAuth(async (user, { tenant }, projectMaterialId: string): Promise<void> => {

@@ -12,3 +12,4 @@ export * from './StockOverview';
 export * from './StockUnitsManager';
 export * from './TransfersManager';
 export * from './VendorsManager';
+export * from './SalesOrderDetail';

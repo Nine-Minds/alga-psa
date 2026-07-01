@@ -4,7 +4,7 @@ import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createAsset } from '@alga-psa/assets';
+import { createAndLinkDeliveredAsset, PendingAssetLink } from '../lib/assetLink';
 import {
   IPurchaseOrder,
   IPurchaseOrderLine,
@@ -162,6 +162,8 @@ export interface ConfirmDropShipShipmentResult {
   sales_order_status: SalesOrderStatus;
   units: IStockUnit[];
   quantity_fulfilled: number;
+  /** Non-fatal issues (e.g. post-commit asset creation failures — F029). */
+  warnings: string[];
 }
 
 /**
@@ -181,38 +183,51 @@ export const confirmDropShipShipment = withAuth(
     }
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      // Resolve the drop-ship PO line from whichever id was supplied.
-      let poLine: IPurchaseOrderLine | undefined;
+    const core = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Resolve the drop-ship PO line from whichever id was supplied (probe, no lock).
+      let poLineProbe: IPurchaseOrderLine | undefined;
       if (ref.po_line_id) {
-        poLine = (await trx('purchase_order_lines')
+        poLineProbe = (await trx('purchase_order_lines')
           .where({ tenant, po_line_id: ref.po_line_id })
           .first()) as IPurchaseOrderLine | undefined;
       } else {
-        poLine = (await trx('purchase_order_lines')
+        poLineProbe = (await trx('purchase_order_lines')
           .where({ tenant, source_so_line_id: ref.so_line_id })
           .first()) as IPurchaseOrderLine | undefined;
       }
-      if (!poLine) throw new Error('Drop-ship purchase order line not found');
-      if (!poLine.source_so_line_id) {
+      if (!poLineProbe) throw new Error('Drop-ship purchase order line not found');
+      if (!poLineProbe.source_so_line_id) {
         throw new Error('Purchase order line is not linked to a sales order line');
       }
+      const soLineProbe = (await trx('sales_order_lines')
+        .where({ tenant, so_line_id: poLineProbe.source_so_line_id })
+        .select('so_id')
+        .first()) as { so_id: string } | undefined;
+      if (!soLineProbe) throw new Error('Sales order line not found');
 
+      // Canonical lock order — SO header → PO header → lines — matching every other
+      // SO/PO flow so a duplicate confirm or a racing receive serializes (F018/F020).
+      const so = (await trx('sales_orders')
+        .where({ tenant, so_id: soLineProbe.so_id })
+        .forUpdate()
+        .first()) as ISalesOrder | undefined;
+      if (!so) throw new Error('Sales order not found');
       const po = (await trx('purchase_orders')
-        .where({ tenant, po_id: poLine.po_id })
+        .where({ tenant, po_id: poLineProbe.po_id })
+        .forUpdate()
         .first()) as IPurchaseOrder | undefined;
       if (!po) throw new Error('Purchase order not found');
       if (!po.is_drop_ship) throw new Error('Purchase order is not a drop-ship order');
-
       const soLine = (await trx('sales_order_lines')
-        .where({ tenant, so_line_id: poLine.source_so_line_id })
+        .where({ tenant, so_line_id: poLineProbe.source_so_line_id })
+        .forUpdate()
         .first()) as ISalesOrderLine | undefined;
       if (!soLine) throw new Error('Sales order line not found');
-
-      const so = (await trx('sales_orders')
-        .where({ tenant, so_id: soLine.so_id })
-        .first()) as ISalesOrder | undefined;
-      if (!so) throw new Error('Sales order not found');
+      const poLine = (await trx('purchase_order_lines')
+        .where({ tenant, po_line_id: poLineProbe.po_line_id })
+        .forUpdate()
+        .first()) as IPurchaseOrderLine | undefined;
+      if (!poLine) throw new Error('Drop-ship purchase order line not found');
 
       const settings = await trx('product_inventory_settings')
         .where({ tenant, service_id: soLine.service_id })
@@ -235,6 +250,7 @@ export const confirmDropShipShipment = withAuth(
 
       const serials = input?.serials ?? [];
       const units: IStockUnit[] = [];
+      const pendingAssets: PendingAssetLink[] = [];
       let quantity: number;
 
       if (isSerialized) {
@@ -242,6 +258,11 @@ export const confirmDropShipShipment = withAuth(
           throw new Error('Serialized drop-ship requires at least one serial');
         }
         quantity = serials.length;
+        if (Number(soLine.quantity_fulfilled) + quantity > Number(soLine.quantity_ordered)) {
+          throw new Error(
+            `Shipment of ${quantity} would exceed the ordered quantity (${soLine.quantity_ordered}, already fulfilled ${soLine.quantity_fulfilled})`,
+          );
+        }
 
         for (const s of serials) {
           if (!s.serial_number?.trim()) throw new Error('Each serial requires a serial_number');
@@ -284,28 +305,15 @@ export const confirmDropShipShipment = withAuth(
             unitPatch: {},
           });
 
-          // Managed asset for the delivered serial (assets ABAC path).
+          // Managed asset for the delivered serial — created AFTER this transaction
+          // commits (F029), so a rollback cannot orphan an asset row.
           if (createsAsset) {
-            const asset = await createAsset({
-              asset_type: 'unknown',
-              client_id: so.client_id,
-              asset_tag: s.serial_number.trim(),
-              name: svc?.service_name ?? s.serial_number.trim(),
-              status: 'active',
-              serial_number: s.serial_number.trim(),
-              ...(s.warranty_expires_at
-                ? { warranty_end_date: new Date(s.warranty_expires_at).toISOString() }
-                : {}),
+            pendingAssets.push({
+              unit: unitRow,
+              serviceId: soLine.service_id,
+              serviceName: svc?.service_name ?? '',
+              clientId: so.client_id,
             });
-
-            // Establish the bidirectional product/unit link the assets schema gained.
-            await trx('assets')
-              .where({ tenant, asset_id: asset.asset_id })
-              .update({ service_id: soLine.service_id, stock_unit_id: unitRow.unit_id, updated_at: trx.fn.now() });
-            await trx('stock_units')
-              .where({ tenant, unit_id: unitRow.unit_id })
-              .update({ asset_id: asset.asset_id, updated_at: trx.fn.now() });
-            unitRow.asset_id = asset.asset_id;
           }
 
           units.push(unitRow);
@@ -377,7 +385,29 @@ export const confirmDropShipShipment = withAuth(
         sales_order_status: soStatus,
         units,
         quantity_fulfilled: quantity,
+        pendingAssets,
       };
     });
+
+    // F029: create + link managed assets only after the delivery is durable; a
+    // failure here is a warning, never an unwind of the shipment.
+    const warnings: string[] = [];
+    for (const p of core.pendingAssets) {
+      try {
+        const assetId = await createAndLinkDeliveredAsset(db, tenant, p);
+        if (assetId) {
+          const delivered = core.units.find((u) => u.unit_id === p.unit.unit_id);
+          if (delivered) delivered.asset_id = assetId;
+        }
+      } catch (e) {
+        warnings.push(
+          `Asset creation failed for unit ${p.unit.serial_number ?? p.unit.unit_id}: ${
+            e instanceof Error ? e.message : String(e)
+          }. The delivery succeeded — create and link the asset manually.`,
+        );
+      }
+    }
+    const { pendingAssets: _pending, ...rest } = core;
+    return { ...rest, warnings };
   },
 );

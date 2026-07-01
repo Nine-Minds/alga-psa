@@ -15,6 +15,7 @@ import {
   listStockLocations,
   getStockLevelsForProduct,
   receiveStockManual,
+  rebuildStockCaches,
 } from '../actions';
 
 type InventoryProduct = IProductInventorySettings & {
@@ -102,6 +103,25 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
       toast.error(e?.message || "Couldn't load locations.");
     }
   }, []);
+
+  const [rebuilding, setRebuilding] = useState(false);
+  const rebuildCaches = useCallback(async () => {
+    setRebuilding(true);
+    try {
+      const result = await rebuildStockCaches();
+      const n = result.corrections.length;
+      toast.success(
+        n === 0
+          ? `Checked ${result.products_checked} products — caches already consistent.`
+          : `Checked ${result.products_checked} products and corrected ${n} value${n === 1 ? '' : 's'}.`,
+      );
+      await reload();
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't rebuild stock caches.");
+    } finally {
+      setRebuilding(false);
+    }
+  }, [reload]);
 
   useEffect(() => {
     loadLocations();
@@ -279,9 +299,21 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
             {lowCount > 0 && <span className="text-amber-600 font-medium"> · {lowCount} low</span>}
           </p>
         </div>
-        <Button id="stock-overview-add-button" onClick={() => openReceive()}>
-          Receive stock
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Repair path for cache drift (F028): recompute on-hand + reserved/held from
+              the ledger, unit statuses, and open SO reservations. */}
+          <Button
+            id="stock-overview-rebuild-button"
+            variant="outline"
+            disabled={rebuilding}
+            onClick={rebuildCaches}
+          >
+            {rebuilding ? 'Rebuilding…' : 'Rebuild stock caches'}
+          </Button>
+          <Button id="stock-overview-add-button" onClick={() => openReceive()}>
+            Receive stock
+          </Button>
+        </div>
       </div>
 
       {products.length > 0 && (

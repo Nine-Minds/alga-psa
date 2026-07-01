@@ -10,11 +10,9 @@ import {
   ISalesOrderLine,
   IStockUnit,
   SalesOrderStatus,
-  CreateAssetRequest,
-  Asset,
 } from '@alga-psa/types';
-import { createAsset } from '@alga-psa/assets/actions';
-import { recordStockMovement, applyAllocationDelta, availableQuantity } from '../lib';
+import { recordStockMovement, applyAllocationDelta, availableQuantity, assertLocationWritable } from '../lib';
+import { createAndLinkDeliveredAsset, PendingAssetLink } from '../lib/assetLink';
 
 async function requireSoPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'sales_order', action))) {
@@ -61,7 +59,7 @@ async function loadCandidateUnits(
   tenant: string,
   serviceId: string,
   soLineId: string,
-  opts: { unitIds?: string[]; locationId?: string | null },
+  opts: { unitIds?: string[]; locationId?: string | null; lock?: boolean },
 ): Promise<CandidateUnit[]> {
   const q = trx('stock_units as u')
     .leftJoin('sales_order_lines as sol', function () {
@@ -85,6 +83,15 @@ async function loadCandidateUnits(
     q.whereIn('u.unit_id', opts.unitIds);
   } else if (opts.locationId) {
     q.where('u.location_id', opts.locationId);
+  }
+
+  // Lock the candidate units so a concurrent fulfill/confirm cannot claim the same
+  // physical unit (F022). FIFO auto-pick skips rows locked by others; an explicit
+  // pick waits for the lock and is then re-validated by the status filter.
+  // (lock:false = read-only listing for the unit-picker UI.)
+  if (opts.lock !== false) {
+    q.forUpdate('u');
+    if (!(opts.unitIds && opts.unitIds.length > 0)) q.skipLocked();
   }
 
   return (await q) as CandidateUnit[];
@@ -111,45 +118,61 @@ async function recomputeSalesOrderStatus(
   return next;
 }
 
-/**
- * Create a managed asset for a delivered serialized unit and wire the bidirectional
- * link (assets.service_id + assets.stock_unit_id, and the stock_units.asset_id
- * back-pointer). Carries serial + warranty. See design §6.B.5 (F085/F086).
- */
-async function linkAssetOnDelivery(
-  trx: Knex.Transaction,
-  tenant: string,
-  unit: IStockUnit,
-  serviceId: string,
-  serviceName: string,
-  clientId: string,
-): Promise<string | null> {
-  const serial = unit.serial_number || unit.unit_id;
-  const req: CreateAssetRequest = {
-    asset_type: 'unknown',
-    client_id: clientId,
-    asset_tag: serial,
-    name: serviceName ? `${serviceName} ${serial}`.trim() : serial,
-    status: 'active',
-    serial_number: unit.serial_number || undefined,
-    ...(unit.warranty_expires_at
-      ? { warranty_end_date: new Date(unit.warranty_expires_at as any).toISOString() }
-      : {}),
-  };
-  // createAsset is an ABAC-respecting server action; it runs in its own transaction.
-  const asset = (await createAsset(req)) as Asset;
-  if (!asset?.asset_id) return null;
 
-  // Establish the inventory back-pointers inside this transaction.
-  await trx('assets')
-    .where({ tenant, asset_id: asset.asset_id })
-    .update({ service_id: serviceId, stock_unit_id: unit.unit_id, updated_at: trx.fn.now() });
-  await trx('stock_units')
-    .where({ tenant, unit_id: unit.unit_id })
-    .update({ asset_id: asset.asset_id, updated_at: trx.fn.now() });
-
-  return asset.asset_id;
+/** A serialized unit as shown in the fulfill dialog's picker (F003/F004). */
+export interface FulfillmentCandidateUnit {
+  unit_id: string;
+  serial_number: string | null;
+  mac_address: string | null;
+  location_id: string | null;
+  location_name: string | null;
+  received_at: string | Date | null;
+  /** Hard-held by ANOTHER sales order — not selectable (F084 poach guard). */
+  foreign_hard_hold: boolean;
+  /** Already allocated to this line — the FIFO default picks these first. */
+  allocated_to_this_line: boolean;
+  /** Soft-allocated to a different order — selectable, but labeled (F004). */
+  foreign_soft_allocated: boolean;
 }
+
+/**
+ * Read-only candidate list for the fulfill dialog's serialized unit picker (F003).
+ * FIFO-ordered; hard-holds by other orders are included but flagged so the UI can
+ * exclude them, and foreign soft allocations are labeled rather than hidden (F004).
+ */
+export const listFulfillmentCandidateUnits = withAuth(
+  async (user, { tenant }, soLineId: string): Promise<FulfillmentCandidateUnit[]> => {
+    await requireSoPerm(user, 'read');
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const line = (await trx('sales_order_lines')
+        .where({ tenant, so_line_id: soLineId })
+        .first()) as ISalesOrderLine | undefined;
+      if (!line) throw new Error('Sales order line not found');
+
+      const candidates = await loadCandidateUnits(trx, tenant, line.service_id, soLineId, { lock: false });
+      const locationIds = [...new Set(candidates.map((u) => u.location_id).filter(Boolean))] as string[];
+      const locations = locationIds.length
+        ? await trx('stock_locations').where({ tenant }).whereIn('location_id', locationIds).select('location_id', 'name')
+        : [];
+      const locationName = new Map(locations.map((l: any) => [l.location_id, l.name as string]));
+
+      return candidates.map((u) => ({
+        unit_id: u.unit_id,
+        serial_number: u.serial_number ?? null,
+        mac_address: u.mac_address ?? null,
+        location_id: u.location_id ?? null,
+        location_name: u.location_id ? locationName.get(u.location_id) ?? null : null,
+        received_at: u.received_at ?? null,
+        foreign_hard_hold: Boolean(u.foreign_hard_hold),
+        allocated_to_this_line: u.allocated_so_line_id === soLineId,
+        foreign_soft_allocated: Boolean(
+          u.allocated_so_line_id && u.allocated_so_line_id !== soLineId && !u.foreign_hard_hold,
+        ),
+      }));
+    });
+  },
+);
 
 /**
  * Fulfill (consume / deliver) a sales-order line — design §6.B.
@@ -175,15 +198,24 @@ export const fulfillSalesOrderLine = withAuth(
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const warnings: string[] = [];
 
-      const line = (await trx('sales_order_lines')
+      const lineProbe = (await trx('sales_order_lines')
         .where({ tenant, so_line_id: soLineId })
-        .first()) as ISalesOrderLine | undefined;
-      if (!line) throw new Error('Sales order line not found');
+        .select('so_id')
+        .first()) as { so_id: string } | undefined;
+      if (!lineProbe) throw new Error('Sales order line not found');
 
+      // Lock parent-first (SO header, then line) — the same order every SO flow uses,
+      // so concurrent confirm/cancel/fulfill serialize instead of racing (F018).
       const so = (await trx('sales_orders')
-        .where({ tenant, so_id: line.so_id })
+        .where({ tenant, so_id: lineProbe.so_id })
+        .forUpdate()
         .first()) as ISalesOrder | undefined;
       if (!so) throw new Error('Sales order not found');
+      const line = (await trx('sales_order_lines')
+        .where({ tenant, so_line_id: soLineId })
+        .forUpdate()
+        .first()) as ISalesOrderLine | undefined;
+      if (!line) throw new Error('Sales order line not found');
       if (so.status === 'cancelled' || so.status === 'closed') {
         throw new Error(`Cannot fulfill a ${so.status} sales order`);
       }
@@ -208,8 +240,9 @@ export const fulfillSalesOrderLine = withAuth(
 
       const isHard = so.allocation_mode === 'hard';
       const deliveredUnitIds: string[] = [];
-      const assetIds: string[] = [];
+      const pendingAssets: PendingAssetLink[] = [];
       let fulfilledQty = 0;
+      let reservedDrain = 0;
 
       if (settings.is_serialized) {
         // -- Serialized path -------------------------------------------------
@@ -252,6 +285,12 @@ export const fulfillSalesOrderLine = withAuth(
         }
         if (picked.length === 0) throw new Error('No serialized units available to fulfill this line');
 
+        // A tech can't fulfill out of another tech's van (F035).
+        const sourceLocations = [...new Set(picked.map((u) => u.location_id).filter(Boolean))] as string[];
+        for (const loc of sourceLocations) {
+          await assertLocationWritable(trx, tenant, (user as any)?.user_id, loc);
+        }
+
         const now = new Date().toISOString();
         for (const unit of picked) {
           const fromLocation = unit.location_id ?? null;
@@ -275,16 +314,15 @@ export const fulfillSalesOrderLine = withAuth(
             },
           });
 
-          // Release a hard-hold counter that this line placed on the unit's location.
-          if (isHard && unit.allocated_so_line_id === soLineId && fromLocation) {
-            await applyAllocationDelta(trx, tenant, serviceId, fromLocation, 'held_quantity', -1);
-          }
+          // NOTE: no held_quantity decrement here — serialized allocation never
+          // increments the counter (the claim is the unit's allocated status), so
+          // decrementing on fulfill was asymmetric dead accounting (F026).
 
           deliveredUnitIds.push(unit.unit_id);
 
           if (settings.creates_asset_on_delivery) {
-            const assetId = await linkAssetOnDelivery(trx, tenant, unit, serviceId, serviceName, so.client_id);
-            if (assetId) assetIds.push(assetId);
+            // F029: collected now, created only after the stock transaction commits.
+            pendingAssets.push({ unit, serviceId, serviceName, clientId: so.client_id });
           }
         }
         fulfilledQty = picked.length;
@@ -294,12 +332,18 @@ export const fulfillSalesOrderLine = withAuth(
         if (!qty || qty <= 0) throw new Error('quantity is required to fulfill a non-serialized line');
         const fromLocation = input?.location_id ?? settings.default_location_id ?? null;
         if (!fromLocation) throw new Error('A source location is required to fulfill a non-serialized line');
+        // A tech can't fulfill out of another tech's van (F035).
+        await assertLocationWritable(trx, tenant, (user as any)?.user_id, fromLocation);
 
-        // Soft availability check — warn, never block.
+        // Soft availability check — warn, never block. The line's own reservation at
+        // this location is not a shortage, so add it back before comparing (F024).
         const level = await trx('stock_levels')
           .where({ tenant, service_id: serviceId, location_id: fromLocation })
+          .forUpdate()
           .first();
-        const available = level ? availableQuantity(level) : 0;
+        const ownReservationHere =
+          line.reserved_location_id === fromLocation ? Number(line.quantity_reserved ?? 0) : 0;
+        const available = (level ? availableQuantity(level) : 0) + ownReservationHere;
         if (available < qty) {
           warnings.push(
             `Available quantity (${available}) is below the requested ${qty} at the source location; fulfilling anyway.`,
@@ -318,27 +362,40 @@ export const fulfillSalesOrderLine = withAuth(
           performed_by: user.user_id,
         });
 
-        // Release the reservation (soft) or hold (hard) this fulfillment satisfies.
-        await applyAllocationDelta(
-          trx,
-          tenant,
-          serviceId,
-          fromLocation,
-          isHard ? 'held_quantity' : 'reserved_quantity',
-          -qty,
-        );
+        // Release exactly what this line reserved — never other orders' claims — at
+        // the location the reservation was placed (F024/F025).
+        reservedDrain = Math.min(qty, Number(line.quantity_reserved ?? 0));
+        if (reservedDrain > 0 && line.reserved_location_id) {
+          await applyAllocationDelta(
+            trx,
+            tenant,
+            serviceId,
+            line.reserved_location_id,
+            isHard ? 'held_quantity' : 'reserved_quantity',
+            -reservedDrain,
+          );
+        }
         fulfilledQty = qty;
       }
 
-      // Bump the line's fulfilled counter and recompute SO status.
-      const [updatedLine] = await trx('sales_order_lines')
+      // Bump the line's fulfilled counter — capped in SQL so overshoot is impossible
+      // even if a concurrent writer slipped past the guards above (F023). The row
+      // lock makes this a belt-and-braces check, not the primary defense.
+      const updatedRows = await trx('sales_order_lines')
         .where({ tenant, so_line_id: soLineId })
+        .andWhereRaw('quantity_fulfilled + ? <= quantity_ordered', [fulfilledQty])
         .update({
           quantity_fulfilled: trx.raw('quantity_fulfilled + ?', [fulfilledQty]),
+          quantity_reserved: trx.raw('GREATEST(0, quantity_reserved - ?)', [reservedDrain]),
           updated_at: trx.fn.now(),
         })
         .returning('quantity_fulfilled');
-      const lineQuantityFulfilled = Number(updatedLine?.quantity_fulfilled ?? Number(line.quantity_fulfilled) + fulfilledQty);
+      if (updatedRows.length === 0) {
+        throw new Error('Fulfillment would exceed the ordered quantity; nothing was fulfilled');
+      }
+      const lineQuantityFulfilled = Number(
+        (updatedRows[0] as any)?.quantity_fulfilled ?? Number(line.quantity_fulfilled) + fulfilledQty,
+      );
 
       const soStatus = await recomputeSalesOrderStatus(trx, tenant, so);
 
@@ -350,10 +407,30 @@ export const fulfillSalesOrderLine = withAuth(
         quantity_fulfilled: fulfilledQty,
         line_quantity_fulfilled: lineQuantityFulfilled,
         unit_ids: deliveredUnitIds,
-        asset_ids: assetIds,
         so_status: soStatus,
         warnings,
+        pendingAssets,
       };
+    }).then(async (core) => {
+      // F029: create + link managed assets only after the stock transaction is
+      // durable. createAsset commits in its own transaction, so doing this mid-flight
+      // left orphan assets whenever the stock work rolled back. A failure here no
+      // longer unwinds the delivery — it is surfaced as a warning instead.
+      const assetIds: string[] = [];
+      for (const p of core.pendingAssets) {
+        try {
+          const id = await createAndLinkDeliveredAsset(db, tenant, p);
+          if (id) assetIds.push(id);
+        } catch (e) {
+          core.warnings.push(
+            `Asset creation failed for unit ${p.unit.serial_number ?? p.unit.unit_id}: ${
+              e instanceof Error ? e.message : String(e)
+            }. The delivery succeeded — create and link the asset manually.`,
+          );
+        }
+      }
+      const { pendingAssets: _pending, ...rest } = core;
+      return { ...rest, asset_ids: assetIds };
     });
   },
 );

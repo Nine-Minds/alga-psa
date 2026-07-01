@@ -5,7 +5,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { IService, IServicePrice, ITicketMaterial, IStockUnit } from '@alga-psa/types';
 import type { Knex } from 'knex';
-import { recordStockConsumption, reverseStockConsumption } from '@alga-psa/inventory/lib';
+import { recordStockConsumption, reverseStockConsumption, createAndLinkDeliveredAsset } from '@alga-psa/inventory/lib';
 
 export interface CatalogPickerSearchOptions {
   search?: string;
@@ -135,7 +135,7 @@ export const addTicketMaterial = withAuth(async (
 ): Promise<ITicketMaterial> => {
   const { knex: db } = await createTenantKnex();
 
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const { row, pendingAsset } = await withTransaction(db, async (trx: Knex.Transaction) => {
     const [row] = await trx('ticket_materials')
       .insert({
         tenant,
@@ -151,7 +151,7 @@ export const addTicketMaterial = withAuth(async (
       .returning('*');
 
     // Inventory: decrement stock for track_stock products (serialized delivers the picked unit). No-op otherwise.
-    await recordStockConsumption(trx, tenant, {
+    const consumption = await recordStockConsumption(trx, tenant, {
       service_id: row.service_id,
       quantity: row.quantity,
       source_doc_type: 'ticket_material',
@@ -161,8 +161,19 @@ export const addTicketMaterial = withAuth(async (
       client_id: input.client_id,
     });
 
-    return row as ITicketMaterial;
+    return { row, pendingAsset: consumption.pending_asset_link ?? null };
   });
+
+  // F044: a serialized install creates the managed asset like SO fulfillment does —
+  // after commit (F029), and never failing the material itself.
+  if (pendingAsset) {
+    try {
+      await createAndLinkDeliveredAsset(db, tenant, pendingAsset);
+    } catch (e) {
+      console.error('Asset creation for delivered ticket-material unit failed:', e);
+    }
+  }
+  return row as ITicketMaterial;
 });
 
 /** In-stock serialized units available to pick when adding a serialized product as a material. */

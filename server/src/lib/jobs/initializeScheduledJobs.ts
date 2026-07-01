@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob } from './index';
 import { scheduleAccountingSyncCycleJob } from './handlers/accountingSyncCycleHandler';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
@@ -59,6 +59,19 @@ export async function initializeScheduledJobs(): Promise<void> {
         }
       } catch (error) {
         logger.error(`Failed to schedule expiring credits notification job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule daily per-location low-stock alerts (runs at 7:30 AM) — inventory F037/F038
+      try {
+        const cron = '30 7 * * *';
+        const lowStockJobId = await scheduleLowStockNotificationJob(tenantId, cron);
+        if (lowStockJobId) {
+          logger.info(`Scheduled low-stock notification job for tenant ${tenantId} with job ID ${lowStockJobId}`);
+        } else {
+          logger.info('Low-stock notification job already scheduled (singleton active)', { tenantId, cron });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule low-stock notification job for tenant ${tenantId}`, error);
       }
 
       // Schedule daily job to run credit reconciliation (runs at 2:00 AM)

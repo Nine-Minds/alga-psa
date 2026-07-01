@@ -19,8 +19,17 @@ async function requirePoPerm(user: any, action: 'create' | 'read' | 'update' | '
 }
 
 /** Load a PO row (within txn) or throw. */
-async function getPoOrThrow(trx: Knex.Transaction, tenant: string, poId: string): Promise<IPurchaseOrder> {
-  const po = await trx('purchase_orders').where({ tenant, po_id: poId }).first();
+async function getPoOrThrow(
+  trx: Knex.Transaction,
+  tenant: string,
+  poId: string,
+  opts?: { forUpdate?: boolean },
+): Promise<IPurchaseOrder> {
+  const q = trx('purchase_orders').where({ tenant, po_id: poId });
+  // Header row lock = transition mutex: concurrent receive/cancel serialize here and
+  // the status guard that follows is authoritative (F020).
+  if (opts?.forUpdate) q.forUpdate();
+  const po = await q.first();
   if (!po) throw new Error('Purchase order not found');
   return po as IPurchaseOrder;
 }
@@ -312,7 +321,7 @@ export const cancelPurchaseOrder = withAuth(
     await requirePoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const po = await getPoOrThrow(trx, tenant, poId);
+      const po = await getPoOrThrow(trx, tenant, poId, { forUpdate: true });
       if (po.status === 'cancelled') return po;
       if (po.status === 'received') throw new Error('Cannot cancel a fully received purchase order');
 
@@ -368,8 +377,13 @@ export const receivePoLine = withAuth(
 
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const line = await getPoLineOrThrow(trx, tenant, poLineId);
-      const po = await getPoOrThrow(trx, tenant, line.po_id);
+      const lineProbe = await getPoLineOrThrow(trx, tenant, poLineId);
+      // Parent-first lock order (PO header, then line) — receive/cancel serialize (F020).
+      const po = await getPoOrThrow(trx, tenant, lineProbe.po_id, { forUpdate: true });
+      const line = (await trx('purchase_order_lines')
+        .where({ tenant, po_line_id: poLineId })
+        .forUpdate()
+        .first()) as IPurchaseOrderLine;
       if (po.status === 'draft') throw new Error('Cannot receive against a draft purchase order; submit it first');
       if (po.status === 'cancelled') throw new Error('Cannot receive against a cancelled purchase order');
 
@@ -381,9 +395,28 @@ export const receivePoLine = withAuth(
       const location = await trx('stock_locations').where({ tenant, location_id: input.location_id }).first();
       if (!location) throw new Error('Stock location not found');
 
-      const settings = await trx('product_inventory_settings').where({ tenant, service_id: line.service_id }).first();
+      // Locked: the moving-average update below is a read-modify-write on this row (F020).
+      const settings = await trx('product_inventory_settings')
+        .where({ tenant, service_id: line.service_id })
+        .forUpdate()
+        .first();
       if (!settings) throw new Error('Inventory is not enabled for this product');
       if (!settings.track_stock) throw new Error('Inventory tracking is disabled for this product');
+
+      // Currency guard vs the product's existing cost basis (F042): blending a receipt
+      // in one currency into an average held in another silently corrupts the average.
+      // Same guard receiveStockManual has; convert the PO (or the product) first.
+      if (settings.cost_currency && line.cost_currency && settings.cost_currency !== line.cost_currency) {
+        const held = await trx('stock_levels')
+          .where({ tenant, service_id: line.service_id })
+          .sum<{ s: string }>('quantity_on_hand as s')
+          .first();
+        if (Number(held?.s ?? 0) > 0 || Number(settings.average_cost ?? 0) > 0) {
+          throw new Error(
+            `Receipt currency (${line.cost_currency}) does not match the product's cost currency (${settings.cost_currency}); cannot blend into the moving average`,
+          );
+        }
+      }
 
       const isSerialized: boolean = settings.is_serialized;
       const unitCost = Number(line.unit_cost);

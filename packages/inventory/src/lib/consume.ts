@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { StockMovementSourceDocType } from '@alga-psa/types';
 import { recordStockMovement } from './movements';
+import { PendingAssetLink } from './assetLink';
 
 /**
  * Stock-consumption hook used by the billing-side materials flow (and any caller
@@ -41,11 +42,22 @@ async function resolveLocation(trx: Knex.Transaction, tenant: string, settings: 
   return loc;
 }
 
+export interface ConsumeResult {
+  consumed: boolean;
+  /**
+   * Set when the delivered serialized unit should get a managed asset
+   * (creates_asset_on_delivery — F044). The CALLER must run
+   * createAndLinkDeliveredAsset AFTER its transaction commits (F029: creating the
+   * asset mid-transaction orphans it if the caller rolls back).
+   */
+  pending_asset_link?: PendingAssetLink | null;
+}
+
 export async function recordStockConsumption(
   trx: Knex.Transaction,
   tenant: string,
   opts: ConsumeOpts,
-): Promise<{ consumed: boolean }> {
+): Promise<ConsumeResult> {
   const settings = await loadTrackedSettings(trx, tenant, opts.service_id);
   if (!settings) return { consumed: false };
 
@@ -65,7 +77,24 @@ export async function recordStockConsumption(
       performed_by: opts.performed_by ?? null,
       unitPatch: { status: 'delivered', client_id: opts.client_id ?? null, delivered_at: trx.fn.now() as any, location_id: null },
     });
-    return { consumed: true };
+
+    // The ticket/project install path is the most common MSP hardware touch — it
+    // must create the managed asset exactly like SO fulfillment does (F044).
+    let pendingAssetLink: PendingAssetLink | null = null;
+    if (settings.creates_asset_on_delivery && opts.client_id) {
+      const svc = await trx('service_catalog')
+        .where({ tenant, service_id: opts.service_id })
+        .select('service_name')
+        .first();
+      const delivered = await trx('stock_units').where({ tenant, unit_id: opts.unit_id }).first();
+      pendingAssetLink = {
+        unit: delivered,
+        serviceId: opts.service_id,
+        serviceName: svc?.service_name ?? '',
+        clientId: opts.client_id,
+      };
+    }
+    return { consumed: true, pending_asset_link: pendingAssetLink };
   }
 
   const loc = await resolveLocation(trx, tenant, settings);

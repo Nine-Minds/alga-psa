@@ -26,7 +26,9 @@ async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 
 }
 
 async function loadRma(trx: Knex.Transaction, tenant: string, rmaId: string): Promise<IRmaCase> {
-  const rma = await trx('rma_cases').where({ tenant, rma_id: rmaId }).first();
+  // Every caller is a status transition, so the row lock is the transition mutex:
+  // concurrent transitions serialize here and assertStatus() is authoritative (F021).
+  const rma = await trx('rma_cases').where({ tenant, rma_id: rmaId }).forUpdate().first();
   if (!rma) throw new Error('RMA case not found');
   return rma as IRmaCase;
 }
@@ -416,7 +418,12 @@ export const deployReplacement = withAuth(
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const rma = await loadRma(trx, tenant, rmaId);
-      assertStatus(rma, ['replacement_received']);
+      // Both tracks converge here (F039): 'replacement_received' is the
+      // advance-replacement track; 'replaced' is the standard track after
+      // resolveReplacement received the vendor's new unit into stock. Without the
+      // latter, a standard RMA dead-ended with the client's asset still pointing at
+      // the dead unit and the fresh unit stranded in stock.
+      assertStatus(rma, ['replacement_received', 'replaced']);
       const serviceId = rmaServiceId(rma);
       if (!rma.replacement_unit_id) throw new Error('No replacement unit recorded for this RMA');
       const repl = await loadUnit(trx, tenant, rma.replacement_unit_id);
