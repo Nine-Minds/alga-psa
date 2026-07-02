@@ -702,5 +702,37 @@
     "prdRefs": [
       "persona-review-P3"
     ]
+  },
+  {
+    "id": "F089",
+    "description": "RMA replacement units default to the replaced (dead) unit's cost and currency when received without an explicit cost \u2014 free replacements are not free stock",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P3"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Vendor-bill lines carry po_unit_cost and line_variance_cents vs the linked PO (LATERAL, no fan-out); bill detail shows a per-line signed 'vs PO' delta pinpointing price creep",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P3"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Unit chain-of-custody timeline: per-unit History dialog on the units screen (unit card + full movement ledger with locations and reasons) and serial+MAC CSV export of the visible rows for provisioning",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P3"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Delivered-unit asset creation carries the MAC address into the asset's attributes (mac_address)",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P3"
+    ]
   }
 ]
