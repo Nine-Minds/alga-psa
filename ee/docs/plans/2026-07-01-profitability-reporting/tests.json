@@ -36,7 +36,7 @@
   {
     "id": "T005",
     "description": "Model insert/list/update/delete round-trip for user cost rates, tenant-scoped (rows from another tenant invisible)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
@@ -44,7 +44,7 @@
   {
     "id": "T006",
     "description": "Overlap validation rejects a new row overlapping an existing closed range for the same user",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
@@ -52,7 +52,7 @@
   {
     "id": "T007",
     "description": "Overlap validation rejects a new row overlapping an existing open-ended (effective_to NULL) range",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
@@ -60,7 +60,7 @@
   {
     "id": "T008",
     "description": "Overlap validation allows adjacent ranges (prev effective_to = 2026-03-31, next effective_from = 2026-04-01)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
@@ -68,7 +68,7 @@
   {
     "id": "T009",
     "description": "Overlap validation scopes by user: same range for a different user (or the tenant default) is allowed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
@@ -92,7 +92,7 @@
   {
     "id": "T012",
     "description": "Rate resolution returns NULL (uncosted) when neither user nor default covers the date",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]

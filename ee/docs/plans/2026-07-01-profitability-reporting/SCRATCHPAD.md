@@ -71,6 +71,16 @@
 - T028 not yet implemented: attempted `cd server && npx vitest run src/test/infrastructure/billing/invoices/fixedPriceAndTimeBasedPlans.test.ts --coverage.enabled=false`; it emitted no progress for roughly five minutes and was stopped with Ctrl-C. Targeted invoice-service tests passed, but the broad integration regression remains unchecked.
 - Commands run: `cd server && npx vitest run src/test/unit/billing/invoiceService.fixedPersistence.test.ts src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts src/test/unit/billing/invoiceService.recurringDetails.static.test.ts --coverage.enabled=false`; `npm -w @alga-psa/billing run typecheck`.
 
+### 2026-07-02 — Cost-rate model behavior test cleanup
+
+- T005 implemented: added an in-memory `UserCostRate` behavior suite covering insert/list/update/delete and tenant isolation.
+- T006 implemented: behavior test rejects an overlapping closed range for the same user.
+- T007 implemented: behavior test rejects an overlap against an open-ended existing range.
+- T008 implemented: behavior test allows adjacent inclusive date ranges (`03-31` then `04-01`).
+- T009 implemented: behavior test confirms overlap validation is scoped by user and tenant-default rows.
+- T012 implemented: behavior test confirms `resolveCostRate` returns `null` when neither a user-specific nor default rate covers the work date.
+- Commands run: `cd server && npx vitest run ../packages/billing/src/models/userCostRate.test.ts ../packages/billing/src/models/userCostRate.behavior.test.ts --coverage.enabled=false`; `npm -w @alga-psa/billing run typecheck`.
+
 ## Implementation log
 
 - 2026-07-02 batch 1 (schema + cost-rate model/actions):
