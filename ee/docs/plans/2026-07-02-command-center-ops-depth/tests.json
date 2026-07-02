@@ -1,0 +1,57 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed: WIP math \u2014 billable uninvoiced time + unbilled material for client sums correctly; invoiced/non-billable excluded; wip_aging flag only when entries >14d",
+    "implemented": false,
+    "featureIds": [
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed: unassigned flag \u2014 open unassigned ticket produces flag; assigned/closed do not; assignee name present on topOpen rows",
+    "implemented": false,
+    "featureIds": [
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed: warranty counts \u2014 units with expired / \u226490d / no warranty dates bucket correctly; summary null when client has no warranty data",
+    "implemented": false,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed or unit per W1 outcome: SLA flag emitted only from real computable targets",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed: timeline draft-invoice suppression \u2014 draft invoice emits no invoice_created event; finalized invoice emits created+finalized as before",
+    "implemented": false,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Browser smoke: Emerald City shows WIP line, assignees, warranty line (after seeding), CSAT collapsed; no duplicated draft noise in timeline",
+    "implemented": false,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F010",
+      "F011",
+      "F013"
+    ]
+  }
+]
