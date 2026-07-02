@@ -109,6 +109,26 @@ async function fetchPeople(
       .limit(3),
   ]);
 
+  // Phones live in contact_phone_numbers; pick each contact's default
+  // (falling back to the first by display order).
+  const contactIds = rows.map((row: any) => row.contact_name_id);
+  const phoneRows = contactIds.length
+    ? await trx('contact_phone_numbers')
+      .where({ tenant })
+      .whereIn('contact_name_id', contactIds)
+      .select('contact_name_id', 'phone_number', 'is_default', 'display_order')
+      .orderBy([
+        { column: 'is_default', order: 'desc' },
+        { column: 'display_order', order: 'asc' },
+      ])
+    : [];
+  const phoneByContact = new Map<string, string>();
+  for (const phoneRow of phoneRows as any[]) {
+    if (!phoneByContact.has(phoneRow.contact_name_id)) {
+      phoneByContact.set(phoneRow.contact_name_id, phoneRow.phone_number);
+    }
+  }
+
   return {
     totalCount: toNumber(countRow?.count),
     top: rows.map((row: any) => ({
@@ -116,6 +136,7 @@ async function fetchPeople(
       full_name: row.full_name ?? '',
       role: row.role ?? null,
       email: row.email ?? null,
+      phone: phoneByContact.get(row.contact_name_id) ?? null,
       is_default: Boolean(defaultContactId && row.contact_name_id === defaultContactId),
     })),
   };
@@ -134,6 +155,7 @@ async function fetchLocations(
       'address_line1',
       'city',
       'phone',
+      'email',
       'is_default',
       'is_billing_address',
       'is_shipping_address',
@@ -147,6 +169,7 @@ async function fetchLocations(
     address_line1: row.address_line1 ?? null,
     city: row.city ?? null,
     phone: row.phone ?? null,
+    email: row.email ?? null,
     is_default: Boolean(row.is_default),
     is_billing: Boolean(row.is_billing_address),
     is_shipping: Boolean(row.is_shipping_address),
@@ -188,6 +211,7 @@ async function fetchRecord(
   ]);
 
   return {
+    url: clientRow.url ?? null,
     accountManagerName: formatUserName(clientRow),
     defaultContactName: defaultContact?.full_name ?? null,
     inboundDomains: inboundDomains.map((domain) => String(domain)),
@@ -614,6 +638,7 @@ export const getClientPulse = withAuth(async (
       .select(
         'c.client_id',
         'c.created_at',
+        'c.url',
         'c.account_manager_id',
         'c.is_inactive',
         'c.properties',

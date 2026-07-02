@@ -303,10 +303,28 @@ export function PeopleCard({ id, data, onOpen, t }: {
                 {contact.full_name.split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()}
               </span>
               <span className="min-w-0">
-                <span className="block font-semibold text-gray-900 truncate">{contact.full_name}</span>
-                <span className="block text-[11px] text-gray-500 truncate">
-                  {[contact.is_default ? t('clientCommandCenter.people.primary', { defaultValue: 'Primary' }) : null, contact.role]
-                    .filter(Boolean).join(' · ') || contact.email || ''}
+                <span className="block font-semibold text-gray-900 truncate">
+                  {contact.full_name}
+                  {(contact.is_default || contact.role) && (
+                    <span className="ml-1.5 font-normal text-[11px] text-gray-400">
+                      {[contact.is_default ? t('clientCommandCenter.people.primary', { defaultValue: 'Primary' }) : null, contact.role]
+                        .filter(Boolean).join(' · ')}
+                    </span>
+                  )}
+                </span>
+                <span className="block text-[12px] text-gray-600 truncate">
+                  {contact.phone && (
+                    <a href={`tel:${contact.phone}`} className="hover:text-primary-700 hover:underline">☎ {contact.phone}</a>
+                  )}
+                  {contact.phone && contact.email && <span className="text-gray-300"> · </span>}
+                  {contact.email && (
+                    <a href={`mailto:${contact.email}`} className="hover:text-primary-700 hover:underline">✉ {contact.email}</a>
+                  )}
+                  {!contact.phone && !contact.email && (
+                    <span className="text-gray-400 italic">
+                      {t('clientCommandCenter.people.noContactInfo', { defaultValue: 'no contact info on file' })}
+                    </span>
+                  )}
                 </span>
               </span>
             </li>
@@ -349,6 +367,17 @@ export function LocationsCard({ id, locations, onManage, t }: {
               <div className="text-[12px] text-gray-500 truncate">
                 {[location.address_line1, location.city].filter(Boolean).join(', ')}
               </div>
+              {(location.phone || location.email) && (
+                <div className="text-[12px] text-gray-600 truncate">
+                  {location.phone && (
+                    <a href={`tel:${location.phone}`} className="hover:text-primary-700 hover:underline">☎ {location.phone}</a>
+                  )}
+                  {location.phone && location.email && <span className="text-gray-300"> · </span>}
+                  {location.email && (
+                    <a href={`mailto:${location.email}`} className="hover:text-primary-700 hover:underline">✉ {location.email}</a>
+                  )}
+                </div>
+              )}
               <div className="mt-1 flex gap-1">
                 {location.is_billing && (
                   <span className="rounded bg-blue-100 text-blue-700 px-1.5 text-[10px] font-bold">

@@ -106,6 +106,8 @@ export interface ClientPulseContact {
   full_name: string;
   role: string | null;
   email: string | null;
+  /** Default number from contact_phone_numbers, when one exists. */
+  phone: string | null;
   is_default: boolean;
 }
 
@@ -120,6 +122,7 @@ export interface ClientPulseLocation {
   address_line1: string | null;
   city: string | null;
   phone: string | null;
+  email: string | null;
   is_default: boolean;
   is_billing: boolean;
   is_shipping: boolean;
@@ -137,6 +140,8 @@ export interface ClientPulseDocuments {
 }
 
 export interface ClientPulseRecord {
+  /** Client website URL, for the identity strip. */
+  url: string | null;
   accountManagerName: string | null;
   defaultContactName: string | null;
   inboundDomains: string[];

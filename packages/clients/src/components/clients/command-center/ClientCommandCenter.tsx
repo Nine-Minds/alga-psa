@@ -179,8 +179,48 @@ export default function ClientCommandCenter({
     navigateToRef(event.refType, event.refId);
   }, [navigateToRef]);
 
+  // The reach-the-customer basics, always visible: default location's phone
+  // and email, website, and primary address. Only fields that exist render.
+  const identityLocation = pulse?.locations.find((location) => location.is_default) ?? pulse?.locations[0] ?? null;
+  const identityItems: Array<{ key: string; href: string | null; text: string }> = [];
+  if (identityLocation?.phone) {
+    identityItems.push({ key: 'phone', href: `tel:${identityLocation.phone}`, text: `☎ ${identityLocation.phone}` });
+  }
+  if (identityLocation?.email) {
+    identityItems.push({ key: 'email', href: `mailto:${identityLocation.email}`, text: `✉ ${identityLocation.email}` });
+  }
+  if (pulse?.record.url) {
+    const href = /^https?:\/\//i.test(pulse.record.url) ? pulse.record.url : `https://${pulse.record.url}`;
+    identityItems.push({ key: 'url', href, text: `🌐 ${pulse.record.url}` });
+  }
+  if (identityLocation?.address_line1) {
+    identityItems.push({
+      key: 'address',
+      href: null,
+      text: `📍 ${[identityLocation.address_line1, identityLocation.city].filter(Boolean).join(', ')}`,
+    });
+  }
+
   return (
     <div id={`${idPrefix}-command-center`} className="min-w-0">
+      {identityItems.length > 0 && (
+        <div id={`${idPrefix}-identity`} className="flex flex-wrap items-center gap-x-5 gap-y-1 mb-3 text-[13px] text-gray-600">
+          {identityItems.map((item) => item.href ? (
+            <a
+              key={item.key}
+              href={item.href}
+              target={item.key === 'url' ? '_blank' : undefined}
+              rel={item.key === 'url' ? 'noreferrer' : undefined}
+              className="hover:text-primary-700 hover:underline"
+            >
+              {item.text}
+            </a>
+          ) : (
+            <span key={item.key}>{item.text}</span>
+          ))}
+        </div>
+      )}
+
       {pulse && (
         <AttentionStrip
           idPrefix={idPrefix}
