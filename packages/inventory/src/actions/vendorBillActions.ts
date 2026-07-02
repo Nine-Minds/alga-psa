@@ -72,10 +72,18 @@ export const listVendorBills = withAuth(
   },
 );
 
+export interface VendorBillLineView extends IVendorBillLine {
+  service_name: string | null;
+  /** PO line unit_cost for the same service; null without a PO or no matching PO line. */
+  po_unit_cost: number | null;
+  /** (unit_cost − po_unit_cost) × quantity (cents); null when po_unit_cost is null. */
+  line_variance_cents: number | null;
+}
+
 export interface VendorBillView extends IVendorBill {
   vendor_name: string | null;
   po_number: string | null;
-  lines: Array<IVendorBillLine & { service_name: string | null }>;
+  lines: VendorBillLineView[];
   /** Bill total minus the PO's received value (cents); null without a PO (F080). */
   variance_vs_received_cents: number | null;
 }
@@ -88,13 +96,39 @@ export const getVendorBill = withAuth(
       const bill = await getBillOrThrow(trx, tenant, billId);
       const vendor = await trx('vendors').where({ tenant, vendor_id: bill.vendor_id }).first();
       const po = bill.po_id ? await trx('purchase_orders').where({ tenant, po_id: bill.po_id }).first() : null;
-      const lines = (await trx('vendor_bill_lines as vbl')
+      let linesQuery = trx('vendor_bill_lines as vbl')
         .leftJoin('service_catalog as sc', function () {
           this.on('sc.service_id', '=', 'vbl.service_id').andOn('sc.tenant', '=', 'vbl.tenant');
         })
         .where({ 'vbl.tenant': tenant, 'vbl.bill_id': billId })
-        .orderBy('vbl.created_at', 'asc')
-        .select('vbl.*', 'sc.service_name')) as any[];
+        .orderBy('vbl.created_at', 'asc');
+      if (bill.po_id) {
+        linesQuery = linesQuery.joinRaw(
+          `LEFT JOIN LATERAL (
+            SELECT pol.unit_cost FROM purchase_order_lines pol
+            WHERE pol.tenant = vbl.tenant AND pol.po_id = ? AND pol.service_id = vbl.service_id
+            ORDER BY pol.created_at ASC LIMIT 1
+          ) pol ON true`,
+          [bill.po_id],
+        );
+      }
+      const rawLines = (await linesQuery.select(
+        'vbl.*',
+        'sc.service_name',
+        ...(bill.po_id ? [trx.raw('pol.unit_cost as po_unit_cost')] : []),
+      )) as any[];
+      const lines: VendorBillLineView[] = rawLines.map((l) => {
+        const po_unit_cost =
+          bill.po_id && l.po_unit_cost != null ? Number(l.po_unit_cost) : null;
+        const unit_cost = Number(l.unit_cost);
+        const quantity = Number(l.quantity);
+        return {
+          ...l,
+          po_unit_cost: bill.po_id ? po_unit_cost : null,
+          line_variance_cents:
+            po_unit_cost != null ? (unit_cost - po_unit_cost) * quantity : null,
+        };
+      });
       const variance = bill.po_id
         ? Number(bill.total_amount) - (await poReceivedValue(trx, tenant, bill.po_id))
         : null;

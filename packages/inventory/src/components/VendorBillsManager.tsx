@@ -328,7 +328,8 @@ export function VendorBillsManager({ initialBills }: { initialBills: BillRow[] }
                     <th className="py-1 pr-2 font-medium">Line</th>
                     <th className="py-1 px-2 font-medium text-right">Qty</th>
                     <th className="py-1 px-2 font-medium text-right">Unit cost</th>
-                    <th className="py-1 pl-2 font-medium text-right">Amount</th>
+                    <th className="py-1 px-2 font-medium text-right">Amount</th>
+                    <th className="py-1 pl-2 font-medium text-right">vs PO</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -337,7 +338,24 @@ export function VendorBillsManager({ initialBills }: { initialBills: BillRow[] }
                       <td className="py-1 pr-2">{l.service_name || l.description || '—'}</td>
                       <td className="py-1 px-2 text-right tabular-nums">{l.quantity}</td>
                       <td className="py-1 px-2 text-right tabular-nums">{money(l.unit_cost)}</td>
-                      <td className="py-1 pl-2 text-right tabular-nums">{money(l.amount)}</td>
+                      <td className="py-1 px-2 text-right tabular-nums">{money(l.amount)}</td>
+                      <td className="py-1 pl-2 text-right">
+                        {l.line_variance_cents == null ? (
+                          <span className="text-gray-400">—</span>
+                        ) : l.line_variance_cents === 0 ? (
+                          <span className="text-xs text-gray-500">matches PO</span>
+                        ) : (
+                          <span
+                            id={`bill-line-variance-${l.bill_line_id}`}
+                            className={`text-xs tabular-nums ${
+                              l.line_variance_cents > 0 ? 'text-red-600' : 'text-green-600'
+                            }`}
+                          >
+                            {l.line_variance_cents > 0 ? '+' : ''}
+                            {money(l.line_variance_cents)}
+                          </span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

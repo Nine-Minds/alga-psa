@@ -112,7 +112,11 @@ async function createInStockUnit(
   return row as IStockUnit;
 }
 
-/** Receive a freshly-created in-stock unit via an `rma_in` movement (replacement intake). */
+/**
+ * Receive a freshly-created in-stock unit via an `rma_in` movement (replacement intake).
+ * When `unit_cost` is omitted, defaults from the returned (dead) unit — a free replacement
+ * is not free stock; it inherits the replaced unit's cost so future COGS/margin stay truthful.
+ */
 async function receiveReplacementUnit(
   trx: Knex.Transaction,
   tenant: string,
@@ -121,7 +125,25 @@ async function receiveReplacementUnit(
   rmaId: string,
   performedBy: string,
 ): Promise<IStockUnit> {
-  const unit = await createInStockUnit(trx, tenant, serviceId, input);
+  let unitInput = input;
+  if (input.unit_cost == null) {
+    const rma = await trx('rma_cases').where({ tenant, rma_id: rmaId }).select('returned_unit_id').first();
+    if (rma?.returned_unit_id) {
+      const dead = await trx('stock_units')
+        .where({ tenant, unit_id: rma.returned_unit_id })
+        .select('unit_cost', 'cost_currency')
+        .first();
+      if (dead?.unit_cost != null) {
+        unitInput = {
+          ...input,
+          unit_cost: Number(dead.unit_cost),
+          cost_currency: input.cost_currency ?? dead.cost_currency ?? null,
+        };
+      }
+    }
+  }
+
+  const unit = await createInStockUnit(trx, tenant, serviceId, unitInput);
   await recordStockMovement(trx, tenant, {
     movement_type: 'rma_in',
     service_id: serviceId,

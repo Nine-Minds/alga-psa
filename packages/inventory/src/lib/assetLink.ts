@@ -34,6 +34,9 @@ export async function createAndLinkDeliveredAsset(
     name: p.serviceName ? `${p.serviceName} ${serial}`.trim() : serial,
     status: 'active',
     serial_number: p.unit.serial_number || undefined,
+    ...(typeof p.unit.mac_address === 'string' && p.unit.mac_address.trim()
+      ? { attributes: { mac_address: p.unit.mac_address } }
+      : {}),
     ...(p.unit.warranty_expires_at
       ? { warranty_end_date: new Date(p.unit.warranty_expires_at as any).toISOString() }
       : {}),
