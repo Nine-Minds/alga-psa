@@ -1,11 +1,49 @@
 // Import mocks first to ensure they're hoisted
 import 'server/test-utils/testMocks';
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { TestContext } from 'server/test-utils/testContext';
 import { setupCommonMocks } from 'server/test-utils/testMocks';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
+
+// Bind the package actions' createTenantKnex to the test transaction. The real
+// @alga-psa/db one opens its own pool, which can't see uncommitted fixtures and
+// deadlocks against the TRUNCATEs held by the TestContext transaction.
+const dbRef = vi.hoisted(() => ({
+  knex: null as any,
+  tenant: '' as string,
+  user: null as any,
+}));
+
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
+  createTenantKnex: vi.fn(async () => ({ knex: dbRef.knex, tenant: dbRef.tenant })),
+}));
+
+// Real withAuth resolves the session user through that same separate pool; mock
+// it inline. (A factory that imports testMocks would deadlock: testMocks is
+// mid-evaluation when its '@alga-psa/auth' import triggers this factory.)
+vi.mock('@alga-psa/auth', () => ({
+  getCurrentUser: vi.fn(async () => dbRef.user),
+  getSession: vi.fn(async () =>
+    dbRef.user ? { user: { id: dbRef.user.user_id, tenant: dbRef.tenant } } : null
+  ),
+  hasPermission: vi.fn(async () => true),
+  throwPermissionError: (action: string, additionalInfo?: string): never => {
+    throw new Error(`Permission denied: Cannot ${action}${additionalInfo ? `. ${additionalInfo}` : ''}`);
+  },
+  withAuth: (action: any) => async (...args: any[]) => {
+    if (!dbRef.user) throw new Error('User not authenticated');
+    return action(dbRef.user, { tenant: dbRef.tenant }, ...args);
+  },
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action(dbRef.user ?? null, dbRef.user ? { tenant: dbRef.tenant } : null, ...args),
+  withAuthCheck: (action: any) => async (...args: any[]) => {
+    if (!dbRef.user) throw new Error('User not authenticated');
+    return action(dbRef.user, ...args);
+  },
+}));
 
 import {
   getBusinessHoursSchedules,
@@ -39,6 +77,13 @@ describe('Business Hours Actions Integration Tests', () => {
   let context: TestContext;
   const scopedTable = (tenant: string, tableName: string) => tenantDb(context.db, tenant).table(tableName);
 
+  // Postgres DATE columns come back as JS Dates at local midnight; compare on
+  // the local calendar date (TIME columns come back as 'HH:MM:SS' strings).
+  const localIsoDate = (value: string | Date) => {
+    const date = value instanceof Date ? value : new Date(value);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
   beforeAll(async () => {
     context = await setupContext({
       runSeeds: true,
@@ -56,6 +101,10 @@ describe('Business Hours Actions Integration Tests', () => {
       user: context.user,
       permissionCheck: () => true
     });
+
+    dbRef.knex = context.db;
+    dbRef.tenant = context.tenantId;
+    dbRef.user = context.user;
   }, HOOK_TIMEOUT);
 
   beforeEach(async () => {
@@ -66,6 +115,10 @@ describe('Business Hours Actions Integration Tests', () => {
       user: context.user,
       permissionCheck: () => true
     });
+
+    dbRef.knex = context.db;
+    dbRef.tenant = context.tenantId;
+    dbRef.user = context.user;
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -116,8 +169,8 @@ describe('Business Hours Actions Integration Tests', () => {
 
       expect(schedule.entries).toHaveLength(2);
       expect(schedule.entries[0].day_of_week).toBe(1);
-      expect(schedule.entries[0].start_time).toBe('09:00');
-      expect(schedule.entries[0].end_time).toBe('17:00');
+      expect(schedule.entries[0].start_time).toBe('09:00:00');
+      expect(schedule.entries[0].end_time).toBe('17:00:00');
       expect(schedule.entries[0].is_enabled).toBe(true);
     });
 
@@ -300,7 +353,9 @@ describe('Business Hours Actions Integration Tests', () => {
       const schedule = await createDefaultBusinessHoursSchedule();
 
       expect(schedule.schedule_name).toBe('Standard Business Hours');
-      expect(schedule.timezone).toBe('America/New_York');
+      // No tenant timezone setting and no browser timezone passed → UTC
+      // (tenant → browser → UTC resolution since a4f2310373).
+      expect(schedule.timezone).toBe('UTC');
       expect(schedule.is_default).toBe(true);
       expect(schedule.is_24x7).toBe(false);
       expect(schedule.entries).toHaveLength(7);
@@ -308,8 +363,8 @@ describe('Business Hours Actions Integration Tests', () => {
       // Verify Monday-Friday are enabled
       const mondayEntry = schedule.entries.find(e => e.day_of_week === 1);
       expect(mondayEntry!.is_enabled).toBe(true);
-      expect(mondayEntry!.start_time).toBe('08:00');
-      expect(mondayEntry!.end_time).toBe('18:00');
+      expect(mondayEntry!.start_time).toBe('08:00:00');
+      expect(mondayEntry!.end_time).toBe('18:00:00');
 
       // Verify weekend is disabled
       const sundayEntry = schedule.entries.find(e => e.day_of_week === 0);
@@ -358,8 +413,8 @@ describe('Business Hours Actions Integration Tests', () => {
       ]);
 
       expect(updated).toHaveLength(1);
-      expect(updated[0].start_time).toBe('08:00');
-      expect(updated[0].end_time).toBe('18:00');
+      expect(updated[0].start_time).toBe('08:00:00');
+      expect(updated[0].end_time).toBe('18:00:00');
 
       // Verify only one entry exists for day 1
       const allEntries = await getBusinessHoursEntries(testScheduleId);
@@ -427,10 +482,10 @@ describe('Business Hours Actions Integration Tests', () => {
       ]);
 
       expect(entries).toHaveLength(2);
-      expect(entries[0].start_time).toBe('00:00');
-      expect(entries[0].end_time).toBe('23:59');
-      expect(entries[1].start_time).toBe('08:30');
-      expect(entries[1].end_time).toBe('17:45');
+      expect(entries[0].start_time).toBe('00:00:00');
+      expect(entries[0].end_time).toBe('23:59:00');
+      expect(entries[1].start_time).toBe('08:30:00');
+      expect(entries[1].end_time).toBe('17:45:00');
     });
 
     it('should handle disabled entries', async () => {
@@ -470,7 +525,7 @@ describe('Business Hours Actions Integration Tests', () => {
       expect(holiday).toBeDefined();
       expect(holiday.holiday_id).toBeDefined();
       expect(holiday.holiday_name).toBe('Christmas');
-      expect(holiday.holiday_date).toBe('2025-12-25');
+      expect(localIsoDate(holiday.holiday_date)).toBe('2025-12-25');
       expect(holiday.is_recurring).toBe(true);
     });
 
@@ -537,7 +592,7 @@ describe('Business Hours Actions Integration Tests', () => {
       });
 
       expect(updated.holiday_name).toBe('Updated Name');
-      expect(updated.holiday_date).toBe('2025-12-31');
+      expect(localIsoDate(updated.holiday_date)).toBe('2025-12-31');
       expect(updated.is_recurring).toBe(true);
     });
 

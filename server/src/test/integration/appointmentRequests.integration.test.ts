@@ -437,11 +437,26 @@ describe('Appointment Request Integration Tests', () => {
     });
 
     it('should create email notifications', async () => {
-      const { clientId, contactId, serviceId, clientUserId } = await setupTestData(db, tenantId);
+      const { clientId, contactId, serviceId, clientUserId, technicianUserId } = await setupTestData(db, tenantId);
       createdIds.clientId = clientId;
       createdIds.contactId = contactId;
       createdIds.serviceId = serviceId;
       createdIds.clientUserId = clientUserId;
+      createdIds.technicianUserId = technicianUserId;
+
+      // Staff recipients come from the configured approvers (3e8a08001f);
+      // without a general_settings approver row nobody is notified.
+      const approverSettingId = uuidv4();
+      await tenantTableFor(db, tenantId, 'availability_settings').insert({
+        availability_setting_id: approverSettingId,
+        tenant: tenantId,
+        setting_type: 'general_settings',
+        is_available: true,
+        config_json: { approver_user_ids: [technicianUserId], approver_team_ids: [] },
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+      createdIds.availabilitySettingIds.push(approverSettingId);
 
       const clientUser = createMockUser('client', {
         user_id: clientUserId,
@@ -475,11 +490,25 @@ describe('Appointment Request Integration Tests', () => {
     });
 
     it('should create internal notifications', async () => {
-      const { clientId, contactId, serviceId, clientUserId } = await setupTestData(db, tenantId);
+      const { clientId, contactId, serviceId, clientUserId, technicianUserId } = await setupTestData(db, tenantId);
       createdIds.clientId = clientId;
       createdIds.contactId = contactId;
       createdIds.serviceId = serviceId;
       createdIds.clientUserId = clientUserId;
+      createdIds.technicianUserId = technicianUserId;
+
+      // Staff recipients come from the configured approvers (3e8a08001f).
+      const approverSettingId = uuidv4();
+      await tenantTableFor(db, tenantId, 'availability_settings').insert({
+        availability_setting_id: approverSettingId,
+        tenant: tenantId,
+        setting_type: 'general_settings',
+        is_available: true,
+        config_json: { approver_user_ids: [technicianUserId], approver_team_ids: [] },
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+      createdIds.availabilitySettingIds.push(approverSettingId);
 
       const clientUser = createMockUser('client', {
         user_id: clientUserId,
@@ -701,7 +730,7 @@ describe('Appointment Request Integration Tests', () => {
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
-      const { createNotificationFromTemplateInternal } = await import('@alga-psa/notifications/actions');
+      const { publishEvent } = await import('@alga-psa/event-bus/publishers');
 
       // Clear mocks from appointment creation
       vi.clearAllMocks();
@@ -711,12 +740,18 @@ describe('Appointment Request Integration Tests', () => {
         assigned_user_id: technicianUserId
       });
 
-      expect(createNotificationFromTemplateInternal).toHaveBeenCalledWith(
-        expect.anything(),
+      // Since c43321e4cb the client's in-app notification is event-driven:
+      // the action publishes APPOINTMENT_REQUEST_APPROVED (with the resolved
+      // clientUserId) and internalNotificationSubscriber renders the
+      // appointment-request-approved template from it.
+      expect(publishEvent).toHaveBeenCalledWith(
         expect.objectContaining({
-          template_name: 'appointment-request-approved',
-          type: 'success',
-          category: 'appointments'
+          eventType: 'APPOINTMENT_REQUEST_APPROVED',
+          payload: expect.objectContaining({
+            tenantId,
+            appointmentRequestId: createResult.data!.appointment_request_id,
+            clientUserId
+          })
         })
       );
     });
@@ -1618,7 +1653,7 @@ describe('Appointment Request Integration Tests', () => {
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
-      const { createNotificationFromTemplateInternal } = await import('@alga-psa/notifications/actions');
+      const { publishEvent } = await import('@alga-psa/event-bus/publishers');
 
       // Clear mocks from appointment creation
       vi.clearAllMocks();
@@ -1628,13 +1663,17 @@ describe('Appointment Request Integration Tests', () => {
         decline_reason: 'Service temporarily unavailable'
       });
 
-      expect(createNotificationFromTemplateInternal).toHaveBeenCalledWith(
-        expect.anything(),
+      // Since c43321e4cb the client's in-app notification is event-driven:
+      // the action publishes APPOINTMENT_REQUEST_DECLINED (with the resolved
+      // clientUserId and reason) and internalNotificationSubscriber renders the
+      // appointment-request-declined template from it.
+      expect(publishEvent).toHaveBeenCalledWith(
         expect.objectContaining({
-          template_name: 'appointment-request-declined',
-          type: 'warning',
-          category: 'appointments',
-          data: expect.objectContaining({
+          eventType: 'APPOINTMENT_REQUEST_DECLINED',
+          payload: expect.objectContaining({
+            tenantId,
+            appointmentRequestId: createResult.data!.appointment_request_id,
+            clientUserId,
             declineReason: 'Service temporarily unavailable'
           })
         })
@@ -1894,7 +1933,10 @@ describe('Appointment Request Integration Tests', () => {
       expect(updateResult.error).toMatch(/pending|cannot update|already/i);
     });
 
-    it('should reject canceling already approved request', async () => {
+    // Canceling an approved request became a supported flow in e4bd66f038
+    // (Teams meeting deletion on cancellation); only terminal statuses
+    // (declined/cancelled) are rejected now.
+    it('allows canceling an already approved request', async () => {
       const { clientId, contactId, serviceId, clientUserId, technicianUserId } = await setupTestData(db, tenantId);
       createdIds.clientId = clientId;
       createdIds.contactId = contactId;
@@ -1948,8 +1990,12 @@ describe('Appointment Request Integration Tests', () => {
         appointment_request_id: createResult.data!.appointment_request_id
       });
 
-      expect(cancelResult.success).toBe(false);
-      expect(cancelResult.error).toMatch(/pending|cannot cancel|already/i);
+      expect(cancelResult.success).toBe(true);
+
+      const cancelledRow = await tenantTableFor(db, tenantId, 'appointment_requests')
+        .where({ appointment_request_id: createResult.data!.appointment_request_id })
+        .first();
+      expect(cancelledRow?.status).toBe('cancelled');
     });
 
     it('should reject double-approving a request', async () => {
@@ -2271,7 +2317,8 @@ describe('Appointment Request Integration Tests', () => {
       });
 
       expect(updateResult.success).toBe(true);
-      expect(updateResult.data?.requested_time).toBe('15:30');
+      // The action returns the re-read row; Postgres serializes TIME as HH:MM:SS.
+      expect(updateResult.data?.requested_time).toBe('15:30:00');
       expect(updateResult.data?.requested_duration).toBe(90);
 
       // Verify schedule entry was also updated
@@ -2283,12 +2330,17 @@ describe('Appointment Request Integration Tests', () => {
         .first();
 
       expect(scheduleEntry).toBeDefined();
+      // scheduled_start is the UTC instant for the requester's wall-clock
+      // (5589b2c770); this request's timezone is UTC, so assert in UTC rather
+      // than the test machine's locale.
       const startTime = new Date(scheduleEntry.scheduled_start);
-      expect(startTime.getHours()).toBe(15);
-      expect(startTime.getMinutes()).toBe(30);
+      expect(startTime.getUTCHours()).toBe(15);
+      expect(startTime.getUTCMinutes()).toBe(30);
     });
 
-    it('should not allow updating date/time after approval', async () => {
+    // Rescheduling an approved request became a supported flow in 23d22000dc
+    // (Teams meeting sync on reschedule); only terminal statuses are rejected.
+    it('allows updating date/time after approval (reschedule)', async () => {
       const { clientId, contactId, serviceId, clientUserId, technicianUserId } = await setupTestData(db, tenantId);
       createdIds.clientId = clientId;
       createdIds.contactId = contactId;
@@ -2332,7 +2384,7 @@ describe('Appointment Request Integration Tests', () => {
         assigned_user_id: technicianUserId
       });
 
-      // Try to update date/time after approval
+      // Reschedule the approved request
       const { updateAppointmentRequestDateTime } = await import('@alga-psa/scheduling/actions');
 
       const updateResult = await updateAppointmentRequestDateTime({
@@ -2342,8 +2394,9 @@ describe('Appointment Request Integration Tests', () => {
         new_duration: 60
       });
 
-      expect(updateResult.success).toBe(false);
-      expect(updateResult.error).toMatch(/pending|cannot update|already/i);
+      expect(updateResult.success).toBe(true);
+      expect(updateResult.data?.requested_time).toBe('16:00:00');
+      expect(updateResult.data?.status).toBe('approved');
     });
 
     it('reschedules the linked Teams meeting when an approved request has an online meeting', async () => {

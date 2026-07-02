@@ -509,6 +509,10 @@ export const bulkCreateHolidays = withAuth(async (_user, { tenant }, holidays: I
       created_at: trx.fn.now()
     }));
 
+    if (holidayRecords.length === 0) {
+      return [];
+    }
+
     const createdHolidays = await tenantScopedTable(trx, 'holidays', tenant)
       .insert(holidayRecords)
       .returning('*');
