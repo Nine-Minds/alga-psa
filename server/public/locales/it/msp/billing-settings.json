@@ -4,7 +4,7 @@
     "quoting": "Citando",
     "tax": "Tassare",
     "payments": "Pagamenti",
-    "costRates": "Cost Rates"
+    "costRates": "Tariffe di costo"
   },
   "general": {
     "currency": {
@@ -1208,77 +1208,77 @@
     }
   },
   "costRates": {
-    "title": "Cost Rates",
-    "description": "Manage fully burdened internal labor cost rates used by profitability reporting.",
-    "loading": "Loading cost rates...",
+    "title": "Tariffe di costo",
+    "description": "Gestisci le tariffe del costo del lavoro interno, comprensive di tutti gli oneri, utilizzate dai report di redditività.",
+    "loading": "Caricamento delle tariffe di costo...",
     "default": {
-      "title": "Tenant default cost rate",
-      "current": "Current default: {{rate}} from {{date}}",
-      "missing": "No tenant default is configured. Users without overrides will be uncosted.",
-      "history": "Default rate history"
+      "title": "Tariffa di costo predefinita del tenant",
+      "current": "Predefinita attuale: {{rate}} dal {{date}}",
+      "missing": "Nessuna tariffa predefinita del tenant configurata. Gli utenti senza una tariffa specifica risulteranno senza costo.",
+      "history": "Cronologia della tariffa predefinita"
     },
     "empty": {
-      "title": "Cost rates are not configured",
-      "description": "Set the tenant default first so reports can cost labor for users without overrides."
+      "title": "Le tariffe di costo non sono configurate",
+      "description": "Imposta prima la tariffa predefinita del tenant in modo che i report possano calcolare il costo del lavoro per gli utenti senza una tariffa specifica."
     },
     "table": {
-      "user": "User",
-      "currentRate": "Current Rate",
-      "actions": "Actions",
-      "usesDefault": "Uses default",
-      "uncosted": "Uncosted"
+      "user": "Utente",
+      "currentRate": "Tariffa attuale",
+      "actions": "Azioni",
+      "usesDefault": "Usa la predefinita",
+      "uncosted": "Senza costo"
     },
     "history": {
-      "empty": "No user-specific rates."
+      "empty": "Nessuna tariffa specifica per utente."
     },
     "dialog": {
-      "title": "Cost Rate",
-      "description": "Enter fully burdened hourly labor cost in the tenant default currency."
+      "title": "Tariffa di costo",
+      "description": "Inserisci il costo orario del lavoro, comprensivo di tutti gli oneri, nella valuta predefinita del tenant."
     },
     "fields": {
       "user": {
-        "label": "User",
-        "default": "Tenant default"
+        "label": "Utente",
+        "default": "Predefinita del tenant"
       },
       "rate": {
-        "label": "Hourly Cost"
+        "label": "Costo orario"
       },
       "effectiveFrom": {
-        "label": "Effective From"
+        "label": "Data di decorrenza"
       },
       "effectiveTo": {
-        "label": "Effective To"
+        "label": "Data di fine validità"
       }
     },
     "actions": {
-      "setDefault": "Set Default",
-      "addUserRate": "Add user rate",
-      "edit": "Edit",
-      "delete": "Delete",
-      "cancel": "Cancel",
-      "save": "Save",
-      "saving": "Saving...",
-      "continue": "Continue"
+      "setDefault": "Imposta predefinita",
+      "addUserRate": "Aggiungi tariffa utente",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "saving": "Salvataggio...",
+      "continue": "Continua"
     },
     "warning": {
-      "title": "Worked time exists in this range",
-      "description": "Changing this rate will change historical profitability for time entries in its effective date range.",
-      "body": "Continue only when this is an intentional correction."
+      "title": "In questo intervallo sono presenti ore lavorate",
+      "description": "La modifica di questa tariffa cambierà la redditività storica delle voci di tempo nel suo periodo di validità.",
+      "body": "Continua solo se si tratta di una correzione intenzionale."
     },
     "toast": {
-      "saved": "Cost rate saved.",
-      "deleted": "Cost rate deleted."
+      "saved": "Tariffa di costo salvata.",
+      "deleted": "Tariffa di costo eliminata."
     },
     "errors": {
-      "load": "Failed to load cost rates",
-      "save": "Failed to save cost rate",
-      "delete": "Failed to delete cost rate"
+      "load": "Impossibile caricare le tariffe di costo",
+      "save": "Impossibile salvare la tariffa di costo",
+      "delete": "Impossibile eliminare la tariffa di costo"
     },
     "formats": {
       "noRate": "—",
-      "hourlyRate": "${{amount}}/hr",
+      "hourlyRate": "${{amount}}/h",
       "dateRange": "{{start}} - {{end}}",
-      "openDateRange": "{{start}} - open"
+      "openDateRange": "{{start}} - in corso"
     }
   }
 }

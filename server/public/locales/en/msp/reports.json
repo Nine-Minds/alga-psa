@@ -138,7 +138,7 @@
       },
       "contractReports": {
         "title": "Contract Reports",
-        "description": "Contract revenue, renewals, bucket utilization, and simple profitability."
+        "description": "Contract revenue, renewals, bucket utilization, and profitability."
       }
     },
     "table": {

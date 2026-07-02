@@ -4,7 +4,7 @@
     "quoting": "Citeren",
     "tax": "Belasting",
     "payments": "Betalingen",
-    "costRates": "Cost Rates"
+    "costRates": "Kostentarieven"
   },
   "general": {
     "currency": {
@@ -1208,77 +1208,77 @@
     }
   },
   "costRates": {
-    "title": "Cost Rates",
-    "description": "Manage fully burdened internal labor cost rates used by profitability reporting.",
-    "loading": "Loading cost rates...",
+    "title": "Kostentarieven",
+    "description": "Beheer integrale interne arbeidskostentarieven die worden gebruikt voor winstgevendheidsrapportage.",
+    "loading": "Kostentarieven laden...",
     "default": {
-      "title": "Tenant default cost rate",
-      "current": "Current default: {{rate}} from {{date}}",
-      "missing": "No tenant default is configured. Users without overrides will be uncosted.",
-      "history": "Default rate history"
+      "title": "Standaardkostentarief van de tenant",
+      "current": "Huidige standaard: {{rate}} vanaf {{date}}",
+      "missing": "Er is geen tenantstandaard geconfigureerd. Gebruikers zonder eigen tarief blijven zonder kostentarief.",
+      "history": "Geschiedenis van het standaardtarief"
     },
     "empty": {
-      "title": "Cost rates are not configured",
-      "description": "Set the tenant default first so reports can cost labor for users without overrides."
+      "title": "Kostentarieven zijn niet geconfigureerd",
+      "description": "Stel eerst de tenantstandaard in, zodat rapporten arbeidskosten kunnen berekenen voor gebruikers zonder eigen tarief."
     },
     "table": {
-      "user": "User",
-      "currentRate": "Current Rate",
-      "actions": "Actions",
-      "usesDefault": "Uses default",
-      "uncosted": "Uncosted"
+      "user": "Gebruiker",
+      "currentRate": "Huidig tarief",
+      "actions": "Acties",
+      "usesDefault": "Gebruikt standaard",
+      "uncosted": "Zonder kostentarief"
     },
     "history": {
-      "empty": "No user-specific rates."
+      "empty": "Geen gebruikersspecifieke tarieven."
     },
     "dialog": {
-      "title": "Cost Rate",
-      "description": "Enter fully burdened hourly labor cost in the tenant default currency."
+      "title": "Kostentarief",
+      "description": "Voer de integrale arbeidskosten per uur in, in de standaardvaluta van de tenant."
     },
     "fields": {
       "user": {
-        "label": "User",
-        "default": "Tenant default"
+        "label": "Gebruiker",
+        "default": "Tenantstandaard"
       },
       "rate": {
-        "label": "Hourly Cost"
+        "label": "Kosten per uur"
       },
       "effectiveFrom": {
-        "label": "Effective From"
+        "label": "Geldig vanaf"
       },
       "effectiveTo": {
-        "label": "Effective To"
+        "label": "Geldig tot"
       }
     },
     "actions": {
-      "setDefault": "Set Default",
-      "addUserRate": "Add user rate",
-      "edit": "Edit",
-      "delete": "Delete",
-      "cancel": "Cancel",
-      "save": "Save",
-      "saving": "Saving...",
-      "continue": "Continue"
+      "setDefault": "Standaard instellen",
+      "addUserRate": "Gebruikerstarief toevoegen",
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "saving": "Bezig met opslaan...",
+      "continue": "Doorgaan"
     },
     "warning": {
-      "title": "Worked time exists in this range",
-      "description": "Changing this rate will change historical profitability for time entries in its effective date range.",
-      "body": "Continue only when this is an intentional correction."
+      "title": "Er bestaat gewerkte tijd in deze periode",
+      "description": "Het wijzigen van dit tarief verandert de historische winstgevendheid van tijdregistraties binnen de geldigheidsperiode.",
+      "body": "Ga alleen door als dit een bewuste correctie is."
     },
     "toast": {
-      "saved": "Cost rate saved.",
-      "deleted": "Cost rate deleted."
+      "saved": "Kostentarief opgeslagen.",
+      "deleted": "Kostentarief verwijderd."
     },
     "errors": {
-      "load": "Failed to load cost rates",
-      "save": "Failed to save cost rate",
-      "delete": "Failed to delete cost rate"
+      "load": "Kan kostentarieven niet laden",
+      "save": "Kan kostentarief niet opslaan",
+      "delete": "Kan kostentarief niet verwijderen"
     },
     "formats": {
       "noRate": "—",
-      "hourlyRate": "${{amount}}/hr",
+      "hourlyRate": "${{amount}}/u",
       "dateRange": "{{start}} - {{end}}",
-      "openDateRange": "{{start}} - open"
+      "openDateRange": "{{start}} - heden"
     }
   }
 }

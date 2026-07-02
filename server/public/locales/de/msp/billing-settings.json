@@ -4,7 +4,7 @@
     "quoting": "Zitieren",
     "tax": "Steuer",
     "payments": "Zahlungen",
-    "costRates": "Cost Rates"
+    "costRates": "Kostensätze"
   },
   "general": {
     "currency": {
@@ -1208,77 +1208,77 @@
     }
   },
   "costRates": {
-    "title": "Cost Rates",
-    "description": "Manage fully burdened internal labor cost rates used by profitability reporting.",
-    "loading": "Loading cost rates...",
+    "title": "Kostensätze",
+    "description": "Verwalten Sie interne Arbeitskostensätze auf Vollkostenbasis, die für die Rentabilitätsberichte verwendet werden.",
+    "loading": "Kostensätze werden geladen...",
     "default": {
-      "title": "Tenant default cost rate",
-      "current": "Current default: {{rate}} from {{date}}",
-      "missing": "No tenant default is configured. Users without overrides will be uncosted.",
-      "history": "Default rate history"
+      "title": "Standardkostensatz des Mandanten",
+      "current": "Aktueller Standard: {{rate}} ab {{date}}",
+      "missing": "Es ist kein Mandantenstandard konfiguriert. Benutzer ohne individuelle Sätze bleiben ohne Kostensatz.",
+      "history": "Verlauf des Standardsatzes"
     },
     "empty": {
-      "title": "Cost rates are not configured",
-      "description": "Set the tenant default first so reports can cost labor for users without overrides."
+      "title": "Es sind keine Kostensätze konfiguriert",
+      "description": "Legen Sie zuerst den Mandantenstandard fest, damit Berichte die Arbeitszeit von Benutzern ohne individuelle Sätze bewerten können."
     },
     "table": {
-      "user": "User",
-      "currentRate": "Current Rate",
-      "actions": "Actions",
-      "usesDefault": "Uses default",
-      "uncosted": "Uncosted"
+      "user": "Benutzer",
+      "currentRate": "Aktueller Satz",
+      "actions": "Aktionen",
+      "usesDefault": "Verwendet Standard",
+      "uncosted": "Ohne Kostensatz"
     },
     "history": {
-      "empty": "No user-specific rates."
+      "empty": "Keine benutzerspezifischen Sätze."
     },
     "dialog": {
-      "title": "Cost Rate",
-      "description": "Enter fully burdened hourly labor cost in the tenant default currency."
+      "title": "Kostensatz",
+      "description": "Geben Sie die Arbeitskosten pro Stunde auf Vollkostenbasis in der Standardwährung des Mandanten ein."
     },
     "fields": {
       "user": {
-        "label": "User",
-        "default": "Tenant default"
+        "label": "Benutzer",
+        "default": "Mandantenstandard"
       },
       "rate": {
-        "label": "Hourly Cost"
+        "label": "Kosten pro Stunde"
       },
       "effectiveFrom": {
-        "label": "Effective From"
+        "label": "Gültig ab"
       },
       "effectiveTo": {
-        "label": "Effective To"
+        "label": "Gültig bis"
       }
     },
     "actions": {
-      "setDefault": "Set Default",
-      "addUserRate": "Add user rate",
-      "edit": "Edit",
-      "delete": "Delete",
-      "cancel": "Cancel",
-      "save": "Save",
-      "saving": "Saving...",
-      "continue": "Continue"
+      "setDefault": "Standard festlegen",
+      "addUserRate": "Benutzersatz hinzufügen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saving": "Speichern...",
+      "continue": "Fortfahren"
     },
     "warning": {
-      "title": "Worked time exists in this range",
-      "description": "Changing this rate will change historical profitability for time entries in its effective date range.",
-      "body": "Continue only when this is an intentional correction."
+      "title": "In diesem Zeitraum ist erfasste Arbeitszeit vorhanden",
+      "description": "Eine Änderung dieses Satzes verändert die historische Rentabilität für Zeiteinträge in seinem Gültigkeitszeitraum.",
+      "body": "Fahren Sie nur fort, wenn es sich um eine beabsichtigte Korrektur handelt."
     },
     "toast": {
-      "saved": "Cost rate saved.",
-      "deleted": "Cost rate deleted."
+      "saved": "Kostensatz gespeichert.",
+      "deleted": "Kostensatz gelöscht."
     },
     "errors": {
-      "load": "Failed to load cost rates",
-      "save": "Failed to save cost rate",
-      "delete": "Failed to delete cost rate"
+      "load": "Kostensätze konnten nicht geladen werden",
+      "save": "Kostensatz konnte nicht gespeichert werden",
+      "delete": "Kostensatz konnte nicht gelöscht werden"
     },
     "formats": {
       "noRate": "—",
-      "hourlyRate": "${{amount}}/hr",
+      "hourlyRate": "${{amount}}/Std.",
       "dateRange": "{{start}} - {{end}}",
-      "openDateRange": "{{start}} - open"
+      "openDateRange": "{{start}} - offen"
     }
   }
 }

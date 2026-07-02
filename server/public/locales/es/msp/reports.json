@@ -138,7 +138,7 @@
       },
       "contractReports": {
         "title": "Informes de contratos",
-        "description": "Ingresos de contratos, renovaciones, uso de bolsas y rentabilidad simple."
+        "description": "Ingresos de contratos, renovaciones, uso de bolsas y rentabilidad."
       }
     },
     "table": {
@@ -220,8 +220,8 @@
         "empty": "No se encontraron contratos basados en paquetes"
       },
       "profitability": {
-        "title": "Profitability Report",
-        "description": "Client, agreement, and ticket margin using configured internal labor cost rates.",
+        "title": "Informe de rentabilidad",
+        "description": "Margen por cliente, acuerdo y ticket según las tarifas de costo internas configuradas.",
         "empty": "No hay datos de rentabilidad disponibles"
       }
     },
@@ -254,91 +254,91 @@
     "profitability": {
       "formats": {
         "percent": "{{value}}%",
-        "hours": "{{value}} hrs",
-        "hourlyRate": "{{value}}/hr",
+        "hours": "{{value}} h",
+        "hourlyRate": "{{value}}/h",
         "ticketWithNumber": "#{{number}} {{title}}",
-        "billableHours": "{{value}} billable hrs",
+        "billableHours": "{{value}} h facturables",
         "listSeparator": ", "
       },
       "errors": {
-        "load": "Failed to load profitability data",
-        "title": "Error Loading Profitability"
+        "load": "No se pudieron cargar los datos de rentabilidad",
+        "title": "Error al cargar la rentabilidad"
       },
       "table": {
-        "revenue": "Revenue",
-        "laborCost": "Labor Cost",
-        "materialCost": "Material Cost",
-        "margin": "Margin",
-        "marginPct": "Margin %",
-        "hours": "Hours",
-        "ehr": "EHR",
-        "client": "Client",
-        "agreement": "Agreement",
+        "revenue": "Ingresos",
+        "laborCost": "Costo de mano de obra",
+        "materialCost": "Costo de materiales",
+        "margin": "Margen",
+        "marginPct": "% de margen",
+        "hours": "Horas",
+        "ehr": "Tarifa efectiva",
+        "client": "Cliente",
+        "agreement": "Acuerdo",
         "ticket": "Ticket",
-        "attribution": "Attribution",
-        "contractLine": "Line",
-        "cost": "Cost"
+        "attribution": "Atribución",
+        "contractLine": "Línea",
+        "cost": "Costo"
       },
       "actions": {
-        "toggleLines": "Toggle lines",
-        "apply": "Apply",
-        "configureCostRates": "Configure Cost Rates",
-        "clearClient": "All Clients",
-        "clearAgreement": "All Agreements"
+        "toggleLines": "Mostrar u ocultar líneas",
+        "apply": "Aplicar",
+        "configureCostRates": "Configurar tarifas de costo",
+        "clearClient": "Todos los clientes",
+        "clearAgreement": "Todos los acuerdos"
       },
       "rowTypes": {
-        "adHoc": "Ad-hoc",
-        "unattributed": "Unattributed",
-        "unassigned": "Unassigned"
+        "adHoc": "Ad hoc",
+        "unattributed": "Sin atribuir",
+        "unassigned": "Sin asignar"
       },
       "attribution": {
-        "exact": "Exact",
-        "allocated": "Allocated",
-        "none": "None"
+        "exact": "Exacta",
+        "allocated": "Distribuida",
+        "none": "Ninguna"
       },
       "status": {
-        "uncosted": "Uncosted"
+        "uncosted": "Sin costear"
       },
       "filters": {
-        "startDate": "Start Date",
-        "endDate": "End Date"
+        "startDate": "Fecha de inicio",
+        "endDate": "Fecha de fin"
       },
-      "timingTooltip": "Revenue is filtered by invoice date. Labor cost is filtered by work date. Billed material cost follows invoice date; unbilled material cost follows created date.",
+      "timingTooltip": "Los ingresos se filtran por fecha de factura. El costo de mano de obra se filtra por fecha de trabajo. El costo de materiales facturados sigue la fecha de factura; el de materiales sin facturar sigue la fecha de creación.",
       "empty": {
-        "costRates": "Cost rates are not configured. Labor hours are shown as uncosted until a tenant default or user rate exists.",
-        "clients": "No client profitability data available for this range.",
-        "lines": "No line-level detail for this row.",
-        "tickets": "No ticket profitability data available for this selection."
+        "costRates": "Las tarifas de costo no están configuradas. Las horas de mano de obra se muestran sin costear hasta que exista una tarifa predeterminada del tenant o una tarifa por usuario.",
+        "clients": "No hay datos de rentabilidad por cliente disponibles para este intervalo.",
+        "lines": "No hay detalle por línea para esta fila.",
+        "tickets": "No hay datos de rentabilidad por ticket disponibles para esta selección."
       },
       "warnings": {
-        "title": "Report warnings",
-        "uncostedMinutes": "{{hours}} uncosted hours",
-        "unapprovedMinutes": "{{hours}} unapproved hours included",
-        "zeroDuration": "{{count}} zero-duration entries",
-        "uncostedMaterials": "{{count}} uncosted materials",
-        "unconvertedRevenue": "{{count}} unconverted revenue rows",
-        "materialCurrencyMismatch": "{{count}} material currency mismatches"
+        "title": "Advertencias del informe",
+        "uncostedMinutes": "{{hours}} horas sin costear",
+        "unapprovedMinutes": "{{hours}} horas sin aprobar incluidas",
+        "zeroDuration": "{{count}} entradas de duración cero",
+        "uncostedMaterials": "{{count}} materiales sin costear",
+        "unconvertedRevenue": "{{count}} filas de ingresos sin convertir",
+        "materialCurrencyMismatch": "{{count}} discrepancias de moneda en materiales"
       },
       "summary": {
-        "revenue": "Revenue",
-        "laborCost": "Labor Cost",
-        "materialCost": "Material Cost",
-        "margin": "Margin",
-        "marginPct": "Margin %",
-        "ehr": "Effective Hourly Rate"
+        "revenue": "Ingresos",
+        "laborCost": "Costo de mano de obra",
+        "materialCost": "Costo de materiales",
+        "margin": "Margen",
+        "marginPct": "% de margen",
+        "ehr": "Tarifa efectiva por hora"
       },
       "sections": {
-        "clients": "Clients",
-        "clientsDescription": "Select a client to drill into agreements and tickets.",
-        "agreements": "Agreements for {{client}}",
-        "agreementsDescription": "Ad-hoc and unattributed rows are included so totals reconcile.",
-        "linesForAgreement": "Contract lines for {{agreement}}",
+        "clients": "Clientes",
+        "clientsDescription": "Seleccione un cliente para ver el detalle de acuerdos y tickets.",
+        "agreements": "Acuerdos de {{client}}",
+        "agreementsDescription": "Se incluyen las filas ad hoc y sin atribuir para que los totales cuadren.",
+        "linesForAgreement": "Líneas de contrato de {{agreement}}",
         "tickets": "Tickets",
-        "ticketsForAgreement": "Ticket cost and revenue for {{agreement}}.",
-        "ticketsDescription": "Ticket-level labor, material cost, attributed revenue, and margin."
+        "ticketsForAgreement": "Costo e ingresos de tickets para {{agreement}}.",
+        "ticketsDescription": "Mano de obra, costo de materiales, ingresos atribuidos y margen a nivel de ticket."
       },
       "fallbacks": {
-        "untitledTicket": "Untitled ticket"
+        "untitledTicket": "Ticket sin título"
       }
     }
   },

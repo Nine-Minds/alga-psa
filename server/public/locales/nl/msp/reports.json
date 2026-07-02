@@ -138,7 +138,7 @@
       },
       "contractReports": {
         "title": "Contractrapporten",
-        "description": "Contractomzet, verlengingen, bundelgebruik en eenvoudige winstgevendheid."
+        "description": "Contractomzet, verlengingen, bundelgebruik en winstgevendheid."
       }
     },
     "table": {
@@ -220,8 +220,8 @@
         "empty": "Geen op bundels gebaseerde contracten gevonden"
       },
       "profitability": {
-        "title": "Profitability Report",
-        "description": "Client, agreement, and ticket margin using configured internal labor cost rates.",
+        "title": "Winstgevendheidsrapport",
+        "description": "Marge per klant, contract en ticket op basis van geconfigureerde interne kostentarieven.",
         "empty": "Geen winstgevendheidsgegevens beschikbaar"
       }
     },
@@ -254,91 +254,91 @@
     "profitability": {
       "formats": {
         "percent": "{{value}}%",
-        "hours": "{{value}} hrs",
-        "hourlyRate": "{{value}}/hr",
+        "hours": "{{value}} u",
+        "hourlyRate": "{{value}}/u",
         "ticketWithNumber": "#{{number}} {{title}}",
-        "billableHours": "{{value}} billable hrs",
+        "billableHours": "{{value}} factureerbare uren",
         "listSeparator": ", "
       },
       "errors": {
-        "load": "Failed to load profitability data",
-        "title": "Error Loading Profitability"
+        "load": "Winstgevendheidsgegevens konden niet worden geladen",
+        "title": "Fout bij het laden van winstgevendheid"
       },
       "table": {
-        "revenue": "Revenue",
-        "laborCost": "Labor Cost",
-        "materialCost": "Material Cost",
-        "margin": "Margin",
-        "marginPct": "Margin %",
-        "hours": "Hours",
-        "ehr": "EHR",
-        "client": "Client",
-        "agreement": "Agreement",
+        "revenue": "Omzet",
+        "laborCost": "Arbeidskosten",
+        "materialCost": "Materiaalkosten",
+        "margin": "Marge",
+        "marginPct": "Marge %",
+        "hours": "Uren",
+        "ehr": "Eff. uurtarief",
+        "client": "Klant",
+        "agreement": "Contract",
         "ticket": "Ticket",
-        "attribution": "Attribution",
-        "contractLine": "Line",
-        "cost": "Cost"
+        "attribution": "Toerekening",
+        "contractLine": "Regel",
+        "cost": "Kosten"
       },
       "actions": {
-        "toggleLines": "Toggle lines",
-        "apply": "Apply",
-        "configureCostRates": "Configure Cost Rates",
-        "clearClient": "All Clients",
-        "clearAgreement": "All Agreements"
+        "toggleLines": "Regels tonen/verbergen",
+        "apply": "Toepassen",
+        "configureCostRates": "Kostentarieven configureren",
+        "clearClient": "Alle klanten",
+        "clearAgreement": "Alle contracten"
       },
       "rowTypes": {
         "adHoc": "Ad-hoc",
-        "unattributed": "Unattributed",
-        "unassigned": "Unassigned"
+        "unattributed": "Niet toegerekend",
+        "unassigned": "Niet toegewezen"
       },
       "attribution": {
         "exact": "Exact",
-        "allocated": "Allocated",
-        "none": "None"
+        "allocated": "Verdeeld",
+        "none": "Geen"
       },
       "status": {
-        "uncosted": "Uncosted"
+        "uncosted": "Zonder kostentarief"
       },
       "filters": {
-        "startDate": "Start Date",
-        "endDate": "End Date"
+        "startDate": "Startdatum",
+        "endDate": "Einddatum"
       },
-      "timingTooltip": "Revenue is filtered by invoice date. Labor cost is filtered by work date. Billed material cost follows invoice date; unbilled material cost follows created date.",
+      "timingTooltip": "Omzet wordt gefilterd op factuurdatum. Arbeidskosten worden gefilterd op werkdatum. Gefactureerde materiaalkosten volgen de factuurdatum; niet-gefactureerde materiaalkosten volgen de aanmaakdatum.",
       "empty": {
-        "costRates": "Cost rates are not configured. Labor hours are shown as uncosted until a tenant default or user rate exists.",
-        "clients": "No client profitability data available for this range.",
-        "lines": "No line-level detail for this row.",
-        "tickets": "No ticket profitability data available for this selection."
+        "costRates": "Er zijn geen kostentarieven geconfigureerd. Arbeidsuren worden zonder kostentarief weergegeven totdat er een tenantstandaard of gebruikerstarief bestaat.",
+        "clients": "Geen winstgevendheidsgegevens per klant beschikbaar voor deze periode.",
+        "lines": "Geen detailgegevens op regelniveau voor deze rij.",
+        "tickets": "Geen winstgevendheidsgegevens per ticket beschikbaar voor deze selectie."
       },
       "warnings": {
-        "title": "Report warnings",
-        "uncostedMinutes": "{{hours}} uncosted hours",
-        "unapprovedMinutes": "{{hours}} unapproved hours included",
-        "zeroDuration": "{{count}} zero-duration entries",
-        "uncostedMaterials": "{{count}} uncosted materials",
-        "unconvertedRevenue": "{{count}} unconverted revenue rows",
-        "materialCurrencyMismatch": "{{count}} material currency mismatches"
+        "title": "Rapportwaarschuwingen",
+        "uncostedMinutes": "{{hours}} uur zonder kostentarief",
+        "unapprovedMinutes": "{{hours}} niet-goedgekeurde uren meegerekend",
+        "zeroDuration": "{{count}} registraties zonder duur",
+        "uncostedMaterials": "{{count}} materialen zonder kostprijs",
+        "unconvertedRevenue": "{{count}} niet-omgerekende omzetregels",
+        "materialCurrencyMismatch": "{{count}} valuta-afwijkingen bij materialen"
       },
       "summary": {
-        "revenue": "Revenue",
-        "laborCost": "Labor Cost",
-        "materialCost": "Material Cost",
-        "margin": "Margin",
-        "marginPct": "Margin %",
-        "ehr": "Effective Hourly Rate"
+        "revenue": "Omzet",
+        "laborCost": "Arbeidskosten",
+        "materialCost": "Materiaalkosten",
+        "margin": "Marge",
+        "marginPct": "Marge %",
+        "ehr": "Effectief uurtarief"
       },
       "sections": {
-        "clients": "Clients",
-        "clientsDescription": "Select a client to drill into agreements and tickets.",
-        "agreements": "Agreements for {{client}}",
-        "agreementsDescription": "Ad-hoc and unattributed rows are included so totals reconcile.",
-        "linesForAgreement": "Contract lines for {{agreement}}",
+        "clients": "Klanten",
+        "clientsDescription": "Selecteer een klant om door te klikken naar contracten en tickets.",
+        "agreements": "Contracten voor {{client}}",
+        "agreementsDescription": "Ad-hoc- en niet-toegerekende rijen zijn inbegrepen zodat de totalen aansluiten.",
+        "linesForAgreement": "Contractregels voor {{agreement}}",
         "tickets": "Tickets",
-        "ticketsForAgreement": "Ticket cost and revenue for {{agreement}}.",
-        "ticketsDescription": "Ticket-level labor, material cost, attributed revenue, and margin."
+        "ticketsForAgreement": "Kosten en omzet per ticket voor {{agreement}}.",
+        "ticketsDescription": "Arbeid, materiaalkosten, toegerekende omzet en marge op ticketniveau."
       },
       "fallbacks": {
-        "untitledTicket": "Untitled ticket"
+        "untitledTicket": "Ticket zonder titel"
       }
     }
   },
