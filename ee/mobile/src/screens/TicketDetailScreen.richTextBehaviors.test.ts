@@ -138,6 +138,24 @@ vi.mock("../network/useNetworkStatus", () => ({
   useNetworkStatus: () => ({}),
 }));
 
+
+vi.mock("../features/timer/TimerContext", () => ({
+  useTimer: () => ({
+    status: "idle",
+    session: null,
+    offsetMs: 0,
+    starting: false,
+    defaultService: null,
+    lastStopped: null,
+    client: null,
+    apiKey: null,
+    refresh: async () => undefined,
+    start: async () => false,
+    openStopModal: () => undefined,
+  }),
+  useTimerElapsedMs: () => null,
+}));
+
 vi.mock("../network/isOffline", () => ({
   isOffline: () => false,
 }));

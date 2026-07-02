@@ -28,6 +28,8 @@ import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { ToastProvider } from "../ui/toast/ToastProvider";
 import { ThemeProvider } from "../ui/ThemeContext";
 import { I18nProvider } from "../i18n/I18nProvider";
+import { TimerProvider } from "../features/timer/TimerContext";
+import { TimerBanner } from "../features/timer/components/TimerBanner";
 import { isSessionUsable, msUntilExpiry, msUntilRefresh, shouldRefreshOnResume, shouldRunRevocationCheck } from "./bootstrapUtils";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { getActiveRouteName } from "../navigation/activeRoute";
@@ -341,6 +343,7 @@ export function AppRoot() {
           clearHost,
         }}
       >
+        <TimerProvider>
         {session && isBiometricLocked ? (
           <BiometricLockView onUnlocked={() => {
             lastBiometricUnlockAtMs.current = Date.now();
@@ -349,6 +352,15 @@ export function AppRoot() {
         ) : (
           <View style={{ flex: 1 }}>
             {isOfflineStatus(network) ? <OfflineBanner onRetry={() => {}} /> : null}
+            {session ? (
+              <TimerBanner
+                onOpenTicket={(ticketId) => {
+                  if (navigationRef.isReady()) {
+                    navigationRef.navigate("TicketDetail", { ticketId });
+                  }
+                }}
+              />
+            ) : null}
             <View style={{ flex: 1 }}>
               <NavigationContainer
                 ref={navigationRef}
@@ -374,6 +386,7 @@ export function AppRoot() {
             </View>
           </View>
         )}
+        </TimerProvider>
       </AuthContext.Provider>
     </ToastProvider>
     </I18nProvider>
