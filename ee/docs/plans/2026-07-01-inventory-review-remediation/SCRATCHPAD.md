@@ -250,3 +250,20 @@ End-to-end UI smoke of the remediation features against the live dev stack (:357
 6. Test suite: fixing the vendor fixture unmasked a latent aborted-transaction bug in the T034 vendor-bill test (it was vacuously green while no vendors existed) — now uses the `expectViolation` savepoint helper; 65/65 green.
 
 Note: the pane dev server (:3555 now, was :3578) served stale-cache 404s for all inventory subroutes after its restart; a clean restart fixed it — not a code issue.
+
+## Persona review — "Sam Delgado" (26-yr MSP owner, 3 branches, 23 techs, phones/components/laptops) — 2026-07-01
+
+Four-round adversarial walkthrough with a grumpy-veteran persona subagent; vendor (us) answered from the actual shipped system, admitting gaps. Full conversation in session transcript.
+
+**Validated as genuinely strong (his "I'd pay for this today" list):**
+append-only ledger + rebuild-from-source; ticket-material consume ("the star" — honest path == paid path, the only real answer to techs who don't log parts); per-unit cost cradle-to-grave (refurb/gray-market margins truthful); blind counts w/ stale-line skip + dollars-with-a-name variance; value-based vendor-bill variance (catches price creep/fees, not just qty); quarantine-on-return; single-level kits; never-double-bill invoicing.
+
+**Hard switch blockers he named:**
+1. **No self-serve opening-balance import** (CW export: on-hand, serials, unit costs, per location → real opening receipts). Called it our #1 gap; wants it contractual for any migration.
+2. **No field tool** — no camera scanning, no offline capture/sync; browser-only breaks the anti-shrink story exactly where work happens (vans, no-signal rooms).
+3. **Money sits quiet in 3 places**: outbound/vendor-side RMA doesn't age ("shelf of dead Samsungs with a login"); drop-ship confirm doesn't auto-invoice under on_fulfillment (from-stock does); attention nag only fires on fully-shipped orders, not any unbilled shipped line.
+
+**Backlog distilled from the review (rough priority):**
+- P1: CSV/bulk opening-balance import (per-location qty + serial + unit cost → ledger receipts). Mobile field experience (camera scan + offline sync) as a roadmap item.
+- P2 ("nothing owed sits quiet"): vendor-owed RMA aging attention item + report; drop-ship confirm auto-invoice in on_fulfillment mode; unbilled-shipped-LINE nag (not just whole order); write-offs-by-approver owner report; enforced four-eyes count approval (PRD §15 open question — customer answer is yes).
+- P3: RMA replacement unit cost defaults to the dead unit's cost; serial+MAC CSV export for provisioning + copy MAC onto created asset; as-of-date valuation report; shrinkage trend by location over time; van replenishment "load list" → branch→van transfer from low stock (current remedy creates vendor POs); per-line vendor-bill variance flags; ghost-usage heuristics (hardware tickets closed vs consumes per van); single-screen unit timeline (chain-of-custody UI).
