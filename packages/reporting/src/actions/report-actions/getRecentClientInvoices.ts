@@ -14,7 +14,7 @@ const InputSchema = z.object({
 });
 
 // Define the type for the returned invoice data, selecting only necessary fields
-export type RecentInvoice = Pick<IInvoice, 'invoice_id' | 'invoice_number' | 'invoice_date' | 'due_date' | 'total_amount' | 'status'>;
+export type RecentInvoice = Pick<IInvoice, 'invoice_id' | 'invoice_number' | 'invoice_date' | 'due_date' | 'total_amount' | 'status' | 'currency_code'>;
 
 /**
  * Server action to fetch recent invoices for a specific client.
@@ -49,8 +49,8 @@ export const getRecentClientInvoices = withAuth(async (
           'invoice_date',
           'due_date',
           'total_amount',
-          'status'
-          // 'currency_code' // Not included as it's not in IInvoice interface
+          'status',
+          'currency_code'
         )
         .where({
           client_id: clientId,

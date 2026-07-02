@@ -8,7 +8,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable'; // Import DataTab
 import { ColumnDefinition } from '@alga-psa/types'; // Import ColumnDefinition
 import { getRecentClientInvoices, type RecentInvoice } from '@alga-psa/reporting/actions'; // Import action and type
 import { Skeleton } from '@alga-psa/ui/components/Skeleton'; // Import Skeleton for loading state
-import { formatCurrency } from '@alga-psa/core'; // Import currency formatter
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core'; // invoices.total_amount is in cents
 import { formatDateOnly } from '@alga-psa/core'; // Import date formatter
 import { parseISO, subDays, format } from 'date-fns'; // Import date functions
 import {
@@ -80,7 +80,9 @@ const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = 
   {
    title: t('clientContractLineDashboard.totalAmount', { defaultValue: 'Total Amount' }),
    dataIndex: 'total_amount',
-   render: (value: number) => <div className="text-right">{formatCurrency(value)}</div>,
+   render: (value: number, record: RecentInvoice) => (
+     <div className="text-right">{formatCurrencyFromMinorUnits(value, 'en-US', record.currency_code || 'USD')}</div>
+   ),
  },
  {
     title: t('clientContractLineDashboard.status', { defaultValue: 'Status' }),
