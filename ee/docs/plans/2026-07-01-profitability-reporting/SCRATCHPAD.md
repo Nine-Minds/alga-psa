@@ -81,6 +81,45 @@
 - T012 implemented: behavior test confirms `resolveCostRate` returns `null` when neither a user-specific nor default rate covers the work date.
 - Commands run: `cd server && npx vitest run ../packages/billing/src/models/userCostRate.test.ts ../packages/billing/src/models/userCostRate.behavior.test.ts --coverage.enabled=false`; `npm -w @alga-psa/billing run typecheck`.
 
+### 2026-07-02 — Profitability report server-action slice
+
+- F022 implemented: revenue facts read `invoice_charges` in countable invoice statuses, use fixed-detail `allocated_amount` when present, and otherwise use `net_amount`.
+- F023 implemented: revenue facts normalize foreign invoice amounts through `exchange_rate_basis_points`; foreign invoices with NULL rates are excluded from totals and counted as unconverted revenue.
+- F024 implemented: labor facts are date-filtered by `time_entries.work_date`, cost actual minutes from `end_time - start_time`, clamp zero/negative duration to zero, include all approval statuses, and count unapproved minutes.
+- F025 implemented: labor facts with no resolved user/default cost rate add minutes and warnings but no labor cost.
+- F026 implemented: material facts union `ticket_materials` and `project_materials`, date billed materials by countable invoice date, date unbilled costs by `(created_at AT TIME ZONE 'UTC')::date`, flag NULL service costs and currency mismatches, and split material revenue/cost into ad-hoc/unattributed agreement buckets.
+- F027 implemented: `getProfitabilitySummary` returns tenant totals, warnings, cost-rate configured state, margin, margin %, and EHR.
+- F028 implemented: `getClientProfitability` groups by client, including a neutral `No client` row for clientless work item types.
+- F029 implemented: agreement cost attribution uses `time_entries.contract_line_id -> contract_lines -> contracts -> client_contracts`, with a date-covering lateral pick and deterministic tiebreak.
+- F030 implemented: agreement profitability includes per-client `Ad-hoc / manual` and `Unattributed` rows; material revenue/cost use those rows per PRD D13.
+- F031 implemented: agreement rows carry a contract-line breakdown for revenue/labor line attribution and an unassigned residual bucket where no line is resolvable.
+- F032 implemented: EHR uses actual minutes at every implemented grouping level and returns `null` when minutes are zero.
+- F038 implemented: raw report queries include tenant predicates in WHERE clauses and JOIN conditions; static tests guard the key joins.
+- F039 implemented: typed interfaces now cover summary, client, agreement, contract-line, and ticket result shapes with cents/minutes fields.
+- F054 implemented: agreement aggregation is fact-based so agreement/ad-hoc/unattributed rows reconcile to the same client totals; covered by a fixture test for revenue/cost.
+- T029 implemented: static SQL test guards the countable invoice status allow-list.
+- T030 implemented: static SQL test guards fixed-detail allocation vs `net_amount` fallback.
+- T031 implemented: mocked action test verifies negative revenue facts reduce total revenue.
+- T032 implemented: static SQL test verifies revenue uses `net_amount` and not tax-inclusive totals.
+- T033 implemented: static SQL test verifies exchange-rate conversion and NULL-rate unconverted warnings.
+- T034 implemented: mocked action test verifies per-entry labor rounding with odd minutes.
+- T035 implemented: mocked action test verifies non-billable time still accrues actual-time labor cost.
+- T036 implemented: mocked action test verifies zero-duration entries are counted and clamped.
+- T038 implemented: mocked action test verifies material revenue/cost from quantity, rate, and service cost.
+- T039 implemented: static/action coverage verifies project materials are in the material union and material agreement grain is ad-hoc revenue/unattributed cost.
+- T040 implemented: static SQL test verifies material currency mismatches are flagged.
+- T041 implemented: summary fixture verifies known revenue/cost totals.
+- T042 implemented: summary fixture verifies EHR = revenue / actual hours.
+- T043 implemented: client fixture verifies per-client grouping.
+- T044 implemented: client fixture verifies the `No client` row for ad-hoc/clientless time.
+- T045 implemented: agreement fixture verifies revenue attribution uses `client_contract_id`.
+- T046 implemented: static SQL test verifies the post-`client_contract_lines` agreement attribution chain.
+- T047 implemented: agreement fixture verifies the ad-hoc/manual row.
+- T049 implemented: agreement fixture verifies agreement + ad-hoc + unattributed revenue/cost reconciliation.
+- T051 implemented: mocked action test verifies EHR is null-safe when revenue exists without hours.
+- Deferred in this slice: ticket-level hourly/fixed/bucket revenue allocation (F033-F037), all-report RBAC matrix test (T064), and broad invoice-generation integration regression (T028).
+- Commands run: `cd server && npx vitest run ../packages/billing/src/actions/profitabilityReportActions.test.ts ../packages/billing/src/actions/profitabilityReportActions.static.test.ts --coverage.enabled=false`; `npm -w @alga-psa/billing run typecheck`.
+
 ## Implementation log
 
 - 2026-07-02 batch 1 (schema + cost-rate model/actions):

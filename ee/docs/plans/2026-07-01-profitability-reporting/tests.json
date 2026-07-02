@@ -235,7 +235,7 @@
   {
     "id": "T029",
     "description": "Revenue CTE counts sent/paid/partially_applied/overdue plus legacy open/completed/Unpaid invoices, and excludes draft/cancelled/pending/prepayment",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -243,7 +243,7 @@
   {
     "id": "T030",
     "description": "Revenue CTE uses allocated_amount from fixed details when present and net_amount otherwise, without double counting",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -251,7 +251,7 @@
   {
     "id": "T031",
     "description": "Discount line items (negative net_amount) reduce revenue in all groupings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -259,7 +259,7 @@
   {
     "id": "T032",
     "description": "Tax is excluded from revenue (net_amount, not total with tax)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -267,7 +267,7 @@
   {
     "id": "T033",
     "description": "Foreign-currency invoice amounts convert via exchange_rate_basis_points into tenant currency",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -275,7 +275,7 @@
   {
     "id": "T034",
     "description": "Labor cost = round(actual minutes x rate / 60) per entry; verified against hand-computed fixture including odd minutes rounding",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
@@ -283,7 +283,7 @@
   {
     "id": "T035",
     "description": "Non-billable time (billable_duration = 0) still accrues labor cost and hours",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F032"
@@ -292,7 +292,7 @@
   {
     "id": "T036",
     "description": "Zero/negative-duration entries (end_time <= start_time) are clamped to 0 cost minutes and reported in zeroDurationEntryCount",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F048"
@@ -311,7 +311,7 @@
   {
     "id": "T038",
     "description": "Material revenue and cost computed from ticket_materials quantity x rate and quantity x service_catalog.cost",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -319,7 +319,7 @@
   {
     "id": "T039",
     "description": "project_materials included in client totals; at agreement grain material revenue lands in the Ad-hoc row and material cost in the Unattributed row (no contract mapping exists for material charges)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F030"
@@ -328,7 +328,7 @@
   {
     "id": "T040",
     "description": "Material rows with currency_code different from tenant currency are flagged and excluded from converted totals",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -336,7 +336,7 @@
   {
     "id": "T041",
     "description": "getProfitabilitySummary returns correct totals for a seeded fixture with known revenue/cost",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
@@ -344,7 +344,7 @@
   {
     "id": "T042",
     "description": "Summary EHR = revenue / actual hours; matches hand-computed fixture",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F032"
@@ -353,7 +353,7 @@
   {
     "id": "T043",
     "description": "getClientProfitability groups by client and matches per-client fixture expectations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
@@ -361,7 +361,7 @@
   {
     "id": "T044",
     "description": "'No client' row appears when ad_hoc / non_billable_category time exists in range (tickets.client_id is NOT NULL on cleanly migrated DBs, so the row is driven by clientless work-item types) and disappears otherwise",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
@@ -369,7 +369,7 @@
   {
     "id": "T045",
     "description": "getAgreementProfitability revenue attribution uses invoice_charges.client_contract_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
@@ -377,7 +377,7 @@
   {
     "id": "T046",
     "description": "Agreement cost/hours attribution: time entries route via contract_line_id -> contract_lines -> contracts -> client_contracts (contract_id join; client_contract_lines is dropped)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
@@ -385,7 +385,7 @@
   {
     "id": "T047",
     "description": "Ad-hoc/manual row aggregates revenue with NULL client_contract_id per client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -401,7 +401,7 @@
   {
     "id": "T049",
     "description": "Reconciliation: agreement rows + ad-hoc + unattributed sum to the client row for revenue, cost, and minutes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
@@ -418,7 +418,7 @@
   {
     "id": "T051",
     "description": "EHR at client and agreement level null-safe when hours are zero (no division by zero, renders as em dash)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032",
       "F055"

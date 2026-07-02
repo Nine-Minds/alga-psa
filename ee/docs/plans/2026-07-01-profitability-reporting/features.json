@@ -184,7 +184,7 @@
   {
     "id": "F022",
     "description": "Revenue CTE: per invoice_charge net revenue using invoice_charge_fixed_details.allocated_amount when detail rows exist else net_amount, restricted to countable invoice statuses (sent, paid, partially_applied, overdue, plus legacy open, completed, and Unpaid)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.4",
       "6.D11"
@@ -193,7 +193,7 @@
   {
     "id": "F023",
     "description": "Revenue CTE: currency normalization to tenant default via invoices.exchange_rate_basis_points; foreign-currency invoices with NULL basis points are excluded from converted totals and reported in an unconverted-revenue warning count",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6.D10",
       "7.4"
@@ -202,7 +202,7 @@
   {
     "id": "F024",
     "description": "Labor cost CTE: time entries in range by work_date joined to resolved cost rate (F008); cost_cents = round(greatest(0, actual_minutes) * rate / 60); zero/negative-duration entries clamped and counted in zeroDurationEntryCount; all approval statuses included, with unapprovedMinutes counted (approval_status != 'APPROVED')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6.D4",
       "7.4",
@@ -212,7 +212,7 @@
   {
     "id": "F025",
     "description": "Labor cost CTE: uncosted entries (no rate resolvable) contribute minutes but not cost, and are counted per grouping row",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6.D6",
       "7.4"
@@ -221,7 +221,7 @@
   {
     "id": "F026",
     "description": "Material CTE: revenue only for rows whose billed_invoice_id is in a countable-status invoice, dated by invoice_date; cost quantity*service_catalog.cost dated by invoice_date when billed else (created_at AT TIME ZONE 'UTC')::date; NULL-cost billed materials flagged as uncosted materials; currency_code != tenant currency flagged not converted; agreement grain: material revenue in the Ad-hoc row, material cost in the Unattributed row (engine emits material charges without client_contract_id)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6.D13",
       "6.D10",
@@ -231,7 +231,7 @@
   {
     "id": "F027",
     "description": "getProfitabilitySummary action: tenant-wide totals for a date range — revenue, laborCost, materialCost, margin, marginPct, totalMinutes, effectiveHourlyRate, uncostedMinutes, unattributedMinutes, unapprovedMinutes, zeroDurationEntryCount, uncostedMaterialCount, unconvertedRevenueCount",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.4"
     ]
@@ -239,7 +239,7 @@
   {
     "id": "F028",
     "description": "getClientProfitability action: per-client rows with all summary fields; time-entry cost attributed to clients by the normative work_item_type chain (ticket -> tickets.client_id; project_task -> projects.client_id; interaction and appointment_request -> their client_id; ad_hoc/non_billable_category/NULL -> 'No client' row)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.4",
       "6.D6"
@@ -248,7 +248,7 @@
   {
     "id": "F029",
     "description": "getAgreementProfitability action: per-client_contract rows via invoice_charges.client_contract_id (revenue) and time_entries.contract_line_id -> contract_lines -> contracts -> client_contracts on contract_id (cost/hours; canonical replacement for the DROPPED client_contract_lines table — billingEngine fetchDiscounts pattern), de-duplicated: single client_contracts row per entry chosen by date range covering work_date, tiebreak latest start_date then client_contract_id; contract lines whose contract has no covering client_contracts row fold cost into the client's Unattributed row",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.4",
       "6.D6"
@@ -257,7 +257,7 @@
   {
     "id": "F030",
     "description": "getAgreementProfitability: 'Ad-hoc / manual' row per client (revenue with NULL client_contract_id, incl. material revenue) and 'Unattributed' row (time with NULL contract_line_id, time on contract lines with no covering client_contracts row, and material cost)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6.D6",
       "6.D13",
@@ -267,7 +267,7 @@
   {
     "id": "F031",
     "description": "getAgreementProfitability: per-contract_line breakdown via invoice_charge_details.config_id -> contract_line_service_configuration.contract_line_id (detail-bearing charges) and item_id -> time_entries.contract_line_id (hourly); charges resolvable to neither shown as an unassigned-to-line residual so lines sum to the agreement",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.4",
       "10.3"
@@ -276,7 +276,7 @@
   {
     "id": "F032",
     "description": "Effective hourly rate computed as revenue / actual hours (billable + non-billable) at every grouping level; null-safe when hours = 0",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6.D4",
       "7.4"
@@ -328,7 +328,7 @@
   {
     "id": "F038",
     "description": "All new report/cost queries include tenant in every WHERE clause and JOIN condition (Citus rules)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.4",
       "10.7"
@@ -337,7 +337,7 @@
   {
     "id": "F039",
     "description": "Typed result interfaces for all four report actions; money integer cents, durations minutes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.4"
     ]
@@ -467,7 +467,7 @@
   {
     "id": "F054",
     "description": "Reconciliation invariant in query design: sum of agreement rows + ad-hoc + unattributed equals client row, for both revenue and cost",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "10.3"
     ]
