@@ -57,6 +57,14 @@ describe('profitability report action SQL contracts', () => {
     expect(source).toContain('(COALESCE(mr.currency_code, ?) <> ?) AS currency_mismatch');
   });
 
+  it('attributes ticket hourly revenue only through item_id-linked invoice time entries', () => {
+    expect(source).toContain('FROM invoice_time_entries ite');
+    expect(source).toContain('AND ic.item_id = ite.item_id');
+    expect(source).toContain('AND ite.item_id IS NOT NULL');
+    expect(source).toContain('SUM(COALESCE(te.billable_duration, 0)) OVER (PARTITION BY ic.item_id)');
+    expect(source).toContain('item_amount_cents::numeric * billable_minutes::numeric');
+  });
+
   it('keeps tenant predicates in raw query joins', () => {
     expect(source).toContain('WHERE ic.tenant = ?');
     expect(source).toContain('AND inv.tenant = ?');

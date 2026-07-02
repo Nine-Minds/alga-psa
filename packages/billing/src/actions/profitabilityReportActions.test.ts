@@ -38,6 +38,7 @@ import {
   getAgreementProfitability,
   getClientProfitability,
   getProfitabilitySummary,
+  getTicketProfitability,
 } from './profitabilityReportActions';
 
 const revenueRows = [
@@ -98,10 +99,20 @@ const materialRows = [
   },
 ];
 
+const ticketRevenueRows = [
+  {
+    ticket_id: 'ticket-1',
+    amount_cents: 7000,
+    unconverted: false,
+    attribution: 'exact',
+  },
+];
+
 function seedRawMocks(options?: {
   revenue?: Array<Record<string, unknown>>;
   labor?: Array<Record<string, unknown>>;
   materials?: Array<Record<string, unknown>>;
+  ticketRevenue?: Array<Record<string, unknown>>;
 }) {
   rawMock.mockImplementation(async (sql: string) => {
     if (sql.includes('WITH charge_details')) {
@@ -112,6 +123,9 @@ function seedRawMocks(options?: {
     }
     if (sql.includes('WITH material_rows')) {
       return { rows: options?.materials ?? materialRows };
+    }
+    if (sql.includes('WITH linked_time')) {
+      return { rows: options?.ticketRevenue ?? ticketRevenueRows };
     }
     throw new Error('Unexpected SQL');
   });
@@ -305,5 +319,26 @@ describe('profitability report actions', () => {
     expect(summary.revenue).toBe(10000);
     expect(summary.totalMinutes).toBe(0);
     expect(summary.effectiveHourlyRate).toBeNull();
+  });
+
+  it('adds exact item-linked hourly revenue to ticket profitability rows', async () => {
+    const rows = await (getTicketProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31', clientId: 'client-1', clientContractId: 'cc-1' },
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        ticketId: 'ticket-1',
+        ticketNumber: 'T-100',
+        billableMinutes: 30,
+        revenue: 10000,
+        laborCost: 5000,
+        materialCost: 1000,
+        attribution: 'exact',
+        uncosted: false,
+      }),
+    ]);
   });
 });

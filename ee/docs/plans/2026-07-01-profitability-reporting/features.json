@@ -285,7 +285,7 @@
   {
     "id": "F033",
     "description": "getTicketProfitability action: per-ticket rows (work_item_type='ticket') with minutes, billable minutes, labor cost, material cost, revenue, margin, attribution tag, uncosted flag; filterable by client and client_contract; usage/product/license charges stay at agreement level (ticket revenue knowingly partial for usage-heavy agreements)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.4",
       "6.D8"
@@ -294,7 +294,7 @@
   {
     "id": "F034",
     "description": "Ticket revenue (hourly, exact): via invoice_time_entries.item_id, 1:1 entry-to-item; defensive by-billable_duration apportionment only if multiple link rows ever share an item",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6.D8",
       "6.D7"
@@ -303,7 +303,7 @@
   {
     "id": "F035",
     "description": "Ticket revenue (hourly, legacy invoices with NULL item_id): stays at agreement level as a tagged residual — no per-ticket apportionment (production audit 2026-07-02: 2 legacy invoices in 1 tenant; the pool-identification heuristic was cut as all-risk-no-payoff)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6.D8"
     ]

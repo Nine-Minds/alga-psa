@@ -128,12 +128,20 @@ interface MaterialFact {
   uncosted: boolean;
 }
 
+interface TicketRevenueFact {
+  ticket_id: string;
+  amount_cents: number | null;
+  unconverted: boolean;
+  attribution: 'exact';
+}
+
 type FactBundle = {
   defaultCurrency: string;
   costRatesConfigured: boolean;
   revenueFacts: RevenueFact[];
   laborFacts: LaborFact[];
   materialFacts: MaterialFact[];
+  ticketRevenueFacts: TicketRevenueFact[];
 };
 
 class MetricAccumulator {
@@ -309,7 +317,7 @@ async function fetchRevenueFacts(
       SELECT DISTINCT ON (ic.item_id)
         ic.item_id,
         COALESCE(te.contract_line_id, clsc.contract_line_id) AS contract_line_id,
-        cli.line_name AS contract_line_name
+        cli.contract_line_name AS contract_line_name
       FROM invoice_charges ic
       LEFT JOIN invoice_charge_details iid
         ON iid.tenant = ic.tenant
@@ -391,7 +399,7 @@ async function fetchLaborFacts(knex: Knex, tenant: string, startDate: string, en
       t.ticket_number::text AS ticket_number,
       t.title AS ticket_title,
       te.contract_line_id,
-      cli.line_name AS contract_line_name,
+      cli.contract_line_name AS contract_line_name,
       cc.client_contract_id,
       c.contract_id,
       c.contract_name,
@@ -606,13 +614,84 @@ async function fetchMaterialFacts(
   }));
 }
 
+async function fetchTicketRevenueFacts(
+  knex: Knex,
+  tenant: string,
+  startDate: string,
+  endDate: string,
+  defaultCurrency: string
+): Promise<TicketRevenueFact[]> {
+  const result = await knex.raw(`
+    WITH linked_time AS (
+      SELECT
+        ic.item_id,
+        t.ticket_id,
+        COALESCE(te.billable_duration, 0) AS billable_minutes,
+        SUM(COALESCE(te.billable_duration, 0)) OVER (PARTITION BY ic.item_id) AS item_billable_minutes,
+        COUNT(*) OVER (PARTITION BY ic.item_id) AS item_link_count,
+        CASE
+          WHEN COALESCE(inv.currency_code, ?) = ? THEN ic.net_amount::bigint
+          WHEN inv.exchange_rate_basis_points IS NULL THEN NULL
+          ELSE ROUND((ic.net_amount::numeric * inv.exchange_rate_basis_points::numeric) / 10000)::bigint
+        END AS item_amount_cents,
+        (COALESCE(inv.currency_code, ?) <> ? AND inv.exchange_rate_basis_points IS NULL) AS unconverted
+      FROM invoice_time_entries ite
+      JOIN invoice_charges ic
+        ON ic.tenant = ite.tenant
+       AND ic.item_id = ite.item_id
+      JOIN invoices inv
+        ON inv.tenant = ic.tenant
+       AND inv.invoice_id = ic.invoice_id
+      JOIN time_entries te
+        ON te.tenant = ite.tenant
+       AND te.entry_id = ite.entry_id
+      JOIN tickets t
+        ON t.tenant = te.tenant
+       AND te.work_item_type = 'ticket'
+       AND t.ticket_id = te.work_item_id
+      WHERE ite.tenant = ?
+        AND ite.item_id IS NOT NULL
+        AND inv.status = ANY(?::text[])
+        AND inv.invoice_date::date >= ?::date
+        AND inv.invoice_date::date <= ?::date
+    )
+    SELECT
+      ticket_id,
+      CASE
+        WHEN unconverted THEN NULL
+        WHEN item_billable_minutes > 0
+          THEN ROUND((item_amount_cents::numeric * billable_minutes::numeric) / item_billable_minutes)::bigint
+        ELSE ROUND(item_amount_cents::numeric / NULLIF(item_link_count, 0))::bigint
+      END AS amount_cents,
+      unconverted
+    FROM linked_time
+  `, [
+    defaultCurrency,
+    defaultCurrency,
+    defaultCurrency,
+    defaultCurrency,
+    tenant,
+    COUNTABLE_INVOICE_STATUSES,
+    startDate,
+    endDate,
+  ]);
+
+  return rawRows<Record<string, unknown>>(result).map((row) => ({
+    ticket_id: String(row.ticket_id),
+    amount_cents: row.amount_cents === null || row.amount_cents === undefined ? null : Number(row.amount_cents),
+    unconverted: Boolean(row.unconverted),
+    attribution: 'exact',
+  }));
+}
+
 async function fetchFacts(knex: Knex, tenant: string, startDate: string, endDate: string): Promise<FactBundle> {
   const defaultCurrency = await getTenantDefaultCurrency(knex, tenant);
   const costRateCount = await tenantDb(knex, tenant).table('user_cost_rates').count<{ count: string }[]>({ count: '*' }).first();
-  const [revenueFacts, laborFacts, materialFacts] = await Promise.all([
+  const [revenueFacts, laborFacts, materialFacts, ticketRevenueFacts] = await Promise.all([
     fetchRevenueFacts(knex, tenant, startDate, endDate, defaultCurrency),
     fetchLaborFacts(knex, tenant, startDate, endDate),
     fetchMaterialFacts(knex, tenant, startDate, endDate, defaultCurrency),
+    fetchTicketRevenueFacts(knex, tenant, startDate, endDate, defaultCurrency),
   ]);
 
   return {
@@ -621,6 +700,7 @@ async function fetchFacts(knex: Knex, tenant: string, startDate: string, endDate
     revenueFacts,
     laborFacts,
     materialFacts,
+    ticketRevenueFacts,
   };
 }
 
@@ -873,6 +953,15 @@ export const getTicketProfitability = withAuth(async (
     const row = rows.get(fact.ticket_id);
     if (!row) continue;
     row.acc.addMaterial(fact, true, true);
+  }
+
+  for (const fact of facts.ticketRevenueFacts) {
+    const row = rows.get(fact.ticket_id);
+    if (!row) continue;
+    row.acc.addRevenue(fact.amount_cents, fact.unconverted);
+    if (!fact.unconverted) {
+      row.attribution = fact.attribution;
+    }
   }
 
   return Array.from(rows.values()).map((row) => {

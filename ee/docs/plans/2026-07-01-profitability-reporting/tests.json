@@ -427,7 +427,7 @@
   {
     "id": "T052",
     "description": "getTicketProfitability returns one row per ticket with minutes, billable minutes, labor cost, material cost, revenue, margin",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -443,7 +443,7 @@
   {
     "id": "T054",
     "description": "Hourly ticket revenue exact path: item_id-linked entries produce revenue equal to invoice line amounts, tagged exact",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -451,7 +451,7 @@
   {
     "id": "T055",
     "description": "Defensive N:1 handling: if multiple link rows share an item_id, by-billable_duration apportionment sums exactly to the item amount with no double counting",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F034"
@@ -460,7 +460,7 @@
   {
     "id": "T056",
     "description": "Legacy invoices (item_id NULL): revenue stays at agreement level as a tagged residual; no per-ticket revenue fabricated; agreement and client totals still reconcile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
@@ -494,7 +494,7 @@
   {
     "id": "T060",
     "description": "Ticket materials revenue/cost included per ticket via billed_invoice_id and quantity x cost",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033",
       "F026"

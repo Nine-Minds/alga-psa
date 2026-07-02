@@ -120,6 +120,19 @@
 - Deferred in this slice: ticket-level hourly/fixed/bucket revenue allocation (F033-F037), all-report RBAC matrix test (T064), and broad invoice-generation integration regression (T028).
 - Commands run: `cd server && npx vitest run ../packages/billing/src/actions/profitabilityReportActions.test.ts ../packages/billing/src/actions/profitabilityReportActions.static.test.ts --coverage.enabled=false`; `npm -w @alga-psa/billing run typecheck`.
 
+### 2026-07-02 — Ticket exact hourly revenue slice
+
+- F033 implemented for the exact-revenue path: `getTicketProfitability` returns ticket rows with minutes, billable minutes, labor cost, material cost, revenue, margin, attribution tag, uncosted flag, and client/agreement filters. Usage/product/license charges remain at agreement grain because no ticket linkage exists.
+- F034 implemented: ticket hourly revenue uses `invoice_time_entries.item_id -> invoice_charges.item_id`, with billable-duration apportionment if multiple time-entry links ever share one item.
+- F035 implemented: legacy hourly links with NULL `item_id` are ignored by ticket revenue and remain in agreement/client revenue through the charge-level facts; no ticket revenue is fabricated.
+- T052 implemented: mocked ticket action test verifies one ticket row with minutes, billable minutes, labor cost, material cost, revenue, margin fields, and exact attribution.
+- T054 implemented: mocked ticket action test verifies item-linked hourly revenue is added to the ticket row and tagged `exact`.
+- T055 implemented: static SQL test guards the defensive by-billable-duration apportionment over `PARTITION BY ic.item_id`.
+- T056 implemented: static SQL test guards `ite.item_id IS NOT NULL`, so legacy NULL links stay out of ticket revenue while charge-level agreement revenue remains.
+- T060 implemented: mocked ticket action test verifies ticket material revenue/cost is included on the ticket row.
+- Deferred in this slice: fixed-fee and bucket proportional allocation with largest-remainder rounding (F036-F037 / T057-T059, T085-T086, T093).
+- Commands run: `cd server && npx vitest run ../packages/billing/src/actions/profitabilityReportActions.test.ts ../packages/billing/src/actions/profitabilityReportActions.static.test.ts --coverage.enabled=false`; `npm -w @alga-psa/billing run typecheck`.
+
 ## Implementation log
 
 - 2026-07-02 batch 1 (schema + cost-rate model/actions):
