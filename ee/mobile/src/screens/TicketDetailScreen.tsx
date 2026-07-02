@@ -46,6 +46,8 @@ import { AgentPickerModal } from "../features/ticketDetail/components/AgentPicke
 import { ContactPickerModal } from "../features/ticketDetail/components/ContactPickerModal";
 import { TagsSection } from "../features/ticketDetail/components/TagsSection";
 import { TagPickerModal } from "../features/ticketDetail/components/TagPickerModal";
+import { TicketTimerChip } from "../features/timer/components/TicketTimerChip";
+import { useTimer } from "../features/timer/TimerContext";
 
 // Utils
 import { getDueDateIso, getWatcherUserIds, isoToDateInput, stringOrDash } from "../features/ticketDetail/utils";
@@ -187,6 +189,11 @@ export function TicketDetailBody({
   const timeEntryHook = useTimeEntry(deps, {
     onCreated: () => setTimeEntriesRefreshKey((value) => value + 1),
   });
+  const timer = useTimer();
+  const timerLastStoppedAt = timer.lastStopped?.workItemId === ticketId ? timer.lastStopped.at : null;
+  useEffect(() => {
+    if (timerLastStoppedAt !== null) setTimeEntriesRefreshKey((value) => value + 1);
+  }, [timerLastStoppedAt]);
   const assignmentHook = useTicketAssignment({ ...deps, fetchTicket });
   const contactHook = useTicketContact({ ...deps, fetchTicket });
   const tagsHook = useTicketTags(deps);
@@ -390,6 +397,7 @@ export function TicketDetailBody({
         </View>
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, gap: spacing.sm }}>
+          <TicketTimerChip ticketId={ticketId} />
           <ActionChip
             label={t("detail.changeStatus")}
             onPress={() => { void statusHook.openStatusPicker(); }}

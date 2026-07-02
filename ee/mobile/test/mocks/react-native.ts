@@ -24,6 +24,12 @@ export const RefreshControl = createMockComponent("RefreshControl");
 export const Alert = {
   alert: () => undefined,
 };
+export const AppState = {
+  currentState: "active" as string,
+  addEventListener: () => ({
+    remove: () => undefined,
+  }),
+};
 export const Linking = {
   openURL: async (url: string) => {
     void url;

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import React, { type ReactNode } from "react";
 import { Pressable, Text } from "react-native";
 import { hitSlop } from "../a11y";
 import { useTheme } from "../ThemeContext";
