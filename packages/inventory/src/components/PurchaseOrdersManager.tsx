@@ -402,7 +402,13 @@ export function PurchaseOrdersManager({
       dataIndex: 'po_number',
       render: (v: any) => <span className="font-medium text-gray-900">{v}</span>,
     },
-    { title: 'Vendor', dataIndex: 'vendor_id', render: (v: any) => vendorName(v) },
+    {
+      title: 'Vendor',
+      dataIndex: 'vendor_id',
+      // Server-joined name first; the client-side vendors lookup is only a fallback
+      // (it loads async, which used to flash raw UUIDs).
+      render: (v: any, rec) => rec.vendor_name || vendorName(v),
+    },
     {
       // The defining number of a purchase order: Σ(unit_cost × qty_ordered) across lines,
       // in the PO's own currency (which is why there's no separate constant "Currency" column).

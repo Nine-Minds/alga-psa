@@ -207,3 +207,46 @@ remediation + completion plan. Parent plans:
 - Migration up (dev, admin creds required):
   `DB_PASSWORD_ADMIN='<pw>' node <scratch>/apply_addr_migration.cjs` pattern — adapt per migration
 - Leverage markers: `grep -rn "LEVERAGE:" packages/inventory`
+
+## Browser smoke test — 2026-07-01 (alga-dev IDE, glinda/Admin)
+
+End-to-end UI smoke of the remediation features against the live dev stack (:3578), verified at each step in the DB.
+
+**Passed (UI → DB verified):**
+- SO create→confirm: reservation capped at availability (ordered 20 → reserved 9, old bug would write 20); per-line `quantity_reserved`/`reserved_location_id`; 2 serialized units claimed via `allocated_so_line_id`.
+- SO detail: availability badges exact (Backorder 8 = 20 − 9 secured − 3 available), per-line fulfill, busy guards.
+- Location scoping on fulfill: foreign location rejected ("technician's van assigned to someone else"), zero side effects; manager write (Main WH) and own location (Downtown) allowed.
+- Fulfill + on_fulfillment invoicing: consume movements, reservations drained exactly at reserved location, 4 draft invoices w/ correct cents and `invoice_charges.so_line_id` backlinks.
+- Serialized picker: search, allocated-unit preselect + labels; COGS 9500/unit captured; units → delivered w/ client set.
+- Reopen guard: "Cannot reopen a sales order with fulfilled lines" (status untouched).
+- Drop-ship confirm: 2 delivered, on-hand untouched (locationless consume), PO 2/5 partially_received, SO → Fulfilled. NOTE: had to inject the drop-ship PO via DB — see finding below.
+- Manual Generate invoice: $10,225.00 draft (5×1240 + 10×380 + 50×4.50), SO → Invoiced.
+- Vendor price list: offer upsert (15500¢, SKU, preferred) + `pis.preferred_vendor_id` sync.
+- Backorder→PO: draft PO picks preferred vendor, qty 8 = shortfall, cost/vendor_sku from offer, `source_so_line_id` linked.
+- PO receive: vendor_sku shown in dialog; avg cost 0→15500; ledgered receipt.
+- Landed cost: preview matched server math ($64 over 8 → $163 effective); applied → avg 16300, entries `applied`, qty-0 audit movement.
+- Cycle count: snapshot, variances (−1/+1), unexpected-serial disposition enforced server-side (approve without it rejected), approve applied all four corrections via `cycle_count:`-tagged adjusts; missing serial retired; found serial added.
+- Vendor bills: create-from-PO prefill, due 7/31 from net_30, "Matches the PO's received value" 2-way line, draft→open→(Mark paid/Void) gating, dashboard widget "$1,240 across 1 bill, nothing overdue".
+- Rebuild stock caches: corrected planted drift (99→2); post-session global check: cache == ledger for all non-serialized rows, cache == in_stock unit counts for serialized.
+- Dev log: 183 inventory POSTs, only error = the intentionally-triggered disposition rejection.
+
+**Findings:**
+1. UI gap (should fix): nothing in the UI calls `createDropShipForSoLine`. A drop-ship SO line with no PO shows "Confirm shipment" which can only fail ("Drop-ship purchase order line not found"). Needs a "Create drop-ship PO" affordance (needs a vendor picker + per-line PO-existence info in `getSalesOrder`).
+2. UX nit: cycle-count disposition selections are client state and reset when submit-for-review refreshes the session — approver must re-select. Server guard correctly blocks, so it's annoyance not corruption.
+3. Display nit (pre-existing): PO list Vendor column renders the raw vendor UUID.
+4. Product decision: every fulfill creates a NEW draft invoice; consider appending to an open draft for the same SO.
+5. Observation: dashboard Margin-MTD counts COGS from movements immediately but revenue only from finalized invoices → transiently shows "$-190 on $0" while invoices are drafts.
+6. Demo-seed gaps (fixed in dev DB during setup): stock_levels had no backing movements (rebuild would zero them) → backfilled receipts; SO-DEMO-001 stuck 'confirmed' with fulfilled lines.
+
+**Fixtures injected (persist in dev DB):** ledger backfill receipts; Samsung SSD → serialized + 38 units (SSD990-0001..0038 @ 9500¢); vendor "Emerald Supply Co." (net_30); glinda = manager of Main Warehouse; drop-ship PO00001 for SO-DEMO-001. Created via UI: SO00001, PO00002, vendor offer, count session, bill ESC-INV-7741, 5 draft invoices.
+
+## Smoke-test findings — all four fixed & re-verified (2026-07-01, same session)
+
+1. **Drop-ship PO wiring** — `getSalesOrder` lines now carry `drop_ship_po_number` (correlated subquery filtered to `is_drop_ship AND status <> 'cancelled'`; a plain join would match backorder-suggested POs, which also link `source_so_line_id`). SO detail swaps the dead-end Confirm-shipment for a "Create drop-ship PO" dialog (vendor select, auto-preselect when only one vendor) calling `createDropShipForSoLine`; once a PO exists the Confirm button returns with the PO number under it. Verified: SO00002 → Create → PO00003 → Confirm shipment → Fulfilled.
+2. **Cycle-count dispositions survive refresh** — `openDetail` prunes dispositions to still-unexpected serials instead of wiping. Verified: disposition set → submit-for-review → still "Add to stock" → approve applied without re-pick (SSD990-7777 in stock).
+3. **PO list vendor name** — `listPurchaseOrders` left-joins vendors (`vendor_name` on `PurchaseOrderListRow`); grid renders it with the async client lookup as fallback. No more UUID flash.
+4. **One growing draft invoice per SO** — `generateInvoiceForSalesOrder` finds an open manual draft already billing this SO (via `invoice_charges.so_line_id` → line → so_id), appends charges via invoiceService primitives + tax redistribution, and records a DELTA `invoice_adjustment` transaction (full-total re-post would double the client balance). Falls back to a fresh invoice otherwise. Verified: Yealink +8 appended to INV-000004 ($567 → $2,079, adjustment 151200¢), no new invoice, SO00001 → invoiced.
+5. **Margin-MTD $0-revenue bug (root cause found)** — consume movements store the SO id in `source_doc_id` but the dashboard joined it against `so_line_id`, so revenue was always 0. Now a LEFT JOIN LATERAL resolves price by (so_id, service_id) with LIMIT 1 against same-service fan-out. Verified: widget shows 96.3% — $5,006 on $5,196 (exact ledger prediction).
+6. Test suite: fixing the vendor fixture unmasked a latent aborted-transaction bug in the T034 vendor-bill test (it was vacuously green while no vendors existed) — now uses the `expectViolation` savepoint helper; 65/65 green.
+
+Note: the pane dev server (:3555 now, was :3578) served stale-cache 404s for all inventory subroutes after its restart; a clean restart fixed it — not a code issue.

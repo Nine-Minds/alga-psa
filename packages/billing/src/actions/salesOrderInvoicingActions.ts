@@ -1,6 +1,8 @@
 'use server';
 
 import { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
+import { Temporal } from '@js-temporal/polyfill';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -10,6 +12,8 @@ import {
   FulfillSalesOrderLineResult,
 } from '@alga-psa/inventory/actions';
 import { generateManualInvoice } from './manualInvoiceActions';
+import { TaxService } from '../services/taxService';
+import * as invoiceService from '../services/invoiceService';
 
 /**
  * Sales-order invoicing — bridges sales_order_lines into the existing manual-invoice
@@ -63,14 +67,88 @@ export const generateInvoiceForSalesOrder = withAuth(
       tax_rate_id: b.line.tax_rate_id ?? null,
     }));
 
-    const result: any = await generateManualInvoice({
-      clientId: so.client_id,
-      currency_code: so.currency_code,
-      items,
-    } as any);
+    // Successive fulfillments append to the SO's open draft instead of spawning an
+    // invoice per fulfill (found via the so_line_id backlink). A finalized invoice is
+    // never touched — absent an appendable draft we fall through to a fresh one.
+    const existingDraft = await withTransaction(db, async (trx: Knex.Transaction) =>
+      trx('invoices as i')
+        .where({
+          'i.tenant': tenant,
+          'i.client_id': so.client_id,
+          'i.status': 'draft',
+          'i.is_manual': true,
+          'i.currency_code': so.currency_code ?? 'USD',
+        })
+        .whereExists(function () {
+          this.select(trx.raw('1'))
+            .from('invoice_charges as c')
+            .join('sales_order_lines as l', function () {
+              this.on('l.so_line_id', '=', 'c.so_line_id').andOn('l.tenant', '=', 'c.tenant');
+            })
+            .whereRaw('c.invoice_id = i.invoice_id')
+            .andWhereRaw('c.tenant = i.tenant')
+            .andWhere('l.so_id', soId);
+        })
+        .orderBy('i.created_at', 'desc')
+        .first(),
+    );
 
-    if (result && result.success === false) {
-      return { success: false, invoiced: 0, error: result.error };
+    let invoiceId: string | undefined;
+    if (existingDraft) {
+      const { session, knex } = await invoiceService.validateSessionAndTenant();
+      const client = await invoiceService.getClientDetails(knex, tenant, so.client_id);
+      const totalBefore = Math.round(Number(existingDraft.total_amount ?? 0));
+      await knex.transaction(async (trx) => {
+        await invoiceService.persistManualInvoiceCharges(
+          trx,
+          existingDraft.invoice_id,
+          items as any,
+          client,
+          session,
+          tenant,
+        );
+        const taxService = new TaxService();
+        await invoiceService.calculateAndDistributeTax(trx, existingDraft.invoice_id, client, taxService, tenant);
+
+        // Totals like updateInvoiceTotalsAndRecordTransaction, but the transaction row
+        // records only the DELTA — re-recording the full total would double the balance.
+        const finalItems = await trx('invoice_charges').where({ invoice_id: existingDraft.invoice_id, tenant });
+        const subtotal = finalItems.reduce((s: number, it: any) => s + Number(it.net_amount), 0);
+        const tax = finalItems.reduce((s: number, it: any) => s + Number(it.tax_amount), 0);
+        const total = Math.round(subtotal + tax);
+        await trx('invoices')
+          .where({ invoice_id: existingDraft.invoice_id, tenant })
+          .update({ subtotal: Math.round(subtotal), tax: Math.round(tax), total_amount: total });
+        const currentBalance = await trx('transactions')
+          .where({ client_id: so.client_id, tenant })
+          .orderBy('created_at', 'desc')
+          .first()
+          .then((lastTx: any) => lastTx?.balance_after || 0);
+        await trx('transactions').insert({
+          transaction_id: uuidv4(),
+          client_id: so.client_id,
+          invoice_id: existingDraft.invoice_id,
+          amount: total - totalBefore,
+          type: 'invoice_adjustment',
+          status: 'completed',
+          description: `Added sales-order items from ${so.so_number} to invoice ${existingDraft.invoice_number}`,
+          created_at: Temporal.Now.instant().toString(),
+          tenant,
+          balance_after: currentBalance + (total - totalBefore),
+        });
+      });
+      invoiceId = existingDraft.invoice_id;
+    } else {
+      const result: any = await generateManualInvoice({
+        clientId: so.client_id,
+        currency_code: so.currency_code,
+        items,
+      } as any);
+
+      if (result && result.success === false) {
+        return { success: false, invoiced: 0, error: result.error };
+      }
+      invoiceId = result?.invoice?.invoice_id ?? result?.invoiceId;
     }
 
     // Record what was invoiced (capped at ordered) and advance SO status.
@@ -93,7 +171,7 @@ export const generateInvoiceForSalesOrder = withAuth(
     return {
       success: true,
       invoiced: billable.reduce((s: number, b: any) => s + b.qty, 0),
-      invoiceId: result?.invoice?.invoice_id ?? result?.invoiceId,
+      invoiceId,
     };
   },
 );

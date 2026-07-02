@@ -174,10 +174,17 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
     const arriving_today = receiving_queue.filter((r) => r.eta_label === 'ETA today').length;
 
     // ---- Margin (month to date) ----
+    // Consume movements carry the SO id (not the line id) in source_doc_id, so the line
+    // price is resolved by (so_id, service_id). LATERAL … LIMIT 1 prevents fan-out when
+    // an SO repeats a service across lines (the movement can't tell them apart anyway).
     const marginRow = await trx('stock_movements as sm')
-      .leftJoin('sales_order_lines as sol', function () {
-        this.on('sm.source_doc_id', '=', 'sol.so_line_id').andOn('sm.tenant', '=', 'sol.tenant');
-      })
+      .joinRaw(
+        `LEFT JOIN LATERAL (
+          SELECT l.unit_price FROM sales_order_lines l
+          WHERE l.tenant = sm.tenant AND l.so_id = sm.source_doc_id AND l.service_id = sm.service_id
+          ORDER BY l.created_at ASC LIMIT 1
+        ) sol ON true`,
+      )
       .where({ 'sm.tenant': tenant, 'sm.movement_type': 'consume', 'sm.source_doc_type': 'sales_order' })
       .andWhereRaw("sm.created_at >= date_trunc('month', now())")
       .select<{ revenue: string; cogs: string }[]>(

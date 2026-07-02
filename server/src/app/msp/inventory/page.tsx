@@ -17,6 +17,7 @@ const EMPTY: InventoryDashboardData = {
   on_hand: { total_units: 0, serialized_units: 0 },
   on_order: { open_po_count: 0, on_order_value: 0, arriving_today: 0 },
   margin_mtd: { revenue: 0, cogs: 0, margin: 0, margin_pct: 0 },
+  vendor_bills: { open_count: 0, open_total: 0, overdue_count: 0, overdue_total: 0 },
   this_week: { received: 0, deployed: 0, transfers: 0, rmas_opened: 0 },
   attention: [],
   receiving_queue: [],

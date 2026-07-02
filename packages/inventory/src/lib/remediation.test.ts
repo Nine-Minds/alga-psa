@@ -354,10 +354,12 @@ describe('T034 constraints — vendor bill lifecycle schema', () => {
         bill_date: trx.fn.now(), currency_code: 'USD', status: 'draft', total_amount: 100,
       };
       await trx('vendor_bills').insert(bill);
-      await expect(trx('vendor_bills').insert(bill)).rejects.toThrow(/uq_vendor_bills_number/);
-      await expect(
-        trx('vendor_bills').insert({ ...bill, bill_number: `${bill.bill_number}-2`, status: 'bogus' }),
-      ).rejects.toThrow(/vendor_bills_status_check/);
+      await expectViolation(trx, () => trx('vendor_bills').insert(bill), /uq_vendor_bills_number/);
+      await expectViolation(
+        trx,
+        () => trx('vendor_bills').insert({ ...bill, bill_number: `${bill.bill_number}-2`, status: 'bogus' }),
+        /vendor_bills_status_check/,
+      );
     });
   });
 });

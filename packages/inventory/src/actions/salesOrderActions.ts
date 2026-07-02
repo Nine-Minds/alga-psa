@@ -244,6 +244,8 @@ export interface SalesOrderLineDetail extends ISalesOrderLine {
   sku: string | null;
   is_serialized: boolean;
   track_stock: boolean;
+  /** Live drop-ship PO backing this line, if one exists — gates Confirm shipment vs Create PO. */
+  drop_ship_po_number: string | null;
 }
 
 /** ISalesOrder with detail lines (Omit avoids intersecting the base `lines?` type). */
@@ -272,6 +274,15 @@ export const getSalesOrder = withAuth(
           'sc.sku',
           trx.raw('COALESCE(pis.is_serialized, false) as is_serialized'),
           trx.raw('COALESCE(pis.track_stock, false) as track_stock'),
+          // Correlated (not a join): a backorder-suggested PO also links source_so_line_id,
+          // so filter to live drop-ship POs and take at most one.
+          trx.raw(`(
+            SELECT po.po_number FROM purchase_order_lines pol
+            JOIN purchase_orders po ON po.po_id = pol.po_id AND po.tenant = pol.tenant
+            WHERE pol.tenant = sol.tenant AND pol.source_so_line_id = sol.so_line_id
+              AND po.is_drop_ship AND po.status <> 'cancelled'
+            ORDER BY po.order_date DESC LIMIT 1
+          ) as drop_ship_po_number`),
         )) as SalesOrderLineDetail[];
       return { ...(row as ISalesOrder), lines };
     });

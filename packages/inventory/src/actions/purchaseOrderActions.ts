@@ -93,6 +93,8 @@ export type PurchaseOrderListRow = IPurchaseOrder & {
   qty_ordered: number;
   qty_received: number;
   line_count: number;
+  /** Joined server-side so the grid never flashes a raw vendor UUID. */
+  vendor_name: string | null;
 };
 
 export const listPurchaseOrders = withAuth(
@@ -113,12 +115,16 @@ export const listPurchaseOrders = withAuth(
 
       const q = trx('purchase_orders as po')
         .leftJoin(lineAgg, 'la.po_id', 'po.po_id')
+        .leftJoin('vendors as v', function () {
+          this.on('v.vendor_id', '=', 'po.vendor_id').andOn('v.tenant', '=', 'po.tenant');
+        })
         .where({ 'po.tenant': tenant });
       if (opts?.status) q.andWhere({ 'po.status': opts.status });
       if (opts?.vendor_id) q.andWhere({ 'po.vendor_id': opts.vendor_id });
 
       const rows = await q
         .select('po.*')
+        .select('v.vendor_name')
         .select(trx.raw('COALESCE(la.total_amount, 0)::bigint as total_amount'))
         .select(trx.raw('COALESCE(la.qty_ordered, 0)::int as qty_ordered'))
         .select(trx.raw('COALESCE(la.qty_received, 0)::int as qty_received'))

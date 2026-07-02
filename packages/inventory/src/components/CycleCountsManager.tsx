@@ -74,7 +74,19 @@ export function CycleCountsManager({
             : '';
       }
       setEntries(draft);
-      setDispositions({});
+      // Prune dispositions to serials that are still unexpected — never wipe them:
+      // submit-for-review reloads the session, and the approver's picks must survive it.
+      const stillUnexpected = new Set<string>();
+      if (view.can_review) {
+        for (const l of view.lines) {
+          if (!l.is_serialized) continue;
+          const expected = new Set(l.expected_serials_visible ?? []);
+          for (const s of l.counted_serials ?? []) if (!expected.has(s)) stillUnexpected.add(s);
+        }
+      }
+      setDispositions((prev) =>
+        Object.fromEntries(Object.entries(prev).filter(([serial]) => stillUnexpected.has(serial))),
+      );
     } catch (e: any) {
       toast.error(e?.message || "Couldn't load the session.");
     }

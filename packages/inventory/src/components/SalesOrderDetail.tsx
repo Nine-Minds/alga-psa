@@ -8,13 +8,15 @@ import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { toast } from 'react-hot-toast';
-import type { ISalesOrder, IStockLocation } from '@alga-psa/types';
+import type { ISalesOrder, IStockLocation, IVendor } from '@alga-psa/types';
 import {
   getSalesOrder,
   computeBackorder,
   suggestPoFromBackorder,
   reopenSalesOrder,
   confirmDropShipShipment,
+  createDropShipForSoLine,
+  listVendors,
   listFulfillmentCandidateUnits,
   type SalesOrderLineDetail,
   type SalesOrderWithDetail,
@@ -101,6 +103,12 @@ export function SalesOrderDetail({
   // Drop-ship sub-dialog state.
   const [dropShipLine, setDropShipLine] = useState<SalesOrderLineDetail | null>(null);
   const [serialRows, setSerialRows] = useState<SerialRow[]>([]);
+
+  // Create-drop-ship-PO sub-dialog state (a drop-ship line is confirmable only once
+  // a vendor PO backs it).
+  const [createPoLine, setCreatePoLine] = useState<SalesOrderLineDetail | null>(null);
+  const [vendors, setVendors] = useState<IVendor[]>([]);
+  const [createPoVendorId, setCreatePoVendorId] = useState('');
 
   const load = useCallback(async () => {
     if (!soId) return;
@@ -246,6 +254,39 @@ export function SalesOrderDetail({
       await changed();
     } catch (e: any) {
       toast.error(e?.message || "Couldn't confirm the shipment.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // ---- Create drop-ship PO -------------------------------------------------------
+
+  const openCreatePo = async (line: SalesOrderLineDetail) => {
+    setCreatePoLine(line);
+    setCreatePoVendorId('');
+    try {
+      const v = await listVendors({});
+      setVendors(v);
+      if (v.length === 1) setCreatePoVendorId(v[0].vendor_id);
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't load vendors.");
+    }
+  };
+
+  const submitCreatePo = async () => {
+    if (!createPoLine || busy) return;
+    if (!createPoVendorId) {
+      toast.error('Pick the vendor that will ship this line.');
+      return;
+    }
+    setBusy(`create-po:${createPoLine.so_line_id}`);
+    try {
+      const po = await createDropShipForSoLine(createPoLine.so_line_id, { vendor_id: createPoVendorId });
+      toast.success(`Drop-ship PO ${po.po_number} created — confirm the shipment once the vendor ships.`);
+      setCreatePoLine(null);
+      await changed();
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't create the drop-ship PO.");
     } finally {
       setBusy(null);
     }
@@ -440,15 +481,31 @@ export function SalesOrderDetail({
                       </td>
                       <td className="py-2 pl-2 text-right">
                         {line.fulfillment_type === 'drop_ship' && remaining > 0 && so.status !== 'cancelled' && so.status !== 'draft' && (
-                          <Button
-                            id={`so-line-dropship-${line.so_line_id}`}
-                            variant="outline"
-                            size="sm"
-                            disabled={busy !== null}
-                            onClick={() => openDropShip(line)}
-                          >
-                            Confirm shipment
-                          </Button>
+                          line.drop_ship_po_number ? (
+                            <div className="inline-flex flex-col items-end gap-0.5">
+                              <Button
+                                id={`so-line-dropship-${line.so_line_id}`}
+                                variant="outline"
+                                size="sm"
+                                disabled={busy !== null}
+                                onClick={() => openDropShip(line)}
+                              >
+                                Confirm shipment
+                              </Button>
+                              <span className="text-xs text-gray-500">{line.drop_ship_po_number}</span>
+                            </div>
+                          ) : (
+                            // No vendor PO yet — confirming would dead-end, so offer creation instead.
+                            <Button
+                              id={`so-line-create-dropship-po-${line.so_line_id}`}
+                              variant="outline"
+                              size="sm"
+                              disabled={busy !== null}
+                              onClick={() => openCreatePo(line)}
+                            >
+                              Create drop-ship PO
+                            </Button>
+                          )
                         )}
                         {line.fulfillment_type === 'from_stock' && canFulfill && remaining > 0 && line.track_stock && (
                           <Button
@@ -654,6 +711,39 @@ export function SalesOrderDetail({
               </Button>
               <Button id="so-dropship-submit" onClick={submitDropShip} disabled={busy !== null}>
                 {busy?.startsWith('dropship:') ? 'Confirming…' : 'Confirm shipment'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
+
+      {/* ---- Create drop-ship PO sub-dialog ---- */}
+      <Dialog
+        isOpen={createPoLine !== null}
+        onClose={() => setCreatePoLine(null)}
+        title={createPoLine ? `Create drop-ship PO — ${createPoLine.service_name || createPoLine.service_id}` : ''}
+        id="so-create-dropship-po-dialog"
+      >
+        {createPoLine && (
+          <div className="space-y-4 p-1">
+            <p className="text-sm text-gray-500">
+              Orders the line's full quantity ({Number(createPoLine.quantity_ordered)}) from the vendor, shipped
+              straight to the client. Once the vendor ships, use "Confirm shipment" to mark the line fulfilled.
+            </p>
+            <CustomSelect
+              id="so-create-dropship-po-vendor"
+              label="Vendor"
+              placeholder="Select a vendor…"
+              value={createPoVendorId}
+              onValueChange={setCreatePoVendorId}
+              options={vendors.map((v) => ({ value: v.vendor_id, label: v.vendor_name }))}
+            />
+            <div className="flex justify-end gap-2 pt-2">
+              <Button id="so-create-dropship-po-cancel" variant="outline" onClick={() => setCreatePoLine(null)}>
+                Cancel
+              </Button>
+              <Button id="so-create-dropship-po-submit" onClick={submitCreatePo} disabled={busy !== null}>
+                {busy?.startsWith('create-po:') ? 'Creating…' : 'Create PO'}
               </Button>
             </div>
           </div>
