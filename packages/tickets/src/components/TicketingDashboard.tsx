@@ -1050,6 +1050,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, []);
 
+  // Authoritative status_id → is_closed so the status pill colors by the status
+  // definition (consistent per status) rather than the drift-prone per-ticket flag.
+  const statusIsClosedById = useMemo(
+    () => Object.fromEntries(rawStatusOptions.map((o) => [o.value, !!o.isClosed])),
+    [rawStatusOptions]
+  );
+
   const columns = useMemo(() => {
     const baseColumns = createTicketColumns({
       categories,
@@ -1061,6 +1068,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       tagSize: densityClasses.tagSize,
       showClient: true,
       onClientClick: onQuickViewClient,
+      statusIsClosedById,
       additionalAgentAvatarUrls,
       teamAvatarUrls,
       isBundleExpanded: bundleView === 'bundled' ? isBundleExpanded : undefined,
@@ -1178,6 +1186,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     clearSelection,
     handleSelectAllMatchingTickets,
     allMatchingMode,
+    statusIsClosedById,
     additionalAgentAvatarUrls,
     teamAvatarUrls,
     isBundleExpanded,
