@@ -250,6 +250,96 @@
       "upcoming": "11111",
       "yes": "11111",
       "no": "11111"
+    },
+    "profitability": {
+      "formats": {
+        "percent": "11111 {{value}} 11111",
+        "hours": "11111 {{value}} 11111",
+        "hourlyRate": "11111 {{value}} 11111",
+        "ticketWithNumber": "11111 {{number}} 11111 {{title}} 11111",
+        "billableHours": "11111 {{value}} 11111",
+        "listSeparator": "11111"
+      },
+      "errors": {
+        "load": "11111",
+        "title": "11111"
+      },
+      "table": {
+        "revenue": "11111",
+        "laborCost": "11111",
+        "materialCost": "11111",
+        "margin": "11111",
+        "marginPct": "11111",
+        "hours": "11111",
+        "ehr": "11111",
+        "client": "11111",
+        "agreement": "11111",
+        "ticket": "11111",
+        "attribution": "11111",
+        "contractLine": "11111",
+        "cost": "11111"
+      },
+      "actions": {
+        "toggleLines": "11111",
+        "apply": "11111",
+        "configureCostRates": "11111",
+        "clearClient": "11111",
+        "clearAgreement": "11111"
+      },
+      "rowTypes": {
+        "adHoc": "11111",
+        "unattributed": "11111",
+        "unassigned": "11111"
+      },
+      "attribution": {
+        "exact": "11111",
+        "allocated": "11111",
+        "none": "11111"
+      },
+      "status": {
+        "uncosted": "11111"
+      },
+      "filters": {
+        "startDate": "11111",
+        "endDate": "11111"
+      },
+      "timingTooltip": "11111",
+      "empty": {
+        "costRates": "11111",
+        "clients": "11111",
+        "lines": "11111",
+        "tickets": "11111"
+      },
+      "warnings": {
+        "title": "11111",
+        "uncostedMinutes": "11111 {{hours}} 11111",
+        "unapprovedMinutes": "11111 {{hours}} 11111",
+        "zeroDuration": "11111 {{count}} 11111",
+        "uncostedMaterials": "11111 {{count}} 11111",
+        "unconvertedRevenue": "11111 {{count}} 11111",
+        "materialCurrencyMismatch": "11111 {{count}} 11111"
+      },
+      "summary": {
+        "revenue": "11111",
+        "laborCost": "11111",
+        "materialCost": "11111",
+        "margin": "11111",
+        "marginPct": "11111",
+        "ehr": "11111"
+      },
+      "sections": {
+        "clients": "11111",
+        "clientsDescription": "11111",
+        "agreements": "11111 {{client}} 11111",
+        "agreementsDescription": "11111",
+        "linesForAgreement": "11111 {{agreement}} 11111",
+        "tickets": "11111",
+        "ticketsForAgreement": "11111 {{agreement}} 11111",
+        "ticketsDescription": "11111"
+      },
+      "fallbacks": {
+        "untitledTicket": "11111"
+      }
     }
   },
   "contractPerformance": {

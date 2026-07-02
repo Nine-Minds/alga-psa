@@ -345,7 +345,7 @@
   {
     "id": "F040",
     "description": "ProfitabilityReport component replacing the Profitability tab content in ContractReports.tsx",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.5",
       "7.7"
@@ -354,7 +354,7 @@
   {
     "id": "F041",
     "description": "Report UI: date-range picker defaulting to the last complete month (current month + invoice-date basis would show cost with no revenue yet), driving all four actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.5",
       "6.D5"
@@ -363,7 +363,7 @@
   {
     "id": "F042",
     "description": "Report UI: summary cards (revenue, labor cost, material cost, margin $, margin %, effective hourly rate)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.5"
     ]
@@ -371,7 +371,7 @@
   {
     "id": "F043",
     "description": "Report UI: per-client DataTable sortable by margin and margin % with drill-down into agreements",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.5"
     ]
@@ -379,7 +379,7 @@
   {
     "id": "F044",
     "description": "Report UI: per-agreement DataTable (within client drill-down) with Ad-hoc and Unattributed rows and contract-line expansion via custom row rendering or nested fetch/table (shared DataTable has onRowClick but no built-in expandable sub-rows)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.5"
     ]
@@ -387,7 +387,7 @@
   {
     "id": "F045",
     "description": "Report UI: per-ticket DataTable (within agreement or client drill-down) with attribution-quality tag and uncosted indicator",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.5"
     ]
@@ -395,7 +395,7 @@
   {
     "id": "F046",
     "description": "Report UI: timing-basis info tooltip (revenue by invoice date, cost by work date)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6.D5",
       "7.5"
@@ -404,7 +404,7 @@
   {
     "id": "F047",
     "description": "Report UI: 'cost rates not configured' empty state linking to Cost Rates settings",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.5",
       "10.1"
@@ -413,7 +413,7 @@
   {
     "id": "F048",
     "description": "Report UI: uncosted-minutes, unapproved-minutes, zero-duration-entries, uncosted-materials, and unconverted-revenue warnings surfaced when present, so totals are never presented as complete when they are not",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6.D4",
       "6.D6",
@@ -425,7 +425,7 @@
   {
     "id": "F049",
     "description": "Report UI: loading and error states consistent with sibling ContractReports tabs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.5"
     ]
@@ -433,7 +433,7 @@
   {
     "id": "F050",
     "description": "Report UI: kebab-case ids on all interactive elements; all strings via i18n; both language packs updated and validating",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.5",
       "10.9"
@@ -442,7 +442,7 @@
   {
     "id": "F051",
     "description": "Remove getProfitabilityReport stub and Profitability interface from contractReportActions.ts; adjust the shared Promise.all fetch in ContractReports.tsx; update the stale 'simple profitability' card description in msp-composition Reports.tsx",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.7"
     ]
@@ -450,7 +450,7 @@
   {
     "id": "F052",
     "description": "Remove contracts.profitability definition file and its ReportRegistry registration from packages/reporting",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.7",
       "6.D9"
@@ -459,7 +459,7 @@
   {
     "id": "F053",
     "description": "Permission checks: all four report actions require billing.read; cost-rate write actions require billing.update",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8"
     ]
@@ -475,7 +475,7 @@
   {
     "id": "F055",
     "description": "Zero/degenerate-range handling: empty date range, range with no invoices, range with time but no revenue all render sensible zero rows (no NaN/Infinity)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.4",
       "7.5"

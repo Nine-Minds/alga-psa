@@ -4,7 +4,7 @@
     "quoting": "11111",
     "tax": "11111",
     "payments": "11111",
-    "costRates": "55555"
+    "costRates": "11111"
   },
   "general": {
     "currency": {
@@ -1208,77 +1208,77 @@
     }
   },
   "costRates": {
-    "title": "55555",
-    "description": "55555",
-    "loading": "55555",
+    "title": "11111",
+    "description": "11111",
+    "loading": "11111",
     "default": {
-      "title": "55555",
-      "current": "55555",
-      "missing": "55555",
-      "history": "55555"
+      "title": "11111",
+      "current": "11111 {{rate}} 11111 {{date}} 11111",
+      "missing": "11111",
+      "history": "11111"
     },
     "empty": {
-      "title": "55555",
-      "description": "55555"
+      "title": "11111",
+      "description": "11111"
     },
     "table": {
-      "user": "55555",
-      "currentRate": "55555",
-      "actions": "55555",
-      "usesDefault": "55555",
-      "uncosted": "55555"
+      "user": "11111",
+      "currentRate": "11111",
+      "actions": "11111",
+      "usesDefault": "11111",
+      "uncosted": "11111"
     },
     "history": {
-      "empty": "55555"
+      "empty": "11111"
     },
     "dialog": {
-      "title": "55555",
-      "description": "55555"
+      "title": "11111",
+      "description": "11111"
     },
     "fields": {
       "user": {
-        "label": "55555",
-        "default": "55555"
+        "label": "11111",
+        "default": "11111"
       },
       "rate": {
-        "label": "55555"
+        "label": "11111"
       },
       "effectiveFrom": {
-        "label": "55555"
+        "label": "11111"
       },
       "effectiveTo": {
-        "label": "55555"
+        "label": "11111"
       }
     },
     "actions": {
-      "setDefault": "55555",
-      "addUserRate": "55555",
-      "edit": "55555",
-      "delete": "55555",
-      "cancel": "55555",
-      "save": "55555",
-      "saving": "55555",
-      "continue": "55555"
+      "setDefault": "11111",
+      "addUserRate": "11111",
+      "edit": "11111",
+      "delete": "11111",
+      "cancel": "11111",
+      "save": "11111",
+      "saving": "11111",
+      "continue": "11111"
     },
     "warning": {
-      "title": "55555",
-      "description": "55555",
-      "body": "55555"
+      "title": "11111",
+      "description": "11111",
+      "body": "11111"
     },
     "toast": {
-      "saved": "55555",
-      "deleted": "55555"
+      "saved": "11111",
+      "deleted": "11111"
     },
     "errors": {
-      "load": "55555",
-      "save": "55555",
-      "delete": "55555"
+      "load": "11111",
+      "save": "11111",
+      "delete": "11111"
     },
     "formats": {
-      "noRate": "55555",
-      "hourlyRate": "55555",
-      "dateRange": "55555",
-      "openDateRange": "55555"
+      "noRate": "11111",
+      "hourlyRate": "11111 {{amount}} 11111",
+      "dateRange": "11111 {{start}} 11111 {{end}} 11111",
+      "openDateRange": "11111 {{start}} 11111"
     }
   }
 }

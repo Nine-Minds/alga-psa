@@ -200,3 +200,15 @@
 - T093 implemented: static SQL guard verifies charges without any resolvable period are excluded from allocation by the terminal rule.
 - T058 left open: the zero-ticket-hours residual case still needs an explicit behavioral test.
 - Commands run: `cd server && npx vitest run ../packages/billing/src/actions/profitabilityReportActions.test.ts ../packages/billing/src/actions/profitabilityReportActions.static.test.ts --coverage.enabled=false`; `npm -w @alga-psa/billing run typecheck`.
+
+### 2026-07-02 — Profitability report UI and stub cleanup
+
+- F040-F050 implemented: `ProfitabilityReport` now replaces the Profitability tab, defaults to last complete month, loads the four report actions, renders summary cards, client drill-down, agreement rows with line-detail expansion, ticket rows with attribution/uncosted indicators, timing-basis tooltip, warning alerts, cost-rate empty state link, loading/error states, kebab-case control ids, and `msp/reports` i18n keys.
+- F051 implemented: removed `getProfitabilityReport` and the old `Profitability` interface from `contractReportActions.ts`; `ContractReports.tsx` no longer fetches placeholder profitability in its shared `Promise.all`; updated the stale reports-card description in `packages/msp-composition/src/reports/Reports.tsx`.
+- F052 implemented: deleted the `contracts.profitability` definition/test and removed `contractProfitabilityReport` from the reporting registry/index.
+- F053 implemented: report action tests now assert all four profitability actions reject users without `billing.read`; cost-rate write permission coverage was already in the cost-rate action tests.
+- F055 implemented: date normalization now allows `endDate < startDate`; bounded queries return empty facts, yielding zero-valued summary and empty tables instead of throwing.
+- T064, T067, T069-T080 implemented through action/static/component tests and translation validation.
+- Commands run: `cd server && npx vitest run ../packages/billing/src/components/billing-dashboard/reports/ProfitabilityReport.test.tsx ../packages/billing/src/actions/profitabilityReportActions.test.ts ../packages/billing/src/actions/profitabilityReportActions.static.test.ts --coverage.enabled=false`; `npm -w @alga-psa/billing run typecheck`; `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`; `npm -w @alga-psa/billing run build`; `npm -w @alga-psa/reporting run typecheck`.
+- Build note: `npm -w @alga-psa/reporting run build` currently fails with `No input files, try "tsup <your-file>" instead` because that package's build script has no tsup entry configured; reporting typecheck passes after the registry deletion.
+- T081 left open: full root/server build has not been run yet, and the reporting package build script limitation means "affected packages build" is not fully satisfied.

@@ -1213,7 +1213,7 @@
     "loading": "55555",
     "default": {
       "title": "55555",
-      "current": "55555",
+      "current": "55555 {{rate}} 55555 {{date}} 55555",
       "missing": "55555",
       "history": "55555"
     },
@@ -1276,9 +1276,9 @@
     },
     "formats": {
       "noRate": "55555",
-      "hourlyRate": "55555",
-      "dateRange": "55555",
-      "openDateRange": "55555"
+      "hourlyRate": "55555 {{amount}} 55555",
+      "dateRange": "55555 {{start}} 55555 {{end}} 55555",
+      "openDateRange": "55555 {{start}} 55555"
     }
   }
 }

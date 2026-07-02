@@ -527,7 +527,7 @@
   {
     "id": "T064",
     "description": "All four report actions reject users lacking billing.read",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
@@ -553,7 +553,7 @@
   {
     "id": "T067",
     "description": "Empty range returns zero-valued summary and empty tables without errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]
@@ -570,7 +570,7 @@
   {
     "id": "T069",
     "description": "ProfitabilityReport renders summary cards from getProfitabilitySummary (component test with mocked actions)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040",
       "F042"
@@ -579,7 +579,7 @@
   {
     "id": "T070",
     "description": "Date-range picker defaults to the last complete month and refetches on change",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
@@ -587,7 +587,7 @@
   {
     "id": "T071",
     "description": "Client table sorts by margin and margin %; clicking a client drills into agreements",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
@@ -595,7 +595,7 @@
   {
     "id": "T072",
     "description": "Agreement table shows Ad-hoc and Unattributed rows and expands to contract lines",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
@@ -603,7 +603,7 @@
   {
     "id": "T073",
     "description": "Ticket table shows attribution tag (exact/allocated) and uncosted indicator",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
@@ -611,7 +611,7 @@
   {
     "id": "T074",
     "description": "Timing-basis tooltip present on the summary header",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]
@@ -619,7 +619,7 @@
   {
     "id": "T075",
     "description": "'Cost rates not configured' empty state shown when tenant has no rates; links to settings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
@@ -627,7 +627,7 @@
   {
     "id": "T076",
     "description": "Uncosted-minutes, unapproved-minutes, zero-duration, uncosted-materials, and unconverted-revenue warnings each render when the actions report nonzero counts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
@@ -635,7 +635,7 @@
   {
     "id": "T077",
     "description": "Error state renders on action failure consistent with sibling tabs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
@@ -643,7 +643,7 @@
   {
     "id": "T078",
     "description": "getProfitabilityReport removed: no remaining references compile; Profitability tab uses new component only",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
@@ -651,7 +651,7 @@
   {
     "id": "T079",
     "description": "contracts.profitability absent from ReportRegistry; build/typecheck passes and no references to the removed definition remain",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]
@@ -659,7 +659,7 @@
   {
     "id": "T080",
     "description": "i18n validation script passes with new keys in all language packs (generate-pseudo-locales + validate-translations run)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]

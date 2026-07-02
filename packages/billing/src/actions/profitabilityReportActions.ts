@@ -246,9 +246,6 @@ function normalizeDateInput(input: ProfitabilityDateInput): { startDate: string;
   if (!startDate || !endDate) {
     throw new Error('startDate and endDate are required');
   }
-  if (endDate < startDate) {
-    throw new Error('endDate must be on or after startDate');
-  }
   return { startDate, endDate };
 }
 

@@ -1,10 +1,11 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(path.resolve(testDir, 'profitabilityReportActions.ts'), 'utf8');
+const repoRoot = path.resolve(testDir, '../../../..');
 
 describe('profitability report action SQL contracts', () => {
   it('counts the required earned-revenue invoice statuses and excludes non-countable statuses by allow-list', () => {
@@ -86,5 +87,17 @@ describe('profitability report action SQL contracts', () => {
     expect(source).toContain('ON inv.tenant = ic.tenant');
     expect(source).toContain('ON t.tenant = te.tenant');
     expect(source).toContain('ON sc.tenant = ?');
+  });
+
+  it('removes the old contract-report profitability stub and registry definition', () => {
+    const contractReportActions = readFileSync(path.resolve(testDir, 'contractReportActions.ts'), 'utf8');
+    const reportRegistry = readFileSync(path.resolve(repoRoot, 'packages/reporting/src/lib/reports/core/ReportRegistry.ts'), 'utf8');
+    const contractDefinitionsIndex = readFileSync(path.resolve(repoRoot, 'packages/reporting/src/lib/reports/definitions/contracts/index.ts'), 'utf8');
+
+    expect(contractReportActions).not.toContain('getProfitabilityReport');
+    expect(contractReportActions).not.toContain('interface Profitability');
+    expect(reportRegistry).not.toContain('contractProfitabilityReport');
+    expect(contractDefinitionsIndex).not.toContain('./profitability');
+    expect(existsSync(path.resolve(repoRoot, 'packages/reporting/src/lib/reports/definitions/contracts/profitability.ts'))).toBe(false);
   });
 });

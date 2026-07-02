@@ -220,8 +220,8 @@
         "empty": "Nie znaleziono kontraktów opartych na puli godzin"
       },
       "profitability": {
-        "title": "Prosty raport rentowności",
-        "description": "Podstawowe marże zysku oraz analiza przychodu względem kosztów według kontraktu",
+        "title": "Profitability Report",
+        "description": "Client, agreement, and ticket margin using configured internal labor cost rates.",
         "empty": "Brak danych o rentowności"
       }
     },
@@ -250,6 +250,96 @@
       "upcoming": "Nadchodzący",
       "yes": "Tak",
       "no": "Nie"
+    },
+    "profitability": {
+      "formats": {
+        "percent": "{{value}}%",
+        "hours": "{{value}} hrs",
+        "hourlyRate": "{{value}}/hr",
+        "ticketWithNumber": "#{{number}} {{title}}",
+        "billableHours": "{{value}} billable hrs",
+        "listSeparator": ", "
+      },
+      "errors": {
+        "load": "Failed to load profitability data",
+        "title": "Error Loading Profitability"
+      },
+      "table": {
+        "revenue": "Revenue",
+        "laborCost": "Labor Cost",
+        "materialCost": "Material Cost",
+        "margin": "Margin",
+        "marginPct": "Margin %",
+        "hours": "Hours",
+        "ehr": "EHR",
+        "client": "Client",
+        "agreement": "Agreement",
+        "ticket": "Ticket",
+        "attribution": "Attribution",
+        "contractLine": "Line",
+        "cost": "Cost"
+      },
+      "actions": {
+        "toggleLines": "Toggle lines",
+        "apply": "Apply",
+        "configureCostRates": "Configure Cost Rates",
+        "clearClient": "All Clients",
+        "clearAgreement": "All Agreements"
+      },
+      "rowTypes": {
+        "adHoc": "Ad-hoc",
+        "unattributed": "Unattributed",
+        "unassigned": "Unassigned"
+      },
+      "attribution": {
+        "exact": "Exact",
+        "allocated": "Allocated",
+        "none": "None"
+      },
+      "status": {
+        "uncosted": "Uncosted"
+      },
+      "filters": {
+        "startDate": "Start Date",
+        "endDate": "End Date"
+      },
+      "timingTooltip": "Revenue is filtered by invoice date. Labor cost is filtered by work date. Billed material cost follows invoice date; unbilled material cost follows created date.",
+      "empty": {
+        "costRates": "Cost rates are not configured. Labor hours are shown as uncosted until a tenant default or user rate exists.",
+        "clients": "No client profitability data available for this range.",
+        "lines": "No line-level detail for this row.",
+        "tickets": "No ticket profitability data available for this selection."
+      },
+      "warnings": {
+        "title": "Report warnings",
+        "uncostedMinutes": "{{hours}} uncosted hours",
+        "unapprovedMinutes": "{{hours}} unapproved hours included",
+        "zeroDuration": "{{count}} zero-duration entries",
+        "uncostedMaterials": "{{count}} uncosted materials",
+        "unconvertedRevenue": "{{count}} unconverted revenue rows",
+        "materialCurrencyMismatch": "{{count}} material currency mismatches"
+      },
+      "summary": {
+        "revenue": "Revenue",
+        "laborCost": "Labor Cost",
+        "materialCost": "Material Cost",
+        "margin": "Margin",
+        "marginPct": "Margin %",
+        "ehr": "Effective Hourly Rate"
+      },
+      "sections": {
+        "clients": "Clients",
+        "clientsDescription": "Select a client to drill into agreements and tickets.",
+        "agreements": "Agreements for {{client}}",
+        "agreementsDescription": "Ad-hoc and unattributed rows are included so totals reconcile.",
+        "linesForAgreement": "Contract lines for {{agreement}}",
+        "tickets": "Tickets",
+        "ticketsForAgreement": "Ticket cost and revenue for {{agreement}}.",
+        "ticketsDescription": "Ticket-level labor, material cost, attributed revenue, and margin."
+      },
+      "fallbacks": {
+        "untitledTicket": "Untitled ticket"
+      }
     }
   },
   "contractPerformance": {

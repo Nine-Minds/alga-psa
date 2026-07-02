@@ -145,14 +145,18 @@ describe('profitability report actions', () => {
     seedRawMocks();
   });
 
-  it('requires billing.read', async () => {
+  it('requires billing.read for every report action', async () => {
     vi.mocked(hasPermission).mockResolvedValue(false);
-
-    await expect((getProfitabilitySummary as any)(
+    const args = [
       { user_id: 'user-1' },
       { tenant: 'tenant-1' },
       { startDate: '2026-01-01', endDate: '2026-01-31' },
-    )).rejects.toThrow('Permission denied: billing read required');
+    ];
+
+    await expect((getProfitabilitySummary as any)(...args)).rejects.toThrow('Permission denied: billing read required');
+    await expect((getClientProfitability as any)(...args)).rejects.toThrow('Permission denied: billing read required');
+    await expect((getAgreementProfitability as any)(...args)).rejects.toThrow('Permission denied: billing read required');
+    await expect((getTicketProfitability as any)(...args)).rejects.toThrow('Permission denied: billing read required');
   });
 
   it('returns summary totals with actual-hour EHR and known revenue/cost fixture', async () => {
@@ -326,6 +330,39 @@ describe('profitability report actions', () => {
     expect(summary.revenue).toBe(10000);
     expect(summary.totalMinutes).toBe(0);
     expect(summary.effectiveHourlyRate).toBeNull();
+  });
+
+  it('returns zero-valued summary and empty rows for an empty range', async () => {
+    seedRawMocks({
+      revenue: [],
+      labor: [],
+      materials: [],
+      ticketRevenue: [],
+      allocations: [],
+    });
+    const args = [
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-02-01', endDate: '2026-01-31' },
+    ];
+
+    const summary = await (getProfitabilitySummary as any)(...args);
+    const clients = await (getClientProfitability as any)(...args);
+    const agreements = await (getAgreementProfitability as any)(...args);
+    const tickets = await (getTicketProfitability as any)(...args);
+
+    expect(summary).toMatchObject({
+      revenue: 0,
+      laborCost: 0,
+      materialCost: 0,
+      margin: 0,
+      marginPct: null,
+      totalMinutes: 0,
+      effectiveHourlyRate: null,
+    });
+    expect(clients).toEqual([]);
+    expect(agreements).toEqual([]);
+    expect(tickets).toEqual([]);
   });
 
   it('adds exact item-linked hourly revenue to ticket profitability rows', async () => {
