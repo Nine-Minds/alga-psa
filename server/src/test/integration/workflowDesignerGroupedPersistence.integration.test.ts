@@ -50,6 +50,36 @@ vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn().mockResolvedValue(true)
 }));
 
+// The workflow designer actions are withAuth-wrapped via @alga-psa/auth now;
+// inject the test user/tenant directly (mirrors workflowRuntimeV2.publish).
+vi.mock('@alga-psa/auth', () => {
+  const withAuth = (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      { user_id: userId, tenant: tenantId, roles: [] },
+      { tenant: tenantId },
+      ...args
+    );
+  const withOptionalAuth = withAuth;
+  const withAuthCheck = (action: (user: any, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action({ user_id: userId, tenant: tenantId, roles: [] }, ...args);
+
+  return {
+    withAuth,
+    withOptionalAuth,
+    withAuthCheck,
+    AuthenticationError: class AuthenticationError extends Error {},
+    hasPermission: vi.fn().mockResolvedValue(true),
+    checkMultiplePermissions: vi.fn().mockResolvedValue(true),
+    getCurrentUser: vi.fn(),
+    preCheckDeletion: vi.fn()
+  };
+});
+
+vi.mock('@alga-psa/workflows/lib/workflowRuntimeV2Temporal', () => ({
+  startWorkflowRuntimeV2TemporalRun: vi.fn(),
+  cancelWorkflowRuntimeV2TemporalRun: vi.fn()
+}));
+
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
 const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
 const mockedGetCurrentUser = vi.mocked(getCurrentUser);

@@ -182,7 +182,8 @@ async function createDocument(
     content: '',
     folder_path: folderPath,
     created_by: userId,
-    created_at: now,
+    user_id: userId,
+    entered_at: now,
     updated_at: now,
     is_client_visible: isClientVisible
   });
@@ -438,7 +439,6 @@ describe('Client Portal Documents Integration Tests', () => {
         client_id: clientId,
         entered_by: mspUserId,
         entered_at: new Date(),
-        created_at: new Date(),
         updated_at: new Date(),
         attributes: {}
       });

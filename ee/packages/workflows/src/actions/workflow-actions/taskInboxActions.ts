@@ -21,6 +21,7 @@ import {
   claimTaskForApi,
   unclaimTaskForApi,
 } from './taskInboxCore';
+import { workflowTenantTable } from '../../lib/workflowTenantDb';
 
 //TODO: we need to fix withTransaction to work with passed knex instances
 
@@ -155,9 +156,8 @@ export const hideTask = withAuth(async (user, { tenant }, taskId: string): Promi
     // Use transaction to update task and add history
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Update task to mark as hidden
-      await trx('workflow_tasks')
+      await workflowTenantTable(trx, tenant, 'workflow_tasks')
         .where('task_id', taskId)
-        .where('tenant', tenant)
         .update({
           is_hidden: true,
           hidden_at: new Date(),
@@ -205,9 +205,8 @@ export const unhideTask = withAuth(async (user, { tenant }, taskId: string): Pro
     // Use transaction to update task and add history
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Update task to mark as not hidden
-      await trx('workflow_tasks')
+      await workflowTenantTable(trx, tenant, 'workflow_tasks')
         .where('task_id', taskId)
-        .where('tenant', tenant)
         .update({
           is_hidden: false,
           hidden_at: null,

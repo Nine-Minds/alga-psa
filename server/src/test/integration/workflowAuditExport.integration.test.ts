@@ -78,6 +78,18 @@ function schemaTable(table: string) {
   return tenantDb(db, '__workflow_audit_export_schema__').unscoped(table, 'workflow audit export test reads schema metadata');
 }
 
+// audit_logs still carries the legacy set_tenant_on_audit_log_insert trigger,
+// which overwrites NEW.tenant from current_setting('app.current_tenant') and
+// errors when the GUC is unset. Mirror production writers (auditLog,
+// businessOperations/shared.ts): set the GUC transaction-locally so the
+// trigger stamps the same tenant the row declares.
+async function insertAuditLog(tenant: string, row: Record<string, unknown>) {
+  await db.transaction(async (trx) => {
+    await trx.raw(`select set_config('app.current_tenant', ?, true)`, [tenant]);
+    await tenantDb(trx, tenant).table('audit_logs').insert(row);
+  });
+}
+
 describe('workflow audit export integration', () => {
   beforeAll(async () => {
     try {
@@ -148,15 +160,17 @@ describe('workflow audit export integration', () => {
       payload_schema_ref: 'payload.Empty.v1',
       draft_definition: { id: workflowId, name: 'Quarterly Review', version: 2, steps: [] },
       draft_version: 2,
-      published_definition: { id: workflowId, name: 'Quarterly Review', version: 1, steps: [] },
-      published_version: 1,
+      ...(hasColumn(workflowColumns, 'published_definition')
+        ? { published_definition: { id: workflowId, name: 'Quarterly Review', version: 1, steps: [] } }
+        : {}),
+      ...(hasColumn(workflowColumns, 'published_version') ? { published_version: 1 } : {}),
       status: 'published',
       ...(hasColumn(workflowColumns, 'created_by') ? { created_by: userId } : {}),
       ...(hasColumn(workflowColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
       ...(hasColumn(workflowColumns, 'updated_at') ? { updated_at: db.fn.now() } : {})
     });
 
-    await tenantTable(tenantId, 'audit_logs').insert({
+    await insertAuditLog(tenantId, {
       audit_id: uuidv4(),
       tenant: tenantId,
       timestamp: db.fn.now(),
@@ -293,7 +307,7 @@ describe('workflow audit export integration', () => {
       ...(hasColumn(runColumns, 'completed_at') ? { completed_at: null } : {})
     });
 
-    await tenantTable(tenantId, 'audit_logs').insert({
+    await insertAuditLog(tenantId, {
       audit_id: uuidv4(),
       tenant: tenantId,
       timestamp: db.fn.now(),

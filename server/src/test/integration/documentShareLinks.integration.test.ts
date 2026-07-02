@@ -100,7 +100,8 @@ async function createDocument(db: Knex, tenantId: string, userId: string, name: 
     document_name: name,
     content: '',
     created_by: userId,
-    created_at: now,
+    user_id: userId,
+    entered_at: now,
     updated_at: now,
     is_client_visible: false
   });
@@ -303,8 +304,8 @@ describe('Document Share Links Integration Tests', () => {
       createdIds.shareIds.push(shareLink.share_id);
 
       // Increment download count to max
-      await incrementDownloadCount(shareLink.token);
-      await incrementDownloadCount(shareLink.token);
+      await incrementDownloadCount(shareLink.token, tenantId);
+      await incrementDownloadCount(shareLink.token, tenantId);
 
       const result = await validateShareToken(shareLink.token);
 
@@ -351,7 +352,7 @@ describe('Document Share Links Integration Tests', () => {
       const shareLink = share as { share_id: string; token: string };
       createdIds.shareIds.push(shareLink.share_id);
 
-      const isValid = await verifySharePassword(shareLink.token, 'WrongPassword');
+      const isValid = await verifySharePassword(shareLink.token, 'WrongPassword', tenantId);
 
       expect(isValid).toBe(false);
     });
@@ -369,7 +370,7 @@ describe('Document Share Links Integration Tests', () => {
       const shareLink = share as { share_id: string; token: string };
       createdIds.shareIds.push(shareLink.share_id);
 
-      const isValid = await verifySharePassword(shareLink.token, correctPassword);
+      const isValid = await verifySharePassword(shareLink.token, correctPassword, tenantId);
 
       expect(isValid).toBe(true);
     });
@@ -443,9 +444,9 @@ describe('Document Share Links Integration Tests', () => {
       expect(shareRecord.download_count).toBe(0);
 
       // Increment
-      await incrementDownloadCount(shareLink.token);
-      await incrementDownloadCount(shareLink.token);
-      await incrementDownloadCount(shareLink.token);
+      await incrementDownloadCount(shareLink.token, tenantId);
+      await incrementDownloadCount(shareLink.token, tenantId);
+      await incrementDownloadCount(shareLink.token, tenantId);
 
       // Count should be 3
       shareRecord = await tenantTable(db, tenantId, 'document_share_links')

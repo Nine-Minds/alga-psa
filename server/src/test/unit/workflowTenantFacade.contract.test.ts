@@ -173,6 +173,7 @@ describe('workflow tenant facade roots', () => {
   it('routes workflow task/form action roots through the workflow tenant facade', () => {
     const files = [
       'ee/packages/workflows/src/actions/workflow-actions/taskInboxActions.ts',
+      'ee/packages/workflows/src/actions/workflow-actions/taskInboxCore.ts',
       'ee/packages/workflows/src/actions/workflow-actions/formRegistryActions.ts',
     ];
 

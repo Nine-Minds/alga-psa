@@ -1,15 +1,34 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// getOnboardingProgressAction lives in @alga-psa/onboarding and reads through
+// @alga-psa/db (getConnection + tenantDb), @alga-psa/tenancy/server, and the
+// @enterprise stubs — mock those seams (the pre-modularization server/src and
+// @ee seams no longer intercept anything).
+const dbState = vi.hoisted(() => ({
+  getConnectionMock: vi.fn(),
+}));
 
 vi.mock('server/src/lib/db', () => ({
-  getCurrentTenantId: vi.fn().mockResolvedValue('tenant_1'),
+  // Consumed synchronously by the setup.ts @alga-psa/auth mock when resolving
+  // the withAuth tenant.
+  getCurrentTenantId: () => 'tenant_1',
 }));
 
-vi.mock('server/src/lib/db/db', () => ({
-  getConnection: vi.fn(),
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
+  getConnection: (...args: unknown[]) => dbState.getConnectionMock(...args),
+  tenantDb: (knex: any, _tenant: string) => ({
+    table: (table: string) => knex(table),
+  }),
+  createTenantKnex: async () => ({
+    knex: await dbState.getConnectionMock('tenant_1'),
+    tenant: 'tenant_1',
+  }),
+  runWithTenant: async (_tenant: string, cb: () => Promise<unknown>) => cb(),
 }));
 
-vi.mock('@alga-psa/tenancy/actions', () => ({
-  getPortalDomainStatusAction: vi.fn().mockResolvedValue({
+vi.mock('@alga-psa/tenancy/server', () => ({
+  getPortalDomainStatusForTenant: vi.fn().mockResolvedValue({
     domain: 'portal.example.com',
     status: 'active',
     statusMessage: null,
@@ -19,16 +38,8 @@ vi.mock('@alga-psa/tenancy/actions', () => ({
   }),
 }));
 
-vi.mock('@/lib/actions/import-actions/importActions', () => ({
-  listImportJobs: vi.fn().mockResolvedValue([]),
-}));
-
-vi.mock('@alga-psa/integrations/actions/calendarActions', () => ({
-  getCalendarProviders: vi.fn().mockResolvedValue({ success: true, providers: [] }),
-}));
-
 vi.mock('@alga-psa/db/admin', () => ({
-  getAdminConnection: vi.fn().mockResolvedValue(() => {
+  getAdminConnection: vi.fn().mockResolvedValue((_table: string) => {
     const qb: any = {
       where: vi.fn().mockReturnThis(),
       count: vi.fn().mockReturnThis(),
@@ -39,27 +50,25 @@ vi.mock('@alga-psa/db/admin', () => ({
   }),
 }));
 
-vi.mock('@ee/lib/auth/providerConfig', () => ({
+vi.mock('@enterprise/lib/auth/providerConfig', () => ({
   getSsoProviderOptions: vi.fn().mockResolvedValue([{ id: 'google', configured: true }]),
 }));
 
-vi.mock('@ee/lib/actions/email-actions/managedDomainActions', () => ({
+vi.mock('@enterprise/lib/actions/email-actions/managedDomainActions', () => ({
   getManagedEmailDomains: vi.fn().mockResolvedValue([
     { domain: 'example.com', status: 'verified', updatedAt: '2026-01-03T00:00:00.000Z' },
   ]),
 }));
 
 describe('getOnboardingProgressAction (substeps)', () => {
-  beforeEach(async () => {
-    const dbModule = await import('@/lib/db/db');
-    const getConnection = dbModule.getConnection as Mock;
-
+  beforeEach(() => {
     const knex = vi.fn((table: string) => {
       const builder: any = {
         where: vi.fn().mockReturnThis(),
         select: vi.fn().mockReturnThis(),
         count: vi.fn().mockReturnThis(),
         max: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
         first: vi.fn().mockImplementation(async () => {
           if (table === 'tenant_settings') {
             return {
@@ -76,11 +85,15 @@ describe('getOnboardingProgressAction (substeps)', () => {
           }
           return null;
         }),
+        // calendar_providers is awaited as a list query.
+        then: (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
+          Promise.resolve([]).then(resolve, reject),
       };
       return builder;
     });
 
-    getConnection.mockResolvedValue(knex);
+    dbState.getConnectionMock.mockReset();
+    dbState.getConnectionMock.mockResolvedValue(knex);
   });
 
   it('returns portal + email steps with substeps', async () => {

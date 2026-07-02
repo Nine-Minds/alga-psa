@@ -21,7 +21,7 @@ describe('financial service payment methods tenant-scoped query contract', () =>
 
     expect(paymentMethodSection).toContain('tenantDb(');
     expect(paymentMethodSection).toContain(".table('payment_methods as pm')");
-    expect(paymentMethodSection).toContain(".andOn('pm.tenant', '=', 'c.tenant')");
+    expect(paymentMethodSection).toContain("scopedDb.tenantJoin(dataQuery, 'clients as c', 'pm.client_id', 'c.client_id', { type: 'left' })");
 
     expect(paymentMethodSection).not.toMatch(/knex\('payment_methods as pm'\)\s*\./);
     expect(paymentMethodSection).not.toMatch(/\.where\('pm\.tenant', context\.tenant\)/);

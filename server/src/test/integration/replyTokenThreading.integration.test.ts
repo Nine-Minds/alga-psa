@@ -113,6 +113,8 @@ describe('Reply Token Threading Logic', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
+        // createCommentFromEmail writes ticket_audit_logs rows whose FK blocks ticket deletion.
+        await scopedDb().table('ticket_audit_logs').where({ ticket_id: ticketId }).del();
         await scopedDb().table('tickets').where({ ticket_id: ticketId }).del();
       });
 
@@ -145,6 +147,7 @@ describe('Reply Token Threading Logic', () => {
     it('should find comment ID when token is for a comment reply', async () => {
       const ticketId = uuidv4();
       const commentId = uuidv4();
+      const threadId = uuidv4();
 
       // Create ticket
       await scopedDb().table('tickets').insert({
@@ -159,14 +162,23 @@ describe('Reply Token Threading Logic', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
+        // createCommentFromEmail writes ticket_audit_logs rows whose FK blocks ticket deletion.
+        await scopedDb().table('ticket_audit_logs').where({ ticket_id: ticketId }).del();
         await scopedDb().table('tickets').where({ ticket_id: ticketId }).del();
       });
 
-      // Create comment to satisfy FK
+      // Create thread + comment to satisfy FKs (comments.thread_id is NOT NULL)
+      await scopedDb().table('comment_threads').insert({
+        tenant: testTenant,
+        thread_id: threadId,
+        ticket_id: ticketId,
+        root_comment_id: commentId
+      });
       await scopedDb().table('comments').insert({
         tenant: testTenant,
         comment_id: commentId,
         ticket_id: ticketId,
+        thread_id: threadId,
         note: 'Original comment',
         is_internal: false,
         is_resolution: false,
@@ -174,6 +186,7 @@ describe('Reply Token Threading Logic', () => {
       });
       cleanup.push(async () => {
         await scopedDb().table('comments').where({ comment_id: commentId }).del();
+        await scopedDb().table('comment_threads').where({ thread_id: threadId }).del();
       });
 
       // Create reply token with comment ID
@@ -207,6 +220,7 @@ describe('Reply Token Threading Logic', () => {
       await scopedDb().table('projects').insert({
         tenant: testTenant,
         project_id: projectId,
+        project_number: `PRJ-${Date.now()}`,
         client_id: testClientId,
         project_name: 'Test Project',
         status: statusId,
@@ -355,6 +369,8 @@ describe('Reply Token Threading Logic', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
+        // createCommentFromEmail writes ticket_audit_logs rows whose FK blocks ticket deletion.
+        await scopedDb().table('ticket_audit_logs').where({ ticket_id: ticketId }).del();
         await scopedDb().table('tickets').where({ ticket_id: ticketId }).del();
       });
 
@@ -422,6 +438,7 @@ describe('Reply Token Threading Logic', () => {
     it('should preserve reply token metadata in comment', async () => {
       const ticketId = uuidv4();
       const commentIdFromToken = uuidv4();
+      const threadId = uuidv4();
 
       await scopedDb().table('tickets').insert({
         tenant: testTenant,
@@ -435,14 +452,23 @@ describe('Reply Token Threading Logic', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
+        // createCommentFromEmail writes ticket_audit_logs rows whose FK blocks ticket deletion.
+        await scopedDb().table('ticket_audit_logs').where({ ticket_id: ticketId }).del();
         await scopedDb().table('tickets').where({ ticket_id: ticketId }).del();
       });
 
-      // Create the referenced comment
+      // Create the referenced comment (with its thread; comments.thread_id is NOT NULL)
+      await scopedDb().table('comment_threads').insert({
+        tenant: testTenant,
+        thread_id: threadId,
+        ticket_id: ticketId,
+        root_comment_id: commentIdFromToken
+      });
       await scopedDb().table('comments').insert({
         tenant: testTenant,
         comment_id: commentIdFromToken,
         ticket_id: ticketId,
+        thread_id: threadId,
         note: 'Original comment for metadata test',
         is_internal: false,
         is_resolution: false,
@@ -450,6 +476,7 @@ describe('Reply Token Threading Logic', () => {
       });
       cleanup.push(async () => {
         await scopedDb().table('comments').where({ comment_id: commentIdFromToken }).del();
+        await scopedDb().table('comment_threads').where({ thread_id: threadId }).del();
       });
 
       const replyToken = `token-${uuidv4()}`;
@@ -529,6 +556,8 @@ describe('Reply Token Threading Logic', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
+        // createCommentFromEmail writes ticket_audit_logs rows whose FK blocks ticket deletion.
+        await scopedDb().table('ticket_audit_logs').where({ ticket_id: ticketId }).del();
         await scopedDb().table('tickets').where({ ticket_id: ticketId }).del();
       });
 

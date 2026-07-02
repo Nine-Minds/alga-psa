@@ -82,6 +82,40 @@ vi.mock('server/src/lib/tenant', () => ({
   getTenantFromHeaders: vi.fn(() => tenantId ?? null)
 }));
 
+// The contract wizard action authenticates via @alga-psa/auth's withAuth and
+// resolves its connection through @alga-psa/db (same recipe as
+// contractWizard.integration.test.ts).
+vi.mock('@alga-psa/db', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
+    withTransaction: vi.fn(async (knexOrTrx: Knex, callback: (trx: Knex.Transaction) => Promise<unknown>) =>
+      callback(knexOrTrx as unknown as Knex.Transaction),
+    ),
+    requireTenantId: vi.fn(async () => tenantId),
+    runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<any>) => fn()),
+  };
+});
+
+vi.mock('@alga-psa/auth/withAuth', () => ({
+  withAuth: (action: (...args: any[]) => Promise<unknown>) =>
+    (...args: any[]) =>
+      action(
+        {
+          user_id: 'multi-currency-test-user',
+          tenant: tenantId,
+          roles: [{ role_name: 'Admin' }],
+        } as any,
+        { tenant: tenantId },
+        ...args,
+      ),
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
 describe('Multi-Currency Gap Tests', () => {
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
@@ -329,7 +363,7 @@ describe('Multi-Currency Gap Tests', () => {
   // MEDIUM: Mixed-currency contracts should have pre-flight validation
   // =============================================================================
   describe('MEDIUM: Mixed-currency contract creation', () => {
-    it('should warn when creating contract in different currency than existing active contract', async () => {
+    it('coerces new contracts to the client currency so mixed-currency contracts cannot be created', async () => {
       // Setup: Create service
       const { serviceTypeId, serviceId } = await createTestService(db, tenantId);
       createdIds.serviceTypeId = serviceTypeId;
@@ -365,34 +399,34 @@ describe('Multi-Currency Gap Tests', () => {
         createdIds.contractLineIds.push(...usdContract.contract_line_ids);
       }
 
-      // Action: Create second contract in EUR - should warn or error
-      // GAP: Currently succeeds silently, will cause billing engine error later
-      let warningOrError: Error | null = null;
-      try {
-        const eurContract = await createClientContractFromWizard({
-          contract_name: 'EUR Contract',
-          client_id: clientId,
-          start_date: new Date().toISOString().split('T')[0],
-          billing_frequency: 'monthly',
-          currency_code: 'EUR',
-          fixed_services: [{ service_id: serviceId, quantity: 1 }],
-          hourly_services: [],
-          usage_services: [],
-          fixed_base_rate: 9000,
-          enable_proration: true
-        });
-        createdIds.contractIds.push(eurContract.contract_id);
-        if (eurContract.contract_line_ids) {
-          createdIds.contractLineIds.push(...eurContract.contract_line_ids);
-        }
-      } catch (e) {
-        warningOrError = e as Error;
+      // Action: Submit a second contract in EUR. Since 2755c6a480 the wizard
+      // derives a NEW contract's currency from the client (client default ->
+      // tenant default -> USD), so a mixed-currency state cannot be created:
+      // the submitted EUR is superseded by the client's USD.
+      const eurSubmission = await createClientContractFromWizard({
+        contract_name: 'EUR Contract',
+        client_id: clientId,
+        start_date: new Date().toISOString().split('T')[0],
+        billing_frequency: 'monthly',
+        currency_code: 'EUR',
+        fixed_services: [{ service_id: serviceId, quantity: 1 }],
+        hourly_services: [],
+        usage_services: [],
+        fixed_base_rate: 9000,
+        enable_proration: true
+      });
+      createdIds.contractIds.push(eurSubmission.contract_id);
+      if (eurSubmission.contract_line_ids) {
+        createdIds.contractLineIds.push(...eurSubmission.contract_line_ids);
       }
 
-      // Expected: Should warn or error about mixed currencies
-      // Currently: Silently creates, will fail at billing time
-      expect(warningOrError).not.toBeNull();
-      expect(warningOrError?.message).toContain('currency');
+      // Expected: both contracts are billed in the client's currency — the
+      // mixed-currency billing hazard is prevented by construction.
+      const currencies = await tenantTable(db, tenantId, 'contracts')
+        .whereIn('contract_id', [usdContract.contract_id, eurSubmission.contract_id])
+        .pluck('currency_code');
+      expect(currencies).toHaveLength(2);
+      expect(currencies).toEqual(['USD', 'USD']);
     });
   });
 
@@ -411,7 +445,9 @@ describe('Multi-Currency Gap Tests', () => {
         client_id: clientId,
         tenant: tenantId,
         client_name: 'Billing Engine Test Client',
-        default_currency_code: 'EUR',
+        // New contracts are billed in the client's currency (2755c6a480), so
+        // the client default drives the persisted contract currency.
+        default_currency_code: 'JPY',
         created_at: db.fn.now(),
         updated_at: db.fn.now()
       });
@@ -502,7 +538,6 @@ async function createTestService(db: Knex, tenantId: string): Promise<{ serviceT
     id: serviceTypeId,
     tenant: tenantId,
     name: serviceTypeName,
-    billing_method: 'fixed',
     order_number: Math.floor(Math.random() * 1000000),
     created_at: db.fn.now(),
     updated_at: db.fn.now()

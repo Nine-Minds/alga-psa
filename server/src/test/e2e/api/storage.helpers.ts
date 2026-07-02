@@ -27,24 +27,32 @@ export function configureStorageTestDatabase(): void {
 }
 
 export async function ensureStorageTables(): Promise<void> {
-  const db = await createTestDbConnection();
+  // recreate: false — callers run this after a TestContext bootstrap; a full
+  // createTestDbConnection() would drop/recreate test_database and wipe the
+  // tenant and fixtures that bootstrap created.
+  const db = await createTestDbConnection({ recreate: false });
   try {
     const { rows } = await db.raw('SELECT current_database() AS name');
     const currentDatabase = rows?.[0]?.name as string | undefined;
     const safeDbName = (currentDatabase ?? 'sebastian_test').replace(/"/g, '""');
 
+    // Best-effort only: the dbConfig bootstrap already provisions app_user
+    // with the right password. Never ALTER the role — it is cluster-wide and
+    // shared with everything else on the server (and may be denied anyway).
     const appUserPassword = process.env.DB_PASSWORD_SERVER ?? 'test_password';
-    await db.raw(`
+    await db
+      .raw(
+        `
       DO $$
       BEGIN
       IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_user') THEN
         CREATE ROLE app_user WITH LOGIN PASSWORD '${appUserPassword}';
-      ELSE
-        ALTER ROLE app_user WITH LOGIN PASSWORD '${appUserPassword}';
       END IF;
       END
       $$;
-    `);
+    `
+      )
+      .catch(() => undefined);
 
     await db.raw(`GRANT ALL PRIVILEGES ON DATABASE "${safeDbName}" TO app_user`);
     await db.raw('GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO app_user').catch(() => undefined);
@@ -122,7 +130,7 @@ export async function ensureStorageTables(): Promise<void> {
 }
 
 export async function resetStorageTables(tenantId?: string): Promise<void> {
-  const db = await createTestDbConnection();
+  const db = await createTestDbConnection({ recreate: false });
   try {
     if (tenantId) {
       const scopedDb = tenantDb(db, tenantId);
@@ -141,7 +149,7 @@ export async function resetStorageTables(tenantId?: string): Promise<void> {
 }
 
 export async function withTenantConnection<T>(tenantId: string, callback: (trx: Knex) => Promise<T>): Promise<T> {
-  const db = await createTestDbConnection();
+  const db = await createTestDbConnection({ recreate: false });
   try {
     return await callback(db.withSchema('public'));
   } finally {

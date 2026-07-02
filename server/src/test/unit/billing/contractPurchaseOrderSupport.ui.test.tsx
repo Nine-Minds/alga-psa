@@ -281,6 +281,9 @@ describe('Contract PO UI flows', () => {
   const getAvailableRecurringDueWorkMock = vi.spyOn(billingAndTaxActions, 'getAvailableRecurringDueWork');
 
   beforeEach(() => {
+    // The jsdom URL persists across test files; drop any leaked
+    // automaticClientFilter param so AutomaticInvoices renders all rows.
+    window.history.replaceState({}, '', '/msp/billing?tab=invoicing&subtab=generate');
     previewGroupedInvoicesForSelectionInputsMock.mockReset();
     getPurchaseOrderOverageForSelectionInputMock.mockReset();
     generateInvoicesAsRecurringBillingRunMock.mockReset();
@@ -346,7 +349,7 @@ describe('Contract PO UI flows', () => {
     fireEvent.click(checkboxes[1]!);
 
     const generateButtons = screen.getAllByRole('button', {
-      name: /Generate Invoices for Selected Periods/i,
+      name: /Generate Invoices \(2\)/i,
     });
     const generateButton = generateButtons.find((b) => !(b as HTMLButtonElement).disabled);
     expect(generateButton).toBeTruthy();
@@ -404,7 +407,7 @@ describe('Contract PO UI flows', () => {
     fireEvent.click(checkboxes[1]!);
 
     const generateButtons = screen.getAllByRole('button', {
-      name: /Generate Invoices for Selected Periods/i,
+      name: /Generate Invoices \(2\)/i,
     });
     const generateButton = generateButtons.find((b) => !(b as HTMLButtonElement).disabled);
     expect(generateButton).toBeTruthy();
@@ -553,7 +556,7 @@ describe('Contract PO UI flows', () => {
     const checkbox = within(readyTable).getAllByRole('checkbox')[0];
     fireEvent.click(checkbox!);
     fireEvent.click(
-      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+      screen.getByRole('button', { name: /Generate Invoices \(1\)/i }),
     );
 
     await waitFor(() => {
@@ -587,7 +590,7 @@ describe('Contract PO UI flows', () => {
     const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
     fireEvent.click(within(readyTable).getAllByRole('checkbox')[0]!);
     fireEvent.click(
-      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+      screen.getByRole('button', { name: /Generate Invoices \(1\)/i }),
     );
 
     await waitFor(() => {

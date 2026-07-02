@@ -42,7 +42,7 @@ const taxWriteSection = sectionBetween(
 );
 const totalUpdateSection = sectionBetween(
   'export async function updateInvoiceTotalsAndRecordTransaction',
-  'await tx(\'transactions\').insert'
+  'await tenantScopedTable(tx, tenant, \'transactions\').insert'
 );
 
 describe('invoiceService tenant-scoped query contract', () => {
@@ -69,7 +69,11 @@ describe('invoiceService tenant-scoped query contract', () => {
   });
 
   it('uses structural tenant scoping for client helpers and percentage discount recalculation roots', () => {
-    expect(preManualChargeSection).toContain("tenantScopedTable(knex, tenant, 'clients as c')");
+    expect(preManualChargeSection).toContain('const db = tenantDb(knex, tenant);');
+    expect(preManualChargeSection).toContain("db.table('clients as c')");
+    expect(preManualChargeSection).toContain(
+      "db.tenantJoin(clientQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {"
+    );
     expect(preManualChargeSection).toContain("tenantScopedTable(knex, tenant, 'client_locations')");
     expect(preManualChargeSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charges')");
 
@@ -95,8 +99,9 @@ describe('invoiceService tenant-scoped query contract', () => {
   it('uses structural tenant scoping for invoice tax read and hydration roots', () => {
     expect(taxReadSection).toContain("tenantScopedTable(tx, tenant, 'invoices')");
     expect(taxReadSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charges')");
-    expect(taxReadSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charge_details')");
-    expect(taxReadSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details as iifd')");
+    expect(taxReadSection).toContain('const db = tenantDb(tx, tenant);');
+    expect(taxReadSection).toContain("db.table('invoice_charge_details')");
+    expect(taxReadSection).toContain("tenantDb(tx, tenant).table('invoice_charge_fixed_details as iifd')");
 
     expect(taxReadSection).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);
     expect(taxReadSection).not.toMatch(/\.(?:where|andWhere)\(['"][^'"]*tenant['"]/);
@@ -109,7 +114,7 @@ describe('invoiceService tenant-scoped query contract', () => {
   it('uses structural tenant scoping for invoice tax writeback and total update roots', () => {
     expect(taxWriteSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details')");
     expect(taxWriteSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charges')");
-    expect(taxWriteSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details as iifd')");
+    expect(taxWriteSection).toContain("tenantDb(tx, tenant).table('invoice_charge_fixed_details as iifd')");
     expect(totalUpdateSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charges')");
     expect(totalUpdateSection).toContain("tenantScopedTable(tx, tenant, 'invoices')");
     expect(totalUpdateSection).toContain("tenantScopedTable(tx, tenant, 'transactions')");

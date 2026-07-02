@@ -240,7 +240,7 @@ describe('updateClientBillingSchedule', () => {
     vi.resetModules();
   });
 
-  it('T052: updates billing schedule settings and regenerates future recurring service periods beyond billed history instead of mutating future client_billing_cycles', async () => {
+  it('T052: updates billing schedule settings, regenerates future recurring service periods beyond billed history, and retires non-invoiced client_billing_cycles from the billed boundary', async () => {
     const responses = {
       'clients:select:first': { client_id: 'client-1', billing_cycle: 'monthly' },
       'client_billing_cycles as cbc:select:first': { period_end_date: '2026-01-10T00:00:00Z' },
@@ -350,10 +350,16 @@ describe('updateClientBillingSchedule', () => {
       ]),
     );
 
+    // Since 9b88ef86c7 every cadence change also retires non-invoiced
+    // client_billing_cycles windows; billed history stays untouched via the
+    // last-invoiced cutover boundary.
     const deactivateUpdate = calls.find(
       c => c.method === 'update' && c.table === 'client_billing_cycles',
     ) as any;
-    expect(deactivateUpdate).toBeFalsy();
+    expect(deactivateUpdate).toBeTruthy();
+    expect(deactivateUpdate.args[0]).toMatchObject({ is_active: false });
+    expect(deactivateUpdate.where).toContainEqual([{ client_id: 'client-1', is_active: true }]);
+    expect(deactivateUpdate.andWhere).toContainEqual(['period_start_date', '>=', '2026-01-10T00:00:00Z']);
   });
 
   it('T053: legitimate client billing schedule management still updates client settings while regenerating recurring service periods', async () => {
@@ -397,9 +403,13 @@ describe('updateClientBillingSchedule', () => {
       reason_code: 'backfill_materialization',
     });
 
+    // No invoiced history: all active non-invoiced windows are retired.
     const deactivateUpdate = calls.find(
       c => c.method === 'update' && c.table === 'client_billing_cycles',
     ) as any;
-    expect(deactivateUpdate).toBeFalsy();
+    expect(deactivateUpdate).toBeTruthy();
+    expect(deactivateUpdate.args[0]).toMatchObject({ is_active: false });
+    expect(deactivateUpdate.where).toContainEqual([{ client_id: 'client-1', is_active: true }]);
+    expect(deactivateUpdate.andWhere).toEqual([]);
   });
 });

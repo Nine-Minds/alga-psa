@@ -110,6 +110,11 @@ describe('Google unified inbound pointer queue ingress', () => {
               };
             }
 
+            // Product gate: getTenantProduct reads tenants.product_code.
+            if (table === 'tenants') {
+              return { product_code: 'psa' };
+            }
+
             throw new Error(`Unexpected table lookup in test: ${table}`);
           },
         };

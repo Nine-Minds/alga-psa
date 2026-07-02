@@ -22,7 +22,7 @@ describe('invoice service payment tenant-scoped query contract', () => {
     expect(paymentSection).toContain('tenantDb(');
     expect(paymentSection).toContain(".table('invoices')");
     expect(paymentSection).toContain(".table('invoice_payments')");
-    expect(paymentSection).toContain("await trx('invoice_payments').insert(paymentData)");
+    expect(paymentSection).toContain("await tenantDb(trx, context.tenant).table('invoice_payments').insert(paymentData)");
 
     expect(paymentSection).not.toMatch(/trx\('invoices'\)\s*\.(?:where|update|first)/);
     expect(paymentSection).not.toMatch(/trx\('invoice_payments'\)\s*\.(?:where|sum|first)/);

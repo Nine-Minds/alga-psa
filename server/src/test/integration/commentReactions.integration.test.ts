@@ -36,6 +36,10 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => (...args: any[]) =>
     action(userRef.user, { tenant: dbRef.tenant }, ...args),
   hasPermission: vi.fn(async () => true),
+  getCurrentUser: vi.fn(async () => userRef.user),
+  getSession: vi.fn(async () =>
+    userRef.user ? { user: { id: userRef.user.user_id, tenant: dbRef.tenant } } : null
+  ),
 }));
 
 const HOOK_TIMEOUT = 120_000;
@@ -128,14 +132,33 @@ describe('Comment Reactions - Ticket Comments', () => {
       entered_by: context.userId,
     });
 
-    // Create two comments
+    // Create two comments (comments.thread_id is NOT NULL and references comment_threads)
     commentId = uuidv4();
     secondCommentId = uuidv4();
+    const threadId = uuidv4();
+    const secondThreadId = uuidv4();
+    await scopedDb().table('comment_threads').insert([
+      {
+        tenant: context.tenantId,
+        thread_id: threadId,
+        ticket_id: ticketId,
+        root_comment_id: commentId,
+        is_internal: false,
+      },
+      {
+        tenant: context.tenantId,
+        thread_id: secondThreadId,
+        ticket_id: ticketId,
+        root_comment_id: secondCommentId,
+        is_internal: false,
+      },
+    ]);
     await scopedDb().table('comments').insert([
       {
         comment_id: commentId,
         tenant: context.tenantId,
         ticket_id: ticketId,
+        thread_id: threadId,
         user_id: context.userId,
         note: '[]',
         is_internal: false,
@@ -146,6 +169,7 @@ describe('Comment Reactions - Ticket Comments', () => {
         comment_id: secondCommentId,
         tenant: context.tenantId,
         ticket_id: ticketId,
+        thread_id: secondThreadId,
         user_id: context.userId,
         note: '[]',
         is_internal: false,
@@ -417,14 +441,33 @@ describe('Comment Reactions - Task Comments', () => {
       wbs_code: '1.1',
     });
 
-    // Create two task comments
+    // Create two task comments (thread_id is NOT NULL and references comment_threads)
     taskCommentId = uuidv4();
     secondTaskCommentId = uuidv4();
+    const taskThreadId = uuidv4();
+    const secondTaskThreadId = uuidv4();
+    await scopedDb().table('comment_threads').insert([
+      {
+        tenant: context.tenantId,
+        thread_id: taskThreadId,
+        project_task_id: taskId,
+        root_comment_id: taskCommentId,
+        is_internal: false,
+      },
+      {
+        tenant: context.tenantId,
+        thread_id: secondTaskThreadId,
+        project_task_id: taskId,
+        root_comment_id: secondTaskCommentId,
+        is_internal: false,
+      },
+    ]);
     await scopedDb().table('project_task_comments').insert([
       {
         task_comment_id: taskCommentId,
         tenant: context.tenantId,
         task_id: taskId,
+        thread_id: taskThreadId,
         user_id: context.userId,
         note: '[]',
         author_type: 'internal',
@@ -433,6 +476,7 @@ describe('Comment Reactions - Task Comments', () => {
         task_comment_id: secondTaskCommentId,
         tenant: context.tenantId,
         task_id: taskId,
+        thread_id: secondTaskThreadId,
         user_id: context.userId,
         note: '[]',
         author_type: 'internal',
@@ -662,10 +706,19 @@ describe('Tenant Isolation', () => {
     });
 
     commentId = uuidv4();
+    const threadId = uuidv4();
+    await scopedDb().table('comment_threads').insert({
+      tenant: context.tenantId,
+      thread_id: threadId,
+      ticket_id: ticketId,
+      root_comment_id: commentId,
+      is_internal: false,
+    });
     await scopedDb().table('comments').insert({
       comment_id: commentId,
       tenant: context.tenantId,
       ticket_id: ticketId,
+      thread_id: threadId,
       user_id: context.userId,
       note: '[]',
       is_internal: false,
@@ -735,11 +788,20 @@ describe('Tenant Isolation', () => {
       entered_by: otherUserId,
     });
 
+    const otherThreadId = uuidv4();
+    await otherTenantDb.table('comment_threads').insert({
+      tenant: otherTenant,
+      thread_id: otherThreadId,
+      ticket_id: otherTicketId,
+      root_comment_id: commentId,
+      is_internal: false,
+    });
     await otherTenantDb.table('comments').insert({
       comment_id: commentId, // same comment_id, different tenant
       tenant: otherTenant,
       ticket_id: otherTicketId,
       user_id: otherUserId,
+      thread_id: otherThreadId,
       note: '[]',
       is_internal: false,
       is_resolution: false,

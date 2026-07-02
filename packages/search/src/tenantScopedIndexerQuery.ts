@@ -7,7 +7,11 @@ export function createTenantScopedIndexerQuery<Row extends object>(
   alias: string,
   tenant: string
 ): Knex.QueryBuilder<Row, Row[]> {
-  return tenantDb(knex, tenant).table<Row>(alias ? `${table} as ${alias}` : table);
+  // Callers pass either a bare table or an already-aliased expression
+  // ('tickets as t'); re-appending the alias would double it and the
+  // expression would no longer resolve in the tenant table registry.
+  const expression = /\s+as\s+/i.test(table) ? table : alias ? `${table} as ${alias}` : table;
+  return tenantDb(knex, tenant).table<Row>(expression);
 }
 
 export function tenantJoinIndexerTable(

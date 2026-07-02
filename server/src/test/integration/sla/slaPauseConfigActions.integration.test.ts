@@ -1,11 +1,49 @@
 // Import mocks first to ensure they're hoisted
 import 'server/test-utils/testMocks';
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { TestContext } from 'server/test-utils/testContext';
 import { setupCommonMocks } from 'server/test-utils/testMocks';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
+
+// Bind the package actions' createTenantKnex to the test transaction. The real
+// @alga-psa/db one opens its own pool, which can't see uncommitted fixtures and
+// deadlocks against the TRUNCATEs held by the TestContext transaction.
+const dbRef = vi.hoisted(() => ({
+  knex: null as any,
+  tenant: '' as string,
+  user: null as any,
+}));
+
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
+  createTenantKnex: vi.fn(async () => ({ knex: dbRef.knex, tenant: dbRef.tenant })),
+}));
+
+// Real withAuth resolves the session user through that same separate pool; mock
+// it inline. (A factory that imports testMocks would deadlock: testMocks is
+// mid-evaluation when its '@alga-psa/auth' import triggers this factory.)
+vi.mock('@alga-psa/auth', () => ({
+  getCurrentUser: vi.fn(async () => dbRef.user),
+  getSession: vi.fn(async () =>
+    dbRef.user ? { user: { id: dbRef.user.user_id, tenant: dbRef.tenant } } : null
+  ),
+  hasPermission: vi.fn(async () => true),
+  throwPermissionError: (action: string, additionalInfo?: string): never => {
+    throw new Error(`Permission denied: Cannot ${action}${additionalInfo ? `. ${additionalInfo}` : ''}`);
+  },
+  withAuth: (action: any) => async (...args: any[]) => {
+    if (!dbRef.user) throw new Error('User not authenticated');
+    return action(dbRef.user, { tenant: dbRef.tenant }, ...args);
+  },
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action(dbRef.user ?? null, dbRef.user ? { tenant: dbRef.tenant } : null, ...args),
+  withAuthCheck: (action: any) => async (...args: any[]) => {
+    if (!dbRef.user) throw new Error('User not authenticated');
+    return action(dbRef.user, ...args);
+  },
+}));
 
 import {
   getSlaSettings,
@@ -51,6 +89,10 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       user: context.user,
       permissionCheck: () => true
     });
+
+    dbRef.knex = context.db;
+    dbRef.tenant = context.tenantId;
+    dbRef.user = context.user;
   }, HOOK_TIMEOUT);
 
   beforeEach(async () => {
@@ -61,6 +103,10 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       user: context.user,
       permissionCheck: () => true
     });
+
+    dbRef.knex = context.db;
+    dbRef.tenant = context.tenantId;
+    dbRef.user = context.user;
 
     // Create a test status for the pause config tests
     testBoardId = uuidv4();
@@ -419,7 +465,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
           priority_id: testPriorityId,
           category_id: testCategoryId,
           entered_by: context.userId,
-          response_state: 'not_set'
+          response_state: null
         })
         .returning('ticket_id');
       testTicketId = ticketResult[0].ticket_id;
@@ -570,7 +616,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         priority_id: testPriorityId,
         category_id: testCategoryId,
         entered_by: context.userId,
-        response_state: 'not_set'
+        response_state: null
       });
 
       await updateSlaSettings({ pause_on_awaiting_client: false });
@@ -628,7 +674,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
           priority_id: testPriorityId,
           category_id: testCategoryId,
           entered_by: context.userId,
-          response_state: 'not_set'
+          response_state: null
         })
         .returning('ticket_id');
       testTicketId = ticketResult[0].ticket_id;
@@ -730,7 +776,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       // Change back to not_set
       await scopedTable(context.tenantId, 'tickets')
         .where({ ticket_id: testTicketId, tenant: context.tenantId })
-        .update({ response_state: 'not_set' });
+        .update({ response_state: null });
 
       result = await shouldSlaBePaused(testTicketId);
       expect(result.paused).toBe(false);

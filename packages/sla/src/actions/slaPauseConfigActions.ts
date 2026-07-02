@@ -232,9 +232,12 @@ export const setStatusSlaPauseConfig = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    // Outside the try: validation errors must reach callers verbatim; the
+    // catch below is for operational failures only.
+    await assertBoardOwnedTicketStatus(trx, tenant, statusId);
+
     try {
       const scopedDb = tenantDb(trx, tenant);
-      await assertBoardOwnedTicketStatus(trx, tenant, statusId);
 
       // Check if config exists for this status
       const existingConfig = await scopedDb.table('status_sla_pause_config')
@@ -473,6 +476,9 @@ export const shouldSlaBePaused = withAuth(async (
         reason: null,
       };
     } catch (error) {
+      if (error instanceof Error && error.message === `Ticket ${ticketId} not found`) {
+        throw error;
+      }
       console.error(`Error checking SLA pause status for ticket ${ticketId}:`, error);
       throw new Error(`Failed to check SLA pause status for ticket ${ticketId}`);
     }

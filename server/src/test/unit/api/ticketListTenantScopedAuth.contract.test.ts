@@ -22,7 +22,11 @@ describe('API ticket list tenant-scoped authorization contract', () => {
     expect(controllerSource).not.toContain('createTenantScopedQuery');
     expect(controllerSource).not.toContain('compileResourceReadAuthorizationSql');
 
-    expect(serviceSource).toContain("tenantDb(knex, context.tenant).scoped('tickets as t')");
+    // The facade binding and .scoped() calls are now split across statements;
+    // both the data and count queries root in the same tenant-scoped facade.
+    expect(serviceSource).toContain('const scopedDb = tenantDb(knex, context.tenant);');
+    expect(serviceSource).toContain("const dataScopedQuery = scopedDb.scoped('tickets as t');");
+    expect(serviceSource).toContain("const countScopedQuery = scopedDb.scoped('tickets as t');");
     expect(serviceSource).toContain('dataScopedQuery.withBuilder(dataQuery)');
     expect(serviceSource).toContain('countScopedQuery.withBuilder(countQuery)');
     expect(serviceSource).not.toContain('withTenantScopedQueryBuilder');

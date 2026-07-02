@@ -13,7 +13,9 @@ describe('Entra mapping/disconnect contract checks', () => {
 
     expect(unmapRoute).toContain("mapping_state: 'unmapped'");
     expect(unmapRoute).toContain('is_active: false');
-    expect(unmapRoute).toContain("await knex('entra_client_tenant_mappings').insert");
+    // Tenant scoping now lives in the tenantDb facade.
+    expect(unmapRoute).toContain('const db = tenantDb(knex, flagGate.tenantId);');
+    expect(unmapRoute).toContain("await db.table('entra_client_tenant_mappings').insert");
     expect(unmapRoute).not.toContain('entra_sync_runs');
     expect(unmapRoute).not.toContain('entra_sync_run_tenants');
     expect(unmapRoute.toLowerCase()).not.toContain('delete from');
@@ -30,7 +32,9 @@ describe('Entra mapping/disconnect contract checks', () => {
     expect(remapRoute).toContain('clientId: targetClientId');
 
     expect(confirmMappingsService).toContain("if (mappingState === 'mapped' && clientId)");
-    expect(confirmMappingsService).toContain("await trx('clients')");
+    // Client linkage update flows through the transaction-bound tenant facade.
+    expect(confirmMappingsService).toContain('const db = tenantDb(trx, params.tenant);');
+    expect(confirmMappingsService).toContain("await db.table('clients')");
     expect(confirmMappingsService).toContain('entra_tenant_id: managedTenant.entra_tenant_id');
     expect(confirmMappingsService).toContain('entra_primary_domain: managedTenant.primary_domain || null');
   });

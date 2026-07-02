@@ -110,9 +110,7 @@ async function seedFixture() {
     board_id: boardId,
     board_name: 'Support',
     is_default: true,
-    is_active: true,
-    created_at: db.fn.now(),
-    updated_at: db.fn.now(),
+    is_inactive: false,
   });
 
   await tenantTable(tenantId, 'priorities').insert({
@@ -138,7 +136,6 @@ async function seedFixture() {
     order_number: 10,
     created_by: userId,
     created_at: db.fn.now(),
-    updated_at: db.fn.now(),
   });
 
   await tenantTable(tenantId, 'tickets').insert({
@@ -164,10 +161,14 @@ async function seedFixture() {
       document_id: deletableDocumentId,
       document_name: 'draft-inline-image.png',
       mime_type: 'image/png',
-      file_id: uuidv4(),
+      // documents.file_id has an FK to external_files; drafts in this test
+      // never touch storage, so leave it unset (the action's reference-token
+      // matching falls back to document_id).
+      file_id: null,
       content: null,
       created_by: userId,
-      created_at: db.fn.now(),
+      user_id: userId,
+      entered_at: db.fn.now(),
       updated_at: db.fn.now(),
       is_client_visible: false,
     },
@@ -176,10 +177,11 @@ async function seedFixture() {
       document_id: blockedDocumentId,
       document_name: 'shared-image.png',
       mime_type: 'image/png',
-      file_id: uuidv4(),
+      file_id: null,
       content: null,
       created_by: userId,
-      created_at: db.fn.now(),
+      user_id: userId,
+      entered_at: db.fn.now(),
       updated_at: db.fn.now(),
       is_client_visible: false,
     },
@@ -191,7 +193,6 @@ async function seedFixture() {
       document_id: deletableDocumentId,
       entity_type: 'ticket',
       entity_id: ticketId,
-      uploaded_by: userId,
       created_at: db.fn.now(),
     },
     {
@@ -199,7 +200,6 @@ async function seedFixture() {
       document_id: blockedDocumentId,
       entity_type: 'ticket',
       entity_id: ticketId,
-      uploaded_by: userId,
       created_at: db.fn.now(),
     },
     {
@@ -207,7 +207,6 @@ async function seedFixture() {
       document_id: blockedDocumentId,
       entity_type: 'client',
       entity_id: clientId,
-      uploaded_by: userId,
       created_at: db.fn.now(),
     },
   ]);

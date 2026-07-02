@@ -29,7 +29,7 @@ export const exportWorkflowBundleV1ForWorkflowId = async (knex: Knex, tenantId: 
   const key = record.key;
   assertWorkflowBundleWorkflowKey(key);
 
-  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflowId);
+  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflowId, tenantId);
   const publishedVersions = versions
     .map((row) => ({
       version: row.version,

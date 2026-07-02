@@ -19,6 +19,9 @@ import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 
+// Repo root resolved from this file (vitest runs with cwd=server/, not the repo root).
+const repoRoot = path.resolve(__dirname, '../../../../..');
+
 // Mock Stripe before any imports that use it
 vi.mock('stripe', () => {
   const mockStripe = vi.fn().mockImplementation(() => ({
@@ -81,6 +84,19 @@ vi.mock('@alga-psa/core', () => ({
     getAppSecret: vi.fn().mockResolvedValue('sk_test_mock'),
   }),
 }));
+
+// The payment providers import from the /secrets subpath, which is its own
+// module in the mock registry.
+vi.mock('@alga-psa/core/secrets', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/core/secrets')>();
+  return {
+    ...actual,
+    getSecretProviderInstance: vi.fn().mockResolvedValue({
+      getTenantSecret: vi.fn().mockResolvedValue('sk_test_mock'),
+      getAppSecret: vi.fn().mockResolvedValue('sk_test_mock'),
+    }),
+  };
+});
 
 // Mock logger
 vi.mock('@alga-psa/core/logger', () => ({
@@ -300,12 +316,31 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
 
       // This should fail because invoiceA doesn't exist in tenant B
       // BUG: But the system might not properly validate this
-      const result = await paymentServiceB.processWebhookEvent(maliciousWebhook);
+      let result: Awaited<ReturnType<typeof paymentServiceB.processWebhookEvent>> | undefined;
+      let thrownError: Error | null = null;
+      try {
+        result = await paymentServiceB.processWebhookEvent(maliciousWebhook);
+      } catch (error) {
+        thrownError = error as Error;
+      }
 
-      // The invoice lookup should fail because we're querying tenant B's invoices
-      // This test verifies that tenant isolation is enforced at the data layer
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Invoice not found');
+      // The invoice lookup should fail because we're querying tenant B's invoices.
+      // This test verifies that tenant isolation is enforced at the data layer.
+      // The service records the webhook event (with the unvalidated invoice_id)
+      // before looking up the invoice, so the composite (tenant, invoice_id) FK
+      // may reject the insert outright - same contract as the
+      // non-existent-invoice test below.
+      if (thrownError) {
+        expect(thrownError.message).toContain('violates foreign key constraint');
+      } else {
+        expect(result?.success).toBe(false);
+        expect(result?.error).toContain('Invoice not found');
+      }
+
+      // Either way, no payment may be recorded against tenant A's invoice.
+      const crossTenantPayments = await tenantTable(mockDb, tenantA, 'invoice_payments')
+        .where({ invoice_id: invoiceA, tenant: tenantA });
+      expect(crossTenantPayments.length).toBe(0);
     }, HOOK_TIMEOUT);
 
     it('should prevent cross-tenant payment recording', async () => {
@@ -330,10 +365,22 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
         status: 'succeeded',
       });
 
-      const result = await paymentServiceB.processWebhookEvent(webhookEvent);
+      let result: Awaited<ReturnType<typeof paymentServiceB.processWebhookEvent>> | undefined;
+      let thrownError: Error | null = null;
+      try {
+        result = await paymentServiceB.processWebhookEvent(webhookEvent);
+      } catch (error) {
+        thrownError = error as Error;
+      }
 
-      // Should fail - invoice doesn't exist in tenant B's context
-      expect(result.success).toBe(false);
+      // Should fail - invoice doesn't exist in tenant B's context. The
+      // composite (tenant, invoice_id) FK on payment_webhook_events may reject
+      // the event insert before the invoice lookup runs.
+      if (thrownError) {
+        expect(thrownError.message).toContain('violates foreign key constraint');
+      } else {
+        expect(result?.success).toBe(false);
+      }
 
       // Verify no payment was recorded in either tenant
       const paymentsA = await tenantTable(mockDb, testTenantId, 'invoice_payments')
@@ -869,7 +916,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       const path = await import('path');
 
       const paymentServicePath = path.join(
-        process.cwd(),
+        repoRoot,
         'ee/server/src/lib/payments/PaymentService.ts'
       );
 
@@ -1040,21 +1087,22 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       const path = await import('path');
 
       const clientPaymentPath = path.join(
-        process.cwd(),
-        '@alga-psa/client-portal/actions'
+        repoRoot,
+        'packages/client-portal/src/actions/clientPaymentActions.ts'
       );
 
       const sourceCode = fs.readFileSync(clientPaymentPath, 'utf-8');
 
-      // Find the verifyClientPortalPayment function
+      // Find the verifyClientPortalPayment function (a withAuth-wrapped action)
       const functionMatch = sourceCode.match(
-        /export async function verifyClientPortalPayment\s*\([^)]*sessionId[^)]*\)/
+        /export const verifyClientPortalPayment = withAuth\(async \([^)]*sessionId[^)]*\)/
       );
-      expect(functionMatch).toBeDefined();
+      expect(functionMatch).not.toBeNull();
 
       // Check if sessionId is actually used in the function body
       // Extract function body (simplified - look for sessionId usage after declaration)
-      const functionStart = sourceCode.indexOf('export async function verifyClientPortalPayment');
+      const functionStart = sourceCode.indexOf('export const verifyClientPortalPayment');
+      expect(functionStart).toBeGreaterThanOrEqual(0);
       const functionBody = sourceCode.slice(functionStart, functionStart + 3000);
 
       // Count occurrences of sessionId (excluding the parameter declaration)
@@ -1141,6 +1189,25 @@ async function createTestInvoiceWithClient(
     tenant: tenantId,
     client_name: `Test Company ${clientId.slice(0, 8)}`,
     billing_email: `billing_${clientId.slice(0, 8)}@test.com`,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  // PaymentService resolves the client's billing email from client_locations
+  // (is_billing_address / is_default), not clients.billing_email.
+  await tenantTable(db, tenantId, 'client_locations').insert({
+    location_id: uuidv4(),
+    tenant: tenantId,
+    client_id: clientId,
+    location_name: 'Billing',
+    address_line1: '123 Test St',
+    city: 'Test City',
+    country_code: 'US',
+    country_name: 'United States',
+    is_billing_address: true,
+    is_default: true,
+    is_active: true,
+    email: `billing_${clientId.slice(0, 8)}@test.com`,
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });
@@ -1303,8 +1370,7 @@ async function runMigrationsAndSeeds(connection: Knex): Promise<void> {
   await connection.raw('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
   await connection.raw('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
 
-  // Tests run from project root
-  const projectRoot = process.cwd();
+  const projectRoot = repoRoot;
   const serverDir = path.join(projectRoot, 'server');
 
   const migrationsDir = path.join(serverDir, 'migrations');

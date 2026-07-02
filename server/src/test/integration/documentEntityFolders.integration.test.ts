@@ -44,6 +44,30 @@ vi.mock('server/src/lib/db', async () => {
   };
 });
 
+// The document actions live in @alga-psa/documents and resolve their
+// connection/auth through @alga-psa/db and @alga-psa/auth directly.
+vi.mock('@alga-psa/db', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
+  };
+});
+
+vi.mock('@alga-psa/auth', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/auth')>('@alga-psa/auth');
+  return {
+    ...actual,
+    withAuth: (action: any) => (...args: any[]) => {
+      const user = { user_id: userId, tenant: tenantId, user_type: 'internal' };
+      return action(user, { tenant: tenantId }, ...args);
+    },
+    hasPermission: vi.fn(() => Promise.resolve(true)),
+    getCurrentUser: vi.fn(async () => ({ user_id: userId, tenant: tenantId, user_type: 'internal' })),
+    getSession: vi.fn(async () => ({ user: { id: userId, tenant: tenantId } })),
+  };
+});
+
 vi.mock('server/src/lib/tenant', () => ({
   getTenantForCurrentRequest: vi.fn(async () => tenantId ?? null),
   getTenantFromHeaders: vi.fn(() => tenantId ?? null)
@@ -299,7 +323,7 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       expect(folderNames).not.toContain('Global');
     });
 
-    it('should return only global folders when no entity params provided', async () => {
+    it('should return global and entity folders when no entity params provided (complete view)', async () => {
       const clientId = await createClient(db, tenantId, 'Global Test Client');
       createdIds.clientIds.push(clientId);
 
@@ -310,13 +334,14 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       await createFolder('/GlobalOnly', null, null, false);
       await createFolder('/GlobalOnly/SubGlobal', null, null, false);
 
-      // Get global tree (no entity params)
+      // Get global tree (no entity params). The global Documents page is a
+      // complete view: it includes entity-scoped folders alongside global ones.
       const globalTree = await getFolderTree(null, null);
 
       expect(Array.isArray(globalTree)).toBe(true);
       const folderNames = (globalTree as Array<{ name: string }>).map(f => f.name);
       expect(folderNames).toContain('GlobalOnly');
-      expect(folderNames).not.toContain('ClientSpecific');
+      expect(folderNames).toContain('ClientSpecific');
     });
   });
 
@@ -335,7 +360,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
           document_name: 'Doc 1',
           content: '',
           created_by: userId,
-          created_at: now,
+          user_id: userId,
+          entered_at: now,
           updated_at: now,
           is_client_visible: false
         },
@@ -345,7 +371,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
           document_name: 'Doc 2',
           content: '',
           created_by: userId,
-          created_at: now,
+          user_id: userId,
+          entered_at: now,
           updated_at: now,
           is_client_visible: false
         },
@@ -355,7 +382,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
           document_name: 'Doc 3',
           content: '',
           created_by: userId,
-          created_at: now,
+          user_id: userId,
+          entered_at: now,
           updated_at: now,
           is_client_visible: true // Already visible
         }
@@ -391,7 +419,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
         document_name: 'Toggle Test Doc',
         content: '',
         created_by: userId,
-        created_at: now,
+        user_id: userId,
+        entered_at: now,
         updated_at: now,
         is_client_visible: true
       });
@@ -441,7 +470,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
           content: '',
           folder_path: '/CascadeTest',
           created_by: userId,
-          created_at: now,
+          user_id: userId,
+          entered_at: now,
           updated_at: now,
           is_client_visible: false
         },
@@ -452,7 +482,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
           content: '',
           folder_path: '/CascadeTest',
           created_by: userId,
-          created_at: now,
+          user_id: userId,
+          entered_at: now,
           updated_at: now,
           is_client_visible: false
         }
@@ -516,7 +547,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
         content: '',
         folder_path: '/NoCascade',
         created_by: userId,
-        created_at: now,
+        user_id: userId,
+        entered_at: now,
         updated_at: now,
         is_client_visible: false
       });
@@ -569,7 +601,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
         content: '',
         folder_path: '/Parent/Child',
         created_by: userId,
-        created_at: now,
+        user_id: userId,
+        entered_at: now,
         updated_at: now,
         is_client_visible: false
       });
@@ -628,7 +661,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
         content: '',
         folder_path: '/GlobalDocs',
         created_by: userId,
-        created_at: now,
+        user_id: userId,
+        entered_at: now,
         updated_at: now,
         is_client_visible: false
       });
@@ -668,8 +702,8 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       expect(globalFolder.folder_id).not.toBe(entityFolder.folder_id);
     });
 
-    it('should render global tree without entity-scoped folders leaking in', async () => {
-      const clientId = await createClient(db, tenantId, 'No Leak Client');
+    it('should include entity-scoped folders in the global tree (complete view)', async () => {
+      const clientId = await createClient(db, tenantId, 'Complete View Client');
       createdIds.clientIds.push(clientId);
 
       // Create entity folder
@@ -678,12 +712,13 @@ describe('Document Entity-Scoped Folders Integration Tests', () => {
       // Create global folder
       await createFolder('/GlobalOnly2', null, null, false);
 
-      // Get global tree
+      // Get global tree — the global Documents page shows every folder,
+      // including entity-scoped ones, so it stays a complete view.
       const globalTree = await getFolderTree(null, null);
 
       const folderNames = (globalTree as Array<{ name: string }>).map(f => f.name);
       expect(folderNames).toContain('GlobalOnly2');
-      expect(folderNames).not.toContain('EntityOnly');
+      expect(folderNames).toContain('EntityOnly');
     });
   });
 });

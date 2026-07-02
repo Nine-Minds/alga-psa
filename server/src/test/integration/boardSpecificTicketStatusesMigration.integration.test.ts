@@ -492,6 +492,7 @@ async function seedWorkflowStatusReferences(fixture: LegacyFixture) {
   });
 
   await tenantTable(fixture.tenantId, 'workflow_definition_versions').insert({
+    tenant: fixture.tenantId,
     workflow_id: workflowId,
     version: definition.version,
     definition_json: definition,

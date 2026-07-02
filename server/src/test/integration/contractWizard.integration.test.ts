@@ -124,7 +124,6 @@ describe('createClientContractFromWizard', () => {
       id: serviceTypeId,
       tenant: tenantId,
       name: serviceTypeName,
-      billing_method: 'fixed',
       order_number: Math.floor(Math.random() * 1000000),
       created_at: db.fn.now(),
       updated_at: db.fn.now()
@@ -551,14 +550,7 @@ describe('createClientContractFromWizard', () => {
       .first();
     expect(hourlyLine).toBeTruthy();
 
-    const lineService = await tenantTable(db, tenantId, 'contract_line_services')
-      .where({
-        tenant: tenantId,
-        contract_line_id: hourlyLine!.contract_line_id,
-        service_id: serviceId,
-      })
-      .first();
-    expect(Number(lineService?.unit_price ?? 0)).toBe(8700);
+    expect(await readHourlyRate(db, tenantId, hourlyLine!.contract_line_id, serviceId)).toBe(8700);
   });
 
   it('T023: resolves usage-mode prefill from service+mode+currency defaults when no usage override is provided', async () => {
@@ -607,14 +599,7 @@ describe('createClientContractFromWizard', () => {
       .first();
     expect(usageLine).toBeTruthy();
 
-    const lineService = await tenantTable(db, tenantId, 'contract_line_services')
-      .where({
-        tenant: tenantId,
-        contract_line_id: usageLine!.contract_line_id,
-        service_id: serviceId,
-      })
-      .first();
-    expect(Number(lineService?.unit_price ?? 0)).toBe(6400);
+    expect(await readUsageRate(db, tenantId, usageLine!.contract_line_id, serviceId)).toBe(6400);
   });
 
   it('T024: explicit fixed/hourly/usage overrides supersede catalog mode defaults', async () => {
@@ -712,25 +697,30 @@ describe('createClientContractFromWizard', () => {
       .first('contract_line_service_fixed_config.base_rate');
     expect(Number(fixedConfig?.base_rate ?? 0)).toBe(7777);
 
-    const hourlyLineService = await tenantTable(db, tenantId, 'contract_line_services')
-      .where({
-        tenant: tenantId,
-        contract_line_id: lineIdByType.get('Hourly'),
-        service_id: hourlyServiceId,
-      })
-      .first('unit_price');
-    expect(Number(hourlyLineService?.unit_price ?? 0)).toBe(8888);
-
-    const usageLineService = await tenantTable(db, tenantId, 'contract_line_services')
-      .where({
-        tenant: tenantId,
-        contract_line_id: lineIdByType.get('Usage'),
-        service_id: usageServiceId,
-      })
-      .first('unit_price');
-    expect(Number(usageLineService?.unit_price ?? 0)).toBe(9999);
+    expect(await readHourlyRate(db, tenantId, lineIdByType.get('Hourly')!, hourlyServiceId)).toBe(8888);
+    expect(await readUsageRate(db, tenantId, lineIdByType.get('Usage')!, usageServiceId)).toBe(9999);
   });
 });
+
+// The wizard persists resolved hourly rates on contract_line_service_hourly_configs
+// (keyed by the line+service configuration) and resolved usage unit rates on the
+// configuration row's custom_rate.
+async function readHourlyRate(connection: Knex, tenant: string, contractLineId: string, serviceId: string) {
+  const config = await tenantTable(connection, tenant, 'contract_line_service_configuration')
+    .where({ tenant, contract_line_id: contractLineId, service_id: serviceId })
+    .first('config_id');
+  const hourlyConfig = await tenantTable(connection, tenant, 'contract_line_service_hourly_configs')
+    .where({ tenant, config_id: config?.config_id })
+    .first('hourly_rate');
+  return Number(hourlyConfig?.hourly_rate ?? 0);
+}
+
+async function readUsageRate(connection: Knex, tenant: string, contractLineId: string, serviceId: string) {
+  const config = await tenantTable(connection, tenant, 'contract_line_service_configuration')
+    .where({ tenant, contract_line_id: contractLineId, service_id: serviceId })
+    .first('custom_rate');
+  return Number(config?.custom_rate ?? 0);
+}
 
 async function insertServiceType(connection: Knex, tenant: string, billingMethod: 'fixed' | 'hourly' | 'usage') {
   const serviceTypeId = uuidv4();
@@ -738,7 +728,6 @@ async function insertServiceType(connection: Knex, tenant: string, billingMethod
     id: serviceTypeId,
     tenant,
     name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-    billing_method: billingMethod,
     order_number: Math.floor(Math.random() * 1000000),
     created_at: connection.fn.now(),
     updated_at: connection.fn.now(),

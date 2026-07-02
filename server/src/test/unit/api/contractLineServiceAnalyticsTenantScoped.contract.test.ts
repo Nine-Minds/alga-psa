@@ -24,7 +24,10 @@ describe('contract line service analytics tenant-scoped query contract', () => {
     expect(analyticsSection).toContain(".table('contract_line_service_configuration as psc')");
     expect(analyticsSection).toContain(".table('contract_lines')");
     expect(analyticsSection).toContain(".table('contracts')");
-    expect(analyticsSection).toContain(".andOn('psc.tenant', '=', 'sc.tenant')");
+    // psc -> sc join is tenant-matched via the facade
+    expect(analyticsSection).toContain(
+      "tenantDb(knex, context.tenant).tenantJoin(q, 'service_catalog as sc', 'psc.service_id', 'sc.service_id')",
+    );
 
     expect(analyticsSection).not.toMatch(/knex\('contract_lines as cl'\)\s*\./);
     expect(analyticsSection).not.toMatch(/knex\('contract_line_service_configuration as psc'\)\s*\./);

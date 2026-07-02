@@ -20,7 +20,8 @@ import { createClient, createTenant, createUser } from '../../../../test-utils/t
 
 // Mock dependencies
 vi.mock('server/src/lib/utils/getSecret', () => ({
-  getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+  getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -28,7 +29,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
     getAppSecret: async () => '',
   })),
   secretProvider: {
-    getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+    getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
   },
 }));
 
@@ -105,9 +107,7 @@ describe('Ticket Due Date Integration Tests', () => {
     await scopedTable(tenantId, 'boards').insert({
       tenant: tenantId,
       board_id: boardId,
-      name: 'Test Board',
-      created_at: new Date(),
-      updated_at: new Date(),
+      board_name: 'Test Board',
     });
 
     statusId = uuidv4();
@@ -391,9 +391,7 @@ describe('Ticket Due Date Integration Tests', () => {
       await scopedTable(tenant2Id, 'boards').insert({
         tenant: tenant2Id,
         board_id: board2Id,
-        name: 'Test Board 2',
-        created_at: new Date(),
-        updated_at: new Date(),
+        board_name: 'Test Board 2',
       });
 
       const status2Id = uuidv4();
