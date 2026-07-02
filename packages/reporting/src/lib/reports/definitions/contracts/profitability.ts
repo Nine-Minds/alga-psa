@@ -57,7 +57,7 @@ export const contractProfitabilityReport: ReportDefinition = {
           }
         ],
         fields: [
-          'COALESCE(time_entries.billable_duration * 833.33, 0)' // $50/hr = 5000 cents/hr = 833.33 cents/min * billable_duration in minutes
+          'COALESCE(time_entries.billable_duration * 83.33, 0)' // $50/hr = 5000 cents/hr = 83.33 cents/min * billable_duration
         ],
         aggregation: 'sum',
         filters: [
@@ -79,27 +79,30 @@ export const contractProfitabilityReport: ReportDefinition = {
       description: 'Revenue minus labor cost (simplified profitability)',
       type: 'sum',
       query: {
-        table: 'invoices',
-        joins: [
-          {
-            type: 'left',
-            table: 'time_entries',
-            on: [
-              { left: 'invoices.client_id', right: 'time_entries.user_id' },
-              { left: 'invoices.tenant', right: 'time_entries.tenant' }
-            ]
-          }
-        ],
+        table: 'raw_sql',
         fields: [
-          'invoices.total_amount - COALESCE(time_entries.billable_duration * 833.33, 0)'
+          `
+          SELECT
+            COALESCE(revenue.total_revenue, 0) - COALESCE(cost.total_cost, 0) AS sum
+          FROM (
+            SELECT COALESCE(SUM(total_amount), 0) AS total_revenue
+            FROM invoices
+            WHERE tenant = {{tenant}}
+              AND invoice_date >= {{start_of_year}}
+              AND invoice_date < {{end_of_year}}
+              AND status IN ('paid', 'completed', 'sent', 'open', 'overdue')
+          ) revenue
+          CROSS JOIN (
+            SELECT COALESCE(SUM(COALESCE(billable_duration, 0) * 83.33), 0) AS total_cost
+            FROM time_entries
+            WHERE tenant = {{tenant}}
+              AND start_time >= {{start_of_year}}
+              AND start_time < {{end_of_year}}
+          ) cost
+          `
         ],
         aggregation: 'sum',
-        filters: [
-          { field: 'invoices.tenant', operator: 'eq', value: '{{tenant}}' },
-          { field: 'invoices.invoice_date', operator: 'gte', value: '{{start_of_year}}' },
-          { field: 'invoices.invoice_date', operator: 'lt', value: '{{end_of_year}}' },
-          { field: 'invoices.status', operator: 'in', value: ['paid', 'completed', 'sent', 'open', 'overdue'] }
-        ]
+        filters: []
       },
       formatting: {
         type: 'currency',
@@ -114,27 +117,33 @@ export const contractProfitabilityReport: ReportDefinition = {
       description: 'Gross profit as a percentage of revenue',
       type: 'ratio',
       query: {
-        table: 'invoices',
-        joins: [
-          {
-            type: 'left',
-            table: 'time_entries',
-            on: [
-              { left: 'invoices.client_id', right: 'time_entries.user_id' },
-              { left: 'invoices.tenant', right: 'time_entries.tenant' }
-            ]
-          }
-        ],
+        table: 'raw_sql',
         fields: [
-          '(SUM(invoices.total_amount) - COALESCE(SUM(time_entries.billable_duration * 833.33), 0)) / NULLIF(SUM(invoices.total_amount), 0) * 100'
+          `
+          SELECT
+            COALESCE(
+              (revenue.total_revenue - cost.total_cost) / NULLIF(revenue.total_revenue, 0) * 100,
+              0
+            ) AS sum
+          FROM (
+            SELECT COALESCE(SUM(total_amount), 0) AS total_revenue
+            FROM invoices
+            WHERE tenant = {{tenant}}
+              AND invoice_date >= {{start_of_year}}
+              AND invoice_date < {{end_of_year}}
+              AND status IN ('paid', 'completed', 'sent', 'open', 'overdue')
+          ) revenue
+          CROSS JOIN (
+            SELECT COALESCE(SUM(COALESCE(billable_duration, 0) * 83.33), 0) AS total_cost
+            FROM time_entries
+            WHERE tenant = {{tenant}}
+              AND start_time >= {{start_of_year}}
+              AND start_time < {{end_of_year}}
+          ) cost
+          `
         ],
         aggregation: 'sum',
-        filters: [
-          { field: 'invoices.tenant', operator: 'eq', value: '{{tenant}}' },
-          { field: 'invoices.invoice_date', operator: 'gte', value: '{{start_of_year}}' },
-          { field: 'invoices.invoice_date', operator: 'lt', value: '{{end_of_year}}' },
-          { field: 'invoices.status', operator: 'in', value: ['paid', 'completed', 'sent', 'open', 'overdue'] }
-        ]
+        filters: []
       },
       formatting: {
         type: 'percentage',
@@ -148,27 +157,56 @@ export const contractProfitabilityReport: ReportDefinition = {
       description: 'Average profit margin across all contracts',
       type: 'average',
       query: {
-        table: 'invoices',
-        joins: [
-          {
-            type: 'left',
-            table: 'time_entries',
-            on: [
-              { left: 'invoices.client_id', right: 'time_entries.user_id' },
-              { left: 'invoices.tenant', right: 'time_entries.tenant' }
-            ]
-          }
-        ],
+        table: 'raw_sql',
         fields: [
-          '(invoices.total_amount - COALESCE(time_entries.billable_duration * 833.33, 0)) / NULLIF(invoices.total_amount, 0) * 100'
+          `
+          WITH invoice_totals AS (
+            SELECT
+              inv.invoice_id,
+              inv.tenant,
+              COALESCE(SUM(ic.net_amount), 0) AS invoice_revenue
+            FROM invoices inv
+            LEFT JOIN invoice_charges ic
+              ON ic.invoice_id = inv.invoice_id
+             AND ic.tenant = inv.tenant
+            WHERE inv.tenant = {{tenant}}
+              AND inv.invoice_date >= {{start_of_year}}
+              AND inv.invoice_date < {{end_of_year}}
+              AND inv.status IN ('paid', 'completed', 'sent', 'open', 'overdue')
+            GROUP BY inv.invoice_id, inv.tenant
+          ),
+          invoice_costs AS (
+            SELECT
+              ite.invoice_id,
+              ite.tenant,
+              COALESCE(SUM(COALESCE(te.billable_duration, 0) * 83.33), 0) AS invoice_cost
+            FROM invoice_time_entries ite
+            JOIN time_entries te
+              ON te.entry_id = ite.entry_id
+             AND te.tenant = ite.tenant
+            WHERE ite.tenant = {{tenant}}
+              AND te.start_time >= {{start_of_year}}
+              AND te.start_time < {{end_of_year}}
+            GROUP BY ite.invoice_id, ite.tenant
+          )
+          SELECT COALESCE(
+            AVG(
+              CASE
+                WHEN it.invoice_revenue > 0 THEN
+                  (it.invoice_revenue - COALESCE(ic.invoice_cost, 0)) / it.invoice_revenue * 100
+                ELSE NULL
+              END
+            ),
+            0
+          ) AS avg
+          FROM invoice_totals it
+          LEFT JOIN invoice_costs ic
+            ON ic.invoice_id = it.invoice_id
+           AND ic.tenant = it.tenant
+          `
         ],
         aggregation: 'avg',
-        filters: [
-          { field: 'invoices.tenant', operator: 'eq', value: '{{tenant}}' },
-          { field: 'invoices.invoice_date', operator: 'gte', value: '{{start_of_year}}' },
-          { field: 'invoices.invoice_date', operator: 'lt', value: '{{end_of_year}}' },
-          { field: 'invoices.status', operator: 'in', value: ['paid', 'completed', 'sent', 'open', 'overdue'] }
-        ]
+        filters: []
       },
       formatting: {
         type: 'percentage',
