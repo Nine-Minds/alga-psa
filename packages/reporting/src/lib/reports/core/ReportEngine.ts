@@ -140,7 +140,9 @@ export class ReportEngine {
       
       // Build and execute the query
       const query = QueryBuilder.build(trx, metric.query, parameters);
-      const result = await query;
+      const rawResult = await query;
+      // raw_sql queries resolve to the pg driver's Result object rather than a rows array
+      const result = Array.isArray(rawResult) ? rawResult : ((rawResult as { rows?: any[] })?.rows ?? []);
       
       // Handle different result types
       if (metric.query.aggregation) {
