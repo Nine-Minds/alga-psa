@@ -26,6 +26,7 @@ export * from './contractLineServiceConfigurationActions';
 export * from './contractPricingScheduleActions';
 export * from './contractReportActions';
 export * from './contractWizardActions';
+export * from './costRateActions';
 export * from './creditActions';
 export * from './creditExpirationSettingsActions';
 export * from './creditReconciliationActions';

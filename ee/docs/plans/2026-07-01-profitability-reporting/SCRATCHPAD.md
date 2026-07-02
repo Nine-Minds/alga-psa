@@ -42,6 +42,24 @@
 - i18n check: `generate-pseudo-locales.cjs` + `validate-translations.cjs` (single consolidated run).
 - Build: `npm run build`; single package: `npx nx build billing`.
 
+## Implementation log
+
+- 2026-07-02 batch 1 (schema + cost-rate model/actions):
+  - Added `server/migrations/20260702120000_create_user_cost_rates.cjs` with tenant-first `(tenant, rate_id)` PK, nullable plain-UUID `user_id`, cents/hour `cost_rate`, inclusive effective dates, audit columns, nonnegative/range CHECKs, `(tenant, user_id, effective_from)` index, no FKs, guarded inline `create_distributed_table`, and `exports.config = { transaction: false }`.
+  - Added `server/migrations/20260702120100_add_item_id_to_invoice_time_entries.cjs` with nullable `invoice_time_entries.item_id` plus `(tenant, item_id)` index.
+  - Registered `user_cost_rates` in both tenant metadata sources: `packages/db/src/lib/tenantTableMetadata.ts` and `server/migrations/utils/tenantDb.cjs`.
+  - Added `IUserCostRate` to `packages/types/src/interfaces/billing.interfaces.ts`.
+  - Added `packages/billing/src/models/userCostRate.ts`: tenant-scoped list/listByUser/get/resolve/upsert/delete, typed validation errors, model-layer internal-user validation, advisory transaction lock before overlap checks, inclusive overlap predicate, deterministic `ORDER BY user_id IS NULL, effective_from DESC, rate_id LIMIT 1` resolution helper, and worked-time intersection helper.
+  - Added `packages/billing/src/actions/costRateActions.ts`: `listCostRates` (`billing.read`), `upsertCostRate`/`deleteCostRate` (`billing.update`), internal-user listing, current-rate derivation, and `covers_worked_time` return values for warning UI.
+  - Tests added:
+    - `server/src/test/unit/migrations/profitabilityCostRatesMigration.test.ts`
+    - `packages/billing/src/models/userCostRate.test.ts`
+    - `packages/billing/src/actions/costRateActions.test.ts`
+  - Checks run:
+    - `cd server && npx vitest run ../packages/billing/src/models/userCostRate.test.ts ../packages/billing/src/actions/costRateActions.test.ts src/test/unit/migrations/profitabilityCostRatesMigration.test.ts --coverage.enabled=false` ✅
+    - `npm -w @alga-psa/billing run typecheck` ✅
+  - Checklist updated: F001-F012 implemented. Tests marked true where covered by this batch: T001-T004, T010-T011, T013-T017, T019, T099. T005-T009/T012/T018 remain open for deeper DB or concurrency fixtures.
+
 ## Review log
 
 - 2026-07-01: Plan drafted.

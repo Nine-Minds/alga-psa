@@ -12,3 +12,5 @@ export { default as Quote } from './quote';
 export { default as QuoteItem } from './quoteItem';
 export { default as QuoteActivity } from './quoteActivity';
 export { default as QuoteDocumentTemplate } from './quoteDocumentTemplate';
+export { default as UserCostRate, CostRateValidationError } from './userCostRate';
+export type { UpsertUserCostRateInput, CostRateValidationCode } from './userCostRate';
