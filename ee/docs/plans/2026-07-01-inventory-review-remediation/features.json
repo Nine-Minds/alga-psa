@@ -734,5 +734,13 @@
     "prdRefs": [
       "persona-review-P3"
     ]
+  },
+  {
+    "id": "F093",
+    "description": "CSV opening-balance import (migration switch-blocker): validate-then-apply two-phase \u2014 RFC-4180 parser, per-row errors (unknown product/location, inactive location, serial dupes in-file and in-DB, serialized/bulk shape mismatches), ADD warnings, all-or-nothing transactional apply as tagged ledger receipts creating units + updating bulk moving averages, optional settings creation for untracked products, 5000-row cap; Stock-page dialog with template download, preview summary, and error/warning panels",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P1"
+    ]
   }
 ]

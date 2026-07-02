@@ -294,3 +294,11 @@ Three parallel harness runs (codex/GPT-5.5 for the units screen; cursor-agent/Co
 - **F092 MAC → asset** (lib/assetLink): attributes.mac_address included when the delivered unit has one (conditional-spread, code-reviewed; no MAC'd delivered unit in demo data to exercise).
 
 tsc + 65/65 green after batch. Demo-data note: the ESC-INV-7741 bill line was bumped to $160/unit (total $1,280) to demonstrate the price-creep flags.
+
+## CSV opening-balance import (F093, persona-review P1 — the migration blocker) — 2026-07-02
+
+Split build: backend + tests offloaded to codex/GPT-5.5 from a locked contract, UI written by hand in parallel against the same contract. Architecture: pure parser + DB-aware validate/apply core in lib/openingBalanceCsv.ts taking a trx (so the rolled-back DB harness tests it — 9 new tests, suite now 74/74), thin withAuth wrappers in actions/openingBalanceActions.ts, ImportOpeningBalances dialog on the Stock page (template download, file → validate preview with summary/errors/warnings, all-or-nothing apply). Semantics: one CSV for both shapes (serial row = one unit, no-serial row = bulk qty), sku-then-name product match, active-location name match, costs in dollars → cents, per-service serial dedupe in-file AND against stock_units, "will ADD" warnings on stocked targets, optional settings creation (serialized-ness inferred, mixed shapes rejected), receipts tagged opening_balance_import:<batch>, bulk moving average updated with the receive-stock weighted formula, 5000-row cap, apply throws on any error.
+
+Verified live end-to-end: bad file (inactive "ZZ Review Throwaway") → 3 clean row errors + Apply stays disabled; corrected file → preview matched hand-computed totals ($210.10, 2 units, 11 bulk, 2 ADD warnings) → apply: Bellevue HDMI 30→40, Main 54→55, IMP-SSD units in stock with cost+MAC, 4 tagged receipts, HDMI average 0→33¢ (= (91×0 + 11×310)/102, matching the formula exactly).
+
+Env note: the dev server died mid-build with a V8 heap OOM (long hot-reload session); restarted with NODE_OPTIONS=--max-old-space-size=8192. Codex sandbox cannot reach localhost Postgres — always rerun DB suites locally after an offload.

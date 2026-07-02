@@ -17,6 +17,7 @@ import {
   receiveStockManual,
   rebuildStockCaches,
 } from '../actions';
+import { ImportOpeningBalances } from './ImportOpeningBalances';
 
 type InventoryProduct = IProductInventorySettings & {
   service_name: string | null;
@@ -300,6 +301,8 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Day-one migration path (Sam review P1): opening balances from CSV as real receipts. */}
+          <ImportOpeningBalances onApplied={reload} />
           {/* Repair path for cache drift (F028): recompute on-hand + reserved/held from
               the ledger, unit statuses, and open SO reservations. */}
           <Button
