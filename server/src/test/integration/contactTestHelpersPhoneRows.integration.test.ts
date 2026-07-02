@@ -113,7 +113,7 @@ describe('contact test helper normalized phone rows integration', () => {
       'utf8'
     );
 
-    expect(seedSource).toContain("await knex('contact_phone_numbers').insert([");
+    expect(seedSource).toContain("await db.table('contact_phone_numbers').insert([");
     expect(seedSource).toContain("canonical_type: 'work'");
     expect(seedSource).toContain("is_default: true");
     expect(seedSource).not.toContain("phone_number: '+1-555-987-6543',\n            email");
