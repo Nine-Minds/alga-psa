@@ -10,6 +10,10 @@ import {
   fulfillSalesOrderLine,
   FulfillSalesOrderLineInput,
   FulfillSalesOrderLineResult,
+  confirmDropShipShipment,
+  ConfirmDropShipShipmentInput,
+  ConfirmDropShipShipmentResult,
+  DropShipLineRef,
 } from '@alga-psa/inventory/actions';
 import { generateManualInvoice } from './manualInvoiceActions';
 import { TaxService } from '../services/taxService';
@@ -215,6 +219,52 @@ export const fulfillAndInvoiceSoLine = withAuth(
     } catch (e) {
       return {
         fulfillment,
+        invoice: { success: false, invoiced: 0, error: e instanceof Error ? e.message : String(e) },
+      };
+    }
+  },
+);
+
+export interface ConfirmDropShipAndInvoiceResult {
+  shipment: ConfirmDropShipShipmentResult;
+  /** Invoice outcome when the SO's invoice_mode is 'on_fulfillment'; null for manual mode. */
+  invoice: { success: boolean; invoiced: number; invoiceId?: string; error?: string } | null;
+}
+
+/**
+ * Confirm a drop-ship vendor shipment and bill it under the same rule as from-stock
+ * fulfillment: invoice_mode 'on_fulfillment' invoices the newly shipped quantity
+ * immediately. Drop-ship is the flow MOST prone to "shipped straight to the client,
+ * nobody ever cut the invoice" — it must not bill more lazily than stock does.
+ *
+ * Same failure semantics as fulfillAndInvoiceSoLine: an invoicing error never unwinds
+ * the shipment confirmation; it is returned in invoice.error and stays billable.
+ */
+export const confirmDropShipAndInvoice = withAuth(
+  async (
+    user,
+    { tenant },
+    ref: DropShipLineRef,
+    input?: ConfirmDropShipShipmentInput,
+  ): Promise<ConfirmDropShipAndInvoiceResult> => {
+    // Both composed actions enforce their own permissions (sales_order update).
+    const shipment = await confirmDropShipShipment(ref, input);
+
+    const soId = shipment.so_line.so_id;
+    const { knex: db } = await createTenantKnex();
+    const so = await withTransaction(db, async (trx: Knex.Transaction) =>
+      trx('sales_orders').where({ tenant, so_id: soId }).select('invoice_mode').first(),
+    );
+    if (so?.invoice_mode !== 'on_fulfillment') {
+      return { shipment, invoice: null };
+    }
+
+    try {
+      const invoice = await generateInvoiceForSalesOrder(soId, { mode: 'fulfilled' });
+      return { shipment, invoice };
+    } catch (e) {
+      return {
+        shipment,
         invoice: { success: false, invoiced: 0, error: e instanceof Error ? e.message : String(e) },
       };
     }

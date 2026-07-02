@@ -17,3 +17,4 @@ export * from './VendorPriceList';
 export * from './CycleCountsManager';
 export * from './PoLandedCostDialog';
 export * from './VendorBillsManager';
+export * from './WriteOffsReport';

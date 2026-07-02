@@ -294,6 +294,51 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
       });
     }
 
+    // Vendor-owed RMAs — units sitting at the vendor age like receivables ("nothing
+    // owed sits quiet"): the shelf-of-dead-drives failure is forgetting to chase the
+    // credit/replacement the vendor already agreed to.
+    const vendorOwedRows = await trx('rma_cases as r')
+      .leftJoin('vendors as v', function () {
+        this.on('r.vendor_id', '=', 'v.vendor_id').andOn('r.tenant', '=', 'v.tenant');
+      })
+      .leftJoin('service_catalog as sc', function () {
+        this.on('r.service_id', '=', 'sc.service_id').andOn('r.tenant', '=', 'sc.tenant');
+      })
+      .leftJoin('stock_units as u', function () {
+        this.on('r.returned_unit_id', '=', 'u.unit_id').andOn('r.tenant', '=', 'u.tenant');
+      })
+      .joinRaw(
+        `LEFT JOIN LATERAL (
+          SELECT sm.created_at FROM stock_movements sm
+          WHERE sm.tenant = r.tenant AND sm.unit_id = r.returned_unit_id AND sm.movement_type = 'rma_out'
+          ORDER BY sm.created_at DESC LIMIT 1
+        ) sent ON true`,
+      )
+      .where({ 'r.tenant': tenant, 'r.status': 'sent_to_vendor' })
+      .select<any[]>(
+        'r.rma_id as rma_id',
+        'r.rma_reference as rma_reference',
+        'v.vendor_name as vendor_name',
+        'sc.service_name as service_name',
+        'u.unit_cost as unit_cost',
+        trx.raw('COALESCE(sent.created_at, r.opened_at) as sent_at'),
+      )
+      .orderByRaw('COALESCE(sent.created_at, r.opened_at) asc');
+    for (const r of vendorOwedRows) {
+      const days = r.sent_at ? Math.floor((Date.now() - new Date(r.sent_at).getTime()) / 86_400_000) : null;
+      const cost = r.unit_cost != null ? Number(r.unit_cost) : null;
+      const stake = cost != null ? `$${(cost / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : 'credit/replacement';
+      attention.push({
+        id: `rma-vendor-${r.rma_id}`,
+        severity: days != null && days >= 30 ? 'red' : 'amber',
+        icon: 'rma',
+        title: `${r.rma_reference ?? 'RMA'} · ${r.vendor_name ?? 'vendor'} owes you ${stake}`,
+        subtitle: `${r.service_name ?? 'Unit'} at vendor ${days != null ? `${days} day${days === 1 ? '' : 's'}` : ''} · chase the credit or replacement`,
+        badge: { label: days != null ? `${days}d at vendor` : 'At vendor', tone: days != null && days >= 30 ? 'err' : 'warn' },
+        action: { label: 'View RMA', href: '/msp/inventory/rma' },
+      });
+    }
+
     // Partially-received POs
     for (const po of receiving_queue.filter((p) => p.status === 'partially_received')) {
       attention.push({
@@ -328,7 +373,9 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
       });
     }
 
-    // Sales orders ready to invoice (fulfilled but not fully invoiced)
+    // Unbilled shipped quantity — fires on ANY line where goods went out ahead of the
+    // invoice, not just fully-fulfilled orders. A half-shipped order that sits quiet is
+    // exactly how drop-ship and partial-fulfillment money walks.
     const soRows = await trx('sales_orders as so')
       .leftJoin('clients as c', function () {
         this.on('so.client_id', '=', 'c.client_id').andOn('so.tenant', '=', 'c.tenant');
@@ -336,25 +383,30 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
       .leftJoin('sales_order_lines as l', function () {
         this.on('so.so_id', '=', 'l.so_id').andOn('so.tenant', '=', 'l.tenant');
       })
-      .where({ 'so.tenant': tenant, 'so.status': 'fulfilled' })
-      .groupBy('so.so_id', 'so.so_number', 'so.order_date', 'c.client_name')
-      .havingRaw('COALESCE(SUM(l.quantity_fulfilled - l.quantity_invoiced),0) > 0')
+      .where({ 'so.tenant': tenant })
+      .whereNot('so.status', 'cancelled')
+      .groupBy('so.so_id', 'so.so_number', 'so.status', 'so.order_date', 'c.client_name')
+      .havingRaw('COALESCE(SUM(GREATEST(l.quantity_fulfilled - l.quantity_invoiced, 0)),0) > 0')
       .select<any[]>(
         'so.so_id as so_id',
         'so.so_number as so_number',
+        'so.status as so_status',
         'c.client_name as client_name',
-        trx.raw('COALESCE(SUM((l.quantity_fulfilled - l.quantity_invoiced) * l.unit_price),0) as uninvoiced_value'),
+        trx.raw(
+          'COALESCE(SUM(GREATEST(l.quantity_fulfilled - l.quantity_invoiced, 0) * l.unit_price),0) as uninvoiced_value',
+        ),
       )
       .orderBy('so.order_date', 'desc');
     for (const so of soRows) {
       const val = Number(so.uninvoiced_value);
+      const fully = so.so_status === 'fulfilled';
       attention.push({
         id: `so-${so.so_id}`,
-        severity: 'info',
+        severity: 'amber',
         icon: 'so',
-        title: `${so.so_number} · ${so.client_name ?? 'client'} — fulfilled`,
-        subtitle: `All lines shipped · ready to invoice ($${(val / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })})`,
-        badge: { label: 'Ready to invoice', tone: 'info' },
+        title: `${so.so_number} · ${so.client_name ?? 'client'} — shipped, not billed`,
+        subtitle: `${fully ? 'All lines shipped' : 'Partially shipped'} · $${(val / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} unbilled`,
+        badge: { label: 'Unbilled shipment', tone: 'warn' },
         action: { label: 'Invoice', href: '/msp/inventory/sales-orders', primary: true },
       });
     }

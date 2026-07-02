@@ -654,5 +654,45 @@
     "prdRefs": [
       "\u00a711"
     ]
+  },
+  {
+    "id": "F083",
+    "description": "Vendor-owed RMA aging: dashboard attention item for cases sent_to_vendor with days-at-vendor and unit cost at stake (red >= 30 days)",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P2"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Drop-ship confirmations auto-invoice under invoice_mode=on_fulfillment via billing-side confirmDropShipAndInvoice composition (parity with from-stock fulfillment)",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P2"
+    ]
+  },
+  {
+    "id": "F085b",
+    "description": "Unbilled-shipment nag fires on ANY sales-order line with quantity_fulfilled > quantity_invoiced (amber, dollars shown), not only fully-fulfilled orders",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P2"
+    ]
+  },
+  {
+    "id": "F086b",
+    "description": "Write-offs report: /msp/inventory/write-offs page + writeOffReport action \u2014 adjustments/retirements/count corrections with signed quantities and dollars, per-user totals over the full range, 500-row display cap flagged",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P2"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Four-eyes count approval: the session creator or anyone who recorded a count cannot approve it when another user holds cycle_count:approve (single-approver tenants may self-approve)",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P2"
+    ]
   }
 ]

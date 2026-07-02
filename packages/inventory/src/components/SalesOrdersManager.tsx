@@ -32,6 +32,7 @@ import {
 } from '../actions';
 import {
   SalesOrderDetail,
+  type ConfirmDropShipFn,
   type FulfillAndInvoiceFn,
   type GenerateInvoiceFn,
 } from './SalesOrderDetail';
@@ -135,6 +136,7 @@ export interface SalesOrdersManagerProps {
   /** Billing-owned actions passed from the page (billing → inventory dependency). */
   fulfillAndInvoice: FulfillAndInvoiceFn;
   generateInvoice: GenerateInvoiceFn;
+  confirmDropShip: ConfirmDropShipFn;
 }
 
 export function SalesOrdersManager({
@@ -142,6 +144,7 @@ export function SalesOrdersManager({
   locations = [],
   fulfillAndInvoice,
   generateInvoice,
+  confirmDropShip,
 }: SalesOrdersManagerProps) {
   const [sos, setSos] = useState<ISalesOrder[]>(initialSos || []);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -511,6 +514,7 @@ export function SalesOrdersManager({
         locations={locations}
         fulfillAndInvoice={fulfillAndInvoice}
         generateInvoice={generateInvoice}
+        confirmDropShip={confirmDropShip}
       />
 
       <ConfirmationDialog

@@ -2,7 +2,11 @@ import { listSalesOrders, listStockLocations } from '@alga-psa/inventory/actions
 import { SalesOrdersManager } from '@alga-psa/inventory/components';
 // Billing owns SO invoicing (billing → inventory dependency direction); the server
 // action references are passed down to the client component as props (F008).
-import { fulfillAndInvoiceSoLine, generateInvoiceForSalesOrder } from '@alga-psa/billing/actions';
+import {
+  confirmDropShipAndInvoice,
+  fulfillAndInvoiceSoLine,
+  generateInvoiceForSalesOrder,
+} from '@alga-psa/billing/actions';
 import { getSession } from '@alga-psa/auth';
 import { redirect } from 'next/navigation';
 import type { ISalesOrder, IStockLocation } from '@alga-psa/types';
@@ -44,6 +48,7 @@ export default async function SalesOrdersPage() {
       locations={locations}
       fulfillAndInvoice={fulfillAndInvoiceSoLine}
       generateInvoice={generateInvoiceForSalesOrder}
+      confirmDropShip={confirmDropShipAndInvoice}
     />
   );
 }

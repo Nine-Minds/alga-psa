@@ -378,6 +378,40 @@ export const approveCountSession = withAuth(
         throw new Error(`Only a session in review can be approved (current: ${session.status})`);
       }
       await assertLocationWritable(trx, tenant, (user as any)?.user_id, session.location_id);
+
+      // Four-eyes: the person who counted (or started the session) cannot also sign off
+      // the write-offs — the approver is the fraud control, so they must be a second
+      // pair of eyes. Escape hatch: a one-person shop (no OTHER user holds
+      // cycle_count:approve) may self-approve rather than being locked out.
+      const approverId = (user as any)?.user_id as string;
+      const counterIds = new Set<string>(
+        (await trx('count_lines')
+          .where({ tenant, session_id: sessionId })
+          .whereNotNull('counted_by')
+          .distinct('counted_by'))
+          .map((r: any) => r.counted_by as string),
+      );
+      if (session.created_by) counterIds.add(session.created_by);
+      if (counterIds.has(approverId)) {
+        const otherApprover = await trx('users as u')
+          .join('user_roles as ur', function () {
+            this.on('ur.user_id', '=', 'u.user_id').andOn('ur.tenant', '=', 'u.tenant');
+          })
+          .join('role_permissions as rp', function () {
+            this.on('rp.role_id', '=', 'ur.role_id').andOn('rp.tenant', '=', 'ur.tenant');
+          })
+          .join('permissions as p', function () {
+            this.on('p.permission_id', '=', 'rp.permission_id').andOn('p.tenant', '=', 'rp.tenant');
+          })
+          .where({ 'u.tenant': tenant, 'p.resource': 'cycle_count', 'p.action': 'approve' })
+          .whereNot('u.user_id', approverId)
+          .first('u.user_id');
+        if (otherApprover) {
+          throw new Error(
+            'Four-eyes: you counted in this session, so a different approver must sign it off',
+          );
+        }
+      }
       const locationId = session.location_id;
       const reason = `cycle_count: session ${sessionId}`;
       const dispositionBySerial = new Map((dispositions ?? []).map((d) => [d.serial_number.trim(), d]));

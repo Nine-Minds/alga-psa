@@ -14,7 +14,6 @@ import {
   computeBackorder,
   suggestPoFromBackorder,
   reopenSalesOrder,
-  confirmDropShipShipment,
   createDropShipForSoLine,
   listVendors,
   listFulfillmentCandidateUnits,
@@ -46,6 +45,13 @@ export type GenerateInvoiceFn = (
   soId: string,
   opts?: { mode?: 'fulfilled' | 'ordered' },
 ) => Promise<{ success: boolean; invoiced: number; invoiceId?: string; error?: string }>;
+export type ConfirmDropShipFn = (
+  ref: { po_line_id?: string; so_line_id?: string },
+  input?: { serials?: Array<{ serial_number: string; mac_address?: string | null }> },
+) => Promise<{
+  shipment: { quantity_fulfilled: number; sales_order_status: string; warnings: string[] };
+  invoice: { success: boolean; invoiced: number; invoiceId?: string; error?: string } | null;
+}>;
 
 const STATUS_BADGES: Record<string, { label: string; variant: BadgeVariant }> = {
   draft: { label: 'Draft', variant: 'secondary' },
@@ -76,6 +82,7 @@ export interface SalesOrderDetailProps {
   locations: IStockLocation[];
   fulfillAndInvoice: FulfillAndInvoiceFn;
   generateInvoice: GenerateInvoiceFn;
+  confirmDropShip: ConfirmDropShipFn;
 }
 
 export function SalesOrderDetail({
@@ -85,6 +92,7 @@ export function SalesOrderDetail({
   locations,
   fulfillAndInvoice,
   generateInvoice,
+  confirmDropShip,
 }: SalesOrderDetailProps) {
   const [so, setSo] = useState<SalesOrderWithDetail | null>(null);
   const [backorder, setBackorder] = useState<Map<string, BackorderLine>>(new Map());
@@ -247,9 +255,16 @@ export function SalesOrderDetail({
     }
     setBusy(`dropship:${line.so_line_id}`);
     try {
-      const result = await confirmDropShipShipment({ so_line_id: line.so_line_id }, { serials });
-      toast.success(`Shipment confirmed — ${result.quantity_fulfilled} unit(s) delivered.`);
-      for (const w of result.warnings ?? []) toast(w, { icon: '⚠️' });
+      const result = await confirmDropShip({ so_line_id: line.so_line_id }, { serials });
+      toast.success(`Shipment confirmed — ${result.shipment.quantity_fulfilled} unit(s) delivered.`);
+      for (const w of result.shipment.warnings ?? []) toast(w, { icon: '⚠️' });
+      if (result.invoice) {
+        if (result.invoice.success && result.invoice.invoiced > 0) {
+          toast.success(`Invoiced ${result.invoice.invoiced} item(s).`);
+        } else if (!result.invoice.success) {
+          toast.error(`Invoicing failed: ${result.invoice.error}. Use "Generate invoice" to retry.`);
+        }
+      }
       setDropShipLine(null);
       await changed();
     } catch (e: any) {
