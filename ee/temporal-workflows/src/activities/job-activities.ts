@@ -251,18 +251,29 @@ export async function updateJobStatus(input: {
         : currentJob.metadata
       : {};
 
+    // A recurring schedule reuses one jobs row as its per-fire tracker; a
+    // terminal status would make it invisible to schedule reconcilers, which
+    // then re-schedule on every pass. pg-boss returns tracker rows to queued
+    // after each run — keep parity, and record the run outcome in metadata.
+    const isRecurringTracker = Boolean(currentMetadata?.recurring);
+    const isTerminal = status === 'completed' || status === 'failed';
+    const effectiveStatus = isRecurringTracker && isTerminal ? 'queued' : status;
+
     // Merge metadata
     const updatedMetadata = {
       ...currentMetadata,
       ...metadata,
       ...(error ? { error } : {}),
+      ...(isRecurringTracker && isTerminal
+        ? { lastRunStatus: status, lastRunAt: new Date().toISOString() }
+        : {}),
     };
 
     // Update job record
     await db.table('jobs')
       .where({ job_id: jobId })
       .update({
-        status,
+        status: effectiveStatus,
         metadata: JSON.stringify(updatedMetadata),
         updated_at: new Date(),
       });
