@@ -1,5 +1,15 @@
 export { createTicketColumns } from './ticket-columns';
 export {
+  hashString,
+  statusPillHue,
+  relativeDueLabel,
+  formatDuePrimary,
+  daysUntil,
+  formatCategoryLabel,
+  STATUS_PILL_HUES,
+  STATUS_PILL_CLOSED_HUE,
+} from './ticketListPresentation';
+export {
   TICKET_COLUMNS,
   TOGGLEABLE_TICKET_COLUMNS,
   resolveTicketColumnVisibility,
