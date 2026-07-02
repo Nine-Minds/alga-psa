@@ -1,7 +1,7 @@
 [
   {
     "id": "T001",
-    "description": "[db][concurrency] Two concurrent confirmSalesOrder calls on one draft SO: exactly one succeeds; reserved_quantity equals min(available, ordered) \u2014 never doubled",
+    "description": "[db][concurrency] Two concurrent confirmSalesOrder calls on one draft SO: exactly one succeeds; reserved_quantity equals min(available, ordered) — never doubled",
     "implemented": false,
     "featureIds": [
       "F018",
@@ -72,7 +72,7 @@
   },
   {
     "id": "T009",
-    "description": "[db][e2e] on_fulfillment SO: fulfill 2 of 5 \u2192 invoice for 2 auto-created with correct amounts; fulfill remaining 3 \u2192 second invoice; re-invoking bills nothing (idempotent cap)",
+    "description": "[db][e2e] on_fulfillment SO: fulfill 2 of 5 → invoice for 2 auto-created with correct amounts; fulfill remaining 3 → second invoice; re-invoking bills nothing (idempotent cap)",
     "implemented": false,
     "featureIds": [
       "F008",
@@ -82,7 +82,7 @@
   },
   {
     "id": "T010",
-    "description": "[db] Manual-mode Generate invoice bills ordered\u2212invoiced once; created invoice items carry so_line_id backlink and the line's tax_rate_id",
+    "description": "[db] Manual-mode Generate invoice bills ordered−invoiced once; created invoice items carry so_line_id backlink and the line's tax_rate_id",
     "implemented": false,
     "featureIds": [
       "F011",
@@ -147,7 +147,7 @@
   },
   {
     "id": "T017",
-    "description": "[db][e2e] Standard RMA: return \u2192 sent_to_vendor \u2192 resolveReplacement \u2192 deployReplacement delivers the new unit and relinks the client asset (serial/MAC updated); old unit stays out of sellable stock",
+    "description": "[db][e2e] Standard RMA: return → sent_to_vendor → resolveReplacement → deployReplacement delivers the new unit and relinks the client asset (serial/MAC updated); old unit stays out of sellable stock",
     "implemented": false,
     "featureIds": [
       "F039"
@@ -301,7 +301,7 @@
   },
   {
     "id": "T033",
-    "description": "[db] Create-bill-from-PO prefills received quantities/costs; due date honors net-30 terms; variance indicator fires when bill total \u2260 received value",
+    "description": "[db] Create-bill-from-PO prefills received quantities/costs; due date honors net-30 terms; variance indicator fires when bill total ≠ received value",
     "implemented": false,
     "featureIds": [
       "F075",
@@ -314,7 +314,7 @@
   },
   {
     "id": "T034",
-    "description": "[db] Vendor bill lifecycle draft\u2192open\u2192paid and void enforce valid transitions; dashboard aging buckets classify due vs overdue correctly",
+    "description": "[db] Vendor bill lifecycle draft→open→paid and void enforce valid transitions; dashboard aging buckets classify due vs overdue correctly",
     "implemented": false,
     "featureIds": [
       "F077",
@@ -337,6 +337,73 @@
       "F059",
       "F069",
       "F075"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "[db][ghost-report] A closed ticket on a selected board with zero ticket_materials rows appears as a ghost candidate; inserting one ticket_materials row for it removes it from the candidate set on the next run",
+    "implemented": true,
+    "featureIds": [
+      "F094",
+      "F096"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "[db][ghost-report] A ticket whose status is not is_closed never appears, even with zero materials; a ticket whose status.is_closed=true but stale tickets.is_closed=false is still classified closed via the statuses join",
+    "implemented": true,
+    "featureIds": [
+      "F100"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "[ghost-report] Narrowing board/category filters shrinks the candidate set; funnel counts stay monotonic (closed ≥ hardware-scoped ≥ candidates) and reconcile (with-consumption = hardware-scoped − candidates)",
+    "implemented": true,
+    "featureIds": [
+      "F095",
+      "F097"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "[permission][ghost-report] A caller without inventory:read is denied getGhostUsageReport at the server action, not merely hidden in the UI",
+    "implemented": true,
+    "featureIds": [
+      "F101"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "[ai][gate] With the AI add-on absent OR the tenant toggle off, the classifier returns a neutral result (attempted=false) and the chat provider is never invoked; the CE report still works",
+    "implemented": false,
+    "featureIds": [
+      "F102"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "[ai] Malformed or non-JSON model output parses to null and the classifier degrades to 'unclear' without throwing; the ticket stays pending",
+    "implemented": true,
+    "featureIds": [
+      "F103"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "[review] Confirming a candidate persists its disposition and removes it from the pending funnel; dismissing suppresses it on re-run; re-classifying overwrites AI fields but preserves the human disposition",
+    "implemented": true,
+    "featureIds": [
+      "F106",
+      "F108"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "[ai][batch] Batch classify honors the N cap and concurrency limit and skips tickets that already have a disposition",
+    "implemented": true,
+    "featureIds": [
+      "F105"
     ]
   }
 ]

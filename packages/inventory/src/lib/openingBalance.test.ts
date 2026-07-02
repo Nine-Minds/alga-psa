@@ -284,9 +284,13 @@ ${a.serialSku},,${LOCATION_NAME},,OB-UNIT-2,AA:00:00:00:00:02,11.00`;
       const csv = `${header()}
 NO-SUCH-SKU,,${LOCATION_NAME},1,,,`;
 
-      await expect(applyOpeningBalance(trx, TENANT, USER, csv)).rejects.toThrow(/row 1: product not found/);
+      // Unique label: the default 'opening-balance' label can legitimately exist
+      // in the dev DB from real imports — this assertion must only see OUR apply.
+      await expect(
+        applyOpeningBalance(trx, TENANT, USER, csv, { batch_label: 'vitest-reject-check' }),
+      ).rejects.toThrow(/row 1: product not found/);
       const movements = await trx('stock_movements')
-        .where({ tenant: TENANT, reason: 'opening_balance_import: opening-balance' })
+        .where({ tenant: TENANT, reason: 'opening_balance_import: vitest-reject-check' })
         .count<{ c: string }>('* as c')
         .first();
       expect(Number(movements?.c ?? 0)).toBe(0);

@@ -140,6 +140,8 @@ New `vendor_products` table: per (vendor, product) `vendor_sku`, `unit_cost` (ce
 | New: `count_sessions`, `count_lines`; `cycle_count` permission | — | 3 |
 | New: `po_landed_costs` | — | 4 |
 | New: `vendor_bills`, `vendor_bill_lines`; `vendor_bill` permission | — | 4 |
+| Ghost-usage report reads only (no new table); relies on `ticket_materials` NOT EXISTS | tickets, statuses, ticket_materials | 5 |
+| New (EE): `ghost_usage_reviews` (AI classification + human disposition) | — | 6 |
 
 All new tables follow the established conventions: tenant-first composite PK/FKs, CHECK-constrained statuses, money as bigint cents.
 
@@ -161,6 +163,8 @@ All new tables follow the established conventions: tenant-first composite PK/FKs
 6. New CHECKs/FKs/indexes/trigger in place; migrations round-trip (up/down) cleanly.
 7. Vendor price lists drive PO line defaults; a blind cycle count applies approved variances through the ledger; landed cost changes effective unit costs idempotently; vendor bills track open/paid with aging.
 8. All features in features.json implemented; all tests in tests.json green.
+9. From the UI alone (CE): pick hardware boards/categories and a date window → the ghost-usage funnel shows closed → hardware-scoped → with-consumption → ghost candidates, and each candidate deep-links to its ticket and to "add material". A candidate disappears once a material is recorded on it.
+10. With EE + the AI Assistant add-on + the tenant toggle on: candidates can be batch-classified, land in a review queue with an AI suggestion/confidence/reason, and a human Confirm/Dismiss sticks across re-runs. With any gate off, the classifier is invisible and the CE report is unaffected.
 
 ## 15. Open questions
 
@@ -168,3 +172,64 @@ All new tables follow the established conventions: tenant-first composite PK/FKs
 2. **RLS:** inventory tables have no per-table RLS policies (drifting repo convention — recent siblings also skip). Defense-in-depth add, or accept app-level scoping?
 3. **Invoice presentation:** should SO-generated invoices group lines per SO (one invoice per SO per generation) — assumed yes via existing `generateManualInvoice` semantics.
 4. Should `cycle_count` approval also require the approver ≠ counter (four-eyes)? Currently: permission + location scope only.
+5. **Ghost-usage "hardware work" definition (§16):** the deterministic report leans on operator-selected boards/categories as the hardware proxy. Is board/category scoping enough for v1, or does the funnel also need a keyword prefilter on title/comments before the AI pass? (Leaning board/category-only; AI does the semantic read.)
+6. **Retention of dismissed reviews (§17):** dismissed `ghost_usage_reviews` rows suppress a ticket forever. Do we want a "re-open review" affordance, or is permanent dismissal acceptable for v1?
+
+---
+
+> Sections 16–17 are a later addition (2026-07-02): the "ghost usage" report and its optional AI classifier. They sit downstream of the sell-side work above and do not change Phases 1–4.
+
+## 16. Phase 5 — Ghost-usage report (CE, deterministic)
+
+**Problem.** A ticket that was really a hardware job — a swapped laptop, a replaced drive, a delivered access point — should carry a product/material charge. When it doesn't, the MSP ate the cost silently. There is no way today to find those tickets after the fact.
+
+**The signal (schema-grounded).** The one authoritative ticket↔product-charge link is the `ticket_materials` table (`ticket_id` FK → `tickets`; a row is written whenever a material/product is recorded against a ticket, which also fires the `consume` stock movement carrying `source_doc_type='ticket_material'`). `sales_orders`, `stock_movements`, and `invoice_items` carry **no** `ticket_id`, so a ticket "has consumption/product charges" **iff** a `ticket_materials` row exists for it. "Closed" is the status's `is_closed` (authoritative; join `statuses`), with the denormalized `tickets.is_closed` as a fast prefilter.
+
+### 16.1 Report action
+CE server action `getGhostUsageReport(filters)` returns the funnel and the candidate list. Deterministic, tenant-scoped, no AI, no new tables (reads `tickets` + `statuses` + `ticket_materials` + `boards`/`categories`/`clients` for display).
+
+### 16.2 Filters
+User-selectable `boardIds` and `categoryIds` (parent or subcategory) define what counts as "hardware work"; a `closedFrom`/`closedTo` window bounds `closed_at`. Empty board/category selection scans the whole desk.
+
+### 16.3 "No consumption" predicate
+`NOT EXISTS (SELECT 1 FROM ticket_materials tm WHERE tm.tenant = t.tenant AND tm.ticket_id = t.ticket_id)`. A row of any kind (billed or not, stock-tracked or a rate-only service) disqualifies the ticket — it is not a ghost.
+
+### 16.4 Funnel summary
+Four monotonic stages with drop-off counts: **closed-in-scope** (closed tickets in the date window) → **hardware-scoped** (also in a selected board/category) → **with-consumption** (has ≥1 material) → **ghost candidates** (hardware-scoped minus with-consumption). Reconciles by construction.
+
+### 16.5 Report UI
+A reporting page (inventory reports area) with the filter controls, the funnel bars, and a candidate table: `ticket_number`, `title`, `board_name`, `category_name`, `client_name`, `closed_at`, `closed_by`, `assigned_to`. Every row deep-links to the ticket. Join conventions copy `packages/tickets/src/actions/ticketActions.ts` (all joins tenant-qualified; `boards`, `clients`, `statuses.name`).
+
+### 16.6 Remediate in place
+Each row offers "Add material" that deep-links into the ticket's materials dialog (`addTicketMaterial` path), so the fix happens where the work was.
+
+### 16.7 Performance & correctness
+Tenant-scoped; `statuses` join for authoritative `is_closed` with `tickets.is_closed` prefilter; `NOT EXISTS` on `ticket_materials` (indexed by `tenant, ticket_id`); `closed_at`/`board_id`/`category_id` filters on existing indexes; cancelled/void tickets excluded.
+
+### 16.8 Permission
+Requires `inventory:read`, server-enforced.
+
+## 17. Phase 6 — AI ghost-usage classifier (EE, AI-add-on gated)
+
+**Why AI here.** §16 finds tickets with *no material and in a hardware board* — but a hardware board still holds plenty of non-consuming work (advisories, config, RMAs that were pure swaps). The classifier reads the ticket's text and judges whether it actually describes hardware that was physically installed/replaced/delivered, turning a broad candidate list into a ranked, human-reviewable queue. It is strictly additive: the CE report stands alone.
+
+### 17.1 Gating (three independent checks)
+EE edition (`isEnterpriseEdition()`), the `ADD_ONS.AI_ASSISTANT` tenant add-on (`tenant_addons`, via `tenantHasAddOn`), and a tenant opt-in toggle stored in `tenant_settings.settings` under `inventory.ghostUsageAi.enabled` (read/write helper in the `getQuoteApprovalWorkflowSettings` style). Any one missing → the classifier UI is hidden and the service returns a neutral no-op (`attempted=false`); it never throws and never blocks §16.
+
+### 17.2 Classifier service
+EE `classifyGhostUsageTicket`, modeled on `packages/ee/src/services/email/inboundEmailRuleAiClassifier.ts`: `resolveChatProvider()` → `provider.client.chat.completions.create({ model: provider.model, messages, temperature: 0, max_tokens: <cap>, ...provider.requestOverrides.resolveTurnOverrides() })`. Output is JSON-only `{ classification: 'hardware_missing' | 'no_hardware' | 'unclear', confidence: number, reason: string }`, parsed by tolerant first-JSON-object extraction; provider or parse failure degrades to `unclear` (`attempted=true`).
+
+### 17.3 Model input
+Ticket `title` + concatenated comment `markdown_content` (the plaintext mirror — **not** the BlockNote JSON `note`), internal and external, newest-first, total length capped, plus board/category names. Nothing else is sent.
+
+### 17.4 Batch classification
+A batch action classifies a bounded page of §16 candidates (hard N cap + concurrency limit), persists each result, and skips tickets that already carry a human disposition (so re-runs don't re-bill model calls).
+
+### 17.5 Review-queue table
+EE migration adds `ghost_usage_reviews`: `tenant`, `review_id`, `ticket_id`, `ai_classification`, `ai_confidence`, `ai_reason`, `ai_model`, `disposition` (`'pending'|'confirmed'|'dismissed'`, CHECK-constrained), `reviewed_by`, `reviewed_at`, `created_at`, `updated_at`. PK `(tenant, review_id)`, unique `(tenant, ticket_id)`, FK `ticket_id`→`tickets` ON DELETE CASCADE. Follows house conventions (tenant-first composite PK/FKs).
+
+### 17.6 Review UI
+A queue listing candidates with the AI suggestion, confidence, and reason. The reviewer **Confirms** (genuine missed consumption) or **Dismisses** (not hardware / handled elsewhere); the disposition persists with reviewer id and timestamp.
+
+### 17.7 Flow
+Confirmed rows leave the pending funnel for an actionable remediation worklist (feeding the §16.6 "add material" fix); dismissed rows are suppressed on later runs; re-classification overwrites the AI fields but preserves the human disposition.
