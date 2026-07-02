@@ -484,7 +484,7 @@
   {
     "id": "F056",
     "description": "SCRATCHPAD and PRD kept current with decisions made during implementation; features/tests flipped as shipped",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "all"
     ]

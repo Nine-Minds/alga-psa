@@ -226,7 +226,7 @@
   {
     "id": "T028",
     "description": "Regression: existing invoice generation integration tests still pass with the item_id change",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F021"
@@ -301,7 +301,7 @@
   {
     "id": "T037",
     "description": "Uncosted entries contribute minutes but zero cost, and uncostedMinutes is reported at summary, client, and agreement levels",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025",
       "F027",
@@ -393,7 +393,7 @@
   {
     "id": "T048",
     "description": "Unattributed row aggregates time with NULL contract_line_id per client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -409,7 +409,7 @@
   {
     "id": "T050",
     "description": "Per-contract-line breakdown sums to its agreement row",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031",
       "F054"
@@ -476,7 +476,7 @@
   {
     "id": "T058",
     "description": "Fixed-line allocation with zero ticket hours in the period: charge revenue lands in an agreement-level residual, not lost or NaN",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036",
       "F055"
@@ -511,7 +511,7 @@
   {
     "id": "T062",
     "description": "Multi-tenant isolation: identical fixtures in two tenants; each tenant's report contains only its own data (all four actions)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
@@ -519,7 +519,7 @@
   {
     "id": "T063",
     "description": "Code review check: every new query includes tenant in WHERE and JOIN conditions (manual checklist item on PR)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
@@ -535,7 +535,7 @@
   {
     "id": "T065",
     "description": "Date-range boundaries: invoice on end date included, day after excluded; work_date on start date included, day before excluded",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F024"
@@ -544,7 +544,7 @@
   {
     "id": "T066",
     "description": "Timing split: work in month 1, invoice in month 2 — month-1 report shows cost only, month-2 shows revenue only",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F024"
@@ -561,7 +561,7 @@
   {
     "id": "T068",
     "description": "Effective-date boundary within range: user rate changes mid-range; cost uses old rate before and new rate after the boundary (acceptance criterion 2)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F024"
@@ -667,7 +667,7 @@
   {
     "id": "T081",
     "description": "npm run build passes for server and affected packages",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051",
       "F052",
@@ -677,7 +677,7 @@
   {
     "id": "T082",
     "description": "Fixture-based end-to-end scenario: seed client with hourly agreement + fixed agreement + materials + mixed rates; verify every acceptance criterion 1-6 number matches hand-computed spreadsheet",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F028",
@@ -690,7 +690,7 @@
   {
     "id": "T083",
     "description": "Report with cost rates configured but zero time entries: margin equals revenue, EHR shown as em dash",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055",
       "F032"
@@ -699,7 +699,7 @@
   {
     "id": "T084",
     "description": "Large-fixture smoke: 10k time entries / 1k invoices in range completes within acceptable latency (baseline measurement recorded in scratchpad)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F028"
@@ -726,7 +726,7 @@
   {
     "id": "T087",
     "description": "Foreign-currency invoice with NULL exchange_rate_basis_points excluded from converted totals and counted in the unconverted-revenue warning",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -734,7 +734,7 @@
   {
     "id": "T088",
     "description": "Unbilled material contributes cost only, never revenue; billed material revenue dated by invoice_date and filtered by countable status",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -742,7 +742,7 @@
   {
     "id": "T089",
     "description": "Billed material whose service has NULL service_catalog.cost is flagged as uncosted material, not treated as zero cost",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -750,7 +750,7 @@
   {
     "id": "T090",
     "description": "Multiple client_contracts rows for the same contract_id (junction-table possibility; zero in production today): entry cost lands in exactly one agreement (date range covering work_date wins, deterministic tiebreak); no double counting",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F054"
@@ -759,7 +759,7 @@
   {
     "id": "T091",
     "description": "Per-line revenue attribution via invoice_charge_details.config_id -> contract_line_service_configuration.contract_line_id matches fixture expectations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -767,7 +767,7 @@
   {
     "id": "T092",
     "description": "Legacy invoice mixing time-based and fixed charges (NULL item_id): the entire invoice's revenue remains at agreement level; its tickets show labor cost with zero attributed revenue and the agreement residual carries the revenue",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
@@ -784,7 +784,7 @@
   {
     "id": "T094",
     "description": "Time entry on a contract line whose contract has no covering client_contracts row: cost folds into the client's Unattributed row; agreement rows still reconcile to the client row",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F030",
@@ -794,7 +794,7 @@
   {
     "id": "T095",
     "description": "Interaction time entries attribute cost to the interaction's client; appointment_request time to its client (client-attribution chain, not just ticket+project)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
@@ -802,7 +802,7 @@
   {
     "id": "T096",
     "description": "Concurrent upsertCostRate calls for the same (tenant, user) with overlapping ranges: advisory lock serializes them and exactly one succeeds",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F010"
@@ -811,7 +811,7 @@
   {
     "id": "T097",
     "description": "With a seeded overlapping rate pair (validation bypassed), resolution still returns exactly one rate per entry and labor cost is not double-counted",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
@@ -819,7 +819,7 @@
   {
     "id": "T098",
     "description": "Unapproved (DRAFT/submitted) time accrues cost and is counted in unapprovedMinutes; approved time is not counted there",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F027"

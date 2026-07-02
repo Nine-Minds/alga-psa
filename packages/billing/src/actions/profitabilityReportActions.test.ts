@@ -234,6 +234,62 @@ describe('profitability report actions', () => {
     ]));
   });
 
+  it('reports uncosted and unattributed labor at summary, client, and agreement levels', async () => {
+    seedRawMocks({
+      revenue: [],
+      materials: [],
+      ticketRevenue: [],
+      labor: [
+        {
+          ...laborRows[0],
+          entry_id: 'uncosted-unattributed',
+          contract_line_id: null,
+          contract_line_name: null,
+          client_contract_id: null,
+          contract_id: null,
+          contract_name: null,
+          actual_minutes: 45,
+          billable_minutes: 0,
+          cost_rate: null,
+          approval_status: 'SUBMITTED',
+        },
+      ],
+    });
+
+    const args = [
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31', clientId: 'client-1' },
+    ];
+    const summary = await (getProfitabilitySummary as any)(...args);
+    const clients = await (getClientProfitability as any)(...args);
+    const agreements = await (getAgreementProfitability as any)(...args);
+
+    expect(summary).toMatchObject({
+      totalMinutes: 45,
+      laborCost: 0,
+      uncostedMinutes: 45,
+      unattributedMinutes: 45,
+      unapprovedMinutes: 45,
+    });
+    expect(clients).toEqual([
+      expect.objectContaining({
+        clientId: 'client-1',
+        totalMinutes: 45,
+        uncostedMinutes: 45,
+        unattributedMinutes: 45,
+      }),
+    ]);
+    expect(agreements).toEqual([
+      expect.objectContaining({
+        rowType: 'unattributed',
+        totalMinutes: 45,
+        uncostedMinutes: 45,
+        unattributedMinutes: 45,
+      }),
+    ]);
+  });
+
   it('reconciles agreement rows with ad-hoc material revenue and unattributed material cost', async () => {
     const rows = await (getAgreementProfitability as any)(
       { user_id: 'user-1' },
@@ -264,6 +320,39 @@ describe('profitability report actions', () => {
     const totalCost = rows.reduce((sum: number, row: any) => sum + row.laborCost + row.materialCost, 0);
     expect(totalRevenue).toBe(13000);
     expect(totalCost).toBe(6000);
+  });
+
+  it('keeps per-contract-line breakdowns reconciled to agreement rows', async () => {
+    const rows = await (getAgreementProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31', clientId: 'client-1' },
+    );
+
+    const agreement = rows.find((row: any) => row.rowType === 'agreement');
+    expect(agreement.lines).toEqual([
+      expect.objectContaining({
+        contractLineId: 'line-1',
+        contractLineName: 'Support',
+        revenue: 10000,
+        laborCost: 5000,
+        totalMinutes: 60,
+      }),
+    ]);
+
+    const lineTotals = agreement.lines.reduce((totals: any, line: any) => ({
+      revenue: totals.revenue + line.revenue,
+      laborCost: totals.laborCost + line.laborCost,
+      materialCost: totals.materialCost + line.materialCost,
+      totalMinutes: totals.totalMinutes + line.totalMinutes,
+    }), { revenue: 0, laborCost: 0, materialCost: 0, totalMinutes: 0 });
+
+    expect(lineTotals).toEqual({
+      revenue: agreement.revenue,
+      laborCost: agreement.laborCost,
+      materialCost: agreement.materialCost,
+      totalMinutes: agreement.totalMinutes,
+    });
   });
 
   it('costs actual minutes with per-entry rounding and counts non-billable unapproved zero-duration and uncosted time', async () => {
@@ -328,6 +417,7 @@ describe('profitability report actions', () => {
     );
 
     expect(summary.revenue).toBe(10000);
+    expect(summary.margin).toBe(10000);
     expect(summary.totalMinutes).toBe(0);
     expect(summary.effectiveHourlyRate).toBeNull();
   });
@@ -365,6 +455,148 @@ describe('profitability report actions', () => {
     expect(tickets).toEqual([]);
   });
 
+  it('keeps fixed allocation revenue at agreement level when ticket hours are zero', async () => {
+    seedRawMocks({
+      materials: [],
+      ticketRevenue: [],
+      revenue: [
+        {
+          ...revenueRows[0],
+          amount_cents: 10001,
+        },
+      ],
+      allocations: [
+        {
+          item_detail_id: 'detail-zero-hours',
+          contract_line_id: 'line-1',
+          line_type: 'Fixed',
+          amount_cents: 10001,
+          unconverted: false,
+          window_start: '2026-01-01',
+          window_end: '2026-01-31',
+          approximate: false,
+        },
+      ],
+      labor: [
+        {
+          ...laborRows[0],
+          actual_minutes: 0,
+          billable_minutes: 0,
+        },
+      ],
+    });
+
+    const tickets = await (getTicketProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+    const agreements = await (getAgreementProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31', clientId: 'client-1' },
+    );
+
+    expect(tickets).toEqual([
+      expect.objectContaining({ ticketId: 'ticket-1', revenue: 0, attribution: 'none' }),
+    ]);
+    expect(agreements).toEqual([
+      expect.objectContaining({ rowType: 'agreement', revenue: 10001 }),
+    ]);
+  });
+
+  it('uses tenant-bound raw queries for multi-tenant report isolation', async () => {
+    rawMock.mockImplementation(async (sql: string, bindings: unknown[] = []) => {
+      const tenant = bindings.find((binding) => binding === 'tenant-a' || binding === 'tenant-b');
+      if (sql.includes('WITH charge_details')) {
+        return {
+          rows: tenant === 'tenant-a'
+            ? [{ ...revenueRows[0], client_id: 'client-a', client_name: 'Tenant A', amount_cents: 1000 }]
+            : [{ ...revenueRows[0], client_id: 'client-b', client_name: 'Tenant B', amount_cents: 2000 }],
+        };
+      }
+      if (sql.includes('FROM time_entries te')) return { rows: [] };
+      if (sql.includes('WITH material_rows')) return { rows: [] };
+      if (sql.includes('WITH linked_time')) return { rows: [] };
+      if (sql.includes('WITH allocation_charges')) return { rows: [] };
+      throw new Error('Unexpected SQL');
+    });
+
+    const tenantA = await (getClientProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-a' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+    const tenantB = await (getClientProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-b' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+
+    expect(tenantA).toEqual([expect.objectContaining({ clientId: 'client-a', revenue: 1000 })]);
+    expect(tenantB).toEqual([expect.objectContaining({ clientId: 'client-b', revenue: 2000 })]);
+    expect(rawMock.mock.calls.every(([, bindings]) => Array.isArray(bindings) && bindings.some((binding) => binding === 'tenant-a' || binding === 'tenant-b'))).toBe(true);
+  });
+
+  it('counts unconverted foreign revenue instead of adding it to totals', async () => {
+    seedRawMocks({
+      revenue: [
+        {
+          ...revenueRows[0],
+          amount_cents: null,
+          unconverted: true,
+        },
+      ],
+      labor: [],
+      materials: [],
+      ticketRevenue: [],
+    });
+
+    const summary = await (getProfitabilitySummary as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+
+    expect(summary.revenue).toBe(0);
+    expect(summary.unconvertedRevenueCount).toBe(1);
+  });
+
+  it('handles unbilled and uncosted materials according to material timing rules', async () => {
+    seedRawMocks({
+      revenue: [],
+      labor: [],
+      ticketRevenue: [],
+      materials: [
+        {
+          ...materialRows[0],
+          material_id: 'unbilled-cost-only',
+          billed_invoice_id: null,
+          revenue_cents: null,
+          cost_cents: 1200,
+          uncosted: false,
+        },
+        {
+          ...materialRows[0],
+          material_id: 'billed-null-cost',
+          revenue_cents: 3000,
+          cost_cents: null,
+          uncosted: true,
+        },
+      ],
+    });
+
+    const summary = await (getProfitabilitySummary as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+
+    expect(summary.revenue).toBe(3000);
+    expect(summary.materialCost).toBe(1200);
+    expect(summary.uncostedMaterialCount).toBe(1);
+  });
+
   it('adds exact item-linked hourly revenue to ticket profitability rows', async () => {
     const rows = await (getTicketProfitability as any)(
       { user_id: 'user-1' },
@@ -384,6 +616,116 @@ describe('profitability report actions', () => {
         uncosted: false,
       }),
     ]);
+  });
+
+  it('keeps legacy null-item hourly revenue at agreement level only', async () => {
+    seedRawMocks({
+      materials: [],
+      ticketRevenue: [],
+      revenue: [
+        {
+          ...revenueRows[0],
+          contract_line_id: null,
+          contract_line_name: null,
+          amount_cents: 10000,
+        },
+      ],
+    });
+
+    const tickets = await (getTicketProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+    const agreements = await (getAgreementProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31', clientId: 'client-1' },
+    );
+
+    expect(tickets).toEqual([
+      expect.objectContaining({ ticketId: 'ticket-1', revenue: 0, laborCost: 5000 }),
+    ]);
+    expect(agreements).toEqual([
+      expect.objectContaining({
+        rowType: 'agreement',
+        revenue: 10000,
+        lines: expect.arrayContaining([
+          expect.objectContaining({ rowType: 'unassigned', revenue: 10000 }),
+        ]),
+      }),
+    ]);
+  });
+
+  it('folds contract-line time with no covering client contract into unattributed agreement cost', async () => {
+    seedRawMocks({
+      revenue: [],
+      materials: [],
+      ticketRevenue: [],
+      labor: [
+        {
+          ...laborRows[0],
+          client_contract_id: null,
+          actual_minutes: 60,
+          cost_rate: 5000,
+        },
+      ],
+    });
+
+    const rows = await (getAgreementProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31', clientId: 'client-1' },
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        rowType: 'unattributed',
+        laborCost: 5000,
+        totalMinutes: 60,
+      }),
+    ]);
+  });
+
+  it('attributes interaction and appointment request time to their resolved clients', async () => {
+    seedRawMocks({
+      revenue: [],
+      materials: [],
+      ticketRevenue: [],
+      labor: [
+        {
+          ...laborRows[0],
+          entry_id: 'interaction-entry',
+          work_item_type: 'interaction',
+          work_item_id: 'interaction-1',
+          client_id: 'client-interaction',
+          client_name: 'Interaction Client',
+          actual_minutes: 30,
+          cost_rate: 6000,
+        },
+        {
+          ...laborRows[0],
+          entry_id: 'appointment-entry',
+          work_item_type: 'appointment_request',
+          work_item_id: 'appointment-1',
+          client_id: 'client-appointment',
+          client_name: 'Appointment Client',
+          actual_minutes: 15,
+          cost_rate: 6000,
+        },
+      ],
+    });
+
+    const rows = await (getClientProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+
+    expect(rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ clientId: 'client-interaction', clientName: 'Interaction Client', laborCost: 3000 }),
+      expect.objectContaining({ clientId: 'client-appointment', clientName: 'Appointment Client', laborCost: 1500 }),
+    ]));
   });
 
   it('filters ticket profitability by client and client contract', async () => {
@@ -491,5 +833,167 @@ describe('profitability report actions', () => {
       expect.objectContaining({ ticketId: 'ticket-2', revenue: 3334, attribution: 'allocated' }),
     ]));
     expect(rows.reduce((sum: number, row: any) => sum + row.revenue, 0)).toBe(10001);
+  });
+
+  it('processes a large report fixture within an interactive baseline', async () => {
+    const largeLabor = Array.from({ length: 10000 }, (_, index) => ({
+      ...laborRows[0],
+      entry_id: `entry-${index}`,
+      actual_minutes: 15,
+      billable_minutes: 0,
+      cost_rate: 6000,
+    }));
+    const largeRevenue = Array.from({ length: 1000 }, (_, index) => ({
+      ...revenueRows[0],
+      item_id: `item-${index}`,
+      amount_cents: 1000,
+    }));
+    seedRawMocks({
+      revenue: largeRevenue,
+      labor: largeLabor,
+      materials: [],
+      ticketRevenue: [],
+      allocations: [],
+    });
+
+    const started = performance.now();
+    const summary = await (getProfitabilitySummary as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+    const elapsedMs = performance.now() - started;
+
+    expect(summary.revenue).toBe(1000000);
+    expect(summary.totalMinutes).toBe(150000);
+    expect(elapsedMs).toBeLessThan(1000);
+  });
+
+  it('matches a hand-computed profitability fixture across hourly, fixed, materials, and tickets', async () => {
+    seedRawMocks({
+      revenue: [
+        {
+          ...revenueRows[0],
+          item_id: 'hourly-item',
+          client_contract_id: 'cc-hourly',
+          contract_id: 'contract-hourly',
+          contract_name: 'Hourly Agreement',
+          contract_line_id: 'line-hourly',
+          contract_line_name: 'Hourly Support',
+          amount_cents: 10000,
+        },
+        {
+          ...revenueRows[0],
+          item_id: 'fixed-item',
+          client_contract_id: 'cc-fixed',
+          contract_id: 'contract-fixed',
+          contract_name: 'Fixed Agreement',
+          contract_line_id: 'line-fixed',
+          contract_line_name: 'Fixed Support',
+          amount_cents: 6000,
+        },
+      ],
+      labor: [
+        {
+          ...laborRows[0],
+          entry_id: 'hourly-entry',
+          work_item_id: 'ticket-hourly',
+          ticket_number: 'T-H',
+          ticket_title: 'Hourly ticket',
+          contract_line_id: 'line-hourly',
+          contract_line_name: 'Hourly Support',
+          client_contract_id: 'cc-hourly',
+          contract_id: 'contract-hourly',
+          contract_name: 'Hourly Agreement',
+          actual_minutes: 60,
+          billable_minutes: 60,
+          cost_rate: 5000,
+        },
+        {
+          ...laborRows[0],
+          entry_id: 'fixed-entry',
+          work_item_id: 'ticket-fixed',
+          ticket_number: 'T-F',
+          ticket_title: 'Fixed ticket',
+          contract_line_id: 'line-fixed',
+          contract_line_name: 'Fixed Support',
+          client_contract_id: 'cc-fixed',
+          contract_id: 'contract-fixed',
+          contract_name: 'Fixed Agreement',
+          actual_minutes: 120,
+          billable_minutes: 0,
+          cost_rate: 4000,
+        },
+      ],
+      materials: [
+        {
+          ...materialRows[0],
+          ticket_id: 'ticket-hourly',
+          revenue_cents: 3000,
+          cost_cents: 1000,
+        },
+      ],
+      ticketRevenue: [
+        {
+          ticket_id: 'ticket-hourly',
+          amount_cents: 10000,
+          unconverted: false,
+          attribution: 'exact',
+        },
+      ],
+      allocations: [
+        {
+          item_detail_id: 'fixed-detail',
+          contract_line_id: 'line-fixed',
+          line_type: 'Fixed',
+          amount_cents: 6000,
+          unconverted: false,
+          window_start: '2026-01-01',
+          window_end: '2026-01-31',
+          approximate: false,
+        },
+      ],
+    });
+
+    const args = [
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31', clientId: 'client-1' },
+    ];
+    const summary = await (getProfitabilitySummary as any)(...args);
+    const agreements = await (getAgreementProfitability as any)(...args);
+    const tickets = await (getTicketProfitability as any)(...args);
+
+    expect(summary).toMatchObject({
+      revenue: 19000,
+      laborCost: 13000,
+      materialCost: 1000,
+      margin: 5000,
+      effectiveHourlyRate: 6333,
+    });
+    expect(agreements).toEqual(expect.arrayContaining([
+      expect.objectContaining({ clientContractId: 'cc-hourly', revenue: 10000, laborCost: 5000 }),
+      expect.objectContaining({ clientContractId: 'cc-fixed', revenue: 6000, laborCost: 8000 }),
+      expect.objectContaining({ rowType: 'ad_hoc', revenue: 3000 }),
+      expect.objectContaining({ rowType: 'unattributed', materialCost: 1000 }),
+    ]));
+    expect(tickets).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        ticketId: 'ticket-hourly',
+        revenue: 13000,
+        laborCost: 5000,
+        materialCost: 1000,
+        margin: 7000,
+        attribution: 'exact',
+      }),
+      expect.objectContaining({
+        ticketId: 'ticket-fixed',
+        revenue: 6000,
+        laborCost: 8000,
+        materialCost: 0,
+        margin: -2000,
+        attribution: 'allocated',
+      }),
+    ]));
   });
 });

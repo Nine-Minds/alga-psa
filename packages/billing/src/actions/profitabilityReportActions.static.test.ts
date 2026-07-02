@@ -36,6 +36,22 @@ describe('profitability report action SQL contracts', () => {
     expect(source).toContain("fact.approval_status !== 'APPROVED'");
   });
 
+  it('keeps date-range boundaries inclusive and uses the intended revenue/cost timing bases', () => {
+    expect(source).toContain('inv.invoice_date::date >= ?::date');
+    expect(source).toContain('inv.invoice_date::date <= ?::date');
+    expect(source).toContain('te.work_date >= ?::date');
+    expect(source).toContain('te.work_date <= ?::date');
+    expect(source).toContain("(mr.created_at AT TIME ZONE 'UTC')::date >= ?::date");
+    expect(source).toContain("(mr.created_at AT TIME ZONE 'UTC')::date <= ?::date");
+  });
+
+  it('keeps effective-date rate resolution single-row and boundary-inclusive', () => {
+    expect(source).toContain('ucr.effective_from <= te.work_date');
+    expect(source).toContain('ucr.effective_to IS NULL OR ucr.effective_to >= te.work_date');
+    expect(source).toContain('ORDER BY ucr.user_id IS NULL, ucr.effective_from DESC, ucr.rate_id');
+    expect(source).toContain('LIMIT 1');
+  });
+
   it('attributes time-entry clients through all supported work item types', () => {
     expect(source).toContain("WHEN te.work_item_type = 'ticket' THEN t.client_id");
     expect(source).toContain("WHEN te.work_item_type = 'project_task' THEN p.client_id");
