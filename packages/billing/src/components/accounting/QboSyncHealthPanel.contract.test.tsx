@@ -155,10 +155,8 @@ describe('QboSyncHealthPanel contracts', () => {
     await waitFor(() => {
       const card = document.getElementById('qbo-integration-sync-health-card');
       expect(card).toBeInTheDocument();
-      // cycle status (humanized)
-      expect(card).toHaveTextContent('Succeeded');
-      // stats
-      expect(card).toHaveTextContent('10 ops processed');
+      // last-cycle stats render in the activity glance
+      expect(card).toHaveTextContent('10 ops · 3 payments');
     });
   });
 
@@ -259,7 +257,7 @@ describe('QboSyncHealthPanel contracts', () => {
     await waitFor(() => {
       const card = document.getElementById('qbo-integration-sync-health-card');
       expect(card).toBeInTheDocument();
-      expect(card).toHaveTextContent(/15 minutes/);
+      expect(card).toHaveTextContent(/15 min/);
     });
   });
 

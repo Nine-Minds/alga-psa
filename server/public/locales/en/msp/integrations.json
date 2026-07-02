@@ -1220,7 +1220,7 @@
           "connect": "Connect QuickBooks",
           "disconnect": "Disconnect QuickBooks",
           "disconnecting": "Disconnecting…",
-          "reconnect": "Reconnect QuickBooks",
+          "reconnect": "Reconnect",
           "refresh": "Refresh",
           "saveCredentials": "Save credentials",
           "saving": "Saving…"
@@ -1253,7 +1253,8 @@
           "realmId": "Realm ID: {{id}}",
           "title": "Live QuickBooks Connection",
           "unknown": "unknown",
-          "realm": "Realm ID"
+          "realm": "Realm ID",
+          "detailsTitle": "Connection details"
         },
         "credentialsSaved": "QuickBooks app setup saved. You can now connect a QuickBooks company.",
         "csvAvailableMiddle": "from",
@@ -1336,7 +1337,21 @@
         "lastRunAt": "· last run {{time}}",
         "tokenValidUntil": "Connection valid until {{date}}",
         "refreshTokenExpirySoon": "QuickBooks token expires {{date}} — reconnect soon to avoid interruption.",
-        "configDescription": "Defaults applied to documents Alga posts into QuickBooks."
+        "configDescription": "Defaults applied to documents Alga posts into QuickBooks.",
+        "activityTitle": "Sync activity",
+        "runsEvery": "Runs every 15 min when on",
+        "attnExceptions": "open exceptions",
+        "attnErrored": "errored ops",
+        "attnDrift": "drift detected",
+        "attnHealthy": "Sync is up to date",
+        "attnNeedReview": "need attention before the next sync.",
+        "attnAutoSyncOff": "Auto-sync is currently off",
+        "attnDriftDetail": "{{count}} drift detected",
+        "reviewExceptions": "Review exceptions",
+        "lastCycle": "Last cycle",
+        "lastCycleSummary": "{{ops}} ops · {{payments}} payments",
+        "lastSyncedShort": "Last synced {{time}}",
+        "notSynced": "Not synced yet"
       }
     },
     "rmm": {

@@ -20,6 +20,7 @@ import {
   saveQboCredentials
 } from '@alga-psa/integrations/actions';
 import { QboLiveMappingManager } from '../../qbo/QboLiveMappingManager';
+import { PanelHero, SettingsGroup } from './accountingSectionPrimitives';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type QboStatus = Awaited<ReturnType<typeof getQboConnectionStatus>>;
@@ -184,8 +185,8 @@ export default function QboIntegrationSettings({
       setClientSecret('');
       setSuccessMessage(
         t('integrations.qbo.settings.credentialsSaved', {
-            defaultValue:
-              'QuickBooks app setup saved. You can now connect a QuickBooks company.'
+          defaultValue:
+            'QuickBooks app setup saved. You can now connect a QuickBooks company.'
         })
       );
       await load();
@@ -212,8 +213,8 @@ export default function QboIntegrationSettings({
 
       setSuccessMessage(
         t('integrations.qbo.settings.disconnectSuccess', {
-            defaultValue:
-              'QuickBooks was disconnected. Saved app setup was left in place for reconnecting.'
+          defaultValue:
+            'QuickBooks was disconnected. Saved app setup was left in place for reconnecting.'
         })
       );
       await load();
@@ -228,11 +229,11 @@ export default function QboIntegrationSettings({
   const defaultConnection = status?.defaultConnection;
   const tenantCredentialsConfigured = Boolean(
     status?.credentials.clientIdConfigured ||
-    status?.credentials.clientSecretConfigured
+      status?.credentials.clientSecretConfigured
   );
   const tenantCredentialsComplete = Boolean(
     status?.credentials.clientIdConfigured &&
-    status?.credentials.clientSecretConfigured
+      status?.credentials.clientSecretConfigured
   );
   const usingAppLevelCredentials = Boolean(
     status?.credentials.ready && !tenantCredentialsComplete
@@ -278,15 +279,6 @@ export default function QboIntegrationSettings({
             defaultValue:
               'No QuickBooks company is connected yet. Finish setup, then connect a company.'
           });
-  const connectionDotClass = loading
-    ? 'bg-muted-foreground/60'
-    : defaultConnection?.status === 'active'
-      ? 'bg-emerald-500'
-      : defaultConnection
-        ? 'bg-amber-500'
-        : canConnect
-          ? 'bg-sky-500'
-          : 'bg-muted-foreground/60';
   const credentialSourceLabel = usingAppLevelCredentials
     ? t('integrations.qbo.settings.credentialSource.hosted', {
         defaultValue: 'Hosted QuickBooks app'
@@ -307,49 +299,46 @@ export default function QboIntegrationSettings({
           defaultValue: 'Sandbox'
         });
 
+  const connectionTone: 'green' | 'amber' | 'sky' | 'grey' = loading
+    ? 'grey'
+    : defaultConnection?.status === 'active'
+      ? 'green'
+      : defaultConnection
+        ? 'amber'
+        : canConnect
+          ? 'sky'
+          : 'grey';
+
+  const mappingTitle = t('integrations.qbo.settings.mapping.title', {
+    defaultValue: 'Mappings'
+  });
+
   return (
-    <div className="space-y-8" id="qbo-integration-settings">
+    <div className="space-y-6" id="qbo-integration-settings">
       {successMessage ? (
         <FeedbackMessage tone="success">{successMessage}</FeedbackMessage>
       ) : null}
 
       {error ? <FeedbackMessage tone="error">{error}</FeedbackMessage> : null}
 
-      <section id="qbo-integration-connection-card" className="space-y-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <span
-              className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${connectionDotClass}`}
-              aria-hidden="true"
-            />
-            <div className="min-w-0">
-              <h4 className="text-base font-semibold text-foreground">
-                {connectionStatusLabel}
-              </h4>
-              <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                {connectionStatusDescription}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              id="qbo-connect-button"
-              type="button"
-              disabled={!canConnect}
-              onClick={() =>
-                window.location.assign('/api/integrations/qbo/connect')
-              }
-            >
-              {defaultConnection
-                ? t('integrations.qbo.settings.actions.reconnect', {
-                    defaultValue: 'Reconnect QuickBooks'
-                  })
-                : t('integrations.qbo.settings.actions.connect', {
-                    defaultValue: 'Connect QuickBooks'
-                  })}
-            </Button>
-
+      {/* Focal hero — brand, status, and primary actions in one elevated banner. */}
+      <PanelHero
+        id="qbo-integration-connection-card"
+        brand="quickbooks"
+        title="QuickBooks Online"
+        status={{ tone: connectionTone, label: connectionStatusLabel }}
+        subtitle={
+          defaultConnection ? (
+            <>
+              {defaultConnection.displayName || defaultConnection.realmId}
+              <span id="qbo-hero-sync-suffix" />
+            </>
+          ) : (
+            connectionStatusDescription
+          )
+        }
+        actions={
+          <>
             <Button
               id="qbo-settings-refresh"
               type="button"
@@ -362,21 +351,74 @@ export default function QboIntegrationSettings({
                 defaultValue: 'Refresh'
               })}
             </Button>
-          </div>
-        </div>
 
-        {status?.error && defaultConnection ? (
-          <p
-            className={
-              status.connected
-                ? 'text-sm text-muted-foreground'
-                : 'text-sm text-red-600'
-            }
-          >
-            {status.error}
-          </p>
-        ) : null}
+            <Button
+              id="qbo-connect-button"
+              type="button"
+              disabled={!canConnect}
+              onClick={() =>
+                window.location.assign('/api/integrations/qbo/connect')
+              }
+            >
+              {defaultConnection
+                ? t('integrations.qbo.settings.actions.reconnect', {
+                    defaultValue: 'Reconnect'
+                  })
+                : t('integrations.qbo.settings.actions.connect', {
+                    defaultValue: 'Connect QuickBooks'
+                  })}
+            </Button>
+          </>
+        }
+        extra={
+          // LEVERAGE: friction hero-portal-bridge — sink half of the teleport: this empty <div> (and <span id="qbo-hero-sync-suffix"> in the subtitle above) exist only as createPortal targets for the billing-owned QboSyncHealthPanel, which can't compose into the hero from its slot below. Hero & strip are correct components; the up-the-tree wiring is the contortion.
+          defaultConnection ? (
+            <div id="qbo-sync-attention-mount" className="mt-[18px]" />
+          ) : null
+        }
+      />
 
+      {status?.error && defaultConnection ? (
+        <p
+          className={
+            status.connected
+              ? 'text-sm text-muted-foreground'
+              : 'text-sm text-red-600'
+          }
+        >
+          {status.error}
+        </p>
+      ) : null}
+
+      {defaultConnection ? syncHealthSlot : null}
+
+      {/* Quiet group — supporting connection detail + app setup recede here. */}
+      <SettingsGroup
+        id="qbo-connection-details"
+        title={t('integrations.qbo.settings.connection.detailsTitle', {
+          defaultValue: 'Connection details'
+        })}
+        action={
+          defaultConnection ? (
+            <Button
+              id="qbo-open-accounting-exports"
+              asChild
+              variant="link"
+              className="h-auto p-0"
+            >
+              <Link
+                href="/msp/billing?tab=accounting-exports"
+                className="inline-flex items-center gap-1.5"
+              >
+                {t('integrations.accounting.settings.viewExportHistory', {
+                  defaultValue: 'View export history'
+                })}
+                <ExternalLink className="h-4 w-4" />
+              </Link>
+            </Button>
+          ) : null
+        }
+      >
         <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
           {defaultConnection ? (
             <>
@@ -423,7 +465,7 @@ export default function QboIntegrationSettings({
 
         <details
           open={shouldOpenCredentialDetails}
-          className="group rounded-lg border"
+          className="group rounded-lg border bg-muted/30"
         >
           <summary className="flex cursor-pointer list-none items-start justify-between gap-4 px-4 py-3 [&::-webkit-details-marker]:hidden">
             <div>
@@ -575,7 +617,7 @@ export default function QboIntegrationSettings({
           </div>
         </details>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+        <div>
           <Button
             id="qbo-disconnect-button"
             type="button"
@@ -591,67 +633,37 @@ export default function QboIntegrationSettings({
                   defaultValue: 'Disconnect QuickBooks'
                 })}
           </Button>
-
-          {defaultConnection ? (
-            <Button id="qbo-open-accounting-exports" asChild variant="link">
-              <Link
-                href="/msp/billing?tab=accounting-exports"
-                className="inline-flex items-center gap-1.5"
-              >
-                {t('integrations.accounting.settings.viewExportHistory', {
-                  defaultValue: 'View export history'
-                })}
-                <ExternalLink className="h-4 w-4" />
-              </Link>
-            </Button>
-          ) : null}
         </div>
-      </section>
+      </SettingsGroup>
 
-      {defaultConnection ? syncHealthSlot : null}
-
-      {defaultConnection ? onboardingSlot : null}
-
+      {/* Mappings recede into their own quiet group. */}
       {defaultConnection ? (
-        <section
-          id="qbo-integration-mapping-card"
-          className="space-y-4 border-t pt-6"
-        >
-          <div>
-            <h3 className="text-base font-semibold text-foreground">
-              {t('integrations.qbo.settings.mapping.title', {
-                defaultValue: 'Mappings'
-              })}
-            </h3>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              {t('integrations.qbo.settings.mapping.description', {
-                defaultValue:
-                  'Match your services, tax codes, and payment terms to {{company}} so invoices land correctly in QuickBooks.',
-                company:
-                  defaultConnection.displayName || defaultConnection.realmId
-              })}
-            </p>
-          </div>
-          <QboLiveMappingManager defaultConnection={defaultConnection} />
-        </section>
-      ) : (
-        <section
-          id="qbo-integration-mapping-placeholder-card"
-          className="space-y-2 border-t pt-6"
-        >
-          <h3 className="text-base font-semibold text-foreground">
-            {t('integrations.qbo.settings.mapping.title', {
-              defaultValue: 'Mappings'
+        <SettingsGroup id="qbo-integration-mapping-card" title={mappingTitle}>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            {t('integrations.qbo.settings.mapping.description', {
+              defaultValue:
+                'Match your services, tax codes, and payment terms to {{company}} so invoices land correctly in QuickBooks.',
+              company:
+                defaultConnection.displayName || defaultConnection.realmId
             })}
-          </h3>
+          </p>
+          <QboLiveMappingManager defaultConnection={defaultConnection} />
+        </SettingsGroup>
+      ) : (
+        <SettingsGroup
+          id="qbo-integration-mapping-placeholder-card"
+          title={mappingTitle}
+        >
           <p className="max-w-2xl text-sm text-muted-foreground">
             {t('integrations.qbo.settings.mapping.placeholderDescription', {
               defaultValue:
                 'Connect a QuickBooks company to map your services, tax codes, and payment terms.'
             })}
           </p>
-        </section>
+        </SettingsGroup>
       )}
+
+      {defaultConnection ? onboardingSlot : null}
     </div>
   );
 }

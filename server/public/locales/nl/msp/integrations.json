@@ -1220,7 +1220,7 @@
           "connect": "QuickBooks verbinden",
           "disconnect": "QuickBooks ontkoppelen",
           "disconnecting": "Ontkoppelen…",
-          "reconnect": "QuickBooks opnieuw verbinden",
+          "reconnect": "Opnieuw verbinden",
           "refresh": "Vernieuwen",
           "saveCredentials": "Inloggegevens opslaan",
           "saving": "Opslaan…"
@@ -1253,7 +1253,8 @@
           "realmId": "Realm ID: {{id}}",
           "title": "Live QuickBooks-verbinding",
           "unknown": "onbekend",
-          "realm": "Realm-ID"
+          "realm": "Realm-ID",
+          "detailsTitle": "Verbindingsdetails"
         },
         "credentialsSaved": "QuickBooks app-configuratie opgeslagen. U kunt nu een QuickBooks-bedrijf verbinden.",
         "csvAvailableMiddle": "vanuit",
@@ -1336,7 +1337,21 @@
         "lastRunAt": "· laatste run {{time}}",
         "tokenValidUntil": "Verbinding geldig tot {{date}}",
         "refreshTokenExpirySoon": "QuickBooks-token verloopt {{date}} — verbind binnenkort opnieuw om onderbreking te voorkomen.",
-        "configDescription": "Standaardwaarden die worden toegepast op documenten die Alga in QuickBooks boekt."
+        "configDescription": "Standaardwaarden die worden toegepast op documenten die Alga in QuickBooks boekt.",
+        "activityTitle": "Synchronisatie-activiteit",
+        "runsEvery": "Draait elke 15 min indien aan",
+        "attnExceptions": "openstaande uitzonderingen",
+        "attnErrored": "mislukte bewerkingen",
+        "attnDrift": "afwijking gedetecteerd",
+        "attnHealthy": "Synchronisatie is bijgewerkt",
+        "attnNeedReview": "vereisen aandacht vóór de volgende synchronisatie.",
+        "attnAutoSyncOff": "Auto-sync staat momenteel uit",
+        "attnDriftDetail": "{{count}} afwijking gedetecteerd",
+        "reviewExceptions": "Uitzonderingen bekijken",
+        "lastCycle": "Laatste cyclus",
+        "lastCycleSummary": "{{ops}} bewerkingen · {{payments}} betalingen",
+        "lastSyncedShort": "Laatst gesynchroniseerd {{time}}",
+        "notSynced": "Nog niet gesynchroniseerd"
       }
     },
     "rmm": {

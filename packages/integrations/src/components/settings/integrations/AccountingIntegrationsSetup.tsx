@@ -203,18 +203,6 @@ export default function AccountingIntegrationsSetup({
           })}
         </Button>
 
-        <div className="flex items-center gap-4">
-          <AccountingBrandMark brand={selectedOption.brand} size="lg" />
-          <div className="min-w-0">
-            <h3 className="truncate text-lg font-semibold text-foreground">
-              {selectedOption.title}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {kindLabel(selectedOption.kind)}
-            </p>
-          </div>
-        </div>
-
         {renderPanel(selectedOption.id)}
       </div>
     );

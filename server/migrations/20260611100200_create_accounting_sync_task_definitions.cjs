@@ -44,7 +44,9 @@ const FORM = {
       settingsLink: {
         type: 'string',
         title: 'Accounting Integration Settings',
-        format: 'uri',
+        // uri-reference (not uri) — the value is a relative app link
+        // (/msp/settings?...), which AJV's strict "uri" format rejects.
+        format: 'uri-reference',
         description: 'Open the accounting integration settings'
       }
     },
