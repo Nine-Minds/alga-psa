@@ -14,6 +14,7 @@ const testState = vi.hoisted(() => ({
   getAppSecretMock: vi.fn(),
   runWithTenantMock: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
   hasPermissionMock: vi.fn(async () => true),
+  getTenantProductMock: vi.fn(async () => 'psa'),
   apiRateLimitConfigGetterMock: vi.fn(async () => ({ maxTokens: 120, refillRate: 1 })),
   loggerWarnMock: vi.fn(),
   loggerInfoMock: vi.fn(),
@@ -56,6 +57,14 @@ vi.mock('@/lib/db/db', () => ({
 
 vi.mock('@/lib/api/rateLimit/apiRateLimitConfigGetter', () => ({
   apiRateLimitConfigGetter: (...args: unknown[]) => testState.apiRateLimitConfigGetterMock(...args),
+}));
+
+// ApiBaseController.authenticate gates by tenant product (ed5064980f); the
+// real getTenantProduct reads tenants.product_code over an admin connection,
+// which is out of scope for these rate-limit tests.
+vi.mock('@/lib/productAccess', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/productAccess')>()),
+  getTenantProduct: (...args: unknown[]) => testState.getTenantProductMock(...args),
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -153,6 +162,7 @@ describe('API rate limit headers', () => {
     testState.getAppSecretMock.mockReset();
     testState.runWithTenantMock.mockReset();
     testState.hasPermissionMock.mockReset();
+    testState.getTenantProductMock.mockReset();
     testState.apiRateLimitConfigGetterMock.mockReset();
     testState.loggerWarnMock.mockReset();
     testState.loggerInfoMock.mockReset();
@@ -211,6 +221,7 @@ describe('API rate limit headers', () => {
     testState.getAppSecretMock.mockResolvedValue('nm-store-key');
     testState.runWithTenantMock.mockImplementation(async (_tenant: string, callback: () => Promise<unknown>) => callback());
     testState.hasPermissionMock.mockResolvedValue(true);
+    testState.getTenantProductMock.mockResolvedValue('psa');
     testState.apiRateLimitConfigGetterMock.mockResolvedValue({ maxTokens: 120, refillRate: 1 });
 
     await TokenBucketRateLimiter.getInstance().initialize(

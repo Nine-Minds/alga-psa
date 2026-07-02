@@ -31,7 +31,11 @@ describe('Ticket documents API contract', () => {
 
     expect(source).toContain("async getTicketDocuments(ticketId: string, context: ServiceContext): Promise<IDocument[]>");
     expect(source).toContain("'da.entity_type': 'ticket'");
-    expect(source).toContain(".join('document_associations as da'");
+    // Tenant scoping now lives in the tenantDb facade: the documents read is
+    // facade-scoped and the association join is tenant-matched via tenantJoin.
+    expect(source).toContain('return tenantDb(conn, tenant).table(table);');
+    expect(source).toContain("const documentQuery = tenantScopedTable(knex, 'documents as d', context.tenant);");
+    expect(source).toContain("scopedDb.tenantJoin(documentQuery, 'document_associations as da', 'd.document_id', 'da.document_id');");
     expect(source).not.toContain("'da.notes as association_notes'");
   });
 
@@ -56,9 +60,12 @@ describe('Ticket documents API contract', () => {
 
     expect(source).toContain('async deleteTicketDocument(');
     expect(source).toContain("'da.entity_type': 'ticket'");
-    // Removes the association
-    expect(source).toContain("('document_associations')");
+    // Removes the association (tenant-scoped via the tenantDb-backed table helper)
+    expect(source).toContain(
+      "await tenantScopedTable(trx, 'document_associations', context.tenant)\n        .where({ association_id: doc.association_id })\n        .del();"
+    );
     // Checks for remaining associations before deleting the document
+    expect(source).toContain("const remaining = await tenantScopedTable(trx, 'document_associations', context.tenant)");
     expect(source).toContain("Number(remaining.count) === 0");
   });
 });

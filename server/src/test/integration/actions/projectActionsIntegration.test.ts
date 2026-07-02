@@ -1,12 +1,53 @@
 // Import mocks first to ensure they're hoisted
 import 'server/test-utils/testMocks';
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { tenantDb } from '@alga-psa/db';
 import { createProject } from '@alga-psa/projects/actions/projectActions';
 import type { IProject } from '@alga-psa/types';
 import { TestContext } from 'server/test-utils/testContext';
 import { setupCommonMocks } from 'server/test-utils/testMocks';
+
+// LEVERAGE: pattern test-harness-package-db-binding — this dbRef +
+// @alga-psa/db/@alga-psa/auth mock block is hand-copied across 10+ integration
+// tests; TestContext should offer it as a helper.
+// Bind the package actions' createTenantKnex to the test transaction. The real
+// @alga-psa/db one opens its own pool, which can't see uncommitted fixtures and
+// deadlocks against the TRUNCATEs held by the TestContext transaction.
+const dbRef = vi.hoisted(() => ({
+  knex: null as any,
+  tenant: '' as string,
+  user: null as any,
+}));
+
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
+  createTenantKnex: vi.fn(async () => ({ knex: dbRef.knex, tenant: dbRef.tenant })),
+}));
+
+// Real withAuth resolves the session user through that same separate pool; mock
+// it inline. (A factory that imports testMocks would deadlock: testMocks is
+// mid-evaluation when its '@alga-psa/auth' import triggers this factory.)
+vi.mock('@alga-psa/auth', () => ({
+  getCurrentUser: vi.fn(async () => dbRef.user),
+  getSession: vi.fn(async () =>
+    dbRef.user ? { user: { id: dbRef.user.user_id, tenant: dbRef.tenant } } : null
+  ),
+  hasPermission: vi.fn(async () => true),
+  throwPermissionError: (action: string, additionalInfo?: string): never => {
+    throw new Error(`Permission denied: Cannot ${action}${additionalInfo ? `. ${additionalInfo}` : ''}`);
+  },
+  withAuth: (action: any) => async (...args: any[]) => {
+    if (!dbRef.user) throw new Error('User not authenticated');
+    return action(dbRef.user, { tenant: dbRef.tenant }, ...args);
+  },
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action(dbRef.user ?? null, dbRef.user ? { tenant: dbRef.tenant } : null, ...args),
+  withAuthCheck: (action: any) => async (...args: any[]) => {
+    if (!dbRef.user) throw new Error('User not authenticated');
+    return action(dbRef.user, ...args);
+  },
+}));
 
 describe('Project Actions Integration - Project Numbers', () => {
   const {
@@ -35,6 +76,10 @@ describe('Project Actions Integration - Project Numbers', () => {
       user: context.user,
       permissionCheck: () => true
     });
+
+    dbRef.knex = context.db;
+    dbRef.tenant = context.tenantId;
+    dbRef.user = context.user;
   }, 120000); // Increase timeout to 2 minutes for setup
 
   beforeEach(async () => {
@@ -45,6 +90,10 @@ describe('Project Actions Integration - Project Numbers', () => {
       user: context.user,
       permissionCheck: () => true
     });
+
+    dbRef.knex = context.db;
+    dbRef.tenant = context.tenantId;
+    dbRef.user = context.user;
 
     // Ensure project statuses exist for test tenant
     const existingStatuses = await tenantTable('statuses')
@@ -159,8 +208,9 @@ describe('Project Actions Integration - Project Numbers', () => {
 
       expect(projects).toHaveLength(3);
 
-      // Extract numbers and verify they're sequential
-      const numbers = projects.map((p: any) => parseInt(p.project_number.split('-')[1]));
+      // Extract numbers and verify they're sequential (format is PRJ0001 —
+      // generate_next_number concatenates prefix + zero-padded counter)
+      const numbers = projects.map((p: any) => parseInt(p.project_number.replace(/^\D+/, ''), 10));
       expect(numbers[1]).toBe(numbers[0] + 1);
       expect(numbers[2]).toBe(numbers[1] + 1);
     });

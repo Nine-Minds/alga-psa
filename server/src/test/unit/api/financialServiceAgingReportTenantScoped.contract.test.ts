@@ -22,7 +22,7 @@ describe('financial service aging report tenant-scoped query contract', () => {
     expect(agingSection).toContain('tenantDb(');
     expect(agingSection).toContain(".table('invoices as i')");
     expect(agingSection).toContain('const tenant = context?.tenant || defaultTenant;');
-    expect(agingSection).toContain(".andOn('i.tenant', '=', 'c.tenant')");
+    expect(agingSection).toContain("scopedDb.tenantJoin(query, 'clients as c', 'i.client_id', 'c.client_id')");
 
     expect(agingSection).not.toMatch(/knex\('invoices as i'\)\s*\./);
     expect(agingSection).not.toMatch(/\.where\('i\.tenant', tenant\)/);

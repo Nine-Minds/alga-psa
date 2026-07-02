@@ -24,10 +24,22 @@ const runtimeImport = <TModule,>(specifier: string): Promise<TModule> => {
 
 // Some sandboxed runtimes (e.g. vitest's VM-evaluated forks) provide no
 // dynamic-import callback, so this provider can never load fs there. Treat it
-// as "provider unavailable" once instead of erroring on every secret lookup.
+// as "provider unavailable" once instead of erroring on every secret access.
+// The raw TypeError Node throws ("A dynamic import callback was not
+// specified") does not always carry the ERR_VM code, so match both shapes.
 let warnedDynamicImportUnavailable = false;
 function handleModulesUnavailable(error: unknown): boolean {
-  if ((error as NodeJS.ErrnoException | undefined)?.code !== 'ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING') {
+  const err = error as (NodeJS.ErrnoException & { cause?: NodeJS.ErrnoException }) | undefined;
+  const code = err?.code ?? err?.cause?.code;
+  const messages = [err?.message, err?.cause?.message].filter(
+    (m): m is string => typeof m === 'string'
+  );
+  const inMessage = messages.some(
+    (m) =>
+      m.includes('ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING') ||
+      m.includes('A dynamic import callback was not specified')
+  );
+  if (code !== 'ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING' && !inMessage) {
     return false;
   }
   if (!warnedDynamicImportUnavailable) {
@@ -163,7 +175,15 @@ export class FileSystemSecretProvider implements ISecretProvider {
   }
 
   async setTenantSecret(tenantId: string, name: string, value: string | null): Promise<void> {
-    const { fs, path } = await this.getModules();
+    let fs: NodeFsPromisesModule;
+    let path: NodePathModule;
+    try {
+      ({ fs, path } = await this.getModules());
+    } catch (error) {
+      // Provider unavailable in this runtime; the write cannot be persisted.
+      if (handleModulesUnavailable(error)) return;
+      throw error;
+    }
     const safeTenantId = path.basename(tenantId);
     const safeName = path.basename(name);
 
@@ -192,7 +212,15 @@ export class FileSystemSecretProvider implements ISecretProvider {
   }
 
   async deleteTenantSecret(tenantId: string, name: string): Promise<void> {
-    const { fs, path } = await this.getModules();
+    let fs: NodeFsPromisesModule;
+    let path: NodePathModule;
+    try {
+      ({ fs, path } = await this.getModules());
+    } catch (error) {
+      // Provider unavailable in this runtime; nothing was persisted to delete.
+      if (handleModulesUnavailable(error)) return;
+      throw error;
+    }
     const safeTenantId = path.basename(tenantId);
     const safeName = path.basename(name);
 

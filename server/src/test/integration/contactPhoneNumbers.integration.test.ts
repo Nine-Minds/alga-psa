@@ -33,7 +33,6 @@ describe('contact phone numbers integration', () => {
       contact_name_id: contactId,
       full_name: 'Phone Test Contact',
       email: 'contact@example.com',
-      phone_number: null,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });

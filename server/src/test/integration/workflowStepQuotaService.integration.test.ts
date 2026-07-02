@@ -195,17 +195,22 @@ describe('workflowStepQuotaService', () => {
       workflowStepLimitPrice: '1200',
     });
 
-    const priceSummary = await workflowStepQuotaService.resolveQuotaSummary(db, tenant);
+    // Pin `now` inside the seeded Stripe period so the test is not wall-clock
+    // dependent (the default `now = new Date()` left the April period behind
+    // once the real date passed it).
+    const now = new Date('2026-04-15T00:00:00.000Z');
+
+    const priceSummary = await workflowStepQuotaService.resolveQuotaSummary(db, tenant, now);
     expect(priceSummary.effectiveLimit).toBe(1200);
     expect(priceSummary.limitSource).toBe('stripe_price_metadata');
 
     await tenantTable(db, tenant, 'stripe_prices').where({ tenant }).update({ metadata: { workflow_step_limit: 'invalid' } });
-    const productSummary = await workflowStepQuotaService.resolveQuotaSummary(db, tenant);
+    const productSummary = await workflowStepQuotaService.resolveQuotaSummary(db, tenant, now);
     expect(productSummary.effectiveLimit).toBe(5000);
     expect(productSummary.limitSource).toBe('stripe_product_metadata');
 
     await tenantTable(db, tenant, 'stripe_products').where({ tenant }).update({ metadata: { workflow_step_limit: 'unlimited' } });
-    const unlimitedSummary = await workflowStepQuotaService.resolveQuotaSummary(db, tenant);
+    const unlimitedSummary = await workflowStepQuotaService.resolveQuotaSummary(db, tenant, now);
     expect(unlimitedSummary.effectiveLimit).toBeNull();
     expect(unlimitedSummary.limitSource).toBe('unlimited_metadata');
   });
@@ -220,9 +225,10 @@ describe('workflowStepQuotaService', () => {
       workflowStepLimitPrice: '2',
     });
 
-    const first = await workflowStepQuotaService.reserveStepStart(db, tenant);
-    const second = await workflowStepQuotaService.reserveStepStart(db, tenant);
-    const third = await workflowStepQuotaService.reserveStepStart(db, tenant);
+    const now = new Date('2026-04-15T00:00:00.000Z');
+    const first = await workflowStepQuotaService.reserveStepStart(db, tenant, now);
+    const second = await workflowStepQuotaService.reserveStepStart(db, tenant, now);
+    const third = await workflowStepQuotaService.reserveStepStart(db, tenant, now);
 
     expect(first.allowed).toBe(true);
     expect(second.allowed).toBe(true);
@@ -242,11 +248,12 @@ describe('workflowStepQuotaService', () => {
       workflowStepLimitPrice: 'unlimited',
     });
 
+    const now = new Date('2026-04-15T00:00:00.000Z');
     const results = await Promise.all([
-      workflowStepQuotaService.reserveStepStart(db, tenant),
-      workflowStepQuotaService.reserveStepStart(db, tenant),
-      workflowStepQuotaService.reserveStepStart(db, tenant),
-      workflowStepQuotaService.reserveStepStart(db, tenant),
+      workflowStepQuotaService.reserveStepStart(db, tenant, now),
+      workflowStepQuotaService.reserveStepStart(db, tenant, now),
+      workflowStepQuotaService.reserveStepStart(db, tenant, now),
+      workflowStepQuotaService.reserveStepStart(db, tenant, now),
     ]);
 
     expect(results.every((result) => result.allowed)).toBe(true);
@@ -265,8 +272,9 @@ describe('workflowStepQuotaService', () => {
       workflowStepLimitPrice: '3',
     });
 
+    const now = new Date('2026-04-15T00:00:00.000Z');
     const reservations = await Promise.all(
-      Array.from({ length: 12 }).map(() => workflowStepQuotaService.reserveStepStart(db, tenant))
+      Array.from({ length: 12 }).map(() => workflowStepQuotaService.reserveStepStart(db, tenant, now))
     );
 
     const allowedCount = reservations.filter((reservation) => reservation.allowed).length;
@@ -319,10 +327,12 @@ describe('workflowStepQuotaService', () => {
       input_json: {},
     });
 
+    // The step ledger is tenant-scoped (runtime writes tenant on every step
+    // row); the reconcile query joins on it, so the fixture must set it too.
     await tenantTable(db, tenant, 'workflow_run_steps').insert([
-      { step_id: uuidv4(), run_id: runId, step_path: '0', definition_step_id: 'a', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:00.000Z' },
-      { step_id: uuidv4(), run_id: runId, step_path: '1', definition_step_id: 'b', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:01.000Z' },
-      { step_id: uuidv4(), run_id: runId, step_path: '2', definition_step_id: 'c', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:02.000Z' },
+      { step_id: uuidv4(), tenant, run_id: runId, step_path: '0', definition_step_id: 'a', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:00.000Z' },
+      { step_id: uuidv4(), tenant, run_id: runId, step_path: '1', definition_step_id: 'b', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:01.000Z' },
+      { step_id: uuidv4(), tenant, run_id: runId, step_path: '2', definition_step_id: 'c', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:02.000Z' },
     ]);
 
     const reconciliation = await workflowStepQuotaService.reconcileUsagePeriod(db, tenant, periodStart, periodEnd);
@@ -346,9 +356,10 @@ describe('workflowStepQuotaService', () => {
     const warnSpy = vi.spyOn(logger, 'warn');
     const debugSpy = vi.spyOn(logger, 'debug');
 
-    await workflowStepQuotaService.resolveQuotaSummary(db, tenant, new Date('2026-04-20T00:00:00.000Z'));
-    await workflowStepQuotaService.reserveStepStart(db, tenant);
-    await workflowStepQuotaService.reserveStepStart(db, tenant);
+    const now = new Date('2026-04-20T00:00:00.000Z');
+    await workflowStepQuotaService.resolveQuotaSummary(db, tenant, now);
+    await workflowStepQuotaService.reserveStepStart(db, tenant, now);
+    await workflowStepQuotaService.reserveStepStart(db, tenant, now);
 
     const fallbackTenant = uuidv4();
     await seedTenant(db, fallbackTenant, 'pro');

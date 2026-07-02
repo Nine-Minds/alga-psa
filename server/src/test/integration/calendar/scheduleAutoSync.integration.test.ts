@@ -7,17 +7,20 @@ import { addScheduleEntry, updateScheduleEntry, deleteScheduleEntry } from '@alg
 import { registerCalendarSyncSubscriber } from '../../../lib/eventBus/subscribers/calendarSyncSubscriber';
 
 const modulePaths = vi.hoisted(() => {
-  const libDbModulePath = new URL('../../../lib/db/index.tsx', import.meta.url).pathname;
+  // @alga-psa/db's knexfile snapshots DB_NAME_SERVER into its module-level
+  // baseConfig at import time — before beforeAll's createTestDbConnection can
+  // set it — so pin the test database name ahead of the import graph.
+  process.env.DB_NAME_SERVER = 'test_database';
+
+  // server/src/lib/db moved from index.tsx to index.ts in the facade migration.
+  const libDbModulePath = new URL('../../../lib/db/index.ts', import.meta.url).pathname;
   const rootDbModulePath = new URL('../../../db.ts', import.meta.url).pathname;
-  const eventBusIndexModulePath = new URL('../../../lib/eventBus/index.ts', import.meta.url).pathname;
 
   return {
     libDbModulePath,
-    libDbModulePathNoExt: libDbModulePath.replace(/\.tsx$/, ''),
+    libDbModulePathNoExt: libDbModulePath.replace(/\.ts$/, ''),
     rootDbModulePath,
     rootDbModulePathNoExt: rootDbModulePath.replace(/\.ts$/, ''),
-    eventBusIndexModulePath,
-    eventBusIndexModulePathNoExt: eventBusIndexModulePath.replace(/\.ts$/, ''),
   };
 });
 
@@ -66,7 +69,10 @@ function buildDbExports() {
     },
     runWithTenant: async (_tenant: string, cb: () => Promise<any>) => cb(),
     getTenantContext: async () => shared.defaultTenant,
-    getCurrentTenantId: async () => shared.defaultTenant,
+    // Must be synchronous: the setup.ts @alga-psa/auth mock resolves the
+    // withAuth tenant from getCurrentTenantId() and requires a string (a
+    // Promise makes it fall back to the default 00000000-… tenant).
+    getCurrentTenantId: () => shared.defaultTenant,
   };
 }
 
@@ -75,33 +81,18 @@ vi.mock(modulePaths.libDbModulePathNoExt, () => buildDbExports());
 vi.mock(modulePaths.rootDbModulePath, () => buildDbExports());
 vi.mock(modulePaths.rootDbModulePathNoExt, () => buildDbExports());
 
-vi.mock(modulePaths.eventBusIndexModulePath, () => ({
+// The calendar sync subscriber (now in @alga-psa/ee-calendar) and the
+// scheduleActions publishers both go through @alga-psa/event-bus getEventBus;
+// mock it with a synchronous in-memory bus so publish → handler is deterministic.
+vi.mock('@alga-psa/event-bus', () => ({
   getEventBus: () => ({
     subscribe: async (eventType: string, handler: (event: any) => Promise<void>) => {
       const handlers = eventHandlers.get(eventType) ?? new Set();
       handlers.add(handler);
       eventHandlers.set(eventType, handlers);
     },
-    publish: async (event: { eventType: string; payload: any }) => {
-      const handlers = eventHandlers.get(event.eventType);
-      if (!handlers) return;
-      for (const handler of handlers) {
-        await handler({
-          id: `event-${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          eventType: event.eventType,
-          payload: event.payload,
-        });
-      }
-    },
-  }),
-}));
-vi.mock(modulePaths.eventBusIndexModulePathNoExt, () => ({
-  getEventBus: () => ({
-    subscribe: async (eventType: string, handler: (event: any) => Promise<void>) => {
-      const handlers = eventHandlers.get(eventType) ?? new Set();
-      handlers.add(handler);
-      eventHandlers.set(eventType, handlers);
+    unsubscribe: async (eventType: string, handler: (event: any) => Promise<void>) => {
+      eventHandlers.get(eventType)?.delete(handler);
     },
     publish: async (event: { eventType: string; payload: any }) => {
       const handlers = eventHandlers.get(event.eventType);
@@ -126,7 +117,7 @@ vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUserPermissions: vi.fn(async () => shared.permissions),
 }));
 
-vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService', () => ({
   CalendarSyncService: class {
     async syncScheduleEntryToExternal(entryId: string, providerId: string) {
       shared.syncCalls.push({ entryId, providerId });
@@ -145,7 +136,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
   },
 }));
 
-vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService', () => ({
   CalendarProviderService: class {
     async getProviders(filter: { tenant: string; isActive?: boolean }) {
       if (!shared.db) throw new Error('Database not initialized');
@@ -207,6 +198,9 @@ describe('Schedule entry creation triggers calendar sync', () => {
     await tenantTable(db, tenantId, 'calendar_providers').insert({
       id: providerId,
       tenant: tenantId,
+      // The subscriber only syncs user-scoped providers whose user is
+      // assigned to the entry; legacy tenant-level rows are skipped.
+      user_id: userId,
       provider_type: 'google',
       provider_name: 'Auto Sync Provider',
       calendar_id: 'primary',

@@ -151,7 +151,7 @@ describe('Collaborative Editing — Integration Tests', () => {
         created_by: userId,
         tenant: tenantId,
         order_number: 0,
-        created_at: now,
+        entered_at: now,
         updated_at: now,
       });
 
@@ -186,7 +186,7 @@ describe('Collaborative Editing — Integration Tests', () => {
         created_by: userId,
         tenant: tenantId,
         order_number: 0,
-        created_at: now,
+        entered_at: now,
         updated_at: now,
       });
 
@@ -229,7 +229,7 @@ describe('Collaborative Editing — Integration Tests', () => {
         created_by: userId,
         tenant: tenantId,
         order_number: 0,
-        created_at: now,
+        entered_at: now,
         updated_at: now,
       });
 
@@ -399,7 +399,7 @@ describe('Collaborative Editing — Integration Tests', () => {
         created_by: userId,
         tenant: tenantId,
         order_number: 0,
-        created_at: now,
+        entered_at: now,
         updated_at: now,
       });
 
@@ -624,11 +624,11 @@ describeIfHocuspocus('Hocuspocus persistence', () => {
     await tenantTable(tenantId, 'documents').insert({
       document_id: docId,
       document_name: 'Snapshot Test',
-      document_type: 'text',
       tenant: tenantId,
+      user_id: userId,
       created_by: userId,
-      updated_by: userId,
-      created_at: now,
+      edited_by: userId,
+      entered_at: now,
       updated_at: now,
     });
 

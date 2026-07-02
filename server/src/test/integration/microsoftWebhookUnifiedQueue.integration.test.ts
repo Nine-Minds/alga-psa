@@ -19,6 +19,13 @@ const providerQueryMock = {
   }),
   first: vi.fn(),
 };
+// tenantDb(trx, tenant).table('tenants') → conn('tenants').where(tenant).first(...)
+const tenantsQueryMock = {
+  where: vi.fn(function where() {
+    return this;
+  }),
+  first: vi.fn(async () => ({ product_code: 'psa' })),
+};
 
 vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
   enqueueUnifiedInboundEmailQueueJob: (...args: any[]) => enqueueUnifiedInboundEmailQueueJobMock(...args),
@@ -28,9 +35,15 @@ vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: (...args: any[]) => getAdminConnectionMock(...args),
 }));
 
-vi.mock('@alga-psa/db', () => ({
-  withTransaction: (...args: any[]) => withTransactionMock(...args),
-}));
+// Keep the real tenantDb facade (the handler's tenant scoping runs against the
+// mock trx below); only stub the transaction wrapper.
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    withTransaction: (...args: any[]) => withTransactionMock(...args),
+  };
+});
 
 describe('Microsoft unified inbound pointer queue ingress', () => {
   beforeEach(() => {
@@ -57,9 +70,15 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
       mc_webhook_verification_token: 'expected-client-state',
     });
 
+    tenantsQueryMock.where.mockClear();
+    tenantsQueryMock.first.mockClear();
+
     trxMock.mockImplementation((table: string) => {
       if (table === 'microsoft_email_provider_config as mc') {
         return providerQueryMock;
+      }
+      if (table === 'tenants') {
+        return tenantsQueryMock;
       }
       throw new Error(`Unexpected table in test transaction: ${table}`);
     });
@@ -108,9 +127,11 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
       handoff: 'unified_pointer_queue',
       processedCount: 1,
       unifiedQueuedCount: 1,
-      inlineProcessedCount: 0,
       messageIds: ['msg-123'],
     });
+
+    // Provider lookup stays tenant-scoped through the facade join.
+    expect(providerQueryMock.join).toHaveBeenCalledWith('email_providers as ep', expect.any(Function));
 
     expect(enqueueUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
     const enqueuePayload = enqueueUnifiedInboundEmailQueueJobMock.mock.calls[0][0];
@@ -183,7 +204,6 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
       handoff: 'unified_pointer_queue',
       processedCount: 1,
       unifiedQueuedCount: 1,
-      inlineProcessedCount: 0,
     });
   });
 

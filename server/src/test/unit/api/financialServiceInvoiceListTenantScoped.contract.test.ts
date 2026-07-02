@@ -21,7 +21,7 @@ describe('financial service invoice list tenant-scoped query contract', () => {
 
     expect(invoiceSection).toContain('tenantDb(');
     expect(invoiceSection).toContain(".table('invoices as i')");
-    expect(invoiceSection).toContain(".andOn('i.tenant', '=', 'c.tenant')");
+    expect(invoiceSection).toContain("scopedDb.tenantJoin(dataQuery, 'clients as c', 'i.client_id', 'c.client_id', { type: 'left' })");
 
     expect(invoiceSection).not.toMatch(/knex\('invoices as i'\)\s*\./);
     expect(invoiceSection).not.toMatch(/\.where\('i\.tenant', context\.tenant\)/);

@@ -134,7 +134,6 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
       mailbox: `support-${uuidv4().slice(0, 6)}@example.com`,
       is_active: true,
       status: 'connected',
-      vendor_config: JSON.stringify({}),
       inbound_ticket_defaults_id: defaultsId,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),

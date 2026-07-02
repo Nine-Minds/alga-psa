@@ -14,6 +14,17 @@ const firstMock = vi.fn(async () => providerRow);
 
 const knexMock = vi.fn((table: string) => {
   tableReads.push(table);
+  // Product gate: getTenantProduct reads tenants.product_code over the
+  // admin connection before the handler proceeds.
+  if (table.startsWith('tenants')) {
+    const tenantsBuilder: any = {
+      select: () => tenantsBuilder,
+      where: () => tenantsBuilder,
+      andWhere: () => tenantsBuilder,
+      first: async () => ({ product_code: 'psa' }),
+    };
+    return tenantsBuilder;
+  }
   if (table !== 'email_providers') {
     throw new Error(`Unexpected table read in IMAP webhook handler: ${table}`);
   }

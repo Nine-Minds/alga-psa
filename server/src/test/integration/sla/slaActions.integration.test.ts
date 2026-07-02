@@ -21,7 +21,8 @@ import { createClient, createTenant, createUser } from '../../../../test-utils/t
 
 // Mock dependencies
 vi.mock('server/src/lib/utils/getSecret', () => ({
-  getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+  getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -29,7 +30,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
     getAppSecret: async () => '',
   })),
   secretProvider: {
-    getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+    getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
   },
 }));
 
@@ -108,18 +110,14 @@ describe('SLA Actions Integration Tests', () => {
     await scopedTable(tenantId, 'boards').insert({
       tenant: tenantId,
       board_id: boardId,
-      name: 'Test Board',
-      created_at: new Date(),
-      updated_at: new Date(),
+      board_name: 'Test Board',
     });
 
     board2Id = uuidv4();
     await scopedTable(tenantId, 'boards').insert({
       tenant: tenantId,
       board_id: board2Id,
-      name: 'Test Board 2',
-      created_at: new Date(),
-      updated_at: new Date(),
+      board_name: 'Test Board 2',
     });
 
     statusId = uuidv4();
@@ -290,6 +288,11 @@ describe('SLA Actions Integration Tests', () => {
 
     describe('getDefaultSlaPolicy', () => {
       it('should return the default policy for tenant', async () => {
+        // Suite runs shuffled; clear defaults left behind by other tests
+        await scopedTable(tenantId, 'sla_policies')
+          .where({ tenant: tenantId, is_default: true })
+          .update({ is_default: false, updated_at: new Date() });
+
         await createTestPolicy({ policyName: 'Non-Default', isDefault: false });
         const defaultPolicyId = await createTestPolicy({ policyName: 'Default Policy', isDefault: true });
 
@@ -502,7 +505,7 @@ describe('SLA Actions Integration Tests', () => {
         // Assign policy to board
         await scopedTable(tenantId, 'boards')
           .where({ tenant: tenantId, board_id: boardId })
-          .update({ sla_policy_id: policyId, updated_at: new Date() });
+          .update({ sla_policy_id: policyId });
 
         // Check if policy is assigned
         const assignedBoards = await scopedTable(tenantId, 'boards')
@@ -515,7 +518,7 @@ describe('SLA Actions Integration Tests', () => {
         // Clean up - remove assignment
         await scopedTable(tenantId, 'boards')
           .where({ tenant: tenantId, board_id: boardId })
-          .update({ sla_policy_id: null, updated_at: new Date() });
+          .update({ sla_policy_id: null });
       });
     });
 
@@ -775,7 +778,7 @@ describe('SLA Actions Integration Tests', () => {
 
         await scopedTable(tenantId, 'boards')
           .where({ tenant: tenantId, board_id: boardId })
-          .update({ sla_policy_id: policyId, updated_at: new Date() });
+          .update({ sla_policy_id: policyId });
 
         const board = await scopedTable(tenantId, 'boards')
           .where({ tenant: tenantId, board_id: boardId })
@@ -786,7 +789,7 @@ describe('SLA Actions Integration Tests', () => {
         // Clean up
         await scopedTable(tenantId, 'boards')
           .where({ tenant: tenantId, board_id: boardId })
-          .update({ sla_policy_id: null, updated_at: new Date() });
+          .update({ sla_policy_id: null });
       });
 
       it('should remove SLA policy assignment from board', async () => {
@@ -795,12 +798,12 @@ describe('SLA Actions Integration Tests', () => {
         // Assign
         await scopedTable(tenantId, 'boards')
           .where({ tenant: tenantId, board_id: boardId })
-          .update({ sla_policy_id: policyId, updated_at: new Date() });
+          .update({ sla_policy_id: policyId });
 
         // Remove
         await scopedTable(tenantId, 'boards')
           .where({ tenant: tenantId, board_id: boardId })
-          .update({ sla_policy_id: null, updated_at: new Date() });
+          .update({ sla_policy_id: null });
 
         const board = await scopedTable(tenantId, 'boards')
           .where({ tenant: tenantId, board_id: boardId })
@@ -824,7 +827,7 @@ describe('SLA Actions Integration Tests', () => {
 
       await scopedTable(tenantId, 'boards')
         .where({ tenant: tenantId, board_id: boardId })
-        .update({ sla_policy_id: boardPolicyId, updated_at: new Date() });
+        .update({ sla_policy_id: boardPolicyId });
 
       // Simulate resolution: client takes priority
       const client = await scopedTable(tenantId, 'clients')
@@ -858,7 +861,7 @@ describe('SLA Actions Integration Tests', () => {
         .update({ sla_policy_id: null, updated_at: new Date() });
       await scopedTable(tenantId, 'boards')
         .where({ tenant: tenantId, board_id: boardId })
-        .update({ sla_policy_id: null, updated_at: new Date() });
+        .update({ sla_policy_id: null });
     });
 
     it('should resolve board policy when no client policy', async () => {
@@ -868,7 +871,7 @@ describe('SLA Actions Integration Tests', () => {
       // Only assign board policy
       await scopedTable(tenantId, 'boards')
         .where({ tenant: tenantId, board_id: boardId })
-        .update({ sla_policy_id: boardPolicyId, updated_at: new Date() });
+        .update({ sla_policy_id: boardPolicyId });
 
       // Simulate resolution
       const client = await scopedTable(tenantId, 'clients')
@@ -891,7 +894,7 @@ describe('SLA Actions Integration Tests', () => {
       // Clean up
       await scopedTable(tenantId, 'boards')
         .where({ tenant: tenantId, board_id: boardId })
-        .update({ sla_policy_id: null, updated_at: new Date() });
+        .update({ sla_policy_id: null });
     });
 
     it('should resolve default policy when no client or board policy', async () => {
@@ -908,7 +911,7 @@ describe('SLA Actions Integration Tests', () => {
         .update({ sla_policy_id: null, updated_at: new Date() });
       await scopedTable(tenantId, 'boards')
         .where({ tenant: tenantId, board_id: boardId })
-        .update({ sla_policy_id: null, updated_at: new Date() });
+        .update({ sla_policy_id: null });
 
       // Simulate resolution
       const client = await scopedTable(tenantId, 'clients')
@@ -946,9 +949,7 @@ describe('SLA Actions Integration Tests', () => {
       await scopedTable(emptyTenantId, 'boards').insert({
         tenant: emptyTenantId,
         board_id: emptyBoardId,
-        name: 'No Policy Board',
-        created_at: new Date(),
-        updated_at: new Date(),
+        board_name: 'No Policy Board',
       });
 
       // Simulate resolution

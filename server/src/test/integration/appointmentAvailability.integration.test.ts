@@ -44,6 +44,15 @@ vi.mock('server/src/lib/db', async () => {
   };
 });
 
+// availabilityService resolves its connection through @alga-psa/db directly.
+vi.mock('@alga-psa/db', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
+  };
+});
+
 vi.mock('server/src/lib/tenant', () => ({
   getTenantForCurrentRequest: vi.fn(async () => tenantId ?? null),
   getTenantFromHeaders: vi.fn(() => tenantId ?? null)
@@ -708,7 +717,6 @@ describe('Appointment Availability Integration Tests', () => {
         id: serviceTypeId,
         tenant: tenantId,
         name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-        billing_method: 'fixed',
         order_number: Math.floor(Math.random() * 1000000),
         created_at: db.fn.now(),
         updated_at: db.fn.now()
@@ -1198,7 +1206,6 @@ describe('Appointment Availability Integration Tests', () => {
         id: serviceTypeId,
         tenant: tenantId,
         name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-        billing_method: 'fixed',
         order_number: Math.floor(Math.random() * 1000000),
         created_at: db.fn.now(),
         updated_at: db.fn.now()
@@ -1425,7 +1432,6 @@ async function setupTestData(
     id: serviceTypeId,
     tenant: tenantId,
     name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-    billing_method: 'fixed',
     order_number: Math.floor(Math.random() * 1000000),
     created_at: db.fn.now(),
     updated_at: db.fn.now()
@@ -1511,7 +1517,6 @@ async function setupTestDataMultipleUsers(
     id: serviceTypeId,
     tenant: tenantId,
     name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-    billing_method: 'fixed',
     order_number: Math.floor(Math.random() * 1000000),
     created_at: db.fn.now(),
     updated_at: db.fn.now()

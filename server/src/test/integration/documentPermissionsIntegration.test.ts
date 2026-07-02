@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { TestContext } from '../../../test-utils/testContext';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import { addDocument } from '@alga-psa/documents/actions/documentActions';
@@ -13,6 +13,67 @@ import { IDocument, DocumentInput } from '@/interfaces/document.interface';
 import { DocumentAssociationEntityType } from '@/interfaces/document-association.interface';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
+
+// LEVERAGE: pattern test-harness-package-db-binding — this dbRef +
+// @alga-psa/db/@alga-psa/auth mock block is hand-copied across 10+ integration
+// tests; TestContext should offer it as a helper.
+// Bind the package actions' createTenantKnex to the test transaction. The real
+// @alga-psa/db one opens its own pool, which can't see uncommitted fixtures and
+// deadlocks against the TRUNCATEs held by the TestContext transaction.
+const dbRef = vi.hoisted(() => ({
+  knex: null as any,
+  tenant: '' as string,
+  user: null as any,
+}));
+
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
+  createTenantKnex: vi.fn(async () => ({ knex: dbRef.knex, tenant: dbRef.tenant })),
+  // Models resolve the tenant from AsyncLocalStorage (requireTenantId); tests
+  // run outside runWithTenant, so resolve to the harness tenant instead.
+  requireTenantId: vi.fn(async () => dbRef.tenant),
+  resolveTenantId: vi.fn(async () => dbRef.tenant || null),
+}));
+
+// Real withAuth resolves the session user through that same separate pool; mock
+// it inline. (A factory that imports testMocks would deadlock: testMocks is
+// mid-evaluation when its '@alga-psa/auth' import triggers this factory.)
+vi.mock('@alga-psa/auth', () => ({
+  getCurrentUser: vi.fn(async () => dbRef.user),
+  getSession: vi.fn(async () =>
+    dbRef.user ? { user: { id: dbRef.user.user_id, tenant: dbRef.tenant } } : null
+  ),
+  hasPermission: vi.fn(async () => true),
+  throwPermissionError: (action: string, additionalInfo?: string): never => {
+    throw new Error(`Permission denied: Cannot ${action}${additionalInfo ? `. ${additionalInfo}` : ''}`);
+  },
+  withAuth: (action: any) => async (...args: any[]) => {
+    if (!dbRef.user) throw new Error('User not authenticated');
+    return action(dbRef.user, { tenant: dbRef.tenant }, ...args);
+  },
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action(dbRef.user ?? null, dbRef.user ? { tenant: dbRef.tenant } : null, ...args),
+  withAuthCheck: (action: any) => async (...args: any[]) => {
+    if (!dbRef.user) throw new Error('User not authenticated');
+    return action(dbRef.user, ...args);
+  },
+}));
+
+// Billing's contract actions import withAuth from the subpath module, which the
+// bare '@alga-psa/auth' mock above does not intercept.
+vi.mock('@alga-psa/auth/withAuth', () => ({
+  AuthenticationError: class AuthenticationError extends Error {},
+  withAuth: (action: any) => async (...args: any[]) => {
+    if (!dbRef.user) throw new Error('User not authenticated');
+    return action(dbRef.user, { tenant: dbRef.tenant }, ...args);
+  },
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action(dbRef.user ?? null, dbRef.user ? { tenant: dbRef.tenant } : null, ...args),
+  withAuthCheck: (action: any) => async (...args: any[]) => {
+    if (!dbRef.user) throw new Error('User not authenticated');
+    return action(dbRef.user, ...args);
+  },
+}));
 
 /**
  * Document Permissions Integration Tests
@@ -66,6 +127,10 @@ describe('Document Permissions Integration Tests', () => {
       userId: context.userId,
       permissionCheck: () => true
     });
+
+    dbRef.knex = context.db;
+    dbRef.tenant = context.tenantId;
+    dbRef.user = context.user;
   }, 120000);
 
   afterAll(async () => {
@@ -79,6 +144,11 @@ describe('Document Permissions Integration Tests', () => {
       userId: context.userId,
       permissionCheck: () => true
     });
+
+    dbRef.knex = context.db;
+    dbRef.tenant = context.tenantId;
+    dbRef.user = context.user;
+
     await seedTestData();
   });
 
@@ -179,6 +249,7 @@ describe('Document Permissions Integration Tests', () => {
       try {
         const contract = await createContract({
           contract_name: 'Test Contract',
+          owner_client_id: testClientId,
           billing_frequency: 'monthly',
           status: 'draft',
           is_active: true,

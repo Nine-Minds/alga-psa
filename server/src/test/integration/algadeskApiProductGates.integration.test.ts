@@ -18,9 +18,11 @@ describe('algadesk API key product gates (integration)', () => {
   });
 
   it('RT011: allows representative AlgaDesk endpoints and denies PSA-only endpoints with structured 403', async () => {
-    process.env.DB_NAME_SERVER = 'test_database';
-    process.env.DB_HOST = 'localhost';
-    process.env.DB_PORT = '5432';
+    // Fallback-only (||): unconditional writes poison later files' bootstraps
+    // in the shared fork (see emailAttachmentIngestion).
+    process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'test_database';
+    process.env.DB_HOST = process.env.DB_HOST || 'localhost';
+    process.env.DB_PORT = process.env.DB_PORT || '5432';
     process.env.DB_USER_SERVER = process.env.DB_USER_SERVER || 'app_user';
     process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'postpass123';
 

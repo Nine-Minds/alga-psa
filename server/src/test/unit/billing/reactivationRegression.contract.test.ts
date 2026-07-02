@@ -87,11 +87,12 @@ describe('tenant reactivation regression contract', () => {
       'export async function linkSubscriptionToExistingTenant(',
       'export async function stampReactivationSubscriptionMetadata',
     );
-    expect(linkActivity).toContain("knex('stripe_subscriptions')");
-    expect(linkActivity).toContain("trx('stripe_customers')");
+    expect(linkActivity).toContain("tenantScopedDb.table('stripe_subscriptions')");
+    expect(linkActivity).toContain("tenantScopedTrx.table('stripe_customers')");
     expect(linkActivity).toContain('insertStripeSubscriptionForTenant(trx');
     expect(linkActivity).not.toContain("trx('tenants')");
     expect(linkActivity).not.toContain("knex('tenants')");
+    expect(linkActivity).not.toContain(".table('tenants')");
 
     const subscriptionHelper = section(
       tenantOps,

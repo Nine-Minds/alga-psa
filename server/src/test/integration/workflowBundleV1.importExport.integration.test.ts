@@ -45,6 +45,20 @@ vi.mock('server/src/lib/db', () => ({
   getCurrentTenantId: vi.fn()
 }));
 
+// Execution moved to Temporal (June 2026 cutover); startWorkflowRunAction only
+// inserts the run row and signals Temporal. Mock the seam like the
+// workflowRuntimeV2.* siblings — no live server in the test environment.
+const startWorkflowRuntimeV2TemporalRunMock = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({ workflowId: 'temporal-wf-test', firstExecutionRunId: 'temporal-run-test' })
+);
+vi.mock('@alga-psa/workflows/lib/workflowRuntimeV2Temporal', () => ({
+  startWorkflowRuntimeV2TemporalRun: (...args: unknown[]) => startWorkflowRuntimeV2TemporalRunMock(...args),
+  cancelWorkflowRuntimeV2TemporalRun: vi.fn().mockResolvedValue(undefined),
+  signalWorkflowRuntimeV2Event: vi.fn().mockResolvedValue(undefined),
+  signalWorkflowRuntimeV2HumanTask: vi.fn().mockResolvedValue(undefined),
+  signalWorkflowRuntimeV2QuotaResume: vi.fn().mockResolvedValue(undefined)
+}));
+
 vi.mock('@alga-psa/auth', () => {
   const withAuth = (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
     async (...args: any[]) => action(
@@ -790,7 +804,7 @@ describe('workflow bundle v1 import/export', () => {
     expect(normalizeBundleForComparison(exported2)).toEqual(normalizeBundleForComparison(exported1));
   });
 
-  it('imported workflow can be executed end-to-end using Workflow Runtime V2', async () => {
+  it('imported workflow can be started through Workflow Runtime V2 (tenant-scoped version resolution)', async () => {
     const bundle = {
       format: 'alga-psa.workflow-bundle',
       formatVersion: 1,
@@ -849,8 +863,12 @@ describe('workflow bundle v1 import/export', () => {
     const imported = await importWorkflowBundleV1(db, tenantId, bundle);
     const workflowId = imported.createdWorkflows[0].workflowId;
 
+    // Regression coverage: pre-fix, bundle import wrote tenant-NULL version
+    // rows and this start 404'd with "Workflow version not found".
     const started = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
     const run = await getWorkflowRunAction({ runId: started.runId });
-    expect(run.status).toBe('SUCCEEDED');
+    expect(run.status).toBe('RUNNING');
+    expect(run.engine).toBe('temporal');
+    expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledTimes(1);
   });
 });

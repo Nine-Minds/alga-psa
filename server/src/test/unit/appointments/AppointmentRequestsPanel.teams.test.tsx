@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AppointmentRequestsPanel from '../../../../../packages/scheduling/src/components/schedule/AppointmentRequestsPanel';
@@ -212,6 +212,9 @@ describe('AppointmentRequestsPanel Teams UI', () => {
   });
 
   afterEach(() => {
+    // Explicit: under full-suite load the auto-registered cleanup has been
+    // observed to leave the previous test's container in document.body.
+    cleanup();
     vi.restoreAllMocks();
     vi.clearAllMocks();
   });
@@ -231,18 +234,26 @@ describe('AppointmentRequestsPanel Teams UI', () => {
   });
 
   it('does not render the Teams toggle in the approval form when capability is unavailable', async () => {
-    getTeamsMeetingCapability.mockResolvedValueOnce({ available: false, reason: 'not_configured' });
+    // Not mockResolvedValueOnce: a stray late call from the previous test's
+    // still-settling component can consume a one-shot value under load,
+    // handing this render the shared default instead.
+    getTeamsMeetingCapability.mockResolvedValue({ available: false, reason: 'not_configured' });
 
-    render(
+    // within(container): under load the previous test's container can outlive
+    // its teardown, and body-scoped queries (screen or render-bound, both hit
+    // baseElement) then match the stale tree's toggle.
+    const view = render(
       <AppointmentRequestsPanel
         isOpen={true}
         onClose={vi.fn()}
         highlightedRequestId="request-pending"
       />
     );
+    const scoped = within(view.container);
 
-    await screen.findByText('Approval Details');
-    expect(screen.queryByLabelText('Generate Microsoft Teams meeting link')).not.toBeInTheDocument();
+    await scoped.findByText('Approval Details');
+    await waitFor(() => expect(getTeamsMeetingCapability).toHaveBeenCalled());
+    expect(scoped.queryByLabelText('Generate Microsoft Teams meeting link')).not.toBeInTheDocument();
   });
 
   it('shows the Teams join action in the request detail view for approved requests that have a meeting URL', async () => {

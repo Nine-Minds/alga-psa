@@ -20,7 +20,7 @@ describe('team service full hierarchy tenant-scoped query contract', () => {
     expect(section).toContain('tenantDb(');
     expect(section).toContain(".table('team_hierarchy as th')");
     expect(section).toContain(".table('team_hierarchy')");
-    expect(section).toContain(".andOn('th.tenant', '=', 't.tenant')");
+    expect(section).toContain("tenantDb(knex, context.tenant).tenantJoin(q, 'teams as t', 'th.child_team_id', 't.team_id')");
 
     expect(section).not.toMatch(/knex\('team_hierarchy(?: as th)?'\)\s*\./);
     expect(section).not.toMatch(/\.where\(\{[^}]*tenant: context\.tenant/);

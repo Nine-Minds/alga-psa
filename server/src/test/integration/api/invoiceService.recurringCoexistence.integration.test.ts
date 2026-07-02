@@ -219,6 +219,9 @@ describe('InvoiceService recurring coexistence integration', () => {
     const legacyBillingCycleId = uuidv4();
     const legacyInvoiceId = uuidv4();
     const canonicalInvoiceId = uuidv4();
+    const canonicalObligationId = uuidv4();
+    const canonicalChargeId = uuidv4();
+    const canonicalDetailId = uuidv4();
     const legacyCreatedAt = '2025-01-15T12:00:00.000Z';
     const canonicalCreatedAt = '2025-02-15T12:00:00.000Z';
 
@@ -276,13 +279,51 @@ describe('InvoiceService recurring coexistence integration', () => {
       },
     ]);
 
+    // The invoice-linkage check constraint is all-or-nothing: a billed period
+    // must reference the invoice, charge, and charge detail rows together.
+    const seededService = await ctx.db('service_catalog')
+      .where({ tenant: ctx.tenantId })
+      .first<{ service_id: string }>('service_id');
+    expect(seededService?.service_id).toBeTruthy();
+
+    await ctx.db('invoice_charges').insert({
+      item_id: canonicalChargeId,
+      tenant: ctx.tenantId,
+      invoice_id: canonicalInvoiceId,
+      service_id: seededService!.service_id,
+      description: 'Canonical recurring line',
+      quantity: 1,
+      unit_price: 100,
+      total_price: 100,
+      net_amount: 100,
+      tax_amount: 0,
+      is_manual: false,
+      created_at: canonicalCreatedAt,
+      updated_at: canonicalCreatedAt,
+    });
+
+    await ctx.db('invoice_charge_details').insert({
+      item_detail_id: canonicalDetailId,
+      item_id: canonicalChargeId,
+      tenant: ctx.tenantId,
+      service_id: seededService!.service_id,
+      config_id: uuidv4(),
+      quantity: 1,
+      rate: 100,
+      service_period_start: '2025-02-01T00:00:00.000Z',
+      service_period_end: '2025-03-01T00:00:00.000Z',
+      billing_timing: 'arrears',
+      created_at: canonicalCreatedAt,
+      updated_at: canonicalCreatedAt,
+    });
+
     await ctx.db('recurring_service_periods').insert({
       record_id: uuidv4(),
       tenant: ctx.tenantId,
-      schedule_key: `schedule:${ctx.tenantId}:contract_line:line-1:contract:advance`,
+      schedule_key: `schedule:${ctx.tenantId}:contract_line:${canonicalObligationId}:contract:advance`,
       period_key: 'period:2025-02-01:2025-03-01',
       revision: 1,
-      obligation_id: 'line-1',
+      obligation_id: canonicalObligationId,
       obligation_type: 'contract_line',
       charge_family: 'fixed',
       cadence_owner: 'contract',
@@ -301,8 +342,8 @@ describe('InvoiceService recurring coexistence integration', () => {
       source_run_key: 'integration-api-classification',
       supersedes_record_id: null,
       invoice_id: canonicalInvoiceId,
-      invoice_charge_id: null,
-      invoice_charge_detail_id: null,
+      invoice_charge_id: canonicalChargeId,
+      invoice_charge_detail_id: canonicalDetailId,
       invoice_linked_at: canonicalCreatedAt,
       created_at: canonicalCreatedAt,
       updated_at: canonicalCreatedAt,

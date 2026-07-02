@@ -15,14 +15,17 @@ function buildThenableQuery(result: any[]) {
     if (typeof maybeCallback === 'function') {
       const callbackBuilder: any = {
         whereIn: vi.fn(() => callbackBuilder),
+        where: vi.fn(() => callbackBuilder),
         orWhere: vi.fn(() => callbackBuilder),
+        orWhereNull: vi.fn(() => callbackBuilder),
         andWhere: vi.fn(() => callbackBuilder),
       };
-      maybeCallback(callbackBuilder);
+      maybeCallback.call(callbackBuilder, callbackBuilder);
     }
     return builder;
   });
   builder.whereNotExists = vi.fn(() => builder);
+  builder.whereNull = vi.fn(() => builder);
   builder.andWhereRaw = vi.fn(() => builder);
   builder.then = (onFulfilled: any, onRejected: any) => Promise.resolve(result).then(onFulfilled, onRejected);
   builder.catch = (onRejected: any) => Promise.resolve(result).catch(onRejected);
@@ -196,8 +199,12 @@ describe('AccountingExportInvoiceSelector service-period behavior', () => {
       if (table === 'transactions') {
         return buildThenableQuery([{ invoice_id: 'invoice-1', transaction_id: 'txn-1' }]);
       }
+      if (table === 'tenant_external_entity_mappings as map') {
+        return buildThenableQuery([]);
+      }
       throw new Error(`Unexpected table ${table}`);
     });
+    knex.raw = vi.fn((sql: string) => sql);
 
     const createBatch = vi.fn().mockResolvedValue({ batch_id: 'batch-1' });
     const appendLines = vi.fn().mockResolvedValue([]);

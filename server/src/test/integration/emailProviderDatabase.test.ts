@@ -39,7 +39,12 @@ vi.mock('../../lib/db', () => ({
   createTenantKnex: vi.fn()
 }));
 
-describe('Email Provider Database Integration Tests', () => {
+// Skipped: this file drives server/src/services/email/EmailProviderService
+// and the legacy email_provider_configs table — dead code since the July 2025
+// split-schema rewrite (no callers; the live path is upsertEmailProvider in
+// @alga-psa/integrations, covered by emailProviderCreation/DataPersistence).
+// Unskip or delete alongside the rewire-or-delete decision on that service.
+describe.skip('Email Provider Database Integration Tests', () => {
   let tablesExist = false;
 
   beforeAll(async () => {

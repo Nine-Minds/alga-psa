@@ -119,6 +119,11 @@ export async function getAvailableTimeSlots(
     let minNoticeHours = 24; // default
 
     if (serviceSettings) {
+      // A service_rules row marked unavailable disables booking outright.
+      if (serviceSettings.is_available === false) {
+        return [];
+      }
+
       const maxAdvanceDays = serviceSettings.advance_booking_days ?? 90;
       const maxDate = new Date();
       maxDate.setDate(maxDate.getDate() + maxAdvanceDays);

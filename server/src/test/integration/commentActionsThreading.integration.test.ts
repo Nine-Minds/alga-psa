@@ -419,6 +419,9 @@ describe('ticket comment threading actions', () => {
       await scopedDb(context.tenant).table('comment_threads')
         .whereIn('root_comment_id', [clientVisibleRootId, internalRootId, inaccessibleRootId].filter(Boolean))
         .delete();
+      // createComment writes ticket_audit_logs rows whose FKs block user/ticket deletion.
+      await scopedDb(context.tenant).table('ticket_audit_logs').where({ actor_user_id: ids.client_user_id }).delete();
+      await scopedDb(context.tenant).table('ticket_audit_logs').where({ ticket_id: ids.other_ticket_id }).delete();
       await scopedDb(context.tenant).table('users').where({ user_id: ids.client_user_id }).delete();
       await scopedDb(context.tenant).table('tickets').where({ ticket_id: ids.other_ticket_id }).delete();
       await scopedDb(context.tenant).table('clients').where({ client_id: ids.other_client_id }).delete();

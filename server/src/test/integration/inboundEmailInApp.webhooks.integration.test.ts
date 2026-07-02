@@ -24,6 +24,11 @@ const SEEDED_TENANT_DISCOVERY_REASON = 'seeded test tenant discovery before tena
 let gmailListMessagesSinceMock = vi.fn();
 let gmailGetMessageDetailsMock = vi.fn();
 let microsoftGetMessageDetailsMock = vi.fn();
+let microsoftDownloadMessageSourceMock = vi.fn();
+const enqueueUnifiedInboundEmailQueueJobMock = vi.fn(async () => ({
+  job: { jobId: 'test-enqueued-job' },
+  queueDepth: 1,
+}));
 let storageUploadMock = vi.fn(async (_buffer: Buffer, storagePath: string) => ({ path: storagePath }));
 let inboundReplyAckDeciderDecideMock = vi.fn(async () => ({
   decision: 'NOT_ACK',
@@ -65,7 +70,8 @@ vi.mock('google-auth-library', () => {
   return { OAuth2Client };
 });
 
-vi.mock('../../../../packages/integrations/src/services/email/providers/GmailAdapter', () => {
+// The unified queue job processor fetches Gmail payloads through the shared adapter.
+vi.mock('@alga-psa/shared/services/email/providers/GmailAdapter', () => {
   return {
     GmailAdapter: class GmailAdapter {
       async connect() {}
@@ -86,11 +92,31 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
       async getMessageDetails(messageId: string) {
         return microsoftGetMessageDetailsMock(messageId);
       }
+      async downloadMessageSource(messageId: string) {
+        return microsoftDownloadMessageSourceMock(messageId);
+      }
     },
   };
 });
 
+// Webhooks are pointer-only ingress now: capture enqueued pointers so tests can
+// run them through the real unified queue job processor.
+vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
+  enqueueUnifiedInboundEmailQueueJob: (...args: any[]) =>
+    enqueueUnifiedInboundEmailQueueJobMock(...args),
+}));
+
 vi.mock('@alga-psa/storage', () => ({
+  StorageProviderFactory: {
+    createProvider: vi.fn(async () => ({
+      upload: (...args: any[]) => storageUploadMock(...args),
+    })),
+  },
+  generateStoragePath: vi.fn((tenant: string, _prefix: string, fileName: string) => `${tenant}/${fileName}`),
+}));
+
+// The artifact orchestrator imports the subpath directly.
+vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({
   StorageProviderFactory: {
     createProvider: vi.fn(async () => ({
       upload: (...args: any[]) => storageUploadMock(...args),
@@ -121,6 +147,70 @@ function expectedOriginalEmailFileName(messageId: string): string {
   return `original-email-${sanitizedMessageId || 'unknown-message'}.eml`;
 }
 
+// Consume the pointers the webhook enqueued by running them through the real
+// unified queue job processor (what the email service does in production).
+async function processEnqueuedUnifiedJobs(): Promise<void> {
+  const { processUnifiedInboundEmailQueueJob } = await import(
+    '@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessor'
+  );
+  const calls = enqueueUnifiedInboundEmailQueueJobMock.mock.calls.splice(0);
+  for (const [payload] of calls) {
+    await processUnifiedInboundEmailQueueJob({
+      jobId: `test-job-${uuidv4().slice(0, 8)}`,
+      schemaVersion: 1,
+      enqueuedAt: new Date().toISOString(),
+      attempt: 1,
+      maxAttempts: 1,
+      ...payload,
+    } as any);
+  }
+}
+
+function buildMicrosoftMime(params: {
+  from: string;
+  to: string;
+  subject: string;
+  messageId: string;
+  text: string;
+  html?: string;
+  attachment?: { name: string; contentType: string; content: Buffer };
+}): Buffer {
+  const outer = 'mime-outer-boundary';
+  const inner = 'mime-inner-boundary';
+  const lines: string[] = [
+    `From: Sender <${params.from}>`,
+    `To: Support <${params.to}>`,
+    `Subject: ${params.subject}`,
+    `Message-ID: <${params.messageId}>`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/mixed; boundary="${outer}"`,
+    '',
+    `--${outer}`,
+    `Content-Type: multipart/alternative; boundary="${inner}"`,
+    '',
+    `--${inner}`,
+    'Content-Type: text/plain; charset=utf-8',
+    '',
+    params.text,
+  ];
+  if (params.html) {
+    lines.push(`--${inner}`, 'Content-Type: text/html; charset=utf-8', '', params.html);
+  }
+  lines.push(`--${inner}--`);
+  if (params.attachment) {
+    lines.push(
+      `--${outer}`,
+      `Content-Type: ${params.attachment.contentType}; name="${params.attachment.name}"`,
+      `Content-Disposition: attachment; filename="${params.attachment.name}"`,
+      'Content-Transfer-Encoding: base64',
+      '',
+      params.attachment.content.toString('base64')
+    );
+  }
+  lines.push(`--${outer}--`, '');
+  return Buffer.from(lines.join('\r\n'));
+}
+
 function tenantTable<Row extends object = Record<string, any>>(tableExpression: string): Knex.QueryBuilder<Row, Row[]> {
   return tenantDb(db, tenantId).table<Row>(tableExpression);
 }
@@ -130,6 +220,24 @@ function discoveryTable<Row extends object = Record<string, any>>(
   reason: string,
 ): Knex.QueryBuilder<Row, Row[]> {
   return tenantDb(db, TEST_TENANT_DISCOVERY).unscoped<Row>(tableExpression, reason);
+}
+
+// Inbound processing writes audit/threading rows that FK to tickets; clear
+// them before deleting the ticket itself.
+async function deleteTicketRows(ticketId: string): Promise<void> {
+  const childTables = [
+    'email_reply_tokens',
+    'ticket_audit_logs',
+    'sla_audit_log',
+    'sla_notifications_sent',
+    'ticket_auto_close_state',
+    'comment_threads',
+    'comments',
+  ];
+  for (const table of childTables) {
+    await tenantTable(table).where({ ticket_id: ticketId }).delete();
+  }
+  await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
 }
 
 function ticketDocumentQuery(ticketId: string): Knex.QueryBuilder {
@@ -167,7 +275,6 @@ async function setupInboundDefaults(params: { providerId: string; mailbox: strin
     mailbox: params.mailbox,
     is_active: true,
     status: 'connected',
-    vendor_config: JSON.stringify({}),
     inbound_ticket_defaults_id: defaultsId,
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
@@ -229,7 +336,6 @@ async function setupMicrosoftProvider(params: {
     mailbox: params.mailbox,
     is_active: true,
     status: 'connected',
-    vendor_config: JSON.stringify({}),
     inbound_ticket_defaults_id: defaultsId,
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
@@ -285,7 +391,6 @@ async function setupImapProvider(params: { providerId: string; mailbox: string }
     mailbox: params.mailbox,
     is_active: true,
     status: 'connected',
-    vendor_config: JSON.stringify({}),
     inbound_ticket_defaults_id: defaultsId,
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
@@ -314,8 +419,27 @@ async function createRoutingBoardVariant(namePrefix: string): Promise<string> {
     ...sourceRest,
     board_id: newBoardId,
     board_name: `${namePrefix}-${newBoardId.slice(0, 6)}`,
+    is_default: false,
+  });
+
+  // Statuses are board-scoped: clone the default open ticket status so
+  // defaults/tickets on the variant board validate.
+  const sourceStatus = await tenantTable('statuses')
+    .where({ board_id: boardId, status_type: 'ticket', is_default: true })
+    .first<any>();
+  if (!sourceStatus) {
+    throw new Error('Expected default ticket status on source board');
+  }
+  const {
+    status_id: _sourceStatusId,
+    created_at: _sourceStatusCreatedAt,
+    ...statusRest
+  } = sourceStatus;
+  await tenantTable('statuses').insert({
+    ...statusRest,
+    status_id: uuidv4(),
+    board_id: newBoardId,
     created_at: db.fn.now(),
-    updated_at: db.fn.now(),
   });
 
   return newBoardId;
@@ -326,6 +450,10 @@ async function createInboundRoutingDefaults(params: {
   clientId?: string | null;
   descriptionPrefix: string;
 }): Promise<string> {
+  const boardStatus = await tenantTable('statuses')
+    .where({ board_id: params.boardId, status_type: 'ticket', is_default: true })
+    .first<{ status_id: string }>('status_id');
+
   const defaultsId = uuidv4();
   await tenantTable('inbound_ticket_defaults').insert({
     id: defaultsId,
@@ -334,7 +462,7 @@ async function createInboundRoutingDefaults(params: {
     display_name: `${params.descriptionPrefix}-${defaultsId.slice(0, 6)}`,
     description: `${params.descriptionPrefix} defaults`,
     board_id: params.boardId,
-    status_id: statusId,
+    status_id: boardStatus?.status_id ?? statusId,
     priority_id: priorityId,
     client_id: params.clientId ?? null,
     entered_by: enteredByUserId,
@@ -382,7 +510,6 @@ async function ensureSecondaryOpenStatus(boardIdForStatus: string): Promise<stri
     is_closed: false,
     order_number: (source.order_number || 10) + 5,
     created_at: db.fn.now(),
-    updated_at: db.fn.now(),
   });
 
   return newStatusId;
@@ -406,15 +533,33 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     if (!client?.client_id) throw new Error('Expected seeded client');
     clientId = client.client_id;
 
-    const board = await tenantTable('boards').first<{ board_id: string }>('board_id');
-    if (!board?.board_id) throw new Error('Expected seeded board');
-    boardId = board.board_id;
-
+    // Statuses are board-scoped: pick a coherent board/status pair.
     const status = await tenantTable('statuses')
-      .where({ status_type: 'ticket' })
-      .first<{ status_id: string }>('status_id');
-    if (!status?.status_id) throw new Error('Expected seeded ticket status');
+      .where({ status_type: 'ticket', is_default: true })
+      .whereNotNull('board_id')
+      .first<{ status_id: string; board_id: string }>('status_id', 'board_id');
+    if (!status?.status_id) throw new Error('Expected seeded default ticket status');
     statusId = status.status_id;
+    boardId = status.board_id;
+
+    // The reopen-policy tests need a closed status on the board; the dev seed
+    // ships none, so ensure one exists as a fixture.
+    const closedStatus = await tenantTable('statuses')
+      .where({ board_id: boardId, status_type: 'ticket', is_closed: true })
+      .first<{ status_id: string }>('status_id');
+    if (!closedStatus?.status_id) {
+      await tenantTable('statuses').insert({
+        tenant: tenantId,
+        status_id: uuidv4(),
+        name: 'Closed (test fixture)',
+        status_type: 'ticket',
+        board_id: boardId,
+        is_closed: true,
+        is_default: false,
+        order_number: 90,
+        created_at: db.fn.now(),
+      });
+    }
 
     const priority = await tenantTable('priorities').first<{ priority_id: string }>('priority_id');
     if (!priority?.priority_id) throw new Error('Expected seeded priority');
@@ -433,6 +578,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = '';
     process.env.INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = '';
     process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = '';
+    enqueueUnifiedInboundEmailQueueJobMock.mockClear();
     storageUploadMock.mockReset();
     storageUploadMock.mockImplementation(async (_buffer: Buffer, storagePath: string) => ({
       path: storagePath,
@@ -459,13 +605,12 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     const { defaultsId, subscriptionName } = await setupInboundDefaults({ providerId, mailbox });
 
     cleanup.push(async () => {
+      await tenantTable('email_processed_messages').where({ provider_id: providerId }).delete();
       await tenantTable('gmail_processed_history').where({ provider_id: providerId }).delete();
       await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).delete();
       await tenantTable('email_providers').where({ id: providerId }).delete();
       await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
     });
-
-    process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = providerId;
 
     gmailListMessagesSinceMock = vi.fn().mockResolvedValue(['gmail-msg-1']);
     gmailGetMessageDetailsMock = vi.fn().mockResolvedValue({
@@ -515,6 +660,15 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     const res = await handleGoogleWebhook(req);
     expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      success: true,
+      queued: true,
+      handoff: 'unified_pointer_queue',
+      providerId,
+      tenant: tenantId,
+    });
+
+    await processEnqueuedUnifiedJobs();
 
     const tickets = await tenantTable('tickets').where({ title: 'Inbound email subject' });
     expect(tickets).toHaveLength(1);
@@ -522,7 +676,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     const ticketId = tickets[0].ticket_id;
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const comments = await tenantTable('comments').where({ ticket_id: ticketId });
@@ -537,13 +691,12 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('email_processed_attachments').where({ provider_id: providerId }).delete();
+      await tenantTable('email_processed_messages').where({ provider_id: providerId }).delete();
       await tenantTable('gmail_processed_history').where({ provider_id: providerId }).delete();
       await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).delete();
       await tenantTable('email_providers').where({ id: providerId }).delete();
       await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
     });
-
-    process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = providerId;
 
     const messageId = `gmail-artifacts-${uuidv4()}@example.com`;
     const subject = `Gmail artifacts ${uuidv4().slice(0, 6)}`;
@@ -602,6 +755,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     const res = await POST(req);
     expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ queued: true, handoff: 'unified_pointer_queue' });
+
+    await processEnqueuedUnifiedJobs();
 
     const ticket = await tenantTable('tickets')
       .where({ title: subject })
@@ -611,7 +767,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
       await tenantTable('document_associations').where({ entity_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
 
     const docs = await ticketDocumentQuery(ticket.ticket_id)
@@ -630,28 +786,22 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     const messageId = `ms-msg-${uuidv4()}`;
     cleanup.push(async () => {
-      await tenantTable('email_processed_messages').where({ provider_id: providerId, message_id: messageId }).delete();
+      await tenantTable('email_processed_messages').where({ provider_id: providerId }).delete();
       await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).delete();
       await tenantTable('email_providers').where({ id: providerId }).delete();
       await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
     });
 
-    process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = providerId;
-
-    microsoftGetMessageDetailsMock = vi.fn().mockResolvedValue({
-      id: messageId,
-      provider: 'microsoft',
-      providerId,
-      tenant: tenantId,
-      receivedAt: new Date().toISOString(),
-      from: { email: 'sender@example.com', name: 'Sender' },
-      to: [{ email: mailbox, name: 'Support' }],
-      subject: 'Inbound MS email subject',
-      body: { text: 'Hello from MS email', html: '<p>Hello from <strong>MS</strong></p>' },
-      attachments: [],
-      threadId: 'thread-ms-1',
-      references: [],
-    });
+    microsoftDownloadMessageSourceMock = vi.fn().mockResolvedValue(
+      buildMicrosoftMime({
+        from: 'sender@example.com',
+        to: mailbox,
+        subject: 'Inbound MS email subject',
+        messageId,
+        text: 'Hello from MS email',
+        html: '<p>Hello from <strong>MS</strong></p>',
+      })
+    );
 
     const payload = {
       value: [
@@ -684,6 +834,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     const res = await handleMicrosoftWebhookPost(req);
     expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      success: true,
+      queued: true,
+      handoff: 'unified_pointer_queue',
+      unifiedQueuedCount: 1,
+    });
+
+    await processEnqueuedUnifiedJobs();
 
     const tickets = await tenantTable('tickets').where({ title: 'Inbound MS email subject' });
     expect(tickets).toHaveLength(1);
@@ -691,7 +849,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     const ticketId = tickets[0].ticket_id;
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const comments = await tenantTable('comments').where({ ticket_id: ticketId });
@@ -707,41 +865,29 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('email_processed_attachments').where({ provider_id: providerId }).delete();
+      await tenantTable('email_processed_messages').where({ provider_id: providerId }).delete();
       await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).delete();
       await tenantTable('email_providers').where({ id: providerId }).delete();
       await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
     });
 
-    process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = providerId;
-
     const messageId = `ms-artifacts-${uuidv4()}@example.com`;
     const subject = `MS artifacts ${uuidv4().slice(0, 6)}`;
-    microsoftGetMessageDetailsMock = vi.fn().mockResolvedValue({
-      id: messageId,
-      provider: 'microsoft',
-      providerId,
-      tenant: tenantId,
-      receivedAt: new Date().toISOString(),
-      from: { email: 'sender@example.com', name: 'Sender' },
-      to: [{ email: mailbox, name: 'Support' }],
-      subject,
-      body: {
+    microsoftDownloadMessageSourceMock = vi.fn().mockResolvedValue(
+      buildMicrosoftMime({
+        from: 'sender@example.com',
+        to: mailbox,
+        subject,
+        messageId,
         text: 'MS inbound body',
         html: `<p>Body<img src="data:image/png;base64,${Buffer.from('ms-embedded').toString('base64')}" /></p>`,
-      },
-      attachments: [
-        {
-          id: 'att-ms-1',
+        attachment: {
           name: 'ms-regular.txt',
           contentType: 'text/plain',
-          size: Buffer.from('ms-regular').length,
-          content: Buffer.from('ms-regular').toString('base64'),
+          content: Buffer.from('ms-regular'),
         },
-      ],
-      rawMimeBase64: Buffer.from('From: sender@example.com\r\n\r\nmicrosoft').toString('base64'),
-      threadId: 'ms-thread-1',
-      references: [],
-    });
+      })
+    );
 
     const payload = {
       value: [
@@ -770,6 +916,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     const res = await POST(req);
     expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ queued: true, handoff: 'unified_pointer_queue' });
+
+    await processEnqueuedUnifiedJobs();
 
     const ticket = await tenantTable('tickets')
       .where({ title: subject })
@@ -779,7 +928,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
       await tenantTable('document_associations').where({ entity_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
 
     const docs = await ticketDocumentQuery(ticket.ticket_id)
@@ -849,7 +998,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
       await tenantTable('document_associations').where({ entity_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
 
     const docs = await ticketDocumentQuery(ticket.ticket_id)
@@ -945,7 +1094,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
       await tenantTable('document_associations').where({ entity_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
 
     const docs = await ticketDocumentQuery(ticket.ticket_id)
@@ -974,7 +1123,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
 
     process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = 'true';
-    storageUploadMock.mockRejectedValueOnce(new Error('simulated upload failure'));
+    // Fail the regular attachment's upload specifically (artifact upload order
+    // is not part of the contract).
+    storageUploadMock.mockImplementation(async (buffer: Buffer, storagePath: string) => {
+      if (Buffer.isBuffer(buffer) && buffer.toString() === 'failure-content') {
+        throw new Error('simulated upload failure');
+      }
+      return { path: storagePath };
+    });
 
     const subject = `IMAP artifact failure ${uuidv4().slice(0, 6)}`;
     const messageId = `imap-failure-${uuidv4()}@example.com`;
@@ -1017,7 +1173,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
       await tenantTable('document_associations').where({ entity_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
 
     const comments = await tenantTable('comments').where({ ticket_id: ticket.ticket_id });
@@ -1066,7 +1222,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const replyToken = `token-${uuidv4()}`;
@@ -1148,7 +1304,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const result = await processInboundEmailInApp({
@@ -1275,7 +1431,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const result = await processInboundEmailInApp({
@@ -1402,7 +1558,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const result = await processInboundEmailInApp({
@@ -1491,7 +1647,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const result = await processInboundEmailInApp({
@@ -1584,7 +1740,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: oldTicketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: oldTicketId }).delete();
+      await deleteTicketRows(oldTicketId);
     });
 
     const subject = `Re: Closed ticket for cutoff reroute test ${uuidv4().slice(0, 6)}`;
@@ -1684,7 +1840,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const result = await processInboundEmailInApp({
@@ -1787,7 +1943,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const result = await processInboundEmailInApp({
@@ -1899,7 +2055,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const result = await processInboundEmailInApp({
@@ -2005,7 +2161,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const result = await processInboundEmailInApp({
@@ -2111,7 +2267,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const result = await processInboundEmailInApp({
@@ -2200,7 +2356,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const replyToken = `token-${uuidv4()}`;
@@ -2310,7 +2466,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const result = await processInboundEmailInApp({
@@ -2413,7 +2569,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
   });
 
@@ -2494,7 +2650,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
   });
 
@@ -2544,7 +2700,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const replyToken = `token-${uuidv4()}`;
@@ -2682,7 +2838,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
   });
 
@@ -2752,7 +2908,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
   });
 
@@ -2775,6 +2931,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('inbound_ticket_defaults').where({ id: contactOverrideDefaultsId }).delete();
+      await tenantTable('statuses').where({ board_id: overrideBoardId }).delete();
       await tenantTable('boards').where({ board_id: overrideBoardId }).delete();
     });
 
@@ -2837,7 +2994,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
   });
 
@@ -2860,6 +3017,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('inbound_ticket_defaults').where({ id: clientDefaultDefaultsId }).delete();
+      await tenantTable('statuses').where({ board_id: clientDefaultBoardId }).delete();
       await tenantTable('boards').where({ board_id: clientDefaultBoardId }).delete();
     });
 
@@ -2922,7 +3080,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
   });
 
@@ -2945,6 +3103,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('inbound_ticket_defaults').where({ id: domainDestinationDefaultsId }).delete();
+      await tenantTable('statuses').where({ board_id: domainDestinationBoardId }).delete();
       await tenantTable('boards').where({ board_id: domainDestinationBoardId }).delete();
     });
 
@@ -3004,7 +3163,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
   });
 
@@ -3093,7 +3252,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
   });
 
@@ -3169,7 +3328,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
   });
 
@@ -3261,7 +3420,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
   });
 
@@ -3313,7 +3472,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
   });
 
@@ -3385,7 +3544,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
   });
 
@@ -3401,8 +3560,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       mailbox,
       is_active: true,
       status: 'connected',
-      vendor_config: JSON.stringify({}),
-      inbound_ticket_defaults_id: null,
+        inbound_ticket_defaults_id: null,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });
@@ -3478,7 +3636,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
     });
   });
 
@@ -3517,7 +3675,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const replyToken = `token-${uuidv4()}`;
@@ -3590,7 +3748,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticketId }).delete();
-      await tenantTable('tickets').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
     });
 
     const replyToken = `token-${uuidv4()}`;
@@ -3673,7 +3831,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: tickets[0].ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: tickets[0].ticket_id }).delete();
+      await deleteTicketRows(tickets[0].ticket_id);
     });
   });
 
@@ -3696,6 +3854,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
     cleanup.push(async () => {
       await tenantTable('inbound_ticket_defaults').where({ id: contactOverrideDefaultsId }).delete();
+      await tenantTable('statuses').where({ board_id: overrideBoardId }).delete();
       await tenantTable('boards').where({ board_id: overrideBoardId }).delete();
     });
 
@@ -3760,7 +3919,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: tickets[0].ticket_id }).delete();
-      await tenantTable('tickets').where({ ticket_id: tickets[0].ticket_id }).delete();
+      await deleteTicketRows(tickets[0].ticket_id);
     });
   });
 });

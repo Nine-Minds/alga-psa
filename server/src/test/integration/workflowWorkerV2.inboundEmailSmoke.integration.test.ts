@@ -1,6 +1,7 @@
 import { beforeAll, afterAll, describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -60,12 +61,15 @@ describeDb('Workflow worker v2 + inbound email smoke', () => {
   });
 
   it('Worker: workflow-worker runs with WORKFLOW_WORKER_MODE=v2 and inbound email still works', async () => {
+    // The compose files live at the repo root; vitest's cwd is server/, so
+    // resolve them relative to this test file instead of process.cwd().
+    const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
     const composePaths = [
-      path.resolve(process.cwd(), 'docker-compose.ce.yaml'),
-      path.resolve(process.cwd(), 'docker-compose.ee.yaml'),
-      path.resolve(process.cwd(), 'docker-compose.prebuilt.ce.yaml'),
-      path.resolve(process.cwd(), 'docker-compose.prebuilt.ee.yaml'),
-      path.resolve(process.cwd(), 'docker-compose.imap.ce.yaml'),
+      path.resolve(repoRoot, 'docker-compose.ce.yaml'),
+      path.resolve(repoRoot, 'docker-compose.ee.yaml'),
+      path.resolve(repoRoot, 'docker-compose.prebuilt.ce.yaml'),
+      path.resolve(repoRoot, 'docker-compose.prebuilt.ee.yaml'),
+      path.resolve(repoRoot, 'docker-compose.imap.ce.yaml'),
     ];
     for (const p of composePaths) {
       const content = fs.readFileSync(p, 'utf8');
@@ -101,7 +105,6 @@ describeDb('Workflow worker v2 + inbound email smoke', () => {
       mailbox,
       is_active: true,
       status: 'connected',
-      vendor_config: JSON.stringify({}),
       inbound_ticket_defaults_id: defaultsId,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
@@ -133,6 +136,8 @@ describeDb('Workflow worker v2 + inbound email smoke', () => {
     expect(comments).toHaveLength(1);
 
     await scopedDb.table('comments').where({ ticket_id: ticket.ticket_id }).delete();
+    // Ticket creation now writes audit rows that FK the ticket.
+    await scopedDb.table('ticket_audit_logs').where({ ticket_id: ticket.ticket_id }).delete();
     await scopedDb.table('tickets').where({ ticket_id: ticket.ticket_id }).delete();
     await scopedDb.table('email_providers').where({ id: providerId }).delete();
     await scopedDb.table('inbound_ticket_defaults').where({ id: defaultsId }).delete();

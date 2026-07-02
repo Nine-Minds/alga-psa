@@ -72,7 +72,7 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
   },
 }));
 
-vi.mock('@alga-psa/integrations', () => ({
+vi.mock('@alga-psa/integrations/runtime', () => ({
   GmailAdapter: class GmailAdapter {
     async connect() {}
     async downloadAttachmentBytes(_messageId: string, _attachmentId: string) {
@@ -91,7 +91,7 @@ vi.mock('@alga-psa/integrations', () => ({
 }));
 
 const uploads: Array<{ path: string; size: number; mime_type?: string }> = [];
-vi.mock('@alga-psa/documents', () => ({
+vi.mock('@alga-psa/storage', () => ({
   StorageProviderFactory: {
     createProvider: vi.fn(async () => ({
       upload: vi.fn(async (file: Buffer, path: string, options?: { mime_type?: string }) => {
@@ -110,14 +110,16 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
   const HOOK_TIMEOUT = 180_000;
 
   beforeAll(async () => {
-    // Force DB connection to the known local test Postgres (see existing e2e containers)
-    process.env.DB_HOST = 'localhost';
-    process.env.DB_PORT = '5432';
-    process.env.DB_USER_ADMIN = 'postgres';
-    process.env.DB_PASSWORD_ADMIN = 'postpass123';
+    // Default DB connection for standalone runs. Fallback-only (||): the suite
+    // runs in one fork, so unconditional writes here poison every later file's
+    // bootstrap with the wrong credentials (this took out ~60 nightly files).
+    process.env.DB_HOST = process.env.DB_HOST || 'localhost';
+    process.env.DB_PORT = process.env.DB_PORT || '5432';
+    process.env.DB_USER_ADMIN = process.env.DB_USER_ADMIN || 'postgres';
+    process.env.DB_PASSWORD_ADMIN = process.env.DB_PASSWORD_ADMIN || 'postpass123';
     process.env.DB_USER_SERVER = process.env.DB_USER_SERVER || 'app_user';
     process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'postpass123';
-    process.env.DB_NAME_SERVER = 'test_database';
+    process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'test_database';
     process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 
     db = await createTestDbConnection();
@@ -141,7 +143,25 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
 
     const tenantScoped = scopedDb(db, tenantId);
     await tenantScoped.table('document_associations').where({ entity_type: 'ticket' }).delete();
-    await tenantScoped.table('documents').delete();
+    // Only remove documents this suite created (storage-backed, non-null
+    // file_id); seeded documents are referenced by kb_articles and must
+    // survive. Delete document child rows first (FKs to documents).
+    const testDocIds = (
+      await tenantScoped.table('documents').whereNotNull('file_id').select('document_id')
+    ).map((row: any) => row.document_id);
+    if (testDocIds.length > 0) {
+      const documentChildTables = [
+        'document_associations',
+        'document_versions',
+        'document_content',
+        'document_block_content',
+        'document_share_links',
+      ];
+      for (const table of documentChildTables) {
+        await tenantScoped.table(table).whereIn('document_id', testDocIds).delete();
+      }
+      await tenantScoped.table('documents').whereIn('document_id', testDocIds).delete();
+    }
     await tenantScoped.table('external_files').delete();
     await tenantScoped.table('email_processed_attachments').delete();
     await tenantScoped.table('microsoft_email_provider_config').delete();

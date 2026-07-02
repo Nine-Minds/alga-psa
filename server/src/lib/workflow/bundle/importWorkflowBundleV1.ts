@@ -132,6 +132,7 @@ export const importWorkflowBundleV1 = async (
       const versionsCreated: number[] = [];
       for (const v of publishedVersions) {
         await WorkflowDefinitionVersionModelV2.create(trx, {
+          tenant: tenantId,
           workflow_id: workflowId,
           version: v.version,
           definition_json: v.definition,

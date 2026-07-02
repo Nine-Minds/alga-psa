@@ -17,6 +17,14 @@ const publishEventMock = vi.hoisted(() => vi.fn(async () => undefined));
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn(async () => undefined));
 const sendNotificationMock = vi.hoisted(() => vi.fn(async () => undefined));
 
+// The auto-close handler no longer sends the warning email itself — it emits a
+// TICKET_AUTO_CLOSE_WARNING event and the server-side subscriber resolves the
+// contact and sends. Capture the subscriber's handler so the mocked publisher
+// can deliver events to it synchronously (no Redis in this test).
+const busHandlersRef = vi.hoisted(() => ({
+  handlers: new Map<string, (event: unknown) => Promise<void>>(),
+}));
+
 vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
   createTenantKnex: vi.fn(async () => ({ knex: dbRef.knex, tenant: dbRef.tenant })),
@@ -51,6 +59,17 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 vi.mock('@alga-psa/event-bus', () => ({
   getEventBus: vi.fn(() => ({ publish: vi.fn() })),
   ServerEventPublisher: class {},
+}));
+
+// The warning subscriber registers itself on the server-local event bus.
+vi.mock('@/lib/eventBus', () => ({
+  getEventBus: () => ({
+    subscribe: async (eventType: string, handler: (event: unknown) => Promise<void>) => {
+      busHandlersRef.handlers.set(eventType, handler);
+    },
+    unsubscribe: async () => undefined,
+    publish: vi.fn(),
+  }),
 }));
 
 vi.mock('@alga-psa/analytics', () => ({
@@ -154,6 +173,20 @@ describe('auto-close engine', () => {
     };
 
     fixture = await createCloseRulesFixture(db, seededUser.tenant, seededUser.user_id);
+
+    // Run the real server-side warning subscriber against the mocked bus so the
+    // handler's TICKET_AUTO_CLOSE_WARNING event still produces the actual email
+    // send (through the mocked notification service).
+    const { registerTicketAutoCloseWarningSubscriber } = await import(
+      '@/lib/eventBus/subscribers/ticketAutoCloseWarningSubscriber'
+    );
+    await registerTicketAutoCloseWarningSubscriber();
+    publishEventMock.mockImplementation(async (params: any) => {
+      const handler = busHandlersRef.handlers.get(params?.eventType);
+      if (handler) {
+        await handler({ id: uuidv4(), timestamp: new Date().toISOString(), ...params });
+      }
+    });
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
