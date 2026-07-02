@@ -111,16 +111,36 @@ const ticketRevenueRows = [
 
 const allocationRows: Array<Record<string, unknown>> = [];
 
+// The invoice charge the engine emits for a billed material (alongside
+// stamping billed_invoice_id): material revenue reaches summary/client/
+// agreement totals through this row, never through the material fact.
+const materialChargeRow = {
+  item_id: 'item-material',
+  client_id: 'client-1',
+  client_name: 'Acme',
+  client_contract_id: null,
+  contract_id: null,
+  contract_name: null,
+  contract_line_id: null,
+  contract_line_name: null,
+  amount_cents: 3000,
+  unconverted: false,
+};
+
 function seedRawMocks(options?: {
   revenue?: Array<Record<string, unknown>>;
   labor?: Array<Record<string, unknown>>;
   materials?: Array<Record<string, unknown>>;
   ticketRevenue?: Array<Record<string, unknown>>;
   allocations?: Array<Record<string, unknown>>;
+  weights?: Array<Record<string, unknown>>;
 }) {
   rawMock.mockImplementation(async (sql: string) => {
     if (sql.includes('WITH charge_details')) {
       return { rows: options?.revenue ?? revenueRows };
+    }
+    if (sql.includes('WITH ticket_allocation_weights')) {
+      return { rows: options?.weights ?? [] };
     }
     if (sql.includes('FROM time_entries te')) {
       return { rows: options?.labor ?? laborRows };
@@ -160,6 +180,7 @@ describe('profitability report actions', () => {
   });
 
   it('returns summary totals with actual-hour EHR and known revenue/cost fixture', async () => {
+    seedRawMocks({ revenue: [...revenueRows, materialChargeRow] });
     const summary = await (getProfitabilitySummary as any)(
       { user_id: 'user-1' },
       { tenant: 'tenant-1' },
@@ -205,6 +226,7 @@ describe('profitability report actions', () => {
 
   it('groups client profitability by client and reports no-client time separately', async () => {
     seedRawMocks({
+      revenue: [...revenueRows, materialChargeRow],
       labor: [
         ...laborRows,
         {
@@ -291,6 +313,7 @@ describe('profitability report actions', () => {
   });
 
   it('reconciles agreement rows with ad-hoc material revenue and unattributed material cost', async () => {
+    seedRawMocks({ revenue: [...revenueRows, materialChargeRow] });
     const rows = await (getAgreementProfitability as any)(
       { user_id: 'user-1' },
       { tenant: 'tenant-1' },
@@ -515,6 +538,7 @@ describe('profitability report actions', () => {
             : [{ ...revenueRows[0], client_id: 'client-b', client_name: 'Tenant B', amount_cents: 2000 }],
         };
       }
+      if (sql.includes('WITH ticket_allocation_weights')) return { rows: [] };
       if (sql.includes('FROM time_entries te')) return { rows: [] };
       if (sql.includes('WITH material_rows')) return { rows: [] };
       if (sql.includes('WITH linked_time')) return { rows: [] };
@@ -564,7 +588,7 @@ describe('profitability report actions', () => {
 
   it('handles unbilled and uncosted materials according to material timing rules', async () => {
     seedRawMocks({
-      revenue: [],
+      revenue: [materialChargeRow],
       labor: [],
       ticketRevenue: [],
       materials: [
@@ -820,6 +844,28 @@ describe('profitability report actions', () => {
           billable_minutes: 0,
         },
       ],
+      weights: [
+        {
+          ticket_id: 'ticket-1',
+          contract_line_id: 'line-1',
+          work_date: '2026-01-10',
+          actual_minutes: 60,
+          ticket_number: 'T-100',
+          ticket_title: 'Fix issue',
+          client_id: 'client-1',
+          client_name: 'Acme',
+        },
+        {
+          ticket_id: 'ticket-2',
+          contract_line_id: 'line-1',
+          work_date: '2026-01-10',
+          actual_minutes: 30,
+          ticket_number: 'T-200',
+          ticket_title: 'Fix issue',
+          client_id: 'client-1',
+          client_name: 'Acme',
+        },
+      ],
     });
 
     const rows = await (getTicketProfitability as any)(
@@ -892,6 +938,7 @@ describe('profitability report actions', () => {
           contract_line_name: 'Fixed Support',
           amount_cents: 6000,
         },
+        materialChargeRow,
       ],
       labor: [
         {
@@ -951,6 +998,18 @@ describe('profitability report actions', () => {
           window_start: '2026-01-01',
           window_end: '2026-01-31',
           approximate: false,
+        },
+      ],
+      weights: [
+        {
+          ticket_id: 'ticket-fixed',
+          contract_line_id: 'line-fixed',
+          work_date: '2026-01-10',
+          actual_minutes: 120,
+          ticket_number: 'T-F',
+          ticket_title: 'Fixed ticket',
+          client_id: 'client-1',
+          client_name: 'Acme',
         },
       ],
     });

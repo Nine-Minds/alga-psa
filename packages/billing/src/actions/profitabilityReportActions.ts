@@ -134,17 +134,37 @@ interface TicketRevenueFact {
   amount_cents: number | null;
   unconverted: boolean;
   attribution: 'exact' | 'allocated';
+  client_contract_id: string | null;
 }
 
 interface TicketAllocationChargeFact {
   item_detail_id: string;
   contract_line_id: string;
+  client_contract_id: string | null;
   line_type: string | null;
   amount_cents: number | null;
   unconverted: boolean;
   window_start: string | null;
   window_end: string | null;
   approximate: boolean;
+}
+
+interface TicketAllocationWeightRow {
+  ticket_id: string;
+  contract_line_id: string;
+  work_date: string;
+  actual_minutes: number;
+  ticket_number: string | null;
+  ticket_title: string | null;
+  client_id: string | null;
+  client_name: string | null;
+}
+
+interface TicketMeta {
+  ticketNumber: string | null;
+  title: string | null;
+  clientId: string | null;
+  clientName: string | null;
 }
 
 type FactBundle = {
@@ -154,6 +174,7 @@ type FactBundle = {
   laborFacts: LaborFact[];
   materialFacts: MaterialFact[];
   ticketRevenueFacts: TicketRevenueFact[];
+  ticketMeta: Map<string, TicketMeta>;
 };
 
 class MetricAccumulator {
@@ -636,6 +657,7 @@ async function fetchTicketRevenueFacts(
     WITH linked_time AS (
       SELECT
         ic.item_id,
+        ic.client_contract_id,
         t.ticket_id,
         COALESCE(te.billable_duration, 0) AS billable_minutes,
         SUM(COALESCE(te.billable_duration, 0)) OVER (PARTITION BY ic.item_id) AS item_billable_minutes,
@@ -668,6 +690,7 @@ async function fetchTicketRevenueFacts(
     )
     SELECT
       ticket_id,
+      client_contract_id,
       CASE
         WHEN unconverted THEN NULL
         WHEN item_billable_minutes > 0
@@ -692,6 +715,7 @@ async function fetchTicketRevenueFacts(
     amount_cents: row.amount_cents === null || row.amount_cents === undefined ? null : Number(row.amount_cents),
     unconverted: Boolean(row.unconverted),
     attribution: 'exact',
+    client_contract_id: row.client_contract_id ? String(row.client_contract_id) : null,
   }));
 }
 
@@ -707,6 +731,7 @@ async function fetchTicketAllocationChargeFacts(
       SELECT
         iid.item_detail_id,
         clsc.contract_line_id,
+        ic.client_contract_id,
         cl.contract_line_type,
         COALESCE(iid.service_period_start::date, inv.billing_period_start::date) AS window_start,
         COALESCE(iid.service_period_end::date, inv.billing_period_end::date) AS window_end,
@@ -741,6 +766,7 @@ async function fetchTicketAllocationChargeFacts(
     SELECT
       item_detail_id,
       contract_line_id,
+      client_contract_id,
       contract_line_type AS line_type,
       window_start::text,
       window_end::text,
@@ -766,6 +792,7 @@ async function fetchTicketAllocationChargeFacts(
   return rawRows<Record<string, unknown>>(result).map((row) => ({
     item_detail_id: String(row.item_detail_id),
     contract_line_id: String(row.contract_line_id),
+    client_contract_id: row.client_contract_id ? String(row.client_contract_id) : null,
     line_type: row.line_type ? String(row.line_type) : null,
     amount_cents: row.amount_cents === null || row.amount_cents === undefined ? null : Number(row.amount_cents),
     unconverted: Boolean(row.unconverted),
@@ -775,7 +802,57 @@ async function fetchTicketAllocationChargeFacts(
   }));
 }
 
-function allocateCents(amount: number, weightedTickets: Array<{ ticketId: string; minutes: number }>): TicketRevenueFact[] {
+async function fetchTicketAllocationWeights(
+  knex: Knex,
+  tenant: string,
+  contractLineIds: string[],
+  spanStart: string,
+  spanEnd: string
+): Promise<TicketAllocationWeightRow[]> {
+  if (contractLineIds.length === 0) {
+    return [];
+  }
+
+  const result = await knex.raw(`
+    WITH ticket_allocation_weights AS (
+      SELECT
+        te.work_item_id AS ticket_id,
+        te.contract_line_id,
+        te.work_date::text AS work_date,
+        GREATEST(0, EXTRACT(EPOCH FROM (te.end_time - te.start_time)) / 60) AS actual_minutes,
+        t.ticket_number::text AS ticket_number,
+        t.title AS ticket_title,
+        t.client_id,
+        cl.client_name
+      FROM time_entries te
+      JOIN tickets t
+        ON t.tenant = te.tenant
+       AND t.ticket_id = te.work_item_id
+      LEFT JOIN clients cl
+        ON cl.tenant = te.tenant
+       AND cl.client_id = t.client_id
+      WHERE te.tenant = ?
+        AND te.work_item_type = 'ticket'
+        AND te.contract_line_id = ANY(?::uuid[])
+        AND te.work_date >= ?::date
+        AND te.work_date <= ?::date
+    )
+    SELECT * FROM ticket_allocation_weights
+  `, [tenant, contractLineIds, spanStart, spanEnd]);
+
+  return rawRows<Record<string, unknown>>(result).map((row) => ({
+    ticket_id: String(row.ticket_id),
+    contract_line_id: String(row.contract_line_id),
+    work_date: String(row.work_date),
+    actual_minutes: Number(row.actual_minutes ?? 0),
+    ticket_number: row.ticket_number ? String(row.ticket_number) : null,
+    ticket_title: row.ticket_title ? String(row.ticket_title) : null,
+    client_id: row.client_id ? String(row.client_id) : null,
+    client_name: row.client_name ? String(row.client_name) : null,
+  }));
+}
+
+function allocateCents(amount: number, weightedTickets: Array<{ ticketId: string; minutes: number }>): Array<{ ticketId: string; cents: number }> {
   const totalMinutes = weightedTickets.reduce((sum, row) => sum + row.minutes, 0);
   if (totalMinutes <= 0 || amount === 0) {
     return [];
@@ -804,23 +881,19 @@ function allocateCents(amount: number, weightedTickets: Array<{ ticketId: string
   return allocations
     .filter((allocation) => allocation.floor !== 0)
     .map((allocation) => ({
-      ticket_id: allocation.ticketId,
-      amount_cents: allocation.floor * sign,
-      unconverted: false,
-      attribution: 'allocated',
+      ticketId: allocation.ticketId,
+      cents: allocation.floor * sign,
     }));
 }
 
 function buildAllocatedTicketRevenue(
   allocationCharges: TicketAllocationChargeFact[],
-  laborFacts: LaborFact[]
+  weights: TicketAllocationWeightRow[]
 ): TicketRevenueFact[] {
-  const ticketLabor = laborFacts.filter((fact) => (
-    fact.work_item_type === 'ticket'
-    && fact.work_item_id
-    && fact.contract_line_id
-    && Math.max(0, Number(fact.actual_minutes) || 0) > 0
-  ));
+  // Weights come from a dedicated query spanning the charges' allocation
+  // windows (D8), NOT the report range: with arrears billing the invoice
+  // lands in the month after the work, so the weighting hours are usually
+  // outside the report range entirely.
   const allocated: TicketRevenueFact[] = [];
 
   for (const charge of allocationCharges) {
@@ -829,16 +902,24 @@ function buildAllocatedTicketRevenue(
     }
 
     const weightsByTicket = new Map<string, number>();
-    for (const fact of ticketLabor) {
-      if (fact.contract_line_id !== charge.contract_line_id) continue;
-      if (fact.work_date < charge.window_start || fact.work_date > charge.window_end) continue;
-      weightsByTicket.set(fact.work_item_id!, (weightsByTicket.get(fact.work_item_id!) ?? 0) + Math.max(0, Number(fact.actual_minutes) || 0));
+    for (const row of weights) {
+      if (row.contract_line_id !== charge.contract_line_id) continue;
+      if (row.work_date < charge.window_start || row.work_date > charge.window_end) continue;
+      const minutes = Math.max(0, Number(row.actual_minutes) || 0);
+      if (minutes <= 0) continue;
+      weightsByTicket.set(row.ticket_id, (weightsByTicket.get(row.ticket_id) ?? 0) + minutes);
     }
 
     allocated.push(...allocateCents(
       charge.amount_cents,
       Array.from(weightsByTicket.entries()).map(([ticketId, minutes]) => ({ ticketId, minutes }))
-    ));
+    ).map(({ ticketId, cents }) => ({
+      ticket_id: ticketId,
+      amount_cents: cents,
+      unconverted: false,
+      attribution: 'allocated' as const,
+      client_contract_id: charge.client_contract_id,
+    })));
   }
 
   return allocated;
@@ -854,10 +935,36 @@ async function fetchFacts(knex: Knex, tenant: string, startDate: string, endDate
     fetchTicketRevenueFacts(knex, tenant, startDate, endDate, defaultCurrency),
     fetchTicketAllocationChargeFacts(knex, tenant, startDate, endDate, defaultCurrency),
   ]);
+
+  // Allocation weights span the charges' windows (which usually precede the
+  // report range under arrears billing), so they need their own bounded fetch.
+  const windowedCharges = allocationChargeFacts.filter((charge) => charge.window_start && charge.window_end);
+  const allocationWeights = windowedCharges.length > 0
+    ? await fetchTicketAllocationWeights(
+        knex,
+        tenant,
+        Array.from(new Set(windowedCharges.map((charge) => charge.contract_line_id))),
+        windowedCharges.reduce((min, charge) => (charge.window_start! < min ? charge.window_start! : min), windowedCharges[0].window_start!),
+        windowedCharges.reduce((max, charge) => (charge.window_end! > max ? charge.window_end! : max), windowedCharges[0].window_end!)
+      )
+    : [];
+
   const ticketRevenueFacts = [
     ...exactTicketRevenueFacts,
-    ...buildAllocatedTicketRevenue(allocationChargeFacts, laborFacts),
+    ...buildAllocatedTicketRevenue(allocationChargeFacts, allocationWeights),
   ];
+
+  const ticketMeta = new Map<string, TicketMeta>();
+  for (const row of allocationWeights) {
+    if (!ticketMeta.has(row.ticket_id)) {
+      ticketMeta.set(row.ticket_id, {
+        ticketNumber: row.ticket_number,
+        title: row.ticket_title,
+        clientId: row.client_id,
+        clientName: row.client_name,
+      });
+    }
+  }
 
   return {
     defaultCurrency,
@@ -866,6 +973,7 @@ async function fetchFacts(knex: Knex, tenant: string, startDate: string, endDate
     laborFacts,
     materialFacts,
     ticketRevenueFacts,
+    ticketMeta,
   };
 }
 
@@ -889,7 +997,11 @@ function applyAllFactsToAccumulator(acc: MetricAccumulator, facts: FactBundle) {
     acc.addLabor(fact, laborIsUnattributed(fact));
   }
   for (const fact of facts.materialFacts) {
-    acc.addMaterial(fact, true, true);
+    // Billed-material revenue already arrives through the invoice_charges row
+    // the engine emits alongside billed_invoice_id; adding the material fact's
+    // revenue here would double-count it. Material revenue from facts is used
+    // only at ticket grain, where charges carry no ticket linkage.
+    acc.addMaterial(fact, false, true);
   }
 }
 
@@ -940,7 +1052,9 @@ export const getClientProfitability = withAuth(async (
     getRow(fact.client_id, fact.client_name).acc.addLabor(fact, laborIsUnattributed(fact));
   }
   for (const fact of facts.materialFacts) {
-    getRow(fact.client_id, fact.client_name).acc.addMaterial(fact, true, true);
+    // Revenue excluded: the billed material's invoice charge is already in
+    // revenueFacts (see applyAllFactsToAccumulator).
+    getRow(fact.client_id, fact.client_name).acc.addMaterial(fact, false, true);
   }
 
   return Array.from(rows.values()).map((row) => ({
@@ -1045,9 +1159,9 @@ export const getAgreementProfitability = withAuth(async (
 
   for (const fact of facts.materialFacts) {
     if (!includeClient(fact.client_id)) continue;
-    if (fact.billed_invoice_id) {
-      getBucket(fact.client_id, fact.client_name, 'ad_hoc', null, null, null).acc.addMaterial(fact, true, false);
-    }
+    // Material revenue reaches the Ad-hoc row through the engine's material
+    // invoice charge in revenueFacts (NULL client_contract_id); only the cost
+    // side comes from the material fact, in the Unattributed row (D13).
     getBucket(fact.client_id, fact.client_name, 'unattributed', null, null, null).acc.addMaterial(fact, false, true);
   }
 
@@ -1113,20 +1227,42 @@ export const getTicketProfitability = withAuth(async (
     row.billableMinutes += Number(fact.billable_minutes) || 0;
   }
 
+  for (const fact of facts.ticketRevenueFacts) {
+    if (input.clientContractId && fact.client_contract_id && fact.client_contract_id !== input.clientContractId) continue;
+    let row = rows.get(fact.ticket_id);
+    if (!row) {
+      // Revenue attributed to a ticket with no labor in the report range —
+      // the normal arrears case (D5: revenue lands by invoice date, the hours
+      // that earned it belong to an earlier period). Surface it as a
+      // revenue-only row rather than dropping it.
+      const meta = facts.ticketMeta.get(fact.ticket_id);
+      if (!meta) continue;
+      if (input.clientId && meta.clientId !== input.clientId) continue;
+      if (input.clientContractId && fact.client_contract_id !== input.clientContractId) continue;
+      row = {
+        ticketId: fact.ticket_id,
+        ticketNumber: meta.ticketNumber,
+        title: meta.title,
+        clientId: meta.clientId,
+        clientName: clientName(meta.clientId, meta.clientName),
+        clientContractId: fact.client_contract_id,
+        billableMinutes: 0,
+        attribution: 'none',
+        acc: new MetricAccumulator(),
+      };
+      rows.set(fact.ticket_id, row);
+    }
+    row.acc.addRevenue(fact.amount_cents, fact.unconverted);
+    if (!fact.unconverted) {
+      row.attribution = fact.attribution;
+    }
+  }
+
   for (const fact of facts.materialFacts) {
     if (fact.material_type !== 'ticket' || !fact.ticket_id) continue;
     const row = rows.get(fact.ticket_id);
     if (!row) continue;
     row.acc.addMaterial(fact, true, true);
-  }
-
-  for (const fact of facts.ticketRevenueFacts) {
-    const row = rows.get(fact.ticket_id);
-    if (!row) continue;
-    row.acc.addRevenue(fact.amount_cents, fact.unconverted);
-    if (!fact.unconverted) {
-      row.attribution = fact.attribution;
-    }
   }
 
   return Array.from(rows.values()).map((row) => {

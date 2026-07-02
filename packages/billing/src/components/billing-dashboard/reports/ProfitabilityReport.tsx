@@ -92,16 +92,16 @@ const ProfitabilityReport: React.FC = () => {
   const formatPercent = (value: number | null): string => (
     value === null
       ? t('units.dash', { defaultValue: '-' })
-      : t('profitability.formats.percent', { defaultValue: '{{value}}%', value: value.toFixed(1) })
+      : t('contractReports.profitability.formats.percent', { defaultValue: '{{value}}%', value: value.toFixed(1) })
   );
-  const formatHours = (minutes: number): string => t('profitability.formats.hours', {
+  const formatHours = (minutes: number): string => t('contractReports.profitability.formats.hours', {
     defaultValue: '{{value}} hrs',
     value: (minutes / 60).toFixed(1),
   });
   const formatRate = (cents: number | null): string => (
     cents === null
       ? t('units.dash', { defaultValue: '-' })
-      : t('profitability.formats.hourlyRate', {
+      : t('contractReports.profitability.formats.hourlyRate', {
         defaultValue: '{{value}}/hr',
         value: formatCents(cents),
       })
@@ -135,7 +135,7 @@ const ProfitabilityReport: React.FC = () => {
         setTickets(ticketRows);
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : t('profitability.errors.load', {
+        setError(err instanceof Error ? err.message : t('contractReports.profitability.errors.load', {
           defaultValue: 'Failed to load profitability data',
         }));
       } finally {
@@ -160,46 +160,46 @@ const ProfitabilityReport: React.FC = () => {
   const metricColumns = <T extends ProfitabilityMetricFields>(nameColumn: ColumnDefinition<T>): ColumnDefinition<T>[] => [
     nameColumn,
     {
-      title: t('profitability.table.revenue', { defaultValue: 'Revenue' }),
+      title: t('contractReports.profitability.table.revenue', { defaultValue: 'Revenue' }),
       dataIndex: 'revenue',
       render: (value: number) => formatCents(value),
     },
     {
-      title: t('profitability.table.laborCost', { defaultValue: 'Labor Cost' }),
+      title: t('contractReports.profitability.table.laborCost', { defaultValue: 'Labor Cost' }),
       dataIndex: 'laborCost',
       render: (value: number) => formatCents(value),
     },
     {
-      title: t('profitability.table.materialCost', { defaultValue: 'Material Cost' }),
+      title: t('contractReports.profitability.table.materialCost', { defaultValue: 'Material Cost' }),
       dataIndex: 'materialCost',
       render: (value: number) => formatCents(value),
     },
     {
-      title: t('profitability.table.margin', { defaultValue: 'Margin' }),
+      title: t('contractReports.profitability.table.margin', { defaultValue: 'Margin' }),
       dataIndex: 'margin',
       render: (value: number) => formatCents(value),
     },
     {
-      title: t('profitability.table.marginPct', { defaultValue: 'Margin %' }),
+      title: t('contractReports.profitability.table.marginPct', { defaultValue: 'Margin %' }),
       dataIndex: 'marginPct',
       render: (value: number | null) => (
         <Badge variant={ratioBadgeVariant(value)}>{formatPercent(value)}</Badge>
       ),
     },
     {
-      title: t('profitability.table.hours', { defaultValue: 'Hours' }),
+      title: t('contractReports.profitability.table.hours', { defaultValue: 'Hours' }),
       dataIndex: 'totalMinutes',
       render: (value: number) => formatHours(value),
     },
     {
-      title: t('profitability.table.ehr', { defaultValue: 'EHR' }),
+      title: t('contractReports.profitability.table.ehr', { defaultValue: 'EHR' }),
       dataIndex: 'effectiveHourlyRate',
       render: (value: number | null) => formatRate(value),
     },
   ];
 
   const clientColumns: ColumnDefinition<ClientProfitabilityRow>[] = metricColumns<ClientProfitabilityRow>({
-    title: t('profitability.table.client', { defaultValue: 'Client' }),
+    title: t('contractReports.profitability.table.client', { defaultValue: 'Client' }),
     dataIndex: 'clientName',
     render: (value: string, record: ClientProfitabilityRow) => (
       <div className="flex items-center gap-2">
@@ -210,7 +210,7 @@ const ProfitabilityReport: React.FC = () => {
   });
 
   const agreementColumns: ColumnDefinition<AgreementProfitabilityRow>[] = metricColumns<AgreementProfitabilityRow>({
-    title: t('profitability.table.agreement', { defaultValue: 'Agreement' }),
+    title: t('contractReports.profitability.table.agreement', { defaultValue: 'Agreement' }),
     dataIndex: 'contractName',
     render: (_value: string, record: AgreementProfitabilityRow) => (
       <div className="flex items-center gap-2">
@@ -236,14 +236,14 @@ const ProfitabilityReport: React.FC = () => {
           {expandedAgreements.has(record.clientContractId ?? record.rowType)
             ? <ChevronDown className="h-4 w-4" aria-hidden="true" />
             : <ChevronRight className="h-4 w-4" aria-hidden="true" />}
-          <span className="sr-only">{t('profitability.actions.toggleLines', { defaultValue: 'Toggle lines' })}</span>
+          <span className="sr-only">{t('contractReports.profitability.actions.toggleLines', { defaultValue: 'Toggle lines' })}</span>
         </Button>
         <span className="font-medium">{rowName(record)}</span>
         {record.rowType !== 'agreement' && (
           <Badge variant="secondary">
             {record.rowType === 'ad_hoc'
-              ? t('profitability.rowTypes.adHoc', { defaultValue: 'Ad-hoc' })
-              : t('profitability.rowTypes.unattributed', { defaultValue: 'Unattributed' })}
+              ? t('contractReports.profitability.rowTypes.adHoc', { defaultValue: 'Ad-hoc' })
+              : t('contractReports.profitability.rowTypes.unattributed', { defaultValue: 'Unattributed' })}
           </Badge>
         )}
       </div>
@@ -251,21 +251,21 @@ const ProfitabilityReport: React.FC = () => {
   });
 
   const ticketColumns: ColumnDefinition<TicketProfitabilityRow>[] = metricColumns<TicketProfitabilityRow>({
-    title: t('profitability.table.ticket', { defaultValue: 'Ticket' }),
+    title: t('contractReports.profitability.table.ticket', { defaultValue: 'Ticket' }),
     dataIndex: 'title',
     render: (_value: string | null, record: TicketProfitabilityRow) => (
       <div className="flex flex-col">
         <span className="font-medium">
           {record.ticketNumber
-            ? t('profitability.formats.ticketWithNumber', {
+            ? t('contractReports.profitability.formats.ticketWithNumber', {
               defaultValue: '#{{number}} {{title}}',
               number: record.ticketNumber,
-              title: record.title || t('profitability.fallbacks.untitledTicket', { defaultValue: 'Untitled ticket' }),
+              title: record.title || t('contractReports.profitability.fallbacks.untitledTicket', { defaultValue: 'Untitled ticket' }),
             })
-            : record.title || t('profitability.fallbacks.untitledTicket', { defaultValue: 'Untitled ticket' })}
+            : record.title || t('contractReports.profitability.fallbacks.untitledTicket', { defaultValue: 'Untitled ticket' })}
         </span>
         <span className="text-xs text-muted-foreground">
-          {t('profitability.formats.billableHours', {
+          {t('contractReports.profitability.formats.billableHours', {
             defaultValue: '{{value}} billable hrs',
             value: (record.billableMinutes / 60).toFixed(1),
           })}
@@ -277,20 +277,20 @@ const ProfitabilityReport: React.FC = () => {
   const ticketColumnsWithStatus: ColumnDefinition<TicketProfitabilityRow>[] = [
     ...ticketColumns,
     {
-      title: t('profitability.table.attribution', { defaultValue: 'Attribution' }),
+      title: t('contractReports.profitability.table.attribution', { defaultValue: 'Attribution' }),
       dataIndex: 'attribution',
       render: (value: TicketProfitabilityRow['attribution'], record: TicketProfitabilityRow) => (
         <div className="flex items-center gap-2">
           <Badge variant={value === 'exact' ? 'success' : value === 'allocated' ? 'warning' : 'secondary'}>
             {value === 'exact'
-              ? t('profitability.attribution.exact', { defaultValue: 'Exact' })
+              ? t('contractReports.profitability.attribution.exact', { defaultValue: 'Exact' })
               : value === 'allocated'
-                ? t('profitability.attribution.allocated', { defaultValue: 'Allocated' })
-                : t('profitability.attribution.none', { defaultValue: 'None' })}
+                ? t('contractReports.profitability.attribution.allocated', { defaultValue: 'Allocated' })
+                : t('contractReports.profitability.attribution.none', { defaultValue: 'None' })}
           </Badge>
           {record.uncosted && (
             <Badge variant="error">
-              {t('profitability.status.uncosted', { defaultValue: 'Uncosted' })}
+              {t('contractReports.profitability.status.uncosted', { defaultValue: 'Uncosted' })}
             </Badge>
           )}
         </div>
@@ -304,27 +304,27 @@ const ProfitabilityReport: React.FC = () => {
   ));
 
   const warningItems = summary ? [
-    summary.uncostedMinutes > 0 && t('profitability.warnings.uncostedMinutes', {
+    summary.uncostedMinutes > 0 && t('contractReports.profitability.warnings.uncostedMinutes', {
       defaultValue: '{{hours}} uncosted hours',
       hours: (summary.uncostedMinutes / 60).toFixed(1),
     }),
-    summary.unapprovedMinutes > 0 && t('profitability.warnings.unapprovedMinutes', {
+    summary.unapprovedMinutes > 0 && t('contractReports.profitability.warnings.unapprovedMinutes', {
       defaultValue: '{{hours}} unapproved hours included',
       hours: (summary.unapprovedMinutes / 60).toFixed(1),
     }),
-    summary.zeroDurationEntryCount > 0 && t('profitability.warnings.zeroDuration', {
+    summary.zeroDurationEntryCount > 0 && t('contractReports.profitability.warnings.zeroDuration', {
       defaultValue: '{{count}} zero-duration entries',
       count: summary.zeroDurationEntryCount,
     }),
-    summary.uncostedMaterialCount > 0 && t('profitability.warnings.uncostedMaterials', {
+    summary.uncostedMaterialCount > 0 && t('contractReports.profitability.warnings.uncostedMaterials', {
       defaultValue: '{{count}} uncosted materials',
       count: summary.uncostedMaterialCount,
     }),
-    summary.unconvertedRevenueCount > 0 && t('profitability.warnings.unconvertedRevenue', {
+    summary.unconvertedRevenueCount > 0 && t('contractReports.profitability.warnings.unconvertedRevenue', {
       defaultValue: '{{count}} unconverted revenue rows',
       count: summary.unconvertedRevenueCount,
     }),
-    summary.materialCurrencyMismatchCount > 0 && t('profitability.warnings.materialCurrencyMismatch', {
+    summary.materialCurrencyMismatchCount > 0 && t('contractReports.profitability.warnings.materialCurrencyMismatch', {
       defaultValue: '{{count}} material currency mismatches',
       count: summary.materialCurrencyMismatchCount,
     }),
@@ -356,7 +356,7 @@ const ProfitabilityReport: React.FC = () => {
       <Alert variant="destructive" id="profitability-error-alert">
         <AlertDescription>
           <p className="font-semibold mb-1">
-            {t('profitability.errors.title', { defaultValue: 'Error Loading Profitability' })}
+            {t('contractReports.profitability.errors.title', { defaultValue: 'Error Loading Profitability' })}
           </p>
           <p>{error}</p>
         </AlertDescription>
@@ -373,7 +373,7 @@ const ProfitabilityReport: React.FC = () => {
               {t('contractReports.sections.profitability.title', { defaultValue: 'Profitability Report' })}
             </h3>
             <span
-              title={t('profitability.timingTooltip', {
+              title={t('contractReports.profitability.timingTooltip', {
                 defaultValue: 'Revenue is filtered by invoice date. Labor cost is filtered by work date. Billed material cost follows invoice date; unbilled material cost follows created date.',
               })}
             >
@@ -389,7 +389,7 @@ const ProfitabilityReport: React.FC = () => {
 
         <form className="flex flex-wrap items-end gap-2" onSubmit={applyDateRange}>
           <div className="space-y-1">
-            <Label htmlFor="profitability-start-date">{t('profitability.filters.startDate', { defaultValue: 'Start Date' })}</Label>
+            <Label htmlFor="profitability-start-date">{t('contractReports.profitability.filters.startDate', { defaultValue: 'Start Date' })}</Label>
             <Input
               id="profitability-start-date"
               type="date"
@@ -398,7 +398,7 @@ const ProfitabilityReport: React.FC = () => {
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="profitability-end-date">{t('profitability.filters.endDate', { defaultValue: 'End Date' })}</Label>
+            <Label htmlFor="profitability-end-date">{t('contractReports.profitability.filters.endDate', { defaultValue: 'End Date' })}</Label>
             <Input
               id="profitability-end-date"
               type="date"
@@ -408,7 +408,7 @@ const ProfitabilityReport: React.FC = () => {
           </div>
           <Button id="profitability-apply-date-range" type="submit">
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
-            {t('profitability.actions.apply', { defaultValue: 'Apply' })}
+            {t('contractReports.profitability.actions.apply', { defaultValue: 'Apply' })}
           </Button>
         </form>
       </div>
@@ -417,14 +417,14 @@ const ProfitabilityReport: React.FC = () => {
         <Alert id="profitability-cost-rates-empty-state">
           <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span>
-              {t('profitability.empty.costRates', {
+              {t('contractReports.profitability.empty.costRates', {
                 defaultValue: 'Cost rates are not configured. Labor hours are shown as uncosted until a tenant default or user rate exists.',
               })}
             </span>
             <Button id="profitability-settings-link" asChild size="sm" variant="secondary">
               <Link href="/msp/settings?tab=billing&section=cost-rates">
                 <Settings className="h-4 w-4" aria-hidden="true" />
-                {t('profitability.actions.configureCostRates', { defaultValue: 'Configure Cost Rates' })}
+                {t('contractReports.profitability.actions.configureCostRates', { defaultValue: 'Configure Cost Rates' })}
               </Link>
             </Button>
           </AlertDescription>
@@ -435,9 +435,9 @@ const ProfitabilityReport: React.FC = () => {
         <Alert id="profitability-warning-alert">
           <AlertDescription>
             <p className="font-medium mb-1">
-              {t('profitability.warnings.title', { defaultValue: 'Report warnings' })}
+              {t('contractReports.profitability.warnings.title', { defaultValue: 'Report warnings' })}
             </p>
-            <p className="text-sm">{warningItems.join(t('profitability.formats.listSeparator', { defaultValue: ', ' }))}</p>
+            <p className="text-sm">{warningItems.join(t('contractReports.profitability.formats.listSeparator', { defaultValue: ', ' }))}</p>
           </AlertDescription>
         </Alert>
       )}
@@ -445,12 +445,12 @@ const ProfitabilityReport: React.FC = () => {
       {summary && (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3">
           {[
-            [t('profitability.summary.revenue', { defaultValue: 'Revenue' }), formatCents(summary.revenue)],
-            [t('profitability.summary.laborCost', { defaultValue: 'Labor Cost' }), formatCents(summary.laborCost)],
-            [t('profitability.summary.materialCost', { defaultValue: 'Material Cost' }), formatCents(summary.materialCost)],
-            [t('profitability.summary.margin', { defaultValue: 'Margin' }), formatCents(summary.margin)],
-            [t('profitability.summary.marginPct', { defaultValue: 'Margin %' }), formatPercent(summary.marginPct)],
-            [t('profitability.summary.ehr', { defaultValue: 'Effective Hourly Rate' }), formatRate(summary.effectiveHourlyRate)],
+            [t('contractReports.profitability.summary.revenue', { defaultValue: 'Revenue' }), formatCents(summary.revenue)],
+            [t('contractReports.profitability.summary.laborCost', { defaultValue: 'Labor Cost' }), formatCents(summary.laborCost)],
+            [t('contractReports.profitability.summary.materialCost', { defaultValue: 'Material Cost' }), formatCents(summary.materialCost)],
+            [t('contractReports.profitability.summary.margin', { defaultValue: 'Margin' }), formatCents(summary.margin)],
+            [t('contractReports.profitability.summary.marginPct', { defaultValue: 'Margin %' }), formatPercent(summary.marginPct)],
+            [t('contractReports.profitability.summary.ehr', { defaultValue: 'Effective Hourly Rate' }), formatRate(summary.effectiveHourlyRate)],
           ].map(([label, value]) => (
             <Card key={label} className="p-4">
               <p className="text-xs text-muted-foreground">{label}</p>
@@ -463,9 +463,9 @@ const ProfitabilityReport: React.FC = () => {
       <Card className="p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
           <div>
-            <h4 className="font-semibold">{t('profitability.sections.clients', { defaultValue: 'Clients' })}</h4>
+            <h4 className="font-semibold">{t('contractReports.profitability.sections.clients', { defaultValue: 'Clients' })}</h4>
             <p className="text-sm text-muted-foreground">
-              {t('profitability.sections.clientsDescription', { defaultValue: 'Select a client to drill into agreements and tickets.' })}
+              {t('contractReports.profitability.sections.clientsDescription', { defaultValue: 'Select a client to drill into agreements and tickets.' })}
             </p>
           </div>
           {selectedClient && (
@@ -477,13 +477,13 @@ const ProfitabilityReport: React.FC = () => {
               onClick={() => setSelectedClient(null)}
             >
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              {t('profitability.actions.clearClient', { defaultValue: 'All Clients' })}
+              {t('contractReports.profitability.actions.clearClient', { defaultValue: 'All Clients' })}
             </Button>
           )}
         </div>
         {clients.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center">
-            {t('profitability.empty.clients', { defaultValue: 'No client profitability data available for this range.' })}
+            {t('contractReports.profitability.empty.clients', { defaultValue: 'No client profitability data available for this range.' })}
           </p>
         ) : (
           <DataTable
@@ -507,13 +507,13 @@ const ProfitabilityReport: React.FC = () => {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
             <div>
               <h4 className="font-semibold">
-                {t('profitability.sections.agreements', {
+                {t('contractReports.profitability.sections.agreements', {
                   defaultValue: 'Agreements for {{client}}',
                   client: selectedClient.clientName,
                 })}
               </h4>
               <p className="text-sm text-muted-foreground">
-                {t('profitability.sections.agreementsDescription', { defaultValue: 'Ad-hoc and unattributed rows are included so totals reconcile.' })}
+                {t('contractReports.profitability.sections.agreementsDescription', { defaultValue: 'Ad-hoc and unattributed rows are included so totals reconcile.' })}
               </p>
             </div>
             {selectedAgreement && (
@@ -525,7 +525,7 @@ const ProfitabilityReport: React.FC = () => {
                 onClick={() => setSelectedAgreement(null)}
               >
                 <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                {t('profitability.actions.clearAgreement', { defaultValue: 'All Agreements' })}
+                {t('contractReports.profitability.actions.clearAgreement', { defaultValue: 'All Agreements' })}
               </Button>
             )}
           </div>
@@ -548,7 +548,7 @@ const ProfitabilityReport: React.FC = () => {
             .map((agreement) => (
               <div key={`lines-${agreement.clientContractId ?? agreement.rowType}`} className="mt-4 overflow-x-auto">
                 <h5 className="text-sm font-semibold mb-2">
-                  {t('profitability.sections.linesForAgreement', {
+                  {t('contractReports.profitability.sections.linesForAgreement', {
                     defaultValue: 'Contract lines for {{agreement}}',
                     agreement: rowName(agreement),
                   })}
@@ -556,18 +556,18 @@ const ProfitabilityReport: React.FC = () => {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[rgb(var(--color-border-200))] text-left">
-                      <th className="py-2 pr-3">{t('profitability.table.contractLine', { defaultValue: 'Line' })}</th>
-                      <th className="py-2 pr-3">{t('profitability.table.revenue', { defaultValue: 'Revenue' })}</th>
-                      <th className="py-2 pr-3">{t('profitability.table.cost', { defaultValue: 'Cost' })}</th>
-                      <th className="py-2 pr-3">{t('profitability.table.margin', { defaultValue: 'Margin' })}</th>
-                      <th className="py-2 pr-3">{t('profitability.table.hours', { defaultValue: 'Hours' })}</th>
+                      <th className="py-2 pr-3">{t('contractReports.profitability.table.contractLine', { defaultValue: 'Line' })}</th>
+                      <th className="py-2 pr-3">{t('contractReports.profitability.table.revenue', { defaultValue: 'Revenue' })}</th>
+                      <th className="py-2 pr-3">{t('contractReports.profitability.table.cost', { defaultValue: 'Cost' })}</th>
+                      <th className="py-2 pr-3">{t('contractReports.profitability.table.margin', { defaultValue: 'Margin' })}</th>
+                      <th className="py-2 pr-3">{t('contractReports.profitability.table.hours', { defaultValue: 'Hours' })}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {agreement.lines.length === 0 ? (
                       <tr>
                         <td className="py-3 text-muted-foreground" colSpan={5}>
-                          {t('profitability.empty.lines', { defaultValue: 'No line-level detail for this row.' })}
+                          {t('contractReports.profitability.empty.lines', { defaultValue: 'No line-level detail for this row.' })}
                         </td>
                       </tr>
                     ) : agreement.lines.map((line: ContractLineProfitabilityRow) => (
@@ -576,7 +576,7 @@ const ProfitabilityReport: React.FC = () => {
                           <span>{line.contractLineName}</span>
                           {line.rowType === 'unassigned' && (
                             <Badge className="ml-2" variant="secondary">
-                              {t('profitability.rowTypes.unassigned', { defaultValue: 'Unassigned' })}
+                              {t('contractReports.profitability.rowTypes.unassigned', { defaultValue: 'Unassigned' })}
                             </Badge>
                           )}
                         </td>
@@ -596,19 +596,19 @@ const ProfitabilityReport: React.FC = () => {
       {selectedClient && (
         <Card className="p-5">
           <div className="mb-4">
-            <h4 className="font-semibold">{t('profitability.sections.tickets', { defaultValue: 'Tickets' })}</h4>
+            <h4 className="font-semibold">{t('contractReports.profitability.sections.tickets', { defaultValue: 'Tickets' })}</h4>
             <p className="text-sm text-muted-foreground">
               {selectedAgreement
-                ? t('profitability.sections.ticketsForAgreement', {
+                ? t('contractReports.profitability.sections.ticketsForAgreement', {
                   defaultValue: 'Ticket cost and revenue for {{agreement}}.',
                   agreement: rowName(selectedAgreement),
                 })
-                : t('profitability.sections.ticketsDescription', { defaultValue: 'Ticket-level labor, material cost, attributed revenue, and margin.' })}
+                : t('contractReports.profitability.sections.ticketsDescription', { defaultValue: 'Ticket-level labor, material cost, attributed revenue, and margin.' })}
             </p>
           </div>
           {visibleTickets.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
-              {t('profitability.empty.tickets', { defaultValue: 'No ticket profitability data available for this selection.' })}
+              {t('contractReports.profitability.empty.tickets', { defaultValue: 'No ticket profitability data available for this selection.' })}
             </p>
           ) : (
             <DataTable
