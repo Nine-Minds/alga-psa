@@ -158,7 +158,7 @@
   {
     "id": "F019",
     "description": "Invoice generation persists item_id into invoice_time_entries for each linked time entry (invoiceService.linkAndMarkSourceBillingRecord and caller pass the persisted invoice_charges item id)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.6",
       "6.D7"
@@ -167,7 +167,7 @@
   {
     "id": "F020",
     "description": "Time-charge generation is verified 1:1 (one invoice_charges row per time entry); report queries defensively tolerate N link rows sharing an item_id without double counting",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.6",
       "6.D7"
@@ -176,7 +176,7 @@
   {
     "id": "F021",
     "description": "Invoice generation unchanged for manual invoices and non-time charges (item_id remains NULL, no regression)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7.6"
     ]

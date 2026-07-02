@@ -159,6 +159,7 @@ function createMockTx(
     invoice_charges: [],
     invoice_charge_details: [],
     invoice_charge_fixed_details: [],
+    invoice_time_entries: [],
   };
 
   const tx: any = (tableName: string) =>
@@ -173,6 +174,139 @@ function createMockTx(
 }
 
 describe("invoiceService fixed recurring persistence", () => {
+  it("persists the generated invoice charge item_id on linked time entries", async () => {
+    const { tx, inserts, tables } = createMockTx({
+      time_entries: [
+        { entry_id: "entry-1", invoiced: false, tenant: "tenant-1" },
+      ],
+    });
+
+    const subtotal = await persistInvoiceCharges(
+      tx,
+      "invoice-1",
+      [
+        {
+          type: "time",
+          serviceId: "service-1",
+          serviceName: "Remote support",
+          userId: "user-1",
+          duration: 60,
+          quantity: 1,
+          rate: 12500,
+          total: 12500,
+          tax_amount: 0,
+          tax_rate: 0,
+          entryId: "entry-1",
+          tenant: "tenant-1",
+        },
+      ],
+      {
+        client_id: "client-1",
+        tax_region: "US-NY",
+      },
+      {
+        user: {
+          id: "user-1",
+        },
+      } as any,
+      "tenant-1",
+    );
+
+    expect(subtotal).toBe(12500);
+    expect(inserts.invoice_charges).toHaveLength(1);
+    expect(inserts.invoice_time_entries).toEqual([
+      expect.objectContaining({
+        invoice_id: "invoice-1",
+        entry_id: "entry-1",
+        item_id: inserts.invoice_charges[0].item_id,
+        tenant: "tenant-1",
+      }),
+    ]);
+    expect(tables.time_entries[0].invoiced).toBe(true);
+  });
+
+  it("keeps one time charge row and one item-linked source row per time entry", async () => {
+    const { tx, inserts } = createMockTx({
+      time_entries: [
+        { entry_id: "entry-1", invoiced: false, tenant: "tenant-1" },
+        { entry_id: "entry-2", invoiced: false, tenant: "tenant-1" },
+        { entry_id: "entry-3", invoiced: false, tenant: "tenant-1" },
+      ],
+    });
+
+    await persistInvoiceCharges(
+      tx,
+      "invoice-1",
+      ["entry-1", "entry-2", "entry-3"].map((entryId, index) => ({
+        type: "time",
+        serviceId: `service-${index + 1}`,
+        serviceName: `Support ${index + 1}`,
+        userId: "user-1",
+        duration: 30,
+        quantity: 1,
+        rate: 5000,
+        total: 5000,
+        tax_amount: 0,
+        tax_rate: 0,
+        entryId,
+        tenant: "tenant-1",
+      })),
+      {
+        client_id: "client-1",
+        tax_region: "US-NY",
+      },
+      {
+        user: {
+          id: "user-1",
+        },
+      } as any,
+      "tenant-1",
+    );
+
+    const chargeItemIds = inserts.invoice_charges.map((row) => row.item_id);
+    const linkItemIds = inserts.invoice_time_entries.map((row) => row.item_id);
+
+    expect(inserts.invoice_charges).toHaveLength(3);
+    expect(inserts.invoice_time_entries).toHaveLength(3);
+    expect(new Set(chargeItemIds).size).toBe(3);
+    expect(linkItemIds).toEqual(chargeItemIds);
+  });
+
+  it("does not create time-entry source links for non-time charges", async () => {
+    const { tx, inserts } = createMockTx();
+
+    await persistInvoiceCharges(
+      tx,
+      "invoice-1",
+      [
+        {
+          type: "product",
+          serviceId: "service-1",
+          serviceName: "Managed router",
+          quantity: 1,
+          rate: 9000,
+          total: 9000,
+          tax_amount: 0,
+          tax_rate: 0,
+          tenant: "tenant-1",
+        },
+      ],
+      {
+        client_id: "client-1",
+        tax_region: "US-NY",
+      },
+      {
+        user: {
+          id: "user-1",
+        },
+      } as any,
+      "tenant-1",
+    );
+
+    expect(inserts.invoice_charges).toHaveLength(1);
+    expect(inserts.invoice_time_entries).toHaveLength(0);
+  });
+
   it("T069: recurring product invoice detail rows persist canonical service-period metadata correctly", async () => {
     const { tx, inserts } = createMockTx();
 

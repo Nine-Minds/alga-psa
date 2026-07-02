@@ -201,7 +201,7 @@
   {
     "id": "T025",
     "description": "Invoice generation from ticket time entries writes invoice_time_entries rows with the correct item_id for a 1-entry:1-item invoice",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
@@ -209,7 +209,7 @@
   {
     "id": "T026",
     "description": "Invoice generation from 3 time entries produces 3 invoice_charges rows (1:1) with 3 distinct item_ids on their link rows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F020"
@@ -218,7 +218,7 @@
   {
     "id": "T027",
     "description": "Manual invoice generation unaffected: no invoice_time_entries rows, no errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]

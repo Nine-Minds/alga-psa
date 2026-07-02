@@ -60,6 +60,17 @@
 - T024 implemented: component test and locale updates cover the Cost Rates screen's translated labels and accessible controls; note that the built UI package used in Vitest does not expose every Button/Input `id` as a DOM id, so tests interact by accessible names/input types while the component still supplies kebab-case IDs to the local UI API.
 - Commands run: `cd server && npx vitest run ../packages/billing/src/components/settings/billing/CostRatesSettings.test.tsx ../packages/billing/src/actions/costRateActions.test.ts --coverage.enabled=false`; `npm -w @alga-psa/billing run typecheck`.
 
+### 2026-07-02 — Invoice time-entry item link batch
+
+- F019 implemented: `linkAndMarkSourceBillingRecord` now receives the persisted `invoice_charges.item_id` from `persistInvoiceCharges` and stores it on new `invoice_time_entries.item_id` rows for time charges.
+- F020 implemented: targeted persistence coverage verifies the current engine path writes one invoice charge and one item-linked `invoice_time_entries` row per time entry; this preserves the 1:1 invariant and gives report queries exact item IDs.
+- F021 implemented: non-time charges continue through the existing source-link paths without creating `invoice_time_entries` rows, and manual invoice charge persistence remains outside the time-entry link path.
+- T025 implemented: unit test verifies a one-entry time invoice writes an `invoice_time_entries` row whose `item_id` equals the generated `invoice_charges.item_id`.
+- T026 implemented: unit test verifies three time entries create three invoice charge rows, three distinct item IDs, and three source-link rows with matching item IDs.
+- T027 implemented: manual invoice persistence test verifies manual invoice charges create no `invoice_time_entries` rows and do not error.
+- T028 not yet implemented: attempted `cd server && npx vitest run src/test/infrastructure/billing/invoices/fixedPriceAndTimeBasedPlans.test.ts --coverage.enabled=false`; it emitted no progress for roughly five minutes and was stopped with Ctrl-C. Targeted invoice-service tests passed, but the broad integration regression remains unchecked.
+- Commands run: `cd server && npx vitest run src/test/unit/billing/invoiceService.fixedPersistence.test.ts src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts src/test/unit/billing/invoiceService.recurringDetails.static.test.ts --coverage.enabled=false`; `npm -w @alga-psa/billing run typecheck`.
+
 ## Implementation log
 
 - 2026-07-02 batch 1 (schema + cost-rate model/actions):
