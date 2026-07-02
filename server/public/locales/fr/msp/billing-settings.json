@@ -113,7 +113,7 @@
       },
       "actions": {
         "save": "Sauvegarder",
-        "saving": "Économie..."
+        "saving": "Enregistrement..."
       },
       "toast": {
         "updated": "Les paramètres d'automatisation du renouvellement ont été mis à jour."
@@ -169,7 +169,7 @@
       "actions": {
         "cancel": "Annuler",
         "save": "Enregistrer les paramètres",
-        "saving": "Économie..."
+        "saving": "Enregistrement..."
       },
       "toast": {
         "saved": "Paramètres de source de taxe enregistrés avec succès."
@@ -206,7 +206,7 @@
         "deactivate": "Désactiver",
         "cancel": "Annuler",
         "save": "Enregistrer les modifications",
-        "saving": "Économie..."
+        "saving": "Enregistrement..."
       },
       "toast": {
         "created": "Région fiscale créée avec succès.",
@@ -271,7 +271,7 @@
         "delete": "Supprimer",
         "cancel": "Annuler",
         "save": "Sauvegarder",
-        "saving": "Économie...",
+        "saving": "Enregistrement...",
         "deleting": "Suppression..."
       },
       "delete": {
@@ -341,7 +341,7 @@
         "delete": "Supprimer",
         "cancel": "Annuler",
         "save": "Sauvegarder",
-        "saving": "Économie...",
+        "saving": "Enregistrement...",
         "deleting": "Suppression..."
       },
       "delete": {
@@ -393,7 +393,7 @@
         "delete": "Supprimer",
         "cancel": "Annuler",
         "save": "Sauvegarder",
-        "saving": "Économie...",
+        "saving": "Enregistrement...",
         "deleting": "Suppression..."
       },
       "delete": {
@@ -946,7 +946,7 @@
       "actions": {
         "cancel": "Annuler",
         "save": "Enregistrer le statut d'exonération fiscale",
-        "saving": "Économie..."
+        "saving": "Enregistrement..."
       }
     },
     "advanced": {
