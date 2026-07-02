@@ -73,21 +73,20 @@ async function cloneServices(trx: Knex.Transaction, tenant: string, templateCont
     .select('service_id', 'quantity', 'custom_rate');
 
   for (const service of services) {
+    // contract_line_services has no timestamp columns (see the other writers
+    // in contractWizardActions/contractLinePresetActions).
     await db.table('contract_line_services')
       .insert({
         tenant,
         contract_line_id: contractLineId,
         service_id: service.service_id,
         quantity: service.quantity,
-        custom_rate: normalizeNumeric(service.custom_rate),
-        created_at: trx.fn.now(),
-        updated_at: trx.fn.now()
+        custom_rate: normalizeNumeric(service.custom_rate)
       })
       .onConflict(['tenant', 'contract_line_id', 'service_id'])
       .merge({
         quantity: service.quantity,
-        custom_rate: normalizeNumeric(service.custom_rate),
-        updated_at: new Date().toISOString()
+        custom_rate: normalizeNumeric(service.custom_rate)
       });
 
     await cloneServiceConfiguration(trx, tenant, templateContractLineId, contractLineId, service.service_id);

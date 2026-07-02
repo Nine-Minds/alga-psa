@@ -11,28 +11,61 @@ import {
 // Mock authentication and permissions
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
+let testDb: () => unknown = () => {
+  throw new Error('Test DB not initialized');
+};
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
-
-vi.mock('@alga-psa/auth', () => ({
-  hasPermission: vi.fn(() => Promise.resolve(true)),
-  getCurrentUser: vi.fn(async () => ({
+// One mock only — duplicate vi.mock calls for the same specifier replace each
+// other, so the exports must live in a single factory.
+vi.mock('@alga-psa/auth', () => {
+  const currentUser = () => ({
     user_id: mockedUserId,
     tenant: mockedTenantId,
     user_type: 'internal',
     roles: []
-  }))
+  });
+  return {
+    getSession: vi.fn(async () => ({
+      user: {
+        id: mockedUserId,
+        tenant: mockedTenantId
+      }
+    })),
+    hasPermission: vi.fn(() => Promise.resolve(true)),
+    getCurrentUser: vi.fn(async () => currentUser()),
+    withAuth: (action: any) => async (...args: any[]) =>
+      action(currentUser(), { tenant: mockedTenantId }, ...args),
+    withOptionalAuth: (action: any) => async (...args: any[]) =>
+      action(currentUser(), { tenant: mockedTenantId }, ...args),
+    withAuthCheck: (action: any) => async (...args: any[]) =>
+      action(currentUser(), ...args),
+  };
+});
+
+// The actions check permissions through the '@alga-psa/auth/rbac' subpath,
+// which resolves to a different module than '@alga-psa/auth'.
+vi.mock('@alga-psa/auth/rbac', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  hasPermission: vi.fn(() => Promise.resolve(true)),
 }));
+
+// Package actions resolve their connection through '@alga-psa/db' (TestContext
+// only spies on server/src/lib/db), so bind it to the active test transaction.
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: testDb(), tenant: mockedTenantId })),
+  };
+});
 
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(async () => Promise.resolve())
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(async () => Promise.resolve()),
+  publishWorkflowEvent: vi.fn(async () => Promise.resolve()),
 }));
 
 describe('Project Templates Integration Tests', () => {
@@ -72,6 +105,7 @@ describe('Project Templates Integration Tests', () => {
 
     mockedTenantId = context.tenantId;
     mockedUserId = context.userId;
+    testDb = () => context.db;
   }, 120000);
 
   afterAll(async () => {
@@ -82,6 +116,7 @@ describe('Project Templates Integration Tests', () => {
     context = await resetContext();
     mockedTenantId = context.tenantId;
     mockedUserId = context.userId;
+    testDb = () => context.db;
   });
 
   afterEach(async () => {
@@ -91,13 +126,21 @@ describe('Project Templates Integration Tests', () => {
   describe('Creating template from project with full structure', () => {
     it('should create template from project with phases, tasks, dependencies, and checklists', async () => {
       // 1. Create a source project with complete structure
+      // projects.status is a uuid FK to statuses and project_number is NOT NULL
+      const projectStatus = await tenantTable('statuses')
+        .where({ status_type: 'project' })
+        .orderBy('order_number', 'asc')
+        .first();
+      expect(projectStatus).toBeDefined();
+
       const [project] = await tenantTable('projects')
         .insert({
           tenant: context.tenantId,
           project_name: 'Source Project for Template',
+          project_number: `TPL-${Date.now()}`,
           wbs_code: '1',
           client_id: context.clientId,
-          status: 'active'
+          status: projectStatus.status_id
         })
         .returning('*');
 
@@ -123,6 +166,7 @@ describe('Project Templates Integration Tests', () => {
           description: 'Initial planning phase',
           wbs_code: '1.1',
           order_key: 'a0',
+          order_number: 1,
           status: 'not_started'
         })
         .returning('*');
@@ -135,6 +179,7 @@ describe('Project Templates Integration Tests', () => {
           description: 'Execution phase',
           wbs_code: '1.2',
           order_key: 'a1',
+          order_number: 2,
           status: 'not_started'
         })
         .returning('*');
@@ -176,27 +221,29 @@ describe('Project Templates Integration Tests', () => {
           description: 'Implement the solution',
           estimated_hours: 40,
           wbs_code: '1.2.1',
-          order_key: 'a0',
+          // Unique across phases so the global orderBy('order_key') read below
+          // is deterministic (fractional keys are only unique per phase).
+          order_key: 'a2',
           task_type_key: 'task',
           project_status_mapping_id: statusMapping1.project_status_mapping_id
         })
         .returning('*');
 
-      // 5. Create dependencies
+      // 5. Create dependencies (dependency_type CHECK allows 'blocks'/'related_to')
       await tenantTable('project_task_dependencies')
         .insert([
           {
             tenant: context.tenantId,
             predecessor_task_id: task1.task_id,
             successor_task_id: task2.task_id,
-            dependency_type: 'finish_to_start',
+            dependency_type: 'blocks',
             lead_lag_days: 0
           },
           {
             tenant: context.tenantId,
             predecessor_task_id: task2.task_id,
             successor_task_id: task3.task_id,
-            dependency_type: 'finish_to_start',
+            dependency_type: 'related_to',
             lead_lag_days: 2
           }
         ]);
@@ -269,11 +316,11 @@ describe('Project Templates Integration Tests', () => {
 
       expect(templateTasks).toHaveLength(3);
       expect(templateTasks[0].task_name).toBe('Task 1: Requirements');
-      expect(templateTasks[0].estimated_hours).toBe(10);
+      expect(Number(templateTasks[0].estimated_hours)).toBe(10); // bigint comes back as string
       expect(templateTasks[1].task_name).toBe('Task 2: Design');
-      expect(templateTasks[1].estimated_hours).toBe(15);
+      expect(Number(templateTasks[1].estimated_hours)).toBe(15);
       expect(templateTasks[2].task_name).toBe('Task 3: Implementation');
-      expect(templateTasks[2].estimated_hours).toBe(40);
+      expect(Number(templateTasks[2].estimated_hours)).toBe(40);
 
       // 11. Verify dependencies were copied with correct remapped IDs
       const templateDeps = await tenantTable('project_template_dependencies')
@@ -287,7 +334,7 @@ describe('Project Templates Integration Tests', () => {
         templateTasks.find(t => t.template_task_id === d.successor_task_id)?.task_name === 'Task 2: Design'
       );
       expect(dep1).toBeDefined();
-      expect(dep1!.dependency_type).toBe('finish_to_start');
+      expect(dep1!.dependency_type).toBe('blocks');
       expect(dep1!.lead_lag_days).toBe(0);
 
       const dep2 = templateDeps.find(d =>
@@ -295,7 +342,7 @@ describe('Project Templates Integration Tests', () => {
         templateTasks.find(t => t.template_task_id === d.successor_task_id)?.task_name === 'Task 3: Implementation'
       );
       expect(dep2).toBeDefined();
-      expect(dep2!.dependency_type).toBe('finish_to_start');
+      expect(dep2!.dependency_type).toBe('related_to');
       expect(dep2!.lead_lag_days).toBe(2);
 
       // 12. Verify checklists were copied
@@ -408,7 +455,8 @@ describe('Project Templates Integration Tests', () => {
         })
         .returning('*');
 
-      // 4. Create template dependencies
+      // 4. Create template dependencies (applyTemplate copies these into
+      // project_task_dependencies, whose CHECK allows 'blocks'/'related_to')
       await tenantTable('project_template_dependencies')
         .insert([
           {
@@ -416,7 +464,7 @@ describe('Project Templates Integration Tests', () => {
             template_id: template.template_id,
             predecessor_task_id: templateTask1.template_task_id,
             successor_task_id: templateTask2.template_task_id,
-            dependency_type: 'finish_to_start',
+            dependency_type: 'blocks',
             lead_lag_days: 1
           },
           {
@@ -424,7 +472,7 @@ describe('Project Templates Integration Tests', () => {
             template_id: template.template_id,
             predecessor_task_id: templateTask2.template_task_id,
             successor_task_id: templateTask3.template_task_id,
-            dependency_type: 'finish_to_start',
+            dependency_type: 'blocks',
             lead_lag_days: 0
           }
         ]);
@@ -493,15 +541,16 @@ describe('Project Templates Integration Tests', () => {
       expect(phases[0].phase_name).toBe('Discovery');
       expect(phases[0].wbs_code).toMatch(/^\d+\.\d+$/); // Format like "1.1"
 
-      // 10. Verify tasks were created
+      // 10. Verify tasks were created (order by wbs_code: phase_id is a random
+      // uuid, so ordering by it first is nondeterministic across runs)
       const phaseIds = phases.map(p => p.phase_id);
       const tasks = await tenantTable('project_tasks')
         .whereIn('phase_id', phaseIds)
-        .orderBy(['phase_id', 'order_key']);
+        .orderBy('wbs_code');
 
       expect(tasks).toHaveLength(3);
       expect(tasks[0].task_name).toBe('Analyze Requirements');
-      expect(tasks[0].estimated_hours).toBe(8);
+      expect(Number(tasks[0].estimated_hours)).toBe(8); // bigint comes back as string
       expect(tasks[0].wbs_code).toMatch(/^\d+\.\d+\.\d+$/); // Format like "1.1.1"
 
       // 11. Verify dependencies were created with remapped IDs
@@ -599,11 +648,14 @@ describe('Project Templates Integration Tests', () => {
 
       const tasks = await tenantTable('project_tasks')
         .whereIn('phase_id', phases.map(p => p.phase_id))
-        .orderBy(['phase_id', 'order_key']);
+        .orderBy('wbs_code');
 
       expect(tasks[0].wbs_code).toBe(`${phases[0].wbs_code}.1`); // e.g., "1.1.1"
+      expect(tasks[0].phase_id).toBe(phases[0].phase_id);
       expect(tasks[1].wbs_code).toBe(`${phases[0].wbs_code}.2`); // e.g., "1.1.2"
+      expect(tasks[1].phase_id).toBe(phases[0].phase_id);
       expect(tasks[2].wbs_code).toBe(`${phases[1].wbs_code}.1`); // e.g., "1.2.1"
+      expect(tasks[2].phase_id).toBe(phases[1].phase_id);
     });
   });
 

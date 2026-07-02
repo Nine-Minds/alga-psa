@@ -22,7 +22,8 @@ import { createTenant, createUser, createClient } from '../../../../test-utils/t
 
 // Mock external dependencies
 vi.mock('server/src/lib/utils/getSecret', () => ({
-  getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+  getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -30,7 +31,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
     getAppSecret: async () => '',
   })),
   secretProvider: {
-    getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+    getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
   },
 }));
 
@@ -160,17 +162,17 @@ describe('SLA Reporting Service Integration Tests', () => {
       user_type: 'internal',
     });
 
-    // Create company (for tickets)
+    // Create client (for tickets; companies table was renamed to clients)
     companyId = uuidv4();
-    await tenantTable(db, tenantId, 'companies').insert({
+    await tenantTable(db, tenantId, 'clients').insert({
       tenant: tenantId,
-      company_id: companyId,
-      company_name: 'Reporting Test Company',
+      client_id: companyId,
+      client_name: 'Reporting Test Company',
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });
 
-    // Create client linked to company
+    // Create secondary client for contacts
     clientId = await createClient(db, tenantId, 'Reporting Test Client');
     contactId = await createContact(db, tenantId, clientId, companyId, `report-contact-${uuidv4().slice(0, 8)}@example.com`);
 
@@ -710,6 +712,10 @@ describe('SLA Reporting Service Integration Tests', () => {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const sixtyDaysAgo = new Date(today);
       sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+      // dateTo is a date-only string (midnight), so keep the recent ticket
+      // strictly inside the window rather than "now"
+      const fiveDaysAgo = new Date(today);
+      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
 
       // Recent ticket (within 30 days) - breached
       await createTicketWithSlaResult(db, tenantId, {
@@ -721,7 +727,7 @@ describe('SLA Reporting Service Integration Tests', () => {
         assignedTo: internalUserId,
         responseMet: false,
         resolutionMet: false,
-        createdAt: today,
+        createdAt: fiveDaysAgo,
       });
 
       // Old ticket (60 days ago) - met
@@ -774,10 +780,10 @@ describe('SLA Reporting Service Integration Tests', () => {
         user_type: 'internal',
       });
       const otherCompanyId = uuidv4();
-      await tenantTable(db, otherTenantId, 'companies').insert({
+      await tenantTable(db, otherTenantId, 'clients').insert({
         tenant: otherTenantId,
-        company_id: otherCompanyId,
-        company_name: 'Other Company',
+        client_id: otherCompanyId,
+        client_name: 'Other Company',
         created_at: db.fn.now(),
         updated_at: db.fn.now(),
       });
@@ -884,10 +890,8 @@ async function createBoard(db: Knex, tenant: string, name: string): Promise<stri
   await tenantTable(db, tenant, 'boards').insert({
     tenant,
     board_id: boardId,
-    name,
+    board_name: name,
     description: 'Test board for SLA reporting',
-    created_at: db.fn.now(),
-    updated_at: db.fn.now(),
   });
   return boardId;
 }
@@ -919,7 +923,6 @@ async function createPriority(db: Knex, tenant: string, name: string, orderNumbe
     priority_id: priorityId,
     priority_name: name,
     color: '#808080',
-    priority_order: orderNumber,
     order_number: orderNumber,
     created_by: createdBy,
     created_at: db.fn.now(),
@@ -1007,7 +1010,7 @@ async function insertTicket(db: Knex, params: {
     ticket_id: params.ticketId,
     ticket_number: params.ticketNumber,
     title: params.title,
-    company_id: params.companyId,
+    client_id: params.companyId,
     contact_name_id: params.contactId,
     status_id: params.statusId,
     priority_id: params.priorityId,
@@ -1051,7 +1054,7 @@ async function createTicketWithSlaResult(db: Knex, tenant: string, params: {
     ticket_id: ticketId,
     ticket_number: `SLA-${uuidv4().slice(0, 6)}`,
     title: `SLA Test Ticket ${uuidv4().slice(0, 6)}`,
-    company_id: params.companyId,
+    client_id: params.companyId,
     contact_name_id: contactId,
     status_id: params.statusId,
     priority_id: params.priorityId,
@@ -1066,7 +1069,6 @@ async function createTicketWithSlaResult(db: Knex, tenant: string, params: {
     sla_resolution_due_at: new Date(now.getTime() + 120 * 60000),
     sla_resolution_met: params.resolutionMet,
     closed_at: closedAt,
-    created_at: now,
     entered_at: now,
     updated_at: now,
   });

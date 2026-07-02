@@ -18,7 +18,8 @@ import { createTenant, createUser, createClient } from '../../../../test-utils/t
 
 // Mock external dependencies
 vi.mock('server/src/lib/utils/getSecret', () => ({
-  getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+  getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -26,7 +27,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
     getAppSecret: async () => '',
   })),
   secretProvider: {
-    getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+    getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
   },
 }));
 
@@ -167,8 +169,9 @@ describe('SLA Notification Service Integration Tests', () => {
     // Create business hours schedule (24x7 for simplicity)
     businessHoursScheduleId = await createBusinessHoursSchedule(db, tenantId, '24x7 Schedule');
 
-    // Create SLA policy with escalation manager
-    slaPolicyId = await createSlaPolicy(db, tenantId, 'Standard SLA', businessHoursScheduleId, true, escalationManagerId);
+    // Create SLA policy; escalation managers are configured per board
+    slaPolicyId = await createSlaPolicy(db, tenantId, 'Standard SLA', businessHoursScheduleId, true);
+    await createEscalationManager(db, tenantId, boardId, escalationManagerId, 1);
     await createSlaPolicyTarget(db, tenantId, slaPolicyId, priorityHighId, 60, 240); // 1hr response, 4hr resolution
 
     // Create notification thresholds
@@ -631,11 +634,9 @@ async function createBoard(db: Knex, tenant: string, name: string, managerUserId
   await tenantTable(db, tenant, 'boards').insert({
     tenant,
     board_id: boardId,
-    name,
+    board_name: name,
     description: 'Test board for SLA notifications',
     manager_user_id: managerUserId,
-    created_at: db.fn.now(),
-    updated_at: db.fn.now(),
   });
   return boardId;
 }
@@ -687,8 +688,7 @@ async function createSlaPolicy(
   tenant: string,
   name: string,
   businessHoursScheduleId: string,
-  isDefault: boolean,
-  escalationManagerId?: string
+  isDefault: boolean
 ): Promise<string> {
   const policyId = uuidv4();
   await tenantTable(db, tenant, 'sla_policies').insert({
@@ -698,11 +698,30 @@ async function createSlaPolicy(
     description: 'Test SLA policy',
     is_default: isDefault,
     business_hours_schedule_id: businessHoursScheduleId,
-    escalation_manager_id: escalationManagerId || null,
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });
   return policyId;
+}
+
+async function createEscalationManager(
+  db: Knex,
+  tenant: string,
+  boardId: string,
+  managerUserId: string,
+  escalationLevel: number
+): Promise<string> {
+  const configId = uuidv4();
+  await tenantTable(db, tenant, 'escalation_managers').insert({
+    config_id: configId,
+    tenant,
+    board_id: boardId,
+    escalation_level: escalationLevel,
+    manager_user_id: managerUserId,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+  return configId;
 }
 
 async function createSlaPolicyTarget(
@@ -751,7 +770,7 @@ async function createNotificationThreshold(
     notify_assignee: notifyAssignee,
     notify_board_manager: notifyBoardManager,
     notify_escalation_manager: notifyEscalationManager,
-    channels: JSON.stringify(['in_app']),
+    channels: ['in_app'],
     created_at: db.fn.now(),
   });
   return thresholdId;

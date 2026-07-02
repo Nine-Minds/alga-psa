@@ -19,7 +19,8 @@ import { createTenant, createUser, createClient } from '../../../../test-utils/t
 
 // Mock external dependencies
 vi.mock('server/src/lib/utils/getSecret', () => ({
-  getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+  getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -27,7 +28,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
     getAppSecret: async () => '',
   })),
   secretProvider: {
-    getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+    getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
   },
 }));
 
@@ -751,10 +753,8 @@ async function createBoard(db: Knex, tenant: string, name: string): Promise<stri
   await tenantTable(db, tenant, 'boards').insert({
     tenant,
     board_id: boardId,
-    name,
+    board_name: name,
     description: 'Test board for SLA pause',
-    created_at: db.fn.now(),
-    updated_at: db.fn.now(),
   });
   return boardId;
 }
