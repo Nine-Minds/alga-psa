@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { StockMovementSourceDocType } from '@alga-psa/types';
 import { recordStockMovement } from './movements';
+import { ensureStockLevel } from './levels';
 import { PendingAssetLink } from './assetLink';
 
 /**
@@ -26,6 +27,24 @@ export interface ConsumeOpts {
   unit_id?: string | null;
   /** Owner recorded on the delivered unit. */
   client_id?: string | null;
+}
+
+/**
+ * Consumption would drive on-hand negative (or the picked unit / location is not
+ * consumable). Adjustments, counts, and receiving are the correction paths and are
+ * NOT guarded (F015) — negative on-hand corrupts COGS layering, so only `consume`
+ * refuses (F014, decision D1).
+ */
+export class InsufficientStockError extends Error {
+  constructor(message: string, public readonly available: number) {
+    super(message);
+    this.name = 'InsufficientStockError';
+  }
+}
+
+async function serviceName(trx: Knex.Transaction, tenant: string, serviceId: string): Promise<string> {
+  const svc = await trx('service_catalog').where({ tenant, service_id: serviceId }).select('service_name').first();
+  return svc?.service_name ?? 'product';
 }
 
 async function loadTrackedSettings(trx: Knex.Transaction, tenant: string, serviceId: string): Promise<any | null> {
@@ -62,9 +81,14 @@ export async function recordStockConsumption(
   if (!settings) return { consumed: false };
 
   if (settings.is_serialized) {
-    if (!opts.unit_id) return { consumed: false }; // serialized requires a picked unit
+    if (!opts.unit_id) return { consumed: false }; // serialized requires a picked unit (canonical materials layer validates)
     const unit = await trx('stock_units').where({ tenant, unit_id: opts.unit_id }).first();
-    if (!unit || unit.status !== 'in_stock') return { consumed: false };
+    if (!unit || unit.service_id !== opts.service_id || unit.status !== 'in_stock') {
+      throw new InsufficientStockError(
+        `The selected unit of ${await serviceName(trx, tenant, opts.service_id)} is no longer in stock.`,
+        0,
+      );
+    }
     await recordStockMovement(trx, tenant, {
       movement_type: 'consume',
       service_id: opts.service_id,
@@ -98,7 +122,29 @@ export async function recordStockConsumption(
   }
 
   const loc = await resolveLocation(trx, tenant, settings);
-  if (!loc) return { consumed: false };
+  if (!loc) {
+    throw new InsufficientStockError(
+      `No stock location is configured for ${await serviceName(trx, tenant, opts.service_id)} — set a default location before consuming stock.`,
+      0,
+    );
+  }
+
+  // F014 (D1): check-and-decrement atomically. The FOR UPDATE lock is held until the
+  // caller's transaction commits, so a concurrent consume of the same level row waits
+  // here and re-reads the post-commit balance. Exact-to-zero is allowed.
+  await ensureStockLevel(trx, tenant, opts.service_id, loc);
+  const level = await trx('stock_levels')
+    .where({ tenant, service_id: opts.service_id, location_id: loc })
+    .forUpdate()
+    .first();
+  const onHand = Number(level?.quantity_on_hand ?? 0);
+  if (onHand < opts.quantity) {
+    throw new InsufficientStockError(
+      `Insufficient stock for ${await serviceName(trx, tenant, opts.service_id)}: ${onHand} available, ${opts.quantity} requested.`,
+      onHand,
+    );
+  }
+
   await recordStockMovement(trx, tenant, {
     movement_type: 'consume',
     service_id: opts.service_id,

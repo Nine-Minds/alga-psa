@@ -24,11 +24,30 @@ import {
   getServicePrices,
   listAvailableStockUnitsForMaterial,
 } from '../../actions/materialCatalogActions';
+import {
+  getProductAvailability,
+  type ProductAvailability,
+} from '@alga-psa/inventory/actions/availabilityActions';
 
 interface TicketMaterialsCardProps {
   id?: string;
   ticketId: string;
   clientId?: string | null;
+}
+
+// On-hand badge for tracked products in the picker (F012): red at zero, amber at/below
+// reorder point, plain otherwise. Untracked products and rows whose stock fields haven't
+// loaded yet (undefined) get no badge.
+function onHandBadge(fields: {
+  track_stock?: boolean;
+  on_hand_total?: number | null;
+  reorder_point?: number | null;
+}): SelectOption['badge'] | undefined {
+  if (!fields.track_stock || fields.on_hand_total == null) return undefined;
+  const onHand = fields.on_hand_total;
+  const variant =
+    onHand <= 0 ? 'danger' : fields.reorder_point != null && onHand <= fields.reorder_point ? 'warning' : 'secondary';
+  return { text: `On hand: ${onHand}`, variant };
 }
 
 export default function TicketMaterialsCard({
@@ -54,6 +73,10 @@ export default function TicketMaterialsCard({
   // Serialized stock unit picker (only shown when the product has in-stock units)
   const [availableUnits, setAvailableUnits] = useState<IStockUnit[]>([]);
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
+  // Per-location on-hand for the selected tracked product (F013), advisory only.
+  const [availability, setAvailability] = useState<ProductAvailability | null>(null);
+  // Inline add error (F018) — e.g. insufficient stock — shown in the form so the user's inputs survive.
+  const [addError, setAddError] = useState<string | null>(null);
 
   // Load materials
   const loadMaterials = useCallback(async () => {
@@ -88,6 +111,7 @@ export default function TicketMaterialsCard({
       const options: SelectOption[] = result.items.map((item) => ({
         value: item.service_id,
         label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
+        badge: onHandBadge(item),
       }));
 
       return { options, total: result.totalCount };
@@ -148,6 +172,25 @@ export default function TicketMaterialsCard({
     return () => { cancelled = true; };
   }, [selectedProductId]);
 
+  // Per-location on-hand for the selected product (F013). Advisory only — a failure
+  // (e.g. the availability action unavailable) leaves the form fully usable.
+  useEffect(() => {
+    if (!selectedProductId) {
+      setAvailability(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const [result] = await getProductAvailability([selectedProductId]);
+        if (!cancelled) setAvailability(result ?? null);
+      } catch {
+        if (!cancelled) setAvailability(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedProductId]);
+
   // Get selected price details
   const selectedPrice = productPrices.find(p => p.currency_code === selectedCurrency);
 
@@ -174,6 +217,7 @@ export default function TicketMaterialsCard({
     }
 
     setIsAdding(true);
+    setAddError(null);
     try {
       await addTicketMaterial({
         ticket_id: ticketId,
@@ -198,7 +242,9 @@ export default function TicketMaterialsCard({
       setSelectedUnitId('');
       await loadMaterials();
     } catch (error) {
-      handleError(error, t('errors.addMaterial', 'Failed to add material'));
+      // Inline so the user keeps their inputs and sees the exact reason (e.g. the
+      // available quantity the backend reports for insufficient stock) (F018).
+      setAddError(error instanceof Error ? error.message : t('errors.addMaterial', 'Failed to add material'));
     } finally {
       setIsAdding(false);
     }
@@ -245,7 +291,7 @@ export default function TicketMaterialsCard({
       <ContentCard
         id={id}
         collapsible
-        defaultExpanded={false}
+        defaultExpanded={materials.length > 0}
         title={t('materials.title', 'Materials')}
         headerIcon={<Package className="w-5 h-5" />}
         count={materials.length}
@@ -268,6 +314,7 @@ export default function TicketMaterialsCard({
                   setSelectedProductId(value);
                   setSelectedProductLabel(option?.label ?? '');
                   setSelectedCurrency('');
+                  setAddError(null);
                 }}
                 loadOptions={loadProductOptions}
                 limit={10}
@@ -361,6 +408,24 @@ export default function TicketMaterialsCard({
               />
             </div>
 
+            {availability?.track_stock && availability.locations.length > 0 && (
+              <div id={`${id}-availability`} className="text-xs text-gray-500 space-y-0.5">
+                <div className="font-medium text-gray-600">{t('materials.onHandByLocation', 'On hand by location')}</div>
+                {availability.locations.map((loc) => (
+                  <div key={loc.location_id} className="flex justify-between">
+                    <span>{loc.location_name}</span>
+                    <span className="tabular-nums">{loc.on_hand}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {addError && (
+              <div id={`${id}-add-error`} className="text-sm text-red-600">
+                {addError}
+              </div>
+            )}
+
             <div className="flex justify-end space-x-2">
               <Button
                 {...withDataAutomationId({ id: `${id}-cancel-add-btn` })}
@@ -374,6 +439,7 @@ export default function TicketMaterialsCard({
                   setSelectedCurrency('');
                   setQuantity(1);
                   setDescription('');
+                  setAddError(null);
                 }}
               >
                 {t('actions.cancel', 'Cancel')}

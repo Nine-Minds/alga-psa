@@ -158,6 +158,7 @@ export const updateInventorySettings = withAuth(
         | 'preferred_vendor_id'
         | 'kit_pricing_mode'
         | 'kit_fixed_price'
+        | 'default_asset_type'
       >
     >,
   ): Promise<IProductInventorySettings> => {
@@ -177,6 +178,7 @@ export const updateInventorySettings = withAuth(
         'preferred_vendor_id',
         'kit_pricing_mode',
         'kit_fixed_price',
+        'default_asset_type',
       ] as const) {
         if (k in patch) update[k] = (patch as any)[k];
       }

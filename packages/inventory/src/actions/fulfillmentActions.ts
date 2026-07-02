@@ -11,7 +11,15 @@ import {
   IStockUnit,
   SalesOrderStatus,
 } from '@alga-psa/types';
-import { recordStockMovement, applyAllocationDelta, availableQuantity, assertLocationWritable } from '../lib';
+import {
+  applyAllocationDelta,
+  assertLocationWritable,
+  availableQuantity,
+  collectStockLowSignalAfterConsume,
+  publishInventoryEvent,
+  recordStockMovement,
+  timestampPayload,
+} from '../lib';
 import { createAndLinkDeliveredAsset, PendingAssetLink } from '../lib/assetLink';
 
 async function requireSoPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
@@ -241,6 +249,7 @@ export const fulfillSalesOrderLine = withAuth(
       const isHard = so.allocation_mode === 'hard';
       const deliveredUnitIds: string[] = [];
       const pendingAssets: PendingAssetLink[] = [];
+      const pendingStockLowSignals: Awaited<ReturnType<typeof collectStockLowSignalAfterConsume>>[] = [];
       let fulfilledQty = 0;
       let reservedDrain = 0;
 
@@ -362,6 +371,9 @@ export const fulfillSalesOrderLine = withAuth(
           performed_by: user.user_id,
         });
 
+        const pendingStockLow = await collectStockLowSignalAfterConsume(trx, tenant, serviceId, fromLocation, qty);
+        if (pendingStockLow) pendingStockLowSignals.push(pendingStockLow);
+
         // Release exactly what this line reserved — never other orders' claims — at
         // the location the reservation was placed (F024/F025).
         reservedDrain = Math.min(qty, Number(line.quantity_reserved ?? 0));
@@ -398,6 +410,11 @@ export const fulfillSalesOrderLine = withAuth(
       );
 
       const soStatus = await recomputeSalesOrderStatus(trx, tenant, so);
+      const fulfilledLineCount = await trx('sales_order_lines')
+        .where({ tenant, so_id: so.so_id })
+        .andWhere('quantity_fulfilled', '>', 0)
+        .count<{ c: string }>('* as c')
+        .first();
 
       return {
         so_line_id: soLineId,
@@ -410,6 +427,15 @@ export const fulfillSalesOrderLine = withAuth(
         so_status: soStatus,
         warnings,
         pendingAssets,
+        pendingStockLowSignals,
+        so_fulfilled_event: {
+          tenant,
+          so_id: so.so_id,
+          so_number: so.so_number,
+          client_id: so.client_id ?? null,
+          fulfilled_line_count: Number(fulfilledLineCount?.c ?? 0),
+          drop_ship: false,
+        },
       };
     }).then(async (core) => {
       // F029: create + link managed assets only after the stock transaction is
@@ -429,7 +455,31 @@ export const fulfillSalesOrderLine = withAuth(
           );
         }
       }
-      const { pendingAssets: _pending, ...rest } = core;
+      for (const signal of core.pendingStockLowSignals) {
+        if (signal) await publishInventoryEvent('INVENTORY_STOCK_LOW', signal);
+      }
+      await publishInventoryEvent('INVENTORY_SO_FULFILLED', core.so_fulfilled_event);
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
+        tenant,
+        so_id: core.so_id,
+        user_id: user.user_id,
+        changed_fields: ['status', 'quantity_fulfilled'],
+      }));
+      for (const unitId of core.unit_ids) {
+        await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+          tenant,
+          unit_id: unitId,
+          service_id: core.service_id,
+          user_id: user.user_id,
+          changed_fields: ['status', 'client_id', 'delivered_at', 'location_id'],
+        }));
+      }
+      const {
+        pendingAssets: _pending,
+        pendingStockLowSignals: _pendingStockLowSignals,
+        so_fulfilled_event: _soFulfilledEvent,
+        ...rest
+      } = core;
       return { ...rest, asset_ids: assetIds };
     });
   },

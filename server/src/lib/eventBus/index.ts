@@ -298,15 +298,21 @@ export class EventBus {
     return `processed_events:${tenantId}`;
   }
 
+  private getEventTenantId(event: Event): string {
+    const payload = event.payload as Record<string, unknown>;
+    const tenantId = payload.tenantId ?? payload.tenant;
+    return typeof tenantId === 'string' && tenantId.length > 0 ? tenantId : 'unknown';
+  }
+
   private async isEventProcessed(event: Event): Promise<boolean> {
     const client = await getClient();
-    const setKey = this.getProcessedSetKey(event.payload.tenantId);
+    const setKey = this.getProcessedSetKey(this.getEventTenantId(event));
     return await client.sIsMember(setKey, event.id);
   }
 
   private async markEventProcessed(event: Event): Promise<void> {
     const client = await getClient();
-    const setKey = this.getProcessedSetKey(event.payload.tenantId);
+    const setKey = this.getProcessedSetKey(this.getEventTenantId(event));
     await client.sAdd(setKey, event.id);
     // Set expiration to prevent unbounded growth (3 days)
     await client.expire(setKey, 60 * 60 * 24 * 3);
@@ -322,13 +328,13 @@ export class EventBus {
 
   private async isHandlerProcessed(event: Event, handlerKey: string): Promise<boolean> {
     const client = await getClient();
-    const setKey = this.getProcessedHandlersSetKey(event.payload.tenantId);
+    const setKey = this.getProcessedHandlersSetKey(this.getEventTenantId(event));
     return await client.sIsMember(setKey, `${event.id}:${handlerKey}`);
   }
 
   private async markHandlerProcessed(event: Event, handlerKey: string): Promise<void> {
     const client = await getClient();
-    const setKey = this.getProcessedHandlersSetKey(event.payload.tenantId);
+    const setKey = this.getProcessedHandlersSetKey(this.getEventTenantId(event));
     await client.sAdd(setKey, `${event.id}:${handlerKey}`);
     // Set expiration to prevent unbounded growth (3 days)
     await client.expire(setKey, 60 * 60 * 24 * 3);
@@ -849,7 +855,7 @@ export class EventBus {
       logger.info('[EventBus] Event published:', {
         eventType: fullEvent.eventType,
         eventId: fullEvent.id,
-        tenant: fullEvent.payload.tenantId,
+        tenant: this.getEventTenantId(fullEvent),
         channel
       });
     } catch (error) {

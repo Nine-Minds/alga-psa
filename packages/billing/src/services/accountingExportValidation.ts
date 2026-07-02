@@ -1,6 +1,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { AccountingExportRepository } from '../repositories/accountingExportRepository';
 import { AccountingMappingResolver } from './accountingMappingResolver';
+import { getAccountingSyncSettings } from './accountingSync/accountingSyncSettings';
 import type { AccountingExportLine, AccountingExportServicePeriodSource } from '@alga-psa/types';
 
 type ChargeDetailProjection = {
@@ -69,6 +70,40 @@ export class AccountingExportValidation {
         resolution_state: 'resolved',
         resolved_at: validationTimestamp
       });
+
+    if (batch.export_type === 'vendor_bill') {
+      if (!batch.tenant) {
+        throw new Error(`Export batch ${batchId} is missing tenant context`);
+      }
+      if (batch.adapter_type === 'quickbooks_online') {
+        const firstLine = lines[0] ?? null;
+        if (!batch.target_realm && firstLine) {
+          await repo.addError({
+            batch_id: batchId,
+            line_id: firstLine.line_id,
+            code: 'missing_target_realm',
+            message: 'Connect QuickBooks Online before exporting vendor bills.',
+            metadata: mergeErrorMetadata(firstLine)
+          });
+        }
+
+        const settings = await getAccountingSyncSettings(knex, batch.tenant);
+        if (!settings.defaultExpenseAccountRef && firstLine) {
+          await repo.addError({
+            batch_id: batchId,
+            line_id: firstLine.line_id,
+            code: 'missing_default_expense_account',
+            message: 'Set a default QuickBooks expense account before exporting vendor bills.',
+            metadata: mergeErrorMetadata(firstLine)
+          });
+        }
+      }
+
+      const errors = await repo.listErrors(batchId);
+      const openErrors = errors.filter((item) => item.resolution_state === 'open');
+      await repo.updateBatchStatus(batchId, { status: openErrors.length === 0 ? 'ready' : 'needs_attention' });
+      return;
+    }
 
     const resolver = await AccountingMappingResolver.create();
     const adapterType = batch.adapter_type;

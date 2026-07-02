@@ -27,8 +27,14 @@ export async function createAndLinkDeliveredAsset(
   p: PendingAssetLink,
 ): Promise<string | null> {
   const serial = p.unit.serial_number || p.unit.unit_id;
+  // F026: the product's configured default asset type, falling back to 'unknown'.
+  const settings = await db('product_inventory_settings')
+    .where({ tenant, service_id: p.serviceId })
+    .select('default_asset_type')
+    .first();
+  const assetType = (settings?.default_asset_type as string | null | undefined)?.trim() || 'unknown';
   const req: CreateAssetRequest = {
-    asset_type: 'unknown',
+    asset_type: assetType,
     client_id: p.clientId,
     asset_tag: serial,
     name: p.serviceName ? `${p.serviceName} ${serial}`.trim() : serial,

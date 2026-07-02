@@ -81,6 +81,8 @@ import HuduClientTab from './HuduClientTab';
 import HuduClientPasswordsTab from './HuduClientPasswordsTab';
 import HuduClientDocumentsSection from './HuduClientDocumentsSection';
 import { useHuduClientTab } from './useHuduClientTab';
+import { useClientEquipmentTab } from './useClientEquipmentTab';
+import { ClientEquipmentTab } from './ClientEquipmentTab';
 
 const EMPTY_CONTACTS: IContact[] = [];
 const EMPTY_DOCUMENTS: IDocument[] = [];
@@ -276,6 +278,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const shouldRenderPsaOnlyClientSurfaces = !isAlgaDeskMode;
   // F070: EE + hudu-integration flag + Hudu connected + this client mapped.
   const huduClientTab = useHuduClientTab(client.client_id);
+  // F023: shown only when the current user has inventory:read.
+  const clientEquipmentTab = useClientEquipmentTab();
 
   const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {
     const response = await fetch(`/api/integrations/entra/sync/runs/${encodeURIComponent(runId)}`, {
@@ -1302,6 +1306,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       label: t('clientDetails.assets', { defaultValue: 'Assets' }),
       content: shouldRenderPsaOnlyClientSurfaces ? renderClientAssets({ clientId: client.client_id }) : null,
     },
+    // F022/F023: inventory Equipment tab — PSA-only, and only when inventory:read.
+    ...((shouldRenderPsaOnlyClientSurfaces && clientEquipmentTab.visible) ? [{
+      id: 'equipment',
+      label: t('clientDetails.equipment', { defaultValue: 'Equipment' }),
+      content: <ClientEquipmentTab clientId={client.client_id} />,
+    }] : []),
     {
       id: 'billing',
       label: t('clientDetails.billing', { defaultValue: 'Billing' }),
@@ -1533,7 +1543,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     documents,
     memoizedRouter,
     interactions,
-    huduClientTab.visible
+    huduClientTab.visible,
+    clientEquipmentTab.visible
   ]);
 
   const tabContent = useMemo(() => {

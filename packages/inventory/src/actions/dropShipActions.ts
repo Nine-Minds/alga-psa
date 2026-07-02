@@ -14,7 +14,7 @@ import {
   SalesOrderStatus,
   PurchaseOrderStatus,
 } from '@alga-psa/types';
-import { recordStockMovement } from '../lib';
+import { publishInventoryEvent, recordStockMovement, timestampPayload } from '../lib';
 
 /**
  * Drop-ship: vendor ships straight to the client, the stock never touches one of
@@ -81,7 +81,7 @@ export const createDropShipForSoLine = withAuth(
     if (!input?.vendor_id) throw new Error('vendor_id is required');
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const soLine = (await trx('sales_order_lines')
         .where({ tenant, so_line_id: soLineId })
         .first()) as ISalesOrderLine | undefined;
@@ -135,6 +135,14 @@ export const createDropShipForSoLine = withAuth(
 
       return { ...(po as IPurchaseOrder), lines: [line as IPurchaseOrderLine] };
     });
+
+    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_CREATED', timestampPayload({
+      tenant,
+      po_id: result.po_id,
+      user_id: user.user_id,
+    }));
+
+    return result;
   },
 );
 
@@ -378,6 +386,11 @@ export const confirmDropShipShipment = withAuth(
             .update({ status: soStatus, updated_at: trx.fn.now() });
         }
       }
+      const fulfilledLineCount = await trx('sales_order_lines')
+        .where({ tenant, so_id: so.so_id })
+        .andWhere('quantity_fulfilled', '>', 0)
+        .count<{ c: string }>('* as c')
+        .first();
 
       return {
         po_line: updatedPoLine as IPurchaseOrderLine,
@@ -386,6 +399,14 @@ export const confirmDropShipShipment = withAuth(
         units,
         quantity_fulfilled: quantity,
         pendingAssets,
+        so_fulfilled_event: {
+          tenant,
+          so_id: so.so_id,
+          so_number: so.so_number,
+          client_id: so.client_id ?? null,
+          fulfilled_line_count: Number(fulfilledLineCount?.c ?? 0),
+          drop_ship: true,
+        },
       };
     });
 
@@ -407,7 +428,29 @@ export const confirmDropShipShipment = withAuth(
         );
       }
     }
-    const { pendingAssets: _pending, ...rest } = core;
+    await publishInventoryEvent('INVENTORY_SO_FULFILLED', core.so_fulfilled_event);
+    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
+      tenant,
+      po_id: core.po_line.po_id,
+      user_id: user.user_id,
+      changed_fields: ['status', 'quantity_received'],
+    }));
+    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
+      tenant,
+      so_id: core.so_line.so_id,
+      user_id: user.user_id,
+      changed_fields: ['status', 'quantity_fulfilled'],
+    }));
+    for (const unit of core.units) {
+      await publishInventoryEvent('INVENTORY_STOCK_UNIT_CREATED', timestampPayload({
+        tenant,
+        unit_id: unit.unit_id,
+        service_id: unit.service_id,
+        user_id: user.user_id,
+      }));
+    }
+
+    const { pendingAssets: _pending, so_fulfilled_event: _soFulfilledEvent, ...rest } = core;
     return { ...rest, warnings };
   },
 );

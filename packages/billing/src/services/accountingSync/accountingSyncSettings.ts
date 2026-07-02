@@ -19,6 +19,8 @@ export interface AccountingSyncSettings {
   defaultClassRef: QboRef | null;
   /** Default QBO department applied at the invoice header. */
   defaultDepartmentRef: QboRef | null;
+  /** Default QBO expense account applied to vendor bill lines. */
+  defaultExpenseAccountRef?: QboRef | null;
   /** The realm that sync operations target when no explicit realm is specified. */
   defaultRealm: string | null;
 }
@@ -29,6 +31,7 @@ const DEFAULT_SETTINGS: AccountingSyncSettings = {
   depositAccountRef: null,
   defaultClassRef: null,
   defaultDepartmentRef: null,
+  defaultExpenseAccountRef: null,
   defaultRealm: null
 };
 
@@ -57,6 +60,7 @@ function normalize(raw: unknown): AccountingSyncSettings {
     depositAccountRef: normalizeQboRef(record.depositAccountRef),
     defaultClassRef: normalizeQboRef(record.defaultClassRef),
     defaultDepartmentRef: normalizeQboRef(record.defaultDepartmentRef),
+    defaultExpenseAccountRef: normalizeQboRef(record.defaultExpenseAccountRef),
     defaultRealm: typeof record.defaultRealm === 'string' ? record.defaultRealm : null
   };
 }

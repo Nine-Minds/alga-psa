@@ -32,6 +32,7 @@ export * from './creditReconciliationActions';
 export * from './creditReconciliationFixActions';
 export * from './externalTaxImportActions';
 export * from './invoiceModification';
+export * from './invoiceCogsActions';
 export * from './invoiceQueries';
 export * from './invoiceJobActions';
 export * from './invoiceTemplates';
@@ -49,6 +50,7 @@ export * from './serviceRateTierActions';
 export * from './taxSettingsActions';
 export * from './taxSourceActions';
 export * from './usageActions';
+export * from './vendorBillExportActions';
 export * from './voidInvoiceActions';
 
 // Export contract actions explicitly to avoid conflicts with contractLineMappingActions

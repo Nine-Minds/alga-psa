@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import {
@@ -19,6 +20,7 @@ import { ChevronDown } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type {
   ColumnDefinition,
+  IClient,
   ISalesOrder,
   IStockLocation,
   SalesOrderInvoiceMode,
@@ -133,6 +135,8 @@ export interface SalesOrdersManagerProps {
   initialSos: ISalesOrder[];
   /** Active stock locations for the fulfill dialog's source selector. */
   locations?: IStockLocation[];
+  /** Clients for the create-SO client picker. */
+  clients?: IClient[];
   /** Billing-owned actions passed from the page (billing → inventory dependency). */
   fulfillAndInvoice: FulfillAndInvoiceFn;
   generateInvoice: GenerateInvoiceFn;
@@ -142,6 +146,7 @@ export interface SalesOrdersManagerProps {
 export function SalesOrdersManager({
   initialSos,
   locations = [],
+  clients = [],
   fulfillAndInvoice,
   generateInvoice,
   confirmDropShip,
@@ -149,6 +154,8 @@ export function SalesOrdersManager({
   const [sos, setSos] = useState<ISalesOrder[]>(initialSos || []);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [saving, setSaving] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<ISalesOrder | null>(null);
   const [emailTarget, setEmailTarget] = useState<ISalesOrder | null>(null);
@@ -397,13 +404,19 @@ export function SalesOrdersManager({
         id="sales-order-dialog"
       >
         <div className="space-y-4 p-1">
-          <Input
-            id="sales-order-client-id"
-            label="Client ID"
-            required
-            value={form.client_id}
-            onChange={(e) => setForm({ ...form, client_id: e.target.value })}
-          />
+          <div className="space-y-1">
+            <label className="block text-sm font-medium">Client</label>
+            <ClientPicker
+              id="sales-order-client"
+              clients={clients}
+              selectedClientId={form.client_id || null}
+              onSelect={(clientId) => setForm({ ...form, client_id: clientId ?? '' })}
+              filterState={clientFilterState}
+              onFilterStateChange={setClientFilterState}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={setClientTypeFilter}
+            />
+          </div>
           <Input
             id="sales-order-currency-code"
             label="Currency code"

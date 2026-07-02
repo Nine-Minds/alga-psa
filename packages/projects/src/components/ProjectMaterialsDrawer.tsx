@@ -21,6 +21,10 @@ import {
   deleteProjectMaterial,
   listAvailableStockUnitsForMaterial,
 } from '../actions/materialCatalogActions';
+import {
+  getProductAvailability,
+  type ProductAvailability,
+} from '@alga-psa/inventory/actions/availabilityActions';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { useTranslation } from 'react-i18next';
 
@@ -28,6 +32,21 @@ interface ProjectMaterialsDrawerProps {
   id?: string;
   projectId: string;
   clientId?: string | null;
+}
+
+// On-hand badge for tracked products in the picker (F016): red at zero, amber at/below
+// reorder point, plain otherwise. Untracked products and rows whose stock fields haven't
+// loaded yet (undefined) get no badge.
+function onHandBadge(fields: {
+  track_stock?: boolean;
+  on_hand_total?: number | null;
+  reorder_point?: number | null;
+}): SelectOption['badge'] | undefined {
+  if (!fields.track_stock || fields.on_hand_total == null) return undefined;
+  const onHand = fields.on_hand_total;
+  const variant =
+    onHand <= 0 ? 'danger' : fields.reorder_point != null && onHand <= fields.reorder_point ? 'warning' : 'secondary';
+  return { text: `On hand: ${onHand}`, variant };
 }
 
 export default function ProjectMaterialsDrawer({
@@ -52,6 +71,10 @@ export default function ProjectMaterialsDrawer({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [availableUnits, setAvailableUnits] = useState<IStockUnit[]>([]);
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
+  // Per-location on-hand for the selected tracked product (F016), advisory only.
+  const [availability, setAvailability] = useState<ProductAvailability | null>(null);
+  // Inline add error (F018) — e.g. insufficient stock — shown in the form so the user's inputs survive.
+  const [addError, setAddError] = useState<string | null>(null);
 
   const loadMaterials = useCallback(async () => {
     if (!projectId) return;
@@ -84,6 +107,7 @@ export default function ProjectMaterialsDrawer({
       const options: SelectOption[] = result.items.map((item) => ({
         value: item.service_id,
         label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
+        badge: onHandBadge(item),
       }));
 
       return { options, total: result.totalCount };
@@ -139,6 +163,25 @@ export default function ProjectMaterialsDrawer({
     return () => { cancelled = true; };
   }, [selectedProductId]);
 
+  // Per-location on-hand for the selected product (F016). Advisory only — a failure
+  // (e.g. the availability action unavailable) leaves the form fully usable.
+  useEffect(() => {
+    if (!selectedProductId) {
+      setAvailability(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const [result] = await getProductAvailability([selectedProductId]);
+        if (!cancelled) setAvailability(result ?? null);
+      } catch {
+        if (!cancelled) setAvailability(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedProductId]);
+
   const calculateTotal = (material: IProjectMaterial) => material.quantity * material.rate;
 
   const unbilledByCurrency = materials
@@ -162,6 +205,7 @@ export default function ProjectMaterialsDrawer({
     setDescription('');
     setAvailableUnits([]);
     setSelectedUnitId('');
+    setAddError(null);
   };
 
   const handleAddMaterial = async () => {
@@ -186,6 +230,7 @@ export default function ProjectMaterialsDrawer({
     }
 
     setIsAdding(true);
+    setAddError(null);
     try {
       await addProjectMaterial({
         project_id: projectId,
@@ -202,7 +247,9 @@ export default function ProjectMaterialsDrawer({
       resetAddForm();
       await loadMaterials();
     } catch (error) {
-      handleError(error, materialsT('addFailed', 'Failed to add material'));
+      // Inline so the user keeps their inputs and sees the exact reason (e.g. the
+      // available quantity the backend reports for insufficient stock) (F018).
+      setAddError(error instanceof Error ? error.message : materialsT('addFailed', 'Failed to add material'));
     } finally {
       setIsAdding(false);
     }
@@ -258,6 +305,7 @@ export default function ProjectMaterialsDrawer({
                   setSelectedProductId(value);
                   setSelectedProductLabel(option?.label ?? '');
                   setSelectedCurrency('');
+                  setAddError(null);
                 }}
                 loadOptions={loadProductOptions}
                 limit={10}
@@ -358,6 +406,24 @@ export default function ProjectMaterialsDrawer({
                 placeholder={materialsT('notesPlaceholder', 'Additional notes...')}
               />
             </div>
+
+            {availability?.track_stock && availability.locations.length > 0 && (
+              <div id={`${id}-availability`} className="text-xs text-gray-500 space-y-0.5">
+                <div className="font-medium text-gray-600">{materialsT('onHandByLocation', 'On hand by location')}</div>
+                {availability.locations.map((loc) => (
+                  <div key={loc.location_id} className="flex justify-between">
+                    <span>{loc.location_name}</span>
+                    <span className="tabular-nums">{loc.on_hand}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {addError && (
+              <div id={`${id}-add-error`} className="text-sm text-red-600">
+                {addError}
+              </div>
+            )}
 
             <div className="flex justify-end space-x-2">
               <Button

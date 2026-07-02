@@ -13,7 +13,13 @@ import {
   SalesOrderAllocationMode,
   SalesOrderLineFulfillmentType,
 } from '@alga-psa/types';
-import { availableQuantity, applyAllocationDelta, recomputeSerializedOnHand } from '../lib';
+import {
+  availableQuantity,
+  applyAllocationDelta,
+  publishInventoryEvent,
+  recomputeSerializedOnHand,
+  timestampPayload,
+} from '../lib';
 import { explodeKitOntoSalesOrder } from './kitActions';
 
 /**
@@ -31,6 +37,7 @@ import { explodeKitOntoSalesOrder } from './kitActions';
 const INVOICE_MODES: SalesOrderInvoiceMode[] = ['on_fulfillment', 'manual'];
 const ALLOCATION_MODES: SalesOrderAllocationMode[] = ['soft', 'hard'];
 const FULFILLMENT_TYPES: SalesOrderLineFulfillmentType[] = ['from_stock', 'drop_ship'];
+type StockUnitSearchTouch = { unit_id: string; service_id?: string };
 
 async function requireSoPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'sales_order', action))) {
@@ -116,9 +123,9 @@ async function allocateLine(
   so: ISalesOrder,
   line: ISalesOrderLine,
   meta: ProductMeta,
-): Promise<void> {
+): Promise<StockUnitSearchTouch[]> {
   const remaining = Number(line.quantity_ordered) - Number(line.quantity_fulfilled ?? 0);
-  if (remaining <= 0) return;
+  if (remaining <= 0) return [];
 
   if (meta.is_serialized) {
     const preferred = await resolveAllocationLocation(trx, tenant, line.service_id, meta);
@@ -135,14 +142,16 @@ async function allocateLine(
       : ((await q.orderByRaw('received_at ASC NULLS LAST')) as any[]);
 
     const touched = new Set<string>();
+    const stockUnitTouches: StockUnitSearchTouch[] = [];
     for (const u of units) {
       await trx('stock_units')
         .where({ tenant, unit_id: u.unit_id })
         .update({ status: 'allocated', allocated_so_line_id: line.so_line_id, updated_at: trx.fn.now() });
       if (u.location_id) touched.add(u.location_id);
+      stockUnitTouches.push({ unit_id: u.unit_id, service_id: line.service_id });
     }
     for (const loc of touched) await recomputeSerializedOnHand(trx, tenant, line.service_id, loc);
-    return;
+    return stockUnitTouches;
   }
 
   // Non-serialized: bump the per-location reserved (soft) / held (hard) counter,
@@ -150,14 +159,14 @@ async function allocateLine(
   // real stock, not a wish; the un-reservable remainder is the backorder. The level
   // row is locked first so concurrent confirms serialize on the availability read.
   const location = await resolveAllocationLocation(trx, tenant, line.service_id, meta);
-  if (!location) return; // nothing on hand anywhere → backorder
+  if (!location) return []; // nothing on hand anywhere → backorder
   const level = await trx('stock_levels')
     .where({ tenant, service_id: line.service_id, location_id: location })
     .forUpdate()
     .first();
   const available = level ? availableQuantity(level) : 0;
   const reserve = Math.max(0, Math.min(available, remaining));
-  if (reserve <= 0) return;
+  if (reserve <= 0) return [];
   const column = so.allocation_mode === 'hard' ? 'held_quantity' : 'reserved_quantity';
   await applyAllocationDelta(trx, tenant, line.service_id, location, column, reserve);
   // Attribute the reservation to the line so release/fulfill can drain exactly what
@@ -169,6 +178,7 @@ async function allocateLine(
       reserved_location_id: location,
       updated_at: trx.fn.now(),
     });
+  return [];
 }
 
 /** Decrement a per-location allocation counter for a service by `amount`, draining from the rows that hold it. */
@@ -199,7 +209,8 @@ async function releaseAllocations(
   tenant: string,
   so: ISalesOrder,
   lines: ISalesOrderLine[],
-): Promise<void> {
+): Promise<StockUnitSearchTouch[]> {
+  const stockUnitTouches: StockUnitSearchTouch[] = [];
   // Serialized: return any units still parked on these lines (not yet delivered) to in_stock.
   const lineIds = lines.map((l) => l.so_line_id);
   if (lineIds.length > 0) {
@@ -210,6 +221,7 @@ async function releaseAllocations(
       await trx('stock_units')
         .where({ tenant, unit_id: u.unit_id })
         .update({ status: 'in_stock', allocated_so_line_id: null, updated_at: trx.fn.now() });
+      stockUnitTouches.push({ unit_id: u.unit_id, service_id: u.service_id });
     }
     for (const u of units) {
       if (u.location_id) await recomputeSerializedOnHand(trx, tenant, u.service_id, u.location_id);
@@ -236,6 +248,7 @@ async function releaseAllocations(
       .where({ tenant, so_line_id: line.so_line_id })
       .update({ quantity_reserved: 0, reserved_location_id: null, updated_at: trx.fn.now() });
   }
+  return stockUnitTouches;
 }
 
 /** SO line enriched with product display fields for the detail UI. */
@@ -256,7 +269,13 @@ export const getSalesOrder = withAuth(
     await requireSoPerm(user, 'read');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const row = await trx('sales_orders').where({ tenant, so_id: soId }).first();
+      const row = await trx('sales_orders as so')
+        .leftJoin('clients as c', function () {
+          this.on('c.client_id', '=', 'so.client_id').andOn('c.tenant', '=', 'so.tenant');
+        })
+        .where({ 'so.tenant': tenant, 'so.so_id': soId })
+        .select('so.*', 'c.client_name')
+        .first();
       if (!row) return null;
       const lines = (await trx('sales_order_lines as sol')
         .leftJoin('service_catalog as sc', function () {
@@ -340,7 +359,7 @@ export const createSalesOrder = withAuth(
     if (!ALLOCATION_MODES.includes(allocationMode)) throw new Error(`Invalid allocation_mode: ${allocationMode}`);
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const r = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'SALES_ORDER']);
       const soNumber: string = r.rows[0].number;
 
@@ -400,6 +419,14 @@ export const createSalesOrder = withAuth(
       const lines = await loadLines(trx, tenant, soId);
       return { ...(so as ISalesOrder), lines };
     });
+
+    await publishInventoryEvent('INVENTORY_SALES_ORDER_CREATED', timestampPayload({
+      tenant,
+      so_id: result.so_id,
+      user_id: user.user_id,
+    }));
+
+    return result;
   },
 );
 
@@ -420,7 +447,7 @@ export const addSoLine = withAuth(
     await requireSoPerm(user, 'update');
     if (!(Number(input.quantity_ordered) > 0)) throw new Error('quantity_ordered must be greater than 0');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const so = await getSoOrThrow(trx, tenant, soId);
       if (so.status !== 'draft') throw new Error(`Cannot add a line to a ${so.status} sales order; release it first`);
 
@@ -454,6 +481,15 @@ export const addSoLine = withAuth(
         .returning('*');
       return row as ISalesOrderLine;
     });
+
+    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
+      tenant,
+      so_id: soId,
+      user_id: user.user_id,
+      changed_fields: ['lines'],
+    }));
+
+    return result;
   },
 );
 
@@ -469,7 +505,7 @@ export const updateSoLine = withAuth(
       throw new Error(`Invalid fulfillment_type: ${patch.fulfillment_type}`);
     }
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const line = await trx('sales_order_lines').where({ tenant, so_line_id: soLineId }).first();
       if (!line) throw new Error('Sales order line not found');
       const so = await getSoOrThrow(trx, tenant, line.so_id);
@@ -485,6 +521,15 @@ export const updateSoLine = withAuth(
       const [row] = await trx('sales_order_lines').where({ tenant, so_line_id: soLineId }).update(update).returning('*');
       return row as ISalesOrderLine;
     });
+
+    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
+      tenant,
+      so_id: result.so_id,
+      user_id: user.user_id,
+      changed_fields: Object.keys(patch),
+    }));
+
+    return result;
   },
 );
 
@@ -492,7 +537,7 @@ export const removeSoLine = withAuth(
   async (user, { tenant }, soLineId: string): Promise<{ removed: boolean }> => {
     await requireSoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const line = await trx('sales_order_lines').where({ tenant, so_line_id: soLineId }).first();
       if (!line) throw new Error('Sales order line not found');
       const so = await getSoOrThrow(trx, tenant, line.so_id);
@@ -500,8 +545,17 @@ export const removeSoLine = withAuth(
       // Remove kit child lines along with the parent.
       await trx('sales_order_lines').where({ tenant, parent_so_line_id: soLineId }).del();
       await trx('sales_order_lines').where({ tenant, so_line_id: soLineId }).del();
-      return { removed: true };
+      return { removed: true, so_id: so.so_id };
     });
+
+    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
+      tenant,
+      so_id: result.so_id,
+      user_id: user.user_id,
+      changed_fields: ['lines'],
+    }));
+
+    return { removed: result.removed };
   },
 );
 
@@ -509,16 +563,17 @@ export const confirmSalesOrder = withAuth(
   async (user, { tenant }, soId: string): Promise<ISalesOrder & { lines: ISalesOrderLine[] }> => {
     await requireSoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
       if (so.status !== 'draft') throw new Error(`Only draft sales orders can be confirmed (current: ${so.status})`);
 
       const lines = await loadLines(trx, tenant, soId);
+      const stockUnitTouches: StockUnitSearchTouch[] = [];
       for (const line of lines) {
         if (line.fulfillment_type === 'drop_ship') continue; // procured straight to client, never allocated from stock
         const meta = await getProductMeta(trx, tenant, line.service_id);
         if (meta.is_kit) continue; // kit parent is a container; its component lines carry the stock
-        await allocateLine(trx, tenant, so, line, meta);
+        stockUnitTouches.push(...await allocateLine(trx, tenant, so, line, meta));
       }
 
       const [updated] = await trx('sales_orders')
@@ -526,8 +581,26 @@ export const confirmSalesOrder = withAuth(
         .update({ status: 'confirmed', updated_at: trx.fn.now() })
         .returning('*');
       const finalLines = await loadLines(trx, tenant, soId);
-      return { ...(updated as ISalesOrder), lines: finalLines };
+      return { ...(updated as ISalesOrder), lines: finalLines, stockUnitTouches };
     });
+
+    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
+      tenant,
+      so_id: soId,
+      user_id: user.user_id,
+      changed_fields: ['status', 'allocation'],
+    }));
+    for (const unit of result.stockUnitTouches) {
+      await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+        tenant,
+        unit_id: unit.unit_id,
+        service_id: unit.service_id,
+        user_id: user.user_id,
+        changed_fields: ['status', 'allocated_so_line_id'],
+      }));
+    }
+    const { stockUnitTouches: _stockUnitTouches, ...publicResult } = result;
+    return publicResult;
   },
 );
 
@@ -536,12 +609,29 @@ export const releaseSalesOrderAllocation = withAuth(
   async (user, { tenant }, soId: string): Promise<{ released: boolean }> => {
     await requireSoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
       const lines = await loadLines(trx, tenant, soId);
-      await releaseAllocations(trx, tenant, so, lines);
-      return { released: true };
+      const stockUnitTouches = await releaseAllocations(trx, tenant, so, lines);
+      return { released: true, stockUnitTouches };
     });
+
+    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
+      tenant,
+      so_id: soId,
+      user_id: user.user_id,
+      changed_fields: ['allocation'],
+    }));
+    for (const unit of result.stockUnitTouches) {
+      await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+        tenant,
+        unit_id: unit.unit_id,
+        service_id: unit.service_id,
+        user_id: user.user_id,
+        changed_fields: ['status', 'allocated_so_line_id'],
+      }));
+    }
+    return { released: result.released };
   },
 );
 
@@ -554,7 +644,7 @@ export const reopenSalesOrder = withAuth(
   async (user, { tenant }, soId: string): Promise<ISalesOrder & { lines: ISalesOrderLine[] }> => {
     await requireSoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
       if (so.status !== 'confirmed') {
         throw new Error(`Only confirmed sales orders can be reopened (current: ${so.status})`);
@@ -564,13 +654,31 @@ export const reopenSalesOrder = withAuth(
         if (Number(line.quantity_fulfilled ?? 0) > 0) throw new Error('Cannot reopen a sales order with fulfilled lines');
         if (Number(line.quantity_invoiced ?? 0) > 0) throw new Error('Cannot reopen a sales order with invoiced lines');
       }
-      await releaseAllocations(trx, tenant, so, lines);
+      const stockUnitTouches = await releaseAllocations(trx, tenant, so, lines);
       const [updated] = await trx('sales_orders')
         .where({ tenant, so_id: soId })
         .update({ status: 'draft', updated_at: trx.fn.now() })
         .returning('*');
-      return { ...(updated as ISalesOrder), lines: await loadLines(trx, tenant, soId) };
+      return { ...(updated as ISalesOrder), lines: await loadLines(trx, tenant, soId), stockUnitTouches };
     });
+
+    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
+      tenant,
+      so_id: soId,
+      user_id: user.user_id,
+      changed_fields: ['status', 'allocation'],
+    }));
+    for (const unit of result.stockUnitTouches) {
+      await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+        tenant,
+        unit_id: unit.unit_id,
+        service_id: unit.service_id,
+        user_id: user.user_id,
+        changed_fields: ['status', 'allocated_so_line_id'],
+      }));
+    }
+    const { stockUnitTouches: _stockUnitTouches, ...publicResult } = result;
+    return publicResult;
   },
 );
 
@@ -646,22 +754,39 @@ export const cancelSalesOrder = withAuth(
   async (user, { tenant }, soId: string): Promise<ISalesOrder> => {
     await requireSoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
-      if (so.status === 'cancelled') return so;
+      if (so.status === 'cancelled') return { so, stockUnitTouches: [] as StockUnitSearchTouch[] };
       const lines = await loadLines(trx, tenant, soId);
       // Guard: a sales order with any fulfilled or invoiced quantity cannot be cancelled.
       for (const line of lines) {
         if (Number(line.quantity_fulfilled ?? 0) > 0) throw new Error('Cannot cancel a sales order with fulfilled lines');
         if (Number(line.quantity_invoiced ?? 0) > 0) throw new Error('Cannot cancel a sales order with invoiced lines');
       }
-      await releaseAllocations(trx, tenant, so, lines);
+      const stockUnitTouches = await releaseAllocations(trx, tenant, so, lines);
       const [updated] = await trx('sales_orders')
         .where({ tenant, so_id: soId })
         .update({ status: 'cancelled', updated_at: trx.fn.now() })
         .returning('*');
-      return updated as ISalesOrder;
+      return { so: updated as ISalesOrder, stockUnitTouches };
     });
+
+    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
+      tenant,
+      so_id: soId,
+      user_id: user.user_id,
+      changed_fields: ['status', 'allocation'],
+    }));
+    for (const unit of result.stockUnitTouches) {
+      await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+        tenant,
+        unit_id: unit.unit_id,
+        service_id: unit.service_id,
+        user_id: user.user_id,
+        changed_fields: ['status', 'allocated_so_line_id'],
+      }));
+    }
+    return result.so;
   },
 );
 
@@ -683,7 +808,7 @@ export const suggestPoFromBackorder = withAuth(
       throw new Error('Permission denied: purchase_order create required');
     }
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const so = await getSoOrThrow(trx, tenant, soId);
       const lines = await loadLines(trx, tenant, soId);
 
@@ -756,5 +881,15 @@ export const suggestPoFromBackorder = withAuth(
 
       return { purchaseOrders, unassigned };
     });
+
+    for (const po of result.purchaseOrders) {
+      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_CREATED', timestampPayload({
+        tenant,
+        po_id: po.po_id,
+        user_id: user.user_id,
+      }));
+    }
+
+    return result;
   },
 );

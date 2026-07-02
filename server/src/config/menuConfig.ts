@@ -159,6 +159,7 @@ export const navigationSections: NavigationSection[] = [
           { name: 'Transfers', translationKey: 'nav.inventoryTransfers', icon: FileOutput, href: '/msp/inventory/transfers' },
           { name: 'Cycle Counts', translationKey: 'nav.inventoryCounts', icon: ListChecks, href: '/msp/inventory/counts' },
           { name: 'Write-offs', translationKey: 'nav.inventoryWriteOffs', icon: FileOutput, href: '/msp/inventory/write-offs' },
+          { name: 'Margin', translationKey: 'nav.inventoryMargin', icon: Percent, href: '/msp/inventory/margin' },
           { name: 'Ghost Usage', translationKey: 'nav.inventoryGhostUsage', icon: Ghost, href: '/msp/inventory/ghost-usage' },
           { name: 'RMA', translationKey: 'nav.inventoryRma', icon: ListTree, href: '/msp/inventory/rma' },
           { name: 'Loaners', translationKey: 'nav.inventoryLoaners', icon: Timer, href: '/msp/inventory/loaners' },

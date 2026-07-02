@@ -22,6 +22,10 @@ import {
   type BackorderLine,
   type FulfillmentCandidateUnit,
 } from '../actions';
+import {
+  listSalesOrderInvoices,
+  type SalesOrderInvoiceLink,
+} from '../actions/salesOrderLinkActions';
 
 /**
  * Billing-owned actions arrive as props (F008): the dependency direction is
@@ -96,6 +100,7 @@ export function SalesOrderDetail({
 }: SalesOrderDetailProps) {
   const [so, setSo] = useState<SalesOrderWithDetail | null>(null);
   const [backorder, setBackorder] = useState<Map<string, BackorderLine>>(new Map());
+  const [invoices, setInvoices] = useState<SalesOrderInvoiceLink[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -130,6 +135,11 @@ export function SalesOrderDetail({
       } catch {
         setBackorder(new Map()); // backorder is decoration; the detail still renders
       }
+      try {
+        setInvoices(await listSalesOrderInvoices(soId));
+      } catch {
+        setInvoices([]); // invoice backlinks are decoration; the detail still renders
+      }
     } catch (e: any) {
       toast.error(e?.message || "Couldn't load the sales order.");
     } finally {
@@ -140,6 +150,7 @@ export function SalesOrderDetail({
   useEffect(() => {
     setSo(null);
     setBackorder(new Map());
+    setInvoices([]);
     load();
   }, [load]);
 
@@ -411,9 +422,25 @@ export function SalesOrderDetail({
                     {statusMeta.label}
                   </Badge>
                 )}
-                <span className="text-sm text-gray-500">
-                  {(so as any).client_name || so.client_id} · {so.currency_code} ·{' '}
-                  {so.invoice_mode === 'on_fulfillment' ? 'Bills on fulfillment' : 'Manual invoicing'}
+                <span className="text-sm text-gray-500 flex items-center gap-1">
+                  <a
+                    id={`so-detail-client-${so.so_id}`}
+                    href={`/msp/clients/${so.client_id}`}
+                    className="text-primary-600 hover:underline"
+                  >
+                    {so.client_name || so.client_id}
+                  </a>
+                  <span>· {so.currency_code} ·{' '}
+                  {so.invoice_mode === 'on_fulfillment' ? 'Bills on fulfillment' : 'Manual invoicing'}</span>
+                  {so.quote_id && (
+                    <a
+                      id={`so-detail-from-quote-${so.so_id}`}
+                      href={`/msp/billing?tab=quotes&quoteId=${so.quote_id}&mode=detail`}
+                      className="text-primary-600 hover:underline"
+                    >
+                      · From quote
+                    </a>
+                  )}
                 </span>
               </div>
               <div className="flex gap-2">
@@ -538,6 +565,42 @@ export function SalesOrderDetail({
                 })}
               </tbody>
             </table>
+
+            {invoices.length > 0 && (
+              <div className="space-y-1" id="so-detail-invoices">
+                <h3 className="text-sm font-semibold text-gray-700">Invoices</h3>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b">
+                      <th className="py-2 pr-2 font-medium">Invoice</th>
+                      <th className="py-2 px-2 font-medium">Status</th>
+                      <th className="py-2 px-2 font-medium text-right">Amount</th>
+                      <th className="py-2 pl-2 font-medium">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoices.map((inv) => (
+                      <tr key={inv.invoice_id} className="border-b last:border-0">
+                        <td className="py-2 pr-2">
+                          <a
+                            id={`so-detail-invoice-${inv.invoice_id}`}
+                            href={`/msp/invoices/${inv.invoice_id}`}
+                            className="text-primary-600 hover:underline"
+                          >
+                            {inv.invoice_number || inv.invoice_id}
+                          </a>
+                        </td>
+                        <td className="py-2 px-2">{inv.status || '—'}</td>
+                        <td className="py-2 px-2 text-right tabular-nums">{dollars(inv.total_amount)}</td>
+                        <td className="py-2 pl-2 text-gray-500">
+                          {inv.created_at ? new Date(inv.created_at).toLocaleDateString() : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </>
         )}
 

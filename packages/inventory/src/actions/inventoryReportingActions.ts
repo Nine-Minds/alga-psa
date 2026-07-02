@@ -111,17 +111,34 @@ export const inventoryValueReport = withAuth(async (user, { tenant }): Promise<I
 export interface MarginReportRow {
   service_id: string;
   service_name: string | null;
-  quantity: number;
-  revenue: number;
-  cogs: number;
-  margin: number;
+  sku: string | null;
+  qty_sold: number;
+  revenue_cents: number;
+  cogs_cents: number;
+  margin_cents: number;
+  /** Percentage points, e.g. 42.5 for 42.5%; null when revenue is zero. */
+  margin_pct: number | null;
 }
 
 export interface MarginReport {
   rows: MarginReportRow[];
-  total_revenue: number;
-  total_cogs: number;
-  total_margin: number;
+  total_revenue_cents: number;
+  total_cogs_cents: number;
+  total_margin_cents: number;
+  total_margin_pct: number | null;
+}
+
+function normalizeReportBoundary(value: string | Date | undefined, endExclusive: boolean): string | Date | undefined {
+  if (!value) return undefined;
+  if (value instanceof Date) return value;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (endExclusive && /^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const date = new Date(`${trimmed}T00:00:00.000Z`);
+    date.setUTCDate(date.getUTCDate() + 1);
+    return date.toISOString();
+  }
+  return trimmed;
 }
 
 /**
@@ -134,44 +151,65 @@ export const marginReport = withAuth(
     await requireInvRead(user);
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+      const from = normalizeReportBoundary(filter?.from, false);
+      const toExclusive = normalizeReportBoundary(filter?.to, true);
       const q = trx('stock_movements as sm')
-        .leftJoin('sales_order_lines as sol', function () {
-          this.on('sm.source_doc_id', '=', 'sol.so_line_id').andOn('sm.tenant', '=', 'sol.tenant');
-        })
+        .joinRaw(
+          `LEFT JOIN LATERAL (
+            SELECT sol.unit_price
+            FROM sales_order_lines sol
+            WHERE sol.tenant = sm.tenant
+              AND sol.so_id = sm.source_doc_id
+              AND sol.service_id = sm.service_id
+            ORDER BY sol.created_at ASC, sol.so_line_id ASC
+            LIMIT 1
+          ) sol ON true`,
+        )
         .leftJoin('service_catalog as sc', function () {
           this.on('sm.service_id', '=', 'sc.service_id').andOn('sm.tenant', '=', 'sc.tenant');
         })
         .where({ 'sm.tenant': tenant, 'sm.movement_type': 'consume', 'sm.source_doc_type': 'sales_order' });
-      if (filter?.from) q.andWhere('sm.created_at', '>=', filter.from);
-      if (filter?.to) q.andWhere('sm.created_at', '<=', filter.to);
+      if (from) q.andWhere('sm.created_at', '>=', from);
+      if (toExclusive) q.andWhere('sm.created_at', '<', toExclusive);
 
       const grouped = await q
-        .select<{ service_id: string; service_name: string | null; quantity: string; revenue: string; cogs: string }[]>(
+        .select<{ service_id: string; service_name: string | null; sku: string | null; qty_sold: string; revenue_cents: string; cogs_cents: string }[]>(
           'sm.service_id as service_id',
           'sc.service_name as service_name',
-          trx.raw('SUM(sm.quantity) as quantity'),
-          trx.raw('SUM(sm.quantity * COALESCE(sol.unit_price, 0)) as revenue'),
-          trx.raw('SUM(COALESCE(sm.cogs_cost, 0)) as cogs'),
+          'sc.sku as sku',
+          trx.raw('SUM(sm.quantity) as qty_sold'),
+          trx.raw('SUM(sm.quantity * COALESCE(sol.unit_price, 0)) as revenue_cents'),
+          trx.raw('SUM(COALESCE(sm.cogs_cost, 0)) as cogs_cents'),
         )
-        .groupBy('sm.service_id', 'sc.service_name')
+        .groupBy('sm.service_id', 'sc.service_name', 'sc.sku')
         .orderBy('sc.service_name', 'asc');
 
       const rows: MarginReportRow[] = grouped.map((r) => {
-        const revenue = Math.round(Number(r.revenue ?? 0));
-        const cogs = Math.round(Number(r.cogs ?? 0));
+        const revenue = Math.round(Number(r.revenue_cents ?? 0));
+        const cogs = Math.round(Number(r.cogs_cents ?? 0));
+        const margin = revenue - cogs;
         return {
           service_id: r.service_id,
           service_name: r.service_name ?? null,
-          quantity: Number(r.quantity ?? 0),
-          revenue,
-          cogs,
-          margin: revenue - cogs,
+          sku: r.sku ?? null,
+          qty_sold: Number(r.qty_sold ?? 0),
+          revenue_cents: revenue,
+          cogs_cents: cogs,
+          margin_cents: margin,
+          margin_pct: revenue === 0 ? null : (margin / revenue) * 100,
         };
       });
 
-      const total_revenue = rows.reduce((s, r) => s + r.revenue, 0);
-      const total_cogs = rows.reduce((s, r) => s + r.cogs, 0);
-      return { rows, total_revenue, total_cogs, total_margin: total_revenue - total_cogs };
+      const total_revenue_cents = rows.reduce((s, r) => s + r.revenue_cents, 0);
+      const total_cogs_cents = rows.reduce((s, r) => s + r.cogs_cents, 0);
+      const total_margin_cents = total_revenue_cents - total_cogs_cents;
+      return {
+        rows,
+        total_revenue_cents,
+        total_cogs_cents,
+        total_margin_cents,
+        total_margin_pct: total_revenue_cents === 0 ? null : (total_margin_cents / total_revenue_cents) * 100,
+      };
     });
   },
 );

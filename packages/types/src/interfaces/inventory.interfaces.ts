@@ -120,6 +120,8 @@ export interface IProductInventorySettings extends TenantEntity {
   kit_fixed_price?: number | null;
   default_location_id?: string | null;
   preferred_vendor_id?: string | null;
+  /** asset_type applied when a delivered serialized unit becomes a managed asset (F026); fallback 'unknown'. */
+  default_asset_type?: string | null;
   created_at?: string | Date;
   updated_at?: string | Date;
 }
@@ -229,6 +231,7 @@ export interface IPurchaseOrderLine extends TenantEntity {
 export interface ISalesOrder extends TenantEntity {
   so_id: string;
   so_number: string;
+  quote_id?: string | null;
   client_id: string;
   /** Denormalized client display name (joined in list reads); absent on bare row reads. */
   client_name?: string | null;

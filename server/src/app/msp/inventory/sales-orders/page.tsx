@@ -7,9 +7,10 @@ import {
   fulfillAndInvoiceSoLine,
   generateInvoiceForSalesOrder,
 } from '@alga-psa/billing/actions';
+import { getAllClients } from '@alga-psa/clients/actions';
 import { getSession } from '@alga-psa/auth';
 import { redirect } from 'next/navigation';
-import type { ISalesOrder, IStockLocation } from '@alga-psa/types';
+import type { IClient, ISalesOrder, IStockLocation } from '@alga-psa/types';
 import type { Metadata } from 'next';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
@@ -42,10 +43,18 @@ export default async function SalesOrdersPage() {
     console.error('Failed to load stock locations:', error);
   }
 
+  let clients: IClient[] = [];
+  try {
+    clients = await getAllClients();
+  } catch (error) {
+    console.error('Failed to load clients:', error);
+  }
+
   return (
     <SalesOrdersManager
       initialSos={initialSos}
       locations={locations}
+      clients={clients}
       fulfillAndInvoice={fulfillAndInvoiceSoLine}
       generateInvoice={generateInvoiceForSalesOrder}
       confirmDropShip={confirmDropShipAndInvoice}

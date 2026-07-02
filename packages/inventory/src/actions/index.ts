@@ -18,6 +18,7 @@ export * from './reorderActions';
 export * from './dropShipActions';
 export * from './inventoryReportingActions';
 export * from './inventoryDashboardActions';
+export * from './clientEquipmentActions';
 export * from './reconcileActions';
 export * from './vendorProductActions';
 export * from './cycleCountActions';

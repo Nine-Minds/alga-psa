@@ -26,7 +26,7 @@ import { getDefaultBillingSettings } from '@alga-psa/billing/actions';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
-import { addQuoteItem, approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
+import { addQuoteItem, approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
@@ -151,7 +151,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
   const [sendMessage, setSendMessage] = useState('');
   const [approvalDialogMode, setApprovalDialogMode] = useState<'approve' | 'changes' | null>(null);
   const [approvalComment, setApprovalComment] = useState('');
-  const [conversionMode, setConversionMode] = useState<'contract' | 'invoice' | 'both' | null>(null);
+  const [conversionMode, setConversionMode] = useState<'contract' | 'invoice' | 'both' | 'sales_order' | null>(null);
   const [conversionPreview, setConversionPreview] = useState<QuoteConversionPreview | null>(null);
   const [isConversionDialogOpen, setIsConversionDialogOpen] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
@@ -801,8 +801,22 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
     return oneTimeItems.some((item) => !item.is_discount);
   }, [quote]);
   const canConvertToBoth = canConvertToContract && canConvertToInvoice;
+  // Product one-time lines are what convert to a sales order (F002/D2).
+  const canConvertToSalesOrder = useMemo(
+    () =>
+      Boolean(
+        (quote?.quote_items || []).some(
+          (item) =>
+            item.service_item_kind === 'product' &&
+            !item.is_recurring &&
+            !item.is_discount &&
+            (!item.is_optional || item.is_selected !== false),
+        ),
+      ),
+    [quote],
+  );
 
-  const handleOpenConversionDialog = async (mode: 'contract' | 'invoice' | 'both') => {
+  const handleOpenConversionDialog = async (mode: 'contract' | 'invoice' | 'both' | 'sales_order') => {
     if (!quote) return;
     try {
       setIsPreviewLoading(true);
@@ -848,6 +862,16 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
           t('quoteForm.notices.createdDraftInvoice', {
             defaultValue: 'Created draft invoice {{name}}.',
             name: result.invoice.invoice_number,
+          }),
+        );
+      } else if (conversionMode === 'sales_order') {
+        const result = await convertQuoteToSalesOrder(quote.quote_id);
+        if ('permissionError' in result) throw new Error(result.permissionError);
+        setQuote(result.quote);
+        setNotice(
+          t('quoteDetail.notices.createdSalesOrder', {
+            defaultValue: 'Created draft sales order {{number}}. Product lines will bill on fulfillment.',
+            number: result.so_number,
           }),
         );
       } else {
@@ -1065,6 +1089,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       if (canConvertToContract) items.push({ id: 'quote-form-convert-contract', label: t('quoteForm.actions.convertToContract', { defaultValue: 'Convert to contract' }), onClick: () => void handleOpenConversionDialog('contract'), disabled: isWorking || isPreviewLoading });
       if (canConvertToInvoice) items.push({ id: 'quote-form-convert-invoice', label: t('quoteForm.actions.convertToInvoice', { defaultValue: 'Convert to invoice' }), onClick: () => void handleOpenConversionDialog('invoice'), disabled: isWorking || isPreviewLoading });
       if (canConvertToBoth) items.push({ id: 'quote-form-convert-both', label: t('quoteForm.actions.convertToBoth', { defaultValue: 'Convert to both' }), onClick: () => void handleOpenConversionDialog('both'), disabled: isWorking || isPreviewLoading });
+      if (canConvertToSalesOrder) items.push({ id: 'quote-form-convert-sales-order', label: t('quoteForm.actions.convertToSalesOrder', { defaultValue: 'Convert to sales order' }), onClick: () => void handleOpenConversionDialog('sales_order'), disabled: isWorking || isPreviewLoading });
       // Remove the item whose id matches the primary so we don't duplicate.
       return items.filter((i) => i.id !== primaryAction?.id);
     }
@@ -1800,7 +1825,9 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
                 ? t('quoteConversion.actions.contract', { defaultValue: 'Create Draft Contract' })
                 : conversionMode === 'invoice'
                   ? t('quoteConversion.actions.invoice', { defaultValue: 'Create Draft Invoice' })
-                  : t('quoteConversion.actions.both', { defaultValue: 'Create Both Records' })}
+                  : conversionMode === 'sales_order'
+                    ? t('quoteConversion.actions.salesOrder', { defaultValue: 'Create Sales Order' })
+                    : t('quoteConversion.actions.both', { defaultValue: 'Create Both Records' })}
             </Button>
           </div>
         )}

@@ -151,6 +151,12 @@ import {
   ticketUnassignedEventPayloadSchema,
   ticketUpdatedEventPayloadSchema,
 } from './ticketEventSchemas';
+import {
+  inventoryPoReceivedEventPayloadSchema,
+  inventoryRmaCreatedEventPayloadSchema,
+  inventorySoFulfilledEventPayloadSchema,
+  inventoryStockLowEventPayloadSchema,
+} from './inventoryEventSchemas';
 
 export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   // Existing/already-present
@@ -304,6 +310,12 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.FileUploaded.v1': fileUploadedEventPayloadSchema,
   'payload.MediaProcessingSucceeded.v1': mediaProcessingSucceededEventPayloadSchema,
   'payload.MediaProcessingFailed.v1': mediaProcessingFailedEventPayloadSchema,
+
+  // Inventory
+  'payload.InventoryStockLow.v1': inventoryStockLowEventPayloadSchema,
+  'payload.InventoryPoReceived.v1': inventoryPoReceivedEventPayloadSchema,
+  'payload.InventorySoFulfilled.v1': inventorySoFulfilledEventPayloadSchema,
+  'payload.InventoryRmaCreated.v1': inventoryRmaCreatedEventPayloadSchema,
 };
 
 export type WorkflowEventPayloadSchemaRef = keyof typeof workflowEventPayloadSchemas;

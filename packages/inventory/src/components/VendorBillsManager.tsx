@@ -19,8 +19,23 @@ import {
   listPurchaseOrders,
   type VendorBillView,
 } from '../actions';
+import type { VendorBillExportStatus, VendorBillExportState } from '../lib/integrationTypes';
 
 type BillRow = IVendorBill & { vendor_name: string | null; po_number: string | null };
+
+// Billing actions cannot be imported here (inventory must not depend on billing); the
+// vendor-bills server page injects them (F047, ghost-usage props idiom).
+interface VendorBillExportProps {
+  exportBill?: (billId: string) => Promise<VendorBillExportStatus>;
+  getExportStatuses?: (billIds: string[]) => Promise<VendorBillExportStatus[]>;
+}
+
+const EXPORT_BADGES: Record<VendorBillExportState, { label: string; variant: BadgeVariant }> = {
+  not_exported: { label: 'Not exported', variant: 'secondary' },
+  pending: { label: 'Export pending', variant: 'warning' },
+  exported: { label: 'Exported', variant: 'success' },
+  error: { label: 'Export failed', variant: 'error' },
+};
 
 const STATUS_BADGES: Record<string, { label: string; variant: BadgeVariant }> = {
   draft: { label: 'Draft', variant: 'secondary' },
@@ -40,7 +55,11 @@ interface CreateForm {
 
 const emptyCreate = (): CreateForm => ({ vendor_id: '', bill_number: '', po_id: '' });
 
-export function VendorBillsManager({ initialBills }: { initialBills: BillRow[] }) {
+export function VendorBillsManager({
+  initialBills,
+  exportBill,
+  getExportStatuses,
+}: { initialBills: BillRow[] } & VendorBillExportProps) {
   const [bills, setBills] = useState<BillRow[]>(initialBills || []);
   const [statusFilter, setStatusFilter] = useState('');
   const [vendors, setVendors] = useState<IVendor[]>([]);
@@ -49,6 +68,8 @@ export function VendorBillsManager({ initialBills }: { initialBills: BillRow[] }
   const [form, setForm] = useState<CreateForm>(emptyCreate());
   const [detail, setDetail] = useState<VendorBillView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [exportStatuses, setExportStatuses] = useState<Map<string, VendorBillExportStatus>>(new Map());
+  const [exporting, setExporting] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -66,6 +87,43 @@ export function VendorBillsManager({ initialBills }: { initialBills: BillRow[] }
       )
       .catch(() => setPos([]));
   }, []);
+
+  // Batch-load export statuses for the current bills (F047). Best-effort: a failure
+  // (or no injected action) simply leaves the badges off.
+  useEffect(() => {
+    if (!getExportStatuses || bills.length === 0) return;
+    let cancelled = false;
+    getExportStatuses(bills.map((b) => b.bill_id))
+      .then((rows) => {
+        if (!cancelled) setExportStatuses(new Map(rows.map((r) => [r.bill_id, r])));
+      })
+      .catch(() => {
+        /* no badges */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [getExportStatuses, bills]);
+
+  const doExport = async (bill: BillRow) => {
+    if (!exportBill) return;
+    setExporting(bill.bill_id);
+    try {
+      const status = await exportBill(bill.bill_id);
+      setExportStatuses((prev) => new Map(prev).set(bill.bill_id, status));
+      if (status.state === 'exported') {
+        toast.success('Exported to accounting.');
+      } else if (status.state === 'error') {
+        toast.error(status.error_message || 'Export failed.');
+      } else {
+        toast.success('Export queued.');
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't export the bill.");
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const create = async () => {
     if (!form.bill_number.trim()) {
@@ -166,44 +224,68 @@ export function VendorBillsManager({ initialBills }: { initialBills: BillRow[] }
     {
       title: 'Actions',
       dataIndex: 'bill_id',
-      width: '220px',
-      render: (_: any, rec) => (
-        <div className="flex gap-2">
-          {rec.status === 'draft' && (
-            <Button
-              id={`open-bill-${rec.bill_id}`}
-              variant="soft"
-              size="sm"
-              disabled={busy !== null}
-              onClick={() => transition(rec, 'open')}
-            >
-              Open
-            </Button>
-          )}
-          {rec.status === 'open' && (
-            <Button
-              id={`pay-bill-${rec.bill_id}`}
-              variant="soft"
-              size="sm"
-              disabled={busy !== null}
-              onClick={() => transition(rec, 'paid')}
-            >
-              Mark paid
-            </Button>
-          )}
-          {(rec.status === 'draft' || rec.status === 'open') && (
-            <Button
-              id={`void-bill-${rec.bill_id}`}
-              variant="ghost"
-              size="sm"
-              disabled={busy !== null}
-              onClick={() => transition(rec, 'void')}
-            >
-              Void
-            </Button>
-          )}
-        </div>
-      ),
+      width: '320px',
+      render: (_: any, rec) => {
+        const exp = exportStatuses.get(rec.bill_id);
+        const expMeta = exp ? EXPORT_BADGES[exp.state] : null;
+        return (
+          <div className="flex flex-wrap items-center gap-2">
+            {rec.status === 'draft' && (
+              <Button
+                id={`open-bill-${rec.bill_id}`}
+                variant="soft"
+                size="sm"
+                disabled={busy !== null}
+                onClick={() => transition(rec, 'open')}
+              >
+                Open
+              </Button>
+            )}
+            {rec.status === 'open' && (
+              <Button
+                id={`pay-bill-${rec.bill_id}`}
+                variant="soft"
+                size="sm"
+                disabled={busy !== null}
+                onClick={() => transition(rec, 'paid')}
+              >
+                Mark paid
+              </Button>
+            )}
+            {(rec.status === 'draft' || rec.status === 'open') && (
+              <Button
+                id={`void-bill-${rec.bill_id}`}
+                variant="ghost"
+                size="sm"
+                disabled={busy !== null}
+                onClick={() => transition(rec, 'void')}
+              >
+                Void
+              </Button>
+            )}
+            {exportBill && (
+              <>
+                {expMeta && (
+                  <Badge id={`vendor-bill-export-badge-${rec.bill_id}`} variant={expMeta.variant} size="sm">
+                    {expMeta.label}
+                  </Badge>
+                )}
+                {exp?.state !== 'exported' && (
+                  <Button
+                    id={`vendor-bill-export-${rec.bill_id}`}
+                    variant="outline"
+                    size="sm"
+                    disabled={exporting === rec.bill_id}
+                    onClick={() => doExport(rec)}
+                  >
+                    {exporting === rec.bill_id ? 'Exporting…' : 'Export'}
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        );
+      },
     },
   ];
 

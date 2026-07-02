@@ -9,5 +9,6 @@ export * from './communicationsEventSchemas';
 export * from './integrationEventSchemas';
 export * from './assetMediaEventSchemas';
 export * from './emailWorkflowSchemas';
+export * from './inventoryEventSchemas';
 export * from './commonEventPayloadSchemas';
 export * from './workflowEventPayloadSchemas';

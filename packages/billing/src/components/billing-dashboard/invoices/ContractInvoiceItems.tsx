@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import type { IInvoiceCharge } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
@@ -9,6 +10,10 @@ import {
   getActiveClientLocationsForBilling,
   type BillingLocationSummary,
 } from '../../../actions/billingClientLocationActions';
+import {
+  getInvoiceLineCogs,
+  type InvoiceLineCogsRow,
+} from '../../../actions/invoiceCogsActions';
 import LocationAddress from '../locations/LocationAddress';
 import {
   buildLocationGroups,
@@ -24,6 +29,12 @@ interface ContractInvoiceItemsProps {
    * component falls back to the contract-grouped layout (existing behavior).
    */
   clientId?: string;
+  /**
+   * When provided, the internal view surfaces per-line COGS/margin and a sales-order
+   * backlink for inventory lines (F040/F041). Internal-only — never passed to the
+   * customer-facing PDF/portal templates.
+   */
+  invoiceId?: string;
 }
 
 interface ContractGroupedItems {
@@ -34,11 +45,12 @@ interface ContractGroupedItems {
   };
 }
 
-const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clientId }) => {
+const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clientId, invoiceId }) => {
   const { t } = useTranslation('msp/invoicing');
   const { t: tLocation } = useTranslation('features/billing');
   const { formatCurrency } = useFormatters();
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
+  const [cogsByItem, setCogsByItem] = useState<Map<string, InvoiceLineCogsRow>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +72,79 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
       cancelled = true;
     };
   }, [clientId]);
+
+  // Per-line COGS/margin + SO backlinks for the internal view (F040/F041). Absent
+  // (empty map) when no invoiceId is supplied or the read fails — the line table
+  // renders exactly as before in that case.
+  useEffect(() => {
+    let cancelled = false;
+    if (!invoiceId) {
+      setCogsByItem(new Map());
+      return;
+    }
+    getInvoiceLineCogs(invoiceId)
+      .then((rows) => {
+        if (!cancelled) setCogsByItem(new Map(rows.map((r) => [r.item_id, r])));
+      })
+      .catch(() => {
+        if (!cancelled) setCogsByItem(new Map());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [invoiceId]);
+
+  // Only surface the COGS/SO columns when at least one line actually carries data,
+  // so service-only invoices are not padded with empty columns.
+  const showCogs = useMemo(
+    () => Array.from(cogsByItem.values()).some((r) => r.cogs_total != null || r.so_id != null),
+    [cogsByItem],
+  );
+
+  const renderCogsHeaderCells = () =>
+    showCogs ? (
+      <>
+        <th className="text-right py-2">
+          {t('contractItems.columns.salesOrder', { defaultValue: 'Sales Order' })}
+        </th>
+        <th className="text-right py-2">
+          {t('contractItems.columns.cogsMargin', { defaultValue: 'COGS / Margin' })}
+        </th>
+      </>
+    ) : null;
+
+  const renderCogsBodyCells = (item: IInvoiceCharge) => {
+    if (!showCogs) return null;
+    const cogs = cogsByItem.get(item.item_id);
+    const marginPct =
+      cogs && cogs.margin_ratio != null ? `${(cogs.margin_ratio * 100).toFixed(1)}%` : null;
+    return (
+      <>
+        <td className="text-right">
+          {cogs?.so_number ? (
+            <Link
+              href="/msp/inventory/sales-orders"
+              className="text-[rgb(var(--color-primary-600))] hover:underline tabular-nums"
+            >
+              {cogs.so_number}
+            </Link>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </td>
+        <td className="text-right tabular-nums">
+          {cogs && cogs.cogs_total != null ? (
+            <span>
+              {formatCurrency(cogs.cogs_total / 100, 'USD')}
+              {marginPct ? <span className="ml-1 text-muted-foreground">· {marginPct}</span> : null}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </td>
+      </>
+    );
+  };
 
   const useLocationGrouping = useMemo(
     () => shouldShowLocationGroups(items),
@@ -89,6 +174,7 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
       <td className="text-right">{item.quantity}</td>
       <td className="text-right">{formatCurrency(item.unit_price / 100, 'USD')}</td>
       <td className="text-right">{formatCurrency(item.total_price / 100, 'USD')}</td>
+      {renderCogsBodyCells(item)}
     </tr>
   );
 
@@ -108,6 +194,7 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
           <th className="text-right py-2">
             {t('contractItems.columns.amount', { defaultValue: 'Amount' })}
           </th>
+          {renderCogsHeaderCells()}
         </tr>
       </thead>
       <tbody className="text-sm">
@@ -211,6 +298,7 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
                   <th className="text-right py-2">
                     {t('contractItems.columns.amount', { defaultValue: 'Amount' })}
                   </th>
+                  {renderCogsHeaderCells()}
                 </tr>
               </thead>
               <tbody className="text-sm">
@@ -220,6 +308,7 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
                     {t('contractItems.labels.contractSubtotal', { defaultValue: 'Contract Subtotal:' })}
                   </td>
                   <td className="text-right">{formatCurrency(contract.subtotal / 100, 'USD')}</td>
+                  {showCogs ? <><td /><td /></> : null}
                 </tr>
               </tbody>
             </table>
@@ -247,6 +336,7 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
                 <th className="text-right py-2">
                   {t('contractItems.columns.amount', { defaultValue: 'Amount' })}
                 </th>
+                {renderCogsHeaderCells()}
               </tr>
             </thead>
             <tbody className="text-sm">
@@ -258,6 +348,7 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
                 <td className="text-right">
                   {formatCurrency(nonContractItems.reduce((sum, item) => sum + item.total_price, 0) / 100, 'USD')}
                 </td>
+                {showCogs ? <><td /><td /></> : null}
               </tr>
             </tbody>
           </table>

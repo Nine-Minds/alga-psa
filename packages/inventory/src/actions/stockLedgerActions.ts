@@ -5,7 +5,14 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IStockLevel, IStockMovement, IStockUnit, IProductInventorySettings } from '@alga-psa/types';
-import { recordStockMovement, availableQuantity, ensureStockLevel, assertLocationWritable } from '../lib';
+import {
+  assertLocationWritable,
+  availableQuantity,
+  ensureStockLevel,
+  publishInventoryEvent,
+  recordStockMovement,
+  timestampPayload,
+} from '../lib';
 
 /**
  * Ad-hoc stock ledger actions (design §6.A, §6.D): manual receipts with no PO,
@@ -105,7 +112,7 @@ export const receiveStockManual = withAuth(
     }
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // A tech can't receive into another tech's van (F032).
       await assertLocationWritable(trx, tenant, (user as any)?.user_id, input.location_id);
       const settings = await loadTrackedSettings(trx, tenant, input.service_id);
@@ -211,6 +218,17 @@ export const receiveStockManual = withAuth(
 
       return { movements, unit_ids: unitIds, average_cost: newAvg, warnings: [] };
     });
+
+    for (const unitId of result.unit_ids) {
+      await publishInventoryEvent('INVENTORY_STOCK_UNIT_CREATED', timestampPayload({
+        tenant,
+        unit_id: unitId,
+        service_id: input.service_id,
+        user_id: user.user_id,
+      }));
+    }
+
+    return result;
   },
 );
 
@@ -249,7 +267,7 @@ export const adjustStock = withAuth(
     if (!trimmedReason) throw new Error('reason is required for a stock adjustment');
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Location-scoped write enforcement: a tech can't adjust another tech's van.
       await assertLocationWritable(trx, tenant, (user as any)?.user_id, locationId);
       const settings = await loadTrackedSettings(trx, tenant, serviceId);
@@ -388,6 +406,19 @@ export const adjustStock = withAuth(
       }
       return { movements, unit_ids: unitIds, warnings };
     });
+
+    const eventType = delta > 0 ? 'INVENTORY_STOCK_UNIT_CREATED' : 'INVENTORY_STOCK_UNIT_UPDATED';
+    for (const unitId of result.unit_ids) {
+      await publishInventoryEvent(eventType, timestampPayload({
+        tenant,
+        unit_id: unitId,
+        service_id: serviceId,
+        user_id: user.user_id,
+        changed_fields: delta > 0 ? undefined : ['status'],
+      }));
+    }
+
+    return result;
   },
 );
 
@@ -424,7 +455,7 @@ export const retireStock = withAuth(
     if (!trimmedReason) throw new Error('reason is required to retire stock');
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // A tech can't retire stock out of another tech's van (F033).
       await assertLocationWritable(trx, tenant, (user as any)?.user_id, input.location_id);
       const settings = await loadTrackedSettings(trx, tenant, input.service_id);
@@ -518,6 +549,18 @@ export const retireStock = withAuth(
       movements.push(movement);
       return { movements, unit_ids: unitIds, warnings };
     });
+
+    for (const unitId of result.unit_ids) {
+      await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+        tenant,
+        unit_id: unitId,
+        service_id: input.service_id,
+        user_id: user.user_id,
+        changed_fields: ['status'],
+      }));
+    }
+
+    return result;
   },
 );
 

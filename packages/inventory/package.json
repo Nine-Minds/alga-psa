@@ -51,6 +51,7 @@
     "@alga-psa/auth": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/event-bus": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",

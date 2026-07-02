@@ -1,0 +1,159 @@
+[
+  {
+    "id": "T001",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004"
+    ],
+    "description": "DB: converting an accepted quote with mixed lines creates a draft SO holding the product lines (quote_id set, invoice_mode on_fulfillment) and the draft invoice excludes those product lines",
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "featureIds": [
+      "F005"
+    ],
+    "description": "DB: getProductAvailability returns on-hand, available (minus open allocations), reorder point, and per-location rows for a tracked product; untracked products marked accordingly",
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "featureIds": [
+      "F014",
+      "F015"
+    ],
+    "description": "DB: consumption exceeding on-hand is rejected with the available quantity in the error; exact-to-zero succeeds; adjustment and cycle-count paths can still move levels freely",
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "featureIds": [
+      "F014"
+    ],
+    "description": "DB concurrency: two parallel consumptions of the last unit \u2014 exactly one succeeds, on-hand ends at zero, single consume movement written",
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "featureIds": [
+      "F048",
+      "F049",
+      "F051"
+    ],
+    "description": "DB: adding a tracked material via tickets action and via REST TicketService produces identical rows, stock movements, and on-hand deltas (canonical path parity) (behavioral half in materials.test.ts; delegation locked by materialAuthorizationParity.contract.test.ts)",
+    "implemented": true
+  },
+  {
+    "id": "T006",
+    "featureIds": [
+      "F052"
+    ],
+    "description": "DB: REST material delete reverses the consume movement for unbilled materials; delete of a billed material is refused \u2014 N/A: the public API has no material DELETE endpoint (verified); adding one is out of scope",
+    "implemented": false
+  },
+  {
+    "id": "T007",
+    "featureIds": [
+      "F050"
+    ],
+    "description": "DB: material add via the canonical path is denied for a user lacking the required permission and allowed for one holding it (static contract half: materialAuthorizationParity.contract.test.ts; RBAC-fixture behavioral half not implemented)",
+    "implemented": true
+  },
+  {
+    "id": "T008",
+    "featureIds": [
+      "F053",
+      "F054",
+      "F055"
+    ],
+    "description": "DB: vendor, transfer, and location mutations are denied without their seeded permissions (static contract half: materialAuthorizationParity.contract.test.ts asserts the gates exist)",
+    "implemented": true
+  },
+  {
+    "id": "T009",
+    "featureIds": [
+      "F019",
+      "F020",
+      "F021"
+    ],
+    "description": "DB: client 360 read actions return the client's SOs, delivered equipment (with asset links), and RMAs; other tenants/clients excluded \u2014 not implemented (UI lane wrote no tests); behavior verified live in browser smoke 2026-07-02",
+    "implemented": false
+  },
+  {
+    "id": "T010",
+    "featureIds": [
+      "F024"
+    ],
+    "description": "DB: getAssetInventoryProvenance walks asset\u2192stock unit\u2192fulfillment\u2192SO and includes RMA history; returns empty provenance for an unlinked asset \u2014 not implemented; positive provenance case verified live in browser smoke 2026-07-02",
+    "implemented": false
+  },
+  {
+    "id": "T011",
+    "featureIds": [
+      "F026"
+    ],
+    "description": "DB: delivered serialized unit auto-creates an asset with product's default_asset_type; falls back to 'unknown' when unset \u2014 not implemented as a test; verified live (asset_type network_device applied on auto-create)",
+    "implemented": false
+  },
+  {
+    "id": "T012",
+    "featureIds": [
+      "F028",
+      "F031"
+    ],
+    "description": "Event: fulfillment emits INVENTORY_SO_FULFILLED post-commit with schema-valid payload (event bus captured/stubbed) \u2014 partial: inventoryEvents.test.ts covers publisher+failure isolation; fulfillment call-site not under test",
+    "implemented": false
+  },
+  {
+    "id": "T013",
+    "featureIds": [
+      "F033"
+    ],
+    "description": "Event: consumption crossing the reorder point emits INVENTORY_STOCK_LOW exactly once; further consumption below the point does not re-emit; rising above and re-crossing re-emits (stockLowSignal.test.ts, real DB rolled back)",
+    "implemented": true
+  },
+  {
+    "id": "T014",
+    "featureIds": [
+      "F036",
+      "F037"
+    ],
+    "description": "Search: indexer output for sales_order, purchase_order, and stock_unit contains the expected searchable fields (number/client, vendor/number, serial/MAC) \u2014 not implemented (indexer document shape untested)",
+    "implemented": false
+  },
+  {
+    "id": "T015",
+    "featureIds": [
+      "F039"
+    ],
+    "description": "DB: getInvoiceLineCogs returns per-line COGS and margin for SO-sourced and material-sourced lines; lines without COGS data return null margin (not zero)",
+    "implemented": true
+  },
+  {
+    "id": "T016",
+    "featureIds": [
+      "F044"
+    ],
+    "description": "DB: contract profitability includes hardware COGS alongside labor for a contract with material consumption; labor-only contracts unchanged",
+    "implemented": true
+  },
+  {
+    "id": "T017",
+    "featureIds": [
+      "F045",
+      "F046"
+    ],
+    "description": "Export: vendor_bill export batch builds a QBO bill payload (vendor match/create, expense-account lines, amounts) against a mocked QBO client; export status recorded idempotently",
+    "implemented": true
+  },
+  {
+    "id": "T018",
+    "featureIds": [
+      "F002"
+    ],
+    "description": "DB guard: converting the same quote twice does not create a second SO or re-add product lines to an invoice (idempotency/double-billing guard)",
+    "implemented": true
+  }
+]

@@ -36,6 +36,18 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 const BILLING_METHOD_OPTION_VALUES = ['usage'] as const;
 
+// Default asset type applied when a delivered serialized unit becomes a managed asset
+// (F027). Mirrors BUILTIN_ASSET_TYPE_SLUGS in @alga-psa/assets (inlined to avoid a
+// cross-package dependency); empty leaves it unset (assetLink falls back to 'unknown').
+const DEFAULT_ASSET_TYPE_OPTIONS = [
+  { value: '', label: 'Unset (unknown)' },
+  { value: 'workstation', label: 'Workstation' },
+  { value: 'network_device', label: 'Network device' },
+  { value: 'server', label: 'Server' },
+  { value: 'mobile_device', label: 'Mobile device' },
+  { value: 'printer', label: 'Printer' },
+];
+
 type PriceDraft = { currency_code: string; rate: number };
 
 interface QuickAddProductProps {
@@ -97,6 +109,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     reorder_point: string;
     reorder_quantity: string;
     kit_pricing_mode: KitPricingMode;
+    default_asset_type: string;
   };
   const defaultInvDraft = (): InvDraft => ({
     is_serialized: false,
@@ -105,6 +118,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     reorder_point: '',
     reorder_quantity: '',
     kit_pricing_mode: 'sum',
+    default_asset_type: '',
   });
   const [invSectionOpen, setInvSectionOpen] = useState(false);
   const [trackInventory, setTrackInventory] = useState(false);
@@ -178,6 +192,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               reorder_point: s.reorder_point != null ? String(s.reorder_point) : '',
               reorder_quantity: s.reorder_quantity != null ? String(s.reorder_quantity) : '',
               kit_pricing_mode: s.kit_pricing_mode ?? 'sum',
+              default_asset_type: s.default_asset_type ?? '',
             });
           } else {
             setInventoryEnabled(false);
@@ -910,6 +925,25 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                           })}
                         </span>
                       </label>
+
+                      {inv.creates_asset_on_delivery && (
+                        <div>
+                          <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                            {t('quickAddProduct.fields.inventory.defaultAssetType', {
+                              defaultValue: 'Default asset type',
+                            })}
+                          </label>
+                          <CustomSelect
+                            id="quick-add-product-default-asset-type"
+                            options={DEFAULT_ASSET_TYPE_OPTIONS}
+                            value={inv.default_asset_type}
+                            onValueChange={(value) => {
+                              setInv((prev) => ({ ...prev, default_asset_type: value }));
+                              persistInventoryPatch({ default_asset_type: value || null });
+                            }}
+                          />
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>

@@ -7,6 +7,7 @@ import { registerSlaSubscriber, unregisterSlaSubscriber } from './slaSubscriber'
 import { registerSlaNotificationSubscriber, unregisterSlaNotificationSubscriber } from './slaNotificationSubscriber';
 import { registerWebhookSubscriber, unregisterWebhookSubscriber } from './webhookSubscriber';
 import { registerSearchIndexSubscriber, unregisterSearchIndexSubscriber } from './searchIndexSubscriber';
+import { registerInventoryNotificationSubscriber, unregisterInventoryNotificationSubscriber } from './inventoryNotificationSubscriber';
 import { registerProjectWebhookSubscriber, unregisterProjectWebhookSubscriber } from './projectWebhookSubscriber';
 import { registerRmmAlertTicketClosedSubscriber, unregisterRmmAlertTicketClosedSubscriber } from './rmmAlertTicketClosedSubscriber';
 import { registerRmmAlertNotificationSubscriber, unregisterRmmAlertNotificationSubscriber } from './rmmAlertNotificationSubscriber';
@@ -26,6 +27,7 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'slaNotification', register: registerSlaNotificationSubscriber },
   { name: 'webhook', register: registerWebhookSubscriber },
   { name: 'searchIndex', register: registerSearchIndexSubscriber },
+  { name: 'inventoryNotification', register: registerInventoryNotificationSubscriber },
   { name: 'projectWebhook', register: registerProjectWebhookSubscriber },
   { name: 'rmmAlertTicketClosed', register: registerRmmAlertTicketClosedSubscriber },
   { name: 'rmmAlertNotification', register: registerRmmAlertNotificationSubscriber },
@@ -41,6 +43,7 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'slaNotification', register: unregisterSlaNotificationSubscriber },
   { name: 'webhook', register: unregisterWebhookSubscriber },
   { name: 'searchIndex', register: unregisterSearchIndexSubscriber },
+  { name: 'inventoryNotification', register: unregisterInventoryNotificationSubscriber },
   { name: 'projectWebhook', register: unregisterProjectWebhookSubscriber },
   { name: 'rmmAlertTicketClosed', register: unregisterRmmAlertTicketClosedSubscriber },
   { name: 'rmmAlertNotification', register: unregisterRmmAlertNotificationSubscriber },

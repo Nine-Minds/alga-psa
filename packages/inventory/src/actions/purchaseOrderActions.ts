@@ -10,7 +10,7 @@ import {
   IStockUnit,
   PurchaseOrderStatus,
 } from '@alga-psa/types';
-import { recordStockMovement } from '../lib';
+import { publishInventoryEvent, recordStockMovement, timestampPayload } from '../lib';
 
 async function requirePoPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'purchase_order', action))) {
@@ -195,7 +195,7 @@ export const createPurchaseOrder = withAuth(
     if (!currency) throw new Error('currency_code is required');
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const vendor = await trx('vendors').where({ tenant, vendor_id: input.vendor_id }).first();
       if (!vendor) throw new Error('Vendor not found');
 
@@ -252,6 +252,14 @@ export const createPurchaseOrder = withAuth(
 
       return { ...(po as IPurchaseOrder), lines };
     });
+
+    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_CREATED', timestampPayload({
+      tenant,
+      po_id: result.po_id,
+      user_id: user.user_id,
+    }));
+
+    return result;
   },
 );
 
@@ -264,7 +272,7 @@ export const addPoLine = withAuth(
   ): Promise<IPurchaseOrderLine> => {
     await requirePoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const po = await getPoOrThrow(trx, tenant, poId);
       if (po.status === 'cancelled' || po.status === 'received') {
         throw new Error(`Cannot add a line to a ${po.status} purchase order`);
@@ -300,6 +308,15 @@ export const addPoLine = withAuth(
         .returning('*');
       return row as IPurchaseOrderLine;
     });
+
+    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
+      tenant,
+      po_id: poId,
+      user_id: user.user_id,
+      changed_fields: ['lines'],
+    }));
+
+    return result;
   },
 );
 
@@ -312,7 +329,7 @@ export const updatePoLine = withAuth(
   ): Promise<IPurchaseOrderLine> => {
     await requirePoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const line = await getPoLineOrThrow(trx, tenant, poLineId);
       const po = await getPoOrThrow(trx, tenant, line.po_id);
       if (po.status === 'cancelled' || po.status === 'received') {
@@ -332,6 +349,15 @@ export const updatePoLine = withAuth(
       const [row] = await trx('purchase_order_lines').where({ tenant, po_line_id: poLineId }).update(update).returning('*');
       return row as IPurchaseOrderLine;
     });
+
+    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
+      tenant,
+      po_id: result.po_id,
+      user_id: user.user_id,
+      changed_fields: Object.keys(patch),
+    }));
+
+    return result;
   },
 );
 
@@ -339,7 +365,7 @@ export const removePoLine = withAuth(
   async (user, { tenant }, poLineId: string): Promise<{ removed: boolean }> => {
     await requirePoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const line = await getPoLineOrThrow(trx, tenant, poLineId);
       if (Number(line.quantity_received) > 0) {
         throw new Error('Cannot remove a line that has already received stock');
@@ -347,8 +373,17 @@ export const removePoLine = withAuth(
       const po = await getPoOrThrow(trx, tenant, line.po_id);
       if (po.status === 'cancelled') throw new Error('Cannot edit a cancelled purchase order');
       await trx('purchase_order_lines').where({ tenant, po_line_id: poLineId }).del();
-      return { removed: true };
+      return { removed: true, po_id: po.po_id };
     });
+
+    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
+      tenant,
+      po_id: result.po_id,
+      user_id: user.user_id,
+      changed_fields: ['lines'],
+    }));
+
+    return { removed: result.removed };
   },
 );
 
@@ -356,7 +391,7 @@ export const submitPurchaseOrder = withAuth(
   async (user, { tenant }, poId: string): Promise<IPurchaseOrder> => {
     await requirePoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const po = await getPoOrThrow(trx, tenant, poId);
       if (po.status !== 'draft') throw new Error(`Only draft purchase orders can be submitted (current: ${po.status})`);
       const lineCount = await trx('purchase_order_lines').where({ tenant, po_id: poId }).count<{ c: string }>('* as c').first();
@@ -368,6 +403,15 @@ export const submitPurchaseOrder = withAuth(
         .returning('*');
       return row as IPurchaseOrder;
     });
+
+    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
+      tenant,
+      po_id: poId,
+      user_id: user.user_id,
+      changed_fields: ['status'],
+    }));
+
+    return result;
   },
 );
 
@@ -375,7 +419,7 @@ export const cancelPurchaseOrder = withAuth(
   async (user, { tenant }, poId: string): Promise<IPurchaseOrder> => {
     await requirePoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const po = await getPoOrThrow(trx, tenant, poId, { forUpdate: true });
       if (po.status === 'cancelled') return po;
       if (po.status === 'received') throw new Error('Cannot cancel a fully received purchase order');
@@ -392,6 +436,15 @@ export const cancelPurchaseOrder = withAuth(
         .returning('*');
       return row as IPurchaseOrder;
     });
+
+    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
+      tenant,
+      po_id: poId,
+      user_id: user.user_id,
+      changed_fields: ['status'],
+    }));
+
+    return result;
   },
 );
 
@@ -431,7 +484,7 @@ export const receivePoLine = withAuth(
     if (!input.location_id) throw new Error('location_id is required');
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const lineProbe = await getPoLineOrThrow(trx, tenant, poLineId);
       // Parent-first lock order (PO header, then line) — receive/cancel serialize (F020).
       const po = await getPoOrThrow(trx, tenant, lineProbe.po_id, { forUpdate: true });
@@ -578,13 +631,48 @@ export const receivePoLine = withAuth(
 
       const overReceipt = Number((updatedLine as IPurchaseOrderLine).quantity_received) > Number(line.quantity_ordered);
       const poStatus = await recomputePoStatus(trx, tenant, po.po_id);
+      const receivedLineCount = await trx('purchase_order_lines')
+        .where({ tenant, po_id: po.po_id })
+        .andWhere('quantity_received', '>', 0)
+        .count<{ c: string }>('* as c')
+        .first();
+      const vendor = po.vendor_id
+        ? await trx('vendors').where({ tenant, vendor_id: po.vendor_id }).select('vendor_name').first()
+        : null;
 
       return {
         po_line: updatedLine as IPurchaseOrderLine,
         po_status: poStatus,
         units,
         over_receipt: overReceipt,
+        po_received_event: {
+          tenant,
+          po_id: po.po_id,
+          po_number: po.po_number,
+          vendor_id: po.vendor_id ?? null,
+          vendor_name: vendor?.vendor_name ?? null,
+          received_line_count: Number(receivedLineCount?.c ?? 0),
+        },
       };
     });
+
+    await publishInventoryEvent('INVENTORY_PO_RECEIVED', result.po_received_event);
+    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
+      tenant,
+      po_id: result.po_line.po_id,
+      user_id: user.user_id,
+      changed_fields: ['status', 'quantity_received'],
+    }));
+    for (const unit of result.units) {
+      await publishInventoryEvent('INVENTORY_STOCK_UNIT_CREATED', timestampPayload({
+        tenant,
+        unit_id: unit.unit_id,
+        service_id: unit.service_id,
+        user_id: user.user_id,
+      }));
+    }
+
+    const { po_received_event: _poReceivedEvent, ...publicResult } = result;
+    return publicResult;
   },
 );

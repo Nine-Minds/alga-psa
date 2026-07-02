@@ -5,7 +5,7 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IRmaCase, IStockUnit, RmaStatus } from '@alga-psa/types';
-import { recordStockMovement } from '../lib';
+import { publishInventoryEvent, recordStockMovement, timestampPayload } from '../lib';
 
 /**
  * RMA / return-path lifecycle (design §6.G).
@@ -63,6 +63,38 @@ async function patchRma(
     .returning('*');
   if (!row) throw new Error('RMA case not found');
   return row as IRmaCase;
+}
+
+async function publishStockUnitUpdated(
+  tenant: string,
+  unitId: string | null | undefined,
+  serviceId: string | null | undefined,
+  userId: string,
+  changedFields: string[],
+): Promise<void> {
+  if (!unitId) return;
+  await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+    tenant,
+    unit_id: unitId,
+    service_id: serviceId ?? undefined,
+    user_id: userId,
+    changed_fields: changedFields,
+  }));
+}
+
+async function publishStockUnitCreated(
+  tenant: string,
+  unitId: string | null | undefined,
+  serviceId: string | null | undefined,
+  userId: string,
+): Promise<void> {
+  if (!unitId) return;
+  await publishInventoryEvent('INVENTORY_STOCK_UNIT_CREATED', timestampPayload({
+    tenant,
+    unit_id: unitId,
+    service_id: serviceId ?? undefined,
+    user_id: userId,
+  }));
 }
 
 /** Fields needed to receive a fresh replacement unit into sellable stock. */
@@ -174,7 +206,7 @@ export const openRma = withAuth(
     await requireInvPerm(user, 'create');
     if (!input?.returned_unit_id) throw new Error('returned_unit_id is required');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const unit = await loadUnit(trx, tenant, input.returned_unit_id);
       const [row] = await trx('rma_cases')
         .insert({
@@ -189,8 +221,22 @@ export const openRma = withAuth(
           created_by: user.user_id,
         })
         .returning('*');
-      return row as IRmaCase;
+      const rma = row as IRmaCase;
+      return {
+        rma,
+        event: {
+          tenant,
+          rma_id: rma.rma_id,
+          rma_reference: rma.rma_reference ?? null,
+          client_id: rma.client_id ?? null,
+          service_id: rma.service_id ?? null,
+          serial_number: unit.serial_number ?? null,
+        },
+      };
     });
+
+    await publishInventoryEvent('INVENTORY_RMA_CREATED', result.event);
+    return result.rma;
   },
 );
 
@@ -200,7 +246,7 @@ export const receiveReturn = withAuth(
     await requireInvPerm(user, 'update');
     if (!input?.location_id) throw new Error('location_id is required');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const rma = await loadRma(trx, tenant, rmaId);
       assertStatus(rma, ['awaiting_return']);
       const serviceId = rmaServiceId(rma);
@@ -219,8 +265,15 @@ export const receiveReturn = withAuth(
         unitPatch: { status: 'returned', location_id: input.location_id },
       });
 
-      return patchRma(trx, tenant, rmaId, { status: 'returned' });
+      return {
+        rma: await patchRma(trx, tenant, rmaId, { status: 'returned' }),
+        unit_id: rma.returned_unit_id,
+        service_id: serviceId,
+      };
     });
+
+    await publishStockUnitUpdated(tenant, result.unit_id, result.service_id, user.user_id, ['status', 'location_id']);
+    return result.rma;
   },
 );
 
@@ -235,7 +288,7 @@ export const sendToVendor = withAuth(
     await requireInvPerm(user, 'update');
     if (!input?.vendor_id) throw new Error('vendor_id is required');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const rma = await loadRma(trx, tenant, rmaId);
       assertStatus(rma, ['returned']);
       const serviceId = rmaServiceId(rma);
@@ -255,12 +308,19 @@ export const sendToVendor = withAuth(
         unitPatch: { status: 'in_rma' },
       });
 
-      return patchRma(trx, tenant, rmaId, {
-        status: 'sent_to_vendor',
-        vendor_id: input.vendor_id,
-        rma_reference: input.rma_reference ?? rma.rma_reference ?? null,
-      });
+      return {
+        rma: await patchRma(trx, tenant, rmaId, {
+          status: 'sent_to_vendor',
+          vendor_id: input.vendor_id,
+          rma_reference: input.rma_reference ?? rma.rma_reference ?? null,
+        }),
+        unit_id: unit.unit_id,
+        service_id: serviceId,
+      };
     });
+
+    await publishStockUnitUpdated(tenant, result.unit_id, result.service_id, user.user_id, ['status']);
+    return result.rma;
   },
 );
 
@@ -269,18 +329,25 @@ export const resolveReplacement = withAuth(
   async (user, { tenant }, rmaId: string, input: NewUnitInput): Promise<IRmaCase> => {
     await requireInvPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const rma = await loadRma(trx, tenant, rmaId);
       assertStatus(rma, ['sent_to_vendor']);
       const serviceId = rmaServiceId(rma);
 
       const unit = await receiveReplacementUnit(trx, tenant, serviceId, input, rmaId, user.user_id);
 
-      return patchRma(trx, tenant, rmaId, {
-        status: 'replaced',
-        replacement_unit_id: unit.unit_id,
-      });
+      return {
+        rma: await patchRma(trx, tenant, rmaId, {
+          status: 'replaced',
+          replacement_unit_id: unit.unit_id,
+        }),
+        unit_id: unit.unit_id,
+        service_id: serviceId,
+      };
     });
+
+    await publishStockUnitCreated(tenant, result.unit_id, result.service_id, user.user_id);
+    return result.rma;
   },
 );
 
@@ -290,7 +357,7 @@ export const resolveRepair = withAuth(
     await requireInvPerm(user, 'update');
     if (!input?.location_id) throw new Error('location_id is required');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const rma = await loadRma(trx, tenant, rmaId);
       assertStatus(rma, ['sent_to_vendor']);
       const serviceId = rmaServiceId(rma);
@@ -309,8 +376,15 @@ export const resolveRepair = withAuth(
         unitPatch: { status: 'in_stock', location_id: input.location_id, client_id: null, asset_id: null },
       });
 
-      return patchRma(trx, tenant, rmaId, { status: 'closed', closed_at: trx.fn.now() });
+      return {
+        rma: await patchRma(trx, tenant, rmaId, { status: 'closed', closed_at: trx.fn.now() }),
+        unit_id: rma.returned_unit_id,
+        service_id: serviceId,
+      };
     });
+
+    await publishStockUnitUpdated(tenant, result.unit_id, result.service_id, user.user_id, ['status', 'location_id', 'client_id', 'asset_id']);
+    return result.rma;
   },
 );
 
@@ -319,7 +393,7 @@ export const resolveCredit = withAuth(
   async (user, { tenant }, rmaId: string): Promise<IRmaCase> => {
     await requireInvPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const rma = await loadRma(trx, tenant, rmaId);
       assertStatus(rma, ['sent_to_vendor']);
       const serviceId = rmaServiceId(rma);
@@ -339,8 +413,15 @@ export const resolveCredit = withAuth(
         unitPatch: { status: 'retired' },
       });
 
-      return patchRma(trx, tenant, rmaId, { status: 'credited' });
+      return {
+        rma: await patchRma(trx, tenant, rmaId, { status: 'credited' }),
+        unit_id: unit.unit_id,
+        service_id: serviceId,
+      };
     });
+
+    await publishStockUnitUpdated(tenant, result.unit_id, result.service_id, user.user_id, ['status']);
+    return result.rma;
   },
 );
 
@@ -349,7 +430,7 @@ export const resolveScrap = withAuth(
   async (user, { tenant }, rmaId: string): Promise<IRmaCase> => {
     await requireInvPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const rma = await loadRma(trx, tenant, rmaId);
       assertStatus(rma, ['sent_to_vendor', 'returned']);
       const serviceId = rmaServiceId(rma);
@@ -369,8 +450,15 @@ export const resolveScrap = withAuth(
         unitPatch: { status: 'retired' },
       });
 
-      return patchRma(trx, tenant, rmaId, { status: 'closed', closed_at: trx.fn.now() });
+      return {
+        rma: await patchRma(trx, tenant, rmaId, { status: 'closed', closed_at: trx.fn.now() }),
+        unit_id: unit.unit_id,
+        service_id: serviceId,
+      };
     });
+
+    await publishStockUnitUpdated(tenant, result.unit_id, result.service_id, user.user_id, ['status']);
+    return result.rma;
   },
 );
 
@@ -388,7 +476,7 @@ export const openAdvanceRma = withAuth(
     await requireInvPerm(user, 'create');
     if (!input?.returned_unit_id) throw new Error('returned_unit_id is required');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const unit = await loadUnit(trx, tenant, input.returned_unit_id);
       const [row] = await trx('rma_cases')
         .insert({
@@ -404,8 +492,22 @@ export const openAdvanceRma = withAuth(
           created_by: user.user_id,
         })
         .returning('*');
-      return row as IRmaCase;
+      const rma = row as IRmaCase;
+      return {
+        rma,
+        event: {
+          tenant,
+          rma_id: rma.rma_id,
+          rma_reference: rma.rma_reference ?? null,
+          client_id: rma.client_id ?? null,
+          service_id: rma.service_id ?? null,
+          serial_number: unit.serial_number ?? null,
+        },
+      };
     });
+
+    await publishInventoryEvent('INVENTORY_RMA_CREATED', result.event);
+    return result.rma;
   },
 );
 
@@ -414,18 +516,25 @@ export const recordReplacementReceived = withAuth(
   async (user, { tenant }, rmaId: string, input: NewUnitInput): Promise<IRmaCase> => {
     await requireInvPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const rma = await loadRma(trx, tenant, rmaId);
       assertStatus(rma, ['open']);
       const serviceId = rmaServiceId(rma);
 
       const unit = await receiveReplacementUnit(trx, tenant, serviceId, input, rmaId, user.user_id);
 
-      return patchRma(trx, tenant, rmaId, {
-        status: 'replacement_received',
-        replacement_unit_id: unit.unit_id,
-      });
+      return {
+        rma: await patchRma(trx, tenant, rmaId, {
+          status: 'replacement_received',
+          replacement_unit_id: unit.unit_id,
+        }),
+        unit_id: unit.unit_id,
+        service_id: serviceId,
+      };
     });
+
+    await publishStockUnitCreated(tenant, result.unit_id, result.service_id, user.user_id);
+    return result.rma;
   },
 );
 
@@ -438,7 +547,7 @@ export const deployReplacement = withAuth(
   async (user, { tenant }, rmaId: string): Promise<IRmaCase> => {
     await requireInvPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const rma = await loadRma(trx, tenant, rmaId);
       // Both tracks converge here (F039): 'replacement_received' is the
       // advance-replacement track; 'replaced' is the standard track after
@@ -492,8 +601,23 @@ export const deployReplacement = withAuth(
         },
       });
 
-      return patchRma(trx, tenant, rmaId, { status: 'replacement_deployed' });
+      return {
+        rma: await patchRma(trx, tenant, rmaId, { status: 'replacement_deployed' }),
+        replacement_unit_id: repl.unit_id,
+        returned_unit_id: rma.returned_unit_id ?? null,
+        service_id: serviceId,
+      };
     });
+
+    await publishStockUnitUpdated(tenant, result.replacement_unit_id, result.service_id, user.user_id, [
+      'status',
+      'client_id',
+      'asset_id',
+      'delivered_at',
+      'location_id',
+    ]);
+    await publishStockUnitUpdated(tenant, result.returned_unit_id, result.service_id, user.user_id, ['asset_id']);
+    return result.rma;
   },
 );
 
@@ -519,7 +643,7 @@ export const recordDeadUnitReturned = withAuth(
   async (user, { tenant }, rmaId: string): Promise<IRmaCase> => {
     await requireInvPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const rma = await loadRma(trx, tenant, rmaId);
       assertStatus(rma, ['dead_unit_owed']);
       const serviceId = rmaServiceId(rma);
@@ -550,12 +674,19 @@ export const recordDeadUnitReturned = withAuth(
         unitPatch: { status: 'in_rma' },
       });
 
-      return patchRma(trx, tenant, rmaId, {
-        status: 'closed',
-        dead_unit_returned_at: trx.fn.now(),
-        closed_at: trx.fn.now(),
-      });
+      return {
+        rma: await patchRma(trx, tenant, rmaId, {
+          status: 'closed',
+          dead_unit_returned_at: trx.fn.now(),
+          closed_at: trx.fn.now(),
+        }),
+        unit_id: rma.returned_unit_id,
+        service_id: serviceId,
+      };
     });
+
+    await publishStockUnitUpdated(tenant, result.unit_id, result.service_id, user.user_id, ['status', 'client_id']);
+    return result.rma;
   },
 );
 

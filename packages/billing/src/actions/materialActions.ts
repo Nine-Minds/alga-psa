@@ -1,32 +1,17 @@
 'use server';
 
-import { withTransaction } from '@alga-psa/db';
-import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import { ITicketMaterial, IProjectMaterial } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { recordStockConsumption, reverseStockConsumption, createAndLinkDeliveredAsset } from '@alga-psa/inventory/lib';
+import { addMaterial, deleteMaterial, listMaterials } from '@alga-psa/inventory/lib';
 
 export const listTicketMaterials = withAuth(async (user, { tenant }, ticketId: string): Promise<ITicketMaterial[]> => {
   if (!await hasPermission(user, 'billing', 'read')) {
     throw new Error('Permission denied: billing read required');
   }
   const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const rows = await trx('ticket_materials as tm')
-      .leftJoin('service_catalog as sc', function () {
-        this.on('tm.service_id', '=', 'sc.service_id').andOn('tm.tenant', '=', 'sc.tenant');
-      })
-      .where({ 'tm.tenant': tenant, 'tm.ticket_id': ticketId })
-      .select(
-        'tm.*',
-        'sc.service_name as service_name',
-        'sc.sku as sku'
-      )
-      .orderBy('tm.created_at', 'desc');
-    return rows as ITicketMaterial[];
-  });
+  return (await listMaterials(db, tenant, 'ticket', ticketId)) as ITicketMaterial[];
 });
 
 export const addTicketMaterial = withAuth(async (user, { tenant }, input: {
@@ -43,42 +28,12 @@ export const addTicketMaterial = withAuth(async (user, { tenant }, input: {
     throw new Error('Permission denied: billing create required');
   }
   const { knex: db } = await createTenantKnex();
-  const { row, pendingAsset } = await withTransaction(db, async (trx: Knex.Transaction) => {
-    const [row] = await trx('ticket_materials')
-      .insert({
-        tenant,
-        ticket_id: input.ticket_id,
-        client_id: input.client_id,
-        service_id: input.service_id,
-        quantity: Math.max(1, Math.floor(input.quantity || 1)),
-        rate: Math.max(0, Math.round(input.rate || 0)),
-        currency_code: input.currency_code || 'USD',
-        description: input.description ?? null,
-        is_billed: false
-      })
-      .returning('*');
-    // Inventory: decrement stock for track_stock (non-serialized) products. No-op otherwise.
-    const consumption = await recordStockConsumption(trx, tenant, {
-      service_id: row.service_id,
-      quantity: row.quantity,
-      source_doc_type: 'ticket_material',
-      source_doc_id: row.ticket_material_id,
-      performed_by: (user as any)?.user_id ?? null,
-      unit_id: input.unit_id ?? null,
-      client_id: input.client_id,
-    });
-    return { row, pendingAsset: consumption.pending_asset_link ?? null };
-  });
-  // F044: a serialized install creates the managed asset like SO fulfillment does —
-  // after commit (F029), and never failing the material itself.
-  if (pendingAsset) {
-    try {
-      await createAndLinkDeliveredAsset(db, tenant, pendingAsset);
-    } catch (e) {
-      console.error('Asset creation for delivered ticket-material unit failed:', e);
-    }
-  }
-  return row as ITicketMaterial;
+  return (await addMaterial(
+    db,
+    tenant,
+    { ...input, parent_type: 'ticket', parent_id: input.ticket_id },
+    (user as any)?.user_id ?? null,
+  )) as ITicketMaterial;
 });
 
 export const deleteTicketMaterial = withAuth(async (user, { tenant }, ticketMaterialId: string): Promise<void> => {
@@ -86,30 +41,7 @@ export const deleteTicketMaterial = withAuth(async (user, { tenant }, ticketMate
     throw new Error('Permission denied: billing delete required');
   }
   const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const row = await trx('ticket_materials')
-      .where({ tenant, ticket_material_id: ticketMaterialId })
-      .select('is_billed', 'service_id', 'quantity')
-      .first();
-
-    if (!row) return;
-    if (row.is_billed) {
-      throw new Error('Cannot delete a billed material.');
-    }
-
-    // Inventory: restore stock that was consumed when this (unbilled) material was added.
-    await reverseStockConsumption(trx, tenant, {
-      service_id: row.service_id,
-      quantity: row.quantity,
-      source_doc_type: 'ticket_material',
-      source_doc_id: ticketMaterialId,
-      performed_by: (user as any)?.user_id ?? null,
-    });
-
-    await trx('ticket_materials')
-      .where({ tenant, ticket_material_id: ticketMaterialId })
-      .delete();
-  });
+  await deleteMaterial(db, tenant, 'ticket', ticketMaterialId, (user as any)?.user_id ?? null);
 });
 
 export const listProjectMaterials = withAuth(async (user, { tenant }, projectId: string): Promise<IProjectMaterial[]> => {
@@ -117,20 +49,7 @@ export const listProjectMaterials = withAuth(async (user, { tenant }, projectId:
     throw new Error('Permission denied: billing read required');
   }
   const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const rows = await trx('project_materials as pm')
-      .leftJoin('service_catalog as sc', function () {
-        this.on('pm.service_id', '=', 'sc.service_id').andOn('pm.tenant', '=', 'sc.tenant');
-      })
-      .where({ 'pm.tenant': tenant, 'pm.project_id': projectId })
-      .select(
-        'pm.*',
-        'sc.service_name as service_name',
-        'sc.sku as sku'
-      )
-      .orderBy('pm.created_at', 'desc');
-    return rows as IProjectMaterial[];
-  });
+  return (await listMaterials(db, tenant, 'project', projectId)) as IProjectMaterial[];
 });
 
 export const addProjectMaterial = withAuth(async (user, { tenant }, input: {
@@ -147,41 +66,12 @@ export const addProjectMaterial = withAuth(async (user, { tenant }, input: {
     throw new Error('Permission denied: billing create required');
   }
   const { knex: db } = await createTenantKnex();
-  const { row, pendingAsset } = await withTransaction(db, async (trx: Knex.Transaction) => {
-    const [row] = await trx('project_materials')
-      .insert({
-        tenant,
-        project_id: input.project_id,
-        client_id: input.client_id,
-        service_id: input.service_id,
-        quantity: Math.max(1, Math.floor(input.quantity || 1)),
-        rate: Math.max(0, Math.round(input.rate || 0)),
-        currency_code: input.currency_code || 'USD',
-        description: input.description ?? null,
-        is_billed: false
-      })
-      .returning('*');
-    // Inventory: decrement stock for track_stock (non-serialized) products. No-op otherwise.
-    const consumption = await recordStockConsumption(trx, tenant, {
-      service_id: row.service_id,
-      quantity: row.quantity,
-      source_doc_type: 'project_material',
-      source_doc_id: row.project_material_id,
-      performed_by: (user as any)?.user_id ?? null,
-      unit_id: input.unit_id ?? null,
-      client_id: input.client_id,
-    });
-    return { row, pendingAsset: consumption.pending_asset_link ?? null };
-  });
-  // F044: see addTicketMaterial — asset creation runs post-commit, best-effort.
-  if (pendingAsset) {
-    try {
-      await createAndLinkDeliveredAsset(db, tenant, pendingAsset);
-    } catch (e) {
-      console.error('Asset creation for delivered project-material unit failed:', e);
-    }
-  }
-  return row as IProjectMaterial;
+  return (await addMaterial(
+    db,
+    tenant,
+    { ...input, parent_type: 'project', parent_id: input.project_id },
+    (user as any)?.user_id ?? null,
+  )) as IProjectMaterial;
 });
 
 export const deleteProjectMaterial = withAuth(async (user, { tenant }, projectMaterialId: string): Promise<void> => {
@@ -189,28 +79,5 @@ export const deleteProjectMaterial = withAuth(async (user, { tenant }, projectMa
     throw new Error('Permission denied: billing delete required');
   }
   const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const row = await trx('project_materials')
-      .where({ tenant, project_material_id: projectMaterialId })
-      .select('is_billed', 'service_id', 'quantity')
-      .first();
-
-    if (!row) return;
-    if (row.is_billed) {
-      throw new Error('Cannot delete a billed material.');
-    }
-
-    // Inventory: restore stock that was consumed when this (unbilled) material was added.
-    await reverseStockConsumption(trx, tenant, {
-      service_id: row.service_id,
-      quantity: row.quantity,
-      source_doc_type: 'project_material',
-      source_doc_id: projectMaterialId,
-      performed_by: (user as any)?.user_id ?? null,
-    });
-
-    await trx('project_materials')
-      .where({ tenant, project_material_id: projectMaterialId })
-      .delete();
-  });
+  await deleteMaterial(db, tenant, 'project', projectMaterialId, (user as any)?.user_id ?? null);
 });
