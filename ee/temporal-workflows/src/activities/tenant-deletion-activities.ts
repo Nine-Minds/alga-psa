@@ -91,6 +91,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Time tracking
   'time_sheet_comments', 'time_entry_change_requests', 'time_entries', 'time_sheets',
+  'user_cost_rates',
 
   // Document details
   'document_block_content', 'document_versions', 'document_content',
