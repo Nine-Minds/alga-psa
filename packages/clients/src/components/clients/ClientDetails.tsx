@@ -77,6 +77,7 @@ import {
   shouldShowEntraSyncAction,
 } from './clientDetailsEntraSyncAction';
 import { ClientDetailsTabContent } from './ClientDetailsTabContent';
+import ClientCommandCenter from './command-center/ClientCommandCenter';
 import HuduClientTab from './HuduClientTab';
 import HuduClientPasswordsTab from './HuduClientPasswordsTab';
 import HuduClientDocumentsSection from './HuduClientDocumentsSection';
@@ -1046,6 +1047,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     memoizedRouter.push(`${pathname}?${params.toString()}`);
   }, [pathname, memoizedRouter, searchParams]);
 
+  // Command-center focus views sync ?tab= with replace (no history spam), and
+  // clear it when the focus view closes (D3).
+  const handleFocusTabUrlChange = useCallback((tabId: string | null) => {
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    if (tabId) {
+      params.set('tab', tabId);
+    } else {
+      params.delete('tab');
+    }
+    const queryString = params.toString();
+    memoizedRouter.replace(queryString ? `${pathname}?${queryString}` : pathname);
+  }, [pathname, memoizedRouter, searchParams]);
+
   const clientActiveContacts = useMemo(() => {
     return (defaultContactOptions ?? []).filter((c) => !c?.is_inactive);
   }, [defaultContactOptions]);
@@ -1700,13 +1714,30 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             ] satisfies PrintableDetailField[]}
           />
         </div>
-        <CustomTabs
-          tabs={quickView ? [tabContent[0]] : tabContent}
-          // In quick view we only render the Details tab. Force default to details
-          // to avoid a mismatch with the current page's ?tab= query (e.g. "Tickets").
-          defaultTab={quickView ? 'details' : searchParams?.get('tab')?.toLowerCase() || 'details'}
-          onTabChange={handleTabChange}
-        />
+        {(quickView || isInDrawer) ? (
+          <CustomTabs
+            tabs={quickView ? [tabContent[0]] : tabContent}
+            // In quick view we only render the Details tab. Force default to details
+            // to avoid a mismatch with the current page's ?tab= query (e.g. "Tickets").
+            defaultTab={quickView ? 'details' : searchParams?.get('tab')?.toLowerCase() || 'details'}
+            onTabChange={handleTabChange}
+          />
+        ) : (
+          // Full-page client screen: command center replaces the tab bar (D1);
+          // legacy tab contents stay reachable as focus views via the registry (D2).
+          <ClientCommandCenter
+            idPrefix={`${id}-cc`}
+            clientId={client.client_id}
+            tabs={tabContent}
+            initialTabId={searchParams?.get('tab')?.toLowerCase() || null}
+            onTabUrlChange={handleFocusTabUrlChange}
+            onNewTicket={() => setIsQuickAddTicketOpen(true)}
+            onManageLocations={() => setIsLocationsDialogOpen(true)}
+            surveySummary={surveySummary}
+            renderSurveySummaryCard={renderSurveySummaryCard}
+            t={t}
+          />
+        )}
 
         {renderQuickAddTicket({
           id: `${id}-quick-add-ticket`,

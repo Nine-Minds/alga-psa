@@ -1,0 +1,296 @@
+'use client';
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import type { TabContent } from '@alga-psa/ui/components/CustomTabs';
+import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
+import { getClientPulse } from '../../../actions/clientPulseActions';
+import type {
+  ClientAttentionFlag,
+  ClientPulse,
+  ClientTimelineEvent,
+} from '../../../lib/commandCenterTypes';
+import AttentionStrip from './AttentionStrip';
+import ClientTimelinePanel from './ClientTimelinePanel';
+import FocusViewHost from './FocusViewHost';
+import {
+  DocumentsCard,
+  InstallBaseCard,
+  LocationsCard,
+  MoneyCard,
+  PeopleCard,
+  RecordCard,
+  ServiceCard,
+} from './PulseCards';
+
+type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+interface ClientCommandCenterProps {
+  idPrefix: string;
+  clientId: string;
+  tabs: TabContent[];
+  /** ?tab= value present when the page loaded (deep link, D3). */
+  initialTabId?: string | null;
+  /** Sync the focus-view state back into the URL (?tab=). */
+  onTabUrlChange: (tabId: string | null) => void;
+  onNewTicket: () => void;
+  onManageLocations: () => void;
+  surveySummary: SurveyClientSatisfactionSummary | null;
+  renderSurveySummaryCard: (props: { summary: SurveyClientSatisfactionSummary | null }) => React.ReactNode;
+  t: TFn;
+}
+
+function SkeletonCard() {
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-4 animate-pulse">
+      <div className="h-3 w-24 bg-gray-200 rounded mb-4" />
+      <div className="h-6 w-16 bg-gray-100 rounded mb-2" />
+      <div className="h-3 w-full bg-gray-100 rounded mb-1.5" />
+      <div className="h-3 w-2/3 bg-gray-100 rounded" />
+    </div>
+  );
+}
+
+export default function ClientCommandCenter({
+  idPrefix,
+  clientId,
+  tabs,
+  initialTabId,
+  onTabUrlChange,
+  onNewTicket,
+  onManageLocations,
+  surveySummary,
+  renderSurveySummaryCard,
+  t,
+}: ClientCommandCenterProps) {
+  const router = useRouter();
+  const [pulse, setPulse] = useState<ClientPulse | null>(null);
+  const [pulseError, setPulseError] = useState<string | null>(null);
+  const tabIds = useMemo(() => new Set(tabs.map((tab) => tab.id)), [tabs]);
+  const [focusTabId, setFocusTabId] = useState<string | null>(null);
+
+  // Deep-link consumption (D3). Some tabs join the registry asynchronously
+  // (e.g. Equipment appears after its permission check resolves), so the
+  // ?tab= deep link must wait for its tab instead of being decided at mount.
+  // Consumed exactly once; any user interaction cancels a pending deep link.
+  const deepLinkConsumedRef = useRef(false);
+  useEffect(() => {
+    if (deepLinkConsumedRef.current) return;
+    if (!initialTabId) {
+      deepLinkConsumedRef.current = true;
+      return;
+    }
+    if (tabIds.has(initialTabId)) {
+      deepLinkConsumedRef.current = true;
+      setFocusTabId(initialTabId);
+    }
+  }, [initialTabId, tabIds]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getClientPulse(clientId)
+      .then((data) => { if (!cancelled) setPulse(data); })
+      .catch(() => {
+        if (!cancelled) {
+          setPulseError(t('clientCommandCenter.pulseError', { defaultValue: 'Could not load the client snapshot.' }));
+        }
+      });
+    return () => { cancelled = true; };
+  }, [clientId, t]);
+
+  const openFocus = useCallback((tabId: string) => {
+    if (!tabIds.has(tabId)) return;
+    deepLinkConsumedRef.current = true;
+    setFocusTabId(tabId);
+    onTabUrlChange(tabId);
+  }, [tabIds, onTabUrlChange]);
+
+  const closeFocus = useCallback(() => {
+    deepLinkConsumedRef.current = true;
+    setFocusTabId(null);
+    onTabUrlChange(null);
+  }, [onTabUrlChange]);
+
+  /** First existing tab id from a preference list (AlgaDesk filters some out). */
+  const resolveTab = useCallback((...preferred: string[]): string | null => {
+    for (const candidate of preferred) {
+      if (tabIds.has(candidate)) return candidate;
+    }
+    return null;
+  }, [tabIds]);
+
+  const focusOpener = useCallback((...preferred: string[]): (() => void) | null => {
+    const target = resolveTab(...preferred);
+    return target ? () => openFocus(target) : null;
+  }, [resolveTab, openFocus]);
+
+  const currencyCode = pulse?.money?.currencyCode ?? 'USD';
+  const formatMoney = useCallback((cents: number) => {
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: currencyCode,
+        maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
+      }).format(cents / 100);
+    } catch {
+      return `$${(cents / 100).toFixed(2)}`;
+    }
+  }, [currencyCode]);
+
+  const navigateToRef = useCallback((refType: string, refId: string) => {
+    switch (refType) {
+      case 'ticket':
+        router.push(`/msp/tickets/${refId}`);
+        return;
+      case 'invoice':
+        router.push(`/msp/invoices/${refId}`);
+        return;
+      case 'sales_order':
+        router.push('/msp/inventory/sales-orders');
+        return;
+      case 'rma':
+        router.push('/msp/inventory/rma');
+        return;
+      case 'quote':
+        router.push('/msp/billing?tab=quotes');
+        return;
+      case 'stock_unit': {
+        const target = resolveTab('equipment', 'assets');
+        if (target) openFocus(target);
+        return;
+      }
+      case 'interaction': {
+        const target = resolveTab('interactions');
+        if (target) openFocus(target);
+        return;
+      }
+      default:
+        break;
+    }
+  }, [router, resolveTab, openFocus]);
+
+  const handleFlagClick = useCallback((flag: ClientAttentionFlag) => {
+    if (flag.refType && flag.refId) {
+      navigateToRef(flag.refType, flag.refId);
+    }
+  }, [navigateToRef]);
+
+  const handleTimelineEventClick = useCallback((event: ClientTimelineEvent) => {
+    navigateToRef(event.refType, event.refId);
+  }, [navigateToRef]);
+
+  return (
+    <div id={`${idPrefix}-command-center`} className="min-w-0">
+      {pulse && (
+        <AttentionStrip
+          idPrefix={idPrefix}
+          flags={pulse.attention}
+          formatMoney={formatMoney}
+          onFlagClick={handleFlagClick}
+          t={t}
+        />
+      )}
+
+      {pulseError && (
+        <p id={`${idPrefix}-pulse-error`} className="text-[13px] text-red-600 mb-4">{pulseError}</p>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {!pulse && !pulseError && (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          )}
+
+          {pulse?.service && (
+            <ServiceCard
+              id={`${idPrefix}-card-service`}
+              data={pulse.service}
+              onOpen={focusOpener('tickets')}
+              onOpenTicket={(ticketId) => navigateToRef('ticket', ticketId)}
+              onNewTicket={onNewTicket}
+              t={t}
+            />
+          )}
+          {pulse?.money && (
+            <MoneyCard
+              id={`${idPrefix}-card-money`}
+              data={pulse.money}
+              formatMoney={formatMoney}
+              onOpen={focusOpener('billing-dashboard', 'billing')}
+              onOpenInvoice={(invoiceId) => navigateToRef('invoice', invoiceId)}
+              t={t}
+            />
+          )}
+          {pulse?.installBase && (
+            <InstallBaseCard
+              id={`${idPrefix}-card-install-base`}
+              data={pulse.installBase}
+              onOpen={focusOpener('equipment', 'assets')}
+              onOpenAsset={(assetId) => router.push(`/msp/assets/${assetId}`)}
+              t={t}
+            />
+          )}
+          {pulse && (
+            <PeopleCard
+              id={`${idPrefix}-card-people`}
+              data={pulse.people}
+              onOpen={focusOpener('contacts')}
+              t={t}
+            />
+          )}
+          {pulse && (
+            <LocationsCard
+              id={`${idPrefix}-card-locations`}
+              locations={pulse.locations}
+              onManage={onManageLocations}
+              t={t}
+            />
+          )}
+          {pulse?.documents && (
+            <DocumentsCard
+              id={`${idPrefix}-card-documents`}
+              data={pulse.documents}
+              onOpen={focusOpener('documents')}
+              t={t}
+            />
+          )}
+          {pulse && (
+            <RecordCard
+              id={`${idPrefix}-card-record`}
+              data={pulse.record}
+              onOpen={focusOpener('details')}
+              t={t}
+            />
+          )}
+          {pulse && surveySummary && (
+            <div id={`${idPrefix}-card-csat`} className="min-w-0">
+              {renderSurveySummaryCard({ summary: surveySummary })}
+            </div>
+          )}
+        </div>
+
+        <div className="lg:col-span-1 min-w-0 lg:sticky lg:top-4 self-stretch">
+          <ClientTimelinePanel
+            idPrefix={idPrefix}
+            clientId={clientId}
+            formatMoney={formatMoney}
+            onEventClick={handleTimelineEventClick}
+            t={t}
+          />
+        </div>
+      </div>
+
+      <FocusViewHost
+        idPrefix={idPrefix}
+        tabs={tabs}
+        activeTabId={focusTabId}
+        onClose={closeFocus}
+      />
+    </div>
+  );
+}
