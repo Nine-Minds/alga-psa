@@ -39,6 +39,32 @@ const integrationOnlyKnex = (builderFactory = activeIntegrationBuilder): any =>
     throw new Error(`Unexpected table ${table}`);
   });
 
+const chainBuilder = (firstValue: unknown) => ({
+  leftJoin: vi.fn().mockReturnThis(),
+  join: vi.fn().mockReturnThis(),
+  select: vi.fn().mockReturnThis(),
+  where: vi.fn().mockReturnThis(),
+  whereNotNull: vi.fn().mockReturnThis(),
+  whereRaw: vi.fn().mockReturnThis(),
+  first: vi.fn().mockResolvedValue(firstValue)
+});
+
+const tacticalKnexWithPermission = (permissionGranted = true): any => {
+  const trx: any = vi.fn((table: string) => {
+    if (table.startsWith('workflow_runs')) return chainBuilder({ matched_workflow_id: 'workflow-1', published_by: 'user-1' });
+    if (table.startsWith('user_roles')) return chainBuilder(permissionGranted ? { permission_id: 'perm-1' } : undefined);
+    throw new Error(`Unexpected transaction table ${table}`);
+  });
+  trx.raw = vi.fn().mockResolvedValue(undefined);
+
+  const knex: any = vi.fn((table: string) => {
+    if (table === 'rmm_integrations') return activeIntegrationBuilder();
+    throw new Error(`Unexpected table ${table}`);
+  });
+  knex.transaction = vi.fn(async (callback: (transaction: any) => Promise<unknown>) => callback(trx));
+  return knex;
+};
+
 const loadActionById = async (actionId: string) => {
   vi.resetModules();
   const { registerTacticalRmmWorkflowActionsV2 } = await import('../registerTacticalRmmWorkflowActions');
@@ -177,14 +203,14 @@ describe('Tactical RMM workflow action handlers (T007)', () => {
     });
   });
 
-  it('run_command and reboot mark side effects and surface command output', async () => {
+  it('run_command requires explicit RMM command permission and surfaces command output', async () => {
     const runAction = await loadActionById('tacticalrmm.agents.run_command');
     const runCommand = vi.fn().mockResolvedValue({ output: 'pong' });
     await mockClient({ runCommand });
 
     const runResult = await runAction.handler(
       { agent_id: 'agent-abc', command: 'ping -n 1 host', shell: 'cmd', timeout: 30, run_as_user: false },
-      { ...baseCtx, tenantId: 'tenant-1', knex: integrationOnlyKnex() } as any
+      { ...baseCtx, tenantId: 'tenant-1', knex: tacticalKnexWithPermission(true) } as any
     );
     expect(runCommand).toHaveBeenCalledWith('agent-abc', {
       shell: 'cmd',
@@ -194,7 +220,26 @@ describe('Tactical RMM workflow action handlers (T007)', () => {
     });
     expect(runResult.output).toBe('pong');
     expect(runAction.sideEffectful).toBe(true);
+  });
 
+  it('run_command denies workflow actors without the RMM command permission before calling Tactical RMM', async () => {
+    const runAction = await loadActionById('tacticalrmm.agents.run_command');
+    const runCommand = vi.fn().mockResolvedValue({ output: 'pong' });
+    await mockClient({ runCommand });
+
+    await expect(
+      runAction.handler(
+        { agent_id: 'agent-abc', command: 'whoami', shell: 'cmd', timeout: 30, run_as_user: false },
+        { ...baseCtx, tenantId: 'tenant-1', knex: tacticalKnexWithPermission(false) } as any
+      )
+    ).rejects.toMatchObject({
+      code: 'PERMISSION_DENIED',
+      message: 'Permission denied: rmm:execute_command'
+    });
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+
+  it('reboot marks side effects', async () => {
     const rebootAction = await loadActionById('tacticalrmm.agents.reboot');
     const rebootAgent = vi.fn().mockResolvedValue(undefined);
     await mockClient({ rebootAgent });

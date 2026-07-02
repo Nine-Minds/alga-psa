@@ -79,6 +79,9 @@ exports.seed = async function(knex, tenantId) {
         { resource: 'workflow', action: 'publish', msp: true, client: false, description: 'Publish workflows' },
         { resource: 'workflow', action: 'admin', msp: true, client: false, description: 'Administer workflows' },
 
+        // RMM permissions
+        { resource: 'rmm', action: 'execute_command', msp: true, client: false, description: 'Execute raw RMM remote commands' },
+
         // Service permissions
         { resource: 'service', action: 'create', msp: true, client: false, description: 'Create services' },
         { resource: 'service', action: 'read', msp: true, client: false, description: 'View services' },
