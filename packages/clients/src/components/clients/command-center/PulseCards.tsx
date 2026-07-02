@@ -154,16 +154,24 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, t }: {
     >
       {hasOutstanding ? (
         <>
-          <div className="flex items-end gap-2 h-16 mt-4">
+          <div className="flex items-end gap-2 h-16 mt-4 border-b border-gray-200">
             {buckets.map((bucket) => (
-              <div key={bucket.key} className="flex-1 flex flex-col justify-end items-stretch">
+              <div
+                key={bucket.key}
+                className="flex-1 flex flex-col justify-end items-stretch"
+                title={`${bucket.label}: ${formatMoney(bucket.cents)}`}
+              >
                 <div className="text-center text-[10px] text-gray-500 mb-0.5">
                   {bucket.cents > 0 ? formatMoney(bucket.cents) : ''}
                 </div>
-                <div
-                  className={`rounded-t ${bucket.warn ? 'bg-amber-200' : 'bg-primary-100'}`}
-                  style={{ height: `${Math.max(4, Math.round((bucket.cents / maxCents) * 44))}px` }}
-                />
+                {/* A bucket with $0 renders no bar at all — a visibility floor on
+                    zero would fake data the honesty rules forbid (D6). */}
+                {bucket.cents > 0 && (
+                  <div
+                    className={`rounded-t ${bucket.warn ? 'bg-amber-200' : 'bg-primary-100'}`}
+                    style={{ height: `${Math.max(4, Math.round((bucket.cents / maxCents) * 44))}px` }}
+                  />
+                )}
               </div>
             ))}
           </div>
