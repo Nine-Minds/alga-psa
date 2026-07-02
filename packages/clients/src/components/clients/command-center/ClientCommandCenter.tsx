@@ -18,6 +18,7 @@ import {
   InstallBaseCard,
   LocationsCard,
   MoneyCard,
+  NotesCard,
   PeopleCard,
   RecordCard,
   ServiceCard,
@@ -66,7 +67,6 @@ export default function ClientCommandCenter({
   const router = useRouter();
   const [pulse, setPulse] = useState<ClientPulse | null>(null);
   const [pulseError, setPulseError] = useState<string | null>(null);
-  const [viewsMenuOpen, setViewsMenuOpen] = useState(false);
   const tabIds = useMemo(() => new Set(tabs.map((tab) => tab.id)), [tabs]);
   const [focusTabId, setFocusTabId] = useState<string | null>(null);
 
@@ -222,36 +222,6 @@ export default function ClientCommandCenter({
             ))}
           </span>
         )}
-        {/* Every registry tab must stay reachable without a deep link — cards
-            only cover some of them (D2). */}
-        <span className="ml-auto relative">
-          <button
-            id={`${idPrefix}-views-menu`}
-            type="button"
-            onClick={() => setViewsMenuOpen((open) => !open)}
-            className="text-xs font-semibold text-gray-500 hover:text-primary-700 border border-gray-200 rounded-lg px-3 py-1.5 bg-white"
-          >
-            {t('clientCommandCenter.allViews', { defaultValue: 'All views ▾' })}
-          </button>
-          {viewsMenuOpen && (
-            <>
-              <span className="fixed inset-0 z-40" onClick={() => setViewsMenuOpen(false)} aria-hidden />
-              <span className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[200px] block">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    id={`${idPrefix}-views-${tab.id}`}
-                    type="button"
-                    onClick={() => { setViewsMenuOpen(false); openFocus(tab.id); }}
-                    className="block w-full text-left px-3.5 py-1.5 text-[13px] text-gray-700 hover:bg-primary-50 hover:text-primary-800"
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </span>
-            </>
-          )}
-        </span>
       </div>
 
       {pulse && (
@@ -296,6 +266,8 @@ export default function ClientCommandCenter({
               formatMoney={formatMoney}
               onOpen={focusOpener('billing-dashboard', 'billing')}
               onOpenInvoice={(invoiceId) => navigateToRef('invoice', invoiceId)}
+              onOpenBillingSetup={focusOpener('billing')}
+              onOpenTaxSettings={focusOpener('tax-settings')}
               t={t}
             />
           )}
@@ -304,6 +276,9 @@ export default function ClientCommandCenter({
               id={`${idPrefix}-card-install-base`}
               data={pulse.installBase}
               onOpen={focusOpener('equipment', 'assets')}
+              // Only when Equipment holds the header action — otherwise the
+              // header already opens Assets and the footer link would duplicate it.
+              onOpenAssetList={tabIds.has('equipment') ? focusOpener('assets') : null}
               onOpenAsset={(assetId) => router.push(`/msp/assets/${assetId}`)}
               t={t}
             />
@@ -333,10 +308,19 @@ export default function ClientCommandCenter({
             />
           )}
           {pulse && (
+            <NotesCard
+              id={`${idPrefix}-card-notes`}
+              data={pulse.notes}
+              onOpen={focusOpener('notes')}
+              t={t}
+            />
+          )}
+          {pulse && (
             <RecordCard
               id={`${idPrefix}-card-record`}
               data={pulse.record}
               onOpen={focusOpener('details')}
+              onOpenAdditionalInfo={focusOpener('additional-info')}
               t={t}
             />
           )}
@@ -362,7 +346,9 @@ export default function ClientCommandCenter({
         idPrefix={idPrefix}
         tabs={tabs}
         activeTabId={focusTabId}
+        onSelectTab={openFocus}
         onClose={closeFocus}
+        t={t}
       />
     </div>
   );

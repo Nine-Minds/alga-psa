@@ -143,3 +143,32 @@ Verified every edit surface works on the command-center path:
   (ids client-details-cc-views-<tabId>).
 - Quick-add ticket, locations dialog, delete + deactivate dialogs all mount OUTSIDE the
   quickView/command-center branch in ClientDetails, so they work on both paths.
+
+## Hybrid nav: drawer rail + notes card (2026-07-02, replaces "All views ▾")
+
+Robert judged the All views dropdown "not discoverable enough" → 2 mockups
+(/tmp/client-cc-nav-{1,2}-*.html) → hybrid approved: option 1 (rail + contextual
+links) + option 3's notes card.
+
+- FocusViewHost gained the view rail (F037): renders the live `tabs` registry, so
+  RBAC filtering + future tabs come free. Group map RAIL_GROUP_BY_TAB (unknown ids →
+  "More" group — reachability guarantee for tabs the map doesn't know). Switching
+  calls the same openFocus → in-place swap + ?tab= hygiene. Ids:
+  `${idPrefix}-focus-rail`, `${idPrefix}-focus-rail-<tabId>`.
+- "All views ▾" menu deleted from the identity row (F038); sweep note above about
+  `-cc-views-<tabId>` ids is now historical.
+- CardShell gained `footerLinks` (ids `${cardId}-link-<slug>`): Money → billing
+  setup + tax settings; Record → additional-info; Install base → assets, gated on
+  `tabIds.has('equipment')` so it never duplicates the header action (F039).
+- Notes: `ClientPulseNotes` in pulse (always present, client:read only). fetchNotes
+  reads document_block_content by clients.notes_document_id; extracts text from the
+  first 2 non-empty BlockNote blocks (inline .text, link children one level down).
+  Blank-but-saved docs → hasNotes:false, no timestamp (D6). NotesCard: amber-tinted
+  preview + "edited Nd ago", empty state flips action label to "＋ Add note ↗".
+- Browser smoke (Emerald City): menu gone; all 4 footer links live; rail lists 12
+  tabs in 4 groups; billing→tax-settings in-place switch with URL following (URL
+  lags clicks by ~2s in dev — router.replace transition, not a bug); note typed via
+  BlockNote + Save persisted (psql-verified) and NotesCard rendered the preview
+  after reload; ?tab=additional-info deep link opens with correct rail active state;
+  close cleans URL.
+- Suites: clientPulse 5/5 (new T005 notes). clients tsc 0, full server tsc 0.

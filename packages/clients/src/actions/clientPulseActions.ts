@@ -11,6 +11,7 @@ import type {
   ClientPulseDocuments,
   ClientPulseInstallBase,
   ClientPulseMoney,
+  ClientPulseNotes,
   ClientPulsePeople,
   ClientPulseRecord,
   ClientPulseService,
@@ -20,6 +21,7 @@ type ClientPulseLocations = ClientPulse['locations'];
 
 const DAY_MS = 86_400_000;
 const DRAFT_INVOICE_PREVIEW_LIMIT = 5;
+const NOTE_PREVIEW_LINE_LIMIT = 2;
 const COMPLETED_PAYMENT_STATUS = 'completed';
 const DELIVERED_STOCK_UNIT_STATUS = 'delivered';
 const TERMINAL_RMA_STATUSES = ['closed'];
@@ -174,6 +176,67 @@ async function fetchLocations(
     is_billing: Boolean(row.is_billing_address),
     is_shipping: Boolean(row.is_shipping_address),
   }));
+}
+
+/** Plain text of one BlockNote block: inline nodes carry .text; links nest one level. */
+function blockNoteBlockText(block: unknown): string {
+  const content = (block as { content?: unknown })?.content;
+  if (!Array.isArray(content)) return '';
+  return content
+    .map((node: any) => {
+      if (typeof node?.text === 'string') return node.text;
+      if (Array.isArray(node?.content)) {
+        return node.content.map((child: any) => (typeof child?.text === 'string' ? child.text : '')).join('');
+      }
+      return '';
+    })
+    .join('')
+    .trim();
+}
+
+async function fetchNotes(
+  trx: Knex.Transaction,
+  tenant: string,
+  notesDocumentId: string | null,
+): Promise<ClientPulseNotes> {
+  const empty: ClientPulseNotes = { hasNotes: false, previewLines: [], lastEditedAt: null };
+  if (!notesDocumentId) return empty;
+
+  const contentRow = await trx('document_block_content')
+    .where({ tenant, document_id: notesDocumentId })
+    .select('block_data', 'updated_at')
+    .first();
+  if (!contentRow) return empty;
+
+  let blocks: unknown = contentRow.block_data;
+  if (typeof blocks === 'string') {
+    try {
+      blocks = JSON.parse(blocks);
+    } catch {
+      return empty;
+    }
+  }
+  if (!Array.isArray(blocks)) return empty;
+
+  const previewLines: string[] = [];
+  let hasNotes = false;
+  for (const block of blocks) {
+    const text = blockNoteBlockText(block);
+    if (!text) continue;
+    hasNotes = true;
+    if (previewLines.length < NOTE_PREVIEW_LINE_LIMIT) previewLines.push(text);
+    else break;
+  }
+
+  // A saved-but-blank doc reads as "no notes" — an empty preview with a
+  // timestamp would imply content that isn't there (D6).
+  if (!hasNotes) return empty;
+
+  return {
+    hasNotes,
+    previewLines,
+    lastEditedAt: toIsoString(contentRow.updated_at),
+  };
 }
 
 async function fetchRecord(
@@ -642,6 +705,7 @@ export const getClientPulse = withAuth(async (
         'c.account_manager_id',
         'c.is_inactive',
         'c.properties',
+        'c.notes_document_id',
         'u.first_name',
         'u.last_name',
         'u.username',
@@ -660,6 +724,7 @@ export const getClientPulse = withAuth(async (
       people,
       locations,
       record,
+      notes,
       serviceResult,
       moneyResult,
       installBaseResult,
@@ -668,6 +733,7 @@ export const getClientPulse = withAuth(async (
       fetchPeople(trx, tenant, clientId, defaultContactId),
       fetchLocations(trx, tenant, clientId),
       fetchRecord(trx, tenant, clientRow, defaultContactId),
+      fetchNotes(trx, tenant, clientRow.notes_document_id ?? null),
       canReadTickets ? fetchService(trx, tenant, clientId, nowMs) : Promise.resolve(null),
       canReadBilling ? fetchMoney(trx, tenant, clientId, nowMs) : Promise.resolve(null),
       canReadInventory ? fetchInstallBase(trx, tenant, clientId, canReadAssets, nowMs) : Promise.resolve(null),
@@ -690,6 +756,7 @@ export const getClientPulse = withAuth(async (
       people,
       locations,
       ...(documents ? { documents } : {}),
+      notes,
       record,
     };
   });

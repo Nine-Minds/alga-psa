@@ -5,6 +5,7 @@ import type {
   ClientPulseService,
   ClientPulseMoney,
   ClientPulseInstallBase,
+  ClientPulseNotes,
   ClientPulsePeople,
   ClientPulseLocation,
   ClientPulseDocuments,
@@ -13,15 +14,24 @@ import type {
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
+export interface CardFooterLink {
+  id: string;
+  label: string;
+  onClick: () => void;
+}
+
 interface CardShellProps {
   id: string;
   title: string;
   action?: { label: string; onClick: () => void } | null;
+  /** Contextual entry links to related focus views (only live links render). */
+  footerLinks?: Array<CardFooterLink | null>;
   className?: string;
   children: React.ReactNode;
 }
 
-export function CardShell({ id, title, action, className = '', children }: CardShellProps) {
+export function CardShell({ id, title, action, footerLinks, className = '', children }: CardShellProps) {
+  const liveFooterLinks = (footerLinks ?? []).filter((link): link is CardFooterLink => link != null);
   return (
     <div id={id} className={`bg-white border border-gray-200 rounded-xl p-4 min-w-0 ${className}`}>
       <div className="flex items-center mb-3">
@@ -38,6 +48,23 @@ export function CardShell({ id, title, action, className = '', children }: CardS
         )}
       </div>
       {children}
+      {liveFooterLinks.length > 0 && (
+        <div className="mt-3 pt-2 border-t border-gray-100 text-xs">
+          {liveFooterLinks.map((link, index) => (
+            <React.Fragment key={link.id}>
+              {index > 0 && <span className="text-gray-300 mx-1.5">·</span>}
+              <button
+                id={`${id}-link-${link.id}`}
+                type="button"
+                onClick={link.onClick}
+                className="font-semibold text-primary-600 hover:text-primary-800"
+              >
+                {link.label}
+              </button>
+            </React.Fragment>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -129,12 +156,14 @@ export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, t }: 
 
 // ── Money ────────────────────────────────────────────────────────────────────
 
-export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, t }: {
+export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpenBillingSetup, onOpenTaxSettings, t }: {
   id: string;
   data: ClientPulseMoney;
   formatMoney: (cents: number) => string;
   onOpen: (() => void) | null;
   onOpenInvoice: (invoiceId: string) => void;
+  onOpenBillingSetup: (() => void) | null;
+  onOpenTaxSettings: (() => void) | null;
   t: TFn;
 }) {
   const buckets = [
@@ -151,6 +180,14 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, t }: {
       id={id}
       title={t('clientCommandCenter.cards.money', { defaultValue: 'Money' })}
       action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      footerLinks={[
+        onOpenBillingSetup
+          ? { id: 'billing-setup', label: t('clientCommandCenter.money.billingSetup', { defaultValue: '⚙ Billing setup' }), onClick: onOpenBillingSetup }
+          : null,
+        onOpenTaxSettings
+          ? { id: 'tax-settings', label: t('clientCommandCenter.money.taxSettings', { defaultValue: 'Tax settings' }), onClick: onOpenTaxSettings }
+          : null,
+      ]}
     >
       {hasOutstanding ? (
         <>
@@ -229,10 +266,12 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, t }: {
 
 // ── Install base ─────────────────────────────────────────────────────────────
 
-export function InstallBaseCard({ id, data, onOpen, onOpenAsset, t }: {
+export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset, t }: {
   id: string;
   data: ClientPulseInstallBase;
   onOpen: (() => void) | null;
+  /** Assets focus view, when Equipment holds the header action (both tabs exist). */
+  onOpenAssetList: (() => void) | null;
   onOpenAsset: (assetId: string) => void;
   t: TFn;
 }) {
@@ -241,6 +280,11 @@ export function InstallBaseCard({ id, data, onOpen, onOpenAsset, t }: {
       id={id}
       title={t('clientCommandCenter.cards.installBase', { defaultValue: 'Install base' })}
       action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      footerLinks={[
+        onOpenAssetList
+          ? { id: 'assets', label: t('clientCommandCenter.installBase.assetsLink', { defaultValue: 'Managed assets ↗' }), onClick: onOpenAssetList }
+          : null,
+      ]}
     >
       <div className="flex gap-6 mb-3">
         {data.managedAssetCount != null && (
@@ -438,12 +482,57 @@ export function DocumentsCard({ id, data, onOpen, t }: {
   );
 }
 
+// ── Notes ────────────────────────────────────────────────────────────────────
+
+export function NotesCard({ id, data, onOpen, t }: {
+  id: string;
+  data: ClientPulseNotes;
+  onOpen: (() => void) | null;
+  t: TFn;
+}) {
+  return (
+    <CardShell
+      id={id}
+      title={t('clientCommandCenter.cards.notes', { defaultValue: 'Notes' })}
+      action={onOpen
+        ? {
+          label: data.hasNotes
+            ? t('clientCommandCenter.openView', { defaultValue: 'Open ↗' })
+            : t('clientCommandCenter.notes.add', { defaultValue: '＋ Add note ↗' }),
+          onClick: onOpen,
+        }
+        : null}
+    >
+      {!data.hasNotes ? (
+        <EmptyLine text={t('clientCommandCenter.notes.none', { defaultValue: 'No notes yet.' })} />
+      ) : (
+        <>
+          <div className="rounded-lg border border-amber-100 bg-amber-50/50 px-3 py-2 text-[13px] text-gray-700">
+            {data.previewLines.map((line, index) => (
+              <p key={index} className={`truncate ${index > 0 ? 'mt-1' : ''}`}>{line}</p>
+            ))}
+          </div>
+          {data.lastEditedAt && (
+            <p className="mt-2 text-[11px] text-gray-400">
+              {t('clientCommandCenter.notes.lastEdited', {
+                defaultValue: 'Shared client note · edited {{days}}d ago',
+                days: timeAgoDays(data.lastEditedAt),
+              })}
+            </p>
+          )}
+        </>
+      )}
+    </CardShell>
+  );
+}
+
 // ── Client record ────────────────────────────────────────────────────────────
 
-export function RecordCard({ id, data, onOpen, t }: {
+export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, t }: {
   id: string;
   data: ClientPulseRecord;
   onOpen: (() => void) | null;
+  onOpenAdditionalInfo: (() => void) | null;
   t: TFn;
 }) {
   const rows: Array<{ label: string; value: string | null }> = [
@@ -470,6 +559,11 @@ export function RecordCard({ id, data, onOpen, t }: {
       id={id}
       title={t('clientCommandCenter.cards.record', { defaultValue: 'Client record' })}
       action={onOpen ? { label: t('clientCommandCenter.record.edit', { defaultValue: 'Edit ↗' }), onClick: onOpen } : null}
+      footerLinks={[
+        onOpenAdditionalInfo
+          ? { id: 'additional-info', label: t('clientCommandCenter.record.additionalInfo', { defaultValue: 'Additional info' }), onClick: onOpenAdditionalInfo }
+          : null,
+      ]}
     >
       <ul className="divide-y divide-gray-100">
         {rows.map((row) => (

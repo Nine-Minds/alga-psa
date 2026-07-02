@@ -368,6 +368,30 @@ async function seedOpenRma(context: TestContext, serviceId: string, reference: s
   return rmaId;
 }
 
+async function seedClientNote(context: TestContext, blocks: unknown, updatedOffsetDays: number) {
+  const documentId = randomUUID();
+  await context.db('documents').insert({
+    tenant: context.tenantId,
+    document_id: documentId,
+    document_name: 'Client notes',
+    user_id: context.userId,
+    created_by: context.userId,
+    entered_at: isoOffset(updatedOffsetDays),
+    updated_at: isoOffset(updatedOffsetDays),
+  });
+  await context.db('document_block_content').insert({
+    tenant: context.tenantId,
+    document_id: documentId,
+    block_data: JSON.stringify(blocks),
+    created_at: isoOffset(updatedOffsetDays),
+    updated_at: isoOffset(updatedOffsetDays),
+  });
+  await context.db('clients')
+    .where({ tenant: context.tenantId, client_id: context.clientId })
+    .update({ notes_document_id: documentId });
+  return documentId;
+}
+
 describe('client pulse infrastructure', () => {
   let context: TestContext;
   let dateNowSpy: ReturnType<typeof vi.spyOn> | null = null;
@@ -637,5 +661,38 @@ describe('client pulse infrastructure', () => {
       refLabel: `#${waitingTicketNumber}`,
       daysAgo: 2,
     });
+  });
+
+  it('T005: previews the first non-empty note blocks and treats blank docs as no notes', async () => {
+    // No notes document at all.
+    const withoutDoc = await getClientPulse(context.clientId);
+    expect(withoutDoc.notes).toEqual({ hasNotes: false, previewLines: [], lastEditedAt: null });
+
+    // Real BlockNote content: empty paragraph skipped, heading text flattened,
+    // preview capped at two lines even though three blocks carry text.
+    await seedClientNote(context, [
+      { type: 'paragraph', content: [] },
+      { type: 'heading', props: { level: 2 }, content: [{ type: 'text', text: 'Renewal call July 15' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Dorothy wants the ' }, { type: 'text', text: 'Q3 refresh scoped first.' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Third line beyond the preview cap.' }] },
+    ], -6);
+
+    const withNotes = await getClientPulse(context.clientId);
+    expect(withNotes.notes.hasNotes).toBe(true);
+    expect(withNotes.notes.previewLines).toEqual([
+      'Renewal call July 15',
+      'Dorothy wants the Q3 refresh scoped first.',
+    ]);
+    expect(withNotes.notes.lastEditedAt).toBe(isoOffset(-6));
+
+    // A saved-but-blank doc must read as "no notes" (D6) — not an empty
+    // preview with a timestamp implying content.
+    await seedClientNote(context, [
+      { type: 'paragraph', content: [] },
+      { type: 'paragraph', content: [{ type: 'text', text: '   ' }] },
+    ], -1);
+
+    const blankDoc = await getClientPulse(context.clientId);
+    expect(blankDoc.notes).toEqual({ hasNotes: false, previewLines: [], lastEditedAt: null });
   });
 });

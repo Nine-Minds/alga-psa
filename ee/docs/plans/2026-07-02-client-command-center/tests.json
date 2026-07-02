@@ -96,5 +96,15 @@
       "F033"
     ],
     "note": "deep link ?tab=equipment verified live (incl. async-registry race fix); close cleans URL; quickView legacy path verified by code branch (quickView||isInDrawer -> CustomTabs), not browser-exercised"
+  },
+  {
+    "id": "T010",
+    "description": "DB-backed: notes preview \u2014 no doc => hasNotes false; real BlockNote content => first 2 non-empty block texts + lastEditedAt; saved-but-blank doc => reads as no notes",
+    "implemented": true,
+    "featureIds": [
+      "F040",
+      "F041"
+    ],
+    "note": "clientPulse.test.ts T005; suite 5/5 green"
   }
 ]

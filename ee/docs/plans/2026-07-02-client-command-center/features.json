@@ -272,5 +272,35 @@
     "description": "i18n: all new UI strings via t() with defaultValue, following ClientDetails conventions",
     "implemented": true,
     "prdRefs": []
+  },
+  {
+    "id": "F037",
+    "description": "Focus-drawer view rail: every registry tab listed in the drawer (grouped Service/Money/Install base/Records, unknown tabs under More), active view highlighted, click switches views in place with ?tab= URL hygiene",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F038",
+    "description": "\"All views\" dropdown removed \u2014 the rail is the reachability guarantee",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F039",
+    "description": "Contextual card footer links: Money \u2192 Billing setup + Tax settings; Client record \u2192 Additional info; Install base \u2192 Managed assets (only when Equipment holds the header action)",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F040",
+    "description": "Notes pulse section: plain-text preview of first 2 non-empty BlockNote blocks from clients.notes_document_id via document_block_content; blank saved docs read as no notes (D6)",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F041",
+    "description": "Notes card in the grid: preview + edited-Nd-ago meta when notes exist, honest empty state with Add note action otherwise; opens notes focus view",
+    "implemented": true,
+    "prdRefs": []
   }
 ]

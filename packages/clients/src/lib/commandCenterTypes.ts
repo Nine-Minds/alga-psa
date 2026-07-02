@@ -139,6 +139,18 @@ export interface ClientPulseDocuments {
   recent: ClientPulseDocument[];
 }
 
+/**
+ * Preview of the client's shared BlockNote note (clients.notes_document_id).
+ * hasNotes is true only when the note contains actual text — an empty saved
+ * doc reads as "no notes" (D6: no zeros-as-insight).
+ */
+export interface ClientPulseNotes {
+  hasNotes: boolean;
+  /** Plain text of the first non-empty blocks (preview only, capped). */
+  previewLines: string[];
+  lastEditedAt: string | null;
+}
+
 export interface ClientPulseRecord {
   /** Client website URL, for the identity strip. */
   url: string | null;
@@ -164,6 +176,7 @@ export interface ClientPulse {
   locations: ClientPulseLocation[];
   /** Absent when caller lacks document:read. */
   documents?: ClientPulseDocuments;
+  notes: ClientPulseNotes;
   record: ClientPulseRecord;
 }
 
