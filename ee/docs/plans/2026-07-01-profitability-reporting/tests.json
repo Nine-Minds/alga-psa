@@ -435,7 +435,7 @@
   {
     "id": "T053",
     "description": "Ticket filter by clientId and clientContractId narrows rows correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -468,7 +468,7 @@
   {
     "id": "T057",
     "description": "Fixed-line allocation: single fixed charge (with detail service period) spread across 3 tickets proportional to actual hours on the detail's contract line; allocations sum exactly to the charge (largest-remainder)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -485,7 +485,7 @@
   {
     "id": "T059",
     "description": "Bucket-line allocation: overage charges spread proportionally by hours, tagged allocated; fixture seeds the bucket base fee as a fixed charge (matching the engine, which emits overage-only bucket charges) and verifies it allocates under the fixed rule",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037",
       "F036"
@@ -503,7 +503,7 @@
   {
     "id": "T061",
     "description": "Ticket view excludes project_task time entries",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -708,7 +708,7 @@
   {
     "id": "T085",
     "description": "Fixed-charge allocation window fallback: charge without detail service period uses invoices.billing_period_start/end and its ticket rows are tagged 'allocated (approximate)'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -716,7 +716,7 @@
   {
     "id": "T086",
     "description": "Fixed charge without any detail rows stays at agreement level (unassigned-to-line residual); agreement totals still reconcile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036",
       "F031",
@@ -775,7 +775,7 @@
   {
     "id": "T093",
     "description": "Fixed charge with no detail period and NULL invoices.billing_period_start/end lands in the agreement-level residual (terminal rule); reconciliation holds",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036",
       "F054"

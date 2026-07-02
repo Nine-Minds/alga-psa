@@ -184,3 +184,19 @@
   - MINOR: invoice status `Unpaid` exists in prod (3 invoices, 2024-09, $225 total) and was missing from D11 — added to countable list (F022, T029). Legacy `open`/`completed` appear on **zero** prod rows (kept for safety; self-hosted installs may differ).
   - MINOR: D6 note added — ~60% of prod time entries have NULL `contract_line_id`, so "Unattributed" is the common case; UI must present it neutrally.
   - Production scale (2026-07-02): 91 tenants, 167 internal users, **42 invoices** (22 draft / 17 sent / 3 Unpaid; top tenant = the 11111111… demo tenant), 163 invoice_charges (56 NULL client_contract_id, 32 manual, 0 discounts), 22 invoice_time_entries (2 invoices, 1 tenant), **410 time_entries** (362 ticket / 25 ad_hoc / 23 project_task; 249 NULL contract_line_id; 199 DRAFT / 30 SUBMITTED / 4 CHANGES_REQUESTED vs 177 APPROVED — unapprovedMinutes matters; 70 with billable_duration=0 — D4 actual-duration costing matters), 45 client_contracts, 112 contract_lines (66 Fixed / 24 Hourly / 22 Usage / **0 Bucket** — F037 has no prod data, kept as engine-driven), 0 NULL service periods on invoice_charge_details, 23/42 invoices NULL billing_period, **all 42 invoices NULL exchange_rate_basis_points** incl. 3 non-USD (AUD+CAD) → D10 unconverted-revenue warning fires on real data, 283/330 service_catalog rows NULL cost → uncosted-materials flag will be common, 6 materials rows (0 billed, 3 non-USD), 45 tickets with NULL client_id (T044's legacy case is real). Perf risk for v1 is nil at this scale.
+
+## Implementation log
+
+### 2026-07-02 — Ticket fixed/bucket allocation slice
+
+- F036 implemented: ticket revenue allocation now reads detail-backed fixed charges with service-period/invoice-window fallback and allocates by actual ticket labor on the same contract line using largest-remainder rounding; no-detail/no-window charges remain agreement residuals because the allocation query requires both detail mapping and a resolvable window.
+- F037 implemented: the same allocation path includes `Bucket` contract lines; bucket overages allocate by hours, while bucket base fees continue through the fixed-charge path.
+- T053 implemented: ticket action test verifies `clientId` and `clientContractId` filters narrow rows.
+- T057 implemented: test verifies a 10001-cent fixed detail charge splits across 60/30 actual minutes as 6667/3334 and sums exactly.
+- T059 implemented: static SQL guard verifies bucket line type inclusion in the allocation path.
+- T061 implemented: ticket action test verifies `project_task` labor is excluded from ticket profitability rows.
+- T085 implemented: static SQL guard verifies fallback to invoice billing period when detail period is missing.
+- T086 implemented: static SQL guard verifies detail-less fixed charges are excluded from allocation and remain agreement residuals.
+- T093 implemented: static SQL guard verifies charges without any resolvable period are excluded from allocation by the terminal rule.
+- T058 left open: the zero-ticket-hours residual case still needs an explicit behavioral test.
+- Commands run: `cd server && npx vitest run ../packages/billing/src/actions/profitabilityReportActions.test.ts ../packages/billing/src/actions/profitabilityReportActions.static.test.ts --coverage.enabled=false`; `npm -w @alga-psa/billing run typecheck`.

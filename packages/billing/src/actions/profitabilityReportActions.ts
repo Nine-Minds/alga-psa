@@ -91,6 +91,7 @@ interface RevenueFact {
 
 interface LaborFact {
   entry_id: string;
+  work_date: string;
   work_item_type: string | null;
   work_item_id: string | null;
   client_id: string | null;
@@ -132,7 +133,18 @@ interface TicketRevenueFact {
   ticket_id: string;
   amount_cents: number | null;
   unconverted: boolean;
-  attribution: 'exact';
+  attribution: 'exact' | 'allocated';
+}
+
+interface TicketAllocationChargeFact {
+  item_detail_id: string;
+  contract_line_id: string;
+  line_type: string | null;
+  amount_cents: number | null;
+  unconverted: boolean;
+  window_start: string | null;
+  window_end: string | null;
+  approximate: boolean;
 }
 
 type FactBundle = {
@@ -386,6 +398,7 @@ async function fetchLaborFacts(knex: Knex, tenant: string, startDate: string, en
   const result = await knex.raw(`
     SELECT
       te.entry_id,
+      te.work_date::text AS work_date,
       te.work_item_type,
       te.work_item_id,
       CASE
@@ -472,6 +485,7 @@ async function fetchLaborFacts(knex: Knex, tenant: string, startDate: string, en
 
   return rawRows<Record<string, unknown>>(result).map((row) => ({
     entry_id: String(row.entry_id),
+    work_date: String(row.work_date),
     work_item_type: row.work_item_type ? String(row.work_item_type) : null,
     work_item_id: row.work_item_id ? String(row.work_item_id) : null,
     client_id: row.client_id ? String(row.client_id) : null,
@@ -684,15 +698,169 @@ async function fetchTicketRevenueFacts(
   }));
 }
 
+async function fetchTicketAllocationChargeFacts(
+  knex: Knex,
+  tenant: string,
+  startDate: string,
+  endDate: string,
+  defaultCurrency: string
+): Promise<TicketAllocationChargeFact[]> {
+  const result = await knex.raw(`
+    WITH allocation_charges AS (
+      SELECT
+        iid.item_detail_id,
+        clsc.contract_line_id,
+        cl.contract_line_type,
+        COALESCE(iid.service_period_start::date, inv.billing_period_start::date) AS window_start,
+        COALESCE(iid.service_period_end::date, inv.billing_period_end::date) AS window_end,
+        (iid.service_period_start IS NULL OR iid.service_period_end IS NULL) AS approximate,
+        COALESCE(iifd.allocated_amount, ic.net_amount) AS amount_cents,
+        inv.currency_code,
+        inv.exchange_rate_basis_points
+      FROM invoice_charges ic
+      JOIN invoices inv
+        ON inv.tenant = ic.tenant
+       AND inv.invoice_id = ic.invoice_id
+      JOIN invoice_charge_details iid
+        ON iid.tenant = ic.tenant
+       AND iid.item_id = ic.item_id
+      JOIN contract_line_service_configuration clsc
+        ON clsc.tenant = iid.tenant
+       AND clsc.config_id = iid.config_id
+      JOIN contract_lines cl
+        ON cl.tenant = clsc.tenant
+       AND cl.contract_line_id = clsc.contract_line_id
+      LEFT JOIN invoice_charge_fixed_details iifd
+        ON iifd.tenant = iid.tenant
+       AND iifd.item_detail_id = iid.item_detail_id
+      WHERE ic.tenant = ?
+        AND inv.status = ANY(?::text[])
+        AND inv.invoice_date::date >= ?::date
+        AND inv.invoice_date::date <= ?::date
+        AND LOWER(COALESCE(cl.contract_line_type, '')) IN ('fixed', 'bucket')
+        AND COALESCE(iid.service_period_start::date, inv.billing_period_start::date) IS NOT NULL
+        AND COALESCE(iid.service_period_end::date, inv.billing_period_end::date) IS NOT NULL
+    )
+    SELECT
+      item_detail_id,
+      contract_line_id,
+      contract_line_type AS line_type,
+      window_start::text,
+      window_end::text,
+      approximate,
+      CASE
+        WHEN COALESCE(currency_code, ?) = ? THEN amount_cents::bigint
+        WHEN exchange_rate_basis_points IS NULL THEN NULL
+        ELSE ROUND((amount_cents::numeric * exchange_rate_basis_points::numeric) / 10000)::bigint
+      END AS amount_cents,
+      (COALESCE(currency_code, ?) <> ? AND exchange_rate_basis_points IS NULL) AS unconverted
+    FROM allocation_charges
+  `, [
+    tenant,
+    COUNTABLE_INVOICE_STATUSES,
+    startDate,
+    endDate,
+    defaultCurrency,
+    defaultCurrency,
+    defaultCurrency,
+    defaultCurrency,
+  ]);
+
+  return rawRows<Record<string, unknown>>(result).map((row) => ({
+    item_detail_id: String(row.item_detail_id),
+    contract_line_id: String(row.contract_line_id),
+    line_type: row.line_type ? String(row.line_type) : null,
+    amount_cents: row.amount_cents === null || row.amount_cents === undefined ? null : Number(row.amount_cents),
+    unconverted: Boolean(row.unconverted),
+    window_start: row.window_start ? String(row.window_start) : null,
+    window_end: row.window_end ? String(row.window_end) : null,
+    approximate: Boolean(row.approximate),
+  }));
+}
+
+function allocateCents(amount: number, weightedTickets: Array<{ ticketId: string; minutes: number }>): TicketRevenueFact[] {
+  const totalMinutes = weightedTickets.reduce((sum, row) => sum + row.minutes, 0);
+  if (totalMinutes <= 0 || amount === 0) {
+    return [];
+  }
+
+  const sign = amount < 0 ? -1 : 1;
+  const absoluteAmount = Math.abs(amount);
+  const allocations = weightedTickets.map((row) => {
+    const numerator = absoluteAmount * row.minutes;
+    const floor = Math.floor(numerator / totalMinutes);
+    return {
+      ticketId: row.ticketId,
+      floor,
+      remainder: numerator - floor * totalMinutes,
+    };
+  });
+
+  let remaining = absoluteAmount - allocations.reduce((sum, row) => sum + row.floor, 0);
+  allocations.sort((left, right) => right.remainder - left.remainder || left.ticketId.localeCompare(right.ticketId));
+  for (const allocation of allocations) {
+    if (remaining <= 0) break;
+    allocation.floor += 1;
+    remaining -= 1;
+  }
+
+  return allocations
+    .filter((allocation) => allocation.floor !== 0)
+    .map((allocation) => ({
+      ticket_id: allocation.ticketId,
+      amount_cents: allocation.floor * sign,
+      unconverted: false,
+      attribution: 'allocated',
+    }));
+}
+
+function buildAllocatedTicketRevenue(
+  allocationCharges: TicketAllocationChargeFact[],
+  laborFacts: LaborFact[]
+): TicketRevenueFact[] {
+  const ticketLabor = laborFacts.filter((fact) => (
+    fact.work_item_type === 'ticket'
+    && fact.work_item_id
+    && fact.contract_line_id
+    && Math.max(0, Number(fact.actual_minutes) || 0) > 0
+  ));
+  const allocated: TicketRevenueFact[] = [];
+
+  for (const charge of allocationCharges) {
+    if (charge.unconverted || charge.amount_cents === null || !charge.window_start || !charge.window_end) {
+      continue;
+    }
+
+    const weightsByTicket = new Map<string, number>();
+    for (const fact of ticketLabor) {
+      if (fact.contract_line_id !== charge.contract_line_id) continue;
+      if (fact.work_date < charge.window_start || fact.work_date > charge.window_end) continue;
+      weightsByTicket.set(fact.work_item_id!, (weightsByTicket.get(fact.work_item_id!) ?? 0) + Math.max(0, Number(fact.actual_minutes) || 0));
+    }
+
+    allocated.push(...allocateCents(
+      charge.amount_cents,
+      Array.from(weightsByTicket.entries()).map(([ticketId, minutes]) => ({ ticketId, minutes }))
+    ));
+  }
+
+  return allocated;
+}
+
 async function fetchFacts(knex: Knex, tenant: string, startDate: string, endDate: string): Promise<FactBundle> {
   const defaultCurrency = await getTenantDefaultCurrency(knex, tenant);
   const costRateCount = await tenantDb(knex, tenant).table('user_cost_rates').count<{ count: string }[]>({ count: '*' }).first();
-  const [revenueFacts, laborFacts, materialFacts, ticketRevenueFacts] = await Promise.all([
+  const [revenueFacts, laborFacts, materialFacts, exactTicketRevenueFacts, allocationChargeFacts] = await Promise.all([
     fetchRevenueFacts(knex, tenant, startDate, endDate, defaultCurrency),
     fetchLaborFacts(knex, tenant, startDate, endDate),
     fetchMaterialFacts(knex, tenant, startDate, endDate, defaultCurrency),
     fetchTicketRevenueFacts(knex, tenant, startDate, endDate, defaultCurrency),
+    fetchTicketAllocationChargeFacts(knex, tenant, startDate, endDate, defaultCurrency),
   ]);
+  const ticketRevenueFacts = [
+    ...exactTicketRevenueFacts,
+    ...buildAllocatedTicketRevenue(allocationChargeFacts, laborFacts),
+  ];
 
   return {
     defaultCurrency,

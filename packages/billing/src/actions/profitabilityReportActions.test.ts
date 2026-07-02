@@ -59,6 +59,7 @@ const revenueRows = [
 const laborRows = [
   {
     entry_id: 'entry-1',
+    work_date: '2026-01-10',
     work_item_type: 'ticket',
     work_item_id: 'ticket-1',
     client_id: 'client-1',
@@ -108,11 +109,14 @@ const ticketRevenueRows = [
   },
 ];
 
+const allocationRows: Array<Record<string, unknown>> = [];
+
 function seedRawMocks(options?: {
   revenue?: Array<Record<string, unknown>>;
   labor?: Array<Record<string, unknown>>;
   materials?: Array<Record<string, unknown>>;
   ticketRevenue?: Array<Record<string, unknown>>;
+  allocations?: Array<Record<string, unknown>>;
 }) {
   rawMock.mockImplementation(async (sql: string) => {
     if (sql.includes('WITH charge_details')) {
@@ -126,6 +130,9 @@ function seedRawMocks(options?: {
     }
     if (sql.includes('WITH linked_time')) {
       return { rows: options?.ticketRevenue ?? ticketRevenueRows };
+    }
+    if (sql.includes('WITH allocation_charges')) {
+      return { rows: options?.allocations ?? allocationRows };
     }
     throw new Error('Unexpected SQL');
   });
@@ -340,5 +347,112 @@ describe('profitability report actions', () => {
         uncosted: false,
       }),
     ]);
+  });
+
+  it('filters ticket profitability by client and client contract', async () => {
+    seedRawMocks({
+      ticketRevenue: [],
+      materials: [],
+      labor: [
+        ...laborRows,
+        {
+          ...laborRows[0],
+          entry_id: 'entry-other',
+          work_item_id: 'ticket-other',
+          ticket_number: 'T-999',
+          client_id: 'client-2',
+          client_name: 'Other',
+          client_contract_id: 'cc-2',
+        },
+      ],
+    });
+
+    const rows = await (getTicketProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31', clientId: 'client-1', clientContractId: 'cc-1' },
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ ticketId: 'ticket-1', clientId: 'client-1', clientContractId: 'cc-1' });
+  });
+
+  it('excludes project-task time from ticket profitability', async () => {
+    seedRawMocks({
+      revenue: [],
+      materials: [],
+      ticketRevenue: [],
+      labor: [
+        {
+          ...laborRows[0],
+          entry_id: 'project-entry',
+          work_item_type: 'project_task',
+          work_item_id: 'task-1',
+          ticket_number: null,
+          ticket_title: null,
+        },
+      ],
+    });
+
+    const rows = await (getTicketProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+
+    expect(rows).toEqual([]);
+  });
+
+
+  it('allocates fixed or bucket detail revenue across ticket hours with no rounding leakage', async () => {
+    seedRawMocks({
+      revenue: [],
+      materials: [],
+      ticketRevenue: [],
+      allocations: [
+        {
+          item_detail_id: 'detail-1',
+          contract_line_id: 'line-1',
+          line_type: 'Fixed',
+          amount_cents: 10001,
+          unconverted: false,
+          window_start: '2026-01-01',
+          window_end: '2026-01-31',
+          approximate: false,
+        },
+      ],
+      labor: [
+        {
+          ...laborRows[0],
+          entry_id: 'entry-1',
+          work_item_id: 'ticket-1',
+          ticket_number: 'T-100',
+          work_date: '2026-01-10',
+          actual_minutes: 60,
+          billable_minutes: 0,
+        },
+        {
+          ...laborRows[0],
+          entry_id: 'entry-2',
+          work_item_id: 'ticket-2',
+          ticket_number: 'T-200',
+          work_date: '2026-01-10',
+          actual_minutes: 30,
+          billable_minutes: 0,
+        },
+      ],
+    });
+
+    const rows = await (getTicketProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+
+    expect(rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ticketId: 'ticket-1', revenue: 6667, attribution: 'allocated' }),
+      expect.objectContaining({ ticketId: 'ticket-2', revenue: 3334, attribution: 'allocated' }),
+    ]));
+    expect(rows.reduce((sum: number, row: any) => sum + row.revenue, 0)).toBe(10001);
   });
 });

@@ -65,6 +65,21 @@ describe('profitability report action SQL contracts', () => {
     expect(source).toContain('item_amount_cents::numeric * billable_minutes::numeric');
   });
 
+  it('allocates only fixed and bucket detail charges with resolvable service or invoice windows', () => {
+    expect(source).toContain('WITH allocation_charges');
+    expect(source).toContain("LOWER(COALESCE(cl.contract_line_type, '')) IN ('fixed', 'bucket')");
+    expect(source).toContain('COALESCE(iid.service_period_start::date, inv.billing_period_start::date) AS window_start');
+    expect(source).toContain('COALESCE(iid.service_period_end::date, inv.billing_period_end::date) AS window_end');
+    expect(source).toContain('COALESCE(iid.service_period_start::date, inv.billing_period_start::date) IS NOT NULL');
+    expect(source).toContain('COALESCE(iid.service_period_end::date, inv.billing_period_end::date) IS NOT NULL');
+  });
+
+  it('uses largest-remainder ticket allocation for fixed and bucket cents', () => {
+    expect(source).toContain('function allocateCents');
+    expect(source).toContain('remaining = absoluteAmount - allocations.reduce');
+    expect(source).toContain('right.remainder - left.remainder || left.ticketId.localeCompare(right.ticketId)');
+  });
+
   it('keeps tenant predicates in raw query joins', () => {
     expect(source).toContain('WHERE ic.tenant = ?');
     expect(source).toContain('AND inv.tenant = ?');

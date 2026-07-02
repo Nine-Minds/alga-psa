@@ -311,7 +311,7 @@
   {
     "id": "F036",
     "description": "Ticket revenue (fixed lines): allocate each fixed charge's revenue across tickets proportionally by actual hours on the charge's contract line (via detail config_id) within the allocation window resolved by fallback chain (invoice_charge_details.service_period_start/end -> invoices.billing_period_start/end tagged approximate); largest-remainder rounding; charges with no detail rows OR no resolvable window (both period sources NULL) stay at agreement level as a residual",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6.D8",
       "10.5"
@@ -320,7 +320,7 @@
   {
     "id": "F037",
     "description": "Ticket revenue (bucket lines): proportional-by-hours allocation of bucket OVERAGE charges (the engine's bucket calculator emits overage only; the base fee arrives as a fixed charge and is allocated under F036) across tickets in the allocation window, tagged 'allocated'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6.D8"
     ]
