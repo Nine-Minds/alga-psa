@@ -208,6 +208,14 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, t }: {
             <span className="ml-auto text-gray-500">{formatMoney(invoice.totalCents)}</span>
           </li>
         ))}
+        {data.draftInvoiceCount > data.draftInvoices.length && (
+          <li className="py-1.5 text-[11px] text-gray-400">
+            {t('clientCommandCenter.money.moreDrafts', {
+              defaultValue: '+{{count}} more draft(s)',
+              count: data.draftInvoiceCount - data.draftInvoices.length,
+            })}
+          </li>
+        )}
         <li className="py-1.5 flex items-baseline text-[13px]">
           <span className="text-gray-600">
             {t('clientCommandCenter.money.activeContracts', { defaultValue: 'Active contracts' })}
@@ -356,6 +364,11 @@ export function LocationsCard({ id, locations, onManage, t }: {
             </li>
           ))}
         </ul>
+      )}
+      {locations.length > 3 && (
+        <p className="mt-1.5 text-[11px] text-gray-400">
+          {t('clientCommandCenter.locations.more', { defaultValue: '+{{count}} more', count: locations.length - 3 })}
+        </p>
       )}
     </CardShell>
   );

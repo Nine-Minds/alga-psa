@@ -19,6 +19,7 @@ import type {
 type ClientPulseLocations = ClientPulse['locations'];
 
 const DAY_MS = 86_400_000;
+const DRAFT_INVOICE_PREVIEW_LIMIT = 5;
 const COMPLETED_PAYMENT_STATUS = 'completed';
 const DELIVERED_STOCK_UNIT_STATUS = 'delivered';
 const TERMINAL_RMA_STATUSES = ['closed'];
@@ -317,7 +318,7 @@ async function fetchMoney(
     .sum({ paid_amount: 'amount' })
     .as('ip');
 
-  const [invoiceRows, draftRows, contractCountRow, currencyRow] = await Promise.all([
+  const [invoiceRows, draftRows, draftAggRow, contractCountRow, currencyRow] = await Promise.all([
     trx('invoices as i')
       .leftJoin(completedPayments, 'ip.invoice_id', 'i.invoice_id')
       .where({ 'i.tenant': tenant, 'i.client_id': clientId })
@@ -340,7 +341,16 @@ async function fetchMoney(
       .where({ tenant, client_id: clientId, status: 'draft' })
       .whereNull('finalized_at')
       .select('invoice_id', 'invoice_number', 'total_amount', 'created_at')
-      .orderBy('created_at', 'desc'),
+      .orderBy('created_at', 'desc')
+      .limit(DRAFT_INVOICE_PREVIEW_LIMIT),
+    // Full aggregate — the preview above is capped, but the flag and the
+    // "+N more" line must report the true count and total.
+    trx('invoices')
+      .where({ tenant, client_id: clientId, status: 'draft' })
+      .whereNull('finalized_at')
+      .count<{ count: string }>('invoice_id as count')
+      .sum({ total: 'total_amount' })
+      .first(),
     trx('contracts')
       .where({ tenant, owner_client_id: clientId, status: 'active' })
       .count<{ count: string }>('contract_id as count')
@@ -388,14 +398,17 @@ async function fetchMoney(
     created_at: toIsoString(row.created_at) ?? new Date(0).toISOString(),
   }));
 
+  const draftInvoiceCount = toNumber((draftAggRow as any)?.count);
+  const draftTotalCents = toNumber((draftAggRow as any)?.total);
+
   const flags: ClientAttentionFlag[] = [];
-  if (draftInvoices.length > 0) {
+  if (draftInvoiceCount > 0 && draftInvoices.length > 0) {
     const newest = draftInvoices[0];
     flags.push({
       kind: 'draft_invoices',
       severity: 'amber',
-      count: draftInvoices.length,
-      amountCents: draftInvoices.reduce((sum, invoice) => sum + invoice.totalCents, 0),
+      count: draftInvoiceCount,
+      amountCents: draftTotalCents,
       refType: 'invoice',
       refId: newest.invoice_id,
       refLabel: newest.invoice_number,
@@ -408,6 +421,7 @@ async function fetchMoney(
       outstandingTotalCents,
       unpaidInvoiceCount,
       draftInvoices,
+      draftInvoiceCount,
       activeContractCount: toNumber(contractCountRow?.count),
       currencyCode: (currencyRow as any)?.currency_code ?? 'USD',
     },

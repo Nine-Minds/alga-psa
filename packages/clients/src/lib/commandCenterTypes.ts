@@ -77,7 +77,9 @@ export interface ClientPulseMoney {
   aging: ClientPulseAging;
   outstandingTotalCents: number;
   unpaidInvoiceCount: number;
+  /** Preview only (newest first, capped at 5) — draftInvoiceCount is the full count. */
   draftInvoices: ClientPulseDraftInvoice[];
+  draftInvoiceCount: number;
   activeContractCount: number;
   currencyCode: string;
 }
