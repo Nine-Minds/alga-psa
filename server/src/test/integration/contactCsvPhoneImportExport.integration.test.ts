@@ -18,7 +18,12 @@ const testState = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => (...args: any[]) =>
-    action({ user_id: testState.userId, tenant: testState.tenant }, { tenant: testState.tenant }, ...args),
+    action(
+      { user_id: testState.userId, tenant: testState.tenant, user_type: 'internal' },
+      { tenant: testState.tenant },
+      ...args
+    ),
+  hasPermission: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('@alga-psa/db', async () => {
@@ -156,8 +161,12 @@ describe('contact CSV hybrid email import/export integration', () => {
     expect(rows[1]?.[3]).toContain('personal:alice.home@wonderland.com');
     expect(rows[1]?.[3]).toContain('billing:accounts@wonderland.com');
 
-    expect(contactsImportDialogSource).toContain("primary_email_type: 'Primary Email Label'");
-    expect(contactsImportDialogSource).toContain("additional_email_addresses: 'Additional Email Addresses'");
+    expect(contactsImportDialogSource).toContain(
+      "primary_email_type: t('contactsImportDialog.fields.primaryEmailLabel', { defaultValue: 'Primary Email Label' })"
+    );
+    expect(contactsImportDialogSource).toContain(
+      "additional_email_addresses: t('contactsImportDialog.fields.additionalEmails', { defaultValue: 'Additional Email Addresses' })"
+    );
     expect(contactsImportDialogSource).toContain('primary_email_type (work/personal/billing/other or a custom label)');
     expect(contactsImportDialogSource).toContain('additional_email_addresses (use `label:email@example.com | label:email@example.com`)');
     expect(contactsImportDialogSource).toContain('CSV import/export keeps `email` as the primary/default contact email.');

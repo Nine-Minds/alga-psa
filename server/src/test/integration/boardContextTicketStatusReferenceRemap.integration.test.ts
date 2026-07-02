@@ -69,6 +69,8 @@ async function cleanupTenant(tenantId: string): Promise<void> {
     await tenantTable(tenantId, 'client_contracts').del();
   }
 
+  await tenantTable(tenantId, 'clients').del();
+
   if (hasColumn(billingSettingsColumns, 'tenant')) {
     await tenantTable(tenantId, 'default_billing_settings').del();
   }
@@ -218,10 +220,18 @@ async function createReferenceFixture(): Promise<ReferenceFixture> {
     .onConflict('tenant')
     .merge();
 
+  // client_contracts.client_id has an FK to clients — create a real client row.
+  const clientId = uuidv4();
+  await tenantTable(tenantId, 'clients').insert({
+    tenant: tenantId,
+    client_id: clientId,
+    client_name: `Client ${clientId.slice(0, 8)}`,
+  });
+
   await tenantTable(tenantId, 'client_contracts').insert({
     tenant: tenantId,
     ...(hasColumn(clientContractsColumns, 'client_contract_id') ? { client_contract_id: contractId } : {}),
-    ...(hasColumn(clientContractsColumns, 'client_id') ? { client_id: uuidv4() } : {}),
+    ...(hasColumn(clientContractsColumns, 'client_id') ? { client_id: clientId } : {}),
     ...(hasColumn(clientContractsColumns, 'contract_id') ? { contract_id: uuidv4() } : {}),
     ...(hasColumn(clientContractsColumns, 'start_date') ? { start_date: db.fn.now() } : {}),
     ...(hasColumn(clientContractsColumns, 'is_active') ? { is_active: true } : {}),
