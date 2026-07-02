@@ -57,6 +57,7 @@ export const listSalesOrderInvoices = withAuth(async (
         'i.invoice_id',
         'i.invoice_number',
         'i.status',
+        'i.finalized_at',
         'i.total_amount',
         'i.created_at'
       )
@@ -65,7 +66,11 @@ export const listSalesOrderInvoices = withAuth(async (
     return rows.map((row) => ({
       invoice_id: row.invoice_id as string,
       invoice_number: (row.invoice_number as string | null) ?? null,
-      status: (row.status as string | null) ?? null,
+      // Canonical predicate (matches the billing Drafts/Finalized tabs): a row with
+      // finalized_at set is finalized even if its status column still says 'draft'.
+      status: row.finalized_at && row.status === 'draft'
+        ? 'finalized'
+        : ((row.status as string | null) ?? null),
       total_amount: Number(row.total_amount ?? 0),
       created_at: toIsoString(row.created_at),
     }));
