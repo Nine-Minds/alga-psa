@@ -694,5 +694,13 @@
     "prdRefs": [
       "persona-review-P2"
     ]
+  },
+  {
+    "id": "F088",
+    "description": "Van load list: computeLoadList action (destination shortfalls vs reorder points, capped by source availability, zero-load rows kept visible, FIFO serial suggestions) + Transfers-page dialog that reviews/edits the list and dispatches a branch-to-van transfer in one click",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P3"
+    ]
   }
 ]
