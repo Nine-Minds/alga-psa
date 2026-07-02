@@ -42,19 +42,27 @@ async function createRoutingBoardVariant(namePrefix: string): Promise<string> {
   }
 
   const newBoardId = uuidv4();
-  const {
-    board_id: _sourceBoardId,
-    created_at: _sourceCreatedAt,
-    updated_at: _sourceUpdatedAt,
-    ...sourceRest
-  } = sourceBoard;
+  const { board_id: _sourceBoardId, ...sourceRest } = sourceBoard;
 
   await tenantTable('boards').insert({
     ...sourceRest,
     board_id: newBoardId,
     board_name: `${namePrefix}-${newBoardId.slice(0, 6)}`,
-    created_at: db.fn.now(),
-    updated_at: db.fn.now(),
+  });
+
+  // Ticket statuses are board-scoped; clone the source status onto the
+  // variant board so ticket creation passes status/board validation.
+  const sourceStatus = await tenantTable('statuses')
+    .where({ tenant: tenantId, status_id: statusId })
+    .first<any>();
+  if (!sourceStatus) {
+    throw new Error('Expected source status for routing variant');
+  }
+  const { status_id: _sourceStatusId, ...sourceStatusRest } = sourceStatus;
+  await tenantTable('statuses').insert({
+    ...sourceStatusRest,
+    status_id: uuidv4(),
+    board_id: newBoardId,
   });
 
   return newBoardId;
@@ -65,6 +73,14 @@ async function createInboundDefaults(params: {
   descriptionPrefix: string;
   clientId?: string | null;
 }): Promise<string> {
+  // Statuses belong to a board; the defaults' status must match its board.
+  const boardStatus = await tenantTable('statuses')
+    .where({ tenant: tenantId, board_id: params.boardId, status_type: 'ticket' })
+    .first<{ status_id: string }>('status_id');
+  if (!boardStatus?.status_id) {
+    throw new Error('Expected ticket status for defaults board');
+  }
+
   const defaultsId = uuidv4();
   await tenantTable('inbound_ticket_defaults').insert({
     id: defaultsId,
@@ -73,7 +89,7 @@ async function createInboundDefaults(params: {
     display_name: `${params.descriptionPrefix}-${defaultsId.slice(0, 6)}`,
     description: `${params.descriptionPrefix} defaults`,
     board_id: params.boardId,
-    status_id: statusId,
+    status_id: boardStatus.status_id,
     priority_id: priorityId,
     client_id: params.clientId ?? null,
     entered_by: enteredByUserId,
@@ -103,7 +119,6 @@ async function createProviderWithDefaults(params: { mailboxPrefix: string }) {
     mailbox,
     is_active: true,
     status: 'connected',
-    vendor_config: JSON.stringify({}),
     inbound_ticket_defaults_id: providerDefaultsId,
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
@@ -145,7 +160,7 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
     boardId = board.board_id;
 
     const status = await tenantTable('statuses')
-      .where({ tenant: tenantId, status_type: 'ticket' })
+      .where({ tenant: tenantId, status_type: 'ticket', board_id: boardId })
       .first<{ status_id: string }>('status_id');
     if (!status?.status_id) throw new Error('Expected seeded ticket status');
     statusId = status.status_id;
@@ -196,6 +211,7 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
     });
     cleanup.push(async () => {
       await tenantTable('inbound_ticket_defaults').where({ tenant: tenantId, id: overrideDefaultsId }).delete();
+      await tenantTable('statuses').where({ tenant: tenantId, board_id: overrideBoardId }).delete();
       await tenantTable('boards').where({ tenant: tenantId, board_id: overrideBoardId }).delete();
     });
 
@@ -253,6 +269,7 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
     });
     cleanup.push(async () => {
       await tenantTable('inbound_ticket_defaults').where({ tenant: tenantId, id: clientDefaultDefaultsId }).delete();
+      await tenantTable('statuses').where({ tenant: tenantId, board_id: clientDefaultBoardId }).delete();
       await tenantTable('boards').where({ tenant: tenantId, board_id: clientDefaultBoardId }).delete();
     });
 
@@ -310,6 +327,7 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
     });
     cleanup.push(async () => {
       await tenantTable('inbound_ticket_defaults').where({ tenant: tenantId, id: domainDefaultDefaultsId }).delete();
+      await tenantTable('statuses').where({ tenant: tenantId, board_id: domainDefaultBoardId }).delete();
       await tenantTable('boards').where({ tenant: tenantId, board_id: domainDefaultBoardId }).delete();
     });
 
@@ -365,6 +383,7 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
     });
     cleanup.push(async () => {
       await tenantTable('inbound_ticket_defaults').where({ tenant: tenantId, id: parityDefaultsId }).delete();
+      await tenantTable('statuses').where({ tenant: tenantId, board_id: parityBoardId }).delete();
       await tenantTable('boards').where({ tenant: tenantId, board_id: parityBoardId }).delete();
     });
 
@@ -428,7 +447,18 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
     expect(contextOutput.targetContactId ?? null).toBe(ticket.contact_name_id ?? null);
 
     cleanup.push(async () => {
-      await tenantTable('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      const ticketChildTables = [
+        'email_reply_tokens',
+        'ticket_audit_logs',
+        'sla_audit_log',
+        'sla_notifications_sent',
+        'ticket_auto_close_state',
+        'comment_threads',
+        'comments',
+      ];
+      for (const table of ticketChildTables) {
+        await tenantTable(table).where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      }
       await tenantTable('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
     });
   });
