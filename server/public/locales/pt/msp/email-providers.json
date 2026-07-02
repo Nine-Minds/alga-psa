@@ -707,7 +707,8 @@
       "refreshStatusFailed": "Falha ao atualizar o status do domínio",
       "domainRemovalScheduled": "Remoção de domínio agendada",
       "domainRemovalScheduledWithClear": "Remoção de domínio agendada e emissão de tickets Do endereço apagado",
-      "removeDomainFailed": "Falha ao remover o domínio"
+      "removeDomainFailed": "Falha ao remover o domínio",
+      "testOutboundFailed": "Falha ao testar o e-mail de saída"
     },
     "tabs": {
       "inboundEmail": "E-mail de entrada",
@@ -741,11 +742,27 @@
         "usernamePlaceholder": "seu-e-mail@exemplo.com",
         "passwordLabel": "Senha",
         "passwordPlaceholder": "Digite a senha",
+        "authHint": "Deixe o nome de usuário e a senha em branco se o seu relay aceitar e-mails sem autenticação.",
         "fromLabel": "Do endereço",
         "fromPlaceholder": "noreply@example.com",
         "fromHelp": "O endereço do remetente padrão para e-mails enviados.",
+        "security": {
+          "title": "Segurança da conexão",
+          "secure": "Usar TLS implícito (SSL ao conectar, normalmente a porta 465)",
+          "requireTls": "Exigir atualização STARTTLS (portas 587 / 25)",
+          "verifyCert": "Verificar o certificado do servidor",
+          "verifyCertHint": "Desative isto apenas para um relay confiável na sua própria rede que use um certificado autoassinado."
+        },
         "savingButton": "Salvando...",
-        "saveButton": "Salvar configurações SMTP"
+        "saveButton": "Salvar configurações SMTP",
+        "test": {
+          "title": "Testar e-mail de saída",
+          "description": "Salva as configurações atuais e depois verifica a conexão com o provedor. Insira um endereço para também enviar uma mensagem de teste.",
+          "recipientLabel": "Enviar teste para (opcional)",
+          "recipientPlaceholder": "voce@exemplo.com",
+          "testingButton": "Testando...",
+          "runButton": "Testar conexão"
+        }
       },
       "ticketingFrom": {
         "title": "Emissão de tickets no endereço",

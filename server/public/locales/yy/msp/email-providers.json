@@ -707,7 +707,8 @@
       "refreshStatusFailed": "55555",
       "domainRemovalScheduled": "55555",
       "domainRemovalScheduledWithClear": "55555",
-      "removeDomainFailed": "55555"
+      "removeDomainFailed": "55555",
+      "testOutboundFailed": "55555"
     },
     "tabs": {
       "inboundEmail": "55555",
@@ -741,11 +742,27 @@
         "usernamePlaceholder": "55555",
         "passwordLabel": "55555",
         "passwordPlaceholder": "55555",
+        "authHint": "55555",
         "fromLabel": "55555",
         "fromPlaceholder": "55555",
         "fromHelp": "55555",
+        "security": {
+          "title": "55555",
+          "secure": "55555",
+          "requireTls": "55555",
+          "verifyCert": "55555",
+          "verifyCertHint": "55555"
+        },
         "savingButton": "55555",
-        "saveButton": "55555"
+        "saveButton": "55555",
+        "test": {
+          "title": "55555",
+          "description": "55555",
+          "recipientLabel": "55555",
+          "recipientPlaceholder": "55555",
+          "testingButton": "55555",
+          "runButton": "55555"
+        }
       },
       "ticketingFrom": {
         "title": "55555",

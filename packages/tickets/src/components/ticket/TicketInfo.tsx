@@ -505,13 +505,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   // Categories are managed through the regular onCategoryChange handler
 
   const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
-    parseTicketRichTextContent(ticket.attributes?.description as string | undefined)
+    parseTicketRichTextContent(ticket.attributes?.description as string | object | undefined)
   );
 
   const discardDescriptionEdit = useCallback(() => {
     const originalDescription =
       originalDescriptionRef.current ??
-      parseTicketRichTextContent(ticket.attributes?.description as string | undefined);
+      parseTicketRichTextContent(ticket.attributes?.description as string | object | undefined);
     setDescriptionContent(originalDescription);
     setHasDescriptionContentChanged(false);
     setIsEditingDescription(false);
@@ -536,7 +536,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     }
 
     const parsedDescription = parseTicketRichTextContent(
-      ticket.attributes?.description as string | undefined
+      ticket.attributes?.description as string | object | undefined
     );
     setDescriptionContent(parsedDescription);
     originalDescriptionRef.current = parsedDescription;

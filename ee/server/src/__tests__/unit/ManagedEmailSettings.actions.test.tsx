@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import i18n from 'i18next';
+import emailProvidersEn from 'server/public/locales/en/msp/email-providers.json';
 import ManagedEmailSettings from '@ee/components/settings/email/ManagedEmailSettings';
 
 const {
@@ -12,6 +14,7 @@ const {
   getEmailSettingsMock,
   updateEmailSettingsMock,
   getEmailProvidersMock,
+  testOutboundEmailMock,
   toastSuccessMock,
   toastErrorMock,
 } = vi.hoisted(() => ({
@@ -22,6 +25,7 @@ const {
   getEmailSettingsMock: vi.fn(),
   updateEmailSettingsMock: vi.fn(),
   getEmailProvidersMock: vi.fn(),
+  testOutboundEmailMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
 }));
@@ -37,6 +41,11 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   getEmailSettings: getEmailSettingsMock,
   updateEmailSettings: updateEmailSettingsMock,
   getEmailProviders: getEmailProvidersMock,
+  testOutboundEmail: testOutboundEmailMock,
+}));
+
+vi.mock('server/src/context/TierContext', () => ({
+  useTier: () => ({ hasFeature: () => true }),
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -117,6 +126,25 @@ vi.mock('@alga-psa/ui/components/Tabs', () => ({
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+vi.mock('@alga-psa/ui/components/Switch', () => ({
+  Switch: ({
+    checked,
+    onCheckedChange,
+    id,
+  }: {
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+    id?: string;
+  }) => (
+    <input
+      id={id}
+      type="checkbox"
+      checked={!!checked}
+      onChange={(event) => onCheckedChange?.(event.target.checked)}
+    />
+  ),
+}));
+
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   default: ({
     value,
@@ -165,6 +193,31 @@ const baseSettings = {
   updatedAt: new Date('2026-03-01T00:00:00.000Z'),
 };
 
+const smtpSettings = {
+  ...baseSettings,
+  emailProvider: 'smtp' as const,
+  providerConfigs: [
+    {
+      providerId: 'smtp-provider',
+      providerType: 'smtp' as const,
+      isEnabled: true,
+      config: {
+        host: 'relay.lan',
+        port: 587,
+        username: '',
+        password: '',
+        from: 'noreply@acme.com',
+      },
+    },
+  ],
+};
+
+beforeAll(() => {
+  // The shared test setup initializes i18next with empty resources; load the
+  // real English namespace so assertions can target user-visible strings.
+  i18n.addResourceBundle('en', 'msp/email-providers', emailProvidersEn, true, true);
+});
+
 describe('ManagedEmailSettings removal actions', () => {
   beforeEach(() => {
     getManagedEmailDomainsMock.mockReset();
@@ -174,6 +227,7 @@ describe('ManagedEmailSettings removal actions', () => {
     getEmailSettingsMock.mockReset();
     updateEmailSettingsMock.mockReset();
     getEmailProvidersMock.mockReset();
+    testOutboundEmailMock.mockReset();
     toastSuccessMock.mockReset();
     toastErrorMock.mockReset();
 
@@ -249,5 +303,109 @@ describe('ManagedEmailSettings removal actions', () => {
       );
     });
     expect(toastSuccessMock).toHaveBeenCalledWith('Domain removal scheduled and ticketing From address cleared');
+  });
+});
+
+describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
+  beforeEach(() => {
+    getManagedEmailDomainsMock.mockReset();
+    requestManagedEmailDomainMock.mockReset();
+    refreshManagedEmailDomainMock.mockReset();
+    deleteManagedEmailDomainMock.mockReset();
+    getEmailSettingsMock.mockReset();
+    updateEmailSettingsMock.mockReset();
+    getEmailProvidersMock.mockReset();
+    testOutboundEmailMock.mockReset();
+    toastSuccessMock.mockReset();
+    toastErrorMock.mockReset();
+
+    getManagedEmailDomainsMock.mockResolvedValue([]);
+    getEmailSettingsMock.mockResolvedValue(smtpSettings);
+    updateEmailSettingsMock.mockResolvedValue(smtpSettings);
+    getEmailProvidersMock.mockResolvedValue({ providers: [] });
+  });
+
+  it('persists current edits and reports success from the connection test', async () => {
+    testOutboundEmailMock.mockResolvedValue({ success: true, message: 'SMTP connection verified.' });
+
+    render(<ManagedEmailSettings />);
+
+    const testButton = await screen.findByRole('button', { name: /test connection/i });
+    fireEvent.click(testButton);
+
+    await waitFor(() => {
+      expect(updateEmailSettingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ emailProvider: 'smtp' })
+      );
+      expect(testOutboundEmailMock).toHaveBeenCalledWith(undefined);
+    });
+    expect(await screen.findByText('SMTP connection verified.')).toBeInTheDocument();
+  });
+
+  it('surfaces the real provider error when the connection test fails', async () => {
+    testOutboundEmailMock.mockResolvedValue({
+      success: false,
+      error: 'self-signed certificate in certificate chain',
+    });
+
+    render(<ManagedEmailSettings />);
+
+    const testButton = await screen.findByRole('button', { name: /test connection/i });
+    fireEvent.click(testButton);
+
+    expect(
+      await screen.findByText('self-signed certificate in certificate chain')
+    ).toBeInTheDocument();
+  });
+
+  it('sends the test message to the entered recipient', async () => {
+    testOutboundEmailMock.mockResolvedValue({ success: true, message: 'Test email sent.' });
+
+    render(<ManagedEmailSettings />);
+
+    const recipientInput = await screen.findByLabelText(/send test to/i);
+    fireEvent.change(recipientInput, { target: { value: 'admin@acme.com' } });
+    fireEvent.click(screen.getByRole('button', { name: /test connection/i }));
+
+    await waitFor(() => {
+      expect(testOutboundEmailMock).toHaveBeenCalledWith('admin@acme.com');
+    });
+  });
+
+  it('persists the TLS security toggles with the SMTP config', async () => {
+    render(<ManagedEmailSettings />);
+
+    // rejectUnauthorized defaults to on; turning it off must be saved so
+    // self-signed LAN relays can be configured.
+    const verifyCertToggle = await waitFor(() => {
+      const el = document.getElementById('smtp-reject-unauthorized');
+      expect(el).not.toBeNull();
+      return el as HTMLInputElement;
+    });
+    expect(verifyCertToggle.checked).toBe(true);
+    fireEvent.click(verifyCertToggle);
+
+    const requireTlsToggle = document.getElementById('smtp-require-tls') as HTMLInputElement;
+    expect(requireTlsToggle.checked).toBe(false);
+    fireEvent.click(requireTlsToggle);
+
+    fireEvent.click(screen.getByRole('button', { name: /save smtp settings/i }));
+
+    await waitFor(() => {
+      expect(updateEmailSettingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          emailProvider: 'smtp',
+          providerConfigs: [
+            expect.objectContaining({
+              providerType: 'smtp',
+              config: expect.objectContaining({
+                rejectUnauthorized: false,
+                requireTLS: true,
+              }),
+            }),
+          ],
+        })
+      );
+    });
   });
 });

@@ -707,7 +707,8 @@
       "refreshStatusFailed": "Failed to refresh domain status",
       "domainRemovalScheduled": "Domain removal scheduled",
       "domainRemovalScheduledWithClear": "Domain removal scheduled and ticketing From address cleared",
-      "removeDomainFailed": "Failed to remove domain"
+      "removeDomainFailed": "Failed to remove domain",
+      "testOutboundFailed": "Failed to test outbound email"
     },
     "tabs": {
       "inboundEmail": "Inbound Email",
@@ -741,11 +742,27 @@
         "usernamePlaceholder": "your-email@example.com",
         "passwordLabel": "Password",
         "passwordPlaceholder": "Enter password",
+        "authHint": "Leave username and password blank if your relay accepts mail without authentication.",
         "fromLabel": "From Address",
         "fromPlaceholder": "noreply@example.com",
         "fromHelp": "The default sender address for outbound emails.",
+        "security": {
+          "title": "Connection Security",
+          "secure": "Use implicit TLS (SSL on connect, typically port 465)",
+          "requireTls": "Require STARTTLS upgrade (ports 587 / 25)",
+          "verifyCert": "Verify server certificate",
+          "verifyCertHint": "Turn this off only for a trusted relay on your own network that uses a self-signed certificate."
+        },
         "savingButton": "Saving...",
-        "saveButton": "Save SMTP Settings"
+        "saveButton": "Save SMTP Settings",
+        "test": {
+          "title": "Test Outbound Email",
+          "description": "Saves the current settings, then verifies the provider connection. Enter an address to also send a test message.",
+          "recipientLabel": "Send test to (optional)",
+          "recipientPlaceholder": "you@example.com",
+          "testingButton": "Testing...",
+          "runButton": "Test Connection"
+        }
       },
       "ticketingFrom": {
         "title": "Ticketing From Address",

@@ -176,6 +176,43 @@ describe('ticketRichText', () => {
     ]);
   });
 
+  it('handles content that is already parsed JSON instead of a string', () => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Stored as jsonb array', styles: {} }],
+      },
+    ];
+
+    expect(parseTicketMobileRichTextDocument(blocks)).toEqual({
+      format: 'blocknote',
+      sourceFormat: 'blocknote',
+      content: blocks,
+    });
+    expect(parseTicketRichTextContent(blocks)).toEqual(blocks);
+
+    const proseMirrorDoc = {
+      type: 'doc' as const,
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'Stored as jsonb object' }] },
+      ],
+    };
+    expect(parseTicketMobileRichTextDocument(proseMirrorDoc)).toEqual({
+      format: 'prosemirror',
+      sourceFormat: 'prosemirror',
+      content: proseMirrorDoc,
+    });
+
+    expect(parseTicketMobileRichTextDocument([])).toEqual({
+      format: 'blocknote',
+      sourceFormat: 'blocknote',
+      content: createEmptyTicketMobileRichTextDocument().content,
+    });
+    expect(parseTicketMobileRichTextDocument({ unexpected: 'shape' })).toEqual(
+      createEmptyTicketMobileRichTextDocument()
+    );
+  });
+
   it('returns a safe empty mobile document for null, undefined, or blank values', () => {
     expect(parseTicketMobileRichTextDocument(undefined)).toEqual(
       createEmptyTicketMobileRichTextDocument()

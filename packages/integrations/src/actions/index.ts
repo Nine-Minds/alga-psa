@@ -74,7 +74,8 @@ export {
 } from './email-actions/emailDomainActions';
 export {
   getEmailSettings,
-  updateEmailSettings
+  updateEmailSettings,
+  testOutboundEmail
 } from './email-actions/emailSettingsActions';
 export {
   getInboundTicketDefaults,

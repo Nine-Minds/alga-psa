@@ -156,6 +156,29 @@
   text-decoration: none;
 }
 
+/* Small "update available" indicator used on the sidebar Manage button and the
+   Manage sub-tab buttons. */
+.updateDot {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--operator-purple);
+  box-shadow: 0 0 0 3px
+    color-mix(in oklch, var(--operator-purple) 22%, transparent);
+}
+
+.updateDotEnd {
+  margin-left: auto;
+}
+
+/* Inside the (non-flex) manage sub-tab buttons the dot sits after the label. */
+.manageTabButton .updateDot {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
 .sidebar > .setupLink {
   margin-top: var(--space-xl);
 }

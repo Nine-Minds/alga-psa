@@ -707,7 +707,8 @@
       "refreshStatusFailed": "Impossibile aggiornare lo stato del dominio",
       "domainRemovalScheduled": "Rimozione del dominio pianificata",
       "domainRemovalScheduledWithClear": "Rimozione del dominio pianificata e indirizzo mittente per ticketing cancellato",
-      "removeDomainFailed": "Impossibile rimuovere il dominio"
+      "removeDomainFailed": "Impossibile rimuovere il dominio",
+      "testOutboundFailed": "Test dell'e-mail in uscita non riuscito"
     },
     "tabs": {
       "inboundEmail": "Email in entrata",
@@ -741,11 +742,27 @@
         "usernamePlaceholder": "la-tua-email@esempio.it",
         "passwordLabel": "Password",
         "passwordPlaceholder": "Inserisci la password",
+        "authHint": "Lascia vuoti nome utente e password se il tuo relay accetta la posta senza autenticazione.",
         "fromLabel": "Indirizzo mittente",
         "fromPlaceholder": "noreply@esempio.it",
         "fromHelp": "Indirizzo mittente predefinito per le email in uscita.",
+        "security": {
+          "title": "Sicurezza della connessione",
+          "secure": "Usa TLS implicito (SSL alla connessione, in genere porta 465)",
+          "requireTls": "Richiedi l'aggiornamento STARTTLS (porte 587 / 25)",
+          "verifyCert": "Verifica il certificato del server",
+          "verifyCertHint": "Disattiva questa opzione solo per un relay attendibile sulla tua rete che utilizza un certificato autofirmato."
+        },
         "savingButton": "Salvataggio…",
-        "saveButton": "Salva impostazioni SMTP"
+        "saveButton": "Salva impostazioni SMTP",
+        "test": {
+          "title": "Prova e-mail in uscita",
+          "description": "Salva le impostazioni attuali, quindi verifica la connessione al provider. Inserisci un indirizzo per inviare anche un messaggio di prova.",
+          "recipientLabel": "Invia prova a (facoltativo)",
+          "recipientPlaceholder": "tu@esempio.com",
+          "testingButton": "Prova in corso...",
+          "runButton": "Prova connessione"
+        }
       },
       "ticketingFrom": {
         "title": "Indirizzo mittente per ticketing",

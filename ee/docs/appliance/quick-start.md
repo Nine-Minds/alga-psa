@@ -50,6 +50,9 @@ Background service issues do not block login readiness.
 
 ## 6. App Updates
 
-Use `http://<node-ip>:8080/updates?token=<status-token>` for app-channel updates (`stable` or `nightly`).
+The appliance does not update itself. When a newer release is published to your
+channel (`stable` or `nightly`), the status page at `http://<node-ip>:8080`
+shows an "Update available" banner; apply the update from Manage → Updates.
 
 v1 scope is app-only updates. Ubuntu and k3s updates are manual/support-run.
+See the operator's manual "Updates And The Upgrade Path" for the full picture.
