@@ -112,3 +112,34 @@
 - Dev demo data added for smoke: due_date -3d on one EC ticket; due_dates -10/-45/-75d on the
   three finalized EC invoices (INV-003/004/005).
 - Final: clients tsc 0, full server tsc 0 (16GB heap), suites green.
+
+## Post-ship polish (2026-07-02, commits 44e0bcb167 + 66c30ff3a7)
+
+- Aging chart: zero buckets rendered a 4px phantom bar (visibility floor applied to $0) —
+  now no bar for empty buckets, axis baseline, exact-amount tooltips. Dollar values were
+  audited against DB + billing Finalized tab: correct (tiny seed invoices INV-003/004/005).
+- Preview-cap rules made consistent: counts never capped; previews capped with on-card
+  acknowledgment. Draft invoices now capped at 5 server-side (DRAFT_INVOICE_PREVIEW_LIMIT)
+  with a separate count+sum aggregate feeding the flag and "+N more" (ClientPulseMoney gained
+  draftInvoiceCount). Locations preview (3) got its missing "+N more".
+
+## Editability sweep (2026-07-02)
+
+Verified every edit surface works on the command-center path:
+- Details focus: full form (11 fields), END-TO-END SAVE verified (account manager →
+  Glinda Good persisted to clients.account_manager_id via psql check).
+- Manage Locations dialog (locations card): Add Location + per-location edit controls.
+- Quick Add Ticket (service card): opens, client prefilled.
+- Contacts focus: list + Add New Contact — NESTED dialog stacks correctly on the focus
+  drawer (InsideDialogContext/modal=false path works). First open is slow in dev only
+  (on-demand chunk compile) — looks like an infinite skeleton, isn't.
+- Notes focus: BlockNote contenteditable mounts editable.
+- Billing (General/Contracts/Tax Rates/Billing Contacts), Tax Settings, Additional Info,
+  Interactions (Add Interaction), Documents (New/Upload/Link), Assets: all render with
+  live controls inside drawers.
+- FINDING+FIX: six tabs had NO UI entry point (billing, tax-settings, additional-info,
+  notes, interactions, assets-when-equipment-present) — reachable only by ?tab= deep
+  link. Added "All views ▾" menu on the identity row listing the full tab registry
+  (ids client-details-cc-views-<tabId>).
+- Quick-add ticket, locations dialog, delete + deactivate dialogs all mount OUTSIDE the
+  quickView/command-center branch in ClientDetails, so they work on both paths.

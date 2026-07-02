@@ -66,6 +66,7 @@ export default function ClientCommandCenter({
   const router = useRouter();
   const [pulse, setPulse] = useState<ClientPulse | null>(null);
   const [pulseError, setPulseError] = useState<string | null>(null);
+  const [viewsMenuOpen, setViewsMenuOpen] = useState(false);
   const tabIds = useMemo(() => new Set(tabs.map((tab) => tab.id)), [tabs]);
   const [focusTabId, setFocusTabId] = useState<string | null>(null);
 
@@ -203,23 +204,55 @@ export default function ClientCommandCenter({
 
   return (
     <div id={`${idPrefix}-command-center`} className="min-w-0">
-      {identityItems.length > 0 && (
-        <div id={`${idPrefix}-identity`} className="flex flex-wrap items-center gap-x-5 gap-y-1 mb-3 text-[13px] text-gray-600">
-          {identityItems.map((item) => item.href ? (
-            <a
-              key={item.key}
-              href={item.href}
-              target={item.key === 'url' ? '_blank' : undefined}
-              rel={item.key === 'url' ? 'noreferrer' : undefined}
-              className="hover:text-primary-700 hover:underline"
-            >
-              {item.text}
-            </a>
-          ) : (
-            <span key={item.key}>{item.text}</span>
-          ))}
-        </div>
-      )}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mb-3 text-[13px] text-gray-600">
+        {identityItems.length > 0 && (
+          <span id={`${idPrefix}-identity`} className="contents">
+            {identityItems.map((item) => item.href ? (
+              <a
+                key={item.key}
+                href={item.href}
+                target={item.key === 'url' ? '_blank' : undefined}
+                rel={item.key === 'url' ? 'noreferrer' : undefined}
+                className="hover:text-primary-700 hover:underline"
+              >
+                {item.text}
+              </a>
+            ) : (
+              <span key={item.key}>{item.text}</span>
+            ))}
+          </span>
+        )}
+        {/* Every registry tab must stay reachable without a deep link — cards
+            only cover some of them (D2). */}
+        <span className="ml-auto relative">
+          <button
+            id={`${idPrefix}-views-menu`}
+            type="button"
+            onClick={() => setViewsMenuOpen((open) => !open)}
+            className="text-xs font-semibold text-gray-500 hover:text-primary-700 border border-gray-200 rounded-lg px-3 py-1.5 bg-white"
+          >
+            {t('clientCommandCenter.allViews', { defaultValue: 'All views ▾' })}
+          </button>
+          {viewsMenuOpen && (
+            <>
+              <span className="fixed inset-0 z-40" onClick={() => setViewsMenuOpen(false)} aria-hidden />
+              <span className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[200px] block">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    id={`${idPrefix}-views-${tab.id}`}
+                    type="button"
+                    onClick={() => { setViewsMenuOpen(false); openFocus(tab.id); }}
+                    className="block w-full text-left px-3.5 py-1.5 text-[13px] text-gray-700 hover:bg-primary-50 hover:text-primary-800"
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </span>
+            </>
+          )}
+        </span>
+      </div>
 
       {pulse && (
         <AttentionStrip
