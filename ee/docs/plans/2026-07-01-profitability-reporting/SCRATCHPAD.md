@@ -44,6 +44,24 @@
 
 ## Implementation log
 
+### 2026-07-02 — Cost-rate settings UI batch
+
+- F013 implemented: added a `cost-rates` section to `BillingSettings.tsx` alongside general/quoting/tax/payments, rendering the new `CostRatesSettings` panel under Billing Settings.
+- F014 implemented: `CostRatesSettings` includes an add/edit dialog with default-vs-user selection, cents-aware hourly cost input, and effective-from/effective-to date inputs.
+- F015 implemented: internal users render with current effective rate and expandable per-user rate history, including row-level edit/delete controls.
+- F016 implemented: editing or deleting a rate first calls `checkCostRateWorkedTimeImpact`; if worked time intersects the existing effective range, the UI shows a confirmation warning before mutating historical cost data.
+- F017 implemented: tenants with no cost-rate rows see an explicit empty state prompting setup of the tenant default rate.
+- F018 implemented: interactive controls use kebab-case IDs in the local UI API, and all Cost Rates text/format strings are routed through `msp/billing-settings` locale keys across language packs.
+- T018 implemented: added action coverage for `checkCostRateWorkedTimeImpact`, verifying the model-layer worked-time indicator is returned and tenant/user/range arguments are passed through.
+- T020 implemented: component test verifies the default banner, internal user list, current rate, and history controls render from mocked `listCostRates` data.
+- T021 implemented: component test verifies entering `62.50` persists `6250` cents to `upsertCostRate`.
+- T022 implemented: component test verifies an edit covering worked time shows the warning dialog and defers `upsertCostRate` until confirmation.
+- T023 implemented: component test verifies the empty state appears when there are no rate rows and exposes the Set Default action.
+- T024 implemented: component test and locale updates cover the Cost Rates screen's translated labels and accessible controls; note that the built UI package used in Vitest does not expose every Button/Input `id` as a DOM id, so tests interact by accessible names/input types while the component still supplies kebab-case IDs to the local UI API.
+- Commands run: `cd server && npx vitest run ../packages/billing/src/components/settings/billing/CostRatesSettings.test.tsx ../packages/billing/src/actions/costRateActions.test.ts --coverage.enabled=false`; `npm -w @alga-psa/billing run typecheck`.
+
+## Implementation log
+
 - 2026-07-02 batch 1 (schema + cost-rate model/actions):
   - Added `server/migrations/20260702120000_create_user_cost_rates.cjs` with tenant-first `(tenant, rate_id)` PK, nullable plain-UUID `user_id`, cents/hour `cost_rate`, inclusive effective dates, audit columns, nonnegative/range CHECKs, `(tenant, user_id, effective_from)` index, no FKs, guarded inline `create_distributed_table`, and `exports.config = { transaction: false }`.
   - Added `server/migrations/20260702120100_add_item_id_to_invoice_time_entries.cjs` with nullable `invoice_time_entries.item_id` plus `(tenant, item_id)` index.

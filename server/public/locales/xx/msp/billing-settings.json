@@ -3,7 +3,8 @@
     "general": "11111",
     "quoting": "11111",
     "tax": "11111",
-    "payments": "11111"
+    "payments": "11111",
+    "costRates": "55555"
   },
   "general": {
     "currency": {
@@ -1204,6 +1205,80 @@
         "title": "11111",
         "description": "11111"
       }
+    }
+  },
+  "costRates": {
+    "title": "55555",
+    "description": "55555",
+    "loading": "55555",
+    "default": {
+      "title": "55555",
+      "current": "55555",
+      "missing": "55555",
+      "history": "55555"
+    },
+    "empty": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "table": {
+      "user": "55555",
+      "currentRate": "55555",
+      "actions": "55555",
+      "usesDefault": "55555",
+      "uncosted": "55555"
+    },
+    "history": {
+      "empty": "55555"
+    },
+    "dialog": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "fields": {
+      "user": {
+        "label": "55555",
+        "default": "55555"
+      },
+      "rate": {
+        "label": "55555"
+      },
+      "effectiveFrom": {
+        "label": "55555"
+      },
+      "effectiveTo": {
+        "label": "55555"
+      }
+    },
+    "actions": {
+      "setDefault": "55555",
+      "addUserRate": "55555",
+      "edit": "55555",
+      "delete": "55555",
+      "cancel": "55555",
+      "save": "55555",
+      "saving": "55555",
+      "continue": "55555"
+    },
+    "warning": {
+      "title": "55555",
+      "description": "55555",
+      "body": "55555"
+    },
+    "toast": {
+      "saved": "55555",
+      "deleted": "55555"
+    },
+    "errors": {
+      "load": "55555",
+      "save": "55555",
+      "delete": "55555"
+    },
+    "formats": {
+      "noRate": "55555",
+      "hourlyRate": "55555",
+      "dateRange": "55555",
+      "openDateRange": "55555"
     }
   }
 }

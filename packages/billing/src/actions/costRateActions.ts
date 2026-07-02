@@ -43,6 +43,12 @@ export interface DeleteCostRateResult {
 
 export type UpsertCostRateActionInput = Omit<UpsertUserCostRateInput, 'created_by'>;
 
+export interface CostRateWorkedTimeImpactInput {
+  user_id: string | null;
+  effective_from: string;
+  effective_to?: string | null;
+}
+
 function requireTenant(tenant: string | null | undefined): string {
   if (!tenant) {
     const error = new Error('No tenant context') as Error & { code?: CostRateActionError['code'] };
@@ -164,4 +170,26 @@ export const deleteCostRate = withAuth(async (
   const deletedRate = await UserCostRate.delete(knex, tenantId, rateId);
 
   return { deleted_rate: deletedRate, covers_worked_time: coversWorkedTime };
+});
+
+export const checkCostRateWorkedTimeImpact = withAuth(async (
+  user,
+  { tenant },
+  input: CostRateWorkedTimeImpactInput
+): Promise<{ covers_worked_time: boolean }> => {
+  if (!await hasPermission(user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
+
+  const tenantId = requireTenant(tenant);
+  const { knex } = await createTenantKnex();
+  const coversWorkedTime = await UserCostRate.coversWorkedTime(
+    knex,
+    tenantId,
+    input.user_id,
+    input.effective_from,
+    input.effective_to ?? null
+  );
+
+  return { covers_worked_time: coversWorkedTime };
 });

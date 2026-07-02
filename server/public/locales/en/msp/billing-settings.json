@@ -3,7 +3,8 @@
     "general": "General",
     "quoting": "Quoting",
     "tax": "Tax",
-    "payments": "Payments"
+    "payments": "Payments",
+    "costRates": "Cost Rates"
   },
   "general": {
     "currency": {
@@ -1204,6 +1205,80 @@
         "title": "Payment Settings",
         "description": "Configure how payment links work with your invoices"
       }
+    }
+  },
+  "costRates": {
+    "title": "Cost Rates",
+    "description": "Manage fully burdened internal labor cost rates used by profitability reporting.",
+    "loading": "Loading cost rates...",
+    "default": {
+      "title": "Tenant default cost rate",
+      "current": "Current default: {{rate}} from {{date}}",
+      "missing": "No tenant default is configured. Users without overrides will be uncosted.",
+      "history": "Default rate history"
+    },
+    "empty": {
+      "title": "Cost rates are not configured",
+      "description": "Set the tenant default first so reports can cost labor for users without overrides."
+    },
+    "table": {
+      "user": "User",
+      "currentRate": "Current Rate",
+      "actions": "Actions",
+      "usesDefault": "Uses default",
+      "uncosted": "Uncosted"
+    },
+    "history": {
+      "empty": "No user-specific rates."
+    },
+    "dialog": {
+      "title": "Cost Rate",
+      "description": "Enter fully burdened hourly labor cost in the tenant default currency."
+    },
+    "fields": {
+      "user": {
+        "label": "User",
+        "default": "Tenant default"
+      },
+      "rate": {
+        "label": "Hourly Cost"
+      },
+      "effectiveFrom": {
+        "label": "Effective From"
+      },
+      "effectiveTo": {
+        "label": "Effective To"
+      }
+    },
+    "actions": {
+      "setDefault": "Set Default",
+      "addUserRate": "Add user rate",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving...",
+      "continue": "Continue"
+    },
+    "warning": {
+      "title": "Worked time exists in this range",
+      "description": "Changing this rate will change historical profitability for time entries in its effective date range.",
+      "body": "Continue only when this is an intentional correction."
+    },
+    "toast": {
+      "saved": "Cost rate saved.",
+      "deleted": "Cost rate deleted."
+    },
+    "errors": {
+      "load": "Failed to load cost rates",
+      "save": "Failed to save cost rate",
+      "delete": "Failed to delete cost rate"
+    },
+    "formats": {
+      "noRate": "—",
+      "hourlyRate": "${{amount}}/hr",
+      "dateRange": "{{start}} - {{end}}",
+      "openDateRange": "{{start}} - open"
     }
   }
 }

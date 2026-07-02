@@ -52,11 +52,18 @@ vi.mock('../models/userCostRate', async () => {
 });
 
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { listCostRates, upsertCostRate, deleteCostRate } from './costRateActions';
+import UserCostRate from '../models/userCostRate';
+import {
+  listCostRates,
+  upsertCostRate,
+  deleteCostRate,
+  checkCostRateWorkedTimeImpact,
+} from './costRateActions';
 
 const callListCostRates = listCostRates as any;
 const callUpsertCostRate = upsertCostRate as any;
 const callDeleteCostRate = deleteCostRate as any;
+const callCheckCostRateWorkedTimeImpact = checkCostRateWorkedTimeImpact as any;
 
 function makeInternalUsersQuery(rows: Array<Record<string, unknown>>) {
   return {
@@ -124,5 +131,25 @@ describe('cost rate actions', () => {
         rate_history: [],
       },
     ]);
+  });
+
+  it('returns the worked-time impact indicator for a rate range', async () => {
+    vi.mocked(hasPermission).mockResolvedValue(true);
+    vi.mocked(UserCostRate.coversWorkedTime).mockResolvedValue(true);
+
+    const result = await callCheckCostRateWorkedTimeImpact(
+      { user_id: 'u1' },
+      { tenant: 'tenant-1' },
+      { user_id: 'user-1', effective_from: '2026-01-01', effective_to: '2026-01-31' }
+    );
+
+    expect(UserCostRate.coversWorkedTime).toHaveBeenCalledWith(
+      { label: 'knex' },
+      'tenant-1',
+      'user-1',
+      '2026-01-01',
+      '2026-01-31'
+    );
+    expect(result).toEqual({ covers_worked_time: true });
   });
 });
