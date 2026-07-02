@@ -707,7 +707,8 @@
       "refreshStatusFailed": "Domainstatus konnte nicht aktualisiert werden",
       "domainRemovalScheduled": "Domainentfernung geplant",
       "domainRemovalScheduledWithClear": "Domainentfernung geplant und Ticketing-Absenderadresse gelöscht",
-      "removeDomainFailed": "Domain konnte nicht entfernt werden"
+      "removeDomainFailed": "Domain konnte nicht entfernt werden",
+      "testOutboundFailed": "Test der ausgehenden E-Mail fehlgeschlagen"
     },
     "tabs": {
       "inboundEmail": "Eingehende E-Mail",
@@ -741,11 +742,27 @@
         "usernamePlaceholder": "ihre-email@beispiel.de",
         "passwordLabel": "Passwort",
         "passwordPlaceholder": "Passwort eingeben",
+        "authHint": "Lassen Sie Benutzername und Passwort leer, wenn Ihr Relay E-Mails ohne Authentifizierung akzeptiert.",
         "fromLabel": "Absenderadresse",
         "fromPlaceholder": "noreply@beispiel.de",
         "fromHelp": "Die Standardabsenderadresse für ausgehende E-Mails.",
+        "security": {
+          "title": "Verbindungssicherheit",
+          "secure": "Implizites TLS verwenden (SSL beim Verbinden, üblicherweise Port 465)",
+          "requireTls": "STARTTLS-Upgrade erforderlich (Ports 587 / 25)",
+          "verifyCert": "Serverzertifikat überprüfen",
+          "verifyCertHint": "Deaktivieren Sie dies nur für ein vertrauenswürdiges Relay in Ihrem eigenen Netzwerk, das ein selbstsigniertes Zertifikat verwendet."
+        },
         "savingButton": "Speichern…",
-        "saveButton": "SMTP-Einstellungen speichern"
+        "saveButton": "SMTP-Einstellungen speichern",
+        "test": {
+          "title": "Ausgehende E-Mail testen",
+          "description": "Speichert die aktuellen Einstellungen und überprüft dann die Verbindung zum Anbieter. Geben Sie eine Adresse ein, um auch eine Testnachricht zu senden.",
+          "recipientLabel": "Test senden an (optional)",
+          "recipientPlaceholder": "sie@beispiel.com",
+          "testingButton": "Wird getestet...",
+          "runButton": "Verbindung testen"
+        }
       },
       "ticketingFrom": {
         "title": "Absenderadresse für Ticketing",
