@@ -110,15 +110,19 @@ export const ClientEquipmentTab: React.FC<ClientEquipmentTabProps> = ({ clientId
     },
   ];
 
+  // The Asset link is the point of this table (unit → managed record), so it
+  // carries an explicit width — width-bearing columns survive narrow
+  // containers first (computeColumnFit). MAC was dropped: dead for most
+  // categories while it cost the truncated Product column its space.
   const equipmentColumns: ColumnDefinition<ClientEquipmentRow>[] = [
     { title: 'Product', dataIndex: 'service_name', render: (v: any) => v || '—' },
     { title: 'SKU', dataIndex: 'sku', render: (v: any) => v || '—' },
     { title: 'Serial', dataIndex: 'serial_number', render: (v: any) => v || '—' },
-    { title: 'MAC', dataIndex: 'mac_address', render: (v: any) => v || '—' },
     { title: 'Delivered', dataIndex: 'delivered_at', render: (v: any) => shortDate(v) },
     {
       title: 'Asset',
       dataIndex: 'asset_id',
+      width: '110px',
       render: (v: any) =>
         v ? (
           <Link href={`/msp/assets/${v}`} className="text-primary-600 hover:underline">

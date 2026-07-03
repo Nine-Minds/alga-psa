@@ -62,6 +62,11 @@ const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = 
  const { t } = useTranslation('msp/clients');
  const notAvailable = t('common.states.na', { defaultValue: 'N/A' });
 
+ // Order is admission priority at narrow widths (computeColumnFit): Status —
+ // what month-close actually needs — sits early instead of being the first
+ // column dropped; Total keeps its rightmost slot via an explicit width
+ // (width-bearing columns are prioritized), leaving Invoice Date as the
+ // drop candidate.
  const invoiceColumns: ColumnDefinition<RecentInvoice>[] = [
   {
     title: t('clientContractLineDashboard.invoiceNumber', { defaultValue: 'Invoice #' }),
@@ -69,9 +74,9 @@ const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = 
     render: (value: string) => value || notAvailable,
   },
   {
-    title: t('clientContractLineDashboard.invoiceDate', { defaultValue: 'Invoice Date' }),
-    dataIndex: 'invoice_date',
-    render: (value: string | Date) => value ? formatDateOnly(typeof value === 'string' ? parseISO(value) : value) : notAvailable,
+    title: t('clientContractLineDashboard.status', { defaultValue: 'Status' }),
+    dataIndex: 'status',
+    render: (value: string) => value || notAvailable,
   },
   {
     title: t('clientContractLineDashboard.dueDate', { defaultValue: 'Due Date' }),
@@ -79,17 +84,18 @@ const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = 
     render: (value: string | Date) => value ? formatDateOnly(typeof value === 'string' ? parseISO(value) : value) : notAvailable,
   },
   {
+    title: t('clientContractLineDashboard.invoiceDate', { defaultValue: 'Invoice Date' }),
+    dataIndex: 'invoice_date',
+    render: (value: string | Date) => value ? formatDateOnly(typeof value === 'string' ? parseISO(value) : value) : notAvailable,
+  },
+  {
    title: t('clientContractLineDashboard.totalAmount', { defaultValue: 'Total Amount' }),
    dataIndex: 'total_amount',
+   width: '140px',
    render: (value: number, record: RecentInvoice) => (
      <div className="text-right">{formatCurrencyFromMinorUnits(value, 'en-US', record.currency_code || 'USD')}</div>
    ),
  },
- {
-    title: t('clientContractLineDashboard.status', { defaultValue: 'Status' }),
-    dataIndex: 'status',
-    render: (value: string) => value || notAvailable,
-  },
  ];
 
  const hoursColumns: ColumnDefinition<HoursByServiceResult>[] = [
