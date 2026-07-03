@@ -250,16 +250,60 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
   }, [tickets]);
 
 
+  // Dispatcher preset for the client context: the drawer is narrower than the
+  // full tickets screen, and the auto-fit hides trailing columns — so this
+  // list keeps the triage set (number/title/status/priority/SLA/assignee/due)
+  // and drops board/category/created/created-by, which stay available on the
+  // main tickets screen. Explicit widths keep the whole set admitted at
+  // drawer width (computeColumnFit prioritizes width-bearing columns) and
+  // stop Title's 320px natural width from crowding out assignee and due date.
+  const clientDisplaySettings = useMemo(() => displaySettings ? ({
+    ...displaySettings,
+    list: {
+      ...displaySettings.list,
+      columnVisibility: {
+        ...displaySettings.list?.columnVisibility,
+        sla: true,
+        board: false,
+        category: false,
+        created: false,
+        created_by: false,
+      },
+    },
+  }) : undefined, [displaySettings]);
+
+  // SLA deliberately carries no width: width-bearing columns are admitted
+  // first, so when space runs out SLA yields before assignee and due date —
+  // the two facts a dispatcher can't triage without.
+  const CLIENT_LIST_COLUMN_WIDTHS: Record<string, string> = {
+    ticket_number: '100px',
+    title: '220px',
+    status_name: '110px',
+    priority_name: '110px',
+    assigned_to_name: '140px',
+    due_date: '120px',
+  };
+
   const columns = useMemo(() =>
     createTicketColumns({
       categories: initialCategories,
       boards: initialBoards,
-      displaySettings: displaySettings || undefined,
+      displaySettings: clientDisplaySettings,
       onTicketClick: handleTicketClick,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
       showClient: false, // Don't show client column since we're already on client page
-    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleTagsChange]);
+    }).map((column) => {
+      const columnId = Array.isArray(column.dataIndex) ? column.dataIndex.join('_') : column.dataIndex;
+      // Every shared ticket column declares a percent width, which makes them
+      // all equal priority — so SLA's width is stripped (not just left alone)
+      // to actually demote it below assignee/due date.
+      if (columnId === 'sla_policy_id') {
+        return { ...column, width: undefined };
+      }
+      const width = CLIENT_LIST_COLUMN_WIDTHS[columnId];
+      return width ? { ...column, width } : column;
+    }), [initialCategories, initialBoards, clientDisplaySettings, handleTicketClick, handleTagsChange]);
 
   // Filter tickets by selected tags
   const filteredTickets = useMemo(() => {
@@ -355,7 +399,9 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-4">
+        {/* Wraps instead of overflowing — this toolbar renders inside the
+            focus drawer, not just the full-page tickets screen. */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
           {initialBoards.length > 0 && (
             <BoardPicker
               id="client-tickets-board-picker"
@@ -427,8 +473,8 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
             placeholder={t('clientTabs.tickets.filters.searchPlaceholder', { defaultValue: 'Search tickets...' })}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-[38px] min-w-[350px] text-sm"
-            containerClassName=""
+            className="h-[38px] min-w-[220px] text-sm"
+            containerClassName="flex-1 min-w-[220px] max-w-[350px]"
           />
 
           {allUniqueTags.length > 0 && (
