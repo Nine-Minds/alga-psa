@@ -239,7 +239,9 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
 
   return (
     <ReflectionContainer id={id} label="Interactions Feed">
-      <Card className="w-full max-w-2xl">
+      {/* No width cap — the feed renders inside the 92vw focus drawer and
+          should spend the width on its rows, not a dead right margin. */}
+      <Card className="w-full">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 {...titleProps} className="text-2xl font-bold">
