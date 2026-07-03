@@ -216,10 +216,22 @@ DEFERRED with reason:
   only) — a designed refactor, not a loop iteration. Same constraint blocks removing the
   duplicated inner titles (Client Tickets h3 / Interactions h2): they're the only titles
   in AlgaDesk mode.
-REMAINING BACKLOG (in ROAST-SYNTHESIS.md): 11. voice sweep (NOTE: existing keys have
-translations in all 8 locale files — changing defaultValue alone does nothing; the sweep
-must edit server/public/locales/*/msp/*.json too; good codex batch) → 12. craft batch
-(equipment i18n + render:(v:any) x15, dashboard recharts as-any + dead state, additional-info
-save variant ClientDetails:~1461-area, interactions console.log :220, details literal
-Add/Remove) → 13. gap fills tier 1 (AR strip + balance-due/status on dashboard, warranty on
+11. 46782b998a voice sweep — offloaded to codex against an adjudicated brief
+   (scratchpad voice-sweep-brief.md), 54 files: sentence case, Add [noun], Save,
+   ID/money column labels, engine-vocab rewrites, tax help link removed, Notes panels
+   retitled, Pagination i18n plurals (itemsLabel_one/_other), hidden-banner tightened,
+   equipment pills capitalized, Actions header dropped. Declines recorded in the commit.
+   Codex judgment calls accepted: BoardPicker placeholder scoped via prop (shared default
+   untouched); billing schedule help was hardcoded in shared/billingClients (no locale).
+   Pre-existing failure (clean-tree verified): Documents.drawer.test.tsx —
+   Missing "./hooks" specifier in @alga-psa/users.
+12. craft batch (codex, craft-batch-brief.md, serialized behind the voice sweep): equipment
+   full i18n (defaultValue-only, no locale entries needed for new keys) + typed renders +
+   Skeleton loading rows; dashboard recharts dynamic imports typed via bounded casts to
+   exported prop types (RadialBarChart uses recharts/types/chart/generateCategoricalChart
+   CategoricalChartProps — not publicly exported in recharts 2.15) + typed tooltip + dead
+   state removed; both hand-rolled primary-variant save-button classNames -> kit default
+   variant (verified renders #8A4DEA, regains dark-mode); Add/Remove -> common.actions.*;
+   interactions console.log removed. Full server tsc 0; save button verified live.
+REMAINING: 13. gap fills tier 1 (AR strip + balance-due/status on dashboard, warranty on
 equipment = ops-depth W4, portal access on contacts) — sequence with ops-depth W1-W5.

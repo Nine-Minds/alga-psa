@@ -373,7 +373,7 @@ export function ClientDetailsTabContent({
                   disabled={isInboundDomainBusy || !normalizeInboundDomain(inboundDomainDraft)}
                   onClick={onAddInboundDomain}
                 >
-                  Add
+                  {t('common.actions.add', { defaultValue: 'Add' })}
                 </Button>
               </div>
 
@@ -389,7 +389,7 @@ export function ClientDetailsTabContent({
                         disabled={isInboundDomainBusy}
                         onClick={() => onRemoveInboundDomain(d.id)}
                       >
-                        Remove
+                        {t('common.actions.remove', { defaultValue: 'Remove' })}
                       </Button>
                     </div>
                   ))}
@@ -436,7 +436,7 @@ export function ClientDetailsTabContent({
                   disabled={isAliasBusy || !aliasDraft.trim()}
                   onClick={onAddClientNameAlias}
                 >
-                  Add
+                  {t('common.actions.add', { defaultValue: 'Add' })}
                 </Button>
               </div>
 
@@ -452,7 +452,7 @@ export function ClientDetailsTabContent({
                         disabled={isAliasBusy}
                         onClick={() => onRemoveClientNameAlias(a.id)}
                       >
-                        Remove
+                        {t('common.actions.remove', { defaultValue: 'Remove' })}
                       </Button>
                     </div>
                   ))}
@@ -621,7 +621,6 @@ export function ClientDetailsTabContent({
           id="save-client-changes-btn"
           onClick={onSave}
           disabled={isSaving}
-          className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSaving
             ? t('common.actions.saving', { defaultValue: 'Saving...' })

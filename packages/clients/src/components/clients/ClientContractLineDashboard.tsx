@@ -20,28 +20,48 @@ import {
 import ChartSkeleton from '@alga-psa/ui/components/skeletons/ChartSkeleton';
 import { BucketUsageChart } from '@alga-psa/ui/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type {
+  PolarAngleAxisProps,
+  RadialBarProps,
+  ResponsiveContainerProps,
+} from 'recharts';
+import type { CategoricalChartProps } from 'recharts/types/chart/generateCategoricalChart';
 
-// Dynamic imports for recharts components with type assertions
-const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer as any), {
-  ssr: false
-}) as any;
-const RadialBarChart = dynamic(() => import('recharts').then(mod => mod.RadialBarChart as any), {
-  ssr: false
-}) as any;
-const RadialBar = dynamic(() => import('recharts').then(mod => mod.RadialBar as any), {
-  ssr: false
-}) as any;
-const PolarAngleAxis = dynamic(() => import('recharts').then(mod => mod.PolarAngleAxis as any), {
-  ssr: false
-}) as any;
+// next/dynamic expects ComponentType; Recharts exports forward-ref/class components.
+// Keep the cast bounded to each exported prop type instead of erasing props to any.
+const rechartsComponent = <P,>(component: unknown): React.ComponentType<P> =>
+  component as React.ComponentType<P>;
+
+const ResponsiveContainer = dynamic<ResponsiveContainerProps>(
+  () => import('recharts').then(mod => rechartsComponent<ResponsiveContainerProps>(mod.ResponsiveContainer)),
+  { ssr: false }
+);
+const RadialBarChart = dynamic<CategoricalChartProps>(
+  () => import('recharts').then(mod => rechartsComponent<CategoricalChartProps>(mod.RadialBarChart)),
+  { ssr: false }
+);
+const RadialBar = dynamic<RadialBarProps>(
+  () => import('recharts').then(mod => rechartsComponent<RadialBarProps>(mod.RadialBar)),
+  { ssr: false }
+);
+const PolarAngleAxis = dynamic<PolarAngleAxisProps>(
+  () => import('recharts').then(mod => rechartsComponent<PolarAngleAxisProps>(mod.PolarAngleAxis)),
+  { ssr: false }
+);
 // Removed Progress import
 
 interface ClientContractLineDashboardProps {
   clientId: string;
 }
 
+interface CustomBucketTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: RemainingBucketUnitsResult }>;
+  label?: string;
+}
+
 // Custom Tooltip Component for Bucket Chart
-const CustomBucketTooltip = ({ active, payload, label }: any) => {
+const CustomBucketTooltip = ({ active, payload, label }: CustomBucketTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload; // Access the full data point for the hovered bar
     return (
@@ -153,8 +173,6 @@ const [hoursData, setHoursData] = useState<HoursByServiceResult[]>([]);
 // State for Bucket Usage
 const [loadingBuckets, setLoadingBuckets] = useState(true);
 const [bucketData, setBucketData] = useState<RemainingBucketUnitsResult[]>([]);
-// Derived state for chart-specific data (optional, could transform inline)
-// const [chartBucketData, setChartBucketData] = useState<any[]>([]);
 
 // State for Usage Metrics
 const [loadingUsage, setLoadingUsage] = useState(true);

@@ -1504,7 +1504,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               id="save-additional-info-btn"
               onClick={handleSave}
               disabled={isSaving}
-              className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving
                 ? t('common.actions.saving', { defaultValue: 'Saving...' })

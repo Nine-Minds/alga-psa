@@ -215,9 +215,8 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               i.interaction_id === updatedInteraction.interaction_id ? updatedInteraction : i
             )
           );
-        } catch (error) {
+        } catch {
           // If interaction doesn't exist (was deleted), don't treat it as an error
-          console.log('Interaction no longer exists (likely deleted)');
         }
       }
     );

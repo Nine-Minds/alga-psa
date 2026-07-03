@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -22,15 +23,15 @@ interface ClientEquipmentTabProps {
   clientId: string;
 }
 
-const shortDate = (iso: string | null): string =>
-  iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—';
+const shortDate = (iso: string | null, emptyValue: string): string =>
+  iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' }) : emptyValue;
 
 const money = (cents: number, currency: string): string =>
   `${(Number(cents || 0) / 100).toLocaleString(undefined, { style: 'currency', currency: currency || 'USD' })}`;
 
-const capitalizeStatus = (status: unknown): string => {
+const capitalizeStatus = (status: string | null | undefined, emptyValue: string): string => {
   const value = String(status ?? '').replace(/_/g, ' ');
-  return value ? value.charAt(0).toUpperCase() + value.slice(1) : '—';
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : emptyValue;
 };
 
 // SO detail is a dialog inside SalesOrdersManager (no per-id route), so rows deep-link
@@ -91,27 +92,32 @@ export const ClientEquipmentTab: React.FC<ClientEquipmentTabProps> = ({ clientId
 
   const retryLabel = t('clientEquipmentTab.retry', { defaultValue: 'Retry' });
   const loadErrorMessage = t('clientEquipmentTab.loadError', { defaultValue: 'This section failed to load.' });
+  const emptyValue = t('clientEquipmentTab.emptyValue', { defaultValue: '—' });
 
   const salesOrderColumns: ColumnDefinition<ClientSalesOrderSummary>[] = [
     {
-      title: 'Order number',
+      title: t('clientEquipmentTab.orderNumber', { defaultValue: 'Order number' }),
       dataIndex: 'so_number',
-      render: (v: any) => (
+      render: (v: string) => (
         <Link href={SALES_ORDERS_HREF} className="text-primary-600 hover:underline font-medium tabular-nums">
           {v}
         </Link>
       ),
     },
     {
-      title: 'Status',
+      title: t('clientEquipmentTab.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
-      render: (v: any) => <Badge variant="secondary" size="sm">{capitalizeStatus(v)}</Badge>,
+      render: (v: string) => <Badge variant="secondary" size="sm">{capitalizeStatus(v, emptyValue)}</Badge>,
     },
-    { title: 'Ordered', dataIndex: 'order_date', render: (v: any) => shortDate(v) },
     {
-      title: 'Amount',
+      title: t('clientEquipmentTab.ordered', { defaultValue: 'Ordered' }),
+      dataIndex: 'order_date',
+      render: (v: string | null) => shortDate(v, emptyValue),
+    },
+    {
+      title: t('clientEquipmentTab.amount', { defaultValue: 'Amount' }),
       dataIndex: 'total_amount',
-      render: (_v: any, rec) => <span className="tabular-nums">{money(rec.total_amount, rec.currency_code)}</span>,
+      render: (_v: number, rec) => <span className="tabular-nums">{money(rec.total_amount, rec.currency_code)}</span>,
     },
   ];
 
@@ -120,73 +126,126 @@ export const ClientEquipmentTab: React.FC<ClientEquipmentTabProps> = ({ clientId
   // containers first (computeColumnFit). MAC was dropped: dead for most
   // categories while it cost the truncated Product column its space.
   const equipmentColumns: ColumnDefinition<ClientEquipmentRow>[] = [
-    { title: 'Product', dataIndex: 'service_name', render: (v: any) => v || '—' },
-    { title: 'SKU', dataIndex: 'sku', render: (v: any) => v || '—' },
-    { title: 'Serial number', dataIndex: 'serial_number', render: (v: any) => v || '—' },
-    { title: 'Delivered', dataIndex: 'delivered_at', render: (v: any) => shortDate(v) },
     {
-      title: 'Asset',
+      title: t('clientEquipmentTab.product', { defaultValue: 'Product' }),
+      dataIndex: 'service_name',
+      render: (v: string) => v || emptyValue,
+    },
+    {
+      title: t('clientEquipmentTab.sku', { defaultValue: 'SKU' }),
+      dataIndex: 'sku',
+      render: (v: string | null) => v || emptyValue,
+    },
+    {
+      title: t('clientEquipmentTab.serialNumber', { defaultValue: 'Serial number' }),
+      dataIndex: 'serial_number',
+      render: (v: string | null) => v || emptyValue,
+    },
+    {
+      title: t('clientEquipmentTab.delivered', { defaultValue: 'Delivered' }),
+      dataIndex: 'delivered_at',
+      render: (v: string | null) => shortDate(v, emptyValue),
+    },
+    {
+      title: t('clientEquipmentTab.asset', { defaultValue: 'Asset' }),
       dataIndex: 'asset_id',
       width: '110px',
-      render: (v: any) =>
+      render: (v: string | null) =>
         v ? (
           <Link href={`/msp/assets/${v}`} className="text-primary-600 hover:underline">
-            View asset
+            {t('clientEquipmentTab.viewAsset', { defaultValue: 'View asset' })}
           </Link>
         ) : (
-          <span className="text-gray-400">—</span>
+          <span className="text-gray-400">{emptyValue}</span>
         ),
     },
   ];
 
   const rmaColumns: ColumnDefinition<ClientRmaRow>[] = [
-    { title: 'RMA number', dataIndex: 'rma_number', render: (v: any) => v || '—' },
     {
-      title: 'Status',
-      dataIndex: 'status',
-      render: (v: any) => <Badge variant="secondary" size="sm">{capitalizeStatus(v)}</Badge>,
+      title: t('clientEquipmentTab.rmaNumber', { defaultValue: 'RMA number' }),
+      dataIndex: 'rma_number',
+      render: (v: string | null) => v || emptyValue,
     },
-    { title: 'Product', dataIndex: 'service_name', render: (v: any) => v || '—' },
-    { title: 'Serial number', dataIndex: 'serial_number', render: (v: any) => v || '—' },
-    { title: 'Opened', dataIndex: 'created_at', render: (v: any) => shortDate(v) },
+    {
+      title: t('clientEquipmentTab.status', { defaultValue: 'Status' }),
+      dataIndex: 'status',
+      render: (v: string) => <Badge variant="secondary" size="sm">{capitalizeStatus(v, emptyValue)}</Badge>,
+    },
+    {
+      title: t('clientEquipmentTab.product', { defaultValue: 'Product' }),
+      dataIndex: 'service_name',
+      render: (v: string | null) => v || emptyValue,
+    },
+    {
+      title: t('clientEquipmentTab.serialNumber', { defaultValue: 'Serial number' }),
+      dataIndex: 'serial_number',
+      render: (v: string | null) => v || emptyValue,
+    },
+    {
+      title: t('clientEquipmentTab.opened', { defaultValue: 'Opened' }),
+      dataIndex: 'created_at',
+      render: (v: string) => shortDate(v, emptyValue),
+    },
   ];
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm space-y-8" id="client-equipment-tab">
       <section className="space-y-2" id="client-equipment-sales-orders">
-        <h3 className="text-lg font-medium">Sales Orders</h3>
+        <h3 className="text-lg font-medium">
+          {t('clientEquipmentTab.salesOrders', { defaultValue: 'Sales Orders' })}
+        </h3>
         {loading ? (
-          <p className="text-sm text-gray-500">Loading…</p>
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
         ) : soError ? (
           <SectionLoadError id="client-equipment-so-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={retry} />
         ) : salesOrders.length === 0 ? (
-          <p className="text-sm text-gray-500">No sales orders for this client.</p>
+          <p className="text-sm text-gray-500">
+            {t('clientEquipmentTab.noSalesOrders', { defaultValue: 'No sales orders for this client.' })}
+          </p>
         ) : (
           <DataTable id="client-sales-orders-table" data={salesOrders} columns={salesOrderColumns} />
         )}
       </section>
 
       <section className="space-y-2" id="client-equipment-equipment">
-        <h3 className="text-lg font-medium">Delivered units</h3>
+        <h3 className="text-lg font-medium">
+          {t('clientEquipmentTab.deliveredUnits', { defaultValue: 'Delivered units' })}
+        </h3>
         {loading ? (
-          <p className="text-sm text-gray-500">Loading…</p>
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
         ) : equipmentError ? (
           <SectionLoadError id="client-equipment-eq-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={retry} />
         ) : equipment.length === 0 ? (
-          <p className="text-sm text-gray-500">No delivered equipment on record.</p>
+          <p className="text-sm text-gray-500">
+            {t('clientEquipmentTab.noDeliveredEquipment', { defaultValue: 'No delivered equipment on record.' })}
+          </p>
         ) : (
           <DataTable id="client-equipment-table" data={equipment} columns={equipmentColumns} />
         )}
       </section>
 
       <section className="space-y-2" id="client-equipment-rmas">
-        <h3 className="text-lg font-medium">RMAs</h3>
+        <h3 className="text-lg font-medium">
+          {t('clientEquipmentTab.rmas', { defaultValue: 'RMAs' })}
+        </h3>
         {loading ? (
-          <p className="text-sm text-gray-500">Loading…</p>
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
         ) : rmaError ? (
           <SectionLoadError id="client-equipment-rma-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={retry} />
         ) : rmas.length === 0 ? (
-          <p className="text-sm text-gray-500">No RMAs for this client.</p>
+          <p className="text-sm text-gray-500">
+            {t('clientEquipmentTab.noRmas', { defaultValue: 'No RMAs for this client.' })}
+          </p>
         ) : (
           <DataTable id="client-rmas-table" data={rmas} columns={rmaColumns} />
         )}
