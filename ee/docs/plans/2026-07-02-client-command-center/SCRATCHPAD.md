@@ -172,3 +172,54 @@ links) + option 3's notes card.
   after reload; ?tab=additional-info deep link opens with correct rail active state;
   close cleans URL.
 - Suites: clientPulse 5/5 (new T005 notes). clients tsc 0, full server tsc 0.
+
+## Roast iteration loop (2026-07-02, per adversarial-design-iteration skill)
+
+Backlog + declines: ROAST-SYNTHESIS.md. One change / live-verify / commit each.
+DONE (all pushed):
+1. 69c386240d B1 cents fix — dashboard invoice totals were 100x (formatCurrencyFromMinorUnits
+   + currency_code restored to getRecentClientInvoices).
+2. cba4bed215 B2 locale fix — "Last updated: {{value}}" added in all 8 locales (fr keeps nbsp).
+3. 4b6971f9ba S3a close guard — ConfirmationDialog on focus-drawer close when the record
+   buffer is dirty (details/additional-info); discard actually resets editedClient.
+   NOTE: kit has an unmounted UnsavedChangesContext engine (link-interception + beforeunload)
+   — adopting it app-wide is a follow-up, deliberately not done here (blast radius).
+4. a558e9c5b8 S3b tax settings — one deferred save model (was: exempt auto-save + certificate
+   own-Save + settings Save); Save disabled until dirty.
+5. 72d5d0b0de B3 error states — shared SectionLoadError (clients pkg) in dashboard 4x +
+   equipment 3x; assets full-view error branch. Verified by sabotaging window.fetch POSTs
+   live (note: rejected action POSTs wedge that page instance's action queue — reload before
+   further server-action work after such a test).
+6. 263e3c51f8 B4/B5 additional-info — parent = ClientPicker writing properties.parent_client_id
+   (+name; legacy free-text hinted; Clear button; self disabled); last-contact-date field
+   REMOVED (timeline is the source of truth; DatePicker option declined).
+7. dd784187f0 S5a contacts — Edit opens ContactDetailsEdit in a drawer (was router.push);
+   list row updates on save; dead router import removed.
+Demo-data side effects: Dorothy Gale role set to "IT Director" (kept — matches People card).
+8. bac8cc01c9 S1 column curation — equipment (MAC dropped, Asset link width-promoted),
+   assets (Details column removed + renderAssetDetails deleted; Status/Warranty End moved
+   ahead of Serial/Location/Purchase), dashboard invoices (Status 2nd, Total width-promoted
+   rightmost, Invoice Date = drop candidate).
+8b. 72c45e9ba3 tickets dispatcher preset — client-context visibility override (sla:true,
+   board/category/created/created_by off), px width overrides for the triage set, SLA width
+   STRIPPED (all shared ticket columns declare % widths → admission is declaration order;
+   stripping demotes SLA below assignee/due), toolbar flex-wrap + flexible search.
+   KEY MECHANIC (dataTableColumnFit.ts): width-bearing columns admitted first (declaration
+   order among peers); % widths floor at natural size, px widths don't.
+9. 8cca2914ac S1b width reclaim — interactions max-w-2xl removed (942px vs 672 capped);
+   notes editor min-h 200px → 50vh. Both measured live.
+DEFERRED with reason:
+- S2 host-owned chrome: the registry card wrappers ALSO serve AlgaDesk mode, where tabs
+  render via CustomTabs on a gray page and the white wrappers ARE the surface
+  (ClientDetails tabContent memo ~1613). Stripping them needs a host-supplied chrome
+  contract (e.g. wrapper injected by FocusViewHost vs CustomTabs, tabs render content
+  only) — a designed refactor, not a loop iteration. Same constraint blocks removing the
+  duplicated inner titles (Client Tickets h3 / Interactions h2): they're the only titles
+  in AlgaDesk mode.
+REMAINING BACKLOG (in ROAST-SYNTHESIS.md): 11. voice sweep (NOTE: existing keys have
+translations in all 8 locale files — changing defaultValue alone does nothing; the sweep
+must edit server/public/locales/*/msp/*.json too; good codex batch) → 12. craft batch
+(equipment i18n + render:(v:any) x15, dashboard recharts as-any + dead state, additional-info
+save variant ClientDetails:~1461-area, interactions console.log :220, details literal
+Add/Remove) → 13. gap fills tier 1 (AR strip + balance-due/status on dashboard, warranty on
+equipment = ops-depth W4, portal access on contacts) — sequence with ops-depth W1-W5.
