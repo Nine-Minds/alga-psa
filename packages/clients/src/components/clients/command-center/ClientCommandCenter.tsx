@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
 import { getClientPulse } from '../../../actions/clientPulseActions';
@@ -34,6 +35,10 @@ interface ClientCommandCenterProps {
   initialTabId?: string | null;
   /** Sync the focus-view state back into the URL (?tab=). */
   onTabUrlChange: (tabId: string | null) => void;
+  /** Dirty state of the shared client-record edit buffer (Details / Additional Info). */
+  hasUnsavedRecordChanges: boolean;
+  /** Reset the record edit buffer to the saved client. */
+  onDiscardRecordChanges: () => void;
   onNewTicket: () => void;
   onManageLocations: () => void;
   surveySummary: SurveyClientSatisfactionSummary | null;
@@ -52,12 +57,18 @@ function SkeletonCard() {
   );
 }
 
+// Focus views editing the shared client-record buffer — closing these while
+// dirty is the silent-data-loss path the close guard exists for.
+const RECORD_FORM_TAB_IDS = new Set(['details', 'additional-info']);
+
 export default function ClientCommandCenter({
   idPrefix,
   clientId,
   tabs,
   initialTabId,
   onTabUrlChange,
+  hasUnsavedRecordChanges,
+  onDiscardRecordChanges,
   onNewTicket,
   onManageLocations,
   surveySummary,
@@ -106,11 +117,19 @@ export default function ClientCommandCenter({
     onTabUrlChange(tabId);
   }, [tabIds, onTabUrlChange]);
 
+  const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
+
   const closeFocus = useCallback(() => {
+    // Closing a record form with pending edits reads as "done" while the edits
+    // sit unsaved — confirm the discard instead of losing them silently.
+    if (hasUnsavedRecordChanges && focusTabId && RECORD_FORM_TAB_IDS.has(focusTabId)) {
+      setConfirmDiscardOpen(true);
+      return;
+    }
     deepLinkConsumedRef.current = true;
     setFocusTabId(null);
     onTabUrlChange(null);
-  }, [onTabUrlChange]);
+  }, [onTabUrlChange, hasUnsavedRecordChanges, focusTabId]);
 
   /** First existing tab id from a preference list (AlgaDesk filters some out). */
   const resolveTab = useCallback((...preferred: string[]): string | null => {
@@ -349,6 +368,25 @@ export default function ClientCommandCenter({
         onSelectTab={openFocus}
         onClose={closeFocus}
         t={t}
+      />
+
+      <ConfirmationDialog
+        id={`${idPrefix}-discard-confirm`}
+        isOpen={confirmDiscardOpen}
+        onClose={() => setConfirmDiscardOpen(false)}
+        onConfirm={() => {
+          setConfirmDiscardOpen(false);
+          onDiscardRecordChanges();
+          deepLinkConsumedRef.current = true;
+          setFocusTabId(null);
+          onTabUrlChange(null);
+        }}
+        title={t('clientCommandCenter.discardTitle', { defaultValue: 'Unsaved changes' })}
+        message={t('clientCommandCenter.discardMessage', {
+          defaultValue: 'You have unsaved client record changes. Close and discard them?',
+        })}
+        confirmLabel={t('clientCommandCenter.discardConfirm', { defaultValue: 'Discard changes' })}
+        cancelLabel={t('clientCommandCenter.discardCancel', { defaultValue: 'Keep editing' })}
       />
     </div>
   );

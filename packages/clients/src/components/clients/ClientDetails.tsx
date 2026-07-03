@@ -1731,6 +1731,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             tabs={tabContent}
             initialTabId={searchParams?.get('tab')?.toLowerCase() || null}
             onTabUrlChange={handleFocusTabUrlChange}
+            hasUnsavedRecordChanges={hasUnsavedChanges}
+            onDiscardRecordChanges={() => {
+              setEditedClient(client);
+              setHasUnsavedChanges(false);
+            }}
             onNewTicket={() => setIsQuickAddTicketOpen(true)}
             onManageLocations={() => setIsLocationsDialogOpen(true)}
             surveySummary={surveySummary}
