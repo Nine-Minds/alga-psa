@@ -1038,7 +1038,7 @@
   "clientNotesPanel": {
     "title": "Notizen und Kurzinformationen",
     "initialNote": "Erste Anmerkung",
-    "lastUpdated": "Letzte Aktualisierung:",
+    "lastUpdated": "Letzte Aktualisierung: {{value}}",
     "save": "Speichern",
     "retry": "Wiederholen",
     "loadError": "Notizen konnten nicht geladen werden",

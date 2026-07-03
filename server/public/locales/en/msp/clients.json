@@ -1038,7 +1038,7 @@
   "clientNotesPanel": {
     "title": "Notes & Quick Info",
     "initialNote": "Initial Note",
-    "lastUpdated": "Last updated:",
+    "lastUpdated": "Last updated: {{value}}",
     "save": "Save",
     "retry": "Retry",
     "loadError": "Notes failed to load",

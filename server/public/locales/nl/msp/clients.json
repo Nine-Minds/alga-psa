@@ -1038,7 +1038,7 @@
   "clientNotesPanel": {
     "title": "Opmerkingen en snelle informatie",
     "initialNote": "Eerste opmerking",
-    "lastUpdated": "Laatst bijgewerkt:",
+    "lastUpdated": "Laatst bijgewerkt: {{value}}",
     "save": "Opslaan",
     "retry": "Opnieuw proberen",
     "loadError": "Notities kunnen niet worden geladen",

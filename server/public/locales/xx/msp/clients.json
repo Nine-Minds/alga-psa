@@ -1038,7 +1038,7 @@
   "clientNotesPanel": {
     "title": "11111",
     "initialNote": "11111",
-    "lastUpdated": "11111",
+    "lastUpdated": "11111 {{value}}",
     "save": "11111",
     "retry": "11111",
     "loadError": "11111",

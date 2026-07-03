@@ -1038,7 +1038,7 @@
   "clientNotesPanel": {
     "title": "Notas e información rápida",
     "initialNote": "Nota inicial",
-    "lastUpdated": "Última actualización:",
+    "lastUpdated": "Última actualización: {{value}}",
     "save": "Guardar",
     "retry": "Reintentar",
     "loadError": "No se pudieron cargar las notas",

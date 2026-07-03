@@ -1068,7 +1068,7 @@
   "clientNotesPanel": {
     "title": "Notatki i krótkie informacje",
     "initialNote": "Uwaga wstępna",
-    "lastUpdated": "Ostatnia aktualizacja:",
+    "lastUpdated": "Ostatnia aktualizacja: {{value}}",
     "save": "Zapisz",
     "retry": "Ponów",
     "loadError": "Nie udało się wczytać notatek",
