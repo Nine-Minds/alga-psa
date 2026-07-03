@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import type { ColumnDefinition } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   listClientSalesOrders,
   listClientEquipment,
@@ -15,6 +16,7 @@ import type {
   ClientEquipmentRow,
   ClientRmaRow,
 } from '@alga-psa/inventory/lib/integrationTypes';
+import { SectionLoadError } from './SectionLoadError';
 
 interface ClientEquipmentTabProps {
   clientId: string;
@@ -37,30 +39,53 @@ const SALES_ORDERS_HREF = '/msp/inventory/sales-orders';
  * query never blanks the others.
  */
 export const ClientEquipmentTab: React.FC<ClientEquipmentTabProps> = ({ clientId }) => {
+  const { t } = useTranslation('msp/clients');
   const [salesOrders, setSalesOrders] = useState<ClientSalesOrderSummary[]>([]);
   const [equipment, setEquipment] = useState<ClientEquipmentRow[]>([]);
   const [rmas, setRmas] = useState<ClientRmaRow[]>([]);
   const [loading, setLoading] = useState(true);
+  // Sections load independently; a failed query renders as a failure with a
+  // retry, never as an empty state.
+  const [soError, setSoError] = useState(false);
+  const [equipmentError, setEquipmentError] = useState(false);
+  const [rmaError, setRmaError] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const retry = useCallback(() => setReloadNonce((n) => n + 1), []);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     (async () => {
       const [so, eq, rma] = await Promise.all([
-        listClientSalesOrders(clientId).catch(() => [] as ClientSalesOrderSummary[]),
-        listClientEquipment(clientId).catch(() => [] as ClientEquipmentRow[]),
-        listClientRmas(clientId).catch(() => [] as ClientRmaRow[]),
+        listClientSalesOrders(clientId).then(
+          (rows) => ({ rows, failed: false }),
+          () => ({ rows: [] as ClientSalesOrderSummary[], failed: true }),
+        ),
+        listClientEquipment(clientId).then(
+          (rows) => ({ rows, failed: false }),
+          () => ({ rows: [] as ClientEquipmentRow[], failed: true }),
+        ),
+        listClientRmas(clientId).then(
+          (rows) => ({ rows, failed: false }),
+          () => ({ rows: [] as ClientRmaRow[], failed: true }),
+        ),
       ]);
       if (cancelled) return;
-      setSalesOrders(so);
-      setEquipment(eq);
-      setRmas(rma);
+      setSalesOrders(so.rows);
+      setSoError(so.failed);
+      setEquipment(eq.rows);
+      setEquipmentError(eq.failed);
+      setRmas(rma.rows);
+      setRmaError(rma.failed);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [clientId]);
+  }, [clientId, reloadNonce]);
+
+  const retryLabel = t('clientEquipmentTab.retry', { defaultValue: 'Retry' });
+  const loadErrorMessage = t('clientEquipmentTab.loadError', { defaultValue: 'This section failed to load.' });
 
   const salesOrderColumns: ColumnDefinition<ClientSalesOrderSummary>[] = [
     {
@@ -123,6 +148,8 @@ export const ClientEquipmentTab: React.FC<ClientEquipmentTabProps> = ({ clientId
         <h3 className="text-lg font-medium">Sales Orders</h3>
         {loading ? (
           <p className="text-sm text-gray-500">Loading…</p>
+        ) : soError ? (
+          <SectionLoadError id="client-equipment-so-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={retry} />
         ) : salesOrders.length === 0 ? (
           <p className="text-sm text-gray-500">No sales orders for this client.</p>
         ) : (
@@ -134,6 +161,8 @@ export const ClientEquipmentTab: React.FC<ClientEquipmentTabProps> = ({ clientId
         <h3 className="text-lg font-medium">Equipment</h3>
         {loading ? (
           <p className="text-sm text-gray-500">Loading…</p>
+        ) : equipmentError ? (
+          <SectionLoadError id="client-equipment-eq-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={retry} />
         ) : equipment.length === 0 ? (
           <p className="text-sm text-gray-500">No delivered equipment on record.</p>
         ) : (
@@ -145,6 +174,8 @@ export const ClientEquipmentTab: React.FC<ClientEquipmentTabProps> = ({ clientId
         <h3 className="text-lg font-medium">RMAs</h3>
         {loading ? (
           <p className="text-sm text-gray-500">Loading…</p>
+        ) : rmaError ? (
+          <SectionLoadError id="client-equipment-rma-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={retry} />
         ) : rmas.length === 0 ? (
           <p className="text-sm text-gray-500">No RMAs for this client.</p>
         ) : (

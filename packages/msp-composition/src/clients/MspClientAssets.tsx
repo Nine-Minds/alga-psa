@@ -24,6 +24,7 @@ import {
 import Link from 'next/link';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import Spinner from '@alga-psa/ui/components/Spinner';
+import { Button } from '@alga-psa/ui/components/Button';
 import { QuickAddAsset } from '@alga-psa/assets/components/QuickAddAsset';
 import { AssetDetailDrawerClient } from '@alga-psa/assets/components/AssetDetailDrawerClient';
 import {
@@ -53,6 +54,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [assetTypeEntries, setAssetTypeEntries] = useState<AssetTypeRegistryEntry[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize, setPageSize] = useState(10);
@@ -185,6 +187,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
 
   const loadData = async () => {
     try {
+      setLoadError(false);
       const [summaryData, assetsData] = await Promise.all([
         getClientMaintenanceSummary(clientId),
         listAssets({
@@ -198,7 +201,9 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       setAssets(assetsData.assets);
       setTotalItems(assetsData.total);
     } catch (error) {
+      // A failed load must not render as zero assets / zeroed summary cards.
       console.error('Error loading asset data:', error);
+      setLoadError(true);
     } finally {
       setIsLoading(false);
     }
@@ -340,6 +345,26 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
             <p className="text-lg font-medium text-gray-900 dark:text-[rgb(var(--color-text-900))]">{t('clientTabs.assets.loading', { defaultValue: 'Loading assets...' })}</p>
             <p className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))]">{t('clientTabs.assets.loadingHint', { defaultValue: 'Please wait while we fetch your data' })}</p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto" />
+          <p className="text-sm text-gray-700 dark:text-[rgb(var(--color-text-700))]">
+            {t('clientTabs.assets.loadError', { defaultValue: 'Unable to load assets right now.' })}
+          </p>
+          <Button
+            id="client-assets-retry"
+            variant="outline"
+            onClick={() => { setIsLoading(true); void loadData(); }}
+          >
+            {t('clientTabs.assets.retry', { defaultValue: 'Retry' })}
+          </Button>
         </div>
       </div>
     );

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Text } from '@radix-ui/themes';
+import { SectionLoadError } from './SectionLoadError';
 import { DataTable } from '@alga-psa/ui/components/DataTable'; // Import DataTable
 import { ColumnDefinition } from '@alga-psa/types'; // Import ColumnDefinition
 import { getRecentClientInvoices, type RecentInvoice } from '@alga-psa/reporting/actions'; // Import action and type
@@ -181,53 +182,53 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
     setUsageCurrentPage(1);
   };
 
-  // Fetch recent invoices on mount
-  useEffect(() => {
-    const fetchInvoices = async () => {
-      try {
-        setLoadingInvoices(true);
-        const fetchedInvoices = await getRecentClientInvoices({ clientId }); // Default limit is 10
-        setInvoices(fetchedInvoices);
-      } catch (error) {
-        console.error("Error fetching recent invoices:", error);
-        // TODO: Add user-facing error handling (e.g., toast notification)
-      } finally {
-        setLoadingInvoices(false);
-      }
-    };
+  // Per-section error flags — a failed fetch must not masquerade as empty.
+  const [invoicesError, setInvoicesError] = useState(false);
+  const [hoursError, setHoursError] = useState(false);
+  const [bucketsError, setBucketsError] = useState(false);
+  const [usageError, setUsageError] = useState(false);
 
-   fetchInvoices();
- }, [clientId]);
+  const fetchInvoices = useCallback(async () => {
+    try {
+      setLoadingInvoices(true);
+      setInvoicesError(false);
+      const fetchedInvoices = await getRecentClientInvoices({ clientId }); // Default limit is 10
+      setInvoices(fetchedInvoices);
+    } catch (error) {
+      console.error("Error fetching recent invoices:", error);
+      setInvoicesError(true);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  }, [clientId]);
 
- // Fetch hours by service on mount and when date range changes
- useEffect(() => {
-   const fetchHours = async () => {
-     try {
-       setLoadingHours(true);
-       const fetchedHours = await getHoursByServiceType({
-         clientId,
+  useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
+
+  const fetchHours = useCallback(async () => {
+    try {
+      setLoadingHours(true);
+      setHoursError(false);
+      const fetchedHours = await getHoursByServiceType({
+        clientId,
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
         groupByServiceType: false // Explicitly set to false
-       });
-       setHoursData(fetchedHours);
-     } catch (error) {
-       console.error("Error fetching hours by service:", error);
-       // TODO: Add user-facing error handling
-     } finally {
-       setLoadingHours(false);
-     }
-   };
+      });
+      setHoursData(fetchedHours);
+    } catch (error) {
+      console.error("Error fetching hours by service:", error);
+      setHoursError(true);
+    } finally {
+      setLoadingHours(false);
+    }
+  }, [clientId, dateRange]);
 
-   fetchHours();
- }, [clientId, dateRange]);
+  useEffect(() => { fetchHours(); }, [fetchHours]);
 
-
-// Fetch bucket usage on mount
-useEffect(() => {
-  const fetchBuckets = async () => {
+  const fetchBuckets = useCallback(async () => {
     try {
       setLoadingBuckets(true);
+      setBucketsError(false);
       const currentDate = format(new Date(), 'yyyy-MM-dd'); // Get current date in YYYY-MM-DD format
       const fetchedBuckets = await getRemainingBucketUnits({
         clientId,
@@ -236,37 +237,36 @@ useEffect(() => {
       setBucketData(fetchedBuckets);
     } catch (error) {
       console.error("Error fetching bucket usage:", error);
-      // TODO: Add user-facing error handling
+      setBucketsError(true);
     } finally {
       setLoadingBuckets(false);
     }
-  };
+  }, [clientId]);
 
-  fetchBuckets();
-}, [clientId]);
+  useEffect(() => { fetchBuckets(); }, [fetchBuckets]);
 
+  const fetchUsage = useCallback(async () => {
+    try {
+      setLoadingUsage(true);
+      setUsageError(false);
+      const fetchedUsage = await getUsageDataMetrics({
+        clientId,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      });
+      setUsageData(fetchedUsage);
+    } catch (error) {
+      console.error("Error fetching usage metrics:", error);
+      setUsageError(true);
+    } finally {
+      setLoadingUsage(false);
+    }
+  }, [clientId, dateRange]);
 
-// Fetch usage metrics on mount and when date range changes
-useEffect(() => {
- const fetchUsage = async () => {
-   try {
-     setLoadingUsage(true);
-     const fetchedUsage = await getUsageDataMetrics({
-       clientId,
-       startDate: dateRange.startDate,
-       endDate: dateRange.endDate,
-     });
-     setUsageData(fetchedUsage);
-   } catch (error) {
-     console.error("Error fetching usage metrics:", error);
-     // TODO: Add user-facing error handling
-   } finally {
-     setLoadingUsage(false);
-   }
- };
+  useEffect(() => { fetchUsage(); }, [fetchUsage]);
 
- fetchUsage();
-}, [clientId, dateRange]);
+  const retryLabel = t('clientContractLineDashboard.retry', { defaultValue: 'Retry' });
+  const loadErrorMessage = t('clientContractLineDashboard.loadError', { defaultValue: 'This section failed to load.' });
 
  // TODO: Add UI elements to change the dateRange state
 
@@ -283,6 +283,8 @@ useEffect(() => {
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
             </div>
+          ) : invoicesError ? (
+            <SectionLoadError id="client-dashboard-invoices-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={fetchInvoices} />
           ) : invoices.length > 0 ? (
             <DataTable
               id="client-contract-line-dashboard-table"
@@ -311,6 +313,8 @@ useEffect(() => {
              <Skeleton className="h-8 w-full" />
              <Skeleton className="h-8 w-full" />
            </div>
+         ) : hoursError ? (
+           <SectionLoadError id="client-dashboard-hours-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={fetchHours} />
          ) : hoursData.length > 0 ? (
            <DataTable
              id="hours-by-service-table"
@@ -340,6 +344,8 @@ useEffect(() => {
                <Skeleton key={i} className="h-40 w-full" />
              ))}
            </div>
+         ) : bucketsError ? (
+           <SectionLoadError id="client-dashboard-buckets-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={fetchBuckets} />
          ) : bucketData.length > 0 ? (
            // Render enhanced bucket usage charts in a grid
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -408,6 +414,8 @@ useEffect(() => {
              <Skeleton className="h-8 w-full" />
              <Skeleton className="h-8 w-full" />
            </div>
+         ) : usageError ? (
+           <SectionLoadError id="client-dashboard-usage-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={fetchUsage} />
          ) : usageData.length > 0 ? (
            <DataTable
              id="usage-metrics-table"
