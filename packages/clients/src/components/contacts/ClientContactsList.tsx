@@ -20,7 +20,6 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import QuickAddContact from './QuickAddContact';
-import { useRouter } from 'next/navigation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientContactsListProps {
@@ -53,8 +52,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [changesSavedInDrawer, setChangesSavedInDrawer] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
-  const { openDrawer } = useDrawer();
-  const router = useRouter();
+  const { openDrawer, closeDrawer } = useDrawer();
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -183,8 +181,23 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   };
 
   const handleEditContact = (contact: IContact) => {
-    // Navigate directly to the contact page for editing
-    router.push(`/msp/contacts/${contact.contact_name_id}`);
+    // Edit in a drawer so the client context survives (the full contact page
+    // is still reachable from Quick View's "Go to contact").
+    openDrawer(
+      <ContactDetailsEdit
+        id="client-contact-edit"
+        initialContact={contact}
+        clients={clients}
+        isInDrawer={true}
+        onSave={(updatedContact) => {
+          setContacts(prev => addIdToContacts(
+            prev.map(existing => existing.contact_name_id === updatedContact.contact_name_id ? updatedContact : existing)
+          ));
+          closeDrawer();
+        }}
+        onCancel={() => closeDrawer()}
+      />
+    );
   };
 
 
