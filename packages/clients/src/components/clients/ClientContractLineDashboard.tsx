@@ -111,9 +111,22 @@ const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = 
   {
    title: t('clientContractLineDashboard.totalAmount', { defaultValue: 'Amount' }),
    dataIndex: 'total_amount',
-   width: '140px',
+   width: '130px',
    render: (value: number, record: RecentInvoice) => (
      <div className="text-right">{formatCurrencyFromMinorUnits(value, 'en-US', record.currency_code || 'USD')}</div>
+   ),
+ },
+ {
+   // W6 (roast gap): the one invoice table on the client's billing page
+   // could not say which invoices are unpaid. Drafts owe nothing yet —
+   // em dash, not $0.
+   title: t('clientContractLineDashboard.balanceDue', { defaultValue: 'Balance due' }),
+   dataIndex: 'balance_due',
+   width: '130px',
+   render: (value: number | null, record: RecentInvoice) => (
+     <div className={`text-right ${value ? 'font-semibold text-gray-900' : 'text-gray-400'}`}>
+       {value == null ? '—' : formatCurrencyFromMinorUnits(value, 'en-US', record.currency_code || 'USD')}
+     </div>
    ),
  },
  ];

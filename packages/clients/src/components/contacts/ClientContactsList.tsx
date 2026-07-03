@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { IContact } from '@alga-psa/types';
 import { getContactsByClient } from '@alga-psa/clients/actions';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -9,6 +9,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Eye, ExternalLink, MoreVertical, Pen } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Input } from '@alga-psa/ui/components/Input';
 import { ColumnDefinition } from '@alga-psa/types';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useDrawer } from "@alga-psa/ui";
@@ -52,6 +53,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [changesSavedInDrawer, setChangesSavedInDrawer] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
+  const [searchTerm, setSearchTerm] = useState('');
   const { openDrawer, closeDrawer } = useDrawer();
 
   // Pagination state
@@ -201,6 +203,17 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   };
 
 
+  // Client-side search: getContactsByClient returns the client's full contact
+  // set, so filtering here scales to the realistic per-client contact count.
+  const filteredContacts = useMemo(() => {
+    const needle = searchTerm.trim().toLowerCase();
+    if (!needle) return contacts;
+    return contacts.filter((contact) =>
+      [contact.full_name, contact.email, contact.role, contact.default_phone_number]
+        .some((field) => field && field.toLowerCase().includes(needle))
+    );
+  }, [contacts, searchTerm]);
+
   const columns: ColumnDefinition<IContact>[] = [
     {
       title: t('clientContactsList.table.name', { defaultValue: 'Name' }),
@@ -233,18 +246,27 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       ),
     },
     {
+      // W7 (roast gap): role was already on every row but never shown —
+      // "who do I call for X" needs it.
+      title: t('clientContactsList.table.role', { defaultValue: 'Role' }),
+      dataIndex: 'role',
+      width: '15%',
+      render: (value, record): React.ReactNode =>
+        record.role || <span className="text-gray-400">—</span>,
+    },
+    {
       title: t('clientContactsList.table.email', { defaultValue: 'Email' }),
       dataIndex: 'email',
-      width: '30%',
+      width: '22%',
       render: (value, record): React.ReactNode =>
         record.email || t('common.states.na', { defaultValue: 'N/A' }),
     },
     {
       title: t('clientContactsList.table.phoneNumber', {
-        defaultValue: 'Phone Number'
+        defaultValue: 'Phone number'
       }),
       dataIndex: 'default_phone_number',
-      width: '30%',
+      width: '18%',
       render: (value, record): React.ReactNode =>
         record.default_phone_number
         || record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number
@@ -375,6 +397,15 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
               }
             ]}
           />
+          {/* W7 (roast gap): a client with dozens of contacts had no search. */}
+          <Input
+            id="client-contacts-search"
+            placeholder={t('clientContactsList.filter.searchPlaceholder', { defaultValue: 'Search contacts...' })}
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            className="h-[38px] text-sm"
+            containerClassName="w-[220px]"
+          />
         </div>
         <Button
           id="add-new-contact-btn"
@@ -387,7 +418,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       </div>
       <DataTable
         id="client-contacts-list"
-        data={contacts}
+        data={filteredContacts}
         columns={columns}
         pagination={true}
         currentPage={currentPage}

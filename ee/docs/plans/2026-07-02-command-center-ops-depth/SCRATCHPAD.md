@@ -56,6 +56,10 @@ Per ROAST-SYNTHESIS gap findings (grounded in existing capability):
   balance-due/status enrichment + its consumers' types. Owns packages/reporting file.
 
 ## Status
-WAVE 1 SHIPPED: lane A (codex) + UI lane (Claude) + W5 cleanup. clientPulse 8/8, clientTimeline 4/4. Identity-strip prerequisite
+WAVE 1 SHIPPED (f60d876093): lane A (codex) + UI lane (Claude) + W5. clientPulse 8/8, clientTimeline 4/4.
+W6/W7 SHIPPED: balance_due on getRecentClientInvoices + dashboard column (drafts show em dash);
+contacts Role column + client-side search. DECLINED: duplicating the AR/aging strip inside the
+dashboard (money card owns it — would recreate roast S4 redundancy); portal-access column
+deferred until a batched per-contact source exists (per-row getPortalInvitations = N calls). Identity-strip prerequisite
 shipped (91225b76c0). Roast loop pre-work: SLA column already surfaceable in client
 tickets list (72c45e9ba3), warranty columns visible on assets (bac8cc01c9).
