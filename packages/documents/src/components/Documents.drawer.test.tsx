@@ -479,7 +479,7 @@ describe('Documents drawer', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'New Document' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add document' }));
 
     await waitFor(() => {
       expect(createBlockDocument).toHaveBeenCalled();

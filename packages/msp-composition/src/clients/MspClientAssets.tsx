@@ -293,7 +293,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       }
     },
     {
-      title: t('clientTabs.assets.columns.serialNumber', { defaultValue: 'Serial Number' }),
+      title: t('clientTabs.assets.columns.serialNumber', { defaultValue: 'Serial number' }),
       dataIndex: 'serial_number',
       render: (value: string | null) => (
         <span className="font-mono text-sm text-gray-600 dark:text-[rgb(var(--color-text-600))]">{value || '—'}</span>
@@ -456,8 +456,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       {/* Assets Table - Enhanced container */}
       <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-xl shadow-sm border border-gray-100 dark:border-[rgb(var(--color-border-200))] overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 dark:border-[rgb(var(--color-border-200))]">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-[rgb(var(--color-text-900))]">{t('clientTabs.assets.inventory.title', { defaultValue: 'Asset Inventory' })}</h2>
-          <p className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))] mt-1">{t('clientTabs.assets.inventory.subtitle', { defaultValue: 'Manage and track all client assets' })}</p>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-[rgb(var(--color-text-900))]">{t('clientTabs.assets.inventory.title', { defaultValue: 'Assets' })}</h2>
         </div>
         <DataTable
           id="client-assets-table"

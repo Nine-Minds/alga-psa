@@ -1000,7 +1000,7 @@
     }
   },
   "assetNotesPanel": {
-    "title": "Notes et informations rapides",
+    "title": "Notes",
     "description": "Panneau de notes en texte enrichi pour des notes spécifiques aux actifs et un contexte opérationnel rapide",
     "errors": {
       "loadTitle": "Les notes n'ont pas pu être chargées",

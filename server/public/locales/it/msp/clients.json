@@ -997,7 +997,6 @@
     "title": "Impostazioni per il calcolo delle imposte",
     "description": "Configura il modo in cui vengono calcolate le tasse per questo cliente.",
     "createDefault": "Crea impostazioni fiscali predefinite",
-    "goToBillingTaxSettings": "Vai a Impostazioni fiscali di fatturazione",
     "taxExemptStatus": "Stato di esenzione fiscale",
     "taxExempt": "Esente da tasse",
     "taxExemptHelp": "Se abilitato, le tasse non verranno applicate alle fatture per questo cliente.",

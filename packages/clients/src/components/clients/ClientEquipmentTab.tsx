@@ -28,6 +28,11 @@ const shortDate = (iso: string | null): string =>
 const money = (cents: number, currency: string): string =>
   `${(Number(cents || 0) / 100).toLocaleString(undefined, { style: 'currency', currency: currency || 'USD' })}`;
 
+const capitalizeStatus = (status: unknown): string => {
+  const value = String(status ?? '').replace(/_/g, ' ');
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : '—';
+};
+
 // SO detail is a dialog inside SalesOrdersManager (no per-id route), so rows deep-link
 // to the sales-orders list screen.
 const SALES_ORDERS_HREF = '/msp/inventory/sales-orders';
@@ -89,7 +94,7 @@ export const ClientEquipmentTab: React.FC<ClientEquipmentTabProps> = ({ clientId
 
   const salesOrderColumns: ColumnDefinition<ClientSalesOrderSummary>[] = [
     {
-      title: 'Number',
+      title: 'Order number',
       dataIndex: 'so_number',
       render: (v: any) => (
         <Link href={SALES_ORDERS_HREF} className="text-primary-600 hover:underline font-medium tabular-nums">
@@ -100,11 +105,11 @@ export const ClientEquipmentTab: React.FC<ClientEquipmentTabProps> = ({ clientId
     {
       title: 'Status',
       dataIndex: 'status',
-      render: (v: any) => <Badge variant="secondary" size="sm">{String(v).replace(/_/g, ' ')}</Badge>,
+      render: (v: any) => <Badge variant="secondary" size="sm">{capitalizeStatus(v)}</Badge>,
     },
-    { title: 'Date', dataIndex: 'order_date', render: (v: any) => shortDate(v) },
+    { title: 'Ordered', dataIndex: 'order_date', render: (v: any) => shortDate(v) },
     {
-      title: 'Total',
+      title: 'Amount',
       dataIndex: 'total_amount',
       render: (_v: any, rec) => <span className="tabular-nums">{money(rec.total_amount, rec.currency_code)}</span>,
     },
@@ -117,7 +122,7 @@ export const ClientEquipmentTab: React.FC<ClientEquipmentTabProps> = ({ clientId
   const equipmentColumns: ColumnDefinition<ClientEquipmentRow>[] = [
     { title: 'Product', dataIndex: 'service_name', render: (v: any) => v || '—' },
     { title: 'SKU', dataIndex: 'sku', render: (v: any) => v || '—' },
-    { title: 'Serial', dataIndex: 'serial_number', render: (v: any) => v || '—' },
+    { title: 'Serial number', dataIndex: 'serial_number', render: (v: any) => v || '—' },
     { title: 'Delivered', dataIndex: 'delivered_at', render: (v: any) => shortDate(v) },
     {
       title: 'Asset',
@@ -135,14 +140,14 @@ export const ClientEquipmentTab: React.FC<ClientEquipmentTabProps> = ({ clientId
   ];
 
   const rmaColumns: ColumnDefinition<ClientRmaRow>[] = [
-    { title: 'RMA', dataIndex: 'rma_number', render: (v: any) => v || '—' },
+    { title: 'RMA number', dataIndex: 'rma_number', render: (v: any) => v || '—' },
     {
       title: 'Status',
       dataIndex: 'status',
-      render: (v: any) => <Badge variant="secondary" size="sm">{String(v).replace(/_/g, ' ')}</Badge>,
+      render: (v: any) => <Badge variant="secondary" size="sm">{capitalizeStatus(v)}</Badge>,
     },
     { title: 'Product', dataIndex: 'service_name', render: (v: any) => v || '—' },
-    { title: 'Serial', dataIndex: 'serial_number', render: (v: any) => v || '—' },
+    { title: 'Serial number', dataIndex: 'serial_number', render: (v: any) => v || '—' },
     { title: 'Opened', dataIndex: 'created_at', render: (v: any) => shortDate(v) },
   ];
 
@@ -162,7 +167,7 @@ export const ClientEquipmentTab: React.FC<ClientEquipmentTabProps> = ({ clientId
       </section>
 
       <section className="space-y-2" id="client-equipment-equipment">
-        <h3 className="text-lg font-medium">Equipment</h3>
+        <h3 className="text-lg font-medium">Delivered units</h3>
         {loading ? (
           <p className="text-sm text-gray-500">Loading…</p>
         ) : equipmentError ? (

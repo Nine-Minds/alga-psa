@@ -997,7 +997,6 @@
     "title": "Tax Calculation Settings",
     "description": "Configure how taxes are calculated for this client.",
     "createDefault": "Create Default Tax Settings",
-    "goToBillingTaxSettings": "Go to Billing Tax Settings",
     "taxExemptStatus": "Tax Exempt Status",
     "taxExempt": "Tax Exempt",
     "taxExemptHelp": "When enabled, taxes will not be applied to invoices for this client.",

@@ -236,7 +236,7 @@ export function ClientDetailsTabContent({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-6">
           <TextDetailItem
-            label={t('clientDetails.clientName', { defaultValue: 'Client Name' })}
+            label={t('clientDetails.clientName', { defaultValue: 'Client name' })}
             value={editedClient.client_name}
             onEdit={(value) => onFieldChange('client_name', value)}
             automationId="client-name-field"
@@ -244,14 +244,14 @@ export function ClientDetailsTabContent({
           />
 
           <FieldContainer
-            label={t('clientDetails.accountManager', { defaultValue: 'Account Manager' })}
+            label={t('clientDetails.accountManager', { defaultValue: 'Account manager' })}
             fieldType="select"
             value={editedClient.account_manager_full_name || ''}
             helperText="Select the account manager for this client"
             automationId="account-manager-field"
           >
             <Text as="label" size="2" className="text-gray-700 font-medium">
-              {t('clientDetails.accountManager', { defaultValue: 'Account Manager' })}
+              {t('clientDetails.accountManager', { defaultValue: 'Account manager' })}
             </Text>
             <UserPicker
               value={editedClient.account_manager_id || ''}
@@ -314,7 +314,7 @@ export function ClientDetailsTabContent({
             fieldType="select"
             value={editedClient.inbound_ticket_defaults_id || ''}
             helperText={t('clientDetails.inboundDestinationPrecedence', {
-              defaultValue: 'Precedence: Contact override -> Client destination -> Provider default.',
+              defaultValue: "Uses the contact's override first, then the client's, then the provider default.",
             })}
             automationId="client-inbound-ticket-destination-field"
           >
@@ -336,7 +336,7 @@ export function ClientDetailsTabContent({
             />
             <Text size="1" className="text-gray-500">
               {t('clientDetails.inboundDestinationPrecedence', {
-                defaultValue: 'Precedence: Contact override -> Client destination -> Provider default.',
+                defaultValue: "Uses the contact's override first, then the client's, then the provider default.",
               })}
             </Text>
           </FieldContainer>
@@ -397,7 +397,7 @@ export function ClientDetailsTabContent({
               ) : (
                 <Text size="1" className="text-gray-500">
                   {t('clientDetails.noInboundDomains', {
-                    defaultValue: 'No inbound email domains configured. Domain matching will not be used.',
+                    defaultValue: 'Add a domain to match inbound email to this client.',
                   })}
                 </Text>
               )}
@@ -625,14 +625,14 @@ export function ClientDetailsTabContent({
         >
           {isSaving
             ? t('common.actions.saving', { defaultValue: 'Saving...' })
-            : t('clientDetails.saveChanges', { defaultValue: 'Save Changes' })}
+            : t('clientDetails.saveChanges', { defaultValue: 'Save' })}
         </Button>
         <Button
           id="add-ticket-btn"
           onClick={onAddTicket}
           variant="default"
         >
-          {t('clientDetails.addTicket', { defaultValue: 'Add Ticket' })}
+          {t('clientDetails.addTicket', { defaultValue: 'Add ticket' })}
         </Button>
       </Flex>
     </div>

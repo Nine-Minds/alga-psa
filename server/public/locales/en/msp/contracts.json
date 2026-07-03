@@ -759,7 +759,7 @@
       "actions": {
         "addSchedule": "Add Schedule",
         "deleteSchedule": "Delete Schedule",
-        "editSchedule": "Edit Schedule"
+        "editSchedule": "Edit schedule"
       },
       "columns": {
         "actions": "Actions",

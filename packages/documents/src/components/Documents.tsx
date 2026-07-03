@@ -1292,7 +1292,7 @@ const Documents = ({
     <div className="flex flex-col h-full">
       <div className="flex justify-between items-center mb-4 pb-4">
         <h2 className="text-lg font-semibold">
-          {isCreatingNew ? tDoc('newDocument', 'New Document') : (isEditModeInDrawer ? tDoc('editDocument', 'Edit Document') : tDoc('viewDocument', 'View Document'))}
+          {isCreatingNew ? tDoc('newDocument', 'Add document') : (isEditModeInDrawer ? tDoc('editDocument', 'Edit Document') : tDoc('viewDocument', 'View Document'))}
         </h2>
         <div className="flex items-center space-x-2">
           {selectedDocument &&
@@ -1514,7 +1514,7 @@ const Documents = ({
                 onClick={handleCreateDocument}
               >
                 <FileText className="w-4 h-4 mr-2" />
-                New Document
+                Add document
               </Button>
               )}
 
@@ -1899,7 +1899,7 @@ const Documents = ({
               variant="default"
             >
               <FileText className="w-4 h-4 mr-2" />
-              {tDoc('newDocument', 'New Document')}
+              {tDoc('newDocument', 'Add document')}
             </Button>
             )}
             <Button
@@ -1914,7 +1914,7 @@ const Documents = ({
               variant="default"
             >
               <Plus className="w-4 h-4 mr-2" />
-              {tDoc('uploadFile', 'Upload File')}
+              {tDoc('uploadFile', 'Upload file')}
             </Button>
             {entityId && entityType && allowLinkExistingDocuments && (
               <Button
@@ -1924,7 +1924,7 @@ const Documents = ({
                 data-testid="link-documents-button"
               >
                 <Link className="w-4 h-4 mr-2" />
-                {tDoc('linkDocuments', 'Link Documents')}
+                {tDoc('linkDocuments', 'Link existing')}
               </Button>
             )}
           </div>

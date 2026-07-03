@@ -603,7 +603,7 @@
     "description": "Zone de téléversement pour les images de profil des contacts"
   },
   "contactNotesPanel": {
-    "title": "Notes et infos rapides",
+    "title": "Notes",
     "description": "Panneau de notes enrichies avec affichage de la note héritée et actions enregistrer/réessayer",
     "legacy": {
       "initialNote": "Note initiale"

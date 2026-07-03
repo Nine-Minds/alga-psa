@@ -398,7 +398,7 @@
     }
   },
   "clientSummary": {
-    "title": "CSAT Summary",
+    "title": "Satisfaction",
     "empty": "No survey data available for this client yet. Surveys sent after ticket closures will populate this view.",
     "labels": {
       "averageRating": "Average Rating",

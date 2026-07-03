@@ -603,7 +603,7 @@
     "description": "Área de carga para imágenes de perfil de contactos"
   },
   "contactNotesPanel": {
-    "title": "Notas e información rápida",
+    "title": "Notas",
     "description": "Panel de notas enriquecidas con visualización de la nota heredada y acciones de guardar/reintentar",
     "legacy": {
       "initialNote": "Nota inicial"

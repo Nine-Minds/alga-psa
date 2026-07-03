@@ -42,7 +42,7 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
     <Card className="bg-white">
       <CardHeader className="pb-2">
         <div className="flex flex-row items-center justify-between">
-          <CardTitle>{t('assetNotesPanel.title', { defaultValue: 'Notes & Quick Info' })}</CardTitle>
+          <CardTitle>{t('assetNotesPanel.title', { defaultValue: 'Notes' })}</CardTitle>
           <Button 
             id="save-asset-note-btn"
             variant="ghost" 

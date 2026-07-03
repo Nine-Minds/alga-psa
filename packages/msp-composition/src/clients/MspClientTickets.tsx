@@ -388,7 +388,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       {/* Sticky Header and Filters */}
       <div className="sticky top-0 z-40 bg-white rounded-t-lg p-6 border-b border-gray-100">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">{t('clientTabs.tickets.title', { defaultValue: 'Client Tickets' })}</h3>
+          <h3 className="text-lg font-semibold text-gray-900">{t('clientTabs.tickets.title', { defaultValue: 'Tickets' })}</h3>
           <Button
             id="add-client-ticket-btn"
             onClick={() => router.push(buildCreateTicketHref({ client: { id: clientId, name: clientName } }))}
@@ -410,6 +410,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               selectedBoardId={selectedBoard}
               filterState={boardFilterState}
               onFilterStateChange={setBoardFilterState}
+              placeholder="Select board"
             />
           )}
 
@@ -419,7 +420,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               options={initialStatuses}
               value={selectedStatus}
               onValueChange={(value) => setSelectedStatus(value)}
-              placeholder={t('clientTabs.tickets.filters.statusPlaceholder', { defaultValue: 'Select Status' })}
+              placeholder={t('clientTabs.tickets.filters.statusPlaceholder', { defaultValue: 'Select status' })}
             />
           )}
 
@@ -429,7 +430,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               options={initialPriorities}
               value={selectedPriority}
               onValueChange={(value) => setSelectedPriority(value)}
-              placeholder={t('clientTabs.tickets.filters.allPriorities', { defaultValue: 'All Priorities' })}
+              placeholder={t('clientTabs.tickets.filters.allPriorities', { defaultValue: 'All priorities' })}
             />
           )}
 
@@ -442,7 +443,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               filterMode={true}
               includeUnassigned={includeUnassigned}
               onUnassignedChange={setIncludeUnassigned}
-              placeholder={t('clientTabs.tickets.filters.allAssignees', { defaultValue: 'All Assignees' })}
+              placeholder={t('clientTabs.tickets.filters.allAssignees', { defaultValue: 'All assignees' })}
               showSearch={true}
               compactDisplay={true}
             />
@@ -457,7 +458,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               selectedCategories={selectedCategories}
               excludedCategories={excludedCategories}
               onSelect={handleCategorySelect}
-              placeholder={t('clientTabs.tickets.filters.categoryPlaceholder', { defaultValue: 'Filter by category' })}
+              placeholder={t('clientTabs.tickets.filters.categoryPlaceholder', { defaultValue: 'All categories' })}
               multiSelect={true}
               showExclude={true}
               showReset={true}

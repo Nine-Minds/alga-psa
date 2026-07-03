@@ -603,7 +603,7 @@
     "description": "Upload-Bereich für Profilbilder von Kontakten"
   },
   "contactNotesPanel": {
-    "title": "Notizen & Kurzinformationen",
+    "title": "Notizen",
     "description": "Bereich für Rich-Text-Notizen mit Anzeige der alten Notiz sowie Speichern-/Erneut-versuchen-Aktionen",
     "legacy": {
       "initialNote": "Erste Notiz"

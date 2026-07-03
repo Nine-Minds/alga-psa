@@ -62,7 +62,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   const { automationIdProps: addButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: `${id}-add-button`,
     type: 'button',
-    label: 'Add Interaction',
+    label: 'Add interaction',
     helperText: 'Opens dialog to create a new interaction'
   });
 
@@ -254,7 +254,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               variant="default"
             >
               <Plus className="mr-2 h-4 w-4" />
-              {t('interactions.feed.addInteraction', { defaultValue: 'Add Interaction' })}
+              {t('interactions.feed.addInteraction', { defaultValue: 'Add interaction' })}
             </Button>
           </div>
           <div className="flex flex-wrap gap-4 mb-4">
@@ -274,7 +274,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               className="flex items-center gap-2"
             >
               <Filter className="h-4 w-4" />
-              {t('interactions.feed.filter', { defaultValue: 'Filter' })}
+              {t('interactions.feed.filter', { defaultValue: 'Filters' })}
             </Button>
           </div>
         </div>

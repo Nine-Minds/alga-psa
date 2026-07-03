@@ -57,7 +57,7 @@ const mockGetClientBillingCycleAnchor = vi.fn(async () => ({
   cadenceContext: {
     cadenceOwner: 'client',
     changeScopeDescription: 'Client-schedule edits affect future client-cadence windows only.',
-    scheduleDescription: 'Client cadence drives these invoice windows. Contract-anniversary lines keep their own cadence.',
+    scheduleDescription: 'Recurring charges invoice on this schedule. Contract-anniversary charges bill on their own dates.',
     previewDescription: 'This preview is for client-cadence windows only. Contract cadence is previewed at the recurring line.',
     previewHeading: 'Upcoming client-owned invoice windows (preview)',
   }
@@ -67,7 +67,7 @@ const mockPreviewBillingPeriodsForSchedule = vi.fn(async () => ({
   cadenceContext: {
     cadenceOwner: 'client',
     changeScopeDescription: 'Client-schedule edits affect future client-cadence windows only.',
-    scheduleDescription: 'Client cadence drives these invoice windows. Contract-anniversary lines keep their own cadence.',
+    scheduleDescription: 'Recurring charges invoice on this schedule. Contract-anniversary charges bill on their own dates.',
     previewDescription: 'This preview is for client-cadence windows only. Contract cadence is previewed at the recurring line.',
     previewHeading: 'Upcoming client-owned invoice windows (preview)',
   },
@@ -103,21 +103,21 @@ describe('ClientBillingSchedule', () => {
     render(<ClientBillingSchedule clientId="client-1" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Edit Schedule')).toBeTruthy();
+      expect(screen.getByText('Edit schedule')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('Create Next Cycle'));
+    fireEvent.click(screen.getByText('Create next cycle'));
     await waitFor(() => {
       expect(mockCreateNextBillingCycle).toHaveBeenCalledWith('client-1');
     });
 
-    fireEvent.click(screen.getByText('Edit Schedule'));
+    fireEvent.click(screen.getByText('Edit schedule'));
     await waitFor(() => {
       expect(screen.getByText('Save Schedule')).toBeTruthy();
     });
 
     expect(screen.getByText(
-      'Client cadence drives these invoice windows. Contract-anniversary lines keep their own cadence.'
+      'Recurring charges invoice on this schedule. Contract-anniversary charges bill on their own dates.'
     )).toBeTruthy();
     expect(screen.getByText(
       'This preview is for client-cadence windows only. Contract cadence is previewed at the recurring line.'

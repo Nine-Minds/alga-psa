@@ -69,7 +69,7 @@ const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = 
  // drop candidate.
  const invoiceColumns: ColumnDefinition<RecentInvoice>[] = [
   {
-    title: t('clientContractLineDashboard.invoiceNumber', { defaultValue: 'Invoice #' }),
+    title: t('clientContractLineDashboard.invoiceNumber', { defaultValue: 'Invoice number' }),
     dataIndex: 'invoice_number',
     render: (value: string) => value || notAvailable,
   },
@@ -79,17 +79,17 @@ const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = 
     render: (value: string) => value || notAvailable,
   },
   {
-    title: t('clientContractLineDashboard.dueDate', { defaultValue: 'Due Date' }),
+    title: t('clientContractLineDashboard.dueDate', { defaultValue: 'Due date' }),
     dataIndex: 'due_date',
     render: (value: string | Date) => value ? formatDateOnly(typeof value === 'string' ? parseISO(value) : value) : notAvailable,
   },
   {
-    title: t('clientContractLineDashboard.invoiceDate', { defaultValue: 'Invoice Date' }),
+    title: t('clientContractLineDashboard.invoiceDate', { defaultValue: 'Invoice date' }),
     dataIndex: 'invoice_date',
     render: (value: string | Date) => value ? formatDateOnly(typeof value === 'string' ? parseISO(value) : value) : notAvailable,
   },
   {
-   title: t('clientContractLineDashboard.totalAmount', { defaultValue: 'Total Amount' }),
+   title: t('clientContractLineDashboard.totalAmount', { defaultValue: 'Amount' }),
    dataIndex: 'total_amount',
    width: '140px',
    render: (value: number, record: RecentInvoice) => (
@@ -100,12 +100,12 @@ const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = 
 
  const hoursColumns: ColumnDefinition<HoursByServiceResult>[] = [
  {
-   title: t('clientContractLineDashboard.serviceName', { defaultValue: 'Service Name' }),
+   title: t('clientContractLineDashboard.serviceName', { defaultValue: 'Service' }),
    dataIndex: 'service_name',
    render: (value: string) => value || notAvailable,
  },
  {
-   title: t('clientContractLineDashboard.totalDurationHours', { defaultValue: 'Total Duration (Hours)' }),
+   title: t('clientContractLineDashboard.totalDurationHours', { defaultValue: 'Hours' }),
    dataIndex: 'total_duration',
    render: (value: number) => {
      const hours = (value / 60).toFixed(2);
@@ -116,12 +116,12 @@ const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = 
 
  const usageColumns: ColumnDefinition<UsageMetricResult>[] = [
 {
-  title: t('clientContractLineDashboard.serviceName', { defaultValue: 'Service Name' }),
+  title: t('clientContractLineDashboard.serviceName', { defaultValue: 'Service' }),
   dataIndex: 'service_name',
   render: (value: string) => value || notAvailable,
 },
 {
-  title: t('clientContractLineDashboard.totalQuantity', { defaultValue: 'Total Quantity' }),
+  title: t('clientContractLineDashboard.totalQuantity', { defaultValue: 'Quantity' }),
   dataIndex: 'total_quantity',
   render: (value: number) => <div className="text-right">{value}</div>,
 },
@@ -280,7 +280,7 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>{t('clientContractLineDashboard.recentInvoices', { defaultValue: 'Recent Invoices' })}</CardTitle>
+          <CardTitle>{t('clientContractLineDashboard.recentInvoices', { defaultValue: 'Recent invoices' })}</CardTitle>
         </CardHeader>
         <CardContent>
           {loadingInvoices ? (
@@ -310,7 +310,7 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
 
       <Card>
         <CardHeader>
-         <CardTitle>{t('clientContractLineDashboard.hoursByService', { defaultValue: 'Hours by Service (Last 30 Days)' })}</CardTitle>
+         <CardTitle>{t('clientContractLineDashboard.hoursByService', { defaultValue: 'Hours by service (last 30 days)' })}</CardTitle>
          {/* TODO: Add Date Range Picker here */}
        </CardHeader>
        <CardContent>
@@ -333,14 +333,14 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
              onItemsPerPageChange={handleHoursPageSizeChange}
            />
          ) : (
-           <Text>{t('clientContractLineDashboard.noHours', { defaultValue: 'No hours recorded in the selected period.' })}</Text>
+           <Text>{t('clientContractLineDashboard.noHours', { defaultValue: 'No hours logged in the last 30 days.' })}</Text>
          )}
         </CardContent>
       </Card>
 
       <Card>
        <CardHeader>
-         <CardTitle>{t('clientContractLineDashboard.bucketUsage', { defaultValue: 'Bucket Usage' })}</CardTitle>
+         <CardTitle>{t('clientContractLineDashboard.bucketUsage', { defaultValue: 'Bucket usage' })}</CardTitle>
        </CardHeader>
        <CardContent>
          {loadingBuckets ? (
@@ -411,7 +411,7 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
 
       <Card>
        <CardHeader>
-         <CardTitle>{t('clientContractLineDashboard.title', { defaultValue: 'Usage Metrics (Last 30 Days)' })}</CardTitle>
+         <CardTitle>{t('clientContractLineDashboard.title', { defaultValue: 'Usage metrics (last 30 days)' })}</CardTitle>
           {/* TODO: Link this title/data to the Date Range Picker */}
        </CardHeader>
        <CardContent>
@@ -434,7 +434,7 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
              onItemsPerPageChange={handleUsagePageSizeChange}
            />
          ) : (
-           <Text>{t('clientContractLineDashboard.noUsage', { defaultValue: 'No usage data found in the selected period.' })}</Text>
+           <Text>{t('clientContractLineDashboard.noUsage', { defaultValue: 'No usage data in the last 30 days.' })}</Text>
          )}
        </CardContent>
       </Card>

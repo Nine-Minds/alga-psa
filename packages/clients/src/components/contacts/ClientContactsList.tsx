@@ -251,7 +251,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         || t('common.states.na', { defaultValue: 'N/A' }),
     },
     {
-      title: t('clientContactsList.table.actions', { defaultValue: 'Actions' }),
+      title: '',
       dataIndex: 'actions',
       width: '5%',
       render: (value, record): React.ReactNode => (
@@ -381,7 +381,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
           onClick={() => setIsQuickAddContactOpen(true)}
         >
           {t('clientContactsList.actions.addNewContact', {
-            defaultValue: 'Add New Contact'
+            defaultValue: 'Add contact'
           })}
         </Button>
       </div>

@@ -1000,7 +1000,7 @@
     }
   },
   "assetNotesPanel": {
-    "title": "Notizen und Kurzinformationen",
+    "title": "Notizen",
     "description": "Rich-Text-Notizbereich für anlagenspezifische Notizen und schnellen betrieblichen Kontext",
     "errors": {
       "loadTitle": "Notizen konnten nicht geladen werden",

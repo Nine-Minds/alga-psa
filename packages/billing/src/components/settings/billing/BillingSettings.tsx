@@ -135,7 +135,7 @@ const BillingSettings: React.FC = () => {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>{t('general.currency.title', { defaultValue: 'Default Currency' })}</CardTitle>
+              <CardTitle>{t('general.currency.title', { defaultValue: 'Default currency' })}</CardTitle>
               <CardDescription>
                 {t('general.currency.description', {
                   defaultValue: 'Set the default currency for new products, services, contracts, and quotes. This can be overridden per client in their billing configuration.'

@@ -97,7 +97,7 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
   },
   {
     value: 'tax-rates',
-    label: 'Tax Rates',
+    label: 'Tax rates',
     labelKey: 'dashboard.tabs.taxRates',
     href: '/msp/billing?tab=tax-rates',
     icon: Percent

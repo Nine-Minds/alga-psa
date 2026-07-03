@@ -49,7 +49,7 @@ export const ClientNotesPanel: React.FC<ClientNotesPanelProps> = ({
     <Card className="bg-white">
       <CardHeader className="pb-2">
         <div className="flex flex-row items-center justify-between">
-          <CardTitle>{t('clientNotesPanel.title', { defaultValue: 'Notes & Quick Info' })}</CardTitle>
+          <CardTitle>{t('clientNotesPanel.title', { defaultValue: 'Notes' })}</CardTitle>
           <Button
             id="save-client-note-btn"
             variant="ghost"

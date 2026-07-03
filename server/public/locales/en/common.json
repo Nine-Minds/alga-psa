@@ -384,6 +384,8 @@
     "first": "First",
     "last": "Last",
     "itemsLabel": "items",
+    "itemsLabel_one": "item",
+    "itemsLabel_other": "items",
     "itemsPerPageOption": "{{count}} items/page",
     "itemsPerPagePlaceholder": "Items per page",
     "reflectionLabel": "Pagination",
@@ -401,15 +403,15 @@
     "remove": "Remove",
     "detach": "Detach",
     "preview": "Preview",
-    "linkDocuments": "Link Documents",
+    "linkDocuments": "Link existing",
     "editDocument": "Edit Document",
     "viewDocument": "View Document",
     "downloadToPlay": "Download to Play",
     "delete": "Delete",
     "deletePermanently": "Delete Permanently",
     "previewUnavailable": "Preview unavailable",
-    "newDocument": "New Document",
-    "uploadFile": "Upload File",
+    "newDocument": "Add document",
+    "uploadFile": "Upload file",
     "deleteTitle": "Permanently Delete Document",
     "deleteMessage": "Are you sure you want to permanently delete \"{{name}}\" from the system?\\n\\nThis will remove the file entirely and it will no longer be available anywhere. This action cannot be undone.",
     "deleteVideoTitle": "Permanently Delete Video",
@@ -1231,11 +1233,11 @@
     }
   },
   "dataTable": {
-    "columnsHidden_one": "{{count}} column hidden due to limited space.",
-    "columnsHidden_other": "{{count}} columns hidden due to limited space.",
+    "columnsHidden_one": "{{count}} column hidden.",
+    "columnsHidden_other": "{{count}} columns hidden.",
     "showAll": "Show all",
     "showingAllColumns": "Showing all columns; scroll horizontally to see them.",
     "showLess": "Show less",
-    "columnsHidden": "{{count}} columns hidden due to limited space."
+    "columnsHidden": "{{count}} columns hidden."
   }
 }

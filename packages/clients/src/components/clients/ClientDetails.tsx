@@ -1508,7 +1508,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             >
               {isSaving
                 ? t('common.actions.saving', { defaultValue: 'Saving...' })
-                : t('clientDetails.saveChanges', { defaultValue: 'Save Changes' })}
+                : t('clientDetails.saveChanges', { defaultValue: 'Save' })}
             </Button>
           </Flex>
         </div>

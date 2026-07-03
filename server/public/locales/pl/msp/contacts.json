@@ -607,7 +607,7 @@
     "description": "Możliwość przesyłania zdjęć profilowych kontaktów"
   },
   "contactNotesPanel": {
-    "title": "Notatki i szybkie informacje",
+    "title": "Notatki",
     "description": "Panel notatek rich text z widokiem starszej notatki oraz akcjami zapisz/spróbuj ponownie",
     "legacy": {
       "initialNote": "Notatka początkowa"

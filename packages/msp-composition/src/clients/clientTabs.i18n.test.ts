@@ -45,7 +45,7 @@ describe('msp-composition client/contact tab i18n wiring', () => {
     const contacts = enLocale('msp/contacts');
     const clientsXx = xxLocale('msp/clients');
 
-    expect(clients.clientTabs.tickets.title).toBe('Client Tickets');
+    expect(clients.clientTabs.tickets.title).toBe('Tickets');
     expect(clients.clientTabs.tickets.filters.searchPlaceholder).toBe('Search tickets...');
     expect(clients.clientTabs.assets.loading).toBe('Loading assets...');
     expect(clients.clientTabs.assets.types.all).toBe('All Asset Types');

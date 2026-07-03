@@ -694,7 +694,9 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               </svg>
               {t('dataTable.columnsHidden', {
                 count: columns.length - visibleColumnIds.length,
-                defaultValue: '{{count}} columns hidden due to limited space.',
+                defaultValue: columns.length - visibleColumnIds.length === 1
+                  ? '{{count}} column hidden.'
+                  : '{{count}} columns hidden.',
               })}{' '}
               <button
                 type="button"

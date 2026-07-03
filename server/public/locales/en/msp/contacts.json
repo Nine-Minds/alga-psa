@@ -582,7 +582,7 @@
     "actions": {
       "openMenu": "Open menu",
       "quickView": "Quick View",
-      "addNewContact": "Add New Contact"
+      "addNewContact": "Add contact"
     },
     "errors": {
       "loadFailed": "Failed to load contacts.",
@@ -603,7 +603,7 @@
     "description": "Avatar upload affordance for contact profile images"
   },
   "contactNotesPanel": {
-    "title": "Notes & Quick Info",
+    "title": "Notes",
     "description": "Rich text notes panel with legacy note display and save/retry actions",
     "legacy": {
       "initialNote": "Initial Note"

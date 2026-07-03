@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import type { TaxSource, IClientTaxSettings } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -249,7 +248,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('taxSettingsForm.taxExemptStatus', { defaultValue: 'Tax Exempt Status' })}</CardTitle>
+          <CardTitle>{t('taxSettingsForm.taxExemptStatus', { defaultValue: 'Tax exempt status' })}</CardTitle>
           <CardDescription>{t('taxSettingsForm.taxExemptDescription', { defaultValue: 'Mark this client as tax exempt and optionally store a certificate number.' })}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -270,7 +269,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
 
           {isTaxExempt && (
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t('taxSettingsForm.certificateLabel', { defaultValue: 'Tax Exemption Certificate' })}</label>
+              <label className="text-sm font-medium">{t('taxSettingsForm.certificateLabel', { defaultValue: 'Exemption certificate' })}</label>
               <Input
                 value={taxExemptionCertificate}
                 onChange={handleCertificateChange}
@@ -284,13 +283,12 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('taxSettingsForm.taxCalculationSettings', { defaultValue: 'Tax Calculation Settings' })}</CardTitle>
-          <CardDescription>{t('taxSettingsForm.taxCalculationDescription', { defaultValue: 'Configure how taxes are calculated for this client.' })}</CardDescription>
+          <CardTitle>{t('taxSettingsForm.taxCalculationSettings', { defaultValue: 'Tax calculation' })}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium">{t('taxSettingsForm.reverseCharge', { defaultValue: 'Reverse Charge Applicable' })}</span>
+              <span className="font-medium">{t('taxSettingsForm.reverseCharge', { defaultValue: 'Apply reverse charge' })}</span>
               <Tooltip content={t('taxSettingsForm.reverseChargeTooltip', { defaultValue: 'Reverse charge shifts tax liability to the buyer (common in B2B cross-border transactions).' })}>
                 <Info className="h-4 w-4 text-gray-500" />
               </Tooltip>
@@ -299,10 +297,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
           </div>
 
           <div className="text-sm text-gray-500">
-            {t('taxSettingsForm.taxSourceHelp', { defaultValue: 'Manage default client tax rates in Client Settings → Tax Rates, and manage global rates in Billing → Tax Settings.' })}
-            <Link href="/billing/settings/tax" className="ml-1 underline">
-              {t('taxSettingsForm.goToBillingTaxSettings', { defaultValue: 'Go to Billing Tax Settings' })}
-            </Link>
+            {t('taxSettingsForm.taxSourceHelp', { defaultValue: "Set this client's rates in Billing → Tax rates. Set global rates in Billing settings → Tax." })}
           </div>
 
           {canOverrideTaxSource && (
@@ -324,7 +319,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
 
           <div className="flex justify-end">
             <Button id="client-tax-save-settings" onClick={handleSubmit} disabled={isSubmitting || !hasChanges}>
-              {isSubmitting ? t('taxSettingsForm.saving', { defaultValue: 'Saving...' }) : t('taxSettingsForm.saveTaxSettings', { defaultValue: 'Save Tax Settings' })}
+              {isSubmitting ? t('taxSettingsForm.saving', { defaultValue: 'Saving...' }) : t('taxSettingsForm.saveTaxSettings', { defaultValue: 'Save' })}
             </Button>
           </div>
         </CardContent>
