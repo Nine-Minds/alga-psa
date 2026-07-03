@@ -7,7 +7,13 @@ export type ClientAttentionFlagKind =
   | 'so_partial'
   | 'ticket_overdue'
   | 'client_waiting'
-  | 'rma_open';
+  | 'rma_open'
+  // Ops-depth batch (W1-W3): computed from per-ticket SLA columns and
+  // unbilled time/materials — never from due_date proxies (D6).
+  | 'sla_breached'
+  | 'sla_at_risk'
+  | 'ticket_unassigned'
+  | 'wip_aging';
 
 export type ClientAttentionSeverity = 'amber' | 'blue' | 'gray';
 
@@ -41,6 +47,17 @@ export interface ClientPulsePermissions {
   documents: boolean;
 }
 
+/**
+ * Per-ticket SLA state derived from the tickets.sla_* columns (same rules as
+ * calculateSlaStatus in ticket-columns): at_risk = ≥80% of the window elapsed.
+ * null when the ticket has no SLA policy or no pending due date.
+ */
+export interface ClientPulseTicketSla {
+  status: 'on_track' | 'at_risk' | 'response_breached' | 'resolution_breached' | 'paused';
+  /** Minutes until the pending due (response first, else resolution); negative when breached. */
+  remainingMinutes: number | null;
+}
+
 export interface ClientPulseServiceTicket {
   ticket_id: string;
   ticket_number: string;
@@ -49,12 +66,17 @@ export interface ClientPulseServiceTicket {
   priority_color: string | null;
   entered_at: string;
   is_overdue: boolean;
+  /** Primary assignee (tickets.assigned_to → users), null when unassigned. */
+  assigned_to_name?: string | null;
+  sla?: ClientPulseTicketSla | null;
 }
 
 export interface ClientPulseService {
   openCount: number;
   oldestOpenDays: number | null;
   overdueCount: number;
+  /** Open tickets with no primary assignee. */
+  unassignedCount?: number;
   topOpen: ClientPulseServiceTicket[];
 }
 
@@ -73,6 +95,20 @@ export interface ClientPulseDraftInvoice {
   created_at: string;
 }
 
+/**
+ * Unbilled work (W2). Time is reported in hours — time_entries carry no rate,
+ * and inventing dollars from rate resolution would violate D6. Materials carry
+ * real rates, so their value is exact cents.
+ */
+export interface ClientPulseWip {
+  unbilledHours: number;
+  unbilledEntryCount: number;
+  unbilledMaterialsCents: number;
+  unbilledMaterialCount: number;
+  /** Days since the oldest unbilled entry or material; null when nothing is unbilled. */
+  oldestUnbilledDays: number | null;
+}
+
 export interface ClientPulseMoney {
   aging: ClientPulseAging;
   outstandingTotalCents: number;
@@ -82,6 +118,7 @@ export interface ClientPulseMoney {
   draftInvoiceCount: number;
   activeContractCount: number;
   currencyCode: string;
+  wip?: ClientPulseWip;
 }
 
 export interface ClientPulseRecentUnit {
@@ -93,12 +130,27 @@ export interface ClientPulseRecentUnit {
   asset_id: string | null;
 }
 
+/**
+ * Warranty posture across delivered stock units (warranty_expires_at) and
+ * managed assets (warranty_end_date). null when NO unit or asset carries a
+ * warranty date at all — many fleets don't track it, and zeros would read as
+ * "everything's fine" (D6: nothing, not zeros-as-insight).
+ */
+export interface ClientPulseWarranty {
+  expiredCount: number;
+  /** Expiring within 90 days. */
+  expiringSoonCount: number;
+  /** Units/assets that carry a warranty date (the denominator). */
+  trackedCount: number;
+}
+
 export interface ClientPulseInstallBase {
   /** null when the caller lacks asset:read (inventory:read alone got them here). */
   managedAssetCount: number | null;
   soldUnitCount: number;
   openRmaCount: number;
   recentUnits: ClientPulseRecentUnit[];
+  warranty?: ClientPulseWarranty | null;
 }
 
 export interface ClientPulseContact {

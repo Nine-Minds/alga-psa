@@ -30,7 +30,8 @@ export default function AttentionStrip({ idPrefix, flags, formatMoney, onFlagCli
     switch (flag.kind) {
       case 'draft_invoices':
         return t('clientCommandCenter.flags.draftInvoices', {
-          defaultValue: '⚠ {{count}} draft invoice(s) — {{amount}} unbilled · {{ref}}',
+          defaultValue_one: '⚠ 1 draft invoice — {{amount}} unbilled · {{ref}}',
+          defaultValue_other: '⚠ {{count}} draft invoices — {{amount}} unbilled · {{ref}}',
           count: flag.count,
           amount: flag.amountCents != null ? formatMoney(flag.amountCents) : '',
           ref: flag.refLabel ?? '',
@@ -44,7 +45,8 @@ export default function AttentionStrip({ idPrefix, flags, formatMoney, onFlagCli
         });
       case 'ticket_overdue':
         return t('clientCommandCenter.flags.ticketOverdue', {
-          defaultValue: '⏰ {{count}} overdue ticket(s) — {{ref}} {{days}}d past due',
+          defaultValue_one: '⏰ 1 overdue ticket — {{ref}} {{days}}d past due',
+          defaultValue_other: '⏰ {{count}} overdue tickets — {{ref}} {{days}}d past due',
           count: flag.count,
           ref: flag.refLabel ?? '',
           days: flag.daysAgo ?? 0,
@@ -57,10 +59,43 @@ export default function AttentionStrip({ idPrefix, flags, formatMoney, onFlagCli
         });
       case 'rma_open':
         return t('clientCommandCenter.flags.rmaOpen', {
-          defaultValue: '↩ {{count}} open RMA(s) — oldest {{days}}d',
+          defaultValue_one: '↩ 1 open RMA — {{days}}d',
+          defaultValue_other: '↩ {{count}} open RMAs — oldest {{days}}d',
           count: flag.count,
           days: flag.daysAgo ?? 0,
         });
+      // Ops-depth flags (W1-W3). SLA facts come from tickets.sla_* columns.
+      case 'sla_breached':
+        return t('clientCommandCenter.flags.slaBreached', {
+          defaultValue_one: '⛔ SLA breached — {{ref}}',
+          defaultValue_other: '⛔ {{count}} SLA breaches — worst {{ref}}',
+          count: flag.count,
+          ref: flag.refLabel ?? '',
+        });
+      case 'sla_at_risk':
+        return t('clientCommandCenter.flags.slaAtRisk', {
+          defaultValue_one: '⏳ SLA at risk — {{ref}}',
+          defaultValue_other: '⏳ {{count}} tickets at SLA risk — next {{ref}}',
+          count: flag.count,
+          ref: flag.refLabel ?? '',
+        });
+      case 'ticket_unassigned':
+        return t('clientCommandCenter.flags.ticketUnassigned', {
+          defaultValue_one: '👤 1 unassigned ticket — {{ref}}',
+          defaultValue_other: '👤 {{count}} unassigned tickets — oldest {{ref}}',
+          count: flag.count,
+          ref: flag.refLabel ?? '',
+        });
+      case 'wip_aging': {
+        const materials = flag.amountCents ? ` · ${formatMoney(flag.amountCents)} materials` : '';
+        return t('clientCommandCenter.flags.wipAging', {
+          defaultValue_one: '⌛ 1 unbilled item — {{days}}d old{{materials}}',
+          defaultValue_other: '⌛ {{count}} unbilled items — oldest {{days}}d{{materials}}',
+          count: flag.count,
+          days: flag.daysAgo ?? 0,
+          materials,
+        });
+      }
       default:
         return '';
     }

@@ -273,6 +273,12 @@ async function listInvoiceCreatedEvents(
     trx('invoices as i')
       .where({ 'i.tenant': tenant, 'i.client_id': clientId })
       .whereNotNull('i.created_at')
+      // W5/D-t1: a "drafted" event for an invoice that is STILL a draft
+      // duplicates the money card and the attention flag — suppress it until
+      // the invoice leaves draft (then its creation is history worth keeping).
+      .andWhere(function notStillDraft() {
+        this.whereNotNull('i.finalized_at').orWhere('i.status', '!=', 'draft');
+      })
       .select(
         'i.invoice_id',
         'i.invoice_number',

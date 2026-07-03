@@ -2,56 +2,62 @@
   {
     "id": "T001",
     "description": "DB-backed: WIP math \u2014 billable uninvoiced time + unbilled material for client sums correctly; invoiced/non-billable excluded; wip_aging flag only when entries >14d",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F005"
-    ]
+    ],
+    "note": "clientPulse T007 (lane A): time hours + material cents + wip_aging flag"
   },
   {
     "id": "T002",
     "description": "DB-backed: unassigned flag \u2014 open unassigned ticket produces flag; assigned/closed do not; assignee name present on topOpen rows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F008"
-    ]
+    ],
+    "note": "clientPulse T006 (lane A): unassigned flag + assigned name on rows"
   },
   {
     "id": "T003",
     "description": "DB-backed: warranty counts \u2014 units with expired / \u226490d / no warranty dates bucket correctly; summary null when client has no warranty data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
-    ]
+    ],
+    "note": "clientPulse T008 (lane A): units+assets buckets; null when untracked"
   },
   {
     "id": "T004",
     "description": "DB-backed or unit per W1 outcome: SLA flag emitted only from real computable targets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002"
-    ]
+    ],
+    "note": "clientPulse T006 (lane A): breached + at-risk from real sla_* columns; W1 gate passed"
   },
   {
     "id": "T005",
     "description": "DB-backed: timeline draft-invoice suppression \u2014 draft invoice emits no invoice_created event; finalized invoice emits created+finalized as before",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
-    ]
+    ],
+    "note": "clientTimeline T008: draft emits nothing; finalized keeps created+finalized"
   },
   {
     "id": "T006",
     "description": "Browser smoke: Emerald City shows WIP line, assignees, warranty line (after seeding), CSAT collapsed; no duplicated draft noise in timeline",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007",
       "F010",
       "F011",
       "F013"
-    ]
+    ],
+    "note": "live smoke Emerald City: 6 flags, SLA chips, assignees, WIP row, warranty line"
   }
 ]

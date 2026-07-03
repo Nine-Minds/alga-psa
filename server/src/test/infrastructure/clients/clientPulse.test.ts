@@ -131,6 +131,14 @@ async function seedTicket(
     dueOffsetDays?: number | null;
     priorityId?: string | null;
     isClosed?: boolean;
+    assignedTo?: string | null;
+    slaPolicyId?: string | null;
+    slaStartedOffsetDays?: number | null;
+    slaPausedOffsetDays?: number | null;
+    slaResponseOffsetDays?: number | null;
+    slaResponseDueOffsetDays?: number | null;
+    slaResolutionOffsetDays?: number | null;
+    slaResolutionDueOffsetDays?: number | null;
   },
 ) {
   const ticketId = randomUUID();
@@ -142,13 +150,35 @@ async function seedTicket(
     title: input.title,
     client_id: context.clientId,
     priority_id: input.priorityId ?? null,
+    assigned_to: input.assignedTo ?? null,
     entered_at: isoOffset(input.enteredOffsetDays),
     due_date: input.dueOffsetDays == null ? null : isoOffset(input.dueOffsetDays),
     is_closed: isClosed,
     closed_at: isClosed ? isoOffset(-1) : null,
+    sla_policy_id: input.slaPolicyId ?? null,
+    sla_started_at: input.slaStartedOffsetDays == null ? null : isoOffset(input.slaStartedOffsetDays),
+    sla_paused_at: input.slaPausedOffsetDays == null ? null : isoOffset(input.slaPausedOffsetDays),
+    sla_response_at: input.slaResponseOffsetDays == null ? null : isoOffset(input.slaResponseOffsetDays),
+    sla_response_due_at: input.slaResponseDueOffsetDays == null ? null : isoOffset(input.slaResponseDueOffsetDays),
+    sla_resolution_at: input.slaResolutionOffsetDays == null ? null : isoOffset(input.slaResolutionOffsetDays),
+    sla_resolution_due_at: input.slaResolutionDueOffsetDays == null ? null : isoOffset(input.slaResolutionDueOffsetDays),
     updated_at: NOW.toISOString(),
   });
   return ticketId;
+}
+
+async function seedSlaPolicy(context: TestContext, name: string) {
+  const slaPolicyId = randomUUID();
+  await context.db('sla_policies').insert({
+    tenant: context.tenantId,
+    sla_policy_id: slaPolicyId,
+    policy_name: name,
+    description: 'Client pulse SLA fixture',
+    is_default: false,
+    created_at: NOW.toISOString(),
+    updated_at: NOW.toISOString(),
+  });
+  return slaPolicyId;
 }
 
 async function seedTicketComment(
@@ -284,7 +314,12 @@ async function seedPayment(context: TestContext, invoiceId: string, amount: numb
   });
 }
 
-async function seedDeliveredUnit(context: TestContext, serviceId: string, serialNumber: string) {
+async function seedDeliveredUnit(
+  context: TestContext,
+  serviceId: string,
+  serialNumber: string,
+  warrantyOffsetDays?: number | null,
+) {
   const unitId = randomUUID();
   await context.db('stock_units').insert({
     tenant: context.tenantId,
@@ -294,6 +329,7 @@ async function seedDeliveredUnit(context: TestContext, serviceId: string, serial
     status: 'delivered',
     client_id: context.clientId,
     delivered_at: isoOffset(-2),
+    warranty_expires_at: warrantyOffsetDays == null ? null : isoOffset(warrantyOffsetDays),
     unit_cost: 2500,
     cost_currency: 'USD',
     created_at: isoOffset(-3),
@@ -694,5 +730,295 @@ describe('client pulse infrastructure', () => {
 
     const blankDoc = await getClientPulse(context.clientId);
     expect(blankDoc.notes).toEqual({ hasNotes: false, previewLines: [], lastEditedAt: null });
+  });
+
+  it('T006: reports SLA posture and ticket ownership facts', async () => {
+    const id = suffix();
+    const slaPolicyId = await seedSlaPolicy(context, `Pulse SLA ${id}`);
+    const priorityId = await seedPriority(context, `Pulse SLA Priority ${id}`, 3);
+
+    const breachedTicketNumber = `T006-BREACH-${id}`;
+    const breachedTicketId = await seedTicket(context, {
+      ticketNumber: breachedTicketNumber,
+      title: 'Resolution SLA breached',
+      enteredOffsetDays: -8,
+      dueOffsetDays: null,
+      priorityId,
+      assignedTo: context.userId,
+      slaPolicyId,
+      slaStartedOffsetDays: -10,
+      slaResolutionDueOffsetDays: -2,
+    });
+
+    const atRiskTicketNumber = `T006-RISK-${id}`;
+    const atRiskTicketId = await seedTicket(context, {
+      ticketNumber: atRiskTicketNumber,
+      title: 'Resolution SLA at risk',
+      enteredOffsetDays: -7,
+      dueOffsetDays: null,
+      priorityId,
+      assignedTo: context.userId,
+      slaPolicyId,
+      slaStartedOffsetDays: -9,
+      slaResolutionDueOffsetDays: 1,
+    });
+
+    const assignedTicketId = await seedTicket(context, {
+      ticketNumber: `T006-ASSIGNED-${id}`,
+      title: 'Assigned without SLA',
+      enteredOffsetDays: -6,
+      dueOffsetDays: null,
+      priorityId,
+      assignedTo: context.userId,
+    });
+
+    const unassignedTicketNumber = `T006-UNASSIGNED-${id}`;
+    const unassignedTicketId = await seedTicket(context, {
+      ticketNumber: unassignedTicketNumber,
+      title: 'Unassigned without SLA',
+      enteredOffsetDays: -5,
+      dueOffsetDays: null,
+      priorityId,
+      assignedTo: null,
+    });
+
+    const pulse = await getClientPulse(context.clientId);
+
+    expect(pulse.service?.unassignedCount).toBe(1);
+
+    const breachedFlag = pulse.attention.find((flag) => flag.kind === 'sla_breached');
+    expect(breachedFlag).toMatchObject({
+      severity: 'amber',
+      count: 1,
+      refType: 'ticket',
+      refId: breachedTicketId,
+      refLabel: `#${breachedTicketNumber}`,
+      daysAgo: 2,
+    });
+
+    const atRiskFlag = pulse.attention.find((flag) => flag.kind === 'sla_at_risk');
+    expect(atRiskFlag).toMatchObject({
+      severity: 'blue',
+      count: 1,
+      refType: 'ticket',
+      refId: atRiskTicketId,
+      refLabel: `#${atRiskTicketNumber}`,
+    });
+
+    const unassignedFlag = pulse.attention.find((flag) => flag.kind === 'ticket_unassigned');
+    expect(unassignedFlag).toMatchObject({
+      severity: 'blue',
+      count: 1,
+      refType: 'ticket',
+      refId: unassignedTicketId,
+      refLabel: `#${unassignedTicketNumber}`,
+      daysAgo: 5,
+    });
+
+    const breachedTop = pulse.service?.topOpen.find((ticket) => ticket.ticket_id === breachedTicketId);
+    expect(breachedTop).toMatchObject({
+      assigned_to_name: 'Test internal User',
+      sla: {
+        status: 'resolution_breached',
+        remainingMinutes: -2880,
+      },
+    });
+
+    const atRiskTop = pulse.service?.topOpen.find((ticket) => ticket.ticket_id === atRiskTicketId);
+    expect(atRiskTop).toMatchObject({
+      assigned_to_name: 'Test internal User',
+      sla: {
+        status: 'at_risk',
+        remainingMinutes: 1440,
+      },
+    });
+
+    const assignedTop = pulse.service?.topOpen.find((ticket) => ticket.ticket_id === assignedTicketId);
+    expect(assignedTop).toMatchObject({
+      assigned_to_name: 'Test internal User',
+      sla: null,
+    });
+  });
+
+  it('T007: reports unbilled WIP time and materials without inventing time dollars', async () => {
+    const id = suffix();
+    const ticketId = await seedTicket(context, {
+      ticketNumber: `T007-WIP-${id}`,
+      title: 'WIP ticket',
+      enteredOffsetDays: -21,
+      dueOffsetDays: null,
+      assignedTo: context.userId,
+    });
+    const serviceId = await createTestService(context, {
+      service_name: `Pulse WIP Material ${id}`,
+      default_rate: 5000,
+      unit_of_measure: 'each',
+    });
+
+    const workStart = isoOffset(-20);
+    await context.db('time_entries').insert([
+      {
+        tenant: context.tenantId,
+        entry_id: randomUUID(),
+        user_id: context.userId,
+        start_time: workStart,
+        end_time: new Date(new Date(workStart).getTime() + 90 * 60_000).toISOString(),
+        notes: 'Unbilled pulse WIP',
+        work_item_id: ticketId,
+        billable_duration: 90,
+        work_item_type: 'ticket',
+        approval_status: 'APPROVED',
+        invoiced: false,
+        work_date: dateOffset(-20),
+        work_timezone: 'UTC',
+        created_at: workStart,
+        updated_at: NOW.toISOString(),
+      },
+      {
+        tenant: context.tenantId,
+        entry_id: randomUUID(),
+        user_id: context.userId,
+        start_time: isoOffset(-25),
+        end_time: new Date(new Date(isoOffset(-25)).getTime() + 60 * 60_000).toISOString(),
+        notes: 'Already invoiced pulse WIP',
+        work_item_id: ticketId,
+        billable_duration: 60,
+        work_item_type: 'ticket',
+        approval_status: 'APPROVED',
+        invoiced: true,
+        work_date: dateOffset(-25),
+        work_timezone: 'UTC',
+        created_at: isoOffset(-25),
+        updated_at: NOW.toISOString(),
+      },
+    ]);
+
+    await context.db('ticket_materials').insert([
+      {
+        tenant: context.tenantId,
+        ticket_material_id: randomUUID(),
+        ticket_id: ticketId,
+        client_id: context.clientId,
+        service_id: serviceId,
+        quantity: 2,
+        rate: 5000,
+        currency_code: 'USD',
+        description: 'Unbilled WIP material',
+        is_billed: false,
+        created_at: isoOffset(-10),
+        updated_at: NOW.toISOString(),
+      },
+      {
+        tenant: context.tenantId,
+        ticket_material_id: randomUUID(),
+        ticket_id: ticketId,
+        client_id: context.clientId,
+        service_id: serviceId,
+        quantity: 3,
+        rate: 5000,
+        currency_code: 'USD',
+        description: 'Billed WIP material',
+        is_billed: true,
+        created_at: isoOffset(-30),
+        updated_at: NOW.toISOString(),
+      },
+    ]);
+
+    const pulse = await getClientPulse(context.clientId);
+
+    expect(pulse.money?.wip).toEqual({
+      unbilledHours: 1.5,
+      unbilledEntryCount: 1,
+      unbilledMaterialsCents: 10000,
+      unbilledMaterialCount: 1,
+      oldestUnbilledDays: 20,
+    });
+
+    const wipFlag = pulse.attention.find((flag) => flag.kind === 'wip_aging');
+    expect(wipFlag).toMatchObject({
+      severity: 'amber',
+      count: 2,
+      amountCents: 10000,
+      daysAgo: 20,
+    });
+  });
+
+  it('T008: reports warranty posture and returns null when warranties are untracked', async () => {
+    const id = suffix();
+    const serviceId = await createTestService(context, {
+      service_name: `Pulse Warranty Device ${id}`,
+      default_rate: 25000,
+      unit_of_measure: 'each',
+    });
+
+    await seedDeliveredUnit(context, serviceId, `SN-T008-EXP-${id}`, -30);
+    await seedDeliveredUnit(context, serviceId, `SN-T008-SOON-${id}`, 30);
+    await seedDeliveredUnit(context, serviceId, `SN-T008-NONE-${id}`, null);
+
+    await context.db('assets').insert({
+      tenant: context.tenantId,
+      asset_id: randomUUID(),
+      client_id: context.clientId,
+      asset_type: 'workstation',
+      asset_tag: `AST-T008-${id}`,
+      name: 'Warranty tracked workstation',
+      status: 'active',
+      warranty_end_date: isoOffset(200),
+      created_at: NOW.toISOString(),
+      updated_at: NOW.toISOString(),
+    });
+
+    const pulse = await getClientPulse(context.clientId);
+    expect(pulse.installBase?.warranty).toEqual({
+      expiredCount: 1,
+      expiringSoonCount: 1,
+      trackedCount: 3,
+    });
+
+    const clientWithoutWarrantyId = randomUUID();
+    await context.db('clients').insert({
+      tenant: context.tenantId,
+      client_id: clientWithoutWarrantyId,
+      client_name: `No Warranty ${id}`,
+      billing_cycle: 'monthly',
+      is_tax_exempt: false,
+      url: '',
+      created_at: NOW.toISOString(),
+      updated_at: NOW.toISOString(),
+      is_inactive: false,
+      credit_balance: 0,
+      properties: {},
+    });
+
+    await context.db('stock_units').insert({
+      tenant: context.tenantId,
+      unit_id: randomUUID(),
+      service_id: serviceId,
+      serial_number: `SN-T008-OTHER-${id}`,
+      status: 'delivered',
+      client_id: clientWithoutWarrantyId,
+      delivered_at: isoOffset(-1),
+      warranty_expires_at: null,
+      unit_cost: 2500,
+      cost_currency: 'USD',
+      created_at: isoOffset(-2),
+      updated_at: NOW.toISOString(),
+    });
+
+    await context.db('assets').insert({
+      tenant: context.tenantId,
+      asset_id: randomUUID(),
+      client_id: clientWithoutWarrantyId,
+      asset_type: 'workstation',
+      asset_tag: `AST-T008-NONE-${id}`,
+      name: 'Warranty untracked workstation',
+      status: 'active',
+      warranty_end_date: null,
+      created_at: NOW.toISOString(),
+      updated_at: NOW.toISOString(),
+    });
+
+    const noWarrantyPulse = await getClientPulse(clientWithoutWarrantyId);
+    expect(noWarrantyPulse.installBase?.warranty).toBeNull();
   });
 });

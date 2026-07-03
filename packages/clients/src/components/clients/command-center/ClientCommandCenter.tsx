@@ -343,10 +343,21 @@ export default function ClientCommandCenter({
               t={t}
             />
           )}
+          {/* W5: the full survey card earns its grid slot only with real
+              responses — an empty one said "no data" four ways. */}
           {pulse && surveySummary && (
-            <div id={`${idPrefix}-card-csat`} className="min-w-0">
-              {renderSurveySummaryCard({ summary: surveySummary })}
-            </div>
+            surveySummary.totalResponses > 0 ? (
+              <div id={`${idPrefix}-card-csat`} className="min-w-0">
+                {renderSurveySummaryCard({ summary: surveySummary })}
+              </div>
+            ) : (
+              <div
+                id={`${idPrefix}-card-csat`}
+                className="bg-white border border-gray-200 rounded-xl px-4 py-3 min-w-0 text-[13px] text-gray-400 italic self-start"
+              >
+                {t('clientCommandCenter.csatEmpty', { defaultValue: 'No survey responses yet.' })}
+              </div>
+            )
           )}
         </div>
 

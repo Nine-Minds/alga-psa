@@ -560,4 +560,29 @@ describe('Client timeline infrastructure', () => {
     expect(noInventoryTypes).not.toContain('rma_opened');
     expect(noInventoryTypes).not.toContain('rma_closed');
   });
+
+  it('T008: suppresses invoice_created for invoices still in draft (W5/D-t1)', async () => {
+    // Still-draft invoice: covered by the strip + money card, so it must emit
+    // no timeline event. A finalized invoice keeps both its created and
+    // finalized events (its creation is history once it leaves draft).
+    const draftId = await seedInvoice({
+      invoiceNumber: 'INV-T008-DRAFT',
+      createdAt: at(10),
+      status: 'draft',
+      finalizedAt: null,
+    });
+    const finalizedId = await seedInvoice({
+      invoiceNumber: 'INV-T008-FINAL',
+      createdAt: at(20),
+      status: 'sent',
+      finalizedAt: at(40),
+    });
+
+    const page = await listClientTimeline(context.clientId, { limit: 50 });
+    const invoiceEvents = page.events.filter((event) => event.refType === 'invoice');
+
+    expect(invoiceEvents.some((event) => event.refId === draftId)).toBe(false);
+    const finalizedEvents = invoiceEvents.filter((event) => event.refId === finalizedId);
+    expect(finalizedEvents.map((event) => event.type).sort()).toEqual(['invoice_created', 'invoice_finalized']);
+  });
 });

@@ -15,6 +15,9 @@ import type {
   ClientPulsePeople,
   ClientPulseRecord,
   ClientPulseService,
+  ClientPulseTicketSla,
+  ClientPulseWarranty,
+  ClientPulseWip,
 } from '../lib/commandCenterTypes';
 
 type ClientPulseLocations = ClientPulse['locations'];
@@ -55,9 +58,91 @@ function toNumber(value: unknown): number {
   return Number(value ?? 0);
 }
 
+function timestampMs(value: unknown): number | null {
+  const iso = toIsoString(value);
+  if (!iso) return null;
+  const ms = new Date(iso).getTime();
+  return Number.isNaN(ms) ? null : ms;
+}
+
 function formatUserName(row: { first_name?: string | null; last_name?: string | null; username?: string | null; email?: string | null }): string | null {
   const fullName = [row.first_name, row.last_name].filter(Boolean).join(' ').trim();
   return fullName || row.username || row.email || null;
+}
+
+function calculateTicketSla(
+  ticket: {
+    sla_policy_id?: string | null;
+    sla_started_at?: unknown;
+    sla_paused_at?: unknown;
+    sla_response_at?: unknown;
+    sla_response_due_at?: unknown;
+    sla_resolution_at?: unknown;
+    sla_resolution_due_at?: unknown;
+    entered_at?: unknown;
+  },
+  nowMs: number,
+): ClientPulseTicketSla | null {
+  if (!ticket.sla_policy_id) return null;
+
+  const isPaused = ticket.sla_paused_at !== null && ticket.sla_paused_at !== undefined;
+  const pendingResponse = !ticket.sla_response_at && ticket.sla_response_due_at;
+  const pendingResolution = !ticket.sla_resolution_at && ticket.sla_resolution_due_at;
+  const dueAt = pendingResponse ? ticket.sla_response_due_at : pendingResolution ? ticket.sla_resolution_due_at : null;
+  if (!dueAt) return null;
+
+  const dueMs = timestampMs(dueAt);
+  if (dueMs == null) return null;
+
+  const remainingMs = dueMs - nowMs;
+  const remainingMinutes = Math.round(remainingMs / 60000);
+
+  if (isPaused) {
+    return { status: 'paused', remainingMinutes };
+  }
+
+  if (remainingMinutes < 0) {
+    return {
+      status: pendingResponse ? 'response_breached' : 'resolution_breached',
+      remainingMinutes,
+    };
+  }
+
+  const startMs = timestampMs(ticket.sla_started_at) ?? timestampMs(ticket.entered_at);
+  const totalMs = startMs == null ? 0 : dueMs - startMs;
+  const elapsedPercent = totalMs > 0 ? ((totalMs - remainingMs) / totalMs) * 100 : 0;
+  if (elapsedPercent >= 80) {
+    return { status: 'at_risk', remainingMinutes };
+  }
+
+  return { status: 'on_track', remainingMinutes };
+}
+
+function minTimestampValue(values: unknown[]): unknown | null {
+  let oldest: unknown | null = null;
+  let oldestMs: number | null = null;
+  for (const value of values) {
+    const ms = timestampMs(value);
+    if (ms == null) continue;
+    if (oldestMs == null || ms < oldestMs) {
+      oldest = value;
+      oldestMs = ms;
+    }
+  }
+  return oldest;
+}
+
+function combineWarrantyRows(rows: Array<{ tracked_count?: unknown; expired_count?: unknown; expiring_soon_count?: unknown } | null>): ClientPulseWarranty | null {
+  const warranty = rows.reduce<ClientPulseWarranty>(
+    (acc, row) => ({
+      trackedCount: acc.trackedCount + toNumber(row?.tracked_count),
+      expiredCount: acc.expiredCount + toNumber(row?.expired_count),
+      expiringSoonCount: acc.expiringSoonCount + toNumber(row?.expiring_soon_count),
+    }),
+    { trackedCount: 0, expiredCount: 0, expiringSoonCount: 0 },
+  );
+
+  return warranty.trackedCount > 0 ? warranty : null;
 }
 
 function parseClientProperties(value: unknown): Record<string, unknown> {
@@ -294,6 +379,9 @@ async function fetchService(
     .leftJoin('priorities as p', function joinPriorities() {
       this.on('t.priority_id', '=', 'p.priority_id').andOn('t.tenant', '=', 'p.tenant');
     })
+    .leftJoin('users as assigned_user', function joinAssignedUser() {
+      this.on('t.assigned_to', '=', 'assigned_user.user_id').andOn('t.tenant', '=', 'assigned_user.tenant');
+    })
     .where({ 't.tenant': tenant, 't.client_id': clientId, 't.is_closed': false })
     .select(
       't.ticket_id',
@@ -301,9 +389,21 @@ async function fetchService(
       't.title',
       't.entered_at',
       't.due_date',
+      't.assigned_to',
+      't.sla_policy_id',
+      't.sla_started_at',
+      't.sla_paused_at',
+      't.sla_response_at',
+      't.sla_response_due_at',
+      't.sla_resolution_at',
+      't.sla_resolution_due_at',
       'p.priority_name',
       'p.color as priority_color',
       'p.order_number as priority_order',
+      'assigned_user.first_name as assigned_first_name',
+      'assigned_user.last_name as assigned_last_name',
+      'assigned_user.username as assigned_username',
+      'assigned_user.email as assigned_email',
     );
 
   const overdueRows = openRows.filter((row: any) => row.due_date && new Date(row.due_date).getTime() < nowMs);
@@ -312,6 +412,9 @@ async function fetchService(
     if (!oldest) return row.entered_at;
     return new Date(row.entered_at).getTime() < new Date(oldest as any).getTime() ? row.entered_at : oldest;
   }, null);
+  const openRowsWithSla = openRows.map((row: any) => ({ row, sla: calculateTicketSla(row, nowMs) }));
+  const slaByTicketId = new Map(openRowsWithSla.map(({ row, sla }) => [row.ticket_id, sla]));
+  const unassignedRows = openRows.filter((row: any) => row.assigned_to == null);
 
   const topOpen = [...openRows]
     .sort((left: any, right: any) => {
@@ -329,6 +432,13 @@ async function fetchService(
       priority_color: row.priority_color ?? null,
       entered_at: toIsoString(row.entered_at) ?? new Date(0).toISOString(),
       is_overdue: Boolean(row.due_date && new Date(row.due_date).getTime() < nowMs),
+      assigned_to_name: formatUserName({
+        first_name: row.assigned_first_name,
+        last_name: row.assigned_last_name,
+        username: row.assigned_username,
+        email: row.assigned_email,
+      }),
+      sla: slaByTicketId.get(row.ticket_id) ?? null,
     }));
 
   const flags: ClientAttentionFlag[] = [];
@@ -344,6 +454,57 @@ async function fetchService(
       refId: mostOverdue.ticket_id,
       refLabel: `#${mostOverdue.ticket_number}`,
       daysAgo: daysSince(mostOverdue.due_date, nowMs),
+    });
+  }
+
+  const breachedSlaRows = openRowsWithSla.filter(({ sla }) =>
+    sla?.status === 'response_breached' || sla?.status === 'resolution_breached'
+  );
+  if (breachedSlaRows.length > 0) {
+    const longestBreached = [...breachedSlaRows].sort((left, right) =>
+      toNumber(left.sla?.remainingMinutes) - toNumber(right.sla?.remainingMinutes)
+    )[0];
+    const breachedDueAt = longestBreached.sla?.status === 'response_breached'
+      ? longestBreached.row.sla_response_due_at
+      : longestBreached.row.sla_resolution_due_at;
+    flags.push({
+      kind: 'sla_breached',
+      severity: 'amber',
+      count: breachedSlaRows.length,
+      refType: 'ticket',
+      refId: longestBreached.row.ticket_id,
+      refLabel: `#${longestBreached.row.ticket_number}`,
+      daysAgo: Math.max(0, daysSince(breachedDueAt, nowMs) ?? 0),
+    });
+  }
+
+  const atRiskSlaRows = openRowsWithSla.filter(({ sla }) => sla?.status === 'at_risk');
+  if (atRiskSlaRows.length > 0) {
+    const closestDue = [...atRiskSlaRows].sort((left, right) =>
+      toNumber(left.sla?.remainingMinutes) - toNumber(right.sla?.remainingMinutes)
+    )[0];
+    flags.push({
+      kind: 'sla_at_risk',
+      severity: 'blue',
+      count: atRiskSlaRows.length,
+      refType: 'ticket',
+      refId: closestDue.row.ticket_id,
+      refLabel: `#${closestDue.row.ticket_number}`,
+    });
+  }
+
+  if (unassignedRows.length > 0) {
+    const oldestUnassigned = [...unassignedRows].sort((left: any, right: any) =>
+      new Date(left.entered_at ?? 0).getTime() - new Date(right.entered_at ?? 0).getTime()
+    )[0];
+    flags.push({
+      kind: 'ticket_unassigned',
+      severity: 'blue',
+      count: unassignedRows.length,
+      refType: 'ticket',
+      refId: oldestUnassigned.ticket_id,
+      refLabel: `#${oldestUnassigned.ticket_number}`,
+      daysAgo: daysSince(oldestUnassigned.entered_at, nowMs),
     });
   }
 
@@ -386,6 +547,7 @@ async function fetchService(
       openCount: openRows.length,
       oldestOpenDays: daysSince(oldestOpen, nowMs),
       overdueCount: overdueRows.length,
+      unassignedCount: unassignedRows.length,
       topOpen,
     },
     flags,
@@ -405,7 +567,7 @@ async function fetchMoney(
     .sum({ paid_amount: 'amount' })
     .as('ip');
 
-  const [invoiceRows, draftRows, draftAggRow, contractCountRow, currencyRow] = await Promise.all([
+  const [invoiceRows, draftRows, draftAggRow, contractCountRow, currencyRow, timeWipRow, ticketMaterialWipRow, projectMaterialWipRow] = await Promise.all([
     trx('invoices as i')
       .leftJoin(completedPayments, 'ip.invoice_id', 'i.invoice_id')
       .where({ 'i.tenant': tenant, 'i.client_id': clientId })
@@ -448,6 +610,50 @@ async function fetchMoney(
       .select('currency_code')
       .orderBy('created_at', 'desc')
       .first(),
+    trx('time_entries as te')
+      .leftJoin('tickets as wt', function joinWipTickets() {
+        this.on('te.work_item_id', '=', 'wt.ticket_id').andOn('te.tenant', '=', 'wt.tenant');
+      })
+      .leftJoin('project_tasks as pt', function joinWipProjectTasks() {
+        this.on('te.work_item_id', '=', 'pt.task_id').andOn('te.tenant', '=', 'pt.tenant');
+      })
+      .leftJoin('project_phases as pp', function joinWipProjectPhases() {
+        this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
+      })
+      .leftJoin('projects as pr', function joinWipProjects() {
+        this.on('pp.project_id', '=', 'pr.project_id').andOn('pp.tenant', '=', 'pr.tenant');
+      })
+      .where({ 'te.tenant': tenant, 'te.invoiced': false })
+      .where('te.billable_duration', '>', 0)
+      .andWhere(function matchWipClient() {
+        this.where(function matchTicketTime() {
+          this.where('te.work_item_type', 'ticket').where('wt.client_id', clientId);
+        }).orWhere(function matchProjectTaskTime() {
+          this.where('te.work_item_type', 'project_task').where('pr.client_id', clientId);
+        });
+      })
+      .select(
+        trx.raw('COALESCE(SUM(te.billable_duration), 0) as total_minutes'),
+        trx.raw('COUNT(te.entry_id)::int as entry_count'),
+        trx.raw('MIN(te.work_date) as oldest_work_date'),
+      )
+      .first(),
+    trx('ticket_materials')
+      .where({ tenant, client_id: clientId, is_billed: false })
+      .select(
+        trx.raw('COALESCE(SUM(ROUND(quantity::numeric * rate::numeric)), 0) as total_cents'),
+        trx.raw('COUNT(ticket_material_id)::int as material_count'),
+        trx.raw('MIN(created_at) as oldest_created_at'),
+      )
+      .first(),
+    trx('project_materials')
+      .where({ tenant, client_id: clientId, is_billed: false })
+      .select(
+        trx.raw('COALESCE(SUM(ROUND(quantity::numeric * rate::numeric)), 0) as total_cents'),
+        trx.raw('COUNT(project_material_id)::int as material_count'),
+        trx.raw('MIN(created_at) as oldest_created_at'),
+      )
+      .first(),
   ]);
 
   const aging = {
@@ -487,6 +693,24 @@ async function fetchMoney(
 
   const draftInvoiceCount = toNumber((draftAggRow as any)?.count);
   const draftTotalCents = toNumber((draftAggRow as any)?.total);
+  const totalWipMinutes = toNumber((timeWipRow as any)?.total_minutes);
+  const unbilledEntryCount = toNumber((timeWipRow as any)?.entry_count);
+  const unbilledMaterialsCents =
+    toNumber((ticketMaterialWipRow as any)?.total_cents) + toNumber((projectMaterialWipRow as any)?.total_cents);
+  const unbilledMaterialCount =
+    toNumber((ticketMaterialWipRow as any)?.material_count) + toNumber((projectMaterialWipRow as any)?.material_count);
+  const oldestUnbilledAt = minTimestampValue([
+    (timeWipRow as any)?.oldest_work_date,
+    (ticketMaterialWipRow as any)?.oldest_created_at,
+    (projectMaterialWipRow as any)?.oldest_created_at,
+  ]);
+  const wip: ClientPulseWip = {
+    unbilledHours: Math.round((totalWipMinutes / 60) * 10) / 10,
+    unbilledEntryCount,
+    unbilledMaterialsCents,
+    unbilledMaterialCount,
+    oldestUnbilledDays: daysSince(oldestUnbilledAt, nowMs),
+  };
 
   const flags: ClientAttentionFlag[] = [];
   if (draftInvoiceCount > 0 && draftInvoices.length > 0) {
@@ -502,6 +726,16 @@ async function fetchMoney(
     });
   }
 
+  if (wip.oldestUnbilledDays != null && wip.oldestUnbilledDays > 14) {
+    flags.push({
+      kind: 'wip_aging',
+      severity: 'amber',
+      count: unbilledEntryCount + unbilledMaterialCount,
+      ...(unbilledMaterialsCents > 0 ? { amountCents: unbilledMaterialsCents } : {}),
+      daysAgo: wip.oldestUnbilledDays,
+    });
+  }
+
   return {
     money: {
       aging,
@@ -511,6 +745,7 @@ async function fetchMoney(
       draftInvoiceCount,
       activeContractCount: toNumber(contractCountRow?.count),
       currencyCode: (currencyRow as any)?.currency_code ?? 'USD',
+      wip,
     },
     flags,
   };
@@ -523,7 +758,9 @@ async function fetchInstallBase(
   canReadAssets: boolean,
   nowMs: number,
 ): Promise<{ installBase: ClientPulseInstallBase; flags: ClientAttentionFlag[] }> {
-  const [soldCountRow, recentRows, rmaRows, assetCountRow, partialSoRows] = await Promise.all([
+  const now = new Date(nowMs);
+  const warrantySoon = new Date(nowMs + 90 * DAY_MS);
+  const [soldCountRow, recentRows, rmaRows, assetCountRow, partialSoRows, unitWarrantyRow, assetWarrantyRow] = await Promise.all([
     trx('stock_units')
       .where({ tenant, client_id: clientId, status: DELIVERED_STOCK_UNIT_STATUS })
       .count<{ count: string }>('unit_id as count')
@@ -572,6 +809,26 @@ async function fetchInstallBase(
       .havingRaw('COUNT(*) FILTER (WHERE sol.quantity_fulfilled >= sol.quantity_ordered) < COUNT(sol.so_line_id)')
       .orderBy('so.created_at', 'desc')
       .limit(3),
+    trx('stock_units')
+      .where({ tenant, client_id: clientId, status: DELIVERED_STOCK_UNIT_STATUS })
+      .whereNotNull('warranty_expires_at')
+      .select(
+        trx.raw('COUNT(unit_id)::int as tracked_count'),
+        trx.raw('COUNT(*) FILTER (WHERE warranty_expires_at < ?)::int as expired_count', [now]),
+        trx.raw('COUNT(*) FILTER (WHERE warranty_expires_at >= ? AND warranty_expires_at < ?)::int as expiring_soon_count', [now, warrantySoon]),
+      )
+      .first(),
+    canReadAssets
+      ? trx('assets')
+        .where({ tenant, client_id: clientId })
+        .whereNotNull('warranty_end_date')
+        .select(
+          trx.raw('COUNT(asset_id)::int as tracked_count'),
+          trx.raw('COUNT(*) FILTER (WHERE warranty_end_date < ?)::int as expired_count', [now]),
+          trx.raw('COUNT(*) FILTER (WHERE warranty_end_date >= ? AND warranty_end_date < ?)::int as expiring_soon_count', [now, warrantySoon]),
+        )
+        .first()
+      : Promise.resolve(null),
   ]);
 
   const flags: ClientAttentionFlag[] = [];
@@ -614,6 +871,7 @@ async function fetchInstallBase(
         delivered_at: toIsoString(row.delivered_at),
         asset_id: row.asset_id ?? null,
       })),
+      warranty: combineWarrantyRows([unitWarrantyRow as any, assetWarrantyRow as any]),
     },
     flags,
   };

@@ -10,6 +10,7 @@ import type {
   ClientPulseLocation,
   ClientPulseDocuments,
   ClientPulseRecord,
+  ClientPulseTicketSla,
 } from '../../../lib/commandCenterTypes';
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
@@ -85,6 +86,59 @@ function Stat({ value, label }: { value: React.ReactNode; label: string }) {
 const timeAgoDays = (iso: string): number =>
   Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
 
+/** "45m" / "3h 20m" / "2d" — for SLA countdowns. */
+const formatMinutes = (minutes: number): string => {
+  const abs = Math.abs(Math.round(minutes));
+  if (abs < 60) return `${abs}m`;
+  if (abs < 48 * 60) {
+    const hours = Math.floor(abs / 60);
+    const rest = abs % 60;
+    return rest ? `${hours}h ${rest}m` : `${hours}h`;
+  }
+  return `${Math.floor(abs / (24 * 60))}d`;
+};
+
+/** Per-ticket SLA state from tickets.sla_* columns — never a due_date proxy. */
+function SlaChip({ sla, t }: { sla: ClientPulseTicketSla; t: TFn }) {
+  const remaining = sla.remainingMinutes != null ? formatMinutes(sla.remainingMinutes) : null;
+  switch (sla.status) {
+    case 'response_breached':
+    case 'resolution_breached':
+      return (
+        <span className="rounded bg-red-100 text-red-700 px-1.5 text-[10.5px] font-bold whitespace-nowrap">
+          {t('clientCommandCenter.sla.breached', {
+            defaultValue: remaining ? 'SLA breached {{over}} ago' : 'SLA breached',
+            over: remaining ?? '',
+          })}
+        </span>
+      );
+    case 'at_risk':
+      return (
+        <span className="rounded bg-amber-100 text-amber-800 px-1.5 text-[10.5px] font-bold whitespace-nowrap">
+          {t('clientCommandCenter.sla.atRisk', {
+            defaultValue: remaining ? 'SLA {{left}} left' : 'SLA at risk',
+            left: remaining ?? '',
+          })}
+        </span>
+      );
+    case 'paused':
+      return (
+        <span className="rounded bg-gray-100 text-gray-600 px-1.5 text-[10.5px] font-semibold whitespace-nowrap">
+          {t('clientCommandCenter.sla.paused', { defaultValue: 'SLA paused' })}
+        </span>
+      );
+    default:
+      return (
+        <span className="text-gray-400 text-[10.5px] whitespace-nowrap">
+          {t('clientCommandCenter.sla.onTrack', {
+            defaultValue: remaining ? 'SLA {{left}} left' : 'SLA on track',
+            left: remaining ?? '',
+          })}
+        </span>
+      );
+  }
+}
+
 // ── Service ──────────────────────────────────────────────────────────────────
 
 export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, t }: {
@@ -114,30 +168,47 @@ export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, t }: 
       ) : (
         <ul className="divide-y divide-gray-100">
           {data.topOpen.map((ticket) => (
-            <li key={ticket.ticket_id} className="py-1.5 flex items-baseline gap-2 text-[13px]">
-              {ticket.priority_name && (
-                <span
-                  className="inline-block rounded px-1.5 text-[10.5px] font-bold"
-                  style={{
-                    color: ticket.priority_color ?? '#374151',
-                    backgroundColor: `${ticket.priority_color ?? '#9ca3af'}22`,
-                  }}
+            <li key={ticket.ticket_id} className="py-1.5 text-[13px]">
+              <div className="flex items-baseline gap-2">
+                {ticket.priority_name && (
+                  <span
+                    className="inline-block rounded px-1.5 text-[10.5px] font-bold"
+                    style={{
+                      color: ticket.priority_color ?? '#374151',
+                      backgroundColor: `${ticket.priority_color ?? '#9ca3af'}22`,
+                    }}
+                  >
+                    {ticket.priority_name}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onOpenTicket(ticket.ticket_id)}
+                  className="text-primary-700 font-medium hover:underline truncate text-left"
                 >
-                  {ticket.priority_name}
+                  #{ticket.ticket_number} {ticket.title}
+                </button>
+                <span className="ml-auto text-[11px] text-gray-400 whitespace-nowrap">
+                  {ticket.is_overdue
+                    ? t('clientCommandCenter.service.overdueTag', { defaultValue: 'overdue' })
+                    : `${timeAgoDays(ticket.entered_at)}d`}
                 </span>
+              </div>
+              {/* Ownership + SLA (W1/W3) — rendered only when the pulse carries them. */}
+              {(ticket.assigned_to_name !== undefined || ticket.sla) && (
+                <div className="mt-0.5 flex items-center gap-2 text-[11.5px]">
+                  {ticket.assigned_to_name !== undefined && (
+                    ticket.assigned_to_name ? (
+                      <span className="text-gray-500 truncate">{ticket.assigned_to_name}</span>
+                    ) : (
+                      <span className="text-gray-400 italic">
+                        {t('clientCommandCenter.service.unassigned', { defaultValue: 'Unassigned' })}
+                      </span>
+                    )
+                  )}
+                  {ticket.sla && <SlaChip sla={ticket.sla} t={t} />}
+                </div>
               )}
-              <button
-                type="button"
-                onClick={() => onOpenTicket(ticket.ticket_id)}
-                className="text-primary-700 font-medium hover:underline truncate text-left"
-              >
-                #{ticket.ticket_number} {ticket.title}
-              </button>
-              <span className="ml-auto text-[11px] text-gray-400 whitespace-nowrap">
-                {ticket.is_overdue
-                  ? t('clientCommandCenter.service.overdueTag', { defaultValue: 'overdue' })
-                  : `${timeAgoDays(ticket.entered_at)}d`}
-              </span>
             </li>
           ))}
         </ul>
@@ -248,9 +319,35 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
         {data.draftInvoiceCount > data.draftInvoices.length && (
           <li className="py-1.5 text-[11px] text-gray-400">
             {t('clientCommandCenter.money.moreDrafts', {
-              defaultValue: '+{{count}} more draft(s)',
+              defaultValue_one: '+1 more draft',
+              defaultValue_other: '+{{count}} more drafts',
               count: data.draftInvoiceCount - data.draftInvoices.length,
             })}
+          </li>
+        )}
+        {/* W2: time in hours (time entries carry no rate — no invented dollars);
+            materials in exact cents. Rendered only when something is unbilled. */}
+        {data.wip && (data.wip.unbilledEntryCount > 0 || data.wip.unbilledMaterialCount > 0) && (
+          <li className="py-1.5 flex items-baseline gap-2 text-[13px]">
+            <span className="text-gray-600">
+              {t('clientCommandCenter.money.unbilledWork', { defaultValue: 'Unbilled work' })}
+            </span>
+            <span className="ml-auto font-semibold text-gray-900 whitespace-nowrap">
+              {[
+                data.wip.unbilledEntryCount > 0
+                  ? t('clientCommandCenter.money.unbilledHours', {
+                    defaultValue: '{{hours}}h',
+                    hours: data.wip.unbilledHours,
+                  })
+                  : null,
+                data.wip.unbilledMaterialCount > 0
+                  ? t('clientCommandCenter.money.unbilledMaterials', {
+                    defaultValue: '{{amount}} materials',
+                    amount: formatMoney(data.wip.unbilledMaterialsCents),
+                  })
+                  : null,
+              ].filter(Boolean).join(' · ')}
+            </span>
           </li>
         )}
         <li className="py-1.5 flex items-baseline text-[13px]">
@@ -293,6 +390,39 @@ export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset
         <Stat value={data.soldUnitCount} label={t('clientCommandCenter.installBase.sold', { defaultValue: 'sold units' })} />
         <Stat value={data.openRmaCount} label={t('clientCommandCenter.installBase.rmas', { defaultValue: 'open RMAs' })} />
       </div>
+      {/* W4: renders only when at least one unit/asset carries a warranty date —
+          a fleet that doesn't track warranties shows nothing, not zeros. */}
+      {data.warranty && (
+        <button
+          id={`${id}-warranty`}
+          type="button"
+          onClick={onOpen ?? undefined}
+          disabled={!onOpen}
+          className="mb-2 text-[12px] text-left text-gray-600 hover:text-primary-700 disabled:hover:text-gray-600"
+        >
+          <span className={data.warranty.expiredCount > 0 ? 'text-red-600 font-semibold' : ''}>
+            {t('clientCommandCenter.installBase.warrantyExpired', {
+              defaultValue_one: '1 out of warranty',
+              defaultValue_other: '{{count}} out of warranty',
+              count: data.warranty.expiredCount,
+            })}
+          </span>
+          <span className="text-gray-300"> · </span>
+          <span className={data.warranty.expiringSoonCount > 0 ? 'text-amber-700 font-semibold' : ''}>
+            {t('clientCommandCenter.installBase.warrantyExpiring', {
+              defaultValue_one: '1 expiring ≤90d',
+              defaultValue_other: '{{count}} expiring ≤90d',
+              count: data.warranty.expiringSoonCount,
+            })}
+          </span>
+          <span className="text-gray-400">
+            {t('clientCommandCenter.installBase.warrantyTracked', {
+              defaultValue: ' (of {{count}} tracked)',
+              count: data.warranty.trackedCount,
+            })}
+          </span>
+        </button>
+      )}
       {data.recentUnits.length === 0 ? (
         <EmptyLine text={t('clientCommandCenter.installBase.none', { defaultValue: 'No delivered equipment yet.' })} />
       ) : (
@@ -535,6 +665,8 @@ export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, t }: {
   onOpenAdditionalInfo: (() => void) | null;
   t: TFn;
 }) {
+  // W5: tax region + inbound domains were plumbing on the overview (they live
+  // in the Details/Tax focus views); the card keeps the who-owns-this facts.
   const rows: Array<{ label: string; value: string | null }> = [
     {
       label: t('clientCommandCenter.record.accountManager', { defaultValue: 'Account manager' }),
@@ -545,12 +677,8 @@ export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, t }: {
       value: data.defaultContactName,
     },
     {
-      label: t('clientCommandCenter.record.inboundDomains', { defaultValue: 'Inbound domains' }),
-      value: data.inboundDomains.length ? data.inboundDomains.join(', ') : null,
-    },
-    {
-      label: t('clientCommandCenter.record.taxRegion', { defaultValue: 'Tax region' }),
-      value: data.taxRegion,
+      label: t('clientCommandCenter.record.clientSince', { defaultValue: 'Client since' }),
+      value: data.clientSince ? new Date(data.clientSince).getFullYear().toString() : null,
     },
   ];
 

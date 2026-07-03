@@ -2,76 +2,76 @@
   {
     "id": "F001",
     "description": "W1: SLA feasibility audit \u2014 document what per-ticket SLA targets are computable from sla_policies + ticket fields; go/no-go recorded in SCRATCHPAD",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F002",
     "description": "W1: sla_at_risk / sla_breached attention flags (only if F001 = go)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F003",
     "description": "W1: SLA countdown on service-card ticket rows (only if F001 = go)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F004",
     "description": "W2: pulse money section gains unbilled WIP: billable uninvoiced time (cents + hours) and unbilled materials for the client",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F005",
     "description": "W2: wip_aging attention flag when unbilled entries older than 14 days (amber, amount + oldest days)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F006",
     "description": "W2: money card renders 'Unbilled work' line with hours + $ (hidden when zero)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F007",
     "description": "W3: assigned tech name on each service-card ticket row (or 'unassigned' marker)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F008",
     "description": "W3: ticket_unassigned attention flag (blue) counting open unassigned tickets, ref oldest",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F009",
     "description": "W4: pulse installBase gains warranty summary: outOfWarrantyCount + expiring90dCount from stock_units.warranty_expires_at and asset warranty fields (null when no warranty data exists at all)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F010",
     "description": "W4: install base card warranty line ('N out of warranty \u00b7 M expiring \u226490d'), absent when no data",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F011",
     "description": "W5: CSAT card collapses to compact chip unless it has at least one response",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F012",
     "description": "W5: client record card drops tax region + inbound domains from overview (still in Details focus)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F013",
     "description": "W5: timeline suppresses invoice_created events for invoices still in draft (strip + money card already cover them); finalized history unchanged",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F014",
     "description": "Contract types updated for all new pulse fields; flags added to ClientAttentionFlagKind; AttentionStrip labels for new kinds",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F015",
     "description": "All new surfaces honest: hidden or explicit empty when no data; no zeros-as-insight",
-    "implemented": false
+    "implemented": true
   }
 ]
