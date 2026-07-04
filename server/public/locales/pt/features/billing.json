@@ -151,7 +151,7 @@
     }
   },
   "quoteForm": {
-    "noticeTitle": "Citar",
+    "noticeTitle": "Cotação",
     "readOnlyNotice": "Esta orçamento é somente leitura. Para fazer alterações, crie uma nova revisão.",
     "breadcrumb": {
       "billing": "Faturamento",
