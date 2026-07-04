@@ -130,8 +130,8 @@ function describeSystemEntry(entry: TicketTimelineEntry): string {
 
 /**
  * Per-entry spine pin + lane accent. The pin (a small ringed circle on the
- * timeline spine) carries the lane colour and icon; `accent` is the left
- * border used to tint comment cards to the same lane.
+ * timeline spine) carries the lane colour and icon; `accent` is border-color
+ * classes passed into the comment card so its full border tints to the lane.
  */
 function laneVisual(node: TimelineNode): { pin: string; icon: React.ReactNode; accent: string } {
   const iconCls = 'h-3 w-3';
@@ -523,9 +523,10 @@ export function BentoTimelineTile({
                   </div>
                   <div className="flex-1 min-w-0 pb-1.5">
                     {node.lane === 'reply' && node.comment ? (
-                      <div className={v.accent ? `border-l-[3px] rounded-lg overflow-hidden ${v.accent}` : ''}>
+                      <div>
                         <CommentItem
                           variant="compact"
+                          accentBorderClassName={v.accent || undefined}
                           id={node.comment.comment_id ? `${id}-comment-${node.comment.comment_id}` : `${id}-comment-unknown`}
                           conversation={node.comment}
                           currentUserId={currentUser?.id}

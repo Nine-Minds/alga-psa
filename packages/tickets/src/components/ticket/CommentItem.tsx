@@ -53,6 +53,12 @@ interface CommentItemProps {
    * space is tight. Defaults to 'default' (the conversation-view look).
    */
   variant?: 'default' | 'compact';
+  /**
+   * Border-color classes that replace the default gray card border (e.g. a
+   * timeline lane accent like `border-amber-400`). The card keeps its own
+   * 1px border width and radius — only the color changes.
+   */
+  accentBorderClassName?: string;
 }
 
 function getInboundSenderIdentity(
@@ -131,6 +137,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   userNames,
   canViewCommentMetadataDebug = false,
   variant = 'default',
+  accentBorderClassName,
 }) => {
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
@@ -332,7 +339,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
   return (
     <div
       {...withDataAutomationId({ id: commentId })}
-      className={`group/comment w-full max-w-full min-w-0 rounded-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))] ${
+      className={`group/comment w-full max-w-full min-w-0 rounded-lg border ${
+        accentBorderClassName ??
+        'border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))]'
+      } bg-white dark:bg-[rgb(var(--color-card))] ${
         isCompact ? 'p-2.5' : 'p-2 mb-2 shadow-sm'
       } ${
         isSearchHighlighted ? 'search-highlight ring-2 ring-yellow-400 bg-yellow-50' : ''
