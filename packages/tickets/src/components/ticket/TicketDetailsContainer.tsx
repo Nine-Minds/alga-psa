@@ -166,6 +166,11 @@ export default function TicketDetailsContainer({
       toast.success(t('messages.ticketUpdated', 'Ticket updated successfully'));
     } catch (error) {
       handleError(error, t('errors.updateField', 'Failed to update {{field}}', { field }));
+      // Re-throw so the optimistic caller (handleSelectChange) reverts the field
+      // to its previous value. Without this, a rejected write (e.g. a board
+      // change that the server refuses without a destination status) leaves the
+      // UI showing an unsaved value that never persisted.
+      throw error;
     } finally {
       setIsSubmitting(false);
     }

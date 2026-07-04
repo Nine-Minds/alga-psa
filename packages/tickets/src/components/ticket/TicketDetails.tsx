@@ -1812,7 +1812,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         styles: {}
                     }]
                 }]);
-                
+                // Remount the uncontrolled composer editor so the typed text
+                // clears from view; resetting newCommentContent state alone does
+                // not, since the editor only reads initialContent on mount.
+                setEditorKey((k) => k + 1);
+
                 return true;
             } else {
                 // Use the regular createComment action for MSP portal
@@ -1853,6 +1857,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                                 styles: {}
                             }]
                         }]);
+                        // See note above: remount the composer editor to clear the view.
+                        setEditorKey((k) => k + 1);
                         console.log("New note added successfully");
                         return true;
                     } else {
