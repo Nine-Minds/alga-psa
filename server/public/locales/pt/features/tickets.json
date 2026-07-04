@@ -1295,9 +1295,11 @@
   "invalidTicketData": "Dados de ticket inválidos",
   "timeEntries": {
     "title": "Tempo registrado",
+    "titleShort": "Registrado",
     "loading": "Carregando entradas de tempo…",
     "loadError": "Não foi possível carregar as entradas de horário",
     "empty": "Nenhum tempo foi registrado neste ticket ainda.",
+    "emptyShort": "Nenhum tempo registrado ainda",
     "myEntries": "Minhas entradas",
     "otherTeam": "Outros membros da equipe",
     "othersAnonymized": "Entradas {{count}} de outros membros da equipe ({{duration}})",

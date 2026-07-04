@@ -1295,9 +1295,11 @@
   "invalidTicketData": "Ongeldige ticketgegevens",
   "timeEntries": {
     "title": "Geregistreerde tijd",
+    "titleShort": "Geregistreerd",
     "loading": "Tijdregistraties laden…",
     "loadError": "Kan tijdregistraties niet laden",
     "empty": "Er is nog geen tijd geregistreerd op dit ticket.",
+    "emptyShort": "Nog geen tijd geregistreerd",
     "myEntries": "Mijn registraties",
     "otherTeam": "Andere teamleden",
     "othersAnonymized": "{{count}} registraties van andere teamleden ({{duration}})",

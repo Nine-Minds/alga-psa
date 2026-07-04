@@ -1295,9 +1295,11 @@
   "invalidTicketData": "Dati del ticket non validi",
   "timeEntries": {
     "title": "Tempo registrato",
+    "titleShort": "Registrato",
     "loading": "Caricamento delle voci di tempo…",
     "loadError": "Impossibile caricare le voci di tempo",
     "empty": "Nessun tempo è stato ancora registrato su questo ticket.",
+    "emptyShort": "Nessun tempo registrato",
     "myEntries": "Le mie voci",
     "otherTeam": "Altri membri del team",
     "othersAnonymized": "{{count}} voci di altri membri del team ({{duration}})",

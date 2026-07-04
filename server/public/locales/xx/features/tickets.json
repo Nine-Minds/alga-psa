@@ -1295,9 +1295,11 @@
   "invalidTicketData": "11111",
   "timeEntries": {
     "title": "11111",
+    "titleShort": "11111",
     "loading": "11111",
     "loadError": "11111",
     "empty": "11111",
+    "emptyShort": "11111",
     "myEntries": "11111",
     "otherTeam": "11111",
     "othersAnonymized": "11111 {{count}} 11111 {{duration}} 11111",

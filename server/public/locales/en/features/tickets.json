@@ -1295,9 +1295,11 @@
   "invalidTicketData": "Invalid ticket data",
   "timeEntries": {
     "title": "Logged Time",
+    "titleShort": "Logged",
     "loading": "Loading time entries…",
     "loadError": "Could not load time entries",
     "empty": "No time has been logged on this ticket yet.",
+    "emptyShort": "No time logged yet",
     "myEntries": "My entries",
     "otherTeam": "Other team members",
     "othersAnonymized": "{{count}} entries by other team members ({{duration}})",
