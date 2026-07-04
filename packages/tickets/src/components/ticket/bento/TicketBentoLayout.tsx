@@ -24,7 +24,7 @@ import type {
 import { parseTicketRichTextContent } from '../../../lib/ticketRichText';
 import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/commentAuthorResolution';
 import TicketChecklistSection from './../TicketChecklistSection';
-import TicketDocumentsSection from './../TicketDocumentsSection';
+import { DocumentsTile } from './DocumentsTile';
 import TicketTimeEntries from './../TicketTimeEntries';
 import TicketMaterialsCard from './../TicketMaterialsCard';
 import TicketWatchListCard from './../TicketWatchListCard';
@@ -474,10 +474,11 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
 
       {props.surveySummaryCard ? props.surveySummaryCard : null}
 
-      <TicketDocumentsSection
+      <DocumentsTile
         id={`${id}-documents-section`}
         ticketId={ticketId}
-        initialDocuments={props.documents}
+        documents={props.documents}
+        resolveDocumentViewUrl={props.resolveTicketAttachmentViewUrl}
         forceUploadToRoot={props.disableAttachmentFolderSelection}
         allowDocumentSharing={!props.disableAttachmentSharing}
         allowLinkExistingDocuments={!props.disableAttachmentLinking}
