@@ -101,7 +101,7 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
   const uploadFormRef = useRef<HTMLDivElement>(null);
 
   return (
-    <ReflectionContainer id={id} label="Ticket Documents">
+    <ReflectionContainer id={id} label={t('ticketDocuments', 'Ticket Documents')}>
       <div
         {...withDataAutomationId({ id })}
         className={

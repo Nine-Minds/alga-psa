@@ -32,6 +32,7 @@ import TicketWatchListCard from './../TicketWatchListCard';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from './BentoTile';
 import { BentoHero } from './BentoHero';
 import { BentoTimelineTile } from './BentoTimelineTile';
@@ -173,6 +174,7 @@ export interface TicketBentoLayoutProps {
  */
 export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const { id, ticket } = props;
+  const { t } = useTranslation('features/tickets');
   const ticketId = ticket.ticket_id ?? '';
   const { enabled: billingEnabled } = useFeatureFlag('billing-enabled');
   const [requestExpanded, setRequestExpanded] = React.useState(false);
@@ -202,13 +204,13 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
     <div className="space-y-4 min-w-0">
       <BentoTile
         id={`${id}-request-tile`}
-        title="Request"
+        title={t('bento.tiles.request', 'Request')}
         icon={<FileText className="h-4 w-4" />}
         action={
           <button
             id={`${id}-request-edit`}
             type="button"
-            aria-label="Edit description"
+            aria-label={t('bento.tiles.editDescription', 'Edit description')}
             className="text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))]"
             onClick={props.onOpenAllFields}
           >
@@ -228,22 +230,22 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
                 className="text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline mt-1 self-start"
                 onClick={() => setRequestExpanded((value) => !value)}
               >
-                {requestExpanded ? 'Show less' : 'Show more'}
+                {requestExpanded ? t('bento.tiles.showLess', 'Show less') : t('bento.tiles.showMore', 'Show more')}
               </button>
             ) : null}
           </>
         ) : (
-          <BentoTileEmpty id={`${id}-request-empty`}>No description yet</BentoTileEmpty>
+          <BentoTileEmpty id={`${id}-request-empty`}>{t('bento.tiles.noDescriptionYet', 'No description yet')}</BentoTileEmpty>
         )}
         <p className="text-xs text-[rgb(var(--color-text-400))] mt-2">
           {props.createdByUser
-            ? `Opened by ${props.createdByUser.first_name} ${props.createdByUser.last_name}`
-            : 'Opened'}
-          {ticket.source ? ` · via ${String(ticket.source).replace(/_/g, ' ')}` : ''}
+            ? t('bento.tiles.openedBy', 'Opened by {{name}}', { name: `${props.createdByUser.first_name} ${props.createdByUser.last_name}` })
+            : t('bento.tiles.opened', 'Opened')}
+          {ticket.source ? ` · ${t('bento.tiles.viaSource', 'via {{source}}', { source: String(ticket.source).replace(/_/g, ' ') })}` : ''}
         </p>
       </BentoTile>
 
-      <BentoTile id={`${id}-contact-tile`} title="Contact" icon={<User className="h-4 w-4" />}>
+      <BentoTile id={`${id}-contact-tile`} title={t('bento.tiles.contact', 'Contact')} icon={<User className="h-4 w-4" />}>
         {props.contactInfo || props.client ? (
           <div className="space-y-1.5 text-sm">
             {props.contactInfo ? (
@@ -256,7 +258,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
                 {props.contactInfo.full_name}
               </button>
             ) : (
-              <BentoTileEmpty id={`${id}-contact-none`}>No contact on this ticket</BentoTileEmpty>
+              <BentoTileEmpty id={`${id}-contact-none`}>{t('bento.tiles.noContactOnTicket', 'No contact on this ticket')}</BentoTileEmpty>
             )}
             {props.contactInfo?.email ? (
               <div className="text-[rgb(var(--color-text-600))] truncate">{props.contactInfo.email}</div>
@@ -271,7 +273,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             ) : null}
             {props.client ? (
               <div className="pt-1 border-t border-[rgb(var(--color-border-100))]">
-                <span className="text-xs text-[rgb(var(--color-text-400))]">Client</span>{' '}
+                <span className="text-xs text-[rgb(var(--color-text-400))]">{t('bento.tiles.client', 'Client')}</span>{' '}
                 <button
                   id={`${id}-client-open`}
                   type="button"
@@ -284,7 +286,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             ) : null}
           </div>
         ) : (
-          <BentoTileEmpty id={`${id}-contact-empty`}>No contact on this ticket</BentoTileEmpty>
+          <BentoTileEmpty id={`${id}-contact-empty`}>{t('bento.tiles.noContactOnTicket', 'No contact on this ticket')}</BentoTileEmpty>
         )}
       </BentoTile>
 
@@ -292,14 +294,14 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         <div id={`${id}-assets-container`}>{props.associatedAssets}</div>
       ) : null}
 
-      <Suspense fallback={<BentoTileSkeleton id={`${id}-next-visit-tile-loading`} title="Next visit" />}>
+      <Suspense fallback={<BentoTileSkeleton id={`${id}-next-visit-tile-loading`} title={t('bento.tiles.nextVisit', 'Next visit')} />}>
         <NextVisitTile
           id={`${id}-next-visit-tile`}
           ticketId={ticketId}
           initialData={props.bentoStreams?.scheduleEntries}
         />
       </Suspense>
-      <Suspense fallback={<BentoTileSkeleton id={`${id}-calls-emails-tile-loading`} title="Calls and emails" />}>
+      <Suspense fallback={<BentoTileSkeleton id={`${id}-calls-emails-tile-loading`} title={t('bento.tiles.callsAndEmails', 'Calls and emails')} />}>
         <CallsEmailsTile
           id={`${id}-calls-emails-tile`}
           ticketId={ticketId}
@@ -311,7 +313,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   );
 
   const timerTile = !props.hideTimeEntry ? (
-    <BentoTile id={`${id}-time-tile`} title="Time logged" icon={<Clock className="h-4 w-4" />}>
+    <BentoTile id={`${id}-time-tile`} title={t('bento.tiles.timeLogged', 'Time logged')} icon={<Clock className="h-4 w-4" />}>
       <Suspense
         fallback={
           <div
@@ -354,12 +356,12 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             </div>
           </div>
           <div className="mt-2">
-            <Label htmlFor={`${id}-timer-description`}>Work description</Label>
+            <Label htmlFor={`${id}-timer-description`}>{t('bento.tiles.workDescription', 'Work description')}</Label>
             <Input
               id={`${id}-timer-description`}
               value={props.timeDescription}
               onChange={(event) => props.onTimeDescriptionChange(event.target.value)}
-              placeholder="What are you working on?"
+              placeholder={t('bento.tiles.whatAreYouWorkingOn', 'What are you working on?')}
               containerClassName="mb-0"
             />
           </div>
@@ -372,7 +374,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         className="w-full mb-3"
         onClick={props.onAddTimeEntry}
       >
-        Add time entry
+        {t('bento.tiles.addTimeEntry', 'Add time entry')}
       </Button>
 
       {ticketId && props.userId ? (
@@ -399,7 +401,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
 
       {props.isLiveTicketTimerEnabled && ticketId && props.userId && props.renderIntervalManagement ? (
         <div className="mt-2 border-t border-[rgb(var(--color-border-100))] pt-3" {...withDataAutomationId({ id: `${id}-interval-management` })}>
-          <h4 className="text-xs font-semibold text-[rgb(var(--color-text-500))] mb-2">Tracked intervals</h4>
+          <h4 className="text-xs font-semibold text-[rgb(var(--color-text-500))] mb-2">{t('bento.tiles.trackedIntervals', 'Tracked intervals')}</h4>
           {props.renderIntervalManagement({ ticketId, userId: props.userId })}
         </div>
       ) : null}
@@ -409,14 +411,14 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const teamTile = (
     <BentoTile
       id={`${id}-team-tile`}
-      title="Team and watchers"
+      title={t('bento.tiles.teamAndWatchers', 'Team and watchers')}
       icon={<Users className="h-4 w-4" />}
     >
       <div className="space-y-2 mb-3">
         {props.additionalAgents.length > 0 ? (
           props.additionalAgents.map((agent) => {
             const agentUser = props.availableAgents.find((user) => user.user_id === agent.additional_user_id);
-            const name = agentUser ? `${agentUser.first_name} ${agentUser.last_name}` : 'Agent';
+            const name = agentUser ? `${agentUser.first_name} ${agentUser.last_name}` : t('bento.tiles.agentFallback', 'Agent');
             return (
               <div key={agent.assignment_id ?? agent.additional_user_id ?? name} className="flex items-center gap-2 text-sm">
                 <UserAvatar userId={agentUser?.user_id ?? ''} userName={name} avatarUrl={null} size="xs" />
@@ -435,7 +437,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
                 <button
                   id={`${id}-team-remove-${agent.additional_user_id}`}
                   type="button"
-                  aria-label={`Remove ${name}`}
+                  aria-label={t('bento.tiles.removeAgent', 'Remove {{name}}', { name })}
                   className="ml-auto text-[rgb(var(--color-text-400))] hover:text-red-600 dark:hover:text-red-400"
                   onClick={() => agent.assignment_id && props.onRemoveAgent(agent.assignment_id)}
                 >
@@ -445,12 +447,12 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             );
           })
         ) : (
-          <BentoTileEmpty id={`${id}-team-empty`}>No additional agents</BentoTileEmpty>
+          <BentoTileEmpty id={`${id}-team-empty`}>{t('bento.tiles.noAdditionalAgents', 'No additional agents')}</BentoTileEmpty>
         )}
         <CustomSelect
           id={`${id}-team-add-select`}
           value=""
-          placeholder="Add an agent…"
+          placeholder={t('bento.tiles.addAgent', 'Add an agent…')}
           options={props.availableAgents
             .filter(
               (user) =>
@@ -485,7 +487,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       {timerTile}
 
       {billingEnabled ? (
-        <Suspense fallback={<BentoTileSkeleton id={`${id}-billing-tile-loading`} title="Billing" />}>
+        <Suspense fallback={<BentoTileSkeleton id={`${id}-billing-tile-loading`} title={t('bento.tiles.billing', 'Billing')} />}>
           <BillingTile
             id={`${id}-billing-tile`}
             ticketId={ticketId}
@@ -568,7 +570,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             fallback={
               <BentoTileSkeleton
                 id={`${id}-timeline-tile-loading`}
-                title="Timeline"
+                title={t('bento.tiles.timeline', 'Timeline')}
                 lines={4}
               />
             }

@@ -1240,5 +1240,8 @@
     "showingAllColumns": "55555",
     "showLess": "55555",
     "columnsHidden": "55555 {{count}} 55555"
+  },
+  "richTextEditorSkeleton": {
+    "loading": "55555"
   }
 }

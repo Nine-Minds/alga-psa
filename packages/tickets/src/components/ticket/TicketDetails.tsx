@@ -403,9 +403,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setTicket((prev: any) => ({ ...prev, status_id: closeBlockedDialog.statusId, response_state: null }));
             setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
             setCloseOverrideReason('');
-            toast.success('Ticket closed');
+            toast.success(t('messages.ticketClosed', 'Ticket closed'));
         } catch (error) {
-            handleError(error, 'Failed to close ticket');
+            handleError(error, t('messages.closeFailed', 'Failed to close ticket'));
         } finally {
             setIsSubmittingCloseOverride(false);
         }
@@ -1416,11 +1416,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleClientClick = async () => {
         if (!client?.client_id) return;
 
-        openDrawer(<div className="p-4 text-sm text-gray-600">Loading…</div>, undefined, undefined, '900px');
+        openDrawer(<div className="p-4 text-sm text-gray-600">{t('info.loading', 'Loading…')}</div>, undefined, undefined, '900px');
         try {
             const fullClient = await getClientById(client.client_id);
             if (!fullClient) {
-                replaceDrawer(<div className="p-4 text-sm text-gray-600">Client not found.</div>);
+                replaceDrawer(<div className="p-4 text-sm text-gray-600">{t('dashboard.drawer.clientNotFound', 'Client not found.')}</div>);
                 return;
             }
 
@@ -1439,7 +1439,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                                 variant="outline"
                                 onClick={() => window.open(`/msp/clients/${fullClient.client_id}`, '_blank', 'noopener,noreferrer')}
                             >
-                                Open Client <ExternalLink className="ml-2 h-4 w-4" />
+                                {t('info.openClient', 'Open Client')} <ExternalLink className="ml-2 h-4 w-4" />
                             </Button>
                         </div>
                     ),
@@ -1447,7 +1447,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 '900px'
             );
         } catch (e) {
-            const message = e instanceof Error ? e.message : 'Failed to load client.';
+            const message = e instanceof Error ? e.message : t('dashboard.drawer.clientLoadFailed', 'Failed to load client.');
             replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
         }
     };
@@ -1455,15 +1455,15 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleContactClick = async () => {
         const contactNameId = ticket.contact_name_id || contactInfo?.contact_name_id;
         if (!contactNameId) {
-            openDrawer(<div className="text-sm text-gray-600">No contact selected.</div>);
+            openDrawer(<div className="text-sm text-gray-600">{t('info.noContactSelected', 'No contact selected.')}</div>);
             return;
         }
 
-        openDrawer(<div className="p-4 text-sm text-gray-600">Loading…</div>, undefined, undefined, '900px');
+        openDrawer(<div className="p-4 text-sm text-gray-600">{t('info.loading', 'Loading…')}</div>, undefined, undefined, '900px');
         try {
             const contact = await getContactByContactNameId(contactNameId);
             if (!contact) {
-                replaceDrawer(<div className="p-4 text-sm text-gray-600">Contact not found.</div>);
+                replaceDrawer(<div className="p-4 text-sm text-gray-600">{t('info.contactNotFound', 'Contact not found.')}</div>);
                 return;
             }
 
@@ -1481,7 +1481,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     : (
                         <div className="p-4 space-y-3">
                             <div className="text-lg font-semibold">
-                                {contact.full_name || 'Contact'}
+                                {contact.full_name || t('properties.contact', 'Contact')}
                             </div>
                             <Button
                                 id="ticket-details-open-contact"
@@ -1489,7 +1489,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                                 variant="outline"
                                 onClick={() => window.open(`/msp/contacts/${contact.contact_name_id}`, '_blank', 'noopener,noreferrer')}
                             >
-                                Open Contact <ExternalLink className="ml-2 h-4 w-4" />
+                                {t('info.openContact', 'Open Contact')} <ExternalLink className="ml-2 h-4 w-4" />
                             </Button>
                         </div>
                     ),
@@ -1497,7 +1497,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 '900px'
             );
         } catch (e) {
-            const message = e instanceof Error ? e.message : 'Failed to load contact.';
+            const message = e instanceof Error ? e.message : t('info.contactLoadFailed', 'Failed to load contact.');
             replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
         }
     };
@@ -2652,7 +2652,7 @@ const handleClose = () => {
     if (!tenant) {
         return (
             <div id="ticket-error-message" className="p-4">
-                Error: tenant is not defined
+                {t('info.tenantNotDefined', 'Error: tenant is not defined')}
             </div>
         );
     }
@@ -2676,7 +2676,7 @@ const handleClose = () => {
                 <div className="sticky top-0 z-10 bg-gray-100 dark:bg-gray-900 py-2 flex gap-3">
                     {!isInDrawer && (
                         <div className="flex-shrink-0 self-start">
-                            <BackNav href="/msp/tickets"><span className="text-right">← Back to<br />Tickets </span></BackNav>
+                            <BackNav href="/msp/tickets"><span className="text-right">← {t('navigation.backTo', 'Back to')}<br />{t('navigation.tickets', 'Tickets')} </span></BackNav>
                         </div>
                     )}
                     <div className="min-w-0 flex-1 space-y-1">
@@ -2714,7 +2714,7 @@ const handleClose = () => {
                                         size="sm"
                                         onClick={openTicketInNewWindow}
                                         className="flex items-center gap-2"
-                                        aria-label="Open in new tab"
+                                        aria-label={t('fields.openInNewTab', 'Open in new tab')}
                                     >
                                         <ExternalLink className="h-4 w-4" />
                                         <span>{t('fields.openInNewTab', 'Open in new tab')}</span>
@@ -2791,11 +2791,11 @@ const handleClose = () => {
                     onClose={resetCommentDeleteState}
                     onConfirm={() => handleDeleteConfirm(true)}
                     onCancel={deleteDialogHasImages ? () => handleDeleteConfirm(false) : undefined}
-                    title="Delete Comment"
+                    title={t('conversation.deleteComment', 'Delete Comment')}
                     message={deleteDialogMessage}
-                    confirmLabel={deleteDialogHasImages ? 'Delete Comment + Images' : 'Delete'}
-                    thirdButtonLabel={deleteDialogHasImages ? 'Delete Comment Only' : undefined}
-                    cancelLabel="Cancel"
+                    confirmLabel={deleteDialogHasImages ? t('conversation.deleteCommentImages', 'Delete Comment + Images') : t('conversation.delete', 'Delete')}
+                    thirdButtonLabel={deleteDialogHasImages ? t('conversation.deleteCommentOnly', 'Delete Comment Only') : undefined}
+                    cancelLabel={t('actions.cancel', 'Cancel')}
                     isConfirming={isDeletingComment}
                 />
                 
@@ -2808,11 +2808,11 @@ const handleClose = () => {
                         setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
                         setCloseOverrideReason('');
                     }}
-                    title="This ticket can't be closed yet"
+                    title={t('info.cannotCloseYet', "This ticket can't be closed yet")}
                 >
                     <DialogContent>
                         <p className="text-sm text-gray-600 mb-3">
-                            The board's close rules require the following before this ticket can be closed:
+                            {t('info.closeRulesIntro', "The board's close rules require the following before this ticket can be closed:")}
                         </p>
                         <ul className="space-y-2 mb-4">
                             {closeBlockedDialog.failures.map((failure) => (
@@ -2834,7 +2834,7 @@ const handleClose = () => {
                                                     ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                             }}
                                         >
-                                            View checklist
+                                            {t('info.viewChecklist', 'View checklist')}
                                         </Button>
                                     )}
                                     {failure.rule === 'resolution_comment' && (
@@ -2850,7 +2850,7 @@ const handleClose = () => {
                                                     ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                             }}
                                         >
-                                            Add comment
+                                            {t('info.addComment', 'Add comment')}
                                         </Button>
                                     )}
                                 </li>
@@ -2862,7 +2862,7 @@ const handleClose = () => {
                                     id={`${id}-close-override-reason`}
                                     value={closeOverrideReason}
                                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCloseOverrideReason(e.target.value)}
-                                    placeholder="Reason for closing anyway (optional, recorded in the audit log)"
+                                    placeholder={t('info.closeReasonPlaceholder', 'Reason for closing anyway (optional, recorded in the audit log)')}
                                     rows={2}
                                 />
                             </div>
@@ -2877,7 +2877,7 @@ const handleClose = () => {
                                     setCloseOverrideReason('');
                                 }}
                             >
-                                Cancel
+                                {t('actions.cancel', 'Cancel')}
                             </Button>
                             {closeBlockedDialog.canOverride && (
                                 <Button
@@ -2887,7 +2887,7 @@ const handleClose = () => {
                                     onClick={submitCloseOverride}
                                     disabled={isSubmittingCloseOverride}
                                 >
-                                    {isSubmittingCloseOverride ? 'Closing…' : 'Close anyway'}
+                                    {isSubmittingCloseOverride ? t('info.closing', 'Closing…') : t('info.closeAnyway', 'Close anyway')}
                                 </Button>
                             )}
                         </DialogFooter>
@@ -2900,10 +2900,10 @@ const handleClose = () => {
                     isOpen={isReplaceDialogOpen}
                     onClose={() => setIsReplaceDialogOpen(false)}
                     onConfirm={handleConfirmReplace}
-                    title="Timer Active Elsewhere"
-                    message="This ticket's timer is active in another window. Do you want to take over and replace it here?"
-                    confirmLabel="Replace Here"
-                    cancelLabel="Cancel"
+                    title={t('info.timerActiveElsewhereTitle', 'Timer Active Elsewhere')}
+                    message={t('info.timerTakeoverMessage', "This ticket's timer is active in another window. Do you want to take over and replace it here?")}
+                    confirmLabel={t('info.replaceHere', 'Replace Here')}
+                    cancelLabel={t('actions.cancel', 'Cancel')}
                 />
 
                 <ConfirmationDialog
@@ -2927,10 +2927,10 @@ const handleClose = () => {
                             setPendingChildToAdd(null);
                         }
                     }}
-                    title="Bundle spans multiple clients"
-                    message={`This will add ${pendingChildToAdd?.ticket_number || 'this ticket'} from a different client into the bundle. Confirm you want to proceed.`}
-                    confirmLabel="Proceed"
-                    cancelLabel="Cancel"
+                    title={t('bulk.bundle.multiClientTitle', 'Bundle spans multiple clients')}
+                    message={t('details.bundle.addChildMultiClientMessage', 'This will add {{ticket}} from a different client into the bundle. Confirm you want to proceed.', { ticket: pendingChildToAdd?.ticket_number || t('details.bundle.thisTicket', 'this ticket') })}
+                    confirmLabel={t('actions.proceed', 'Proceed')}
+                    cancelLabel={t('actions.cancel', 'Cancel')}
                 />
 
                 <ConfirmationDialog
@@ -2941,10 +2941,10 @@ const handleClose = () => {
                         setIsTimeEntryPeriodDialogOpen(false);
                         router.push('/msp/settings?tab=time-entry&subtab=time-periods');
                     }}
-                    title="No Active Time Period"
-                    message="No active time period found. Time periods need to be set up in the billing dashboard before adding time entries."
-                    confirmLabel="Go to Time Periods Setup"
-                    cancelLabel="Cancel"
+                    title={t('info.noActiveTimePeriodTitle', 'No Active Time Period')}
+                    message={t('info.noActiveTimePeriodMessage', 'No active time period found. Time periods need to be set up in the billing dashboard before adding time entries.')}
+                    confirmLabel={t('info.goToTimePeriodsSetup', 'Go to Time Periods Setup')}
+                    cancelLabel={t('actions.cancel', 'Cancel')}
                 />
 
                 <ConfirmationDialog
@@ -3079,11 +3079,13 @@ const handleClose = () => {
 
                                 {bundle?.isBundleMaster ? (
                                     <div className="mb-3 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 px-4 py-2 text-sm text-indigo-900 dark:text-indigo-200" id="ticket-bundle-master-banner">
-                                        This ticket is the master of a bundle ({Array.isArray(bundle.children) ? bundle.children.length : 0} children). Mode:{' '}
-                                        {(bundle.mode || 'sync_updates').split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}.
+                                        {t('details.bundle.masterBanner', 'This ticket is the master of a bundle ({{count}} children). Mode: {{mode}}.', {
+                                            count: Array.isArray(bundle.children) ? bundle.children.length : 0,
+                                            mode: (bundle.mode || 'sync_updates').split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+                                        })}
                                         {bundleHasMultipleClients ? (
                                             <span className="ml-2 inline-flex items-center rounded bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:text-amber-200">
-                                                Multiple clients
+                                                {t('details.bundle.multipleClients', 'Multiple clients')}
                                             </span>
                                         ) : null}
                                     </div>
@@ -3092,7 +3094,7 @@ const handleClose = () => {
                                 {bundle?.isBundleMaster ? (
                                     <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3" id="ticket-bundle-master-panel">
                                         <div className="flex items-center justify-between mb-2">
-                                            <div className="text-sm font-semibold text-gray-900">Bundle</div>
+                                            <div className="text-sm font-semibold text-gray-900">{t('details.bundle.title', 'Bundle')}</div>
                                             <div className="flex items-center gap-2">
                                                 <Button
                                                     id="ticket-bundle-toggle-mode-button"
@@ -3101,7 +3103,7 @@ const handleClose = () => {
                                                     onClick={handleToggleBundleMode}
                                                     disabled={isUpdatingBundleSettings}
                                                 >
-                                                    Mode: {(bundle.mode || 'sync_updates').split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                                    {t('details.bundle.mode', 'Mode: {{mode}}', { mode: (bundle.mode || 'sync_updates').split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') })}
                                                 </Button>
                                                 <Button
                                                     id="ticket-bundle-unbundle-button"
@@ -3109,7 +3111,7 @@ const handleClose = () => {
                                                     size="sm"
                                                     onClick={handleUnbundleMaster}
                                                 >
-                                                    Unbundle
+                                                    {t('details.bundle.unbundle', 'Unbundle')}
                                                 </Button>
                                             </div>
                                         </div>
@@ -3124,7 +3126,7 @@ const handleClose = () => {
                                                     value={addChildTicketNumber}
                                                     onChange={handleSearchInputChange}
                                                     onFocus={() => addChildTicketNumber.trim() && setShowSearchResults(true)}
-                                                    placeholder="Search ticket number or title…"
+                                                    placeholder={t('details.bundle.searchPlaceholder', 'Search ticket number or title…')}
                                                     className="h-8"
                                                     containerClassName="mb-0"
                                                     autoComplete="off"
@@ -3157,7 +3159,7 @@ const handleClose = () => {
                                                             </ul>
                                                         ) : addChildTicketNumber.trim().length > 0 && !isSearching ? (
                                                             <div className="px-3 py-2 text-sm text-gray-500">
-                                                                No tickets found
+                                                                {t('messages.noTickets', 'No tickets found')}
                                                             </div>
                                                         ) : null}
                                                     </div>
@@ -3169,7 +3171,7 @@ const handleClose = () => {
                                                 onClick={handleAddChildToBundle}
                                                 disabled={!addChildTicketNumber.trim()}
                                             >
-                                                Add
+                                                {t('details.bundle.add', 'Add')}
                                             </Button>
                                         </div>
                                         <div className="max-h-56 overflow-y-auto rounded border border-gray-100">
@@ -3192,7 +3194,7 @@ const handleClose = () => {
                                                                     size="sm"
                                                                     onClick={() => handlePromoteChildToMaster(child.ticket_id)}
                                                                 >
-                                                                    Promote
+                                                                    {t('details.bundle.promote', 'Promote')}
                                                                 </Button>
                                                                 <Button
                                                                     id={`ticket-bundle-remove-child-${child.ticket_id}`}
@@ -3200,14 +3202,14 @@ const handleClose = () => {
                                                                     size="sm"
                                                                     onClick={() => handleRemoveChildFromBundle(child.ticket_id)}
                                                                 >
-                                                                    Remove
+                                                                    {t('details.bundle.remove', 'Remove')}
                                                                 </Button>
                                                             </div>
                                                         </li>
                                                     ))}
                                                 </ul>
                                             ) : (
-                                                <div className="px-3 py-2 text-sm text-gray-500">No children in this bundle.</div>
+                                                <div className="px-3 py-2 text-sm text-gray-500">{t('details.bundle.noChildren', 'No children in this bundle.')}</div>
                                             )}
                                         </div>
                                     </div>
@@ -3504,12 +3506,12 @@ const handleClose = () => {
                     {isAllFieldsDrawerOpen ? (
                         <div id={`${id}-all-fields-extras`} className="mt-4 pt-4 border-t border-[rgb(var(--color-border-200))] grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                                <Label htmlFor={`${id}-all-fields-contact-select`}>Contact</Label>
+                                <Label htmlFor={`${id}-all-fields-contact-select`}>{t('properties.contact', 'Contact')}</Label>
                                 <CustomSelect
                                     id={`${id}-all-fields-contact-select`}
                                     value={ticket.contact_name_id ?? 'none'}
                                     options={[
-                                        { value: 'none', label: 'No contact' },
+                                        { value: 'none', label: t('info.noContact', 'No contact') },
                                         ...contacts.map((contact) => ({
                                             value: contact.contact_name_id,
                                             label: contact.full_name,
@@ -3522,12 +3524,12 @@ const handleClose = () => {
                                 />
                             </div>
                             <div>
-                                <Label htmlFor={`${id}-all-fields-location-select`}>Location</Label>
+                                <Label htmlFor={`${id}-all-fields-location-select`}>{t('fields.location', 'Location')}</Label>
                                 <CustomSelect
                                     id={`${id}-all-fields-location-select`}
                                     value={ticket.location_id ?? 'none'}
                                     options={[
-                                        { value: 'none', label: 'No location' },
+                                        { value: 'none', label: t('bento.tiles.noLocation', 'No location') },
                                         ...locations.map((location) => ({
                                             value: location.location_id,
                                             label: [location.location_name, location.address_line1]
@@ -3555,7 +3557,7 @@ const handleClose = () => {
                     <div className="flex items-center gap-2">
                         <Mail className="h-5 w-5 text-[rgb(var(--color-text-700))]" />
                         <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
-                            Email Notification Logs
+                            {t('info.emailNotificationLogs', 'Email Notification Logs')}
                         </h2>
                     </div>
                     <TicketEmailNotifications
@@ -3575,7 +3577,7 @@ const handleClose = () => {
                     <div className="flex items-center gap-2">
                         <History className="h-5 w-5 text-[rgb(var(--color-text-700))]" />
                         <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
-                            Ticket Activity
+                            {t('info.ticketActivity', 'Ticket Activity')}
                         </h2>
                     </div>
                     {ticket.ticket_id ? (

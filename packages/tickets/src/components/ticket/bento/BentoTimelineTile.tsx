@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import type { PartialBlock } from '@blocknote/core';
 import { Activity, AlertTriangle, ArrowDownUp, CheckCircle, Clock, CornerDownRight, Lock, MessageSquare, MessagesSquare } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import { buildCommentThreadGroups, type CommentThreadGroup } from '@alga-psa/ui/components';
 import CommentThreadDrawer from '@alga-psa/ui/components/CommentThreadDrawer';
@@ -28,7 +29,7 @@ import type { TicketReactionsBootstrap } from '../../../lib/ticketScreenBootstra
 import { BentoTile, BentoTileEmpty } from './BentoTile';
 
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
-  loading: () => <RichTextEditorSkeleton height="120px" title="Reply editor" />,
+  loading: () => <RichTextEditorSkeleton height="120px" />,
   ssr: false,
 });
 
@@ -50,14 +51,6 @@ interface TimelineNode {
   comment?: IComment;
   entry?: TicketTimelineEntry;
 }
-
-const LANE_FILTERS: { value: LaneFilter; label: string }[] = [
-  { value: 'everything', label: 'Everything' },
-  { value: 'reply', label: 'Replies' },
-  { value: 'time', label: 'Time' },
-  { value: 'system', label: 'System' },
-  { value: 'alert', label: 'Alerts' },
-];
 
 interface BentoTimelineTileProps {
   id: string;
@@ -118,24 +111,32 @@ function formatMinutes(minutes: number): string {
   return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`;
 }
 
+type Translator = (key: string, fallback: string, opts?: Record<string, unknown>) => string;
+
 /** Compact one-line description of a system (activity) entry. */
-function describeSystemEntry(entry: TicketTimelineEntry): string {
+function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string {
   const activity = entry.activity;
-  if (!activity) return 'Ticket updated';
-  const actor = activity.actor_display_name || 'System';
+  if (!activity) return t('bento.timeline.ticketUpdated', 'Ticket updated');
+  const actor = activity.actor_display_name || t('bento.timeline.systemActor', 'System');
   const changes = activity.changes ?? {};
   const changeLines = Object.entries(changes).map(([field, change]) => {
     const from = change?.oldLabel ?? null;
     const to = change?.newLabel ?? null;
     const fieldName = field.replace(/_id$/, '').replace(/_/g, ' ');
-    if (to != null) return from != null ? `${fieldName}: ${from} → ${to}` : `${fieldName} set to ${to}`;
+    if (to != null) {
+      return from != null
+        ? t('bento.timeline.fieldChanged', '{{actor}} changed {{field}}: {{from}} → {{to}}', { actor, field: fieldName, from, to })
+        : t('bento.timeline.fieldSet', '{{field}} set to {{to}}', { field: fieldName, to });
+    }
     return fieldName;
   });
   const eventName = activity.event_type
     .replace(/^TICKET_/, '')
     .toLowerCase()
     .replace(/_/g, ' ');
-  return changeLines.length > 0 ? `${actor} changed ${changeLines.join(', ')}` : `${actor} · ${eventName}`;
+  return changeLines.length > 0
+    ? changeLines.join(', ')
+    : t('bento.timeline.actorEvent', '{{actor}} · {{eventName}}', { actor, eventName });
 }
 
 /** Lane border-color classes for a comment (client / internal / resolution). */
@@ -257,6 +258,17 @@ export function BentoTimelineTile({
   resolveTicketAttachmentViewUrl,
   className,
 }: BentoTimelineTileProps) {
+  const { t } = useTranslation('features/tickets');
+  const laneFilters = useMemo<{ value: LaneFilter; label: string }[]>(
+    () => [
+      { value: 'everything', label: t('bento.timeline.filterEverything', 'Everything') },
+      { value: 'reply', label: t('bento.timeline.filterReplies', 'Replies') },
+      { value: 'time', label: t('bento.timeline.filterTime', 'Time') },
+      { value: 'system', label: t('bento.timeline.filterSystem', 'System') },
+      { value: 'alert', label: t('bento.timeline.filterAlerts', 'Alerts') },
+    ],
+    [t],
+  );
   // Server-started entries resolve via use(): first paint streams in behind
   // the tile's <Suspense> skeleton with no client request.
   const initialSystemEntries = initialEntries ? use(initialEntries) : null;
@@ -405,7 +417,7 @@ export function BentoTimelineTile({
         setFetchError(null);
       })
       .catch((err: unknown) => {
-        if (!cancelled) setFetchError(err instanceof Error ? err.message : 'Could not load the timeline');
+        if (!cancelled) setFetchError(err instanceof Error ? err.message : t('bento.timeline.loadError', 'Could not load the timeline'));
       });
     return () => {
       cancelled = true;
@@ -520,7 +532,9 @@ export function BentoTimelineTile({
       className="mt-3 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3"
     >
       <p className="text-xs font-medium text-[rgb(var(--color-text-500))] mb-1.5">
-        {contactFirstName ? `Reply to ${contactFirstName}` : 'Write a reply'}
+        {contactFirstName
+          ? t('bento.timeline.replyTo', 'Reply to {{name}}', { name: contactFirstName })
+          : t('bento.timeline.writeReply', 'Write a reply')}
       </p>
       <TextEditor
         {...withDataAutomationId({ id: `${id}-composer-editor` })}
@@ -537,14 +551,14 @@ export function BentoTimelineTile({
       <div className="flex items-center gap-2 mt-2">
         <div
           role="group"
-          aria-label="Reply visibility"
+          aria-label={t('bento.timeline.replyVisibility', 'Reply visibility')}
           className="inline-flex items-center gap-0.5 rounded-lg bg-[rgb(var(--color-border-100))] p-0.5 text-xs font-medium"
         >
           {(
             [
-              { value: 'client', label: 'Client' },
-              { value: 'internal', label: 'Internal' },
-              { value: 'resolution', label: 'Resolution' },
+              { value: 'client', label: t('bento.timeline.modeClient', 'Client') },
+              { value: 'internal', label: t('bento.timeline.modeInternal', 'Internal') },
+              { value: 'resolution', label: t('bento.timeline.modeResolution', 'Resolution') },
             ] as const
           ).map((option) => (
             <button
@@ -570,7 +584,7 @@ export function BentoTimelineTile({
           onClick={handleSend}
           disabled={isSubmitting || !hasDraft}
         >
-          {isSubmitting ? 'Sending…' : 'Send'}
+          {isSubmitting ? t('bento.timeline.sending', 'Sending…') : t('bento.timeline.send', 'Send')}
         </Button>
       </div>
     </div>
@@ -581,8 +595,8 @@ export function BentoTimelineTile({
   return (
     <BentoTile
       id={id}
-      title="Timeline"
-      subtitle="Replies, time, and system changes in one place"
+      title={t('bento.timeline.title', 'Timeline')}
+      subtitle={t('bento.timeline.subtitle', 'Replies, time, and system changes in one place')}
       icon={<Activity className="h-4 w-4" />}
       error={fetchError}
       className={className}
@@ -592,15 +606,17 @@ export function BentoTimelineTile({
           type="button"
           className="inline-flex items-center gap-1 text-xs font-medium text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))]"
           onClick={toggleOrder}
-          aria-label="Toggle sort order"
+          aria-label={t('bento.timeline.toggleSortOrder', 'Toggle sort order')}
         >
           <ArrowDownUp className="h-3.5 w-3.5" />
-          {order === 'asc' ? 'Oldest first' : 'Newest first'}
+          {order === 'asc'
+            ? t('bento.timeline.oldestFirst', 'Oldest first')
+            : t('bento.timeline.newestFirst', 'Newest first')}
         </button>
       }
     >
       <div id={`${id}-filters`} className="flex flex-wrap gap-1.5 mb-3">
-        {LANE_FILTERS.map((laneFilter) => {
+        {laneFilters.map((laneFilter) => {
           const count =
             laneFilter.value === 'everything' ? nodes.length : counts[laneFilter.value as Lane];
           return (
@@ -625,8 +641,10 @@ export function BentoTimelineTile({
       {visible.length === 0 ? (
         <BentoTileEmpty id={`${id}-empty`}>
           {nodes.length === 0
-            ? `Nothing yet. The ticket was opened ${ticketCreatedAt ? dayLabel(ticketCreatedAt) : 'recently'}.`
-            : 'Nothing in this lane yet.'}
+            ? t('bento.timeline.nothingYet', 'Nothing yet. The ticket was opened {{when}}.', {
+                when: ticketCreatedAt ? dayLabel(ticketCreatedAt) : t('bento.timeline.recently', 'recently'),
+              })
+            : t('bento.timeline.nothingInLane', 'Nothing in this lane yet.')}
         </BentoTileEmpty>
       ) : (
         <ol id={`${id}-stream`} className="relative">
@@ -687,12 +705,14 @@ export function BentoTimelineTile({
                               id={`${id}-comment-${commentId}-parent-ref`}
                               type="button"
                               onClick={() => jumpToComment(parentId)}
-                              title={parentText ? `Replying to ${parentAuthor}: ${parentText}` : `Replying to ${parentAuthor}`}
+                              title={parentText
+                                ? t('bento.timeline.replyingToWithText', 'Replying to {{name}}: {{text}}', { name: parentAuthor, text: parentText })
+                                : t('bento.timeline.replyingTo', 'Replying to {{name}}', { name: parentAuthor })}
                               className="mb-1 flex max-w-full items-center gap-1 rounded-full bg-[rgb(var(--color-border-100))] px-2.5 py-0.5 text-[11px] text-[rgb(var(--color-text-500))] hover:bg-[rgb(var(--color-border-200))]"
                             >
                               <CornerDownRight className="h-3 w-3 flex-shrink-0" />
                               <span className="flex-shrink-0 font-semibold text-[rgb(var(--color-text-700))]">
-                                {(parentAuthor || 'Unknown').split(' ')[0]}
+                                {(parentAuthor || t('bento.timeline.unknownAuthor', 'Unknown')).split(' ')[0]}
                               </span>
                               {parentText ? (
                                 <span className="min-w-0 truncate">· “{truncateSnippet(parentText)}”</span>
@@ -742,13 +762,15 @@ export function BentoTimelineTile({
                               className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-400)/0.15)] px-2.5 py-0.5 text-xs font-semibold text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))] hover:bg-[rgb(var(--color-primary-100))] dark:hover:bg-[rgb(var(--color-primary-400)/0.25)]"
                             >
                               <MessagesSquare className="h-3 w-3" />
-                              Thread · {group.replyCount} {group.replyCount === 1 ? 'reply' : 'replies'}
+                              {group.replyCount === 1
+                                ? t('bento.timeline.threadReply', 'Thread · {{count}} reply', { count: group.replyCount })
+                                : t('bento.timeline.threadReplies', 'Thread · {{count}} replies', { count: group.replyCount })}
                             </button>
                           ) : null}
                         </div>
                       );
                     })() : (
-                      <TimelineNodeView id={`${id}-node`} node={node} />
+                      <TimelineNodeView id={`${id}-node`} node={node} t={t} />
                     )}
                   </div>
                 </div>
@@ -810,16 +832,16 @@ export function BentoTimelineTile({
 
 // Compact single-line rows for the non-comment lanes. The lane icon is drawn
 // by the spine pin in the gutter, so these render just the text + timestamp.
-function TimelineNodeView({ id, node }: { id: string; node: TimelineNode }) {
+function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: Translator }) {
   if (node.lane === 'time' && node.entry?.timeEntry) {
     const timeEntry = node.entry.timeEntry;
     return (
       <div id={`${id}-${node.sortId}`} className="flex gap-2.5 items-baseline pt-1">
         <p className="text-sm text-[rgb(var(--color-text-600))] min-w-0">
           <span className="font-semibold text-[rgb(var(--color-text-800))]">
-            {timeEntry.user_display_name || 'Someone'}
+            {timeEntry.user_display_name || t('bento.timeline.someone', 'Someone')}
           </span>{' '}
-          logged{' '}
+          {t('bento.timeline.logged', 'logged')}{' '}
           <span className="inline-block rounded bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-400)/0.2)] px-1.5 text-xs font-semibold text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))]">
             {formatMinutes(timeEntry.billable_duration)}
           </span>
@@ -838,11 +860,11 @@ function TimelineNodeView({ id, node }: { id: string; node: TimelineNode }) {
       <div id={`${id}-${node.sortId}`} className="flex gap-2.5 items-baseline pt-1">
         <p className="text-sm text-[rgb(var(--color-text-600))] min-w-0">
           <span className="font-semibold text-[rgb(var(--color-text-800))]">
-            {alert.device_name || 'Monitoring'}
+            {alert.device_name || t('bento.timeline.monitoringActor', 'Monitoring')}
           </span>
           {alert.message ? <> — {alert.message}</> : null}
           {alert.occurrence_count && alert.occurrence_count > 1 ? (
-            <span className="text-xs text-[rgb(var(--color-text-400))]"> (occurrence {alert.occurrence_count})</span>
+            <span className="text-xs text-[rgb(var(--color-text-400))]"> {t('bento.timeline.occurrence', '(occurrence {{count}})', { count: alert.occurrence_count })}</span>
           ) : null}
         </p>
         <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
@@ -856,7 +878,7 @@ function TimelineNodeView({ id, node }: { id: string; node: TimelineNode }) {
   return (
     <div id={`${id}-${node.sortId}`} className="flex gap-2.5 items-baseline pt-1.5">
       <p className="text-xs text-[rgb(var(--color-text-500))] min-w-0 truncate">
-        {node.entry ? describeSystemEntry(node.entry) : 'Ticket updated'}
+        {node.entry ? describeSystemEntry(node.entry, t) : t('bento.timeline.ticketUpdated', 'Ticket updated')}
       </p>
       <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
         {formatClock(node.occurredAt)}

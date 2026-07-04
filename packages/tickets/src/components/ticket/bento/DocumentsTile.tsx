@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { FileText, Plus, Eye } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IDocument } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -59,10 +60,12 @@ function DocumentRow({
   id,
   doc,
   resolveDocumentViewUrl,
+  t,
 }: {
   id: string;
   doc: IDocument;
   resolveDocumentViewUrl?: DocumentsTileProps['resolveDocumentViewUrl'];
+  t: (key: string, defaultValue: string) => string;
 }) {
   const size = formatFileSize(doc.file_size);
   return (
@@ -83,7 +86,7 @@ function DocumentRow({
         {doc.is_client_visible ? (
           <Eye
             className="h-3 w-3 flex-shrink-0 text-[rgb(var(--color-text-400))]"
-            aria-label="Client visible"
+            aria-label={t('bento.tiles.clientVisible', 'Client visible')}
           />
         ) : null}
         {size ? (
@@ -112,6 +115,7 @@ export function DocumentsTile({
   allowLinkExistingDocuments,
   allowBlockDocuments,
 }: DocumentsTileProps) {
+  const { t } = useTranslation('features/tickets');
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const visible = documents.slice(0, MAX_ROWS);
   const overflow = documents.length - visible.length;
@@ -120,7 +124,7 @@ export function DocumentsTile({
     <>
       <BentoTile
         id={id}
-        title="Documents"
+        title={t('bento.tiles.documents', 'Documents')}
         icon={<FileText className="h-4 w-4" />}
         action={
           <Button
@@ -128,7 +132,7 @@ export function DocumentsTile({
             variant="ghost"
             size="sm"
             className="h-6 w-6 p-0"
-            aria-label="Add or manage documents"
+            aria-label={t('bento.tiles.addOrManageDocuments', 'Add or manage documents')}
             onClick={() => setIsManagerOpen(true)}
           >
             <Plus className="h-4 w-4" />
@@ -137,14 +141,14 @@ export function DocumentsTile({
       >
         {documents.length === 0 ? (
           <div>
-            <BentoTileEmpty id={`${id}-empty`}>No documents yet</BentoTileEmpty>
+            <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.noDocuments', 'No documents yet')}</BentoTileEmpty>
             <button
               id={`${id}-add-link`}
               type="button"
               onClick={() => setIsManagerOpen(true)}
               className="inline-flex items-center gap-1 text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline mt-1"
             >
-              <Plus className="h-3 w-3" /> Add a document
+              <Plus className="h-3 w-3" /> {t('bento.tiles.addDocument', 'Add a document')}
             </button>
           </div>
         ) : (
@@ -156,6 +160,7 @@ export function DocumentsTile({
                   id={`${id}-row-${doc.document_id}`}
                   doc={doc}
                   resolveDocumentViewUrl={resolveDocumentViewUrl}
+                  t={t}
                 />
               ))}
             </ul>
@@ -166,7 +171,7 @@ export function DocumentsTile({
                 onClick={() => setIsManagerOpen(true)}
                 className="text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline mt-2"
               >
-                View all {documents.length}
+                {t('bento.tiles.viewAllCount', 'View all {{count}}', { count: documents.length })}
               </button>
             ) : null}
           </div>

@@ -8,8 +8,9 @@ import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomS
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TagManager } from '@alga-psa/tags/components';
 import type { ITag, ITicket } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile } from './BentoTile';
-import { computeSlaClocks, type TicketSlaFields } from './slaClocks';
+import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
 
 interface HeroSelectOption {
   value: string;
@@ -42,12 +43,6 @@ interface BentoHeroProps {
   liveHighlightedFields?: string[];
   liveFrozenFields?: string[];
 }
-
-const RESPONSE_STATE_OPTIONS: SelectOption[] = [
-  { value: 'awaiting_internal', label: 'Waiting on us' },
-  { value: 'awaiting_client', label: 'Waiting on client' },
-  { value: 'none', label: 'No reply needed' },
-];
 
 function HeroField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -93,8 +88,18 @@ export function BentoHero({
   liveHighlightedFields = [],
   liveFrozenFields = [],
 }: BentoHeroProps) {
+  const { t } = useTranslation('features/tickets');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(ticket.title ?? '');
+
+  const responseStateOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: 'awaiting_internal', label: t('bento.hero.responseWaitingOnUs', 'Waiting on us') },
+      { value: 'awaiting_client', label: t('bento.hero.responseWaitingOnClient', 'Waiting on client') },
+      { value: 'none', label: t('bento.hero.responseNone', 'No reply needed') },
+    ],
+    [t],
+  );
 
   useEffect(() => {
     if (!isEditingTitle) setTitleDraft(ticket.title ?? '');
@@ -139,7 +144,7 @@ export function BentoHero({
 
   const agentJsxOptions = useMemo<SelectOption[]>(
     () => [
-      { value: 'unassigned', label: 'Not assigned' },
+      { value: 'unassigned', label: t('bento.hero.notAssigned', 'Not assigned') },
       ...agentOptions.map((option) => ({
         value: option.value,
         textValue: option.label,
@@ -153,7 +158,7 @@ export function BentoHero({
         ),
       })),
     ],
-    [agentOptions],
+    [agentOptions, t],
   );
 
   const dueDate = ticket.due_date ? new Date(ticket.due_date as unknown as string) : undefined;
@@ -211,7 +216,7 @@ export function BentoHero({
                 <button
                   id={`${id}-title-edit`}
                   type="button"
-                  aria-label="Edit title"
+                  aria-label={t('bento.hero.editTitle', 'Edit title')}
                   className="text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))] flex-shrink-0"
                   onClick={() => setIsEditingTitle(true)}
                 >
@@ -228,7 +233,7 @@ export function BentoHero({
                 className="inline-flex items-center gap-1 rounded-full bg-red-100 dark:bg-red-500/20 px-2.5 py-0.5 text-xs font-semibold text-red-800 dark:text-red-300"
               >
                 <Flame className="h-3 w-3" />
-                Escalated{typeof ticket.escalation_level === 'number' && ticket.escalation_level > 0 ? ` · L${ticket.escalation_level}` : ''}
+                {t('bento.hero.escalated', 'Escalated')}{typeof ticket.escalation_level === 'number' && ticket.escalation_level > 0 ? ` · L${ticket.escalation_level}` : ''}
               </span>
             ) : null}
             {!hideSlaStatus && slaClocks.policyApplied ? (
@@ -236,7 +241,7 @@ export function BentoHero({
                 id={`${id}-sla-slab`}
                 className="text-xs font-medium text-[rgb(var(--color-text-500))]"
               >
-                Resolution SLA:{' '}
+                {t('bento.hero.resolutionSla', 'Resolution SLA:')}{' '}
                 <span
                   className={
                     slaClocks.resolution.state === 'overdue' || slaClocks.resolution.state === 'missed'
@@ -246,7 +251,7 @@ export function BentoHero({
                         : 'font-semibold text-amber-700 dark:text-amber-400'
                   }
                 >
-                  {slaClocks.resolution.label}
+                  {formatSlaLabel(slaClocks.resolution.label, t)}
                 </span>
               </span>
             ) : null}
@@ -259,13 +264,13 @@ export function BentoHero({
               className="flex items-center gap-1.5"
             >
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              All fields
+              {t('bento.hero.allFields', 'All fields')}
             </Button>
           </div>
         </div>
 
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <HeroField label="Status">
+          <HeroField label={t('bento.hero.status', 'Status')}>
             <div className={fieldWrapClass('status_id')}>
               <CustomSelect
                 id={`${id}-status-select`}
@@ -277,7 +282,7 @@ export function BentoHero({
               />
             </div>
           </HeroField>
-          <HeroField label="Priority">
+          <HeroField label={t('bento.hero.priority', 'Priority')}>
             <div className={fieldWrapClass('priority_id')}>
               <CustomSelect
                 id={`${id}-priority-select`}
@@ -289,7 +294,7 @@ export function BentoHero({
               />
             </div>
           </HeroField>
-          <HeroField label="Board">
+          <HeroField label={t('bento.hero.board', 'Board')}>
             <div className={fieldWrapClass('board_id')}>
               <CustomSelect
                 id={`${id}-board-select`}
@@ -301,7 +306,7 @@ export function BentoHero({
               />
             </div>
           </HeroField>
-          <HeroField label="Assigned to">
+          <HeroField label={t('bento.hero.assignedTo', 'Assigned to')}>
             <div className={fieldWrapClass('assigned_to')}>
               <CustomSelect
                 id={`${id}-assignee-select`}
@@ -313,24 +318,24 @@ export function BentoHero({
               />
             </div>
           </HeroField>
-          <HeroField label="Due">
+          <HeroField label={t('bento.hero.due', 'Due')}>
             <div className={fieldWrapClass('due_date')}>
               <DatePicker
                 id={`${id}-due-date-picker`}
                 value={dueDate && !Number.isNaN(dueDate.getTime()) ? dueDate : undefined}
                 onChange={handleDueDateChange}
-                placeholder="No due date"
+                placeholder={t('bento.hero.noDueDate', 'No due date')}
                 disabled={isFrozen('due_date')}
               />
             </div>
           </HeroField>
           {responseStateTrackingEnabled ? (
-            <HeroField label="Reply status">
+            <HeroField label={t('bento.hero.replyStatus', 'Reply status')}>
               <div className={fieldWrapClass('response_state')}>
                 <CustomSelect
                   id={`${id}-response-state-select`}
                   value={(ticket.response_state as string | null) ?? 'none'}
-                  options={RESPONSE_STATE_OPTIONS}
+                  options={responseStateOptions}
                   onValueChange={(value: string) =>
                     void onSelectChange('response_state', value === 'none' ? null : value)
                   }
@@ -345,7 +350,7 @@ export function BentoHero({
         {ticket.ticket_id && onTagsChange ? (
           <div id={`${id}-tags-row`} className="mt-3 flex items-center gap-2 flex-wrap">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-              Tags
+              {t('bento.hero.tags', 'Tags')}
             </span>
             <TagManager
               entityId={ticket.ticket_id}

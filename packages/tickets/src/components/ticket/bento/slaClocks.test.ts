@@ -42,7 +42,7 @@ describe('computeSlaClocks', () => {
     expect(clocks.policyApplied).toBe(true);
     expect(clocks.response.state).toBe('met');
     // Started 60m before now, responded 18m before now -> 42m elapsed.
-    expect(clocks.response.label).toBe('Met in 42m');
+    expect(clocks.response.label).toEqual({ kind: 'metIn', duration: '42m' });
     expect(clocks.response.pctElapsed).toBe(100);
   });
 
@@ -58,7 +58,7 @@ describe('computeSlaClocks', () => {
       NOW,
     );
     expect(clocks.response.state).toBe('missed');
-    expect(clocks.response.label).toContain('Missed by');
+    expect(clocks.response.label.kind).toBe('missedBy');
   });
 
   it('counts down a running resolution clock and reports time left', () => {
@@ -71,7 +71,7 @@ describe('computeSlaClocks', () => {
       NOW,
     );
     expect(clocks.resolution.state).toBe('running');
-    expect(clocks.resolution.label).toBe('1h left');
+    expect(clocks.resolution.label).toEqual({ kind: 'left', duration: '1h' });
     // 180m elapsed of a 240m window -> 75%.
     expect(clocks.resolution.pctElapsed).toBe(75);
   });
@@ -86,7 +86,7 @@ describe('computeSlaClocks', () => {
       NOW,
     );
     expect(clocks.resolution.state).toBe('overdue');
-    expect(clocks.resolution.label).toBe('Overdue by 2h');
+    expect(clocks.resolution.label).toEqual({ kind: 'overdueBy', duration: '2h' });
     expect(clocks.resolution.pctElapsed).toBe(100);
   });
 
@@ -101,7 +101,7 @@ describe('computeSlaClocks', () => {
       NOW,
     );
     expect(clocks.resolution.state).toBe('paused');
-    expect(clocks.resolution.label).toBe('Paused');
+    expect(clocks.resolution.label).toEqual({ kind: 'paused' });
   });
 
   it('prefers completion state over a pause (a met clock is not "paused")', () => {

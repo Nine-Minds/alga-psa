@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { LayoutGrid, AlignLeft } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TicketDetailLayout } from '../../../actions/ticketLayoutPreference';
 
 interface LayoutToggleProps {
@@ -16,6 +17,7 @@ interface LayoutToggleProps {
  * ticketLayoutPreference actions (wired by the parent).
  */
 export function LayoutToggle({ value, onChange, disabled }: LayoutToggleProps) {
+  const { t } = useTranslation('features/tickets');
   const base =
     'inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-400))]';
   const on =
@@ -26,7 +28,7 @@ export function LayoutToggle({ value, onChange, disabled }: LayoutToggleProps) {
     <div
       id="ticket-layout-toggle"
       role="group"
-      aria-label="Ticket layout"
+      aria-label={t('bento.layout.ticketLayout', 'Ticket layout')}
       className="inline-flex items-center gap-0.5 rounded-lg bg-[rgb(var(--color-border-100))] p-0.5"
     >
       <button
@@ -38,7 +40,7 @@ export function LayoutToggle({ value, onChange, disabled }: LayoutToggleProps) {
         onClick={() => onChange('grid')}
       >
         <LayoutGrid className="h-3.5 w-3.5" />
-        Grid
+        {t('bento.layout.grid', 'Grid')}
       </button>
       <button
         id="ticket-layout-toggle-entry"
@@ -49,7 +51,7 @@ export function LayoutToggle({ value, onChange, disabled }: LayoutToggleProps) {
         onClick={() => onChange('entry')}
       >
         <AlignLeft className="h-3.5 w-3.5" />
-        Entry
+        {t('bento.layout.entry', 'Entry')}
       </button>
     </div>
   );

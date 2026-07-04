@@ -1240,5 +1240,8 @@
     "showingAllColumns": "Showing all columns; scroll horizontally to see them.",
     "showLess": "Show less",
     "columnsHidden": "{{count}} columns hidden due to limited space."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Loading editor…"
   }
 }

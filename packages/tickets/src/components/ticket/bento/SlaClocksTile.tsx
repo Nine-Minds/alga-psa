@@ -2,9 +2,10 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Clock } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile, BentoTileEmpty } from './BentoTile';
 import { getTicketSlaPolicyName } from '../../../actions/ticketBentoActions';
-import { computeSlaClocks, type SlaClock, type TicketSlaFields } from './slaClocks';
+import { computeSlaClocks, formatSlaLabel, type SlaClock, type TicketSlaFields } from './slaClocks';
 
 const STATE_TEXT: Record<string, string> = {
   met: 'text-green-700 dark:text-green-400',
@@ -24,12 +25,22 @@ const STATE_BAR: Record<string, string> = {
   none: 'bg-[rgb(var(--color-border-200))]',
 };
 
-function ClockRow({ id, name, clock }: { id: string; name: string; clock: SlaClock }) {
+function ClockRow({
+  id,
+  name,
+  clock,
+  label,
+}: {
+  id: string;
+  name: string;
+  clock: SlaClock;
+  label: string;
+}) {
   return (
     <div id={id} className="mb-3 last:mb-0">
       <div className="flex items-baseline justify-between text-xs font-medium mb-1">
         <span className="text-[rgb(var(--color-text-600))]">{name}</span>
-        <span className={STATE_TEXT[clock.state]}>{clock.label}</span>
+        <span className={STATE_TEXT[clock.state]}>{label}</span>
       </div>
       <div className="h-1.5 rounded-full bg-[rgb(var(--color-border-100))] overflow-hidden">
         <div
@@ -50,6 +61,7 @@ interface SlaClocksTileProps {
 
 /** "SLA clocks" tile — response + resolution targets from the sla_* columns. */
 export function SlaClocksTile({ id, ticket, initialPolicyName }: SlaClocksTileProps) {
+  const { t } = useTranslation('features/tickets');
   // Re-derive on a minute cadence so "left"/"overdue" labels stay honest
   // while the screen sits open.
   const [now, setNow] = useState(() => Date.now());
@@ -92,7 +104,7 @@ export function SlaClocksTile({ id, ticket, initialPolicyName }: SlaClocksTilePr
   return (
     <BentoTile
       id={id}
-      title="SLA clocks"
+      title={t('bento.sla.title', 'SLA clocks')}
       icon={<Clock className="h-4 w-4" />}
       action={
         policyName ? (
@@ -108,16 +120,28 @@ export function SlaClocksTile({ id, ticket, initialPolicyName }: SlaClocksTilePr
     >
       {clocks.policyApplied ? (
         <div>
-          <ClockRow id={`${id}-response`} name="First response" clock={clocks.response} />
-          <ClockRow id={`${id}-resolution`} name="Resolution" clock={clocks.resolution} />
+          <ClockRow
+            id={`${id}-response`}
+            name={t('bento.sla.firstResponse', 'First response')}
+            clock={clocks.response}
+            label={formatSlaLabel(clocks.response.label, t)}
+          />
+          <ClockRow
+            id={`${id}-resolution`}
+            name={t('bento.sla.resolution', 'Resolution')}
+            clock={clocks.resolution}
+            label={formatSlaLabel(clocks.resolution.label, t)}
+          />
           {clocks.response.state === 'paused' || clocks.resolution.state === 'paused' ? (
             <p className="text-xs text-[rgb(var(--color-text-400))] mt-2">
-              The clock is paused while the ticket waits in a paused status.
+              {t('bento.sla.pausedHint', 'The clock is paused while the ticket waits in a paused status.')}
             </p>
           ) : null}
         </div>
       ) : (
-        <BentoTileEmpty id={`${id}-empty`}>No SLA policy applies</BentoTileEmpty>
+        <BentoTileEmpty id={`${id}-empty`}>
+          {t('bento.sla.noPolicy', 'No SLA policy applies')}
+        </BentoTileEmpty>
       )}
     </BentoTile>
   );

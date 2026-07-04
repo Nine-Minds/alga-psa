@@ -2,6 +2,7 @@
 
 import React, { use, useEffect, useMemo, useRef, useState } from 'react';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
 import type { TicketTimeEntriesSummary } from '@alga-psa/types';
 
@@ -43,6 +44,7 @@ function dayLabel(key: string): string {
  * per-ticket summary the entries list uses, so the two can never disagree.
  */
 export function TimeLoggedSummary({ id, ticketId, refreshKey = 0, initialSummary }: TimeLoggedSummaryProps) {
+  const { t } = useTranslation('features/tickets');
   const { fetchTimeEntriesForTicket } = useSchedulingCallbacks();
   const initialData = initialSummary ? use(initialSummary) : null;
   const [summary, setSummary] = useState<TicketTimeEntriesSummary | null>(initialData);
@@ -99,14 +101,14 @@ export function TimeLoggedSummary({ id, ticketId, refreshKey = 0, initialSummary
           {formatMinutesAsHoursAndMinutes(totalMinutes)}
         </span>
         <span className="text-xs text-[rgb(var(--color-text-500))]">
-          across {entryCount} {entryCount === 1 ? 'entry' : 'entries'}
+          {t('bento.tiles.acrossEntries', { count: entryCount })}
         </span>
       </div>
       {buckets.length > 1 ? (
         <div
           id={`${id}-chart`}
           role="img"
-          aria-label={`Time logged per day: ${buckets.map((b) => `${b.label} ${formatMinutesAsHoursAndMinutes(b.minutes)}`).join(', ')}`}
+          aria-label={t('bento.tiles.timeLoggedPerDay', 'Time logged per day: {{details}}', { details: buckets.map((b) => `${b.label} ${formatMinutesAsHoursAndMinutes(b.minutes)}`).join(', ') })}
           className="mt-2 flex items-end gap-1.5 h-14"
         >
           {buckets.map((bucket) => (

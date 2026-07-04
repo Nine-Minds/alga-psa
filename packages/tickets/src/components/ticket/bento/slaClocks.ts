@@ -19,12 +19,55 @@ export interface TicketSlaFields {
 
 export type SlaClockState = 'none' | 'met' | 'missed' | 'running' | 'overdue' | 'paused';
 
+/**
+ * Translation-agnostic descriptor for a clock's house-voice label. The pure
+ * compute layer stays free of i18n; a component renders it via
+ * {@link formatSlaLabel} with a `t` function so every locale is covered.
+ */
+export type SlaClockLabel =
+  | { kind: 'none' }
+  | { kind: 'met' }
+  | { kind: 'metIn'; duration: string }
+  | { kind: 'missed' }
+  | { kind: 'missedBy'; duration: string }
+  | { kind: 'paused' }
+  | { kind: 'overdueBy'; duration: string }
+  | { kind: 'left'; duration: string };
+
 export interface SlaClock {
   state: SlaClockState;
-  /** House-voice label, e.g. "Met in 42m", "4h 12m left", "Overdue by 2h", "Paused". */
-  label: string;
+  /** House-voice label descriptor, e.g. `{ kind: 'metIn', duration: '42m' }`. */
+  label: SlaClockLabel;
   /** 0..100 share of the window already elapsed; null when not meaningful. */
   pctElapsed: number | null;
+}
+
+type SlaLabelTranslator = (
+  key: string,
+  fallback: string,
+  options?: Record<string, unknown>,
+) => string;
+
+/** Render a {@link SlaClockLabel} to a localized string via a `t` function. */
+export function formatSlaLabel(label: SlaClockLabel, t: SlaLabelTranslator): string {
+  switch (label.kind) {
+    case 'none':
+      return t('bento.sla.noTarget', 'No target');
+    case 'met':
+      return t('bento.sla.met', 'Met');
+    case 'metIn':
+      return t('bento.sla.metIn', 'Met in {{duration}}', { duration: label.duration });
+    case 'missed':
+      return t('bento.sla.missed', 'Missed');
+    case 'missedBy':
+      return t('bento.sla.missedBy', 'Missed by {{duration}}', { duration: label.duration });
+    case 'paused':
+      return t('bento.sla.paused', 'Paused');
+    case 'overdueBy':
+      return t('bento.sla.overdueBy', 'Overdue by {{duration}}', { duration: label.duration });
+    case 'left':
+      return t('bento.sla.left', '{{duration}} left', { duration: label.duration });
+  }
 }
 
 export interface SlaClocks {
@@ -57,7 +100,7 @@ function computeClock(
   pausedAt: number | null,
   now: number,
 ): SlaClock {
-  if (dueAt == null) return { state: 'none', label: 'No target', pctElapsed: null };
+  if (dueAt == null) return { state: 'none', label: { kind: 'none' }, pctElapsed: null };
 
   if (completedAt != null || met != null) {
     const wasMet = met ?? (completedAt != null && completedAt <= dueAt);
@@ -65,33 +108,34 @@ function computeClock(
       const took = completedAt != null && startedAt != null ? completedAt - startedAt : null;
       return {
         state: 'met',
-        label: took != null ? `Met in ${formatDurationShort(took)}` : 'Met',
+        label: took != null ? { kind: 'metIn', duration: formatDurationShort(took) } : { kind: 'met' },
         pctElapsed: 100,
       };
     }
     const by = completedAt != null ? completedAt - dueAt : null;
     return {
       state: 'missed',
-      label: by != null && by > 0 ? `Missed by ${formatDurationShort(by)}` : 'Missed',
+      label:
+        by != null && by > 0 ? { kind: 'missedBy', duration: formatDurationShort(by) } : { kind: 'missed' },
       pctElapsed: 100,
     };
   }
 
   if (pausedAt != null) {
-    return { state: 'paused', label: 'Paused', pctElapsed: pct(startedAt, dueAt, pausedAt) };
+    return { state: 'paused', label: { kind: 'paused' }, pctElapsed: pct(startedAt, dueAt, pausedAt) };
   }
 
   if (now > dueAt) {
     return {
       state: 'overdue',
-      label: `Overdue by ${formatDurationShort(now - dueAt)}`,
+      label: { kind: 'overdueBy', duration: formatDurationShort(now - dueAt) },
       pctElapsed: 100,
     };
   }
 
   return {
     state: 'running',
-    label: `${formatDurationShort(dueAt - now)} left`,
+    label: { kind: 'left', duration: formatDurationShort(dueAt - now) },
     pctElapsed: pct(startedAt, dueAt, now),
   };
 }
