@@ -106,6 +106,8 @@ export interface TicketBentoLayoutProps {
     documentIds: string[];
   }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
+  /** Threaded reply pipeline (same handler the conversation view gets). */
+  onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
   // Request / contact
   createdByUser?: IUser | null;
   contactInfo?: IContact | null;
@@ -534,6 +536,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             isSubmitting={props.isSubmitting}
             onNewCommentContentChange={props.onNewCommentContentChange}
             onAddNewComment={props.onAddNewComment}
+            onAddReplyComment={props.onAddReplyComment}
             currentUser={props.currentUser}
             isEditing={props.isEditing}
             currentComment={props.currentComment}

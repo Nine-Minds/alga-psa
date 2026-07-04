@@ -2926,6 +2926,7 @@ const handleClose = () => {
                     isSubmitting={isSubmitting}
                     onNewCommentContentChange={setNewCommentContent}
                     onAddNewComment={handleAddNewComment}
+                    onAddReplyComment={handleAddReplyComment}
                     currentUser={currentUser ? {
                         id: currentUser.user_id,
                         name: `${currentUser.first_name} ${currentUser.last_name}`,
