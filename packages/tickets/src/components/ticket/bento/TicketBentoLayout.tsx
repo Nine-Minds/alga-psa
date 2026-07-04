@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import type { PartialBlock } from '@blocknote/core';
 import { FileText, User, Play, Pause, StopCircle, Clock, Users, X, Pencil } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -25,13 +25,14 @@ import { parseTicketRichTextContent } from '../../../lib/ticketRichText';
 import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/commentAuthorResolution';
 import TicketChecklistSection from './../TicketChecklistSection';
 import { DocumentsTile } from './DocumentsTile';
+import type { TicketScreenBootstrap } from '../../../lib/ticketScreenBootstrap';
 import TicketTimeEntries from './../TicketTimeEntries';
 import TicketMaterialsCard from './../TicketMaterialsCard';
 import TicketWatchListCard from './../TicketWatchListCard';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
-import { BentoTile, BentoTileEmpty } from './BentoTile';
+import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from './BentoTile';
 import { BentoHero } from './BentoHero';
 import { BentoTimelineTile } from './BentoTimelineTile';
 import { SlaClocksTile } from './SlaClocksTile';
@@ -108,6 +109,11 @@ export interface TicketBentoLayoutProps {
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   /** Threaded reply pipeline (same handler the conversation view gets). */
   onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
+  /**
+   * Server-started data promises from the RSC page. Tiles resolve them via
+   * React use() behind <Suspense> skeletons — zero fetch-on-mount requests.
+   */
+  bentoStreams?: NonNullable<TicketScreenBootstrap['streams']>;
   // Request / contact
   createdByUser?: IUser | null;
   contactInfo?: IContact | null;
@@ -286,22 +292,41 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         <div id={`${id}-assets-container`}>{props.associatedAssets}</div>
       ) : null}
 
-      <NextVisitTile id={`${id}-next-visit-tile`} ticketId={ticketId} />
-      <CallsEmailsTile
-        id={`${id}-calls-emails-tile`}
-        ticketId={ticketId}
-        viewAllHref={ticket.contact_name_id ? `/msp/contacts/${ticket.contact_name_id}/activity` : undefined}
-      />
+      <Suspense fallback={<BentoTileSkeleton id={`${id}-next-visit-tile-loading`} title="Next visit" />}>
+        <NextVisitTile
+          id={`${id}-next-visit-tile`}
+          ticketId={ticketId}
+          initialData={props.bentoStreams?.scheduleEntries}
+        />
+      </Suspense>
+      <Suspense fallback={<BentoTileSkeleton id={`${id}-calls-emails-tile-loading`} title="Calls and emails" />}>
+        <CallsEmailsTile
+          id={`${id}-calls-emails-tile`}
+          ticketId={ticketId}
+          viewAllHref={ticket.contact_name_id ? `/msp/contacts/${ticket.contact_name_id}/activity` : undefined}
+          initialData={props.bentoStreams?.interactions}
+        />
+      </Suspense>
     </div>
   );
 
   const timerTile = !props.hideTimeEntry ? (
     <BentoTile id={`${id}-time-tile`} title="Time logged" icon={<Clock className="h-4 w-4" />}>
-      <TimeLoggedSummary
-        id={`${id}-time-summary`}
-        ticketId={ticketId}
-        refreshKey={props.timeEntriesRefreshKey}
-      />
+      <Suspense
+        fallback={
+          <div
+            id={`${id}-time-summary-loading`}
+            className="animate-pulse bg-[rgb(var(--color-border-100))] h-8 rounded-md mb-3"
+          />
+        }
+      >
+        <TimeLoggedSummary
+          id={`${id}-time-summary`}
+          ticketId={ticketId}
+          refreshKey={props.timeEntriesRefreshKey}
+          initialSummary={props.bentoStreams?.timeEntries}
+        />
+      </Suspense>
       {props.isLiveTicketTimerEnabled ? (
         <div className="mb-3">
           <div className="flex items-center justify-between rounded-md bg-[rgb(var(--color-border-100))] px-3 py-2 font-mono text-xl text-[rgb(var(--color-text-900))]">
@@ -351,15 +376,25 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       </Button>
 
       {ticketId && props.userId ? (
-        <TicketTimeEntries
-          id={`${id}-time-entries`}
-          ticketId={ticketId}
-          currentUserId={props.userId}
-          dateTimeFormat={props.dateTimeFormat}
-          refreshKey={props.timeEntriesRefreshKey}
-          onEditEntry={props.onEditTimeEntry}
-          onDeleteEntry={props.onDeleteTimeEntry}
-        />
+        <Suspense
+          fallback={
+            <div
+              id={`${id}-time-entries-loading-fallback`}
+              className="animate-pulse bg-[rgb(var(--color-border-100))] h-10 rounded-md"
+            />
+          }
+        >
+          <TicketTimeEntries
+            id={`${id}-time-entries`}
+            ticketId={ticketId}
+            currentUserId={props.userId}
+            dateTimeFormat={props.dateTimeFormat}
+            refreshKey={props.timeEntriesRefreshKey}
+            onEditEntry={props.onEditTimeEntry}
+            onDeleteEntry={props.onDeleteTimeEntry}
+            initialSummary={props.bentoStreams?.timeEntries}
+          />
+        </Suspense>
       ) : null}
 
       {props.isLiveTicketTimerEnabled && ticketId && props.userId && props.renderIntervalManagement ? (
@@ -435,7 +470,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
     // At the lg tier the right rail spans the full width below the timeline,
     // so its tiles flow as a 3-up grid; at xl it becomes the stacked rail.
     <div className="min-w-0 space-y-4 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:items-start xl:block xl:space-y-4">
-      {!props.hideSlaStatus ? <SlaClocksTile id={`${id}-sla-tile`} ticket={ticket} /> : null}
+      {!props.hideSlaStatus ? <SlaClocksTile id={`${id}-sla-tile`} ticket={ticket} initialPolicyName={props.bentoStreams?.slaPolicyName} /> : null}
 
       {/* These sections ship their own ContentCard chrome; the surrounding
           ContentCardVariantProvider restyles it to match the bento tiles, so
@@ -450,7 +485,14 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       {timerTile}
 
       {billingEnabled ? (
-        <BillingTile id={`${id}-billing-tile`} ticketId={ticketId} refreshKey={props.timeEntriesRefreshKey} />
+        <Suspense fallback={<BentoTileSkeleton id={`${id}-billing-tile-loading`} title="Billing" />}>
+          <BillingTile
+            id={`${id}-billing-tile`}
+            ticketId={ticketId}
+            refreshKey={props.timeEntriesRefreshKey}
+            initialData={props.bentoStreams?.billingRollup}
+          />
+        </Suspense>
       ) : null}
 
       {teamTile}
@@ -471,7 +513,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       />
 
       {!props.hideMaterials ? (
-        <TicketMaterialsCard id={`${id}-materials`} ticketId={ticketId} clientId={ticket.client_id} />
+        <TicketMaterialsCard id={`${id}-materials`} ticketId={ticketId} clientId={ticket.client_id} initialMaterials={props.bentoStreams?.materials} />
       ) : null}
 
       {props.surveySummaryCard ? props.surveySummaryCard : null}
@@ -522,6 +564,15 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         <div className="order-3 lg:order-1 lg:col-span-4 xl:col-span-3">{leftRail}</div>
         <div className="order-1 lg:order-2 lg:col-span-8 xl:col-span-6 min-w-0">
+          <Suspense
+            fallback={
+              <BentoTileSkeleton
+                id={`${id}-timeline-tile-loading`}
+                title="Timeline"
+                lines={4}
+              />
+            }
+          >
           <BentoTimelineTile
             id={`${id}-timeline-tile`}
             ticketId={ticketId}
@@ -551,7 +602,10 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             uploadTicketAttachmentAction={props.uploadTicketAttachmentAction}
             deleteDraftTicketAttachmentImagesAction={props.deleteDraftTicketAttachmentImagesAction}
             resolveTicketAttachmentViewUrl={props.resolveTicketAttachmentViewUrl}
+            initialEntries={props.bentoStreams?.timelineEntries}
+            initialReactions={props.bentoStreams?.commentReactions}
           />
+          </Suspense>
         </div>
         <div className="order-2 lg:order-3 lg:col-span-12 xl:col-span-3">{rightRail}</div>
       </div>

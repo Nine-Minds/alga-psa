@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Clock } from 'lucide-react';
 import { BentoTile, BentoTileEmpty } from './BentoTile';
 import { getTicketSlaPolicyName } from '../../../actions/ticketBentoActions';
@@ -44,10 +44,12 @@ function ClockRow({ id, name, clock }: { id: string; name: string; clock: SlaClo
 interface SlaClocksTileProps {
   id: string;
   ticket: TicketSlaFields & { ticket_id?: string };
+  /** Server-started policy-name promise (decoration; resolved in an effect, never suspends). */
+  initialPolicyName?: Promise<string | null>;
 }
 
 /** "SLA clocks" tile — response + resolution targets from the sla_* columns. */
-export function SlaClocksTile({ id, ticket }: SlaClocksTileProps) {
+export function SlaClocksTile({ id, ticket, initialPolicyName }: SlaClocksTileProps) {
   // Re-derive on a minute cadence so "left"/"overdue" labels stay honest
   // while the screen sits open.
   const [now, setNow] = useState(() => Date.now());
@@ -57,7 +59,22 @@ export function SlaClocksTile({ id, ticket }: SlaClocksTileProps) {
   }, []);
 
   const [policyName, setPolicyName] = useState<string | null>(null);
+  const skipPolicyFetch = useRef(Boolean(initialPolicyName));
   useEffect(() => {
+    if (!initialPolicyName) return;
+    let cancelled = false;
+    initialPolicyName.then((name) => {
+      if (!cancelled) setPolicyName(name);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialPolicyName]);
+  useEffect(() => {
+    if (skipPolicyFetch.current) {
+      skipPolicyFetch.current = false;
+      return;
+    }
     let cancelled = false;
     if (!ticket.ticket_id || !ticket.sla_policy_id) return;
     getTicketSlaPolicyName(ticket.ticket_id)

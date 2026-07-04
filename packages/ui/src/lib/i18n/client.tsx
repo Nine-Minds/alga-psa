@@ -86,8 +86,30 @@ export function getBootstrapLoadingText(
   return BOOTSTRAP_LOADING_TEXT[resolvedLocale]?.[key] ?? BOOTSTRAP_LOADING_TEXT.en[key];
 }
 
-async function initI18n(locale?: SupportedLocale) {
+/** Namespace resources embedded in the initial HTML, keyed by namespace. */
+export type PreloadedNamespaceResources = Record<string, Record<string, unknown>>;
+
+/**
+ * Merge server-embedded namespace resources into i18next so the HTTP backend
+ * never fetches them. Safe to call before or after init (addResourceBundle is
+ * idempotent with the merge flag).
+ */
+function applyPreloadedResources(
+  locale: SupportedLocale,
+  preloaded?: PreloadedNamespaceResources,
+) {
+  if (!preloaded) return;
+  for (const [namespace, resources] of Object.entries(preloaded)) {
+    if (!i18next.hasResourceBundle(locale, namespace)) {
+      i18next.addResourceBundle(locale, namespace, resources, true, true);
+    }
+  }
+}
+
+async function initI18n(locale?: SupportedLocale, preloaded?: PreloadedNamespaceResources) {
+  const resolvedLocale = (locale || LOCALE_CONFIG.defaultLocale) as SupportedLocale;
   if (i18nInitialized) {
+    applyPreloadedResources(resolvedLocale, preloaded);
     if (locale && i18next.language !== locale) {
       await i18next.changeLanguage(locale);
     }
@@ -99,7 +121,11 @@ async function initI18n(locale?: SupportedLocale) {
     .use(initReactI18next)
     .init({
       ...I18N_CONFIG,
-      lng: locale || LOCALE_CONFIG.defaultLocale,
+      lng: resolvedLocale,
+      // Seed the route's namespaces so useTranslation() resolves them without a
+      // network round-trip; the HTTP backend still covers anything not seeded.
+      resources: preloaded ? { [resolvedLocale]: preloaded } : undefined,
+      partialBundledLanguages: true,
       backend: {
         loadPath: '/locales/{{lng}}/{{ns}}.json',
       },
@@ -129,6 +155,8 @@ interface I18nProviderProps {
   initialLocale?: SupportedLocale;
   portal?: 'msp' | 'client';
   namespaces?: string[];
+  /** Server-embedded namespace resources for the current route (no HTTP fetch). */
+  preloadedResources?: PreloadedNamespaceResources;
 }
 
 export function I18nProvider({
@@ -136,6 +164,7 @@ export function I18nProvider({
   initialLocale,
   portal = 'client',
   namespaces,
+  preloadedResources,
 }: I18nProviderProps) {
   const [locale, setLocaleState] = useState<SupportedLocale>(
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
@@ -144,10 +173,10 @@ export function I18nProvider({
 
   useEffect(() => {
     // Initialize i18next
-    initI18n(locale).then(() => {
+    initI18n(locale, preloadedResources).then(() => {
       setIsInitialized(true);
     });
-  }, [locale]);
+  }, [locale, preloadedResources]);
 
   useEffect(() => {
     if (!isInitialized || !namespaces || namespaces.length === 0) {

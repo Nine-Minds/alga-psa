@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { use, useEffect, useMemo, useRef, useState } from 'react';
 import { Clock, ChevronDown, ChevronRight, EyeOff, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -27,6 +27,11 @@ interface TicketTimeEntriesProps {
    */
   onEditEntry?: (entry: TicketTimeEntrySummaryEntry) => void;
   onDeleteEntry?: (entry: TicketTimeEntrySummaryEntry) => void;
+  /**
+   * Server-started summary promise, SHARED with TimeLoggedSummary (one query,
+   * two consumers). Resolved via React use(); skips the mount fetch.
+   */
+  initialSummary?: Promise<TicketTimeEntriesSummary | null>;
 }
 
 const APPROVAL_STATUS_LABEL_KEYS: Record<string, string> = {
@@ -58,15 +63,18 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
   refreshKey = 0,
   onEditEntry,
   onDeleteEntry,
+  initialSummary,
 }) => {
   const { t } = useTranslation('features/tickets');
   // Inside the Grid layout's "Time logged" tile the tile header already names
   // the section, so this panel renders as quiet rows instead of a second header.
   const isBento = useContentCardVariant() === 'bento';
   const { fetchTimeEntriesForTicket } = useSchedulingCallbacks();
-  const [summary, setSummary] = useState<TicketTimeEntriesSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+  const initialData = initialSummary ? use(initialSummary) : null;
+  const [summary, setSummary] = useState<TicketTimeEntriesSummary | null>(initialData);
+  const [loading, setLoading] = useState(!initialSummary);
   const [error, setError] = useState<string | null>(null);
+  const skipFirstFetch = useRef(Boolean(initialSummary));
   const [showMine, setShowMine] = useState(true);
   const [showOthers, setShowOthers] = useState(false);
   const userTimeZone = useMemo(() => getUserTimeZone(), []);
@@ -80,6 +88,10 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
   );
 
   useEffect(() => {
+    if (skipFirstFetch.current) {
+      skipFirstFetch.current = false;
+      return;
+    }
     let cancelled = false;
     if (!ticketId) {
       setSummary(null);

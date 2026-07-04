@@ -64,4 +64,37 @@ export function BentoTileEmpty({ id, children }: { id: string; children: React.R
   );
 }
 
+/**
+ * Default <Suspense> fallback for a streaming tile: the tile chrome with a
+ * pulsing body, so the grid keeps its shape while the tile's server-started
+ * data promise resolves.
+ */
+export function BentoTileSkeleton({
+  id,
+  title,
+  icon,
+  lines = 1,
+  className,
+}: {
+  id: string;
+  title?: string;
+  icon?: React.ReactNode;
+  /** Rough content height in pulse blocks (1 block ≈ h-16). */
+  lines?: number;
+  className?: string;
+}) {
+  return (
+    <BentoTile id={id} title={title} icon={icon} className={className}>
+      <div className="space-y-2">
+        {Array.from({ length: lines }, (_, index) => (
+          <div
+            key={index}
+            className="animate-pulse bg-[rgb(var(--color-border-100))] h-16 rounded-md"
+          />
+        ))}
+      </div>
+    </BentoTile>
+  );
+}
+
 export default BentoTile;

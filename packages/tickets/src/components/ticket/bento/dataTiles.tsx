@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { use, useEffect, useRef, useState } from 'react';
 import { Calendar, Phone, CreditCard, Plus } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { BentoTile, BentoTileEmpty } from './BentoTile';
@@ -13,16 +13,36 @@ import {
   type TicketBillingRollup,
 } from '../../../actions/ticketBentoActions';
 
-function useTileData<T>(load: () => Promise<T>, deps: React.DependencyList): {
+/**
+ * Tile data source. When `initial` (a server-started promise from the RSC
+ * page) is provided, the FIRST paint resolves it via React `use()` — the tile
+ * suspends into its <Suspense> skeleton and issues NO network request. The
+ * mount fetch is skipped; later dep changes (refreshKey after a mutation)
+ * fall back to the client action as before. Without `initial`, behavior is
+ * the legacy fetch-on-mount.
+ */
+function useTileData<T>(
+  load: () => Promise<T>,
+  deps: React.DependencyList,
+  initial?: Promise<T>,
+): {
   data: T | null;
   error: string | null;
   loading: boolean;
 } {
-  const [data, setData] = useState<T | null>(null);
+  // Conditional use() is allowed by React; a resolved streamed promise
+  // returns synchronously on re-renders.
+  const initialData = initial ? use(initial) : null;
+  const [data, setData] = useState<T | null>(initialData);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initial);
+  const skipFirstLoad = useRef(Boolean(initial));
 
   useEffect(() => {
+    if (skipFirstLoad.current) {
+      skipFirstLoad.current = false;
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -68,10 +88,21 @@ function formatTimeRange(startIso: string, endIso: string): string {
 }
 
 /** "Next visit" tile — schedule entries linked to this ticket. */
-export function NextVisitTile({ id, ticketId, refreshKey = 0 }: { id: string; ticketId: string; refreshKey?: number }) {
+export function NextVisitTile({
+  id,
+  ticketId,
+  refreshKey = 0,
+  initialData,
+}: {
+  id: string;
+  ticketId: string;
+  refreshKey?: number;
+  initialData?: Promise<TicketScheduleEntrySummary[]>;
+}) {
   const { data, error, loading } = useTileData(
     () => getTicketScheduleEntries(ticketId),
     [ticketId, refreshKey],
+    initialData,
   );
 
   const upcoming = (data ?? []).filter((entry) => entry.isUpcoming);
@@ -129,15 +160,18 @@ export function CallsEmailsTile({
   ticketId,
   refreshKey = 0,
   viewAllHref,
+  initialData,
 }: {
   id: string;
   ticketId: string;
   refreshKey?: number;
   viewAllHref?: string;
+  initialData?: Promise<TicketInteractionSummary[]>;
 }) {
   const { data, error, loading } = useTileData(
     () => getTicketInteractions(ticketId, { limit: 5 }),
     [ticketId, refreshKey],
+    initialData,
   );
 
   return (
@@ -194,10 +228,21 @@ function formatMinutes(minutes: number): string {
 }
 
 /** "Billing" tile — hours-only rollup for this ticket (v1: no dollar amounts). */
-export function BillingTile({ id, ticketId, refreshKey = 0 }: { id: string; ticketId: string; refreshKey?: number }) {
+export function BillingTile({
+  id,
+  ticketId,
+  refreshKey = 0,
+  initialData,
+}: {
+  id: string;
+  ticketId: string;
+  refreshKey?: number;
+  initialData?: Promise<TicketBillingRollup | null>;
+}) {
   const { data, error, loading } = useTileData(
     () => getTicketBillingRollup(ticketId),
     [ticketId, refreshKey],
+    initialData,
   );
 
   const rollup: TicketBillingRollup | null = data;

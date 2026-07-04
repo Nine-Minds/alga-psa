@@ -114,6 +114,7 @@ import {
 } from '../../lib/commentImageDocuments';
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
+import type { TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
 
 interface PendingCommentDelete {
@@ -167,6 +168,13 @@ interface TicketDetailsProps {
      * This keeps @alga-psa/tickets from importing other vertical slices directly.
      */
     surveySummaryCard?: React.ReactNode;
+    /**
+     * Server-gathered startup payload (see ticketScreenBootstrap.ts). When
+     * present, the matching mount fetches are skipped — the screen renders
+     * entirely from the initial RSC response. Absent (drawer usage, tests),
+     * the legacy fetch-on-mount behavior is unchanged.
+     */
+    bootstrap?: TicketScreenBootstrap;
 
     /**
      * Optional injected UI for cross-slice composition (e.g. assets associations).
@@ -258,6 +266,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     onUpdateDescription,
     isSubmitting = false,
     surveySummaryCard,
+    bootstrap,
     associatedAssets = null,
     renderContactDetails,
     renderCreateProjectTask,
@@ -278,7 +287,22 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const ticketLive = useTicketLiveContext();
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
-    const [canViewCommentMetadataDebug, setCanViewCommentMetadataDebug] = useState(false);
+    const [canViewCommentMetadataDebug, setCanViewCommentMetadataDebug] = useState(
+        bootstrap?.canViewCommentMetadataDebug ?? false,
+    );
+    // Tracks which mount fetches the server bootstrap already satisfied, so the
+    // corresponding effects skip their FIRST run only (later dep-driven runs —
+    // e.g. checklist on status change — still fetch).
+    const bootstrapSkips = useRef({
+        permissions: bootstrap?.canViewCommentMetadataDebug != null,
+        checklist: bootstrap?.checklistItems != null || bootstrap?.autoCloseState != null,
+        layout: bootstrap?.layoutPreference != null,
+        teams: bootstrap?.teams != null,
+        display: bootstrap?.displaySettings != null,
+        tags: bootstrap?.tags != null,
+        board: bootstrap != null && initialBoard != null,
+        adjacent: bootstrap?.streams?.adjacentTickets != null,
+    });
     const { getDocumentByTicketId, deleteDocument } = useDocumentsCrossFeature();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -300,6 +324,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, []);
 
     useEffect(() => {
+        if (bootstrapSkips.current.permissions) {
+            bootstrapSkips.current.permissions = false;
+            return;
+        }
         let cancelled = false;
         void getCurrentUserPermissions().then((perms) => {
             if (!cancelled) {
@@ -334,10 +362,18 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }>({ isOpen: false, statusId: null, failures: [], canOverride: false });
     const [closeOverrideReason, setCloseOverrideReason] = useState('');
     const [isSubmittingCloseOverride, setIsSubmittingCloseOverride] = useState(false);
-    const [checklistItems, setChecklistItems] = useState<ITicketChecklistItem[] | undefined>(undefined);
-    const [autoCloseState, setAutoCloseState] = useState<ITicketAutoCloseState | null>(null);
+    const [checklistItems, setChecklistItems] = useState<ITicketChecklistItem[] | undefined>(
+        bootstrap?.checklistItems ?? undefined,
+    );
+    const [autoCloseState, setAutoCloseState] = useState<ITicketAutoCloseState | null>(
+        bootstrap?.autoCloseState ?? null,
+    );
 
     useEffect(() => {
+        if (bootstrapSkips.current.checklist) {
+            bootstrapSkips.current.checklist = false;
+            return;
+        }
         let cancelled = false;
         if (!ticket.ticket_id) return;
         getTicketChecklistItems(ticket.ticket_id)
@@ -402,8 +438,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [clients, setClients] = useState<IClient[]>(initialClients);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
-    const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
-    const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
+    const [dateTimeFormat, setDateTimeFormat] = useState<string>(bootstrap?.displaySettings?.dateTimeFormat ?? 'MMM d, yyyy h:mm a');
+    const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(bootstrap?.displaySettings?.responseStateTrackingEnabled ?? true);
     const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
     const [updatedRelativeTime, setUpdatedRelativeTime] = useState<string>('');
     const [addChildTicketNumber, setAddChildTicketNumber] = useState<string>('');
@@ -437,11 +473,19 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // the ticket-bento-layout flag is on). Entry is the default and renders
     // the existing layout untouched.
     const { enabled: bentoFlagEnabled } = useFeatureFlag('ticket-bento-layout');
-    const [layoutMode, setLayoutMode] = useState<TicketDetailLayout>('entry');
-    const [timelinePrefOrder, setTimelinePrefOrder] = useState<'asc' | 'desc'>('asc');
+    const [layoutMode, setLayoutMode] = useState<TicketDetailLayout>(
+        bootstrap?.layoutPreference?.layout ?? 'entry',
+    );
+    const [timelinePrefOrder, setTimelinePrefOrder] = useState<'asc' | 'desc'>(
+        bootstrap?.layoutPreference?.timelineOrder ?? 'asc',
+    );
     const [isAllFieldsDrawerOpen, setIsAllFieldsDrawerOpen] = useState(false);
 
     useEffect(() => {
+        if (bootstrapSkips.current.layout) {
+            bootstrapSkips.current.layout = false;
+            return;
+        }
         let cancelled = false;
         getTicketLayoutPreference()
             .then((prefs) => {
@@ -860,6 +904,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     useEffect(() => {
         let cancelled = false;
 
+        if (bootstrapSkips.current.board) {
+            bootstrapSkips.current.board = false;
+            return;
+        }
         const loadBoard = async () => {
             if (!savedBoardId) {
                 if (!cancelled) {
@@ -924,13 +972,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isRunning, setIsRunning] = useState(false);
     const [timeDescription, setTimeDescription] = useState('');
     const [timeEntriesRefreshKey, setTimeEntriesRefreshKey] = useState(0);
-    const [tags, setTags] = useState<ITag[]>([]);
+    const [tags, setTags] = useState<ITag[]>(bootstrap?.tags ?? []);
     const { tags: allTags } = useTags();
     const [currentTimeSheet, setCurrentTimeSheet] = useState<ITimeSheet | null>(null);
     const [currentTimePeriod, setCurrentTimePeriod] = useState<ITimePeriodView | null>(null);
 
     const [team, setTeam] = useState<ITeam | null>(null);
-    const [teams, setTeams] = useState<ITeam[]>([]);
+    const [teams, setTeams] = useState<ITeam[]>(bootstrap?.teams ?? []);
     const [isChangeContactDialogOpen, setIsChangeContactDialogOpen] = useState(false);
     const [isChangeClientDialogOpen, setIsChangeClientDialogOpen] = useState(false);
     const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
@@ -1047,6 +1095,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const intervalService = useMemo(() => new IntervalTrackingService(), []);
 
     useEffect(() => {
+        if (bootstrapSkips.current.teams) {
+            bootstrapSkips.current.teams = false;
+            return;
+        }
         const loadTeams = async () => {
             try {
                 const fetchedTeams = await getTeams();
@@ -1103,6 +1155,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     // Load ticketing display settings
     useEffect(() => {
+        if (bootstrapSkips.current.display) {
+            bootstrapSkips.current.display = false;
+            return;
+        }
         const loadDisplaySettings = async () => {
             try {
                 const settings = await getTicketingDisplaySettings();
@@ -1138,6 +1194,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     // Fetch tags when component mounts
     useEffect(() => {
+        if (bootstrapSkips.current.tags) {
+            bootstrapSkips.current.tags = false;
+            return;
+        }
         const fetchTags = async () => {
             if (!ticket.ticket_id) return;
             
@@ -2617,7 +2677,7 @@ const handleClose = () => {
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 {!isInDrawer && ticket.ticket_id && (
-                                    <TicketNavigation currentTicketId={ticket.ticket_id} />
+                                    <TicketNavigation currentTicketId={ticket.ticket_id} initialAdjacent={bootstrap?.streams?.adjacentTickets} />
                                 )}
                                 <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
                                 {responseStateTrackingEnabled && ticket.response_state ? (
@@ -2927,6 +2987,7 @@ const handleClose = () => {
                     onNewCommentContentChange={setNewCommentContent}
                     onAddNewComment={handleAddNewComment}
                     onAddReplyComment={handleAddReplyComment}
+                    bentoStreams={bootstrap?.streams ?? undefined}
                     currentUser={currentUser ? {
                         id: currentUser.user_id,
                         name: `${currentUser.first_name} ${currentUser.last_name}`,

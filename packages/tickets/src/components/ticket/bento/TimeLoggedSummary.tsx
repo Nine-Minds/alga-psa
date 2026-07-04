@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { use, useEffect, useMemo, useRef, useState } from 'react';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
 import type { TicketTimeEntriesSummary } from '@alga-psa/types';
@@ -9,6 +9,12 @@ interface TimeLoggedSummaryProps {
   id: string;
   ticketId: string;
   refreshKey?: number;
+  /**
+   * Server-started summary promise, SHARED with TicketTimeEntries (one query,
+   * two consumers). Resolved via React use() — the component suspends into its
+   * <Suspense> fallback and skips the mount fetch.
+   */
+  initialSummary?: Promise<TicketTimeEntriesSummary | null>;
 }
 
 interface DayBucket {
@@ -36,11 +42,17 @@ function dayLabel(key: string): string {
  * Headline + per-day mini chart for the "Time logged" tile. Reads the same
  * per-ticket summary the entries list uses, so the two can never disagree.
  */
-export function TimeLoggedSummary({ id, ticketId, refreshKey = 0 }: TimeLoggedSummaryProps) {
+export function TimeLoggedSummary({ id, ticketId, refreshKey = 0, initialSummary }: TimeLoggedSummaryProps) {
   const { fetchTimeEntriesForTicket } = useSchedulingCallbacks();
-  const [summary, setSummary] = useState<TicketTimeEntriesSummary | null>(null);
+  const initialData = initialSummary ? use(initialSummary) : null;
+  const [summary, setSummary] = useState<TicketTimeEntriesSummary | null>(initialData);
+  const skipFirstFetch = useRef(Boolean(initialSummary));
 
   useEffect(() => {
+    if (skipFirstFetch.current) {
+      skipFirstFetch.current = false;
+      return;
+    }
     let cancelled = false;
     if (!ticketId) return;
     fetchTimeEntriesForTicket(ticketId)

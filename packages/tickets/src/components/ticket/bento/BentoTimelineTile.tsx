@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { PartialBlock } from '@blocknote/core';
 import { Activity, AlertTriangle, ArrowDownUp, CheckCircle, Clock, CornerDownRight, Lock, MessageSquare, MessagesSquare } from 'lucide-react';
@@ -24,6 +24,7 @@ import {
 } from '../../../actions/comment-actions/commentReactionActions';
 import { resolveCommentAuthor, type CommentUserAuthor, type CommentContactAuthor } from '../../../lib/commentAuthorResolution';
 import { parseTicketRichTextContent } from '../../../lib/ticketRichText';
+import type { TicketReactionsBootstrap } from '../../../lib/ticketScreenBootstrap';
 import { BentoTile, BentoTileEmpty } from './BentoTile';
 
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
@@ -76,6 +77,10 @@ interface BentoTimelineTileProps {
   onAddNewComment: (isInternal: boolean, isResolution: boolean) => Promise<boolean>;
   /** Threaded reply pipeline (same handler the conversation view gets). */
   onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
+  /** Server-started non-comment timeline entries; resolved via use() so the tile suspends into its skeleton. */
+  initialEntries?: Promise<TicketTimelineEntry[]>;
+  /** Server-started reactions batch (decoration; resolved in an effect, never suspends). */
+  initialReactions?: Promise<TicketReactionsBootstrap>;
   // Comment affordances (reactions, edit, delete) — same handlers the
   // conversation view receives from TicketDetails.
   currentUser?: { id: string; name: string; email?: string } | null;
@@ -234,6 +239,8 @@ export function BentoTimelineTile({
   onNewCommentContentChange,
   onAddNewComment,
   onAddReplyComment,
+  initialEntries,
+  initialReactions,
   currentUser,
   isEditing,
   currentComment,
@@ -250,8 +257,13 @@ export function BentoTimelineTile({
   resolveTicketAttachmentViewUrl,
   className,
 }: BentoTimelineTileProps) {
-  const [systemEntries, setSystemEntries] = useState<TicketTimelineEntry[]>([]);
+  // Server-started entries resolve via use(): first paint streams in behind
+  // the tile's <Suspense> skeleton with no client request.
+  const initialSystemEntries = initialEntries ? use(initialEntries) : null;
+  const [systemEntries, setSystemEntries] = useState<TicketTimelineEntry[]>(initialSystemEntries ?? []);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const skipFirstEntriesFetch = useRef(Boolean(initialEntries));
+  const skipFirstReactionsFetch = useRef(Boolean(initialReactions));
   const [filter, setFilter] = useState<LaneFilter>('everything');
   const [order, setOrder] = useState<'asc' | 'desc'>(initialOrder);
   const [composerLane, setComposerLane] = useState<'client' | 'internal' | 'resolution'>('client');
@@ -295,6 +307,23 @@ export function BentoTimelineTile({
     [conversations],
   );
   useEffect(() => {
+    if (!initialReactions) return;
+    let cancelled = false;
+    initialReactions.then(({ reactions, userNames }) => {
+      if (cancelled) return;
+      setReactionsMap(reactions);
+      setReactionUserNames((prev) => ({ ...prev, ...userNames }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialReactions]);
+
+  useEffect(() => {
+    if (skipFirstReactionsFetch.current) {
+      skipFirstReactionsFetch.current = false;
+      return;
+    }
     const commentIds = commentIdsKey.split(',').filter(Boolean);
     if (commentIds.length === 0) return;
     getCommentsReactionsBatch(commentIds)
@@ -362,6 +391,10 @@ export function BentoTimelineTile({
   useEffect(() => setOrder(initialOrder), [initialOrder]);
 
   useEffect(() => {
+    if (skipFirstEntriesFetch.current) {
+      skipFirstEntriesFetch.current = false;
+      return;
+    }
     let cancelled = false;
     getTicketTimelineEntries(ticketId, { order: 'asc', includeTimeEntries: true, includeAlerts: true })
       .then((entries) => {
