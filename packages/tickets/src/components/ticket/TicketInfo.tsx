@@ -22,7 +22,7 @@ import { format, setHours, setMinutes } from 'date-fns';
 import { TagManager } from '@alga-psa/tags/components';
 import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
-import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
+import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '../../actions/ticketCategoryActions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { Pencil, Check, X, HelpCircle, Save, PauseCircle, Users, Mail, History } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -505,13 +505,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   // Categories are managed through the regular onCategoryChange handler
 
   const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
-    parseTicketRichTextContent(ticket.attributes?.description as string | undefined)
+    parseTicketRichTextContent(ticket.attributes?.description as string | object | undefined)
   );
 
   const discardDescriptionEdit = useCallback(() => {
     const originalDescription =
       originalDescriptionRef.current ??
-      parseTicketRichTextContent(ticket.attributes?.description as string | undefined);
+      parseTicketRichTextContent(ticket.attributes?.description as string | object | undefined);
     setDescriptionContent(originalDescription);
     setHasDescriptionContentChanged(false);
     setIsEditingDescription(false);
@@ -536,7 +536,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     }
 
     const parsedDescription = parseTicketRichTextContent(
-      ticket.attributes?.description as string | undefined
+      ticket.attributes?.description as string | object | undefined
     );
     setDescriptionContent(parsedDescription);
     originalDescriptionRef.current = parsedDescription;

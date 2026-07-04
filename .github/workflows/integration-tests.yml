@@ -77,6 +77,17 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      # Event-bus integration paths need real Redis streams; the suite-wide
+      # `redis` stub alias is skipped via REAL_REDIS below.
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
       DB_HOST: localhost
@@ -90,6 +101,11 @@ jobs:
       # Fail loudly instead of describe.skip when the DB is unreachable (see server/test-utils/requireDb.ts).
       REQUIRE_DB: '1'
       VITEST_SEED: '20260610'
+      # Use the real Redis service instead of the unit-suite stub alias
+      # (vitest.config.ts skips the `redis` stub when this is set).
+      REAL_REDIS: '1'
+      REDIS_HOST: localhost
+      REDIS_PORT: '6379'
 
     steps:
       - name: Checkout
@@ -137,5 +153,30 @@ jobs:
         if: github.event_name == 'schedule' || github.event.inputs.suite == 'full'
         working-directory: ./server
         run: npm run test:integration:ci
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
+      # src/test/infrastructure is the original DB-backed billing-engine suite
+      # (invoice generation, tax, credits). It shares this job's Postgres rather
+      # than running a parallel workflow. Non-blocking until it has a green
+      # baseline; flip continue-on-error off once stable.
+      # timeout-minutes bounds a hang: continue-on-error ignores a failure but NOT
+      # a hung process, so without this a stuck infra run would consume the whole
+      # job timeout and cancel the (passing) integration step above.
+      - name: Run Tier-1 infrastructure subset (non-blocking)
+        if: github.event_name != 'schedule' && github.event.inputs.suite != 'full'
+        continue-on-error: true
+        timeout-minutes: 15
+        working-directory: ./server
+        run: npm run test:infrastructure:tier1
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
+      - name: Run full infrastructure suite (non-blocking)
+        if: github.event_name == 'schedule' || github.event.inputs.suite == 'full'
+        continue-on-error: true
+        timeout-minutes: 60
+        working-directory: ./server
+        run: npm run test:infrastructure:ci
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'

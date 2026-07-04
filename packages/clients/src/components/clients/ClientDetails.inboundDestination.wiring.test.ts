@@ -6,6 +6,11 @@ const clientDetailsSource = readFileSync(
   'utf8'
 );
 
+const clientTabContentSource = readFileSync(
+  new URL('./ClientDetailsTabContent.tsx', import.meta.url),
+  'utf8'
+);
+
 const clientActionsSource = readFileSync(
   new URL('../../actions/clientActions.ts', import.meta.url),
   'utf8'
@@ -13,10 +18,15 @@ const clientActionsSource = readFileSync(
 
 describe('ClientDetails inbound destination wiring', () => {
   it('T025: UI can set/clear inbound destination and persists through updateClient', () => {
-    expect(clientDetailsSource).toContain('id="client-inbound-ticket-destination-select"');
-    expect(clientDetailsSource).toContain("value={editedClient.inbound_ticket_defaults_id || ''}");
-    expect(clientDetailsSource).toContain("onValueChange={(value) => handleFieldChange('inbound_ticket_defaults_id', value)}");
-    expect(clientDetailsSource).toContain('allowClear={true}');
+    // The inbound destination select lives in the details tab content and routes
+    // changes back to the parent through the onFieldChange prop.
+    expect(clientTabContentSource).toContain('id="client-inbound-ticket-destination-select"');
+    expect(clientTabContentSource).toContain("value={editedClient.inbound_ticket_defaults_id || ''}");
+    expect(clientTabContentSource).toContain("onValueChange={(value) => onFieldChange('inbound_ticket_defaults_id', value)}");
+    expect(clientTabContentSource).toContain('allowClear={true}');
+
+    // ClientDetails wires its field handler into the tab content and persists via updateClient.
+    expect(clientDetailsSource).toContain('onFieldChange={handleFieldChange}');
     expect(clientDetailsSource).toContain("const updatedClientResult = await updateClient(client.client_id, dataToUpdate);");
 
     expect(clientActionsSource).toContain(

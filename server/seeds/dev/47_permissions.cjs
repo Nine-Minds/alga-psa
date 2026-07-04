@@ -1,5 +1,7 @@
+const { getTenantDb } = require('./_tenant.cjs');
+
 exports.seed = async function(knex) {
-    // Get all tenants
+    // This seed provisions every tenant; only tenant-owned permission work uses the facade.
     const tenants = await knex('tenants').select('tenant');
     if (!tenants.length) return;
 
@@ -29,7 +31,13 @@ exports.seed = async function(knex) {
         { resource: 'contact', action: 'read', msp: true, client: false, description: 'View contacts' },
         { resource: 'contact', action: 'update', msp: true, client: false, description: 'Update contacts' },
         { resource: 'contact', action: 'delete', msp: true, client: false, description: 'Delete contacts' },
-        
+
+        // Interaction permissions (calls, notes, check-ins, activity — gated by interactionActions)
+        { resource: 'interaction', action: 'create', msp: true, client: false, description: 'Create interactions (calls, notes, check-ins, activity)' },
+        { resource: 'interaction', action: 'read', msp: true, client: false, description: 'View interactions' },
+        { resource: 'interaction', action: 'update', msp: true, client: false, description: 'Update interactions' },
+        { resource: 'interaction', action: 'delete', msp: true, client: false, description: 'Delete interactions' },
+
         // Credit permissions
         { resource: 'credit', action: 'create', msp: true, client: false, description: 'Create credits' },
         { resource: 'credit', action: 'read', msp: true, client: false, description: 'View credits' },
@@ -245,13 +253,18 @@ exports.seed = async function(knex) {
         { resource: 'service', action: 'create', msp: true, client: false, description: 'Create services/products in the service catalog' },
         { resource: 'service', action: 'read', msp: true, client: false, description: 'View services/products in the service catalog' },
         { resource: 'service', action: 'update', msp: true, client: false, description: 'Update services/products in the service catalog' },
-        { resource: 'service', action: 'delete', msp: true, client: false, description: 'Archive/delete services/products in the service catalog' }
+        { resource: 'service', action: 'delete', msp: true, client: false, description: 'Archive/delete services/products in the service catalog' },
+
+        // Job monitoring
+        { resource: 'job', action: 'delete', msp: true, client: false, description: 'Clear job monitoring history' }
     ];
 
     // Process each tenant
-    for (const { tenant } of tenants) {
+    for (const { tenant: tenantId } of tenants) {
+        const db = await getTenantDb(knex, tenantId);
+
         // Check which permissions already exist
-        const existingPermissions = await knex('permissions').where({ tenant });
+        const existingPermissions = await db.table('permissions');
         const existingPermMap = new Map();
         existingPermissions.forEach(p => {
             const key = `${p.resource}:${p.action}`;
@@ -268,7 +281,7 @@ exports.seed = async function(knex) {
 
             if (!existing) {
                 permissionsToInsert.push({
-                    tenant,
+                    tenant: tenantId,
                     resource: perm.resource,
                     action: perm.action,
                     msp: perm.msp,
@@ -299,14 +312,14 @@ exports.seed = async function(knex) {
         }
 
         if (permissionsToInsert.length > 0) {
-            await knex('permissions').insert(permissionsToInsert);
-            console.log(`Inserted ${permissionsToInsert.length} new permissions for tenant ${tenant}`);
+            await db.table('permissions').insert(permissionsToInsert);
+            console.log(`Inserted ${permissionsToInsert.length} new permissions for tenant ${tenantId}`);
         } else {
-            console.log(`All permissions already exist for tenant ${tenant}`);
+            console.log(`All permissions already exist for tenant ${tenantId}`);
         }
 
         for (const update of permissionsToUpdate) {
-            await knex('permissions')
+            await db.table('permissions')
                 .where({ permission_id: update.permission_id })
                 .update({
                     msp: update.msp,

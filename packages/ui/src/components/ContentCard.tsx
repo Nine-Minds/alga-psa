@@ -1,9 +1,38 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { Button } from './Button';
 import styles from '../editor/TicketDetails.module.css';
+
+export type ContentCardVariant = 'default' | 'bento';
+
+/**
+ * Lets a container (e.g. the ticket "Grid" bento layout) restyle every
+ * ContentCard in its subtree to match the compact bento tiles, without
+ * threading a `variant` prop through intermediate/injected components.
+ */
+const ContentCardVariantContext = React.createContext<ContentCardVariant>('default');
+
+export function ContentCardVariantProvider({
+  variant,
+  children,
+}: {
+  variant: ContentCardVariant;
+  children: React.ReactNode;
+}) {
+  return (
+    <ContentCardVariantContext.Provider value={variant}>{children}</ContentCardVariantContext.Provider>
+  );
+}
+
+/**
+ * Read the surrounding card variant. Lets hand-rolled card panels (that don't
+ * use ContentCard) adapt to the bento layout the same way ContentCard does.
+ */
+export function useContentCardVariant(): ContentCardVariant {
+  return useContext(ContentCardVariantContext);
+}
 
 interface ContentCardProps {
   id?: string;
@@ -25,7 +54,16 @@ interface ContentCardProps {
     label?: string;
     onClick: () => void;
   };
+  /**
+   * Visual variant. Defaults to the surrounding
+   * ContentCardVariantProvider (or 'default'). 'bento' matches the compact
+   * tile styling used in the ticket Grid layout.
+   */
+  variant?: ContentCardVariant;
 }
+
+const BENTO_SHELL = 'rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 space-y-3 min-w-0';
+const BENTO_HEADER = 'text-sm font-semibold text-[rgb(var(--color-text-800))] flex items-center min-w-0';
 
 interface ContentCardHeaderProps {
   children: React.ReactNode;
@@ -70,7 +108,12 @@ export function ContentCard({
   headerIcon,
   count,
   addButton,
+  variant,
 }: ContentCardProps) {
+  const contextVariant = useContext(ContentCardVariantContext);
+  const resolvedVariant = variant ?? contextVariant;
+  const isBento = resolvedVariant === 'bento';
+  const shellClass = isBento ? BENTO_SHELL : `${styles['card']} p-6 space-y-4`;
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   // Auto-expand when count transitions from 0/undefined to >0 (async-loaded data)
@@ -89,7 +132,7 @@ export function ContentCard({
 
   if (collapsible && title) {
     return (
-      <div id={id} className={`${styles['card']} p-6 space-y-4 ${className}`}>
+      <div id={id} className={`${shellClass} ${className}`}>
         <div className="@container grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <Button
             id={`${id || 'content-card'}-toggle`}
@@ -99,16 +142,20 @@ export function ContentCard({
             onClick={() => setIsExpanded(!isExpanded)}
           >
             {isExpanded ? (
-              <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              <ChevronDown className={`${isBento ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-gray-500 dark:text-[rgb(var(--color-text-400))] flex-shrink-0`} />
             ) : (
-              <ChevronRight className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              <ChevronRight className={`${isBento ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-gray-500 dark:text-[rgb(var(--color-text-400))] flex-shrink-0`} />
             )}
-            <h2 className={`${styles['panel-header']} flex items-center min-w-0`}>
-              {headerIcon && <span className="mr-2 inline-flex flex-shrink-0">{headerIcon}</span>}
+            <h2 className={isBento ? BENTO_HEADER : `${styles['panel-header']} flex items-center min-w-0`}>
+              {headerIcon && (
+                <span className={`mr-2 inline-flex flex-shrink-0 ${isBento ? 'text-[rgb(var(--color-primary-500))] [&_svg]:w-4 [&_svg]:h-4' : ''}`}>
+                  {headerIcon}
+                </span>
+              )}
               <span className="truncate">{title}</span>
             </h2>
             {!isExpanded && count != null && count > 0 && (
-              <span className="ml-2 text-xs bg-gray-100 text-gray-600 rounded-full px-2 py-0.5 flex-shrink-0">
+              <span className="ml-2 text-xs bg-gray-100 dark:bg-[rgb(var(--color-border-100))] text-gray-600 dark:text-[rgb(var(--color-text-500))] rounded-full px-2 py-0.5 flex-shrink-0">
                 {count}
               </span>
             )}
@@ -117,7 +164,7 @@ export function ContentCard({
             <Button
               id={addButton.id}
               variant="outline"
-              size="sm"
+              size={isBento ? 'xs' : 'sm'}
               className="flex-shrink-0 whitespace-nowrap"
               title={addButton.label || 'Add'}
               aria-label={addButton.label || 'Add'}
@@ -126,7 +173,7 @@ export function ContentCard({
                 if (!isExpanded) setIsExpanded(true);
               }}
             >
-              <Plus className="w-4 h-4 @sm:mr-1 flex-shrink-0" />
+              <Plus className={`${isBento ? 'w-3.5 h-3.5' : 'w-4 h-4'} @sm:mr-1 flex-shrink-0`} />
               <span className="hidden @sm:inline">{addButton.label || 'Add'}</span>
             </Button>
           )}
@@ -137,7 +184,7 @@ export function ContentCard({
   }
 
   return (
-    <div id={id} className={`${styles['card']} p-6 space-y-4 ${className}`}>
+    <div id={id} className={`${shellClass} ${className}`}>
       {children}
     </div>
   );

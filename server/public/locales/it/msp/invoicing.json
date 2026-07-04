@@ -28,8 +28,12 @@
         "group": "Gruppo",
         "servicePeriod": "Periodo di servizio",
         "invoiceWindow": "Finestra fattura",
-        "included": "Incluso"
-      }
+        "included": "Incluso",
+        "charge": "Tariffa",
+        "status": "Stato",
+        "amount": "Importo"
+      },
+      "pageScopeNote": "{{count}} gruppo/i in questa pagina"
     },
     "groups": {
       "item": "Articolo {{count}}",
@@ -41,9 +45,6 @@
       "line": "Linea {{count}}",
       "line_one": "Linea {{count}}",
       "line_other": "Linee {{count}}",
-      "obligationCount": "Obbligo di {{count}}",
-      "obligationCount_one": "Obbligo di {{count}}",
-      "obligationCount_other": "Obblighi {{count}}",
       "includedCount": "Articolo {{count}} incluso",
       "includedCount_one": "Articolo {{count}} incluso",
       "includedCount_other": "Articoli {{count}} inclusi",
@@ -58,7 +59,10 @@
       "canCombine": "Può essere combinato in 1 fattura",
       "separate": "Deve fatturare separatamente",
       "blocked": "Contiene elementi bloccati",
-      "notReady": "Non pronto per la fatturazione"
+      "notReady": "Non pronto per la fatturazione",
+      "upcoming": "Non ancora dovuto",
+      "upcomingDetail": "Questo periodo viene fatturato a consuntivo, quindi diventa disponibile per la fatturazione al termine del periodo di servizio.",
+      "upcomingDetailWithDate": "Questo periodo viene fatturato a consuntivo, quindi diventa disponibile per la fatturazione il {{date}}, al termine del periodo di servizio."
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "La finestra della fattura è diversa",
@@ -75,6 +79,7 @@
         "servicePeriod": "Periodo di servizio"
       },
       "pendingAmount": "Importo in sospeso",
+      "billableOn": "Fatturabile il {{date}}",
       "attributionWarning": "Metadati di attribuzione dell'assegnazione mancanti",
       "blockedUntilApproval": "Bloccato fino all'approvazione: {{count}} voce non approvata.",
       "blockedUntilApproval_one": "Bloccato fino all'approvazione: {{count}} voce non approvata.",
@@ -204,7 +209,12 @@
         "scheduleKey": "Chiave di pianificazione"
       },
       "reviewLink": "Revisione dei periodi di servizio",
-      "helpText": "Riparare i record canonici del periodo di servizio invece di generare una riga della fattura di compatibilità."
+      "helpText": "Riparare i record canonici del periodo di servizio invece di generare una riga della fattura di compatibilità.",
+      "fixAll": "Correggi tutto",
+      "fixAllBusy": "Ricostruzione…",
+      "fixAllResult": "Ricostruiti {{schedules}} programma/i su {{clients}} cliente/i.",
+      "fixAllError": "Impossibile ricostruire i periodi di servizio. Riprova.",
+      "fixAllDenied": "Non hai l’autorizzazione per ricostruire i periodi di servizio."
     },
     "errors": {
       "title": "Si sono verificati errori durante la finalizzazione delle fatture:",
@@ -213,6 +223,61 @@
     },
     "loading": {
       "billingData": "Caricamento dati di fatturazione"
+    },
+    "views": {
+      "all": "Tutti",
+      "ready": "Pronto",
+      "combinable": "Combinabile",
+      "attention": "Richiede attenzione",
+      "notYetDue": "Non ancora dovuto"
+    },
+    "status": {
+      "ready": "Pronto",
+      "combine": "Combina",
+      "separate": "Separato",
+      "notYetDue": "Non ancora dovuto",
+      "approval": "Approvazione",
+      "blocked": "Bloccato"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} selezionato/i",
+      "breakdown": "{{invoices}} fattura/e · {{combine}} combinate · {{separate}} separate",
+      "knownNow": "noto ora",
+      "knownPlusAtGeneration": "noto ora · {{count}} calcolato alla generazione",
+      "atGenerationLines": "{{count}} voce/i",
+      "empty": "Seleziona gruppi o voci per visualizzare l’anteprima o generare le fatture.",
+      "pageScope": "{{groups}} gruppo/i · {{obligations}} voce/i"
+    },
+    "amount": {
+      "atGeneration": "Calcolato alla generazione",
+      "plusAtGeneration": "+ {{count}} alla generazione"
+    },
+    "window": {
+      "open": "Aperta",
+      "opensOn": "Apre il {{date}}",
+      "notOpen": "Non ancora aperta"
+    },
+    "legend": {
+      "confirmed": "Importo noto ora",
+      "atGeneration": "Calcolato alla generazione",
+      "combine": "Combina in una fattura",
+      "separate": "Da fatturare separatamente",
+      "notYetDue": "Non ancora dovuto"
+    },
+    "filters": {
+      "title": "Filtri",
+      "windowOpen": "Finestra aperta",
+      "charge": "Tariffa",
+      "currency": "Valuta",
+      "any": "tutte",
+      "clear": "Cancella",
+      "countSummary": "{{groups}} gruppo/i · {{obligations}} voce/i"
     }
   },
   "manualInvoices": {

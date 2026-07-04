@@ -1,7 +1,7 @@
 'use server';
 
 import type { IUser } from '@alga-psa/types';
-import { createTenantKnex, User } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, User } from '@alga-psa/db';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 
 function sortUsersByName(users: IUser[]): IUser[] {
@@ -34,6 +34,7 @@ function pickUserRow(row: any): IUser {
 
 export const fetchEligibleTimeEntrySubjects = withAuth(async (user, { tenant }): Promise<IUser[]> => {
   const { knex: db } = await createTenantKnex();
+  const scopedDb = tenantDb(db, tenant) as any;
 
   const subjectsById = new Map<string, IUser>();
   subjectsById.set(user.user_id, user);
@@ -46,8 +47,8 @@ export const fetchEligibleTimeEntrySubjects = withAuth(async (user, { tenant }):
   const canReadAll = await hasPermission(user, 'timesheet', 'read_all', db);
 
   if (canReadAll) {
-    const rows = await db('users')
-      .where({ tenant, user_type: 'internal' })
+    const rows = await scopedDb.table('users')
+      .where({ user_type: 'internal' })
       .select('user_id', 'username', 'first_name', 'last_name', 'email', 'is_inactive', 'tenant', 'user_type', 'timezone');
 
     for (const row of rows) {
@@ -57,19 +58,15 @@ export const fetchEligibleTimeEntrySubjects = withAuth(async (user, { tenant }):
     return sortUsersByName(Array.from(subjectsById.values()));
   }
 
-  const rows = await db('teams')
-    .join('team_members', function joinTeamMembers() {
-      this.on('teams.team_id', '=', 'team_members.team_id').andOn('teams.tenant', '=', 'team_members.tenant');
-    })
-    .join('users', function joinUsers() {
-      this.on('team_members.user_id', '=', 'users.user_id').andOn('team_members.tenant', '=', 'users.tenant');
-    })
+  const rowsQuery = scopedDb.table('teams')
     .where({
-      'teams.tenant': tenant,
       'teams.manager_id': user.user_id,
       'users.user_type': 'internal'
     })
     .distinct('users.user_id', 'users.username', 'users.first_name', 'users.last_name', 'users.email', 'users.is_inactive', 'users.tenant', 'users.user_type', 'users.timezone');
+  scopedDb.tenantJoin(rowsQuery, 'team_members', 'teams.team_id', 'team_members.team_id');
+  scopedDb.tenantJoin(rowsQuery, 'users', 'team_members.user_id', 'users.user_id');
+  const rows = await rowsQuery;
 
   for (const row of rows) {
     subjectsById.set(row.user_id, pickUserRow(row));
@@ -77,9 +74,9 @@ export const fetchEligibleTimeEntrySubjects = withAuth(async (user, { tenant }):
 
   const subordinateIds = await User.getReportsToSubordinateIds(db, user.user_id);
   if (subordinateIds.length > 0) {
-    const subordinateRows = await db('users')
+    const subordinateRows = await scopedDb.table('users')
       .whereIn('user_id', subordinateIds)
-      .where({ tenant, user_type: 'internal' })
+      .where({ user_type: 'internal' })
       .select('user_id', 'username', 'first_name', 'last_name', 'email', 'is_inactive', 'tenant', 'user_type', 'timezone');
 
     for (const row of subordinateRows) {
@@ -89,4 +86,3 @@ export const fetchEligibleTimeEntrySubjects = withAuth(async (user, { tenant }):
 
   return sortUsersByName(Array.from(subjectsById.values()));
 });
-

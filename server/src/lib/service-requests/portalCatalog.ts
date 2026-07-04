@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getServiceRequestVisibilityProvider } from './providers/registry';
 import type { ServiceRequestDefinitionShape } from './domain';
 
@@ -45,24 +46,22 @@ export async function listVisibleServiceRequestCatalogItems(
   knex: Knex,
   context: ServiceRequestPortalCatalogContext
 ): Promise<ServiceRequestPortalCatalogItem[]> {
-  const definitionRows = (await knex('service_request_definitions as definition')
-    .where('definition.tenant', context.tenant)
+  const db = tenantDb(knex, context.tenant);
+  const definitionRows = (await db.table('service_request_definitions as definition')
     .whereNot('definition.lifecycle_state', 'archived')
     .whereNotNull('definition.published_at')
-    .whereExists(function publishedVersionExists() {
-      this.select(knex.raw('1'))
-        .from('service_request_definition_versions as version')
-        .whereRaw('version.tenant = definition.tenant')
-        .andWhereRaw('version.definition_id = definition.definition_id');
-    })
+    .whereExists(
+      db.subquery('service_request_definition_versions as version')
+        .select(knex.raw('1'))
+        .whereRaw('version.definition_id = definition.definition_id')
+    )
     .select('definition.definition_id')) as PortalCatalogDefinitionRow[];
 
   if (definitionRows.length === 0) {
     return [];
   }
 
-  const versionRows = (await knex('service_request_definition_versions')
-    .where({ tenant: context.tenant })
+  const versionRows = (await db.table('service_request_definition_versions')
     .whereIn(
       'definition_id',
       definitionRows.map((row) => row.definition_id)

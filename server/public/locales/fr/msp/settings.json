@@ -384,7 +384,6 @@
       "display": "Affichage",
       "ticketNumbering": "Numérotation des tickets",
       "boards": "Tableaux",
-      "statuses": "Statuts",
       "priorities": "Priorités",
       "categories": "Catégories",
       "checklistTemplates": "Modèles de checklist"
@@ -489,7 +488,9 @@
         "boardManager": "Responsable du tableau",
         "order": "Ordre",
         "itilBoard": "Tableau ITIL",
-        "actions": "Actions"
+        "actions": "Actions",
+        "ticketLoad": "Charge de tickets",
+        "statuses": "Statuts"
       },
       "statusLabels": {
         "active": "Actif",
@@ -508,7 +509,8 @@
         "up": "Monter",
         "down": "Descendre",
         "remove": "Supprimer",
-        "addStatus": "Ajouter un statut"
+        "addStatus": "Ajouter un statut",
+        "back": "Retour aux Tableaux"
       },
       "fields": {
         "boardName": {
@@ -588,6 +590,10 @@
         "liveTimer": {
           "label": "Activer le minuteur de ticket en direct",
           "help": "Affiche le minuteur en direct et les intervalles suivis sur les tickets de ce tableau. La saisie manuelle du temps reste disponible."
+        },
+        "defaultBoard": {
+          "label": "Tableau par défaut pour les tickets du portail client",
+          "help": "Les nouveaux tickets soumis depuis le portail client sont ajoutés à ce tableau. Un seul tableau peut être défini par défaut."
         }
       },
       "dialog": {
@@ -713,7 +719,34 @@
           "autoCloseDaysInvalid": "Le nombre de jours d'inactivité pour la clôture automatique doit être un entier positif",
           "autoCloseWarningInvalid": "Le délai d'avertissement doit être inférieur au nombre de jours d'inactivité"
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "Général",
+          "generalHelp": "Nom, description, visibilité et valeur par défaut",
+          "assignment": "Attribution et SLA",
+          "assignmentHelp": "Routage par défaut, SLA et responsable du tableau",
+          "inbound": "E-mail et réponses entrantes",
+          "inboundHelp": "Rouvrir les tickets lorsque les clients répondent par e-mail",
+          "close": "Règles de clôture",
+          "closeHelp": "Conditions requises avant de pouvoir clôturer un ticket",
+          "automation": "Automatisation",
+          "automationHelp": "Clôturer automatiquement les tickets inactifs après une période d'inactivité",
+          "statuses": "Priorités et statuts",
+          "statusesHelp": "Priorité par défaut et statuts de ticket pour ce tableau",
+          "display": "Affichage et comportement",
+          "displayHelp": "Minuteur en direct et type de tableau"
+        },
+        "saveChanges": "Enregistrer les modifications",
+        "unsaved": "Non enregistré",
+        "unsavedShort": "Modifications non enregistrées",
+        "unsavedBanner": "Vous avez des modifications non enregistrées. Cliquez sur « Enregistrer les modifications » pour les appliquer.",
+        "allSaved": "Toutes les modifications sont enregistrées",
+        "reopenBadge": "rouvrir",
+        "required": "Obligatoire"
+      },
+      "empty": "Aucun tableau trouvé.",
+      "searchPlaceholder": "Rechercher des tableaux…"
     },
     "priorities": {
       "title": {
@@ -1138,6 +1171,17 @@
         "step3": "Utilisez le bouton Actualiser pour suivre la progression du provisionnement. Nous enverrons un email à vos administrateurs si le provisionnement échoue.",
         "canonicalHostFallback": "hôte canonique"
       },
+      "appliance": {
+        "helpText": "Pointez ce nom d'hôte vers votre appliance et faites en sorte que votre proxy inverse transmette l'en-tête Host d'origine avant d'enregistrer.",
+        "checklistTitle": "Configuration du proxy inverse",
+        "step1Prefix": "Pointez ",
+        "step1Suffix": " vers cette appliance (un enregistrement A vers son adresse, ou un CNAME vers votre hôte d'appliance).",
+        "step2": "Sur votre proxy inverse, terminez TLS pour le domaine et transmettez à cette appliance sur le port 3000, en préservant l'en-tête Host d'origine (par ex. proxy_set_header Host $host) et en envoyant X-Forwarded-Proto: https.",
+        "step3": "Obtenez et maintenez le certificat TLS pour le domaine sur votre proxy.",
+        "step4": "Enregistrez le domaine ici — il s'active immédiatement. Configurez d'abord le DNS et votre proxy, car les liens du portail basculent immédiatement vers ce domaine.",
+        "docLinkText": "Guide de configuration et de dépannage du proxy inverse",
+        "neverSeenWarning": "Aucune requête n'a encore atteint {{domain}}. Vérifiez que votre proxy inverse transmet l'en-tête Host d'origine."
+      },
       "badges": {
         "pending_dns": "DNS en attente",
         "verifying_dns": "Vérification du DNS",
@@ -1232,6 +1276,176 @@
       "telemetry": {
         "title": "Télémétrie et analytique",
         "description": "Gérez vos préférences de télémétrie et d'analytique"
+      }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "Activer les notifications",
+        "description": "Activer ou désactiver toutes les notifications pour ce locataire"
+      },
+      "loading": "Chargement des paramètres de notification...",
+      "loadError": "Échec du chargement des paramètres",
+      "save": "Enregistrer les modifications",
+      "saving": "Enregistrement..."
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "Aperçu de l'objet",
+        "iframeTitle": "Aperçu du modèle d'e-mail",
+        "sampleDataNote": "L'aperçu utilise des données d'exemple. Les e-mails réels contiendront des valeurs réelles."
+      },
+      "errors": {
+        "loadFailed": "Échec du chargement des modèles"
+      },
+      "list": {
+        "loading": "Chargement des modèles d'e-mail...",
+        "templateCount": "({{templateCount}} modèles)",
+        "usingCustom": "Utilisation d'un modèle personnalisé",
+        "usingStandard": "Utilisation du modèle standard"
+      },
+      "columns": {
+        "name": "Nom",
+        "actions": "Actions"
+      },
+      "fields": {
+        "language": "Langue",
+        "subject": "Objet",
+        "htmlContent": "Contenu HTML",
+        "textContent": "Contenu texte"
+      },
+      "actions": {
+        "collapse": "Réduire",
+        "expand": "Développer",
+        "edit": "Modifier",
+        "useStandard": "Utiliser le standard",
+        "view": "Afficher",
+        "customize": "Personnaliser",
+        "sending": "Envoi...",
+        "sendTest": "Envoyer un e-mail de test",
+        "close": "Fermer",
+        "cancel": "Annuler",
+        "saving": "Enregistrement...",
+        "save": "Enregistrer"
+      },
+      "description": "Chaque type d'événement dispose d'un modèle standard personnalisable. Vous pouvez utiliser le modèle standard ou créer une version personnalisée.",
+      "filter": {
+        "languages": "Langues",
+        "reset": "Réinitialiser"
+      },
+      "test": {
+        "sentTo": "E-mail de test envoyé à {{recipient}}",
+        "failed": "Échec de l'envoi de l'e-mail de test."
+      },
+      "view": {
+        "title": "Modèle standard : {{name}}"
+      },
+      "tabs": {
+        "source": "Source",
+        "preview": "Aperçu"
+      },
+      "common": {
+        "notAvailable": "N/D"
+      },
+      "edit": {
+        "title": "Modifier le modèle personnalisé : {{name}}"
+      },
+      "languages": {
+        "en": "Anglais",
+        "fr": "Français",
+        "es": "Espagnol",
+        "de": "Allemand",
+        "nl": "Néerlandais",
+        "it": "Italien",
+        "pl": "Polonais",
+        "pt": "Portugais"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "Échec du chargement des catégories",
+        "loadSubtypes": "Échec du chargement des sous-types de notification",
+        "save": "Échec de l'enregistrement des paramètres de notification"
+      },
+      "loading": "Chargement des catégories de notification...",
+      "toasts": {
+        "saved": "Paramètres de notification enregistrés avec succès",
+        "discarded": "Modifications annulées"
+      },
+      "columns": {
+        "name": "Nom",
+        "description": "Description",
+        "enabled": "Activé",
+        "defaultForUsers": "Par défaut pour les utilisateurs",
+        "actions": "Actions"
+      },
+      "tooltips": {
+        "cannotDisable": "Cette catégorie ne peut pas être désactivée",
+        "cannotModify": "Cette catégorie ne peut pas être modifiée"
+      },
+      "actions": {
+        "enableAllSubtypes": "Activer tous les sous-types",
+        "disableAllSubtypes": "Désactiver tous les sous-types",
+        "disable": "Désactiver",
+        "enable": "Activer",
+        "disableDefault": "Désactiver par défaut",
+        "enableDefault": "Activer par défaut",
+        "discardChanges": "Annuler les modifications",
+        "saving": "Enregistrement...",
+        "saveChanges": "Enregistrer les modifications",
+        "cancel": "Annuler"
+      },
+      "help": {
+        "intro": "Contrôlez quels types de notification par e-mail sont disponibles et définissez les valeurs par défaut pour les nouveaux utilisateurs.",
+        "enabledLabel": "Activé :",
+        "enabledDescription": "Détermine si ce type de notification est actif",
+        "defaultLabel": "Par défaut pour les utilisateurs :",
+        "defaultDescription": "Détermine si les nouveaux utilisateurs ont cette notification activée par défaut"
+      },
+      "unsavedChangesAlert": "Vous avez des modifications non enregistrées. Cliquez sur « Enregistrer les modifications » pour les appliquer.",
+      "discardDialog": {
+        "title": "Annuler les modifications ?",
+        "message": "Êtes-vous sûr de vouloir annuler toutes les modifications non enregistrées ? Cette action est irréversible."
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "Échec du chargement des catégories",
+        "loadSubtypes": "Échec du chargement des sous-types de notification",
+        "saveSettings": "Échec de l'enregistrement des paramètres de notification"
+      },
+      "loading": "Chargement des catégories de notifications internes...",
+      "toasts": {
+        "saveSuccess": "Paramètres de notification enregistrés avec succès",
+        "changesDiscarded": "Modifications annulées"
+      },
+      "columns": {
+        "name": "Nom",
+        "description": "Description",
+        "enabled": "Activé",
+        "defaultForUsers": "Par défaut pour les utilisateurs",
+        "actions": "Actions"
+      },
+      "actions": {
+        "enableAllSubtypes": "Activer tous les sous-types",
+        "disableAllSubtypes": "Désactiver tous les sous-types",
+        "disable": "Désactiver",
+        "enable": "Activer",
+        "disableDefault": "Désactiver par défaut",
+        "enableDefault": "Activer par défaut",
+        "discardChanges": "Annuler les modifications",
+        "saving": "Enregistrement...",
+        "saveChanges": "Enregistrer les modifications",
+        "cancel": "Annuler"
+      },
+      "intro": "Contrôlez quels types de notifications internes sont disponibles et définissez les valeurs par défaut pour les nouveaux utilisateurs.",
+      "enabledLabel": "Activé :",
+      "enabledDescription": "Détermine si ce type de notification est actif dans le système",
+      "defaultForUsersLabel": "Par défaut pour les utilisateurs :",
+      "defaultForUsersDescription": "Détermine si les nouveaux utilisateurs ont cette notification activée par défaut",
+      "unsavedChangesAlert": "Vous avez des modifications non enregistrées. Cliquez sur « Enregistrer les modifications » pour les appliquer.",
+      "discardDialog": {
+        "title": "Annuler les modifications ?",
+        "message": "Êtes-vous sûr de vouloir annuler toutes les modifications non enregistrées ? Cette action est irréversible."
       }
     }
   },

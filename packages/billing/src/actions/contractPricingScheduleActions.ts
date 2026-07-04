@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IContractPricingSchedule } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -10,8 +10,8 @@ async function assertContractIsAuthorable(
   tenant: string,
   contractId: string,
 ): Promise<void> {
-  const contract = await knex('contracts')
-    .where({ tenant, contract_id: contractId })
+  const contract = await tenantDb(knex, tenant).table('contracts')
+    .where({ contract_id: contractId })
     .first('is_system_managed_default');
 
   if (contract?.is_system_managed_default === true) {
@@ -39,9 +39,9 @@ export const getPricingSchedulesByContract = withAuth(async (
     throw new Error('Tenant not found');
   }
 
-  const schedules = await knex('contract_pricing_schedules')
+  const db = tenantDb(knex, tenant);
+  const schedules = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       contract_id: contractId
     })
     .orderBy('effective_date', 'asc')
@@ -69,9 +69,9 @@ export const getPricingScheduleById = withAuth(async (
     throw new Error('Tenant not found');
   }
 
-  const schedule = await knex('contract_pricing_schedules')
+  const db = tenantDb(knex, tenant);
+  const schedule = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       schedule_id: scheduleId
     })
     .first();
@@ -126,6 +126,7 @@ export const createPricingSchedule = withAuth(async (
     throw new Error('Tenant not found');
   }
   await assertContractIsAuthorable(knex, tenant, scheduleData.contract_id);
+  const db = tenantDb(knex, tenant);
 
   // Calculate end_date from duration if provided
   let endDate = scheduleData.end_date;
@@ -143,9 +144,8 @@ export const createPricingSchedule = withAuth(async (
   }
 
   // Check for overlapping schedules
-  const overlapping = await knex('contract_pricing_schedules')
+  const overlapping = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       contract_id: scheduleData.contract_id
     })
     .where(function() {
@@ -173,7 +173,7 @@ export const createPricingSchedule = withAuth(async (
     throw new Error('This schedule overlaps with an existing pricing schedule');
   }
 
-  const [schedule] = await knex('contract_pricing_schedules')
+  const [schedule] = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .insert({
       ...scheduleData,
       end_date: endDate,
@@ -208,9 +208,9 @@ export const updatePricingSchedule = withAuth(async (
   }
 
   // Get existing schedule
-  const existingSchedule = await knex('contract_pricing_schedules')
+  const db = tenantDb(knex, tenant);
+  const existingSchedule = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       schedule_id: scheduleId
     })
     .first();
@@ -237,9 +237,8 @@ export const updatePricingSchedule = withAuth(async (
   }
 
   // Check for overlapping schedules (excluding current schedule)
-  const overlapping = await knex('contract_pricing_schedules')
+  const overlapping = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       contract_id: existingSchedule.contract_id
     })
     .whereNot('schedule_id', scheduleId)
@@ -268,9 +267,8 @@ export const updatePricingSchedule = withAuth(async (
     throw new Error('This schedule would overlap with an existing pricing schedule');
   }
 
-  const [schedule] = await knex('contract_pricing_schedules')
+  const [schedule] = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       schedule_id: scheduleId
     })
     .update({
@@ -301,9 +299,9 @@ export const deletePricingSchedule = withAuth(async (
   if (!tenant) {
     throw new Error('Tenant not found');
   }
-  const existingSchedule = await knex('contract_pricing_schedules')
+  const db = tenantDb(knex, tenant);
+  const existingSchedule = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       schedule_id: scheduleId,
     })
     .first('contract_id');
@@ -312,9 +310,8 @@ export const deletePricingSchedule = withAuth(async (
   }
   await assertContractIsAuthorable(knex, tenant, existingSchedule.contract_id);
 
-  await knex('contract_pricing_schedules')
+  await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       schedule_id: scheduleId
     })
     .delete();
@@ -343,9 +340,9 @@ export const getActivePricingScheduleByContract = withAuth(async (
 
   const checkDate = date || new Date();
 
-  const schedule = await knex('contract_pricing_schedules')
+  const db = tenantDb(knex, tenant);
+  const schedule = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       contract_id: contractId
     })
     .where('effective_date', '<=', checkDate.toISOString())

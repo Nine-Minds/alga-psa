@@ -48,10 +48,12 @@ function makeFakeExceptions() {
  *  so the double-entry guard passes through in normal tests.
  */
 function makeFakeKnex(invoiceRow: any = { status: 'sent', total_amount: 20000, credit_applied: 0 }) {
-  const first = vi.fn(async () => invoiceRow);
-  const select = vi.fn(() => ({ first }));
-  const where = vi.fn(() => ({ select, first }));
-  const trx: any = Object.assign(vi.fn(() => ({ where })), {
+  const query: any = {
+    where: vi.fn(() => query),
+    select: vi.fn(() => query),
+    first: vi.fn(async () => invoiceRow)
+  };
+  const trx: any = Object.assign(vi.fn(() => query), {
     transaction: vi.fn(async (cb: any) => cb(trx)),
     fn: { now: vi.fn() }
   });
@@ -379,10 +381,12 @@ describe('paymentApplier', () => {
  * AND supports knex.transaction (used by the happy path).
  */
 function makeKnexWithInvoice(invoiceRow: any): any {
-  const first = vi.fn(async () => invoiceRow);
-  const select = vi.fn(() => ({ first }));
-  const where = vi.fn(() => ({ select, first }));
-  const table = vi.fn(() => ({ where }));
+  const query: any = {
+    where: vi.fn(() => query),
+    select: vi.fn(() => query),
+    first: vi.fn(async () => invoiceRow)
+  };
+  const table = vi.fn(() => query);
   const trx: any = Object.assign(table, {
     transaction: vi.fn(async (cb: any) => cb(trx)),
     fn: { now: vi.fn() }

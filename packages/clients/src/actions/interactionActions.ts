@@ -2,7 +2,7 @@
 
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache'
 import { StorageService } from '@alga-psa/storage/StorageService';
@@ -15,12 +15,15 @@ import {
 } from './interactionCreateHelper';
 
 import { createTenantKnex } from '@alga-psa/db';
+import { assertMspPermission } from '../lib/authHelpers';
 
 export const addInteraction = withAuth(async (
   user,
   { tenant },
   interactionData: Omit<IInteraction, 'interaction_date'>
 ): Promise<IInteraction> => {
+  await assertMspPermission(user, 'interaction', 'create', 'Permission denied: Cannot create interactions');
+
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -55,7 +58,9 @@ export const addInteraction = withAuth(async (
   }
 });
 
-export const getInteractionTypes = withAuth(async (_user, { tenant }): Promise<IInteractionType[]> => {
+export const getInteractionTypes = withAuth(async (user, { tenant }): Promise<IInteractionType[]> => {
+  await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interaction types');
+
   try {
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -68,11 +73,13 @@ export const getInteractionTypes = withAuth(async (_user, { tenant }): Promise<I
 });
 
 export const getInteractionsForEntity = withAuth(async (
-  _user,
+  user,
   { tenant },
   entityId: string,
   entityType: 'contact' | 'client'
 ): Promise<IInteraction[]> => {
+  await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
+
   try {
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -85,7 +92,7 @@ export const getInteractionsForEntity = withAuth(async (
 });
 
 export const getRecentInteractions = withAuth(async (
-  _user,
+  user,
   { tenant },
   filters: {
     userId?: string;
@@ -95,6 +102,8 @@ export const getRecentInteractions = withAuth(async (
     typeId?: string;
   }
 ): Promise<IInteraction[]> => {
+  await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
+
   try {
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -112,6 +121,8 @@ export const updateInteraction = withAuth(async (
   interactionId: string,
   updateData: Partial<IInteraction>
 ): Promise<IInteraction> => {
+  await assertMspPermission(user, 'interaction', 'update', 'Permission denied: Cannot update interactions');
+
   try {
     const { knex } = await createTenantKnex();
     const updatedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -131,13 +142,14 @@ export const updateInteraction = withAuth(async (
   }
 });
 
-export const getInteractionStatuses = withAuth(async (_user, { tenant }): Promise<any[]> => {
+export const getInteractionStatuses = withAuth(async (user, { tenant }): Promise<any[]> => {
+  await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interaction statuses');
+
   try {
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('statuses')
+      return await tenantDb(trx, tenant).table('statuses')
         .where({
-          tenant,
           status_type: 'interaction'
         })
         .select('*')
@@ -159,44 +171,48 @@ async function cleanupInteractionOnlineMeetings(
   tenant: string,
   interactionId: string,
 ): Promise<string[]> {
-  const meetings = await trx('online_meetings')
-    .where({ tenant, interaction_id: interactionId })
+  const db = tenantDb(trx, tenant);
+
+  const meetings = await db.table('online_meetings')
+    .where({ interaction_id: interactionId })
     .select('meeting_id');
   if (meetings.length === 0) {
     return [];
   }
   const meetingIds = meetings.map((m) => m.meeting_id);
 
-  const artifacts = await trx('online_meeting_artifacts')
-    .where({ tenant })
+  const artifacts = await db.table('online_meeting_artifacts')
     .whereIn('meeting_id', meetingIds)
     .select('document_id', 'file_id');
 
   const documentIds = artifacts.map((a) => a.document_id).filter((id): id is string => Boolean(id));
   const fileIds = artifacts.map((a) => a.file_id).filter((id): id is string => Boolean(id));
 
-  await trx('online_meeting_artifacts').where({ tenant }).whereIn('meeting_id', meetingIds).del();
-  await trx('online_meetings').where({ tenant }).whereIn('meeting_id', meetingIds).del();
+  await db.table('online_meeting_artifacts').whereIn('meeting_id', meetingIds).del();
+  await db.table('online_meetings').whereIn('meeting_id', meetingIds).del();
 
   // Transcript content is stored as internal documents; remove them with the meeting.
   if (documentIds.length > 0) {
-    await trx('document_block_content').where({ tenant }).whereIn('document_id', documentIds).del();
-    await trx('document_associations').where({ tenant }).whereIn('document_id', documentIds).del();
-    await trx('documents').where({ tenant }).whereIn('document_id', documentIds).del();
+    await db.table('document_block_content').whereIn('document_id', documentIds).del();
+    await db.table('document_associations').whereIn('document_id', documentIds).del();
+    await db.table('documents').whereIn('document_id', documentIds).del();
   }
 
   return fileIds;
 }
 
 export const deleteInteraction = withAuth(async (user, { tenant }, interactionId: string): Promise<void> => {
+  await assertMspPermission(user, 'interaction', 'delete', 'Permission denied: Cannot delete interactions');
+
   try {
     const { knex } = await createTenantKnex();
 
     const { existing, recordingFileIds } = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const existingRow = await trx('interactions')
+      const db = tenantDb(trx, tenant);
+
+      const existingRow = await db.table('interactions')
         .where({
           interaction_id: interactionId,
-          tenant
         })
         .select('interaction_id', 'client_id', 'contact_name_id', 'user_id')
         .first();
@@ -205,10 +221,9 @@ export const deleteInteraction = withAuth(async (user, { tenant }, interactionId
       const fileIds = await cleanupInteractionOnlineMeetings(trx, tenant, interactionId);
 
       // Delete the interaction
-      const deletedCount = await trx('interactions')
+      const deletedCount = await db.table('interactions')
         .where({
           interaction_id: interactionId,
-          tenant
         })
         .del();
 

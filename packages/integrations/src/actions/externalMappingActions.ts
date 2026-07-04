@@ -1,8 +1,7 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -150,9 +149,7 @@ export const getExternalEntityMappings = withAuth(async (
 
   try {
     const mappings = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const query = trx<ExternalEntityMapping>('tenant_external_entity_mappings').where({
-        tenant
-      });
+      const query = tenantDb(trx, tenant).table<ExternalEntityMapping>('tenant_external_entity_mappings');
 
       if (integrationType) {
         query.andWhere({ integration_type: integrationType });
@@ -229,7 +226,7 @@ export const createExternalEntityMapping = withAuth(async (
 
   try {
     const [newMapping] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+      return await tenantDb(trx, tenant).table<ExternalEntityMapping>('tenant_external_entity_mappings')
         .insert({
           id: trx.raw('gen_random_uuid()'),
           tenant,
@@ -329,12 +326,12 @@ export const updateExternalEntityMapping = withAuth(async (
 
   try {
     const { before, after } = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const before = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({ id: mappingId, tenant })
+      const before = await tenantDb(trx, tenant).table<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({ id: mappingId })
         .first();
 
-      const [after] = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({ id: mappingId, tenant })
+      const [after] = await tenantDb(trx, tenant).table<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({ id: mappingId })
         .update(updatePayload)
         .returning('*');
 
@@ -407,16 +404,16 @@ export const deleteExternalEntityMapping = withAuth(async (
 
   try {
     const { before, deletedCount } = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const before = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({ id: mappingId, tenant })
+      const before = await tenantDb(trx, tenant).table<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({ id: mappingId })
         .first();
 
       if (!before) {
         return { before: null, deletedCount: 0 };
       }
 
-      const deletedCount = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({ id: mappingId, tenant })
+      const deletedCount = await tenantDb(trx, tenant).table<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({ id: mappingId })
         .del();
 
       return { before, deletedCount };

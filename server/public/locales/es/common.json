@@ -1,4 +1,7 @@
 {
+  "clientNameCell": {
+    "noClient": "Sin cliente"
+  },
   "reactions": {
     "ariaSummary_one": "{{emoji}} {{count}} reacción",
     "ariaSummary_other": "{{emoji}} {{count}} reacciones",

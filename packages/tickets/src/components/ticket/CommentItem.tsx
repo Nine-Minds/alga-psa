@@ -47,6 +47,12 @@ interface CommentItemProps {
   userNames?: Record<string, string>;
   /** When true and metadata is non-empty, show debug metadata control (Admin Settings viewers). */
   canViewCommentMetadataDebug?: boolean;
+  /**
+   * Density. 'compact' drops the email line, inlines the timestamp with the
+   * author, shrinks the avatar and body spacing — used in the timeline where
+   * space is tight. Defaults to 'default' (the conversation-view look).
+   */
+  variant?: 'default' | 'compact';
 }
 
 function getInboundSenderIdentity(
@@ -124,7 +130,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onToggleReaction,
   userNames,
   canViewCommentMetadataDebug = false,
+  variant = 'default',
 }) => {
+  const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
   const [metadataDebugOpen, setMetadataDebugOpen] = useState(false);
   const [isInternalToggle, setIsInternalToggle] = useState(conversation.is_internal ?? false);
@@ -324,12 +332,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
   return (
     <div
       {...withDataAutomationId({ id: commentId })}
-      className={`group/comment w-full max-w-full min-w-0 rounded-lg p-2 mb-2 shadow-sm border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))] ${
+      className={`group/comment w-full max-w-full min-w-0 rounded-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))] ${
+        isCompact ? 'p-2.5' : 'p-2 mb-2 shadow-sm'
+      } ${
         isSearchHighlighted ? 'search-highlight ring-2 ring-yellow-400 bg-yellow-50' : ''
       }`}
     >
-      <div className="flex items-start mb-1 min-w-0 max-w-full">
-        <div className="mr-2">
+      <div className={`flex items-start min-w-0 max-w-full ${isCompact ? 'mb-0.5' : 'mb-1'}`}>
+        <div className={isCompact ? 'mr-2' : 'mr-2'}>
           {/* Conditionally render UserAvatar or ContactAvatar */}
           {conversation.is_system_generated || resolvedAuthor.source === 'unknown' ? (
             <UserAvatar
@@ -337,7 +347,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               userId=""
               userName={t('conversation.unknownUser')}
               avatarUrl={null}
-              size="md"
+              size={isCompact ? 'sm' : 'md'}
             />
           ) : resolvedAuthor.source === 'contact' ? (
             <ContactAvatar
@@ -345,7 +355,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               contactId={resolvedAuthor.contactId || conversation.contact_id || ''}
               contactName={resolvedAuthor.displayName}
               avatarUrl={resolvedAuthor.avatarUrl}
-              size="md"
+              size={isCompact ? 'sm' : 'md'}
             />
           ) : resolvedAuthor.avatarKind === 'contact' ? (
             <ContactAvatar
@@ -353,7 +363,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               contactId={conversation.contact_id || resolvedAuthor.userId || ''}
               contactName={resolvedAuthor.displayName}
               avatarUrl={resolvedAuthor.avatarUrl}
-              size="md"
+              size={isCompact ? 'sm' : 'md'}
             />
           ) : (
             <UserAvatar
@@ -361,14 +371,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
               userId={resolvedAuthor.userId || ''}
               userName={resolvedAuthor.displayName}
               avatarUrl={resolvedAuthor.avatarUrl}
-              size="md"
+              size={isCompact ? 'sm' : 'md'}
             />
           )}
         </div>
         <div className="flex-grow min-w-0 max-w-full">
           <div className="flex justify-between items-start gap-2 min-w-0 max-w-full">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 min-w-0 flex-wrap">
+              <div className={`flex items-center gap-2 min-w-0 flex-wrap ${isCompact ? 'text-sm' : ''}`}>
                 <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className="font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))] break-words min-w-0">
                   {getAuthorName()}
                 </p>
@@ -418,29 +428,48 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     />
                   </>
                 )}
-              </div>
-              <div className="flex flex-col min-w-0">
-                {authorEmail && (
-                  <p
-                    {...withDataAutomationId({ id: `${commentId}-author-email` })}
-                    className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))] break-words min-w-0"
+                {isCompact && conversation.created_at && (
+                  <span
+                    {...withDataAutomationId({ id: `${commentId}-timestamp` })}
+                    className="text-xs font-normal text-gray-500 dark:text-[rgb(var(--color-text-400))] whitespace-nowrap"
                   >
-                    <a href={`mailto:${authorEmail}`} className="hover:text-indigo-600 break-words">
-                      {authorEmail}
-                    </a>
-                  </p>
+                    {new Date(conversation.created_at).toLocaleString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                    {conversation.updated_at &&
+                    new Date(conversation.updated_at).getTime() > new Date(conversation.created_at).getTime()
+                      ? ` (${t('conversation.edited', 'edited')})`
+                      : ''}
+                  </span>
                 )}
-                <p {...withDataAutomationId({ id: `${commentId}-timestamp` })} className="text-xs text-gray-500 dark:text-[rgb(var(--color-text-300))]">
-                  {conversation.created_at && (
-                    <span>
-                      {new Date(conversation.created_at).toLocaleString()}
-                      {conversation.updated_at &&
-                       new Date(conversation.updated_at).getTime() > new Date(conversation.created_at).getTime() &&
-                       ` (${t('conversation.edited', 'edited')})`}
-                    </span>
-                  )}
-                </p>
               </div>
+              {!isCompact && (
+                <div className="flex flex-col min-w-0">
+                  {authorEmail && (
+                    <p
+                      {...withDataAutomationId({ id: `${commentId}-author-email` })}
+                      className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))] break-words min-w-0"
+                    >
+                      <a href={`mailto:${authorEmail}`} className="hover:text-indigo-600 break-words">
+                        {authorEmail}
+                      </a>
+                    </p>
+                  )}
+                  <p {...withDataAutomationId({ id: `${commentId}-timestamp` })} className="text-xs text-gray-500 dark:text-[rgb(var(--color-text-300))]">
+                    {conversation.created_at && (
+                      <span>
+                        {new Date(conversation.created_at).toLocaleString()}
+                        {conversation.updated_at &&
+                         new Date(conversation.updated_at).getTime() > new Date(conversation.created_at).getTime() &&
+                         ` (${t('conversation.edited', 'edited')})`}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
             {((onReply && !isDeleted) || canEdit) && (
               <div className="c-actions space-x-2">
@@ -503,10 +532,17 @@ const CommentItem: React.FC<CommentItemProps> = ({
               return (
                 <div
                   {...withDataAutomationId({ id: `${commentId}-content` })}
-                  className="prose max-w-none mt-1 w-full min-w-0 overflow-hidden break-words"
+                  className={`prose max-w-none w-full min-w-0 overflow-hidden break-words ${
+                    isCompact
+                      ? // Compact: drop the editor's side-menu horizontal padding, and hide
+                        // BlockNote's always-appended trailing empty block (identified by its
+                        // ProseMirror trailing break) so a one-line comment reads as one line.
+                        'prose-sm mt-0.5 text-sm leading-snug [&_.bn-editor]:!px-0 [&_.bn-block-outer:last-child:has(br.ProseMirror-trailingBreak)]:hidden'
+                      : 'mt-1'
+                  }`}
                   style={{ overflowWrap: 'anywhere' }}
                 >
-                  <RichTextViewer 
+                  <RichTextViewer
                     key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
                     content={parsed as any}
                     className="w-full min-w-0 max-w-full"
@@ -515,7 +551,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               );
             })()
           )}
-          {reactions && onToggleReaction && (
+          {reactions && onToggleReaction && (!isCompact || reactions.length > 0) && (
             <ReactionDisplay
               id={`${commentId}-reactions`}
               reactions={reactions}

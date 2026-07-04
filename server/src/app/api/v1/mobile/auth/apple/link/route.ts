@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
 import { handleApiError, UnauthorizedError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 import {
   decryptAppleRefreshToken,
@@ -50,12 +51,14 @@ const postSchema = z.object({
   authorizationCode: z.string().optional(),
 });
 
+const MOBILE_TENANT_DISCOVERY = 'tenant-discovery';
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const { tenant, userId } = await authenticate(req);
     const knex = await getConnection(null);
-    const row = await knex('apple_user_identities')
-      .where({ tenant, user_id: userId })
+    const row = await tenantDb(knex, tenant).table('apple_user_identities')
+      .where({ user_id: userId })
       .first<{ apple_user_id: string; email: string | null; is_private_email: boolean } | undefined>([
         'apple_user_id',
         'email',
@@ -95,7 +98,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     // If this Apple ID is already mapped to a DIFFERENT user, refuse. We
     // don't want a user to steal another user's Apple ID binding.
-    const existing = await knex('apple_user_identities')
+    const existing = await tenantDb(knex, MOBILE_TENANT_DISCOVERY)
+      .unscoped('apple_user_identities', 'global Apple user id uniqueness check before linking')
       .where({ apple_user_id: appleUserId })
       .first<{ tenant: string; user_id: string; apple_refresh_token_enc: string | null } | undefined>();
 
@@ -125,7 +129,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }
     }
 
-    await knex('apple_user_identities')
+    await tenantDb(knex, tenant).table('apple_user_identities')
       .insert({
         apple_user_id: appleUserId,
         tenant,
@@ -172,8 +176,8 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
     const { tenant, userId } = await authenticate(req);
     const knex = await getConnection(null);
 
-    const rows = await knex('apple_user_identities')
-      .where({ tenant, user_id: userId })
+    const rows = await tenantDb(knex, tenant).table('apple_user_identities')
+      .where({ user_id: userId })
       .select<{ apple_user_id: string; apple_refresh_token_enc: string | null }[]>([
         'apple_user_id',
         'apple_refresh_token_enc',
@@ -193,7 +197,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
     }
 
     if (rows.length > 0) {
-      await knex('apple_user_identities').where({ tenant, user_id: userId }).del();
+      await tenantDb(knex, tenant).table('apple_user_identities').where({ user_id: userId }).del();
     }
 
     return NextResponse.json({ linked: false });

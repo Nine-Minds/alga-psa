@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { EmailProviderService } from '../../services/email/EmailProviderService';
 import { createTenantKnex } from '../../lib/db';
@@ -14,11 +15,36 @@ import { createTenantKnex } from '../../lib/db';
 let testDb: Knex;
 let testTenant: string;
 
+const EMAIL_PROVIDER_SCHEMA_PROBE_TENANT = '__email_provider_database_schema_probe__';
+
+function tenantTable<Row extends object = Record<string, unknown>>(table: string) {
+  return tenantDb(testDb, testTenant).table<Row>(table);
+}
+
+function tenantFixtureTable() {
+  return tenantDb(testDb, testTenant).unscoped(
+    'tenants',
+    'Email provider database test fixture creates and removes tenant rows'
+  );
+}
+
+function schemaProbeTable<Row extends object = Record<string, unknown>>(table: string) {
+  return tenantDb(testDb, EMAIL_PROVIDER_SCHEMA_PROBE_TENANT).unscoped<Row>(
+    table,
+    'Email provider database test checks optional table availability'
+  );
+}
+
 vi.mock('../../lib/db', () => ({
   createTenantKnex: vi.fn()
 }));
 
-describe('Email Provider Database Integration Tests', () => {
+// Skipped: this file drives server/src/services/email/EmailProviderService
+// and the legacy email_provider_configs table — dead code since the July 2025
+// split-schema rewrite (no callers; the live path is upsertEmailProvider in
+// @alga-psa/integrations, covered by emailProviderCreation/DataPersistence).
+// Unskip or delete alongside the rewire-or-delete decision on that service.
+describe.skip('Email Provider Database Integration Tests', () => {
   let tablesExist = false;
 
   beforeAll(async () => {
@@ -30,7 +56,7 @@ describe('Email Provider Database Integration Tests', () => {
     
     // Check if email_provider_configs table exists
     try {
-      await testDb('email_provider_configs').limit(1);
+      await schemaProbeTable('email_provider_configs').limit(1);
       tablesExist = true;
     } catch (error) {
       console.warn('email_provider_configs table does not exist. Skipping integration tests.');
@@ -58,12 +84,12 @@ describe('Email Provider Database Integration Tests', () => {
     // Check if tables exist before running tests
     try {
       // Ensure tenant exists in tenants table
-      const tenantExists = await testDb('tenants')
+      const tenantExists = await tenantFixtureTable()
         .where('tenant', testTenant)
         .first();
       
       if (!tenantExists) {
-        await testDb('tenants').insert({
+        await tenantFixtureTable().insert({
           tenant: testTenant,
           client_name: 'Email Provider Test Client',
           email: 'test@client.com',
@@ -79,23 +105,19 @@ describe('Email Provider Database Integration Tests', () => {
   afterEach(async () => {
     // Clean up test data
     try {
-      await testDb('email_processed_messages')
-        .where('tenant', testTenant)
-        .delete();
+      await tenantTable('email_processed_messages').delete();
     } catch (error) {
       // Table might not exist
     }
     
     try {
-      await testDb('email_provider_configs')
-        .where('tenant', testTenant)
-        .delete();
+      await tenantTable('email_provider_configs').delete();
     } catch (error) {
       // Table might not exist
     }
     
     try {
-      await testDb('tenants')
+      await tenantFixtureTable()
         .where('tenant', testTenant)
         .delete();
     } catch (error) {
@@ -140,9 +162,8 @@ describe('Email Provider Database Integration Tests', () => {
       expect(createdProvider.provider_config).toMatchObject(googleProviderData.vendorConfig);
 
       // Verify directly in the database
-      const dbRecord = await testDb('email_provider_configs')
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('id', createdProvider.id)
-        .where('tenant', testTenant)
         .first();
 
       expect(dbRecord).toBeDefined();
@@ -193,9 +214,8 @@ describe('Email Provider Database Integration Tests', () => {
       expect(createdProvider.provider_type).toBe('google');
       
       // Verify in database
-      const dbRecord = await testDb('email_provider_configs')
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('id', createdProvider.id)
-        .where('tenant', testTenant)
         .first();
 
       expect(dbRecord.mailbox).toBe('support@client.com');
@@ -255,9 +275,8 @@ describe('Email Provider Database Integration Tests', () => {
       expect(updatedProvider.provider_config.projectId).toBe('initial-project');
 
       // Verify in database
-      const dbRecord = await testDb('email_provider_configs')
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('id', createdProvider.id)
-        .where('tenant', testTenant)
         .first();
 
       expect(dbRecord.name).toBe('Updated Gmail Provider');
@@ -359,9 +378,8 @@ describe('Email Provider Database Integration Tests', () => {
       const createdProvider = await emailProviderService.createProvider(fullProviderData);
 
       // Verify all fields were saved
-      const dbRecord = await testDb('email_provider_configs')
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('id', createdProvider.id)
-        .where('tenant', testTenant)
         .first();
 
       const providerConfig = typeof dbRecord.provider_config === 'string' 
@@ -390,8 +408,7 @@ describe('Email Provider Database Integration Tests', () => {
       ).rejects.toThrow();
 
       // Verify no record was created
-      const count = await testDb('email_provider_configs')
-        .where('tenant', testTenant)
+      const count = await tenantTable('email_provider_configs')
         .count('* as count')
         .first();
 

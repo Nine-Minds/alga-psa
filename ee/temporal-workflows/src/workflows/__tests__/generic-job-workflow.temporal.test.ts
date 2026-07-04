@@ -16,10 +16,16 @@ vi.mock('@temporalio/workflow', () => ({
   setHandler: vi.fn(),
   log: {
     info: vi.fn(),
+    warn: vi.fn(),
     error: vi.fn(),
   },
   sleep: vi.fn(async () => {}),
   workflowInfo: vi.fn(() => ({ workflowId: 'wf-test-123' })),
+  ApplicationFailure: {
+    create: vi.fn((opts: { message: string; type?: string; nonRetryable?: boolean }) =>
+      Object.assign(new Error(opts.message), opts)
+    ),
+  },
 }));
 
 const loadWorkflow = async () => {
@@ -87,7 +93,7 @@ describe('genericJobWorkflow', () => {
     );
   });
 
-  it('marks a job failed and returns terminal failure result when handler returns failure', async () => {
+  it('marks a job failed and fails the workflow when handler returns failure', async () => {
     mockActivities.executeJobHandler.mockResolvedValue({
       success: false,
       error: 'simulated handler failure',
@@ -101,11 +107,11 @@ describe('genericJobWorkflow', () => {
       data: { scheduleId: 'sched-2' },
     };
 
-    const result = await genericJobWorkflow(input);
-
-    expect(result.success).toBe(false);
-    expect(result.jobId).toBe(input.jobId);
-    expect(result.error).toBe('simulated handler failure');
+    await expect(genericJobWorkflow(input)).rejects.toMatchObject({
+      message: 'simulated handler failure',
+      type: 'GenericJobFailure',
+      nonRetryable: true,
+    });
 
     expect(mockActivities.updateJobStatus).toHaveBeenNthCalledWith(
       1,
@@ -137,6 +143,31 @@ describe('genericJobWorkflow', () => {
         stepName: 'execution_failed',
         status: 'failed',
       })
+    );
+  });
+
+  it('still executes the handler when pre-run bookkeeping fails', async () => {
+    mockActivities.updateJobStatus.mockRejectedValueOnce(
+      new Error('tracker row missing')
+    );
+    mockActivities.executeJobHandler.mockResolvedValue({
+      success: true,
+      result: { ok: true },
+    });
+
+    const { genericJobWorkflow } = await loadWorkflow();
+    const input: GenericJobInput = {
+      jobId: 'job-orphan-1',
+      jobName: 'rmm-alert-reconciliation',
+      tenantId: 'tenant-3',
+      data: { integrationId: 'integ-1' },
+    };
+
+    const result = await genericJobWorkflow(input);
+
+    expect(result.success).toBe(true);
+    expect(mockActivities.executeJobHandler).toHaveBeenCalledWith(
+      expect.objectContaining({ jobId: input.jobId, jobName: input.jobName })
     );
   });
 });

@@ -6,7 +6,7 @@ import { getAssetDetailBundle } from '@alga-psa/assets/actions/assetActions';
 import { getClientById, getContactByContactNameId } from '@alga-psa/clients/actions';
 import { getProject } from '@alga-psa/projects/actions/projectActions';
 import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
-import { findCommentsByTicketId } from '@alga-psa/tickets/actions/comment-actions';
+import { findCommentsByTicketId } from '@alga-psa/tickets/actions/comment-actions/commentActions';
 import { getCurrentUser, findUserById } from '@alga-psa/user-composition/actions';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { getRegistry } from '../chat/registry/apiRegistry.indexer';
@@ -18,13 +18,13 @@ import {
   resolveSearchAclPrincipal,
   verifyResultVisibility,
   type ClientAccess,
-} from '@/lib/search/acl';
+} from '@alga-psa/search/acl';
 import {
   countSearchMatches,
   countSearchMatchesByType,
   encodeSearchCursor,
   runSearchQuery,
-} from '@/lib/search/query';
+} from '@alga-psa/search/query';
 import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@alga-psa/types';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';

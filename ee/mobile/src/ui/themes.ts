@@ -62,6 +62,11 @@ export type Theme = {
     warning: string;
     success: string;
     info: string;
+    /** Activity-list accents aligned with the web main-app list (cyan=project task at the
+     *  secondary-500 shade, plus time-entry orange and notification indigo). */
+    orange: string;
+    indigo: string;
+    cyan: string;
     placeholder: string;
     shadow: string;
     badge: Record<"info" | "success" | "warning" | "danger" | "neutral", BadgeColorSet>;
@@ -158,6 +163,9 @@ export const lightTheme: Theme = {
     warning: "#F59E0B",
     success: "#16A34A",
     info: "#2563EB",
+    orange: "#F97316",
+    indigo: "#6366F1",
+    cyan: secondaryLight[500],
     placeholder: grayLight[400],
     shadow: "#000000",
     badge: {
@@ -224,6 +232,9 @@ export const darkTheme: Theme = {
     warning: "#EAB308",
     success: "#4ABE78",
     info: "#3B82F6",
+    orange: "#F97316",
+    indigo: "#6366F1",
+    cyan: secondaryDark[500],
     placeholder: grayDark[400],
     shadow: "#000000",
     badge: {

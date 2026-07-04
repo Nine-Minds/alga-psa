@@ -124,7 +124,7 @@ describe('Accounting export batch lifecycle integration', () => {
     const adapterRegistry = new AccountingAdapterRegistry([new StubQuickBooksAdapter()]);
     service = new AccountingExportService(repository, adapterRegistry);
     vi.spyOn(AccountingExportRepository, 'create').mockResolvedValue(repository);
-    const resolver = new AccountingMappingResolver(ctx.db);
+    const resolver = new AccountingMappingResolver(ctx.db, undefined, ctx.tenantId);
     vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(resolver);
   }, HOOK_TIMEOUT);
 

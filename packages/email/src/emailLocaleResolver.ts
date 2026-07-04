@@ -19,9 +19,10 @@
  * defaultLocale is respected.
  */
 
-import { getConnection } from '@alga-psa/db';
+import { tenantDb, getConnection } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from './lib/localeConfig';
 import logger from '@alga-psa/core/logger';
+import type { Knex } from 'knex';
 
 export interface EmailRecipient {
   email: string;
@@ -29,6 +30,9 @@ export interface EmailRecipient {
   userType?: 'client' | 'internal';
   clientId?: string;
 }
+
+const tenantScopedTable = (knex: Knex, table: string, tenant: string) =>
+  tenantDb(knex, tenant).table(table);
 
 /**
  * Get the user's client ID from their contact
@@ -38,20 +42,18 @@ async function getUserClientId(userId: string, tenantId: string): Promise<string
     const knex = await getConnection(tenantId);
 
     // Get user's contact_id
-    const user = await knex('users')
+    const user = await tenantScopedTable(knex, 'users', tenantId)
       .where({
-        user_id: userId,
-        tenant: tenantId
+        user_id: userId
       })
       .first();
 
     if (!user?.contact_id) return null;
 
     // Get contact's client
-    const contact = await knex('contacts')
+    const contact = await tenantScopedTable(knex, 'contacts', tenantId)
       .where({
-        contact_name_id: user.contact_id,
-        tenant: tenantId
+        contact_name_id: user.contact_id
       })
       .first();
 
@@ -77,10 +79,9 @@ export async function resolveEmailLocale(
     let clientId = recipient.clientId;
 
     if (recipient.userId && !userType) {
-      const user = await knex('users')
+      const user = await tenantScopedTable(knex, 'users', tenantId)
         .where({
-          user_id: recipient.userId,
-          tenant: tenantId
+          user_id: recipient.userId
         })
         .first();
 
@@ -90,11 +91,10 @@ export async function resolveEmailLocale(
     // If we have a userId, check user preference and get user details
     if (recipient.userId) {
       // 1. Check user preference
-      const userPref = await knex('user_preferences')
+      const userPref = await tenantScopedTable(knex, 'user_preferences', tenantId)
         .where({
           user_id: recipient.userId,
-          setting_name: 'locale',
-          tenant: tenantId
+          setting_name: 'locale'
         })
         .first();
 
@@ -118,8 +118,8 @@ export async function resolveEmailLocale(
 
     // 2. Client-specific default (client-portal users / portal invitations)
     if ((userType === 'client' || clientId) && clientId) {
-      const client = await knex('clients')
-        .where({ client_id: clientId, tenant: tenantId })
+      const client = await tenantScopedTable(knex, 'clients', tenantId)
+        .where({ client_id: clientId })
         .first();
 
       const clientLocale = client?.properties?.defaultLocale;
@@ -131,8 +131,7 @@ export async function resolveEmailLocale(
 
     // 3. Client-portal default (client-portal users only)
     if (userType === 'client' || clientId) {
-      const tenantSettings = await knex('tenant_settings')
-        .where({ tenant: tenantId })
+      const tenantSettings = await tenantScopedTable(knex, 'tenant_settings', tenantId)
         .first();
 
       const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
@@ -164,8 +163,7 @@ export async function getTenantDefaultLocale(
 ): Promise<SupportedLocale> {
   try {
     const knex = await getConnection(tenantId);
-    const tenantSettings = await knex('tenant_settings')
-      .where({ tenant: tenantId })
+    const tenantSettings = await tenantScopedTable(knex, 'tenant_settings', tenantId)
       .first();
 
     const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
@@ -216,10 +214,9 @@ export async function getUserInfoForEmail(
   try {
     const knex = await getConnection(tenantId);
 
-    const user = await knex('users')
+    const user = await tenantScopedTable(knex, 'users', tenantId)
       .where({
-        email,
-        tenant: tenantId
+        email
       })
       .first();
 

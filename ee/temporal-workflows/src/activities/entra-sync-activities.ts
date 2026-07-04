@@ -1,7 +1,7 @@
 import logger from '@alga-psa/core/logger';
 import { randomUUID } from 'crypto';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db/tenant';
-import { retryOnTenantReadOnly } from '@alga-psa/db';
+import { retryOnTenantReadOnly, tenantDb } from '@alga-psa/db';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
 import { executeEntraSync } from '@ee/lib/integrations/entra/sync/syncEngine';
 import { filterEntraUsersForTenant } from '@ee/lib/integrations/entra/settingsService';
@@ -18,12 +18,17 @@ import type {
   RecordSyncTenantResultActivityInput,
 } from '../types/entra-sync';
 
+type MappingRow = {
+  managed_tenant_id: string;
+  entra_tenant_id: string;
+  client_id: string | null;
+};
+
 async function getActiveConnectionType(tenantId: string): Promise<EntraConnectionType> {
   const activeConnection = await runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    return knex('entra_partner_connections')
+    return tenantDb(knex, tenantId).table('entra_partner_connections')
       .where({
-        tenant: tenantId,
         is_active: true,
       })
       .orderBy('updated_at', 'desc')
@@ -47,21 +52,19 @@ export async function loadMappedTenantsActivity(
 
   const mappings = await runWithTenant(input.tenantId, async () => {
     const { knex } = await createTenantKnex();
-    const query = knex('entra_client_tenant_mappings as m')
-      .join('entra_managed_tenants as t', function joinManagedTenants() {
-        this.on('m.tenant', '=', 't.tenant').andOn(
-          'm.managed_tenant_id',
-          '=',
-          't.managed_tenant_id'
-        );
-      })
+    const db = tenantDb(knex, input.tenantId);
+    const query = db.table('entra_client_tenant_mappings as m')
       .where({
-        'm.tenant': input.tenantId,
         'm.is_active': true,
         'm.mapping_state': 'mapped',
       })
-      .select('m.managed_tenant_id', 'm.client_id', 't.entra_tenant_id')
+      .select({
+        managed_tenant_id: 'm.managed_tenant_id',
+        client_id: 'm.client_id',
+        entra_tenant_id: 't.entra_tenant_id',
+      })
       .orderBy('m.updated_at', 'asc');
+    db.tenantJoin(query, 'entra_managed_tenants as t', 'm.managed_tenant_id', 't.managed_tenant_id');
 
     if (input.managedTenantId) {
       query.andWhere('m.managed_tenant_id', input.managedTenantId);
@@ -69,12 +72,6 @@ export async function loadMappedTenantsActivity(
 
     return query;
   });
-
-  type MappingRow = {
-    managed_tenant_id: string;
-    entra_tenant_id: string;
-    client_id: string | null;
-  };
 
   return {
     mappings: (mappings as MappingRow[]).map((row) => ({
@@ -115,8 +112,7 @@ export async function syncTenantUsersActivity(
 
   const fieldSyncConfig = await runWithTenant(input.tenantId, async () => {
     const { knex } = await createTenantKnex();
-    const row = await knex('entra_sync_settings')
-      .where({ tenant: input.tenantId })
+    const row = await tenantDb(knex, input.tenantId).table('entra_sync_settings')
       .first(['field_sync_config']);
     const raw = row?.field_sync_config;
     return raw && typeof raw === 'object' && !Array.isArray(raw)
@@ -171,18 +167,17 @@ export async function upsertSyncRunActivity(
       runWithTenant(input.tenantId, async () => {
         const { knex } = await createTenantKnex();
         const now = knex.fn.now();
+        const db = tenantDb(knex, input.tenantId);
 
-        const existing = await knex('entra_sync_runs')
+        const existing = await db.table('entra_sync_runs')
           .where({
-            tenant: input.tenantId,
             workflow_id: input.workflowId,
           })
           .first(['run_id']);
 
         if (existing?.run_id) {
-          await knex('entra_sync_runs')
+          await db.table('entra_sync_runs')
             .where({
-              tenant: input.tenantId,
               run_id: existing.run_id,
             })
             .update({
@@ -194,7 +189,7 @@ export async function upsertSyncRunActivity(
         }
 
         const runId = randomUUID();
-        await knex('entra_sync_runs').insert({
+        await db.table('entra_sync_runs').insert({
           tenant: input.tenantId,
           run_id: runId,
           workflow_id: input.workflowId,
@@ -234,9 +229,8 @@ export async function finalizeSyncRunActivity(
         const { knex } = await createTenantKnex();
         const now = knex.fn.now();
 
-        await knex('entra_sync_runs')
+        await tenantDb(knex, input.tenantId).table('entra_sync_runs')
           .where({
-            tenant: input.tenantId,
             run_id: input.runId,
           })
           .update({
@@ -269,10 +263,10 @@ export async function recordSyncTenantResultActivity(
       runWithTenant(input.tenantId, async () => {
         const { knex } = await createTenantKnex();
         const now = knex.fn.now();
+        const db = tenantDb(knex, input.tenantId);
 
-        const existing = await knex('entra_sync_run_tenants')
+        const existing = await db.table('entra_sync_run_tenants')
           .where({
-            tenant: input.tenantId,
             run_id: input.runId,
             managed_tenant_id: input.result.managedTenantId,
           })
@@ -296,16 +290,15 @@ export async function recordSyncTenantResultActivity(
         };
 
         if (existing?.run_tenant_id) {
-          await knex('entra_sync_run_tenants')
+          await db.table('entra_sync_run_tenants')
             .where({
-              tenant: input.tenantId,
               run_tenant_id: existing.run_tenant_id,
             })
             .update(row);
           return;
         }
 
-        await knex('entra_sync_run_tenants').insert({
+        await db.table('entra_sync_run_tenants').insert({
           ...row,
           run_tenant_id: randomUUID(),
           created_at: now,

@@ -31,5 +31,65 @@
     "nonBillable": "Non-billable",
     "adHoc": "Ad hoc",
     "interaction": "Interaction"
+  },
+  "timer": {
+    "startedToast": "Timer started · {{service}}",
+    "stoppedToast": "Time entry saved · {{duration}}",
+    "stoppedToastNoDuration": "Time entry saved",
+    "errors": {
+      "start": "Unable to start the timer.",
+      "stop": "Unable to stop the timer.",
+      "permission": "Your account does not have permission to log time."
+    },
+    "chip": {
+      "start": "Start timer",
+      "stop": "Stop timer · {{elapsed}}",
+      "switchHere": "Timer running elsewhere"
+    },
+    "banner": {
+      "stop": "Stop",
+      "untitled": "Time tracking",
+      "accessibility": "Timer running on {{title}}",
+      "openWorkItem": "Open {{title}}"
+    },
+    "servicePicker": {
+      "title": "Pick a service",
+      "subtitle": "Time entries need a service for billing. Your choice is remembered for one-tap starts.",
+      "loadError": "Unable to load services.",
+      "empty": "No services are available."
+    },
+    "stopModal": {
+      "title": "Stop timer",
+      "untitledWorkItem": "Time tracking",
+      "startedAt": "Started {{time}}",
+      "zeroDurationHint": "Less than a minute will be saved as 0m.",
+      "serviceLabel": "Service",
+      "selectService": "Select a service",
+      "loadingServices": "Loading services…",
+      "billableLabel": "Billable",
+      "adjustEnd": "Adjust end time",
+      "endDateLabel": "End date",
+      "endTimeLabel": "End time",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "What did you work on?",
+      "willStartNext": "A new timer will start on this ticket after saving.",
+      "save": "Stop & save",
+      "keepRunning": "Keep running",
+      "errors": {
+        "noService": "Select a service before saving.",
+        "invalidEnd": "Enter a valid end time.",
+        "endBeforeStart": "End time must be after the timer started.",
+        "endInFuture": "End time can be at most 15 minutes ahead."
+      }
+    },
+    "notifications": {
+      "ongoingChannelName": "Time tracking",
+      "reminderChannelName": "Timer reminders",
+      "ongoingTitle": "Timer running",
+      "ongoingBody": "{{workItem}} · started at {{time}}",
+      "reminderTitle": "Timer still running",
+      "reminderBody": "You have been tracking time on {{workItem}} for {{hours}}h.",
+      "genericWorkItem": "a work item"
+    }
   }
 }

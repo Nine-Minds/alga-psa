@@ -4,8 +4,7 @@
 // This is a temporary duplication to break the auth <-> users cycle
 
 import { IRole, IUserRole } from '@alga-psa/types';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 
@@ -15,8 +14,7 @@ export const getRoles = withAuth(async (
 ): Promise<IRole[]> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('roles')
-            .where({ tenant })
+        return await tenantDb(trx, tenant).table('roles')
             .select('role_id', 'role_name', 'description', 'tenant', 'msp', 'client');
     });
 });
@@ -30,8 +28,8 @@ export const assignRoleToUser = withAuth(async (
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const [user, role] = await Promise.all([
-            trx('users').where({ user_id: userId, tenant }).first(),
-            trx('roles').where({ role_id: roleId, tenant }).first()
+            tenantDb(trx, tenant).table('users').where({ user_id: userId }).first(),
+            tenantDb(trx, tenant).table('roles').where({ role_id: roleId }).first()
         ]);
 
         // Authorization: assigning an MSP role requires 'user:update'.
@@ -61,7 +59,7 @@ export const assignRoleToUser = withAuth(async (
             throw new Error('Cannot assign MSP role to client portal user');
         }
 
-        const [userRole] = await trx('user_roles')
+        const [userRole] = await tenantDb(trx, tenant).table<IUserRole>('user_roles')
             .insert({ user_id: userId, role_id: roleId, tenant })
             .returning('*');
         return userRole;
@@ -76,7 +74,7 @@ export const removeRoleFromUser = withAuth(async (
 ): Promise<void> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const role = await trx('roles').where({ role_id: roleId, tenant }).first();
+        const role = await tenantDb(trx, tenant).table('roles').where({ role_id: roleId }).first();
 
         // Authorization mirrors assignRoleToUser: removing an MSP role requires
         // 'user:update'; pure client-portal roles may also use 'client:update'.
@@ -88,6 +86,6 @@ export const removeRoleFromUser = withAuth(async (
             throw new Error('Permission denied: You do not have permission to change user roles.');
         }
 
-        await trx('user_roles').where({ user_id: userId, role_id: roleId, tenant }).del();
+        await tenantDb(trx, tenant).table('user_roles').where({ user_id: userId, role_id: roleId }).del();
     });
 });

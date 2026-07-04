@@ -26,9 +26,17 @@
       "import": "./src/components/constants.ts",
       "types": "./src/components/constants.ts"
     },
+    "./server/activity-actions": {
+      "import": "./src/server/activity-actions.ts",
+      "types": "./src/server/activity-actions.ts"
+    },
     "./server/workflow-tasks": {
       "import": "./src/server/workflow-tasks.ts",
       "types": "./src/server/workflow-tasks.ts"
+    },
+    "./server/workflow-task-actions": {
+      "import": "./src/server/workflow-task-actions.ts",
+      "types": "./src/server/workflow-task-actions.ts"
     },
     "./client/workflow-tasks": {
       "import": "./src/client/workflow-tasks.tsx",

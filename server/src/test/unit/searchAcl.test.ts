@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { aclPredicateSql, verifyResultVisibility } from '../../lib/search/acl';
+import { aclPredicateSql, verifyResultVisibility } from '@alga-psa/search/acl';
 
 describe('search ACL SQL predicate', () => {
   it('T105 filters required_permission through the user permission set', () => {
@@ -116,8 +116,8 @@ describe('search ACL SQL predicate', () => {
       [{ type: 'ticket', id: 'ticket-missing' }],
     );
 
+    expect(query.where).toHaveBeenCalledWith('tickets.tenant', 'tenant-1');
     expect(query.where).toHaveBeenCalledWith('ticket_id', 'ticket-missing');
-    expect(query.andWhere).toHaveBeenCalledWith('tenant', 'tenant-1');
     expect(visible).toEqual([]);
   });
 
@@ -298,8 +298,8 @@ describe('search ACL SQL predicate', () => {
       [{ type: 'project' as const, id: 'project-1' }],
     )).resolves.toEqual([]);
 
+    expect(projectQuery.where).toHaveBeenCalledWith('projects.tenant', 'tenant-1');
     expect(projectQuery.where).toHaveBeenCalledWith('project_id', 'project-1');
-    expect(projectQuery.andWhere).toHaveBeenCalledWith('tenant', 'tenant-1');
   });
 
   it('T168 drops document hits outside the user accessible client scope', async () => {
@@ -336,8 +336,9 @@ describe('search ACL SQL predicate', () => {
       [{ type: 'document' as const, id: 'document-1' }],
     )).resolves.toEqual([]);
 
+    expect(documentQuery.where).toHaveBeenCalledWith('documents.tenant', 'tenant-1');
     expect(documentQuery.where).toHaveBeenCalledWith('document_id', 'document-1');
-    expect(documentQuery.andWhere).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(associationQuery.where).toHaveBeenCalledWith('document_associations.tenant', 'tenant-1');
     expect(associationQuery.andWhere).toHaveBeenCalledWith('entity_type', 'client');
   });
 

@@ -28,6 +28,10 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+  }),
   withTransaction: async (...args: any[]) => {
     try {
       const result = await withTransactionMock(...args);

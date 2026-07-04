@@ -15,6 +15,11 @@ const withTransactionMock = vi.fn();
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  // The trx builders here supply their own `.where(...)`, so the tenant facade
+  // just passes the table through to the mocked connection.
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({

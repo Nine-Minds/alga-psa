@@ -34,6 +34,8 @@ import { registerStorageRoutes } from './routes/extensionStorage';
 import { registerSystemRoutes } from './routes/system';
 import { registerWebhookRoutes } from './routes/webhooks';
 import { registerWorkflowV1Routes } from './routes/workflowsV1';
+import { registerWorkflowTasksV1Routes } from './routes/workflowTasksV1';
+import { registerActivitiesV1Routes } from './routes/activitiesV1';
 import { registerWorkManagementV1Routes } from './routes/workManagementV1';
 import { registerMetaUtilityV1Routes } from './routes/metaUtilityV1';
 import { registerEeInventoryOnlyRoutes } from './routes/eeInventoryOnly';
@@ -76,6 +78,8 @@ export function buildBaseRegistry(options: RegistryInitOptions = {}): ApiOpenApi
   registerServiceTypeRoutes(registry, components);
   registerWebhookRoutes(registry);
   registerWorkflowV1Routes(registry);
+  registerWorkflowTasksV1Routes(registry);
+  registerActivitiesV1Routes(registry);
   registerProjectRoutes(registry, components);
   registerWorkManagementV1Routes(registry);
   registerQuotesContractsV1Routes(registry);

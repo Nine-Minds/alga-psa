@@ -76,8 +76,8 @@ describe('inbound webhook idempotency', () => {
 
     expect(duplicate).toBeNull();
     expect(calls.table).toHaveBeenCalledWith('inbound_webhook_deliveries');
+    expect(calls.where).toHaveBeenCalledWith('inbound_webhook_deliveries.tenant', 'tenant-a');
     expect(calls.where).toHaveBeenCalledWith({
-      tenant: 'tenant-a',
       inbound_webhook_id: 'webhook-1',
       idempotency_key: 'alert-123',
     });
@@ -99,8 +99,8 @@ describe('inbound webhook idempotency', () => {
     });
 
     expect(duplicate).toBeNull();
+    expect(calls.where).toHaveBeenCalledWith('inbound_webhook_deliveries.tenant', 'tenant-a');
     expect(calls.where).toHaveBeenCalledWith({
-      tenant: 'tenant-a',
       inbound_webhook_id: 'webhook-b',
       idempotency_key: 'shared-alert-key',
     });

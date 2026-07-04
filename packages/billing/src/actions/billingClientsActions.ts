@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientContract } from '@alga-psa/types';
 import {
@@ -22,19 +22,40 @@ import {
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
+async function attachClientLogos(clients: IClient[], tenant: string): Promise<IClient[]> {
+  if (clients.length === 0) {
+    return clients;
+  }
+  const clientIds = clients
+    .map((client) => client.client_id)
+    .filter((clientId): clientId is string => Boolean(clientId));
+  const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+  return clients.map((client) => ({
+    ...client,
+    logoUrl: logoUrlsMap.get(client.client_id) ?? null,
+  }));
+}
 
 async function assertClientContractAssignmentIsAuthorable(
   trx: Knex.Transaction,
   tenant: string,
   clientContractId: string,
 ): Promise<void> {
-  const row = await trx('client_contracts as cc')
-    .join('contracts as c', function joinContracts() {
-      this.on('cc.contract_id', '=', 'c.contract_id')
-        .andOn('cc.tenant', '=', 'c.tenant');
-    })
-    .where('cc.tenant', tenant)
+  const query = tenantScopedTable(trx, tenant, 'client_contracts as cc');
+  tenantDb(trx, tenant).tenantJoin(query, 'contracts as c', 'cc.contract_id', 'c.contract_id');
+
+  const row = await query
     .andWhere('cc.client_contract_id', clientContractId)
     .first('c.is_system_managed_default');
 
@@ -58,7 +79,8 @@ export const getAllClientsForBilling = withAuth(async (
 ): Promise<IClient[]> => {
   await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
-  return getAllClients(knex, tenant, includeInactive);
+  const clients = await getAllClients(knex, tenant, includeInactive);
+  return attachClientLogos(clients, tenant);
 });
 
 export const getAllClientsPaginatedForBilling = withAuth(async (
@@ -68,7 +90,8 @@ export const getAllClientsPaginatedForBilling = withAuth(async (
 ): Promise<PaginatedClientsResponse> => {
   await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
-  return getAllClientsPaginated(knex, tenant, params);
+  const response = await getAllClientsPaginated(knex, tenant, params);
+  return { ...response, clients: await attachClientLogos(response.clients, tenant) };
 });
 
 export const getClientsWithBillingCycleRangePaginatedForBilling = withAuth(async (
@@ -78,7 +101,8 @@ export const getClientsWithBillingCycleRangePaginatedForBilling = withAuth(async
 ): Promise<PaginatedClientsResponse> => {
   await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
-  return getClientsWithBillingCycleRangePaginated(knex, tenant, params);
+  const response = await getClientsWithBillingCycleRangePaginated(knex, tenant, params);
+  return { ...response, clients: await attachClientLogos(response.clients, tenant) };
 });
 
 export const getClientByIdForBilling = withAuth(async (
@@ -88,7 +112,14 @@ export const getClientByIdForBilling = withAuth(async (
 ): Promise<IClient | null> => {
   await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
-  return getClientById(knex, tenant, clientId);
+  const client = await getClientById(knex, tenant, clientId);
+  if (!client) {
+    return null;
+  }
+  // Resolve the uploaded logo so the client drawer (e.g. from a contract) shows
+  // the real logo, not just initials.
+  const logoUrl = await getClientLogoUrl(clientId, tenant);
+  return { ...client, logoUrl };
 });
 
 export const getClientContractsForBilling = withAuth(async (
@@ -142,8 +173,8 @@ export const createClientContractForBilling = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const contract = await trx('contracts')
-      .where({ tenant, contract_id: input.contract_id })
+    const contract = await tenantScopedTable(trx, tenant, 'contracts')
+      .where({ contract_id: input.contract_id })
       .first('is_system_managed_default');
     if (contract?.is_system_managed_default === true) {
       throw new Error(

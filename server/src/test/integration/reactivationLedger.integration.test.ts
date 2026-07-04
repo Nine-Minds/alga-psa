@@ -2,23 +2,22 @@
  * Real-DB integration tests for the tenant reactivation / win-back back end.
  *
  * Unlike the fake-knex contract tests, these run the actual lib functions
- * against the local Postgres `server` database (the one the EE migration was
- * applied to), so they exercise the real SQL, the single-use token reservation,
- * the (tenant, token_hash) uniqueness, the COALESCE'd effective deletion date,
+ * against the shared test database (test-utils/dbConfig bootstrap), so they
+ * exercise the real SQL, the single-use token reservation, the
+ * (tenant, token_hash) uniqueness, the COALESCE'd effective deletion date,
  * and the atomic win-back throttle under concurrency.
  *
- * Skips automatically when the DB is unreachable (e.g. CI without a database).
- * Every row it creates is namespaced to a throwaway tenant and removed in
- * afterAll.
+ * The reactivation tables ship in EE migrations, which the CE bootstrap does
+ * not run, so the two relevant migrations are applied directly in beforeAll.
  */
-import fs from 'node:fs';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
 
-import knexLib, { Knex } from 'knex';
+import { Knex } from 'knex';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { describeWithDb } from '../../../test-utils/requireDb';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 import {
   createTenantReactivationToken,
@@ -35,21 +34,9 @@ import {
 // getTokenSecret() reads this at call time; set before any token op.
 process.env.ALGA_WEBHOOK_SECRET ||= 'localtest-reactivation-secret';
 
-const DB_HOST = process.env.DB_HOST || 'localhost';
-const DB_PORT = Number(process.env.DB_PORT || 5432);
-
 const describeDb = await describeWithDb();
 
-function readSecret(name: string, fallbackEnv: string): string {
-  try {
-    return fs.readFileSync(path.resolve(__dirname, '../../../../secrets', name), 'utf8').trim();
-  } catch {
-    return process.env[fallbackEnv] || '';
-  }
-}
-
 let db: Knex;
-const createdTenants: string[] = [];
 
 async function seedTenantWithPendingDeletion(opts: {
   email: string | null;
@@ -60,7 +47,6 @@ async function seedTenantWithPendingDeletion(opts: {
 }): Promise<{ tenantId: string; deletionId: string }> {
   const tenantId = randomUUID();
   const deletionId = randomUUID();
-  createdTenants.push(tenantId);
 
   await db('tenants').insert({
     tenant: tenantId,
@@ -84,30 +70,24 @@ async function seedTenantWithPendingDeletion(opts: {
   return { tenantId, deletionId };
 }
 
-beforeAll(() => {
-  db = knexLib({
-    client: 'pg',
-    connection: {
-      host: DB_HOST,
-      port: DB_PORT,
-      user: process.env.DB_USER_ADMIN || 'postgres',
-      // Secret file first (the docker-compose source of truth); fall back to env.
-      password: readSecret('postgres_password', 'DB_PASSWORD_ADMIN'),
-      database: process.env.DB_NAME_SERVER || 'server',
-    },
-    pool: { min: 1, max: 5 },
-  });
+beforeAll(async () => {
+  db = await createTestDbConnection({ runSeeds: false });
+
+  // Apply the EE migrations that own the reactivation schema.
+  const require = createRequire(import.meta.url);
+  const eeMigrations = [
+    '../../../../ee/server/migrations/20260113120000_create_pending_tenant_deletions.cjs',
+    '../../../../ee/server/migrations/20260605120000_add_tenant_reactivation_winback_tables.cjs',
+  ];
+  for (const migrationPath of eeMigrations) {
+    await require(migrationPath).up(db);
+  }
 });
 
 afterAll(async () => {
-  if (!db) return;
-  for (const tenantId of createdTenants) {
-    await db('tenant_reactivation_tokens').where({ tenant: tenantId }).delete();
-    await db('pending_reactivation_refunds').where({ tenant: tenantId }).delete();
-    await db('pending_tenant_deletions').where({ tenant: tenantId }).delete();
-    await db('tenants').where({ tenant: tenantId }).delete();
+  if (db) {
+    await db.destroy();
   }
-  await db.destroy();
 });
 
 describeDb('reactivation token ledger (real DB)', () => {
@@ -245,7 +225,6 @@ describeDb('reactivation contact email (real DB)', () => {
     });
 
     const withoutEmail = randomUUID();
-    createdTenants.push(withoutEmail);
     await db('tenants').insert({
       tenant: withoutEmail,
       client_name: `reactivation-it-${withoutEmail.slice(0, 8)}`,

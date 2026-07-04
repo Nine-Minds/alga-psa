@@ -9,11 +9,11 @@ vi.mock('@alga-psa/billing/actions/creditReconciliationActions', () => ({
   runScheduledCreditBalanceValidation: mocks.runScheduledCreditBalanceValidation,
 }));
 
-vi.mock('server/src/lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   runWithTenant: mocks.runWithTenant,
 }));
 
-import { creditReconciliationHandler } from 'server/src/lib/jobs/handlers/creditReconciliationHandler';
+import { creditReconciliationHandler } from '@alga-psa/jobs/handlers/creditReconciliationHandler';
 
 const validationResults = {
   balanceValidCount: 3,

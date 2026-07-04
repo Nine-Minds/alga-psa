@@ -18,6 +18,13 @@ export interface CreateTestDbConnectionOptions {
   migrationsDir?: string;
   seedsDir?: string;
   runSeeds?: boolean;
+  /**
+   * When false, skip the destructive bootstrap (drop/recreate + migrate + seed)
+   * and just connect to the already-bootstrapped test database. Helpers that
+   * run after a TestContext bootstrap must use this or they wipe its data.
+   * @default true
+   */
+  recreate?: boolean;
 }
 
 export function verifyTestDatabase(dbName: string): void {
@@ -42,6 +49,25 @@ export async function createTestDbConnection(
   const adminPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123');
   const appUser = process.env.DB_USER_SERVER || 'app_user';
   const appPassword = await getSecret('db_password_server', 'DB_PASSWORD_SERVER', 'postpass123');
+  const recreate = options.recreate ?? true;
+
+  if (!recreate) {
+    return knex({
+      client: 'pg',
+      connection: {
+        host: dbHost,
+        port: dbPort,
+        user: appUser,
+        password: appPassword,
+        database: databaseName,
+      },
+      asyncStackTraces: true,
+      pool: {
+        min: 2,
+        max: 20,
+      },
+    });
+  }
 
   await recreateDatabase(databaseName, dbHost, dbPort, adminUser, adminPassword, appUser, appPassword);
 
@@ -152,6 +178,13 @@ async function recreateDatabase(
     $$;`);
     await adminConnection.raw(`ALTER DATABASE "${safeDbName}" OWNER TO ${appUser}`);
     await adminConnection.raw(`GRANT ALL PRIVILEGES ON DATABASE "${safeDbName}" TO ${appUser}`);
+    // Some migrations and test helpers run CREATE ROLE / ALTER ... OWNER TO postgres
+    // as the app user; make the app role a member of the admin role so those
+    // succeed (resetDatabase used to do this before initialize was collapsed to a
+    // single bootstrap).
+    if (adminUser !== appUser) {
+      await adminConnection.raw(`GRANT ${adminUser} TO ${appUser}`);
+    }
   } finally {
     await adminConnection.destroy().catch(() => undefined);
   }

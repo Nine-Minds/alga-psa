@@ -384,7 +384,6 @@
       "display": "Display",
       "ticketNumbering": "Ticket Numbering",
       "boards": "Boards",
-      "statuses": "Statuses",
       "priorities": "Priorities",
       "categories": "Categories",
       "checklistTemplates": "Checklist Templates"
@@ -489,7 +488,9 @@
         "boardManager": "Board Manager",
         "order": "Order",
         "itilBoard": "ITIL Board",
-        "actions": "Actions"
+        "actions": "Actions",
+        "ticketLoad": "Ticket load",
+        "statuses": "Statuses"
       },
       "statusLabels": {
         "active": "Active",
@@ -508,7 +509,8 @@
         "up": "Up",
         "down": "Down",
         "remove": "Remove",
-        "addStatus": "Add Status"
+        "addStatus": "Add Status",
+        "back": "Back to Boards"
       },
       "fields": {
         "boardName": {
@@ -588,6 +590,10 @@
         "liveTimer": {
           "label": "Enable live ticket timer",
           "help": "Shows the live timer and tracked intervals on tickets in this board. Manual time entry remains available."
+        },
+        "defaultBoard": {
+          "label": "Default board for client portal tickets",
+          "help": "New tickets submitted from the client portal land on this board. Only one board can be the default."
         }
       },
       "dialog": {
@@ -713,7 +719,34 @@
           "autoCloseDaysInvalid": "Auto-close inactivity days must be a positive whole number",
           "autoCloseWarningInvalid": "The warning lead time must be smaller than the inactivity days"
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "General",
+          "generalHelp": "Name, description, visibility and default",
+          "assignment": "Assignment & SLA",
+          "assignmentHelp": "Default routing, SLA and board manager",
+          "inbound": "Email & inbound replies",
+          "inboundHelp": "Reopen tickets when clients reply by email",
+          "close": "Close rules",
+          "closeHelp": "Requirements before a ticket can be closed",
+          "automation": "Automation",
+          "automationHelp": "Auto-close stale tickets after inactivity",
+          "statuses": "Priorities & statuses",
+          "statusesHelp": "Default priority and the ticket statuses for this board",
+          "display": "Display & behaviour",
+          "displayHelp": "Live timer and board type"
+        },
+        "saveChanges": "Save Changes",
+        "unsaved": "Unsaved",
+        "unsavedShort": "Unsaved changes",
+        "unsavedBanner": "You have unsaved changes. Click \"Save Changes\" to apply them.",
+        "allSaved": "All changes saved",
+        "reopenBadge": "reopen",
+        "required": "Required"
+      },
+      "empty": "No boards found.",
+      "searchPlaceholder": "Search boards…"
     },
     "priorities": {
       "title": {
@@ -1138,6 +1171,17 @@
         "step3": "Use the Refresh button to poll provisioning progress. We will email your administrators if provisioning fails.",
         "canonicalHostFallback": "canonical host"
       },
+      "appliance": {
+        "helpText": "Point this hostname at your appliance and have your reverse proxy forward the original Host header before saving.",
+        "checklistTitle": "Reverse proxy setup",
+        "step1Prefix": "Point ",
+        "step1Suffix": " at this appliance (an A record to its address, or a CNAME to your appliance host).",
+        "step2": "On your reverse proxy, terminate TLS for the domain and forward to this appliance on port 3000, preserving the original Host header (e.g. proxy_set_header Host $host) and sending X-Forwarded-Proto: https.",
+        "step3": "Obtain and maintain the TLS certificate for the domain on your proxy.",
+        "step4": "Save the domain here — it activates immediately. Wire DNS and your proxy first, since portal links switch to this domain right away.",
+        "docLinkText": "Reverse proxy setup & troubleshooting guide",
+        "neverSeenWarning": "No requests have reached {{domain}} yet. Check that your reverse proxy forwards the original Host header."
+      },
       "badges": {
         "pending_dns": "Pending DNS",
         "verifying_dns": "Verifying DNS",
@@ -1232,6 +1276,176 @@
       "telemetry": {
         "title": "Telemetry & Analytics",
         "description": "Manage your telemetry and analytics preferences"
+      }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "Enable Notifications",
+        "description": "Toggle all notifications on or off for this tenant"
+      },
+      "loading": "Loading notification settings...",
+      "loadError": "Failed to load settings",
+      "save": "Save Changes",
+      "saving": "Saving..."
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "Subject Preview",
+        "iframeTitle": "Email template preview",
+        "sampleDataNote": "Preview uses sample data. Actual emails will contain real values."
+      },
+      "errors": {
+        "loadFailed": "Failed to load templates"
+      },
+      "list": {
+        "loading": "Loading email templates...",
+        "templateCount": "({{templateCount}} templates)",
+        "usingCustom": "Using custom template",
+        "usingStandard": "Using standard template"
+      },
+      "columns": {
+        "name": "Name",
+        "actions": "Actions"
+      },
+      "fields": {
+        "language": "Language",
+        "subject": "Subject",
+        "htmlContent": "HTML Content",
+        "textContent": "Text Content"
+      },
+      "actions": {
+        "collapse": "Collapse",
+        "expand": "Expand",
+        "edit": "Edit",
+        "useStandard": "Use Standard",
+        "view": "View",
+        "customize": "Customize",
+        "sending": "Sending...",
+        "sendTest": "Send Test Email",
+        "close": "Close",
+        "cancel": "Cancel",
+        "saving": "Saving...",
+        "save": "Save"
+      },
+      "description": "Each event type has a standard template that can be customized. You can either use the standard template or create a custom version.",
+      "filter": {
+        "languages": "Languages",
+        "reset": "Reset"
+      },
+      "test": {
+        "sentTo": "Test email sent to {{recipient}}",
+        "failed": "Failed to send test email."
+      },
+      "view": {
+        "title": "Standard Template: {{name}}"
+      },
+      "tabs": {
+        "source": "Source",
+        "preview": "Preview"
+      },
+      "common": {
+        "notAvailable": "N/A"
+      },
+      "edit": {
+        "title": "Edit Custom Template: {{name}}"
+      },
+      "languages": {
+        "en": "English",
+        "fr": "French",
+        "es": "Spanish",
+        "de": "German",
+        "nl": "Dutch",
+        "it": "Italian",
+        "pl": "Polish",
+        "pt": "Portuguese"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "Failed to load categories",
+        "loadSubtypes": "Failed to load notification subtypes",
+        "save": "Failed to save notification settings"
+      },
+      "loading": "Loading notification categories...",
+      "toasts": {
+        "saved": "Notification settings saved successfully",
+        "discarded": "Changes discarded"
+      },
+      "columns": {
+        "name": "Name",
+        "description": "Description",
+        "enabled": "Enabled",
+        "defaultForUsers": "Default for Users",
+        "actions": "Actions"
+      },
+      "tooltips": {
+        "cannotDisable": "This category cannot be disabled",
+        "cannotModify": "This category cannot be modified"
+      },
+      "actions": {
+        "enableAllSubtypes": "Enable all subtypes",
+        "disableAllSubtypes": "Disable all subtypes",
+        "disable": "Disable",
+        "enable": "Enable",
+        "disableDefault": "Disable default",
+        "enableDefault": "Enable default",
+        "discardChanges": "Discard Changes",
+        "saving": "Saving...",
+        "saveChanges": "Save Changes",
+        "cancel": "Cancel"
+      },
+      "help": {
+        "intro": "Control which email notification types are available and set defaults for new users.",
+        "enabledLabel": "Enabled:",
+        "enabledDescription": "Controls whether this notification type is active",
+        "defaultLabel": "Default for Users:",
+        "defaultDescription": "Sets whether new users have this notification enabled by default"
+      },
+      "unsavedChangesAlert": "You have unsaved changes. Click \"Save Changes\" to apply them.",
+      "discardDialog": {
+        "title": "Discard Changes?",
+        "message": "Are you sure you want to discard all unsaved changes? This action cannot be undone."
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "Failed to load categories",
+        "loadSubtypes": "Failed to load notification subtypes",
+        "saveSettings": "Failed to save notification settings"
+      },
+      "loading": "Loading internal notification categories...",
+      "toasts": {
+        "saveSuccess": "Notification settings saved successfully",
+        "changesDiscarded": "Changes discarded"
+      },
+      "columns": {
+        "name": "Name",
+        "description": "Description",
+        "enabled": "Enabled",
+        "defaultForUsers": "Default for Users",
+        "actions": "Actions"
+      },
+      "actions": {
+        "enableAllSubtypes": "Enable all subtypes",
+        "disableAllSubtypes": "Disable all subtypes",
+        "disable": "Disable",
+        "enable": "Enable",
+        "disableDefault": "Disable default",
+        "enableDefault": "Enable default",
+        "discardChanges": "Discard Changes",
+        "saving": "Saving...",
+        "saveChanges": "Save Changes",
+        "cancel": "Cancel"
+      },
+      "intro": "Control which internal notification types are available and set defaults for new users.",
+      "enabledLabel": "Enabled:",
+      "enabledDescription": "Controls whether this notification type is active in the system",
+      "defaultForUsersLabel": "Default for Users:",
+      "defaultForUsersDescription": "Sets whether new users have this notification enabled by default",
+      "unsavedChangesAlert": "You have unsaved changes. Click \"Save Changes\" to apply them.",
+      "discardDialog": {
+        "title": "Discard Changes?",
+        "message": "Are you sure you want to discard all unsaved changes? This action cannot be undone."
       }
     }
   },

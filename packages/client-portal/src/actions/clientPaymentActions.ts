@@ -9,7 +9,7 @@
  * These actions allow portal users to get payment links and verify payments.
  */
 
-import { withTransaction, createTenantKnex } from '@alga-psa/db';
+import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import {
@@ -28,6 +28,11 @@ interface PaymentActionResult<T = void> {
   data?: T;
   error?: string;
 }
+
+type InvoiceRecurringSummary = {
+  service_period_start?: string | null;
+  service_period_end?: string | null;
+};
 
 /**
  * Gets a payment link for an invoice in the client portal.
@@ -49,17 +54,17 @@ export const getClientPortalInvoicePaymentLink = withAuth(async (
 
     // Get the user's client_id from their contact and verify invoice access
     const { contact, invoice } = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const contactResult = await trx('contacts')
+      const scopedDb = tenantDb(trx, tenantId);
+
+      const contactResult = await scopedDb.table('contacts')
         .where({
-          tenant: tenantId,
           contact_name_id: (user as any).contact_id,
         })
         .select('client_id')
         .first();
 
-      const invoiceResult = await trx('invoices')
+      const invoiceResult = await scopedDb.table('invoices')
         .where({
-          tenant: tenantId,
           invoice_id: invoiceId,
         })
         .first();
@@ -153,37 +158,35 @@ export const verifyClientPortalPayment = withAuth(async (
 
     // Get the user's client_id from their contact and verify invoice access
     const { contact, invoice, recurringSummary } = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const contactResult = await trx('contacts')
+      const scopedDb = tenantDb(trx, tenantId);
+
+      const contactResult = await scopedDb.table('contacts')
         .where({
-          tenant: tenantId,
           contact_name_id: (user as any).contact_id,
         })
         .select('client_id')
         .first();
 
-      const invoiceResult = await trx('invoices')
+      const invoiceResult = await scopedDb.table('invoices')
         .where({
-          tenant: tenantId,
           invoice_id: invoiceId,
         })
         .first();
 
-      const recurringSummaryResult = invoiceResult
-        ? await trx('invoice_charges as ic')
-            .join('invoice_charge_details as iid', function () {
-              this.on('ic.item_id', '=', 'iid.item_id')
-                .andOn('ic.tenant', '=', 'iid.tenant');
-            })
-            .where({
-              'ic.tenant': tenantId,
-              'ic.invoice_id': invoiceId,
-            })
-            .select(
-              trx.raw('MIN(iid.service_period_start) as service_period_start'),
-              trx.raw('MAX(iid.service_period_end) as service_period_end')
-            )
-            .first()
-        : null;
+      let recurringSummaryResult: InvoiceRecurringSummary | null = null;
+      if (invoiceResult) {
+        const recurringSummaryQuery = scopedDb.table('invoice_charges as ic')
+          .where({
+            'ic.invoice_id': invoiceId,
+          });
+        scopedDb.tenantJoin(recurringSummaryQuery, 'invoice_charge_details as iid', 'ic.item_id', 'iid.item_id');
+        recurringSummaryResult = await recurringSummaryQuery
+          .select(
+            trx.raw('MIN(iid.service_period_start) as service_period_start'),
+            trx.raw('MAX(iid.service_period_end) as service_period_end')
+          )
+          .first() as InvoiceRecurringSummary | null;
+      }
 
       return { contact: contactResult, invoice: invoiceResult, recurringSummary: recurringSummaryResult };
     });
@@ -220,9 +223,8 @@ export const verifyClientPortalPayment = withAuth(async (
     // This ensures we're verifying the specific checkout session, not just any payment
     if (sessionId) {
       const paymentLink = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return trx('invoice_payment_links')
+        return tenantDb(trx, tenantId).table('invoice_payment_links')
           .where({
-            tenant: tenantId,
             invoice_id: invoiceId,
             external_link_id: sessionId,
           })

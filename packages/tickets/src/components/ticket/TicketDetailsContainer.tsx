@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   addTicketCommentWithCacheForCurrentUser,
@@ -108,7 +107,6 @@ export default function TicketDetailsContainer({
   const router = useRouter();
   const { data: session } = useSession();
   const { t } = useTranslation('features/tickets');
-  const liveTicketUpdatesFlag = useFeatureFlag('live-ticket-updates', { defaultValue: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Local comments state to avoid mutating ticketData directly
@@ -253,8 +251,6 @@ export default function TicketDetailsContainer({
     : null;
 
   const shouldEnableTicketLiveUpdates =
-    liveTicketUpdatesFlag.enabled &&
-    !liveTicketUpdatesFlag.loading &&
     Boolean(liveCurrentUser && ticketData.ticket.tenant && ticketData.ticket.ticket_id);
 
   const ticketDetailsContent = (

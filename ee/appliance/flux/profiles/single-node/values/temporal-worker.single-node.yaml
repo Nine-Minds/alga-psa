@@ -12,7 +12,10 @@ image:
 temporal:
   address: temporal-frontend.msp.svc.cluster.local:7233
   namespace: default
-  taskQueue: tenant-workflows,portal-domain-workflows,email-domain-workflows
+  # No portal-domain-workflows: the appliance uses the `direct` provisioner
+  # (deploymentProfile: appliance), so portal-domain registration never enqueues
+  # a workflow. Re-add this queue only if a future profile provisions domains via Temporal.
+  taskQueue: tenant-workflows,email-domain-workflows
 
 db:
   host: pgbouncer.msp.svc.cluster.local
@@ -52,8 +55,6 @@ auth:
     name: alga-core-sebastian-secrets
     key: NEXTAUTH_SECRET
 
-portalDomain:
-  certificateNamespace: ""
-  gatewayNamespace: ""
-  secretReplicationEnabled: false
-  baseVirtualService: ""
+# No portalDomain block: the appliance does not provision portal domains via the
+# Temporal worker (Istio/cert-manager are absent). Domains are activated directly
+# by alga-core (deploymentProfile: appliance -> direct provisioner).

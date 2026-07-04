@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import type { ActionContext } from '../../registries/actionRegistry';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import {
@@ -40,6 +41,7 @@ export function registerNotificationActions(): void {
     idempotency: { mode: 'actionProvided', key: (input: any, ctx: ActionContext) => input.dedupe_key ? String(input.dedupe_key) : actionProvidedKey(input, ctx) },
     ui: { label: 'Send In-App Notification', category: 'Business Operations', description: 'Create internal_notifications records for users' },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      const db = tenantDb(tx.trx, tx.tenantId);
       const explicitUserIds = Array.isArray(input.recipients?.user_ids) ? input.recipients.user_ids : [];
       const roleIds = Array.isArray(input.recipients?.role_ids) ? input.recipients.role_ids : [];
       const roleNames = Array.isArray(input.recipients?.role_names) ? input.recipients.role_names : [];
@@ -48,8 +50,7 @@ export function registerNotificationActions(): void {
       if (roleIds.length) resolvedRoleIds.push(...roleIds);
       if (roleNames.length) {
         const roleNamesLower = roleNames.map((n) => n.toLowerCase());
-        const roles = await tx.trx('roles')
-          .where({ tenant: tx.tenantId })
+        const roles = await db.table('roles')
           .andWhere(function matchRoleNames() {
             roleNamesLower.forEach((name) => {
               this.orWhereRaw('lower(role_name) = ?', [name]);
@@ -60,8 +61,7 @@ export function registerNotificationActions(): void {
       }
 
       const roleUserIds: string[] = resolvedRoleIds.length
-        ? (await tx.trx('user_roles')
-            .where({ tenant: tx.tenantId })
+        ? (await db.table('user_roles')
             .whereIn('role_id', resolvedRoleIds)
             .select('user_id'))
             .map((row: any) => row.user_id)
@@ -72,8 +72,7 @@ export function registerNotificationActions(): void {
         throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'At least one recipient user_id is required' });
       }
 
-      const existingUsers = await tx.trx('users')
-        .where({ tenant: tx.tenantId })
+      const existingUsers = await db.table('users')
         .whereIn('user_id', userIds)
         .select('user_id');
       const existingSet = new Set(existingUsers.map((u: any) => u.user_id));
@@ -87,7 +86,7 @@ export function registerNotificationActions(): void {
       for (const userId of userIds) {
         const notificationId = uuidv4();
         ids.push(notificationId);
-        await tx.trx('internal_notifications').insert({
+        await db.table('internal_notifications').insert({
           internal_notification_id: notificationId,
           tenant: tx.tenantId,
           user_id: userId,

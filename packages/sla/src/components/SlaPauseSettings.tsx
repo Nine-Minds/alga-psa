@@ -285,7 +285,6 @@ export function SlaPauseSettings() {
                       id={`status-pause-${state.statusId}`}
                       checked={state.pausesSla}
                       onChange={(e) => handleStatusPauseChange(state.statusId, e.target.checked)}
-                      containerClassName="mb-0"
                     />
                     <Label
                       htmlFor={`status-pause-${state.statusId}`}

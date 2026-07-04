@@ -5,7 +5,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { routes } from '@alga-psa/integrations/entra/routes/entry';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateNonce } from '../../utils/email/oauthHelpers';
 import { createIntegrationClient } from '../clientLookupActions';
 
@@ -306,8 +306,7 @@ function normalizeEntraFieldSyncConfig(input: unknown): EntraFieldSyncConfig {
 
 async function getTenantFieldSyncConfig(tenant: string): Promise<EntraFieldSyncConfig> {
   const { knex } = await createTenantKnex();
-  const row = await knex('entra_sync_settings')
-    .where({ tenant })
+  const row = await tenantDb(knex, tenant).table('entra_sync_settings')
     .first(['field_sync_config']);
   return normalizeEntraFieldSyncConfig(row?.field_sync_config);
 }
@@ -454,9 +453,10 @@ export const updateEntraFieldSyncConfig = withAuth(async (
 
   const normalizedConfig = normalizeEntraFieldSyncConfig(input);
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
   const now = new Date().toISOString();
 
-  await knex('entra_sync_settings')
+  await db.table('entra_sync_settings')
     .insert({
       tenant,
       field_sync_config: knex.raw('?::jsonb', [JSON.stringify(normalizedConfig)]),
@@ -546,11 +546,12 @@ export const connectEntraCipp = withAuth(async (
   });
 
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
   const now = knex.fn.now();
   const userId = String((user as { user_id?: string } | undefined)?.user_id || '');
 
-  await knex('entra_partner_connections')
-    .where({ tenant, is_active: true })
+  await db.table('entra_partner_connections')
+    .where({ is_active: true })
     .update({
       is_active: false,
       status: 'disconnected',
@@ -559,7 +560,7 @@ export const connectEntraCipp = withAuth(async (
       updated_by: userId || null,
     });
 
-  await knex('entra_partner_connections').insert({
+  await db.table('entra_partner_connections').insert({
     tenant,
     connection_type: 'cipp',
     status: 'connected',
@@ -945,9 +946,10 @@ export const skipEntraTenantMapping = withAuth(async (
   const userId = String((user as { user_id?: string } | undefined)?.user_id || '') || null;
 
   await knex.transaction(async (trx) => {
-    await trx('entra_client_tenant_mappings')
+    const db = tenantDb(trx, tenant);
+
+    await db.table('entra_client_tenant_mappings')
       .where({
-        tenant,
         managed_tenant_id: managedTenantId,
         is_active: true,
       })
@@ -956,7 +958,7 @@ export const skipEntraTenantMapping = withAuth(async (
         updated_at: now,
       });
 
-    await trx('entra_client_tenant_mappings').insert({
+    await db.table('entra_client_tenant_mappings').insert({
       tenant,
       managed_tenant_id: managedTenantId,
       client_id: null,
@@ -1003,8 +1005,8 @@ export const importEntraTenantAsClient = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  const managedTenant = await knex('entra_managed_tenants')
-    .where({ tenant, managed_tenant_id: input.managedTenantId })
+  const managedTenant = await tenantDb(knex, tenant).table('entra_managed_tenants')
+    .where({ managed_tenant_id: input.managedTenantId })
     .first(['display_name', 'primary_domain']);
 
   if (!managedTenant) {
@@ -1171,12 +1173,12 @@ export const startEntraSync = withAuth(async (
     }
 
     const { knex } = await createTenantKnex();
-    const mapping = await knex('entra_client_tenant_mappings as m')
-      .join('entra_managed_tenants as t', function joinManagedTenants() {
-        this.on('m.tenant', '=', 't.tenant').andOn('m.managed_tenant_id', '=', 't.managed_tenant_id');
-      })
+    const db = tenantDb(knex, tenant);
+    const mappingQuery = db.table('entra_client_tenant_mappings as m');
+    db.tenantJoin(mappingQuery, 'entra_managed_tenants as t', 'm.managed_tenant_id', 't.managed_tenant_id');
+
+    const mapping = await mappingQuery
       .where({
-        'm.tenant': tenant,
         'm.client_id': clientId,
         'm.is_active': true,
         'm.mapping_state': 'mapped',

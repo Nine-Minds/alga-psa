@@ -9,6 +9,7 @@ import {
   TIER_LABELS,
 } from '@alga-psa/types';
 import { getSession } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getLicenseStateRow, resolveSelfHostTier } from '@alga-psa/licensing';
 import { isEnterprise } from '../features';
@@ -88,8 +89,7 @@ async function getTenantTier(tenantId: string): Promise<TenantTier> {
   }
 
   const knex = await getAdminConnection();
-  const tenantRecord = await knex('tenants')
-    .where({ tenant: tenantId })
+  const tenantRecord = await tenantDb(knex, tenantId).table('tenants')
     .select('plan')
     .first();
 
@@ -98,8 +98,7 @@ async function getTenantTier(tenantId: string): Promise<TenantTier> {
     return resolvedTier;
   }
 
-  const subscription = await knex('stripe_subscriptions')
-    .where({ tenant: tenantId })
+  const subscription = await tenantDb(knex, tenantId).table('stripe_subscriptions')
     .whereIn('status', ['active', 'trialing', 'past_due', 'unpaid'])
     .orderByRaw("CASE WHEN status = 'trialing' THEN 0 WHEN status = 'active' THEN 1 ELSE 2 END")
     .select('metadata')

@@ -1,4 +1,5 @@
 import { getSSORegistry } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 interface UserRow {
@@ -58,10 +59,9 @@ export async function resolveTeamsLinkedUser(
   }
 
   const db = await getAdminConnection();
-  const user = await db<UserRow>('users')
+  const user = await tenantDb(db, tenantId).table<UserRow>('users')
     .select('tenant', 'user_id', 'email', 'username', 'user_type')
     .where({
-      tenant: tenantId,
       user_id: accountLink.user_id,
     })
     .first();

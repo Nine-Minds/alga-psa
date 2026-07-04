@@ -17,7 +17,7 @@ import {
   ExternalTaxComponent,
   PendingTaxImportRecord
 } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
 import { CompanyAccountingSyncService } from '../../services/companySync/companySyncService';
 import { KnexCompanyMappingRepository } from '../../services/companySync/companyMappingRepository';
@@ -248,6 +248,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         }
 
         const serviceMapping = await resolver.resolveServiceMapping({
+          tenantId: context.batch.tenant,
           adapterType: this.type,
           serviceId: charge.service_id,
           targetRealm: context.batch.target_realm
@@ -300,6 +301,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
             let taxCodeRef = taxCodeCache.get(taxRegion);
             if (taxCodeRef === undefined) {
               const taxMapping = await resolver.resolveTaxCodeMapping({
+                tenantId: context.batch.tenant,
                 adapterType: this.type,
                 taxRegionId: taxRegion,
                 targetRealm: context.batch.target_realm
@@ -374,6 +376,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         let termRef = paymentTermCache.get(clientRow.payment_terms);
         if (termRef === undefined) {
           const termMapping = await resolver.resolvePaymentTermMapping({
+            tenantId: context.batch.tenant,
             adapterType: this.type,
             paymentTermId: clientRow.payment_terms,
             targetRealm: context.batch.target_realm
@@ -613,7 +616,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       return new Map();
     }
 
-    const rows = await knex<DbInvoice>('invoices')
+    const rows = await tenantDb(knex, tenantId).table<DbInvoice>('invoices')
       .select(
         'invoice_id',
         'invoice_number',
@@ -626,7 +629,6 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'exchange_rate_basis_points',
         'invoice_type'
       )
-      .where('tenant', tenantId)
       .whereIn('invoice_id', invoiceIds);
 
     return new Map(rows.map((row) => [row.invoice_id, row]));
@@ -645,7 +647,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       return new Map();
     }
 
-    const rows = await knex<DbCharge>('invoice_charges')
+    const rows = await tenantDb(knex, tenantId).table<DbCharge>('invoice_charges')
       .select(
         'item_id',
         'invoice_id',
@@ -660,7 +662,6 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'is_discount',
         'tax_region'
       )
-      .where('tenant', tenantId)
       .whereIn('item_id', chargeIds);
 
     return new Map(rows.map((row) => [row.item_id, row]));
@@ -690,17 +691,15 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       return { clients: new Map(), mappings: new Map() };
     }
 
-    const clients = await knex<DbClient>('clients')
+    const clients = await tenantDb(knex, tenantId).table<DbClient>('clients')
       .select('client_id', 'client_name', 'billing_email', 'payment_terms')
-      .where('tenant', tenantId)
       .whereIn('client_id', Array.from(clientIds));
 
     const clientMap = new Map(clients.map((client) => [client.client_id, client]));
 
-    const mappingRows = await knex<MappingRowRaw>('tenant_external_entity_mappings')
+    const mappingRows = await tenantDb(knex, tenantId).table<MappingRowRaw>('tenant_external_entity_mappings')
       .select('*')
-      .where('tenant', tenantId)
-      .andWhere('integration_type', this.type)
+      .where('integration_type', this.type)
       .whereIn('alga_entity_type', ['client'])
       .whereIn('alga_entity_id', Array.from(clientIds))
       .modify((qb) => {
@@ -756,9 +755,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       // Look up charge-to-line mapping from invoice metadata
       // This was stored during export to enable robust matching
-      const mappingRow = await knex('tenant_external_entity_mappings')
+      const mappingRow = await tenantDb(knex, tenantId).table<MappingRowRaw>('tenant_external_entity_mappings')
         .where({
-          tenant: tenantId,
           integration_type: this.type,
           alga_entity_type: 'invoice',
           external_entity_id: externalInvoiceRef

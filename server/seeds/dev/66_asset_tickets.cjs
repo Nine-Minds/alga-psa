@@ -1,48 +1,53 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 exports.seed = async function(knex) {
     // Get necessary references
-    const tenant = await knex('tenants').select('tenant').first();
-    const [glinda, scarecrow, madhatter] = await knex('users')
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { tenantId, db } = context;
+    const [glinda, scarecrow, madhatter] = await db.table('users')
         .whereIn('username', ['glinda', 'scarecrow', 'madhatter'])
         .select('user_id', 'username');
     
-    const [emeraldCity, wonderland] = await knex('clients')
+    const [emeraldCity, wonderland] = await db.table('clients')
         .whereIn('client_name', ['Emerald City', 'Wonderland'])
         .select('client_id', 'client_name');
 
-    const mainCategory = await knex('categories')
+    const mainCategory = await db.table('categories')
         .where({ category_name: 'Realm Maintenance' })
         .first();
     
-    const subCategory = await knex('categories')
+    const subCategory = await db.table('categories')
         .where({ category_name: 'Magical Infrastructure' })
         .first();
 
-    const board = await knex('boards')
+    const board = await db.table('boards')
         .where({ board_name: 'Urgent Matters' })
         .first();
 
-    const statuses = board ? await knex('statuses')
-        .where({ tenant: tenant.tenant, board_id: board.board_id })
+    const statuses = board ? await db.table('statuses')
+        .where({ board_id: board.board_id })
         .whereIn('name', ['Curious Beginning', 'Unfolding Adventure'])
         .select('status_id', 'name') : [];
 
-    const priority = await knex('priorities')
+    const priority = await db.table('priorities')
         .where({ priority_name: 'Enchanted Emergency' })
         .first();
 
-    const severity = await knex('severities')
+    const severity = await db.table('severities')
         .where({ severity_name: 'Moderate Muddle' })
         .first();
 
-    const urgency = await knex('urgencies')
+    const urgency = await db.table('urgencies')
         .where({ urgency_name: 'Tick-Tock Task' })
         .first();
 
-    const impact = await knex('impacts')
+    const impact = await db.table('impacts')
         .where({ impact_name: 'Local Disruption' })
         .first();
 
-    if (tenant && glinda && emeraldCity && wonderland && mainCategory && subCategory) {
+    if (glinda && emeraldCity && wonderland && mainCategory && subCategory) {
         const now = new Date();
         const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
         const oneDayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
@@ -50,9 +55,9 @@ exports.seed = async function(knex) {
         const twoWeeksFromNow = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
 
         // Create new asset-related tickets
-        const [ticket1, ticket2] = await knex('tickets').insert([
+        const [ticket1, ticket2] = await db.table('tickets').insert([
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 title: 'Ruby Slippers Server Power Fluctuation',
                 ticket_number: 'TIC1006',
                 client_id: emeraldCity.client_id,
@@ -69,7 +74,7 @@ exports.seed = async function(knex) {
                 entered_at: now.toISOString()
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 title: 'Tea Time Server Performance Issues',
                 ticket_number: 'TIC1007',
                 client_id: wonderland.client_id,
@@ -88,14 +93,14 @@ exports.seed = async function(knex) {
         ]).returning(['ticket_id', 'title']);
 
         // Get asset references
-        const assets = await knex('assets')
+        const assets = await db.table('assets')
             .whereIn('name', ['Ruby Slippers Server', 'Mad Hatter Tea Time Server'])
             .select('asset_id', 'name');
 
         // Create asset ticket associations
-        await knex('asset_ticket_associations').insert([
+        await db.table('asset_ticket_associations').insert([
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 asset_id: assets.find(a => a.name === 'Ruby Slippers Server').asset_id,
                 ticket_id: ticket1.ticket_id,
                 association_type: 'primary',
@@ -104,7 +109,7 @@ exports.seed = async function(knex) {
                 created_at: now.toISOString()
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 asset_id: assets.find(a => a.name === 'Mad Hatter Tea Time Server').asset_id,
                 ticket_id: ticket2.ticket_id,
                 association_type: 'primary',
@@ -115,9 +120,9 @@ exports.seed = async function(knex) {
         ]);
 
         // Create service history entries
-        await knex('asset_service_history').insert([
+        await db.table('asset_service_history').insert([
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 asset_id: assets.find(a => a.name === 'Ruby Slippers Server').asset_id,
                 ticket_id: ticket1.ticket_id,
                 service_type: 'repair',
@@ -134,7 +139,7 @@ exports.seed = async function(knex) {
                 created_at: twoDaysAgo.toISOString()
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 asset_id: assets.find(a => a.name === 'Mad Hatter Tea Time Server').asset_id,
                 ticket_id: ticket2.ticket_id,
                 service_type: 'maintenance',

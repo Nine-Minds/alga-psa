@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 interface AuditLogParams {
   userId?: string;
@@ -16,6 +17,7 @@ export async function auditLog(
 ) {
   try {
     // If the current request hasn't established the tenant GUC, skip logging to avoid aborting the transaction.
+    let tenant: string;
     try {
       const tenantCheck = await knex.raw("select current_setting('app.current_tenant', true) as tenant");
       const tenantValue = Array.isArray(tenantCheck?.rows)
@@ -26,12 +28,13 @@ export async function auditLog(
         console.warn('Skipping audit log insert; app.current_tenant GUC is unavailable in this context.');
         return;
       }
+      tenant = String(tenantValue);
     } catch (gucError) {
       console.warn('Skipping audit log insert; unable to read app.current_tenant GUC.', gucError);
       return;
     }
 
-    await knex('audit_logs').insert({
+    await tenantDb(knex, tenant).table('audit_logs').insert({
       audit_id: uuidv4(),
       user_id: params.userId,
       operation: params.operation,

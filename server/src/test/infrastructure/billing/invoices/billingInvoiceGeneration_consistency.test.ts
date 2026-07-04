@@ -9,17 +9,11 @@ import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import type { IBillingResult, IBillingCharge } from 'server/src/interfaces/billing.interfaces';
 
-let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-let mockedUserId = 'mock-user-id';
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  return createAuthModuleMock();
+});
 
 vi.mock('server/src/lib/analytics/posthog', () => ({
   analytics: {
@@ -146,13 +140,11 @@ async function ensureDefaultBillingSettings() {
       userType: 'internal'
     });
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
     await ensureDefaultTaxConfiguration();
     await ensureDefaultBillingSettings();
     await ensureClientPlanBundlesTable(context);
@@ -160,13 +152,11 @@ async function ensureDefaultBillingSettings() {
 
   beforeEach(async () => {
     context = await resetContext();
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
     await ensureDefaultTaxConfiguration();
     await ensureDefaultBillingSettings();
     await ensureClientPlanBundlesTable(context);

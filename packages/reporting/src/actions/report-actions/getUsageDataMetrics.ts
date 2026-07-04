@@ -1,10 +1,9 @@
 'use server';
 
 import { z } from 'zod';
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import type { IService, IUsageRecord } from '@alga-psa/types';
+import type { IUsageRecord } from '@alga-psa/types';
 import { Knex } from 'knex'; // Import Knex type
 
 // Define the schema for the input parameters
@@ -52,13 +51,12 @@ export const getUsageDataMetrics = withAuth(async (
 
   try {
     const results: UsageMetricResult[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const query = trx<IUsageRecord>('usage_tracking as ut')
-        .join<IService>('service_catalog as sc', function() {
-          this.on('ut.service_id', '=', 'sc.service_id')
-              .andOn('ut.tenant', '=', 'sc.tenant');
-        })
+      const db = tenantDb(trx, tenant);
+      const query = db.table<IUsageRecord>('usage_tracking as ut');
+      db.tenantJoin(query, 'service_catalog as sc', 'ut.service_id', 'sc.service_id');
+
+      query
         .where('ut.client_id', clientId)
-        .andWhere('ut.tenant', tenant)
         .andWhere('ut.usage_date', '>=', startDate)
         .andWhere('ut.usage_date', '<=', endDate)
         .select(

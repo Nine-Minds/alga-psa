@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CalendarWebhookProcessor } from '../../services/calendar/CalendarWebhookProcessor';
-import { getAdminConnection } from '@alga-psa/db';
+import { getAdminConnection, tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
+
+const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
 const processor = new CalendarWebhookProcessor();
 
@@ -137,32 +139,35 @@ export async function POST(request: NextRequest) {
             const now = new Date().toISOString();
 
             // Find providers by subscription IDs
-            const providers = await knex('microsoft_calendar_provider_config as mcp')
-              .join('calendar_providers as cp', function() {
-                this.on('mcp.calendar_provider_id', '=', 'cp.id')
-                  .andOn('mcp.tenant', '=', 'cp.tenant');
-              })
+            const discoveryDb = tenantDb(knex, PROVIDER_TENANT_DISCOVERY);
+            const providersQuery = discoveryDb.unscoped(
+              'microsoft_calendar_provider_config as mcp',
+              'tenant discovery from Microsoft calendar webhook provider config'
+            );
+            discoveryDb.tenantJoin(providersQuery, 'calendar_providers as cp', 'mcp.calendar_provider_id', 'cp.id', {
+              rootTenantColumn: 'mcp.tenant',
+            });
+
+            const providers = await providersQuery
               .whereIn('mcp.webhook_subscription_id', Array.from(subscriptionIds))
-              .select('cp.id as provider_id', 'cp.tenant');
+              .select('cp.id as provider_id', 'cp.tenant') as Array<{ provider_id: string; tenant: string }>;
 
             // Update health table for each provider
             for (const provider of providers) {
-              const existing = await knex('calendar_provider_health')
+              const existing = await tenantDb(knex, provider.tenant).table('calendar_provider_health')
                 .where('calendar_provider_id', provider.provider_id)
-                .andWhere('tenant', provider.tenant)
                 .first();
 
               if (existing) {
-                await knex('calendar_provider_health')
+                await tenantDb(knex, provider.tenant).table('calendar_provider_health')
                   .where('calendar_provider_id', provider.provider_id)
-                  .andWhere('tenant', provider.tenant)
                   .update({
                     last_webhook_received_at: now,
                     updated_at: now
                   });
               } else {
                 // Create health row if it doesn't exist
-                await knex('calendar_provider_health')
+                await tenantDb(knex, provider.tenant).table('calendar_provider_health')
                   .insert({
                     calendar_provider_id: provider.provider_id,
                     tenant: provider.tenant,

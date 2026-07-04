@@ -469,7 +469,7 @@ function FormFieldEditorCard({
         <Checkbox
           id={`service-request-form-required-${key}`}
           label={t('editor.form.required')}
-          containerClassName="mb-0 min-h-10"
+          containerClassName="min-h-10"
           checked={Boolean(field.required)}
           onChange={async (event) => {
             await updateServiceRequestFormFieldAction(definitionId, key, {
@@ -588,7 +588,7 @@ function FormFieldPreview({
       <Checkbox
         key={key}
         id={`service-request-form-preview-checkbox-${key}`}
-        containerClassName="mb-0 items-start"
+        containerClassName="items-start"
         checked={defaultBooleanValue}
         disabled
         onChange={() => {}}
@@ -764,7 +764,7 @@ export default function ServiceRequestDefinitionEditorPage() {
       replaceDrawer(
         <div className="bg-gray-100">
           <MspTicketDetailsContainerClient
-            ticketData={ticketData}
+            ticketData={ticketData as any}
             surveySummary={surveySummary ?? null}
           />
         </div>,

@@ -12,7 +12,7 @@ import {
 } from '../helpers/workflowRuntimeV2TestHelpers';
 import { importWorkflowBundleV1 } from 'server/src/lib/workflow/bundle/importWorkflowBundleV1';
 import { ensureWorkflowScheduleStateTable, resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
-import { createTenantKnex, getCurrentTenantId } from '@alga-psa/db';
+import { createTenantKnex, getCurrentTenantId, tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth';
 import {
   createTenantKnex as createCompatibilityTenantKnex,
@@ -43,6 +43,20 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 vi.mock('server/src/lib/db', () => ({
   createTenantKnex: vi.fn(),
   getCurrentTenantId: vi.fn()
+}));
+
+// Execution moved to Temporal (June 2026 cutover); startWorkflowRunAction only
+// inserts the run row and signals Temporal. Mock the seam like the
+// workflowRuntimeV2.* siblings — no live server in the test environment.
+const startWorkflowRuntimeV2TemporalRunMock = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({ workflowId: 'temporal-wf-test', firstExecutionRunId: 'temporal-run-test' })
+);
+vi.mock('@alga-psa/workflows/lib/workflowRuntimeV2Temporal', () => ({
+  startWorkflowRuntimeV2TemporalRun: (...args: unknown[]) => startWorkflowRuntimeV2TemporalRunMock(...args),
+  cancelWorkflowRuntimeV2TemporalRun: vi.fn().mockResolvedValue(undefined),
+  signalWorkflowRuntimeV2Event: vi.fn().mockResolvedValue(undefined),
+  signalWorkflowRuntimeV2HumanTask: vi.fn().mockResolvedValue(undefined),
+  signalWorkflowRuntimeV2QuotaResume: vi.fn().mockResolvedValue(undefined)
 }));
 
 vi.mock('@alga-psa/auth', () => {
@@ -97,6 +111,10 @@ const mockedGetCompatibilityCurrentTenantId = vi.mocked(getCompatibilityCurrentT
 let db: Knex;
 let tenantId: string;
 let userId: string;
+
+function tenantTable(table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
 
 const normalizeBundleForComparison = (bundle: any) => {
   const copy = JSON.parse(JSON.stringify(bundle));
@@ -312,7 +330,7 @@ describe('workflow bundle v1 import/export', () => {
     const summary = await response.json();
     expect(summary.createdWorkflows?.[0]?.key).toBe('test.http-import');
 
-    const rows = await db('workflow_definitions').where({ key: 'test.http-import' });
+    const rows = await tenantTable('workflow_definitions').where({ key: 'test.http-import' });
     expect(rows).toHaveLength(1);
   });
 
@@ -408,13 +426,13 @@ describe('workflow bundle v1 import/export', () => {
     expect(result.createdWorkflows[0].key).toBe('test.import-basic');
 
     const createdId = result.createdWorkflows[0].workflowId;
-    const definitionRow = await db('workflow_definitions').where({ workflow_id: createdId }).first();
+    const definitionRow = await tenantTable('workflow_definitions').where({ workflow_id: createdId }).first();
     expect(definitionRow).toBeTruthy();
     expect(definitionRow.key).toBe('test.import-basic');
     expect(definitionRow.status).toBe('published');
     expect(definitionRow.draft_definition?.id).toBe(createdId);
 
-    const versionRow = await db('workflow_definition_versions').where({ workflow_id: createdId, version: 1 }).first();
+    const versionRow = await tenantTable('workflow_definition_versions').where({ workflow_id: createdId, version: 1 }).first();
     expect(versionRow).toBeTruthy();
     expect(versionRow.definition_json?.id).toBe(createdId);
   });
@@ -470,7 +488,7 @@ describe('workflow bundle v1 import/export', () => {
       status: 409
     });
 
-    const rows = await db('workflow_definitions').where({ key: 'test.conflict' });
+    const rows = await tenantTable('workflow_definitions').where({ key: 'test.conflict' });
     expect(rows).toHaveLength(1);
   });
 
@@ -538,11 +556,11 @@ describe('workflow bundle v1 import/export', () => {
 
     expect(secondId).toBe(firstId);
 
-    const row = await db('workflow_definitions').where({ workflow_id: secondId }).first();
+    const row = await tenantTable('workflow_definitions').where({ workflow_id: secondId }).first();
     expect(row).toBeTruthy();
     expect(row.key).toBe('test.force-overwrite');
 
-    const versions = await db('workflow_definition_versions')
+    const versions = await tenantTable('workflow_definition_versions')
       .where({ workflow_id: secondId })
       .orderBy('version', 'asc');
     expect(versions).toHaveLength(1);
@@ -618,7 +636,7 @@ describe('workflow bundle v1 import/export', () => {
 
     await expect(importWorkflowBundleV1(db, tenantId, bundle)).rejects.toBeTruthy();
 
-    const rows = await db('workflow_definitions').where({ key: 'test.transactional' });
+    const rows = await tenantTable('workflow_definitions').where({ key: 'test.transactional' });
     expect(rows).toHaveLength(0);
   });
 
@@ -786,7 +804,7 @@ describe('workflow bundle v1 import/export', () => {
     expect(normalizeBundleForComparison(exported2)).toEqual(normalizeBundleForComparison(exported1));
   });
 
-  it('imported workflow can be executed end-to-end using Workflow Runtime V2', async () => {
+  it('imported workflow can be started through Workflow Runtime V2 (tenant-scoped version resolution)', async () => {
     const bundle = {
       format: 'alga-psa.workflow-bundle',
       formatVersion: 1,
@@ -845,8 +863,12 @@ describe('workflow bundle v1 import/export', () => {
     const imported = await importWorkflowBundleV1(db, tenantId, bundle);
     const workflowId = imported.createdWorkflows[0].workflowId;
 
+    // Regression coverage: pre-fix, bundle import wrote tenant-NULL version
+    // rows and this start 404'd with "Workflow version not found".
     const started = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
     const run = await getWorkflowRunAction({ runId: started.runId });
-    expect(run.status).toBe('SUCCEEDED');
+    expect(run.status).toBe('RUNNING');
+    expect(run.engine).toBe('temporal');
+    expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledTimes(1);
   });
 });

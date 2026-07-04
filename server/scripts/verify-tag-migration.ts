@@ -5,70 +5,90 @@
  */
 
 import { createTenantKnex } from '../src/lib/db';
+import { tenantDb } from '@alga-psa/db';
+
+const TAG_MIGRATION_VERIFICATION_TENANT = '__tag_migration_verification__';
+const LEGACY_TAGS_VERIFICATION_REASON = 'legacy tag migration verification reads retired tags table';
+const TAG_MIGRATION_ALL_TENANTS_REASON = 'tag migration verification scans all tenants';
 
 async function verifyTagMigration() {
   const { knex } = await createTenantKnex();
+  const verificationDb = tenantDb(knex, TAG_MIGRATION_VERIFICATION_TENANT);
   
   try {
     console.log('Starting tag migration verification...\n');
-    
+
     // 1. Count comparison
     console.log('1. Verifying record counts...');
-    const [{ old_count }] = await knex('tags').count('* as old_count');
-    const [{ new_count }] = await knex('tag_mappings').count('* as new_count');
-    const [{ def_count }] = await knex('tag_definitions').count('* as def_count');
-    
+    const [{ old_count }] = await verificationDb
+      .unscoped('tags', LEGACY_TAGS_VERIFICATION_REASON)
+      .count('* as old_count');
+    const [{ new_count }] = await verificationDb
+      .unscoped('tag_mappings', TAG_MIGRATION_ALL_TENANTS_REASON)
+      .count('* as new_count');
+    const [{ def_count }] = await verificationDb
+      .unscoped('tag_definitions', TAG_MIGRATION_ALL_TENANTS_REASON)
+      .count('* as def_count');
+
     console.log(`   Old tags table: ${old_count} records`);
     console.log(`   New mappings table: ${new_count} records`);
     console.log(`   Tag definitions: ${def_count} unique tags`);
-    
+
     if (old_count !== new_count) {
       console.error(`   ❌ Count mismatch! Expected ${old_count} mappings, found ${new_count}`);
     } else {
       console.log(`   ✓ Record counts match`);
     }
-    
+
     // 2. Check for orphaned mappings
     console.log('\n2. Checking for orphaned mappings...');
-    const orphanedMappings = await knex.raw(`
-      SELECT COUNT(*) as count
-      FROM tag_mappings tm
-      LEFT JOIN tag_definitions td ON tm.tenant = td.tenant AND tm.tag_id = td.tag_id
-      WHERE td.tag_id IS NULL
-    `);
-    
-    if (orphanedMappings.rows[0].count > 0) {
-      console.error(`   ❌ Found ${orphanedMappings.rows[0].count} orphaned mappings`);
+    const orphanedMappingsQuery = verificationDb
+      .unscoped('tag_mappings as tm', TAG_MIGRATION_ALL_TENANTS_REASON)
+      .count('* as count');
+    verificationDb.tenantJoin(
+      orphanedMappingsQuery,
+      'tag_definitions as td',
+      'tm.tag_id',
+      'td.tag_id',
+      { type: 'left' }
+    );
+    const [orphanedMappings] = await orphanedMappingsQuery.whereNull('td.tag_id');
+
+    if (Number(orphanedMappings.count) > 0) {
+      console.error(`   ❌ Found ${orphanedMappings.count} orphaned mappings`);
     } else {
       console.log(`   ✓ No orphaned mappings found`);
     }
-    
+
     // 3. Verify unique constraints
     console.log('\n3. Verifying unique constraints...');
-    const duplicateDefinitions = await knex.raw(`
-      SELECT tenant, tag_text, tagged_type, COUNT(*) as count
-      FROM tag_definitions
-      GROUP BY tenant, tag_text, tagged_type
-      HAVING COUNT(*) > 1
-    `);
-    
-    if (duplicateDefinitions.rows.length > 0) {
-      console.error(`   ❌ Found ${duplicateDefinitions.rows.length} duplicate tag definitions`);
-      console.error('   Duplicates:', duplicateDefinitions.rows);
+    const duplicateDefinitions = await verificationDb
+      .unscoped('tag_definitions', TAG_MIGRATION_ALL_TENANTS_REASON)
+      .select('tenant', 'tag_text', 'tagged_type')
+      .count('* as count')
+      .groupBy('tenant', 'tag_text', 'tagged_type')
+      .havingRaw('COUNT(*) > 1');
+
+    if (duplicateDefinitions.length > 0) {
+      console.error(`   ❌ Found ${duplicateDefinitions.length} duplicate tag definitions`);
+      console.error('   Duplicates:', duplicateDefinitions);
     } else {
       console.log(`   ✓ No duplicate tag definitions`);
     }
     
     // 4. Sample data verification
     console.log('\n4. Verifying sample data integrity...');
-    const sampleOldTags = await knex('tags')
-      .orderBy(knex.raw('RANDOM()'))
+    const sampleOldTags = await verificationDb
+      .unscoped('tags', LEGACY_TAGS_VERIFICATION_REASON)
+      .orderByRaw('RANDOM()')
       .limit(10);
     
     let dataIntegrityPassed = true;
     for (const oldTag of sampleOldTags) {
+      const oldTagDb = tenantDb(knex, oldTag.tenant);
+
       // Find corresponding mapping
-      const mapping = await knex('tag_mappings')
+      const mapping = await oldTagDb.table('tag_mappings')
         .where('mapping_id', oldTag.tag_id)
         .first();
       
@@ -79,9 +99,8 @@ async function verifyTagMigration() {
       }
       
       // Find corresponding definition
-      const definition = await knex('tag_definitions')
+      const definition = await tenantDb(knex, mapping.tenant).table('tag_definitions')
         .where('tag_id', mapping.tag_id)
-        .where('tenant', mapping.tenant)
         .first();
       
       if (!definition) {
@@ -111,22 +130,26 @@ async function verifyTagMigration() {
     
     // Old system query
     const oldStart = Date.now();
-    await knex('tags')
-      .where('tenant', sampleOldTags[0]?.tenant || '')
-      .where('tagged_type', 'ticket')
-      .select('*');
+    const sampleTenant = sampleOldTags[0]?.tenant;
+    if (sampleTenant) {
+      await tenantDb(knex, sampleTenant)
+        .unscoped('tags', LEGACY_TAGS_VERIFICATION_REASON)
+        .where('tenant', sampleTenant)
+        .where('tagged_type', 'ticket')
+        .select('*');
+    }
     const oldTime = Date.now() - oldStart;
     
     // New system query
     const newStart = Date.now();
-    await knex('tag_mappings as tm')
-      .join('tag_definitions as td', function() {
-        this.on('tm.tenant', '=', 'td.tenant')
-            .andOn('tm.tag_id', '=', 'td.tag_id');
-      })
-      .where('tm.tenant', sampleOldTags[0]?.tenant || '')
-      .where('tm.tagged_type', 'ticket')
-      .select('*');
+    if (sampleTenant) {
+      const scopedDb = tenantDb(knex, sampleTenant);
+      const newSystemQuery = scopedDb.table('tag_mappings as tm');
+      scopedDb.tenantJoin(newSystemQuery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+      await newSystemQuery
+        .where('tm.tagged_type', 'ticket')
+        .select('*');
+    }
     const newTime = Date.now() - newStart;
     
     console.log(`   Old system query time: ${oldTime}ms`);

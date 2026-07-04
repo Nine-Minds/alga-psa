@@ -226,6 +226,7 @@ export const bottomMenuItems: MenuItem[] = [
 
 // Settings navigation sections - used when sidebar is in 'settings' mode
 // These correspond to the settings tabs in SettingsPage
+// LEVERAGE: pattern settings-tabs-twice — the settings tab set is defined twice (here, and in SettingsPage.tsx's allTabs builder); the two lists drift. The EE-gated 'mcp-server' tab exists there but is missing here, so it never appears in the side menu. This nav config also has no EE gating primitive (only product + tier), so a gated tab can't be expressed as data. Both lists should derive from one gated registry (cf. providerRegistry.ts requiresEnterprise).
 export const settingsNavigationSections: NavigationSection[] = [
   {
     title: 'Organization & Access',

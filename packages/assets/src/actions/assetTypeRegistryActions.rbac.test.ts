@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 type Row = Record<string, any>;
 
 const h = vi.hoisted(() => {
-  const permissionState = { read: true, update: true };
+  const permissionState = { read: true, update: true, systemUpdate: true };
   const mockUser = { user_id: 'user-1', tenant: 'tenant_a' };
   const dbState: { asset_type_registry: Row[]; assets: Row[] } = {
     asset_type_registry: [],
@@ -13,7 +13,10 @@ const h = vi.hoisted(() => {
   let idCounter = 0;
 
   const matches = (row: Row, where: Record<string, any>) =>
-    Object.entries(where).every(([k, v]) => row[k] === v);
+    Object.entries(where).every(([k, v]) => {
+      const key = k.includes('.') ? k.split('.').pop()! : k;
+      return row[key] === v;
+    });
 
   class QB {
     private whereClauses: Array<Record<string, any>> = [];
@@ -25,8 +28,12 @@ const h = vi.hoisted(() => {
       return dbState[this.table];
     }
 
-    where(where: Record<string, any>) {
-      this.whereClauses.push(where);
+    where(where: Record<string, any> | string, value?: any) {
+      if (typeof where === 'string') {
+        this.whereClauses.push({ [where]: value });
+      } else {
+        this.whereClauses.push(where);
+      }
       return this;
     }
 
@@ -99,9 +106,9 @@ const h = vi.hoisted(() => {
 
 const hasPermissionMock = vi.hoisted(() =>
   vi.fn(async (_user: unknown, resource: string, action: string) => {
-    if (resource !== 'asset') return false;
-    if (action === 'read') return h.permissionState.read;
-    if (action === 'update') return h.permissionState.update;
+    if (resource === 'asset' && action === 'read') return h.permissionState.read;
+    if (resource === 'asset' && action === 'update') return h.permissionState.update;
+    if (resource === 'system_settings' && action === 'update') return h.permissionState.systemUpdate;
     return false;
   })
 );
@@ -113,6 +120,9 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: h.knexMock, tenant: 'tenant_a' })),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: 'asset_type_registry' | 'assets') => conn(table).where(`${table}.tenant`, tenant),
+  }),
   withTransaction: vi.fn(async (_knex: unknown, callback: (trx: unknown) => Promise<unknown>) => callback(h.knexMock)),
 }));
 
@@ -127,6 +137,7 @@ import {
 beforeEach(() => {
   h.permissionState.read = true;
   h.permissionState.update = true;
+  h.permissionState.systemUpdate = true;
   h.dbState.asset_type_registry.length = 0;
   h.dbState.assets.length = 0;
   hasPermissionMock.mockClear();
@@ -167,24 +178,24 @@ describe('asset type registry action RBAC (T307)', () => {
     expect(single?.slug).toBe('workstation');
   });
 
-  it('createAssetTypeAction requires asset.update (asset.read alone is not enough)', async () => {
-    h.permissionState.update = false;
+  it('createAssetTypeAction requires system settings update (asset permissions alone are not enough)', async () => {
+    h.permissionState.systemUpdate = false;
     await expect(createAssetTypeAction({ name: 'Door Access' })).rejects.toThrow(
       'Permission denied: Cannot manage asset types'
     );
-    expect(hasPermissionMock).toHaveBeenCalledWith(h.mockUser, 'asset', 'update');
+    expect(hasPermissionMock).toHaveBeenCalledWith(h.mockUser, 'system_settings', 'update');
     expect(h.dbState.asset_type_registry).toHaveLength(0);
   });
 
-  it('updateAssetTypeAction requires asset.update', async () => {
-    h.permissionState.update = false;
+  it('updateAssetTypeAction requires system settings update', async () => {
+    h.permissionState.systemUpdate = false;
     await expect(updateAssetTypeAction('door_access', { name: 'Doors' })).rejects.toThrow(
       'Permission denied: Cannot manage asset types'
     );
   });
 
-  it('deleteAssetTypeAction requires asset.update', async () => {
-    h.permissionState.update = false;
+  it('deleteAssetTypeAction requires system settings update', async () => {
+    h.permissionState.systemUpdate = false;
     await expect(deleteAssetTypeAction('door_access')).rejects.toThrow(
       'Permission denied: Cannot manage asset types'
     );

@@ -8,7 +8,7 @@ import type {
   IScheduleEntry,
   WorkItemType,
 } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { convertRecurrencePatternToRRULE } from './recurrenceConverter';
 
 export async function mapScheduleEntryToExternalEvent(
@@ -237,8 +237,7 @@ async function fetchUserEmails(userIds: string[], tenant: string): Promise<Map<s
   }
 
   const { knex } = await createTenantKnex(tenant);
-  const users = await knex('users')
-    .where('tenant', tenant)
+  const users = await tenantDb(knex, tenant).table('users')
     .whereIn('user_id', userIds)
     .select('user_id', 'email');
 
@@ -266,8 +265,7 @@ async function fetchUserIdsByEmail(emails: string[], tenant: string): Promise<Ma
   );
 
   const { knex } = await createTenantKnex(tenant);
-  const users = await knex('users')
-    .where('tenant', tenant)
+  const users = await tenantDb(knex, tenant).table('users')
     .whereRaw(
       `LOWER(email) IN (${normalizedEmails.map(() => '?').join(', ')})`,
       normalizedEmails

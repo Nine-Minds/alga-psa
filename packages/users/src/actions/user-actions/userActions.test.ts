@@ -19,6 +19,11 @@ vi.mock('@alga-psa/core', () => ({
   get isEnterprise() {
     return isEnterpriseRef.value;
   },
+}));
+
+// deleteEntityWithValidation is imported from @alga-psa/core/server, not the
+// package root — mock that subpath so the stub (not the real impl) is used.
+vi.mock('@alga-psa/core/server', () => ({
   deleteEntityWithValidation: deleteEntityWithValidationMock,
 }));
 
@@ -38,6 +43,12 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   withTransaction: withTransactionMock,
   withAdminTransaction: vi.fn(),
+  // The fakes in this file are full query builders whose own `.where(...)`
+  // supplies the filtering, so the tenant facade just passes the table through.
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    unscoped: (t: string, _reason?: string) => conn(t),
+  }),
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -141,12 +152,16 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
     }
 
     if (table === 'tenants') {
+      const tenantRow = {
+        licensed_user_count: input.licensedUserCount,
+        plan: input.plan,
+      };
+      // The tenant facade scopes by tenant, so addUser now reads the row via
+      // tenantDb.table('tenants').first(...) without an explicit `.where`.
       return {
+        first: async (..._fields: any[]) => tenantRow,
         where: (_criteria: Record<string, any>) => ({
-          first: async () => ({
-            licensed_user_count: input.licensedUserCount,
-            plan: input.plan,
-          }),
+          first: async () => tenantRow,
         }),
       };
     }
@@ -480,6 +495,9 @@ function makeFakeTrx(present: ReadonlySet<string>) {
       where: (_criteria: Record<string, unknown>) => chain,
       whereIn: (_column: string, _sub: unknown) => chain,
       orWhere: (_criteria: Record<string, unknown>) => chain,
+      // Eager subquery builder (e.g. user_activity_groups.select('group_id'))
+      // used inside whereIn after the tenant-scope migration.
+      select: (..._cols: unknown[]) => chain,
       update: async (values: Record<string, unknown>) => {
         ops.push({ table, op: 'update', values });
         return 0;

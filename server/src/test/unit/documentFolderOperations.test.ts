@@ -12,10 +12,24 @@ import {
 } from '@alga-psa/documents/actions/documentActions';
 import type { IUser } from '@alga-psa/types';
 
+// Records each tenantDb(...).table(name) access with the tenant it was scoped
+// to, so tests can assert tenant isolation now that scoping lives in the facade
+// rather than positional .where('tenant', ...) calls.
+const { tenantScopeSpy } = vi.hoisted(() => ({ tenantScopeSpy: vi.fn() }));
+
 // Mock dependencies
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
   withTransaction: async (knex: any, callback: (trx: any) => Promise<unknown>) => callback(knex),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => {
+      tenantScopeSpy(t, tenant);
+      return conn(t);
+    },
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => {
@@ -384,24 +398,20 @@ describe('Document Folder Operations', () => {
       let sawEntityIdFilter = false;
       let sawEntityTypeFilter = false;
 
-      queryBuilder.whereExists = vi.fn(function(this: any, callback: (this: any) => void) {
-        const nestedBuilder: any = {};
-        nestedBuilder.select = vi.fn().mockReturnValue(nestedBuilder);
-        nestedBuilder.from = vi.fn().mockReturnValue(nestedBuilder);
-        nestedBuilder.whereRaw = vi.fn().mockReturnValue(nestedBuilder);
-        nestedBuilder.andWhere = vi.fn((column: string, value: any) => {
-          if (column === 'da.entity_id' && value === 'entity-123') {
-            sawEntityIdFilter = true;
-          }
+      // The association-exists subquery is now constructed as a standalone
+      // tenant-scoped builder and passed into whereExists (the callback form is
+      // gone); its entity predicates are chained via andWhere before the handoff.
+      const associationBuilder = createQueryBuilder();
+      associationBuilder.andWhere = vi.fn((column: string, value: any) => {
+        if (column === 'da.entity_id' && value === 'entity-123') {
+          sawEntityIdFilter = true;
+        }
 
-          if (column === 'da.entity_type' && value === 'client') {
-            sawEntityTypeFilter = true;
-          }
+        if (column === 'da.entity_type' && value === 'client') {
+          sawEntityTypeFilter = true;
+        }
 
-          return nestedBuilder;
-        });
-        callback.call(nestedBuilder);
-        return queryBuilder;
+        return associationBuilder;
       });
 
       const clonedQuery = createQueryBuilder();
@@ -425,7 +435,8 @@ describe('Document Folder Operations', () => {
         })
       });
 
-      mockKnex.mockImplementation(() => queryBuilder);
+      mockKnex.mockImplementation((tableName: string) =>
+        tableName === 'document_associations as da' ? associationBuilder : queryBuilder);
       await getDocumentsByFolder('/Legal', false, 1, 15, undefined, 'entity-123', 'client');
 
       expect(queryBuilder.whereExists).toHaveBeenCalled();
@@ -913,8 +924,10 @@ describe('Document Folder Operations', () => {
 
       await deleteFolder('/Legal/Old');
 
-      // Verify tenant was included in queries
-      expect(mockKnex.where).toHaveBeenCalledWith('tenant', 'tenant-123');
+      // Tenant scoping now lives in the tenantDb facade; verify the document and
+      // subfolder checks were routed through it with the active tenant.
+      expect(tenantScopeSpy).toHaveBeenCalledWith('documents', 'tenant-123');
+      expect(tenantScopeSpy).toHaveBeenCalledWith('document_folders', 'tenant-123');
     });
   });
 });

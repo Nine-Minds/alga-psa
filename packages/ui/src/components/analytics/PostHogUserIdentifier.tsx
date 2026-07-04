@@ -88,6 +88,7 @@ export function PostHogUserIdentifier() {
           });
         }
 
+        // LEVERAGE: friction posthog-tenant-group — client sets `tenant` as a person property only; server-side evals (featureFlagRuntime.ts) send groups:{tenant}. Same flag needs different PostHog targeting depending on where it's read (client→person-property, server→group). A posthog.group('tenant', user.tenant) here would let group-targeted flags resolve client-side too, so tenant flags target uniformly.
         if (!shouldAnonymize) {
           posthog.identify(user.id, {
             email: user.email,

@@ -6,18 +6,7 @@ import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
-// Mock function for getting client by ID - in a real implementation, this would be imported from a client model
-async function getClientById(clientId: string) {
-  // This is a placeholder - in a real implementation, you would fetch the client from the database
-  const mockClients = {
-    'client1': { id: 'client1', name: 'Acme Inc' },
-    'client2': { id: 'client2', name: 'Globex Corp' },
-    'client3': { id: 'client3', name: 'Initech' },
-    'client4': { id: 'client4', name: 'Umbrella Corp' }
-  };
-
-  return mockClients[clientId as keyof typeof mockClients] || null;
-}
+import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
 /**
  * Fetch reconciliation reports with pagination and filtering
@@ -52,20 +41,40 @@ export const fetchReconciliationReports = withAuth(async (_user, { tenant }, {
         pageSize
       });
 
-    // Fetch client names for each report
-    const reportsWithClientNames = await Promise.all(
-      result.reports.map(async (report) => {
-        const client = await getClientById(report.client_id);
-        return {
-          ...report,
-          client_name: client?.name || 'Unknown Client'
-        };
-      })
-    );
+      // Resolve real client names in one tenant-scoped query (no N+1).
+      const clientIds = Array.from(
+        new Set(
+          result.reports
+            .map((report) => report.client_id)
+            .filter((clientId): clientId is string => Boolean(clientId))
+        )
+      );
+      const clientRows = clientIds.length > 0
+        ? await trx('clients')
+            .where('tenant', tenant)
+            .whereIn('client_id', clientIds)
+            .select('client_id', 'client_name')
+        : [];
+      const clientNameMap = new Map<string, string>(
+        clientRows.map((row: { client_id: string; client_name: string }) => [row.client_id, row.client_name])
+      );
+      const reportsWithClientNames = result.reports.map((report) => ({
+        ...report,
+        client_name: clientNameMap.get(report.client_id) || 'Unknown Client'
+      }));
+
+      // Batch-resolve client logos (single call, no N+1)
+      const logoUrlsMap = clientIds.length > 0
+        ? await getClientLogoUrlsBatch(clientIds, tenant)
+        : new Map<string, string | null>();
+      const reportsWithLogos = reportsWithClientNames.map((report) => ({
+        ...report,
+        logoUrl: report.client_id ? logoUrlsMap.get(report.client_id) ?? null : null
+      }));
 
       return {
         ...result,
-        reports: reportsWithClientNames
+        reports: reportsWithLogos
       };
     } catch (error) {
       console.error('Error fetching reconciliation reports:', error);

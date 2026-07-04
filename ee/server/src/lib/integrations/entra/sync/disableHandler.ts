@@ -1,4 +1,5 @@
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 
 export interface EntraIdentityRef {
   entraTenantId: string;
@@ -14,10 +15,10 @@ async function markIdentityInactive(
     const { knex } = await createTenantKnex();
 
     return knex.transaction(async (trx) => {
+      const db = tenantDb(trx, tenantId);
       const now = trx.fn.now();
-      const links = await trx('entra_contact_links')
+      const links = await db.table('entra_contact_links')
         .where({
-          tenant: tenantId,
           entra_tenant_id: identity.entraTenantId,
           entra_object_id: identity.entraObjectId,
         })
@@ -28,10 +29,7 @@ async function markIdentityInactive(
       }
 
       const contactIds = links.map((row: any) => String(row.contact_name_id));
-      await trx('contacts')
-        .where({
-          tenant: tenantId,
-        })
+      await db.table('contacts')
         .whereIn('contact_name_id', contactIds)
         .update({
           is_inactive: true,
@@ -42,9 +40,8 @@ async function markIdentityInactive(
           updated_at: now,
         });
 
-      await trx('entra_contact_links')
+      await db.table('entra_contact_links')
         .where({
-          tenant: tenantId,
           entra_tenant_id: identity.entraTenantId,
           entra_object_id: identity.entraObjectId,
         })

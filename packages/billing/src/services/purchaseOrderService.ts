@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import type { InvoiceStatus } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 
 export const PO_CONSUMPTION_FINALIZED_STATUSES: readonly InvoiceStatus[] = [
   'sent',
@@ -31,8 +32,8 @@ export async function getPurchaseOrderConsumedCents(params: {
   const { knex, tenant, clientContractId } = params;
 
   const statuses = PO_CONSUMPTION_FINALIZED_STATUSES;
-  const row = await knex('invoices')
-    .where({ tenant, client_contract_id: clientContractId })
+  const row = await tenantDb(knex, tenant).table('invoices')
+    .where({ client_contract_id: clientContractId })
     .andWhereNot('status', 'cancelled')
     .andWhere((builder) => {
       builder.whereNotNull('finalized_at').orWhereIn('status', statuses as readonly string[]);
@@ -61,8 +62,8 @@ export async function getClientContractPurchaseOrderContext(params: {
   po_amount: number | null;
 }> {
   const { knex, tenant, clientContractId } = params;
-  const row = await knex('client_contracts')
-    .where({ tenant, client_contract_id: clientContractId })
+  const row = await tenantDb(knex, tenant).table('client_contracts')
+    .where({ client_contract_id: clientContractId })
     .select('po_required', 'po_number', 'po_amount')
     .first();
 

@@ -12,6 +12,7 @@
  */
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
+import * as net from 'node:net';
 import logger from '@alga-psa/core/logger';
 import { resolveHuduCredentials, HuduCredentials } from './secrets';
 import type {
@@ -420,13 +421,62 @@ export function redactSecret(value: string, secret?: string): string {
   return value.split(secret).join('[REDACTED]');
 }
 
+function isPrivateIpv4(hostname: string): boolean {
+  const parts = hostname.split('.').map((part) => Number.parseInt(part, 10));
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  const [a, b] = parts;
+  return (
+    a === 10 ||
+    a === 127 ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 169 && b === 254) ||
+    a === 0
+  );
+}
+
+function isBlockedHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (normalized === 'localhost' || normalized.endsWith('.localhost')) return true;
+  if (net.isIP(normalized) === 4) return isPrivateIpv4(normalized);
+  if (net.isIP(normalized) === 6) {
+    return (
+      normalized === '::1' ||
+      normalized.startsWith('fc') ||
+      normalized.startsWith('fd') ||
+      normalized.startsWith('fe80')
+    );
+  }
+  return false;
+}
+
+/**
+ * Opt-in escape hatch for local development against a self-hosted Hudu over
+ * plain HTTP (e.g. http://hudu.localtest.me, http://host.docker.internal).
+ * Relaxes the HTTPS requirement and the localhost/private-network SSRF guard.
+ * Never set this in production.
+ */
+function allowInsecureHuduUrl(): boolean {
+  const flag = process.env.HUDU_ALLOW_INSECURE_URL?.trim().toLowerCase();
+  return flag === 'true' || flag === '1' || flag === 'yes';
+}
+
 /** Normalize a base URL to `<instance>/api/v1` (idempotent). */
 export function buildHuduApiBaseUrl(baseUrl: string): string {
-  return baseUrl
+  const normalized = baseUrl
     .trim()
     .replace(/\/+$/, '')
     .replace(/\/api(?:\/v1)?$/, '')
     .concat('/api/v1');
+  const parsed = new URL(normalized);
+  const insecureAllowed = allowInsecureHuduUrl();
+  if (parsed.protocol !== 'https:' && !(insecureAllowed && parsed.protocol === 'http:')) {
+    throw new Error('Hudu base URL must use HTTPS.');
+  }
+  if (isBlockedHostname(parsed.hostname) && !insecureAllowed) {
+    throw new Error('Hudu base URL must not target localhost or private network addresses.');
+  }
+  return normalized;
 }
 
 /**

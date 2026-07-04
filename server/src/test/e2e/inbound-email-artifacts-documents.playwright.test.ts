@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 import {
   applyTestEnvDefaults,
@@ -11,6 +12,10 @@ import {
 } from './helpers/testSetup';
 
 applyTestEnvDefaults();
+
+function scopedDb(db: Knex, tenantId: string) {
+  return tenantDb(db, tenantId);
+}
 
 test('T242: Documents tab shows regular attachment, embedded image, and original-email .eml artifacts', async ({
   page,
@@ -27,25 +32,32 @@ test('T242: Documents tab shows regular attachment, embedded image, and original
   const associationIds: string[] = [];
 
   try {
-    const tenant = await db('tenants').first<{ tenant: string; client_name: string }>('tenant', 'client_name');
+    const tenant = await tenantDb(db, '__test_discovery__')
+      .unscoped<{ tenant: string; client_name: string }>(
+        'tenants',
+        'test discovery of seeded tenant for inbound email artifact UI test'
+      )
+      .first('tenant', 'client_name');
     if (!tenant?.tenant) {
       throw new Error('Expected seeded tenant');
     }
     tenantId = tenant.tenant;
 
-    const user = await db('users')
-      .where({ tenant: tenantId, user_type: 'internal' })
+    const tenantScoped = scopedDb(db, tenantId);
+
+    const user = await tenantScoped.table('users')
+      .where({ user_type: 'internal' })
       .first<{ user_id: string; email: string }>('user_id', 'email');
     if (!user?.user_id || !user?.email) {
       throw new Error('Expected seeded internal user');
     }
 
-    const client = await db('clients').where({ tenant: tenantId }).first<{ client_id: string }>('client_id');
-    const board = await db('boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
-    const status = await db('statuses')
-      .where({ tenant: tenantId, status_type: 'ticket' })
+    const client = await tenantScoped.table('clients').first<{ client_id: string }>('client_id');
+    const board = await tenantScoped.table('boards').first<{ board_id: string }>('board_id');
+    const status = await tenantScoped.table('statuses')
+      .where({ status_type: 'ticket' })
       .first<{ status_id: string }>('status_id');
-    const priority = await db('priorities').where({ tenant: tenantId }).first<{ priority_id: string }>('priority_id');
+    const priority = await tenantScoped.table('priorities').first<{ priority_id: string }>('priority_id');
 
     if (!client?.client_id || !board?.board_id || !status?.status_id || !priority?.priority_id) {
       throw new Error('Expected seeded ticket dependencies (client/board/status/priority)');
@@ -68,7 +80,7 @@ test('T242: Documents tab shows regular attachment, embedded image, and original
     await setupAuthSession(page, tenantData, baseUrl);
 
     ticketId = uuidv4();
-    await db('tickets').insert({
+    await tenantScoped.table('tickets').insert({
       tenant: tenantId,
       ticket_id: ticketId,
       ticket_number: `E2E-${Math.floor(Math.random() * 1_000_000)}`,
@@ -100,7 +112,7 @@ test('T242: Documents tab shows regular attachment, embedded image, and original
       documentIds.push(documentId);
       associationIds.push(associationId);
 
-      await db('external_files').insert({
+      await tenantScoped.table('external_files').insert({
         tenant: tenantId,
         file_id: fileId,
         file_name: doc.name,
@@ -113,7 +125,7 @@ test('T242: Documents tab shows regular attachment, embedded image, and original
         updated_at: db.fn.now(),
       });
 
-      await db('documents').insert({
+      await tenantScoped.table('documents').insert({
         tenant: tenantId,
         document_id: documentId,
         document_name: doc.name,
@@ -129,7 +141,7 @@ test('T242: Documents tab shows regular attachment, embedded image, and original
         file_size: doc.bytes.length,
       });
 
-      await db('document_associations').insert({
+      await tenantScoped.table('document_associations').insert({
         tenant: tenantId,
         association_id: associationId,
         document_id: documentId,
@@ -176,21 +188,21 @@ async function cleanupInboundArtifactUiTestRows(
 ) {
   if (!params.tenantId) return;
   const tenantId = params.tenantId;
+  const tenantScoped = scopedDb(db, tenantId);
 
   if (params.associationIds.length > 0) {
-    await db('document_associations')
-      .where({ tenant: tenantId })
+    await tenantScoped.table('document_associations')
       .whereIn('association_id', params.associationIds)
       .delete();
   }
   if (params.documentIds.length > 0) {
-    await db('documents').where({ tenant: tenantId }).whereIn('document_id', params.documentIds).delete();
+    await tenantScoped.table('documents').whereIn('document_id', params.documentIds).delete();
   }
   if (params.fileIds.length > 0) {
-    await db('external_files').where({ tenant: tenantId }).whereIn('file_id', params.fileIds).delete();
+    await tenantScoped.table('external_files').whereIn('file_id', params.fileIds).delete();
   }
   if (params.ticketId) {
-    await db('comments').where({ tenant: tenantId, ticket_id: params.ticketId }).delete();
-    await db('tickets').where({ tenant: tenantId, ticket_id: params.ticketId }).delete();
+    await tenantScoped.table('comments').where({ ticket_id: params.ticketId }).delete();
+    await tenantScoped.table('tickets').where({ ticket_id: params.ticketId }).delete();
   }
 }

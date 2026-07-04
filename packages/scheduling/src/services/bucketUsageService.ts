@@ -1,7 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill';
 import type { Knex } from 'knex';
 import type { ISO8601String } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { toISODate, toPlainDate } from '@alga-psa/core';
 
 // Define IBucketUsage locally for now, aligning with Phase 1 needs.
@@ -72,22 +72,21 @@ async function calculatePeriod(
     `[calculatePeriod] Inputs: tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`
   );
 
+  const db = tenantDb(trx, tenant);
+
   // Find the active client contract line that covers the target date AND
   // is associated with a bucket configuration for the given serviceCatalogId.
-  const clientPlan = await trx('client_contract_lines as ccl')
-    .join('contract_lines as cl', function () {
-      this.on('ccl.contract_line_id', '=', 'cl.contract_line_id').andOn('ccl.tenant', '=', 'cl.tenant');
-    })
-    .join('contract_line_service_configuration as psc', function () {
-      this.on('cl.contract_line_id', '=', 'psc.contract_line_id')
-        .andOn('cl.tenant', '=', 'psc.tenant')
-        .andOnVal('psc.service_id', '=', serviceCatalogId);
-    })
-    .join('contract_line_service_bucket_config as psbc', function () {
-      this.on('psc.config_id', '=', 'psbc.config_id').andOn('psc.tenant', '=', 'psbc.tenant');
-    })
+  const clientPlanQuery = db.table('client_contract_lines as ccl');
+  db.tenantJoin(clientPlanQuery, 'contract_lines as cl', 'ccl.contract_line_id', 'cl.contract_line_id');
+  db.tenantJoin(clientPlanQuery, 'contract_line_service_configuration as psc', 'cl.contract_line_id', 'psc.contract_line_id', {
+    on(join) {
+      join.andOnVal('psc.service_id', '=', serviceCatalogId);
+    },
+  });
+  db.tenantJoin(clientPlanQuery, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id');
+
+  const clientPlan = await clientPlanQuery
     .where('ccl.client_id', clientId)
-    .andWhere('ccl.tenant', tenant)
     .andWhere('ccl.is_active', true)
     .andWhere('ccl.start_date', '<=', targetDateISO) // Plan must start on or before the target date
     .andWhere(function () {
@@ -109,9 +108,8 @@ async function calculatePeriod(
     `[calculatePeriod] Found clientPlan: contract_line_id=${clientPlan.contract_line_id}, start_date=${clientPlan.start_date}, billing_frequency=${clientPlan.billing_frequency}`
   );
 
-  const matchingClientBillingCycle = await trx('client_billing_cycles')
+  const matchingClientBillingCycle = await db.table('client_billing_cycles')
     .where({
-      tenant,
       client_id: clientId,
     })
     .whereNotNull('period_start_date')
@@ -217,11 +215,11 @@ export async function findOrCreateCurrentBucketUsageRecord(
   const { periodStart, periodEnd, planId, billingFrequency, source } = periodInfo;
   const periodStartISO = toISODate(periodStart) as ISO8601String;
   const periodEndISO = toISODate(periodEnd) as ISO8601String;
+  const db = tenantDb(trx, tenant);
 
   // 2. Find Existing Record for the Calculated Period
-  const existingRecord = await trx('bucket_usage')
+  const existingRecord = await db.table('bucket_usage')
     .where({
-      tenant: tenant,
       client_id: clientId,
       service_catalog_id: serviceCatalogId,
       period_start: periodStartISO,
@@ -236,9 +234,8 @@ export async function findOrCreateCurrentBucketUsageRecord(
   // 3. Create New Record - Fetch Bucket Configuration
 
   // First, get the contract_line_service_configuration to find the config_id
-  const planServiceConfig = await trx('contract_line_service_configuration')
+  const planServiceConfig = await db.table('contract_line_service_configuration')
     .where({
-      tenant: tenant,
       contract_line_id: planId,
       service_id: serviceCatalogId,
     })
@@ -250,9 +247,8 @@ export async function findOrCreateCurrentBucketUsageRecord(
     );
   }
 
-  const bucketConfig = await trx('contract_line_service_bucket_config')
+  const bucketConfig = await db.table('contract_line_service_bucket_config')
     .where({
-      tenant: tenant,
       config_id: planServiceConfig.config_id,
     })
     .first<IContractLineServiceBucketConfigLocal | undefined>();
@@ -273,9 +269,8 @@ export async function findOrCreateCurrentBucketUsageRecord(
 
     try {
       if (source === 'client_billing_cycle') {
-        const previousCycle = await trx('client_billing_cycles')
+        const previousCycle = await db.table('client_billing_cycles')
           .where({
-            tenant,
             client_id: clientId,
           })
           .whereNotNull('period_start_date')
@@ -333,9 +328,8 @@ export async function findOrCreateCurrentBucketUsageRecord(
     const prevPeriodEndISO = toISODate(prevPeriodEnd) as ISO8601String;
 
     // Find the usage record for the previous period
-    const previousRecord = await trx('bucket_usage')
+    const previousRecord = await db.table('bucket_usage')
       .where({
-        tenant: tenant,
         client_id: clientId,
         service_catalog_id: serviceCatalogId,
         period_start: prevPeriodStartISO,
@@ -345,18 +339,16 @@ export async function findOrCreateCurrentBucketUsageRecord(
 
     if (previousRecord) {
       // Calculate unused minutes in previous period
-      const prevPlanServiceConfig = await trx('contract_line_service_configuration')
+      const prevPlanServiceConfig = await db.table('contract_line_service_configuration')
         .where({
-          tenant: tenant,
           contract_line_id: previousRecord.contract_line_id,
           service_id: serviceCatalogId,
         })
         .first<{ config_id: string }>();
 
       if (prevPlanServiceConfig) {
-        const prevBucketConfig = await trx('contract_line_service_bucket_config')
+        const prevBucketConfig = await db.table('contract_line_service_bucket_config')
           .where({
-            tenant: tenant,
             config_id: prevPlanServiceConfig.config_id,
           })
           .first<IContractLineServiceBucketConfigLocal | undefined>();
@@ -371,7 +363,7 @@ export async function findOrCreateCurrentBucketUsageRecord(
   }
 
   // 5. Create new usage record
-  const [newUsage] = await trx('bucket_usage')
+  const [newUsage] = await db.table('bucket_usage')
     .insert({
       tenant: tenant,
       client_id: clientId,
@@ -399,17 +391,17 @@ export async function updateBucketUsageMinutes(trx: Knex.Transaction, bucketUsag
     throw new Error('Tenant context could not be determined for bucket usage update.');
   }
 
-  const currentUsage = await trx('bucket_usage as bu')
-    .join('contract_line_service_configuration as psc', function () {
-      this.on('bu.contract_line_id', '=', 'psc.contract_line_id')
-        .andOn('bu.service_catalog_id', '=', 'psc.service_id')
-        .andOn('bu.tenant', '=', 'psc.tenant');
-    })
-    .join('contract_line_service_bucket_config as psbc', function () {
-      this.on('psc.config_id', '=', 'psbc.config_id').andOn('psc.tenant', '=', 'psbc.tenant').andOn('bu.tenant', '=', 'psbc.tenant');
-    })
+  const db = tenantDb(trx, tenant);
+  const currentUsageQuery = db.table('bucket_usage as bu');
+  db.tenantJoin(currentUsageQuery, 'contract_line_service_configuration as psc', 'bu.contract_line_id', 'psc.contract_line_id', {
+    on(join) {
+      join.andOn('bu.service_catalog_id', '=', 'psc.service_id');
+    },
+  });
+  db.tenantJoin(currentUsageQuery, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id');
+
+  const currentUsage = await currentUsageQuery
     .where('bu.usage_id', bucketUsageId)
-    .andWhere('bu.tenant', tenant)
     .select('bu.minutes_used', 'bu.rolled_over_minutes', 'psbc.total_minutes')
     .first<{ minutes_used: number; rolled_over_minutes: number; total_minutes: number } | undefined>();
 
@@ -423,10 +415,9 @@ export async function updateBucketUsageMinutes(trx: Knex.Transaction, bucketUsag
 
   const newOverageMinutes = Math.max(0, newMinutesUsed - totalAvailableMinutes);
 
-  const updateCount = await trx('bucket_usage')
+  const updateCount = await db.table('bucket_usage')
     .where({
       usage_id: bucketUsageId,
-      tenant: tenant,
     })
     .update({
       minutes_used: newMinutesUsed,
@@ -454,17 +445,17 @@ export async function reconcileBucketUsageRecord(trx: Knex.Transaction, bucketUs
   }
 
   // 2. Fetch Bucket Usage Record and Config
-  const usageRecord = await trx('bucket_usage as bu')
-    .join('contract_line_service_configuration as psc', function () {
-      this.on('bu.contract_line_id', '=', 'psc.contract_line_id')
-        .andOn('bu.service_catalog_id', '=', 'psc.service_id')
-        .andOn('bu.tenant', '=', 'psc.tenant');
-    })
-    .join('contract_line_service_bucket_config as psbc', function () {
-      this.on('psc.config_id', '=', 'psbc.config_id').andOn('psc.tenant', '=', 'psbc.tenant').andOn('bu.tenant', '=', 'psbc.tenant');
-    })
+  const db = tenantDb(trx, tenant);
+  const usageRecordQuery = db.table('bucket_usage as bu');
+  db.tenantJoin(usageRecordQuery, 'contract_line_service_configuration as psc', 'bu.contract_line_id', 'psc.contract_line_id', {
+    on(join) {
+      join.andOn('bu.service_catalog_id', '=', 'psc.service_id');
+    },
+  });
+  db.tenantJoin(usageRecordQuery, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id');
+
+  const usageRecord = await usageRecordQuery
     .where('bu.usage_id', bucketUsageId)
-    .andWhere('bu.tenant', tenant)
     .select('bu.client_id', 'bu.service_catalog_id', 'bu.period_start', 'bu.period_end', 'bu.rolled_over_minutes', 'psbc.total_minutes')
     .first<{
       client_id: string;
@@ -482,9 +473,8 @@ export async function reconcileBucketUsageRecord(trx: Knex.Transaction, bucketUs
   const { client_id, service_catalog_id, period_start, period_end, total_minutes } = usageRecord;
 
   // 3. Sum Billable Time Entries (billable_duration is in minutes)
-  const timeEntrySumResult = await trx('time_entries')
+  const timeEntrySumResult = await db.table('time_entries')
     .where({
-      tenant: tenant,
       client_id: client_id,
       service_id: service_catalog_id,
       is_billable: true,
@@ -498,9 +488,8 @@ export async function reconcileBucketUsageRecord(trx: Knex.Transaction, bucketUs
   console.log(`Reconciliation: Found ${timeEntryMinutes} minutes from time entries.`);
 
   // 4. Sum Billable Usage Tracking (assuming 1 quantity = 1 minute)
-  const usageTrackingSumResult = await trx('usage_tracking')
+  const usageTrackingSumResult = await db.table('usage_tracking')
     .where({
-      tenant: tenant,
       client_id: client_id,
       service_id: service_catalog_id,
       is_billable: true,
@@ -521,10 +510,9 @@ export async function reconcileBucketUsageRecord(trx: Knex.Transaction, bucketUs
   console.log(`Reconciliation: Calculated total_minutes_used = ${totalMinutesUsed}, new_overage_minutes = ${newOverageMinutes}`);
 
   // 6. Update Bucket Usage Record
-  const updateCount = await trx('bucket_usage')
+  const updateCount = await db.table('bucket_usage')
     .where({
       usage_id: bucketUsageId,
-      tenant: tenant,
     })
     .update({
       minutes_used: totalMinutesUsed,

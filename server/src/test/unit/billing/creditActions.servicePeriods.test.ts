@@ -11,6 +11,12 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
   auditLog: vi.fn(async () => undefined),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({

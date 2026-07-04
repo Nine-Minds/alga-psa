@@ -7,6 +7,7 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { useClientDrawer } from '@alga-psa/ui';
 import { Card } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
@@ -379,6 +380,14 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     });
     return map;
   }, [assets, clients]);
+
+  const clientLogoById = useMemo(() => {
+    const map = new Map<string, string | null>();
+    clients.forEach((client) => {
+      map.set(client.client_id, client.logoUrl ?? null);
+    });
+    return map;
+  }, [clients]);
 
 
 
@@ -822,7 +831,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
             })}
             className="m-0"
             indeterminate={isIndeterminate}
-            containerClassName="mb-0"
             skipRegistration
           />
         </div>
@@ -862,7 +870,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 name: record.name
               })}
               className="m-0 pointer-events-none"
-              containerClassName="mb-0"
               skipRegistration
             />
           </div>
@@ -972,21 +979,24 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       title: t('assetDashboardClient.table.client', { defaultValue: 'Client' }),
       render: (_: unknown, record: Asset) => {
         const name = record.client?.client_name || t('assetDashboardClient.details.unassigned', { defaultValue: 'Unassigned' });
+        const logoUrl = record.client_id ? (clientLogoById.get(record.client_id) ?? null) : null;
         if (record.client_id && clientDrawer) {
           return (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                clientDrawer.openClientDrawer(record.client_id);
-              }}
-              className="text-sm font-medium text-blue-500 hover:underline text-left bg-transparent border-none p-0"
-            >
-              {name}
-            </button>
+            <ClientNameCell clientId={record.client_id} clientName={name} logoUrl={logoUrl}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clientDrawer.openClientDrawer(record.client_id);
+                }}
+                className="text-sm font-medium text-blue-500 hover:underline text-left bg-transparent border-none p-0 truncate"
+              >
+                {name}
+              </button>
+            </ClientNameCell>
           );
         }
-        return <span className="text-sm font-medium text-gray-700">{name}</span>;
+        return <ClientNameCell clientId={record.client_id} clientName={name} logoUrl={logoUrl} />;
       }
     },
     location: {
@@ -1060,6 +1070,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     renderAssetDetails,
     openAssetRecordPage,
     clientDrawer,
+    clientLogoById,
     getAssetStatusLabel,
     getAssetTypeLabel,
   ]);
@@ -1252,7 +1263,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                           checked={statusFilters.includes(status)}
                           onChange={() => toggleFilterValue(statusFilters, status, setStatusFilters)}
                           className="mr-2"
-                          containerClassName="m-0"
                         />
                         <span className="capitalize">{getAssetStatusLabel(status)}</span>
                       </DropdownMenuItem>
@@ -1276,7 +1286,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                           checked={typeFilters.includes(type)}
                           onChange={() => toggleFilterValue(typeFilters, type, setTypeFilters)}
                           className="mr-2"
-                          containerClassName="m-0"
                         />
                         <span className="capitalize">{getAssetTypeLabel(type)}</span>
                       </DropdownMenuItem>
@@ -1300,7 +1309,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                           checked={agentStatusFilters.includes(value)}
                           onChange={() => toggleFilterValue(agentStatusFilters, value, setAgentStatusFilters)}
                           className="mr-2"
-                          containerClassName="m-0"
                         />
                         <span>{getAgentStatusLabel(value)}</span>
                       </DropdownMenuItem>
@@ -1313,7 +1321,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                           checked={rmmManagedFilter.includes(value)}
                           onChange={() => toggleFilterValue(rmmManagedFilter, value, setRmmManagedFilter)}
                           className="mr-2"
-                          containerClassName="m-0"
                         />
                         <span>{label}</span>
                       </DropdownMenuItem>
@@ -1336,7 +1343,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                           checked={visibleColumnIds.includes(key)}
                           onChange={() => toggleColumn(key)}
                           className="mr-2"
-                          containerClassName="m-0"
                         />
                         <span className="capitalize">
                           {t(`assetDashboardClient.columns.${key}`, {

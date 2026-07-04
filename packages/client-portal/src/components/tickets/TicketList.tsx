@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import { getClientTickets, updateTicketStatus } from '@alga-psa/client-portal/actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getTicketCategories } from '@alga-psa/tickets/actions';
+import { getTicketCategories } from '@alga-psa/tickets/actions/ticketCategoryActions';
 import { ColumnDefinition } from '@alga-psa/types';
 import { ITicketListItem, ITicketCategory, TicketResponseState } from '@alga-psa/types';
 import type { IStatus } from '@alga-psa/types';
@@ -39,6 +39,10 @@ import {
   TICKET_STATUS_FILTER_CLOSED,
   TICKET_STATUS_FILTER_OPEN,
   type TicketStatusFilterOption,
+  statusPillHue,
+  formatDuePrimary,
+  daysUntil,
+  formatCategoryLabel,
 } from '@alga-psa/tickets/lib';
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -262,6 +266,15 @@ export function TicketList() {
     ];
   }, [rawStatusOptions, selectedStatus, t]);
 
+  // Authoritative status_id → is_closed, so the status pill colors green from
+  // the status definition (consistent per status) rather than the per-ticket
+  // is_closed flag, which can drift so two tickets sharing a status differ.
+  // Falls back to the record flag only when the status isn't in the list.
+  const statusClosedById = useMemo(
+    () => new Map(rawStatusOptions.map((o) => [o.value, !!o.isClosed])),
+    [rawStatusOptions]
+  );
+
   const loadTickets = useCallback(async () => {
     setLoading(true);
     try {
@@ -420,35 +433,42 @@ export function TicketList() {
   }, []);
 
   const columns: ColumnDefinition<ITicketListItem>[] = [
-    {
-      title: t('fields.ticketNumber'),
-      dataIndex: 'ticket_number',
-      width: '75px',
-      render: (value: string, record: ITicketListItem) => (
-        <Link
-          href={`/client-portal/tickets/${record.ticket_id}`}
-          className="font-medium hover:text-[rgb(var(--color-secondary-600))]"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {value}
-        </Link>
-      ),
-    },
+    // Ticket — the hero cell: bold title with the mono ticket number and
+    // category folded underneath (mirrors the MSP Refined List design).
     {
       title: t('fields.title'),
       dataIndex: 'title',
-      width: '25%',
-      render: (value: string, record: ITicketListItem) => (
-        <div className="overflow-hidden">
-          <Link
-            href={`/client-portal/tickets/${record.ticket_id}`}
-            className="font-medium hover:text-[rgb(var(--color-secondary-600))] block whitespace-normal break-words"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {value}
-          </Link>
-        </div>
-      ),
+      width: '32%',
+      render: (value: string, record: ITicketListItem) => {
+        const hasCategory = !!(record.category_id || record.subcategory_id);
+        const categoryLabel = hasCategory ? formatCategoryLabel(record, categories) : null;
+        return (
+          <div className="flex flex-col gap-0.5 overflow-hidden">
+            <Link
+              href={`/client-portal/tickets/${record.ticket_id}`}
+              className="block truncate font-semibold text-[rgb(var(--color-text-900))] hover:text-[rgb(var(--color-secondary-600))]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {value}
+            </Link>
+            <div className="flex items-center gap-1.5 overflow-hidden text-[11px] leading-tight text-[rgb(var(--color-text-500))]">
+              <Link
+                href={`/client-portal/tickets/${record.ticket_id}`}
+                className="shrink-0 font-mono text-[11px] text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-secondary-600))]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {record.ticket_number}
+              </Link>
+              {categoryLabel && (
+                <>
+                  <span className="text-[rgb(var(--color-text-300))]">·</span>
+                  <span className="truncate">{categoryLabel}</span>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      },
     },
     {
       title: t('fields.status'),
@@ -457,17 +477,26 @@ export function TicketList() {
       render: (value: string, record: ITicketListItem) => {
         // Get response_state from the record (F026-F030)
         const responseState = record.response_state as TicketResponseState | undefined;
+        const closed =
+          record.status_id && statusClosedById.has(record.status_id)
+            ? !!statusClosedById.get(record.status_id)
+            : ((record as { is_closed?: boolean }).is_closed ?? false);
+        const hue = statusPillHue(value || '', closed);
         return (
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
-                <div
-                  id="change-ticket-category-button"
-                  className="text-sm cursor-pointer flex items-center gap-2"
+                <button
+                  id="change-ticket-status-button"
+                  type="button"
+                  className="inline-flex min-w-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium text-[rgb(var(--color-text-700))] cursor-pointer"
+                  style={{ backgroundColor: `rgb(${hue} / 0.14)`, borderColor: `rgb(${hue} / 0.30)` }}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {value}
-                  <ChevronDown className="h-3 w-3 text-gray-400" />
-                </div>
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: `rgb(${hue})` }} />
+                  <span className="overflow-hidden text-ellipsis">{value || 'No Status'}</span>
+                  <ChevronDown className="h-3 w-3 shrink-0 text-[rgb(var(--color-text-400))]" />
+                </button>
               </DropdownMenu.Trigger>
 
               <DropdownMenu.Content
@@ -498,6 +527,7 @@ export function TicketList() {
                 responseState={responseState}
                 isClientPortal={true}
                 size="sm"
+                className="ml-auto shrink-0"
                 labels={{
                   awaitingClient: t('responseState.awaitingYourResponse', 'Awaiting Your Response'),
                   awaitingInternal: t('responseState.awaitingSupportResponse', 'Awaiting Support Response'),
@@ -516,49 +546,41 @@ export function TicketList() {
       width: '12%',
       render: (value: string, record: ITicketListItem) => (
         <div className="flex items-center gap-2">
-          <div
-            className={`w-3 h-3 rounded-full border border-gray-300 ${!record.priority_color ? 'bg-gray-500' : ''}`}
-            style={record.priority_color ? { backgroundColor: record.priority_color } : undefined}
+          <span
+            className="h-3.5 w-[3px] shrink-0 rounded-full"
+            style={{ backgroundColor: record.priority_color || '#94a3b8' }}
           />
-          <span className="capitalize">{value}</span>
+          <span className="font-medium text-[rgb(var(--color-text-700))]">{value || 'No Priority'}</span>
         </div>
       ),
     },
     {
+      // Two-line due cell: smart primary label + a relative "in N days" hint,
+      // colored for overdue/soon urgency. (No SLA line — clients don't see SLA.)
       title: t('fields.dueDate', 'Due Date'),
       dataIndex: 'due_date',
-      width: '12%',
+      width: '13%',
       render: (value: string | null) => {
         if (!value) {
-          return <span className="text-sm text-gray-500">-</span>;
+          return <span className="text-sm text-[rgb(var(--color-text-400))]">No due date</span>;
         }
 
-        const dueDate = new Date(value);
         const now = new Date();
+        const dueDate = new Date(value);
         const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-        // Check if time is midnight (00:00) - show date only
-        const isMidnight = dueDate.getHours() === 0 && dueDate.getMinutes() === 0;
-        const displayFormat = isMidnight ? 'MMM d, yyyy' : 'MMM d, yyyy h:mm a';
+        let primaryClass = 'text-[rgb(var(--color-text-700))]';
+        if (hoursUntilDue < 0) primaryClass = 'text-red-600 dark:text-red-400';
+        else if (hoursUntilDue <= 24) primaryClass = 'text-orange-600 dark:text-orange-400';
 
-        // Determine styling based on due date status
-        let textColorClass = 'text-gray-500';
-        let bgColorClass = '';
-
-        if (hoursUntilDue < 0) {
-          // Overdue - red/warning style
-          textColorClass = 'text-red-700';
-          bgColorClass = 'bg-destructive/10';
-        } else if (hoursUntilDue <= 24) {
-          // Approaching due date (within 24 hours) - orange/caution style
-          textColorClass = 'text-orange-700';
-          bgColorClass = 'bg-warning/10';
-        }
+        const d = daysUntil(dueDate, now);
+        const secondary = d >= 2 ? `in ${d} days` : null;
 
         return (
-          <span className={`text-sm inline-block ${textColorClass} ${bgColorClass ? `${bgColorClass} px-2 py-0.5 rounded-full` : ''}`}>
-            {format(dueDate, displayFormat)}
-          </span>
+          <div className="flex flex-col leading-tight">
+            <span className={`text-sm font-medium ${primaryClass}`}>{formatDuePrimary(dueDate, now)}</span>
+            {secondary && <span className="text-[11px] text-[rgb(var(--color-text-400))]">{secondary}</span>}
+          </div>
         );
       },
     },
@@ -570,8 +592,20 @@ export function TicketList() {
         const additionalCount = record.additional_agent_count || 0;
         const additionalAgents = record.additional_agents || [];
         return (
-          <div className="text-sm flex items-center gap-1.5">
-            {value || '-'}
+          <div className="text-sm text-[rgb(var(--color-text-700))] flex items-center gap-2">
+            {value ? (
+              <UserAvatar
+                userId={record.assigned_to || value}
+                userName={value}
+                avatarUrl={additionalAgentAvatarUrls[record.assigned_to ?? ''] ?? null}
+                size="xs"
+              />
+            ) : (
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-[rgb(var(--color-border-400))] text-xs text-[rgb(var(--color-text-400))]">
+                +
+              </span>
+            )}
+            <span className="truncate">{value || 'Unassigned'}</span>
             {record.assigned_team_id && record.assigned_team_name && (
               <Tooltip content={record.assigned_team_name}>
                 <span className="inline-flex items-center cursor-help">
@@ -619,21 +653,11 @@ export function TicketList() {
       },
     },
     {
-      title: t('fields.createdAt'),
-      dataIndex: 'entered_at',
-      width: '15%',
-      render: (value: string | null) => (
-        <div className="text-sm text-gray-500">
-          {value ? format(new Date(value), 'MMM d, yyyy h:mm a') : '-'}
-        </div>
-      ),
-    },
-    {
       title: t('fields.updatedAt'),
       dataIndex: 'updated_at',
-      width: '15%',
+      width: '14%',
       render: (value: string | null) => (
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-[rgb(var(--color-text-500))]">
           {value ? format(new Date(value), 'MMM d, yyyy h:mm a') : '-'}
         </div>
       ),

@@ -19,6 +19,11 @@ vi.mock('server/src/lib/db/db', () => ({
 vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(async (_knex, callback) => callback(_knex)),
   withAdminTransaction: vi.fn(async (_callback, existing) => _callback(existing)),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t, () => {}) ?? q) : (q.join?.(t, () => {}) ?? q),
+  }),
 }));
 vi.mock('@alga-psa/auth', async (importOriginal) => {
   const actual = await importOriginal<any>();
@@ -1865,7 +1870,7 @@ describe('BillingEngine', () => {
 
   describe('Pricing Schedule Integration', () => {
     it('should query contract pricing schedules by contract id for the active service period overlap', () => {
-      expect(billingEngineSource).toContain('this.knex(\n          "contract_pricing_schedules",\n        )');
+      expect(billingEngineSource).toContain('db.table("contract_pricing_schedules")');
       expect(billingEngineSource).toContain('contract_id: clientContractLine.contract_id');
       expect(billingEngineSource).toContain('.where("effective_date", "<", servicePeriodEndExclusive)');
       expect(billingEngineSource).toContain('.orWhere("end_date", ">", servicePeriodStartExclusive);');
@@ -1883,7 +1888,7 @@ describe('BillingEngine', () => {
     });
 
     it('should still continue fixed-charge calculation when no pricing schedule row exists', () => {
-      expect(billingEngineSource).toContain('const activePricingSchedule = await this.knex(');
+      expect(billingEngineSource).toContain('const activePricingSchedule = await db.table("contract_pricing_schedules")');
       expect(billingEngineSource).toContain('.first();');
       expect(billingEngineSource).toContain('if (');
       expect(billingEngineSource).toContain('activePricingSchedule &&');

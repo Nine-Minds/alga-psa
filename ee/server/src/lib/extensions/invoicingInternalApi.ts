@@ -2,6 +2,7 @@ import { CAP_INVOICE_MANUAL_CREATE, normalizeCapability } from '@ee/lib/extensio
 import { getInstallConfigByInstallId } from '@ee/lib/extensions/installConfig'
 import { createManualInvoice } from '@ee/lib/extensions/invoicingHostApi'
 import { validateCreateManualInvoiceInput } from '@ee/lib/extensions/invoicingValidation'
+import { isValidRunnerToken } from '@ee/lib/extensions/runnerAuth'
 import { runWithTenant } from 'server/src/lib/db'
 
 export type InvoicingInternalResponse = { status: number; body: any }
@@ -19,12 +20,11 @@ class InvoicingInternalError extends Error {
 }
 
 function ensureRunnerAuth(headers: Headers): void {
-  const expected = process.env.RUNNER_STORAGE_API_TOKEN || process.env.RUNNER_SERVICE_TOKEN
-  if (!expected) {
-    throw new InvoicingInternalError('UNAUTHORIZED', 401, 'Runner token not configured')
-  }
-  const provided = headers.get('x-runner-auth')
-  if (!provided || provided !== expected) {
+  if (!isValidRunnerToken(
+    headers.get('x-runner-auth'),
+    process.env.RUNNER_STORAGE_API_TOKEN,
+    process.env.RUNNER_SERVICE_TOKEN,
+  )) {
     throw new InvoicingInternalError('UNAUTHORIZED', 401, 'Invalid runner token')
   }
 }

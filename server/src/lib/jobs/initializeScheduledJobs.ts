@@ -1,7 +1,9 @@
 import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob } from './index';
 import { scheduleAccountingSyncCycleJob } from './handlers/accountingSyncCycleHandler';
+import { scheduleHuduAutoSyncJob } from './handlers/huduAutoSyncHandler';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
+import { tenantDb } from '@alga-psa/db';
 
 const isEnterpriseWorkflowEdition = (): boolean =>
   process.env.EDITION === 'enterprise'
@@ -20,7 +22,9 @@ export async function initializeScheduledJobs(): Promise<void> {
     
     // Get all tenants using root connection
     const knex = await getConnection(null);
-    const tenants = await knex('tenants').select('tenant');
+    const tenants = await tenantDb(knex, '__scheduled_jobs_tenant_enumeration__')
+      .unscoped('tenants', 'scheduler enumerates all tenants to register recurring jobs')
+      .select('tenant');
     logger.info(`Preparing to schedule jobs for ${tenants.length} tenants`);
     
     // Set up expired credits job for each tenant
@@ -138,6 +142,17 @@ export async function initializeScheduledJobs(): Promise<void> {
         }
       } catch (error) {
         logger.error(`Failed to schedule accounting sync cycle for tenant ${tenantId}`, error);
+      }
+
+      // Converge the Hudu daily auto-sync schedule (EE only; created only for
+      // tenants with an active Hudu connection AND settings.autoSync.enabled)
+      try {
+        const huduJobId = await scheduleHuduAutoSyncJob(tenantId);
+        if (huduJobId) {
+          logger.info(`Scheduled Hudu auto-sync for tenant ${tenantId} with job ID ${huduJobId}`);
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule Hudu auto-sync for tenant ${tenantId}`, error);
       }
 
       // Schedule Microsoft calendar webhook renewal (every 30 minutes)

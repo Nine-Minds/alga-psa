@@ -1,6 +1,6 @@
 import { v4 as uuid4 } from 'uuid';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { IExternalTaxImport, TaxSource } from '@alga-psa/types';
 import {
   AccountingExportAdapter,
@@ -80,8 +80,10 @@ export class ExternalTaxImportService {
 
     try {
       // 1. Get invoice and verify it's pending external tax
-      const invoice = await knex('invoices')
-        .where({ invoice_id: invoiceId, tenant })
+      const db = tenantDb(knex, tenant);
+
+      const invoice = await db.table('invoices')
+        .where({ invoice_id: invoiceId })
         .select('invoice_id', 'invoice_number', 'tax_source', 'total_amount')
         .first();
 
@@ -110,9 +112,8 @@ export class ExternalTaxImportService {
       }
 
       // 2. Get the export mapping to determine adapter and external reference
-      const mapping = await knex('tenant_external_entity_mappings')
+      const mapping = await db.table('tenant_external_entity_mappings')
         .where({
-          tenant,
           alga_entity_type: 'invoice',
           alga_entity_id: invoiceId
         })
@@ -193,8 +194,8 @@ export class ExternalTaxImportService {
       // service periods may explain why a charge exists, but they do not change
       // external tax matching or the imported amount basis.
       // 6. Get current invoice charges and their tax
-      const charges = await knex('invoice_charges')
-        .where({ invoice_id: invoiceId, tenant })
+      const charges = await db.table('invoice_charges')
+        .where({ invoice_id: invoiceId })
         .select('item_id', 'description', 'tax_amount');
 
       const originalTax = charges.reduce(
@@ -212,16 +213,16 @@ export class ExternalTaxImportService {
       );
 
       // 8. Update invoice tax_source
-      await knex('invoices')
-        .where({ invoice_id: invoiceId, tenant })
+      await db.table('invoices')
+        .where({ invoice_id: invoiceId })
         .update({
           tax_source: 'external' as TaxSource,
           updated_at: knex.fn.now()
         });
 
       // 9. Recalculate invoice total
-      const newTotals = await knex('invoice_charges')
-        .where({ invoice_id: invoiceId, tenant })
+      const newTotals = await db.table('invoice_charges')
+        .where({ invoice_id: invoiceId })
         .select(
           knex.raw('COALESCE(SUM(net_amount), 0) as subtotal'),
           knex.raw('COALESCE(SUM(COALESCE(external_tax_amount, tax_amount, 0)), 0) as tax')
@@ -233,8 +234,8 @@ export class ExternalTaxImportService {
       const newTax = Number(newTotalsRow?.tax ?? 0);
       const newTotal = newSubtotal + newTax;
 
-      await knex('invoices')
-        .where({ invoice_id: invoiceId, tenant })
+      await db.table('invoices')
+        .where({ invoice_id: invoiceId })
         .update({
           subtotal: newSubtotal,
           tax: newTax,
@@ -247,7 +248,7 @@ export class ExternalTaxImportService {
       const importedTax = fetchResult.invoice.totalTax;
       const difference = importedTax - originalTax;
 
-      await knex('external_tax_imports').insert({
+      await db.table('external_tax_imports').insert({
         import_id: importId,
         tenant,
         invoice_id: invoiceId,
@@ -327,8 +328,8 @@ export class ExternalTaxImportService {
 
     try {
       // Get all invoices pending external tax
-      const pendingInvoices = await knex('invoices')
-        .where({ tenant, tax_source: 'pending_external' })
+      const pendingInvoices = await tenantDb(knex, tenant).table('invoices')
+        .where({ tax_source: 'pending_external' })
         .select('invoice_id');
 
       result.totalProcessed = pendingInvoices.length;
@@ -391,8 +392,8 @@ export class ExternalTaxImportService {
       throw new Error('Tenant context is required for import history');
     }
 
-    const imports = await knex('external_tax_imports')
-      .where({ tenant, invoice_id: invoiceId })
+    const imports = await tenantDb(knex, tenant).table('external_tax_imports')
+      .where({ invoice_id: invoiceId })
       .orderBy('imported_at', 'desc')
       .select('*');
 
@@ -425,8 +426,10 @@ export class ExternalTaxImportService {
     }
 
     // Get invoice
-    const invoice = await knex('invoices')
-      .where({ invoice_id: invoiceId, tenant })
+    const db = tenantDb(knex, tenant);
+
+    const invoice = await db.table('invoices')
+      .where({ invoice_id: invoiceId })
       .select('invoice_id', 'tax_source')
       .first();
 
@@ -438,8 +441,8 @@ export class ExternalTaxImportService {
     // imported external tax amounts per invoice charge. Canonical recurring
     // service periods stay explanatory context, not reconciliation inputs.
     // Get charges with both internal and external tax
-    const charges = await knex('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
+    const charges = await db.table('invoice_charges')
+      .where({ invoice_id: invoiceId })
       .select('item_id', 'description', 'tax_amount', 'external_tax_amount');
 
     const lineComparisons = charges.map(charge => ({
@@ -482,8 +485,8 @@ export class ExternalTaxImportService {
       return 0;
     }
 
-    const result = await knex('invoices')
-      .where({ tenant, tax_source: 'pending_external' })
+    const result = await tenantDb(knex, tenant).table('invoices')
+      .where({ tax_source: 'pending_external' })
       .count('invoice_id as count')
       .first();
 
@@ -505,6 +508,7 @@ export class ExternalTaxImportService {
   ): Promise<{ chargesUpdated: number; warnings: string[] }> {
     const warnings: string[] = [];
     let chargesUpdated = 0;
+    const db = tenantDb(knex, tenant);
 
     // Create a map of external charges by lineId for matching
     // lineId is now the actual charge ID (item_id) when charge mappings are stored
@@ -530,8 +534,8 @@ export class ExternalTaxImportService {
         const externalCharge = externalChargeMap.get(charge.item_id);
 
         if (externalCharge) {
-          await knex('invoice_charges')
-            .where({ item_id: charge.item_id, tenant })
+          await db.table('invoice_charges')
+            .where({ item_id: charge.item_id })
             .update({
               external_tax_amount: externalCharge.taxAmount,
               external_tax_code: externalCharge.taxCode,
@@ -551,8 +555,8 @@ export class ExternalTaxImportService {
         const charge = charges[i];
         const externalCharge = externalChargeMap.get(`line-${i}`)!;
 
-        await knex('invoice_charges')
-          .where({ item_id: charge.item_id, tenant })
+        await db.table('invoice_charges')
+          .where({ item_id: charge.item_id })
           .update({
             external_tax_amount: externalCharge.taxAmount,
             external_tax_code: externalCharge.taxCode,
@@ -568,8 +572,8 @@ export class ExternalTaxImportService {
       warnings.push('Using proportional tax distribution - external line matching failed');
 
       // Get charge amounts from database (order must match the charges parameter)
-      const chargeAmounts = await knex('invoice_charges')
-        .where({ invoice_id: invoiceId, tenant })
+      const chargeAmounts = await db.table('invoice_charges')
+        .where({ invoice_id: invoiceId })
         .select('item_id', 'net_amount')
         .orderBy('created_at')
         .orderBy('item_id');
@@ -599,8 +603,8 @@ export class ExternalTaxImportService {
           taxAmount = 0;
         }
 
-        await knex('invoice_charges')
-          .where({ item_id: chargeData.item_id, tenant })
+        await db.table('invoice_charges')
+          .where({ item_id: chargeData.item_id })
           .update({
             external_tax_amount: taxAmount,
             updated_at: knex.fn.now()

@@ -209,12 +209,14 @@
           "priorityPlaceholder": "Select Priority...",
           "allPriorities": "All Priorities",
           "dueDateRange": "Due Date Range",
+          "createdDateRange": "Created Date Range",
           "showClosedTasks": "Show Closed Tasks"
         },
         "actions": {
           "reset": "Reset",
           "cancel": "Cancel",
-          "apply": "Apply Filters"
+          "apply": "Apply Filters",
+          "clearDates": "Clear"
         }
       }
     },
@@ -252,12 +254,14 @@
           "priorityPlaceholder": "Select Priority...",
           "allPriorities": "All Priorities",
           "dueDateRange": "Due Date Range",
+          "createdDateRange": "Created Date Range",
           "showClosedTickets": "Show Closed Tickets"
         },
         "actions": {
           "reset": "Reset",
           "cancel": "Cancel",
-          "apply": "Apply Filters"
+          "apply": "Apply Filters",
+          "clearDates": "Clear"
         }
       }
     },
@@ -297,13 +301,15 @@
           "priorityMedium": "Medium",
           "priorityLow": "Low",
           "dueDateRange": "Due Date Range",
+          "createdDateRange": "Created Date Range",
           "showClosedTasks": "Show Closed Tasks",
           "includeHiddenTasks": "Include Hidden Tasks"
         },
         "actions": {
           "reset": "Reset",
           "cancel": "Cancel",
-          "apply": "Apply Filters"
+          "apply": "Apply Filters",
+          "clearDates": "Clear"
         }
       },
       "listDrawer": {
@@ -441,6 +447,7 @@
       "showClosed": "Show closed",
       "client": "Client",
       "dueDateShort": "Due",
+      "createdShort": "Created",
       "tags": "Tags",
       "tagsSelected": "{{count}} tags",
       "tasksCompact": "Tasks",
@@ -470,7 +477,9 @@
     },
     "actions": {
       "reset": "Reset",
-      "clearClient": "Clear client filter"
+      "clearClient": "Clear client filter",
+      "clearDueDate": "Clear due date filter",
+      "clearCreatedDate": "Clear created date filter"
     },
     "statusClosedSuffix": " (closed)",
     "summary": {

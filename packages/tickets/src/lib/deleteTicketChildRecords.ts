@@ -1,5 +1,14 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
+
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
 
 /**
  * Deletes (or detaches) every child row that references a ticket, so the ticket
@@ -23,12 +32,11 @@ export async function deleteTicketChildRecords(
   await deleteEntityTags(trx, ticketId, 'ticket');
 
   // Delete comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
-  const commentIds = await trx('comments')
-    .where({ ticket_id: ticketId, tenant })
+  const commentIds = await tenantScopedTable(trx, 'comments', tenant)
+    .where({ ticket_id: ticketId })
     .pluck('comment_id');
   if (commentIds.length > 0) {
-    await trx('comment_reactions')
-      .where({ tenant })
+    await tenantScopedTable(trx, 'comment_reactions', tenant)
       .whereIn('comment_id', commentIds)
       .delete();
   }
@@ -38,8 +46,7 @@ export async function deleteTicketChildRecords(
   // one of this ticket's comments must be removed first or the comments delete
   // below trips the constraint. Match on comment_id as well as ticket_id to
   // catch tokens whose ticket_id is null/stale but still point at a comment.
-  await trx('email_reply_tokens')
-    .where({ tenant })
+  await tenantScopedTable(trx, 'email_reply_tokens', tenant)
     .where((builder: Knex.QueryBuilder) => {
       builder.where('ticket_id', ticketId);
       if (commentIds.length > 0) {
@@ -48,21 +55,21 @@ export async function deleteTicketChildRecords(
     })
     .delete();
 
-  await trx('comments')
-    .where({ ticket_id: ticketId, tenant })
+  await tenantScopedTable(trx, 'comments', tenant)
+    .where({ ticket_id: ticketId })
     .delete();
 
-  await trx('ticket_resources')
-    .where({ ticket_id: ticketId, tenant })
+  await tenantScopedTable(trx, 'ticket_resources', tenant)
+    .where({ ticket_id: ticketId })
     .delete();
 
-  await trx('project_ticket_links')
-    .where({ ticket_id: ticketId, tenant })
+  await tenantScopedTable(trx, 'project_ticket_links', tenant)
+    .where({ ticket_id: ticketId })
     .delete();
 
   // Delete SLA notification tracking records (CitusDB doesn't support ON DELETE CASCADE)
-  await trx('sla_notifications_sent')
-    .where({ ticket_id: ticketId, tenant })
+  await tenantScopedTable(trx, 'sla_notifications_sent', tenant)
+    .where({ ticket_id: ticketId })
     .delete();
 
   // Detach SLA audit log rows from the ticket rather than deleting them.
@@ -76,8 +83,8 @@ export async function deleteTicketChildRecords(
     _detached_from_ticket_number: ticket.ticket_number ?? null,
     _detached_at: new Date().toISOString(),
   });
-  await trx('sla_audit_log')
-    .where({ ticket_id: ticketId, tenant })
+  await tenantScopedTable(trx, 'sla_audit_log', tenant)
+    .where({ ticket_id: ticketId })
     .update({
       ticket_id: null,
       event_data: trx.raw(
@@ -90,7 +97,7 @@ export async function deleteTicketChildRecords(
   // CASCADE). Unlike sla_audit_log, ticket_audit_logs.ticket_id is NOT NULL
   // and its FK has no ON DELETE action, so the rows must be removed before the
   // ticket itself can be deleted.
-  await trx('ticket_audit_logs')
-    .where({ ticket_id: ticketId, tenant })
+  await tenantScopedTable(trx, 'ticket_audit_logs', tenant)
+    .where({ ticket_id: ticketId })
     .delete();
 }

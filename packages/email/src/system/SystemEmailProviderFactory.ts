@@ -79,9 +79,11 @@ export class SystemEmailProviderFactory {
       requireTLS: process.env.EMAIL_REQUIRE_TLS === 'true'
     };
 
-    // Validate required fields
-    if (!config.host || !config.username || !config.password) {
-      throw new Error('Missing required SMTP configuration: host, username, and password are required');
+    // Only host is strictly required here. Credentials are optional so an
+    // unauthenticated relay works; SMTPEmailProvider validates the rest
+    // (including the "both-or-neither" credential rule).
+    if (!config.host) {
+      throw new Error('Missing required SMTP configuration: EMAIL_HOST is required');
     }
 
     const provider = new SMTPEmailProvider(providerId);

@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { observabilityLogger } from '@/lib/observability/logging';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
@@ -155,7 +156,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Log to unified extension audit table (pending status)
     const knex = await getAdminConnection();
-    const [auditRecord] = await knex('extension_audit_logs')
+    const auditLogs = tenantDb(knex, MASTER_BILLING_TENANT_ID).table('extension_audit_logs');
+    const [auditRecord] = await auditLogs
       .insert({
         tenant: MASTER_BILLING_TENANT_ID,
         event_type: 'tenant.create',
@@ -210,8 +212,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     // Update audit record with workflow ID
-    await knex('extension_audit_logs')
-      .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
+    await auditLogs
+      .where({ log_id: auditRecord.log_id })
       .update({
         workflow_id: workflowId,
         details: JSON.stringify({
@@ -236,8 +238,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const tenantResult = await Promise.race([result, timeoutPromise]) as TenantCreationResult;
 
       // Update audit with final result
-      await knex('extension_audit_logs')
-        .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
+      await auditLogs
+        .where({ log_id: auditRecord.log_id })
         .update({
           resource_id: tenantResult.tenantId || 'unknown',
           status: tenantResult.success !== false ? 'completed' : 'failed',
@@ -286,8 +288,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
 
       // Update audit to show workflow is still running
-      await knex('extension_audit_logs')
-        .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
+      await auditLogs
+        .where({ log_id: auditRecord.log_id })
         .update({
           status: 'running',
           details: JSON.stringify({

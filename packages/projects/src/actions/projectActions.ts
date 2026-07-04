@@ -28,7 +28,8 @@ import { getContactByContactNameId } from '@alga-psa/clients/actions/contact-act
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { z } from 'zod';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { createProjectSchema, updateProjectSchema, projectPhaseSchema } from '../schemas/project.schemas';
@@ -39,7 +40,7 @@ import {
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
 } from '@alga-psa/workflow-streams';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -79,6 +80,66 @@ const extendedUpdateProjectSchema = updateProjectSchema.extend({
   contact_name_id: data.contact_name_id || null
 }));
 
+type DbConnection = Knex | Knex.Transaction;
+
+function tenantScopedTable(
+  conn: DbConnection,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
+function tenantScopedDerivedTableSql(
+  facade: ReturnType<typeof tenantDb>,
+  tableName: string,
+  alias: string,
+): { subquery: Knex.QueryBuilder; sql: string; bindings: Knex.RawBinding[] } {
+  const subquery = facade
+    .subquery(tableName)
+    .select('*')
+    .as(alias);
+  const scoped = subquery.toSQL();
+
+  return {
+    subquery,
+    sql: `(${scoped.sql}) ${alias}`,
+    bindings: scoped.bindings as Knex.RawBinding[],
+  };
+}
+
+function tenantJoinSubquerySql(
+  facade: ReturnType<typeof tenantDb>,
+  conn: DbConnection,
+  subquery: Knex.QueryBuilder | Knex.Raw,
+  left: string | Knex.Raw,
+  right: string | Knex.Raw,
+  options: Parameters<ReturnType<typeof tenantDb>['tenantJoinSubquery']>[4]
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const fragmentSource = (conn as Knex)('__tenant_join_fragment__').select(conn.raw('1'));
+
+  facade.tenantJoinSubquery(
+    fragmentSource,
+    subquery as unknown as Knex.QueryBuilder,
+    left as unknown as string,
+    right as unknown as string,
+    options
+  );
+
+  const compiled = fragmentSource.toSQL();
+  const marker = ' from "__tenant_join_fragment__" ';
+  const markerIndex = compiled.sql.indexOf(marker);
+
+  if (markerIndex < 0) {
+    throw new Error('Unable to compile tenant join subquery SQL fragment');
+  }
+
+  return {
+    sql: compiled.sql.slice(markerIndex + marker.length),
+    bindings: compiled.bindings as Knex.RawBinding[],
+  };
+}
+
 async function checkPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<ActionPermissionError | null> {
     try {
         const hasPermissionResult = await hasPermission(user, resource, action, knexConnection);
@@ -102,8 +163,8 @@ async function getContactFullNameByContactNameId(params: {
     tenant: string;
     contactNameId: string;
 }): Promise<string | null> {
-    const row = await params.knexOrTrx('contacts')
-        .where({ tenant: params.tenant, contact_name_id: params.contactNameId })
+    const row = await tenantScopedTable(params.knexOrTrx, 'contacts', params.tenant)
+        .where({ contact_name_id: params.contactNameId })
         .first<{ full_name: string }>('full_name');
     return row?.full_name ?? null;
 }
@@ -131,8 +192,8 @@ async function resolveAuthorizationSubjectForUser(
   let roleIds = extractRoleIdsFromUser(user);
   if (roleIds.length === 0) {
     try {
-      const roleRows = await trx('user_roles')
-        .where({ tenant, user_id: user.user_id })
+      const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
+        .where({ user_id: user.user_id })
         .select<{ role_id: string }[]>('role_id');
       roleIds = roleRows.map((row) => row.role_id);
     } catch {
@@ -141,8 +202,8 @@ async function resolveAuthorizationSubjectForUser(
   }
 
   const [teamRows, managedRows] = await Promise.all([
-    trx('team_members').where({ tenant, user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-    trx('users').where({ tenant, reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
+    tenantScopedTable(trx, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
+    tenantScopedTable(trx, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
   ]);
 
   return {
@@ -251,8 +312,8 @@ async function resolveProjectIdForPhase(
   tenant: string,
   phaseId: string
 ): Promise<string | null> {
-  const row = await trx('project_phases')
-    .where({ tenant, phase_id: phaseId })
+  const row = await tenantScopedTable(trx, 'project_phases', tenant)
+    .where({ phase_id: phaseId })
     .first<{ project_id: string }>('project_id');
 
   return row?.project_id ?? null;
@@ -263,8 +324,8 @@ async function resolveProjectIdsForStatus(
   tenant: string,
   statusId: string
 ): Promise<string[]> {
-  const rows = await trx('project_status_mappings')
-    .where({ tenant, status_id: statusId })
+  const rows = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+    .where({ status_id: statusId })
     .select<{ project_id: string }[]>('project_id');
 
   return Array.from(new Set(rows.map((row) => row.project_id)));
@@ -274,10 +335,20 @@ export const getAllClientsForProjects = withAuth(async (_user, { tenant }): Prom
   const { knex: db } = await createTenantKnex();
 
   const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return trx('clients').select('*').where('tenant', tenant).orderBy('client_name', 'asc');
+    return tenantScopedTable(trx, 'clients', tenant).select('*').orderBy('client_name', 'asc');
   });
 
-  return clients as IClient[];
+  if (clients.length === 0) {
+    return [];
+  }
+
+  // Batch-resolve logo URLs once (no N+1) so the projects table can show real logos.
+  const logoUrlsMap = await getClientLogoUrlsBatch(clients.map((c: any) => c.client_id), tenant);
+
+  return clients.map((c: any) => ({
+    ...c,
+    logoUrl: logoUrlsMap.get(c.client_id) ?? null,
+  })) as IClient[];
 });
 
 export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[] | ActionPermissionError> => {
@@ -356,6 +427,37 @@ export const searchProjectListIds = withAuth(async (
   const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
+    const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');
+    const projectTasks = tenantScopedDerivedTableSql(scopedDb, 'project_tasks', 'pt');
+    const projectPhases = tenantScopedDerivedTableSql(scopedDb, 'project_phases', 'ph');
+    const projectTaskCommentJoin = tenantJoinSubquerySql(
+      scopedDb,
+      trx,
+      projectTasks.subquery,
+      trx.raw('??::text', ['pt.task_id']),
+      'si.parent_id',
+      {
+        type: 'left',
+        rootTenantColumn: 'si.tenant',
+        joinedTenantColumn: 'pt.tenant',
+        on: (join) => {
+          join.andOn('si.object_type', '=', trx.raw("'project_task_comment'"));
+        },
+      }
+    );
+    const projectPhaseJoin = tenantJoinSubquerySql(
+      scopedDb,
+      trx,
+      projectPhases.subquery,
+      'ph.phase_id',
+      'pt.phase_id',
+      {
+        type: 'left',
+        rootTenantColumn: 'pt.tenant',
+        joinedTenantColumn: 'ph.tenant',
+      }
+    );
     const result = await trx.raw<{ rows: Array<{ project_id: string }> }>(
       `
         WITH q AS (
@@ -372,17 +474,11 @@ export const searchProjectListIds = withAuth(async (
               WHEN si.object_type IN ('project_phase', 'project_task') THEN si.parent_id
               WHEN si.object_type = 'project_task_comment' THEN ph.project_id::text
             END AS project_id
-          FROM app_search_index si
+          FROM ${searchIndex.sql}
           CROSS JOIN q
-          LEFT JOIN project_tasks pt
-            ON si.object_type = 'project_task_comment'
-            AND pt.tenant = si.tenant
-            AND pt.task_id::text = si.parent_id
-          LEFT JOIN project_phases ph
-            ON ph.tenant = pt.tenant
-            AND ph.phase_id = pt.phase_id
-          WHERE si.tenant = ?::uuid
-            AND si.object_type = ANY(?::text[])
+          ${projectTaskCommentJoin.sql}
+          ${projectPhaseJoin.sql}
+          WHERE si.object_type = ANY(?::text[])
             AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
             AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
             AND (si.is_internal_only = false OR ?::boolean = true)
@@ -415,7 +511,9 @@ export const searchProjectListIds = withAuth(async (
         prefixTsquery,
         rawSearch,
         identifier,
-        tenant,
+        ...searchIndex.bindings,
+        ...projectTaskCommentJoin.bindings,
+        ...projectPhaseJoin.bindings,
         [...PROJECT_LIST_SEARCH_TYPES],
         ['project:read'],
         user.user_id,
@@ -430,8 +528,7 @@ export const searchProjectListIds = withAuth(async (
       return [];
     }
 
-    const matchedProjects = await trx('projects')
-      .where({ tenant })
+    const matchedProjects = await tenantScopedTable(trx, 'projects', tenant)
       .whereIn('project_id', projectIds)
       .select<IProject[]>('project_id', 'assigned_to', 'client_id');
     const authorizedProjects = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, matchedProjects);
@@ -457,33 +554,30 @@ export const getProjectsWithPhases = withAuth(async (
     if (denied) return denied;
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+      const statusMappingsQuery = tenantScopedTable(trx, 'project_status_mappings as psm', tenant);
+      db.tenantJoin(statusMappingsQuery, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+      db.tenantJoin(statusMappingsQuery, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+      statusMappingsQuery
+        .select(
+          'psm.project_status_mapping_id as mapping_id',
+          'psm.project_id',
+          'psm.phase_id',
+          trx.raw("COALESCE(psm.custom_name, s.name, ss.name) as name"),
+          trx.raw("COALESCE(s.is_closed, ss.is_closed, false) as is_closed"),
+          'psm.display_order'
+        )
+        .orderBy('psm.display_order');
+
       const [projects, phases, statusMappings] = await Promise.all([
-        trx('projects')
-          .where({ tenant })
+        tenantScopedTable(trx, 'projects', tenant)
           .select('project_id', 'project_name', 'is_inactive', 'client_id', 'assigned_to')
           .orderBy('project_name'),
-        trx('project_phases')
-          .where({ tenant })
+        tenantScopedTable(trx, 'project_phases', tenant)
           .select('phase_id', 'project_id', 'phase_name', 'wbs_code')
           .orderBy('wbs_code'),
         // Fetch all project status mappings with resolved names
-        trx('project_status_mappings as psm')
-          .leftJoin('statuses as s', function () {
-            this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
-          })
-          .leftJoin('standard_statuses as ss', function () {
-            this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-          })
-          .where('psm.tenant', tenant)
-          .select(
-            'psm.project_status_mapping_id as mapping_id',
-            'psm.project_id',
-            'psm.phase_id',
-            trx.raw("COALESCE(psm.custom_name, s.name, ss.name) as name"),
-            trx.raw("COALESCE(s.is_closed, ss.is_closed, false) as is_closed"),
-            'psm.display_order'
-          )
-          .orderBy('psm.display_order'),
+        statusMappingsQuery,
       ]);
 
       // Group phases by project
@@ -855,8 +949,8 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
         // Get the phase being moved
-        const phase = await trx('project_phases')
-            .where({ phase_id: phaseId, tenant })
+        const phase = await tenantScopedTable(trx, 'project_phases', tenant)
+            .where({ phase_id: phaseId })
             .select('project_id')
             .first();
 
@@ -870,16 +964,16 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
         let afterKey: string | null = null;
 
         if (beforePhaseId) {
-            const beforePhase = await trx('project_phases')
-                .where({ phase_id: beforePhaseId, tenant })
+            const beforePhase = await tenantScopedTable(trx, 'project_phases', tenant)
+                .where({ phase_id: beforePhaseId })
                 .select('order_key')
                 .first();
             beforeKey = beforePhase?.order_key || null;
         }
 
         if (afterPhaseId) {
-            const afterPhase = await trx('project_phases')
-                .where({ phase_id: afterPhaseId, tenant })
+            const afterPhase = await tenantScopedTable(trx, 'project_phases', tenant)
+                .where({ phase_id: afterPhaseId })
                 .select('order_key')
                 .first();
             afterKey = afterPhase?.order_key || null;
@@ -889,8 +983,8 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
             // Use OrderingService for key generation
             const newOrderKey = OrderingService.generateKeyForPosition(beforeKey, afterKey);
 
-            await trx('project_phases')
-                .where({ phase_id: phaseId, tenant })
+            await tenantScopedTable(trx, 'project_phases', tenant)
+                .where({ phase_id: phaseId })
                 .update({
                     order_key: newOrderKey,
                     updated_at: trx.fn.now()
@@ -910,12 +1004,12 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
             await regenerateOrderKeysForPhases(phase.project_id);
 
             // Try again with fresh order keys
-            const freshBeforePhase = beforePhaseId ? await trx('project_phases')
-                .where({ phase_id: beforePhaseId, tenant })
+            const freshBeforePhase = beforePhaseId ? await tenantScopedTable(trx, 'project_phases', tenant)
+                .where({ phase_id: beforePhaseId })
                 .select('order_key')
                 .first() : null;
-            const freshAfterPhase = afterPhaseId ? await trx('project_phases')
-                .where({ phase_id: afterPhaseId, tenant })
+            const freshAfterPhase = afterPhaseId ? await tenantScopedTable(trx, 'project_phases', tenant)
+                .where({ phase_id: afterPhaseId })
                 .select('order_key')
                 .first() : null;
 
@@ -924,8 +1018,8 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
 
             const newOrderKey = OrderingService.generateKeyForPosition(freshBeforeKey, freshAfterKey);
 
-            await trx('project_phases')
-                .where({ phase_id: phaseId, tenant })
+            await tenantScopedTable(trx, 'project_phases', tenant)
+                .where({ phase_id: phaseId })
                 .update({
                     order_key: newOrderKey,
                     updated_at: trx.fn.now()
@@ -1305,14 +1399,13 @@ export const deleteProject = withAuth(async (
 
             await deleteEntityTags(trx, projectId, 'project');
 
-            const phaseIds = await trx('project_phases')
-                .where({ project_id: projectId, tenant: tenantId })
+            const phaseIds = await tenantScopedTable(trx as Knex.Transaction, 'project_phases', tenantId)
+                .where({ project_id: projectId })
                 .pluck('phase_id');
 
             if (phaseIds.length > 0) {
-                const taskIds = await trx('project_tasks')
+                const taskIds = await tenantScopedTable(trx as Knex.Transaction, 'project_tasks', tenantId)
                     .whereIn('phase_id', phaseIds)
-                    .andWhere('tenant', tenantId)
                     .pluck('task_id');
 
                 if (taskIds.length > 0) {
@@ -1321,14 +1414,14 @@ export const deleteProject = withAuth(async (
             }
 
             // Clean up child records owned by the project
-            await trx('project_ticket_links').where({ project_id: projectId, tenant: tenantId }).delete();
-            await trx('email_reply_tokens').where({ project_id: projectId, tenant: tenantId }).delete();
+            await tenantScopedTable(trx as Knex.Transaction, 'project_ticket_links', tenantId).where({ project_id: projectId }).delete();
+            await tenantScopedTable(trx as Knex.Transaction, 'email_reply_tokens', tenantId).where({ project_id: projectId }).delete();
 
             // Drop every user's per-project "hidden kanban columns" preference for
             // this project — those rows reference this project by setting name and
             // would otherwise be orphaned once the project is gone.
-            await trx('user_preferences')
-                .where({ tenant: tenantId, setting_name: projectKanbanHiddenStatusesKey(projectId) })
+            await tenantScopedTable(trx as Knex.Transaction, 'user_preferences', tenantId)
+                .where({ setting_name: projectKanbanHiddenStatusesKey(projectId) })
                 .delete();
 
             await ProjectModel.delete(trx, tenantId, projectId);
@@ -1418,7 +1511,7 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
         let contact: { full_name: string } | undefined;
         if (project.contact_name_id) {
             const contactData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-                return await trx('contacts')
+                return await tenantDb(trx, tenant).table('contacts')
                     .where({ contact_name_id: project.contact_name_id })
                     .select('full_name')
                     .first();
@@ -1445,7 +1538,7 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
 async function getAllClientsForProjectsInternal(tenant: string): Promise<IClient[]> {
     const { knex: db } = await createTenantKnex();
     const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return trx('clients').select('*').where('tenant', tenant).orderBy('client_name', 'asc');
+        return tenantScopedTable(trx, 'clients', tenant).select('*').orderBy('client_name', 'asc');
     });
     return clients as IClient[];
 }
@@ -1516,10 +1609,10 @@ async function fetchStatusesForMappings(
 
     const [standardStatusRows, customStatusRows] = await Promise.all([
         standardIds.length > 0
-            ? trx<IStandardStatus>('standard_statuses').whereIn('standard_status_id', standardIds)
+            ? tenantDb(trx, tenant).table<IStandardStatus>('standard_statuses').whereIn('standard_status_id', standardIds)
             : [],
         customIds.length > 0
-            ? trx<IStatus>('statuses').whereIn('status_id', customIds).andWhere('tenant', tenant)
+            ? tenantScopedTable(trx, 'statuses', tenant).whereIn('status_id', customIds)
             : []
     ]);
 
@@ -1750,10 +1843,9 @@ async function resolveAllPhaseStatusesInternal(
     projectId: string,
     phases: IProjectPhase[]
 ): Promise<Record<string, ProjectStatus[]>> {
-    const allMappings = await trx<IProjectStatusMapping>('project_status_mappings')
+    const allMappings = await tenantScopedTable(trx, 'project_status_mappings', tenant)
         .where('project_id', projectId)
-        .andWhere('tenant', tenant)
-        .orderBy('display_order');
+        .orderBy('display_order') as IProjectStatusMapping[];
 
     // Split into per-phase groups and the project-level defaults (phase_id null).
     // Iteration order follows the display_order sort, so each group stays ordered.

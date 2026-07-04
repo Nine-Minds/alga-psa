@@ -8,14 +8,20 @@ import type {
   ImportContactResult,
   ITag,
 } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { deleteEntityWithValidation, isEnterprise, unparseCSV } from '@alga-psa/core';
+import { isEnterprise, unparseCSV } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
 import { createTag } from '@alga-psa/tags/actions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
-import { hasPermissionAsync } from '../../lib/authHelpers';
+import {
+  assertMspOrClientPortalOwnClientPermission,
+  assertMspPermission,
+  hasMspPermission,
+  isClientPortalUser,
+  isMspUser,
+} from '../../lib/authHelpers';
 import type { IBoard } from '@alga-psa/types';
 import { ContactModel, CreateContactInput, UpdateContactInput } from '@alga-psa/shared/models/contactModel';
 import { withAuth } from '@alga-psa/auth';
@@ -31,6 +37,14 @@ import {
   isValidContactCsvEmailValue,
   normalizeContactCsvEmailValue,
 } from '../../lib/contactCsvEmailFields';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
 
 function maybeUserActor(user: any) {
   const userId = user?.user_id;
@@ -97,8 +111,8 @@ async function cleanupEntraReferencesBeforeContactDelete(
     return;
   }
 
-  await trx('entra_contact_reconciliation_queue')
-    .where({ tenant: tenantId, resolved_contact_id: contactId })
+  await tenantScopedTable(trx, 'entra_contact_reconciliation_queue', tenantId)
+    .where({ resolved_contact_id: contactId })
     .update({
       resolved_contact_id: null,
       updated_at: trx.fn.now(),
@@ -107,7 +121,7 @@ async function cleanupEntraReferencesBeforeContactDelete(
 
 
 export const getContactByContactNameId = withAuth(async (
-  _user,
+  user,
   { tenant },
   contactNameId: string
 ): Promise<IContact | null> => {
@@ -117,6 +131,8 @@ export const getContactByContactNameId = withAuth(async (
     if (!contactNameId) {
       throw new Error('VALIDATION_ERROR: Contact ID is required');
     }
+
+    await assertMspPermission(user, 'contact', 'read', 'Permission denied: Cannot read contacts', db);
 
     // Fetch contact with client information
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => ContactModel.getContactById(contactNameId, tenant, trx));
@@ -128,6 +144,7 @@ export const getContactByContactNameId = withAuth(async (
     if (err instanceof Error) {
       const message = err.message;
       if (message.includes('VALIDATION_ERROR:') ||
+        message.includes('Permission denied:') ||
         message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
@@ -156,13 +173,11 @@ export const deleteContact = withAuth(async (
       throw new Error('VALIDATION_ERROR: Contact ID is required');
     }
 
-    if (!await hasPermissionAsync(user, 'contact', 'delete')) {
-      throw new Error('Permission denied: Cannot delete contacts');
-    }
+    await assertMspPermission(user, 'contact', 'delete', 'Permission denied: Cannot delete contacts', db);
 
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
-        .where({ contact_name_id: contactId, tenant })
+      return await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ contact_name_id: contactId })
         .first();
     });
 
@@ -181,34 +196,40 @@ export const deleteContact = withAuth(async (
       await deleteEntityTags(trx, contactId, 'contact');
 
       // Clean up child records owned by the contact
-      await trx('contact_phone_numbers').where({ contact_name_id: contactId, tenant: tenantId }).delete();
-      await trx('contact_additional_email_addresses').where({ contact_name_id: contactId, tenant: tenantId }).delete();
-      await trx('comments').where({ contact_id: contactId, tenant: tenantId }).delete();
-      await trx('portal_invitations').where({ contact_id: contactId, tenant: tenantId }).delete();
+      await tenantScopedTable(trx, 'contact_phone_numbers', tenantId).where({ contact_name_id: contactId }).delete();
+      await tenantScopedTable(trx, 'contact_additional_email_addresses', tenantId).where({ contact_name_id: contactId }).delete();
+      await tenantScopedTable(trx, 'comments', tenantId).where({ contact_id: contactId }).delete();
+      await tenantScopedTable(trx, 'portal_invitations', tenantId).where({ contact_id: contactId }).delete();
 
-      const contactRecord = await trx('contacts')
-        .where({ contact_name_id: contactId, tenant: tenantId })
+      // Unlink from any RMM org mapping using this contact as its default
+      // notification contact (no FK; Citus rejects ON DELETE SET NULL).
+      await tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)
+        .where({ default_contact_id: contactId })
+        .update({ default_contact_id: null });
+
+      const contactRecord = await tenantScopedTable(trx, 'contacts', tenantId)
+        .where({ contact_name_id: contactId })
         .select('notes_document_id')
         .first();
 
       if (contactRecord?.notes_document_id) {
-        await trx('document_block_content')
-          .where({ tenant: tenantId, document_id: contactRecord.notes_document_id })
+        await tenantScopedTable(trx, 'document_block_content', tenantId)
+          .where({ document_id: contactRecord.notes_document_id })
           .delete();
 
-        await trx('document_associations')
-          .where({ tenant: tenantId, document_id: contactRecord.notes_document_id })
+        await tenantScopedTable(trx, 'document_associations', tenantId)
+          .where({ document_id: contactRecord.notes_document_id })
           .delete();
 
-        await trx('documents')
-          .where({ tenant: tenantId, document_id: contactRecord.notes_document_id })
+        await tenantScopedTable(trx, 'documents', tenantId)
+          .where({ document_id: contactRecord.notes_document_id })
           .delete();
       }
 
       await cleanupEntraReferencesBeforeContactDelete(trx, tenantId, contactId);
 
-      const deleted = await trx('contacts')
-        .where({ contact_name_id: contactId, tenant: tenantId })
+      const deleted = await tenantScopedTable(trx, 'contacts', tenantId)
+        .where({ contact_name_id: contactId })
         .delete();
 
       if (!deleted || deleted === 0) {
@@ -305,24 +326,23 @@ export const getContactsEligibleForInvitation = withAuth(async (
 ): Promise<IContact[]> => {
   const { knex: db } = await createTenantKnex();
 
-  const canRead = await hasPermissionAsync(user, 'contact', 'read', db);
+  const canRead = await hasMspPermission(user, 'contact', 'read', db);
   if (!canRead) {
     throw new Error('Permission denied: Cannot read contacts');
   }
 
   try {
     const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const q = trx('contacts as c')
-        .leftJoin('users as u', function(this: Knex.JoinClause) {
-          this.on('u.contact_id', 'c.contact_name_id')
-            .andOn('u.tenant', 'c.tenant')
-            .andOn(trx.raw('u.user_type = ?', ['client']));
-        })
-        .leftJoin('clients as comp', function(this: Knex.JoinClause) {
-          this.on('c.client_id', 'comp.client_id')
-            .andOn('comp.tenant', 'c.tenant');
-        })
-        .where('c.tenant', tenant)
+      const scopedDb = tenantDb(trx, tenant);
+      const q = scopedDb.table('contacts as c');
+      scopedDb.tenantJoin(q, 'users as u', 'u.contact_id', 'c.contact_name_id', {
+        type: 'left',
+        on(join) {
+          join.andOn(trx.raw('u.user_type = ?', ['client']));
+        },
+      });
+      scopedDb.tenantJoin(q, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+      q
         .whereNull('u.user_id')
         .modify((qb: Knex.QueryBuilder) => {
           if (clientId) qb.andWhere('c.client_id', clientId);
@@ -357,9 +377,7 @@ export const addContact = withAuth(async (
 ): Promise<AddContactResult> => {
   const { knex: db } = await createTenantKnex();
 
-  if (!await hasPermissionAsync(user, 'contact', 'create')) {
-    throw new Error('Permission denied: Cannot create contacts');
-  }
+  await assertMspPermission(user, 'contact', 'create', 'Permission denied: Cannot create contacts', db);
 
   const createInput: CreateContactInput = {
     full_name: contactData.full_name || '',
@@ -445,19 +463,18 @@ export const listContactPhoneTypeSuggestions = withAuth(async (
 ): Promise<string[]> => {
   const { knex: db } = await createTenantKnex();
 
-  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+  if (!await hasMspPermission(user, 'contact', 'read', db)) {
     return [];
   }
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const rows = await trx('contact_phone_type_definitions')
-      .where({ tenant })
+    const rows = await tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)
       .orderBy('label', 'asc')
       .select('label');
 
     return rows
       .map((row: { label?: string | null }) => row.label?.trim() ?? '')
-      .filter((label): label is string => label.length > 0);
+      .filter((label: string): label is string => label.length > 0);
   });
 });
 
@@ -468,7 +485,7 @@ export const getCustomPhoneTypeUsageCount = withAuth(async (
 ): Promise<{ label: string; usageCount: number }> => {
   const { knex: db } = await createTenantKnex();
 
-  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+  if (!await hasMspPermission(user, 'contact', 'read', db)) {
     return { label: customTypeLabel, usageCount: 0 };
   }
 
@@ -484,7 +501,7 @@ export const getContactLastUsagePhoneTypes = withAuth(async (
 ): Promise<Array<{ contact_phone_type_id: string; label: string }>> => {
   const { knex: db } = await createTenantKnex();
 
-  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+  if (!await hasMspPermission(user, 'contact', 'read', db)) {
     return [];
   }
 
@@ -500,9 +517,7 @@ export const deleteOrphanedPhoneTypes = withAuth(async (
 ): Promise<number> => {
   const { knex: db } = await createTenantKnex();
 
-  if (!await hasPermissionAsync(user, 'contact', 'update')) {
-    throw new Error('Permission denied: Cannot manage phone types');
-  }
+  await assertMspPermission(user, 'contact', 'update', 'Permission denied: Cannot manage phone types', db);
 
   if (typeLabels.length === 0) return 0;
 
@@ -531,6 +546,8 @@ export const updateContact = withAuth(async (
       throw new Error('VALIDATION_ERROR: Contact ID is required for updates');
     }
 
+    await assertMspPermission(user, 'contact', 'update', 'Permission denied: Cannot update contacts', db);
+
     if (contactData.email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(contactData.email.trim())) {
@@ -538,8 +555,8 @@ export const updateContact = withAuth(async (
       }
 
       const existingContact = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('contacts')
-          .where({ email: contactData.email!.trim().toLowerCase(), tenant })
+        return await tenantScopedTable(trx, 'contacts', tenant)
+          .where({ email: contactData.email!.trim().toLowerCase() })
           .whereNot({ contact_name_id: contactData.contact_name_id })
           .first();
       });
@@ -551,8 +568,8 @@ export const updateContact = withAuth(async (
 
     if ('client_id' in contactData && contactData.client_id) {
       const client = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('clients')
-          .where({ client_id: contactData.client_id, tenant })
+        return await tenantScopedTable(trx, 'clients', tenant)
+          .where({ client_id: contactData.client_id })
           .first();
       });
 
@@ -569,8 +586,8 @@ export const updateContact = withAuth(async (
     ) {
       const inboundDestinationId = String(inboundDestinationIdRaw).trim();
       const destination = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('inbound_ticket_defaults')
-          .where({ id: inboundDestinationId, tenant })
+        return await tenantScopedTable(trx, 'inbound_ticket_defaults', tenant)
+          .where({ id: inboundDestinationId })
           .first();
       });
 
@@ -608,8 +625,8 @@ export const updateContact = withAuth(async (
       }, tenant, trx);
 
       if (contactData.is_inactive === true) {
-        await trx('users')
-          .where({ contact_id: contactData.contact_name_id, tenant, user_type: 'client' })
+        await tenantScopedTable(trx, 'users', tenant)
+          .where({ contact_id: contactData.contact_name_id, user_type: 'client' })
           .update({ is_inactive: true });
       }
 
@@ -678,6 +695,7 @@ export const updateContact = withAuth(async (
       if (message.includes('VALIDATION_ERROR:') ||
         message.includes('EMAIL_EXISTS:') ||
         message.includes('FOREIGN_KEY_ERROR:') ||
+        message.includes('Permission denied:') ||
         message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
@@ -701,7 +719,7 @@ export const updateContact = withAuth(async (
 });
 
 export const updateContactsForClient = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
   updateData: Partial<IContact>
@@ -713,9 +731,11 @@ export const updateContactsForClient = withAuth(async (
       throw new Error('VALIDATION_ERROR: Client ID is required');
     }
 
+    await assertMspPermission(user, 'contact', 'update', 'Permission denied: Cannot update contacts', db);
+
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('clients')
-        .where({ client_id: clientId, tenant })
+      return await tenantScopedTable(trx, 'clients', tenant)
+        .where({ client_id: clientId })
         .first();
     });
 
@@ -775,8 +795,8 @@ export const updateContactsForClient = withAuth(async (
     }, {});
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const updated = await trx('contacts')
-        .where({ client_id: clientId, tenant })
+      const updated = await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ client_id: clientId })
         .update({
           ...sanitizedData,
           updated_at: new Date().toISOString()
@@ -794,6 +814,7 @@ export const updateContactsForClient = withAuth(async (
       if (message.includes('VALIDATION_ERROR:') ||
         message.includes('EMAIL_EXISTS:') ||
         message.includes('FOREIGN_KEY_ERROR:') ||
+        message.includes('Permission denied:') ||
         message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
@@ -912,15 +933,13 @@ async function findExistingContactByImportedEmails(
     return undefined;
   }
 
-  const directMatches = await trx('contacts')
+  const directMatches = await tenantScopedTable(trx, 'contacts', tenant)
     .select('contact_name_id')
-    .whereIn('email', emails)
-    .andWhere('tenant', tenant);
+    .whereIn('email', emails);
 
-  const additionalMatches = await trx('contact_additional_email_addresses')
+  const additionalMatches = await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
     .select('contact_name_id')
-    .whereIn('normalized_email_address', emails)
-    .andWhere('tenant', tenant);
+    .whereIn('normalized_email_address', emails);
 
   const contactIds = [...new Set([
     ...directMatches.map((row: { contact_name_id: string }) => row.contact_name_id),
@@ -958,6 +977,11 @@ export const importContactsFromCSV = withAuth(async (
 ): Promise<ImportContactResult[]> => {
   const { knex: db } = await createTenantKnex();
 
+  await assertMspPermission(user, 'contact', 'create', 'Permission denied: Cannot create contacts', db);
+  if (updateExisting && !await hasMspPermission(user, 'contact', 'update', db)) {
+    throw new Error('Permission denied: Cannot update contacts');
+  }
+
   try {
     if (!contactsData || contactsData.length === 0) {
       throw new Error('VALIDATION_ERROR: No contact data provided');
@@ -982,8 +1006,8 @@ export const importContactsFromCSV = withAuth(async (
           }
 
           if (contactData.client_id) {
-            const client = await trx('clients')
-              .where({ client_id: contactData.client_id, tenant })
+            const client = await tenantScopedTable(trx, 'clients', tenant)
+              .where({ client_id: contactData.client_id })
               .first();
 
             if (!client) {
@@ -1002,11 +1026,10 @@ export const importContactsFromCSV = withAuth(async (
           matchedByEmail = Boolean(existingContact);
 
           if (!existingContact) {
-            const existingContactRow = await trx('contacts')
+            const existingContactRow = await tenantScopedTable(trx, 'contacts', tenant)
               .select('contact_name_id')
               .where({
                 full_name: contactData.full_name.trim(),
-                tenant,
                 client_id: contactData.client_id
               })
               .first();
@@ -1095,8 +1118,8 @@ export const importContactsFromCSV = withAuth(async (
 
             if (contactData.tags !== undefined) {
               try {
-                await trx('tag_mappings')
-                  .where({ tagged_id: savedContact.contact_name_id, tagged_type: 'contact', tenant })
+                await tenantScopedTable(trx, 'tag_mappings', tenant)
+                  .where({ tagged_id: savedContact.contact_name_id, tagged_type: 'contact' })
                   .delete();
 
                 if (contactData.tags) {
@@ -1225,11 +1248,13 @@ export const importContactsFromCSV = withAuth(async (
 });
 
 export const checkExistingEmails = withAuth(async (
-  _user,
+  user,
   { tenant },
   emails: string[]
 ): Promise<string[]> => {
   const { knex: db } = await createTenantKnex();
+
+  await assertMspPermission(user, 'contact', 'read', 'Permission denied: Cannot read contacts', db);
 
   try {
     if (!emails || emails.length === 0) {
@@ -1247,15 +1272,13 @@ export const checkExistingEmails = withAuth(async (
     }
 
     const existingEmails = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const primaryEmails = await trx('contacts')
+      const primaryEmails = await tenantScopedTable(trx, 'contacts', tenant)
         .select('email')
-        .whereIn('email', sanitizedEmails)
-        .andWhere('tenant', tenant);
+        .whereIn('email', sanitizedEmails);
 
-      const additionalEmails = await trx('contact_additional_email_addresses')
+      const additionalEmails = await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
         .select('normalized_email_address')
-        .whereIn('normalized_email_address', sanitizedEmails)
-        .andWhere('tenant', tenant);
+        .whereIn('normalized_email_address', sanitizedEmails);
 
       return [
         ...primaryEmails.map((contact: { email: string }) => contact.email),
@@ -1282,17 +1305,26 @@ export const checkExistingEmails = withAuth(async (
 });
 
 export const getContactByEmail = withAuth(async (
-  _user,
+  user,
   { tenant },
   email: string,
   clientId: string
 ) => {
   try {
     const { knex } = await createTenantKnex();
+    await assertMspOrClientPortalOwnClientPermission(
+      user,
+      tenant,
+      clientId,
+      'contact',
+      'read',
+      'Permission denied: Cannot read contacts',
+      knex
+    );
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const existingContact = await trx('contacts')
-        .where({ email: email.toLowerCase(), client_id: clientId, tenant })
+      const existingContact = await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ email: email.toLowerCase(), client_id: clientId })
         .first<{ contact_name_id: string }>();
 
       if (!existingContact) {
@@ -1314,7 +1346,7 @@ export const getContactByEmail = withAuth(async (
  * @deprecated Use createOrFindContactByEmail instead for better duplicate handling
  */
 export const createClientContact = withAuth(async (
-  _user,
+  user,
   { tenant },
   {
     clientId,
@@ -1340,10 +1372,11 @@ export const createClientContact = withAuth(async (
 ) => {
   try {
     const { knex } = await createTenantKnex();
+    await assertMspPermission(user, 'contact', 'create', 'Permission denied: Cannot create contacts', knex);
 
     const existingContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
-        .where({ email: email.trim().toLowerCase(), tenant })
+      return await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ email: email.trim().toLowerCase() })
         .first();
     });
 
@@ -1381,16 +1414,21 @@ export const updateContactPortalAdminStatus = withAuth(async (
   isPortalAdmin: boolean
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    const hasUpdatePermission = await hasPermissionAsync(user, 'client', 'update');
-    if (!hasUpdatePermission) {
-      throw new Error('You do not have permission to update client settings');
-    }
-
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const updated = await trx('contacts')
-        .where({ contact_name_id: contactId, tenant })
+      await resolveContactAndVerifyPermission(
+        user,
+        trx,
+        tenant,
+        contactId,
+        'user',
+        'update',
+        'You do not have permission to update client users'
+      );
+
+      const updated = await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ contact_name_id: contactId })
         .update({
           is_client_admin: isPortalAdmin,
           updated_at: new Date().toISOString()
@@ -1420,32 +1458,35 @@ export const getUserByContactId = withAuth(async (
   contactId: string
 ): Promise<{ user: any | null; error?: string }> => {
   try {
-    const hasReadPermission = await hasPermissionAsync(user, 'client', 'read');
-    if (!hasReadPermission) {
-      throw new Error('You do not have permission to view client information');
-    }
-
     const { knex } = await createTenantKnex();
 
     const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const foundUser = await trx('users')
-        .where({ contact_id: contactId, tenant: tenant, user_type: 'client' })
+      await resolveContactAndVerifyPermission(
+        user,
+        trx,
+        tenant,
+        contactId,
+        'user',
+        'read',
+        'You do not have permission to view client users'
+      );
+
+      const foundUser = await tenantScopedTable(trx, 'users', tenant)
+        .where({ contact_id: contactId, user_type: 'client' })
         .first();
 
       if (!foundUser) {
         return null;
       }
 
-      const roles = await trx('user_roles')
+      const scopedDb = tenantDb(trx, tenant);
+      const rolesQuery = scopedDb.table('user_roles')
         .select('roles.role_id', 'roles.role_name')
-        .join('roles', function(this: Knex.JoinClause) {
-          this.on('user_roles.role_id', 'roles.role_id')
-            .andOn('roles.tenant', trx.raw('?', [tenant]));
-        })
         .where({
-          'user_roles.user_id': foundUser.user_id,
-          'user_roles.tenant': tenant
+          'user_roles.user_id': foundUser.user_id
         });
+      scopedDb.tenantJoin(rolesQuery, 'roles', 'user_roles.role_id', 'roles.role_id');
+      const roles = await rolesQuery;
 
       return {
         ...foundUser,
@@ -1474,6 +1515,8 @@ type VisibilityGroupListItem = {
   board_count: number;
 };
 
+type VisibilityGroupRow = Pick<VisibilityGroupListItem, 'group_id' | 'name' | 'description'>;
+
 type VisibilityGroupPayload = {
   name: string;
   description?: string | null;
@@ -1485,8 +1528,8 @@ async function resolveContactClientId(
   tenant: string,
   contactId: string
 ): Promise<string> {
-  const contact = await trx('contacts')
-    .where({ tenant, contact_name_id: contactId })
+  const contact = await tenantScopedTable(trx, 'contacts', tenant)
+    .where({ contact_name_id: contactId })
     .first('contact_name_id', 'client_id');
 
   if (!contact?.client_id) {
@@ -1496,18 +1539,64 @@ async function resolveContactClientId(
   return contact.client_id;
 }
 
+async function getClientPortalAdminClientId(
+  user: any,
+  trx: Knex.Transaction,
+  tenant: string
+): Promise<string> {
+  if (!isClientPortalUser(user) || !user.contact_id) {
+    throw new Error('Permission denied: Client portal admin access is required');
+  }
+
+  const actorContact = await tenantScopedTable(trx, 'contacts', tenant)
+    .where({
+      contact_name_id: user.contact_id
+    })
+    .select('client_id', 'is_client_admin')
+    .first();
+
+  if (!actorContact?.is_client_admin || !actorContact.client_id) {
+    throw new Error('Permission denied: Client portal admin access is required');
+  }
+
+  return actorContact.client_id;
+}
+
 async function resolveContactAndVerifyPermission(
   user: any,
   trx: Knex.Transaction,
   tenant: string,
-  contactId: string
+  contactId: string,
+  resource: string = 'contact',
+  action: string = 'update',
+  message: string = 'Permission denied: Cannot update contacts'
 ): Promise<string> {
-  const hasUpdatePermission = await hasPermissionAsync(user, 'contact', 'update');
-  if (!hasUpdatePermission) {
-    throw new Error('Permission denied: Cannot update contacts');
+  if (isMspUser(user)) {
+    await assertMspPermission(user, resource, action, message, trx);
+    return resolveContactClientId(trx, tenant, contactId);
   }
 
-  return resolveContactClientId(trx, tenant, contactId);
+  if (!isClientPortalUser(user)) {
+    throw new Error(message);
+  }
+
+  const actorClientId = await getClientPortalAdminClientId(user, trx, tenant);
+  await assertMspOrClientPortalOwnClientPermission(
+    user,
+    tenant,
+    actorClientId,
+    resource,
+    action,
+    message,
+    trx
+  );
+
+  const targetClientId = await resolveContactClientId(trx, tenant, contactId);
+  if (targetClientId !== actorClientId) {
+    throw new Error('Cannot manage contacts for another client');
+  }
+
+  return targetClientId;
 }
 
 async function ensureContactPortalGroupsScope(
@@ -1516,8 +1605,8 @@ async function ensureContactPortalGroupsScope(
   clientId: string,
   groupId: string
 ): Promise<void> {
-  const group = await trx('client_portal_visibility_groups')
-    .where({ tenant, client_id: clientId, group_id: groupId })
+  const group = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
+    .where({ client_id: clientId, group_id: groupId })
     .first('group_id');
 
   if (!group) {
@@ -1536,14 +1625,13 @@ export const getClientPortalVisibilityGroupsForContact = withAuth(async (
     return withTransaction(knex, async (trx: Knex.Transaction) => {
       const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
 
-      const groups = await trx('client_portal_visibility_groups')
-        .where({ tenant, client_id: clientId })
+      const groups = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
+        .where({ client_id: clientId })
         .select('group_id', 'name', 'description')
-        .orderBy('name');
+        .orderBy('name') as VisibilityGroupRow[];
 
       const boardCounts = groups.length
-        ? await trx('client_portal_visibility_group_boards')
-          .where({ tenant })
+        ? await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
           .whereIn('group_id', groups.map((group) => group.group_id))
           .count('board_id as board_count')
           .select('group_id')
@@ -1580,8 +1668,7 @@ export const getClientPortalVisibilityBoardsByClient = withAuth(async (
     return withTransaction(knex, async (trx: Knex.Transaction) => {
       await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
 
-      return trx('boards')
-        .where({ tenant })
+      return tenantScopedTable(trx, 'boards', tenant)
         .andWhere('is_inactive', false)
         .select('board_id', 'board_name');
     });
@@ -1603,17 +1690,17 @@ export const getClientPortalVisibilityGroupById = withAuth(async (
     return withTransaction(knex, async (trx: Knex.Transaction) => {
       const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
 
-      const group = await trx('client_portal_visibility_groups')
-        .where({ tenant, client_id: clientId, group_id: groupId })
+      const group = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
+        .where({ client_id: clientId, group_id: groupId })
         .first('group_id', 'name', 'description');
 
       if (!group) {
         throw new Error('Visibility group not found');
       }
 
-      const rows = await trx('client_portal_visibility_group_boards')
-        .where({ tenant, group_id: groupId })
-        .select('board_id');
+      const rows = await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
+        .where({ group_id: groupId })
+        .select('board_id') as Array<{ board_id: string }>;
 
       return {
         ...group,
@@ -1635,8 +1722,7 @@ async function ensureBoardsAreActiveInTenant(
     return;
   }
 
-  const validBoardCount = await trx('boards')
-    .where({ tenant })
+  const validBoardCount = await tenantScopedTable(trx, 'boards', tenant)
     .andWhere('is_inactive', false)
     .whereIn('board_id', boardIds)
     .count('* as count')
@@ -1657,16 +1743,15 @@ async function ensureBoardsAreActiveOrAlreadyAssignedToGroup(
     return;
   }
 
-  const activeRows = await trx('boards')
-    .where({ tenant })
+  const activeRows = await tenantScopedTable(trx, 'boards', tenant)
     .andWhere('is_inactive', false)
     .whereIn('board_id', boardIds)
-    .select('board_id');
+    .select('board_id') as Array<{ board_id: string }>;
 
-  const existingMembershipRows = await trx('client_portal_visibility_group_boards')
-    .where({ tenant, group_id: groupId })
+  const existingMembershipRows = await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
+    .where({ group_id: groupId })
     .whereIn('board_id', boardIds)
-    .select('board_id');
+    .select('board_id') as Array<{ board_id: string }>;
 
   const allowedBoardIds = new Set<string>([
     ...activeRows.map((row) => row.board_id),
@@ -1697,7 +1782,7 @@ export const createClientPortalVisibilityGroupForContact = withAuth(async (
 
     await ensureBoardsAreActiveInTenant(trx, tenant, boardIds);
 
-    const [group] = await trx('client_portal_visibility_groups')
+    const [group] = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
       .insert({
         tenant,
         client_id: clientId,
@@ -1711,7 +1796,7 @@ export const createClientPortalVisibilityGroupForContact = withAuth(async (
     }
 
     if (boardIds.length > 0) {
-      await trx('client_portal_visibility_group_boards')
+      await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
         .insert(boardIds.map((boardId) => ({
           tenant,
           group_id: group.group_id,
@@ -1741,8 +1826,8 @@ export const updateClientPortalVisibilityGroupForContact = withAuth(async (
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
 
-    const existing = await trx('client_portal_visibility_groups')
-      .where({ tenant, client_id: clientId, group_id: groupId })
+    const existing = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
+      .where({ client_id: clientId, group_id: groupId })
       .first('group_id');
 
     if (!existing) {
@@ -1751,20 +1836,20 @@ export const updateClientPortalVisibilityGroupForContact = withAuth(async (
 
     await ensureBoardsAreActiveOrAlreadyAssignedToGroup(trx, tenant, groupId, boardIds);
 
-    await trx('client_portal_visibility_groups')
-      .where({ tenant, group_id: groupId })
+    await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
+      .where({ group_id: groupId })
       .update({
         name,
         description: input.description?.trim() || null,
         updated_at: new Date().toISOString()
       });
 
-    await trx('client_portal_visibility_group_boards')
-      .where({ tenant, group_id: groupId })
+    await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
+      .where({ group_id: groupId })
       .delete();
 
     if (boardIds.length > 0) {
-      await trx('client_portal_visibility_group_boards')
+      await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
         .insert(boardIds.map((boardId) => ({
           tenant,
           group_id: groupId,
@@ -1785,16 +1870,16 @@ export const deleteClientPortalVisibilityGroupForContact = withAuth(async (
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
 
-    const existing = await trx('client_portal_visibility_groups')
-      .where({ tenant, client_id: clientId, group_id: groupId })
+    const existing = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
+      .where({ client_id: clientId, group_id: groupId })
       .first('group_id');
 
     if (!existing) {
       throw new Error('Visibility group not found');
     }
 
-    const assignedCount = await trx('contacts')
-      .where({ tenant, client_id: clientId, portal_visibility_group_id: groupId })
+    const assignedCount = await tenantScopedTable(trx, 'contacts', tenant)
+      .where({ client_id: clientId, portal_visibility_group_id: groupId })
       .count('contact_name_id as count')
       .first();
 
@@ -1802,12 +1887,12 @@ export const deleteClientPortalVisibilityGroupForContact = withAuth(async (
       throw new Error('Cannot delete visibility group while it is assigned to contacts');
     }
 
-    await trx('client_portal_visibility_group_boards')
-      .where({ tenant, group_id: groupId })
+    await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
+      .where({ group_id: groupId })
       .delete();
 
-    await trx('client_portal_visibility_groups')
-      .where({ tenant, group_id: groupId })
+    await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
+      .where({ group_id: groupId })
       .delete();
   });
 });
@@ -1827,8 +1912,8 @@ export const assignClientPortalVisibilityGroupToContact = withAuth(async (
       await ensureContactPortalGroupsScope(trx, tenant, clientId, groupId);
     }
 
-    await trx('contacts')
-      .where({ tenant, contact_name_id: contactId })
+    await tenantScopedTable(trx, 'contacts', tenant)
+      .where({ contact_name_id: contactId })
       .update({
         portal_visibility_group_id: groupId,
         updated_at: new Date().toISOString()

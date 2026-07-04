@@ -17,6 +17,7 @@ import { createTenantKnex } from '../../db';
 import { formatBlockNoteContent, convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import { isValidEmail } from '@alga-psa/core';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
@@ -117,6 +118,68 @@ async function resolveProjectLinks(
   return buildProjectLinks(ctx, projectId);
 }
 
+async function fetchProjectForEmail(
+  db: Knex,
+  tenantId: string,
+  projectId: string
+): Promise<Record<string, any> | undefined> {
+  const scopedDb = tenantDb(db, tenantId);
+  const query = scopedDb.table('projects as p')
+    .select(
+      'p.*',
+      'dcl.email as client_email',
+      'c.client_name',
+      's.name as status_name',
+      'u.first_name as manager_first_name',
+      'u.last_name as manager_last_name',
+      'u.email as assigned_user_email',
+      'ct.email as contact_email'
+    );
+
+  scopedDb.tenantJoin(query, 'clients as c', 'c.client_id', 'p.client_id', { type: 'left' });
+  scopedDb.tenantJoin(query, 'client_locations as dcl', 'dcl.client_id', 'p.client_id', {
+    type: 'left',
+    on(join) {
+      join
+        .andOn('dcl.is_default', '=', db.raw('true'))
+        .andOn('dcl.is_active', '=', db.raw('true'));
+    },
+  });
+  scopedDb.tenantJoin(query, 'statuses as s', 's.status_id', 'p.status', { type: 'left' });
+  scopedDb.tenantJoin(query, 'users as u', 'u.user_id', 'p.assigned_to', {
+    type: 'left',
+    on(join) {
+      join.andOn('u.is_inactive', '=', db.raw('false'));
+    },
+  });
+  scopedDb.tenantJoin(query, 'contacts as ct', 'ct.contact_name_id', 'p.contact_name_id', { type: 'left' });
+
+  return query
+    .where('p.project_id', projectId)
+    .first();
+}
+
+async function fetchTaskResourceEmails(
+  db: Knex,
+  tenantId: string,
+  taskId: string
+): Promise<Array<{ email?: string | null; user_id?: string | null }>> {
+  const scopedDb = tenantDb(db, tenantId);
+  const query = scopedDb.table('task_resources as tr')
+    .select({ email: 'u.email', user_id: 'u.user_id' });
+
+  scopedDb.tenantJoin(query, 'users as u', 'u.user_id', 'tr.additional_user_id', {
+    type: 'left',
+    on(join) {
+      join.andOn('u.is_inactive', '=', db.raw('false'));
+    },
+  });
+
+  return query
+    .where('tr.task_id', taskId)
+    .whereNotNull('tr.additional_user_id');
+}
+
 /**
  * Wrapper function that checks notification preferences before sending email
  * @param params - Same params as sendEventEmail
@@ -130,11 +193,10 @@ async function sendNotificationIfEnabled(
 ): Promise<void> {
   try {
     const { knex } = await createTenantKnex();
+    const scopedDb = tenantDb(knex, params.tenantId);
 
     // 1. Check global notification settings
-    const settings = await knex('notification_settings')
-      .where({ tenant: params.tenantId })
-      .first();
+    const settings = await scopedDb.table('notification_settings').first();
 
     if (settings && !settings.is_enabled) {
       logger.info('[ProjectEmailSubscriber] Notifications disabled globally for tenant:', {
@@ -146,7 +208,7 @@ async function sendNotificationIfEnabled(
     }
 
     // 2. Look up notification subtype ID
-    const subtype = await knex('notification_subtypes')
+    const subtype = await scopedDb.table('notification_subtypes')
       .where({ name: subtypeName })
       .first();
 
@@ -161,8 +223,8 @@ async function sendNotificationIfEnabled(
     }
 
     // 3. Check tenant-specific subtype setting
-    const subtypeSetting = await knex('tenant_notification_subtype_settings')
-      .where({ tenant: params.tenantId, subtype_id: subtype.id })
+    const subtypeSetting = await scopedDb.table('tenant_notification_subtype_settings')
+      .where({ subtype_id: subtype.id })
       .first();
 
     const isSubtypeEnabled = subtypeSetting?.is_enabled ?? true;
@@ -176,8 +238,8 @@ async function sendNotificationIfEnabled(
     }
 
     // 4. Check tenant-specific category setting
-    const categorySetting = await knex('tenant_notification_category_settings')
-      .where({ tenant: params.tenantId, category_id: subtype.category_id })
+    const categorySetting = await scopedDb.table('tenant_notification_category_settings')
+      .where({ category_id: subtype.category_id })
       .first();
 
     const isCategoryEnabled = categorySetting?.is_enabled ?? true;
@@ -193,9 +255,8 @@ async function sendNotificationIfEnabled(
     // 5. For internal users, check user preferences and rate limiting
     if (recipientUserId) {
       // Check user preferences
-      const preference = await knex('user_notification_preferences')
+      const preference = await scopedDb.table('user_notification_preferences')
         .where({
-          tenant: params.tenantId,
           user_id: recipientUserId,
           subtype_id: subtype.id
         })
@@ -223,7 +284,7 @@ async function sendNotificationIfEnabled(
     // 7. Log the notification (only for internal users with userId)
     if (recipientUserId && subtype) {
       try {
-        await knex('notification_logs').insert({
+        await scopedDb.table('notification_logs').insert({
           tenant: params.tenantId,
           user_id: recipientUserId,
           subtype_id: subtype.id,
@@ -317,7 +378,7 @@ function renderChangeItemHtml(fieldLabel: string, oldValue: string | null, newVa
 /**
  * Format changes record into an HTML fragment for use in the "Changes Made" email box.
  */
-async function formatChanges(db: any, changes: Record<string, unknown>): Promise<string> {
+async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string): Promise<string> {
   const items = await Promise.all(
     Object.entries(changes).map(async ([field, value]) => {
       const fieldLabel = formatFieldName(field);
@@ -330,18 +391,18 @@ async function formatChanges(db: any, changes: Record<string, unknown>): Promise
         };
 
         if (from !== undefined && to !== undefined) {
-          const fromValue = await resolveValue(db, field, from);
-          const toValue = await resolveValue(db, field, to);
+          const fromValue = await resolveValue(db, field, from, tenantId);
+          const toValue = await resolveValue(db, field, to, tenantId);
           return renderChangeItemHtml(fieldLabel, fromValue, toValue);
         }
 
         if (previous !== undefined && newValue !== undefined) {
-          const fromValue = await resolveValue(db, field, previous);
-          const toValue = await resolveValue(db, field, newValue);
+          const fromValue = await resolveValue(db, field, previous, tenantId);
+          const toValue = await resolveValue(db, field, newValue, tenantId);
           return renderChangeItemHtml(fieldLabel, fromValue, toValue);
         }
       }
-      const resolvedValue = await resolveValue(db, field, value);
+      const resolvedValue = await resolveValue(db, field, value, tenantId);
       return renderChangeItemHtml(fieldLabel, null, resolvedValue);
     })
   );
@@ -354,14 +415,16 @@ async function formatChanges(db: any, changes: Record<string, unknown>): Promise
 /**
  * Resolve field values to human-readable names
  */
-async function resolveValue(db: any, field: string, value: unknown): Promise<string> {
+async function resolveValue(db: any, field: string, value: unknown, tenantId: string): Promise<string> {
   if (value === null || value === undefined) {
     return 'None';
   }
 
+  const scopedDb = tenantDb(db, tenantId);
+
   switch (field) {
     case 'status':
-      const status = await db('statuses')
+      const status = await scopedDb.table('statuses')
         .where('status_id', value)
         .first();
       return status?.name || String(value);
@@ -370,7 +433,7 @@ async function resolveValue(db: any, field: string, value: unknown): Promise<str
     case 'assignedTo':
     case 'updated_by':
     case 'closed_by':
-      const user = await db('users')
+      const user = await scopedDb.table('users')
         .where({
           user_id: value,
           is_inactive: false
@@ -380,14 +443,14 @@ async function resolveValue(db: any, field: string, value: unknown): Promise<str
 
     case 'client_id':
     case 'clientId':
-      const client = await db('clients')
+      const client = await scopedDb.table('clients')
         .where('client_id', value)
         .first();
       return client ? client.client_name : String(value);
 
       case 'contact_name_id':
       case 'contactNameId':
-        const contact_name = await db('contacts')
+        const contact_name = await scopedDb.table('contacts')
           .where('contact_name_id', value)
           .first();
         return contact_name ? contact_name.full_name : String(value);
@@ -470,56 +533,12 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       tenantId
     });
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db } = await createTenantKnex();
     
     logger.info('[ProjectEmailSubscriber] Fetching project details');
     
     // Get project details with debug logging
-    const query = db('projects as p')
-      .where('p.tenant', tenant!)
-      .select(
-        'p.*',
-        'dcl.email as client_email',
-        'c.client_name',
-        's.name as status_name',
-        'u.first_name as manager_first_name',
-        'u.last_name as manager_last_name',
-        'u.email as assigned_user_email',
-        'ct.email as contact_email'
-      )
-      .leftJoin('clients as c', function() {
-        this.on('c.client_id', '=', 'p.client_id')
-            .andOn('c.tenant', '=', 'p.tenant');
-      })
-      .leftJoin('client_locations as dcl', function() {
-        this.on('dcl.client_id', '=', 'p.client_id')
-            .andOn('dcl.tenant', '=', 'p.tenant')
-            .andOn('dcl.is_default', '=', db.raw('true'))
-            .andOn('dcl.is_active', '=', db.raw('true'));
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('s.status_id', '=', 'p.status')
-            .andOn('s.tenant', '=', 'p.tenant');
-      })
-      .leftJoin('users as u', function() {
-        this.on('u.user_id', '=', 'p.assigned_to')
-            .andOn('u.tenant', '=', 'p.tenant')
-            .andOn('u.is_inactive', '=', db.raw('false'));
-      })
-      .leftJoin('contacts as ct', function() {
-        this.on('ct.contact_name_id', '=', 'p.contact_name_id')
-          .andOn('ct.tenant', '=', 'p.tenant');
-      })
-      .where('p.project_id', payload.projectId)
-      .andWhere('p.tenant', tenantId);  // Add explicit tenant filter on main table
-
-    // Log the query for debugging
-    logger.info('[ProjectEmailSubscriber] Project query:', {
-      sql: query.toString(),
-      bindings: query.toSQL().bindings
-    });
-
-    const project = await query.first();
+    const project = await fetchProjectForEmail(db, tenantId, payload.projectId);
 
     // Log the project details for debugging
     logger.info('[ProjectEmailSubscriber] Project details:', {
@@ -532,10 +551,9 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
 
     // If contact exists but email is missing, check the contact directly
     if (project?.contact_name_id && !project.contact_email) {
-      const contact = await db('contacts')
+      const contact = await tenantDb(db, tenantId).table('contacts')
         .where({
           contact_name_id: project.contact_name_id,
-          tenant: tenant!
         })
         .first();
       logger.info('[ProjectEmailSubscriber] Direct contact lookup:', {
@@ -676,10 +694,9 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
   })();
 
   if (statusValue) {
-    const { knex: db, tenant } = await createTenantKnex();
-    const status = await db('statuses')
+    const { knex: db } = await createTenantKnex();
+    const status = await tenantDb(db, tenantId).table('statuses')
       .where('status_id', statusValue)
-      .andWhere('tenant', tenant!)
       .first();
     
     if (status?.is_closed) {
@@ -697,54 +714,10 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
   }
 
   try {
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db } = await createTenantKnex();
     
     // Get project details with debug logging
-    const query = db('projects as p')
-      .where('p.tenant', tenant!)
-      .select(
-        'p.*',
-        'dcl.email as client_email',
-        'c.client_name',
-        's.name as status_name',
-        'u.first_name as manager_first_name',
-        'u.last_name as manager_last_name',
-        'u.email as assigned_user_email',
-        'ct.email as contact_email'
-      )
-      .leftJoin('clients as c', function() {
-        this.on('c.client_id', '=', 'p.client_id')
-            .andOn('c.tenant', '=', 'p.tenant');
-      })
-      .leftJoin('client_locations as dcl', function() {
-        this.on('dcl.client_id', '=', 'p.client_id')
-            .andOn('dcl.tenant', '=', 'p.tenant')
-            .andOn('dcl.is_default', '=', db.raw('true'))
-            .andOn('dcl.is_active', '=', db.raw('true'));
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('s.status_id', '=', 'p.status')
-            .andOn('s.tenant', '=', 'p.tenant');
-      })
-      .leftJoin('users as u', function() {
-        this.on('u.user_id', '=', 'p.assigned_to')
-            .andOn('u.tenant', '=', 'p.tenant')
-            .andOn('u.is_inactive', '=', db.raw('false'));
-      })
-      .leftJoin('contacts as ct', function() {
-        this.on('ct.contact_name_id', '=', 'p.contact_name_id')
-          .andOn('ct.tenant', '=', 'p.tenant');
-      })
-      .where('p.project_id', payload.projectId)
-      .andWhere('p.tenant', tenantId);  // Add explicit tenant filter on main table
-
-    // Log the query for debugging
-    logger.info('[ProjectEmailSubscriber] Project query:', {
-      sql: query.toString(),
-      bindings: query.toSQL().bindings
-    });
-
-    const project = await query.first();
+    const project = await fetchProjectForEmail(db, tenantId, payload.projectId);
 
     // Log the project details for debugging
     logger.info('[ProjectEmailSubscriber] Project details:', {
@@ -757,10 +730,9 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
 
     // If contact exists but email is missing, check the contact directly
     if (project?.contact_name_id && !project.contact_email) {
-      const contact = await db('contacts')
+      const contact = await tenantDb(db, tenantId).table('contacts')
         .where({
           contact_name_id: project.contact_name_id,
-          tenant: tenant!
         })
         .first();
       logger.info('[ProjectEmailSubscriber] Direct contact lookup:', {
@@ -832,7 +804,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
     });
 
     // Format changes with database lookups
-    const formattedChanges = await formatChanges(db, payload.changes || {});
+    const formattedChanges = await formatChanges(db, payload.changes || {}, tenantId);
 
     // Log the formatted changes
     logger.info('[ProjectEmailSubscriber] Formatted changes:', {
@@ -842,11 +814,10 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
 
     // Get updater's name
     const updater = updaterUserId
-      ? await db('users')
+      ? await tenantDb(db, tenantId).table('users')
           .where({
             user_id: updaterUserId,
             is_inactive: false,
-            tenant: tenant!
           })
           .first()
       : null;
@@ -922,53 +893,10 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
   const closedByUserId = ((payload as any).actorUserId ?? (payload as any).userId) as string | undefined;
   
   try {
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db } = await createTenantKnex();
     
     // Get project details with debug logging
-    const query = db('projects as p')
-      .select(
-        'p.*',
-        'dcl.email as client_email',
-        'c.client_name',
-        's.name as status_name',
-        'u.first_name as manager_first_name',
-        'u.last_name as manager_last_name',
-        'u.email as assigned_user_email',
-        'ct.email as contact_email'
-      )
-      .leftJoin('clients as c', function() {
-        this.on('c.client_id', '=', 'p.client_id')
-            .andOn('c.tenant', '=', 'p.tenant');
-      })
-      .leftJoin('client_locations as dcl', function() {
-        this.on('dcl.client_id', '=', 'p.client_id')
-            .andOn('dcl.tenant', '=', 'p.tenant')
-            .andOn('dcl.is_default', '=', db.raw('true'))
-            .andOn('dcl.is_active', '=', db.raw('true'));
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('s.status_id', '=', 'p.status')
-            .andOn('s.tenant', '=', 'p.tenant');
-      })
-      .leftJoin('users as u', function() {
-        this.on('u.user_id', '=', 'p.assigned_to')
-            .andOn('u.tenant', '=', 'p.tenant')
-            .andOn('u.is_inactive', '=', db.raw('false'));
-      })
-      .leftJoin('contacts as ct', function() {
-        this.on('ct.contact_name_id', '=', 'p.contact_name_id')
-          .andOn('ct.tenant', '=', 'p.tenant');
-      })
-      .where('p.project_id', payload.projectId)
-      .andWhere('p.tenant', tenantId);  // Add explicit tenant filter on main table
-
-    // Log the query for debugging
-    logger.info('[ProjectEmailSubscriber] Project query:', {
-      sql: query.toString(),
-      bindings: query.toSQL().bindings
-    });
-
-    const project = await query.first();
+    const project = await fetchProjectForEmail(db, tenantId, payload.projectId);
 
     // Log the project details for debugging
     logger.info('[ProjectEmailSubscriber] Project details:', {
@@ -981,10 +909,9 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
 
     // If contact exists but email is missing, check the contact directly
     if (project?.contact_name_id && !project.contact_email) {
-      const contact = await db('contacts')
+      const contact = await tenantDb(db, tenantId).table('contacts')
         .where({
           contact_name_id: project.contact_name_id,
-          tenant: tenant!
         })
         .first();
       logger.info('[ProjectEmailSubscriber] Direct contact lookup:', {
@@ -1045,8 +972,8 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
     const closedDescriptionHtml = closedDescriptionFormatting ? closedDescriptionFormatting.html : '';
 
     const { internalUrl, portalUrl } = await resolveProjectLinks(db, tenantId, project.project_id);
-    const formattedClosedChanges = await formatChanges(db, payload.changes || {});
-    const closedByValue = await resolveValue(db, 'closed_by', closedByUserId);
+    const formattedClosedChanges = await formatChanges(db, payload.changes || {}, tenantId);
+    const closedByValue = await resolveValue(db, 'closed_by', closedByUserId, tenantId);
     const closedAtValue = new Date().toISOString();
     const buildContext = (url: string) => ({
       project: {
@@ -1126,50 +1053,38 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
   const { tenantId, assignedTo } = payload;
   
   try {
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db } = await createTenantKnex();
+    const scopedDb = tenantDb(db, tenantId);
     
     // Get project and user details
-    const query = db('projects as p')
+    const query = scopedDb.table('projects as p')
       .select(
         'p.*',
         'c.client_name',
         'dcl.email as client_email',
         'u.email as user_email',
         'u.first_name as user_first_name',
-        'u.last_name as user_last_name',
-        'au.first_name as assigner_first_name',
-        'au.last_name as assigner_last_name'
-      )
-      .leftJoin('clients as c', function() {
-        this.on('c.client_id', '=', 'p.client_id')
-            .andOn('c.tenant', '=', 'p.tenant');
-      })
-      .leftJoin('client_locations as dcl', function() {
-        this.on('dcl.client_id', '=', 'p.client_id')
-            .andOn('dcl.tenant', '=', 'p.tenant')
-            .andOn('dcl.is_default', '=', db.raw('true'))
-            .andOn('dcl.is_active', '=', db.raw('true'));
-      })
-      .leftJoin('users as u', function() {
-        this.on('u.user_id', '=', assignedTo)
-            .andOn('u.tenant', '=', 'p.tenant')
-            .andOn('u.is_inactive', '=', db.raw('false'));
-      })
-      .leftJoin('users as au', function() {
-        this.on('au.user_id', '=', db.raw('?', [payload.userId]))
-            .andOn('au.tenant', '=', 'p.tenant')
-            .andOn('au.is_inactive', '=', db.raw('false'));
-      })
-      .where('p.project_id', payload.projectId)
-      .andWhere('p.tenant', tenantId);  // Add explicit tenant filter on main table
-
-    // Log the query for debugging
-    logger.info('[ProjectEmailSubscriber] Project query:', {
-      sql: query.toString(),
-      bindings: query.toSQL().bindings
+        'u.last_name as user_last_name'
+      );
+    scopedDb.tenantJoin(query, 'clients as c', 'c.client_id', 'p.client_id', { type: 'left' });
+    scopedDb.tenantJoin(query, 'client_locations as dcl', 'dcl.client_id', 'p.client_id', {
+      type: 'left',
+      on(join) {
+        join
+          .andOn('dcl.is_default', '=', db.raw('true'))
+          .andOn('dcl.is_active', '=', db.raw('true'));
+      },
+    });
+    scopedDb.tenantJoin(query, 'users as u', 'u.user_id', 'p.assigned_to', {
+      type: 'left',
+      on(join) {
+        join.andOn('u.is_inactive', '=', db.raw('false'));
+      },
     });
 
-    const project = await query.first();
+    const project = await query
+      .where('p.project_id', payload.projectId)
+      .first();
 
     // Log the project details for debugging
     logger.info('[ProjectEmailSubscriber] Project details:', {
@@ -1188,6 +1103,16 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       return;
     }
 
+    const assignedUser = await scopedDb.table('users')
+      .select('email', 'first_name', 'last_name')
+      .where({ user_id: assignedTo, is_inactive: false })
+      .first();
+    if (assignedUser) {
+      project.user_email = assignedUser.email;
+      project.user_first_name = assignedUser.first_name;
+      project.user_last_name = assignedUser.last_name;
+    }
+
     if (!isValidEmail(project.user_email)) {
       logger.warn('Could not send project assigned email - user email not found or invalid:', {
         eventId: event.id,
@@ -1198,6 +1123,13 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       });
       return;
     }
+
+    const assigner = payload.userId
+      ? await scopedDb.table('users')
+          .select('first_name', 'last_name')
+          .where({ user_id: payload.userId, is_inactive: false })
+          .first()
+      : null;
 
     const projectDescriptionFormatting = project.description ? formatBlockNoteContent(project.description) : null;
     const projectDescriptionText = projectDescriptionFormatting ? projectDescriptionFormatting.text : '';
@@ -1215,7 +1147,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
           descriptionText: projectDescriptionText,
           descriptionHtml: projectDescriptionHtml,
           startDate: project.start_date,
-          assignedBy: `${project.assigner_first_name} ${project.assigner_last_name}`,
+          assignedBy: assigner ? `${assigner.first_name} ${assigner.last_name}` : 'Someone',
           url: `${getBaseUrl()}/msp/projects/${project.project_id}`,
           client: project.client_name || 'No Client'
         }
@@ -1247,39 +1179,26 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
   const assignedByNameFromPayload = (payload as any).assignedByName as string | undefined;
 
   try {
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db } = await createTenantKnex();
+    const scopedDb = tenantDb(db, tenantId);
 
     // Get task, project and user details
     // Note: We removed the 'users as au' join for the assigner because it caused
     // Citus errors with complex joins. The assigner name is now passed in the event payload.
-    const query = db('project_tasks as t')
-      .select(
-        't.task_id',
-        't.task_name',
-        't.description',
-        't.due_date',
-        't.phase_id',
-        'p.project_name',
-        'p.project_id',
-        'u.email as user_email',
-        'u.first_name as user_first_name',
-        'u.last_name as user_last_name'
-      )
-      .leftJoin('project_phases as ph', function() {
-        this.on('ph.phase_id', '=', 't.phase_id')
-            .andOn('ph.tenant', '=', 't.tenant');
-      })
-      .leftJoin('projects as p', function() {
-        this.on('p.project_id', '=', 'ph.project_id')
-            .andOn('p.tenant', '=', 'ph.tenant');
-      })
-      .leftJoin('users as u', function() {
-        this.on('u.user_id', '=', 't.assigned_to')
-            .andOn('u.tenant', '=', 't.tenant')
-            .andOn('u.is_inactive', '=', db.raw('false'));
-      })
-      .where('t.task_id', payload.taskId)
-      .andWhere('t.tenant', tenantId);  // Explicit tenant filter on main table
+    const query = scopedDb.table('project_tasks as t')
+      .select({ task_id: 't.task_id', task_name: 't.task_name', description: 't.description', due_date: 't.due_date', phase_id: 't.phase_id', project_name: 'p.project_name', project_id: 'p.project_id', user_email: 'u.email', user_first_name: 'u.first_name', user_last_name: 'u.last_name' });
+    scopedDb.tenantJoin(query, 'project_phases as ph', 'ph.phase_id', 't.phase_id', { type: 'left' });
+    scopedDb.tenantJoin(query, 'projects as p', 'p.project_id', 'ph.project_id', {
+      type: 'left',
+      rootTenantColumn: 'ph.tenant',
+    });
+    scopedDb.tenantJoin(query, 'users as u', 'u.user_id', 't.assigned_to', {
+      type: 'left',
+      on(join) {
+        join.andOn('u.is_inactive', '=', db.raw('false'));
+      },
+    });
+    query.where('t.task_id', payload.taskId);
 
     logger.debug('[ProjectEmailSubscriber] Task query:', {
       sql: query.toString(),
@@ -1298,16 +1217,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
     }
 
     // Get additional users' emails from task_resources
-    const additionalUserEmails = await db('task_resources as tr')
-      .select('u.email', 'u.user_id')
-      .leftJoin('users as u', function() {
-        this.on('u.user_id', '=', 'tr.additional_user_id')
-            .andOn('u.tenant', '=', 'tr.tenant')
-            .andOn('u.is_inactive', '=', db.raw('false'));
-      })
-      .where('tr.task_id', payload.taskId)
-      .andWhere('tr.tenant', tenantId)  // Explicit tenant filter on main table
-      .whereNotNull('tr.additional_user_id');
+    const additionalUserEmails = await fetchTaskResourceEmails(db, tenantId, payload.taskId);
 
     // Build task URL using URLSearchParams for consistency
     const taskUrlParams = new URLSearchParams();
@@ -1347,7 +1257,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
         if (!isValidEmail(user.email)) {
           return acc;
         }
-        const key = user.user_id || user.email;
+        const key = (user.user_id || user.email) as string;
         if (!acc.has(key)) {
           acc.set(key, user);
         }
@@ -1375,7 +1285,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
         replyContext: {
           projectId: task.project_id || payload.projectId
         }
-      }, 'Project Task Assigned', additionalUser.user_id);
+      }, 'Project Task Assigned', additionalUser.user_id ?? '');
     }
 
   } catch (error) {
@@ -1397,27 +1307,19 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
 
   try {
     const { knex: db } = await createTenantKnex();
+    const scopedDb = tenantDb(db, tenantId);
 
     // Get task and project details
-    const task = await db('project_tasks as t')
-      .select(
-        't.task_id',
-        't.task_name',
-        't.assigned_to',
-        't.phase_id',
-        'p.project_name',
-        'p.project_id'
-      )
-      .leftJoin('project_phases as ph', function() {
-        this.on('ph.phase_id', '=', 't.phase_id')
-            .andOn('ph.tenant', '=', 't.tenant');
-      })
-      .leftJoin('projects as p', function() {
-        this.on('p.project_id', '=', 'ph.project_id')
-            .andOn('p.tenant', '=', 'ph.tenant');
-      })
+    const taskQuery = scopedDb.table('project_tasks as t')
+      .select({ task_id: 't.task_id', task_name: 't.task_name', assigned_to: 't.assigned_to', phase_id: 't.phase_id', project_name: 'p.project_name', project_id: 'p.project_id' });
+    scopedDb.tenantJoin(taskQuery, 'project_phases as ph', 'ph.phase_id', 't.phase_id', { type: 'left' });
+    scopedDb.tenantJoin(taskQuery, 'projects as p', 'p.project_id', 'ph.project_id', {
+      type: 'left',
+      rootTenantColumn: 'ph.tenant',
+    });
+
+    const task = await taskQuery
       .where('t.task_id', taskId)
-      .andWhere('t.tenant', tenantId)
       .first();
 
     if (!task) {
@@ -1429,9 +1331,9 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
     }
 
     // Get comment author
-    const author = await db('users')
+    const author = await scopedDb.table('users')
       .select('first_name', 'last_name', 'email', 'user_id')
-      .where({ user_id: userId, tenant: tenantId })
+      .where({ user_id: userId })
       .first();
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
@@ -1486,9 +1388,9 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
 
     // Primary assignee
     if (task.assigned_to) {
-      const primaryAssignee = await db('users')
+      const primaryAssignee = await scopedDb.table('users')
         .select('user_id', 'email')
-        .where({ user_id: task.assigned_to, tenant: tenantId, is_inactive: false })
+        .where({ user_id: task.assigned_to, is_inactive: false })
         .first();
       if (primaryAssignee && isValidEmail(primaryAssignee.email)) {
         assignees.push(primaryAssignee);
@@ -1496,20 +1398,11 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
     }
 
     // Additional agents
-    const additionalAgents = await db('task_resources as tr')
-      .select('u.user_id', 'u.email')
-      .leftJoin('users as u', function() {
-        this.on('u.user_id', '=', 'tr.additional_user_id')
-            .andOn('u.tenant', '=', 'tr.tenant')
-            .andOn('u.is_inactive', '=', db.raw('false'));
-      })
-      .where('tr.task_id', taskId)
-      .andWhere('tr.tenant', tenantId)
-      .whereNotNull('tr.additional_user_id');
+    const additionalAgents = await fetchTaskResourceEmails(db, tenantId, taskId);
 
     for (const agent of additionalAgents) {
       if (agent.email && isValidEmail(agent.email) && !assignees.some(a => a.user_id === agent.user_id)) {
-        assignees.push(agent);
+        assignees.push(agent as { user_id: string; email: string });
       }
     }
 

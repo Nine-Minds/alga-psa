@@ -1,4 +1,5 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import path from 'node:path';
 import process from 'node:process';
@@ -6,11 +7,19 @@ import { pathToFileURL } from 'node:url';
 import { v4 as uuidv4 } from 'uuid';
 
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
-import { computeCanonicalHost } from 'server/src/models/PortalDomainModel';
 import type { PortalDomainRecord } from 'server/src/models/PortalDomainModel';
 
 let db: Knex;
 let tenantId: string;
+const TEST_DISCOVERY_TENANT = '__portal_domain_permissions_test__';
+
+function tenantTable<Row extends object = Record<string, any>>(connection: Knex, tenant: string, table: string) {
+  return tenantDb(connection, tenant).table<Row>(table);
+}
+
+function unscopedTestTable<Row extends object = Record<string, any>>(connection: Knex, table: string, reason: string) {
+  return tenantDb(connection, TEST_DISCOVERY_TENANT).unscoped<Row>(table, reason);
+}
 
 const enqueueWorkflow = vi.fn(async () => ({ enqueued: true }));
 const analyticsCapture = vi.fn();
@@ -120,7 +129,7 @@ describe('Portal domain permissions', () => {
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
-    await db('portal_domains').where({ tenant: tenantId }).delete();
+    await tenantTable<PortalDomainRecord>(db, tenantId, 'portal_domains').delete();
     enqueueWorkflow.mockClear();
     analyticsCapture.mockClear();
     vi.mocked(getCurrentUser).mockReset();
@@ -141,8 +150,7 @@ describe('Portal domain permissions', () => {
     expect(result.status.domain).toBe('admin-allowed.example.com');
     expect(result.status.status).toBe('pending_dns');
 
-    const record = await db<PortalDomainRecord>('portal_domains')
-      .where({ tenant: tenantId })
+    const record = await tenantTable<PortalDomainRecord>(db, tenantId, 'portal_domains')
       .first();
 
     expect(record).toBeTruthy();
@@ -162,8 +170,7 @@ describe('Portal domain permissions', () => {
       )
     ).rejects.toThrow('Client portal users cannot manage custom domains.');
 
-    const existing = await db<PortalDomainRecord>('portal_domains')
-      .where({ tenant: tenantId })
+    const existing = await tenantTable<PortalDomainRecord>(db, tenantId, 'portal_domains')
       .first();
 
     expect(existing).toBeFalsy();
@@ -172,6 +179,7 @@ describe('Portal domain permissions', () => {
 });
 
 async function runMigrationsAndSeeds(connection: Knex): Promise<void> {
+  // Integration fixture bootstrap intentionally resets global schema before migrations/seeds.
   await connection.raw('DROP SCHEMA IF EXISTS public CASCADE');
   await connection.raw('CREATE SCHEMA public');
   await connection.raw('GRANT ALL ON SCHEMA public TO public');
@@ -194,13 +202,17 @@ async function runMigrationsAndSeeds(connection: Knex): Promise<void> {
 }
 
 async function ensureTenant(connection: Knex): Promise<string> {
-  const row = await connection('tenants').first<{ tenant: string }>('tenant');
+  const row = await unscopedTestTable<{ tenant: string }>(
+    connection,
+    'tenants',
+    'portal domain permissions test discovers seeded tenant after migrations and seeds'
+  ).first('tenant');
   if (row?.tenant) {
     return row.tenant;
   }
 
   const newTenantId = uuidv4();
-  await connection('tenants').insert({
+  await tenantTable(connection, newTenantId, 'tenants').insert({
     tenant: newTenantId,
     client_name: 'Portal Domain Test Co',
     email: 'portal@test.co',
@@ -211,27 +223,27 @@ async function ensureTenant(connection: Knex): Promise<string> {
 }
 
 async function findClientUserByRole(connection: Knex, roleName: string): Promise<{ user_id: string; tenant: string; user_type: string } | null> {
-  const row = await connection('users as u')
+  const scopedDb = tenantDb(connection, tenantId);
+  const query = scopedDb.table('users as u')
     .select<{ user_id: string; tenant: string; user_type: string }>('u.user_id', 'u.tenant', 'u.user_type')
-    .join('user_roles as ur', 'u.user_id', 'ur.user_id')
-    .join('roles as r', 'ur.role_id', 'r.role_id')
     .where('r.role_name', roleName)
-    .andWhere('r.client', true)
-    .andWhere('u.tenant', tenantId)
-    .first();
+    .andWhere('r.client', true);
+  scopedDb.tenantJoin(query, 'user_roles as ur', 'u.user_id', 'ur.user_id');
+  scopedDb.tenantJoin(query, 'roles as r', 'ur.role_id', 'r.role_id');
+  const row = await query.first();
 
   return row ?? null;
 }
 
 async function findMspUserByRole(connection: Knex, roleName: string): Promise<{ user_id: string; tenant: string; user_type: string | null } | null> {
-  const row = await connection('users as u')
+  const scopedDb = tenantDb(connection, tenantId);
+  const query = scopedDb.table('users as u')
     .select<{ user_id: string; tenant: string; user_type: string | null }>('u.user_id', 'u.tenant', 'u.user_type')
-    .join('user_roles as ur', 'u.user_id', 'ur.user_id')
-    .join('roles as r', 'ur.role_id', 'r.role_id')
     .where('r.role_name', roleName)
-    .andWhere('r.msp', true)
-    .andWhere('u.tenant', tenantId)
-    .first();
+    .andWhere('r.msp', true);
+  scopedDb.tenantJoin(query, 'user_roles as ur', 'u.user_id', 'ur.user_id');
+  scopedDb.tenantJoin(query, 'roles as r', 'ur.role_id', 'r.role_id');
+  const row = await query.first();
 
   return row ?? null;
 }
@@ -245,7 +257,7 @@ async function ensureClientPortalAdmin(
     return existing;
   }
 
-  const clientAdminRole = await connection('roles')
+  const clientAdminRole = await tenantTable(connection, tenant, 'roles')
     .where({ tenant, role_name: 'Admin', client: true })
     .first('role_id');
 
@@ -255,7 +267,7 @@ async function ensureClientPortalAdmin(
 
   const email = `portal-admin-${uuidv4()}@example.com`;
 
-  const [insertedUser] = await connection('users')
+  const [insertedUser] = await tenantTable(connection, tenant, 'users')
     .insert({
       tenant,
       username: email,
@@ -270,7 +282,7 @@ async function ensureClientPortalAdmin(
     })
     .returning<{ user_id: string; tenant: string; user_type: string | null }[]>(['user_id', 'tenant', 'user_type']);
 
-  await connection('user_roles').insert({
+  await tenantTable(connection, tenant, 'user_roles').insert({
     tenant,
     user_id: insertedUser.user_id,
     role_id: clientAdminRole.role_id,
@@ -285,19 +297,20 @@ async function ensureMspSettingsPermission(
   tenant: string,
   userId: string
 ): Promise<void> {
-  const adminRole = await connection('user_roles as ur')
+  const scopedDb = tenantDb(connection, tenant);
+  const adminRoleQuery = scopedDb.table('user_roles as ur')
     .select('ur.role_id')
-    .join('roles as r', 'r.role_id', 'ur.role_id')
     .where('ur.user_id', userId)
     .andWhere('r.msp', true)
-    .andWhere('r.role_name', 'Admin')
-    .first();
+    .andWhere('r.role_name', 'Admin');
+  scopedDb.tenantJoin(adminRoleQuery, 'roles as r', 'r.role_id', 'ur.role_id');
+  const adminRole = await adminRoleQuery.first();
 
   if (!adminRole) {
     throw new Error('MSP Admin user does not have an Admin role');
   }
 
-  const existingPermission = await connection('permissions')
+  const existingPermission = await tenantTable(connection, tenant, 'permissions')
     .select('permission_id')
     .where({ tenant, resource: 'settings', action: 'update', msp: true })
     .first();
@@ -306,7 +319,7 @@ async function ensureMspSettingsPermission(
     throw new Error('Expected MSP settings:update permission to be seeded for tenant');
   }
 
-  const existingAssignment = await connection('role_permissions')
+  const existingAssignment = await tenantTable(connection, tenant, 'role_permissions')
     .where({ tenant, role_id: adminRole.role_id, permission_id: existingPermission.permission_id })
     .first();
 

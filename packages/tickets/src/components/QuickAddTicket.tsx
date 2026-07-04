@@ -16,7 +16,7 @@ import { addTicketResource } from '../actions/ticketResourceActions';
 import { getCurrentUser, getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { getContactsByClient, getClientLocations } from '../actions/clientLookupActions';
 import { getTicketFormData } from '../actions/ticketFormActions';
-import { getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
+import { getTicketCategoriesByBoard, BoardCategoryData } from '../actions/ticketCategoryActions';
 import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, IClient, IClientLocation, IContact, ITicket, ITicketCategory } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
@@ -42,7 +42,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { createTagsForEntity } from '@alga-psa/tags/actions';
 import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
-import { assignTeamToTicket } from '@alga-psa/tickets/actions';
+import { assignTeamToTicket } from '../actions/teamAssignmentActions';
 import type { ITeam } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -139,6 +139,16 @@ interface QuickAddTicketProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onTicketAdded: (ticket: ITicket) => void;
+  /**
+   * Optional handler for the "Create + View Ticket" action. When provided, this component
+   * delegates the post-create navigation entirely to the host instead of calling
+   * onTicketAdded + onOpenChange + its own router.push. The intercepting-route modal
+   * (CreateTicketRouteClient) supplies this so closing the modal and navigating to the new
+   * ticket happen as ONE navigation — otherwise the modal's close handler (router.back) races
+   * the router.push to the ticket, and one aborts the other (the user is stranded on the
+   * tickets list, or the dialog is left stuck over the detail page).
+   */
+  onViewCreatedTicket?: (ticket: ITicket) => void;
   prefilledClient?: {
     id: string;
     name: string;
@@ -165,6 +175,7 @@ export function QuickAddTicket({
   open,
   onOpenChange,
   onTicketAdded,
+  onViewCreatedTicket,
   prefilledClient,
   prefilledContact,
   prefilledDescription,
@@ -184,6 +195,10 @@ export function QuickAddTicket({
   const { t } = useTranslation('features/tickets');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // True once a "Create + View" navigation has been handed to onViewCreatedTicket. The
+  // navigation is a slow RSC fetch during which this modal is still mounted; keep the actions
+  // disabled so the operator can't fire a second create before the page swaps.
+  const [isNavigatingToTicket, setIsNavigatingToTicket] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [title, setTitle] = useState(prefilledTitle || '');
@@ -922,15 +937,28 @@ export function QuickAddTicket({
         }
       }
 
-      // Pass ticket with tags to callback
-      await onTicketAdded({
+      const finalTicket = {
         ...newTicket,
         attributes: {
           ...(newTicket.attributes || {}),
           description: finalizedDescription,
         },
         tags: createdTags,
-      });
+      };
+
+      // "Create + View": when the host owns navigation (the intercepting-route modal does),
+      // hand the new ticket to it and stop. Doing onTicketAdded + onOpenChange + router.push
+      // here as well would fire a second, competing navigation that aborts the first — that
+      // race is what stranded the user on the tickets list (or left this dialog stuck over the
+      // detail page). The host performs exactly one navigation, which also unmounts this modal.
+      if (openAfterCreate && newTicket.ticket_id && onViewCreatedTicket) {
+        setIsNavigatingToTicket(true);
+        onViewCreatedTicket(finalTicket);
+        return;
+      }
+
+      // Pass ticket with tags to callback
+      await onTicketAdded(finalTicket);
       resetForm();
 
       onOpenChange(false);
@@ -1011,21 +1039,23 @@ export function QuickAddTicket({
         id={`${id}-create-open-btn`}
         type="button"
         variant="secondary"
-        disabled={isSubmitting}
+        disabled={isSubmitting || isNavigatingToTicket}
         onClick={() => {
           void handleCreateTicket({ openAfterCreate: true });
         }}
         className={hasRequiredFieldErrors ? 'opacity-50' : ''}
       >
-        {isSubmitting
-          ? t('quickAdd.submitting', 'Adding...')
-          : t('quickAdd.createAndView', 'Create + View Ticket')}
+        {isNavigatingToTicket
+          ? t('quickAdd.openingTicket', 'Opening ticket…')
+          : isSubmitting
+            ? t('quickAdd.submitting', 'Adding...')
+            : t('quickAdd.createAndView', 'Create + View Ticket')}
       </Button>
       <Button
         id={`${id}-submit-btn`}
         type="button"
         variant="default"
-        disabled={isSubmitting}
+        disabled={isSubmitting || isNavigatingToTicket}
         onClick={() => { void handleCreateTicket(); }}
         className={hasRequiredFieldErrors ? 'opacity-50' : ''}
       >

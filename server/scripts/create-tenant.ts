@@ -9,6 +9,7 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'node:module';
+import { tenantDb } from '@alga-psa/db';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -148,7 +149,7 @@ async function main() {
     // never fires. Idempotent + best-effort so it never blocks tenant creation.
     try {
       const now = new Date();
-      await db('tenant_settings')
+      await tenantDb(db, result.tenantId).table('tenant_settings')
         .insert({
           tenant: result.tenantId,
           onboarding_completed: false,

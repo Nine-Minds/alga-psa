@@ -1,5 +1,6 @@
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { IProjectTask } from '@alga-psa/types';
+import type { Knex } from 'knex';
 
 import ProjectModel from '../models/project';
 import ProjectTaskModel from '../models/projectTask';
@@ -26,6 +27,14 @@ interface CreateProjectTaskMappedValues extends Record<string, unknown> {
 interface UpdateProjectTaskStatusByExternalIdMappedValues extends Record<string, unknown> {
   external_id: string;
   project_status_mapping_id: string;
+}
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
 }
 
 const createProjectTaskAction: InboundActionDefinition<CreateProjectTaskMappedValues> = {
@@ -58,7 +67,9 @@ const createProjectTaskAction: InboundActionDefinition<CreateProjectTaskMappedVa
     const { knex } = await createTenantKnex(ctx.tenant);
     const task = await withTransaction(knex, async (trx) => {
       const projectId = await resolveProjectId(trx, ctx.tenant, ctx.webhookSlug, mappedValues);
-      const project = await trx('projects').where({ tenant: ctx.tenant, project_id: projectId }).first('project_id');
+      const project = await tenantScopedTable(trx, 'projects', ctx.tenant)
+        .where({ project_id: projectId })
+        .first('project_id');
       if (!project) {
         throw new Error(`VALIDATION_ERROR: project_id "${projectId}" does not exist`);
       }
@@ -138,11 +149,10 @@ const updateProjectTaskStatusByExternalIdAction: InboundActionDefinition<UpdateP
         return null;
       }
 
-      const task = await trx('project_tasks as pt')
-        .join('project_phases as pp', function joinPhase(this: any) {
-          this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
-        })
-        .where({ 'pt.tenant': ctx.tenant, 'pt.task_id': lookup.algaEntityId })
+      const taskQuery = tenantScopedTable(trx, 'project_tasks as pt', ctx.tenant);
+      tenantDb(trx, ctx.tenant).tenantJoin(taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+      const task = await taskQuery
+        .where({ 'pt.task_id': lookup.algaEntityId })
         .first<{
           task_id: string;
           phase_id: string;
@@ -230,7 +240,9 @@ async function resolvePhaseId(
   phaseId?: string,
 ): Promise<string> {
   if (phaseId) {
-    const phase = await trx('project_phases').where({ tenant, project_id: projectId, phase_id: phaseId }).first('phase_id');
+    const phase = await tenantScopedTable(trx, 'project_phases', tenant)
+      .where({ project_id: projectId, phase_id: phaseId })
+      .first('phase_id');
     if (!phase) {
       throw new Error(`VALIDATION_ERROR: phase_id "${phaseId}" does not belong to project "${projectId}"`);
     }
@@ -253,8 +265,8 @@ async function resolveStatusMappingId(
   statusMappingId?: string,
 ): Promise<string> {
   if (statusMappingId) {
-    const mapping = await trx('project_status_mappings')
-      .where({ tenant, project_status_mapping_id: statusMappingId })
+    const mapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+      .where({ project_status_mapping_id: statusMappingId })
       .where((builder: any) => {
         builder.where({ project_id: projectId }).orWhereNull('project_id');
       })
@@ -279,8 +291,8 @@ async function assertStatusMappingValidForTaskProject(
   projectId: string,
   statusMappingId: string,
 ): Promise<void> {
-  const mapping = await trx('project_status_mappings')
-    .where({ tenant, project_status_mapping_id: statusMappingId })
+  const mapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+    .where({ project_status_mapping_id: statusMappingId })
     .where((builder: any) => {
       builder.where({ project_id: projectId }).orWhereNull('project_id');
     })

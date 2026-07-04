@@ -1,9 +1,10 @@
 'use server';
 
-import { getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { TenantBranding } from './tenantBrandingActions';
 import { unstable_cache } from 'next/cache';
 import { LOCALE_CONFIG, SupportedLocale, isSupportedLocale } from '@alga-psa/core/i18n/config';
+import type { Knex } from 'knex';
 
 const DEV_HOSTS = new Set([
   '',
@@ -18,10 +19,14 @@ interface TenantPortalConfig {
   locale: SupportedLocale | null;
 }
 
+const tenantSettingsQuery = (knex: Knex, tenant: string) =>
+  tenantDb(knex, tenant).table('tenant_settings');
+
+const PORTAL_DOMAIN_TENANT_DISCOVERY = 'tenant-discovery';
+
 async function getTenantSettings(tenantId: string) {
   const tenantKnex = await getConnection(tenantId);
-  return tenantKnex('tenant_settings')
-    .where({ tenant: tenantId })
+  return tenantSettingsQuery(tenantKnex, tenantId)
     .first();
 }
 
@@ -32,7 +37,8 @@ async function lookupTenantSettingsByDomain(normalizedDomain: string) {
       const tenantPrefix = parts[0];
       const knex = await getConnection();
 
-      const portalDomain = await knex('portal_domains')
+      const portalDomain = await tenantDb(knex, PORTAL_DOMAIN_TENANT_DISCOVERY)
+        .unscoped('portal_domains', 'tenant discovery from client portal subdomain')
         .where('canonical_host', 'like', `${tenantPrefix}.portal.%`)
         .andWhere('status', 'active')
         .first();
@@ -50,7 +56,8 @@ async function lookupTenantSettingsByDomain(normalizedDomain: string) {
   }
 
   const knex = await getConnection();
-  const portalDomain = await knex('portal_domains')
+  const portalDomain = await tenantDb(knex, PORTAL_DOMAIN_TENANT_DISCOVERY)
+    .unscoped('portal_domains', 'tenant discovery from client portal custom domain')
     .whereRaw('lower(domain) = ?', [normalizedDomain])
     .first();
 
@@ -148,8 +155,7 @@ export async function invalidateDomainBrandingCache(_domain: string): Promise<vo
 export async function getTenantBrandingByTenantId(tenantId: string): Promise<TenantBranding | null> {
   try {
     const knex = await getConnection(tenantId);
-    const tenantSettings = await knex('tenant_settings')
-      .where({ tenant: tenantId })
+    const tenantSettings = await tenantSettingsQuery(knex, tenantId)
       .first();
 
     if (!tenantSettings?.settings) {

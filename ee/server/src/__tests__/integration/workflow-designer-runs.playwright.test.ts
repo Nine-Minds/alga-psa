@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import type { Step } from '@alga-psa/workflows/runtime';
@@ -16,6 +17,16 @@ applyPlaywrightAuthEnvDefaults();
 const TEST_CONFIG = {
   baseUrl: resolvePlaywrightBaseUrl(),
 };
+
+const WORKFLOW_RUNS_TEST_BOUNDARY_TENANT = '__workflow_designer_runs_test_boundary__';
+
+function tenantTable(db: Knex | Knex.Transaction, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function unscopedWorkflowTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, WORKFLOW_RUNS_TEST_BOUNDARY_TENANT).unscoped(table, reason);
+}
 
 const ADMIN_PERMISSIONS = [
   {
@@ -97,7 +108,11 @@ async function createWorkflowDefinition(
   steps: Step[] = []
 ): Promise<WorkflowSeed> {
   const workflowId = uuidv4();
-  const tenantId = (await db('tenants').select('tenant').first())?.tenant;
+  const tenantId = (await unscopedWorkflowTable(
+    db,
+    'tenants',
+    'workflow designer runs test seed resolves the active Playwright tenant'
+  ).select('tenant').first())?.tenant;
   if (!tenantId) throw new Error('tenant_id is required to seed workflow definition');
   const now = new Date().toISOString();
   const definition = {
@@ -109,7 +124,7 @@ async function createWorkflowDefinition(
     steps,
   };
 
-  await db('workflow_definitions').insert({
+  await tenantTable(db, tenantId, 'workflow_definitions').insert({
     workflow_id: workflowId,
     tenant: tenantId,
     name,
@@ -122,8 +137,9 @@ async function createWorkflowDefinition(
     created_at: now,
     updated_at: now,
   });
-  await db('workflow_definition_versions').insert({
+  await tenantTable(db, tenantId, 'workflow_definition_versions').insert({
     version_id: uuidv4(),
+    tenant: tenantId,
     workflow_id: workflowId,
     version,
     definition_json: definition,
@@ -138,7 +154,7 @@ async function createWorkflowDefinition(
 }
 
 async function createWorkflowRun(db: Knex, run: RunSeed): Promise<void> {
-  await db('workflow_runs').insert({
+  await tenantTable(db, run.tenantId, 'workflow_runs').insert({
     run_id: run.runId,
     workflow_id: run.workflowId,
     workflow_version: run.version,
@@ -153,9 +169,10 @@ async function createWorkflowRun(db: Knex, run: RunSeed): Promise<void> {
   });
 }
 
-async function createWaitKey(db: Knex, runId: string, key: string, waitType = 'EVENT'): Promise<void> {
-  await db('workflow_run_waits').insert({
+async function createWaitKey(db: Knex, tenantId: string, runId: string, key: string, waitType = 'EVENT'): Promise<void> {
+  await tenantTable(db, tenantId, 'workflow_run_waits').insert({
     wait_id: uuidv4(),
+    tenant: tenantId,
     run_id: runId,
     step_path: 'root.steps[0]',
     wait_type: waitType,
@@ -168,6 +185,7 @@ async function createWaitKey(db: Knex, runId: string, key: string, waitType = 'E
 }
 
 type RunWaitSeed = {
+  tenantId: string;
   waitId: string;
   runId: string;
   stepPath: string;
@@ -180,8 +198,9 @@ type RunWaitSeed = {
 };
 
 async function createWorkflowRunWait(db: Knex, wait: RunWaitSeed): Promise<void> {
-  await db('workflow_run_waits').insert({
+  await tenantTable(db, wait.tenantId, 'workflow_run_waits').insert({
     wait_id: wait.waitId,
+    tenant: wait.tenantId,
     run_id: wait.runId,
     step_path: wait.stepPath,
     wait_type: wait.waitType,
@@ -196,6 +215,7 @@ async function createWorkflowRunWait(db: Knex, wait: RunWaitSeed): Promise<void>
 }
 
 type RunStepSeed = {
+  tenantId: string;
   runId: string;
   stepId: string;
   stepPath: string;
@@ -210,8 +230,9 @@ type RunStepSeed = {
 };
 
 async function createWorkflowRunStep(db: Knex, step: RunStepSeed): Promise<void> {
-  await db('workflow_run_steps').insert({
+  await tenantTable(db, step.tenantId, 'workflow_run_steps').insert({
     step_id: step.stepId,
+    tenant: step.tenantId,
     run_id: step.runId,
     step_path: step.stepPath,
     definition_step_id: step.definitionStepId,
@@ -226,6 +247,7 @@ async function createWorkflowRunStep(db: Knex, step: RunStepSeed): Promise<void>
 }
 
 type SnapshotSeed = {
+  tenantId: string;
   snapshotId: string;
   runId: string;
   stepPath: string;
@@ -235,8 +257,9 @@ type SnapshotSeed = {
 
 async function createWorkflowRunSnapshot(db: Knex, snapshot: SnapshotSeed): Promise<void> {
   const serialized = JSON.stringify(snapshot.envelopeJson ?? {});
-  await db('workflow_run_snapshots').insert({
+  await tenantTable(db, snapshot.tenantId, 'workflow_run_snapshots').insert({
     snapshot_id: snapshot.snapshotId,
+    tenant: snapshot.tenantId,
     run_id: snapshot.runId,
     step_path: snapshot.stepPath,
     envelope_json: snapshot.envelopeJson,
@@ -246,6 +269,7 @@ async function createWorkflowRunSnapshot(db: Knex, snapshot: SnapshotSeed): Prom
 }
 
 type InvocationSeed = {
+  tenantId: string;
   invocationId: string;
   runId: string;
   stepPath: string;
@@ -262,8 +286,9 @@ type InvocationSeed = {
 };
 
 async function createWorkflowActionInvocation(db: Knex, invocation: InvocationSeed): Promise<void> {
-  await db('workflow_action_invocations').insert({
+  await tenantTable(db, invocation.tenantId, 'workflow_action_invocations').insert({
     invocation_id: invocation.invocationId,
+    tenant: invocation.tenantId,
     run_id: invocation.runId,
     step_path: invocation.stepPath,
     action_id: invocation.actionId,
@@ -294,7 +319,7 @@ type LogSeed = {
 };
 
 async function createWorkflowRunLog(db: Knex, log: LogSeed): Promise<void> {
-  await db('workflow_run_logs').insert({
+  await tenantTable(db, log.tenantId, 'workflow_run_logs').insert({
     log_id: log.logId,
     run_id: log.runId,
     tenant: log.tenantId,
@@ -327,7 +352,7 @@ async function createWorkflowAuditLog(db: Knex, log: AuditLogSeed): Promise<void
     if (userId) {
       await trx.raw('select set_config(?, ?, true)', ['app.current_user', userId]);
     }
-    await trx('audit_logs').insert({
+    await tenantTable(trx, log.tenantId, 'audit_logs').insert({
       audit_id: log.auditId,
       tenant: log.tenantId,
       user_id: userId,
@@ -400,6 +425,7 @@ async function seedRunDetailFixture(
   };
 
   await createWorkflowRunStep(db, {
+    tenantId,
     runId,
     stepId: stepRuntimeIds.ifBlock,
     stepPath: RUN_DETAIL_PATHS.ifBlock,
@@ -411,6 +437,7 @@ async function seedRunDetailFixture(
     durationMs: 1000
   });
   await createWorkflowRunStep(db, {
+    tenantId,
     runId,
     stepId: stepRuntimeIds.thenStep,
     stepPath: RUN_DETAIL_PATHS.thenStep,
@@ -423,6 +450,7 @@ async function seedRunDetailFixture(
     errorJson: { message: 'Step failed', category: 'Runtime', at: '2025-02-01T10:00:13Z' }
   });
   await createWorkflowRunStep(db, {
+    tenantId,
     runId,
     stepId: stepRuntimeIds.elseStep,
     stepPath: RUN_DETAIL_PATHS.elseStep,
@@ -433,6 +461,7 @@ async function seedRunDetailFixture(
     durationMs: 500
   });
   await createWorkflowRunStep(db, {
+    tenantId,
     runId,
     stepId: stepRuntimeIds.returnStep,
     stepPath: RUN_DETAIL_PATHS.returnStep,
@@ -446,6 +475,7 @@ async function seedRunDetailFixture(
 
   if (options.includeWaits) {
     await createWorkflowRunWait(db, {
+      tenantId,
       waitId: uuidv4(),
       runId,
       stepPath: RUN_DETAIL_PATHS.thenStep,
@@ -459,6 +489,7 @@ async function seedRunDetailFixture(
 
   if (options.includeSnapshot) {
     await createWorkflowRunSnapshot(db, {
+      tenantId,
       snapshotId: uuidv4(),
       runId,
       stepPath: RUN_DETAIL_PATHS.thenStep,
@@ -474,6 +505,7 @@ async function seedRunDetailFixture(
 
   if (options.includeInvocations) {
     await createWorkflowActionInvocation(db, {
+      tenantId,
       invocationId: uuidv4(),
       runId,
       stepPath: RUN_DETAIL_PATHS.thenStep,
@@ -717,7 +749,7 @@ test.describe('Workflow Designer UI - runs tab', () => {
         startedAt: new Date('2025-01-12T11:00:00Z').toISOString(),
         tenantId,
       });
-      await createWaitKey(db, runId, correlationKey);
+      await createWaitKey(db, tenantData.tenant.tenantId, runId, correlationKey);
 
       await openRunsTab(page);
       await page.locator('#workflow-runs-search').fill(runId);
@@ -1945,7 +1977,7 @@ test.describe('Workflow Designer UI - error handling', () => {
       });
 
       await openRunsTab(page);
-      await db('workflow_runs').where({ run_id: runId }).del();
+      await tenantTable(db, tenantId, 'workflow_runs').where({ run_id: runId }).del();
       const viewButton = page.locator(`#workflow-runs-view-${runId}`);
       await viewButton.scrollIntoViewIfNeeded();
       await viewButton.click();

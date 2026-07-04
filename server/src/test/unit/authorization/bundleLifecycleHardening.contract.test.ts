@@ -19,7 +19,10 @@ describe('authorization bundle lifecycle hardening contracts', () => {
     expect(serviceSource).toContain('Cannot create or retrieve drafts for an archived bundle.');
     expect(serviceSource).toContain('Cannot publish revisions for an archived bundle.');
     expect(serviceSource).toContain("Draft revision changed before publish could complete. Refresh bundle state and try again.");
-    expect(serviceSource).toContain("const bundle = await trx('authorization_bundles')");
-    expect(serviceSource).toContain("const draftRevision = await trx('authorization_bundle_revisions')");
+    expect(serviceSource).toContain("import { tenantDb } from '@alga-psa/db';");
+    expect(serviceSource).toContain("const bundle = await scopedDb.table('authorization_bundles')");
+    expect(serviceSource).toContain("const draftRevision = await scopedDb.table('authorization_bundle_revisions')");
+    expect(serviceSource).not.toContain("trx('authorization_bundles')");
+    expect(serviceSource).not.toContain("trx('authorization_bundle_revisions')");
   });
 });

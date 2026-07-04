@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { tenantDb } from '@alga-psa/db';
 import { enqueueUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueue';
+
+const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
 interface ImapWebhookPointerPayload {
   mailbox?: string;
@@ -21,7 +24,7 @@ interface ImapWebhookPayload {
 }
 
 async function assertTenantEmailProductAccess(knex: any, tenantId: string): Promise<void> {
-  const tenant = await knex('tenants').where({ tenant: tenantId }).first('product_code');
+  const tenant = await tenantDb(knex, tenantId).table('tenants').first('product_code');
   const productCode = typeof tenant?.product_code === 'string' ? tenant.product_code : 'psa';
   if (productCode !== 'psa' && productCode !== 'algadesk') {
     throw new Error(`Product access denied for tenant ${tenantId}`);
@@ -67,7 +70,8 @@ export async function POST(request: NextRequest) {
     }
 
     const knex = await getAdminConnection();
-    const provider = await knex('email_providers')
+    const provider = await tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
+      .unscoped('email_providers', 'tenant discovery for IMAP email webhook provider lookup')
       .where({ id: providerId, provider_type: 'imap' })
       .first('id', 'tenant', 'is_active', 'mailbox');
 

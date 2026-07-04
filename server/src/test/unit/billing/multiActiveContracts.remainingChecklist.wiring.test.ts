@@ -61,7 +61,10 @@ describe('multi-active remaining checklist wiring coverage', () => {
     expect(wizardSource).toContain('createClientContractAssignment(trx, tenant, {');
     expect(clientActionsSource).toContain('createClientContractAssignment(trx, tenant, {');
     expect(clientModelSource).toContain('createClientContractAssignment(db, tenant, {');
-    expect(mixedCurrencyIntegrationSource).toContain("expect(warningOrError?.message).toContain('currency');");
+    // The mixed-currency policy test now asserts the stronger invariant:
+    // contracts derive currency from the client, so a mixed state cannot be
+    // constructed (was: a warning-message expectation).
+    expect(mixedCurrencyIntegrationSource).toContain("expect(currencies).toEqual(['USD', 'USD']);");
   });
 
   it('T069: activation/reactivation logic remains free of sibling-active singleton blockers', () => {

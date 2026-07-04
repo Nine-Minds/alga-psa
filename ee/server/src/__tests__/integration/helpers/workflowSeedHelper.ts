@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 const SYSTEM_WORKFLOW_ID = '00000000-0000-0000-0000-00000000e001';
 const SYSTEM_WORKFLOW_PATH = path.resolve(
@@ -38,14 +39,19 @@ const loadSystemWorkflowDefinition = (workflowId: string): SystemWorkflowDefinit
 };
 
 export async function ensureSystemEmailWorkflow(db: Knex, tenantId?: string): Promise<void> {
-  const resolvedTenantId = tenantId ?? (await db('tenants').select('tenant').first())?.tenant;
+  const discoveryDb = tenantDb(db, '00000000-0000-0000-0000-000000000000');
+  const resolvedTenantId = tenantId ?? (await discoveryDb
+    .unscoped('tenants', 'workflow seed helper tenant discovery')
+    .select('tenant')
+    .first())?.tenant;
   if (!resolvedTenantId) {
     throw new Error('tenant_id is required to seed the legacy email workflow fixture');
   }
 
+  const scopedDb = tenantDb(db, resolvedTenantId);
   const workflowId = tenantWorkflowId(resolvedTenantId);
-  const existing = await db('workflow_definitions')
-    .where({ workflow_id: workflowId, tenant: resolvedTenantId })
+  const existing = await scopedDb.table('workflow_definitions')
+    .where({ workflow_id: workflowId })
     .first();
   if (existing) {
     return;
@@ -74,19 +80,20 @@ export async function ensureSystemEmailWorkflow(db: Knex, tenantId?: string): Pr
     record.is_visible = true;
   }
 
-  await db('workflow_definitions').insert(record).onConflict('workflow_id').ignore();
+  await scopedDb.table('workflow_definitions').insert(record).onConflict('workflow_id').ignore();
 
   const hasVersionsTable = await db.schema.hasTable('workflow_definition_versions');
   if (!hasVersionsTable) {
     return;
   }
 
-  const versionExists = await db('workflow_definition_versions')
+  const versionExists = await scopedDb.table('workflow_definition_versions')
     .where({ workflow_id: workflowId, version: definition.version })
     .first();
   if (!versionExists) {
-    await db('workflow_definition_versions').insert({
+    await scopedDb.table('workflow_definition_versions').insert({
       version_id: uuidv4(),
+      tenant: resolvedTenantId,
       workflow_id: workflowId,
       version: definition.version,
       definition_json: definition,

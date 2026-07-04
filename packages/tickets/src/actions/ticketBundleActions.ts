@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import type { IUser } from '@alga-psa/types';
@@ -13,6 +13,14 @@ import type { ActionMessageError } from '@alga-psa/ui/lib/errorHandling';
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
 }
 
 function buildTicketBundleWorkflowCtx(params: {
@@ -33,9 +41,8 @@ async function findBundleMasterIds(
   ticketIds: string[]
 ): Promise<string[]> {
   if (ticketIds.length === 0) return [];
-  const rows = await trx('tickets')
+  const rows = await tenantScopedTable(trx, 'tickets', tenant)
     .distinct('master_ticket_id')
-    .where({ tenant })
     .whereIn('master_ticket_id', ticketIds);
   return rows.map((r: any) => r.master_ticket_id).filter(Boolean);
 }
@@ -45,9 +52,8 @@ async function buildBundleMasterError(
   tenant: string,
   masterIds: string[]
 ): Promise<ActionMessageError> {
-  const rows = await trx('tickets')
+  const rows = await tenantScopedTable(trx, 'tickets', tenant)
     .select('ticket_number')
-    .where({ tenant })
     .whereIn('ticket_id', masterIds);
   const labels = rows
     .map((r: any) => r.ticket_number)
@@ -77,9 +83,8 @@ export const findTicketByNumberAction = withAuth(async (user, { tenant }, input:
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
       throw new Error('Permission denied: Cannot view tickets');
     }
-    const ticket = await trx('tickets')
+    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
       .select('ticket_id', 'ticket_number', 'title', 'client_id', 'master_ticket_id')
-      .where({ tenant })
       .andWhere('ticket_number', 'ilike', data.ticketNumber)
       .first();
     return ticket || null;
@@ -88,6 +93,11 @@ export const findTicketByNumberAction = withAuth(async (user, { tenant }, input:
 
 type BundleTicketsResult = { masterTicketId: string; childTicketIds: string[]; mode: 'link_only' | 'sync_updates' };
 type BundleTxResult = { ok: true; value: BundleTicketsResult } | { ok: false; error: ActionMessageError };
+type BundleTicketRow = {
+  ticket_id: string;
+  ticket_number?: string | null;
+  master_ticket_id?: string | null;
+};
 
 export const bundleTicketsAction = withAuth(async (
   user,
@@ -110,12 +120,11 @@ export const bundleTicketsAction = withAuth(async (
     }
 
     // Fetch master + children and validate tenant isolation
-    const tickets = await trx('tickets')
+    const tickets = await tenantScopedTable(trx, 'tickets', tenant)
       .select('ticket_id', 'ticket_number', 'master_ticket_id')
-      .where({ tenant })
-      .whereIn('ticket_id', [data.masterTicketId, ...uniqueChildIds]);
+      .whereIn('ticket_id', [data.masterTicketId, ...uniqueChildIds]) as BundleTicketRow[];
 
-    const byId = new Map(tickets.map((t: any) => [t.ticket_id, t]));
+    const byId = new Map<string, BundleTicketRow>(tickets.map((t) => [t.ticket_id, t]));
     if (!byId.has(data.masterTicketId)) {
       return { ok: false, error: actionError('Master ticket not found.') };
     }
@@ -125,7 +134,7 @@ export const bundleTicketsAction = withAuth(async (
       }
     }
 
-    const master = byId.get(data.masterTicketId);
+    const master = byId.get(data.masterTicketId)!;
     if (master.master_ticket_id) {
       return { ok: false, error: actionError('Cannot select a child ticket as the master.') };
     }
@@ -138,7 +147,7 @@ export const bundleTicketsAction = withAuth(async (
 
     // Ensure children are not already bundled
     for (const childId of uniqueChildIds) {
-      const child = byId.get(childId);
+      const child = byId.get(childId)!;
       if (child.master_ticket_id) {
         return { ok: false, error: actionError(`Ticket is already bundled: ${child.ticket_number || childId}`) };
       }
@@ -148,8 +157,7 @@ export const bundleTicketsAction = withAuth(async (
     }
 
     // Attach children to master (do not change child status/assignment/etc)
-    const updatedChildrenCount = await trx('tickets')
-      .where({ tenant })
+    const updatedChildrenCount = await tenantScopedTable(trx, 'tickets', tenant)
       .whereIn('ticket_id', uniqueChildIds)
       .whereNull('master_ticket_id')
       .update({
@@ -162,7 +170,7 @@ export const bundleTicketsAction = withAuth(async (
     }
 
     // Upsert bundle settings for the master
-    await trx('ticket_bundle_settings')
+    await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
       .insert({
         tenant,
         master_ticket_id: data.masterTicketId,
@@ -234,18 +242,17 @@ export const addChildrenToBundleAction = withAuth(async (
       throw new Error('Permission denied: Cannot modify ticket bundles');
     }
 
-    const master = await trx('tickets')
+    const master = await tenantScopedTable(trx, 'tickets', tenant)
       .select('ticket_id', 'master_ticket_id')
-      .where({ tenant, ticket_id: data.masterTicketId })
-      .first();
+      .where({ ticket_id: data.masterTicketId })
+      .first() as BundleTicketRow | undefined;
     if (!master) return { ok: false, error: actionError('Master ticket not found.') };
     if (master.master_ticket_id) return { ok: false, error: actionError('Cannot add children to a bundled child ticket.') };
 
-    const children = await trx('tickets')
+    const children = await tenantScopedTable(trx, 'tickets', tenant)
       .select('ticket_id', 'ticket_number', 'master_ticket_id')
-      .where({ tenant })
-      .whereIn('ticket_id', childIds);
-    const byId = new Map(children.map((t: any) => [t.ticket_id, t]));
+      .whereIn('ticket_id', childIds) as BundleTicketRow[];
+    const byId = new Map<string, BundleTicketRow>(children.map((t) => [t.ticket_id, t]));
     for (const childId of childIds) {
       const child = byId.get(childId);
       if (!child) return { ok: false, error: actionError(`Child ticket not found: ${childId}`) };
@@ -258,8 +265,7 @@ export const addChildrenToBundleAction = withAuth(async (
       return { ok: false, error: await buildBundleMasterError(trx, tenant, offendingMasterIds) };
     }
 
-    const updatedChildrenCount = await trx('tickets')
-      .where({ tenant })
+    const updatedChildrenCount = await tenantScopedTable(trx, 'tickets', tenant)
       .whereIn('ticket_id', childIds)
       .whereNull('master_ticket_id')
       .update({
@@ -315,16 +321,16 @@ export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input
       throw new Error('Permission denied: Cannot modify ticket bundles');
     }
 
-    const oldMaster = await trx('tickets')
+    const oldMaster = await tenantScopedTable(trx, 'tickets', tenant)
       .select('ticket_id', 'master_ticket_id')
-      .where({ tenant, ticket_id: data.oldMasterTicketId })
+      .where({ ticket_id: data.oldMasterTicketId })
       .first();
     if (!oldMaster) throw new Error('Old master ticket not found');
     if (oldMaster.master_ticket_id) throw new Error('Old master ticket is not a master');
 
-    const newMaster = await trx('tickets')
+    const newMaster = await tenantScopedTable(trx, 'tickets', tenant)
       .select('ticket_id', 'master_ticket_id')
-      .where({ tenant, ticket_id: data.newMasterTicketId })
+      .where({ ticket_id: data.newMasterTicketId })
       .first();
     if (!newMaster) throw new Error('New master ticket not found');
     if (newMaster.master_ticket_id !== data.oldMasterTicketId) {
@@ -340,14 +346,14 @@ export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input
     }
 
     // Move bundle settings to new master
-    const settings = await trx('ticket_bundle_settings')
-      .where({ tenant, master_ticket_id: data.oldMasterTicketId })
+    const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+      .where({ master_ticket_id: data.oldMasterTicketId })
       .first();
     if (settings) {
-      await trx('ticket_bundle_settings')
-        .where({ tenant, master_ticket_id: data.oldMasterTicketId })
+      await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+        .where({ master_ticket_id: data.oldMasterTicketId })
         .delete();
-      await trx('ticket_bundle_settings')
+      await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
         .insert({
           ...settings,
           master_ticket_id: data.newMasterTicketId,
@@ -360,8 +366,8 @@ export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input
     }
 
     // Re-point children to new master (including old master)
-    await trx('tickets')
-      .where({ tenant, master_ticket_id: data.oldMasterTicketId })
+    await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ master_ticket_id: data.oldMasterTicketId })
       .andWhereNot({ ticket_id: data.newMasterTicketId })
       .update({
         master_ticket_id: data.newMasterTicketId,
@@ -370,8 +376,8 @@ export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input
       });
 
     // New master becomes root
-    await trx('tickets')
-      .where({ tenant, ticket_id: data.newMasterTicketId })
+    await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: data.newMasterTicketId })
       .update({
         master_ticket_id: null,
         updated_by: user.user_id,
@@ -379,8 +385,8 @@ export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input
       });
 
     // Old master becomes child
-    await trx('tickets')
-      .where({ tenant, ticket_id: data.oldMasterTicketId })
+    await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: data.oldMasterTicketId })
       .update({
         master_ticket_id: data.newMasterTicketId,
         updated_by: user.user_id,
@@ -420,8 +426,8 @@ export const updateBundleSettingsAction = withAuth(async (user, { tenant }, inpu
       throw new Error('Permission denied: Cannot modify ticket bundles');
     }
 
-    const existing = await trx('ticket_bundle_settings')
-      .where({ tenant, master_ticket_id: data.masterTicketId })
+    const existing = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+      .where({ master_ticket_id: data.masterTicketId })
       .first();
     if (!existing) throw new Error('Bundle settings not found');
 
@@ -437,8 +443,8 @@ export const updateBundleSettingsAction = withAuth(async (user, { tenant }, inpu
       };
     }
 
-    const [updated] = await trx('ticket_bundle_settings')
-      .where({ tenant, master_ticket_id: data.masterTicketId })
+    const [updated] = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+      .where({ master_ticket_id: data.masterTicketId })
       .update(update)
       .returning(['master_ticket_id', 'mode', 'reopen_on_child_reply']);
 
@@ -461,9 +467,9 @@ export const removeChildFromBundleAction = withAuth(async (user, { tenant }, inp
       throw new Error('Permission denied: Cannot modify ticket bundles');
     }
 
-    const child = await trx('tickets')
+    const child = await tenantScopedTable(trx, 'tickets', tenant)
       .select('ticket_id', 'master_ticket_id')
-      .where({ tenant, ticket_id: data.childTicketId })
+      .where({ ticket_id: data.childTicketId })
       .first();
 
     if (!child) throw new Error('Ticket not found');
@@ -471,8 +477,8 @@ export const removeChildFromBundleAction = withAuth(async (user, { tenant }, inp
 
     const masterTicketId = child.master_ticket_id;
 
-    await trx('tickets')
-      .where({ tenant, ticket_id: data.childTicketId })
+    await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: data.childTicketId })
       .update({
         master_ticket_id: null,
         updated_by: user.user_id,
@@ -480,13 +486,13 @@ export const removeChildFromBundleAction = withAuth(async (user, { tenant }, inp
       });
 
     // If the master now has no children, remove bundle settings
-    const [{ count }] = await trx('tickets')
-      .where({ tenant, master_ticket_id: masterTicketId })
+    const [{ count }] = await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ master_ticket_id: masterTicketId })
       .count('ticket_id as count');
     const remaining = Number.parseInt(String(count), 10) || 0;
     if (remaining === 0) {
-      await trx('ticket_bundle_settings')
-        .where({ tenant, master_ticket_id: masterTicketId })
+      await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+        .where({ master_ticket_id: masterTicketId })
         .delete();
     }
 
@@ -558,40 +564,44 @@ export const searchEligibleChildTicketsAction = withAuth(async (user, { tenant }
     }
 
     // Search for tickets on the same board with open status, not already bundled
-    let query = trx('tickets')
-      .select(
-        'tickets.ticket_id',
-        'tickets.ticket_number',
-        'tickets.title',
-        'tickets.client_id',
-        'clients.client_name'
+    const facade = tenantDb(trx, tenant);
+    let query = facade
+      .tenantJoin(
+        facade.tenantJoin(
+          tenantScopedTable(trx, 'tickets as t', tenant),
+          'statuses as s',
+          't.status_id',
+          's.status_id'
+        ),
+        'clients as c',
+        't.client_id',
+        'c.client_id',
+        { type: 'left' }
       )
-      .join('statuses', function() {
-        this.on('tickets.status_id', 'statuses.status_id')
-          .andOn('tickets.tenant', 'statuses.tenant');
-      })
-      .leftJoin('clients', function() {
-        this.on('tickets.client_id', 'clients.client_id')
-          .andOn('tickets.tenant', 'clients.tenant');
-      })
+      .select(
+        't.ticket_id',
+        't.ticket_number',
+        't.title',
+        't.client_id',
+        'c.client_name'
+      )
       .where({
-        'tickets.tenant': tenant,
-        'tickets.board_id': data.boardId
+        't.board_id': data.boardId
       })
       .andWhere((builder) => {
-        builder.where('statuses.is_closed', false).orWhereNull('statuses.is_closed');
+        builder.where('s.is_closed', false).orWhereNull('s.is_closed');
       })
-      .whereNull('tickets.master_ticket_id') // Not already bundled
+      .whereNull('t.master_ticket_id') // Not already bundled
       .andWhere((builder) => {
-        builder.where('tickets.ticket_number', 'ilike', `%${data.searchQuery}%`)
-          .orWhere('tickets.title', 'ilike', `%${data.searchQuery}%`);
+        builder.where('t.ticket_number', 'ilike', `%${data.searchQuery}%`)
+          .orWhere('t.title', 'ilike', `%${data.searchQuery}%`);
       })
-      .orderBy('tickets.entered_at', 'desc')
+      .orderBy('t.entered_at', 'desc')
       .limit(data.limit);
 
     // Exclude the master ticket itself if provided
     if (data.excludeTicketId) {
-      query = query.andWhereNot('tickets.ticket_id', data.excludeTicketId);
+      query = query.andWhereNot('t.ticket_id', data.excludeTicketId);
     }
 
     const tickets = await query;
@@ -611,28 +621,28 @@ export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, inpu
     }
 
     // Ensure master exists and is not itself a child
-    const master = await trx('tickets')
+    const master = await tenantScopedTable(trx, 'tickets', tenant)
       .select('ticket_id', 'master_ticket_id')
-      .where({ tenant, ticket_id: data.masterTicketId })
+      .where({ ticket_id: data.masterTicketId })
       .first();
     if (!master) throw new Error('Master ticket not found');
     if (master.master_ticket_id) throw new Error('Cannot unbundle from a child ticket id');
 
-    const childTicketRows = await trx('tickets')
+    const childTicketRows = await tenantScopedTable(trx, 'tickets', tenant)
       .select('ticket_id')
-      .where({ tenant, master_ticket_id: data.masterTicketId });
+      .where({ master_ticket_id: data.masterTicketId });
     const childTicketIds = childTicketRows.map((r: any) => r.ticket_id);
 
-    await trx('tickets')
-      .where({ tenant, master_ticket_id: data.masterTicketId })
+    await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ master_ticket_id: data.masterTicketId })
       .update({
         master_ticket_id: null,
         updated_by: user.user_id,
         updated_at: nowIso(),
       });
 
-    await trx('ticket_bundle_settings')
-      .where({ tenant, master_ticket_id: data.masterTicketId })
+    await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+      .where({ master_ticket_id: data.masterTicketId })
       .delete();
 
     return { masterTicketId: data.masterTicketId, childTicketIds };

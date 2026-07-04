@@ -1,7 +1,8 @@
 import { getQueueMetricsAction, getJobDetailsWithHistory } from '@alga-psa/jobs/actions';
-import { JobMetricsDisplay, RecentJobsDataTable } from '@alga-psa/jobs/components';
+import { JobMetricsDisplay, RecentJobsDataTable, ClearJobHistoryButton } from '@alga-psa/jobs/components';
 import SystemMonitoringWrapper from '@alga-psa/ui/components/system-monitoring/SystemMonitoringWrapper';
 import { Card } from '@alga-psa/ui/components/Card';
+import { getCurrentUser, hasPermission } from '@alga-psa/auth';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -15,17 +16,21 @@ export default async function JobMonitorPage() {
   const jobMetrics = await getQueueMetricsAction();
   const jobHistory = await getJobDetailsWithHistory({ limit: 50 });
 
+  // Only MSP users with the job:delete permission may clear history.
+  const currentUser = await getCurrentUser();
+  const canClearHistory = currentUser
+    ? await hasPermission(currentUser, 'job', 'delete')
+    : false;
+
   return (
     <SystemMonitoringWrapper>
       <div className="space-y-6">
         {/* Page Header */}
-        <div>
+        <div className="flex items-center justify-between gap-4">
           <h1 className="text-3xl font-bold text-[rgb(var(--color-text-900))]">
             Job Monitoring
           </h1>
-          <p className="text-[rgb(var(--color-text-600))] mt-2">
-            Monitor background jobs, track execution status, and view detailed job history
-          </p>
+          <ClearJobHistoryButton canClear={canClearHistory} />
         </div>
 
         {/* Metrics Cards */}
@@ -33,14 +38,9 @@ export default async function JobMonitorPage() {
 
         {/* Job History Table */}
         <Card className="p-6">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold text-[rgb(var(--color-text-900))]">
-              Recent Jobs
-            </h2>
-            <p className="text-sm text-[rgb(var(--color-text-500))] mt-1">
-              Click on any job to view detailed execution information
-            </p>
-          </div>
+          <h2 className="text-xl font-semibold text-[rgb(var(--color-text-900))] mb-4">
+            Recent Jobs
+          </h2>
           <RecentJobsDataTable initialData={jobHistory} />
         </Card>
       </div>

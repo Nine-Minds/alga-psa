@@ -1,22 +1,29 @@
 // server/src/lib/models/contractLine.ts
 import { Knex } from 'knex';
 import type { IContractLine } from '@alga-psa/types';
-import { requireTenantId } from '@alga-psa/db';
+import { requireTenantId, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
   resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
 
+function tenantScopedTable<Row extends object = Record<string, any>>(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
+
 const ContractLine = {
   isInUse: async (knexOrTrx: Knex | Knex.Transaction, planId: string): Promise<boolean> => {
     const tenant = await requireTenantId(knexOrTrx);
 
     try {
-      const result = await knexOrTrx('client_contract_lines')
+      const result = await tenantScopedTable(knexOrTrx, tenant, 'client_contract_lines')
         .where({
-          contract_line_id: planId,
-          tenant
+          contract_line_id: planId
         })
         .count('client_contract_line_id as count')
         .first() as { count: string };
@@ -32,10 +39,9 @@ const ContractLine = {
     const tenant = await requireTenantId(knexOrTrx);
 
     try {
-      const result = await knexOrTrx('contract_line_services')
+      const result = await tenantScopedTable(knexOrTrx, tenant, 'contract_line_services')
         .where({
-          contract_line_id: planId,
-          tenant
+          contract_line_id: planId
         })
         .count('service_id as count')
         .first() as { count: string };
@@ -56,18 +62,17 @@ const ContractLine = {
         throw new Error('Cannot delete contract line that is in use by clients');
       }
 
-      await knexOrTrx('contract_line_service_configuration')
-        .where({ contract_line_id: planId, tenant })
+      await tenantScopedTable(knexOrTrx, tenant, 'contract_line_service_configuration')
+        .where({ contract_line_id: planId })
         .delete();
 
-      await knexOrTrx('contract_line_services')
-        .where({ contract_line_id: planId, tenant })
+      await tenantScopedTable(knexOrTrx, tenant, 'contract_line_services')
+        .where({ contract_line_id: planId })
         .delete();
 
-      const deletedCount = await knexOrTrx('contract_lines')
+      const deletedCount = await tenantScopedTable(knexOrTrx, tenant, 'contract_lines')
         .where({
-          contract_line_id: planId,
-          tenant
+          contract_line_id: planId
         })
         .delete();
 
@@ -84,8 +89,7 @@ const ContractLine = {
     const tenant = await requireTenantId(knexOrTrx);
 
     try {
-      const plans = await knexOrTrx<IContractLine>('contract_lines')
-        .where({ tenant })
+      const plans = await tenantScopedTable<IContractLine>(knexOrTrx, tenant, 'contract_lines')
         .select('*');
 
       console.log(`Retrieved ${plans.length} contract lines for tenant ${tenant}`);
@@ -122,7 +126,7 @@ const ContractLine = {
       contract_line_id: uuidv4(),
       tenant
     };
-    const [createdPlan] = await knexOrTrx<IContractLine>('contract_lines').insert(planWithId).returning('*');
+    const [createdPlan] = await tenantScopedTable<IContractLine>(knexOrTrx, tenant, 'contract_lines').insert(planWithId).returning('*');
     return createdPlan;
   },
 
@@ -133,10 +137,9 @@ const ContractLine = {
       // Remove tenant from update data to prevent modification
       const { tenant: _, ...dataToUpdate } = updateData;
 
-      const existingPlan = await knexOrTrx<IContractLine>('contract_lines')
+      const existingPlan = await tenantScopedTable<IContractLine>(knexOrTrx, tenant, 'contract_lines')
         .where({
-          contract_line_id: planId,
-          tenant
+          contract_line_id: planId
         })
         .first(['billing_timing', 'cadence_owner']);
 
@@ -149,10 +152,9 @@ const ContractLine = {
 
       const { billing_timing, cadence_owner, ...rest } = dataToUpdate;
 
-      const [updatedPlan] = await knexOrTrx<IContractLine>('contract_lines')
+      const [updatedPlan] = await tenantScopedTable<IContractLine>(knexOrTrx, tenant, 'contract_lines')
         .where({
-          contract_line_id: planId,
-          tenant
+          contract_line_id: planId
         })
         .update({
           ...rest,
@@ -177,10 +179,9 @@ const ContractLine = {
 
     try {
       // Assume config fields are columns on contract_lines table
-      const plan = await knexOrTrx<IContractLine>('contract_lines')
+      const plan = await tenantScopedTable<IContractLine>(knexOrTrx, tenant, 'contract_lines')
         .where({
-          contract_line_id: planId,
-          tenant: tenant
+          contract_line_id: planId
         })
         .first(); // Use .first() to get a single object or undefined
 

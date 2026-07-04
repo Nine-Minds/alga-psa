@@ -4,18 +4,22 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
+import { tenantDb } from '@alga-psa/db';
 
 vi.mock('server/src/lib/utils/getSecret', () => ({
-  getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+  getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
-  getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+  getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
   getSecretProviderInstance: vi.fn(async () => ({
     getAppSecret: async () => '',
   })),
   secretProvider: {
-    getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+    getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
   },
 }));
 
@@ -285,7 +289,8 @@ describe('Ticket bundling integration', () => {
       mockCurrentUser = internalUser;
     }
 
-    const linkedChild = await db('tickets').where({ tenant: tenantId, ticket_id: childId }).first();
+    const scopedDb = tenantDb(db, tenantId);
+    const linkedChild = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
     expect(linkedChild?.master_ticket_id).toBe(masterId);
   });
 
@@ -310,13 +315,14 @@ describe('Ticket bundling integration', () => {
       );
     });
 
-    const child1 = await db('tickets').where({ tenant: tenantId, ticket_id: child1Id }).first();
-    const child2 = await db('tickets').where({ tenant: tenantId, ticket_id: child2Id }).first();
+    const scopedDb = tenantDb(db, tenantId);
+    const child1 = await scopedDb.table('tickets').where({ ticket_id: child1Id }).first();
+    const child2 = await scopedDb.table('tickets').where({ ticket_id: child2Id }).first();
     expect(child1?.master_ticket_id).toBe(masterId);
     expect(child2?.master_ticket_id).toBe(masterId);
     expect(child2?.status_id).toBe(statusClosedId);
 
-    const settings = await db('ticket_bundle_settings').where({ tenant: tenantId, master_ticket_id: masterId }).first();
+    const settings = await scopedDb.table('ticket_bundle_settings').where({ master_ticket_id: masterId }).first();
     expect(settings).toBeTruthy();
     expect(settings?.mode).toBe('sync_updates');
 
@@ -365,16 +371,16 @@ describe('Ticket bundling integration', () => {
     await runWithTenant(tenantId, async () => {
       await removeChildFromBundleAction({ childTicketId: child2Id }, internalUser as any);
     });
-    const child2After = await db('tickets').where({ tenant: tenantId, ticket_id: child2Id }).first();
+    const child2After = await scopedDb.table('tickets').where({ ticket_id: child2Id }).first();
     expect(child2After?.master_ticket_id).toBeNull();
 
     // Unbundle detaches all children + removes settings.
     await runWithTenant(tenantId, async () => {
       await unbundleMasterTicketAction({ masterTicketId: masterId }, internalUser as any);
     });
-    const child1After = await db('tickets').where({ tenant: tenantId, ticket_id: child1Id }).first();
+    const child1After = await scopedDb.table('tickets').where({ ticket_id: child1Id }).first();
     expect(child1After?.master_ticket_id).toBeNull();
-    const settingsAfter = await db('ticket_bundle_settings').where({ tenant: tenantId, master_ticket_id: masterId }).first();
+    const settingsAfter = await scopedDb.table('ticket_bundle_settings').where({ master_ticket_id: masterId }).first();
     expect(settingsAfter).toBeFalsy();
   });
 
@@ -398,14 +404,15 @@ describe('Ticket bundling integration', () => {
       await promoteBundleMasterAction({ oldMasterTicketId: oldMasterId, newMasterTicketId: child1Id }, internalUser as any);
     });
 
-    const newMaster = await db('tickets').where({ tenant: tenantId, ticket_id: child1Id }).first();
+    const scopedDb = tenantDb(db, tenantId);
+    const newMaster = await scopedDb.table('tickets').where({ ticket_id: child1Id }).first();
     expect(newMaster?.master_ticket_id).toBeNull();
-    const oldMaster = await db('tickets').where({ tenant: tenantId, ticket_id: oldMasterId }).first();
+    const oldMaster = await scopedDb.table('tickets').where({ ticket_id: oldMasterId }).first();
     expect(oldMaster?.master_ticket_id).toBe(child1Id);
-    const otherChild = await db('tickets').where({ tenant: tenantId, ticket_id: child2Id }).first();
+    const otherChild = await scopedDb.table('tickets').where({ ticket_id: child2Id }).first();
     expect(otherChild?.master_ticket_id).toBe(child1Id);
 
-    const settings = await db('ticket_bundle_settings').where({ tenant: tenantId, master_ticket_id: child1Id }).first();
+    const settings = await scopedDb.table('ticket_bundle_settings').where({ master_ticket_id: child1Id }).first();
     expect(settings?.mode).toBe('sync_updates');
   });
 
@@ -423,14 +430,15 @@ describe('Ticket bundling integration', () => {
       await bundleTicketsAction({ masterTicketId: masterId, childTicketIds: [childId], mode: 'sync_updates' }, internalUser as any);
     });
 
-    const anotherPriority = await db('priorities').where({ tenant: tenantId }).andWhereNot({ priority_id: priorityId }).first();
+    const scopedDb = tenantDb(db, tenantId);
+    const anotherPriority = await scopedDb.table('priorities').andWhereNot({ priority_id: priorityId }).first();
     const nextPriorityId = anotherPriority?.priority_id ?? priorityId;
 
     await runWithTenant(tenantId, async () => {
       await updateTicketWithCache(masterId, { status_id: statusClosedId, priority_id: nextPriorityId }, internalUser as any);
     });
 
-    const childAfter = await db('tickets').where({ tenant: tenantId, ticket_id: childId }).first();
+    const childAfter = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
     expect(childAfter?.status_id).toBe(statusClosedId);
     expect(childAfter?.priority_id).toBe(nextPriorityId);
 
@@ -440,7 +448,7 @@ describe('Ticket bundling integration', () => {
       })
     ).rejects.toThrow();
 
-    const childAfterLockAttempt = await db('tickets').where({ tenant: tenantId, ticket_id: childId }).first();
+    const childAfterLockAttempt = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
     expect(childAfterLockAttempt?.status_id).toBe(statusClosedId);
   });
 
@@ -469,8 +477,9 @@ describe('Ticket bundling integration', () => {
       await addTicketCommentWithCache(masterId, content, false, false, internalUser as any);
     });
 
-    const mirrored = await db('comments')
-      .where({ tenant: tenantId, ticket_id: childId })
+    const scopedDb = tenantDb(db, tenantId);
+    const mirrored = await scopedDb.table('comments')
+      .where({ ticket_id: childId })
       .andWhere({ is_system_generated: true })
       .first();
 
@@ -484,7 +493,7 @@ describe('Ticket bundling integration', () => {
       })
     ).rejects.toThrow();
 
-    const mirroredAfter = await db('comments').where({ tenant: tenantId, comment_id: mirrored.comment_id }).first();
+    const mirroredAfter = await scopedDb.table('comments').where({ comment_id: mirrored.comment_id }).first();
     expect(mirroredAfter?.note).toBe(originalNote);
   });
 
@@ -504,7 +513,8 @@ describe('Ticket bundling integration', () => {
       await updateTicketWithCache(masterId, { status_id: statusClosedId }, internalUser as any);
     });
 
-    const closedMaster = await db('tickets').where({ tenant: tenantId, ticket_id: masterId }).first();
+    const scopedDb = tenantDb(db, tenantId);
+    const closedMaster = await scopedDb.table('tickets').where({ ticket_id: masterId }).first();
     expect(closedMaster?.status_id).toBe(statusClosedId);
     expect(closedMaster?.is_closed).toBe(true);
 
@@ -528,8 +538,8 @@ describe('Ticket bundling integration', () => {
     // The reopen utility resets the master to the tenant's default open ticket
     // status (tenant-wide, not board-scoped), so compute that expectation the
     // same way rather than assuming it matches this suite's chosen status.
-    const tenantDefaultOpenStatus = await db('statuses')
-      .where({ tenant: tenantId, is_closed: false })
+    const tenantDefaultOpenStatus = await scopedDb.table('statuses')
+      .where({ is_closed: false })
       .andWhere(function () {
         this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
       })
@@ -537,7 +547,7 @@ describe('Ticket bundling integration', () => {
       .orderBy('order_number', 'asc')
       .first<{ status_id: string }>('status_id');
 
-    const reopenedMaster = await db('tickets').where({ tenant: tenantId, ticket_id: masterId }).first();
+    const reopenedMaster = await scopedDb.table('tickets').where({ ticket_id: masterId }).first();
     expect(reopenedMaster?.status_id).toBe(tenantDefaultOpenStatus?.status_id);
     expect(reopenedMaster?.closed_at).toBeNull();
     expect(reopenedMaster?.is_closed).toBe(false);
@@ -581,21 +591,22 @@ describe('Ticket bundling integration', () => {
     const clientA = await createClient(db, tenantId, `Client A ${uuidv4().slice(0, 6)}`);
     const contactA = await createContact(db, tenantId, clientA, `a-${uuidv4().slice(0, 6)}@example.com`);
 
-    const existingService = await db('service_catalog')
-      .where({ tenant: tenantId, is_active: true })
+    const scopedDb = tenantDb(db, tenantId);
+    const existingService = await scopedDb.table('service_catalog')
+      .where({ is_active: true })
       .first('service_id');
     let serviceId = existingService?.service_id as string | undefined;
     if (!serviceId) {
       const serviceTypeId = uuidv4();
       serviceId = uuidv4();
-      await db('service_types').insert({
+      await scopedDb.table('service_types').insert({
         id: serviceTypeId,
         tenant: tenantId,
         name: `Hourly Type ${uuidv4().slice(0, 6)}`,
         is_active: true,
         order_number: 9999,
       });
-      await db('service_catalog').insert({
+      await scopedDb.table('service_catalog').insert({
         service_id: serviceId,
         tenant: tenantId,
         service_name: `Time Entry Service ${uuidv4().slice(0, 6)}`,
@@ -640,8 +651,8 @@ describe('Ticket bundling integration', () => {
         })
       ).resolves.toBeUndefined();
 
-      const entry = await db('time_entries')
-        .where({ tenant: tenantId, user_id: internalUser.user_id, work_item_id: ticketId, work_item_type: 'ticket' })
+      const entry = await scopedDb.table('time_entries')
+        .where({ user_id: internalUser.user_id, work_item_id: ticketId, work_item_type: 'ticket' })
         .first();
       expect(entry).toBeTruthy();
     }
@@ -649,7 +660,9 @@ describe('Ticket bundling integration', () => {
 });
 
 async function ensureTenant(connection: Knex, name: string): Promise<string> {
-  const row = await connection('tenants').first<{ tenant: string }>('tenant');
+  const row = await tenantDb(connection, '__test_discovery__')
+    .unscoped('tenants', 'test discovery of seeded tenant for ticket bundling integration')
+    .first<{ tenant: string }>('tenant');
   if (row?.tenant) {
     return row.tenant;
   }
@@ -657,13 +670,13 @@ async function ensureTenant(connection: Knex, name: string): Promise<string> {
 }
 
 async function ensureTicketReferenceData(connection: Knex, tenant: string, createdByUserId: string): Promise<void> {
-  let boardId = (await connection('boards')
-    .where({ tenant })
+  const scopedDb = tenantDb(connection, tenant);
+  let boardId = (await scopedDb.table('boards')
     .orderBy('is_default', 'desc')
     .first<{ board_id: string }>('board_id'))?.board_id;
   if (!boardId) {
     boardId = uuidv4();
-    await connection('boards').insert({
+    await scopedDb.table('boards').insert({
       tenant,
       board_id: boardId,
       board_name: 'Test Board',
@@ -676,11 +689,11 @@ async function ensureTicketReferenceData(connection: Knex, tenant: string, creat
   }
 
   // Ticket statuses are board-scoped; ensure the chosen board has open and closed statuses.
-  const hasTicketStatuses = await connection('statuses')
-    .where({ tenant, status_type: 'ticket', is_closed: false, board_id: boardId })
+  const hasTicketStatuses = await scopedDb.table('statuses')
+    .where({ status_type: 'ticket', is_closed: false, board_id: boardId })
     .first<{ status_id: string }>('status_id');
   if (!hasTicketStatuses?.status_id) {
-    await connection('statuses').insert({
+    await scopedDb.table('statuses').insert({
       tenant,
       status_id: uuidv4(),
       name: 'Open',
@@ -694,11 +707,11 @@ async function ensureTicketReferenceData(connection: Knex, tenant: string, creat
     });
   }
 
-  const hasClosedTicketStatus = await connection('statuses')
-    .where({ tenant, status_type: 'ticket', is_closed: true, board_id: boardId })
+  const hasClosedTicketStatus = await scopedDb.table('statuses')
+    .where({ status_type: 'ticket', is_closed: true, board_id: boardId })
     .first<{ status_id: string }>('status_id');
   if (!hasClosedTicketStatus?.status_id) {
-    await connection('statuses').insert({
+    await scopedDb.table('statuses').insert({
       tenant,
       status_id: uuidv4(),
       name: 'Closed',
@@ -712,9 +725,9 @@ async function ensureTicketReferenceData(connection: Knex, tenant: string, creat
     });
   }
 
-  const existingPriority = await connection('priorities').where({ tenant }).first<{ priority_id: string }>('priority_id');
+  const existingPriority = await scopedDb.table('priorities').first<{ priority_id: string }>('priority_id');
   if (!existingPriority?.priority_id) {
-    await connection('priorities').insert({
+    await scopedDb.table('priorities').insert({
       tenant,
       priority_id: uuidv4(),
       priority_name: 'Normal',
@@ -730,42 +743,38 @@ async function ensureTicketReferenceData(connection: Knex, tenant: string, creat
 async function loadTicketReferenceData(connection: Knex, tenant: string) {
   // Ticket statuses are board-scoped, so pick a board that has both an open
   // and a closed ticket status, then select statuses from that board only.
+  const scopedDb = tenantDb(connection, tenant);
   const ticketStatusFilter = function (this: Knex.QueryBuilder) {
     this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
   };
-  const board = await connection('boards as b')
-    .where('b.tenant', tenant)
-    .whereExists(function () {
-      this.select(connection.raw('1'))
-        .from('statuses as s_open')
-        .whereRaw('s_open.tenant = b.tenant')
-        .whereRaw('s_open.board_id = b.board_id')
-        .where('s_open.is_closed', false)
-        .andWhere(ticketStatusFilter);
-    })
-    .whereExists(function () {
-      this.select(connection.raw('1'))
-        .from('statuses as s_closed')
-        .whereRaw('s_closed.tenant = b.tenant')
-        .whereRaw('s_closed.board_id = b.board_id')
-        .where('s_closed.is_closed', true)
-        .andWhere(ticketStatusFilter);
-    })
+  const openStatusExists = scopedDb.table('statuses as s_open')
+    .select(connection.raw('1'))
+    .whereRaw('?? = ??', ['s_open.board_id', 'b.board_id'])
+    .where('s_open.is_closed', false)
+    .andWhere(ticketStatusFilter);
+  const closedStatusExists = scopedDb.table('statuses as s_closed')
+    .select(connection.raw('1'))
+    .whereRaw('?? = ??', ['s_closed.board_id', 'b.board_id'])
+    .where('s_closed.is_closed', true)
+    .andWhere(ticketStatusFilter);
+  const board = await scopedDb.table('boards as b')
+    .whereExists(openStatusExists)
+    .whereExists(closedStatusExists)
     .orderBy('b.is_default', 'desc')
     .first<{ board_id: string }>('b.board_id as board_id');
-  const openStatus = await connection('statuses')
-    .where({ tenant, is_closed: false, board_id: board?.board_id })
+  const openStatus = await scopedDb.table('statuses')
+    .where({ is_closed: false, board_id: board?.board_id })
     .andWhere(ticketStatusFilter)
     .orderBy('is_default', 'desc')
     .orderBy('order_number', 'asc')
     .first<{ status_id: string }>('status_id');
-  const closedStatus = await connection('statuses')
-    .where({ tenant, is_closed: true, board_id: board?.board_id })
+  const closedStatus = await scopedDb.table('statuses')
+    .where({ is_closed: true, board_id: board?.board_id })
     .andWhere(ticketStatusFilter)
     .orderBy('is_default', 'desc')
     .orderBy('order_number', 'asc')
     .first<{ status_id: string }>('status_id');
-  const prio = await connection('priorities').where({ tenant }).orderBy('order_number', 'asc').first<{ priority_id: string }>('priority_id');
+  const prio = await scopedDb.table('priorities').orderBy('order_number', 'asc').first<{ priority_id: string }>('priority_id');
 
   if (!board?.board_id || !openStatus?.status_id || !closedStatus?.status_id || !prio?.priority_id) {
     throw new Error('Missing reference data (boards/statuses/priorities) for ticket bundling integration test');
@@ -781,7 +790,7 @@ async function loadTicketReferenceData(connection: Knex, tenant: string) {
 
 async function createContact(connection: Knex, tenant: string, clientId: string, email: string): Promise<string> {
   const contactId = uuidv4();
-  await connection('contacts').insert({
+  await tenantDb(connection, tenant).table('contacts').insert({
     tenant,
     contact_name_id: contactId,
     full_name: 'Bundling Contact',
@@ -794,12 +803,13 @@ async function createContact(connection: Knex, tenant: string, clientId: string,
 }
 
 async function ensureDefaultClientLocation(connection: Knex, tenant: string, clientId: string, email: string): Promise<void> {
-  const existing = await connection('client_locations')
-    .where({ tenant, client_id: clientId, is_default: true, is_active: true })
+  const scopedDb = tenantDb(connection, tenant);
+  const existing = await scopedDb.table('client_locations')
+    .where({ client_id: clientId, is_default: true, is_active: true })
     .first('location_id');
   if (existing) return;
 
-  await connection('client_locations').insert({
+  await scopedDb.table('client_locations').insert({
     tenant,
     location_id: uuidv4(),
     client_id: clientId,
@@ -827,7 +837,7 @@ async function insertTicket(connection: Knex, params: {
   priorityId: string;
   boardId: string;
 }): Promise<void> {
-  await connection('tickets').insert({
+  await tenantDb(connection, params.tenant).table('tickets').insert({
     tenant: params.tenant,
     ticket_id: params.ticketId,
     ticket_number: params.ticketNumber,
@@ -854,7 +864,8 @@ async function grantUserPermissions(
   permissions: Array<{ resource: string; action: string }>
 ) {
   const roleId = uuidv4();
-  await connection('roles').insert({
+  const scopedDb = tenantDb(connection, tenant);
+  await scopedDb.table('roles').insert({
     tenant,
     role_id: roleId,
     role_name: `Bundling Test Role ${uuidv4().slice(0, 8)}`,
@@ -866,12 +877,12 @@ async function grantUserPermissions(
   });
 
   for (const perm of permissions) {
-    const existingPerm = await connection('permissions')
-      .where({ tenant, resource: perm.resource, action: perm.action })
+    const existingPerm = await scopedDb.table('permissions')
+      .where({ resource: perm.resource, action: perm.action })
       .first<{ permission_id: string }>('permission_id');
     const permissionId = existingPerm?.permission_id ?? uuidv4();
     if (!existingPerm) {
-      await connection('permissions').insert({
+      await scopedDb.table('permissions').insert({
         tenant,
         permission_id: permissionId,
         resource: perm.resource,
@@ -881,7 +892,7 @@ async function grantUserPermissions(
         created_at: connection.fn.now(),
       });
     }
-    await connection('role_permissions')
+    await scopedDb.table('role_permissions')
       .insert({
         tenant,
         role_id: roleId,
@@ -892,7 +903,7 @@ async function grantUserPermissions(
       .ignore();
   }
 
-  await connection('user_roles')
+  await scopedDb.table('user_roles')
     .insert({
       tenant,
       user_id: userId,

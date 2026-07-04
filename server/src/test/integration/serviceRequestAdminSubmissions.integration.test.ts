@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import {
   getServiceRequestSubmissionDetailForDefinition,
@@ -9,6 +10,15 @@ import {
 
 describe('service request admin submissions', () => {
   let db: Knex;
+
+  function tenantTable(tenant: string, table: string) {
+    return tenantDb(db, tenant).table(table);
+  }
+
+  function tenantRows() {
+    return tenantDb(db, '__test_tenant_fixture__')
+      .unscoped('tenants', 'test fixture creates and removes tenant rows');
+  }
 
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
@@ -33,7 +43,7 @@ describe('service request admin submissions', () => {
     const clientId = uuidv4();
     const contactId = uuidv4();
 
-    await db('tenants').insert([
+    await tenantRows().insert([
       {
         tenant,
         client_name: `Tenant ${tenant.slice(0, 8)}`,
@@ -46,7 +56,7 @@ describe('service request admin submissions', () => {
       },
     ]);
 
-    await db('users').insert({
+    await tenantTable(tenant, 'users').insert({
       tenant,
       user_id: requesterUserId,
       username: 'casey.requester',
@@ -57,20 +67,20 @@ describe('service request admin submissions', () => {
       user_type: 'internal',
     });
 
-    await db('clients').insert({
+    await tenantTable(tenant, 'clients').insert({
       tenant,
       client_id: clientId,
       client_name: 'Emerald City',
     });
 
-    await db('contacts').insert({
+    await tenantTable(tenant, 'contacts').insert({
       tenant,
       contact_name_id: contactId,
       full_name: 'Casey Parker',
       client_id: clientId,
     });
 
-    await db('tickets').insert({
+    await tenantTable(tenant, 'tickets').insert({
       tenant,
       ticket_id: createdTicketId,
       ticket_number: 'TIC001036',
@@ -78,7 +88,7 @@ describe('service request admin submissions', () => {
       client_id: clientId,
     });
 
-    await db('service_request_definitions').insert([
+    await tenantTable(tenant, 'service_request_definitions').insert([
       {
         tenant,
         definition_id: definitionId,
@@ -107,7 +117,7 @@ describe('service request admin submissions', () => {
       },
     ]);
 
-    await db('service_request_definition_versions').insert({
+    await tenantTable(tenant, 'service_request_definition_versions').insert({
       tenant,
       version_id: versionId,
       definition_id: definitionId,
@@ -124,7 +134,7 @@ describe('service request admin submissions', () => {
       visibility_config: {},
     });
 
-    await db('service_request_submissions').insert([
+    await tenantTable(tenant, 'service_request_submissions').insert([
       {
         tenant,
         submission_id: submissionId,

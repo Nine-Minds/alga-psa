@@ -282,8 +282,44 @@
       "@alga-psa/jobs": [
         "../packages/jobs/src"
       ],
+      "@alga-psa/jobs/handlers/*": [
+        "../packages/jobs/src/lib/handlers/*"
+      ],
+      "@alga-psa/jobs/handler-utils/*": [
+        "../packages/jobs/src/lib/handler-utils/*"
+      ],
+      "@alga-psa/jobs/runners/*": [
+        "../packages/jobs/src/lib/jobs/runners/*"
+      ],
+      "@alga-psa/jobs/fanout": [
+        "../packages/jobs/src/lib/fanout"
+      ],
+      "@alga-psa/jobs/runner": [
+        "../packages/jobs/src/lib/jobRunnerAccessor"
+      ],
+      "@alga-psa/jobs/scheduler": [
+        "../packages/jobs/src/lib/jobSchedulerAccessor"
+      ],
       "@alga-psa/jobs/*": [
         "../packages/jobs/src/*"
+      ],
+      "@alga-psa/search": [
+        "../packages/search/src"
+      ],
+      "@alga-psa/search/*": [
+        "../packages/search/src/*"
+      ],
+      "@alga-psa/user-activities": [
+        "../packages/user-activities/src"
+      ],
+      "@alga-psa/user-activities/*": [
+        "../packages/user-activities/src/*"
+      ],
+      "@alga-psa/agent-tooling": [
+        "../packages/agent-tooling/src"
+      ],
+      "@alga-psa/agent-tooling/*": [
+        "../packages/agent-tooling/src/*"
       ],
       "@alga-psa/reference-data": [
         "../packages/reference-data/src"

@@ -1,16 +1,18 @@
 import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig.ts';
 
 const modulePaths = vi.hoisted(() => {
-  const libDbModulePath = new URL('../../../lib/db/index.tsx', import.meta.url).pathname;
+  // The server db module moved from index.tsx to index.ts — mock the current file.
+  const libDbModulePath = new URL('../../../lib/db/index.ts', import.meta.url).pathname;
   const rootDbModulePath = new URL('../../../db.ts', import.meta.url).pathname;
   const rbacModulePath = new URL('../../../lib/auth/rbac.ts', import.meta.url).pathname;
 
   return {
     libDbModulePath,
-    libDbModulePathNoExt: libDbModulePath.replace(/\.tsx$/, ''),
+    libDbModulePathNoExt: libDbModulePath.replace(/\.tsx?$/, ''),
     rootDbModulePath,
     rootDbModulePathNoExt: rootDbModulePath.replace(/\.ts$/, ''),
     rbacModulePath,
@@ -69,15 +71,63 @@ vi.mock(modulePaths.libDbModulePathNoExt, () => buildDbExports());
 vi.mock(modulePaths.rootDbModulePath, () => buildDbExports());
 vi.mock(modulePaths.rootDbModulePathNoExt, () => buildDbExports());
 
+// The EE calendar impl resolves its connection/tenant context via @alga-psa/db.
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    ...buildDbExports(),
+  };
+});
+
+// The EE calendar actions are withAuth-wrapped; inject the test user directly.
+vi.mock('@alga-psa/auth/withAuth', () => ({
+  withAuth: (action: any) => (...args: any[]) =>
+    action(
+      { user_id: context.userId, tenant: context.defaultTenant, user_type: 'internal' },
+      { tenant: context.defaultTenant },
+      ...args
+    ),
+  withOptionalAuth: (action: any) => (...args: any[]) =>
+    action(
+      { user_id: context.userId, tenant: context.defaultTenant, user_type: 'internal' },
+      { tenant: context.defaultTenant },
+      ...args
+    ),
+  withAuthCheck: (action: any) => (...args: any[]) =>
+    action({ user_id: context.userId, tenant: context.defaultTenant, user_type: 'internal' }, ...args),
+}));
+
 const providerTenantMap = vi.hoisted(() => new Map<string, string>());
 
-vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
+function contextTenantTable(table: string, tenant: string) {
+  if (!context.db) {
+    throw new Error('Database not initialized');
+  }
+  return tenantDb(context.db, tenant).table(table);
+}
+
+function tenantTable(db: Knex, tenant: string, table: string) {
+  return tenantDb(db, tenant).table(table);
+}
+
+function tenantRows(db: Knex, tenant: string) {
+  return tenantDb(db, tenant).unscoped('tenants', 'manual calendar sync test fixture creates and removes tenant rows');
+}
+
+function schemaTable(db: Knex, table: string) {
+  return tenantDb(db, '__manual_calendar_sync_schema__').unscoped(table, 'manual calendar sync test reads schema metadata');
+}
+
+// The EE calendar action impl lives in @alga-psa/ee-calendar and imports its
+// services from that package (not @enterprise) — mock those specifiers.
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService', () => ({
   CalendarProviderService: class {
     async getProvider(providerId: string, tenant: string) {
       if (!context.db) {
         throw new Error('Database not initialized');
       }
-      const row = await context.db('calendar_providers')
+      const row = await contextTenantTable('calendar_providers', tenant)
         .where({ id: providerId, tenant })
         .first();
       if (!row) {
@@ -87,6 +137,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
       return {
         id: row.id,
         tenant: row.tenant,
+        user_id: row.user_id,
         name: row.provider_name,
         provider_type: row.provider_type,
         calendar_id: row.calendar_id,
@@ -108,7 +159,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
       if (!tenant) {
         throw new Error(`Tenant not known for provider ${providerId}`);
       }
-      await context.db('calendar_providers')
+      await contextTenantTable('calendar_providers', tenant)
         .where({ id: providerId, tenant })
         .update({
           status: updates.status,
@@ -120,7 +171,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
   },
 }));
 
-vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService', () => ({
   CalendarSyncService: class {
     async syncScheduleEntryToExternal(entryId: string, providerId: string) {
       if (!context.db) {
@@ -131,7 +182,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
         throw new Error('Tenant context missing');
       }
 
-      const mapping = await context.db('calendar_event_mappings')
+      const mapping = await contextTenantTable('calendar_event_mappings', tenant)
         .where({
           tenant,
           calendar_provider_id: providerId,
@@ -147,7 +198,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
       const lastSyncedAt = new Date('2025-10-31T11:05:00.000Z');
       const externalLastModified = '2025-10-31T11:00:00.000Z';
 
-      await context.db('calendar_event_mappings')
+      await contextTenantTable('calendar_event_mappings', tenant)
         .where({ id: mapping.id, tenant })
         .update({
           sync_status: 'synced',
@@ -181,7 +232,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
         throw new Error('Tenant context missing');
       }
 
-      const mapping = await context.db('calendar_event_mappings')
+      const mapping = await contextTenantTable('calendar_event_mappings', tenant)
         .where({
           tenant,
           calendar_provider_id: providerId,
@@ -194,7 +245,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
       }
 
       const columns = context.scheduleEntryColumns;
-      const existing = await context.db('schedule_entries')
+      const existing = await contextTenantTable('schedule_entries', tenant)
         .where({ tenant, entry_id: mapping.schedule_entry_id })
         .first();
 
@@ -236,7 +287,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
           insertRecord.duration_minutes = 60;
         }
 
-        await context.db('schedule_entries').insert(insertRecord);
+        await contextTenantTable('schedule_entries', tenant).insert(insertRecord);
         context.lastPullMetadata = {
           externalEventId,
           providerId,
@@ -244,7 +295,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
           externalLastModified: '2025-10-31T12:05:00.000Z',
         };
       } else {
-        await context.db('schedule_entries')
+        await contextTenantTable('schedule_entries', tenant)
           .where({ tenant, entry_id: mapping.schedule_entry_id })
           .update({
             notes: 'Updated via inbound sync',
@@ -258,7 +309,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
         };
       }
 
-      await context.db('calendar_event_mappings')
+      await contextTenantTable('calendar_event_mappings', tenant)
         .where({ id: mapping.id, tenant })
         .update({
           sync_status: 'synced',
@@ -295,7 +346,30 @@ vi.mock('@/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(),
 }));
 
-import { syncCalendarProvider } from '@alga-psa/integrations/actions/calendarActions';
+// Keep the adapter/maintenance imports of the EE impl inert.
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/providers/GoogleCalendarAdapter', () => ({
+  GoogleCalendarAdapter: class {
+    constructor(_provider: unknown) {}
+    async connect() {}
+    async registerWebhookSubscription() {}
+  },
+}));
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/providers/MicrosoftCalendarAdapter', () => ({
+  MicrosoftCalendarAdapter: class {
+    constructor(_provider: unknown) {}
+    async connect() {}
+    async registerWebhookSubscription() {}
+  },
+}));
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarWebhookMaintenanceService', () => ({
+  CalendarWebhookMaintenanceService: class {},
+}));
+
+// Import the EE action directly: it is what the EE settings UI calls. (The CE
+// wrapper in @alga-psa/integrations delegates to `*Impl` exports that
+// @alga-psa/ee-calendar/actions does not expose, so it reports calendar sync
+// unavailable even on EE.)
+import { syncCalendarProvider } from '@alga-psa/ee-calendar/actions';
 
 describe('Manual calendar sync integration', () => {
   const testTenant = uuidv4();
@@ -310,9 +384,9 @@ describe('Manual calendar sync integration', () => {
 
     await db.migrate.latest();
 
-    context.scheduleEntryColumns = await db('schedule_entries').columnInfo();
+    context.scheduleEntryColumns = await schemaTable(db, 'schedule_entries').columnInfo();
 
-    await db('tenants').insert({
+    await tenantRows(db, testTenant).insert({
       tenant: testTenant,
       client_name: 'Calendar Sync Tenant',
       email: 'calendar-sync@example.com',
@@ -320,7 +394,7 @@ describe('Manual calendar sync integration', () => {
       updated_at: new Date(),
     }).onConflict('tenant').ignore();
 
-    await db('users').insert({
+    await tenantTable(db, testTenant, 'users').insert({
       tenant: testTenant,
       user_id: testUserId,
       username: 'calendar-sync-user',
@@ -333,11 +407,11 @@ describe('Manual calendar sync integration', () => {
 
   afterAll(async () => {
     if (db) {
-      await db('calendar_event_mappings').where({ tenant: testTenant }).del();
-      await db('calendar_providers').where({ tenant: testTenant }).del();
-      await db('schedule_entries').where({ tenant: testTenant }).del();
-      await db('users').where({ tenant: testTenant, user_id: testUserId }).del();
-      await db('tenants').where({ tenant: testTenant }).del();
+      await tenantTable(db, testTenant, 'calendar_event_mappings').del();
+      await tenantTable(db, testTenant, 'calendar_providers').del();
+      await tenantTable(db, testTenant, 'schedule_entries').del();
+      await tenantTable(db, testTenant, 'users').where({ user_id: testUserId }).del();
+      await tenantRows(db, testTenant).where({ tenant: testTenant }).del();
       await db.destroy();
     }
   });
@@ -348,19 +422,21 @@ describe('Manual calendar sync integration', () => {
     context.lastPullMetadata = null;
     providerTenantMap.clear();
 
-    await db('calendar_event_mappings').where({ tenant: testTenant }).del();
-    await db('calendar_providers').where({ tenant: testTenant }).del();
-    await db('schedule_entries').where({ tenant: testTenant }).del();
+    await tenantTable(db, testTenant, 'calendar_event_mappings').del();
+    await tenantTable(db, testTenant, 'calendar_providers').del();
+    await tenantTable(db, testTenant, 'schedule_entries').del();
   });
 
   function buildScheduleEntryInsert(entryId: string) {
-    const now = new Date('2025-10-31T08:00:00.000Z');
+    // The manual sync only reconciles mappings whose schedule entries fall in a
+    // now-relative window (-2d..+15d), so the fixture must use relative dates.
+    const now = new Date();
     const record: Record<string, any> = {
       tenant: testTenant,
       entry_id: entryId,
       title: 'Manual Sync Entry',
-      scheduled_start: now,
-      scheduled_end: new Date('2025-10-31T09:00:00.000Z'),
+      scheduled_start: new Date(now.getTime() + 60 * 60 * 1000),
+      scheduled_end: new Date(now.getTime() + 2 * 60 * 60 * 1000),
       status: 'scheduled',
       notes: 'Initial notes',
       created_at: now,
@@ -393,15 +469,35 @@ describe('Manual calendar sync integration', () => {
     return record;
   }
 
+  // syncCalendarProvider now starts the sync in the background (setImmediate)
+  // and returns immediately; the run finishes by moving the provider status off
+  // 'disconnected' via updateProviderStatus.
+  async function waitForBackgroundSync(providerId: string, timeoutMs = 15000) {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      const row = await tenantTable(db, testTenant, 'calendar_providers')
+        .where({ id: providerId, tenant: testTenant })
+        .first();
+      if (row && row.status !== 'disconnected') {
+        return row;
+      }
+      if (Date.now() > deadline) {
+        throw new Error(`Timed out waiting for background sync (status=${row?.status ?? 'missing'})`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+
   it('pushes existing schedule entries to the external provider and updates mapping metadata', async () => {
     const providerId = uuidv4();
     const scheduleEntryId = uuidv4();
     const mappingId = uuidv4();
     const externalEventId = 'ext-manual-push';
 
-    await db('calendar_providers').insert({
+    await tenantTable(db, testTenant, 'calendar_providers').insert({
       id: providerId,
       tenant: testTenant,
+      user_id: testUserId,
       provider_type: 'google',
       provider_name: 'Manual Sync Provider',
       calendar_id: 'primary',
@@ -415,9 +511,9 @@ describe('Manual calendar sync integration', () => {
       updated_at: new Date(),
     });
 
-    await db('schedule_entries').insert(buildScheduleEntryInsert(scheduleEntryId));
+    await tenantTable(db, testTenant, 'schedule_entries').insert(buildScheduleEntryInsert(scheduleEntryId));
 
-    await db('calendar_event_mappings').insert({
+    await tenantTable(db, testTenant, 'calendar_event_mappings').insert({
       id: mappingId,
       tenant: testTenant,
       calendar_provider_id: providerId,
@@ -434,13 +530,14 @@ describe('Manual calendar sync integration', () => {
     });
 
     const result = await syncCalendarProvider(providerId);
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ success: true, started: true });
+    await waitForBackgroundSync(providerId);
 
     expect(context.lastPushMetadata).not.toBeNull();
     expect(context.lastPushMetadata?.entryId).toBe(scheduleEntryId);
     expect(context.lastPushMetadata?.providerId).toBe(providerId);
 
-    const updatedMapping = await db('calendar_event_mappings')
+    const updatedMapping = await tenantTable(db, testTenant, 'calendar_event_mappings')
       .where({ id: mappingId, tenant: testTenant })
       .first();
 
@@ -455,7 +552,7 @@ describe('Manual calendar sync integration', () => {
     expect(updatedMapping?.alga_last_modified instanceof Date).toBe(true);
     expect(updatedMapping?.sync_error_message).toBeNull();
 
-    const providerRow = await db('calendar_providers')
+    const providerRow = await tenantTable(db, testTenant, 'calendar_providers')
       .where({ id: providerId, tenant: testTenant })
       .first();
     expect(providerRow?.status).toBe('connected');
@@ -463,15 +560,16 @@ describe('Manual calendar sync integration', () => {
     expect(providerRow?.last_sync_at).not.toBeNull();
   });
 
-  it('pulls external changes and persists schedule entries for inbound sync', async () => {
+  it('pulls external changes into mapped in-window schedule entries for inbound sync', async () => {
     const providerId = uuidv4();
     const inboundEntryId = uuidv4();
     const mappingId = uuidv4();
     const externalEventId = 'ext-inbound-123';
 
-    await db('calendar_providers').insert({
+    await tenantTable(db, testTenant, 'calendar_providers').insert({
       id: providerId,
       tenant: testTenant,
+      user_id: testUserId,
       provider_type: 'google',
       provider_name: 'Inbound Provider',
       calendar_id: 'primary',
@@ -485,7 +583,11 @@ describe('Manual calendar sync integration', () => {
       updated_at: new Date(),
     });
 
-    await db('calendar_event_mappings').insert({
+    // Manual sync reconciles existing mapped entries only (inbound creation of
+    // brand-new entries is webhook-driven now), so the local entry must exist.
+    await tenantTable(db, testTenant, 'schedule_entries').insert(buildScheduleEntryInsert(inboundEntryId));
+
+    await tenantTable(db, testTenant, 'calendar_event_mappings').insert({
       id: mappingId,
       tenant: testTenant,
       calendar_provider_id: providerId,
@@ -502,20 +604,22 @@ describe('Manual calendar sync integration', () => {
     });
 
     const result = await syncCalendarProvider(providerId);
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ success: true, started: true });
+    await waitForBackgroundSync(providerId);
+
     expect(context.lastPullMetadata).not.toBeNull();
     expect(context.lastPullMetadata?.externalEventId).toBe(externalEventId);
-    expect(context.lastPullMetadata?.created).toBe(true);
+    expect(context.lastPullMetadata?.created).toBe(false);
 
-    const storedEntry = await db('schedule_entries')
+    const storedEntry = await tenantTable(db, testTenant, 'schedule_entries')
       .where({ tenant: testTenant, entry_id: inboundEntryId })
       .first();
 
     expect(storedEntry).toBeDefined();
-    expect(storedEntry?.notes).toBe('Created via inbound sync');
+    expect(storedEntry?.notes).toBe('Updated via inbound sync');
     expect(storedEntry?.status).toBe('scheduled');
 
-    const updatedMapping = await db('calendar_event_mappings')
+    const updatedMapping = await tenantTable(db, testTenant, 'calendar_event_mappings')
       .where({ id: mappingId, tenant: testTenant })
       .first();
 

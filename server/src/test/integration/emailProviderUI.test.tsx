@@ -11,8 +11,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { GmailProviderForm } from '@alga-psa/integrations/components';
 import type { EmailProvider } from '@alga-psa/integrations/components';
 import { TestContext } from '../../../test-utils/testContext';
-import * as tenantActions from '../../lib/actions/tenantActions';
 import * as userActions from '@alga-psa/user-composition/actions';
+import { getCurrentUser as authGetCurrentUser } from '@alga-psa/auth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 const localStorageProviderMock = vi.hoisted(() => ({
@@ -40,15 +40,26 @@ vi.mock('@alga-psa/documents/handlers/VideoDocumentHandler', () => ({
   }
 }));
 
-vi.mock('../../lib/actions/email-actions/inboundTicketDefaultsActions', () => ({
-  getInboundTicketDefaults: vi.fn().mockResolvedValue({ defaults: [] })
+// The form and actions live in @alga-psa/integrations now; mock the package
+// source modules (the /actions barrel re-exports them, so module identity
+// matches both barrel and relative imports).
+vi.mock('@alga-psa/integrations/actions/email-actions/inboundTicketDefaultsActions', () => ({
+  getInboundTicketDefaults: vi.fn().mockResolvedValue({ defaults: [] }),
+  createInboundTicketDefaults: vi.fn(),
+  updateInboundTicketDefaults: vi.fn(),
+  deleteInboundTicketDefaults: vi.fn()
 }));
 
-vi.mock('../../lib/actions/email-actions/configureGmailProvider', () => ({
-  configureGmailProvider: vi.fn().mockResolvedValue(undefined)
+vi.mock('@alga-psa/integrations/actions/email-actions/configureGmailProvider', () => ({
+  configureGmailProvider: vi.fn().mockResolvedValue({
+    success: true,
+    pubsubConfigured: true,
+    watchRegistered: true,
+    warnings: []
+  })
 }));
 
-vi.mock('@/lib/actions/integrations/googleActions', () => ({
+vi.mock('@alga-psa/integrations/actions/integrations/googleActions', () => ({
   getGoogleIntegrationStatus: vi.fn().mockResolvedValue({
     success: true,
     config: {
@@ -61,28 +72,62 @@ vi.mock('@/lib/actions/integrations/googleActions', () => ({
       usingSharedOAuthApp: true,
     },
   }),
+  saveGoogleIntegrationSettings: vi.fn(),
+  resetGoogleProvidersToDisconnected: vi.fn(),
 }));
 
-vi.mock('@alga-psa/core', () => {
-  const getAppSecret = vi.fn().mockResolvedValue(undefined);
+// In-memory secret store shared by both @alga-psa/core specifiers. The
+// filesystem provider cannot load node:fs in this VM-evaluated runtime, and
+// the actions under test read tenant secrets through '@alga-psa/core/secrets'.
+const inMemorySecretProvider = vi.hoisted(() => {
   const tenantSecrets = new Map<string, Map<string, string>>();
 
   return {
-    getSecretProviderInstance: vi.fn().mockResolvedValue({
-      getAppSecret,
-      setAppSecret: vi.fn().mockResolvedValue(undefined),
-      deleteAppSecret: vi.fn().mockResolvedValue(undefined),
-      listAppSecrets: vi.fn().mockResolvedValue([]),
-      getTenantSecret: vi.fn(async (tenant: string, key: string) => tenantSecrets.get(tenant)?.get(key)),
-      setTenantSecret: vi.fn(async (tenant: string, key: string, value: string) => {
-        const bucket = tenantSecrets.get(tenant) ?? new Map<string, string>();
-        bucket.set(key, value);
-        tenantSecrets.set(tenant, bucket);
-      }),
-      deleteTenantSecret: vi.fn(async (tenant: string, key: string) => {
-        tenantSecrets.get(tenant)?.delete(key);
-      })
-    })
+    getAppSecret: async () => undefined,
+    setAppSecret: async () => undefined,
+    deleteAppSecret: async () => undefined,
+    listAppSecrets: async () => [],
+    getTenantSecret: async (tenant: string, key: string) => tenantSecrets.get(tenant)?.get(key),
+    setTenantSecret: async (tenant: string, key: string, value: string) => {
+      const bucket = tenantSecrets.get(tenant) ?? new Map<string, string>();
+      bucket.set(key, value);
+      tenantSecrets.set(tenant, bucket);
+    },
+    deleteTenantSecret: async (tenant: string, key: string) => {
+      tenantSecrets.get(tenant)?.delete(key);
+    }
+  };
+});
+
+vi.mock('@alga-psa/core', () => ({
+  getSecretProviderInstance: vi.fn().mockResolvedValue(inMemorySecretProvider)
+}));
+
+vi.mock('@alga-psa/core/secrets', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/core/secrets')>();
+  return {
+    ...actual,
+    getSecretProviderInstance: vi.fn().mockResolvedValue(inMemorySecretProvider)
+  };
+});
+
+// Route the actions' tenant resolution (global withAuth mock reads
+// getCurrentTenantId from server/src/lib/db) and their @alga-psa/db
+// connections at the TestContext database/tenant. vitest loads server/.env,
+// so the real createTenantKnex would target the production-named database.
+let actionsDb: Knex | undefined;
+let actionsTenant: string | undefined;
+
+vi.mock('../../lib/db', () => ({
+  getCurrentTenantId: () => actionsTenant,
+  createTenantKnex: vi.fn(async () => ({ knex: actionsDb, tenant: actionsTenant })),
+}));
+
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: actionsDb, tenant: actionsTenant })),
   };
 });
 
@@ -99,7 +144,6 @@ describe('Email Provider UI Integration', () => {
   let ctx: TestContext;
   let db: Knex;
   let tenantId: string;
-  let getCurrentTenantSpy: ReturnType<typeof vi.spyOn> | undefined;
   let getCurrentUserSpy: ReturnType<typeof vi.spyOn> | undefined;
 
   beforeAll(async () => {
@@ -123,15 +167,24 @@ describe('Email Provider UI Integration', () => {
     ctx = await testHelpers.beforeEach();
     db = ctx.db;
     tenantId = ctx.tenantId;
+    actionsDb = ctx.db;
+    actionsTenant = ctx.tenantId;
 
-    getCurrentTenantSpy?.mockRestore();
     getCurrentUserSpy?.mockRestore();
 
-    getCurrentTenantSpy = vi.spyOn(tenantActions, 'getCurrentTenant').mockResolvedValue(tenantId);
     getCurrentUserSpy = vi.spyOn(userActions, 'getCurrentUser').mockResolvedValue({
       ...ctx.user,
       tenant: tenantId
     } as any);
+
+    // The global @alga-psa/auth mock (setup.ts) resolves withAuth's tenant from
+    // its own getCurrentUser mock; point it at this file's tenant.
+    if (vi.isMockFunction(authGetCurrentUser)) {
+      (authGetCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...ctx.user,
+        tenant: tenantId
+      });
+    }
 
     const secretProvider = await getSecretProviderInstance();
     await secretProvider.setTenantSecret(tenantId, 'google_project_id', 'test-project');
@@ -146,9 +199,7 @@ describe('Email Provider UI Integration', () => {
 
   afterEach(async () => {
     await testHelpers.afterEach();
-    getCurrentTenantSpy?.mockRestore();
     getCurrentUserSpy?.mockRestore();
-    getCurrentTenantSpy = undefined;
     getCurrentUserSpy = undefined;
   });
 
@@ -165,7 +216,7 @@ describe('Email Provider UI Integration', () => {
       />
     );
 
-    await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Production Gmail');
+    await user.type(screen.getByPlaceholderText('e.g., Support Gmail (internal)'), 'Production Gmail');
     await user.type(screen.getByPlaceholderText('support@client.com'), 'production@client.com');
     const labelsField = screen.getByPlaceholderText('INBOX, Support, Custom Label');
     await user.clear(labelsField);
@@ -335,7 +386,7 @@ describe('Email Provider UI Integration', () => {
     await user.click(screen.getByRole('button', { name: /add provider/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Provider name is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/Configuration name is required/i)).toBeInTheDocument();
     });
     expect(screen.getByText(/Valid Gmail address is required/i)).toBeInTheDocument();
     expect(onSuccess).not.toHaveBeenCalled();

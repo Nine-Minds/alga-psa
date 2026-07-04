@@ -342,15 +342,27 @@ describe('buildUnifiedTicketTimeline', () => {
       occurredAt: earlier,
     });
 
-    // Later: comment
+    // Later: comment (comments.thread_id is NOT NULL and references comment_threads)
+    const commentId = uuidv4();
+    const threadId = uuidv4();
+    await db('comment_threads').insert({
+      tenant: fx.tenantId,
+      thread_id: threadId,
+      ticket_id: fx.ticketId,
+      root_comment_id: commentId,
+      is_internal: false,
+      created_at: later,
+    });
     await db('comments').insert({
       tenant: fx.tenantId,
-      comment_id: uuidv4(),
+      comment_id: commentId,
+      thread_id: threadId,
       ticket_id: fx.ticketId,
       user_id: fx.userId,
       author_type: 'internal',
       note: 'A comment',
       is_internal: false,
+      is_resolution: false,
       created_at: later,
     });
 

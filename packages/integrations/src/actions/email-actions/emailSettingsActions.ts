@@ -4,15 +4,45 @@
 
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import type { TenantEmailSettings } from '@alga-psa/types';
+import type { EmailProviderConfig, TenantEmailSettings } from '@alga-psa/types';
 import { TenantEmailService } from '@alga-psa/email';
 
 type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
   defaultFromDomain?: string | null;
   ticketingFromEmail?: string | null;
 };
+
+// getEmailSettings masks stored secrets as this sentinel so they are never
+// sent to the browser. On save it means "unchanged" — restore the real value.
+const SECRET_MASK = '***';
+const SECRET_FIELDS = ['password', 'apiKey'] as const;
+
+function mergeProviderSecrets(
+  incoming: EmailProviderConfig[],
+  existing: EmailProviderConfig[] | undefined
+): EmailProviderConfig[] {
+  const existingById = new Map((existing ?? []).map(config => [config.providerId, config]));
+
+  return incoming.map(config => {
+    const prior = existingById.get(config.providerId);
+    const nextConfig: Record<string, any> = { ...(config.config ?? {}) };
+
+    for (const field of SECRET_FIELDS) {
+      if (nextConfig[field] !== SECRET_MASK) continue;
+      // The client only ever held the mask, so this is not a real change.
+      const priorValue = prior?.config?.[field];
+      if (priorValue) {
+        nextConfig[field] = priorValue;
+      } else {
+        delete nextConfig[field];
+      }
+    }
+
+    return { ...config, config: nextConfig };
+  });
+}
 
 function extractDomain(address?: string | null): string | null {
   if (!address) return null;
@@ -113,7 +143,9 @@ export const updateEmailSettings = withAuth(async (
       ticketingFromEmail: nextTicketingFromEmail,
       customDomains: updates.customDomains ?? existingSettings?.customDomains ?? [],
       emailProvider: updates.emailProvider ?? existingSettings?.emailProvider ?? 'smtp',
-      providerConfigs: updates.providerConfigs ?? existingSettings?.providerConfigs ?? [],
+      providerConfigs: updates.providerConfigs
+        ? mergeProviderSecrets(updates.providerConfigs, existingSettings?.providerConfigs)
+        : existingSettings?.providerConfigs ?? [],
       trackingEnabled: updates.trackingEnabled ?? existingSettings?.trackingEnabled ?? false,
       maxDailyEmails: updates.maxDailyEmails ?? existingSettings?.maxDailyEmails,
       createdAt: existingSettings?.createdAt ?? now,
@@ -145,19 +177,17 @@ export const updateEmailSettings = withAuth(async (
       updated_at: now
     };
 
+    const settingsTable = () => tenantDb(knex, tenant).table('tenant_email_settings');
+
     // Check if settings exist
-    const existing = await knex('tenant_email_settings')
-      .where({ tenant: tenant })
-      .first();
+    const existing = await settingsTable().first();
 
     if (existing) {
       // Update existing settings
-      await knex('tenant_email_settings')
-        .where({ tenant: tenant })
-        .update(settingsData);
+      await settingsTable().update(settingsData);
     } else {
       // Create new settings
-      await knex('tenant_email_settings')
+      await settingsTable()
         .insert({
           ...settingsData,
           created_at: now
@@ -174,5 +204,24 @@ export const updateEmailSettings = withAuth(async (
   } catch (error: any) {
     console.error('Error updating email settings:', error);
     throw new Error('Failed to update email settings');
+  }
+});
+
+/**
+ * Verify the saved outbound provider (and optionally send a test email to the
+ * given address). Returns the real failure reason so admins can diagnose SMTP
+ * problems from the Outbound Email tab without reading server logs.
+ */
+export const testOutboundEmail = withAuth(async (
+  _user,
+  { tenant },
+  toAddress?: string
+): Promise<{ success: boolean; message?: string; error?: string }> => {
+  try {
+    const recipient = toAddress?.trim() || undefined;
+    return await TenantEmailService.testConnection(tenant || '', recipient);
+  } catch (error: any) {
+    console.error('Error testing outbound email:', error);
+    return { success: false, error: error?.message || 'Failed to test outbound email' };
   }
 });

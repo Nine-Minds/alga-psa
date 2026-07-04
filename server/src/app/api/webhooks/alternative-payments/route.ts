@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { recordExternalPayment } from '@alga-psa/billing/services/accountingSync/recordExternalPayment';
 
@@ -147,7 +147,13 @@ function timingSafeEqualHex(left: string, right: string): boolean {
 function verifySignature(body: string, signature: string | null): boolean {
   const secret = process.env.ALTERNATIVE_PAYMENTS_WEBHOOK_SECRET;
   if (!secret) {
-    return true;
+    // Fail closed: without a configured secret the request cannot be
+    // authenticated. This endpoint records payments against an
+    // attacker-supplied tenant/invoice, so an unsigned request must never be
+    // trusted (previously this returned true, allowing unauthenticated
+    // cross-tenant payment fraud).
+    console.error('[alternative-payments webhook] ALTERNATIVE_PAYMENTS_WEBHOOK_SECRET is not configured; rejecting webhook');
+    return false;
   }
 
   if (!signature) {
@@ -167,7 +173,7 @@ async function insertWebhookEvent(knex: any, tenant: string, eventId: string, ev
     return { inserted: true, eventRecordId: null };
   }
 
-  const inserted = await knex('payment_webhook_events')
+  const inserted = await tenantDb(knex, tenant).table('payment_webhook_events')
     .insert({
       tenant,
       provider_type: PROVIDER,
@@ -193,8 +199,8 @@ async function updateWebhookEvent(knex: any, tenant: string, eventId: string, st
     return;
   }
 
-  await knex('payment_webhook_events')
-    .where({ tenant, provider_type: PROVIDER, external_event_id: eventId })
+  await tenantDb(knex, tenant).table('payment_webhook_events')
+    .where({ provider_type: PROVIDER, external_event_id: eventId })
     .update({
       processed: status === 'completed',
       processing_status: status,

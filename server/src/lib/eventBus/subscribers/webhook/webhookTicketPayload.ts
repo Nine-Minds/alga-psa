@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { TaggedEntityType } from '@alga-psa/types';
 import TagMapping from '@alga-psa/tags/models/tagMapping';
 import type { TicketWebhookInternalEvent as TicketWebhookInternalEventType } from './webhookEventMap';
@@ -235,25 +236,16 @@ async function fetchTicketWebhookRow(
   tenantId: string,
   ticketId: string
 ): Promise<TicketWebhookRow | undefined> {
-  return knex('tickets as t')
-    .leftJoin('clients as c', function joinClients() {
-      this.on('t.client_id', '=', 'c.client_id').andOn('t.tenant', '=', 'c.tenant');
-    })
-    .leftJoin('contacts as co', function joinContacts() {
-      this.on('t.contact_name_id', '=', 'co.contact_name_id').andOn('t.tenant', '=', 'co.tenant');
-    })
-    .leftJoin('statuses as s', function joinStatuses() {
-      this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-    })
-    .leftJoin('priorities as p', function joinPriorities() {
-      this.on('t.priority_id', '=', 'p.priority_id').andOn('t.tenant', '=', 'p.tenant');
-    })
-    .leftJoin('users as au', function joinAssignedUsers() {
-      this.on('t.assigned_to', '=', 'au.user_id').andOn('t.tenant', '=', 'au.tenant');
-    })
-    .leftJoin('boards as b', function joinBoards() {
-      this.on('t.board_id', '=', 'b.board_id').andOn('t.tenant', '=', 'b.tenant');
-    })
+  const db = tenantDb(knex, tenantId);
+  const query = db.table('tickets as t');
+  db.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+  db.tenantJoin(query, 'contacts as co', 't.contact_name_id', 'co.contact_name_id', { type: 'left' });
+  db.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+  db.tenantJoin(query, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+  db.tenantJoin(query, 'users as au', 't.assigned_to', 'au.user_id', { type: 'left' });
+  db.tenantJoin(query, 'boards as b', 't.board_id', 'b.board_id', { type: 'left' });
+
+  return query
     .select(
       't.ticket_id',
       't.ticket_number',
@@ -283,7 +275,6 @@ async function fetchTicketWebhookRow(
       't.due_date'
     )
     .where({
-      't.tenant': tenantId,
       't.ticket_id': ticketId,
     })
     .first();
@@ -303,10 +294,9 @@ async function fetchStatusName(
   tenantId: string,
   statusId: string
 ): Promise<string | null> {
-  const row = await knex('statuses')
+  const row = await tenantDb(knex, tenantId).table('statuses')
     .select('name')
     .where({
-      tenant: tenantId,
       status_id: statusId,
     })
     .first<{ name: string | null }>();
@@ -327,10 +317,11 @@ export async function fetchTicketCommentsForWebhook(
   tenantId: string,
   ticketId: string,
 ): Promise<TicketWebhookCommentsEntry[]> {
-  const rows = await knex('comments as c')
-    .leftJoin('users as u', function joinUsers() {
-      this.on('c.user_id', '=', 'u.user_id').andOn('c.tenant', '=', 'u.tenant');
-    })
+  const db = tenantDb(knex, tenantId);
+  const query = db.table('comments as c');
+  db.tenantJoin(query, 'users as u', 'c.user_id', 'u.user_id', { type: 'left' });
+
+  const rows = await query
     .select(
       'c.comment_id',
       'c.note',
@@ -344,7 +335,6 @@ export async function fetchTicketCommentsForWebhook(
       ),
     )
     .where({
-      'c.tenant': tenantId,
       'c.ticket_id': ticketId,
     })
     .orderBy('c.created_at', 'asc');

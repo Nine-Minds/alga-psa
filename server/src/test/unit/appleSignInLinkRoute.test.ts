@@ -50,8 +50,11 @@ function makeFakeKnex() {
     _insertRow: undefined as Record<string, unknown> | undefined,
     _mergeRow: undefined as Record<string, unknown> | undefined,
 
-    where(w: Record<string, unknown>) {
-      this._where = w;
+    where(w: Record<string, unknown> | string, value?: unknown) {
+      // tenantDb scopes the root query with where('apple_user_identities.tenant', tenant);
+      // normalize the qualified column to its bare name and accumulate chained wheres.
+      const patch = typeof w === 'string' ? { [w.split('.').pop() as string]: value } : w;
+      this._where = { ...(this._where ?? {}), ...patch };
       return this;
     },
     first(_columns?: string[]) {

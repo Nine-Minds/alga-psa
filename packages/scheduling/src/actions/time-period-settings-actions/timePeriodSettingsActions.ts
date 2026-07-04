@@ -1,6 +1,5 @@
 'use server'
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { ITimePeriod, ITimePeriodSettings } from '@alga-psa/types';
 import { set, getDaysInMonth } from 'date-fns';
 import { formatISO } from 'date-fns';
@@ -13,6 +12,23 @@ import { withAuth } from '@alga-psa/auth';
 // Special value to indicate end of period
 const END_OF_PERIOD = 0;
 
+type TimePeriodSettingsRow = Omit<ITimePeriodSettings, 'effective_from' | 'effective_to' | 'created_at' | 'updated_at'> & {
+  effective_from: string | Date;
+  effective_to?: string | Date | null;
+  created_at: string | Date;
+  updated_at: string | Date;
+  start_date?: string | Date | null;
+  end_date?: string | Date | null;
+};
+
+function tenantScopedTable<T extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder<T, T[]> {
+  return tenantDb(conn, tenant).table<T>(table);
+}
+
 export const getActiveTimePeriodSettings = withAuth(async (
   _user,
   { tenant }
@@ -20,9 +36,8 @@ export const getActiveTimePeriodSettings = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   const activeSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return await trx<ITimePeriodSettings>('time_period_settings')
+    return await tenantScopedTable<ITimePeriodSettings>(trx, 'time_period_settings', tenant)
       .where({ is_active: true })
-      .andWhere('tenant', tenant)
       .orderBy('effective_from', 'desc')
       .then(settings => settings.map((setting):ITimePeriodSettings => ({
         ...setting,
@@ -60,9 +75,8 @@ export const updateTimePeriodSettings = withAuth(async (
     // Validate business rules and check for overlaps
     await validateTimePeriodSettings({ ...validatedSettings, tenant }, trx, settings.time_period_settings_id);
 
-    await trx('time_period_settings')
+    await tenantScopedTable(trx, 'time_period_settings', tenant)
       .where({ time_period_settings_id: validatedSettings.time_period_settings_id })
-      .andWhere('tenant', tenant)
       .update({
         frequency: validatedSettings.frequency,
         frequency_unit: validatedSettings.frequency_unit,
@@ -109,7 +123,7 @@ export const createTimePeriodSettings = withAuth(async (
     await validateTimePeriodSettings(newSettings, trx);
 
     // First insert into database to get the ID
-    const [result] = await trx('time_period_settings')
+    const [result] = await tenantScopedTable<TimePeriodSettingsRow>(trx, 'time_period_settings', tenant)
       .insert({
         ...newSettings,
         effective_from: new Date(newSettings.effective_from),
@@ -147,9 +161,8 @@ export const deleteTimePeriodSettings = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
-    await trx('time_period_settings')
+    await tenantScopedTable(trx, 'time_period_settings', tenant)
       .where({ time_period_settings_id: settingId })
-      .andWhere('tenant', tenant)
       .delete();
   });
 });
@@ -272,9 +285,8 @@ async function validateTimePeriodSettings(settings: Partial<ITimePeriodSettings>
   const effectiveTo = settings.effective_to ? new Date(settings.effective_to) : null;
 
   // Check for overlapping periods within the same tenant
-  let query = db<ITimePeriodSettings>('time_period_settings')
-    .where('is_active', true)
-    .andWhere('tenant', settings.tenant);
+  let query = tenantScopedTable<ITimePeriodSettings>(db, 'time_period_settings', settings.tenant)
+    .where('is_active', true);
 
   // Add conditions for overlapping effective dates
   query = query.andWhere(builder => {

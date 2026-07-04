@@ -57,6 +57,8 @@ export async function applianceLicenseCheckInActivity(): Promise<ApplianceCheckI
   const log = logger();
   const knex = await getAdminConnection();
 
+  // license_state is install-wide admin metadata; keep it on the admin
+  // connection rather than tenantDb.
   const row = await knex('license_state').orderBy('id').first();
   if (!row) {
     // SaaS/cloud: no self-host license state — nothing to check in.
@@ -104,7 +106,8 @@ export async function applianceLicenseCheckInActivity(): Promise<ApplianceCheckI
 
   const data = (await res.json()) as CheckInResponse;
 
-  // 200 from the service = it processed our check-in; record the timestamp.
+  // 200 from the service = it processed our check-in; record the timestamp
+  // on the admin-scoped license_state singleton.
   await knex('license_state')
     .where({ id: row.id })
     .update({ last_checkin_at: knex.fn.now(), updated_at: knex.fn.now() });
@@ -123,10 +126,11 @@ export async function applianceLicenseCheckInActivity(): Promise<ApplianceCheckI
     return { outcome: 'unchanged', exp: data.exp };
   }
 
-  // Fresh token: store it. getLicenseStateRow always reads the DB and the verify
-  // cache is keyed by token string, so the server process picks up the new token
-  // (and its rolled-forward exp) as a cache miss on its next read — no
-  // cross-process cache coordination needed.
+  // Fresh token: store it on the admin-scoped license_state singleton.
+  // getLicenseStateRow always reads the DB and the verify cache is keyed by
+  // token string, so the server process picks up the new token (and its
+  // rolled-forward exp) as a cache miss on its next read — no cross-process
+  // cache coordination needed.
   await knex('license_state')
     .where({ id: row.id })
     .update({ license_token: data.jwt, updated_at: knex.fn.now() });

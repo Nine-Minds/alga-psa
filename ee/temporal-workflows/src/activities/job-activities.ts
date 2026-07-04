@@ -1,7 +1,32 @@
 import { createLogger, format, transports } from 'winston';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
+import {
+  workflowOneTimeScheduledRunHandler,
+  workflowRecurringScheduledRunHandler,
+} from '@alga-psa/jobs/handlers/workflowScheduledRunHandlers';
+import {
+  WORKFLOW_ONE_TIME_TRIGGER_JOB,
+  WORKFLOW_RECURRING_TRIGGER_JOB,
+} from '@alga-psa/workflows/lib/workflowScheduleLifecycle';
 import type { JobStatus } from '../types/job.js';
+import { registerJobRunnerAccessor } from '@alga-psa/jobs/runner';
+import { TemporalJobRunner } from '@alga-psa/jobs/runners/TemporalJobRunner';
+import { extensionScheduledInvocationHandler } from '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+
+// rmm/huntress poll + accounting-sync-cycle handlers import src-consumed vertical
+// packages (@alga-psa/integrations, @alga-psa/billing) the plain-Node-ESM worker
+// cannot load. They run server-side: the worker forwards a MAINTENANCE_JOB_REQUESTED
+// event (with the original jobId + data) and a server subscriber runs the registered
+// handler (registerAllHandlers). Job-name constants are inlined here because importing
+// them would pull the unresolvable handler module back into the worker's static graph.
+const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
+const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
+const ACCOUNTING_SYNC_CYCLE_JOB = 'accounting-sync-cycle';
+const HUDU_AUTO_SYNC_JOB = 'hudu-auto-sync';
+const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 // Configure logger
 const logger = createLogger({
@@ -48,13 +73,18 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     return;
   }
 
+  // Provide a Temporal job runner to shared handlers that schedule follow-up
+  // jobs. The worker registers the Temporal runner directly so shared handlers
+  // (e.g. RMM polling) stay decoupled from the server-bound JobRunnerFactory.
+  registerJobRunnerAccessor(async () => TemporalJobRunner.create({
+    address: process.env.TEMPORAL_ADDRESS || 'temporal-frontend.temporal.svc.cluster.local:7233',
+    namespace: process.env.TEMPORAL_NAMESPACE || 'default',
+    taskQueue: process.env.TEMPORAL_JOB_TASK_QUEUE || 'alga-jobs',
+  }) as any);
+
   // Register EE extension schedule invocation handler so Temporal can execute
   // extension cron jobs on the shared alga-jobs queue.
   try {
-    const { extensionScheduledInvocationHandler } = await import(
-      '../../../../server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
-    );
-
     registerJobHandlerForActivities(
       'extension-scheduled-invocation',
       async (jobId, data) => {
@@ -68,27 +98,45 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     throw error;
   }
 
-  // RMM polling handlers: in EE these recurring jobs arrive as Temporal
-  // Schedules (TemporalJobRunner.scheduleRecurringJob) that start
-  // genericJobWorkflow, which executes whatever is registered here. The same
-  // handler code runs on pg-boss in CE — see
-  // server/src/lib/jobs/handlers/rmmAlertPollingHandlers.ts for the model.
-  try {
-    const {
-      rmmAlertReconciliationHandler,
-      huntressIncidentPollHandler,
-      RMM_ALERT_RECONCILIATION_JOB,
-      HUNTRESS_INCIDENT_POLL_JOB,
-    } = await import('../../../../server/src/lib/jobs/handlers/rmmAlertPollingHandlers');
+  // RMM/Huntress polling: in EE these recurring jobs arrive as Temporal Schedules
+  // that start genericJobWorkflow, which executes whatever is registered here. The
+  // handlers import the src-consumed @alga-psa/integrations vertical, which the
+  // plain-Node-ESM worker cannot load, so they run server-side: forward the job to
+  // the server (which has them registered via registerAllHandlers) over the event
+  // bus and let a subscriber execute the real handler for the tenant.
+  const forwardJobToServer = (jobName: string) =>
+    async (jobId: string, data: Record<string, unknown>) => {
+      await publishEvent({
+        eventType: 'MAINTENANCE_JOB_REQUESTED',
+        payload: {
+          tenantId: (data?.tenantId as string) ?? SYSTEM_TENANT_ID,
+          occurredAt: new Date().toISOString(),
+          jobName,
+          jobId,
+          data: data ?? {},
+        },
+      });
+    };
+  registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, forwardJobToServer(RMM_ALERT_RECONCILIATION_JOB));
+  registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, forwardJobToServer(HUNTRESS_INCIDENT_POLL_JOB));
+  registerJobHandlerForActivities(ACCOUNTING_SYNC_CYCLE_JOB, forwardJobToServer(ACCOUNTING_SYNC_CYCLE_JOB));
+  registerJobHandlerForActivities(HUDU_AUTO_SYNC_JOB, forwardJobToServer(HUDU_AUTO_SYNC_JOB));
 
-    registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, async (jobId, data) => {
-      await rmmAlertReconciliationHandler(jobId, data as any);
+  // User-defined workflow schedules: after the pg-boss → Temporal cutover these
+  // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /
+  // scheduleRecurringJob) that start genericJobWorkflow with jobName
+  // workflow-time-trigger-{once,recurring}. The handler code and trigger-name
+  // constants are shared via @alga-psa/jobs and @alga-psa/workflows (no server
+  // dependency), so they are imported statically at module load.
+  try {
+    registerJobHandlerForActivities(WORKFLOW_ONE_TIME_TRIGGER_JOB, async (jobId, data) => {
+      await workflowOneTimeScheduledRunHandler(jobId, data as any);
     });
-    registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, async (jobId, data) => {
-      await huntressIncidentPollHandler(jobId, data as any);
+    registerJobHandlerForActivities(WORKFLOW_RECURRING_TRIGGER_JOB, async (jobId, data) => {
+      await workflowRecurringScheduledRunHandler(jobId, data as any);
     });
   } catch (error) {
-    logger.error('Failed to register RMM polling handlers', {
+    logger.error('Failed to register workflow schedule handlers', {
       error: error instanceof Error ? error.message : String(error),
     });
     throw error;
@@ -191,9 +239,10 @@ export async function updateJobStatus(input: {
   logger.debug('Updating job status', { jobId, tenantId, status });
 
   await runWithTenant(tenantId, async (trx) => {
+    const db = tenantDb(trx, tenantId);
     // Get current metadata
-    const currentJob = await trx('jobs')
-      .where({ job_id: jobId, tenant: tenantId })
+    const currentJob = await db.table('jobs')
+      .where({ job_id: jobId })
       .first('metadata');
 
     const currentMetadata = currentJob?.metadata
@@ -202,18 +251,29 @@ export async function updateJobStatus(input: {
         : currentJob.metadata
       : {};
 
+    // A recurring schedule reuses one jobs row as its per-fire tracker; a
+    // terminal status would make it invisible to schedule reconcilers, which
+    // then re-schedule on every pass. pg-boss returns tracker rows to queued
+    // after each run — keep parity, and record the run outcome in metadata.
+    const isRecurringTracker = Boolean(currentMetadata?.recurring);
+    const isTerminal = status === 'completed' || status === 'failed';
+    const effectiveStatus = isRecurringTracker && isTerminal ? 'queued' : status;
+
     // Merge metadata
     const updatedMetadata = {
       ...currentMetadata,
       ...metadata,
       ...(error ? { error } : {}),
+      ...(isRecurringTracker && isTerminal
+        ? { lastRunStatus: status, lastRunAt: new Date().toISOString() }
+        : {}),
     };
 
     // Update job record
-    await trx('jobs')
-      .where({ job_id: jobId, tenant: tenantId })
+    await db.table('jobs')
+      .where({ job_id: jobId })
       .update({
-        status,
+        status: effectiveStatus,
         metadata: JSON.stringify(updatedMetadata),
         updated_at: new Date(),
       });
@@ -239,7 +299,7 @@ export async function createJobDetail(input: {
   logger.debug('Creating job detail', { jobId, tenantId, stepName, status });
 
   const detailId = await runWithTenant(tenantId, async (trx) => {
-    const [row] = await trx('job_details')
+    const [row] = await tenantDb(trx, tenantId).table('job_details')
       .insert({
         tenant: tenantId,
         job_id: jobId,
@@ -281,8 +341,8 @@ export async function getJobData(input: {
   const { jobId, tenantId } = input;
 
   return runWithTenant(tenantId, async (trx) => {
-    const job = await trx('jobs')
-      .where({ job_id: jobId, tenant: tenantId })
+    const job = await tenantDb(trx, tenantId).table('jobs')
+      .where({ job_id: jobId })
       .first();
 
     if (!job) {

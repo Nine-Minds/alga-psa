@@ -4,20 +4,47 @@ import { IPermission, IRole, IPolicy, IUserRole, IUserWithRoles, ICondition, Del
 import { ITicket } from '@alga-psa/types';
 import { PolicyEngine } from '../lib/policy/PolicyEngine';
 import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../lib/attributes/EntityAttributes';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '../lib/withAuth';
 import { hasPermission } from '../lib/rbac';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 
 const policyEngine = new PolicyEngine();
 
+/**
+ * Roles, permissions and policies are governed by the `security_settings`
+ * resource (see preCheckDeletion.ts, which maps the `role` entity to
+ * `security_settings`). Every RBAC/ABAC mutation must be gated on the
+ * corresponding security_settings permission; without this an authenticated
+ * but unprivileged user could create/rename/delete roles or attach arbitrary
+ * permissions to a role they already hold and self-escalate to admin.
+ */
+async function assertSecuritySettingsPermission(
+  user: IUserWithRoles,
+  action: 'create' | 'read' | 'update' | 'delete',
+  knexConnection?: Knex | Knex.Transaction,
+): Promise<void> {
+  const allowed = await hasPermission(user, 'security_settings', action, knexConnection);
+  if (!allowed) {
+    throw new Error('Permission denied: You do not have permission to manage roles and permissions.');
+  }
+}
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 // Role actions
-export const createRole = withAuth(async (_user, { tenant }, roleName: string, description: string, msp: boolean = true, client: boolean = false): Promise<IRole> => {
+export const createRole = withAuth(async (user, { tenant }, roleName: string, description: string, msp: boolean = true, client: boolean = false): Promise<IRole> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [role] = await trx('roles').insert({
+        await assertSecuritySettingsPermission(user, 'create', trx);
+        const [role] = await tenantScopedTable(trx, 'roles', tenant).insert({
             role_name: roleName,
             description,
             tenant,
@@ -28,11 +55,12 @@ export const createRole = withAuth(async (_user, { tenant }, roleName: string, d
     });
 });
 
-export const updateRole = withAuth(async (_user, { tenant }, roleId: string, roleName: string): Promise<IRole> => {
+export const updateRole = withAuth(async (user, { tenant }, roleId: string, roleName: string): Promise<IRole> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [updatedRole] = await trx('roles')
-            .where({ role_id: roleId, tenant })
+        await assertSecuritySettingsPermission(user, 'update', trx);
+        const [updatedRole] = await tenantScopedTable(trx, 'roles', tenant)
+            .where({ role_id: roleId })
             .update({ role_name: roleName })
             .returning('*');
         return updatedRole;
@@ -40,15 +68,17 @@ export const updateRole = withAuth(async (_user, { tenant }, roleId: string, rol
 });
 
 export const deleteRole = withAuth(async (
-  _user,
+  user,
   { tenant },
   roleId: string
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   try {
     const { knex: db } = await createTenantKnex();
 
-    const role = await db('roles')
-      .where({ role_id: roleId, tenant })
+    await assertSecuritySettingsPermission(user, 'delete', db);
+
+    const role = await tenantScopedTable(db, 'roles', tenant)
+      .where({ role_id: roleId })
       .first();
 
     if (!role) {
@@ -75,9 +105,9 @@ export const deleteRole = withAuth(async (
 
     const result = await deleteEntityWithValidation('role', roleId, db, tenant, async (trx, tenantId) => {
       // Clean up child records owned by the role
-      await trx('role_permissions').where({ role_id: roleId, tenant: tenantId }).del();
+      await tenantScopedTable(trx, 'role_permissions', tenantId).where({ role_id: roleId }).del();
 
-      await trx('roles').where({ role_id: roleId, tenant: tenantId }).del();
+      await tenantScopedTable(trx, 'roles', tenantId).where({ role_id: roleId }).del();
     });
 
     return {
@@ -101,22 +131,23 @@ export const deleteRole = withAuth(async (
 export const getRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('roles')
-            .where({ tenant })
+        return await tenantScopedTable(trx, 'roles', tenant)
             .select('role_id', 'role_name', 'description', 'tenant', 'msp', 'client');
     });
 });
 
 // Role-Permission actions
-export const assignPermissionToRole = withAuth(async (_user, { tenant }, roleId: string, permissionId: string): Promise<void> => {
+export const assignPermissionToRole = withAuth(async (user, { tenant }, roleId: string, permissionId: string): Promise<void> => {
     try {
         const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
 
+        await assertSecuritySettingsPermission(user, 'update', trx);
+
         // First, verify both the role and permission exist for this tenant
         const [role, permission] = await Promise.all([
-            trx('roles').where({ role_id: roleId, tenant }).first(),
-            trx('permissions').where({ permission_id: permissionId, tenant }).first()
+            tenantScopedTable(trx, 'roles', tenant).where({ role_id: roleId }).first(),
+            tenantScopedTable(trx, 'permissions', tenant).where({ permission_id: permissionId }).first()
         ]);
 
         if (!role || !permission) {
@@ -124,7 +155,7 @@ export const assignPermissionToRole = withAuth(async (_user, { tenant }, roleId:
         }
 
         // Then insert the role permission
-        await trx('role_permissions')
+        await tenantScopedTable(trx, 'role_permissions', tenant)
             .insert({
                 role_id: roleId,
                 permission_id: permissionId,
@@ -139,15 +170,15 @@ export const assignPermissionToRole = withAuth(async (_user, { tenant }, roleId:
     }
 });
 
-export const removePermissionFromRole = withAuth(async (_user, { tenant }, roleId: string, permissionId: string): Promise<void> => {
+export const removePermissionFromRole = withAuth(async (user, { tenant }, roleId: string, permissionId: string): Promise<void> => {
     try {
         const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
-        await trx('role_permissions')
+        await assertSecuritySettingsPermission(user, 'update', trx);
+        await tenantScopedTable(trx, 'role_permissions', tenant)
             .where({
                 role_id: roleId,
-                permission_id: permissionId,
-                tenant
+                permission_id: permissionId
             })
               .del();
         });
@@ -163,8 +194,8 @@ export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId:
     return withTransaction(db, async (trx: Knex.Transaction) => {
         // Validate that the role and user exist and are compatible
         const [user, role] = await Promise.all([
-            trx('users').where({ user_id: userId, tenant }).first(),
-            trx('roles').where({ role_id: roleId, tenant }).first()
+            tenantScopedTable(trx, 'users', tenant).where({ user_id: userId }).first(),
+            tenantScopedTable(trx, 'roles', tenant).where({ role_id: roleId }).first()
         ]);
 
         // Authorization: assigning an MSP role requires 'user:update'.
@@ -195,7 +226,7 @@ export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId:
             throw new Error('Cannot assign MSP role to client portal user');
         }
 
-        const [userRole] = await trx('user_roles')
+        const [userRole] = await tenantScopedTable(trx, 'user_roles', tenant)
             .insert({ user_id: userId, role_id: roleId, tenant })
             .returning('*');
         return userRole;
@@ -205,7 +236,7 @@ export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId:
 export const removeRoleFromUser = withAuth(async (currentUser, { tenant }, userId: string, roleId: string): Promise<void> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const role = await trx('roles').where({ role_id: roleId, tenant }).first();
+        const role = await tenantScopedTable(trx, 'roles', tenant).where({ role_id: roleId }).first();
 
         // Authorization mirrors assignRoleToUser: removing an MSP role requires
         // 'user:update'; pure client-portal roles may also use 'client:update'.
@@ -217,21 +248,20 @@ export const removeRoleFromUser = withAuth(async (currentUser, { tenant }, userI
             throw new Error('Permission denied: You do not have permission to change user roles.');
         }
 
-        await trx('user_roles').where({ user_id: userId, role_id: roleId, tenant }).del();
+        await tenantScopedTable(trx, 'user_roles', tenant).where({ user_id: userId, role_id: roleId }).del();
     });
 });
 
 export const getUserRoles = withAuth(async (_user, { tenant }, userId: string): Promise<IRole[]> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('user_roles')
-            .join('roles', function() {
-                this.on('user_roles.role_id', '=', 'roles.role_id')
-                    .andOn('user_roles.tenant', '=', 'roles.tenant');
-            })
+        const scopedDb = tenantDb(trx, tenant);
+        const query = scopedDb.table('user_roles');
+        scopedDb.tenantJoin(query, 'roles', 'user_roles.role_id', 'roles.role_id');
+
+        return await query
             .where({
-                'user_roles.user_id': userId,
-                'user_roles.tenant': tenant
+                'user_roles.user_id': userId
             })
             .select('roles.*');
     });
@@ -247,12 +277,11 @@ export const getUserRolesBatch = withAuth(
         const { knex: db } = await createTenantKnex();
 
         return withTransaction(db, async (trx: Knex.Transaction) => {
-            const rows = await trx('user_roles')
-                .join('roles', function() {
-                    this.on('user_roles.role_id', '=', 'roles.role_id')
-                        .andOn('user_roles.tenant', '=', 'roles.tenant');
-                })
-                .where({ 'user_roles.tenant': tenant })
+            const scopedDb = tenantDb(trx, tenant);
+            const query = scopedDb.table('user_roles');
+            scopedDb.tenantJoin(query, 'roles', 'user_roles.role_id', 'roles.role_id');
+
+            const rows = await query
                 .whereIn('user_roles.user_id', uniqueUserIds)
                 .select<Array<IRole & { user_id: string }>>('roles.*', 'user_roles.user_id');
 
@@ -273,7 +302,7 @@ export const getUserRolesBatch = withAuth(
 export const getUserAttributes = withAuth(async (_user, { tenant }, userId: string): Promise<Partial<IUserWithRoles>> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const user = await trx('users').where({ user_id: userId, tenant }).first();
+        const user = await tenantScopedTable(trx, 'users', tenant).where({ user_id: userId }).first();
 
     if (!user) {
         throw new Error('User not found');
@@ -296,7 +325,7 @@ export const getUserAttributes = withAuth(async (_user, { tenant }, userId: stri
 export const getTicketAttributes = withAuth(async (_user, { tenant }, ticketId: string): Promise<Partial<ITicket>> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const ticket = await trx('tickets').where({ ticket_id: ticketId, tenant }).first();
+        const ticket = await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: ticketId }).first();
 
     if (!ticket) {
         throw new Error('Ticket not found');
@@ -309,10 +338,11 @@ export const getTicketAttributes = withAuth(async (_user, { tenant }, ticketId: 
 });
 
 // Policy actions
-export const createPolicy = withAuth(async (_user, { tenant }, policyName: string, resource: string, action: string, conditions: ICondition[]): Promise<IPolicy> => {
+export const createPolicy = withAuth(async (user, { tenant }, policyName: string, resource: string, action: string, conditions: ICondition[]): Promise<IPolicy> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [policy] = await trx('policies').insert({
+        await assertSecuritySettingsPermission(user, 'create', trx);
+        const [policy] = await tenantScopedTable(trx, 'policies', tenant).insert({
             tenant,
             policy_name: policyName,
             resource,
@@ -324,11 +354,12 @@ export const createPolicy = withAuth(async (_user, { tenant }, policyName: strin
     });
 });
 
-export const updatePolicy = withAuth(async (_user, { tenant }, policyId: string, policyName: string, resource: string, action: string, conditions: ICondition[]): Promise<IPolicy> => {
+export const updatePolicy = withAuth(async (user, { tenant }, policyId: string, policyName: string, resource: string, action: string, conditions: ICondition[]): Promise<IPolicy> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [updatedPolicy] = await trx('policies')
-            .where({ policy_id: policyId, tenant })
+        await assertSecuritySettingsPermission(user, 'update', trx);
+        const [updatedPolicy] = await tenantScopedTable(trx, 'policies', tenant)
+            .where({ policy_id: policyId })
             .update({
                 policy_name: policyName,
                 resource,
@@ -342,11 +373,12 @@ export const updatePolicy = withAuth(async (_user, { tenant }, policyId: string,
     });
 });
 
-export const deletePolicy = withAuth(async (_user, { tenant }, policyId: string): Promise<void> => {
+export const deletePolicy = withAuth(async (user, { tenant }, policyId: string): Promise<void> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [deletedPolicy] = await trx('policies').where({ policy_id: policyId, tenant }).returning('*');
-        await trx('policies').where({ policy_id: policyId, tenant }).del();
+        await assertSecuritySettingsPermission(user, 'delete', trx);
+        const [deletedPolicy] = await tenantScopedTable(trx, 'policies', tenant).where({ policy_id: policyId }).returning('*');
+        await tenantScopedTable(trx, 'policies', tenant).where({ policy_id: policyId }).del();
         policyEngine.removePolicy(deletedPolicy);
     });
 });
@@ -354,7 +386,7 @@ export const deletePolicy = withAuth(async (_user, { tenant }, policyId: string)
 export const getPolicies = withAuth(async (_user, { tenant }): Promise<IPolicy[]> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const policies = await trx('policies').where({ tenant });
+        const policies = await tenantScopedTable(trx, 'policies', tenant);
         return policies.map((policy: any): IPolicy => ({
             ...policy,
             conditions: policy.conditions
@@ -371,14 +403,13 @@ export const getRolePermissions = withAuth(async (_user, { tenant }, roleId: str
     try {
         const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
-            return await trx('role_permissions')
-                .join('permissions', function() {
-                    this.on('role_permissions.permission_id', '=', 'permissions.permission_id')
-                        .andOn('role_permissions.tenant', '=', 'permissions.tenant');
-                })
+            const scopedDb = tenantDb(trx, tenant);
+            const query = scopedDb.table('role_permissions');
+            scopedDb.tenantJoin(query, 'permissions', 'role_permissions.permission_id', 'permissions.permission_id');
+
+            return await query
                 .where({
-                    'role_permissions.role_id': roleId,
-                    'role_permissions.tenant': tenant
+                    'role_permissions.role_id': roleId
                 })
                 .select('permissions.permission_id', 'permissions.resource', 'permissions.action', 'permissions.tenant', 'permissions.msp', 'permissions.client', 'permissions.description');
         });
@@ -392,8 +423,7 @@ export const getPermissions = withAuth(async (_user, { tenant }): Promise<IPermi
     try {
         const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
-            const permissions = await trx('permissions')
-                .where({ tenant })
+            const permissions = await tenantScopedTable(trx, 'permissions', tenant)
                 .select('permission_id', 'resource', 'action', 'tenant', 'msp', 'client', 'description');
             return permissions;
         });

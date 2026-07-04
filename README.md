@@ -145,6 +145,33 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
 
 For Windows-specific setup, see the [Windows Setup Guide](docs/getting-started/setup_guide_windows.md).
 
+## On-premise appliance (ISO)
+
+The Quick start above runs the Community Edition stack with Docker Compose, which suits teams that want to build on the source or manage the containers themselves. If you want a turnkey on-premise install instead, the appliance ISO installs and configures the full platform for you.
+
+The appliance ships as a single bootable image. It installs Ubuntu Server 24.04, brings up a self-contained Kubernetes runtime, and deploys AlgaPSA with its database, cache, and background workers. You boot the image, answer a short setup wizard, and sign in. There are no containers to assemble and no manifests to write.
+
+The free **Essentials** edition runs the open-source feature set and is community-supported. Each appliance includes a 15-day trial of the Enterprise feature set that you can start from inside the app, and paid editions add the integration layer, a support contract, and an SLA.
+
+### How it installs
+
+1. Register for the appliance at [nineminds.com/self-hosted](https://www.nineminds.com/self-hosted). You receive an install code and an ISO download link by email.
+2. Boot the ISO on your hardware or VM. Ubuntu installs unattended, then the machine reboots and prints a setup URL and one-time token on the console.
+3. Open the setup console on port `8080`, enter your install code, and create the first tenant and administrator. The appliance pulls its images and deploys itself.
+4. Sign in to AlgaPSA on port `3000` and complete the guided onboarding.
+
+A first install takes about 30 to 45 minutes, most of it unattended.
+
+### Appliance requirements
+
+- 64-bit x86 machine or VM running the appliance image (Ubuntu Server 24.04)
+- 4 vCPUs and 16 GB RAM recommended
+- At least 60 GB disk; the installer uses the whole disk you select
+- A reachable IPv4 address; reserve the DHCP lease or set a static address so the setup URL stays stable
+- Outbound HTTPS (port 443) to `license.nineminds.com` and `ghcr.io` to redeem the install code and pull images
+
+For the full walkthrough, see the [Appliance Install Guide](docs/getting-started/appliance_install.md).
+
 ## Technical architecture
 
 The following details are for teams evaluating the technical stack. For deployment requirements, see [Quick start](#quick-start).
@@ -181,6 +208,7 @@ Useful technical docs:
 ### Setup and configuration
 
 - [Complete Setup Guide](docs/getting-started/setup_guide.md)
+- [Appliance Install Guide](docs/getting-started/appliance_install.md)
 - [Windows Setup Guide](docs/getting-started/setup_guide_windows.md)
 - [Configuration Guide](docs/getting-started/configuration_guide.md)
 - [Development Guide](docs/getting-started/development_guide.md)

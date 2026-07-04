@@ -6,6 +6,12 @@ const withTransaction = vi.fn();
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
   withTransaction: (...args: any[]) => withTransaction(...args),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -13,6 +19,12 @@ vi.mock('@alga-psa/auth', () => ({
     fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
   withAuthCheck: (fn: any) => (...args: any[]) =>
     fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
+}));
+
+// Grant the MSP permission gate so the domain guards under test actually run.
+vi.mock('../../../../../packages/clients/src/lib/authHelpers', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  assertMspPermission: vi.fn(async () => {}),
 }));
 
 function createCanonicalDetailBuilder(servicePeriodEnd: string) {
@@ -59,7 +71,7 @@ describe('client contract line mutation guards', () => {
 
     expect(knex).toHaveBeenCalledWith('invoice_charge_details as iid');
     expect(detailBuilder.andWhere).toHaveBeenCalledWith('clsc.contract_line_id', ASSIGNMENT_SCOPED_LINE_ID);
-    expect(detailBuilder.first).toHaveBeenCalledWith('iid.service_period_end');
+    expect(detailBuilder.first).toHaveBeenCalledWith({ service_period_end: 'iid.service_period_end' });
     expect(withTransaction).not.toHaveBeenCalled();
   });
 

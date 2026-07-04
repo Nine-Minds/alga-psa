@@ -3,7 +3,7 @@
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 const GOOGLE_CLIENT_ID_SECRET = 'google_client_id';
 const GOOGLE_CLIENT_SECRET_SECRET = 'google_client_secret';
@@ -217,18 +217,18 @@ export const resetGoogleProvidersToDisconnected = withAuth(async (
     if (!permitted) return { success: false, error: 'Forbidden' };
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Email providers: mark disconnected + clear tokens
-    await knex('email_providers')
-      .where({ tenant, provider_type: 'google' })
+    await db.table('email_providers')
+      .where({ provider_type: 'google' })
       .update({
         status: 'disconnected',
         error_message: null,
         updated_at: knex.fn.now()
       });
 
-    await knex('google_email_provider_config')
-      .where({ tenant })
+    await db.table('google_email_provider_config')
       .update({
         access_token: null,
         refresh_token: null,
@@ -240,16 +240,15 @@ export const resetGoogleProvidersToDisconnected = withAuth(async (
       });
 
     // Calendar providers: mark disconnected + clear tokens + webhook identifiers
-    await knex('calendar_providers')
-      .where({ tenant, provider_type: 'google' })
+    await db.table('calendar_providers')
+      .where({ provider_type: 'google' })
       .update({
         status: 'disconnected',
         error_message: null,
         updated_at: knex.fn.now()
       });
 
-    await knex('google_calendar_provider_config')
-      .where({ tenant })
+    await db.table('google_calendar_provider_config')
       .update({
         access_token: null,
         refresh_token: null,

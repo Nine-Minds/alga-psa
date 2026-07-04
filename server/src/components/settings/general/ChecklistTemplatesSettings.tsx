@@ -6,7 +6,11 @@ import { Plus, MoreVertical } from "lucide-react";
 import { IBoard, IPriority, ITicketCategory, ColumnDefinition } from '@alga-psa/types';
 import {
   getAllBoards,
+} from '@alga-psa/tickets/actions/board-actions/boardActions';
+import {
   getTicketCategories,
+} from '@alga-psa/tickets/actions/ticketCategoryActions';
+import {
   getChecklistTemplates,
   createChecklistTemplate,
   updateChecklistTemplate,
@@ -22,7 +26,7 @@ import {
   IChecklistTemplate,
   IChecklistTemplateItem,
   IChecklistTemplateApplyRule,
-} from '@alga-psa/tickets/actions';
+} from '@alga-psa/tickets/actions/checklists/checklistTemplateActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -51,6 +55,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
 
+  // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);

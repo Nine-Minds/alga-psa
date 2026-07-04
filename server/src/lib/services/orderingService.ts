@@ -1,4 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex } from 'server/src/lib/db';
 
 export class OrderingService {
@@ -60,8 +61,8 @@ export class OrderingService {
         const newKey = this.generateKeyForPosition(beforeKey, afterKey);
         
         const {knex: db, tenant} = await createTenantKnex();
-        await db('project_tasks')
-            .where({ task_id: taskId, tenant })
+        await tenantDb(db, tenant).table('project_tasks')
+            .where({ task_id: taskId })
             .update({
                 project_status_mapping_id: targetStatusId,
                 order_key: newKey,
@@ -79,8 +80,8 @@ export class OrderingService {
         const newKey = this.generateKeyForPosition(beforeKey, afterKey);
         
         const {knex: db, tenant} = await createTenantKnex();
-        await db('project_phases')
-            .where({ phase_id: phaseId, tenant })
+        await tenantDb(db, tenant).table('project_phases')
+            .where({ phase_id: phaseId })
             .update({
                 order_key: newKey,
                 updated_at: db.fn.now()

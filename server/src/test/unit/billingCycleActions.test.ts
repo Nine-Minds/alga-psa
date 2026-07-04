@@ -5,8 +5,16 @@ import { getBillingCycle, updateBillingCycle, getAllBillingCycles } from '@alga-
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 
-const { mockGetCurrentUser } = vi.hoisted(() => ({
+const { mockGetCurrentUser, mockApplyClientCadenceChange } = vi.hoisted(() => ({
   mockGetCurrentUser: vi.fn(),
+  mockApplyClientCadenceChange: vi.fn(),
+}));
+
+// updateBillingCycle now routes every cadence change through the shared layer so
+// the scalar, anchor, windows, and recurring_service_periods ledger stay
+// consistent; stub it and assert the delegation below.
+vi.mock('@alga-psa/shared/billingClients', () => ({
+  applyClientCadenceChange: mockApplyClientCadenceChange,
 }));
 
 // The actions are wrapped with withAuth; mirror the production wrapper which
@@ -54,6 +62,12 @@ vi.mock('@alga-psa/db', () => ({
   getTenantContext: vi.fn(async () => 'test-tenant'),
   getTenantIdBySlug: vi.fn(async () => 'test-tenant'),
   registerAfterCommit: vi.fn(),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 // Heavy sibling modules pulled in by billingCycleActions' module graph.
@@ -147,12 +161,24 @@ describe('Billing Cycle Actions', () => {
   describe('updateBillingCycle', () => {
     it('should update the billing cycle for a client', async () => {
       const mockKnex = createMockKnex();
+      // The anchor settings read chains `.first().select(...)`, so first() must
+      // return the (thenable-by-await) builder rather than terminate the chain.
+      (mockKnex as any).first.mockReturnValue(mockKnex);
       mockCreateTenantKnex.mockResolvedValue({ knex: mockKnex, tenant: 'test-tenant' });
 
       await updateBillingCycle('client-1', 'quarterly');
 
-      expect((mockKnex as any).where).toHaveBeenCalledWith({ client_id: 'client-1', tenant: 'test-tenant' });
-      expect((mockKnex as any).update).toHaveBeenCalled();
+      // Tenant scoping moved into the tenantDb facade (where({ tenant })) while the
+      // action adds the client predicate; both must still be applied to the read.
+      expect((mockKnex as any).where).toHaveBeenCalledWith({ tenant: 'test-tenant' });
+      expect((mockKnex as any).where).toHaveBeenCalledWith({ client_id: 'client-1' });
+      // The cadence change now delegates to the shared layer instead of a bare
+      // scalar update.
+      expect(mockApplyClientCadenceChange).toHaveBeenCalledWith(
+        mockKnex,
+        'test-tenant',
+        expect.objectContaining({ clientId: 'client-1', billingCycle: 'quarterly' }),
+      );
     });
 
     it('should throw an error if user is not authenticated', async () => {

@@ -1,3 +1,4 @@
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { filterInboundWebhookHeaders } from './headerFilter';
 import type { InboundWebhookAuthStatus, InboundWebhookDispatchStatus } from './types';
@@ -24,7 +25,7 @@ export async function createInboundDelivery(
   knex: Knex,
   input: CreateInboundDeliveryInput,
 ): Promise<{ deliveryId: string }> {
-  const [row] = await knex('inbound_webhook_deliveries')
+  const [row] = await tenantDb(knex, input.tenant).table('inbound_webhook_deliveries')
     .insert({
       tenant: input.tenant,
       inbound_webhook_id: input.inboundWebhookId ?? null,
@@ -63,9 +64,8 @@ export async function updateInboundDeliveryOutcome(
   knex: Knex,
   input: UpdateInboundDeliveryOutcomeInput,
 ): Promise<void> {
-  await knex('inbound_webhook_deliveries')
+  await tenantDb(knex, input.tenant).table('inbound_webhook_deliveries')
     .where({
-      tenant: input.tenant,
       delivery_id: input.deliveryId,
     })
     .update({

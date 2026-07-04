@@ -119,6 +119,9 @@ export interface ITimePeriodView extends Omit<ITimePeriod, 'start_date' | 'end_d
 export interface ITimePeriodWithStatusView extends Omit<ITimePeriodWithStatus, 'start_date' | 'end_date'> {
   start_date: string;
   end_date: string;
+  timeSheetId?: string | null;
+  entryCount?: number;
+  periodTimesheetCount?: number;
 }
 
 export interface ITimeSheetView extends Omit<ITimeSheet, 'time_period'> {

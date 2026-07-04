@@ -1,6 +1,6 @@
 'use server';
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { appendFileSync } from 'node:fs';
 import process from 'node:process';
 import type { Knex } from 'knex';
@@ -9,6 +9,7 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex, runWithTenant } from '../lib/db';
 import { issueSurveyToken } from '@alga-psa/surveys/actions/surveyTokenService';
 import { TenantEmailService } from '@alga-psa/email';
+import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
 import { isValidEmail } from '@alga-psa/core';
 import { DatabaseTemplateProcessor } from '@alga-psa/email';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
@@ -175,9 +176,9 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
       const tenantRow = await loadTenant(trx, params.tenantId);
       appendDebug('loaded-tenant', { tenantName: tenantRow?.name });
 
-      const [{ count: previousCountRaw } = { count: 0 }] = (await trx(SURVEY_INVITATION_TABLE)
+      const [{ count: previousCountRaw } = { count: 0 }] = (await tenantDb(trx, params.tenantId)
+        .table(SURVEY_INVITATION_TABLE)
         .where({
-          tenant: params.tenantId,
           ticket_id: ticketRow.ticket_id,
           template_id: templateRow.template_id,
           contact_id: contactRow.contact_name_id,
@@ -187,7 +188,8 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
         typeof previousCountRaw === 'number' ? previousCountRaw : Number.parseInt(String(previousCountRaw), 10) || 0;
       const nextReminderNumber = previousCount + 1;
 
-      const [invitationRow] = await trx<InvitationRow>(SURVEY_INVITATION_TABLE)
+      const [invitationRow] = await tenantDb(trx, params.tenantId)
+        .table<InvitationRow>(SURVEY_INVITATION_TABLE)
         .insert({
           tenant: params.tenantId,
           ticket_id: ticketRow.ticket_id,
@@ -283,6 +285,8 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
         templateProcessor: processor,
         templateData,
         locale,
+        // RFC 3834: survey invitations are auto-generated; suppress recipient auto-replies.
+        headers: { ...AUTO_GENERATED_MAIL_HEADERS },
       });
 
       if (!sendResult.success) {
@@ -387,8 +391,8 @@ async function loadTemplate(
   templateId?: string
 ): Promise<TemplateRow> {
   if (templateId) {
-    const template = await knex<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-      .where({ tenant: tenantId, template_id: templateId })
+    const template = await tenantDb(knex, tenantId).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
+      .where({ template_id: templateId })
       .andWhere({ enabled: true })
       .first();
 
@@ -398,8 +402,8 @@ async function loadTemplate(
     return template;
   }
 
-  const template = await knex<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-    .where({ tenant: tenantId, enabled: true })
+  const template = await tenantDb(knex, tenantId).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
+    .where({ enabled: true })
     .orderBy([{ column: 'is_default', order: 'desc' }, { column: 'created_at', order: 'asc' }])
     .first();
 
@@ -415,13 +419,19 @@ async function loadTicket(
   tenantId: string,
   ticketId: string
 ): Promise<TicketRow | null> {
-  return knex<TicketRow>(`${TICKETS_TABLE} as t`)
-    .leftJoin(`${CLIENTS_TABLE} as c`, function joinClients() {
-      this.on('t.client_id', '=', 'c.client_id').andOn('t.tenant', '=', 'c.tenant');
-    })
-    .leftJoin(`${USERS_TABLE} as u`, function joinUsers() {
-      this.on('t.assigned_to', '=', 'u.user_id').andOn('t.tenant', '=', 'u.tenant');
-    })
+  const db = tenantDb(knex, tenantId);
+  const query = db.table<TicketRow>(`${TICKETS_TABLE} as t`);
+
+  db.tenantJoin(query, `${CLIENTS_TABLE} as c`, 't.client_id', 'c.client_id', {
+    type: 'left',
+    rootTenantColumn: 't.tenant',
+  });
+  db.tenantJoin(query, `${USERS_TABLE} as u`, 't.assigned_to', 'u.user_id', {
+    type: 'left',
+    rootTenantColumn: 't.tenant',
+  });
+
+  return query
     .select(
       't.ticket_id',
       't.ticket_number',
@@ -434,7 +444,7 @@ async function loadTicket(
       'u.first_name as technician_first_name',
       'u.last_name as technician_last_name'
     )
-    .where({ 't.tenant': tenantId, 't.ticket_id': ticketId })
+    .where('t.ticket_id', ticketId)
     .first();
 }
 
@@ -443,18 +453,16 @@ async function loadContact(
   tenantId: string,
   contactId: string
 ): Promise<ContactRow | null> {
-  const result = await knex<ContactRow>(CONTACTS_TABLE)
+  const result = await tenantDb(knex, tenantId).table<ContactRow>(CONTACTS_TABLE)
     .select('contact_name_id', 'full_name', 'email')
-    .where('tenant', tenantId)
-    .andWhere('contact_name_id', contactId)
+    .where('contact_name_id', contactId)
     .first();
   return result || null;
 }
 
 async function loadTenant(knex: Knex | Knex.Transaction, tenantId: string): Promise<TenantRow | null> {
-  const result = await knex<TenantRow>(TENANTS_TABLE)
+  const result = await tenantDb(knex, tenantId).table<TenantRow>(TENANTS_TABLE)
     .select('tenant', 'client_name')
-    .where('tenant', tenantId)
     .first();
   return result || null;
 }
@@ -462,8 +470,8 @@ async function loadTenant(knex: Knex | Knex.Transaction, tenantId: string): Prom
 async function removeInvitationSafe(tenantId: string, invitationId: string): Promise<void> {
   await runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    await knex(SURVEY_INVITATION_TABLE)
-      .where({ tenant: tenantId, invitation_id: invitationId })
+    await tenantDb(knex, tenantId).table(SURVEY_INVITATION_TABLE)
+      .where({ invitation_id: invitationId })
       .del()
       .catch(() => undefined);
   });

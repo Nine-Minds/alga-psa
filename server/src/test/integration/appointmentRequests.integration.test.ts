@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, afterAll, afterEach, describe, expect, it, vi } 
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { formatInTimeZone } from 'date-fns-tz';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { setupCommonMocks, createMockUser, setMockUser } from '../../../test-utils/testMocks';
@@ -42,6 +43,19 @@ type CreatedIds = {
 };
 let createdIds: CreatedIds = { availabilitySettingIds: [] };
 
+function tenantTableFor(connection: Knex, tenant: string, table: string) {
+  return tenantDb(connection, tenant).table(table);
+}
+
+function tenantRows(connection: Knex) {
+  return tenantDb(connection, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+function globalTableFor(connection: Knex, table: string, reason: string) {
+  return tenantDb(connection, '__test_global_catalog__').unscoped(table, reason);
+}
+
 async function insertServiceType(
   db: Knex,
   values: {
@@ -52,7 +66,7 @@ async function insertServiceType(
   }
 ) {
   const hasBillingMethod = await db.schema.hasColumn('service_types', 'billing_method');
-  await db('service_types').insert({
+  await tenantTableFor(db, values.tenant, 'service_types').insert({
     ...values,
     ...(hasBillingMethod ? { billing_method: 'fixed' } : {}),
     created_at: db.fn.now(),
@@ -61,7 +75,7 @@ async function insertServiceType(
 }
 
 async function ensureStaffUser(db: Knex, tenant: string) {
-  await db('users')
+  await tenantTableFor(db, tenant, 'users')
     .insert({
       tenant,
       user_id: STAFF_USER_ID,
@@ -291,7 +305,7 @@ describe('Appointment Request Integration Tests', () => {
       createdIds.scheduleEntryId = result.data?.schedule_entry_id;
 
       // Verify schedule entry was created
-      const scheduleEntry = await db('schedule_entries')
+      const scheduleEntry = await tenantTableFor(db, tenantId, 'schedule_entries')
         .where({
           entry_id: result.data?.schedule_entry_id,
           tenant: tenantId
@@ -321,7 +335,7 @@ describe('Appointment Request Integration Tests', () => {
       createdIds.serviceTypeId = serviceTypeId;
 
       const serviceId = uuidv4();
-      await db('service_catalog').insert({
+      await tenantTableFor(db, tenantId, 'service_catalog').insert({
         tenant: tenantId,
         service_id: serviceId!,
         service_name: 'Unavailable Service',
@@ -423,11 +437,26 @@ describe('Appointment Request Integration Tests', () => {
     });
 
     it('should create email notifications', async () => {
-      const { clientId, contactId, serviceId, clientUserId } = await setupTestData(db, tenantId);
+      const { clientId, contactId, serviceId, clientUserId, technicianUserId } = await setupTestData(db, tenantId);
       createdIds.clientId = clientId;
       createdIds.contactId = contactId;
       createdIds.serviceId = serviceId;
       createdIds.clientUserId = clientUserId;
+      createdIds.technicianUserId = technicianUserId;
+
+      // Staff recipients come from the configured approvers (3e8a08001f);
+      // without a general_settings approver row nobody is notified.
+      const approverSettingId = uuidv4();
+      await tenantTableFor(db, tenantId, 'availability_settings').insert({
+        availability_setting_id: approverSettingId,
+        tenant: tenantId,
+        setting_type: 'general_settings',
+        is_available: true,
+        config_json: { approver_user_ids: [technicianUserId], approver_team_ids: [] },
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+      createdIds.availabilitySettingIds.push(approverSettingId);
 
       const clientUser = createMockUser('client', {
         user_id: clientUserId,
@@ -461,11 +490,25 @@ describe('Appointment Request Integration Tests', () => {
     });
 
     it('should create internal notifications', async () => {
-      const { clientId, contactId, serviceId, clientUserId } = await setupTestData(db, tenantId);
+      const { clientId, contactId, serviceId, clientUserId, technicianUserId } = await setupTestData(db, tenantId);
       createdIds.clientId = clientId;
       createdIds.contactId = contactId;
       createdIds.serviceId = serviceId;
       createdIds.clientUserId = clientUserId;
+      createdIds.technicianUserId = technicianUserId;
+
+      // Staff recipients come from the configured approvers (3e8a08001f).
+      const approverSettingId = uuidv4();
+      await tenantTableFor(db, tenantId, 'availability_settings').insert({
+        availability_setting_id: approverSettingId,
+        tenant: tenantId,
+        setting_type: 'general_settings',
+        is_available: true,
+        config_json: { approver_user_ids: [technicianUserId], approver_team_ids: [] },
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+      createdIds.availabilitySettingIds.push(approverSettingId);
 
       const clientUser = createMockUser('client', {
         user_id: clientUserId,
@@ -570,7 +613,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(approveResult.data?.schedule_entry_id).toBeDefined();
 
       // Verify schedule entry was updated
-      const scheduleEntry = await db('schedule_entries')
+      const scheduleEntry = await tenantTableFor(db, tenantId, 'schedule_entries')
         .where({
           entry_id: approveResult.data?.schedule_entry_id,
           tenant: tenantId
@@ -582,7 +625,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(scheduleEntry.title).toContain('Appointment:');
 
       // Verify assignee was set
-      const assignee = await db('schedule_entry_assignees')
+      const assignee = await tenantTableFor(db, tenantId, 'schedule_entry_assignees')
         .where({
           entry_id: approveResult.data?.schedule_entry_id,
           tenant: tenantId
@@ -687,7 +730,7 @@ describe('Appointment Request Integration Tests', () => {
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
-      const { createNotificationFromTemplateInternal } = await import('@alga-psa/notifications/actions');
+      const { publishEvent } = await import('@alga-psa/event-bus/publishers');
 
       // Clear mocks from appointment creation
       vi.clearAllMocks();
@@ -697,12 +740,18 @@ describe('Appointment Request Integration Tests', () => {
         assigned_user_id: technicianUserId
       });
 
-      expect(createNotificationFromTemplateInternal).toHaveBeenCalledWith(
-        expect.anything(),
+      // Since c43321e4cb the client's in-app notification is event-driven:
+      // the action publishes APPOINTMENT_REQUEST_APPROVED (with the resolved
+      // clientUserId) and internalNotificationSubscriber renders the
+      // appointment-request-approved template from it.
+      expect(publishEvent).toHaveBeenCalledWith(
         expect.objectContaining({
-          template_name: 'appointment-request-approved',
-          type: 'success',
-          category: 'appointments'
+          eventType: 'APPOINTMENT_REQUEST_APPROVED',
+          payload: expect.objectContaining({
+            tenantId,
+            appointmentRequestId: createResult.data!.appointment_request_id,
+            clientUserId
+          })
         })
       );
     });
@@ -753,7 +802,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(approveResult.success).toBe(true);
 
       // Verify the technician is assigned to the schedule entry
-      const assignees = await db('schedule_entry_assignees')
+      const assignees = await tenantTableFor(db, tenantId, 'schedule_entry_assignees')
         .where({
           entry_id: approveResult.data?.schedule_entry_id,
           tenant: tenantId
@@ -782,7 +831,7 @@ describe('Appointment Request Integration Tests', () => {
         })
       );
 
-      const updatedRequest = await db('appointment_requests')
+      const updatedRequest = await tenantTableFor(db, tenantId, 'appointment_requests')
         .where({
           appointment_request_id: fixture.appointmentRequestId,
           tenant: tenantId,
@@ -793,7 +842,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(updatedRequest.online_meeting_url).toBe('https://teams.example.com/meeting/123');
       expect(updatedRequest.online_meeting_id).toBe('meeting-123');
 
-      const onlineMeeting = await db('online_meetings')
+      const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
         .where({
           tenant: tenantId,
           appointment_request_id: fixture.appointmentRequestId,
@@ -812,14 +861,18 @@ describe('Appointment Request Integration Tests', () => {
         schedule_entry_id: approveResult.data?.schedule_entry_id,
       });
 
-      const interaction = await db('interactions')
+      const interaction = await tenantTableFor(db, tenantId, 'interactions')
         .where({
           tenant: tenantId,
           interaction_id: onlineMeeting.interaction_id,
         })
         .first();
 
-      const onlineMeetingType = await db('system_interaction_types')
+      const onlineMeetingType = await globalTableFor(
+        db,
+        'system_interaction_types',
+        'global interaction type catalog lookup for appointment Teams meeting assertions'
+      )
         .where({ type_name: 'Online Meeting' })
         .first();
 
@@ -843,12 +896,20 @@ describe('Appointment Request Integration Tests', () => {
       const fixture = await createPendingAppointmentFixture(db, tenantId);
       setStaffSchedulingContext(tenantId);
 
-      const onlineMeetingType = await db('system_interaction_types')
+      const onlineMeetingType = await globalTableFor(
+        db,
+        'system_interaction_types',
+        'global interaction type catalog lookup for appointment Teams meeting failure setup'
+      )
         .where({ type_name: 'Online Meeting' })
         .first();
       expect(onlineMeetingType).toBeTruthy();
 
-      await db('system_interaction_types')
+      await globalTableFor(
+        db,
+        'system_interaction_types',
+        'global interaction type catalog mutation for appointment Teams meeting failure setup'
+      )
         .where({ type_id: onlineMeetingType.type_id })
         .update({ type_name: `Online Meeting Hidden ${uuidv4()}` });
 
@@ -874,7 +935,7 @@ describe('Appointment Request Integration Tests', () => {
           appointmentRequestId: fixture.appointmentRequestId,
         });
 
-        const updatedRequest = await db('appointment_requests')
+        const updatedRequest = await tenantTableFor(db, tenantId, 'appointment_requests')
           .where({
             appointment_request_id: fixture.appointmentRequestId,
             tenant: tenantId,
@@ -885,7 +946,7 @@ describe('Appointment Request Integration Tests', () => {
         expect(updatedRequest.online_meeting_url).toBeNull();
         expect(updatedRequest.online_meeting_id).toBeNull();
 
-        const onlineMeeting = await db('online_meetings')
+        const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
           .where({
             tenant: tenantId,
             appointment_request_id: fixture.appointmentRequestId,
@@ -893,7 +954,11 @@ describe('Appointment Request Integration Tests', () => {
           .first();
         expect(onlineMeeting).toBeUndefined();
       } finally {
-        await db('system_interaction_types')
+        await globalTableFor(
+          db,
+          'system_interaction_types',
+          'global interaction type catalog restoration after appointment Teams meeting failure setup'
+        )
           .where({ type_id: onlineMeetingType.type_id })
           .update({ type_name: 'Online Meeting' });
       }
@@ -903,7 +968,7 @@ describe('Appointment Request Integration Tests', () => {
       const fixture = await createPendingAppointmentFixture(db, tenantId);
       const approvedAt = new Date('2026-06-01T12:00:00.000Z');
 
-      await db('appointment_requests')
+      await tenantTableFor(db, tenantId, 'appointment_requests')
         .where({
           tenant: tenantId,
           appointment_request_id: fixture.appointmentRequestId,
@@ -917,7 +982,7 @@ describe('Appointment Request Integration Tests', () => {
           online_meeting_id: 'legacy-meeting-123',
         });
 
-      const legacyRequest = await db('appointment_requests')
+      const legacyRequest = await tenantTableFor(db, tenantId, 'appointment_requests')
         .where({
           tenant: tenantId,
           appointment_request_id: fixture.appointmentRequestId,
@@ -927,7 +992,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(legacyRequest.online_meeting_url).toBe('https://teams.example.com/legacy');
       expect(legacyRequest.online_meeting_id).toBe('legacy-meeting-123');
 
-      const onlineMeeting = await db('online_meetings')
+      const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
         .where({
           tenant: tenantId,
           appointment_request_id: fixture.appointmentRequestId,
@@ -935,7 +1000,7 @@ describe('Appointment Request Integration Tests', () => {
         .first();
       expect(onlineMeeting).toBeUndefined();
 
-      const timelineInteractions = await db('interactions')
+      const timelineInteractions = await tenantTableFor(db, tenantId, 'interactions')
         .where({
           tenant: tenantId,
           client_id: fixture.clientId,
@@ -958,7 +1023,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(approveResult.success).toBe(true);
       expect(createTeamsMeetingMock).not.toHaveBeenCalled();
 
-      const updatedRequest = await db('appointment_requests')
+      const updatedRequest = await tenantTableFor(db, tenantId, 'appointment_requests')
         .where({
           appointment_request_id: fixture.appointmentRequestId,
           tenant: tenantId,
@@ -985,7 +1050,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(approveResult.teamsMeetingWarning).toContain('no default organizer');
       expect(createTeamsMeetingMock).not.toHaveBeenCalled();
 
-      const updatedRequest = await db('appointment_requests')
+      const updatedRequest = await tenantTableFor(db, tenantId, 'appointment_requests')
         .where({
           appointment_request_id: fixture.appointmentRequestId,
           tenant: tenantId,
@@ -996,7 +1061,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(updatedRequest.online_meeting_url).toBeNull();
       expect(updatedRequest.online_meeting_id).toBeNull();
 
-      const onlineMeeting = await db('online_meetings')
+      const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
         .where({
           tenant: tenantId,
           appointment_request_id: fixture.appointmentRequestId,
@@ -1025,7 +1090,7 @@ describe('Appointment Request Integration Tests', () => {
         expect.anything()
       );
 
-      const updatedRequest = await db('appointment_requests')
+      const updatedRequest = await tenantTableFor(db, tenantId, 'appointment_requests')
         .where({
           appointment_request_id: fixture.appointmentRequestId,
           tenant: tenantId,
@@ -1036,7 +1101,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(updatedRequest.online_meeting_url).toBeNull();
       expect(updatedRequest.online_meeting_id).toBeNull();
 
-      const onlineMeeting = await db('online_meetings')
+      const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
         .where({
           tenant: tenantId,
           appointment_request_id: fixture.appointmentRequestId,
@@ -1052,7 +1117,7 @@ describe('Appointment Request Integration Tests', () => {
         requestedDuration: 60,
       });
 
-      await db('appointment_requests')
+      await tenantTableFor(db, tenantId, 'appointment_requests')
         .where({
           appointment_request_id: fixture.appointmentRequestId,
           tenant: tenantId,
@@ -1142,7 +1207,7 @@ describe('Appointment Request Integration Tests', () => {
       });
       expect(createTeamsMeetingMock.mock.calls[0][0]).not.toHaveProperty('organizerUpn');
 
-      const onlineMeeting = await db('online_meetings')
+      const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
         .where({
           tenant: tenantId,
           meeting_id: result.data.meeting_id,
@@ -1163,10 +1228,14 @@ describe('Appointment Request Integration Tests', () => {
         created_by: STAFF_USER_ID,
       });
 
-      const onlineMeetingType = await db('system_interaction_types')
+      const onlineMeetingType = await globalTableFor(
+        db,
+        'system_interaction_types',
+        'global interaction type catalog lookup for MSP Teams meeting assertions'
+      )
         .where({ type_name: 'Online Meeting' })
         .first();
-      const interaction = await db('interactions')
+      const interaction = await tenantTableFor(db, tenantId, 'interactions')
         .where({
           tenant: tenantId,
           interaction_id: result.data.interaction_id,
@@ -1215,7 +1284,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(result.error).toMatch(/permission denied/i);
       expect(createTeamsMeetingMock).not.toHaveBeenCalled();
 
-      const interactionCount = await db('interactions')
+      const interactionCount = await tenantTableFor(db, tenantId, 'interactions')
         .where({
           tenant: tenantId,
           client_id: setup.clientId,
@@ -1242,7 +1311,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(result.error).toContain('no default organizer');
       expect(createTeamsMeetingMock).not.toHaveBeenCalled();
 
-      const interactionCount = await db('interactions')
+      const interactionCount = await tenantTableFor(db, tenantId, 'interactions')
         .where({
           tenant: tenantId,
           client_id: clientId,
@@ -1276,7 +1345,7 @@ describe('Appointment Request Integration Tests', () => {
 
       expect(result.data.schedule_entry_id).toBeTruthy();
 
-      const scheduleEntry = await db('schedule_entries')
+      const scheduleEntry = await tenantTableFor(db, tenantId, 'schedule_entries')
         .where({
           tenant: tenantId,
           entry_id: result.data.schedule_entry_id,
@@ -1290,7 +1359,7 @@ describe('Appointment Request Integration Tests', () => {
         notes: 'Join Teams Meeting: https://teams.example.com/meeting/123',
       });
 
-      const assignees = await db('schedule_entry_assignees')
+      const assignees = await tenantTableFor(db, tenantId, 'schedule_entry_assignees')
         .where({
           tenant: tenantId,
           entry_id: result.data.schedule_entry_id,
@@ -1298,7 +1367,7 @@ describe('Appointment Request Integration Tests', () => {
         .select('user_id');
       expect(assignees.map((row) => row.user_id)).toEqual([technicianUserId]);
 
-      const onlineMeeting = await db('online_meetings')
+      const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
         .where({
           tenant: tenantId,
           meeting_id: result.data.meeting_id,
@@ -1335,7 +1404,7 @@ describe('Appointment Request Integration Tests', () => {
       const fixture = await createPendingAppointmentFixture(db, tenantId);
 
       const settingId = uuidv4();
-      await db('availability_settings').insert({
+      await tenantTableFor(db, tenantId, 'availability_settings').insert({
         availability_setting_id: settingId,
         tenant: tenantId,
         setting_type: 'general_settings',
@@ -1365,7 +1434,7 @@ describe('Appointment Request Integration Tests', () => {
 
       // Pre-migration shape: only `default_approver_id`, no array fields.
       const settingId = uuidv4();
-      await db('availability_settings').insert({
+      await tenantTableFor(db, tenantId, 'availability_settings').insert({
         availability_setting_id: settingId,
         tenant: tenantId,
         setting_type: 'general_settings',
@@ -1434,7 +1503,7 @@ describe('Appointment Request Integration Tests', () => {
       createdIds.appointmentRequestId = createResult.data?.appointment_request_id;
       const originalScheduleEntryId = createResult.data?.schedule_entry_id;
       const meetingId = uuidv4();
-      await db('online_meetings').insert({
+      await tenantTableFor(db, tenantId, 'online_meetings').insert({
         tenant: tenantId,
         meeting_id: meetingId,
         provider: 'teams',
@@ -1463,7 +1532,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(declineResult.success).toBe(true);
 
       // Verify status was updated
-      const updatedRequest = await db('appointment_requests')
+      const updatedRequest = await tenantTableFor(db, tenantId, 'appointment_requests')
         .where({
           appointment_request_id: createResult.data!.appointment_request_id,
           tenant: tenantId
@@ -1475,7 +1544,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(updatedRequest.approved_by_user_id).toBe(STAFF_USER_ID);
       expect(updatedRequest.schedule_entry_id).toBeNull();
 
-      const onlineMeeting = await db('online_meetings')
+      const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
         .where({
           tenant: tenantId,
           meeting_id: meetingId,
@@ -1484,7 +1553,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(onlineMeeting.status).toBe('cancelled');
 
       // Verify schedule entry was deleted
-      const scheduleEntry = await db('schedule_entries')
+      const scheduleEntry = await tenantTableFor(db, tenantId, 'schedule_entries')
         .where({
           entry_id: originalScheduleEntryId,
           tenant: tenantId
@@ -1584,7 +1653,7 @@ describe('Appointment Request Integration Tests', () => {
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
-      const { createNotificationFromTemplateInternal } = await import('@alga-psa/notifications/actions');
+      const { publishEvent } = await import('@alga-psa/event-bus/publishers');
 
       // Clear mocks from appointment creation
       vi.clearAllMocks();
@@ -1594,13 +1663,17 @@ describe('Appointment Request Integration Tests', () => {
         decline_reason: 'Service temporarily unavailable'
       });
 
-      expect(createNotificationFromTemplateInternal).toHaveBeenCalledWith(
-        expect.anything(),
+      // Since c43321e4cb the client's in-app notification is event-driven:
+      // the action publishes APPOINTMENT_REQUEST_DECLINED (with the resolved
+      // clientUserId and reason) and internalNotificationSubscriber renders the
+      // appointment-request-declined template from it.
+      expect(publishEvent).toHaveBeenCalledWith(
         expect.objectContaining({
-          template_name: 'appointment-request-declined',
-          type: 'warning',
-          category: 'appointments',
-          data: expect.objectContaining({
+          eventType: 'APPOINTMENT_REQUEST_DECLINED',
+          payload: expect.objectContaining({
+            tenantId,
+            appointmentRequestId: createResult.data!.appointment_request_id,
+            clientUserId,
             declineReason: 'Service temporarily unavailable'
           })
         })
@@ -1642,7 +1715,7 @@ describe('Appointment Request Integration Tests', () => {
 
       // Create second tenant
       const tenant2Id = uuidv4();
-      await db('tenants').insert({
+      await tenantRows(db).insert({
         tenant: tenant2Id,
         client_name: 'Second Tenant',
         email: 'tenant2@test.com',
@@ -1672,7 +1745,7 @@ describe('Appointment Request Integration Tests', () => {
         expect(approveResult.error).toContain('not found');
       } finally {
         // Cleanup second tenant
-        await db('tenants').where({ tenant: tenant2Id }).del();
+        await tenantRows(db).where({ tenant: tenant2Id }).del();
         tenantId = originalTenantId;
       }
     });
@@ -1860,7 +1933,10 @@ describe('Appointment Request Integration Tests', () => {
       expect(updateResult.error).toMatch(/pending|cannot update|already/i);
     });
 
-    it('should reject canceling already approved request', async () => {
+    // Canceling an approved request became a supported flow in e4bd66f038
+    // (Teams meeting deletion on cancellation); only terminal statuses
+    // (declined/cancelled) are rejected now.
+    it('allows canceling an already approved request', async () => {
       const { clientId, contactId, serviceId, clientUserId, technicianUserId } = await setupTestData(db, tenantId);
       createdIds.clientId = clientId;
       createdIds.contactId = contactId;
@@ -1914,8 +1990,12 @@ describe('Appointment Request Integration Tests', () => {
         appointment_request_id: createResult.data!.appointment_request_id
       });
 
-      expect(cancelResult.success).toBe(false);
-      expect(cancelResult.error).toMatch(/pending|cannot cancel|already/i);
+      expect(cancelResult.success).toBe(true);
+
+      const cancelledRow = await tenantTableFor(db, tenantId, 'appointment_requests')
+        .where({ appointment_request_id: createResult.data!.appointment_request_id })
+        .first();
+      expect(cancelledRow?.status).toBe('cancelled');
     });
 
     it('should reject double-approving a request', async () => {
@@ -2063,7 +2143,7 @@ describe('Appointment Request Integration Tests', () => {
 
       // Create a ticket
       const ticketNumber = Math.floor(Math.random() * 100000);
-      const [ticketRow] = await db('tickets').insert({
+      const [ticketRow] = await tenantTableFor(db, tenantId, 'tickets').insert({
         tenant: tenantId,
         ticket_number: ticketNumber,
         title: 'Test Ticket',
@@ -2103,7 +2183,7 @@ describe('Appointment Request Integration Tests', () => {
       createdIds.scheduleEntryId = result.data?.schedule_entry_id;
 
       // Cleanup ticket
-      await db('tickets').where({ ticket_id: ticketId, tenant: tenantId }).del();
+      await tenantTableFor(db, tenantId, 'tickets').where({ ticket_id: ticketId, tenant: tenantId }).del();
     });
 
     it('should allow staff to associate request to ticket during approval', async () => {
@@ -2119,7 +2199,7 @@ describe('Appointment Request Integration Tests', () => {
 
       // Create a ticket
       const ticketNumber = Math.floor(Math.random() * 100000);
-      const [ticketRow] = await db('tickets').insert({
+      const [ticketRow] = await tenantTableFor(db, tenantId, 'tickets').insert({
         tenant: tenantId,
         ticket_number: ticketNumber,
         title: 'Test Ticket for Association',
@@ -2174,7 +2254,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(associateResult.success).toBe(true);
 
       // Verify association
-      const updatedRequest = await db('appointment_requests')
+      const updatedRequest = await tenantTableFor(db, tenantId, 'appointment_requests')
         .where({
           appointment_request_id: createResult.data!.appointment_request_id,
           tenant: tenantId
@@ -2184,7 +2264,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(updatedRequest.ticket_id).toBe(ticketId);
 
       // Cleanup ticket
-      await db('tickets').where({ ticket_id: ticketId, tenant: tenantId }).del();
+      await tenantTableFor(db, tenantId, 'tickets').where({ ticket_id: ticketId, tenant: tenantId }).del();
     });
   });
 
@@ -2237,11 +2317,12 @@ describe('Appointment Request Integration Tests', () => {
       });
 
       expect(updateResult.success).toBe(true);
-      expect(updateResult.data?.requested_time).toBe('15:30');
+      // The action returns the re-read row; Postgres serializes TIME as HH:MM:SS.
+      expect(updateResult.data?.requested_time).toBe('15:30:00');
       expect(updateResult.data?.requested_duration).toBe(90);
 
       // Verify schedule entry was also updated
-      const scheduleEntry = await db('schedule_entries')
+      const scheduleEntry = await tenantTableFor(db, tenantId, 'schedule_entries')
         .where({
           entry_id: createResult.data?.schedule_entry_id,
           tenant: tenantId
@@ -2249,12 +2330,17 @@ describe('Appointment Request Integration Tests', () => {
         .first();
 
       expect(scheduleEntry).toBeDefined();
+      // scheduled_start is the UTC instant for the requester's wall-clock
+      // (5589b2c770); this request's timezone is UTC, so assert in UTC rather
+      // than the test machine's locale.
       const startTime = new Date(scheduleEntry.scheduled_start);
-      expect(startTime.getHours()).toBe(15);
-      expect(startTime.getMinutes()).toBe(30);
+      expect(startTime.getUTCHours()).toBe(15);
+      expect(startTime.getUTCMinutes()).toBe(30);
     });
 
-    it('should not allow updating date/time after approval', async () => {
+    // Rescheduling an approved request became a supported flow in 23d22000dc
+    // (Teams meeting sync on reschedule); only terminal statuses are rejected.
+    it('allows updating date/time after approval (reschedule)', async () => {
       const { clientId, contactId, serviceId, clientUserId, technicianUserId } = await setupTestData(db, tenantId);
       createdIds.clientId = clientId;
       createdIds.contactId = contactId;
@@ -2298,7 +2384,7 @@ describe('Appointment Request Integration Tests', () => {
         assigned_user_id: technicianUserId
       });
 
-      // Try to update date/time after approval
+      // Reschedule the approved request
       const { updateAppointmentRequestDateTime } = await import('@alga-psa/scheduling/actions');
 
       const updateResult = await updateAppointmentRequestDateTime({
@@ -2308,8 +2394,9 @@ describe('Appointment Request Integration Tests', () => {
         new_duration: 60
       });
 
-      expect(updateResult.success).toBe(false);
-      expect(updateResult.error).toMatch(/pending|cannot update|already/i);
+      expect(updateResult.success).toBe(true);
+      expect(updateResult.data?.requested_time).toBe('16:00:00');
+      expect(updateResult.data?.status).toBe('approved');
     });
 
     it('reschedules the linked Teams meeting when an approved request has an online meeting', async () => {
@@ -2344,7 +2431,7 @@ describe('Appointment Request Integration Tests', () => {
         })
       );
 
-      const onlineMeeting = await db('online_meetings')
+      const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
         .where({
           tenant: tenantId,
           appointment_request_id: fixture.appointmentRequestId,
@@ -2353,7 +2440,7 @@ describe('Appointment Request Integration Tests', () => {
       expect(new Date(onlineMeeting.start_time).toISOString()).toBe('2026-04-30T16:45:00.000Z');
       expect(new Date(onlineMeeting.end_time).toISOString()).toBe('2026-04-30T18:15:00.000Z');
 
-      const interaction = await db('interactions')
+      const interaction = await tenantTableFor(db, tenantId, 'interactions')
         .where({
           tenant: tenantId,
           interaction_id: onlineMeeting.interaction_id,
@@ -2424,7 +2511,7 @@ describe('Appointment Request Integration Tests', () => {
       });
 
       expect(approveResult.success).toBe(true);
-      await db('online_meetings')
+      await tenantTableFor(db, tenantId, 'online_meetings')
         .where({
           tenant: tenantId,
           appointment_request_id: fixture.appointmentRequestId,
@@ -2479,7 +2566,7 @@ describe('Appointment Request Integration Tests', () => {
         appointmentRequestId: fixture.appointmentRequestId,
       });
 
-      const onlineMeeting = await db('online_meetings')
+      const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
         .where({
           tenant: tenantId,
           appointment_request_id: fixture.appointmentRequestId,
@@ -2510,7 +2597,7 @@ describe('Appointment Request Integration Tests', () => {
         appointmentRequestId: fixture.appointmentRequestId,
       });
 
-      const onlineMeeting = await db('online_meetings')
+      const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
         .where({
           tenant: tenantId,
           appointment_request_id: fixture.appointmentRequestId,
@@ -2548,13 +2635,13 @@ describe('Appointment Request Integration Tests', () => {
  * Helper function to ensure a tenant exists in the test database
  */
 async function ensureTenant(connection: Knex): Promise<string> {
-  const existing = await connection('tenants').first<{ tenant: string }>('tenant');
+  const existing = await tenantRows(connection).first<{ tenant: string }>('tenant');
   if (existing?.tenant) {
     return existing.tenant;
   }
 
   const newTenantId = uuidv4();
-  await connection('tenants').insert({
+  await tenantRows(connection).insert({
     tenant: newTenantId,
     client_name: 'Appointment Request Integration Test Tenant',
     email: 'appointment-test@test.com',
@@ -2644,13 +2731,13 @@ async function ensureTicketMetadata(
   tenantId: string,
   createdByUserId: string
 ): Promise<{ statusId: string; priorityId: string }> {
-  let status = await db('statuses')
+  let status = await tenantTableFor(db, tenantId, 'statuses')
     .where({ tenant: tenantId, status_type: 'ticket' })
     .first<{ status_id: string }>('status_id');
 
   if (!status) {
     const statusId = uuidv4();
-    await db('statuses').insert({
+    await tenantTableFor(db, tenantId, 'statuses').insert({
       status_id: statusId,
       tenant: tenantId,
       name: 'Test Ticket Status',
@@ -2664,13 +2751,13 @@ async function ensureTicketMetadata(
     status = { status_id: statusId };
   }
 
-  let priority = await db('priorities')
+  let priority = await tenantTableFor(db, tenantId, 'priorities')
     .where({ tenant: tenantId })
     .first<{ priority_id: string }>('priority_id');
 
   if (!priority) {
     const priorityId = uuidv4();
-    await db('priorities').insert({
+    await tenantTableFor(db, tenantId, 'priorities').insert({
       priority_id: priorityId,
       tenant: tenantId,
       priority_name: 'Test Priority',
@@ -2709,7 +2796,7 @@ async function setupTestData(
 }> {
   // Create client
   const clientId = uuidv4();
-  await db('clients').insert({
+  await tenantTableFor(db, tenantId, 'clients').insert({
     tenant: tenantId,
     client_id: clientId,
     client_name: `Test Client ${clientId.slice(0, 8)}`,
@@ -2721,7 +2808,7 @@ async function setupTestData(
 
   // Create contact
   const contactId = uuidv4();
-  await db('contacts').insert({
+  await tenantTableFor(db, tenantId, 'contacts').insert({
     tenant: tenantId,
     contact_name_id: contactId,
     client_id: clientId,
@@ -2733,7 +2820,7 @@ async function setupTestData(
 
   // Create client user
   const clientUserId = uuidv4();
-  await db('users').insert({
+  await tenantTableFor(db, tenantId, 'users').insert({
     tenant: tenantId,
     user_id: clientUserId,
     username: `client_${clientId.slice(0, 8)}`,
@@ -2750,7 +2837,7 @@ async function setupTestData(
 
   // Create technician user
   const technicianUserId = uuidv4();
-  await db('users').insert({
+  await tenantTableFor(db, tenantId, 'users').insert({
     tenant: tenantId,
     user_id: technicianUserId,
     username: `tech_${clientId.slice(0, 8)}`,
@@ -2781,7 +2868,7 @@ async function setupTestData(
 
     // Create service
     serviceId = uuidv4();
-    await db('service_catalog').insert({
+    await tenantTableFor(db, tenantId, 'service_catalog').insert({
       tenant: tenantId,
       service_id: serviceId!,
       service_name: 'Test Service',
@@ -2793,7 +2880,7 @@ async function setupTestData(
 
     // Create availability setting for service
     const availabilitySettingId = uuidv4();
-    await db('availability_settings').insert({
+    await tenantTableFor(db, tenantId, 'availability_settings').insert({
       availability_setting_id: availabilitySettingId,
       tenant: tenantId,
       setting_type: 'service_rules',
@@ -2810,7 +2897,7 @@ async function setupTestData(
 
     // Create user availability settings for technician
     const userAvailSettingId = uuidv4();
-    await db('availability_settings').insert({
+    await tenantTableFor(db, tenantId, 'availability_settings').insert({
       availability_setting_id: userAvailSettingId,
       tenant: tenantId,
       setting_type: 'user_hours',
@@ -2828,7 +2915,7 @@ async function setupTestData(
     if (!options.skipContract && !options.allowWithoutContract) {
       // Create contract
       contractId = uuidv4();
-      await db('contracts').insert({
+      await tenantTableFor(db, tenantId, 'contracts').insert({
         tenant: tenantId,
         contract_id: contractId,
         contract_name: 'Test Contract',
@@ -2838,7 +2925,7 @@ async function setupTestData(
 
       // Create client contract
       clientContractId = uuidv4();
-      await db('client_contracts').insert({
+      await tenantTableFor(db, tenantId, 'client_contracts').insert({
         tenant: tenantId,
         client_contract_id: clientContractId,
         client_id: clientId,
@@ -2851,7 +2938,7 @@ async function setupTestData(
 
       // Create contract line
       const contractLineId = uuidv4();
-      await db('contract_lines').insert({
+      await tenantTableFor(db, tenantId, 'contract_lines').insert({
         tenant: tenantId,
         contract_line_id: contractLineId,
         contract_id: contractId,
@@ -2865,7 +2952,7 @@ async function setupTestData(
       });
 
       // Create contract line service
-      await db('contract_line_services').insert({
+      await tenantTableFor(db, tenantId, 'contract_line_services').insert({
         tenant: tenantId,
         contract_line_id: contractLineId,
         service_id: serviceId!,
@@ -2896,7 +2983,7 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
 
   const safeDelete = async (table: string, where: Record<string, unknown>) => {
     try {
-      await db(table).where(where).del();
+      await tenantTableFor(db, tenantId, table).where(where).del();
     } catch {
       // Ignore cleanup issues
     }
@@ -2907,7 +2994,7 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
       return;
     }
     try {
-      await db(table).whereIn(column, values).andWhere({ tenant: tenantId }).del();
+      await tenantTableFor(db, tenantId, table).whereIn(column, values).andWhere({ tenant: tenantId }).del();
     } catch {
       // Ignore cleanup issues
     }

@@ -1,10 +1,19 @@
+const MIGRATION_TENANT = 'migration:20250619120000_add_comprehensive_permissions';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for comprehensive permission backfill';
+
+async function loadTenantDb() {
+  return require('./utils/tenantDb.cjs').tenantDb;
+}
+
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) return;
 
   // Define all new permissions needed based on security audit
@@ -107,8 +116,9 @@ exports.up = async function(knex) {
 
   // For each tenant, add the permissions
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     // Get existing permissions to avoid duplicates
-    const existingPerms = await knex('permissions')
+    const existingPerms = await db.table('permissions')
       .where({ tenant })
       .select('resource', 'action');
 
@@ -121,27 +131,27 @@ exports.up = async function(knex) {
         permission_id: knex.raw('gen_random_uuid()'),
         ...p,
         created_at: new Date()
-      }));
+    }));
 
     if (permissionsToAdd.length > 0) {
-      await knex('permissions').insert(permissionsToAdd);
+      await db.table('permissions').insert(permissionsToAdd);
       console.log(`Added ${permissionsToAdd.length} new permissions for tenant ${tenant}`);
     }
 
     // Get Admin role for this tenant (case-insensitive)
-    const roles = await knex('roles').where({ tenant });
+    const roles = await db.table('roles').where({ tenant });
     const adminRole = roles.find(r => 
       r.role_name && r.role_name.toLowerCase() === 'admin'
     );
 
     if (adminRole) {
       // Get all permissions for this tenant
-      const allPermissions = await knex('permissions')
+      const allPermissions = await db.table('permissions')
         .where({ tenant })
         .select('permission_id');
 
       // Get existing role permissions for admin
-      const existingRolePerms = await knex('role_permissions')
+      const existingRolePerms = await db.table('role_permissions')
         .where({
           tenant,
           role_id: adminRole.role_id
@@ -160,7 +170,7 @@ exports.up = async function(knex) {
         }));
 
       if (rolePermissionsToAdd.length > 0) {
-        await knex('role_permissions').insert(rolePermissionsToAdd);
+        await db.table('role_permissions').insert(rolePermissionsToAdd);
         console.log(`Added ${rolePermissionsToAdd.length} role permissions to Admin role for tenant ${tenant}`);
       }
     }
@@ -172,7 +182,7 @@ exports.up = async function(knex) {
 
     if (managerRole) {
       // Manager gets most permissions except sensitive ones like user:delete, billing:delete, etc.
-      const managerPermissions = await knex('permissions')
+      const managerPermissions = await db.table('permissions')
         .where({ tenant })
         .where(function() {
           // Core business operations
@@ -228,7 +238,7 @@ exports.up = async function(knex) {
         .select('permission_id');
 
       // Get existing role permissions for manager
-      const existingManagerPerms = await knex('role_permissions')
+      const existingManagerPerms = await db.table('role_permissions')
         .where({
           tenant,
           role_id: managerRole.role_id
@@ -247,7 +257,7 @@ exports.up = async function(knex) {
         }));
 
       if (managerRolePermissionsToAdd.length > 0) {
-        await knex('role_permissions').insert(managerRolePermissionsToAdd);
+        await db.table('role_permissions').insert(managerRolePermissionsToAdd);
         console.log(`Added ${managerRolePermissionsToAdd.length} role permissions to Manager role for tenant ${tenant}`);
       }
     }
@@ -259,8 +269,10 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) return;
 
   // Define the resources we added
@@ -272,19 +284,24 @@ exports.down = async function(knex) {
   ];
 
   for (const { tenant } of tenants) {
-    // Remove role permissions first (foreign key constraint)
-    await knex('role_permissions')
+    const db = tenantDb(knex, tenant);
+    const permissionIds = await db.table('permissions')
       .where('tenant', tenant)
-      .whereIn('permission_id', function() {
-        this.select('permission_id')
-          .from('permissions')
-          .where('tenant', tenant)
-          .whereIn('resource', resourcesToRemove);
-      })
+      .whereIn('resource', resourcesToRemove)
+      .pluck('permission_id');
+
+    if (!permissionIds.length) {
+      continue;
+    }
+
+    // Remove role permissions first (foreign key constraint)
+    await db.table('role_permissions')
+      .where('tenant', tenant)
+      .whereIn('permission_id', permissionIds)
       .delete();
 
     // Remove permissions
-    await knex('permissions')
+    await db.table('permissions')
       .where('tenant', tenant)
       .whereIn('resource', resourcesToRemove)
       .delete();

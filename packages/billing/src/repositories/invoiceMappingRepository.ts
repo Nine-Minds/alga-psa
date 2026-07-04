@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { AccountingAdapterType } from '../services/companySync/companySync.types';
 
@@ -46,7 +47,7 @@ export class KnexInvoiceMappingRepository {
   }
 
   async findInvoiceMapping(params: FindInvoiceMappingParams): Promise<InvoiceMappingRow | null> {
-    const query = this.knex<InvoiceMappingDbRow>(TABLE_NAME)
+    const query = tenantDb(this.knex, params.tenantId).table<InvoiceMappingDbRow>(TABLE_NAME)
       .select(
         'id',
         'integration_type',
@@ -57,7 +58,6 @@ export class KnexInvoiceMappingRepository {
       )
       .where((builder) => {
         builder
-          .where('tenant', params.tenantId)
           .where('integration_type', params.adapterType)
           .where('alga_entity_type', 'invoice')
           .where('alga_entity_id', params.invoiceId);
@@ -90,7 +90,7 @@ export class KnexInvoiceMappingRepository {
     const metadata =
       params.metadata && Object.keys(params.metadata).length > 0 ? params.metadata : null;
 
-    await this.knex(TABLE_NAME)
+    await tenantDb(this.knex, params.tenantId).table(TABLE_NAME)
       .insert({
         id: this.knex.raw('gen_random_uuid()'),
         tenant: params.tenantId,

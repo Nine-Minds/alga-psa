@@ -1,11 +1,11 @@
 import logger from '@alga-psa/core/logger';
 import type { Event, EventType } from '@alga-psa/event-schemas';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 import { getEventBus } from '../index';
-import { allIndexers, getIndexer } from '../../search';
-import { deleteSearchDoc, upsertSearchDoc } from '../../search/upsert';
+import { allIndexers, getIndexer } from '@alga-psa/search';
+import { deleteSearchDoc, upsertSearchDoc } from '@alga-psa/search/upsert';
 import type { EntityIndexer, SearchObjectType } from '@alga-psa/types';
 
 let isRegistered = false;
@@ -43,6 +43,14 @@ const OBJECT_ID_FIELDS: Record<SearchObjectType, string[]> = {
 };
 
 const CASCADE_BATCH_SIZE = 500;
+
+function tenantScopedTable<Row extends object>(
+  knex: Knex,
+  tenant: string,
+  tableExpression: string,
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(knex, tenant).table<Row>(tableExpression);
+}
 
 function buildIndexersByEvent(): Map<EventType, EntityIndexer[]> {
   const byEvent = new Map<EventType, EntityIndexer[]>();
@@ -106,10 +114,9 @@ async function reindexTicketComments(knex: Knex, tenant: string, ticketId: strin
     return 0;
   }
 
-  const rows = await knex<{ comment_id: string }>('comments')
+  const rows = await tenantScopedTable<{ comment_id: string }>(knex, tenant, 'comments')
     .select('comment_id')
-    .where('tenant', tenant)
-    .andWhere('ticket_id', ticketId)
+    .where('ticket_id', ticketId)
     .orderBy('comment_id', 'asc');
 
   for (const row of rows) {
@@ -133,10 +140,9 @@ async function reindexProjectTaskComments(knex: Knex, tenant: string, taskId: st
   // into their URL/title. When a task is renamed or moved between phases —
   // possibly into a different project — those comments go stale until the
   // daily reconcile unless we re-index them here.
-  const rows = await knex<{ task_comment_id: string }>('project_task_comments')
+  const rows = await tenantScopedTable<{ task_comment_id: string }>(knex, tenant, 'project_task_comments')
     .select('task_comment_id')
-    .where('tenant', tenant)
-    .andWhere('task_id', taskId)
+    .where('task_id', taskId)
     .orderBy('task_comment_id', 'asc');
 
   for (const row of rows) {
@@ -159,10 +165,9 @@ async function reindexInvoiceChildren(knex: Knex, tenant: string, invoiceId: str
   let annotations = 0;
 
   if (itemIndexer) {
-    const rows = await knex<{ item_id: string }>('invoice_items')
+    const rows = await tenantScopedTable<{ item_id: string }>(knex, tenant, 'invoice_items')
       .select('item_id')
-      .where('tenant', tenant)
-      .andWhere('invoice_id', invoiceId)
+      .where('invoice_id', invoiceId)
       .orderBy('item_id', 'asc');
 
     for (const row of rows) {
@@ -177,10 +182,13 @@ async function reindexInvoiceChildren(knex: Knex, tenant: string, invoiceId: str
   }
 
   if (annotationIndexer) {
-    const rows = await knex<{ annotation_id: string }>('invoice_annotations')
+    const rows = await tenantScopedTable<{ annotation_id: string }>(
+      knex,
+      tenant,
+      'invoice_annotations',
+    )
       .select('annotation_id')
-      .where('tenant', tenant)
-      .andWhere('invoice_id', invoiceId)
+      .where('invoice_id', invoiceId)
       .orderBy('annotation_id', 'asc');
 
     for (const row of rows) {
@@ -212,10 +220,9 @@ async function reindexProjectChildren(knex: Knex, tenant: string, projectId: str
   if (phaseIndexer) {
     let cursor: string | undefined;
     while (true) {
-      const query = knex<{ phase_id: string }>('project_phases')
+      const query = tenantScopedTable<{ phase_id: string }>(knex, tenant, 'project_phases')
         .select('phase_id')
-        .where('tenant', tenant)
-        .andWhere('project_id', projectId)
+        .where('project_id', projectId)
         .orderBy('phase_id', 'asc')
         .limit(CASCADE_BATCH_SIZE);
 
@@ -248,15 +255,13 @@ async function reindexProjectChildren(knex: Knex, tenant: string, projectId: str
   if (taskIndexer) {
     let cursor: string | undefined;
     while (true) {
-      const query = knex<{ task_id: string }>('project_tasks as pt')
-        .join('project_phases as pp', function() {
-          this.on('pp.tenant', 'pt.tenant').andOn('pp.phase_id', 'pt.phase_id');
-        })
+      const db = tenantDb(knex, tenant);
+      const query = db.table<{ task_id: string }>('project_tasks as pt')
         .select('pt.task_id')
-        .where('pt.tenant', tenant)
-        .andWhere('pp.project_id', projectId)
+        .where('pp.project_id', projectId)
         .orderBy('pt.task_id', 'asc')
         .limit(CASCADE_BATCH_SIZE);
+      db.tenantJoin(query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
 
       if (cursor) {
         query.andWhere('pt.task_id', '>', cursor);
@@ -287,18 +292,14 @@ async function reindexProjectChildren(knex: Knex, tenant: string, projectId: str
   if (taskCommentIndexer) {
     let cursor: string | undefined;
     while (true) {
-      const query = knex<{ task_comment_id: string }>('project_task_comments as ptc')
-        .join('project_tasks as pt', function() {
-          this.on('pt.tenant', 'ptc.tenant').andOn('pt.task_id', 'ptc.task_id');
-        })
-        .join('project_phases as pp', function() {
-          this.on('pp.tenant', 'pt.tenant').andOn('pp.phase_id', 'pt.phase_id');
-        })
+      const db = tenantDb(knex, tenant);
+      const query = db.table<{ task_comment_id: string }>('project_task_comments as ptc')
         .select('ptc.task_comment_id')
-        .where('ptc.tenant', tenant)
-        .andWhere('pp.project_id', projectId)
+        .where('pp.project_id', projectId)
         .orderBy('ptc.task_comment_id', 'asc')
         .limit(CASCADE_BATCH_SIZE);
+      db.tenantJoin(query, 'project_tasks as pt', 'pt.task_id', 'ptc.task_id');
+      db.tenantJoin(query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
 
       if (cursor) {
         query.andWhere('ptc.task_comment_id', '>', cursor);

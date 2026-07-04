@@ -1,6 +1,7 @@
 "use server";
 
 import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { computeDomain, enqueueProvisioningWorkflow } from '../extensions/runtime/provision';
 import { getS3Client, getBundleBucket } from "../storage/s3-client";
@@ -44,10 +45,10 @@ export const fetchInstalledExtensionsV2 = withOptionalAuth(async (user, ctx): Pr
   if (!tenant) throw new Error('Tenant not found');
   await assertExtensionPermissionIfUserPresent('read', knex, user);
 
-  const rows = await knex('tenant_extension_install as ti')
+  const db = tenantDb(knex, tenant);
+  const rows = await db.table('tenant_extension_install as ti')
     .join('extension_registry as er', 'er.id', 'ti.registry_id')
     .join('extension_version as ev', 'ev.id', 'ti.version_id')
-    .where('ti.tenant_id', tenant)
     .select({
       id: 'er.id',
       name: 'er.name',
@@ -68,14 +69,15 @@ export const toggleExtensionV2 = withOptionalAuth(async (user, ctx, registryId: 
   await assertExtensionPermissionIfUserPresent('write', knex, user);
 
   return await knex.transaction(async (trx: Knex.Transaction) => {
-    const row = await trx('tenant_extension_install')
-      .where({ tenant_id: tenant, registry_id: registryId })
+    const txDb = tenantDb(trx, tenant);
+    const row = await txDb.table('tenant_extension_install')
+      .where({ registry_id: registryId })
       .first(['id', 'is_enabled']);
     if (!row) return { success: false, message: 'Install not found' };
     const next = !row.is_enabled;
     const installId = (row as any).id as string;
-    await trx('tenant_extension_install')
-      .where({ tenant_id: tenant, registry_id: registryId })
+    await txDb.table('tenant_extension_install')
+      .where({ registry_id: registryId })
       .update({ is_enabled: next, updated_at: trx.fn.now() });
 
     // No cascades: pause/resume schedules via business logic.
@@ -84,8 +86,8 @@ export const toggleExtensionV2 = withOptionalAuth(async (user, ctx, registryId: 
     try {
       const runner = getJobRunnerInstance() ?? (await initializeJobRunner());
       if (!next) {
-        const schedules = await trx('tenant_extension_schedule')
-          .where({ tenant_id: tenant, install_id: installId })
+        const schedules = await txDb.table('tenant_extension_schedule')
+          .where({ install_id: installId })
           .select(['id', 'job_id', 'enabled']);
       for (const s of schedules as any[]) {
         if (s.enabled && s.job_id) {
@@ -100,18 +102,18 @@ export const toggleExtensionV2 = withOptionalAuth(async (user, ctx, registryId: 
             }
         }
       }
-      await trx('tenant_extension_schedule')
-        .where({ tenant_id: tenant, install_id: installId })
+      await txDb.table('tenant_extension_schedule')
+        .where({ install_id: installId })
         .update({ job_id: null, runner_schedule_id: null, updated_at: trx.fn.now() });
     } else {
-        const schedules = await trx('tenant_extension_schedule')
-          .where({ tenant_id: tenant, install_id: installId, enabled: true })
+        const schedules = await txDb.table('tenant_extension_schedule')
+          .where({ install_id: installId, enabled: true })
           .andWhere((b) => b.whereNull('job_id'))
           .select(['id', 'cron']);
         for (const s of schedules as any[]) {
           const scheduleId = String(s.id);
           const cron = String(s.cron);
-          const timezoneRow = await trx('tenant_extension_schedule').where({ id: scheduleId, tenant_id: tenant }).first(['timezone']);
+          const timezoneRow = await txDb.table('tenant_extension_schedule').where({ id: scheduleId }).first(['timezone']);
           const timezone = timezoneRow?.timezone ? String(timezoneRow.timezone) : 'UTC';
           const { jobId, externalId } = await runner.scheduleRecurringJob(
             'extension-scheduled-invocation',
@@ -119,8 +121,8 @@ export const toggleExtensionV2 = withOptionalAuth(async (user, ctx, registryId: 
             cron,
             { singletonKey: `extsched:${installId}:${scheduleId}`, metadata: { kind: 'extension_schedule', scheduleId, timezone } }
           );
-          await trx('tenant_extension_schedule')
-            .where({ id: scheduleId, tenant_id: tenant })
+          await txDb.table('tenant_extension_schedule')
+            .where({ id: scheduleId })
             .update({ job_id: jobId, runner_schedule_id: externalId, updated_at: trx.fn.now() });
         }
       }
@@ -143,7 +145,8 @@ function normalizePath(path: string): string {
 }
 
 async function materializeEndpointsForVersion(trx: Knex.Transaction, versionId: string) {
-  const row = await trx('extension_version').where({ id: versionId }).first(['api_endpoints']);
+  const extensionDb = tenantDb(trx, '__extension_endpoint_materialization__');
+  const row = await extensionDb.table('extension_version').where({ id: versionId }).first(['api_endpoints']);
   if (!row) return;
   const raw = (row as any).api_endpoints;
   let endpoints: any[] = [];
@@ -174,7 +177,7 @@ async function materializeEndpointsForVersion(trx: Knex.Transaction, versionId: 
   const uniq = Array.from(deduped.values());
 
   if (uniq.length === 0) return;
-  await trx('extension_api_endpoint')
+  await extensionDb.table('extension_api_endpoint')
     .insert(uniq)
     .onConflict(['version_id', 'method', 'path'])
     .merge({ handler: trx.raw('excluded.handler'), updated_at: trx.raw('excluded.updated_at') });
@@ -191,15 +194,16 @@ export const updateExtensionForCurrentTenantV2 = withOptionalAuth(async (user, c
   const disableMissingSchedules = Boolean(params.disableMissingSchedules);
 
   return await knex.transaction(async (trx: Knex.Transaction) => {
-    const install = await trx('tenant_extension_install')
-      .where({ tenant_id: tenant, registry_id: registryId })
+    const txDb = tenantDb(trx, tenant);
+    const install = await txDb.table('tenant_extension_install')
+      .where({ registry_id: registryId })
       .first(['id', 'version_id']);
     if (!install) {
       return { success: false, message: 'Install not found' };
     }
     const installId = String((install as any).id);
 
-    const ev = await trx('extension_version')
+    const ev = await txDb.table('extension_version')
       .where({ registry_id: registryId, version: targetVersion })
       .first(['id']);
     if (!ev) {
@@ -211,13 +215,13 @@ export const updateExtensionForCurrentTenantV2 = withOptionalAuth(async (user, c
     await materializeEndpointsForVersion(trx, newVersionId);
 
     // Load current schedules and their endpoint method/path.
-    const schedules = await trx('tenant_extension_schedule as s')
+    const schedules = await txDb.table('tenant_extension_schedule as s')
       .join('extension_api_endpoint as e', 'e.id', 's.endpoint_id')
-      .where({ 's.tenant_id': tenant, 's.install_id': installId })
+      .where({ 's.install_id': installId })
       .select(['s.id as schedule_id', 's.enabled', 'e.method', 'e.path']);
 
     // Build map (method,path) -> endpoint_id for new version.
-    const newEndpoints = await trx('extension_api_endpoint')
+    const newEndpoints = await txDb.table('extension_api_endpoint')
       .where({ version_id: newVersionId })
       .select(['id', 'method', 'path']);
     const map = new Map<string, string>();
@@ -243,19 +247,19 @@ export const updateExtensionForCurrentTenantV2 = withOptionalAuth(async (user, c
       throw new ExtensionUpdateBlockedError(missing);
     }
 
-	    // Remap schedules we can.
-	    for (const u of updates) {
-	      await trx('tenant_extension_schedule')
-	        .where({ id: u.scheduleId, tenant_id: tenant, install_id: installId })
-	        .update({ endpoint_id: u.endpointId, updated_at: trx.fn.now() });
-	    }
+    // Remap schedules we can.
+    for (const u of updates) {
+      await txDb.table('tenant_extension_schedule')
+        .where({ id: u.scheduleId, install_id: installId })
+        .update({ endpoint_id: u.endpointId, updated_at: trx.fn.now() });
+    }
 
-	    // Optionally disable those that cannot be remapped.
-	    if (missing.length > 0 && disableMissingSchedules) {
-	      const runner = getJobRunnerInstance() ?? (await initializeJobRunner());
-	      for (const m of missing) {
-        const row = await trx('tenant_extension_schedule')
-          .where({ id: m.scheduleId, tenant_id: tenant, install_id: installId })
+    // Optionally disable those that cannot be remapped.
+    if (missing.length > 0 && disableMissingSchedules) {
+      const runner = getJobRunnerInstance() ?? (await initializeJobRunner());
+      for (const m of missing) {
+        const row = await txDb.table('tenant_extension_schedule')
+          .where({ id: m.scheduleId, install_id: installId })
           .first(['job_id']);
         if (row?.job_id) {
           try {
@@ -268,52 +272,52 @@ export const updateExtensionForCurrentTenantV2 = withOptionalAuth(async (user, c
             });
           }
         }
-	        await trx('tenant_extension_schedule')
-	          .where({ id: m.scheduleId, tenant_id: tenant, install_id: installId })
-	          .update({ enabled: false, job_id: null, runner_schedule_id: null, updated_at: trx.fn.now(), last_error: 'Disabled due to missing endpoint on extension update' });
-	      }
-	    }
+        await txDb.table('tenant_extension_schedule')
+          .where({ id: m.scheduleId, install_id: installId })
+          .update({ enabled: false, job_id: null, runner_schedule_id: null, updated_at: trx.fn.now(), last_error: 'Disabled due to missing endpoint on extension update' });
+      }
+    }
 
-	    // Ensure enabled schedules have runner jobs. The handler reads schedule row + endpoint at runtime,
-	    // so remapping endpoint_id doesn't require recreating the runner schedule, but we still need to
-	    // (re)create schedules if the durable runner handle is missing.
-	    try {
-	      const enabledRows = await trx('tenant_extension_schedule')
-	        .where({ tenant_id: tenant, install_id: installId, enabled: true })
-	        .andWhere((b) => b.whereNull('job_id').orWhereNull('runner_schedule_id'))
-	        .select(['id', 'cron', 'timezone']);
+    // Ensure enabled schedules have runner jobs. The handler reads schedule row + endpoint at runtime,
+    // so remapping endpoint_id doesn't require recreating the runner schedule, but we still need to
+    // (re)create schedules if the durable runner handle is missing.
+    try {
+      const enabledRows = await txDb.table('tenant_extension_schedule')
+        .where({ install_id: installId, enabled: true })
+        .andWhere((b) => b.whereNull('job_id').orWhereNull('runner_schedule_id'))
+        .select(['id', 'cron', 'timezone']);
 
-	      if (enabledRows.length > 0) {
-	        const runner = getJobRunnerInstance() ?? (await initializeJobRunner());
-	        for (const r of enabledRows as any[]) {
-	          const scheduleId = String(r.id);
-	          const cron = String(r.cron);
-	          const tz = r.timezone ? String(r.timezone) : 'UTC';
-	          try {
-	            const { jobId, externalId } = await runner.scheduleRecurringJob(
-	              'extension-scheduled-invocation',
-	              { tenantId: tenant, installId, scheduleId } as any,
-	              cron,
-	              { singletonKey: `extsched:${installId}:${scheduleId}`, metadata: { kind: 'extension_schedule', scheduleId, timezone: tz } }
-	            );
-	            await trx('tenant_extension_schedule')
-	              .where({ id: scheduleId, tenant_id: tenant, install_id: installId })
-	              .update({ job_id: jobId, runner_schedule_id: externalId, updated_at: trx.fn.now() });
-	          } catch (e) {
-	            console.warn('updateExtensionForCurrentTenantV2: failed to recreate runner schedule', {
-	              scheduleId,
-	              error: (e as any)?.message ?? String(e),
-	            });
-	          }
-	        }
-	      }
-	    } catch (e) {
-	      console.warn('updateExtensionForCurrentTenantV2: failed to ensure runner schedules', { error: (e as any)?.message ?? String(e) });
-	    }
+      if (enabledRows.length > 0) {
+        const runner = getJobRunnerInstance() ?? (await initializeJobRunner());
+        for (const r of enabledRows as any[]) {
+          const scheduleId = String(r.id);
+          const cron = String(r.cron);
+          const tz = r.timezone ? String(r.timezone) : 'UTC';
+          try {
+            const { jobId, externalId } = await runner.scheduleRecurringJob(
+              'extension-scheduled-invocation',
+              { tenantId: tenant, installId, scheduleId } as any,
+              cron,
+              { singletonKey: `extsched:${installId}:${scheduleId}`, metadata: { kind: 'extension_schedule', scheduleId, timezone: tz } }
+            );
+            await txDb.table('tenant_extension_schedule')
+              .where({ id: scheduleId, install_id: installId })
+              .update({ job_id: jobId, runner_schedule_id: externalId, updated_at: trx.fn.now() });
+          } catch (e) {
+            console.warn('updateExtensionForCurrentTenantV2: failed to recreate runner schedule', {
+              scheduleId,
+              error: (e as any)?.message ?? String(e),
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('updateExtensionForCurrentTenantV2: failed to ensure runner schedules', { error: (e as any)?.message ?? String(e) });
+    }
 
     // Update install to new version.
-    await trx('tenant_extension_install')
-      .where({ id: installId, tenant_id: tenant })
+    await txDb.table('tenant_extension_install')
+      .where({ id: installId })
       .update({ version_id: newVersionId, updated_at: trx.fn.now() });
 
     return { success: true, message: 'Updated' };
@@ -329,13 +333,14 @@ export const uninstallExtensionV2 = withOptionalAuth(async (user, ctx, registryI
   // Lookup the installed version and current bundle content hash before deleting DB rows
   let bundleKey: string | null = null;
   let installId: string | null = null;
+  const db = tenantDb(knex, tenant);
   try {
-    const install = await knex('tenant_extension_install')
-      .where({ tenant_id: tenant, registry_id: registryId })
+    const install = await db.table('tenant_extension_install')
+      .where({ registry_id: registryId })
       .first(['id', 'version_id']);
     if (install?.version_id) {
       installId = (install as any).id ?? null;
-      const bundle = await knex('extension_bundle')
+      const bundle = await db.table('extension_bundle')
         .where({ version_id: (install as any).version_id })
         .orderBy('created_at', 'desc')
         .first(['content_hash']);
@@ -354,8 +359,8 @@ export const uninstallExtensionV2 = withOptionalAuth(async (user, ctx, registryI
   if (installId) {
     try {
       const runner = getJobRunnerInstance() ?? (await initializeJobRunner());
-      const schedules = await knex('tenant_extension_schedule')
-        .where({ tenant_id: tenant, install_id: installId })
+      const schedules = await db.table('tenant_extension_schedule')
+        .where({ install_id: installId })
         .select(['id', 'job_id']);
       for (const s of schedules as any[]) {
         if (s.job_id) {
@@ -370,14 +375,14 @@ export const uninstallExtensionV2 = withOptionalAuth(async (user, ctx, registryI
           }
         }
       }
-      await knex('tenant_extension_schedule').where({ tenant_id: tenant, install_id: installId }).del();
+      await db.table('tenant_extension_schedule').where({ install_id: installId }).del();
     } catch (e) {
       console.warn('uninstallExtensionV2: failed to cleanup schedules', { installId, error: (e as any)?.message ?? String(e) });
     }
   }
 
   // Remove the install row
-  await knex('tenant_extension_install').where({ tenant_id: tenant, registry_id: registryId }).del();
+  await db.table('tenant_extension_install').where({ registry_id: registryId }).del();
 
   // Best-effort S3 delete of the tenant-local canonical bundle (and manifest) to stop serving.
   if (bundleKey) {
@@ -404,7 +409,7 @@ export const installExtensionForCurrentTenantV2 = withOptionalAuth(async (user, 
   await assertExtensionPermissionIfUserPresent('write', knex, user);
 
   // Lookup extension version outside transaction (read-only)
-  const ev = await knex('extension_version')
+  const ev = await tenantDb(knex, tenant).table('extension_version')
     .where({ registry_id: params.registryId, version: params.version })
     .first(['id', 'capabilities']);
   if (!ev) throw new Error('Version not found');
@@ -441,6 +446,7 @@ export const installExtensionForCurrentTenantV2 = withOptionalAuth(async (user, 
 
   // Wrap all writes in a transaction to ensure atomicity across pods
   const installId = await knex.transaction(async (trx: Knex.Transaction) => {
+    const txDb = tenantDb(trx, tenant);
     const payload = {
       tenant_id: tenant,
       registry_id: params.registryId,
@@ -458,7 +464,7 @@ export const installExtensionForCurrentTenantV2 = withOptionalAuth(async (user, 
       updated_at: trx.fn.now(),
     };
 
-    const upserted = await trx('tenant_extension_install')
+    const upserted = await txDb.table('tenant_extension_install')
       .insert({ id: trx.raw('gen_random_uuid()'), ...payload, created_at: trx.fn.now() })
       .onConflict(['tenant_id', 'registry_id'])
       .merge(payload)
@@ -496,8 +502,8 @@ export const installExtensionForCurrentTenantV2 = withOptionalAuth(async (user, 
         error: enqueueError,
       });
       // Mark install for reconciliation so a background process can retry
-      await knex('tenant_extension_install')
-        .where({ id: installId, tenant_id: tenant })
+      await tenantDb(knex, tenant).table('tenant_extension_install')
+        .where({ id: installId })
         .update({
           runner_status: JSON.stringify({
             state: 'provisioning_enqueue_failed',
@@ -520,12 +526,12 @@ export const getBundleInfoForInstall = withOptionalAuth(async (user, ctx, regist
   const tenant = ctx?.tenant;
   if (!tenant) throw new Error('Tenant not found');
 
-  const ti = await knex('tenant_extension_install')
-    .where({ tenant_id: tenant, registry_id: registryId })
+  const ti = await tenantDb(knex, tenant).table('tenant_extension_install')
+    .where({ registry_id: registryId })
     .first(['version_id']);
   if (!ti) return null;
 
-  const bundle = await knex('extension_bundle')
+  const bundle = await tenantDb(knex, tenant).table('extension_bundle')
     .where({ version_id: (ti as any).version_id })
     .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'id', order: 'desc' }])
     .first(['content_hash']);

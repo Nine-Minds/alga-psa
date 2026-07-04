@@ -2,7 +2,7 @@ import { Knex } from 'knex';
 import { JobScheduler } from '../lib/jobs/jobScheduler';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { JobStatus } from '../types/job';
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 
 export interface JobStep {
   stepName: string;
@@ -186,9 +186,20 @@ export class JobService {
 
   async getJobDetails(jobId: string, knexOrTrx?: Knex | Knex.Transaction): Promise<JobDetail[]> {
     const db = knexOrTrx || (await createTenantKnex()).knex;
+    const job = await tenantDb(db, '__job_details_tenant_discovery__')
+      .unscoped<{ tenant: string }>(
+        'jobs',
+        'job details lookup resolves the tenant from job_id before reading job_details'
+      )
+      .where('job_id', jobId)
+      .first('tenant');
+
+    if (!job?.tenant) {
+      return [];
+    }
 
     // Get job details from job_details table with correct column names
-    const details = await db('job_details')
+    const details = await tenantDb(db, job.tenant).table<any>('job_details')
       .select(
         'detail_id as id',
         'step_name as stepName',
@@ -213,7 +224,8 @@ export class JobService {
     if (!data.tenantId) {
       throw new Error('Tenant ID is required for job creation');
     }
-    return await runWithTenant(data.tenantId, async () => {
+    const tenantId = data.tenantId;
+    return await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
       
       // Ensure metadata is properly stringified
@@ -224,7 +236,7 @@ export class JobService {
       };
   
       const jobRecord = {
-        tenant: data.tenantId,
+        tenant: tenantId,
         type: data.jobName,
         status: JobStatus.Pending,
         metadata: typeof metadataObj === 'string' ? metadataObj : JSON.stringify(metadataObj),
@@ -232,7 +244,7 @@ export class JobService {
         user_id: data.metadata?.user_id
       };
 
-      const [inserted] = await knex('jobs')
+      const [inserted] = await tenantDb(knex, tenantId).table('jobs')
         .insert(jobRecord)
         .returning('*');
 
@@ -257,7 +269,11 @@ export class JobService {
     const { knex } = await createTenantKnex();
     
     // Get the tenant ID from the job record
-    const job = await knex('jobs')
+    const job = await tenantDb(knex, '__job_detail_create_tenant_discovery__')
+      .unscoped<{ tenant: string }>(
+        'jobs',
+        'job detail creation resolves the tenant from job_id before inserting job_details'
+      )
       .where('job_id', jobId)
       .first('tenant');
       
@@ -265,7 +281,7 @@ export class JobService {
       throw new Error(`Job with ID ${jobId} not found`);
     }
 
-    const [detail] = await knex('job_details')
+    const [detail] = await tenantDb(knex, job.tenant).table('job_details')
       .insert({
         tenant: job.tenant,
         job_id: jobId,
@@ -284,7 +300,11 @@ export class JobService {
   async updateJobDetailRecord(detailId: string, status: 'pending' | 'processing' | 'completed' | 'failed', metadata?: Record<string, unknown>): Promise<void> {
     const { knex } = await createTenantKnex();
     
-    const detail = await knex('job_details')
+    const detail = await tenantDb(knex, '__job_detail_update_tenant_discovery__')
+      .unscoped<{ tenant: string; retry_count: number }>(
+        'job_details',
+        'job detail update resolves the tenant from detail_id before updating job_details'
+      )
       .where('detail_id', detailId)
       .first();
       
@@ -292,7 +312,7 @@ export class JobService {
       throw new Error(`Job detail with ID ${detailId} not found`);
     }
 
-    await knex('job_details')
+    await tenantDb(knex, detail.tenant).table('job_details')
       .where('detail_id', detailId)
       .update({
         status,
@@ -315,7 +335,7 @@ export class JobService {
     await runWithTenant(resolvedTenant, async () => {
       const { knex } = await createTenantKnex();
       
-      const currentJob = await knex('jobs')
+      const currentJob = await tenantDb(knex, resolvedTenant).table('jobs')
         .where('job_id', id)
         .first();
 
@@ -342,7 +362,7 @@ export class JobService {
         metadata: JSON.stringify(updatedMetadata)
       };
 
-      await knex('jobs')
+      await tenantDb(knex, resolvedTenant).table('jobs')
         .where('job_id', id)
         .update(updateData);
     });

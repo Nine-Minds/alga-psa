@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import type { IDocumentAssociation, IDocumentAssociationInput } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
-import { requireTenantId } from '@alga-psa/db';
+import { requireTenantId, tenantDb } from '@alga-psa/db';
 
 class DocumentAssociation {
   static async create(
@@ -16,7 +16,7 @@ class DocumentAssociation {
       tenant,
     };
 
-    await knexOrTrx('document_associations').insert(association);
+    await tenantDb(knexOrTrx, tenant).table<IDocumentAssociation>('document_associations').insert(association);
 
     return { association_id: association.association_id };
   }
@@ -24,7 +24,9 @@ class DocumentAssociation {
   static async deleteByDocument(knexOrTrx: Knex | Knex.Transaction, document_id: string): Promise<void> {
     const tenant = await requireTenantId(knexOrTrx);
 
-    await knexOrTrx('document_associations').where({ document_id, tenant }).delete();
+    await tenantDb(knexOrTrx, tenant).table<IDocumentAssociation>('document_associations')
+      .where({ document_id })
+      .delete();
   }
 
   static async deleteByEntity(
@@ -34,7 +36,10 @@ class DocumentAssociation {
   ): Promise<void> {
     const tenant = await requireTenantId(knexOrTrx);
 
-    await knexOrTrx('document_associations').where({ entity_id, entity_type, tenant }).delete();
+    await tenantDb(knexOrTrx, tenant).table<IDocumentAssociation>('document_associations')
+      .where('entity_id', entity_id)
+      .andWhere('entity_type', entity_type)
+      .delete();
   }
 
   static async getByDocumentId(
@@ -42,8 +47,8 @@ class DocumentAssociation {
     document_id: string
   ): Promise<IDocumentAssociation[]> {
     const tenant = await requireTenantId(knexOrTrx);
-    return knexOrTrx('document_associations')
-      .where({ document_id, tenant })
+    return tenantDb(knexOrTrx, tenant).table<IDocumentAssociation>('document_associations')
+      .where({ document_id })
       .orderBy('created_at', 'desc');
   }
 
@@ -54,8 +59,9 @@ class DocumentAssociation {
   ): Promise<IDocumentAssociation[]> {
     const tenant = await requireTenantId(knexOrTrx);
 
-    return knexOrTrx('document_associations')
-      .where({ entity_id, entity_type, tenant })
+    return tenantDb(knexOrTrx, tenant).table<IDocumentAssociation>('document_associations')
+      .where('entity_id', entity_id)
+      .andWhere('entity_type', entity_type)
       .orderBy('created_at', 'desc');
   }
 
@@ -67,11 +73,14 @@ class DocumentAssociation {
   ): Promise<boolean> {
     const tenant = await requireTenantId(knexOrTrx);
 
-    const result = await knexOrTrx('document_associations').where({ document_id, entity_id, entity_type, tenant }).first();
+    const result = await tenantDb(knexOrTrx, tenant).table<IDocumentAssociation>('document_associations')
+      .where('document_id', document_id)
+      .andWhere('entity_id', entity_id)
+      .andWhere('entity_type', entity_type)
+      .first();
 
     return !!result;
   }
 }
 
 export default DocumentAssociation;
-

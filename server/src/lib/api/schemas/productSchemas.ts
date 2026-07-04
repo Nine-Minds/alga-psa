@@ -19,7 +19,11 @@ const defaultRateSchema = z.preprocess((value) => {
 
 const nullableUuidSchema = z.union([uuidSchema, z.null()]);
 const descriptionSchema = z.union([z.string().max(2048), z.null()]);
-const currencyCodeSchema = z.string().length(3).default('USD'); // ISO 4217 currency code
+// DD-2/F-2: no static 'USD' default. Products are tenant-scoped (no client_id),
+// so ProductCatalogService.create resolves the currency from the tenant's
+// default_billing_settings.default_currency_code (falling back to 'USD' only as
+// a last resort) and sets cost_currency explicitly before insert.
+const currencyCodeSchema = z.string().length(3); // ISO 4217 currency code
 
 const priceSchema = z.object({
   currency_code: z.string().length(3),
@@ -39,7 +43,11 @@ const productShape = {
 
   sku: z.union([z.string().max(128), z.null()]).optional(),
   cost: z.union([z.number().min(0), z.null()]).optional(),
-  cost_currency: z.union([z.string().length(3), z.null()]).optional().default('USD'),
+  // DD-2/F-2: no static 'USD' default. ProductCatalogService.create resolves
+  // cost_currency from the tenant default (default_billing_settings) and sets it
+  // explicitly before insert (service_catalog.cost_currency DB column DEFAULTs
+  // to 'USD', so an unset value would otherwise silently become USD).
+  cost_currency: z.union([z.string().length(3), z.null()]).optional(),
   vendor: z.union([z.string().max(255), z.null()]).optional(),
   manufacturer: z.union([z.string().max(255), z.null()]).optional(),
   product_category: z.union([z.string().max(255), z.null()]).optional(),

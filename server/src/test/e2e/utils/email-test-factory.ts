@@ -2,6 +2,9 @@ import { TestContext } from '../../../../test-utils/testContext';
 import { createTenant, createClient } from '../../../../test-utils/testDataFactory';
 import { v4 as uuidv4 } from 'uuid';
 import { ContactModel, type CreateContactInput } from '@alga-psa/shared/models/contactModel';
+import { tenantDb } from '@alga-psa/db';
+
+const EMAIL_TEST_TENANT_DISCOVERY_FACADE_TENANT = '00000000-0000-0000-0000-000000000000';
 
 export interface EmailScenario {
   tenant: { tenant: string };
@@ -33,6 +36,7 @@ export interface EmailProvider {
 export class EmailTestFactory {
   private context: TestContext;
   private createdResources: {
+    tenantScopes: string[];
     tenants: string[];
     clients: string[];
     contacts: string[];
@@ -42,6 +46,7 @@ export class EmailTestFactory {
   constructor(context: TestContext) {
     this.context = context;
     this.createdResources = {
+      tenantScopes: [],
       tenants: [],
       clients: [],
       contacts: [],
@@ -49,9 +54,34 @@ export class EmailTestFactory {
     };
   }
 
+  private tenantTable(tenantId: string, table: string) {
+    return tenantDb(this.context.db, tenantId).table(table);
+  }
+
+  private tenantDiscoveryTable(reason: string) {
+    return tenantDb(
+      this.context.db,
+      this.context.tenantId || EMAIL_TEST_TENANT_DISCOVERY_FACADE_TENANT
+    ).unscoped('tenants', reason);
+  }
+
+  private trackTenantScope(tenantId: string): void {
+    if (!this.createdResources.tenantScopes.includes(tenantId)) {
+      this.createdResources.tenantScopes.push(tenantId);
+    }
+  }
+
+  private cleanupTenantScopes(): string[] {
+    return Array.from(new Set([
+      this.context.tenantId,
+      ...this.createdResources.tenantScopes,
+      ...this.createdResources.tenants
+    ].filter((tenantId): tenantId is string => Boolean(tenantId))));
+  }
+
   async createBasicEmailScenario(): Promise<EmailScenario> {
     // Look for existing tenants first
-    let existingTenant = await this.context.db('tenants').first();
+    let existingTenant = await this.tenantDiscoveryTable('E2E email scenario tenant discovery').first();
     let tenantId: string;
     
     if (existingTenant) {
@@ -64,6 +94,7 @@ export class EmailTestFactory {
       this.createdResources.tenants.push(tenantId);
       console.log(`✅ Created test tenant: ${tenantId}`);
     }
+    this.trackTenantScope(tenantId);
 
     // Create client for this test
     const clientId = await createClient(this.context.db, tenantId, 'E2E Test Client', {
@@ -122,6 +153,7 @@ export class EmailTestFactory {
   }
 
   async createTestEmailProvider(tenantId: string, providerType: 'microsoft365' | 'gmail' | 'mailhog' = 'mailhog'): Promise<EmailProvider> {
+    this.trackTenantScope(tenantId);
     const providerId = uuidv4();
     const now = new Date().toISOString();
 
@@ -169,7 +201,7 @@ export class EmailTestFactory {
     }
 
     // Insert into email_providers table (assuming this table exists)
-    await this.context.db('email_providers').insert(provider);
+    await this.tenantTable(tenantId, 'email_providers').insert(provider);
     this.createdResources.emailProviders.push(providerId);
 
     return provider;
@@ -185,11 +217,12 @@ export class EmailTestFactory {
     }>;
   }> {
     // Use existing tenant from setup container
-    const existingTenant = await this.context.db('tenants').first();
+    const existingTenant = await this.tenantDiscoveryTable('E2E multi-client tenant discovery').first();
     if (!existingTenant) {
       throw new Error('No tenant found in database - setup container may not have run properly');
     }
     const tenantId = existingTenant.tenant;
+    this.trackTenantScope(tenantId);
 
     const clients = [];
 
@@ -253,7 +286,7 @@ export class EmailTestFactory {
       updated_at: now
     };
 
-    await this.context.db('tickets').insert(ticket);
+    await this.tenantTable(scenario.tenant.tenant, 'tickets').insert(ticket);
 
     return {
       scenario,
@@ -274,11 +307,12 @@ export class EmailTestFactory {
     };
   }> {
     // Use existing tenant from setup container
-    const existingTenant = await this.context.db('tenants').first();
+    const existingTenant = await this.tenantDiscoveryTable('E2E workflow tenant discovery').first();
     if (!existingTenant) {
       throw new Error('No tenant found in database - setup container may not have run properly');
     }
     const tenantId = existingTenant.tenant;
+    this.trackTenantScope(tenantId);
 
     // Create a basic email processing workflow definition
     const workflowId = uuidv4();
@@ -321,7 +355,7 @@ export class EmailTestFactory {
     };
 
     // Insert workflow definition (assuming workflow_definitions table exists)
-    await this.context.db('workflow_definitions').insert(workflowDefinition);
+    await this.tenantTable(tenantId, 'workflow_definitions').insert(workflowDefinition);
 
     return {
       tenant: { tenant: tenantId },
@@ -341,55 +375,66 @@ export class EmailTestFactory {
       
       // Clean up email providers
       if (this.createdResources.emailProviders.length > 0) {
-        await this.context.db('email_providers')
-          .whereIn('provider_id', this.createdResources.emailProviders)
-          .del();
+        for (const tenantId of this.cleanupTenantScopes()) {
+          await this.tenantTable(tenantId, 'email_providers')
+            .whereIn('provider_id', this.createdResources.emailProviders)
+            .del();
+        }
       }
 
       // Clean up comments that reference tickets (must be done before deleting tickets)
       if (this.createdResources.contacts.length > 0) {
-        const tickets = await this.context.db('tickets')
-          .whereIn('contact_name_id', this.createdResources.contacts)
-          .select('ticket_id');
-        
-        if (tickets.length > 0) {
-          const ticketIds = tickets.map(t => t.ticket_id);
-          await this.context.db('comments')
-            .whereIn('ticket_id', ticketIds)
-            .del();
+        for (const tenantId of this.cleanupTenantScopes()) {
+          const tickets = await this.tenantTable(tenantId, 'tickets')
+            .whereIn('contact_name_id', this.createdResources.contacts)
+            .select('ticket_id');
+
+          if (tickets.length > 0) {
+            const ticketIds = tickets.map(t => t.ticket_id);
+            await this.tenantTable(tenantId, 'comments')
+              .whereIn('ticket_id', ticketIds)
+              .del();
+          }
         }
       }
 
       // Clean up tickets that reference contacts (must be done before deleting contacts)
       if (this.createdResources.contacts.length > 0) {
-        await this.context.db('tickets')
-          .whereIn('contact_name_id', this.createdResources.contacts)
-          .del();
+        for (const tenantId of this.cleanupTenantScopes()) {
+          await this.tenantTable(tenantId, 'tickets')
+            .whereIn('contact_name_id', this.createdResources.contacts)
+            .del();
+        }
       }
 
       // Clean up contacts
       if (this.createdResources.contacts.length > 0) {
-        await this.context.db('contacts')
-          .whereIn('contact_name_id', this.createdResources.contacts)
-          .del();
+        for (const tenantId of this.cleanupTenantScopes()) {
+          await this.tenantTable(tenantId, 'contacts')
+            .whereIn('contact_name_id', this.createdResources.contacts)
+            .del();
+        }
       }
 
       // Clean up clients
       if (this.createdResources.clients.length > 0) {
-        await this.context.db('clients')
-          .whereIn('client_id', this.createdResources.clients)
-          .del();
+        for (const tenantId of this.cleanupTenantScopes()) {
+          await this.tenantTable(tenantId, 'clients')
+            .whereIn('client_id', this.createdResources.clients)
+            .del();
+        }
       }
 
       // Clean up tenants
       if (this.createdResources.tenants.length > 0) {
-        await this.context.db('tenants')
-          .whereIn('tenant', this.createdResources.tenants)
-          .del();
+        for (const tenantId of this.createdResources.tenants) {
+          await this.tenantTable(tenantId, 'tenants').del();
+        }
       }
 
       // Reset tracking arrays
       this.createdResources = {
+        tenantScopes: [],
         tenants: [],
         clients: [],
         contacts: [],
@@ -425,7 +470,7 @@ export class EmailTestFactory {
       updated_at: now
     };
 
-    await this.context.db('tickets').insert(ticket);
+    await this.tenantTable(scenario.tenant.tenant, 'tickets').insert(ticket);
 
     return { ticket_id: ticketId };
   }

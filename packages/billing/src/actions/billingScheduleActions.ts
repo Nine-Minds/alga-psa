@@ -1,22 +1,22 @@
 'use server'
 
 import type { Knex } from 'knex';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { BillingCycleType } from '@alga-psa/types';
 import type { ISO8601String } from '@alga-psa/types';
 import {
   ensureUtcMidnightIsoDate,
   normalizeAnchorSettingsForCycle,
-  validateAnchorSettingsForCycle,
   type BillingCycleAnchorSettingsInput,
   type NormalizedBillingCycleAnchorSettings
 } from '../lib/billing/billingCycleAnchors';
-import { ensureClientBillingSettingsRow } from './billingCycleAnchorActions';
-import { regenerateClientCadenceServicePeriodsForScheduleChange } from './clientCadenceScheduleRegeneration';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { updateClientBillingSchedule as updateClientBillingScheduleShared } from '@alga-psa/shared/billingClients';
+import {
+  applyClientCadenceChange,
+  previewClientCadenceScheduleChange,
+  type ClientCadenceChangePreview,
+} from '@alga-psa/shared/billingClients';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -52,20 +52,20 @@ export const getClientBillingScheduleSummaries = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const rows = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('clients as c')
-      .leftJoin('client_billing_settings as s', function () {
-        this.on('s.client_id', '=', 'c.client_id').andOn('s.tenant', '=', 'c.tenant');
-      })
-      .where('c.tenant', tenant)
+    const db = tenantDb(trx, tenant);
+    const query = db.table('clients as c');
+    db.tenantJoin(query, 'client_billing_settings as s', 's.client_id', 'c.client_id', { type: 'left' });
+
+    return await query
       .whereIn('c.client_id', clientIds)
-      .select(
-        'c.client_id',
-        'c.billing_cycle',
-        's.billing_cycle_anchor_day_of_month',
-        's.billing_cycle_anchor_month_of_year',
-        's.billing_cycle_anchor_day_of_week',
-        's.billing_cycle_anchor_reference_date'
-      );
+      .select({
+        client_id: 'c.client_id',
+        billing_cycle: 'c.billing_cycle',
+        billing_cycle_anchor_day_of_month: 's.billing_cycle_anchor_day_of_month',
+        billing_cycle_anchor_month_of_year: 's.billing_cycle_anchor_month_of_year',
+        billing_cycle_anchor_day_of_week: 's.billing_cycle_anchor_day_of_week',
+        billing_cycle_anchor_reference_date: 's.billing_cycle_anchor_reference_date',
+      });
   });
 
   const summaries: Record<string, ClientBillingScheduleConfig> = {};
@@ -105,46 +105,63 @@ export const updateClientBillingSchedule = withAuth(async (
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const client = await trx('clients')
-      .where({ tenant, client_id: input.clientId })
-      .first()
-      .select('client_id', 'billing_cycle');
-    if (!client) {
-      throw new Error('Client not found');
+    await applyClientCadenceChange(trx, tenant, input);
+  });
+
+  return { success: true };
+});
+
+export type PreviewClientCadenceChangeInput = {
+  clientId: string;
+  billingCycle: BillingCycleType;
+  anchor?: BillingCycleAnchorSettingsInput;
+};
+
+/**
+ * Dry-run a cadence change so the UI can show the impact before applying it.
+ * Reads only — no scalar, anchor, cycle-window, or ledger rows are written.
+ * When no anchor is supplied (a plain cycle switch) the client's current anchor
+ * is read and adapted to the new cycle, matching what `updateBillingCycle` does.
+ */
+export const previewClientCadenceChange = withAuth(async (
+  user,
+  { tenant },
+  input: PreviewClientCadenceChangeInput
+): Promise<ClientCadenceChangePreview> => {
+  if (!await hasPermission(user as any, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
+  const { knex } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    let anchorInput = input.anchor;
+    if (!anchorInput) {
+      const settings = await tenantDb(trx, tenant).table('client_billing_settings')
+        .where({ client_id: input.clientId })
+        .first()
+        .select(
+          'billing_cycle_anchor_day_of_month',
+          'billing_cycle_anchor_month_of_year',
+          'billing_cycle_anchor_day_of_week',
+          'billing_cycle_anchor_reference_date'
+        );
+      anchorInput = {
+        dayOfMonth: settings?.billing_cycle_anchor_day_of_month ?? null,
+        monthOfYear: settings?.billing_cycle_anchor_month_of_year ?? null,
+        dayOfWeek: settings?.billing_cycle_anchor_day_of_week ?? null,
+        referenceDate: settings?.billing_cycle_anchor_reference_date
+          ? normalizeDbIsoUtcMidnight(settings.billing_cycle_anchor_reference_date)
+          : null,
+      };
     }
 
-    validateAnchorSettingsForCycle(input.billingCycle, input.anchor);
-    const normalized = normalizeAnchorSettingsForCycle(input.billingCycle, input.anchor);
+    const normalized = normalizeAnchorSettingsForCycle(input.billingCycle, anchorInput);
 
-    if (input.billingHistoryStartDate) {
-      await updateClientBillingScheduleShared(trx, tenant, input);
-    } else {
-      if ((client.billing_cycle ?? 'monthly') !== input.billingCycle) {
-        await trx('clients')
-          .where({ tenant, client_id: input.clientId })
-          .update({ billing_cycle: input.billingCycle, updated_at: trx.fn.now() });
-      }
-
-      await ensureClientBillingSettingsRow(trx, { tenant, clientId: input.clientId });
-
-      await trx('client_billing_settings')
-        .where({ tenant, client_id: input.clientId })
-        .update({
-          billing_cycle_anchor_day_of_month: normalized.dayOfMonth,
-          billing_cycle_anchor_month_of_year: normalized.monthOfYear,
-          billing_cycle_anchor_day_of_week: normalized.dayOfWeek,
-          billing_cycle_anchor_reference_date: normalized.referenceDate,
-          updated_at: trx.fn.now()
-        });
-    }
-
-    await regenerateClientCadenceServicePeriodsForScheduleChange(trx, {
+    return previewClientCadenceScheduleChange(trx, {
       tenant,
       clientId: input.clientId,
       billingCycle: input.billingCycle,
       anchor: normalized,
     });
   });
-
-  return { success: true };
 });

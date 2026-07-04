@@ -5,7 +5,7 @@
   "main": "dist/ee/temporal-workflows/src/worker.js",
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json -f",
+    "build": "NODE_OPTIONS=--max-old-space-size=8192 tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json -f",
     "dev": "tsx watch src/worker.ts",
     "start": "node dist/ee/temporal-workflows/src/worker.js",
     "start:worker": "node dist/ee/temporal-workflows/src/worker.js",
@@ -26,6 +26,9 @@
   "dependencies": {
     "@alga-psa/core": "file:../../packages/core",
     "@alga-psa/db": "file:../../packages/db",
+    "@alga-psa/event-bus": "file:../../packages/event-bus",
+    "@alga-psa/jobs": "file:../../packages/jobs",
+    "@alga-psa/search": "file:../../packages/search",
     "@alga-psa/shared": "file:../../shared",
     "@alga-psa/sla": "file:../../packages/sla",
     "@alga-psa/types": "file:../../packages/types",
@@ -58,7 +61,20 @@
     "uuid": "^10.0.0",
     "winston": "^3.13.1",
     "winston-daily-rotate-file": "^5.0.0",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "@blocknote/server-util": "^0.47.3",
+    "ajv": "^8.18.0",
+    "ajv-formats": "^2.1.1",
+    "cron-parser": "^4.9.0",
+    "file-type": "^21.3.4",
+    "fractional-indexing": "^3.2.0",
+    "google-auth-library": "^10.5.0",
+    "jsonata": "^2.1.0",
+    "openai": "^4.104.0",
+    "posthog-node": "^4.18.0",
+    "rrule": "^2.8.1",
+    "sharp": "^0.34.5",
+    "zod-to-json-schema": "^3.25.1"
   },
   "devDependencies": {
     "@temporalio/nyc-test-coverage": "~1.14.1",

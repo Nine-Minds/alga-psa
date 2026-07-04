@@ -11,6 +11,10 @@ import AlertWidget from '@alga-psa/ui/components/widgets/AlertWidget';
 import HighlightWidget from '@alga-psa/ui/components/widgets/HighlightWidget';
 import ButtonLinkWidget from '@alga-psa/ui/components/widgets/ButtonLinkWidget';
 import RichTextViewerWidget from '@alga-psa/ui/components/widgets/RichTextViewerWidget';
+import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { RadioGroup, type RadioOption } from '@alga-psa/ui/components/RadioGroup';
+
+type RjsfEnumOption = { value: unknown; label: string };
 
 // Client Picker Widget
 export const ClientPickerWidget = (props: WidgetProps) => {
@@ -123,6 +127,63 @@ export const CheckboxWidget = (props: WidgetProps) => {
   );
 };
 
+// Select Widget — overrides RJSF's default `SelectWidget` so every enum field renders with
+// the design-system CustomSelect instead of a plain HTML <select>.
+export const SelectWidget = (props: WidgetProps) => {
+  const { id, value, onChange, disabled, readonly, placeholder, required, options } = props;
+  const enumOptions = (options?.enumOptions ?? []) as RjsfEnumOption[];
+  const selectOptions: SelectOption[] = enumOptions.map((opt) => ({
+    value: String(opt.value),
+    label: opt.label,
+  }));
+
+  return (
+    <CustomSelect
+      id={id}
+      options={selectOptions}
+      value={value === undefined || value === null ? null : String(value)}
+      placeholder={placeholder || 'Select...'}
+      disabled={disabled || readonly}
+      required={required}
+      allowClear={!required}
+      onValueChange={(selected) => {
+        if (selected === '') {
+          onChange(undefined);
+          return;
+        }
+        // Recover the original (possibly non-string) enum value.
+        const match = enumOptions.find((opt) => String(opt.value) === selected);
+        onChange(match ? match.value : selected);
+      }}
+    />
+  );
+};
+
+// Radio Widget — overrides RJSF's default `RadioWidget` with the design-system RadioGroup.
+export const RadioWidget = (props: WidgetProps) => {
+  const { id, value, onChange, disabled, readonly, required, options } = props;
+  const enumOptions = (options?.enumOptions ?? []) as RjsfEnumOption[];
+  const radioOptions: RadioOption[] = enumOptions.map((opt) => ({
+    value: String(opt.value),
+    label: opt.label,
+  }));
+
+  return (
+    <RadioGroup
+      id={id}
+      name={id}
+      options={radioOptions}
+      value={value === undefined || value === null ? undefined : String(value)}
+      disabled={disabled || readonly}
+      orientation={options?.inline ? 'horizontal' : 'vertical'}
+      onChange={(selected) => {
+        const match = enumOptions.find((opt) => String(opt.value) === selected);
+        onChange(match ? match.value : selected);
+      }}
+    />
+  );
+};
+
 // Export all widgets in a single object
 export const customWidgets = {
   ClientPickerWidget,
@@ -131,6 +192,8 @@ export const customWidgets = {
   DatePickerWidget,
   UserPickerWidget,
   CheckboxWidget,
+  SelectWidget,
+  RadioWidget,
   AlertWidget,
   ButtonLinkWidget,
   HighlightWidget,

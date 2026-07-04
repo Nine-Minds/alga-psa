@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingExportService } from './accountingExportService';
 import { AccountingExportBatch, AccountingExportServicePeriodSource } from '@alga-psa/types';
 import { AppError } from '@alga-psa/core';
@@ -106,17 +106,13 @@ export class AccountingExportInvoiceSelector {
     const invoiceStatusesForQuery = expandInvoiceStatuses(filters.invoiceStatuses);
     const includePendingExternalDrafts =
       shouldIncludePendingExternalDrafts(adapterType, invoiceStatusesForQuery);
+    const db = tenantDb(this.knex, tenantId);
 
-    const query = this.knex('invoices as inv')
-      .join('invoice_charges as ch', function joinCharges() {
-        this.on('inv.invoice_id', '=', 'ch.invoice_id').andOn('inv.tenant', '=', 'ch.tenant');
-      })
-      .leftJoin('invoice_charge_details as iid', function joinChargeDetails() {
-        this.on('ch.item_id', '=', 'iid.item_id').andOn('ch.tenant', '=', 'iid.tenant');
-      })
-      .leftJoin('clients as cli', function joinClients() {
-        this.on('inv.client_id', '=', 'cli.client_id').andOn('inv.tenant', '=', 'cli.tenant');
-      })
+    const query = db.table('invoices as inv');
+    db.tenantJoin(query, 'invoice_charges as ch', 'inv.invoice_id', 'ch.invoice_id');
+    db.tenantJoin(query, 'invoice_charge_details as iid', 'ch.item_id', 'iid.item_id', { type: 'left' });
+    db.tenantJoin(query, 'clients as cli', 'inv.client_id', 'cli.client_id', { type: 'left' });
+    query
       .select([
         'inv.invoice_id',
         'inv.invoice_number',
@@ -136,9 +132,7 @@ export class AccountingExportInvoiceSelector {
         'iid.service_period_start as detail_service_period_start',
         'iid.service_period_end as detail_service_period_end',
         'iid.billing_timing as detail_billing_timing'
-      ])
-      .where('inv.tenant', this.tenantId)
-      .andWhere('ch.tenant', this.tenantId);
+      ]);
 
     if (filters.startDate) {
       query.andWhere('inv.invoice_date', '>=', filters.startDate);
@@ -177,23 +171,21 @@ export class AccountingExportInvoiceSelector {
     const shouldExcludeSynced = Boolean(adapterType) && filters.excludeSyncedInvoices !== false;
 
     if (shouldExcludeSynced) {
-      const knex = this.knex;
-      query.whereNotExists(function () {
-        this.select(knex.raw('1'))
-          .from('tenant_external_entity_mappings as map')
-          .where('map.tenant', tenantId)
-          .andWhere('map.integration_type', adapterType)
-          .andWhere('map.alga_entity_type', 'invoice')
-          .andWhereRaw('map.alga_entity_id = inv.invoice_id::text');
+      const mappingExists = db.table('tenant_external_entity_mappings as map')
+        .select(this.knex.raw('1'))
+        .where('map.integration_type', adapterType)
+        .andWhere('map.alga_entity_type', 'invoice')
+        .andWhereRaw('map.alga_entity_id = inv.invoice_id::text');
 
-        if (targetRealm) {
-          this.andWhere(function () {
-            this.where('map.external_realm_id', targetRealm).orWhereNull('map.external_realm_id');
-          });
-        } else {
-          this.whereNull('map.external_realm_id');
-        }
-      });
+      if (targetRealm) {
+        mappingExists.andWhere(function () {
+          this.where('map.external_realm_id', targetRealm).orWhereNull('map.external_realm_id');
+        });
+      } else {
+        mappingExists.whereNull('map.external_realm_id');
+      }
+
+      query.whereNotExists(mappingExists);
     }
 
     const rows = (await query.orderBy('inv.invoice_date', 'asc').orderBy('inv.invoice_number', 'asc')) as InvoicePreviewSelectionRow[];
@@ -383,9 +375,8 @@ export class AccountingExportInvoiceSelector {
       return new Map();
     }
 
-    const rows = await this.knex('transactions')
+    const rows = await tenantDb(this.knex, this.tenantId).table('transactions')
       .select('invoice_id', 'transaction_id')
-      .where('tenant', this.tenantId)
       .whereIn('invoice_id', invoiceIds);
 
     const map = new Map<string, string[]>();

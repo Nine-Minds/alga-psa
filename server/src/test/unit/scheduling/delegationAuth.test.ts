@@ -90,6 +90,12 @@ describe('assertCanActOnBehalf', () => {
     const qb: any = {
       join: () => qb,
       where: () => qb,
+      // knex's .modify(fn) runs fn(builder) then returns the builder; the facade
+      // uses it to attach the tenant-scoped team_members join.
+      modify: (fn: (q: any) => void) => {
+        fn(qb);
+        return qb;
+      },
       select: async () => [{ user_id: 'subject-1' }],
       first: async () => ({ team_id: 'team-1' }),
     };
@@ -117,6 +123,12 @@ describe('assertCanActOnBehalf', () => {
     const qb: any = {
       join: () => qb,
       where: () => qb,
+      // knex's .modify(fn) runs fn(builder) then returns the builder; the facade
+      // uses it to attach the tenant-scoped team_members join.
+      modify: (fn: (q: any) => void) => {
+        fn(qb);
+        return qb;
+      },
       select: async () => [],
       first: async () => null,
     };

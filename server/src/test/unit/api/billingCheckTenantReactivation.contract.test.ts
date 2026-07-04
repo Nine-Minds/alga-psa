@@ -22,8 +22,16 @@ describe('billing check-tenant reactivation contract', () => {
   });
 
   it('T007/T008: check-tenant keeps legacy existence behavior while adding false reactivation fields', () => {
-    expect(ceRoute).toContain("knex('tenants')");
-    expect(ceRoute).toContain("knex('users')");
+    // pre-tenant-context email discovery uses the deliberate unscoped escape hatch
+    expect(ceRoute).toContain(
+      ".unscoped('tenants', 'billing check discovers tenant by email before tenant context exists')",
+    );
+    expect(ceRoute).toContain(
+      ".unscoped('users', 'billing check discovers internal admin by email before tenant context exists')",
+    );
+    // the follow-up tenants read is tenant-scoped through the facade
+    expect(ceRoute).toContain('tenantDb(knex, adminUser.tenant)');
+    expect(ceRoute).toContain(".table('tenants')");
     expect(ceRoute).toContain('exists: true');
     expect(ceRoute).toContain('tenantId: tenant.tenant');
     expect(ceRoute).toContain('tenantName: tenant.client_name');

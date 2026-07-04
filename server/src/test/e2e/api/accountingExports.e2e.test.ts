@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 import {
@@ -47,6 +48,10 @@ describe('Accounting Exports API E2E', () => {
   const createdChargeIds: string[] = [];
   const createdTransactionIds: string[] = [];
 
+  function tenantTable(table: string) {
+    return tenantDb(env.db, env.tenant).table(table);
+  }
+
   beforeAll(async () => {
     await ensureApiServerRunning(apiBaseUrl);
     env = await setupE2ETestEnvironment({
@@ -71,46 +76,39 @@ describe('Accounting Exports API E2E', () => {
     }
     try {
       if (createdChargeIds.length > 0) {
-        await env.db('invoice_charges')
-          .where('tenant', env.tenant)
+        await tenantTable('invoice_charges')
           .whereIn('item_id', createdChargeIds)
           .delete();
       }
 
       if (createdTransactionIds.length > 0) {
-        await env.db('transactions')
-          .where('tenant', env.tenant)
+        await tenantTable('transactions')
           .whereIn('transaction_id', createdTransactionIds)
           .delete();
       }
 
       if (createdInvoiceIds.length > 0) {
-        await env.db('invoices')
-          .where('tenant', env.tenant)
+        await tenantTable('invoices')
           .whereIn('invoice_id', createdInvoiceIds)
           .delete();
       }
 
       if (createdBatchIds.length > 0) {
-        await env.db('accounting_export_errors')
-          .where('tenant', env.tenant)
+        await tenantTable('accounting_export_errors')
           .whereIn('batch_id', createdBatchIds)
           .delete();
 
-        await env.db('accounting_export_lines')
-          .where('tenant', env.tenant)
+        await tenantTable('accounting_export_lines')
           .whereIn('batch_id', createdBatchIds)
           .delete();
 
-        await env.db('accounting_export_batches')
-          .where('tenant', env.tenant)
+        await tenantTable('accounting_export_batches')
           .whereIn('batch_id', createdBatchIds)
           .delete();
       }
 
       if (createdServiceIds.length > 0) {
-        await env.db('service_catalog')
-          .where('tenant', env.tenant)
+        await tenantTable('service_catalog')
           .whereIn('service_id', createdServiceIds)
           .delete();
       }
@@ -183,7 +181,7 @@ describe('Accounting Exports API E2E', () => {
     const now = new Date().toISOString();
     const invoiceNumber = `INV-${invoiceId.slice(0, 8)}`;
 
-    await env.db('invoices').insert({
+    await tenantTable('invoices').insert({
       invoice_id: invoiceId,
       tenant: env.tenant,
       client_id: env.clientId,
@@ -203,7 +201,7 @@ describe('Accounting Exports API E2E', () => {
     });
     createdInvoiceIds.push(invoiceId);
 
-    await env.db('invoice_charges').insert({
+    await tenantTable('invoice_charges').insert({
       item_id: chargeId,
       tenant: env.tenant,
       invoice_id: invoiceId,
@@ -220,7 +218,7 @@ describe('Accounting Exports API E2E', () => {
     });
     createdChargeIds.push(chargeId);
 
-    await env.db('transactions').insert({
+    await tenantTable('transactions').insert({
       transaction_id: transactionId,
       tenant: env.tenant,
       client_id: env.clientId,

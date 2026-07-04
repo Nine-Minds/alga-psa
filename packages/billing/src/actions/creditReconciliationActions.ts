@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction, getTenantContext } from '@alga-psa/db';
+import { tenantDb, withTransaction, getTenantContext } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { ICreditReconciliationReport, ITransaction, ICreditTracking, IInvoiceCharge } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -10,6 +10,46 @@ import { auditLog } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import Invoice from '../models/invoice';
+
+type DbRow = Record<string, any>;
+
+type ClientCreditRow = DbRow & {
+    client_id: string;
+    credit_balance: number;
+};
+
+type CreditBillingSettingsRow = DbRow & {
+    enable_credit_expiration?: boolean | null;
+};
+
+type CreditTransactionRow = ITransaction & DbRow;
+type CreditTrackingRow = ICreditTracking & DbRow;
+
+type CreditReconciliationTableRows = {
+    clients: ClientCreditRow;
+    client_billing_settings: CreditBillingSettingsRow;
+    default_billing_settings: CreditBillingSettingsRow;
+    transactions: CreditTransactionRow;
+    credit_tracking: CreditTrackingRow;
+};
+
+function tenantScopedTable<TableName extends keyof CreditReconciliationTableRows>(
+    conn: Knex | Knex.Transaction,
+    tenant: string,
+    tableExpression: TableName
+): Knex.QueryBuilder<CreditReconciliationTableRows[TableName], CreditReconciliationTableRows[TableName][]>;
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+    conn: Knex | Knex.Transaction,
+    tenant: string,
+    tableExpression: string
+): Knex.QueryBuilder<Row, Row[]>;
+function tenantScopedTable(
+    conn: Knex | Knex.Transaction,
+    tenant: string,
+    tableExpression: string
+) {
+    return tenantDb(conn, tenant).table(tableExpression);
+}
 
 /**
  * Helper to get tenant from context, throwing if not available
@@ -95,28 +135,26 @@ export async function validateCreditBalanceWithoutCorrection(
         const now = new Date().toISOString();
 
         // Check if credit expiration is enabled for this client
-        const clientSettings = await trx('client_billing_settings')
+        const clientSettings = await tenantScopedTable(trx, tenant, 'client_billing_settings')
             .where({
-                client_id: clientId,
-                tenant
+                client_id: clientId
             })
             .first();
 
-        const defaultSettings = await trx('default_billing_settings')
-            .where({ tenant })
+        const defaultSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
             .first();
 
         // Determine if credit expiration is enabled
         // Client setting overrides default, if not specified use default
         let isCreditExpirationEnabled = true; // Default to true if no settings found
-        if (clientSettings?.enable_credit_expiration !== undefined) {
+        if (typeof clientSettings?.enable_credit_expiration === 'boolean') {
             isCreditExpirationEnabled = clientSettings.enable_credit_expiration;
-        } else if (defaultSettings?.enable_credit_expiration !== undefined) {
+        } else if (typeof defaultSettings?.enable_credit_expiration === 'boolean') {
             isCreditExpirationEnabled = defaultSettings.enable_credit_expiration;
         }
 
         // Get all credit-related transactions
-        const transactions = await trx('transactions')
+        const transactions = await tenantScopedTable(trx, tenant, 'transactions')
             .where({
                 client_id: clientId,
                 tenant
@@ -147,7 +185,7 @@ export async function validateCreditBalanceWithoutCorrection(
                 console.log(`Skipping expired credit transaction ${tx.transaction_id} with amount ${tx.amount}`);
 
                 // Check if there's already a credit_expiration transaction for this credit
-                const existingExpiration = await trx('transactions')
+                const existingExpiration = await tenantScopedTable(trx, tenant, 'transactions')
                     .where({
                         related_transaction_id: tx.transaction_id,
                         type: 'credit_expiration',
@@ -160,7 +198,7 @@ export async function validateCreditBalanceWithoutCorrection(
                 // because expiration is a business rule, not a correction
                 if (!existingExpiration) {
                     const expirationTxId = uuidv4();
-                    await trx('transactions').insert({
+                    await tenantScopedTable(trx, tenant, 'transactions').insert({
                         transaction_id: expirationTxId,
                         client_id: clientId,
                         amount: -tx.amount, // Negative amount to reduce the balance
@@ -174,7 +212,7 @@ export async function validateCreditBalanceWithoutCorrection(
                     });
 
                     // Update credit_tracking entry to mark as expired
-                    const creditTracking = await trx('credit_tracking')
+                    const creditTracking = await tenantScopedTable(trx, tenant, 'credit_tracking')
                         .where({
                             transaction_id: tx.transaction_id,
                             tenant
@@ -182,7 +220,7 @@ export async function validateCreditBalanceWithoutCorrection(
                         .first();
 
                     if (creditTracking) {
-                        await trx('credit_tracking')
+                        await tenantScopedTable(trx, tenant, 'credit_tracking')
                             .where({
                                 credit_id: creditTracking.credit_id,
                                 tenant
@@ -202,6 +240,8 @@ export async function validateCreditBalanceWithoutCorrection(
                         type: 'credit_expiration',
                         status: 'completed',
                         created_at: now,
+                        balance_after: calculatedBalance,
+                        currency_code: tx.currency_code,
                         tenant,
                         related_transaction_id: tx.transaction_id
                     });
@@ -213,8 +253,8 @@ export async function validateCreditBalanceWithoutCorrection(
         }
 
         // Get the client's current credit balance
-        const [client] = await trx('clients')
-            .where({ client_id: clientId, tenant })
+        const [client] = await tenantScopedTable(trx, tenant, 'clients')
+            .where({ client_id: clientId })
             .select('credit_balance');
 
         const actualBalance = Number(client.credit_balance);
@@ -319,7 +359,7 @@ export async function validateCreditTrackingEntries(
         const reportIds: string[] = [];
 
         // Get all credit-related transactions that should have corresponding tracking entries
-        const transactions = await trx('transactions')
+        const transactions = await tenantScopedTable(trx, tenant, 'transactions')
             .where({
                 client_id: clientId,
                 tenant
@@ -333,7 +373,7 @@ export async function validateCreditTrackingEntries(
             .orderBy('created_at', 'asc');
 
         // Get all credit tracking entries for this client
-        const creditTrackingEntries = await trx('credit_tracking')
+        const creditTrackingEntries = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 client_id: clientId,
                 tenant
@@ -439,7 +479,7 @@ export async function validateCreditTrackingRemainingAmounts(
         const reportIds: string[] = [];
 
         // Get all active (non-expired) credit tracking entries for this client
-        const creditTrackingEntries = await trx('credit_tracking')
+        const creditTrackingEntries = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 client_id: clientId,
                 tenant,
@@ -463,7 +503,7 @@ export async function validateCreditTrackingRemainingAmounts(
         // For each credit tracking entry, calculate the expected remaining amount
         for (const entry of creditTrackingEntries) {
             // Get the original transaction
-            const originalTransaction = await trx('transactions')
+            const originalTransaction = await tenantScopedTable(trx, tenant, 'transactions')
                 .where({
                     transaction_id: entry.transaction_id,
                     tenant
@@ -476,7 +516,7 @@ export async function validateCreditTrackingRemainingAmounts(
             }
 
             // Get all credit application transactions related to this credit
-            const applications = await trx('transactions')
+            const applications = await tenantScopedTable(trx, tenant, 'transactions')
                 .where({
                     tenant,
                     type: 'credit_application'
@@ -692,8 +732,8 @@ export async function runScheduledCreditBalanceValidation(
             console.log(`Starting credit balance and tracking validation for client ${clientId} in tenant ${tenant}`);
 
             // Verify the client exists
-            const client = await trx('clients')
-                .where({ client_id: clientId, tenant })
+            const client = await tenantScopedTable(trx, tenant, 'clients')
+                .where({ client_id: clientId })
                 .first();
 
             if (!client) {
@@ -705,8 +745,7 @@ export async function runScheduledCreditBalanceValidation(
         } else {
             console.log(`Starting scheduled credit balance and tracking validation for all clients in tenant ${tenant}`);
 
-            clients = await trx('clients')
-                .where({ tenant })
+            clients = await tenantScopedTable(trx, tenant, 'clients')
                 .select('client_id');
 
             console.log(`Found ${clients.length} clients to validate`);
@@ -857,7 +896,7 @@ export const resolveReconciliationReport = withAuth(async (
 
             // Create a transaction to record the correction
             const transactionId = uuidv4();
-            await transaction('transactions').insert({
+            await tenantScopedTable(transaction, tenant, 'transactions').insert({
                 transaction_id: transactionId,
                 client_id: report.client_id,
                 amount: report.difference, // This will be positive or negative depending on the discrepancy
@@ -870,8 +909,8 @@ export const resolveReconciliationReport = withAuth(async (
             });
 
             // Update the client's credit balance
-            await transaction('clients')
-                .where({ client_id: report.client_id, tenant })
+            await tenantScopedTable(transaction, tenant, 'clients')
+                .where({ client_id: report.client_id })
                 .update({
                     credit_balance: report.expected_balance,
                     updated_at: now

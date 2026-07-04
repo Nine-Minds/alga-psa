@@ -1,5 +1,5 @@
 import type { IOnlineMeeting, IOnlineMeetingArtifact, OnlineMeetingStatus } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 type OnlineMeetingRow = Omit<IOnlineMeeting, 'artifacts'>;
 
@@ -35,6 +35,14 @@ function requireTenant(tenant: string | null | undefined): string {
   return tenant;
 }
 
+function tenantScopedTable<Row extends object>(
+  db: Parameters<typeof tenantDb>[0],
+  table: string,
+  tenant: string,
+) {
+  return tenantDb(db, tenant).table<Row>(table);
+}
+
 function withArtifacts(row: OnlineMeetingRow, artifacts: IOnlineMeetingArtifact[]): IOnlineMeeting {
   return {
     ...row,
@@ -47,7 +55,7 @@ class OnlineMeetingModel {
     const { knex: db, tenant: contextTenant } = await createTenantKnex(tenantId);
     const tenant = requireTenant(contextTenant);
 
-    const [created] = await db<OnlineMeetingRow>('online_meetings')
+    const [created] = await tenantScopedTable<OnlineMeetingRow>(db, 'online_meetings', tenant)
       .insert({
         ...withoutUndefined(input as unknown as Record<string, unknown>),
         tenant,
@@ -66,8 +74,8 @@ class OnlineMeetingModel {
     const { knex: db, tenant: contextTenant } = await createTenantKnex(tenantId);
     const tenant = requireTenant(contextTenant);
 
-    const row = await db<OnlineMeetingRow>('online_meetings')
-      .where({ tenant, meeting_id: meetingId })
+    const row = await tenantScopedTable<OnlineMeetingRow>(db, 'online_meetings', tenant)
+      .where({ meeting_id: meetingId })
       .first();
 
     if (!row) {
@@ -85,8 +93,8 @@ class OnlineMeetingModel {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
     const scopedTenant = requireTenant(tenant);
 
-    const row = await db<OnlineMeetingRow>('online_meetings')
-      .where({ tenant: scopedTenant, provider, provider_meeting_id: providerMeetingId })
+    const row = await tenantScopedTable<OnlineMeetingRow>(db, 'online_meetings', scopedTenant)
+      .where({ provider, provider_meeting_id: providerMeetingId })
       .first();
 
     if (!row) {
@@ -100,8 +108,8 @@ class OnlineMeetingModel {
     const { knex: db, tenant: contextTenant } = await createTenantKnex(tenantId);
     const tenant = requireTenant(contextTenant);
 
-    const row = await db<OnlineMeetingRow>('online_meetings')
-      .where({ tenant, interaction_id: interactionId })
+    const row = await tenantScopedTable<OnlineMeetingRow>(db, 'online_meetings', tenant)
+      .where({ interaction_id: interactionId })
       .first();
 
     if (!row) {
@@ -118,8 +126,8 @@ class OnlineMeetingModel {
     const { knex: db, tenant: contextTenant } = await createTenantKnex(tenantId);
     const tenant = requireTenant(contextTenant);
 
-    const row = await db<OnlineMeetingRow>('online_meetings')
-      .where({ tenant, appointment_request_id: appointmentRequestId })
+    const row = await tenantScopedTable<OnlineMeetingRow>(db, 'online_meetings', tenant)
+      .where({ appointment_request_id: appointmentRequestId })
       .first();
 
     if (!row) {
@@ -141,8 +149,8 @@ class OnlineMeetingModel {
       updated_at: new Date(),
     });
 
-    const [updated] = await db<OnlineMeetingRow>('online_meetings')
-      .where({ tenant, meeting_id: meetingId })
+    const [updated] = await tenantScopedTable<OnlineMeetingRow>(db, 'online_meetings', tenant)
+      .where({ meeting_id: meetingId })
       .update(updateData as any)
       .returning('*');
 
@@ -157,8 +165,7 @@ class OnlineMeetingModel {
     const { knex: db, tenant: contextTenant } = await createTenantKnex(tenantId);
     const tenant = requireTenant(contextTenant);
 
-    const rows = await db<OnlineMeetingRow>('online_meetings')
-      .where({ tenant })
+    const rows = await tenantScopedTable<OnlineMeetingRow>(db, 'online_meetings', tenant)
       .whereIn('status', PENDING_RECORDING_STATUSES)
       .andWhere('end_time', '<=', new Date())
       .orderBy('end_time', 'asc')
@@ -187,7 +194,7 @@ class OnlineMeetingModel {
       updated_at: new Date(),
     });
 
-    const [artifact] = await db<IOnlineMeetingArtifact>('online_meeting_artifacts')
+    const [artifact] = await tenantScopedTable<IOnlineMeetingArtifact>(db, 'online_meeting_artifacts', tenant)
       .insert(insertData as any)
       .onConflict(['tenant', 'meeting_id', 'artifact_type', 'provider_artifact_id'])
       .merge(mergeData as any)
@@ -200,8 +207,8 @@ class OnlineMeetingModel {
     const { knex: db, tenant: contextTenant } = await createTenantKnex(tenantId);
     const tenant = requireTenant(contextTenant);
 
-    return db<IOnlineMeetingArtifact>('online_meeting_artifacts')
-      .where({ tenant, meeting_id: meetingId })
+    return tenantScopedTable<IOnlineMeetingArtifact>(db, 'online_meeting_artifacts', tenant)
+      .where({ meeting_id: meetingId })
       .orderBy('created_date_time', 'desc')
       .orderBy('created_at', 'desc');
   }

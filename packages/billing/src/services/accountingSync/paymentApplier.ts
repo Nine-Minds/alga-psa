@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import type { AccountingExternalChange } from '@alga-psa/types';
 import { SyncMappingLedger } from './syncMappingLedger';
@@ -181,8 +182,8 @@ async function loadTargetInvoices(
   const invoiceIds = [...new Set(allocations.map((allocation) => allocation.invoiceId))];
 
   for (const invoiceId of invoiceIds) {
-    const invoiceRow = await deps.knex('invoices')
-      .where({ tenant: deps.tenantId, invoice_id: invoiceId })
+    const invoiceRow = await tenantDb(deps.knex, deps.tenantId).table('invoices')
+      .where({ invoice_id: invoiceId })
       .select('status', 'total_amount', 'credit_applied')
       .first<PaymentTargetInvoiceRow | undefined>();
 

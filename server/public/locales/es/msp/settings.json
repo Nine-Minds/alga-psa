@@ -384,7 +384,6 @@
       "display": "Visualización",
       "ticketNumbering": "Numeración de tickets",
       "boards": "Tableros",
-      "statuses": "Estados",
       "priorities": "Prioridades",
       "categories": "Categorías",
       "checklistTemplates": "Plantillas de lista de verificación"
@@ -489,7 +488,9 @@
         "boardManager": "Responsable del tablero",
         "order": "Orden",
         "itilBoard": "Tablero ITIL",
-        "actions": "Acciones"
+        "actions": "Acciones",
+        "ticketLoad": "Carga de tickets",
+        "statuses": "Estados"
       },
       "statusLabels": {
         "active": "Activo",
@@ -508,7 +509,8 @@
         "up": "Subir",
         "down": "Bajar",
         "remove": "Eliminar",
-        "addStatus": "Agregar estado"
+        "addStatus": "Agregar estado",
+        "back": "Volver a Tableros"
       },
       "fields": {
         "boardName": {
@@ -588,6 +590,10 @@
         "liveTimer": {
           "label": "Activar temporizador de tickets en vivo",
           "help": "Muestra el temporizador en vivo y los intervalos registrados en los tickets de este tablero. La entrada manual de tiempo sigue disponible."
+        },
+        "defaultBoard": {
+          "label": "Tablero predeterminado para tickets del portal del cliente",
+          "help": "Los nuevos tickets enviados desde el portal del cliente se asignan a este tablero. Solo un tablero puede ser el predeterminado."
         }
       },
       "dialog": {
@@ -713,7 +719,34 @@
           "autoCloseDaysInvalid": "Los días de inactividad del cierre automático deben ser un número entero positivo",
           "autoCloseWarningInvalid": "El tiempo de aviso previo debe ser menor que los días de inactividad"
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "General",
+          "generalHelp": "Nombre, descripción, visibilidad y predeterminado",
+          "assignment": "Asignación y SLA",
+          "assignmentHelp": "Enrutamiento predeterminado, SLA y responsable del tablero",
+          "inbound": "Correo y respuestas entrantes",
+          "inboundHelp": "Reabrir tickets cuando los clientes respondan por correo electrónico",
+          "close": "Reglas de cierre",
+          "closeHelp": "Requisitos antes de que se pueda cerrar un ticket",
+          "automation": "Automatización",
+          "automationHelp": "Cerrar automáticamente los tickets inactivos tras un período de inactividad",
+          "statuses": "Prioridades y estados",
+          "statusesHelp": "Prioridad predeterminada y los estados de ticket de este tablero",
+          "display": "Visualización y comportamiento",
+          "displayHelp": "Temporizador en vivo y tipo de tablero"
+        },
+        "saveChanges": "Guardar cambios",
+        "unsaved": "Sin guardar",
+        "unsavedShort": "Cambios sin guardar",
+        "unsavedBanner": "Tienes cambios sin guardar. Haz clic en «Guardar cambios» para aplicarlos.",
+        "allSaved": "Todos los cambios guardados",
+        "reopenBadge": "reabrir",
+        "required": "Obligatorio"
+      },
+      "empty": "No se encontraron tableros.",
+      "searchPlaceholder": "Buscar tableros…"
     },
     "priorities": {
       "title": {
@@ -1138,6 +1171,17 @@
         "step3": "Use el botón Actualizar para consultar el progreso del aprovisionamiento. Enviaremos un correo electrónico a sus administradores si el aprovisionamiento falla.",
         "canonicalHostFallback": "host canónico"
       },
+      "appliance": {
+        "helpText": "Apunte este nombre de host a su appliance y haga que su proxy inverso reenvíe el encabezado Host original antes de guardar.",
+        "checklistTitle": "Configuración del proxy inverso",
+        "step1Prefix": "Apunte ",
+        "step1Suffix": " a este appliance (un registro A a su dirección o un CNAME a su host de appliance).",
+        "step2": "En su proxy inverso, termine TLS para el dominio y reenvíe a este appliance en el puerto 3000, preservando el encabezado Host original (p. ej. proxy_set_header Host $host) y enviando X-Forwarded-Proto: https.",
+        "step3": "Obtenga y mantenga el certificado TLS para el dominio en su proxy.",
+        "step4": "Guarde el dominio aquí — se activa de inmediato. Configure primero el DNS y su proxy, ya que los enlaces del portal cambian a este dominio de inmediato.",
+        "docLinkText": "Guía de configuración y resolución de problemas del proxy inverso",
+        "neverSeenWarning": "Aún no han llegado solicitudes a {{domain}}. Compruebe que su proxy inverso reenvía el encabezado Host original."
+      },
       "badges": {
         "pending_dns": "DNS pendiente",
         "verifying_dns": "Verificando DNS",
@@ -1232,6 +1276,176 @@
       "telemetry": {
         "title": "Telemetría y análisis",
         "description": "Administrar sus preferencias de telemetría y análisis"
+      }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "Activar notificaciones",
+        "description": "Activa o desactiva todas las notificaciones para este inquilino"
+      },
+      "loading": "Cargando configuración de notificaciones...",
+      "loadError": "Error al cargar la configuración",
+      "save": "Guardar cambios",
+      "saving": "Guardando..."
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "Vista previa del asunto",
+        "iframeTitle": "Vista previa de la plantilla de correo electrónico",
+        "sampleDataNote": "La vista previa usa datos de muestra. Los correos electrónicos reales contendrán valores reales."
+      },
+      "errors": {
+        "loadFailed": "Error al cargar las plantillas"
+      },
+      "list": {
+        "loading": "Cargando plantillas de correo electrónico...",
+        "templateCount": "({{templateCount}} plantillas)",
+        "usingCustom": "Usando plantilla personalizada",
+        "usingStandard": "Usando plantilla estándar"
+      },
+      "columns": {
+        "name": "Nombre",
+        "actions": "Acciones"
+      },
+      "fields": {
+        "language": "Idioma",
+        "subject": "Asunto",
+        "htmlContent": "Contenido HTML",
+        "textContent": "Contenido de texto"
+      },
+      "actions": {
+        "collapse": "Contraer",
+        "expand": "Expandir",
+        "edit": "Editar",
+        "useStandard": "Usar estándar",
+        "view": "Ver",
+        "customize": "Personalizar",
+        "sending": "Enviando...",
+        "sendTest": "Enviar correo electrónico de prueba",
+        "close": "Cerrar",
+        "cancel": "Cancelar",
+        "saving": "Guardando...",
+        "save": "Guardar"
+      },
+      "description": "Cada tipo de evento tiene una plantilla estándar que se puede personalizar. Puede usar la plantilla estándar o crear una versión personalizada.",
+      "filter": {
+        "languages": "Idiomas",
+        "reset": "Restablecer"
+      },
+      "test": {
+        "sentTo": "Correo electrónico de prueba enviado a {{recipient}}",
+        "failed": "Error al enviar el correo electrónico de prueba."
+      },
+      "view": {
+        "title": "Plantilla estándar: {{name}}"
+      },
+      "tabs": {
+        "source": "Código fuente",
+        "preview": "Vista previa"
+      },
+      "common": {
+        "notAvailable": "N/D"
+      },
+      "edit": {
+        "title": "Editar plantilla personalizada: {{name}}"
+      },
+      "languages": {
+        "en": "Inglés",
+        "fr": "Francés",
+        "es": "Español",
+        "de": "Alemán",
+        "nl": "Neerlandés",
+        "it": "Italiano",
+        "pl": "Polaco",
+        "pt": "Portugués"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "Error al cargar las categorías",
+        "loadSubtypes": "Error al cargar los subtipos de notificación",
+        "save": "Error al guardar la configuración de notificaciones"
+      },
+      "loading": "Cargando categorías de notificación...",
+      "toasts": {
+        "saved": "Configuración de notificaciones guardada correctamente",
+        "discarded": "Cambios descartados"
+      },
+      "columns": {
+        "name": "Nombre",
+        "description": "Descripción",
+        "enabled": "Habilitado",
+        "defaultForUsers": "Predeterminado para usuarios",
+        "actions": "Acciones"
+      },
+      "tooltips": {
+        "cannotDisable": "Esta categoría no se puede deshabilitar",
+        "cannotModify": "Esta categoría no se puede modificar"
+      },
+      "actions": {
+        "enableAllSubtypes": "Habilitar todos los subtipos",
+        "disableAllSubtypes": "Deshabilitar todos los subtipos",
+        "disable": "Deshabilitar",
+        "enable": "Habilitar",
+        "disableDefault": "Deshabilitar predeterminado",
+        "enableDefault": "Habilitar predeterminado",
+        "discardChanges": "Descartar cambios",
+        "saving": "Guardando...",
+        "saveChanges": "Guardar cambios",
+        "cancel": "Cancelar"
+      },
+      "help": {
+        "intro": "Controle qué tipos de notificación por correo electrónico están disponibles y establezca los valores predeterminados para los nuevos usuarios.",
+        "enabledLabel": "Habilitado:",
+        "enabledDescription": "Controla si este tipo de notificación está activo",
+        "defaultLabel": "Predeterminado para usuarios:",
+        "defaultDescription": "Define si los nuevos usuarios tienen esta notificación habilitada de forma predeterminada"
+      },
+      "unsavedChangesAlert": "Tiene cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos.",
+      "discardDialog": {
+        "title": "¿Descartar cambios?",
+        "message": "¿Está seguro de que desea descartar todos los cambios sin guardar? Esta acción no se puede deshacer."
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "Error al cargar las categorías",
+        "loadSubtypes": "Error al cargar los subtipos de notificación",
+        "saveSettings": "Error al guardar la configuración de notificaciones"
+      },
+      "loading": "Cargando categorías de notificaciones internas...",
+      "toasts": {
+        "saveSuccess": "Configuración de notificaciones guardada correctamente",
+        "changesDiscarded": "Cambios descartados"
+      },
+      "columns": {
+        "name": "Nombre",
+        "description": "Descripción",
+        "enabled": "Habilitado",
+        "defaultForUsers": "Predeterminado para usuarios",
+        "actions": "Acciones"
+      },
+      "actions": {
+        "enableAllSubtypes": "Habilitar todos los subtipos",
+        "disableAllSubtypes": "Deshabilitar todos los subtipos",
+        "disable": "Deshabilitar",
+        "enable": "Habilitar",
+        "disableDefault": "Deshabilitar predeterminado",
+        "enableDefault": "Habilitar predeterminado",
+        "discardChanges": "Descartar cambios",
+        "saving": "Guardando...",
+        "saveChanges": "Guardar cambios",
+        "cancel": "Cancelar"
+      },
+      "intro": "Controle qué tipos de notificaciones internas están disponibles y establezca los valores predeterminados para los nuevos usuarios.",
+      "enabledLabel": "Habilitado:",
+      "enabledDescription": "Controla si este tipo de notificación está activo en el sistema",
+      "defaultForUsersLabel": "Predeterminado para usuarios:",
+      "defaultForUsersDescription": "Establece si los nuevos usuarios tienen esta notificación habilitada de forma predeterminada",
+      "unsavedChangesAlert": "Tiene cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos.",
+      "discardDialog": {
+        "title": "¿Descartar cambios?",
+        "message": "¿Está seguro de que desea descartar todos los cambios sin guardar? Esta acción no se puede deshacer."
       }
     }
   },

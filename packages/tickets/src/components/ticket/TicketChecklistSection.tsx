@@ -424,6 +424,22 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
           </DropdownMenu>
         </div>
 
+        {summary.total > 0 ? (
+          <div
+            id={`${id}-progress-bar`}
+            className="h-1.5 rounded-full bg-[rgb(var(--color-border-100))] overflow-hidden"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={summary.total}
+            aria-valuenow={summary.done}
+          >
+            <div
+              className="h-full rounded-full bg-green-500 dark:bg-green-400 transition-all"
+              style={{ width: `${Math.round((summary.done / Math.max(1, summary.total)) * 100)}%` }}
+            />
+          </div>
+        ) : null}
+
         {/* Checklist items */}
         {isLoading ? (
           <p className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-500))]">

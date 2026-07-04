@@ -1,2071 +1,2071 @@
 {
   "common": {
     "actions": {
-      "back": "Back",
-      "cancel": "Cancel",
-      "close": "Close",
-      "create": "Create",
-      "delete": "Delete",
-      "discard": "Discard",
-      "edit": "Edit",
-      "refresh": "Refresh",
-      "remove": "Remove",
-      "retry": "Retry",
-      "save": "Save",
-      "saveChanges": "Save Changes",
-      "saveChangesDirty": "Save Changes *",
-      "saving": "Saving...",
-      "view": "View",
-      "openMenu": "Open menu"
+      "back": "Voltar",
+      "cancel": "Cancelar",
+      "close": "Fechar",
+      "create": "Criar",
+      "delete": "Excluir",
+      "discard": "Descartar",
+      "edit": "Editar",
+      "refresh": "Atualizar",
+      "remove": "Remover",
+      "retry": "Tentar novamente",
+      "save": "Salvar",
+      "saveChanges": "Salvar alterações",
+      "saveChangesDirty": "Salvar alterações *",
+      "saving": "Salvando...",
+      "view": "Visualizar",
+      "openMenu": "Abrir menu"
     },
     "alerts": {
-      "saveSuccess": "Changes saved successfully.",
-      "systemManagedDefault": "This is a system-managed default contract."
+      "saveSuccess": "Alterações salvas com sucesso.",
+      "systemManagedDefault": "Este é um contrato padrão gerenciado pelo sistema."
     },
     "empty": {
-      "none": "None",
-      "notAvailable": "N/A",
-      "notSpecified": "Not specified",
-      "ongoing": "Ongoing"
+      "none": "Nenhum",
+      "notAvailable": "N / D",
+      "notSpecified": "Não especificado",
+      "ongoing": "Em andamento"
     },
     "errors": {
-      "failedToLoad": "Failed to load data.",
-      "failedToSave": "Failed to save changes.",
-      "validationPrefix": "Please correct the following:"
+      "failedToLoad": "Falha ao carregar dados.",
+      "failedToSave": "Falha ao salvar as alterações.",
+      "validationPrefix": "Corrija o seguinte:"
     },
     "labels": {
-      "created": "Created",
-      "currency": "Currency",
-      "description": "Description",
-      "lastUpdated": "Last Updated",
-      "name": "Name",
-      "no": "No",
+      "created": "Criado",
+      "currency": "Moeda",
+      "description": "Descrição",
+      "lastUpdated": "Última atualização",
+      "name": "Nome",
+      "no": "Não",
       "status": "Status",
-      "yes": "Yes"
+      "yes": "Sim"
     },
     "tabs": {
-      "clientContracts": "Client Contracts",
+      "clientContracts": "Contratos de clientes",
       "drafts": "Rascunhos",
-      "templates": "Templates"
+      "templates": "Modelos"
     },
-    "moneyPlaceholder": "—",
+    "moneyPlaceholder": "-",
     "notAvailable": "-"
   },
   "status": {
-    "active": "Active",
+    "active": "Ativo",
     "draft": "Rascunho",
-    "expired": "Expired",
-    "terminated": "Terminated"
+    "expired": "Expirado",
+    "terminated": "Terminado"
   },
   "renewal": {
     "labels": {
-      "decisionDue": "Decision Due",
-      "mode": "Renewal Mode",
-      "noticeDays": "Notice Period",
-      "source": "Renewal Source",
-      "termMonths": "Renewal Term"
+      "decisionDue": "Decisão vencida",
+      "mode": "Modo de renovação",
+      "noticeDays": "Período de aviso prévio",
+      "source": "Fonte de renovação",
+      "termMonths": "Prazo de renovação"
     },
     "modes": {
-      "auto": "Auto-renew",
-      "manual": "Manual renewal",
-      "none": "Non-renewing"
+      "auto": "Renovação automática",
+      "manual": "Renovação manual",
+      "none": "Não renovável"
     },
     "source": {
-      "contract": "Contract",
-      "tenantDefault": "Tenant default"
+      "contract": "Contrato",
+      "tenantDefault": "Padrão do locatário"
     }
   },
   "billing": {
     "cadenceOwner": {
-      "client": "Client schedule",
-      "contract": "Contract anniversary"
+      "client": "Agenda do cliente",
+      "contract": "Aniversário do contrato"
     },
     "frequency": {
-      "annually": "Annually",
-      "biweekly": "Biweekly",
-      "monthly": "Monthly",
-      "quarterly": "Quarterly",
-      "weekly": "Weekly"
+      "annually": "Anualmente",
+      "biweekly": "Quinzenal",
+      "monthly": "Mensal",
+      "quarterly": "Trimestral",
+      "weekly": "Semanalmente"
     },
     "labels": {
-      "billingFrequency": "Billing Frequency",
-      "timing": "Billing Timing",
-      "cadenceOwner": "Cadence Owner"
+      "billingFrequency": "Frequência de cobrança",
+      "timing": "Tempo de faturamento",
+      "cadenceOwner": "Proprietário da cadência"
     },
     "timing": {
-      "advance": "In Advance",
-      "arrears": "In Arrears"
+      "advance": "Antecipadamente",
+      "arrears": "Em atraso"
     }
   },
   "po": {
     "labels": {
-      "amount": "PO Amount",
-      "number": "PO Number",
-      "required": "PO Required"
+      "amount": "Valor da ordem de compra",
+      "number": "Número do pedido",
+      "required": "Pedido de compra obrigatório"
     }
   },
   "contractDetail": {
     "alerts": {
-      "saveSuccess": "Contract saved successfully!",
-      "unsavedChanges": "You have unsaved changes. Click \"Save Changes\" to apply them."
+      "saveSuccess": "Contrato salvo com sucesso!",
+      "unsavedChanges": "Você tem alterações não salvas. Clique em “Salvar alterações” para aplicá-las."
     },
     "cards": {
-      "assignment": "Client Assignment",
-      "clientOwnership": "Client Ownership",
-      "contractDetails": "Contract Details",
-      "header": "Contract Header",
-      "quickActions": "Quick Actions",
-      "renewalHandling": "Renewal Handling"
+      "assignment": "Atribuição do cliente",
+      "clientOwnership": "Propriedade do cliente",
+      "contractDetails": "Detalhes do contrato",
+      "header": "Cabeçalho do contrato",
+      "quickActions": "Ações rápidas",
+      "renewalHandling": "Tratamento de renovação"
     },
     "clientAssignment": {
-      "clientContractId": "Client Contract ID: {{id}}",
-      "empty": "This contract is not assigned to a client yet.",
-      "endDate": "End Date",
-      "endDateLabel": "Assignment end date",
-      "loadingStatuses": "Loading statuses...",
-      "notRequired": "Not required",
-      "noticePeriodDays": "Notice Period (Days)",
-      "noticePeriodPlaceholder": "e.g., 30",
-      "noticePrefix": "Notice:",
-      "renewalHandling": "Renewal Handling",
-      "renewalTermMonths": "Renewal Term (Months)",
-      "renewalTermPlaceholder": "e.g., 12",
-      "renewalTicketBoard": "Renewal Ticket Board",
-      "renewalTicketStatus": "Renewal Ticket Status",
-      "required": "Required",
-      "selectBoard": "Select board",
-      "selectBoardFirst": "Select a board first",
-      "selectRenewalMode": "Select renewal mode",
-      "selectStartDate": "Select start date",
-      "selectStatus": "Select status",
-      "startDate": "Start Date",
-      "startDateLabel": "Assignment start date",
-      "startDateLocked": "Start date cannot be changed for active contracts",
-      "title": "Client Assignment",
-      "useTenantRenewalDefaults": "Use tenant renewal defaults",
-      "usingCustomSettings": "Using custom assignment settings",
-      "usingTenantDefaults": "Using tenant defaults"
+      "clientContractId": "ID do contrato do cliente: {{id}}",
+      "empty": "Este contrato ainda não está atribuído a um cliente.",
+      "endDate": "Data de término",
+      "endDateLabel": "Data de término da atribuição",
+      "loadingStatuses": "Carregando status...",
+      "notRequired": "Não obrigatório",
+      "noticePeriodDays": "Período de aviso (dias)",
+      "noticePeriodPlaceholder": "por exemplo, 30",
+      "noticePrefix": "Perceber:",
+      "renewalHandling": "Tratamento de renovação",
+      "renewalTermMonths": "Prazo de renovação (meses)",
+      "renewalTermPlaceholder": "por exemplo, 12",
+      "renewalTicketBoard": "Quadro de Renovação de Tickets",
+      "renewalTicketStatus": "Status de renovação do ticket",
+      "required": "Obrigatório",
+      "selectBoard": "Selecione o quadro",
+      "selectBoardFirst": "Selecione um quadro primeiro",
+      "selectRenewalMode": "Selecione o modo de renovação",
+      "selectStartDate": "Selecione a data de início",
+      "selectStatus": "Selecione o status",
+      "startDate": "Data de início",
+      "startDateLabel": "Data de início da tarefa",
+      "startDateLocked": "A data de início não pode ser alterada para contratos ativos",
+      "title": "Atribuição do cliente",
+      "useTenantRenewalDefaults": "Use padrões de renovação de locatário",
+      "usingCustomSettings": "Usando configurações de atribuição personalizadas",
+      "usingTenantDefaults": "Usando padrões de locatário"
     },
     "clientOwnership": {
-      "assignmentStatus": "Assignment Status",
-      "clientName": "Client Name",
-      "endDate": "End Date",
-      "ownerClient": "Owner Client",
-      "required": "Required",
-      "startDate": "Start Date",
-      "systemManaged": "Ownership is system-managed for this default contract.",
-      "title": "Client Ownership"
+      "assignmentStatus": "Status da Atribuição",
+      "clientName": "Nome do cliente",
+      "endDate": "Data de término",
+      "ownerClient": "Cliente Proprietário",
+      "required": "Obrigatório",
+      "startDate": "Data de início",
+      "systemManaged": "A propriedade é gerenciada pelo sistema para este contrato padrão.",
+      "title": "Propriedade do cliente"
     },
     "detailsCard": {
       "actions": {
-        "cancelDescription": "Cancel description edits",
-        "cancelName": "Cancel contract name",
-        "editDescription": "Edit contract description",
-        "editName": "Edit contract name",
-        "saveDescription": "Save description",
-        "saveName": "Save contract name"
+        "cancelDescription": "Cancelar edições na descrição",
+        "cancelName": "Cancelar nome do contrato",
+        "editDescription": "Editar descrição do contrato",
+        "editName": "Editar nome do contrato",
+        "saveDescription": "Salvar descrição",
+        "saveName": "Salvar nome do contrato"
       },
-      "contractNameLabel": "Contract Name *",
-      "contractNamePlaceholder": "Enter contract name",
-      "descriptionLabel": "Description",
-      "descriptionPlaceholder": "Enter contract description",
-      "title": "Contract Details"
+      "contractNameLabel": "Nome do contrato *",
+      "contractNamePlaceholder": "Insira o nome do contrato",
+      "descriptionLabel": "Descrição",
+      "descriptionPlaceholder": "Insira a descrição do contrato",
+      "title": "Detalhes do contrato"
     },
     "headerCard": {
-      "assignmentLifecycleHint": "Live client status is controlled by the assignment lifecycle below.",
-      "assignmentStatus": "Assignment Status",
-      "billingFrequencyLabel": "Billing Frequency *",
-      "billingFrequencyPlaceholder": "Select billing frequency",
-      "customSettings": "Custom settings",
-      "expiredStatusNote": "Expired contracts cannot be changed to another status",
-      "notice": "Notice",
-      "noticeDay": "{{count}} day",
-      "noticeDays": "{{count}} days",
-      "ongoingNoEndDate": "Ongoing (no end date)",
-      "renewalHeading": "Renewal",
-      "tenantDefaults": "Tenant defaults",
-      "title": "Contract Header"
+      "assignmentLifecycleHint": "O status do cliente ativo é controlado pelo ciclo de vida da atribuição abaixo.",
+      "assignmentStatus": "Status da Atribuição",
+      "billingFrequencyLabel": "Frequência de cobrança *",
+      "billingFrequencyPlaceholder": "Selecione a frequência de cobrança",
+      "customSettings": "Configurações personalizadas",
+      "expiredStatusNote": "Contratos expirados não podem ser alterados para outro status",
+      "notice": "Perceber",
+      "noticeDay": "Dia {{count}}",
+      "noticeDays": "{{count}} dias",
+      "ongoingNoEndDate": "Em andamento (sem data de término)",
+      "renewalHeading": "Renovação",
+      "tenantDefaults": "Padrões do locatário",
+      "title": "Cabeçalho do contrato"
     },
     "dialogs": {
       "delete": {
-        "cancel": "Cancel",
-        "confirm": "Delete Contract",
-        "deleting": "Deleting…",
-        "description": "Are you sure you want to delete this contract? This action cannot be undone.",
-        "message": "Are you sure you want to delete this contract? This action cannot be undone and will remove all associated data.",
-        "title": "Delete Contract"
+        "cancel": "Cancelar",
+        "confirm": "Excluir contrato",
+        "deleting": "Excluindo…",
+        "description": "Tem certeza de que deseja excluir este contrato? Esta ação não pode ser desfeita.",
+        "message": "Tem certeza de que deseja excluir este contrato? Esta ação não pode ser desfeita e removerá todos os dados associados.",
+        "title": "Excluir contrato"
       },
       "discard": {
-        "cancel": "Continue Editing",
-        "confirm": "Discard Changes",
-        "description": "Discard your unsaved changes?",
-        "message": "Are you sure you want to discard all changes? Any unsaved changes will be lost.",
-        "title": "Discard Changes"
+        "cancel": "Continuar editando",
+        "confirm": "Descartar alterações",
+        "description": "Descartar suas alterações não salvas?",
+        "message": "Tem certeza de que deseja descartar todas as alterações? Quaisquer alterações não salvas serão perdidas.",
+        "title": "Descartar alterações"
       },
       "leave": {
-        "confirm": "Leave Page",
-        "description": "You have unsaved changes. Leave this page without saving?",
-        "title": "Unsaved Changes"
+        "confirm": "Sair da página",
+        "description": "Você tem alterações não salvas. Sair desta página sem salvar?",
+        "title": "Alterações não salvas"
       },
       "unsaved": {
-        "cancel": "Stay on Page",
-        "confirm": "Leave Page",
-        "message": "You have unsaved changes. Are you sure you want to leave this page? All changes will be lost.",
-        "title": "Unsaved Changes"
+        "cancel": "Fique na página",
+        "confirm": "Sair da página",
+        "message": "Você tem alterações não salvas. Tem certeza de que deseja sair desta página? Todas as alterações serão perdidas.",
+        "title": "Alterações não salvas"
       }
     },
     "invoices": {
       "columns": {
-        "amount": "Amount",
-        "createdAt": "Created",
-        "dueDate": "Due Date",
-        "invoiceDate": "Invoice Date",
-        "invoiceNumber": "Invoice #",
-        "preview": "Preview",
+        "amount": "Quantia",
+        "createdAt": "Criado",
+        "dueDate": "Data de vencimento",
+        "invoiceDate": "Data da fatura",
+        "invoiceNumber": "Fatura #",
+        "preview": "Visualização",
         "status": "Status"
       },
-      "empty": "No invoices found for this contract.",
-      "loading": "Loading invoices...",
-      "noTemplatesAvailable": "No invoice templates are available for preview.",
-      "preview": "Preview",
-      "selectForPreview": "Select an invoice to open a full preview in the drawer.",
-      "title": "Contract Invoices"
+      "empty": "Nenhuma fatura encontrada para este contrato.",
+      "loading": "Carregando faturas...",
+      "noTemplatesAvailable": "Nenhum modelo de fatura está disponível para visualização.",
+      "preview": "Visualização",
+      "selectForPreview": "Selecione uma fatura para abrir uma visualização completa na gaveta.",
+      "title": "Faturas de contrato"
     },
     "labels": {
-      "client": "Client",
-      "contractName": "Contract Name",
-      "description": "Description",
-      "noClientAssigned": "No client assigned",
-      "noDescription": "No description",
-      "systemManagedDefault": "System-managed default",
-      "useTenantDefaults": "Use tenant defaults"
+      "client": "Cliente",
+      "contractName": "Nome do contrato",
+      "description": "Descrição",
+      "noClientAssigned": "Nenhum cliente atribuído",
+      "noDescription": "Sem descrição",
+      "systemManagedDefault": "Padrão gerenciado pelo sistema",
+      "useTenantDefaults": "Usar padrões de locatário"
     },
     "quickActions": {
-      "deleteContract": "Delete Contract",
-      "manageContractLines": "Manage Contract Lines",
-      "managePricingSchedules": "Manage Pricing Schedules",
-      "title": "Quick Actions",
-      "viewDocuments": "View Documents",
-      "viewInvoices": "View Invoices"
+      "deleteContract": "Excluir contrato",
+      "manageContractLines": "Gerenciar linhas de contrato",
+      "managePricingSchedules": "Gerenciar programações de preços",
+      "title": "Ações rápidas",
+      "viewDocuments": "Ver documentos",
+      "viewInvoices": "Ver faturas"
     },
     "systemManaged": {
-      "attributionOnly": "This contract is attribution-only and does not control recurring billing behavior.",
-      "configureCustom": "To configure custom billing behavior, create or edit a normal user-authored contract.",
-      "createdAutomatically": "Created automatically for uncontracted work.",
-      "title": "System-managed default contract"
+      "attributionOnly": "Este contrato é apenas de atribuição e não controla o comportamento de cobrança recorrente.",
+      "configureCustom": "Para configurar o comportamento de cobrança personalizado, crie ou edite um contrato normal de autoria do usuário.",
+      "createdAutomatically": "Criado automaticamente para trabalho não contratado.",
+      "title": "Contrato padrão gerenciado pelo sistema"
     },
     "tabs": {
-      "documents": "Documents",
-      "invoices": "Invoices",
-      "lines": "Contract Lines",
-      "overview": "Overview",
-      "pricing": "Pricing Schedules"
+      "documents": "Documentos",
+      "invoices": "Faturas",
+      "lines": "Linhas de Contrato",
+      "overview": "Visão geral",
+      "pricing": "Cronogramas de preços"
     },
     "validation": {
-      "billingFrequencyRequired": "Billing frequency is required.",
-      "billingFrequency": "Billing frequency",
-      "contractName": "Contract name",
-      "contractNameRequired": "Contract name is required.",
-      "failedToUpdate": "Failed to update contract",
-      "fixErrors": "Please fix the following errors:"
+      "billingFrequencyRequired": "A frequência de cobrança é obrigatória.",
+      "billingFrequency": "Frequência de cobrança",
+      "contractName": "Nome do contrato",
+      "contractNameRequired": "O nome do contrato é obrigatório.",
+      "failedToUpdate": "Falha ao atualizar o contrato",
+      "fixErrors": "Corrija os seguintes erros:"
     },
     "documents": {
-      "loading": "Loading documents..."
+      "loading": "Carregando documentos..."
     }
   },
   "contractHeader": {
     "badges": {
-      "clientOwned": "Client-owned",
-      "template": "Template"
+      "clientOwned": "Propriedade do cliente",
+      "template": "Modelo"
     },
     "labels": {
-      "billingFrequency": "Billing Frequency",
-      "contractLines": "Contract Lines",
-      "currency": "Currency",
-      "endDate": "End Date",
-      "lastUpdated": "Last Updated",
-      "startDate": "Start Date"
+      "billingFrequency": "Frequência de cobrança",
+      "contractLines": "Linhas de Contrato",
+      "currency": "Moeda",
+      "endDate": "Data de término",
+      "lastUpdated": "Última atualização",
+      "startDate": "Data de início"
     },
     "po": {
       "prefix": "PO",
-      "requiredForContract": "Purchase order required for this contract."
+      "requiredForContract": "Ordem de compra necessária para este contrato."
     },
     "status": {
-      "active": "Active",
+      "active": "Ativo",
       "draft": "Rascunho",
-      "expired": "Expired",
-      "terminated": "Terminated"
+      "expired": "Expirado",
+      "terminated": "Terminado"
     },
     "values": {
-      "ongoing": "Ongoing"
+      "ongoing": "Em andamento"
     }
   },
   "contractOverview": {
     "errors": {
-      "failedToLoadOverview": "Failed to load overview"
+      "failedToLoadOverview": "Falha ao carregar a visão geral"
     },
     "frequency": {
-      "annually": "Annually",
-      "biweekly": "Biweekly",
-      "semi_annually": "Semi-Annually",
-      "weekly": "Weekly"
+      "annually": "Anualmente",
+      "biweekly": "Quinzenal",
+      "semi_annually": "Semestralmente",
+      "weekly": "Semanalmente"
     },
     "lines": {
-      "addContractLines": "Add Contract Lines",
-      "collapseAll": "Collapse all",
-      "expandAll": "Expand all",
-      "includedServices": "Included Services",
-      "noContractLinesDescription": "Add contract lines to define what's included in this contract",
-      "noContractLinesYet": "No contract lines yet",
-      "noServicesConfigured": "No services configured",
-      "serviceCountOne": "{{count}} service",
-      "serviceCountOther": "{{count}} services"
+      "addContractLines": "Adicionar linhas de contrato",
+      "collapseAll": "Recolher tudo",
+      "expandAll": "Expandir tudo",
+      "includedServices": "Serviços incluídos",
+      "noContractLinesDescription": "Adicione linhas de contrato para definir o que está incluído neste contrato",
+      "noContractLinesYet": "Ainda não há linhas de contrato",
+      "noServicesConfigured": "Nenhum serviço configurado",
+      "serviceCountOne": "Serviço {{count}}",
+      "serviceCountOther": "Serviços {{count}}"
     },
     "stats": {
-      "contractLines": "Contract Lines",
-      "estimatedMonthlyValue": "Est. Monthly Value",
-      "totalServices": "Total Services",
-      "variable": "Variable",
-      "variableSuffix": "+ variable (hourly/usage)",
-      "viewDetails": "View details"
+      "contractLines": "Linhas de Contrato",
+      "estimatedMonthlyValue": "Husa. Valor Mensal",
+      "totalServices": "Serviços totais",
+      "variable": "Variável",
+      "variableSuffix": "+ variável (por hora/uso)",
+      "viewDetails": "Ver detalhes"
     },
-    "title": "What's Included"
+    "title": "O que está incluído"
   },
   "contractDialog": {
     "actions": {
-      "createContract": "Create Contract",
+      "createContract": "Criar contrato",
       "saveAsDraft": "Salvar como rascunho",
-      "updateContract": "Update Contract"
+      "updateContract": "Atualizar contrato"
     },
     "documents": {
-      "loading": "Loading documents..."
+      "loading": "Carregando documentos..."
     },
     "form": {
-      "billingFrequencyLabel": "Billing Frequency *",
-      "billingFrequencyPlaceholder": "Select billing frequency",
-      "clientLabel": "Client *",
-      "clientPlaceholder": "Select a client",
-      "contractNameLabel": "Contract Name *",
-      "contractNamePlaceholder": "e.g., Standard MSP Services",
-      "currencyHint": "Currency is based on the client's default currency setting.",
-      "descriptionLabel": "Description (Optional)",
-      "descriptionPlaceholder": "Add any additional notes about this contract...",
-      "endDateHint": "Leave blank for ongoing contracts that don't have a fixed end date.",
-      "endDateLabel": "End Date (Optional)",
-      "noticePeriodLabel": "Notice Period (Days)",
-      "noticePeriodPlaceholder": "e.g., 30",
-      "renewalModePlaceholder": "Select renewal mode",
-      "renewalSettingsDescription": "Configure renewal behavior for this client contract assignment.",
-      "renewalSettingsTitle": "Renewal Settings",
-      "renewalTermLabel": "Renewal Term (Months)",
-      "renewalTermPlaceholder": "e.g., 12",
-      "selectClientFirst": "Select a client first",
-      "startDateLabel": "Start Date *",
-      "useTenantDefaultsDescription": "Apply organization-level renewal mode and notice period settings.",
-      "useTenantDefaultsLabel": "Use Tenant Renewal Defaults"
+      "billingFrequencyLabel": "Frequência de cobrança *",
+      "billingFrequencyPlaceholder": "Selecione a frequência de cobrança",
+      "clientLabel": "Cliente *",
+      "clientPlaceholder": "Selecione um cliente",
+      "contractNameLabel": "Nome do contrato *",
+      "contractNamePlaceholder": "por exemplo, serviços MSP padrão",
+      "currencyHint": "A moeda é baseada na configuração de moeda padrão do cliente.",
+      "descriptionLabel": "Descrição (opcional)",
+      "descriptionPlaceholder": "Adicione quaisquer notas adicionais sobre este contrato...",
+      "endDateHint": "Deixe em branco para contratos em andamento que não tenham data de término fixa.",
+      "endDateLabel": "Data de término (opcional)",
+      "noticePeriodLabel": "Período de aviso (dias)",
+      "noticePeriodPlaceholder": "por exemplo, 30",
+      "renewalModePlaceholder": "Selecione o modo de renovação",
+      "renewalSettingsDescription": "Configure o comportamento de renovação para esta atribuição de contrato de cliente.",
+      "renewalSettingsTitle": "Configurações de renovação",
+      "renewalTermLabel": "Prazo de renovação (meses)",
+      "renewalTermPlaceholder": "por exemplo, 12",
+      "selectClientFirst": "Selecione um cliente primeiro",
+      "startDateLabel": "Data de início *",
+      "useTenantDefaultsDescription": "Aplique o modo de renovação no nível da organização e as configurações do período de aviso prévio.",
+      "useTenantDefaultsLabel": "Usar padrões de renovação de locatário"
     },
     "po": {
-      "amountLabel": "PO Amount (Optional)",
+      "amountLabel": "Valor do pedido (opcional)",
       "amountPlaceholder": "0.00",
-      "comingSoon": "Invoice integration coming soon. Settings will be saved but PO enforcement won't be active until a future release.",
-      "noteLabel": "Note:",
-      "numberLabel": "PO Number *",
-      "numberPlaceholder": "e.g., PO-2024-12345",
-      "requirePurchaseOrder": "Require Purchase Order",
-      "requirePurchaseOrderTooltip": "When enabled, invoices cannot be generated for this contract unless a PO number is provided."
+      "comingSoon": "Integração de faturas em breve. As configurações serão salvas, mas a aplicação do pedido de compra não estará ativa até uma versão futura.",
+      "noteLabel": "Observação:",
+      "numberLabel": "Número do pedido *",
+      "numberPlaceholder": "por exemplo, PO-2024-12345",
+      "requirePurchaseOrder": "Exigir ordem de compra",
+      "requirePurchaseOrderTooltip": "Quando ativado, as faturas não podem ser geradas para este contrato, a menos que um número de ordem de compra seja fornecido."
     },
     "presetDetails": {
-      "defaultBaseRate": "Default Base Rate:",
-      "defaultRatePlaceholder": "Default: ${{rate}}",
-      "defaultRateValue": "Default: ${{rate}}",
-      "enterBaseRate": "Enter base rate",
-      "fixedRateConfiguration": "Fixed Rate Configuration",
-      "fixedServicesReferenceHelp": "These services are included for reference only. The fixed rate above determines the billing amount.",
-      "hourlyRate": "Hourly Rate",
-      "leaveBlankDefaultRate": "Leave blank to use the default rate",
-      "minimumBillableMinutes": "Minimum billable minutes",
-      "noServicesConfigured": "No services configured for this preset",
-      "notSet": "Not set",
-      "overrideBaseRate": "Override Base Rate",
-      "quantity": "Quantity",
-      "quantityShort": "Qty: {{quantity}}",
-      "ratePerUnit": "Rate (per unit)",
-      "roundUpToNearestMinutes": "Round up to nearest (minutes)",
-      "servicesConfiguration": "Services Configuration",
-      "servicesHourlyRates": "Services & Hourly Rates",
-      "servicesIncludedReference": "Services Included (Reference)",
-      "timeBillingConfiguration": "Time Billing Configuration",
-      "unitOfMeasure": "Unit of Measure",
-      "unitOfMeasureHint": "e.g., GB, API call, user"
+      "defaultBaseRate": "Taxa básica padrão:",
+      "defaultRatePlaceholder": "Padrão: ${{rate}}",
+      "defaultRateValue": "Padrão: ${{rate}}",
+      "enterBaseRate": "Insira a taxa básica",
+      "fixedRateConfiguration": "Configuração de taxa fixa",
+      "fixedServicesReferenceHelp": "Esses serviços estão incluídos apenas para referência. A taxa fixa acima determina o valor do faturamento.",
+      "hourlyRate": "Taxa horária",
+      "leaveBlankDefaultRate": "Deixe em branco para usar a taxa padrão",
+      "minimumBillableMinutes": "Minutos mínimos faturáveis",
+      "noServicesConfigured": "Nenhum serviço configurado para esta predefinição",
+      "notSet": "Não definido",
+      "overrideBaseRate": "Substituir taxa básica",
+      "quantity": "Quantidade",
+      "quantityShort": "Quantidade: {{quantity}}",
+      "ratePerUnit": "Taxa (por unidade)",
+      "roundUpToNearestMinutes": "Arredondar para o mais próximo (minutos)",
+      "servicesConfiguration": "Configuração de serviços",
+      "servicesHourlyRates": "Serviços e taxas horárias",
+      "servicesIncludedReference": "Serviços incluídos (referência)",
+      "timeBillingConfiguration": "Configuração de cobrança por tempo",
+      "unitOfMeasure": "Unidade de Medida",
+      "unitOfMeasureHint": "por exemplo, GB, chamada de API, usuário"
     },
     "presets": {
-      "allTypes": "All types",
-      "empty": "No contract line presets available. You can add them later.",
-      "heading": "Contract Line Presets (Optional)",
-      "headingTooltip": "Select contract line presets to copy into this contract. You can add more later.",
-      "loading": "Loading contract line presets...",
-      "noMatches": "No contract line presets match your search.",
-      "resetFilters": "Reset",
-      "searchPlaceholder": "Search contract line presets...",
-      "selectedPlural": "{{count}} contract line presets selected",
-      "selectedSingle": "{{count}} contract line preset selected",
-      "serviceCountPlural": "{{count}} services",
-      "serviceCountSingle": "{{count}} service",
-      "typePlaceholder": "Select type"
+      "allTypes": "Todos os tipos",
+      "empty": "Nenhuma predefinição de linha de contrato disponível. Você pode adicioná-los mais tarde.",
+      "heading": "Predefinições de linha de contrato (opcional)",
+      "headingTooltip": "Selecione predefinições de linha de contrato para copiar neste contrato. Você pode adicionar mais posteriormente.",
+      "loading": "Carregando predefinições de linha de contrato...",
+      "noMatches": "Nenhuma predefinição de linha de contrato corresponde à sua pesquisa.",
+      "resetFilters": "Reiniciar",
+      "searchPlaceholder": "Pesquisar predefinições de linha de contrato...",
+      "selectedPlural": "Predefinições de linha de contrato {{count}} selecionadas",
+      "selectedSingle": "Predefinição de linha de contrato {{count}} selecionada",
+      "serviceCountPlural": "Serviços {{count}}",
+      "serviceCountSingle": "Serviço {{count}}",
+      "typePlaceholder": "Selecione o tipo"
     },
     "title": {
-      "create": "Create Contract",
-      "edit": "Edit Contract"
+      "create": "Criar contrato",
+      "edit": "Editar contrato"
     },
     "validation": {
-      "billingFrequency": "Billing frequency",
-      "client": "Client",
-      "contractName": "Contract name",
-      "failedToSave": "Failed to save contract",
-      "noticePeriodInvalid": "Notice period days must be a non-negative whole number",
-      "poNumberRequired": "PO number (required when PO is enabled)",
-      "renewalTermInvalid": "Renewal term months must be a positive whole number for auto-renew contracts",
-      "requiredFields": "Please fill in the required fields:",
-      "startDate": "Start date"
+      "billingFrequency": "Frequência de cobrança",
+      "client": "Cliente",
+      "contractName": "Nome do contrato",
+      "failedToSave": "Falha ao salvar o contrato",
+      "noticePeriodInvalid": "Os dias do período de aviso precisam ser um número inteiro não negativo",
+      "poNumberRequired": "Número do pedido de compra (obrigatório quando o pedido de compra está ativado)",
+      "renewalTermInvalid": "Os meses do prazo de renovação devem ser um número inteiro positivo para contratos de renovação automática",
+      "requiredFields": "Por favor preencha os campos obrigatórios:",
+      "startDate": "Data de início"
     }
   },
   "contractForm": {
     "actions": {
-      "saveChanges": "Save Changes",
-      "saving": "Saving..."
+      "saveChanges": "Salvar alterações",
+      "saving": "Salvando..."
     },
     "errors": {
-      "failedToUpdateContract": "Failed to update contract"
+      "failedToUpdateContract": "Falha ao atualizar o contrato"
     },
     "fields": {
-      "billingFrequency": "Billing Frequency",
-      "billingFrequencyPlaceholder": "Select billing frequency",
-      "contractName": "Contract Name",
-      "contractNamePlaceholder": "Enter contract name",
-      "currency": "Currency",
-      "currencyPlaceholder": "Select currency",
-      "description": "Description",
-      "descriptionPlaceholder": "Enter contract description",
+      "billingFrequency": "Frequência de cobrança",
+      "billingFrequencyPlaceholder": "Selecione a frequência de cobrança",
+      "contractName": "Nome do contrato",
+      "contractNamePlaceholder": "Insira o nome do contrato",
+      "currency": "Moeda",
+      "currencyPlaceholder": "Selecione a moeda",
+      "description": "Descrição",
+      "descriptionPlaceholder": "Insira a descrição do contrato",
       "status": "Status"
     },
-    "heading": "Contract Details",
+    "heading": "Detalhes do contrato",
     "status": {
-      "active": "Active",
+      "active": "Ativo",
       "draft": "Rascunho",
-      "expired": "Expired",
-      "expiredHelper": "Expired contracts cannot be changed to another status",
-      "terminated": "Terminated"
+      "expired": "Expirado",
+      "expiredHelper": "Contratos expirados não podem ser alterados para outro status",
+      "terminated": "Terminado"
     },
     "validation": {
-      "billingFrequency": "Billing frequency",
-      "contractName": "Contract name",
-      "requiredFields": "Please fill in the required fields:"
+      "billingFrequency": "Frequência de cobrança",
+      "contractName": "Nome do contrato",
+      "requiredFields": "Por favor preencha os campos obrigatórios:"
     }
   },
   "contractLines": {
     "actions": {
-      "addFromPresets": "Add from Presets",
-      "collapseLine": "Collapse contract line",
-      "createCustom": "Create Custom",
-      "expandLine": "Expand contract line"
+      "addFromPresets": "Adicionar de predefinições",
+      "collapseLine": "Recolher linha de contrato",
+      "createCustom": "Criar personalizado",
+      "expandLine": "Expandir linha de contrato"
     },
     "bucket": {
-      "billingPeriod": "Billing Period: {{period}}",
-      "defaultUnit": "unit",
-      "defaultUnits": "units",
-      "enableTracking": "Enable bucket usage tracking",
-      "hour": "hour",
-      "hoursValue": "{{hours}} hours",
-      "included": "Included: {{value}}",
-      "overageRate": "Overage Rate: {{rate}} per {{unit}}",
-      "rolloverEnabled": "Rollover: Enabled",
-      "title": "Bucket Configuration",
+      "billingPeriod": "Período de cobrança: {{period}}",
+      "defaultUnit": "unidade",
+      "defaultUnits": "unidades",
+      "enableTracking": "Ativar o rastreamento de uso do bucket",
+      "hour": "hora",
+      "hoursValue": "Horas {{hours}}",
+      "included": "Incluído: {{value}}",
+      "overageRate": "Taxa de excedente: {{rate}} por {{unit}}",
+      "rolloverEnabled": "Rolagem: Habilitado",
+      "title": "Configuração do intervalo",
       "unitsValue": "{{count}} {{units}}"
     },
     "columns": {
-      "actions": "Actions",
-      "frequency": "Frequency",
-      "name": "Name",
-      "rate": "Rate",
-      "services": "Services",
-      "type": "Type"
+      "actions": "Ações",
+      "frequency": "Freqüência",
+      "name": "Nome",
+      "rate": "Avaliar",
+      "services": "Serviços",
+      "type": "Tipo"
     },
     "configuration": {
-      "description": "Settings that apply to this contract line",
-      "fixedInfo": "Fixed contract lines bill a flat recurring fee regardless of individual service rates.",
-      "fixedInfoDetails": "For fixed fee lines, the service rate and quantity are used only for tax allocation purposes. They determine how the fixed fee is proportionally attributed across services for tax calculations. The actual billed amount is the contract line's base rate shown above.",
-      "fixedInfoHeading": "About service rates below:",
-      "minimumBillableTime": "Minimum Billable Time (minutes)",
-      "minutesValue": "{{count}} minutes",
-      "roundUpToNearest": "Round Up To Nearest (minutes)",
-      "title": "Contract Line Configuration",
-      "usageInfo": "Usage-based contract lines are configured per service with unit rates."
+      "description": "Configurações que se aplicam a esta linha de contrato",
+      "fixedInfo": "As linhas de contrato fixas cobram uma taxa fixa recorrente, independentemente das taxas de serviço individuais.",
+      "fixedInfoDetails": "Para linhas de taxa fixa, a taxa de serviço e a quantidade são usadas apenas para fins de alocação de impostos. Eles determinam como a taxa fixa é atribuída proporcionalmente aos serviços para cálculo de impostos. O valor efetivamente faturado é a taxa básica da linha de contrato mostrada acima.",
+      "fixedInfoHeading": "Sobre as taxas de serviço abaixo:",
+      "minimumBillableTime": "Tempo mínimo faturável (minutos)",
+      "minutesValue": "{{count}} minutos",
+      "roundUpToNearest": "Arredondar para o mais próximo (minutos)",
+      "title": "Configuração da linha de contrato",
+      "usageInfo": "As linhas de contrato baseadas no uso são configuradas por serviço com taxas unitárias."
     },
-    "customRate": "Custom",
+    "customRate": "Personalizado",
     "description": {
-      "default": "Manage the contract lines and services for this contract",
-      "readOnly": "This system-managed default contract is attribution-only. Contract line authoring is disabled."
+      "default": "Gerenciar as linhas de contrato e serviços para este contrato",
+      "readOnly": "Este contrato padrão gerenciado pelo sistema é somente de atribuição. A criação de linha de contrato está desabilitada."
     },
     "dialogs": {
-      "confirmRemove": "Remove contract line \"{{name}}\"?"
+      "confirmRemove": "Remover linha de contrato \"{{name}}\"?"
     },
     "empty": {
-      "noneAdded": "No contract lines added yet.",
-      "selectAbove": "Select a contract line above to get started."
+      "noneAdded": "Nenhuma linha de contrato adicionada ainda.",
+      "selectAbove": "Selecione uma linha de contrato acima para começar."
     },
     "errors": {
-      "cannotEditWithInvoices": "Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated.",
-      "failedToCheckEditable": "Failed to check if contract can be edited",
-      "failedToLoad": "Failed to load contract lines",
-      "failedToRefresh": "Failed to refresh contract lines",
-      "failedToRemove": "Failed to remove contract line",
-      "failedToUpdate": "Failed to update contract line"
+      "cannotEditWithInvoices": "Não é possível editar a linha de contrato: este contrato tem faturas associadas. As linhas de contrato não podem ser editadas depois que as faturas forem geradas.",
+      "failedToCheckEditable": "Falha ao verificar se o contrato pode ser editado",
+      "failedToLoad": "Falha ao carregar linhas de contrato",
+      "failedToRefresh": "Falha ao atualizar linhas de contrato",
+      "failedToRemove": "Falha ao remover a linha de contrato",
+      "failedToUpdate": "Falha ao atualizar a linha de contrato"
     },
     "loading": {
-      "contractLines": "Loading contract lines",
-      "inline": "Loading..."
+      "contractLines": "Carregando linhas de contrato",
+      "inline": "Carregando..."
     },
-    "serviceCountPlural": "{{count}} services",
-    "serviceCountSingle": "{{count}} service",
-    "services": {
-      "empty": "No services configured for this contract line.",
-      "hourlyRate": "Hourly Rate",
-      "quantity": "Quantity",
-      "quantityShort": "Qty: {{quantity}}",
-      "quantityTaxAllocation": "Quantity (for tax allocation)",
-      "rateTaxAllocation": "Rate (for tax allocation)",
-      "title": "Services ({{count}})",
-      "typeLabel": "{{type}} Service",
-      "unitOfMeasure": "Unit of Measure",
-      "unitPlaceholder": "unit",
-      "unitRate": "Unit Rate"
-    },
-    "title": "Contract Lines",
     "location": {
-      "addLocation": "+ Add location",
-      "fallback": "Location",
-      "label": "Location",
-      "lineCountPlural": "{{count}} lines",
-      "lineCountSingle": "{{count}} line",
-      "none": "No location assigned",
-      "pendingEmptyHint": "No contract lines yet for this location. Add a line, then assign it to this location via its Edit panel.",
-      "placeholder": "Select a location",
-      "removePendingGroup": "Remove empty location group",
-      "unassigned": "No location assigned",
-      "unnamed": "Location"
-    }
+      "addLocation": "+ Adicionar localização",
+      "fallback": "Localização",
+      "label": "Localização",
+      "lineCountPlural": "Linhas {{count}}",
+      "lineCountSingle": "Linha {{count}}",
+      "none": "Nenhum local atribuído",
+      "pendingEmptyHint": "Ainda não há linhas de contrato para este local. Adicione uma linha e atribua-a a esse local por meio do painel Editar.",
+      "placeholder": "Selecione um local",
+      "removePendingGroup": "Remover grupo de locais vazio",
+      "unassigned": "Nenhum local atribuído",
+      "unnamed": "Localização"
+    },
+    "serviceCountPlural": "Serviços {{count}}",
+    "serviceCountSingle": "Serviço {{count}}",
+    "services": {
+      "empty": "Nenhum serviço configurado para esta linha de contrato.",
+      "hourlyRate": "Taxa horária",
+      "quantity": "Quantidade",
+      "quantityShort": "Quantidade: {{quantity}}",
+      "quantityTaxAllocation": "Quantidade (para alocação de impostos)",
+      "rateTaxAllocation": "Taxa (para alocação de impostos)",
+      "title": "Serviços ({{count}})",
+      "typeLabel": "Serviço {{type}}",
+      "unitOfMeasure": "Unidade de Medida",
+      "unitPlaceholder": "unidade",
+      "unitRate": "Taxa unitária"
+    },
+    "title": "Linhas de Contrato"
   },
   "contractLineEdit": {
     "actions": {
-      "cancel": "Cancel",
-      "saveChanges": "Save Changes",
-      "saving": "Saving..."
+      "cancel": "Cancelar",
+      "saveChanges": "Salvar alterações",
+      "saving": "Salvando..."
     },
     "errors": {
-      "failedToSaveChanges": "Failed to save changes"
+      "failedToSaveChanges": "Falha ao salvar as alterações"
     },
     "fields": {
-      "billingTimingQuestion": "When should this line be billed?",
-      "rate": "Rate"
+      "billingTimingQuestion": "Quando esta linha deve ser faturada?",
+      "rate": "Avaliar"
     },
     "sections": {
-      "billingTiming": "Billing Timing",
-      "pricing": "Pricing"
+      "billingTiming": "Tempo de faturamento",
+      "pricing": "Preços"
     },
     "timingDescriptions": {
-      "advance": "Charges will be billed before the service is provided",
-      "arrears": "Charges will be billed after the service is provided"
+      "advance": "As cobranças serão cobradas antes da prestação do serviço",
+      "arrears": "As cobranças serão cobradas após a prestação do serviço"
     },
     "timingOptions": {
-      "advance": "In Advance (at start of billing period)",
-      "arrears": "In Arrears (at end of billing period)"
+      "advance": "Antecipadamente (no início do período de faturamento)",
+      "arrears": "Em atraso (no final do período de faturamento)"
     },
-    "title": "Edit Contract Line: {{name}}",
+    "title": "Editar linha de contrato: {{name}}",
     "validation": {
-      "validRateRequired": "Please enter a valid rate (must be a non-negative number)"
+      "validRateRequired": "Insira uma taxa válida (deve ser um número não negativo)"
     },
     "values": {
-      "unnamedLine": "Unnamed line"
+      "unnamedLine": "Linha sem nome"
     }
   },
   "contractLineRate": {
     "actions": {
-      "cancel": "Cancel",
-      "saveRate": "Save Rate"
+      "cancel": "Cancelar",
+      "saveRate": "Salvar taxa"
     },
     "fields": {
-      "rate": "Rate"
+      "rate": "Avaliar"
     },
-    "title": "Set Custom Rate for {{name}}",
+    "title": "Definir taxa personalizada para {{name}}",
     "validation": {
-      "validRateRequired": "Please enter a valid rate (must be a non-negative number)"
+      "validRateRequired": "Insira uma taxa válida (deve ser um número não negativo)"
     }
   },
   "addLines": {
     "actions": {
-      "addPlural": "Add ({{count}}) Presets",
-      "addSingle": "Add ({{count}}) Preset",
-      "adding": "Adding..."
+      "addPlural": "Adicionar predefinições ({{count}})",
+      "addSingle": "Adicionar predefinição ({{count}})",
+      "adding": "Adicionando..."
     },
     "empty": {
-      "noMatches": "No presets match your search.",
-      "noneAvailable": "No contract line presets available."
+      "noMatches": "Nenhuma predefinição corresponde à sua pesquisa.",
+      "noneAvailable": "Nenhuma predefinição de linha de contrato disponível."
     },
     "errors": {
-      "failedToAddPresets": "Failed to add selected presets.",
-      "failedToLoadPresetDetails": "Failed to load preset details.",
-      "failedToLoadPresets": "Failed to load contract line presets."
+      "failedToAddPresets": "Falha ao adicionar predefinições selecionadas.",
+      "failedToLoadPresetDetails": "Falha ao carregar detalhes predefinidos.",
+      "failedToLoadPresets": "Falha ao carregar predefinições de linha de contrato."
     },
     "filters": {
-      "allTypes": "All types",
-      "reset": "Reset",
-      "searchPlaceholder": "Search presets...",
-      "typePlaceholder": "Select type"
+      "allTypes": "Todos os tipos",
+      "reset": "Reiniciar",
+      "searchPlaceholder": "Pesquisar predefinições...",
+      "typePlaceholder": "Selecione o tipo"
     },
     "fixedConfig": {
-      "defaultBaseRate": "Default Base Rate:",
-      "defaultRatePlaceholder": "Default: ${{rate}}",
-      "enterBaseRate": "Enter base rate",
-      "leaveBlankDefault": "Leave blank to use the default rate",
-      "notSet": "Not set",
-      "overrideBaseRate": "Override Base Rate",
-      "title": "Fixed Rate Configuration"
+      "defaultBaseRate": "Taxa básica padrão:",
+      "defaultRatePlaceholder": "Padrão: ${{rate}}",
+      "enterBaseRate": "Insira a taxa básica",
+      "leaveBlankDefault": "Deixe em branco para usar a taxa padrão",
+      "notSet": "Não definido",
+      "overrideBaseRate": "Substituir taxa básica",
+      "title": "Configuração de taxa fixa"
     },
     "hourlyConfig": {
-      "defaultRate": "Default: ${{rate}}",
-      "hourlyRate": "Hourly Rate",
-      "minimumBillableMinutes": "Minimum billable minutes",
-      "roundUpToNearest": "Round up to nearest (minutes)",
-      "servicesAndRates": "Services & Hourly Rates",
-      "title": "Time Billing Configuration"
+      "defaultRate": "Padrão: ${{rate}}",
+      "hourlyRate": "Taxa horária",
+      "minimumBillableMinutes": "Minutos mínimos faturáveis",
+      "roundUpToNearest": "Arredondar para o mais próximo (minutos)",
+      "servicesAndRates": "Serviços e taxas horárias",
+      "title": "Configuração de cobrança por tempo"
     },
-    "loading": "Loading contract line presets...",
-    "selectPresetsTitle": "Select Contract Line Presets to Add",
+    "loading": "Carregando predefinições de linha de contrato...",
+    "selectPresetsTitle": "Selecione predefinições de linha de contrato para adicionar",
     "selection": {
-      "deselectPreset": "Deselect preset",
-      "selectPreset": "Select preset",
-      "selectedPlural": "{{count}} presets selected",
-      "selectedSingle": "{{count}} preset selected"
+      "deselectPreset": "Desmarcar predefinição",
+      "selectPreset": "Selecione predefinição",
+      "selectedPlural": "Predefinições {{count}} selecionadas",
+      "selectedSingle": "Predefinição {{count}} selecionada"
     },
-    "serviceCountPlural": "{{count}} services",
-    "serviceCountSingle": "{{count}} service",
+    "serviceCountPlural": "Serviços {{count}}",
+    "serviceCountSingle": "Serviço {{count}}",
     "services": {
-      "configuration": "Services Configuration",
-      "empty": "No services configured for this preset",
-      "fixedReferenceHelp": "These services are included for reference only. The fixed rate above determines the billing amount.",
-      "includedReference": "Services Included (Reference)",
-      "quantityShort": "Qty: {{quantity}}",
-      "unknownService": "Unknown Service"
+      "configuration": "Configuração de serviços",
+      "empty": "Nenhum serviço configurado para esta predefinição",
+      "fixedReferenceHelp": "Esses serviços estão incluídos apenas para referência. A taxa fixa acima determina o valor do faturamento.",
+      "includedReference": "Serviços incluídos (referência)",
+      "quantityShort": "Quantidade: {{quantity}}",
+      "unknownService": "Serviço desconhecido"
     },
-    "title": "Add Contract Lines from Presets",
+    "title": "Adicionar linhas de contrato de predefinições",
     "usageConfig": {
-      "defaultRate": "Default: ${{rate}}",
-      "quantity": "Quantity",
-      "ratePerUnit": "Rate (per unit)",
-      "unitHint": "e.g., GB, API call, user",
-      "unitOfMeasure": "Unit of Measure",
-      "unitPlaceholder": "unit"
+      "defaultRate": "Padrão: ${{rate}}",
+      "quantity": "Quantidade",
+      "ratePerUnit": "Taxa (por unidade)",
+      "unitHint": "por exemplo, GB, chamada de API, usuário",
+      "unitOfMeasure": "Unidade de Medida",
+      "unitPlaceholder": "unidade"
     }
   },
   "createCustomLine": {
-    "addBucketOfConsumption": "Add bucket of consumption",
-    "addBucketOfHours": "Add bucket of hours",
-    "addHourlyService": "Add Hourly Service",
-    "addItem": "Add Item",
-    "addUsageService": "Add Usage-Based Service",
-    "adjustForPartialPeriods": "Adjust for Partial Periods",
-    "adjustForPartialPeriodsHelp": "When enabled, the recurring fee scales to the covered portion of a service period when the contract starts or ends inside that period.",
-    "basicsDescription": "Create a custom contract line directly for this contract.",
-    "basicsTitle": "Contract Line Basics",
-    "billingFrequencyLabel": "Billing Frequency *",
-    "billingFrequencyPlaceholder": "Select billing frequency",
+    "addBucketOfConsumption": "Adicionar balde de consumo",
+    "addBucketOfHours": "Adicionar intervalo de horas",
+    "addHourlyService": "Adicionar serviço por hora",
+    "addItem": "Adicionar item",
+    "addUsageService": "Adicionar serviço baseado em uso",
+    "adjustForPartialPeriods": "Ajuste para períodos parciais",
+    "adjustForPartialPeriodsHelp": "Quando ativada, a taxa recorrente é dimensionada para a parte coberta de um período de serviço quando o contrato começa ou termina dentro desse período.",
+    "basicsDescription": "Crie uma linha de contrato personalizada diretamente para este contrato.",
+    "basicsTitle": "Noções básicas da linha de contrato",
+    "billingFrequencyLabel": "Frequência de cobrança *",
+    "billingFrequencyPlaceholder": "Selecione a frequência de cobrança",
     "billingModel": {
-      "fixedDescription": "Charge a flat amount every billing period.",
-      "fixedTitle": "Fixed Fee",
-      "hourlyDescription": "Bill based on approved time entries.",
-      "hourlyTitle": "Hourly",
-      "usageDescription": "Invoice for units consumed.",
-      "usageTitle": "Usage-Based"
+      "fixedDescription": "Cobrar um valor fixo a cada período de faturamento.",
+      "fixedTitle": "Taxa Fixa",
+      "hourlyDescription": "Faturar com base em entradas de tempo aprovadas.",
+      "hourlyTitle": "De hora em hora",
+      "usageDescription": "Fatura por unidades consumidas.",
+      "usageTitle": "Baseado no uso"
     },
     "billingTiming": {
-      "advance": "Advance (bill at start of period)",
-      "arrears": "Arrears (bill at end of period)"
+      "advance": "Adiantamento (fatura no início do período)",
+      "arrears": "Atrasos (fatura no final do período)"
     },
-    "billingTimingHelp": "Advance billing is typical for fixed fees; arrears for time/usage-based services.",
-    "chooseBillingModel": "Choose a Billing Model *",
-    "chooseBillingModelDescription": "Select the billing behavior that fits this offering.",
-    "contractLineNameLabel": "Contract Line Name *",
-    "contractLineNamePlaceholder": "e.g. Managed Support - Gold",
-    "create": "Create Contract Line",
-    "creating": "Creating...",
-    "defaultUnit": "unit",
-    "defaultUnits": "units",
-    "enterHourlyRate": "Enter hourly rate",
-    "enterUnitRate": "Enter unit rate",
-    "fixedServicesAlertBaseRate": "The contract line's base rate (set below) is the billed amount.",
-    "fixedServicesAlertHeading": "Fixed Fee Services",
-    "fixedServicesAlertProducts": "You can also attach products to this contract line; product quantities are billed as units, while fixed-fee service quantities are used for tax allocation only.",
-    "fixedServicesDescription": "Set up services that are billed at a fixed recurring rate.",
-    "fixedServicesTitle": "Fixed Fee Services",
-    "hourlyRateDisplay": "{{rate}}/hour",
-    "hourlyRateLabel": "Hourly Rate",
-    "hourlyServicesAlertDescription": "These services are billed based on actual time tracked.",
-    "hourlyServicesAlertHeading": "Hourly Services",
-    "hourlyServicesDescription": "Configure services that are billed based on time tracked.",
-    "hourlyServicesLabel": "Hourly Services",
-    "hourlyServicesTitle": "Hourly Services",
+    "billingTimingHelp": "O faturamento antecipado é típico para taxas fixas; atrasos por serviços baseados em tempo/utilização.",
+    "chooseBillingModel": "Escolha um modelo de cobrança *",
+    "chooseBillingModelDescription": "Selecione o comportamento de cobrança adequado a esta oferta.",
+    "contractLineNameLabel": "Nome da linha de contrato *",
+    "contractLineNamePlaceholder": "por exemplo Suporte Gerenciado - Ouro",
+    "create": "Criar linha de contrato",
+    "creating": "Criando...",
+    "defaultUnit": "unidade",
+    "defaultUnits": "unidades",
+    "enterHourlyRate": "Insira a taxa horária",
+    "enterUnitRate": "Insira a taxa unitária",
+    "fixedServicesAlertBaseRate": "A taxa básica da linha de contrato (definida abaixo) é o valor faturado.",
+    "fixedServicesAlertHeading": "Serviços de taxa fixa",
+    "fixedServicesAlertProducts": "Você também pode anexar produtos a esta linha de contrato; as quantidades de produtos são faturadas como unidades, enquanto as quantidades de serviços com taxa fixa são usadas apenas para alocação de impostos.",
+    "fixedServicesDescription": "Configure serviços cobrados a uma taxa recorrente fixa.",
+    "fixedServicesTitle": "Serviços de taxa fixa",
+    "hourlyRateDisplay": "{{rate}}/hora",
+    "hourlyRateLabel": "Taxa horária",
+    "hourlyServicesAlertDescription": "Esses serviços são cobrados com base no tempo real monitorado.",
+    "hourlyServicesAlertHeading": "Serviços por hora",
+    "hourlyServicesDescription": "Configure serviços cobrados com base no tempo monitorado.",
+    "hourlyServicesLabel": "Serviços por hora",
+    "hourlyServicesTitle": "Serviços por hora",
     "itemLabel": "Item {{index}}",
     "moneyPlaceholder": "0.00",
-    "minimumBillableTimeLabel": "Minimum Billable Time (minutes)",
-    "noFixedItems": "No fixed fee items added yet. Click \"Add Item\" above to get started.",
-    "noHourlyServices": "No hourly services added yet. Click \"Add Hourly Service\" above to get started.",
-    "noUsageServices": "No usage-based services added yet. Click \"Add Usage-Based Service\" above to get started.",
-    "quantityLabel": "Quantity",
-    "ratePerUnitLabel": "Rate per Unit",
-    "recurringBaseRateHelp": "Recurring fee for all fixed services.",
-    "recurringBaseRateLabel": "Recurring Base Rate",
-    "roundUpToNearestLabel": "Round Up To Nearest (minutes)",
-    "selectItemPlaceholder": "Select an item",
-    "selectServicePlaceholder": "Select a service",
-    "serviceLabel": "Service {{index}}",
-    "servicesAndProductsLabel": "Services & Products",
-    "title": "Create Custom Contract Line",
-    "unitOfMeasureLabel": "Unit of Measure",
-    "unitOfMeasurePlaceholder": "e.g., GB, API call, user",
+    "minimumBillableTimeLabel": "Tempo mínimo faturável (minutos)",
+    "noFixedItems": "Nenhum item de taxa fixa adicionado ainda. Clique em \"Adicionar item\" acima para começar.",
+    "noHourlyServices": "Nenhum serviço por hora adicionado ainda. Clique em \"Adicionar serviço por hora\" acima para começar.",
+    "noUsageServices": "Nenhum serviço baseado em uso foi adicionado ainda. Clique em \"Adicionar serviço baseado em uso\" acima para começar.",
+    "quantityLabel": "Quantidade",
+    "ratePerUnitLabel": "Taxa por unidade",
+    "recurringBaseRateHelp": "Taxa recorrente para todos os serviços fixos.",
+    "recurringBaseRateLabel": "Taxa básica recorrente",
+    "roundUpToNearestLabel": "Arredondar para o mais próximo (minutos)",
+    "selectItemPlaceholder": "Selecione um item",
+    "selectServicePlaceholder": "Selecione um serviço",
+    "serviceLabel": "Serviço {{index}}",
+    "servicesAndProductsLabel": "Serviços e Produtos",
+    "title": "Criar linha de contrato personalizada",
+    "unitOfMeasureLabel": "Unidade de Medida",
+    "unitOfMeasurePlaceholder": "por exemplo, GB, chamada de API, usuário",
     "unitRateDisplay": "{{rate}}/{{unit}}",
-    "usageServicesAlertDescription": "These services are billed based on actual consumption.",
-    "usageServicesAlertHeading": "Usage-Based Services",
-    "usageServicesDescription": "Configure services that are billed based on usage or consumption.",
-    "usageServicesLabel": "Usage-Based Services",
-    "usageServicesTitle": "Usage-Based Services",
+    "usageServicesAlertDescription": "Esses serviços são cobrados com base no consumo real.",
+    "usageServicesAlertHeading": "Serviços baseados em uso",
+    "usageServicesDescription": "Configure serviços cobrados com base no uso ou consumo.",
+    "usageServicesLabel": "Serviços baseados em uso",
+    "usageServicesTitle": "Serviços baseados em uso",
     "validation": {
-      "billingFrequencyRequired": "Billing frequency is required",
-      "contractLineNameRequired": "Contract Line Name is required",
-      "contractLineTypeRequired": "Contract Line Type is required",
-      "failedToCreate": "Failed to create contract line",
-      "fixedServiceRequired": "At least one fixed service or product is required",
-      "fixedServiceSelectRequired": "Item {{index}}: Please select a service or product",
-      "hourlyRateRequired": "Service {{index}}: Hourly rate is required",
-      "hourlyServiceRequired": "At least one hourly service is required",
-      "hourlyServiceSelectRequired": "Service {{index}}: Please select a service",
-      "unitOfMeasureRequired": "Service {{index}}: Unit of measure is required",
-      "unitRateRequired": "Service {{index}}: Unit rate is required",
-      "usageServiceRequired": "At least one usage-based service is required",
-      "usageServiceSelectRequired": "Service {{index}}: Please select a service"
+      "billingFrequencyRequired": "A frequência de faturamento é obrigatória",
+      "contractLineNameRequired": "O nome da linha de contrato é obrigatório",
+      "contractLineTypeRequired": "O tipo de linha de contrato é obrigatório",
+      "failedToCreate": "Falha ao criar linha de contrato",
+      "fixedServiceRequired": "É necessário pelo menos um serviço ou produto fixo",
+      "fixedServiceSelectRequired": "Item {{index}}: Selecione um serviço ou produto",
+      "hourlyRateRequired": "Serviço {{index}}: taxa horária é obrigatória",
+      "hourlyServiceRequired": "É necessário pelo menos um serviço por hora",
+      "hourlyServiceSelectRequired": "Serviço {{index}}: Selecione um serviço",
+      "unitOfMeasureRequired": "Serviço {{index}}: Unidade de medida obrigatória",
+      "unitRateRequired": "Serviço {{index}}: taxa unitária é obrigatória",
+      "usageServiceRequired": "É necessário pelo menos um serviço baseado em uso",
+      "usageServiceSelectRequired": "Serviço {{index}}: Selecione um serviço"
     }
   },
   "pricingSchedules": {
     "list": {
       "actions": {
-        "addSchedule": "Add Schedule",
-        "deleteSchedule": "Delete Schedule",
-        "editSchedule": "Edit Schedule"
+        "addSchedule": "Adicionar agendamento",
+        "deleteSchedule": "Excluir agendamento",
+        "editSchedule": "Editar agendamento"
       },
       "columns": {
-        "actions": "Actions",
-        "customRate": "Custom Rate",
-        "effectiveDate": "Effective Date",
-        "endDate": "End Date",
-        "notes": "Notes"
+        "actions": "Ações",
+        "customRate": "Taxa personalizada",
+        "effectiveDate": "Data Efetiva",
+        "endDate": "Data de término",
+        "notes": "Notas"
       },
       "dialogs": {
-        "confirmDeleteSchedule": "Are you sure you want to delete this pricing schedule?"
+        "confirmDeleteSchedule": "Tem certeza de que deseja excluir esta programação de preços?"
       },
       "empty": {
-        "description": "Add pricing schedules to define time-based rate changes for this contract",
-        "noPricingSchedules": "No pricing schedules yet"
+        "description": "Adicione programações de preços para definir alterações de taxas baseadas no tempo para este contrato",
+        "noPricingSchedules": "Ainda não há tabelas de preços"
       },
       "errors": {
-        "failedToDeletePricingSchedule": "Failed to delete pricing schedule",
-        "failedToLoadPricingSchedules": "Failed to load pricing schedules"
+        "failedToDeletePricingSchedule": "Falha ao excluir a programação de preços",
+        "failedToLoadPricingSchedules": "Falha ao carregar programações de preços"
       },
-      "loading": "Loading pricing schedules",
-      "readOnlyNotice": "This system-managed default contract is attribution-only. Pricing schedule authoring is disabled.",
+      "loading": "Carregando programações de preços",
+      "readOnlyNotice": "Este contrato padrão gerenciado pelo sistema é somente de atribuição. A criação da programação de preços está desativada.",
       "timeline": {
-        "title": "Pricing Timeline"
+        "title": "Cronograma de preços"
       },
-      "title": "Pricing Schedules",
+      "title": "Cronogramas de preços",
       "values": {
-        "defaultRate": "Default rate",
-        "ongoing": "Ongoing",
-        "useDefaultRate": "Use default rate"
+        "defaultRate": "Taxa padrão",
+        "ongoing": "Em andamento",
+        "useDefaultRate": "Usar taxa padrão"
       }
     },
     "dialog": {
       "actions": {
-        "addSchedule": "Add Schedule",
-        "cancel": "Cancel",
-        "saving": "Saving...",
-        "updateSchedule": "Update Schedule"
+        "addSchedule": "Adicionar agendamento",
+        "cancel": "Cancelar",
+        "saving": "Salvando...",
+        "updateSchedule": "Cronograma de atualização"
       },
       "durationUnits": {
-        "days": "Days",
-        "months": "Months",
-        "weeks": "Weeks",
-        "years": "Years"
+        "days": "Dias",
+        "months": "Meses",
+        "weeks": "Semanas",
+        "years": "Anos"
       },
       "errors": {
-        "failedToSavePricingSchedule": "Failed to save pricing schedule"
+        "failedToSavePricingSchedule": "Falha ao salvar a programação de preços"
       },
       "fields": {
-        "customRate": "Custom Rate",
+        "customRate": "Taxa personalizada",
         "customRatePlaceholder": "0.00",
-        "duration": "Duration",
-        "durationPlaceholder": "e.g., 6",
-        "effectiveDate": "Effective Date",
-        "endDate": "End Date",
-        "hasEndDate": "Has end date",
-        "notes": "Notes",
-        "notesPlaceholder": "Add notes about this pricing change (e.g., 'Annual rate increase')",
-        "unit": "Unit",
-        "useDefaultRate": "Use default rate",
-        "useDuration": "Use duration"
+        "duration": "Duração",
+        "durationPlaceholder": "por exemplo, 6",
+        "effectiveDate": "Data Efetiva",
+        "endDate": "Data de término",
+        "hasEndDate": "Tem data de término",
+        "notes": "Notas",
+        "notesPlaceholder": "Adicione notas sobre esta alteração de preço (por exemplo, 'Aumento da taxa anual')",
+        "unit": "Unidade",
+        "useDefaultRate": "Usar taxa padrão",
+        "useDuration": "Duração de uso"
       },
       "title": {
-        "addPricingSchedule": "Add Pricing Schedule",
-        "editPricingSchedule": "Edit Pricing Schedule"
+        "addPricingSchedule": "Adicionar tabela de preços",
+        "editPricingSchedule": "Editar tabela de preços"
       },
       "validation": {
-        "customRatePositive": "Custom rate must be a positive number",
-        "customRateRequired": "Custom rate is required when not using default rate",
-        "durationPositive": "Duration must be a positive number",
-        "durationRequired": "Duration value is required when using duration",
-        "effectiveDateRequired": "Effective date is required",
-        "endDateAfterEffectiveDate": "End date must be after effective date",
-        "endDateRequiredWhenEnabled": "End date is required when \"Has end date\" is enabled"
+        "customRatePositive": "A taxa personalizada precisa ser um número positivo",
+        "customRateRequired": "A taxa personalizada é obrigatória quando não se usa a taxa padrão",
+        "durationPositive": "A duração precisa ser um número positivo",
+        "durationRequired": "O valor da duração é obrigatório ao usar duração",
+        "effectiveDateRequired": "A data de vigência é obrigatória",
+        "endDateAfterEffectiveDate": "A data de término deve ser posterior à data de vigência",
+        "endDateRequiredWhenEnabled": "A data de término é obrigatória quando \"Tem data de término\" está ativado"
       }
     }
   },
   "contractsList": {
     "actions": {
-      "deleting": "Deleting…",
-      "createContract": "Create Contract",
-      "createTemplate": "Create Template",
-      "openMenu": "Open menu",
-      "quickAdd": "Quick Add",
-      "resume": "Resume",
-      "restore": "Restore",
-      "setToActive": "Set to Active",
-      "terminate": "Terminate"
+      "deleting": "Excluindo…",
+      "createContract": "Criar contrato",
+      "createTemplate": "Criar modelo",
+      "openMenu": "Abrir menu",
+      "quickAdd": "Adição rápida",
+      "resume": "Retomar",
+      "restore": "Restaurar",
+      "setToActive": "Definir como ativo",
+      "terminate": "Encerrar"
     },
     "columns": {
-      "actions": "Actions",
-      "client": "Client",
-      "contractName": "Contract Name",
-      "created": "Created",
-      "description": "Description",
-      "endDate": "End Date",
-      "lastModified": "Last Modified",
-      "sourceTemplate": "Source Template",
-      "startDate": "Start Date",
+      "actions": "Ações",
+      "client": "Cliente",
+      "contractName": "Nome do contrato",
+      "created": "Criado",
+      "description": "Descrição",
+      "endDate": "Data de término",
+      "lastModified": "Última modificação",
+      "sourceTemplate": "Modelo de origem",
+      "startDate": "Data de início",
       "status": "Status"
     },
     "dialogs": {
       "deleteClient": {
-        "clientSuffix": " for {{clientName}}",
-        "message": "Are you sure you want to permanently delete the client contract \"{{contractName}}\"{{clientSuffix}}? This action cannot be undone.",
-        "title": "Delete client contract?"
+        "clientSuffix": "para {{clientName}}",
+        "message": "Tem certeza de que deseja excluir permanentemente o contrato de cliente \"{{contractName}}\"{{clientSuffix}}? Esta ação não pode ser desfeita.",
+        "title": "Excluir contrato do cliente?"
       },
       "deleteTemplate": {
-        "message": "Are you sure you want to permanently delete the template \"{{contractName}}\"? This action cannot be undone.",
-        "title": "Delete contract template?"
+        "message": "Tem certeza de que deseja excluir permanentemente o modelo \"{{contractName}}\"? Esta ação não pode ser desfeita.",
+        "title": "Excluir modelo de contrato?"
       },
       "discardDraft": {
-        "message": "This will permanently delete the draft \"{{contractName}}\" for {{clientName}}.\nThis action cannot be undone.",
-        "title": "Descartar contrato rascunho?"
+        "message": "Isso excluirá permanentemente o rascunho \"{{contractName}}\" de {{clientName}}.\nEsta ação não pode ser desfeita.",
+        "title": "Descartar o rascunho do contrato?"
       }
     },
     "drafts": {
-      "badgeCount": "{{count}} draft contracts"
+      "badgeCount": "Rascunhos de contratos {{count}}"
     },
     "empty": {
-      "dash": "—",
-      "noClientContracts": "No client contracts match your search.",
-      "noDescription": "No description",
-      "noDraftMatches": "No draft contracts match your search.",
-      "noDrafts": "No draft contracts. Start creating a new contract to save as draft.",
-      "noTemplates": "No templates match your search.",
-      "unknownClient": "Unknown client",
-      "untitledContract": "Untitled contract",
-      "untitledDraft": "Untitled draft",
-      "untitledTemplate": "Untitled template"
+      "dash": "-",
+      "noClientContracts": "Nenhum contrato de cliente corresponde à sua pesquisa.",
+      "noDescription": "Sem descrição",
+      "noDraftMatches": "Nenhuma minuta de contrato corresponde à sua pesquisa.",
+      "noDrafts": "Sem minutas de contratos. Comece a criar um novo contrato para salvar como rascunho.",
+      "noTemplates": "Nenhum modelo corresponde à sua pesquisa.",
+      "unknownClient": "Cliente desconhecido",
+      "untitledContract": "Contrato sem título",
+      "untitledDraft": "Rascunho sem título",
+      "untitledTemplate": "Modelo sem título"
     },
     "errors": {
-      "failedToFetch": "Failed to fetch contracts"
+      "failedToFetch": "Falha ao buscar contratos"
     },
     "heading": {
-      "description": "Templates are reusable definitions. Client contracts are client-owned instances.",
-      "title": "Contracts"
+      "description": "Os modelos são definições reutilizáveis. Os contratos do cliente são instâncias de propriedade do cliente.",
+      "title": "Contratos"
     },
     "loading": {
-      "contracts": "Loading contracts..."
+      "contracts": "Carregando contratos..."
     },
     "search": {
-      "clientContractsAriaLabel": "Search client contracts",
-      "clientContractsPlaceholder": "Search by client or contract...",
-      "draftsAriaLabel": "Search draft contracts",
-      "draftsPlaceholder": "Search drafts...",
-      "templatesAriaLabel": "Search contract templates",
-      "templatesPlaceholder": "Search templates..."
+      "clientContractsAriaLabel": "Pesquisar contratos de clientes",
+      "clientContractsPlaceholder": "Pesquise por cliente ou contrato...",
+      "draftsAriaLabel": "Pesquisar minutas de contratos",
+      "draftsPlaceholder": "Pesquisar rascunhos...",
+      "templatesAriaLabel": "Pesquisar modelos de contrato",
+      "templatesPlaceholder": "Pesquisar modelos..."
     },
     "status": {
-      "archived": "Archived",
-      "published": "Published"
+      "archived": "Arquivado",
+      "published": "Publicado"
     },
     "toasts": {
       "draftDiscarded": "Rascunho descartado",
-      "failedToActivateContract": "Failed to activate contract",
-      "failedToDeleteContract": "Failed to delete contract",
-      "failedToDiscardDraft": "Failed to discard draft",
-      "failedToRestoreContract": "Failed to restore contract",
-      "failedToResumeDraft": "Failed to resume draft",
-      "failedToTerminateContract": "Failed to terminate contract"
+      "failedToActivateContract": "Falha ao ativar o contrato",
+      "failedToDeleteContract": "Falha ao excluir contrato",
+      "failedToDiscardDraft": "Falha ao descartar o rascunho",
+      "failedToRestoreContract": "Falha ao restaurar o contrato",
+      "failedToResumeDraft": "Falha ao retomar o rascunho",
+      "failedToTerminateContract": "Não foi possível rescindir o contrato"
     }
   },
   "clientContracts": {
     "actions": {
-      "viewDetails": "View details"
+      "viewDetails": "Ver detalhes"
     },
     "columns": {
-      "actions": "Actions",
-      "billingFrequency": "Billing Frequency",
-      "client": "Client",
-      "contractName": "Contract Name",
-      "endDate": "End Date",
+      "actions": "Ações",
+      "billingFrequency": "Frequência de cobrança",
+      "client": "Cliente",
+      "contractName": "Nome do contrato",
+      "endDate": "Data de término",
       "poIndicator": "PO",
-      "sourceTemplate": "Source Template",
-      "startDate": "Start Date",
+      "sourceTemplate": "Modelo de origem",
+      "startDate": "Data de início",
       "status": "Status"
     },
     "dialogs": {
       "terminate": {
-        "clientSuffix": " for {{clientName}}",
-        "message": "Are you sure you want to terminate \"{{contractName}}\"{{clientSuffix}}?",
-        "title": "Terminate client contract?"
+        "clientSuffix": "para {{clientName}}",
+        "message": "Tem certeza de que deseja encerrar \"{{contractName}}\"{{clientSuffix}}?",
+        "title": "Rescindir o contrato do cliente?"
       }
     },
     "empty": {
-      "noMatches": "No client contracts match your search."
+      "noMatches": "Nenhum contrato de cliente corresponde à sua pesquisa."
     },
     "errors": {
-      "failedToFetch": "Failed to fetch client contracts"
+      "failedToFetch": "Falha ao buscar contratos de cliente"
     },
-    "loading": "Loading client contracts...",
+    "loading": "Carregando contratos de cliente...",
     "po": {
-      "notRequired": "Not required",
-      "required": "Required"
+      "notRequired": "Não obrigatório",
+      "required": "Obrigatório"
     },
     "search": {
-      "ariaLabel": "Search client contracts",
-      "placeholder": "Search by client or contract..."
+      "ariaLabel": "Pesquisar contratos de clientes",
+      "placeholder": "Pesquise por cliente ou contrato..."
     },
     "tabs": {
-      "contracts": "Contracts",
-      "upcomingRenewals": "Upcoming Renewals ({{count}})"
+      "contracts": "Contratos",
+      "upcomingRenewals": "Próximas renovações ({{count}})"
     },
     "toasts": {
-      "failedToActivate": "Failed to activate contract",
-      "failedToDelete": "Failed to delete contract",
-      "failedToMarkNonRenewing": "Failed to mark renewal as non-renewing",
-      "failedToMarkRenewing": "Failed to mark renewal as renewing",
-      "failedToRestore": "Failed to restore contract",
-      "failedToResumeDraft": "Failed to resume draft",
-      "failedToTerminate": "Failed to terminate contract"
+      "failedToActivate": "Falha ao ativar o contrato",
+      "failedToDelete": "Falha ao excluir contrato",
+      "failedToMarkNonRenewing": "Falha ao marcar a renovação como não renovável",
+      "failedToMarkRenewing": "Falha ao marcar a renovação como renovada",
+      "failedToRestore": "Falha ao restaurar o contrato",
+      "failedToResumeDraft": "Falha ao retomar o rascunho",
+      "failedToTerminate": "Não foi possível rescindir o contrato"
     },
     "upcoming": {
       "actions": {
-        "markNonRenewing": "Mark non-renewing",
-        "markRenewing": "Mark renewing",
-        "openMenu": "Open renewal actions"
+        "markNonRenewing": "Marcar como não renovável",
+        "markRenewing": "Marca renovando",
+        "openMenu": "Ações de renovação abertas"
       },
       "columns": {
-        "actions": "Actions",
-        "client": "Client",
-        "contract": "Contract",
-        "daysUntilDue": "Days Until Due",
-        "decisionDue": "Decision Due",
+        "actions": "Ações",
+        "client": "Cliente",
+        "contract": "Contrato",
+        "daysUntilDue": "Dias até o vencimento",
+        "decisionDue": "Decisão vencida",
         "status": "Status",
-        "type": "Type"
+        "type": "Tipo"
       },
-      "description": "Contracts with renewal decisions due within the selected window.",
-      "empty": "No upcoming renewals for the selected window.",
-      "filterAriaLabel": "Filter upcoming renewals",
-      "filterPlaceholder": "Filter upcoming renewals...",
+      "description": "Contratos com decisões de renovação com vencimento na janela selecionada.",
+      "empty": "Não há renovações futuras para a janela selecionada.",
+      "filterAriaLabel": "Filtre as próximas renovações",
+      "filterPlaceholder": "Filtrar as próximas renovações...",
       "status": {
-        "completed": "Completed",
-        "nonRenewing": "Non-renewing",
-        "pending": "Pending",
-        "renewing": "Renewing",
-        "snoozed": "Snoozed"
+        "completed": "Concluído",
+        "nonRenewing": "Não renovável",
+        "pending": "Pendente",
+        "renewing": "Renovando",
+        "snoozed": "Adiado"
       },
-      "title": "Upcoming Renewals",
+      "title": "Próximas renovações",
       "type": {
-        "evergreen": "Evergreen",
-        "fixedTerm": "Fixed-term"
+        "evergreen": "Sempre-viva",
+        "fixedTerm": "Prazo fixo"
       },
       "window": {
-        "all": "All",
-        "next30": "Next 30 days",
-        "next60": "Next 60 days",
-        "next90": "Next 90 days"
+        "all": "Todos",
+        "next30": "Próximos 30 dias",
+        "next60": "Próximos 60 dias",
+        "next90": "Próximos 90 dias"
       },
-      "windowPlaceholder": "Select renewal window"
+      "windowPlaceholder": "Selecione a janela de renovação"
     }
   },
   "templatesTab": {
     "actions": {
-      "createTemplate": "Create Template",
-      "delete": "Delete",
-      "edit": "Edit"
+      "createTemplate": "Criar modelo",
+      "delete": "Excluir",
+      "edit": "Editar"
     },
     "columns": {
-      "actions": "Actions",
-      "description": "Description",
+      "actions": "Ações",
+      "description": "Descrição",
       "status": "Status",
-      "templateName": "Template Name"
+      "templateName": "Nome do modelo"
     },
     "empty": {
-      "createFirstTemplate": "Create your first template to get started.",
-      "noSearchMatches": "No templates match your search",
-      "noTemplates": "No templates yet",
-      "tryDifferentSearch": "Try a different search term."
+      "createFirstTemplate": "Crie seu primeiro modelo para começar.",
+      "noSearchMatches": "Nenhum modelo corresponde à sua pesquisa",
+      "noTemplates": "Ainda não há modelos",
+      "tryDifferentSearch": "Experimente um termo de pesquisa diferente."
     },
     "errors": {
-      "failedToDeleteContract": "Failed to delete contract",
-      "failedToFetchTemplates": "Failed to fetch templates"
+      "failedToDeleteContract": "Falha ao excluir contrato",
+      "failedToFetchTemplates": "Falha ao buscar modelos"
     },
-    "loading": "Loading templates...",
+    "loading": "Carregando modelos...",
     "search": {
-      "ariaLabel": "Search contract templates",
-      "placeholder": "Search templates..."
+      "ariaLabel": "Pesquisar modelos de contrato",
+      "placeholder": "Pesquisar modelos..."
     },
     "status": {
-      "active": "Active",
-      "archived": "Archived",
+      "active": "Ativo",
+      "archived": "Arquivado",
       "draft": "Rascunho",
-      "expired": "Expired",
-      "published": "Published",
-      "terminated": "Terminated"
+      "expired": "Expirado",
+      "published": "Publicado",
+      "terminated": "Terminado"
     },
     "values": {
-      "noDescription": "No description"
+      "noDescription": "Sem descrição"
     }
   },
   "detailSwitcher": {
     "errors": {
-      "contractNotFound": "Contract not found",
-      "failedToLoadContractDetails": "Failed to load contract details",
-      "missingContractIdentifier": "Missing contract identifier",
-      "noContractSelected": "No contract selected.",
-      "unableToLoadContractDetails": "Unable to load contract details"
+      "contractNotFound": "Contrato não encontrado",
+      "failedToLoadContractDetails": "Falha ao carregar detalhes do contrato",
+      "missingContractIdentifier": "Identificador de contrato ausente",
+      "noContractSelected": "Nenhum contrato selecionado.",
+      "unableToLoadContractDetails": "Não foi possível carregar os detalhes do contrato"
     },
     "loading": {
-      "contract": "Loading contract..."
+      "contract": "Carregando contrato..."
     }
   },
   "templateDetail": {
-    "backToTemplates": "Back to Templates",
-    "backToTemplatesArrow": "← Back to Templates",
+    "backToTemplates": "Voltar aos modelos",
+    "backToTemplatesArrow": "← Voltar para Modelos",
     "composition": {
-      "addContractLinesBeforeManaging": "Add contract lines to this template before managing services.",
-      "additionalPlans": "Additional Plans",
-      "bucketSummary": "Bucket: {{minutes}} min • Overage ${{overage}}",
-      "closeManager": "Close Manager",
-      "editRate": "Edit Rate",
-      "fixedFeeBundles": "Fixed Fee Bundles",
-      "fixedFeeRate": "Fixed Fee Rate:",
-      "hourlyPlans": "Hourly Plans",
-      "manageServices": "Manage Services",
-      "manageTemplateServices": "Manage Template Services",
-      "minimumTimeLabel": "Minimum Time:",
+      "addContractLinesBeforeManaging": "Adicione linhas de contrato a este modelo antes de gerenciar serviços.",
+      "additionalPlans": "Planos Adicionais",
+      "bucketSummary": "Intervalo: {{minutes}} min • Excedente de ${{overage}}",
+      "closeManager": "Fechar gerente",
+      "editRate": "Editar taxa",
+      "fixedFeeBundles": "Pacotes de taxas fixas",
+      "fixedFeeRate": "Taxa fixa:",
+      "hourlyPlans": "Planos por hora",
+      "manageServices": "Gerenciar serviços",
+      "manageTemplateServices": "Gerenciar serviços de modelo",
+      "minimumTimeLabel": "Tempo Mínimo:",
       "minutesValue": "{{count}} min",
-      "noFixedFeeLines": "No fixed fee contract lines configured yet.",
-      "noHourlyLines": "No hourly contract lines configured yet.",
-      "noServicesAssigned": "No services assigned to this contract line.",
-      "noUsageLines": "No usage-based contract lines configured yet.",
-      "notSet": "Not set",
-      "quantityLabel": "Quantity:",
-      "roundUpLabel": "Round Up:",
-      "serviceCountPlural": "{{count}} services",
-      "serviceCountSingle": "{{count}} service",
-      "serviceFallback": "Service",
-      "title": "Template Composition",
-      "unitLabel": "Unit:",
-      "usageBasedPlans": "Usage-Based Plans"
+      "noFixedFeeLines": "Nenhuma linha de contrato de taxa fixa configurada ainda.",
+      "noHourlyLines": "Nenhuma linha de contrato por hora configurada ainda.",
+      "noServicesAssigned": "Nenhum serviço atribuído a esta linha de contrato.",
+      "noUsageLines": "Nenhuma linha de contrato baseada em uso configurada ainda.",
+      "notSet": "Não definido",
+      "quantityLabel": "Quantidade:",
+      "roundUpLabel": "Arredondamento:",
+      "serviceCountPlural": "Serviços {{count}}",
+      "serviceCountSingle": "Serviço {{count}}",
+      "serviceFallback": "Serviço",
+      "title": "Composição do modelo",
+      "unitLabel": "Unidade:",
+      "usageBasedPlans": "Planos baseados em uso"
     },
-    "editBasicsTitle": "Edit Template Basics",
-    "editGuidanceTitle": "Edit Template Guidance",
-    "failedToLoadTemplate": "Failed to load contract template",
+    "editBasicsTitle": "Editar princípios básicos do modelo",
+    "editGuidanceTitle": "Editar orientação do modelo",
+    "failedToLoadTemplate": "Falha ao carregar modelo de contrato",
     "form": {
-      "currencyPlaceholder": "Select currency",
-      "internalNotesLabel": "Internal Notes",
-      "internalNotesPlaceholder": "Describe where this template applies, onboarding tips, or approval requirements.",
-      "recommendedBillingFrequencyLabel": "Recommended Billing Frequency *",
-      "recommendedBillingFrequencyPlaceholder": "Select billing cadence",
-      "templateNameLabel": "Template Name *",
-      "templateNamePlaceholder": "Managed Services Starter, Premium Support Bundle, etc."
+      "currencyPlaceholder": "Selecione a moeda",
+      "internalNotesLabel": "Notas internas",
+      "internalNotesPlaceholder": "Descreva onde este modelo se aplica, dicas de onboarding ou requisitos de aprovação.",
+      "recommendedBillingFrequencyLabel": "Frequência de cobrança recomendada *",
+      "recommendedBillingFrequencyPlaceholder": "Selecione a cadência de faturamento",
+      "templateNameLabel": "Nome do modelo *",
+      "templateNamePlaceholder": "Starter de serviços gerenciados, pacote de suporte premium, etc."
     },
     "guidance": {
-      "noCadenceProvided": "No recommended cadence provided.",
-      "recommendedCadenceLabel": "Recommended Cadence",
-      "recommendedCadencePlaceholder": "Select a cadence",
-      "tagsHint": "Tags help teams find relevant templates quickly.",
-      "tagsLabel": "Tags",
-      "tagsPlaceholder": "Comma separated (e.g., onboarding, finance)",
-      "title": "Template Guidance",
-      "usageNotesLabel": "Usage Notes",
-      "usageNotesPlaceholder": "Add guidance to help others understand how to use this template."
+      "noCadenceProvided": "Nenhuma cadência recomendada é fornecida.",
+      "recommendedCadenceLabel": "Cadência Recomendada",
+      "recommendedCadencePlaceholder": "Selecione uma cadência",
+      "tagsHint": "As tags ajudam as equipes a encontrar modelos relevantes rapidamente.",
+      "tagsLabel": "Etiquetas",
+      "tagsPlaceholder": "Separados por vírgulas (por exemplo, onboarding, finanças)",
+      "title": "Orientação de modelo",
+      "usageNotesLabel": "Notas de uso",
+      "usageNotesPlaceholder": "Adicione orientações para ajudar outras pessoas a entender como usar este modelo."
     },
-    "loadingTemplate": "Loading template...",
-    "servicesLabel": "Services",
-    "templateBadge": "Template",
-    "templateNotFound": "Contract template not found",
-    "templateSnapshotTitle": "Template Snapshot",
+    "loadingTemplate": "Carregando modelo...",
+    "servicesLabel": "Serviços",
+    "templateBadge": "Modelo",
+    "templateNotFound": "Modelo de contrato não encontrado",
+    "templateSnapshotTitle": "Instantâneo do modelo",
     "validation": {
-      "billingFrequencyRequired": "Billing frequency is required",
-      "failedToUpdateBasics": "Failed to update template basics",
-      "failedToUpdateGuidance": "Failed to update template guidance",
-      "templateNameRequired": "Template name is required"
+      "billingFrequencyRequired": "A frequência de faturamento é obrigatória",
+      "failedToUpdateBasics": "Falha ao atualizar os princípios básicos do modelo",
+      "failedToUpdateGuidance": "Falha ao atualizar a orientação do modelo",
+      "templateNameRequired": "O nome do modelo é obrigatório"
     },
     "clientAssignments": {
-      "title": "Client Assignments",
-      "totalAssignments": "Total Assignments",
-      "activeClients": "Active Clients",
-      "purchaseOrders": "Purchase Orders",
-      "poRequiredCount": "{{count}} assignments require PO",
-      "noPoRequirements": "No PO requirements captured.",
-      "noClientContracts": "No client contracts are currently using this template.",
-      "reviewBelow": "Review the full assignment list in the details section below."
+      "title": "Atribuições do cliente",
+      "totalAssignments": "Total de atribuições",
+      "activeClients": "Clientes ativos",
+      "purchaseOrders": "Pedidos de compra",
+      "poRequiredCount": "As atribuições {{count}} exigem PO",
+      "noPoRequirements": "Nenhum requisito de PO capturado.",
+      "noClientContracts": "Nenhum contrato de cliente está usando este modelo no momento.",
+      "reviewBelow": "Revise a lista completa de tarefas na seção de detalhes abaixo."
     },
     "assignmentDetails": {
-      "title": "Assignment Details",
-      "empty": "When client contracts adopt this template they will be listed here with purchase order context.",
-      "contractId": "Contract ID: {{id}}",
-      "ongoing": "Ongoing",
-      "notRequired": "Not required",
+      "title": "Detalhes da tarefa",
+      "empty": "Quando os contratos dos clientes adotarem este modelo eles serão listados aqui com o contexto do pedido de compra.",
+      "contractId": "ID do contrato: {{id}}",
+      "ongoing": "Em andamento",
+      "notRequired": "Não obrigatório",
       "columns": {
-        "client": "Client",
+        "client": "Cliente",
         "status": "Status",
-        "start": "Start",
-        "end": "End",
-        "poRequired": "PO Required",
-        "poNumber": "PO Number",
-        "poAmount": "PO Amount"
+        "start": "Começar",
+        "end": "Fim",
+        "poRequired": "Pedido de compra obrigatório",
+        "poNumber": "Número do pedido",
+        "poAmount": "Valor da ordem de compra"
       },
       "status": {
-        "active": "Active",
-        "inactive": "Inactive"
+        "active": "Ativo",
+        "inactive": "Inativo"
       }
     }
   },
   "quickStart": {
     "actions": {
-      "createFirstContract": "Create Your First Contract",
-      "dismiss": "Dismiss",
-      "minimize": "Minimize",
-      "showGuide": "Show Guide"
+      "createFirstContract": "Crie seu primeiro contrato",
+      "dismiss": "Liberar",
+      "minimize": "Minimizar",
+      "showGuide": "Mostrar guia"
     },
     "badge": {
-      "new": "New"
+      "new": "Novo"
     },
     "bestPractices": {
       "items": {
-        "clearNames": "Use clear, descriptive contract names (e.g., \"Acme Corp - MSP Services Q4 2024\")",
-        "endDates": "Set end dates for fixed-term contracts to track renewal dates",
-        "partialPeriodAdjustment": "Use partial-period adjustment when contract dates cover only part of a service period",
-        "poNumbers": "Add PO numbers when required by client procurement policies"
+        "clearNames": "Use nomes de contratos claros e descritivos (por exemplo, \"Acme Corp - MSP Services Q4 2024\")",
+        "endDates": "Defina datas de término para contratos por prazo determinado para rastrear datas de renovação",
+        "partialPeriodAdjustment": "Use o ajuste de período parcial quando as datas do contrato cobrirem apenas parte de um período de serviço",
+        "poNumbers": "Adicione números de ordem de compra quando exigido pelas políticas de compras do cliente"
       },
-      "title": "Best Practices"
+      "title": "Melhores Práticas"
     },
     "billingModels": {
       "bucketHours": {
-        "description": "Prepaid hours + overage",
-        "label": "Bucket Hours:"
+        "description": "Horas pré-pagas + excedente",
+        "label": "Horário do intervalo:"
       },
       "fixedFee": {
-        "description": "Same price every month",
-        "label": "Fixed Fee:"
+        "description": "O mesmo preço todo mês",
+        "label": "Taxa Fixa:"
       },
       "hourly": {
-        "description": "Bill by time tracked",
-        "label": "Hourly:"
+        "description": "Faturamento por tempo rastreado",
+        "label": "Por hora:"
       },
       "usageBased": {
-        "description": "Bill by consumption/usage",
-        "label": "Usage-Based:"
+        "description": "Faturar por consumo/utilização",
+        "label": "Baseado no uso:"
       }
     },
     "steps": {
       "configureBilling": {
-        "description": "Choose your billing model(s). You can combine multiple types:",
-        "title": "Configure Billing"
+        "description": "Escolha seu(s) modelo(s) de cobrança. Você pode combinar vários tipos:",
+        "title": "Configurar faturamento"
       },
       "createContract": {
-        "description": "Click \"New Contract\" to start the wizard. Choose a client and name your contract.",
-        "requiredFields": "Required: Client, Contract Name, Start Date",
-        "title": "Create a Contract"
+        "description": "Clique em “Novo Contrato” para iniciar o assistente. Escolha um cliente e nomeie seu contrato.",
+        "requiredFields": "Obrigatório: Cliente, Nome do Contrato, Data de Início",
+        "title": "Crie um contrato"
       },
       "reviewCreate": {
-        "description": "Double-check everything before creating. You can always edit later.",
-        "tip": "Tip: At least one service line is required",
-        "title": "Review & Create"
+        "description": "Verifique tudo antes de criar. Você sempre pode editar mais tarde.",
+        "tip": "Dica: É necessária pelo menos uma linha de serviço",
+        "title": "Revise e crie"
       }
     },
-    "subtitle": "Learn how to create and manage contracts",
-    "title": "Quick Start Guide"
+    "subtitle": "Aprenda a criar e gerenciar contratos",
+    "title": "Guia de início rápido"
   },
   "servicePicker": {
-    "emptyMessage": "No service found.",
-    "placeholder": "Select service...",
-    "searchPlaceholder": "Search services...",
+    "emptyMessage": "Nenhum serviço encontrado.",
+    "placeholder": "Selecione o serviço...",
+    "searchPlaceholder": "Pesquisar serviços...",
     "catalog": {
       "badges": {
-        "product": "Product",
-        "service": "Service"
+        "product": "Produto",
+        "service": "Serviço"
       },
       "custom": {
-        "addAsCustomItem": "Add “{{name}}” as custom item",
-        "badge": "Custom",
-        "typeNameHint": "Type a name to add a custom item"
+        "addAsCustomItem": "Adicione “{{name}}” como item personalizado",
+        "badge": "Personalizado",
+        "typeNameHint": "Digite um nome para adicionar um item personalizado"
       },
-      "emptyMessage": "No matching items.",
-      "placeholder": "Select item...",
-      "searchPlaceholder": "Search items..."
+      "emptyMessage": "Nenhum item correspondente.",
+      "placeholder": "Selecione o item...",
+      "searchPlaceholder": "Pesquisar itens..."
     }
   },
   "bucketOverlay": {
-    "includedLabel": "Included {{units}}",
-    "includedPlaceholderHours": "e.g., 40",
-    "includedPlaceholderUnits": "e.g., 1000",
-    "includedTooltip": "Amount of {{units}} included each billing period before overages apply.",
-    "overageRateLabel": "Overage Rate",
-    "overageRateTooltip": "Charge applied for each {{unit}} beyond the included amount.",
-    "rolloverDescription": "If enabled, any unused balance carries into the next period.",
-    "rolloverLabel": "Allow unused {{units}} to roll over",
+    "includedLabel": "Incluído {{units}}",
+    "includedPlaceholderHours": "por exemplo, 40",
+    "includedPlaceholderUnits": "por exemplo, 1000",
+    "includedTooltip": "Valor de {{units}} incluído em cada período de faturamento antes da aplicação dos excedentes.",
+    "overageRateLabel": "Taxa excedente",
+    "overageRateTooltip": "Encargo aplicado para cada {{unit}} além do valor incluído.",
+    "rolloverDescription": "Se ativado, qualquer saldo não utilizado será transferido para o próximo período.",
+    "rolloverLabel": "Permitir que {{units}} não utilizado passe",
     "units": {
-      "hour": "hour",
-      "hours": "hours",
-      "units": "units"
+      "hour": "hora",
+      "hours": "horas",
+      "units": "unidades"
     }
   },
   "frequencyOverride": {
-    "confirmation": "This contract line will be billed {{lineFrequency}} instead of {{contractFrequency}}.",
-    "description": "Optional: Override the contract's billing frequency ({{frequency}}) for this specific contract line.",
-    "label": "Billing Frequency Override",
-    "optionAlreadySetForContract": "{{label}} (already set for contract)",
-    "placeholder": "Use contract billing frequency ({{frequency}})"
+    "confirmation": "Esta linha de contrato será cobrada como {{lineFrequency}} em vez de {{contractFrequency}}.",
+    "description": "Opcional: substitua a frequência de cobrança do contrato ({{frequency}}) para esta linha de contrato específica.",
+    "label": "Substituição de frequência de faturamento",
+    "optionAlreadySetForContract": "{{label}} (já definido para contrato)",
+    "placeholder": "Usar frequência de faturamento do contrato ({{frequency}})"
   },
   "wizard": {
     "dialogs": {
       "unsavedChanges": {
-        "cancel": "Stay",
-        "confirm": "Discard Changes",
-        "message": "You have unsaved changes. If you close this dialog now, your changes will be discarded.",
-        "title": "Discard changes?"
+        "cancel": "Ficar",
+        "confirm": "Descartar alterações",
+        "message": "Você tem alterações não salvas. Se você fechar esta caixa de diálogo agora, suas alterações serão descartadas.",
+        "title": "Descartar alterações?"
       }
     },
     "errors": {
-      "failedToCreateContract": "Failed to create contract",
-      "failedToLoadTemplateDetails": "Failed to load template details",
-      "failedToLoadTemplates": "Failed to load templates",
-      "failedToSaveDraft": "Failed to save draft"
+      "failedToCreateContract": "Falha ao criar contrato",
+      "failedToLoadTemplateDetails": "Falha ao carregar detalhes do modelo",
+      "failedToLoadTemplates": "Falha ao carregar modelos",
+      "failedToSaveDraft": "Falha ao salvar o rascunho"
     },
     "steps": {
-      "contractBasics": "Contract Basics",
-      "fixedFeeServices": "Fixed Fee Services",
-      "hourlyServices": "Hourly Services",
-      "products": "Products",
-      "reviewCreate": "Review & Create",
-      "usageBasedServices": "Usage-Based Services"
+      "contractBasics": "Noções básicas do contrato",
+      "fixedFeeServices": "Serviços de taxa fixa",
+      "hourlyServices": "Serviços por hora",
+      "products": "Produtos",
+      "reviewCreate": "Revise e crie",
+      "usageBasedServices": "Serviços baseados em uso"
     },
     "title": {
-      "createNewContract": "Create New Contract",
-      "editContract": "Edit Contract"
+      "createNewContract": "Criar novo contrato",
+      "editContract": "Editar contrato"
     },
     "validation": {
-      "addAtLeastOneService": "Add at least one service before creating the contract",
-      "baseRateRequiredWhenFixedServices": "Base rate is required when fixed services are included",
-      "billingFrequencyRequired": "Billing frequency is required",
-      "clientRequired": "Client is required",
-      "contractNameRequired": "Contract name is required",
-      "noticePeriodRange": "Notice period must be between {{min}} and {{max}} days",
-      "noticePeriodWholeNumber": "Notice period must be a whole number of days",
+      "addAtLeastOneService": "Adicione pelo menos um serviço antes de criar o contrato",
+      "baseRateRequiredWhenFixedServices": "A tarifa básica é exigida quando serviços fixos estão incluídos",
+      "billingFrequencyRequired": "A frequência de faturamento é obrigatória",
+      "clientRequired": "O cliente é obrigatório",
+      "contractNameRequired": "O nome do contrato é obrigatório",
+      "noticePeriodRange": "O período de aviso deve ser entre {{min}} e {{max}} dias",
+      "noticePeriodWholeNumber": "O período de aviso deve ser um número inteiro de dias",
       "recurring": {
         "frequency": {
-          "annually": "annually",
-          "biweekly": "biweekly",
-          "monthly": "monthly",
-          "quarterly": "quarterly",
-          "semi-annually": "semi-annually",
-          "weekly": "weekly"
+          "annually": "anualmente",
+          "biweekly": "quinzenal",
+          "monthly": "mensal",
+          "quarterly": "trimestral",
+          "semi-annually": "semestralmente",
+          "weekly": "semanalmente"
         },
         "lineType": {
-          "fixed": "Fixed",
-          "hourly": "Hourly",
-          "product": "Product",
-          "usage": "Usage"
+          "fixed": "Fixo",
+          "hourly": "De hora em hora",
+          "product": "Produto",
+          "usage": "Uso"
         }
       },
-      "renewalModeRequiredWithEndDate": "Renewal mode is required when an end date is set",
-      "renewalTermPositiveWhole": "Renewal term months must be a positive whole number",
-      "selectClientBeforeDraft": "Select a client before saving as draft",
-      "selectProductForEachLine": "Please select a product for each product line",
-      "startDateRequired": "Start date is required",
-      "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead."
+      "renewalModeRequiredWithEndDate": "O modo de renovação é necessário quando uma data de término é definida",
+      "renewalTermPositiveWhole": "Os meses do prazo de renovação devem ser um número inteiro positivo",
+      "selectClientBeforeDraft": "Selecione um cliente antes de salvar como rascunho",
+      "selectProductForEachLine": "Selecione um produto para cada linha de produtos",
+      "startDateRequired": "A data de início é obrigatória",
+      "unsupportedRecurringAuthoringCombination": "Combinação de autoria recorrente não suportada para serviços {{lineType}}: a cadência de aniversário do contrato atualmente suporta frequências de cobrança {{supportedFrequencies}}. {{billingFrequency}} ainda não é compatível. Use uma das frequências ou faturas suportadas na programação de faturamento do cliente."
     },
     "nav": {
-      "back": "Back",
-      "next": "Next",
-      "skip": "Skip",
-      "finish": "Finish Setup",
+      "back": "Voltar",
+      "next": "Próximo",
+      "skip": "Pular",
+      "finish": "Concluir configuração",
       "saveDraft": "Salvar como rascunho",
-      "saving": "Saving...",
-      "completing": "Completing..."
+      "saving": "Salvando...",
+      "completing": "Concluindo..."
     }
   },
   "wizardBasics": {
     "additionalDescription": {
-      "hint": "Internal notes or contract details.",
-      "label": "Description (Optional)",
-      "placeholder": "Add any additional notes about this contract..."
+      "hint": "Notas internas ou detalhes do contrato.",
+      "label": "Descrição (opcional)",
+      "placeholder": "Adicione quaisquer notas adicionais sobre este contrato..."
     },
     "billingFrequency": {
-      "hint": "How often should this contract be billed?",
-      "label": "Billing Frequency",
-      "placeholder": "Select billing frequency"
+      "hint": "Com que frequência esse contrato deve ser cobrado?",
+      "label": "Frequência de cobrança",
+      "placeholder": "Selecione a frequência de cobrança"
     },
     "cadenceOwner": {
-      "description": "Sets the default cadence owner applied to recurring lines created in this wizard.",
-      "label": "Recurring Cadence Default",
+      "description": "Define o proprietário da cadência padrão aplicado às linhas recorrentes criadas neste assistente.",
+      "label": "Padrão de cadência recorrente",
       "options": {
         "client": {
-          "description": "Use the client billing calendar so recurring lines stay aligned with the client’s normal invoice cadence.",
-          "label": "Invoice on client billing schedule"
+          "description": "Use o calendário de cobrança do cliente para que as linhas recorrentes fiquem alinhadas com o ritmo normal de fatura do cliente.",
+          "label": "Fatura na programação de faturamento do cliente"
         },
         "contract": {
-          "description": "Use contract-anniversary service periods for recurring lines that should follow the contract timeline.",
-          "label": "Invoice on contract anniversary"
+          "description": "Use períodos de serviço de aniversário de contrato para linhas recorrentes que devem seguir o cronograma do contrato.",
+          "label": "Fatura no aniversário do contrato"
         }
       }
     },
     "client": {
-      "chooseClientHint": "Choose the client this contract is for.",
-      "clientLabel": "Client",
-      "loadingClients": "Loading clients…",
-      "selectClient": "Select a client"
+      "chooseClientHint": "Escolha o cliente para o qual este contrato se destina.",
+      "clientLabel": "Cliente",
+      "loadingClients": "Carregando clientes…",
+      "selectClient": "Selecione um cliente"
     },
     "contractName": {
-      "hint": "Give this contract a descriptive name.",
-      "label": "Contract Name",
-      "placeholder": "e.g., Standard MSP Services, Premium Support Package"
+      "hint": "Dê a este contrato um nome descritivo.",
+      "label": "Nome do contrato",
+      "placeholder": "por exemplo, serviços MSP padrão, pacote de suporte premium"
     },
     "currency": {
-      "hint": "Currency for this contract. Defaults to the client's preferred currency.",
-      "label": "Currency",
-      "placeholder": "Select currency"
+      "hint": "Moeda deste contrato. O padrão é a moeda preferida do cliente.",
+      "label": "Moeda",
+      "placeholder": "Selecione a moeda"
     },
     "dates": {
-      "endDateAfterStartValidation": "End date must be after start date",
-      "endDateLabel": "End Date (Optional)",
-      "endDateOngoingHint": "Leave blank for an ongoing contract.",
-      "endDateTooltip": "Leave blank for ongoing contracts that don't have a fixed end date. You can always set an end date later when the contract is terminated or expires.",
-      "startDateHint": "When does this contract become active?",
-      "startDateLabel": "Start Date"
+      "endDateAfterStartValidation": "A data de término deve ser posterior à data de início",
+      "endDateLabel": "Data de término (opcional)",
+      "endDateOngoingHint": "Deixe em branco para um contrato em andamento.",
+      "endDateTooltip": "Deixe em branco para contratos em andamento que não tenham data de término fixa. Você sempre pode definir uma data de término posteriormente, quando o contrato for rescindido ou expirar.",
+      "startDateHint": "Quando este contrato se torna ativo?",
+      "startDateLabel": "Data de início"
     },
-    "description": "Choose a template (optional), select the client, and set foundational contract details. Service details load in the next steps.",
-    "heading": "Contract Basics",
+    "description": "Escolha um modelo (opcional), selecione o cliente e defina os detalhes básicos do contrato. Os detalhes do serviço são carregados nas próximas etapas.",
+    "heading": "Noções básicas do contrato",
     "po": {
-      "amountHint": "Total authorized amount on the purchase order.",
-      "amountLabel": "PO Amount",
-      "noteLabel": "Note:",
-      "noteText": "PO enforcement will apply when invoice automation is enabled. Configure now to stay ahead.",
-      "numberHint": "Client's purchase order reference number.",
-      "numberLabel": "PO Number",
-      "numberPlaceholder": "e.g., PO-2024-12345",
-      "requireForInvoicing": "Require Purchase Order for invoicing",
-      "requireHint": "Block invoice generation if PO is not provided.",
-      "requireTooltip": "When enabled, invoices cannot be generated for this contract unless a PO number is provided.",
-      "title": "Purchase Order (Optional)"
+      "amountHint": "Valor total autorizado no pedido de compra.",
+      "amountLabel": "Valor da ordem de compra",
+      "noteLabel": "Observação:",
+      "noteText": "A aplicação da ordem de compra será aplicada quando a automação de faturas estiver habilitada. Configure agora para ficar à frente.",
+      "numberHint": "Número de referência do pedido de compra do cliente.",
+      "numberLabel": "Número do pedido",
+      "numberPlaceholder": "por exemplo, PO-2024-12345",
+      "requireForInvoicing": "Exigir ordem de compra para faturamento",
+      "requireHint": "Bloqueie a geração de fatura se o pedido não for fornecido.",
+      "requireTooltip": "Quando ativado, as faturas não podem ser geradas para este contrato, a menos que um número de ordem de compra seja fornecido.",
+      "title": "Ordem de compra (opcional)"
     },
     "renewal": {
       "evergreen": {
-        "description": "This contract is ongoing. Configure annual review cadence and notice timing.",
-        "title": "Evergreen Review Settings"
+        "description": "Este contrato está em andamento. Configure a cadência de revisão anual e o tempo de notificação.",
+        "title": "Configurações de revisão perene"
       },
       "fixedTerm": {
-        "description": "This contract has a fixed end date. Configure renewal behavior and notice timing.",
-        "title": "Renewal Settings"
+        "description": "Este contrato tem uma data de término fixa. Configure o comportamento de renovação e aviso prévio.",
+        "title": "Configurações de renovação"
       },
-      "modeLabel": "Renewal Mode",
+      "modeLabel": "Modo de renovação",
       "modeOptions": {
-        "auto": "Auto Renew",
-        "manual": "Manual Renewal",
-        "none": "No Renewal"
+        "auto": "Renovação automática",
+        "manual": "Renovação manual",
+        "none": "Sem renovação"
       },
-      "modePlaceholder": "Select renewal mode",
-      "noticePeriodLabel": "Notice Period (Days)",
-      "noticePeriodPlaceholder": "e.g., 30",
-      "termLabel": "Renewal Term (Months)",
-      "termPlaceholder": "e.g., 12",
-      "useTenantDefaultsDescription": "Apply organization-level renewal settings unless explicitly overridden.",
-      "useTenantDefaultsLabel": "Use Tenant Renewal Defaults"
+      "modePlaceholder": "Selecione o modo de renovação",
+      "noticePeriodLabel": "Período de aviso (dias)",
+      "noticePeriodPlaceholder": "por exemplo, 30",
+      "termLabel": "Prazo de renovação (meses)",
+      "termPlaceholder": "por exemplo, 12",
+      "useTenantDefaultsDescription": "Aplicar configurações de renovação no nível da organização, a menos que sejam explicitamente substituídas.",
+      "useTenantDefaultsLabel": "Usar padrões de renovação de locatário"
     },
     "summary": {
       "labels": {
-        "billingFrequency": "Billing Frequency:",
-        "client": "Client:",
-        "contract": "Contract:",
-        "currency": "Currency:",
-        "noticePeriod": "Notice Period:",
-        "period": "Period:",
-        "poAmount": "PO Amount:",
-        "poNumber": "PO Number:",
-        "poRequired": "PO Required:",
-        "renewalMode": "Renewal Mode:",
-        "renewalTerm": "Renewal Term:"
+        "billingFrequency": "Frequência de cobrança:",
+        "client": "Cliente:",
+        "contract": "Contrato:",
+        "currency": "Moeda:",
+        "noticePeriod": "Período de aviso prévio:",
+        "period": "Período:",
+        "poAmount": "Valor da ordem de compra:",
+        "poNumber": "Número da PO:",
+        "poRequired": "PO necessário:",
+        "renewalMode": "Modo de renovação:",
+        "renewalTerm": "Prazo de renovação:"
       },
-      "title": "Contract Summary",
+      "title": "Resumo do Contrato",
       "values": {
-        "notSelected": "Not selected",
-        "noticePeriodDays_one": "{{count}} day",
-        "noticePeriodDays_other": "{{count}} days",
-        "ongoing": "Ongoing",
-        "renewalTermMonths_one": "{{count}} month",
-        "renewalTermMonths_other": "{{count}} months",
-        "noticePeriodDays": "{{count}} dia",
-        "renewalTermMonths": "{{count}} mês"
+        "notSelected": "Não selecionado",
+        "noticePeriodDays_one": "Dia {{count}}",
+        "noticePeriodDays_other": "{{count}} dias",
+        "ongoing": "Em andamento",
+        "renewalTermMonths_one": "Mês {{count}}",
+        "renewalTermMonths_other": "{{count}} meses",
+        "noticePeriodDays": "Dia {{count}}",
+        "renewalTermMonths": "Mês {{count}}"
       }
     },
     "template": {
-      "loadingTemplateDetails": "Loading template details…",
-      "loadingTemplates": "Loading templates…",
-      "prefillHint": "Prefill services, notes, and billing cadence from an existing template. You can still adjust everything before publishing.",
+      "loadingTemplateDetails": "Carregando detalhes do modelo…",
+      "loadingTemplates": "Carregando modelos…",
+      "prefillHint": "Preencha previamente serviços, notas e cadência de cobrança a partir de um modelo existente. Você ainda pode ajustar tudo antes de publicar.",
       "preview": {
-        "billingCadenceLabel": "Billing cadence:",
-        "notSpecified": "Not specified",
-        "templateLabel": "Template:"
+        "billingCadenceLabel": "Cadência de cobrança:",
+        "notSpecified": "Não especificado",
+        "templateLabel": "Modelo:"
       },
-      "selectTemplateOptional": "Select a template (optional)",
-      "startFromTemplate": "Start From Template"
+      "selectTemplateOptional": "Selecione um modelo (opcional)",
+      "startFromTemplate": "Começar a partir do modelo"
     }
   },
   "wizardFixed": {
-    "alternateFrequencyLabel": "Alternate Billing Frequency (Optional)",
+    "alternateFrequencyLabel": "Frequência de cobrança alternativa (opcional)",
     "baseRate": {
-      "hint": "Total recurring fee for all fixed services combined.",
-      "label": "Recurring Base Rate",
+      "hint": "Taxa recorrente total para todos os serviços fixos combinados.",
+      "label": "Taxa básica recorrente",
       "placeholder": "0.00"
     },
-    "description": "Configure services that are billed at a fixed rate each billing cycle. You can still track time, but billing is based on this flat amount.",
-    "emptyState": "No fixed fee services added yet. Click “Add Service” above or “Skip” to move on.",
+    "description": "Configure serviços que são cobrados a uma taxa fixa em cada ciclo de cobrança. Você ainda pode controlar o tempo, mas o faturamento é baseado nesse valor fixo.",
+    "emptyState": "Nenhum serviço de taxa fixa adicionado ainda. Clique em “Adicionar serviço” acima ou “Pular” para prosseguir.",
     "explainer": {
-      "description": "These services have a set recurring price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.",
-      "title": "What are Fixed Fee Services?"
+      "description": "Estes serviços têm um preço recorrente definido. Você ainda acompanhará as entradas de tempo para esses serviços, mas o faturamento é baseado na taxa fixa e não nas horas trabalhadas.",
+      "title": "O que são serviços de taxa fixa?"
     },
-    "heading": "Fixed Fee Services",
+    "heading": "Serviços de taxa fixa",
     "preview": {
       "labels": {
-        "alternateFrequency": "Alternate Billing Frequency:",
-        "billingTiming": "Billing Timing:",
-        "cadenceOwner": "Cadence Owner:",
-        "invoiceWindow": "Invoice window:",
-        "recurringRate": "Recurring Rate:",
-        "service": "Service:",
-        "services": "Services:"
+        "alternateFrequency": "Frequência de cobrança alternativa:",
+        "billingTiming": "Tempo de cobrança:",
+        "cadenceOwner": "Proprietário da Cadência:",
+        "invoiceWindow": "Janela de fatura:",
+        "recurringRate": "Taxa recorrente:",
+        "service": "Serviço:",
+        "services": "Serviços:"
       },
       "materializedPeriods": {
-        "tooltip": "A preview of the next few service periods and the invoice windows that would be generated for them based on the current settings. These help you sanity-check the cadence before saving — actual invoices are produced later by the billing run."
+        "tooltip": "Uma prévia dos próximos períodos de serviço e das janelas de fatura que seriam geradas para eles com base nas configurações atuais. Isso ajuda você a verificar a cadência antes de salvar – as faturas reais são produzidas posteriormente pela execução do faturamento."
       },
-      "title": "Recurring Preview Before Save"
+      "title": "Visualização recorrente antes de salvar"
     },
     "proration": {
-      "label": "Adjust for Partial Periods",
-      "tooltip": "Adjust the recurring fee when contract dates cover only part of a service period."
+      "label": "Ajuste para períodos parciais",
+      "tooltip": "Ajuste a taxa recorrente quando as datas do contrato cobrirem apenas parte do período de serviço."
     },
     "services": {
-      "addService": "Add Service",
-      "label": "Services",
-      "quantityLabel": "Quantity",
-      "selectServicePlaceholder": "Select a service",
-      "serviceItemLabel": "Service {{index}}"
+      "addService": "Adicionar serviço",
+      "label": "Serviços",
+      "quantityLabel": "Quantidade",
+      "selectServicePlaceholder": "Selecione um serviço",
+      "serviceItemLabel": "Serviço {{index}}"
     }
   },
   "wizardProducts": {
     "actions": {
-      "addProduct": "Add Product"
+      "addProduct": "Adicionar produto"
     },
-    "description": "Attach products that will be billed each cycle. Products use the catalog price for the contract currency unless you enter an override.",
-    "emptyState": "No products attached yet. Add a product if you want it to bill every cycle.",
-    "heading": "Products",
+    "description": "Anexe os produtos que serão faturados a cada ciclo. Os produtos usam o preço de catálogo para a moeda do contrato, a menos que você insira uma substituição.",
+    "emptyState": "Nenhum produto anexado ainda. Adicione um produto se quiser que ele fature cada ciclo.",
+    "heading": "Produtos",
     "labels": {
-      "defaultCatalogPrice": "Default catalog price:",
-      "overrideUnitPriceOptional": "Override unit price (optional)",
-      "productItem": "Product {{index}}",
-      "products": "Products",
-      "quantity": "Quantity",
-      "selectProductPlaceholder": "Select a product",
+      "defaultCatalogPrice": "Preço de catálogo padrão:",
+      "overrideUnitPriceOptional": "Substituir preço unitário (opcional)",
+      "productItem": "Produto {{index}}",
+      "products": "Produtos",
+      "quantity": "Quantidade",
+      "selectProductPlaceholder": "Selecione um produto",
       "catalogPriceInCurrency": "Preço de catálogo em {{currency}}:"
     },
     "validation": {
-      "noDefaultPriceEnterUnitPrice": "No default price set. Enter a unit price.",
-      "productMissingPrice": "This product has no default price and no override. It cannot be billed until you enter a unit price.",
-      "noCurrencyPriceEnterUnitPrice": "Não há preço em {{currency}} no catálogo. Insira um preço unitário.",
-      "noCurrencyPriceWithLegacyHint": "Não há preço em {{currency}} no catálogo. Taxa padrão legada: {{rate}}. Insira um preço unitário em {{currency}}."
+      "noDefaultPriceEnterUnitPrice": "Nenhum preço padrão definido. Insira um preço unitário.",
+      "productMissingPrice": "Este produto não tem preço padrão nem substituição. Ele não pode ser cobrado até que você insira um preço unitário.",
+      "noCurrencyPriceEnterUnitPrice": "Nenhum preço {{currency}} no catálogo. Insira um preço unitário.",
+      "noCurrencyPriceWithLegacyHint": "Nenhum preço {{currency}} no catálogo. Taxa padrão herdada: {{rate}}. Insira um preço unitário em {{currency}}."
     }
   },
   "wizardHourly": {
     "actions": {
-      "addHourlyService": "Add Hourly Service"
+      "addHourlyService": "Adicionar serviço por hora"
     },
-    "alternateFrequencyLabel": "Alternate Billing Frequency (Optional)",
-    "description": "Configure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.",
-    "emptyState": "No hourly services added yet. Click “Add Hourly Service” above or “Skip” if you don’t need time & materials billing.",
+    "alternateFrequencyLabel": "Frequência de cobrança alternativa (opcional)",
+    "description": "Configure serviços cobrados com base no tempo monitorado. Perfeito para trabalhos de T&M (Tempo e Materiais).",
+    "emptyState": "Nenhum serviço por hora adicionado ainda. Clique em “Adicionar serviço por hora” acima ou “Pular” se não precisar de cobrança de tempo e materiais.",
     "explainer": {
-      "description": "These services are billed based on actual time tracked. Each time entry will be multiplied by the hourly rate to calculate the invoice amount.",
-      "title": "What are Hourly Services?"
+      "description": "Esses serviços são cobrados com base no tempo real monitorado. Cada entrada de tempo será multiplicada pela taxa horária para calcular o valor da fatura.",
+      "title": "O que são serviços por hora?"
     },
-    "heading": "Hourly Services",
+    "heading": "Serviços por hora",
     "labels": {
-      "enterHourlyRate": "Enter the hourly rate",
-      "hourlyRate": "Hourly Rate",
-      "hourlyRatePerHour": "{{rate}}/hour",
+      "enterHourlyRate": "Insira a taxa horária",
+      "hourlyRate": "Taxa horária",
+      "hourlyRatePerHour": "{{rate}}/hora",
       "hourlyRatePlaceholder": "0.00",
-      "hourlyServices": "Hourly Services",
-      "selectServicePlaceholder": "Select a service",
-      "serviceItem": "Service {{index}}",
-      "setBucketOfHours": "Set bucket of hours",
-      "noCurrencyPriceEnterRate": "Não há preço em {{currency}} no catálogo. Insira uma taxa horária.",
-      "noCurrencyPriceWithLegacyHint": "Não há preço em {{currency}} no catálogo. Taxa padrão legada: {{rate}}. Insira uma taxa horária em {{currency}}."
+      "hourlyServices": "Serviços por hora",
+      "selectServicePlaceholder": "Selecione um serviço",
+      "serviceItem": "Serviço {{index}}",
+      "setBucketOfHours": "Definir intervalo de horas",
+      "noCurrencyPriceEnterRate": "Nenhum preço {{currency}} no catálogo. Insira uma taxa por hora.",
+      "noCurrencyPriceWithLegacyHint": "Nenhum preço {{currency}} no catálogo. Taxa padrão herdada: {{rate}}. Insira uma taxa horária em {{currency}}."
     },
     "minimumBillableTime": {
-      "hint": "e.g., 15 minutes - any time entry less than this will be rounded up",
-      "label": "Minimum Billable Time (minutes)",
+      "hint": "por exemplo, 15 minutos - qualquer tempo menor que esse será arredondado para cima",
+      "label": "Tempo mínimo faturável (minutos)",
       "placeholder": "15"
     },
     "roundUpToNearest": {
-      "hint": "e.g., 15 minutes - time entries will be rounded up to the nearest interval",
-      "label": "Round Up To Nearest (minutes)",
+      "hint": "por exemplo, 15 minutos - as entradas de tempo serão arredondadas para o intervalo mais próximo",
+      "label": "Arredondar para o mais próximo (minutos)",
       "placeholder": "15"
     },
     "summary": {
       "labels": {
-        "alternateFrequency": "Alternate Billing Frequency:",
-        "bucketsHeading": "Buckets:",
-        "includedHours": "Included Hours:",
-        "minimumTime": "Minimum Time:",
-        "overageRate": "Overage Rate:",
-        "rollover": "Rollover:",
-        "roundUp": "Round Up:",
-        "serviceFallback": "Service {{index}}",
-        "services": "Services:"
+        "alternateFrequency": "Frequência de cobrança alternativa:",
+        "bucketsHeading": "Baldes:",
+        "includedHours": "Horário Incluso:",
+        "minimumTime": "Tempo Mínimo:",
+        "overageRate": "Taxa de excedente:",
+        "rollover": "Rolagem:",
+        "roundUp": "Arredondamento:",
+        "serviceFallback": "Serviço {{index}}",
+        "services": "Serviços:"
       },
-      "title": "Hourly Services Summary",
+      "title": "Resumo dos serviços por hora",
       "values": {
-        "everyMinutes": "Every {{count}} minutes",
-        "hours": "{{count}} hours",
-        "minutes": "{{count}} minutes",
-        "overageRatePerHour": "{{rate}}/hour",
-        "rolloverDisabled": "Disabled",
-        "rolloverEnabled": "Enabled"
+        "everyMinutes": "A cada {{count}} minutos",
+        "hours": "Horas {{count}}",
+        "minutes": "{{count}} minutos",
+        "overageRatePerHour": "{{rate}}/hora",
+        "rolloverDisabled": "Desabilitado",
+        "rolloverEnabled": "Habilitado"
       }
     }
   },
   "wizardUsage": {
     "actions": {
-      "addUsageBasedService": "Add Usage-Based Service"
+      "addUsageBasedService": "Adicionar serviço baseado em uso"
     },
-    "alternateFrequencyLabel": "Alternate Billing Frequency (Optional)",
-    "description": "Configure services that are billed based on usage or consumption. Perfect for metered services like data transfer, API calls, or storage.",
-    "emptyState": "No usage-based services added yet. Click “Add Usage-Based Service” above or “Skip” if you don’t need consumption billing.",
+    "alternateFrequencyLabel": "Frequência de cobrança alternativa (opcional)",
+    "description": "Configure serviços cobrados com base no uso ou consumo. Perfeito para serviços medidos, como transferência de dados, chamadas de API ou armazenamento.",
+    "emptyState": "Nenhum serviço baseado em uso foi adicionado ainda. Clique em “Adicionar serviço baseado em uso” acima ou “Pular” se não precisar de faturamento de consumo.",
     "explainer": {
-      "description": "These services are billed based on actual consumption or usage metrics. Each unit consumed will be multiplied by the unit rate to calculate the invoice amount.",
-      "title": "What are Usage-Based Services?"
+      "description": "Esses serviços são cobrados com base no consumo real ou nas métricas de uso. Cada unidade consumida será multiplicada pela taxa unitária para calcular o valor da fatura.",
+      "title": "O que são serviços baseados em uso?"
     },
-    "heading": "Usage-Based Services",
+    "heading": "Serviços baseados em uso",
     "labels": {
-      "enterUnitRate": "Enter the unit rate",
-      "ratePerUnit": "Rate per Unit",
+      "enterUnitRate": "Insira a taxa unitária",
+      "ratePerUnit": "Taxa por unidade",
       "ratePerUnitPlaceholder": "0.00",
       "ratePerUnitValue": "{{rate}}/{{unit}}",
-      "selectServicePlaceholder": "Select a service",
-      "serviceItem": "Service {{index}}",
-      "services": "Services",
-      "setBucketAllocation": "Set bucket allocation",
-      "unitOfMeasure": "Unit of Measure",
-      "unitOfMeasureHint": "Choose the unit this service bills on.",
-      "unitOfMeasurePlaceholder": "e.g., GB, API call, user",
-      "noCurrencyPriceEnterRate": "Não há preço em {{currency}} no catálogo. Insira uma taxa unitária.",
-      "noCurrencyPriceWithLegacyHint": "Não há preço em {{currency}} no catálogo. Taxa padrão legada: {{rate}}. Insira uma taxa unitária em {{currency}}."
+      "selectServicePlaceholder": "Selecione um serviço",
+      "serviceItem": "Serviço {{index}}",
+      "services": "Serviços",
+      "setBucketAllocation": "Definir alocação de bucket",
+      "unitOfMeasure": "Unidade de Medida",
+      "unitOfMeasureHint": "Escolha a unidade em que este serviço será cobrado.",
+      "unitOfMeasurePlaceholder": "por exemplo, GB, chamada de API, usuário",
+      "noCurrencyPriceEnterRate": "Nenhum preço {{currency}} no catálogo. Insira uma taxa unitária.",
+      "noCurrencyPriceWithLegacyHint": "Nenhum preço {{currency}} no catálogo. Taxa padrão herdada: {{rate}}. Insira uma taxa unitária em {{currency}}."
     },
     "summary": {
       "labels": {
-        "services": "Services:"
+        "services": "Serviços:"
       },
-      "title": "Usage-Based Summary"
+      "title": "Resumo baseado em uso"
     },
     "values": {
-      "defaultUnit": "unit"
+      "defaultUnit": "unidade"
     }
   },
   "wizardReview": {
-    "heading": "Review Contract",
-    "description": "Review all contract details before creating. You can still edit after creation if needed.",
+    "heading": "Revise o contrato",
+    "description": "Revise todos os detalhes do contrato antes de criá-lo. Você ainda pode editar após a criação, se necessário.",
     "sections": {
-      "contractBasics": "Contract Basics",
-      "fixedFeeServices": "Fixed Fee Services",
-      "products": "Products",
-      "hourlyServices": "Hourly Services",
-      "usageBasedServices": "Usage-Based Services"
+      "contractBasics": "Noções básicas do contrato",
+      "fixedFeeServices": "Serviços de taxa fixa",
+      "products": "Produtos",
+      "hourlyServices": "Serviços por hora",
+      "usageBasedServices": "Serviços baseados em uso"
     },
     "fields": {
-      "client": "Client",
-      "contractName": "Contract Name",
-      "billingFrequency": "Billing Frequency",
-      "currency": "Currency",
-      "startDate": "Start Date",
-      "endDate": "End Date",
-      "renewalMode": "Renewal Mode",
-      "noticePeriod": "Notice Period",
-      "renewalTerm": "Renewal Term"
+      "client": "Cliente",
+      "contractName": "Nome do contrato",
+      "billingFrequency": "Frequência de cobrança",
+      "currency": "Moeda",
+      "startDate": "Data de início",
+      "endDate": "Data de término",
+      "renewalMode": "Modo de renovação",
+      "noticePeriod": "Período de aviso prévio",
+      "renewalTerm": "Prazo de renovação"
     },
     "fallback": {
-      "notSelected": "Not selected",
-      "notSpecified": "Not specified",
-      "ongoing": "Ongoing",
-      "notApplicable": "N/A"
+      "notSelected": "Não selecionado",
+      "notSpecified": "Não especificado",
+      "ongoing": "Em andamento",
+      "notApplicable": "N / D"
     },
     "renewalMode": {
-      "none": "No Renewal",
-      "manual": "Manual Renewal",
-      "auto": "Auto Renew"
+      "none": "Sem renovação",
+      "manual": "Renovação manual",
+      "auto": "Renovação automática"
     },
     "noticePeriod": {
-      "one": "{{count}} day",
-      "other": "{{count}} days"
+      "one": "Dia {{count}}",
+      "other": "{{count}} dias"
     },
     "renewalTerm": {
-      "one": "{{count}} month",
-      "other": "{{count}} months"
+      "one": "Mês {{count}}",
+      "other": "{{count}} meses"
     },
     "common": {
-      "yes": "Yes",
-      "no": "No",
-      "enabled": "Enabled",
-      "disabled": "Disabled",
-      "bucketLabel": "Bucket:",
-      "billingFrequencyOverrideLabel": "Billing Frequency Override:",
-      "serviceQuantityRow": "{{serviceName}} (Qty: {{quantity}})",
-      "unitSingular": "unit",
-      "unitsFallback": "units",
-      "hourSingular": "hour"
+      "yes": "Sim",
+      "no": "Não",
+      "enabled": "Habilitado",
+      "disabled": "Desabilitado",
+      "bucketLabel": "Balde:",
+      "billingFrequencyOverrideLabel": "Substituição de frequência de cobrança:",
+      "serviceQuantityRow": "{{serviceName}} (Qtd: {{quantity}})",
+      "unitSingular": "unidade",
+      "unitsFallback": "unidades",
+      "hourSingular": "hora"
     },
     "po": {
-      "title": "Purchase Order Requirements",
-      "requiredLabel": "PO Required:",
-      "numberLabel": "PO Number:",
-      "amountLabel": "PO Amount:"
+      "title": "Requisitos do pedido de compra",
+      "requiredLabel": "PO necessário:",
+      "numberLabel": "Número da PO:",
+      "amountLabel": "Valor da ordem de compra:"
     },
     "bucket": {
-      "includedHours": "{{formattedValue}} hours",
+      "includedHours": "Horas {{formattedValue}}",
       "includedUnits": "{{formattedValue}} {{unitLabel}}",
-      "overageLabel": "{{rate}}/{{unit}} overage",
-      "rolloverEnabled": "rollover enabled",
-      "rolloverDisabled": "no rollover",
+      "overageLabel": "Sobrecarga {{rate}}/{{unit}}",
+      "rolloverEnabled": "rollover ativado",
+      "rolloverDisabled": "sem capotamento",
       "summaryWithOverage": "{{included}}, {{overage}}, {{rollover}}",
       "summaryWithoutOverage": "{{included}}, {{rollover}}"
     },
     "fixed": {
       "badgeCount": {
-        "one": "{{count}} service",
-        "other": "{{count}} services"
+        "one": "Serviço {{count}}",
+        "other": "Serviços {{count}}"
       },
-      "monthlyBaseRate": "Monthly Base Rate:",
-      "partialPeriodAdjustment": "Partial-Period Adjustment:"
+      "monthlyBaseRate": "Taxa Básica Mensal:",
+      "partialPeriodAdjustment": "Ajuste de período parcial:"
     },
     "recurring": {
       "cadenceOwner": {
-        "label": "Cadence owner:",
-        "contractAnniversary": "Contract anniversary",
-        "clientBillingSchedule": "Client billing schedule"
+        "label": "Proprietário da cadência:",
+        "contractAnniversary": "Aniversário do contrato",
+        "clientBillingSchedule": "Cronograma de faturamento do cliente"
       },
       "firstInvoice": {
         "contract": {
-          "advance": "First invoice: bill on the contract anniversary window that opens the first covered service period.",
-          "arrears": "First invoice: bill on the next contract anniversary window after the first covered service period closes."
+          "advance": "Primeira fatura: fatura na janela de aniversário do contrato que abre o primeiro período de serviço coberto.",
+          "arrears": "Primeira fatura: fatura na próxima janela de aniversário do contrato após o encerramento do primeiro período de serviço coberto."
         },
         "client": {
-          "advance": "First invoice: bill on the first client billing schedule window covering the service period.",
-          "arrears": "First invoice: bill on the next client billing schedule window after the first covered service period closes."
+          "advance": "Primeira fatura: fatura na primeira janela de agendamento de faturamento do cliente cobrindo o período de serviço.",
+          "arrears": "Primeira fatura: fatura na próxima janela de programação de faturamento do cliente após o encerramento do primeiro período de serviço coberto."
         }
       },
       "partialPeriod": {
-        "enabled": "Partial periods adjust the recurring fee to the covered portion of the service period.",
-        "disabled": "Partial periods keep the full recurring fee even when contract dates land inside a service period."
+        "enabled": "Os períodos parciais ajustam a taxa recorrente à parcela coberta do período de serviço.",
+        "disabled": "Os períodos parciais mantêm a taxa recorrente integral mesmo quando as datas do contrato estão dentro de um período de serviço."
       },
       "materialized": {
-        "heading": "Illustrative future materialized periods",
-        "serviceLabel": "Service:",
-        "invoiceWindowLabel": "Invoice window:",
+        "heading": "Períodos materializados futuros ilustrativos",
+        "serviceLabel": "Serviço:",
+        "invoiceWindowLabel": "Janela de fatura:",
         "summary": {
-          "contract": "If you save this recurring line, future periods would materialize on an anniversary-style preview anchored to the 8th before invoice generation.",
-          "client": "If you save this recurring line, future periods would materialize on the client billing schedule preview before invoice generation."
+          "contract": "Se você salvar esta linha recorrente, os períodos futuros se materializarão em uma visualização estilo aniversário ancorada no dia 8 antes da geração da fatura.",
+          "client": "Se você salvar essa linha recorrente, os períodos futuros se materializarão na visualização da programação de faturamento do cliente antes da geração da fatura."
         }
       }
     },
     "products": {
       "badgeCount": {
-        "one": "{{count}} product",
-        "other": "{{count}} products"
+        "one": "Produto {{count}}",
+        "other": "Produtos {{count}}"
       },
-      "overrideRate": "- override {{rate}}/{{currencyCode}}"
+      "overrideRate": "- substituir {{rate}}/{{currencyCode}}"
     },
     "hourly": {
       "badgeCount": {
-        "one": "{{count}} service",
-        "other": "{{count}} services"
+        "one": "Serviço {{count}}",
+        "other": "Serviços {{count}}"
       },
-      "servicesAndRates": "Services and Rates",
-      "serviceRateRow": "{{serviceName}} - {{rate}}/hour",
-      "minimumTimeLabel": "Minimum Time:",
-      "roundUpLabel": "Round Up:",
-      "minutesValue": "{{count}} minutes"
+      "servicesAndRates": "Serviços e Tarifas",
+      "serviceRateRow": "{{serviceName}} - {{rate}}/hora",
+      "minimumTimeLabel": "Tempo Mínimo:",
+      "roundUpLabel": "Arredondamento:",
+      "minutesValue": "{{count}} minutos"
     },
     "usage": {
       "badgeCount": {
-        "one": "{{count}} service",
-        "other": "{{count}} services"
+        "one": "Serviço {{count}}",
+        "other": "Serviços {{count}}"
       },
       "serviceRateRow": "{{serviceName}} - {{rate}}/{{unit}}"
     },
     "total": {
-      "title": "Estimated Monthly Total",
-      "description": "Fixed charges only. Hourly and usage services bill separately based on actual usage.",
-      "perMonth": "per month"
+      "title": "Total Mensal Estimado",
+      "description": "Somente cobranças fixas. Faturamento por hora e serviços de uso separadamente com base no uso real.",
+      "perMonth": "por mês"
     },
     "finalChecklist": {
-      "title": "Before you finish:",
-      "itemRates": "Double-check all rates, quantities, and buckets",
-      "itemPo": "Confirm PO requirements (if any)",
-      "itemDates": "Verify the start and end dates",
-      "itemEditLater": "Remember: you can edit the contract later if needed"
+      "title": "Antes de terminar:",
+      "itemRates": "Verifique novamente todas as taxas, quantidades e intervalos",
+      "itemPo": "Confirme os requisitos do pedido de compra (se houver)",
+      "itemDates": "Verifique as datas de início e término",
+      "itemEditLater": "Lembre-se: você pode editar o contrato posteriormente, se necessário"
     }
   },
   "templateWizard": {
     "title": {
-      "createContractTemplate": "Create Contract Template"
+      "createContractTemplate": "Criar modelo de contrato"
     },
     "steps": {
-      "templateBasics": "Template Basics",
-      "fixedFeeBlocks": "Fixed Fee Blocks",
-      "products": "Products",
-      "hourlyBlocks": "Hourly Blocks",
-      "usageBasedBlocks": "Usage-Based Blocks",
-      "reviewPublish": "Review & Publish"
+      "templateBasics": "Noções básicas do modelo",
+      "fixedFeeBlocks": "Blocos de taxas fixas",
+      "products": "Produtos",
+      "hourlyBlocks": "Blocos de hora em hora",
+      "usageBasedBlocks": "Blocos baseados em uso",
+      "reviewPublish": "Revise e publique"
     },
     "actions": {
-      "continue": "Continue",
-      "publishTemplate": "Publish Template"
+      "continue": "Continuar",
+      "publishTemplate": "Publicar modelo"
     },
     "errors": {
-      "failedToCreateTemplate": "Failed to create template"
+      "failedToCreateTemplate": "Falha ao criar modelo"
     },
     "validation": {
-      "templateNameRequired": "Template name is required",
-      "billingFrequencyRequired": "Billing frequency is required",
-      "duplicateNameExists": "A template with this name already exists",
-      "templateNameAlreadyInUse": "Template name is already in use",
-      "atLeastOneServiceRequired": "At least one service is required",
-      "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead.",
+      "templateNameRequired": "O nome do modelo é obrigatório",
+      "billingFrequencyRequired": "A frequência de faturamento é obrigatória",
+      "duplicateNameExists": "Já existe um modelo com este nome",
+      "templateNameAlreadyInUse": "O nome do modelo já está em uso",
+      "atLeastOneServiceRequired": "É necessário pelo menos um serviço",
+      "unsupportedRecurringAuthoringCombination": "Combinação de autoria recorrente não suportada para serviços {{lineType}}: a cadência de aniversário do contrato atualmente suporta frequências de cobrança {{supportedFrequencies}}. {{billingFrequency}} ainda não é compatível. Use uma das frequências ou faturas suportadas na programação de faturamento do cliente.",
       "recurring": {
         "frequency": {
-          "monthly": "monthly",
-          "quarterly": "quarterly",
-          "semi-annually": "semi-annually",
-          "annually": "annually",
-          "weekly": "weekly",
-          "biweekly": "biweekly"
+          "monthly": "mensal",
+          "quarterly": "trimestral",
+          "semi-annually": "semestralmente",
+          "annually": "anualmente",
+          "weekly": "semanalmente",
+          "biweekly": "quinzenal"
         },
         "lineType": {
-          "fixed": "Fixed",
-          "product": "Product",
-          "hourly": "Hourly",
-          "usage": "Usage"
+          "fixed": "Fixo",
+          "product": "Produto",
+          "hourly": "De hora em hora",
+          "usage": "Uso"
         }
       }
     }
   },
   "templateBasics": {
-    "heading": "Template Basics",
-    "description": "Name this contract template and capture high-level guidance. Pricing and client specifics will be finalized when the template is applied to a client.",
+    "heading": "Noções básicas do modelo",
+    "description": "Dê um nome a este modelo de contrato e obtenha orientações de alto nível. Os preços e as especificações do cliente serão finalizados quando o modelo for aplicado a um cliente.",
     "fields": {
-      "templateName": "Template Name *",
-      "internalNotes": "Internal Notes",
-      "recommendedBillingFrequency": "Recommended Billing Frequency *"
+      "templateName": "Nome do modelo *",
+      "internalNotes": "Notas internas",
+      "recommendedBillingFrequency": "Frequência de cobrança recomendada *"
     },
     "placeholders": {
-      "templateName": "Managed Services Starter, Premium Support Bundle, etc.",
-      "internalNotes": "Describe where this template applies, onboarding tips, or approval requirements.",
-      "billingFrequency": "Select billing cadence"
+      "templateName": "Starter de serviços gerenciados, pacote de suporte premium, etc.",
+      "internalNotes": "Descreva onde este modelo se aplica, dicas de onboarding ou requisitos de aprovação.",
+      "billingFrequency": "Selecione a cadência de faturamento"
     },
     "help": {
-      "templateName": "Use a descriptive name so teams can quickly identify the right template.",
-      "internalNotes": "These notes stay with the template to provide context when teammates use it.",
-      "billingFrequency": "Sets the default cadence when the template is applied. It can still be adjusted per client."
+      "templateName": "Use um nome descritivo para que as equipes possam identificar rapidamente o modelo certo.",
+      "internalNotes": "Essas notas permanecem com o modelo para fornecer contexto quando os colegas de equipe o utilizam.",
+      "billingFrequency": "Define a cadência padrão quando o modelo é aplicado. Ainda pode ser ajustado por cliente."
     }
   },
   "templateFixed": {
-    "heading": "Fixed Fee Services",
-    "description": "Configure services that are billed at a fixed rate each billing cycle. You can still track time, but billing is based on this flat amount.",
+    "heading": "Serviços de taxa fixa",
+    "description": "Configure serviços que são cobrados a uma taxa fixa em cada ciclo de cobrança. Você ainda pode controlar o tempo, mas o faturamento é baseado nesse valor fixo.",
     "info": {
-      "title": "What are Fixed Fee Services?",
-      "description": "These services have a set recurring price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked."
+      "title": "O que são serviços de taxa fixa?",
+      "description": "Estes serviços têm um preço recorrente definido. Você ainda acompanhará as entradas de tempo para esses serviços, mas o faturamento é baseado na taxa fixa e não nas horas trabalhadas."
     },
     "cadenceOwner": {
-      "label": "Cadence Owner",
-      "help": "Choose which schedule should define recurring service periods for contracts created from this template.",
+      "label": "Proprietário da cadência",
+      "help": "Escolha qual cronograma deve definir períodos de serviço recorrentes para contratos criados a partir deste modelo.",
       "client": {
-        "label": "Invoice on client billing schedule",
-        "description": "Use the client billing calendar so contracts created from this template stay aligned with the client billing cadence."
+        "label": "Fatura na programação de faturamento do cliente",
+        "description": "Use o calendário de cobrança do cliente para que os contratos criados a partir deste modelo fiquem alinhados com o ritmo de cobrança do cliente."
       },
       "contract": {
-        "label": "Invoice on contract anniversary",
-        "description": "Use this contract line anniversary schedule. Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing."
+        "label": "Fatura no aniversário do contrato",
+        "description": "Use esta programação de aniversário de linha de contrato. A cadência do contrato atualmente oferece suporte ao faturamento recorrente mensal, trimestral, semestral e anual."
       }
     },
     "billingTiming": {
-      "arrears": "Arrears - invoice after the period closes",
-      "advance": "Advance - invoice at the start of the period"
+      "arrears": "Atrasos - fatura após o encerramento do período",
+      "advance": "Adiantamento - fatura no início do período"
     },
     "fields": {
-      "billingTiming": "Billing Timing",
-      "adjustPartialPeriods": "Adjust for Partial Periods",
-      "services": "Services",
-      "serviceNumber": "Service {{index}}",
-      "quantityOptional": "Quantity (Optional)"
+      "billingTiming": "Tempo de faturamento",
+      "adjustPartialPeriods": "Ajuste para períodos parciais",
+      "services": "Serviços",
+      "serviceNumber": "Serviço {{index}}",
+      "quantityOptional": "Quantidade (opcional)"
     },
     "placeholders": {
-      "billingTiming": "Select billing timing",
-      "selectService": "Select a service"
+      "billingTiming": "Selecione o momento do faturamento",
+      "selectService": "Selecione um serviço"
     },
     "help": {
-      "adjustPartialPeriods": "Use this when contracts created from the template should scale the recurring fee if service starts or ends inside a period.",
-      "quantity": "Suggested quantity when creating contracts"
+      "adjustPartialPeriods": "Use isto quando os contratos criados a partir do modelo devem dimensionar a taxa recorrente se o serviço começar ou terminar dentro de um período.",
+      "quantity": "Quantidade sugerida ao criar contratos"
     },
     "preview": {
-      "unknownService": "Unknown Service",
-      "cadenceOwnerLabel": "Cadence Owner:",
-      "billingTimingLabel": "Billing Timing:",
-      "serviceLabel": "Service:",
-      "invoiceWindowLabel": "Invoice window:"
+      "unknownService": "Serviço desconhecido",
+      "cadenceOwnerLabel": "Proprietário da Cadência:",
+      "billingTimingLabel": "Tempo de cobrança:",
+      "serviceLabel": "Serviço:",
+      "invoiceWindowLabel": "Janela de fatura:"
     },
     "actions": {
-      "addService": "Add Service"
+      "addService": "Adicionar serviço"
     }
   },
   "templateProducts": {
-    "heading": "Products",
-    "description": "Attach products to the template. When a contract is created from this template, products will be billed each cycle using the product catalog price for the contract currency.",
+    "heading": "Produtos",
+    "description": "Anexe produtos ao modelo. Quando um contrato é criado a partir deste modelo, os produtos serão cobrados em cada ciclo usando o preço do catálogo de produtos para a moeda do contrato.",
     "fields": {
-      "products": "Products",
-      "productNumber": "Product {{index}}",
-      "quantityOptional": "Quantity (Optional)"
+      "products": "Produtos",
+      "productNumber": "Produto {{index}}",
+      "quantityOptional": "Quantidade (opcional)"
     },
     "placeholders": {
-      "selectProduct": "Select a product"
+      "selectProduct": "Selecione um produto"
     },
     "help": {
-      "quantity": "Suggested quantity when creating contracts"
+      "quantity": "Quantidade sugerida ao criar contratos"
     },
     "actions": {
-      "addProduct": "Add Product"
+      "addProduct": "Adicionar produto"
     },
     "preview": {
-      "unknownProduct": "Unknown Product"
+      "unknownProduct": "Produto desconhecido"
     }
   },
   "templateHourly": {
-    "heading": "Hourly Services",
-    "description": "Select services that are billed based on time tracked. Rates will be determined by the service's pricing in the client's currency when the contract is created.",
+    "heading": "Serviços por hora",
+    "description": "Selecione serviços cobrados com base no tempo monitorado. As tarifas serão determinadas pelo preço do serviço na moeda do cliente no momento da criação do contrato.",
     "info": {
-      "title": "What are Hourly Services?",
-      "description": "These services are billed based on actual time tracked. Each time entry is multiplied by the service's hourly rate to calculate the invoice amount."
+      "title": "O que são serviços por hora?",
+      "description": "Esses serviços são cobrados com base no tempo real monitorado. Cada entrada de tempo é multiplicada pela taxa horária do serviço para calcular o valor da fatura."
     },
     "rounding": {
-      "heading": "Time Rounding Settings",
-      "minimumBillableTime": "Minimum Billable Time (minutes)",
-      "minimumBillableTimeHelp": "Example: 15 minutes. Any time entry below this threshold is rounded up.",
-      "roundUpToNearest": "Round Up To Nearest (minutes)",
-      "roundUpToNearestHelp": "Example: 15 minutes. Time entries are rounded up to the nearest interval.",
+      "heading": "Configurações de arredondamento de tempo",
+      "minimumBillableTime": "Tempo mínimo faturável (minutos)",
+      "minimumBillableTimeHelp": "Exemplo: 15 minutos. Qualquer entrada abaixo desse limite será arredondada para cima.",
+      "roundUpToNearest": "Arredondar para o mais próximo (minutos)",
+      "roundUpToNearestHelp": "Exemplo: 15 minutos. As entradas de tempo são arredondadas para o intervalo mais próximo.",
       "defaultIntervalPlaceholder": "15"
     },
     "fields": {
-      "services": "Services",
-      "serviceNumber": "Service {{index}}",
-      "setBucketOfHours": "Set bucket of hours"
+      "services": "Serviços",
+      "serviceNumber": "Serviço {{index}}",
+      "setBucketOfHours": "Definir intervalo de horas"
     },
     "placeholders": {
-      "selectService": "Select a service"
+      "selectService": "Selecione um serviço"
     },
     "preview": {
-      "unknownService": "Unknown Service"
+      "unknownService": "Serviço desconhecido"
     },
     "actions": {
-      "addService": "Add Service"
+      "addService": "Adicionar serviço"
     }
   },
   "templateUsage": {
-    "heading": "Usage-Based Services",
-    "description": "Select services that are billed based on usage or consumption. Rates will be determined by the service's pricing in the client's currency when the contract is created.",
+    "heading": "Serviços baseados em uso",
+    "description": "Selecione serviços cobrados com base no uso ou consumo. As tarifas serão determinadas pelo preço do serviço na moeda do cliente no momento da criação do contrato.",
     "info": {
-      "title": "What are Usage-Based Services?",
-      "description": "These services are billed based on actual consumption or usage metrics. Each unit consumed is multiplied by the service's unit rate to calculate the invoice amount."
+      "title": "O que são serviços baseados em uso?",
+      "description": "Esses serviços são cobrados com base no consumo real ou nas métricas de uso. Cada unidade consumida é multiplicada pela taxa unitária do serviço para calcular o valor da fatura."
     },
     "fields": {
-      "services": "Services",
-      "serviceNumber": "Service {{index}}",
-      "unitOfMeasureOptional": "Unit of Measure (Optional)",
-      "setBucketAllocation": "Set bucket allocation"
+      "services": "Serviços",
+      "serviceNumber": "Serviço {{index}}",
+      "unitOfMeasureOptional": "Unidade de medida (opcional)",
+      "setBucketAllocation": "Definir alocação de bucket"
     },
     "placeholders": {
-      "selectService": "Select a service",
-      "unitOfMeasure": "e.g., GB, API call, user"
+      "selectService": "Selecione um serviço",
+      "unitOfMeasure": "por exemplo, GB, chamada de API, usuário"
     },
     "help": {
-      "unitOfMeasure": "Override the default unit of measure for this service."
+      "unitOfMeasure": "Substitua a unidade de medida padrão deste serviço."
     },
     "preview": {
-      "unknownService": "Unknown Service"
+      "unknownService": "Serviço desconhecido"
     },
     "actions": {
-      "addService": "Add Service"
+      "addService": "Adicionar serviço"
     }
   },
   "templateReview": {
-    "heading": "Review Template",
-    "description": "Confirm the template contents. Rates are determined by each service's pricing in the client's currency when a contract is created from this template.",
+    "heading": "Modelo de revisão",
+    "description": "Confirme o conteúdo do modelo. As tarifas são determinadas pelo preço de cada serviço na moeda do cliente quando um contrato é criado a partir deste modelo.",
     "sections": {
-      "basics": "Template Basics",
-      "fixedFeeServices": "Fixed Fee Services",
-      "products": "Products",
-      "hourlyServices": "Hourly Services",
-      "usageBasedServices": "Usage-Based Services"
+      "basics": "Noções básicas do modelo",
+      "fixedFeeServices": "Serviços de taxa fixa",
+      "products": "Produtos",
+      "hourlyServices": "Serviços por hora",
+      "usageBasedServices": "Serviços baseados em uso"
     },
     "fields": {
-      "templateName": "Template Name",
-      "billingFrequency": "Billing Frequency",
-      "internalNotes": "Internal Notes"
+      "templateName": "Nome do modelo",
+      "billingFrequency": "Frequência de cobrança",
+      "internalNotes": "Notas internas"
     },
     "fallback": {
-      "none": "—",
-      "noNotes": "No notes added.",
-      "unnamedService": "Unnamed Service",
-      "unnamedProduct": "Unnamed Product"
+      "none": "-",
+      "noNotes": "Nenhuma nota adicionada.",
+      "unnamedService": "Serviço Sem Nome",
+      "unnamedProduct": "Produto sem nome"
     },
     "empty": {
-      "fixed": "No fixed fee services selected.",
-      "products": "No products selected.",
-      "hourly": "No hourly services selected.",
-      "usage": "No usage-based services selected."
+      "fixed": "Nenhum serviço de taxa fixa selecionado.",
+      "products": "Nenhum produto selecionado.",
+      "hourly": "Nenhum serviço por hora selecionado.",
+      "usage": "Nenhum serviço baseado em uso selecionado."
     },
     "common": {
-      "quantity": "Quantity:",
-      "bucket": "Bucket:",
-      "enabled": "Enabled",
-      "disabled": "Disabled"
+      "quantity": "Quantidade:",
+      "bucket": "Balde:",
+      "enabled": "Habilitado",
+      "disabled": "Desabilitado"
     },
     "fixed": {
-      "cadenceOwnerLabel": "Cadence owner:",
+      "cadenceOwnerLabel": "Proprietário da cadência:",
       "cadenceOwner": {
-        "contract": "Contract anniversary",
-        "client": "Client billing schedule"
+        "contract": "Aniversário do contrato",
+        "client": "Cronograma de faturamento do cliente"
       },
-      "billingTimingLabel": "Billing timing:",
+      "billingTimingLabel": "Tempo de cobrança:",
       "billingTiming": {
-        "advance": "Advance",
-        "arrears": "Arrears"
+        "advance": "Avançar",
+        "arrears": "Atrasados"
       },
-      "partialPeriodLabel": "Partial-period adjustment:",
-      "serviceLabel": "Service:",
-      "invoiceWindowLabel": "Invoice window:"
+      "partialPeriodLabel": "Ajuste de período parcial:",
+      "serviceLabel": "Serviço:",
+      "invoiceWindowLabel": "Janela de fatura:"
     },
     "hourly": {
-      "minimumBillableTimeLabel": "Minimum billable time:",
-      "roundUpLabel": "Round up:",
-      "minutes": "{{count}} minutes"
+      "minimumBillableTimeLabel": "Tempo mínimo faturável:",
+      "roundUpLabel": "Resumindo:",
+      "minutes": "{{count}} minutos"
     },
     "usage": {
-      "unitLabel": "Unit:"
+      "unitLabel": "Unidade:"
     },
     "bucket": {
-      "hoursIncluded": "{{value}} hours included",
-      "unitsIncluded": "{{value}} {{unit}} included",
-      "unitsFallback": "units",
-      "overage": "Overage ${{amount}}/{{unit}}",
-      "hourSingular": "hour",
-      "unitSingular": "unit",
-      "rolloverEnabled": "Rollover enabled",
-      "period": "Period: {{period}}"
+      "hoursIncluded": "Horas {{value}} incluídas",
+      "unitsIncluded": "{{value}} {{unit}} incluído",
+      "unitsFallback": "unidades",
+      "overage": "Excedente ${{amount}}/{{unit}}",
+      "hourSingular": "hora",
+      "unitSingular": "unidade",
+      "rolloverEnabled": "Rollover ativado",
+      "period": "Período: {{period}}"
     }
   },
   "templatePreview": {
     "serviceType": {
-      "fixedFee": "Fixed Fee",
-      "products": "Products",
-      "hourly": "Hourly",
-      "usageBased": "Usage-Based"
+      "fixedFee": "Taxa Fixa",
+      "products": "Produtos",
+      "hourly": "De hora em hora",
+      "usageBased": "Baseado no uso"
     },
-    "selectedHeading": "Selected {{type}} Services ({{count}})",
+    "selectedHeading": "Serviços {{type}} selecionados ({{count}})",
     "labels": {
-      "qty": "Qty:"
+      "qty": "Quantidade:"
     },
     "removeDialog": {
-      "title": "Remove Contract Line Preset",
-      "message": "Are you sure you want to remove \"{{serviceName}}\" from \"{{presetName}}\"? This will remove all other services associated with this contract line preset as well.",
-      "confirm": "Remove All",
-      "cancel": "Cancel"
+      "title": "Remover predefinição de linha de contrato",
+      "message": "Tem certeza de que deseja remover \"{{serviceName}}\" de \"{{presetName}}\"? Isso também removerá todos os outros serviços associados a esta predefinição de linha de contrato.",
+      "confirm": "Remover tudo",
+      "cancel": "Cancelar"
     }
   },
   "recurringPreview": {
-    "rangeSeparator": "{{start}} to {{end}}",
+    "rangeSeparator": "{{start}} para {{end}}",
     "cadenceOwner": {
       "contract": {
-        "label": "Contract anniversary",
-        "summary": "Service periods and invoice windows follow the contract anniversary dates."
+        "label": "Aniversário do contrato",
+        "summary": "Os períodos de serviço e as janelas de fatura seguem as datas de aniversário do contrato."
       },
       "client": {
-        "label": "Client billing schedule",
-        "summary": "Service periods and invoice windows stay aligned to the client billing calendar."
+        "label": "Cronograma de faturamento do cliente",
+        "summary": "Os períodos de serviço e as janelas de fatura permanecem alinhados ao calendário de cobrança do cliente."
       }
     },
     "billingTiming": {
       "advance": {
-        "label": "Advance",
-        "summary": "Invoices post at the opening of the due service period."
+        "label": "Avançar",
+        "summary": "As faturas são lançadas na abertura do devido período de serviço."
       },
       "arrears": {
-        "label": "Arrears",
-        "summary": "Invoices post after the covered service period closes."
+        "label": "Atrasados",
+        "summary": "As faturas são publicadas após o encerramento do período de serviço coberto."
       }
     },
     "firstInvoice": {
       "contract": {
-        "advance": "First invoice: bill on the contract anniversary window that opens the first covered service period.",
-        "arrears": "First invoice: bill on the next contract anniversary window after the first covered service period closes."
+        "advance": "Primeira fatura: fatura na janela de aniversário do contrato que abre o primeiro período de serviço coberto.",
+        "arrears": "Primeira fatura: fatura na próxima janela de aniversário do contrato após o encerramento do primeiro período de serviço coberto."
       },
       "client": {
-        "advance": "First invoice: bill on the first client billing schedule window covering the service period.",
-        "arrears": "First invoice: bill on the next client billing schedule window after the first covered service period closes."
+        "advance": "Primeira fatura: fatura na primeira janela de agendamento de faturamento do cliente cobrindo o período de serviço.",
+        "arrears": "Primeira fatura: fatura na próxima janela de programação de faturamento do cliente após o encerramento do primeiro período de serviço coberto."
       }
     },
     "partialPeriod": {
-      "prorated": "Partial periods adjust the recurring fee to the covered portion of the service period.",
-      "full": "Partial periods keep the full recurring fee even when contract dates land inside a service period."
+      "prorated": "Os períodos parciais ajustam a taxa recorrente à parcela coberta do período de serviço.",
+      "full": "Os períodos parciais mantêm a taxa recorrente integral mesmo quando as datas do contrato estão dentro de um período de serviço."
     },
     "materializedPeriods": {
-      "heading": "Illustrative future materialized periods",
+      "heading": "Períodos materializados futuros ilustrativos",
       "summary": {
-        "contract": "If you save this recurring line, future periods would materialize on an anniversary-style preview anchored to the 8th before invoice generation.",
-        "client": "If you save this recurring line, future periods would materialize on the client billing schedule preview before invoice generation."
+        "contract": "Se você salvar esta linha recorrente, os períodos futuros se materializarão em uma visualização estilo aniversário ancorada no dia 8 antes da geração da fatura.",
+        "client": "Se você salvar essa linha recorrente, os períodos futuros se materializarão na visualização da programação de faturamento do cliente antes da geração da fatura."
       }
     }
   }

@@ -5,6 +5,7 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { EventCatalogModel } from '../models/eventCatalog';
+import { workflowTenantTable } from '../lib/workflowTenantDb';
 import {
   type ICreateEventCatalogEntry,
   type IEventCatalogEntry,
@@ -199,10 +200,12 @@ export const getEventCategories = withAuth(async (
   { tenant }
 ): Promise<string[]> => {
   const { knex } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
 
   // Get distinct categories
-  const results = await knex('event_catalog')
-    .where('tenant', tenant)
+  const results = await workflowTenantTable(knex, tenant, 'event_catalog')
     .distinct('category')
     .whereNotNull('category')
     .orderBy('category', 'asc');

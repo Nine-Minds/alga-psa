@@ -33,14 +33,18 @@ describe('Entra mapping query/index alignment', () => {
       'ON entra_client_tenant_mappings (tenant, managed_tenant_id)'
     );
 
+    // The leading tenant predicate now comes from the tenantDb facade, keeping the
+    // lookups aligned to the tenant-prefixed indexes.
+    expect(previewSource).toContain('const db = tenantDb(knex, tenant);');
     expect(previewSource).toMatch(
-      /knex\('entra_managed_tenants'\)\s*\.where\(\{\s*tenant\s*\}\)/s
+      /db\.table\('entra_managed_tenants'\)\s*\.orderByRaw/s
     );
     expect(previewSource).toContain(
       ".orderByRaw('coalesce(display_name, entra_tenant_id) asc')"
     );
+    expect(confirmSource).toContain('const db = tenantDb(trx, params.tenant);');
     expect(confirmSource).toMatch(
-      /trx\('entra_client_tenant_mappings'\)\s*\.where\(\{\s*tenant:\s*params\.tenant,\s*managed_tenant_id:\s*managedTenantId,\s*is_active:\s*true,\s*\}\)/s
+      /db\.table\('entra_client_tenant_mappings'\)\s*\.where\(\{\s*managed_tenant_id:\s*managedTenantId,\s*is_active:\s*true,\s*\}\)/s
     );
   });
 });

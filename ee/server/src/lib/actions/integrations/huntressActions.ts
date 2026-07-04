@@ -9,6 +9,7 @@ import { revalidatePath } from 'next/cache';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { createTenantKnex } from '@/lib/db';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
@@ -35,8 +36,8 @@ import type { RmmOrganizationMapping } from '../../../interfaces/rmm.interfaces'
 
 const SETTINGS_PATH = '/msp/settings';
 
-// Huntress visibility is gated in the UI via the huntress-rmm-integration
-// feature flag; server actions enforce tier + permissions only.
+// Huntress visibility in the UI is EE-gated (requiresEnterprise); server
+// actions enforce tier + permissions only.
 function withHuntressAccess<TArgs extends unknown[], TResult>(
   handler: (user: any, context: { tenant: string }, ...args: TArgs) => Promise<TResult>
 ) {
@@ -54,7 +55,7 @@ async function requireSettingsUpdatePermission(user: any): Promise<void> {
 }
 
 async function getIntegrationRow(knex: any, tenant: string) {
-  return knex('rmm_integrations').where({ tenant, provider: 'huntress' }).first();
+  return tenantDb(knex, tenant).table('rmm_integrations').where({ provider: 'huntress' }).first();
 }
 
 export interface HuntressConnectionStatus {
@@ -104,14 +105,15 @@ export const connectHuntress = withHuntressAccess(
     await secretProvider.setTenantSecret(tenant, HUNTRESS_API_SECRET_SECRET, apiSecret);
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
     const existing = await getIntegrationRow(knex, tenant);
     const existingSettings = parseHuntressSettings(existing?.settings);
 
     // Pre-fill severity → priority by name match when not already configured.
     let severityPriorityMap = existingSettings.severityPriorityMap;
     if (!severityPriorityMap.critical || !severityPriorityMap.high || !severityPriorityMap.low) {
-      const priorities = await knex('priorities')
-        .where({ tenant, item_type: 'ticket' })
+      const priorities = await db.table('priorities')
+        .where({ item_type: 'ticket' })
         .select('priority_id', 'priority_name');
       severityPriorityMap = { ...prefillSeverityPriorityMap(priorities), ...severityPriorityMap };
     }
@@ -126,8 +128,8 @@ export const connectHuntress = withHuntressAccess(
     let integrationId: string;
     if (existing) {
       integrationId = existing.integration_id;
-      await knex('rmm_integrations')
-        .where({ tenant, integration_id: integrationId })
+      await db.table('rmm_integrations')
+        .where({ integration_id: integrationId })
         .update({
           instance_url: baseUrl,
           is_active: true,
@@ -138,7 +140,7 @@ export const connectHuntress = withHuntressAccess(
           updated_at: knex.fn.now(),
         });
     } else {
-      const [inserted] = await knex('rmm_integrations')
+      const [inserted] = await db.table('rmm_integrations')
         .insert({
           tenant,
           provider: 'huntress',
@@ -168,6 +170,7 @@ export const connectHuntress = withHuntressAccess(
 export const getHuntressConnectionStatus = withHuntressAccess(
   async (_user, { tenant }): Promise<HuntressConnectionStatus> => {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
     const row = await getIntegrationRow(knex, tenant);
 
     if (!row || !row.is_active) {
@@ -183,17 +186,17 @@ export const getHuntressConnectionStatus = withHuntressAccess(
 
     const settings = parseHuntressSettings(row.settings);
     const [orgCount, unmappedCount, openAlertCount] = await Promise.all([
-      knex('rmm_organization_mappings')
-        .where({ tenant, integration_id: row.integration_id })
+      db.table('rmm_organization_mappings')
+        .where({ integration_id: row.integration_id })
         .count('* as n')
         .first(),
-      knex('rmm_organization_mappings')
-        .where({ tenant, integration_id: row.integration_id })
+      db.table('rmm_organization_mappings')
+        .where({ integration_id: row.integration_id })
         .whereNull('client_id')
         .count('* as n')
         .first(),
-      knex('rmm_alerts')
-        .where({ tenant, integration_id: row.integration_id })
+      db.table('rmm_alerts')
+        .where({ integration_id: row.integration_id })
         .whereIn('status', ['sent', 'auto_remediating'])
         .count('* as n')
         .first(),
@@ -240,6 +243,7 @@ export const updateHuntressSettings = withHuntressAccess(
     await requireSettingsUpdatePermission(user);
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
     const row = await getIntegrationRow(knex, tenant);
     if (!row) return { success: false, error: 'Huntress is not connected' };
 
@@ -271,8 +275,8 @@ export const updateHuntressSettings = withHuntressAccess(
     });
     merged.incidentCursor = current.incidentCursor;
 
-    await knex('rmm_integrations')
-      .where({ tenant, integration_id: row.integration_id })
+    await db.table('rmm_integrations')
+      .where({ integration_id: row.integration_id })
       .update({ settings: JSON.stringify(merged), updated_at: knex.fn.now() });
 
     revalidatePath(SETTINGS_PATH);
@@ -285,11 +289,12 @@ export const disconnectHuntressIntegration = withHuntressAccess(
     await requireSettingsUpdatePermission(user);
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
     const row = await getIntegrationRow(knex, tenant);
     if (!row) return { success: true };
 
-    await knex('rmm_integrations')
-      .where({ tenant, integration_id: row.integration_id })
+    await db.table('rmm_integrations')
+      .where({ integration_id: row.integration_id })
       .update({ is_active: false, updated_at: knex.fn.now() });
 
     const secretProvider = await getSecretProviderInstance();
@@ -330,22 +335,16 @@ export const syncHuntressOrganizationMappings = withHuntressAccess(
 export const getHuntressOrganizationMappings = withHuntressAccess(
   async (_user, { tenant }): Promise<RmmOrganizationMapping[]> => {
     const { knex } = await createTenantKnex();
-    const rows = await knex('rmm_organization_mappings as rom')
-      .join('rmm_integrations as ri', function (this: any) {
-        this.on('ri.integration_id', '=', 'rom.integration_id').andOn(
-          'ri.tenant',
-          '=',
-          'rom.tenant'
-        );
-      })
-      .leftJoin('clients as c', function (this: any) {
-        this.on('c.client_id', '=', 'rom.client_id').andOn('c.tenant', '=', 'rom.tenant');
-      })
-      .where('rom.tenant', tenant)
+    const db = tenantDb(knex, tenant);
+    const mappingsQuery = db.table('rmm_organization_mappings as rom');
+    db.tenantJoin(mappingsQuery, 'rmm_integrations as ri', 'ri.integration_id', 'rom.integration_id');
+    db.tenantJoin(mappingsQuery, 'clients as c', 'c.client_id', 'rom.client_id', { type: 'left' });
+
+    const rows = await mappingsQuery
       .where('ri.provider', 'huntress')
       .select('rom.*', 'c.client_name as company_name')
       .orderBy('rom.external_organization_name', 'asc');
-    return rows as RmmOrganizationMapping[];
+    return rows as unknown as RmmOrganizationMapping[];
   }
 );
 
@@ -354,13 +353,14 @@ export const updateHuntressOrganizationMapping = withHuntressAccess(
     user,
     { tenant },
     mappingId: string,
-    updates: { client_id?: string | null; auto_create_tickets?: boolean }
+    updates: { client_id?: string | null; default_contact_id?: string | null; auto_create_tickets?: boolean }
   ): Promise<{ success: boolean; error?: string }> => {
     await requireSettingsUpdatePermission(user);
 
     const { knex } = await createTenantKnex();
-    const mapping = await knex('rmm_organization_mappings')
-      .where({ tenant, mapping_id: mappingId })
+    const db = tenantDb(knex, tenant);
+    const mapping = await db.table('rmm_organization_mappings')
+      .where({ mapping_id: mappingId })
       .first();
     if (!mapping) return { success: false, error: 'Mapping not found' };
 
@@ -377,9 +377,12 @@ export const updateHuntressOrganizationMapping = withHuntressAccess(
     if (updates.auto_create_tickets !== undefined) {
       changes.auto_create_tickets = updates.auto_create_tickets;
     }
+    if (updates.default_contact_id !== undefined) {
+      changes.default_contact_id = updates.default_contact_id;
+    }
 
-    await knex('rmm_organization_mappings')
-      .where({ tenant, mapping_id: mappingId })
+    await db.table('rmm_organization_mappings')
+      .where({ mapping_id: mappingId })
       .update(changes);
 
     revalidatePath(SETTINGS_PATH);
@@ -390,18 +393,18 @@ export const updateHuntressOrganizationMapping = withHuntressAccess(
 export const getHuntressRoutingOptions = withHuntressAccess(
   async (_user, { tenant }) => {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
     const [boards, priorities, categories, closedStatuses] = await Promise.all([
-      knex('boards').where({ tenant }).select('board_id', 'board_name').orderBy('board_name'),
-      knex('priorities')
-        .where({ tenant, item_type: 'ticket' })
+      db.table('boards').select('board_id', 'board_name').orderBy('board_name'),
+      db.table('priorities')
+        .where({ item_type: 'ticket' })
         .select('priority_id', 'priority_name')
         .orderBy('order_number'),
-      knex('categories')
-        .where({ tenant })
+      db.table('categories')
         .select('category_id', 'category_name', 'parent_category', 'board_id')
         .orderBy('category_name'),
-      knex('statuses')
-        .where({ tenant, item_type: 'ticket', is_closed: true })
+      db.table('statuses')
+        .where({ item_type: 'ticket', is_closed: true })
         .select('status_id', 'name as status_name')
         .orderBy('order_number'),
     ]);

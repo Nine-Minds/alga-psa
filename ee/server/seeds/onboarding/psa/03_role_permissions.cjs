@@ -1,4 +1,6 @@
 exports.seed = async function (knex, tenantId) {
+    const { tenantDb } = await import('@alga-psa/db');
+
     // Use provided tenantId or seed all tenants
     let tenants;
     if (tenantId) {
@@ -13,13 +15,15 @@ exports.seed = async function (knex, tenantId) {
 
     // Process each tenant
     for (const { tenant } of tenants) {
+        const db = tenantDb(knex, tenant);
+
         console.log(`Seeding role permissions for tenant ${tenant}`);
 
         // Get all roles for this tenant
-        const roles = await knex('roles').where({ tenant });
+        const roles = await db.table('roles');
         
         // Get all permissions for this tenant
-        const permissions = await knex('permissions').where({ tenant });
+        const permissions = await db.table('permissions');
         
         // Create permission map for easy lookup
         const permissionMap = new Map();
@@ -29,7 +33,7 @@ exports.seed = async function (knex, tenantId) {
         });
         
         // Clear existing role permissions
-        await knex('role_permissions').where({ tenant }).del();
+        await db.table('role_permissions').del();
         console.log('Cleared existing role permissions');
         
         for (const role of roles) {
@@ -51,6 +55,7 @@ exports.seed = async function (knex, tenantId) {
                     'contact:create:msp', 'contact:read:msp', 'contact:update:msp', 'contact:delete:msp',
                     'credit:create:msp', 'credit:read:msp', 'credit:update:msp', 'credit:delete:msp', 'credit:transfer:msp', 'credit:reconcile:msp', 'financial:create:msp', 'financial:read:msp', 'financial:update:msp', 'financial:delete:msp', 'financial:transfer:msp',
                     'document:create:msp', 'document:read:msp', 'document:update:msp', 'document:delete:msp',
+                    'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp', 'interaction:delete:msp',
                     'invoice:create:msp', 'invoice:read:msp', 'invoice:update:msp', 'invoice:delete:msp', 'invoice:generate:msp', 'invoice:finalize:msp', 'invoice:send:msp', 'invoice:void:msp',
                     'profile:create:msp', 'profile:read:msp', 'profile:update:msp',
                     'project:read:msp', 'project:update:msp',
@@ -78,6 +83,7 @@ exports.seed = async function (knex, tenantId) {
                     'client:read:msp', 'client:delete:msp',
                     'contact:read:msp', 'contact:delete:msp',
                     'document:create:msp', 'document:read:msp', 'document:update:msp',
+                    'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp',
                     'profile:read:msp', 'profile:update:msp',
                     'project:read:msp',
                     'project_task:create:msp', 'project_task:read:msp', 'project_task:update:msp',
@@ -106,6 +112,7 @@ exports.seed = async function (knex, tenantId) {
                     'client:read:msp', 'client:delete:msp',
                     'contact:read:msp', 'contact:delete:msp',
                     'document:create:msp', 'document:read:msp', 'document:update:msp',
+                    'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp',
                     'profile:read:msp', 'profile:update:msp',
                     'project:read:msp',
                     'project_task:create:msp', 'project_task:read:msp', 'project_task:update:msp',
@@ -133,6 +140,7 @@ exports.seed = async function (knex, tenantId) {
                     'client:create:msp', 'client:read:msp', 'client:update:msp',
                     'contact:create:msp', 'contact:read:msp', 'contact:update:msp',
                     'document:create:msp', 'document:read:msp', 'document:update:msp',
+                    'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp',
                     'invoice:read:msp',
                     'profile:read:msp', 'profile:update:msp',
                     'project:create:msp', 'project:read:msp', 'project:update:msp', 'project:delete:msp',
@@ -162,6 +170,7 @@ exports.seed = async function (knex, tenantId) {
                     'client:read:msp',
                     'contact:read:msp',
                     'document:read:msp',
+                    'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp',
                     'profile:read:msp',
                     'project:read:msp',
                     'project_task:read:msp',
@@ -240,7 +249,7 @@ exports.seed = async function (knex, tenantId) {
                     permission_id: permId
                 }));
 
-                await knex('role_permissions').insert(rolePermissionsToAdd);
+                await db.table('role_permissions').insert(rolePermissionsToAdd);
                 console.log(`Added ${rolePermissionsToAdd.length} permissions to ${role.role_name} role (${role.msp ? 'MSP' : 'Client'}) for tenant ${tenant}`);
             } else {
                 console.log(`No permissions found for ${role.role_name} role (${role.msp ? 'MSP' : 'Client'})`);

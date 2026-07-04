@@ -1,17 +1,20 @@
 'use server'
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import type { Knex } from 'knex';
 
 
 // Type definitions for reports
 export interface ContractRevenue {
   contract_name: string;
+  client_id: string;
   client_name: string;
+  logoUrl?: string | null;
   monthly_recurring: number;
   total_billed_ytd: number;
   status: 'active' | 'upcoming' | 'expired';
@@ -20,7 +23,9 @@ export interface ContractRevenue {
 export interface ContractExpiration {
   client_contract_id?: string;
   contract_name: string;
+  client_id: string;
   client_name: string;
+  logoUrl?: string | null;
   end_date: string;
   decision_due_date?: string | null;
   renewal_mode?: 'none' | 'manual' | 'auto' | null;
@@ -32,7 +37,9 @@ export interface ContractExpiration {
 
 export interface BucketUsage {
   contract_name: string;
+  client_id: string;
   client_name: string;
+  logoUrl?: string | null;
   total_hours: number;
   used_hours: number;
   remaining_hours: number;
@@ -64,6 +71,39 @@ type ContractRevenueFactRow = {
   item_detail_id?: string | null;
   service_period_end?: string | Date | null;
   allocated_amount?: string | number | null;
+};
+
+type ContractRevenueAssignmentRow = {
+  client_contract_id: string;
+  client_id: string;
+  is_active: boolean | null;
+  start_date: string | Date | null;
+  end_date: string | Date | null;
+  contract_id: string;
+  contract_name: string;
+  client_name: string | null;
+};
+
+type ContractLineRateRow = {
+  contract_id: string;
+  custom_rate: string | number | null;
+};
+
+type ContractExpirationRow = {
+  client_contract_id: string;
+  contract_id: string;
+  contract_name: string;
+  client_id: string;
+  client_name: string | null;
+  is_active: boolean | null;
+  start_date: string | Date | null;
+  end_date: string | Date | null;
+  decision_due_date: string | Date | null;
+  renewal_mode: string | null;
+  use_tenant_renewal_defaults: boolean | null;
+  tenant_default_renewal_mode: string | null;
+  queue_status: RenewalWorkItemStatus | null;
+  monthly_value: string | number | null;
 };
 
 const EXCLUDED_INVOICE_STATUSES = ['draft', 'Draft', 'cancelled', 'Cancelled', 'canceled', 'Canceled'] as const;
@@ -99,20 +139,11 @@ async function getContractRevenueYtdByAssignment(
   yearStartDateOnly: string,
   nextYearStartDateOnly: string
 ): Promise<Map<string, number>> {
+  const db = tenantDb(knex, tenant);
   // Contract revenue is the report family that intentionally pivots to
   // canonical recurring service periods when detail rows exist. Expiration and
   // renewal reporting below stay assignment-date based instead.
-  const revenueFactRows = await knex('invoice_charges as ic')
-    .join('invoices as inv', function joinInvoices() {
-      this.on('ic.invoice_id', '=', 'inv.invoice_id').andOn('ic.tenant', '=', 'inv.tenant');
-    })
-    .leftJoin('invoice_charge_details as iid', function joinChargeDetails() {
-      this.on('ic.item_id', '=', 'iid.item_id').andOn('ic.tenant', '=', 'iid.tenant');
-    })
-    .leftJoin('invoice_charge_fixed_details as iifd', function joinFixedDetails() {
-      this.on('iid.item_detail_id', '=', 'iifd.item_detail_id').andOn('iid.tenant', '=', 'iifd.tenant');
-    })
-    .where({ 'ic.tenant': tenant })
+  const revenueFactQuery = db.table('invoice_charges as ic')
     .whereNotIn('inv.status', EXCLUDED_INVOICE_STATUSES)
     .whereNotNull('ic.client_contract_id')
     .select(
@@ -123,7 +154,11 @@ async function getContractRevenueYtdByAssignment(
       'iid.item_detail_id',
       'iid.service_period_end',
       'iifd.allocated_amount'
-    ) as ContractRevenueFactRow[];
+    );
+  db.tenantJoin(revenueFactQuery, 'invoices as inv', 'ic.invoice_id', 'inv.invoice_id');
+  db.tenantJoin(revenueFactQuery, 'invoice_charge_details as iid', 'ic.item_id', 'iid.item_id', { type: 'left' });
+  db.tenantJoin(revenueFactQuery, 'invoice_charge_fixed_details as iifd', 'iid.item_detail_id', 'iifd.item_detail_id', { type: 'left' });
+  const revenueFactRows = (await revenueFactQuery) as unknown as ContractRevenueFactRow[];
 
   const rowsByItemId = new Map<string, ContractRevenueFactRow[]>();
   for (const row of revenueFactRows) {
@@ -197,6 +232,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
   }
   try {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     const today = new Date();
     const yearStartDateOnly = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0)).toISOString().slice(0, 10);
@@ -208,14 +244,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
       nextYearStartDateOnly
     );
 
-    const data = await knex('client_contracts as cc')
-      .join('contracts as c', function joinContracts() {
-        this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('clients as cl', function joinClients() {
-        this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
-      })
-      .where({ 'cc.tenant': tenant })
+    const dataQuery = db.table('client_contracts as cc')
       .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
       .whereNotNull('c.owner_client_id')
       .select(
@@ -228,14 +257,17 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
         'c.contract_name',
         'cl.client_name'
       );
+    db.tenantJoin(dataQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
+    db.tenantJoin(dataQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
+    const data = (await dataQuery) as unknown as ContractRevenueAssignmentRow[];
 
     const aggregatedMap = new Map<string, any>();
 
     for (const row of data) {
       const assignmentStatus = deriveClientContractStatus({
         isActive: Boolean(row.is_active),
-        startDate: row.start_date,
-        endDate: row.end_date,
+        startDate: normalizeDateOnly(row.start_date),
+        endDate: normalizeDateOnly(row.end_date),
         now: today,
       });
       const status = mapAssignmentStatusToRevenueStatus(assignmentStatus);
@@ -247,6 +279,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
         client_contract_id: row.client_contract_id,
         contract_id: row.contract_id,
         contract_name: row.contract_name,
+        client_id: row.client_id,
         client_name: row.client_name || 'Unknown Client',
         monthly_recurring: 0,
         total_billed_ytd: invoiceMap.get(row.client_contract_id) || 0,
@@ -254,12 +287,11 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
       });
     }
 
-    const contractLines = await knex('contract_lines as cl')
-      .where({ 'cl.tenant': tenant })
+    const contractLines = (await db.table('contract_lines as cl')
       .select(
         'cl.contract_id',
         'cl.custom_rate'
-      );
+      )) as unknown as ContractLineRateRow[];
 
     for (const contractLine of contractLines) {
       const rateInCents = Math.round(Number(contractLine.custom_rate) || 0);
@@ -271,7 +303,21 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
       }
     }
 
-    return Array.from(aggregatedMap.values()).map(({ client_contract_id, contract_id, ...rest }) => rest);
+    const rows: ContractRevenue[] = Array.from(aggregatedMap.values()).map(
+      ({ client_contract_id, contract_id, ...rest }) => rest
+    );
+
+    const clientIds = Array.from(
+      new Set(rows.map((row) => row.client_id).filter((id): id is string => Boolean(id)))
+    );
+    if (clientIds.length > 0) {
+      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+      for (const row of rows) {
+        row.logoUrl = row.client_id ? logoUrlsMap.get(row.client_id) ?? null : null;
+      }
+    }
+
+    return rows;
   } catch (error) {
     console.error('Error fetching contract revenue report:', error);
     if (error instanceof Error) {
@@ -291,23 +337,12 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
   }
   try {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     const today = new Date();
 
-    const data = await knex('contracts as c')
-      .join('client_contracts as cc', function joinClientContracts() {
-        this.on('c.contract_id', '=', 'cc.contract_id').andOn('c.tenant', '=', 'cc.tenant');
-      })
-      .leftJoin('clients as cl', function joinClients() {
-        this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
-      })
-      .leftJoin('contract_lines as cln', function joinLines() {
-        this.on('c.contract_id', '=', 'cln.contract_id').andOn('c.tenant', '=', 'cln.tenant');
-      })
-      .leftJoin('default_billing_settings as dbs', function joinDefaultBillingSettings() {
-        this.on('cc.tenant', '=', 'dbs.tenant');
-      })
-      .where({ 'c.tenant': tenant, 'cc.is_active': true })
+    const dataQuery = db.table('contracts as c')
+      .where({ 'cc.is_active': true })
       .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
       .whereNotNull('c.owner_client_id')
       .whereNotNull('cc.end_date')
@@ -315,6 +350,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         'cc.client_contract_id',
         'c.contract_id',
         'c.contract_name',
+        'cc.client_id',
         'cl.client_name',
         'cc.is_active',
         'cc.start_date',
@@ -327,20 +363,31 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         knex.raw('COALESCE(cln.custom_rate, 0) as monthly_value')
       )
       .orderBy('cc.end_date', 'asc');
+    db.tenantJoin(dataQuery, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id');
+    db.tenantJoin(dataQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
+    db.tenantJoin(dataQuery, 'contract_lines as cln', 'c.contract_id', 'cln.contract_id', { type: 'left' });
+    db.tenantJoin(dataQuery, 'default_billing_settings as dbs', 'cc.tenant', 'dbs.tenant', {
+      type: 'left',
+      rootTenantColumn: 'cc.tenant',
+    });
+    const data = (await dataQuery) as unknown as ContractExpirationRow[];
 
     const expirationMap = new Map<string, ContractExpiration>();
 
     for (const row of data) {
       const assignmentStatus = deriveClientContractStatus({
         isActive: Boolean(row.is_active),
-        startDate: row.start_date,
-        endDate: row.end_date,
+        startDate: normalizeDateOnly(row.start_date),
+        endDate: normalizeDateOnly(row.end_date),
         now: today,
       });
       if (assignmentStatus !== 'active') {
         continue;
       }
 
+      if (!row.end_date) {
+        continue;
+      }
       const endDate = new Date(row.end_date);
       const daysUntilExpiration = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       const contractRenewalMode = row.renewal_mode === 'none' || row.renewal_mode === 'manual' || row.renewal_mode === 'auto'
@@ -362,25 +409,40 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
       const key = row.client_contract_id;
       const existing = expirationMap.get(key);
       if (existing) {
-        existing.monthly_value += row.monthly_value || 0;
+        existing.monthly_value += Number(row.monthly_value ?? 0) || 0;
         continue;
       }
 
       expirationMap.set(key, {
         client_contract_id: row.client_contract_id,
         contract_name: row.contract_name,
+        client_id: row.client_id,
         client_name: row.client_name || 'Unknown Client',
         end_date: endDate.toISOString().split('T')[0],
         decision_due_date: row.decision_due_date ? new Date(row.decision_due_date).toISOString().split('T')[0] : null,
         renewal_mode: effectiveRenewalMode,
         queue_status: row.queue_status ?? null,
         days_until_expiration: Math.max(0, daysUntilExpiration),
-        monthly_value: row.monthly_value || 0,
+        monthly_value: Number(row.monthly_value ?? 0) || 0,
         auto_renew: effectiveRenewalMode === 'auto'
       });
     }
 
-    return Array.from(expirationMap.values()).map(({ client_contract_id: _ignored, ...item }) => item);
+    const rows: ContractExpiration[] = Array.from(expirationMap.values()).map(
+      ({ client_contract_id: _ignored, ...item }) => item
+    );
+
+    const clientIds = Array.from(
+      new Set(rows.map((row) => row.client_id).filter((id): id is string => Boolean(id)))
+    );
+    if (clientIds.length > 0) {
+      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+      for (const row of rows) {
+        row.logoUrl = row.client_id ? logoUrlsMap.get(row.client_id) ?? null : null;
+      }
+    }
+
+    return rows;
   } catch (error) {
     console.error('Error fetching contract expiration report:', error);
     if (error instanceof Error) {
@@ -400,32 +462,27 @@ export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<B
   }
   try {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Query for bucket-type contract lines and their time tracking
     // Note: We're working with contracts that have bucket-type lines
     // For now, we'll show all bucket contracts without specific hour allocations
     // (as the bucket config is stored separately and not directly linked to contract_line_id)
-    const data = await knex('contracts as c')
-      .leftJoin('contract_lines as cl_line', function joinLines() {
-        this.on('c.contract_id', '=', 'cl_line.contract_id').andOn('c.tenant', '=', 'cl_line.tenant');
-      })
-      .leftJoin('client_contracts as cc', function joinClientContracts() {
-        this.on('c.contract_id', '=', 'cc.contract_id').andOn('c.tenant', '=', 'cc.tenant');
-      })
-      .leftJoin('clients as cl', function joinClients() {
-        this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
-      })
-      .leftJoin('time_entries as te', function joinTimeEntries() {
-        this.on('cl_line.contract_line_id', '=', 'te.contract_line_id').andOn('cl_line.tenant', '=', 'te.tenant');
-      })
-      .where({ 'c.tenant': tenant, 'cl_line.contract_line_type': 'Bucket' })
+    const dataQuery = db.table('contracts as c')
+      .where({ 'cl_line.contract_line_type': 'Bucket' })
       .select(
         'c.contract_id',
         'c.contract_name',
+        'cl.client_id',
         'cl.client_name',
         knex.raw('COALESCE(SUM(te.billable_duration), 0) as used_minutes')
       )
-      .groupBy('c.contract_id', 'c.contract_name', 'cl.client_name');
+      .groupBy('c.contract_id', 'c.contract_name', 'cl.client_id', 'cl.client_name');
+    db.tenantJoin(dataQuery, 'contract_lines as cl_line', 'c.contract_id', 'cl_line.contract_id', { type: 'left' });
+    db.tenantJoin(dataQuery, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id', { type: 'left' });
+    db.tenantJoin(dataQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
+    db.tenantJoin(dataQuery, 'time_entries as te', 'cl_line.contract_line_id', 'te.contract_line_id', { type: 'left' });
+    const data = await dataQuery;
 
     const bucketUsages: BucketUsage[] = data
       .filter((row: any) => row.contract_name) // Filter out null results
@@ -440,6 +497,7 @@ export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<B
 
         return {
           contract_name: row.contract_name,
+          client_id: row.client_id,
           client_name: row.client_name || 'Unknown Client',
           total_hours: totalHours,
           used_hours: usedHours,
@@ -448,6 +506,16 @@ export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<B
           overage_hours: overageHours
         };
       });
+
+    const clientIds = Array.from(
+      new Set(bucketUsages.map((row) => row.client_id).filter((id): id is string => Boolean(id)))
+    );
+    if (clientIds.length > 0) {
+      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+      for (const row of bucketUsages) {
+        row.logoUrl = row.client_id ? logoUrlsMap.get(row.client_id) ?? null : null;
+      }
+    }
 
     return bucketUsages;
   } catch (error) {
@@ -469,14 +537,14 @@ export const getProfitabilityReport = withAuth(async (user, { tenant }): Promise
   }
   try {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     const today = new Date();
     const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0));
     const excludedInvoiceStatuses = ['draft', 'Draft', 'cancelled', 'Cancelled', 'canceled', 'Canceled'];
 
     // Get total revenue for the year using SQL aggregation to avoid duplication
-    const revenueResult = await knex('invoices')
-      .where({ tenant })
+    const revenueResult = await db.table('invoices')
       .whereNotIn('status', excludedInvoiceStatuses)
       .whereRaw('invoice_date >= ?', [yearStart.toISOString()])
       .select(knex.raw('SUM(total_amount) as total_revenue')) as Array<{ total_revenue: string | number | null }>;
@@ -485,8 +553,7 @@ export const getProfitabilityReport = withAuth(async (user, { tenant }): Promise
     const totalRevenue = Number(revenueResult[0]?.total_revenue ?? 0) || 0;
 
     // Get time entries and cost data for the year - simplified approach
-    const timeEntries = await knex('time_entries as te')
-      .where({ 'te.tenant': tenant })
+    const timeEntries = await db.table('time_entries as te')
       .whereRaw('te.start_time >= ?', [yearStart.toISOString()])
       .select(knex.raw('SUM(billable_duration) as total_minutes')) as { total_minutes: number }[];
 
@@ -538,6 +605,7 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
   }
   try {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     const revenueData = await getContractRevenueReport();
 
@@ -562,12 +630,8 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
     inNinetyDays.setUTCDate(inNinetyDays.getUTCDate() + 90);
     const summaryNinetyDaysDateOnly = inNinetyDays.toISOString().slice(0, 10);
 
-    const atRiskDecisions = await knex('client_contracts as cc')
-      .join('contracts as c', function joinContracts() {
-        this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-      })
+    const atRiskDecisionQuery = db.table('client_contracts as cc')
       .where({
-        'cc.tenant': tenant,
         'cc.is_active': true,
       })
       .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
@@ -581,8 +645,9 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
       })
       .andWhere('cc.decision_due_date', '>=', summaryTodayDateOnly)
       .andWhere('cc.decision_due_date', '<=', summaryNinetyDaysDateOnly)
-      .countDistinct('cc.client_contract_id as count')
-      .first() as { count: string } | undefined;
+      .countDistinct('cc.client_contract_id as count');
+    db.tenantJoin(atRiskDecisionQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
+    const atRiskDecisions = await atRiskDecisionQuery.first() as { count: string } | undefined;
     const atRiskDecisionCount = Number(atRiskDecisions?.count ?? 0);
 
     return {

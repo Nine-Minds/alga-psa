@@ -7,9 +7,19 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     testTimeout: 20000,
+    // Inline next-auth/@auth/core/next so vite transforms them and the next/server
+    // alias below applies to next-auth's internal `import "next/server"`. Without it
+    // the contract-wizard / automatic-invoices component suites render-crash on a
+    // fresh CI install ("Cannot find module next/server"). Matches tickets.
+    server: {
+      deps: {
+        inline: ['next-auth', '@auth/core', 'next'],
+      },
+    },
   },
   resolve: {
     alias: [
+      { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
       {
         find: /^@alga-psa\/billing\/(.*)$/,
         replacement: `${path.resolve(__dirname, './src')}/$1`,

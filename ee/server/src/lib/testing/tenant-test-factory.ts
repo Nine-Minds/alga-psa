@@ -5,6 +5,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantComplete, type TenantCreationInput, type TenantCreationResult } from './tenant-creation';
 
 export interface TenantTestData {
@@ -57,7 +58,7 @@ export async function createTestTenant(
 
   // Initialize tenant settings if requested
   if (options.initializeTenantSettings) {
-    await db('tenant_settings')
+    await tenantDb(db, result.tenantId).table('tenant_settings')
       .insert({
         tenant: result.tenantId,
         onboarding_completed: options.onboardingCompleted ?? false,

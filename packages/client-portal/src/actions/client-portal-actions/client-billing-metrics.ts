@@ -1,25 +1,15 @@
 'use server';
 
 import { z } from 'zod';
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, withTransaction, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { ITimeEntry } from '@alga-psa/types';
 import {
-  IService,
-  IServiceType,
   IClientContract,
-  IContractLine,
-  IBucketUsage,
-  IContractLineService
 } from '@alga-psa/types';
 import { ITicket } from '@alga-psa/types';
-import { IProjectTask, IProject, IProjectPhase } from '@alga-psa/types';
+import { IProjectTask } from '@alga-psa/types';
 import { IUsageRecord } from '@alga-psa/types';
-import {
-  IContractLineServiceConfiguration,
-  IContractLineServiceBucketConfig
-} from '@alga-psa/types';
 import { toPlainDate, formatDateOnly } from '@alga-psa/core';
 import { withAuth } from '@alga-psa/auth';
 
@@ -67,11 +57,12 @@ export const getClientHoursByService = withAuth(async (
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant);
+
       // Get user's client_id
-      const userRecord = await trx('users')
+      const userRecord = await scopedDb.table('users')
         .where({
           user_id: user.user_id,
-          tenant
         })
         .first();
 
@@ -79,10 +70,9 @@ export const getClientHoursByService = withAuth(async (
         throw new Error('User not associated with a contact');
       }
 
-      const contact = await trx('contacts')
+      const contact = await scopedDb.table('contacts')
         .where({
           contact_name_id: userRecord.contact_id,
-          tenant
         })
         .first();
 
@@ -95,8 +85,7 @@ export const getClientHoursByService = withAuth(async (
       console.log(`Fetching hours by service for client client ${clientId} in tenant ${tenant} from ${startDate} to ${endDate}`);
 
       // Base query for time entries within the date range and for the tenant
-      const timeEntriesQuery = trx<ITimeEntry>('time_entries')
-      .where('time_entries.tenant', tenant)
+      const timeEntriesQuery = scopedDb.table<ITimeEntry>('time_entries')
       .where('time_entries.billable_duration', '>', 0)
       .where('start_time', '>=', startDate)
       .where('start_time', '<=', endDate);
@@ -105,23 +94,16 @@ export const getClientHoursByService = withAuth(async (
     // We need to join time_entries to either tickets or projects to filter by clientId
 
       // Subquery for tickets linked to the client
-      const ticketClientSubquery = trx<ITicket>('tickets')
+      const ticketClientSubquery = scopedDb.table<ITicket>('tickets')
       .select('ticket_id')
-      .where({ client_id: clientId, tenant: tenant });
+      .where({ client_id: clientId });
 
       // Subquery for project tasks linked to the client
-      const projectTaskClientSubquery = trx<IProjectTask>('project_tasks')
-      .join<IProjectPhase>('project_phases', function() {
-        this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
-            .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
-      })
-      .join<IProject>('projects', function() {
-        this.on('project_phases.project_id', '=', 'projects.project_id')
-            .andOn('project_phases.tenant', '=', 'projects.tenant');
-      })
+      const projectTaskClientSubquery = scopedDb.table<IProjectTask>('project_tasks')
       .select('project_tasks.task_id')
-      .where('projects.client_id', '=', clientId)
-      .andWhere('project_tasks.tenant', '=', tenant);
+      .where('projects.client_id', '=', clientId);
+      scopedDb.tenantJoin(projectTaskClientSubquery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+      scopedDb.tenantJoin(projectTaskClientSubquery, 'projects', 'project_phases.project_id', 'projects.project_id');
 
     // Apply the client filter using the subqueries
     timeEntriesQuery.where(function() {
@@ -135,15 +117,8 @@ export const getClientHoursByService = withAuth(async (
     });
 
     // --- Join Service Catalog and Service Types ---
-    timeEntriesQuery
-      .join<IService>('service_catalog as sc', function() {
-        this.on('time_entries.service_id', '=', 'sc.service_id')
-            .andOn('time_entries.tenant', '=', 'sc.tenant');
-      })
-      .leftJoin<IServiceType>('service_types as st', function() {
-        this.on('sc.custom_service_type_id', '=', 'st.id')
-            .andOn('sc.tenant', '=', 'st.tenant');
-      });
+    scopedDb.tenantJoin(timeEntriesQuery, 'service_catalog as sc', 'time_entries.service_id', 'sc.service_id');
+    scopedDb.tenantJoin(timeEntriesQuery, 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' });
 
     // --- Aggregation and Grouping ---
     const groupByColumn = groupByServiceType ? 'st.name' : 'sc.service_name';
@@ -223,11 +198,12 @@ export const getClientUsageMetrics = withAuth(async (
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant);
+
       // Get user's client_id
-      const userRecord = await trx('users')
+      const userRecord = await scopedDb.table('users')
         .where({
           user_id: user.user_id,
-          tenant
         })
         .first();
 
@@ -235,10 +211,9 @@ export const getClientUsageMetrics = withAuth(async (
         throw new Error('User not associated with a contact');
       }
 
-      const contact = await trx('contacts')
+      const contact = await scopedDb.table('contacts')
         .where({
           contact_name_id: userRecord.contact_id,
-          tenant
         })
         .first();
 
@@ -252,13 +227,8 @@ export const getClientUsageMetrics = withAuth(async (
 
       console.log(`Fetching usage metrics for client client ${clientId} in tenant ${tenant} from ${startDate} to ${endDate}`);
 
-      const query = trx<IUsageRecord>('usage_tracking as ut')
-      .join<IService>('service_catalog as sc', function() {
-        this.on('ut.service_id', '=', 'sc.service_id')
-            .andOn('ut.tenant', '=', 'sc.tenant');
-      })
+      const query = scopedDb.table<IUsageRecord>('usage_tracking as ut')
       .where('ut.client_id', clientId)
-        .andWhere('ut.tenant', tenant)
         .andWhere(trx.raw('ut.usage_date::date'), '>=', startDate)
         .andWhere(trx.raw('ut.usage_date::date'), '<=', endDate)
         .select(
@@ -269,6 +239,7 @@ export const getClientUsageMetrics = withAuth(async (
         )
         .groupBy('ut.service_id', 'sc.service_name', 'sc.unit_of_measure')
         .orderBy('sc.service_name');
+      scopedDb.tenantJoin(query, 'service_catalog as sc', 'ut.service_id', 'sc.service_id');
 
       const rawResults: any[] = await query;
 
@@ -336,35 +307,27 @@ export const getClientBucketUsageHistory = withAuth(async (
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const userRecord = await trx('users').where({ user_id: user.user_id, tenant }).first();
+      const scopedDb = tenantDb(trx, tenant);
+
+      const userRecord = await scopedDb.table('users').where({ user_id: user.user_id }).first();
       if (!userRecord?.contact_id) throw new Error('User not associated with a contact');
 
-      const contact = await trx('contacts').where({ contact_name_id: userRecord.contact_id, tenant }).first();
+      const contact = await scopedDb.table('contacts').where({ contact_name_id: userRecord.contact_id }).first();
       if (!contact?.client_id) throw new Error('Contact not associated with a client');
 
       const clientId = contact.client_id;
 
-      let query: any = trx('bucket_usage as bu')
-        .join('contract_line_service_configuration as clsc', function(this: any) {
-          this.on('bu.contract_line_id', '=', 'clsc.contract_line_id')
-            .andOn('bu.service_catalog_id', '=', 'clsc.service_id')
-            .andOn('bu.tenant', '=', 'clsc.tenant')
-            .andOnVal('clsc.configuration_type', 'Bucket');
-        })
-        .join('contract_line_service_bucket_config as clsb', function(this: any) {
-          this.on('clsc.config_id', '=', 'clsb.config_id')
-            .andOn('clsc.tenant', '=', 'clsb.tenant');
-        })
-        .join('contract_lines as cl', function(this: any) {
-          this.on('cl.contract_line_id', '=', 'clsc.contract_line_id')
-            .andOn('cl.tenant', '=', 'clsc.tenant');
-        })
-        .join('service_catalog as sc', function(this: any) {
-          this.on('clsc.service_id', '=', 'sc.service_id')
-            .andOn('clsc.tenant', '=', 'sc.tenant');
-        })
+      let query: any = scopedDb.table('bucket_usage as bu')
         .where('bu.client_id', clientId)
-        .andWhere('bu.tenant', tenant);
+      scopedDb.tenantJoin(query, 'contract_line_service_configuration as clsc', 'bu.contract_line_id', 'clsc.contract_line_id', {
+        on(join) {
+          join.andOn('bu.service_catalog_id', '=', 'clsc.service_id')
+            .andOnVal('clsc.configuration_type', 'Bucket');
+        },
+      });
+      scopedDb.tenantJoin(query, 'contract_line_service_bucket_config as clsb', 'clsc.config_id', 'clsb.config_id');
+      scopedDb.tenantJoin(query, 'contract_lines as cl', 'clsc.contract_line_id', 'cl.contract_line_id');
+      scopedDb.tenantJoin(query, 'service_catalog as sc', 'clsc.service_id', 'sc.service_id');
 
       if (serviceId) {
         query = query.andWhere('clsc.service_id', serviceId);
@@ -431,11 +394,12 @@ export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<C
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant);
+
       // Get user's client_id
-      const userRecord = await trx('users')
+      const userRecord = await scopedDb.table('users')
         .where({
           user_id: user.user_id,
-          tenant
         })
         .first();
 
@@ -443,10 +407,9 @@ export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<C
         throw new Error('User not associated with a contact');
       }
 
-      const contact = await trx('contacts')
+      const contact = await scopedDb.table('contacts')
         .where({
           contact_name_id: userRecord.contact_id,
-          tenant
         })
         .first();
 
@@ -461,37 +424,8 @@ export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<C
       const currentDate = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
       console.log(`Fetching bucket usage for client client ${clientId} in tenant ${tenant} as of ${currentDate}`);
 
-      const query = trx<IClientContract>('client_contracts as cc')
-      .join<IContractLine>('contract_lines as cl', function() {
-        this.on('cc.contract_id', '=', 'cl.contract_id')
-            .andOn('cc.tenant', '=', 'cl.tenant');
-      })
-      .join<IContractLineService>('contract_line_services as ps', function() {
-        this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
-            .andOn('cl.tenant', '=', 'ps.tenant');
-      })
-      .join<IService>('service_catalog as sc', function() {
-        this.on('ps.service_id', '=', 'sc.service_id')
-            .andOn('ps.tenant', '=', 'sc.tenant');
-      })
-      .join<IContractLineServiceConfiguration>('contract_line_service_configuration as psc', function() {
-        this.on('ps.contract_line_id', '=', 'psc.contract_line_id')
-            .andOn('ps.service_id', '=', 'psc.service_id')
-            .andOn('ps.tenant', '=', 'psc.tenant');
-      })
-      .join<IContractLineServiceBucketConfig>('contract_line_service_bucket_config as psbc', function() {
-        this.on('psc.config_id', '=', 'psbc.config_id')
-            .andOn('psc.tenant', '=', 'psbc.tenant');
-      })
-      .leftJoin<IBucketUsage>('bucket_usage as bu', function() {
-        this.on('cl.contract_line_id', '=', 'bu.contract_line_id')
-            .andOn('cc.client_id', '=', 'bu.client_id')
-            .andOn('cc.tenant', '=', 'bu.tenant')
-            .andOn('bu.period_start', '<=', trx.raw('?', [currentDate]))
-            .andOn('bu.period_end', '>', trx.raw('?', [currentDate]));
-      })
+      const query = scopedDb.table<IClientContract>('client_contracts as cc')
       .where('cc.client_id', clientId)
-      .andWhere('cc.tenant', tenant)
       .andWhere('cc.is_active', true)
         .andWhere('cc.start_date', '<=', trx.raw('?', [currentDate]))
         .andWhere(function() {
@@ -509,6 +443,23 @@ export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<C
           'bu.period_start',
           'bu.period_end'
         );
+      scopedDb.tenantJoin(query, 'contract_lines as cl', 'cc.contract_id', 'cl.contract_id');
+      scopedDb.tenantJoin(query, 'contract_line_services as ps', 'cl.contract_line_id', 'ps.contract_line_id');
+      scopedDb.tenantJoin(query, 'service_catalog as sc', 'ps.service_id', 'sc.service_id');
+      scopedDb.tenantJoin(query, 'contract_line_service_configuration as psc', 'ps.contract_line_id', 'psc.contract_line_id', {
+        on(join) {
+          join.andOn('ps.service_id', '=', 'psc.service_id');
+        },
+      });
+      scopedDb.tenantJoin(query, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id');
+      scopedDb.tenantJoin(query, 'bucket_usage as bu', 'cl.contract_line_id', 'bu.contract_line_id', {
+        type: 'left',
+        on(join) {
+          join.andOn('cc.client_id', '=', 'bu.client_id')
+            .andOn('bu.period_start', '<=', trx.raw('?', [currentDate]))
+            .andOn('bu.period_end', '>', trx.raw('?', [currentDate]));
+        },
+      });
 
       const rawResults: any[] = await query;
 

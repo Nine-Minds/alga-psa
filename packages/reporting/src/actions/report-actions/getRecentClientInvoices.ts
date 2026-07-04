@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import type { IInvoice } from '@alga-psa/types';
 import { z } from 'zod';
@@ -42,7 +42,7 @@ export const getRecentClientInvoices = withAuth(async (
 
   try {
     const invoices: RecentInvoice[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoices')
+      return await tenantDb(trx, tenant).table('invoices')
         .select(
           'invoice_id',
           'invoice_number',
@@ -54,7 +54,6 @@ export const getRecentClientInvoices = withAuth(async (
         )
         .where({
           client_id: clientId,
-          tenant: tenant,
         })
         .orderBy('invoice_date', 'desc')
         .limit(limit);

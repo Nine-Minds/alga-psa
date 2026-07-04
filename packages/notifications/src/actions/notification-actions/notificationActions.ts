@@ -2,7 +2,7 @@
 
 import { getEmailNotificationService } from "../../notifications/email";
 import { revalidatePath } from "next/cache";
-import { withTransaction, createTenantKnex } from '@alga-psa/db';
+import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import {
@@ -14,6 +14,10 @@ import {
   UserNotificationPreference,
   isLockedCategory
 } from "../../types/notification";
+
+function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
+  return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
+}
 
 export async function getNotificationSettingsAction(tenant: string): Promise<NotificationSettings> {
   const notificationService = getEmailNotificationService();
@@ -37,17 +41,17 @@ export async function getTemplatesAction(tenant: string): Promise<{
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
   
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const systemTemplates = await trx("system_email_templates as t")
+    const db = tenantDb(trx, tenant);
+    let systemTemplatesQuery = tenantScopedTable(trx, "system_email_templates as t", tenant)
       .select(
         "t.*",
         "c.name as category"
-      )
-      .join("notification_subtypes as s", "t.notification_subtype_id", "s.id")
-      .join("notification_categories as c", "s.category_id", "c.id")
-      .orderBy(["c.name", "t.name"]);
+      );
+    systemTemplatesQuery = db.tenantJoin(systemTemplatesQuery, "notification_subtypes as s", "t.notification_subtype_id", "s.id");
+    systemTemplatesQuery = db.tenantJoin(systemTemplatesQuery, "notification_categories as c", "s.category_id", "c.id");
+    const systemTemplates = await systemTemplatesQuery.orderBy(["c.name", "t.name"]);
       
-    const tenantTemplates = await trx("tenant_email_templates")
-      .where({ tenant })
+    const tenantTemplates = await tenantScopedTable(trx, "tenant_email_templates", tenant)
       .orderBy("name");
       
     return { systemTemplates, tenantTemplates };
@@ -72,7 +76,7 @@ export async function cloneSystemTemplateAction(
   
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get the system template
-    const systemTemplate = await trx("system_email_templates")
+    const systemTemplate = await tenantScopedTable(trx, "system_email_templates", tenant)
       .where({ id: systemTemplateId })
       .first();
       
@@ -116,8 +120,8 @@ export async function deactivateTenantTemplateAction(
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
   
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await trx("tenant_email_templates")
-      .where({ tenant, name })
+    await tenantScopedTable(trx, "tenant_email_templates", tenant)
+      .where({ name })
       .del();
   });
     
@@ -128,11 +132,14 @@ export const getCategoriesAction = withAuth(async (_user, { tenant }): Promise<N
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const categories = await trx('notification_categories as nc')
-      .leftJoin('tenant_notification_category_settings as tcs', function() {
-        this.on('tcs.category_id', 'nc.id')
-            .andOn('tcs.tenant', trx.raw('?', [tenant]));
-      })
+    const db = tenantDb(trx, tenant);
+    const query = db.table('notification_categories as nc') as Knex.QueryBuilder<any, any>;
+    db.tenantJoin(query, 'tenant_notification_category_settings as tcs', 'tcs.category_id', 'nc.id', {
+      type: 'left',
+      tenantPredicate: 'literal',
+    });
+
+    const categories = await query
       .select(
         'nc.id',
         'nc.name',
@@ -145,7 +152,7 @@ export const getCategoriesAction = withAuth(async (_user, { tenant }): Promise<N
       .orderBy('nc.name');
 
     // Add is_locked flag based on category name
-    return categories.map(cat => ({
+    return categories.map((cat: NotificationCategory) => ({
       ...cat,
       is_locked: isLockedCategory(cat.name)
     }));
@@ -160,11 +167,14 @@ export const getCategoryWithSubtypesAction = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const category = await trx('notification_categories as nc')
-      .leftJoin('tenant_notification_category_settings as tcs', function() {
-        this.on('tcs.category_id', 'nc.id')
-            .andOn('tcs.tenant', trx.raw('?', [tenant]));
-      })
+    const db = tenantDb(trx, tenant);
+    const categoryQuery = db.table('notification_categories as nc') as Knex.QueryBuilder<any, any>;
+    db.tenantJoin(categoryQuery, 'tenant_notification_category_settings as tcs', 'tcs.category_id', 'nc.id', {
+      type: 'left',
+      tenantPredicate: 'literal',
+    });
+
+    const category = await categoryQuery
       .select(
         'nc.id',
         'nc.name',
@@ -181,11 +191,13 @@ export const getCategoryWithSubtypesAction = withAuth(async (
       throw new Error("Category not found");
     }
 
-    const subtypes = await trx('notification_subtypes as ns')
-      .leftJoin('tenant_notification_subtype_settings as tss', function() {
-        this.on('tss.subtype_id', 'ns.id')
-            .andOn('tss.tenant', trx.raw('?', [tenant]));
-      })
+    const subtypesQuery = db.table('notification_subtypes as ns') as Knex.QueryBuilder<any, any>;
+    db.tenantJoin(subtypesQuery, 'tenant_notification_subtype_settings as tss', 'tss.subtype_id', 'ns.id', {
+      type: 'left',
+      tenantPredicate: 'literal',
+    });
+
+    const subtypes = await subtypesQuery
       .select(
         'ns.id',
         'ns.category_id',
@@ -213,6 +225,8 @@ export const updateCategoryAction = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const db = tenantDb(trx, tenant);
+
     // Check permission within transaction context
     const hasUpdatePermission = await hasPermission(currentUser, 'settings', 'update', trx);
     if (!hasUpdatePermission) {
@@ -220,7 +234,7 @@ export const updateCategoryAction = withAuth(async (
     }
 
     // Verify the category exists
-    const exists = await trx("notification_categories")
+    const exists = await tenantScopedTable(trx, "notification_categories", tenant)
       .where({ id })
       .first();
 
@@ -237,8 +251,8 @@ export const updateCategoryAction = withAuth(async (
     }
 
     // Get existing tenant settings (if any) to preserve values not being updated
-    const existingSettings = await trx('tenant_notification_category_settings')
-      .where({ tenant, category_id: id })
+    const existingSettings = await tenantScopedTable(trx, 'tenant_notification_category_settings', tenant)
+      .where({ category_id: id })
       .first();
 
     // Build update object with only defined values, defaulting to existing or true
@@ -248,7 +262,7 @@ export const updateCategoryAction = withAuth(async (
     const now = new Date();
 
     // Upsert into tenant-specific settings table
-    await trx('tenant_notification_category_settings')
+    await db.table('tenant_notification_category_settings')
       .insert({
         tenant,
         category_id: id,
@@ -263,11 +277,13 @@ export const updateCategoryAction = withAuth(async (
       });
 
     // Return the updated category with tenant-specific settings
-    const updated = await trx('notification_categories as nc')
-      .leftJoin('tenant_notification_category_settings as tcs', function() {
-        this.on('tcs.category_id', 'nc.id')
-            .andOn('tcs.tenant', trx.raw('?', [tenant]));
-      })
+    const updatedQuery = db.table('notification_categories as nc') as Knex.QueryBuilder<any, any>;
+    db.tenantJoin(updatedQuery, 'tenant_notification_category_settings as tcs', 'tcs.category_id', 'nc.id', {
+      type: 'left',
+      tenantPredicate: 'literal',
+    });
+
+    const updated = await updatedQuery
       .select(
         'nc.id',
         'nc.name',
@@ -299,6 +315,8 @@ export const updateSubtypeAction = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const db = tenantDb(trx, tenant);
+
     // Check permission within transaction context
     const hasUpdatePermission = await hasPermission(currentUser, 'settings', 'update', trx);
     if (!hasUpdatePermission) {
@@ -306,7 +324,7 @@ export const updateSubtypeAction = withAuth(async (
     }
 
     // Verify the subtype exists
-    const exists = await trx("notification_subtypes")
+    const exists = await db.table("notification_subtypes")
       .where({ id })
       .first();
 
@@ -315,8 +333,8 @@ export const updateSubtypeAction = withAuth(async (
     }
 
     // Get existing tenant settings (if any) to preserve values not being updated
-    const existingSettings = await trx('tenant_notification_subtype_settings')
-      .where({ tenant, subtype_id: id })
+    const existingSettings = await tenantScopedTable(trx, 'tenant_notification_subtype_settings', tenant)
+      .where({ subtype_id: id })
       .first();
 
     // Build update object with only defined values, defaulting to existing or true
@@ -326,7 +344,7 @@ export const updateSubtypeAction = withAuth(async (
     const now = new Date();
 
     // Upsert into tenant-specific settings table
-    await trx('tenant_notification_subtype_settings')
+    await db.table('tenant_notification_subtype_settings')
       .insert({
         tenant,
         subtype_id: id,
@@ -341,11 +359,13 @@ export const updateSubtypeAction = withAuth(async (
       });
 
     // Return the updated subtype with tenant-specific settings
-    const updated = await trx('notification_subtypes as ns')
-      .leftJoin('tenant_notification_subtype_settings as tss', function() {
-        this.on('tss.subtype_id', 'ns.id')
-            .andOn('tss.tenant', trx.raw('?', [tenant]));
-      })
+    const updatedQuery = db.table('notification_subtypes as ns') as Knex.QueryBuilder<any, any>;
+    db.tenantJoin(updatedQuery, 'tenant_notification_subtype_settings as tss', 'tss.subtype_id', 'ns.id', {
+      type: 'left',
+      tenantPredicate: 'literal',
+    });
+
+    const updated = await updatedQuery
       .select(
         'ns.id',
         'ns.category_id',
@@ -387,8 +407,8 @@ export const sendTestEmailAction = withAuth(async (
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // 1. Get the user's email from the database
-    const userRecord = await trx('users')
-      .where({ user_id: user.user_id, tenant })
+    const userRecord = await tenantScopedTable(trx, 'users', tenant)
+      .where({ user_id: user.user_id })
       .select('email')
       .first();
 
@@ -404,12 +424,9 @@ export const sendTestEmailAction = withAuth(async (
     }
 
     // 3. Load the template
-    const table = templateType === 'system' ? 'system_email_templates' : 'tenant_email_templates';
-    const whereClause = templateType === 'system'
-      ? { id: templateId }
-      : { id: templateId, tenant };
-
-    const template = await trx(table).where(whereClause).first();
+    const template = templateType === 'system'
+      ? await tenantScopedTable(trx, 'system_email_templates', tenant).where({ id: templateId }).first()
+      : await tenantScopedTable(trx, 'tenant_email_templates', tenant).where({ id: templateId }).first();
     if (!template) {
       return { success: false, error: 'Template not found.' };
     }

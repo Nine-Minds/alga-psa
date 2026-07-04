@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 /**
  * Resolves the authenticated client user's client_id.
@@ -10,10 +11,11 @@ export async function getAuthenticatedClientId(
   userId: string,
   tenant: string
 ): Promise<string> {
-  const userRecord = await trx('users')
+  const scopedDb = tenantDb(trx, tenant);
+
+  const userRecord = await scopedDb.table('users')
     .where({
       user_id: userId,
-      tenant: tenant,
     })
     .first();
 
@@ -21,10 +23,9 @@ export async function getAuthenticatedClientId(
     throw new Error('User not associated with a contact');
   }
 
-  const contact = await trx('contacts')
+  const contact = await scopedDb.table('contacts')
     .where({
       contact_name_id: userRecord.contact_id,
-      tenant: tenant,
     })
     .first();
 

@@ -1,4 +1,4 @@
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import {
   TicketModel,
   type CreateCommentInput,
@@ -112,7 +112,7 @@ const createTicketAction: InboundActionDefinition<CreateTicketMappedValues> = {
       const created = await TicketModel.createTicketWithRetry(input, ctx.tenant, trx, {}, undefined, undefined, undefined, 3);
 
       if (mappedValues.asset_id) {
-        await trx('asset_associations').insert({
+        await tenantDb(trx, ctx.tenant).table('asset_associations').insert({
           tenant: ctx.tenant,
           asset_id: mappedValues.asset_id,
           entity_id: created.ticket_id,

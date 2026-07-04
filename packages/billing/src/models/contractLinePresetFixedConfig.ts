@@ -1,7 +1,7 @@
 // server/src/lib/models/contractLinePresetFixedConfig.ts
 import { Knex } from 'knex';
 import type { IContractLinePresetFixedConfig } from '@alga-psa/types';
-import { requireTenantId } from '@alga-psa/db';
+import { requireTenantId, tenantDb } from '@alga-psa/db';
 
 const ContractLinePresetFixedConfig = {
   /**
@@ -14,7 +14,7 @@ const ContractLinePresetFixedConfig = {
     const tenant = await requireTenantId(knexOrTrx);
 
     try {
-      const config = await knexOrTrx<IContractLinePresetFixedConfig>('contract_line_preset_fixed_config')
+      const config = await tenantDb(knexOrTrx, tenant).table<IContractLinePresetFixedConfig>('contract_line_preset_fixed_config')
         .where({
           preset_id: presetId,
           tenant
@@ -50,7 +50,7 @@ const ContractLinePresetFixedConfig = {
 
       if (existing) {
         // Update existing config
-        const [updatedConfig] = await knexOrTrx<IContractLinePresetFixedConfig>('contract_line_preset_fixed_config')
+        const [updatedConfig] = await tenantDb(knexOrTrx, tenant).table<IContractLinePresetFixedConfig>('contract_line_preset_fixed_config')
           .where({
             preset_id: presetId,
             tenant
@@ -64,7 +64,7 @@ const ContractLinePresetFixedConfig = {
         return updatedConfig;
       } else {
         // Insert new config
-        const [createdConfig] = await knexOrTrx<IContractLinePresetFixedConfig>('contract_line_preset_fixed_config')
+        const [createdConfig] = await tenantDb(knexOrTrx, tenant).table<IContractLinePresetFixedConfig>('contract_line_preset_fixed_config')
           .insert(configWithKeys)
           .returning('*');
 
@@ -86,7 +86,7 @@ const ContractLinePresetFixedConfig = {
     const tenant = await requireTenantId(knexOrTrx);
 
     try {
-      await knexOrTrx('contract_line_preset_fixed_config')
+      await tenantDb(knexOrTrx, tenant).table('contract_line_preset_fixed_config')
         .where({
           preset_id: presetId,
           tenant

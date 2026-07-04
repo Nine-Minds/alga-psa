@@ -7,6 +7,7 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IDocument } from '@alga-psa/types';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useContentCardVariant } from '@alga-psa/ui/components';
 import styles from './TicketDetails.module.css';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -41,6 +42,7 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
 }) => {
   const router = useRouter();
   const { getDocumentByTicketId, renderDocuments } = useDocumentsCrossFeature();
+  const isBento = useContentCardVariant() === 'bento';
   const { t } = useTranslation('features/documents');
   const { data: session } = useSession();
   const userId = session?.user?.id || '';
@@ -100,10 +102,19 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
 
   return (
     <ReflectionContainer id={id} label="Ticket Documents">
-      <div {...withDataAutomationId({ id })} className={`${styles['card']}`}>
-        <div className="p-6">
+      <div
+        {...withDataAutomationId({ id })}
+        className={
+          isBento
+            ? 'rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] min-w-0'
+            : `${styles['card']}`
+        }
+      >
+        <div className={isBento ? 'p-4' : 'p-6'}>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">{t('title', 'Documents')}</h2>
+            <h2 className={isBento ? 'text-sm font-semibold text-[rgb(var(--color-text-800))]' : 'text-xl font-bold'}>
+              {t('title', 'Documents')}
+            </h2>
           </div>
           {renderDocuments({
             id: `${id}-documents`,

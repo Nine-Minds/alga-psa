@@ -21,7 +21,7 @@ vi.mock('@alga-psa/db', () => ({
   getUserWithRoles: (...args: unknown[]) => getUserWithRolesMock(...args),
 }));
 
-vi.mock('@alga-psa/tickets/actions', () => ({
+vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({
   getTicketById: (...args: unknown[]) => getTicketByIdMock(...args),
 }));
 

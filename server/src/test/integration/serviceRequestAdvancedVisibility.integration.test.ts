@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { listVisibleServiceRequestCatalogItems } from '../../lib/service-requests/portalCatalog';
 import { submitPortalServiceRequest } from '../../lib/service-requests/submissionService';
@@ -21,21 +22,35 @@ describe('service request advanced visibility provider', () => {
     return Object.prototype.hasOwnProperty.call(columns, columnName);
   }
 
+  function tenantTable(tenant: string, table: string) {
+    return tenantDb(db, tenant).table(table);
+  }
+
+  function tenantRows() {
+    return tenantDb(db, '__test_tenant_fixture__')
+      .unscoped('tenants', 'test fixture creates and removes tenant rows');
+  }
+
+  function schemaTable(table: string) {
+    return tenantDb(db, '__test_schema__')
+      .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+  }
+
   async function cleanupTenant(tenant: string): Promise<void> {
-    await db('service_request_submission_attachments').where({ tenant }).del();
-    await db('service_request_submissions').where({ tenant }).del();
-    await db('service_request_definition_versions').where({ tenant }).del();
-    await db('service_request_definitions').where({ tenant }).del();
-    await db('clients').where({ tenant }).del();
-    await db('users').where({ tenant }).del();
-    await db('tenants').where({ tenant }).del();
+    await tenantTable(tenant, 'service_request_submission_attachments').del();
+    await tenantTable(tenant, 'service_request_submissions').del();
+    await tenantTable(tenant, 'service_request_definition_versions').del();
+    await tenantTable(tenant, 'service_request_definitions').del();
+    await tenantTable(tenant, 'clients').del();
+    await tenantTable(tenant, 'users').del();
+    await tenantRows().where({ tenant }).del();
   }
 
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
-    tenantColumns = await db('tenants').columnInfo();
-    userColumns = await db('users').columnInfo();
-    clientColumns = await db('clients').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
+    clientColumns = await schemaTable('clients').columnInfo();
     resetServiceRequestProviderRegistry();
     registerServiceRequestProviders(await getServiceRequestEnterpriseProviderRegistrations());
   });
@@ -64,7 +79,7 @@ describe('service request advanced visibility provider', () => {
     const definitionId = uuidv4();
     const versionId = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       ...(hasColumn(tenantColumns, 'company_name')
         ? { company_name: `Tenant ${tenant.slice(0, 8)}` }
@@ -74,7 +89,7 @@ describe('service request advanced visibility provider', () => {
       ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
     });
 
-    await db('users').insert({
+    await tenantTable(tenant, 'users').insert({
       tenant,
       user_id: requesterUserId,
       username: `requester-${tenant.slice(0, 8)}`,
@@ -85,7 +100,7 @@ describe('service request advanced visibility provider', () => {
       ...(hasColumn(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
     });
 
-    await db('clients').insert([
+    await tenantTable(tenant, 'clients').insert([
       {
         tenant,
         client_id: allowedClientId,
@@ -108,7 +123,7 @@ describe('service request advanced visibility provider', () => {
       },
     ]);
 
-    await db('service_request_definitions').insert({
+    await tenantTable(tenant, 'service_request_definitions').insert({
       tenant,
       definition_id: definitionId,
       name: 'Restricted Workflow Request',
@@ -127,7 +142,7 @@ describe('service request advanced visibility provider', () => {
       published_at: db.fn.now(),
     });
 
-    await db('service_request_definition_versions').insert({
+    await tenantTable(tenant, 'service_request_definition_versions').insert({
       tenant,
       version_id: versionId,
       definition_id: definitionId,
@@ -175,8 +190,8 @@ describe('service request advanced visibility provider', () => {
       })
     ).rejects.toThrow('Service request is not visible or not published');
 
-    const submissions = await db('service_request_submissions')
-      .where({ tenant, definition_id: definitionId })
+    const submissions = await tenantTable(tenant, 'service_request_submissions')
+      .where({ definition_id: definitionId })
       .select('submission_id');
     expect(submissions).toHaveLength(0);
   });

@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 export type OAuthLinkProvider = 'google' | 'microsoft';
@@ -34,6 +35,7 @@ export class OAuthAccountLinkConflictError extends Error {
 }
 
 const TABLE_NAME = 'user_auth_accounts';
+const OAUTH_ACCOUNT_LINK_DISCOVERY_TENANT = 'oauth-account-link-discovery';
 
 function normalizeEmail(email?: string | null): string | null {
   if (!email) {
@@ -46,9 +48,10 @@ export async function upsertOAuthAccountLink(input: OAuthAccountLinkInput): Prom
   const knex = await getAdminConnection();
   const metadataPayload = input.metadata ?? {};
   const providerEmail = normalizeEmail(input.providerEmail);
+  const db = tenantDb(knex, input.tenant);
 
   try {
-    await knex(TABLE_NAME)
+    await db.table(TABLE_NAME)
       .insert({
         tenant: input.tenant,
         user_id: input.userId,
@@ -95,7 +98,11 @@ export async function findOAuthAccountLink(
   providerAccountId: string,
 ): Promise<OAuthAccountLinkRecord | undefined> {
   const knex = await getAdminConnection();
-  const record = await knex<OAuthAccountLinkRecord>(TABLE_NAME)
+  const record = await tenantDb(knex, OAUTH_ACCOUNT_LINK_DISCOVERY_TENANT)
+    .unscoped<OAuthAccountLinkRecord>(
+      TABLE_NAME,
+      'OAuth account sign-in discovers the owning tenant from provider account id before tenant context exists',
+    )
     .where({
       provider,
       provider_account_id: providerAccountId,
@@ -110,7 +117,7 @@ export async function listOAuthAccountLinksForUser(
   userId: string,
 ): Promise<OAuthAccountLinkRecord[]> {
   const knex = await getAdminConnection();
-  return knex<OAuthAccountLinkRecord>(TABLE_NAME)
-    .where({ tenant, user_id: userId })
+  return tenantDb(knex, tenant).table<OAuthAccountLinkRecord>(TABLE_NAME)
+    .where({ user_id: userId })
     .orderBy('linked_at', 'desc');
 }

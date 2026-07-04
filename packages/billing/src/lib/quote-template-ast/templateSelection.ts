@@ -1,5 +1,6 @@
 import type { TemplateAst, IQuote } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 import Quote from '../../models/quote';
 import {
@@ -25,14 +26,17 @@ function countDistinctItemLocations(quote: IQuote): number {
 const cloneAst = (ast: TemplateAst): TemplateAst =>
   JSON.parse(JSON.stringify(ast)) as TemplateAst;
 
+const standardQuoteTemplates = (knexOrTrx: Knex | Knex.Transaction) =>
+  tenantDb(knexOrTrx, '__standard_quote_template_ast_catalog__').table('standard_quote_document_templates');
+
 const getCustomTemplateAst = async (
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   templateId: string
 ): Promise<TemplateAst | null> => {
-  const record = await knexOrTrx('quote_document_templates')
+  const record = await tenantDb(knexOrTrx, tenant).table('quote_document_templates')
     .select('templateAst')
-    .where({ tenant, template_id: templateId })
+    .where({ template_id: templateId })
     .first<{ templateAst?: TemplateAst | null }>();
 
   return record?.templateAst ? cloneAst(record.templateAst) : null;
@@ -42,7 +46,7 @@ const getStandardTemplateAst = async (
   knexOrTrx: Knex | Knex.Transaction,
   code: string
 ): Promise<TemplateAst | null> => {
-  const record = await knexOrTrx('standard_quote_document_templates')
+  const record = await standardQuoteTemplates(knexOrTrx)
     .select('templateAst')
     .where({ standard_quote_document_template_code: code })
     .first<{ templateAst?: TemplateAst | null }>();
@@ -58,7 +62,7 @@ const getStandardTemplateAstByTemplateId = async (
   knexOrTrx: Knex | Knex.Transaction,
   templateId: string
 ): Promise<{ templateAst: TemplateAst; standardCode: string } | null> => {
-  const record = await knexOrTrx('standard_quote_document_templates')
+  const record = await standardQuoteTemplates(knexOrTrx)
     .select('templateAst', 'standard_quote_document_template_code')
     .where({ template_id: templateId })
     .first<{ templateAst?: TemplateAst | null; standard_quote_document_template_code?: string }>();
@@ -113,9 +117,9 @@ export async function resolveQuoteTemplateAst(
     }
   }
 
-  const tenantAssignment = await knexOrTrx('quote_document_template_assignments')
+  const tenantAssignment = await tenantDb(knexOrTrx, tenant).table('quote_document_template_assignments')
     .select('template_source', 'standard_quote_document_template_code', 'quote_document_template_id')
-    .where({ tenant, scope_type: 'tenant' })
+    .where({ scope_type: 'tenant' })
     .whereNull('scope_id')
     .first<{
       template_source?: 'standard' | 'custom';

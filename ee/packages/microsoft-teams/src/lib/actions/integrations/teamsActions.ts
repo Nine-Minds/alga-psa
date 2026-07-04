@@ -1,7 +1,7 @@
 import { hasPermission } from '@alga-psa/auth/rbac';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import { fetchMicrosoftGraphAppToken } from '../../graphAuth';
 import { getTeamsAvailability } from '../../teams/teamsAvailability';
@@ -153,12 +153,12 @@ function mapTeamsIntegrationRow(row?: TeamsIntegrationRow | null): NonNullable<T
 }
 
 async function getTeamsIntegrationRow(knex: any, tenant: string): Promise<TeamsIntegrationRow | undefined> {
-  const row = await knex('teams_integrations').where({ tenant }).first();
+  const row = await tenantDb(knex, tenant).table<TeamsIntegrationRow>('teams_integrations').first();
   return row || undefined;
 }
 
 async function getMicrosoftProfileRow(knex: any, tenant: string, profileId: string): Promise<MicrosoftProfileRow | undefined> {
-  const row = await knex('microsoft_profiles').where({ tenant, profile_id: profileId }).first();
+  const row = await tenantDb(knex, tenant).table<MicrosoftProfileRow>('microsoft_profiles').where({ profile_id: profileId }).first();
   return row || undefined;
 }
 
@@ -300,15 +300,15 @@ async function ensureOnlineMeetingInteractionType(
   userId: string | null
 ): Promise<void> {
   try {
-    const systemType = await knex('system_interaction_types')
+    const db = tenantDb(knex, tenant);
+    const systemType = await db.table('system_interaction_types')
       .where({ type_name: 'Online Meeting' })
       .first('type_id', 'icon');
     if (!systemType) {
       return;
     }
 
-    const existing = await knex('interaction_types')
-      .where({ tenant })
+    const existing = await db.table('interaction_types')
       .andWhere((builder: any) => {
         builder.where({ system_type_id: systemType.type_id }).orWhere({ type_name: 'Online Meeting' });
       })
@@ -317,10 +317,10 @@ async function ensureOnlineMeetingInteractionType(
       return;
     }
 
-    const maxRow = await knex('interaction_types').where({ tenant }).max('display_order as max').first();
+    const maxRow = await db.table('interaction_types').max('display_order as max').first();
     const nextOrder = (typeof maxRow?.max === 'number' ? maxRow.max : -1) + 1;
 
-    await knex('interaction_types').insert({
+    await db.table('interaction_types').insert({
       tenant,
       type_name: 'Online Meeting',
       icon: systemType.icon || 'video',
@@ -355,6 +355,7 @@ export async function saveTeamsIntegrationSettingsImpl(
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     const existing = await getTeamsIntegrationRow(knex, tenant);
     const next = {
@@ -452,9 +453,9 @@ export async function saveTeamsIntegrationSettingsImpl(
       // Citus distributes teams_integrations by `tenant`; the distribution column
       // must never appear in an UPDATE SET clause, even when the value is unchanged.
       const { tenant: _tenant, created_at: _createdAt, created_by: _createdBy, ...updatePayload } = row;
-      await knex('teams_integrations').where({ tenant }).update(updatePayload);
+      await db.table('teams_integrations').update(updatePayload);
     } else {
-      await knex('teams_integrations').insert(row);
+      await db.table('teams_integrations').insert(row);
     }
 
     // Provision the Online Meeting interaction type once the tenant activates Teams.

@@ -4,7 +4,7 @@ import { decode } from '@auth/core/jwt';
 import jwt from 'jsonwebtoken';
 import { getCurrentUser, getNextAuthSecret, getSessionCookieName } from '@alga-psa/auth';
 import { getUserWithRoles } from '@alga-psa/db';
-import { getTicketById } from '@alga-psa/tickets/actions';
+import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
 import { auth } from '../../../auth/[...nextauth]/auth';
 import { getHocuspocusJwtSecret } from '@/lib/hocuspocusJwt';
 

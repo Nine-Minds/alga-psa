@@ -1,7 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 export interface SchedulingTicketDetailsRecord {
@@ -29,34 +29,17 @@ export const getSchedulingTicketById = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const ticket = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return trx('tickets as t')
-      .leftJoin('statuses as s', function joinStatuses() {
-        this.on('t.status_id', '=', 's.status_id')
-          .andOn('t.tenant', '=', 's.tenant');
-      })
-      .leftJoin('priorities as p', function joinPriorities() {
-        this.on('t.priority_id', '=', 'p.priority_id')
-          .andOn('t.tenant', '=', 'p.tenant');
-      })
-      .leftJoin('boards as b', function joinBoards() {
-        this.on('t.board_id', '=', 'b.board_id')
-          .andOn('t.tenant', '=', 'b.tenant');
-      })
-      .leftJoin('clients as c', function joinClients() {
-        this.on('t.client_id', '=', 'c.client_id')
-          .andOn('t.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('contacts as ct', function joinContacts() {
-        this.on('t.contact_name_id', '=', 'ct.contact_name_id')
-          .andOn('t.tenant', '=', 'ct.tenant');
-      })
-      .leftJoin('users as u', function joinUsers() {
-        this.on('t.assigned_to', '=', 'u.user_id')
-          .andOn('t.tenant', '=', 'u.tenant');
-      })
+    const scopedDb = tenantDb(trx, tenant) as any;
+    const query = scopedDb.table('tickets as t');
+    scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+    scopedDb.tenantJoin(query, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+    scopedDb.tenantJoin(query, 'boards as b', 't.board_id', 'b.board_id', { type: 'left' });
+    scopedDb.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+    scopedDb.tenantJoin(query, 'contacts as ct', 't.contact_name_id', 'ct.contact_name_id', { type: 'left' });
+    scopedDb.tenantJoin(query, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
+    return query
       .where({
         't.ticket_id': ticketId,
-        't.tenant': tenant,
       })
       .select(
         't.ticket_id',

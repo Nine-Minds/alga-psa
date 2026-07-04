@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { requireTenantId } from '@alga-psa/db';
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
@@ -293,9 +293,8 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
     && executionWindow.periodKey
   ) {
     const linkedRow = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
-      return trx('recurring_service_periods')
+      return tenantDb(trx, params.tenant).table('recurring_service_periods')
         .where({
-          tenant: params.tenant,
           cadence_owner: 'client',
           schedule_key: executionWindow.scheduleKey,
           period_key: executionWindow.periodKey,
@@ -314,9 +313,8 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
     && executionWindow.contractLineId
   ) {
     const linkedRow = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
-      return trx('recurring_service_periods')
+      return tenantDb(trx, params.tenant).table('recurring_service_periods')
         .where({
-          tenant: params.tenant,
           obligation_type: 'contract_line',
           obligation_id: executionWindow.contractLineId,
           invoice_window_start: params.selectorInput.windowStart,
@@ -344,22 +342,15 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
 
   const recurringServicePeriod = await withTransaction(
     params.knex,
-    async (trx: Knex.Transaction) =>
-      trx('recurring_service_periods as rsp')
-        .join('contract_lines as cl', function () {
-          this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-            .andOn('cl.tenant', '=', 'rsp.tenant');
-        })
-        .join('contracts as ct', function () {
-          this.on('ct.contract_id', '=', 'cl.contract_id')
-            .andOn('ct.tenant', '=', 'cl.tenant');
-        })
-        .join('clients as c', function () {
-          this.on('c.client_id', '=', 'ct.owner_client_id')
-            .andOn('c.tenant', '=', 'ct.tenant');
-        })
+    async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, params.tenant);
+      const query = db.table('recurring_service_periods as rsp');
+      db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+      db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+      db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+
+      return query
         .where({
-          'rsp.tenant': params.tenant,
           'rsp.cadence_owner': 'client',
           'c.client_id': params.clientId,
           'rsp.invoice_window_start': normalizedWindowStart,
@@ -369,7 +360,8 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
         .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
         .orderBy('rsp.service_period_start', 'asc')
         .orderBy('rsp.revision', 'asc')
-        .first('rsp.schedule_key', 'rsp.period_key'),
+        .first('rsp.schedule_key', 'rsp.period_key');
+    },
   );
 
   if (!recurringServicePeriod?.schedule_key || !recurringServicePeriod?.period_key) {
@@ -407,21 +399,15 @@ async function resolveCanonicalSelectorInputsForClientWindow(params: {
   const normalizedWindowEnd = normalizeRecurringWindowDate(params.windowEnd);
 
   const buildWindowRowsQuery = (trx: Knex.Transaction) =>
-    trx('recurring_service_periods as rsp')
-      .join('contract_lines as cl', function () {
-        this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-          .andOn('cl.tenant', '=', 'rsp.tenant');
-      })
-      .join('contracts as ct', function () {
-        this.on('ct.contract_id', '=', 'cl.contract_id')
-          .andOn('ct.tenant', '=', 'cl.tenant');
-      })
-      .join('clients as c', function () {
-        this.on('c.client_id', '=', 'ct.owner_client_id')
-          .andOn('c.tenant', '=', 'ct.tenant');
-      })
+    (() => {
+      const db = tenantDb(trx, params.tenant);
+      const query = db.table('recurring_service_periods as rsp');
+      db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+      db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+      db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+      return query;
+    })()
       .where({
-        'rsp.tenant': params.tenant,
         'c.client_id': params.clientId,
         'rsp.invoice_window_start': normalizedWindowStart,
         'rsp.invoice_window_end': normalizedWindowEnd,
@@ -505,18 +491,14 @@ async function assertClientCadenceWindowFullyMaterialized(params: {
 }): Promise<void> {
   const activeRecurringLineRows = await withTransaction(
     params.knex,
-    async (trx: Knex.Transaction) =>
-      trx('client_contracts as cc')
-        .join('contracts as ct', function () {
-          this.on('ct.contract_id', '=', 'cc.contract_id')
-            .andOn('ct.tenant', '=', 'cc.tenant');
-        })
-        .join('contract_lines as cl', function () {
-          this.on('cl.contract_id', '=', 'ct.contract_id')
-            .andOn('cl.tenant', '=', 'ct.tenant');
-        })
+    async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, params.tenant);
+      const query = db.table('client_contracts as cc');
+      db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
+      db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
+
+      return query
         .where({
-          'cc.tenant': params.tenant,
           'cc.client_id': params.clientId,
           'cc.is_active': true,
           'cl.cadence_owner': 'client',
@@ -528,7 +510,8 @@ async function assertClientCadenceWindowFullyMaterialized(params: {
           this.where('cc.end_date', '>=', params.windowStart)
             .orWhereNull('cc.end_date');
         })
-        .select('cl.contract_line_id'),
+        .select('cl.contract_line_id');
+    },
   );
 
   const activeRecurringLineIds = Array.from(
@@ -545,9 +528,8 @@ async function assertClientCadenceWindowFullyMaterialized(params: {
   const materializedRows = await withTransaction(
     params.knex,
     async (trx: Knex.Transaction) =>
-      trx('recurring_service_periods')
+      tenantDb(trx, params.tenant).table('recurring_service_periods')
         .where({
-          tenant: params.tenant,
           cadence_owner: 'client',
           invoice_window_start: params.windowStart,
           invoice_window_end: params.windowEnd,
@@ -599,22 +581,15 @@ async function normalizeRecurringSelectorInput(params: {
   if (params.selectorInput.executionWindow.kind === 'client_cadence_window') {
     const recurringServicePeriod = await withTransaction(
       params.knex,
-      async (trx: Knex.Transaction) =>
-        trx('recurring_service_periods as rsp')
-          .join('contract_lines as cl', function () {
-            this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-              .andOn('cl.tenant', '=', 'rsp.tenant');
-          })
-          .join('contracts as ct', function () {
-            this.on('ct.contract_id', '=', 'cl.contract_id')
-              .andOn('ct.tenant', '=', 'cl.tenant');
-          })
-          .join('clients as c', function () {
-            this.on('c.client_id', '=', 'ct.owner_client_id')
-              .andOn('c.tenant', '=', 'ct.tenant');
-          })
+      async (trx: Knex.Transaction) => {
+        const db = tenantDb(trx, params.tenant);
+        const query = db.table('recurring_service_periods as rsp');
+        db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+        db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+        db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+
+        return query
           .where({
-            'rsp.tenant': params.tenant,
             'rsp.cadence_owner': 'client',
             'rsp.schedule_key': params.selectorInput.executionWindow.scheduleKey,
             'rsp.period_key': params.selectorInput.executionWindow.periodKey,
@@ -626,7 +601,8 @@ async function normalizeRecurringSelectorInput(params: {
           .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
           .orderBy('rsp.service_period_start', 'asc')
           .orderBy('rsp.revision', 'asc')
-          .first('rsp.schedule_key', 'rsp.period_key'),
+          .first('rsp.schedule_key', 'rsp.period_key');
+      },
     );
 
     if (!recurringServicePeriod?.schedule_key || !recurringServicePeriod?.period_key) {
@@ -656,21 +632,14 @@ async function normalizeRecurringSelectorInput(params: {
     const recurringServicePeriod = await withTransaction(
       params.knex,
       async (trx: Knex.Transaction) => {
-        const query = trx('recurring_service_periods as rsp')
-          .join('contract_lines as cl', function () {
-            this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-              .andOn('cl.tenant', '=', 'rsp.tenant');
-          })
-          .join('contracts as ct', function () {
-            this.on('ct.contract_id', '=', 'cl.contract_id')
-              .andOn('ct.tenant', '=', 'cl.tenant');
-          })
-          .join('clients as c', function () {
-            this.on('c.client_id', '=', 'ct.owner_client_id')
-              .andOn('c.tenant', '=', 'ct.tenant');
-          })
+        const db = tenantDb(trx, params.tenant);
+        const query = db.table('recurring_service_periods as rsp');
+        db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+        db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+        db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+
+        query
           .where({
-            'rsp.tenant': params.tenant,
             'rsp.cadence_owner': 'contract',
             'rsp.obligation_type': 'contract_line',
             'rsp.invoice_window_start': normalizedWindowStart,
@@ -900,24 +869,20 @@ async function resolveApprovalBlockerRowsForSelectorInputs(params: {
     scheduleKey?: string | null;
   }> = [];
 
-  const persistedWindowRows = await withTransaction(params.knex, async (trx: Knex.Transaction) =>
-    trx('recurring_service_periods as rsp')
-      .join('contract_lines as cl', function joinContractLines() {
-        this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-          .andOn('cl.tenant', '=', 'rsp.tenant');
-      })
-      .join('contracts as ct', function joinContracts() {
-        this.on('ct.contract_id', '=', 'cl.contract_id')
-          .andOn('ct.tenant', '=', 'cl.tenant');
-      })
-      .where('rsp.tenant', params.tenant)
+  const persistedWindowRows = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+    const db = tenantDb(trx, params.tenant);
+    const query = db.table('recurring_service_periods as rsp');
+    db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+    db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+
+    return query
       .where('ct.owner_client_id', canonicalSelection.clientId)
       .where('rsp.invoice_window_start', canonicalSelection.windowStart)
       .where('rsp.invoice_window_end', canonicalSelection.windowEnd)
       .whereIn('rsp.obligation_type', ['contract_line', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE])
       .whereIn('rsp.lifecycle_state', [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES])
-      .select('rsp.obligation_id', 'rsp.service_period_start', 'rsp.service_period_end', 'rsp.schedule_key'),
-  );
+      .select('rsp.obligation_id', 'rsp.service_period_start', 'rsp.service_period_end', 'rsp.schedule_key');
+  });
 
   for (const row of persistedWindowRows) {
     resolvedRows.push({
@@ -1116,8 +1081,8 @@ export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
-    return await trx('client_billing_cycles')
-      .where({ billing_cycle_id, tenant })
+    return await tenantDb(trx, tenant).table('client_billing_cycles')
+      .where({ billing_cycle_id })
       .first();
   });
 
@@ -1223,27 +1188,30 @@ async function adaptToWasmViewModel(
   if (tenant) {
     const { knex } = await createTenantKnex(tenant); // Get knex instance again if needed
     const tenantClientLink = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('tenant_companies')
-        .where({ tenant: tenant, is_default: true })
+      return await tenantDb(trx, tenant).table('tenant_companies')
+        .where({ is_default: true })
         .select('client_id')
         .first();
     });
 
     if (tenantClientLink) {
       const tenantClientDetails = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('clients as c')
-          .leftJoin('client_locations as cl', function() {
-            this.on('c.client_id', '=', 'cl.client_id')
-                .andOn('c.tenant', '=', 'cl.tenant')
-                .andOn('cl.is_default', '=', trx.raw('true'));
-          })
+        const db = tenantDb(trx, tenant);
+        const query = db.table('clients as c');
+        db.tenantJoin(query, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+          type: 'left',
+          on(join) {
+            join.andOn('cl.is_default', '=', trx.raw('true'));
+          },
+        });
+
+        return await query
           .select(
             'c.client_name',
             'cl.address_line1 as address'
           )
           .where({
             'c.client_id': tenantClientLink.client_id,
-            'c.tenant': tenant
           })
           .first();
       });
@@ -1299,8 +1267,8 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     .sort()
     .join('|');
 
-  const clientForValidation = await knex('clients')
-    .where({ client_id, tenant })
+  const clientForValidation = await tenantDb(knex, tenant).table('clients')
+    .where({ client_id })
     .select('client_name')
     .first();
 
@@ -1609,10 +1577,9 @@ export const previewInvoice = withAuth(async (
     }
 
     const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('client_billing_cycles')
+      return await tenantDb(trx, tenant).table('client_billing_cycles')
         .where({
           billing_cycle_id,
-          tenant
         })
         .first();
     });
@@ -1686,10 +1653,9 @@ export const generateInvoice = withAuth(async (
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
-    return await trx('client_billing_cycles')
+    return await tenantDb(trx, tenant).table('client_billing_cycles')
       .where({
         billing_cycle_id,
-        tenant
       })
       .first();
   });
@@ -1811,8 +1777,8 @@ async function generateInvoiceForNormalizedSelectionInputs(params: {
   const cycleStart = normalizedSelectorInput.windowStart;
   const cycleEnd = normalizedSelectorInput.windowEnd;
 
-  const clientForValidation = await knex('clients')
-    .where({ client_id, tenant })
+  const clientForValidation = await tenantDb(knex, tenant).table('clients')
+    .where({ client_id })
     .select('client_name')
     .first();
   if (clientForValidation) {
@@ -1904,10 +1870,10 @@ async function generateInvoiceForNormalizedSelectionInputs(params: {
   }
 
   const clientSettings = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return trx('client_billing_settings').where({ client_id, tenant }).first();
+    return tenantDb(trx, tenant).table('client_billing_settings').where({ client_id }).first();
   });
   const defaultSettings = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return trx('default_billing_settings').where({ tenant }).first();
+    return tenantDb(trx, tenant).table('default_billing_settings').first();
   });
   const settings = clientSettings || defaultSettings;
   if (!settings) {
@@ -2038,8 +2004,8 @@ export const generateInvoicePDF = withAuth(async (
   const pdfGenerationService = createPDFGenerationService(tenant);
 
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('invoices')
-      .where({ invoice_id: invoiceId, tenant })
+    return await tenantDb(trx, tenant).table('invoices')
+      .where({ invoice_id: invoiceId })
       .first(['invoice_number']);
   });
 
@@ -2074,8 +2040,8 @@ export const downloadInvoicePDF = withAuth(async (
 
     // Get invoice details
     const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoices')
-        .where({ invoice_id: invoiceId, tenant })
+      return await tenantDb(trx, tenant).table('invoices')
+        .where({ invoice_id: invoiceId })
         .first();
     });
 
@@ -2195,7 +2161,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
           throw new Error('Permission denied: Cannot create invoices');
         }
 
-        return await trx('invoices').insert(invoiceData).returning('*');
+        return await tenantDb(trx, tenant).table('invoices').insert(invoiceData).returning('*');
       });
       newInvoice = insertedInvoice;
       break;
@@ -2252,8 +2218,8 @@ export const createInvoiceFromBillingResult = withAuth(async (
     // These materials were included by BillingEngine as non-contract charges (like usage/time).
     try {
       const billedAt = Temporal.Now.instant().toString();
-      await trx('ticket_materials')
-        .where({ tenant, client_id: client.client_id, is_billed: false })
+      await tenantDb(trx, tenant).table('ticket_materials')
+        .where({ client_id: client.client_id, is_billed: false })
         .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
         .andWhere('created_at', '>=', cycleStart)
         .andWhere('created_at', '<', cycleEnd)
@@ -2264,8 +2230,8 @@ export const createInvoiceFromBillingResult = withAuth(async (
           updated_at: billedAt
         });
 
-      await trx('project_materials')
-        .where({ tenant, client_id: client.client_id, is_billed: false })
+      await tenantDb(trx, tenant).table('project_materials')
+        .where({ client_id: client.client_id, is_billed: false })
         .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
         .andWhere('created_at', '>=', cycleStart)
         .andWhere('created_at', '<', cycleEnd)
@@ -2302,7 +2268,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
         tenant,
         created_by: userId
       };
-      await trx('invoice_charges').insert(discountItem);
+      await tenantDb(trx, tenant).table('invoice_charges').insert(discountItem);
       discountSubtotalAdjustment += netAmount; // Add negative amount
     }
 
@@ -2325,8 +2291,8 @@ export const createInvoiceFromBillingResult = withAuth(async (
     const creditToApply = Math.min(availableCredit, Math.ceil(totalAmount));
 
     // Update the invoice with subtotal, tax, and total amount
-    await trx('invoices')
-      .where({ invoice_id: newInvoice!.invoice_id, tenant })
+    await tenantDb(trx, tenant).table('invoices')
+      .where({ invoice_id: newInvoice!.invoice_id })
       .update({
         subtotal: finalSubtotal,
         tax: finalTax,

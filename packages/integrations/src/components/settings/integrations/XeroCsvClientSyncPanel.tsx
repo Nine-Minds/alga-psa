@@ -217,7 +217,6 @@ export function XeroCsvClientSyncPanel() {
                     }))
                   }
                   label={t('integrations.xero.csv.clientSync.updateExisting', { defaultValue: 'Update existing clients' })}
-                  containerClassName="mb-0"
                 />
                 <Checkbox
                   id="create-new"
@@ -229,7 +228,6 @@ export function XeroCsvClientSyncPanel() {
                     }))
                   }
                   label={t('integrations.xero.csv.clientSync.createNew', { defaultValue: 'Create new clients' })}
-                  containerClassName="mb-0"
                 />
               </div>
 

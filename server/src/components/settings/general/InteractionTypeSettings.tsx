@@ -62,6 +62,7 @@ const InteractionTypesSettings: React.FC = () => {
   const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
   const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
 
+  // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -378,7 +379,7 @@ const InteractionTypesSettings: React.FC = () => {
                         key={type.type_id} 
                         className="flex items-center space-x-2 p-2 hover:bg-muted/50 border-b last:border-b-0 cursor-pointer"
                       >
-                        <div className="w-8 [&>div]:mb-0">
+                        <div className="w-8">
                           <Checkbox
                             id={`import-type-${type.type_id}`}
                             checked={selectedImportTypes.includes(type.type_id)}

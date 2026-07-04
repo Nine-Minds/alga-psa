@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
   IContractLineServiceConfiguration,
   IContractLineServiceFixedConfig,
@@ -31,6 +31,62 @@ type ClientConfigDetails = {
   userTypeRates?: IUserTypeRate[];
 };
 
+type DbNumeric = number | string;
+
+type ContractLineConfigJoinRow = {
+  config_id: string;
+  configuration_type: IContractLineServiceConfiguration['configuration_type'];
+  custom_rate: DbNumeric | null;
+  quantity: DbNumeric | null;
+  created_at: Date;
+  updated_at: Date;
+  contract_line_id: string;
+  service_id: string;
+};
+
+type ContractLineServiceFixedConfigRow = Omit<IContractLineServiceFixedConfig, 'base_rate'> & {
+  base_rate?: DbNumeric | null;
+};
+
+type ContractLineServiceHourlyCoreRow = Omit<
+  IContractLineServiceHourlyConfig,
+  'hourly_rate' | 'minimum_billable_time' | 'round_up_to_nearest'
+> & {
+  hourly_rate?: DbNumeric | null;
+  minimum_billable_time?: DbNumeric | null;
+  round_up_to_nearest?: DbNumeric | null;
+};
+
+type ContractLineServiceHourlyMetaRow = {
+  config_id: string;
+  minimum_billable_time?: DbNumeric | null;
+  round_up_to_nearest?: DbNumeric | null;
+  enable_overtime?: boolean | number | null;
+  overtime_rate?: DbNumeric | null;
+  overtime_threshold?: DbNumeric | null;
+  enable_after_hours_rate?: boolean | number | null;
+  after_hours_multiplier?: DbNumeric | null;
+  tenant: string;
+  created_at?: Date;
+  updated_at?: Date;
+};
+
+type ContractLineServiceUsageConfigRow = Omit<
+  IContractLineServiceUsageConfig,
+  'minimum_usage' | 'base_rate'
+> & {
+  minimum_usage?: DbNumeric | null;
+  base_rate?: DbNumeric | null;
+};
+
+type ContractLineServiceBucketConfigRow = Omit<
+  IContractLineServiceBucketConfig,
+  'total_minutes' | 'overage_rate'
+> & {
+  total_minutes: DbNumeric;
+  overage_rate: DbNumeric | null;
+};
+
 export class ClientContractServiceConfigurationService {
   private knex: Knex;
   private tenant: string;
@@ -51,30 +107,37 @@ export class ClientContractServiceConfigurationService {
     }
   }
 
+  private table<Row extends object = Record<string, unknown>>(tableExpression: string) {
+    return tenantDb(this.knex, this.tenant).table<Row>(tableExpression);
+  }
+
   async getConfigurationsForClientContractLine(clientContractLineId: string): Promise<ClientConfigDetails[]> {
     await this.initKnex();
 
     // Use contract_line_services and contract_line_service_configuration tables
     // The clientContractLineId is now effectively a contract_line_id
-    const rows = await this.knex('contract_line_services as cls')
-      .join('contract_line_service_configuration as clsc', function () {
-        this.on('clsc.contract_line_id', '=', 'cls.contract_line_id')
-          .andOn('clsc.service_id', '=', 'cls.service_id')
-          .andOn('clsc.tenant', '=', 'cls.tenant');
-      })
+    const db = tenantDb(this.knex, this.tenant);
+    const query = db.table('contract_line_services as cls');
+    db.tenantJoin(query, 'contract_line_service_configuration as clsc', 'clsc.contract_line_id', 'cls.contract_line_id', {
+      on(join) {
+        join.andOn('clsc.service_id', '=', 'cls.service_id');
+      },
+    });
+
+    const rows = await query
       .where({
         'cls.contract_line_id': clientContractLineId,
         'cls.tenant': this.tenant
       })
-      .select(
-        'clsc.config_id',
-        'clsc.configuration_type',
-        'clsc.custom_rate',
-        'clsc.quantity',
-        'clsc.created_at',
-        'clsc.updated_at',
-        'cls.contract_line_id',
-        'cls.service_id'
+      .select<ContractLineConfigJoinRow[]>(
+        'clsc.config_id as config_id',
+        'clsc.configuration_type as configuration_type',
+        'clsc.custom_rate as custom_rate',
+        'clsc.quantity as quantity',
+        'clsc.created_at as created_at',
+        'clsc.updated_at as updated_at',
+        'cls.contract_line_id as contract_line_id',
+        'cls.service_id as service_id'
       );
 
     const results: ClientConfigDetails[] = [];
@@ -111,27 +174,31 @@ export class ClientContractServiceConfigurationService {
     await this.initKnex();
 
     // Use contract_line_services and contract_line_service_configuration tables
-    const row = await this.knex('contract_line_services as cls')
-      .join('contract_line_service_configuration as clsc', function () {
-        this.on('clsc.contract_line_id', '=', 'cls.contract_line_id')
-          .andOn('clsc.service_id', '=', 'cls.service_id')
-          .andOn('clsc.tenant', '=', 'cls.tenant');
-      })
+    const db = tenantDb(this.knex, this.tenant);
+    const query = db.table('contract_line_services as cls');
+    db.tenantJoin(query, 'contract_line_service_configuration as clsc', 'clsc.contract_line_id', 'cls.contract_line_id', {
+      on(join) {
+        join.andOn('clsc.service_id', '=', 'cls.service_id');
+      },
+    });
+
+    const row = await query
       .where({
         'cls.contract_line_id': clientContractLineId,
         'cls.service_id': serviceId,
         'cls.tenant': this.tenant
       })
-      .first(
-        'clsc.config_id',
-        'clsc.configuration_type',
-        'clsc.custom_rate',
-        'clsc.quantity',
-        'clsc.created_at',
-        'clsc.updated_at',
-        'cls.contract_line_id',
-        'cls.service_id'
-      );
+      .select<ContractLineConfigJoinRow[]>(
+        'clsc.config_id as config_id',
+        'clsc.configuration_type as configuration_type',
+        'clsc.custom_rate as custom_rate',
+        'clsc.quantity as quantity',
+        'clsc.created_at as created_at',
+        'clsc.updated_at as updated_at',
+        'cls.contract_line_id as contract_line_id',
+        'cls.service_id as service_id'
+      )
+      .first();
 
     if (!row) {
       return null;
@@ -181,7 +248,7 @@ export class ClientContractServiceConfigurationService {
     // Use contract_line_service_* tables instead of client_contract_service_* tables
     switch (baseConfig.configuration_type) {
       case 'Fixed': {
-        const fixedConfig = await this.knex('contract_line_service_fixed_config')
+        const fixedConfig = await this.table<ContractLineServiceFixedConfigRow>('contract_line_service_fixed_config')
           .where({
             config_id: baseConfig.config_id,
             tenant: this.tenant
@@ -199,14 +266,14 @@ export class ClientContractServiceConfigurationService {
         break;
       }
       case 'Hourly': {
-        const hourlyCore = await this.knex('contract_line_service_hourly_configs')
+        const hourlyCore = await this.table<ContractLineServiceHourlyCoreRow>('contract_line_service_hourly_configs')
           .where({
             config_id: baseConfig.config_id,
             tenant: this.tenant
           })
           .first();
 
-        const hourlyMeta = await this.knex('contract_line_service_hourly_config')
+        const hourlyMeta = await this.table<ContractLineServiceHourlyMetaRow>('contract_line_service_hourly_config')
           .where({
             config_id: baseConfig.config_id,
             tenant: this.tenant
@@ -236,7 +303,7 @@ export class ClientContractServiceConfigurationService {
           after_hours_multiplier?: number | null;
         };
 
-        userTypeRates = await this.knex('user_type_rates')
+        userTypeRates = await this.table<IUserTypeRate>('user_type_rates')
           .where({
             config_id: baseConfig.config_id,
             tenant: this.tenant
@@ -245,7 +312,7 @@ export class ClientContractServiceConfigurationService {
         break;
       }
       case 'Usage': {
-        const usageConfig = await this.knex('contract_line_service_usage_config')
+        const usageConfig = await this.table<ContractLineServiceUsageConfigRow>('contract_line_service_usage_config')
           .where({
             config_id: baseConfig.config_id,
             tenant: this.tenant
@@ -265,7 +332,7 @@ export class ClientContractServiceConfigurationService {
         }
 
         if (usageConfig?.enable_tiered_pricing) {
-          rateTiers = await this.knex('contract_line_service_rate_tiers')
+          rateTiers = await this.table<IContractLineServiceRateTier>('contract_line_service_rate_tiers')
             .where({
               config_id: baseConfig.config_id,
               tenant: this.tenant
@@ -276,7 +343,7 @@ export class ClientContractServiceConfigurationService {
         break;
       }
       case 'Bucket': {
-        const bucketConfig = await this.knex('contract_line_service_bucket_config')
+        const bucketConfig = await this.table<ContractLineServiceBucketConfigRow>('contract_line_service_bucket_config')
           .where({
             config_id: baseConfig.config_id,
             tenant: this.tenant
@@ -286,7 +353,7 @@ export class ClientContractServiceConfigurationService {
         if (bucketConfig) {
           typeConfig = {
             config_id: baseConfig.config_id,
-            total_minutes: bucketConfig.total_minutes,
+            total_minutes: Number(bucketConfig.total_minutes),
             billing_period: bucketConfig.billing_period,
             overage_rate: bucketConfig.overage_rate != null ? Number(bucketConfig.overage_rate) : 0,
             allow_rollover: Boolean(bucketConfig.allow_rollover),

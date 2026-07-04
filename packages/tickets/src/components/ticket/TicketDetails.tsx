@@ -42,8 +42,8 @@ import { useDrawer } from "@alga-psa/ui";
 import { useCatalogShortcut } from "@alga-psa/ui/keyboard-shortcuts";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser, getCurrentUserPermissions } from "@alga-psa/user-composition/actions";
-import { findBoardById } from "@alga-psa/tickets/actions";
-import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
+import { findBoardById } from "../../actions/board-actions/boardActions";
+import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "../../actions/comment-actions/commentActions";
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getAllActiveContacts, getClientLocations, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
 import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
@@ -60,12 +60,15 @@ import { Dialog, DialogContent, DialogFooter } from "@alga-psa/ui/components/Dia
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { getTicketStatuses } from "@alga-psa/reference-data/actions";
 import { getAllPriorities } from "@alga-psa/reference-data/actions";
-import { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket } from "@alga-psa/tickets/actions";
+import { addTicketResource, getTicketResources, removeTicketResource } from "../../actions/ticketResourceActions";
+import { assignTeamToTicket, removeTeamFromTicket } from "../../actions/teamAssignmentActions";
 import { getTeamById, getTeams } from '@alga-psa/teams/actions';
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
 import { Button } from "@alga-psa/ui/components/Button";
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from "@alga-psa/ui/components/Input";
+import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
 import { ExternalLink, Mail, History, Trash2 } from 'lucide-react';
 import { WorkItemType } from "@alga-psa/types";
@@ -77,6 +80,14 @@ import { convertBlockNoteToMarkdown } from "@alga-psa/formatting/blocknoteUtils"
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
 import TicketNavigation from './TicketNavigation';
+import LayoutToggle from './bento/LayoutToggle';
+import TicketBentoLayout from './bento/TicketBentoLayout';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import {
+    getTicketLayoutPreference,
+    setTicketLayoutPreference,
+    type TicketDetailLayout,
+} from '../../actions/ticketLayoutPreference';
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
@@ -421,6 +432,35 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         other: t('origin.other', 'Created via Other'),
     }), [t]);
     const [ticketInfoDirtyFields, setTicketInfoDirtyFields] = useState<string[]>([]);
+
+    // Grid | Entry layout toggle (per-user preference; toggle shown only when
+    // the ticket-bento-layout flag is on). Entry is the default and renders
+    // the existing layout untouched.
+    const { enabled: bentoFlagEnabled } = useFeatureFlag('ticket-bento-layout');
+    const [layoutMode, setLayoutMode] = useState<TicketDetailLayout>('entry');
+    const [timelinePrefOrder, setTimelinePrefOrder] = useState<'asc' | 'desc'>('asc');
+    const [isAllFieldsDrawerOpen, setIsAllFieldsDrawerOpen] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        getTicketLayoutPreference()
+            .then((prefs) => {
+                if (cancelled) return;
+                setLayoutMode(prefs.layout);
+                setTimelinePrefOrder(prefs.timelineOrder);
+            })
+            .catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const handleLayoutModeChange = useCallback((next: TicketDetailLayout) => {
+        setLayoutMode(next);
+        void setTicketLayoutPreference({ layout: next }).catch(() => undefined);
+    }, []);
+
+    const useGridLayout = Boolean(bentoFlagEnabled) && layoutMode === 'grid' && !isInDrawer;
     const [ticketPropertiesDirtyFields, setTicketPropertiesDirtyFields] = useState<string[]>([]);
     const [liveHighlightedFields, setLiveHighlightedFields] = useState<string[]>([]);
     const [liveFieldConflicts, setLiveFieldConflicts] = useState<Partial<Record<string, TicketLiveConflictState>>>({});
@@ -2597,6 +2637,9 @@ const handleClose = () => {
                             </div>
 
                             <div className="flex items-center gap-2">
+                                {bentoFlagEnabled && !isInDrawer ? (
+                                    <LayoutToggle value={layoutMode} onChange={handleLayoutModeChange} />
+                                ) : null}
                                 {/* Add popout button only when in drawer */}
                                 {isInDrawer && (
                                     <Button
@@ -2854,6 +2897,104 @@ const handleClose = () => {
                     isConfirming={isDeletingTimeEntry}
                 />
 
+                {useGridLayout ? (
+                <TicketBentoLayout
+                    id={`${id}-bento`}
+                    ticket={ticket as any}
+                    statusOptions={statusOptions}
+                    priorityOptions={priorityOptions}
+                    boardOptions={boardOptions}
+                    agentOptions={agentOptions}
+                    onSelectChange={handleSelectChange}
+                    responseStateTrackingEnabled={responseStateTrackingEnabled}
+                    hideSlaStatus={hideSlaStatus}
+                    workflowLocked={Boolean(bundle?.isBundleChild)}
+                    onOpenAllFields={() => setIsAllFieldsDrawerOpen(true)}
+                    tags={tags}
+                    onTagsChange={handleTagsChange}
+                    taskActions={renderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
+                    liveHighlightedFields={liveHighlightedFields}
+                    liveFrozenFields={Object.keys(liveFieldConflicts)}
+                    onAgentClick={handleAgentClick}
+                    locations={locations}
+                    conversations={conversations}
+                    userMap={userMap}
+                    contactMap={contactMap}
+                    timelineRefreshKey={conversations.length + activityLogRefreshKey + timeEntriesRefreshKey}
+                    timelineInitialOrder={timelinePrefOrder}
+                    editorKey={editorKey}
+                    isSubmitting={isSubmitting}
+                    onNewCommentContentChange={setNewCommentContent}
+                    onAddNewComment={handleAddNewComment}
+                    currentUser={currentUser ? {
+                        id: currentUser.user_id,
+                        name: `${currentUser.first_name} ${currentUser.last_name}`,
+                        email: currentUser.email,
+                    } : (session?.user?.id ? {
+                        id: session.user.id,
+                        name: session.user.name ?? '',
+                        email: session.user.email ?? undefined,
+                    } : null)}
+                    isEditing={isEditing}
+                    currentComment={currentComment}
+                    onContentChange={handleContentChange}
+                    onSaveComment={handleSave}
+                    onCloseEdit={handleClose}
+                    onEditComment={handleEdit}
+                    onDeleteComment={handleDeleteRequest}
+                    reactionRefreshVersion={reactionRefreshVersion}
+                    canViewCommentMetadataDebug={canViewCommentMetadataDebug}
+                    onClipboardImageUploaded={refreshTicketDocuments}
+                    uploadTicketAttachmentAction={uploadTicketAttachmentAction}
+                    deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
+                    resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
+                    createdByUser={createdByUser}
+                    contactInfo={contactInfo}
+                    client={client}
+                    onContactClick={handleContactClick}
+                    onClientClick={handleClientClick}
+                    checklistItems={checklistItems ?? []}
+                    onChecklistItemsChanged={setChecklistItems}
+                    hideTimeEntry={hideTimeEntry}
+                    isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
+                    elapsedTime={elapsedTime}
+                    isRunning={isRunning}
+                    isTimerLocked={isLockedByOther}
+                    timeDescription={timeDescription}
+                    onTimeDescriptionChange={setTimeDescription}
+                    onStart={handleStartClick}
+                    onPause={handlePauseClick}
+                    onStop={handleStopClick}
+                    onAddTimeEntry={handleAddTimeEntry}
+                    userId={userId || ''}
+                    dateTimeFormat={dateTimeFormat}
+                    timeEntriesRefreshKey={timeEntriesRefreshKey}
+                    onEditTimeEntry={handleEditTimeEntry}
+                    onDeleteTimeEntry={handleRequestDeleteTimeEntry}
+                    renderIntervalManagement={renderIntervalManagement}
+                    additionalAgents={additionalAgents}
+                    availableAgents={availableAgents}
+                    onAddAgent={handleAddAgent}
+                    onRemoveAgent={handleRemoveAgent}
+                    teams={teams}
+                    onUpdateWatchList={handleUpdateWatchList}
+                    watchListSaving={isWatchListSaving}
+                    contacts={contacts}
+                    allContactsForWatchList={allContactsForWatchList}
+                    allContactsForWatchListLoading={allContactsForWatchListLoading}
+                    onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
+                    hideMaterials={hideMaterials}
+                    surveySummaryCard={surveySummaryCard}
+                    associatedAssets={associatedAssets}
+                    documents={documents}
+                    onDocumentCreated={async () => {
+                        router.refresh();
+                    }}
+                    disableAttachmentFolderSelection={disableAttachmentFolderSelection}
+                    disableAttachmentSharing={disableAttachmentSharing}
+                    disableAttachmentLinking={disableAttachmentLinking}
+                />
+                ) : (
                 <div className="flex gap-6 min-w-0">
                     <div className="flex-grow col-span-2 min-w-0" id="ticket-main-content">
                         <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse bg-gray-200 dark:bg-gray-800 h-64 rounded-lg mb-6"></div>}>
@@ -3231,7 +3372,111 @@ const handleClose = () => {
                         {associatedAssets ? <div className="mt-6" id="associated-assets-container">{associatedAssets}</div> : null}
                     </div>
                 </div>
+                )}
             </div>
+            <Drawer
+                id={`${id}-all-fields-drawer`}
+                isOpen={isAllFieldsDrawerOpen}
+                onClose={() => setIsAllFieldsDrawerOpen(false)}
+                width="52rem"
+            >
+                <div className="pr-8">
+                    {isAllFieldsDrawerOpen ? (
+                        <TicketInfo
+                            id={`${id}-all-fields-info`}
+                            titleRef={cardTitleRef}
+                            ticket={ticket}
+                            conversations={conversations}
+                            statusOptions={statusOptions}
+                            agentOptions={agentOptions}
+                            boardOptions={boardOptions}
+                            priorityOptions={priorityOptions}
+                            onSelectChange={handleSelectChange}
+                            onSaveChanges={handleBatchSaveChanges}
+                            onUpdateDescription={handleUpdateDescription}
+                            isSubmitting={isSubmitting}
+                            users={availableAgents}
+                            tags={tags}
+                            allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
+                            onTagsChange={handleTagsChange}
+                            isInDrawer
+                            onItilFieldChange={handleItilFieldChange}
+                            initialCategories={initialCategories}
+                            itilImpact={itilImpact}
+                            itilUrgency={itilUrgency}
+                            isBundledChild={Boolean(bundle?.isBundleChild)}
+                            responseStateTrackingEnabled={responseStateTrackingEnabled}
+                            renderProjectTaskActions={renderCreateProjectTask}
+                            teams={teams}
+                            onAssignTeam={handleAssignTeam}
+                            onRemoveTeamAssignment={async () => {
+                                await handleRemoveTeamAssignment('remove_all');
+                            }}
+                            onClipboardImageUploaded={refreshTicketDocuments}
+                            uploadTicketAttachmentAction={uploadTicketAttachmentAction}
+                            deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
+                            resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
+                            onOpenEmailNotificationLogs={() => setIsEmailNotificationLogsDrawerOpen(true)}
+                            onOpenActivityLog={() => {
+                                setActivityLogRefreshKey((value) => value + 1);
+                                setIsActivityLogDrawerOpen(true);
+                            }}
+                            hideSlaStatus={hideSlaStatus}
+                            additionalAgents={additionalAgentsForInfo}
+                            onLiveDirtyFieldsChange={setTicketInfoDirtyFields}
+                            liveHighlightedFields={liveHighlightedFields}
+                            liveFieldConflicts={liveFieldConflicts}
+                            liveFrozenFields={Object.keys(liveFieldConflicts)}
+                            onKeepLiveConflict={handleKeepLiveConflict}
+                            onTakeLiveConflict={handleTakeLiveConflict}
+                            liveEditingUsers={liveEditingUsers}
+                            onLiveEditingFieldChange={ticketLive.setEditingField}
+                        />
+                    ) : null}
+                    {isAllFieldsDrawerOpen ? (
+                        <div id={`${id}-all-fields-extras`} className="mt-4 pt-4 border-t border-[rgb(var(--color-border-200))] grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <Label htmlFor={`${id}-all-fields-contact-select`}>Contact</Label>
+                                <CustomSelect
+                                    id={`${id}-all-fields-contact-select`}
+                                    value={ticket.contact_name_id ?? 'none'}
+                                    options={[
+                                        { value: 'none', label: 'No contact' },
+                                        ...contacts.map((contact) => ({
+                                            value: contact.contact_name_id,
+                                            label: contact.full_name,
+                                        })),
+                                    ]}
+                                    onValueChange={(value: string) =>
+                                        void handleContactChange(value === 'none' ? null : value)
+                                    }
+                                    className="!w-full"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor={`${id}-all-fields-location-select`}>Location</Label>
+                                <CustomSelect
+                                    id={`${id}-all-fields-location-select`}
+                                    value={ticket.location_id ?? 'none'}
+                                    options={[
+                                        { value: 'none', label: 'No location' },
+                                        ...locations.map((location) => ({
+                                            value: location.location_id,
+                                            label: [location.location_name, location.address_line1]
+                                                .filter(Boolean)
+                                                .join(' – ') || location.location_id,
+                                        })),
+                                    ]}
+                                    onValueChange={(value: string) =>
+                                        void handleLocationChange(value === 'none' ? null : value)
+                                    }
+                                    className="!w-full"
+                                />
+                            </div>
+                        </div>
+                    ) : null}
+                </div>
+            </Drawer>
             <Drawer
                 id={`${id}-email-notification-logs-drawer`}
                 isOpen={isEmailNotificationLogsDrawerOpen}

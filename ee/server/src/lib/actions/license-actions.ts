@@ -6,6 +6,7 @@ import type { AddOnKey } from '@alga-psa/types';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { getStripeService, AppleIapBillingError } from '../stripe/StripeService';
 import { getConnection } from '@/lib/db/db';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { sendCancellationRequestEmail } from '@alga-psa/email/sendCancellationRequestEmail';
 import {
@@ -19,6 +20,14 @@ import {
   IStripeCustomer,
   IScheduledLicenseChange,
 } from 'server/src/interfaces/subscription.interfaces';
+
+async function hasAccountManagementAccess(): Promise<boolean> {
+  return await checkAccountManagementPermission();
+}
+
+function permissionDenied(error = 'Permission denied') {
+  return { success: false as const, error };
+}
 
 /**
  * Server action to get the current license usage for the session tenant
@@ -83,6 +92,10 @@ export async function getInvoicePreviewAction(
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
     }
 
     // Validate quantity - must be a positive integer
@@ -155,6 +168,10 @@ export async function createLicenseCheckoutSessionAction(
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
     }
 
     // Validate quantity - must be a positive integer
@@ -274,15 +291,15 @@ export async function getLicensePricingAction(): Promise<{
     }
 
     const knex = await getConnection(session.user.tenant);
+    const db = tenantDb(knex, session.user.tenant);
 
     // Try to get pricing from the tenant's actual subscription
-    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({ tenant: session.user.tenant })
+    const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
       .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (subscription) {
-      const price = await knex<IStripePrice>('stripe_prices')
+      const price = await db.table<IStripePrice>('stripe_prices')
         .where({ stripe_price_id: subscription.stripe_price_id })
         .first();
 
@@ -350,25 +367,27 @@ export async function getSubscriptionInfoAction(): Promise<IGetSubscriptionInfoR
       };
     }
 
-    const knex = await getConnection(session.user.tenant);
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('Permission denied');
+    }
 
-    // Get active subscription with related price info
-    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: session.user.tenant,
-        status: 'active',
-      })
+    const knex = await getConnection(session.user.tenant);
+    const db = tenantDb(knex, session.user.tenant);
+
+    // Get active, trialing, or past_due subscription with related price info
+    const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
+      .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (!subscription) {
       return {
         success: false,
-        error: 'No active subscription found',
+        error: 'No active, trialing, or past due subscription found',
       };
     }
 
     // Get price info
-    const price = await knex<IStripePrice>('stripe_prices')
+    const price = await db.table<IStripePrice>('stripe_prices')
       .where({
         stripe_price_id: subscription.stripe_price_id,
       })
@@ -423,7 +442,12 @@ export async function getPaymentMethodInfoAction(): Promise<IGetPaymentMethodRes
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
+    }
+
     const knex = await getConnection(session.user.tenant);
+    const db = tenantDb(knex, session.user.tenant);
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
       return {
@@ -433,8 +457,7 @@ export async function getPaymentMethodInfoAction(): Promise<IGetPaymentMethodRes
     }
 
     // Get customer from database
-    const customer = await knex<IStripeCustomer>('stripe_customers')
-      .where({ tenant: session.user.tenant })
+    const customer = await db.table<IStripeCustomer>('stripe_customers')
       .first();
 
     if (!customer) {
@@ -503,7 +526,12 @@ export async function getRecentInvoicesAction(limit: number = 10): Promise<IGetI
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
+    }
+
     const knex = await getConnection(session.user.tenant);
+    const db = tenantDb(knex, session.user.tenant);
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
       return {
@@ -513,8 +541,7 @@ export async function getRecentInvoicesAction(limit: number = 10): Promise<IGetI
     }
 
     // Get customer from database
-    const customer = await knex<IStripeCustomer>('stripe_customers')
-      .where({ tenant: session.user.tenant })
+    const customer = await db.table<IStripeCustomer>('stripe_customers')
       .first();
 
     if (!customer) {
@@ -580,7 +607,12 @@ export async function createCustomerPortalSessionAction(): Promise<IUpdatePaymen
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
+    }
+
     const knex = await getConnection(session.user.tenant);
+    const db = tenantDb(knex, session.user.tenant);
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
       return {
@@ -590,8 +622,7 @@ export async function createCustomerPortalSessionAction(): Promise<IUpdatePaymen
     }
 
     // Get customer from database
-    const customer = await knex<IStripeCustomer>('stripe_customers')
-      .where({ tenant: session.user.tenant })
+    const customer = await db.table<IStripeCustomer>('stripe_customers')
       .first();
 
     if (!customer) {
@@ -644,30 +675,34 @@ export async function sendCancellationFeedbackAction(
       };
     }
 
-    const knex = await getConnection(session.user.tenant);
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to cancel the subscription');
+    }
 
-    // Get subscription details
-    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({ tenant: session.user.tenant, status: 'active' })
+    const knex = await getConnection(session.user.tenant);
+    const db = tenantDb(knex, session.user.tenant);
+
+    // Get subscription details (active, trialing, or past_due — all are cancelable)
+    const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
+      .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (!subscription) {
       return {
         success: false,
-        error: 'No active subscription found',
+        error: 'No active, trialing, or past due subscription found',
       };
     }
 
     // Get pricing info
-    const price = await knex<IStripePrice>('stripe_prices')
+    const price = await db.table<IStripePrice>('stripe_prices')
       .where({ stripe_price_id: subscription.stripe_price_id })
       .first();
 
     const monthlyCost = price ? (price.unit_amount / 100) * subscription.quantity : 0;
 
     // Get tenant info
-    const tenant = await knex('tenants')
-      .where({ tenant: session.user.tenant })
+    const tenant = await db.table('tenants')
       .first('client_name', 'email');
 
     // Import the email function dynamically
@@ -720,7 +755,12 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to cancel the subscription');
+    }
+
     const knex = await getConnection(session.user.tenant);
+    const db = tenantDb(knex, session.user.tenant);
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
       return {
@@ -729,18 +769,18 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
       };
     }
 
-    // Get active subscription
-    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: session.user.tenant,
-        status: 'active',
-      })
+    // Get active, trialing, or past_due subscription. Trialing subs cancel just like
+    // active ones via cancel_at_period_end: Stripe treats the trial as the current
+    // period, so the subscription cancels at trial_end and the customer is never
+    // charged. past_due subs cancel at period end too, stopping further dunning.
+    const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
+      .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (!subscription) {
       return {
         success: false,
-        error: 'No active subscription found',
+        error: 'No active, trialing, or past due subscription found',
       };
     }
 
@@ -777,7 +817,7 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
 
     // Update local database (clear schedule metadata if present)
     const { scheduled_quantity, schedule_id, ...remainingMetadata } = subscription.metadata || {};
-    await knex<IStripeSubscription>('stripe_subscriptions')
+    await db.table<IStripeSubscription>('stripe_subscriptions')
       .where({
         stripe_subscription_id: subscription.stripe_subscription_id,
       })
@@ -795,9 +835,8 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
 
     // Send cancellation request received email (fire-and-forget, don't block the response)
     try {
-      const tenant = await knex('tenants')
+      const tenant = await db.table('tenants')
         .select('email', 'client_name', 'company_name')
-        .where({ tenant: session.user.tenant })
         .first();
 
       if (tenant?.email) {
@@ -839,10 +878,10 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
  */
 export async function getActiveUserCount(tenantId: string): Promise<number> {
   const knex = await getConnection(tenantId);
+  const db = tenantDb(knex, tenantId);
 
-  const result = await knex('users')
+  const result = await db.table('users')
     .where({
-      tenant: tenantId,
       user_type: 'internal',
       is_inactive: false
     })
@@ -898,10 +937,10 @@ export async function reduceLicenseCount(
     }
 
     const knex = await getConnection(tenantId);
+    const db = tenantDb(knex, tenantId);
 
     // Get current license count
-    const tenant = await knex('tenants')
-      .where({ tenant: tenantId })
+    const tenant = await db.table('tenants')
       .first('licensed_user_count');
 
     if (!tenant) {
@@ -946,12 +985,9 @@ export async function reduceLicenseCount(
       };
     }
 
-    // Get subscription details for effective date
-    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: tenantId,
-        status: 'active',
-      })
+    // Get subscription details for effective date (active or trialing)
+    const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
+      .whereIn('status', ['active', 'trialing'])
       .first();
 
     if (!subscription || !subscription.current_period_end) {
@@ -1016,6 +1052,10 @@ export async function reduceLicenseCountAction(
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to reduce license count');
+    }
+
     logger.info(
       `[reduceLicenseCountAction] Reducing licenses for tenant ${session.user.tenant} to ${newQuantity}`
     );
@@ -1047,6 +1087,10 @@ export async function getScheduledLicenseChangesAction(): Promise<{
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('Permission denied');
     }
 
     logger.info(`[getScheduledLicenseChangesAction] Getting scheduled changes for tenant ${session.user.tenant}`);
@@ -1426,8 +1470,8 @@ export async function startSelfServicePremiumTrialAction(): Promise<{ success: b
 
     // Verify the tenant is on an active (non-trialing) Pro subscription
     const knex = await getConnection(session.user.tenant);
-    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where('tenant', session.user.tenant)
+    const db = tenantDb(knex, session.user.tenant);
+    const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
       .whereIn('status', ['active', 'trialing'])
       .first();
 
@@ -1565,8 +1609,8 @@ export async function sendPremiumTrialRequestAction(
     }
 
     const knex = await getConnection(session.user.tenant);
-    const tenant = await knex('tenants')
-      .where('tenant', session.user.tenant)
+    const tenant = await tenantDb(knex, session.user.tenant)
+      .table('tenants')
       .select('tenant', 'client_name', 'email', 'plan')
       .first();
 
@@ -1629,8 +1673,8 @@ export async function getIapBillingContextAction(): Promise<{
     }
 
     const knex = await getConnection(session.user.tenant);
-    const tenant = await knex('tenants')
-      .where({ tenant: session.user.tenant })
+    const db = tenantDb(knex, session.user.tenant);
+    const tenant = await db.table('tenants')
       .first<{ billing_source: string | null }>('billing_source');
 
     const billingSource = (tenant?.billing_source ?? 'stripe') as 'stripe' | 'apple_iap';
@@ -1639,8 +1683,7 @@ export async function getIapBillingContextAction(): Promise<{
       return { success: true, data: { billingSource, iap: null } };
     }
 
-    const iap = await knex('apple_iap_subscriptions')
-      .where({ tenant: session.user.tenant })
+    const iap = await db.table('apple_iap_subscriptions')
       .whereIn('status', ['active', 'grace_period'])
       .orderBy('created_at', 'desc')
       .first<{

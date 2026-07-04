@@ -3,6 +3,7 @@ import { BaseEmailAdapter } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/email.interfaces';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { tenantDb } from '@alga-psa/db';
 import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
 
 /**
@@ -287,9 +288,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       // Persist to DB (parity with Gmail)
       try {
         const knex = await getAdminConnection();
-        await knex('microsoft_email_provider_config')
+        await tenantDb(knex, this.config.tenant).table('microsoft_email_provider_config')
           .where('email_provider_id', this.config.id)
-          .andWhere('tenant', this.config.tenant)
           .update({
             access_token: this.accessToken,
             refresh_token: this.refreshToken,
@@ -369,9 +369,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       // Persist webhook details only in microsoft vendor config
       try {
         const knex = await getAdminConnection();
-        await knex('microsoft_email_provider_config')
+        await tenantDb(knex, this.config.tenant).table('microsoft_email_provider_config')
           .where('email_provider_id', this.config.id)
-          .andWhere('tenant', this.config.tenant)
           .update({
             webhook_subscription_id: response.data.id,
             webhook_expires_at: response.data.expirationDateTime,
@@ -415,9 +414,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       // Persist renewal
       try {
         const knex = await getAdminConnection();
-        await knex('microsoft_email_provider_config')
+        await tenantDb(knex, this.config.tenant).table('microsoft_email_provider_config')
           .where('email_provider_id', this.config.id)
-          .andWhere('tenant', this.config.tenant)
           .update({ webhook_expires_at: newExpiry, updated_at: new Date().toISOString() });
       } catch (dbErr: any) {
         this.log('warn', `Failed to persist webhook renewal: ${dbErr?.message}`);
@@ -607,9 +605,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       // Persist webhook details only in microsoft vendor config
       try {
         const knex = await getAdminConnection();
-        await knex('microsoft_email_provider_config')
+        await tenantDb(knex, this.config.tenant).table('microsoft_email_provider_config')
           .where('email_provider_id', this.config.id)
-          .andWhere('tenant', this.config.tenant)
           .update({
             webhook_subscription_id: response.data.id,
             webhook_expires_at: response.data.expirationDateTime,

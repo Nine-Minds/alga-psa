@@ -9,6 +9,9 @@ const enterpriseState = vi.hoisted(() => ({ value: true }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+  }),
 }));
 
 vi.mock('@alga-psa/core/features', () => ({

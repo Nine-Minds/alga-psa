@@ -1,7 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 const SETTING_NAME = 'dashboardMobileAppCardDismissed';
 
@@ -10,8 +10,8 @@ export const getDashboardMobileAppCardDismissedAction = withAuth(async (
   { tenant }
 ): Promise<boolean> => {
   const { knex } = await createTenantKnex();
-  const pref = await knex('user_preferences')
-    .where({ tenant, user_id: user.user_id, setting_name: SETTING_NAME })
+  const pref = await tenantDb(knex, tenant).table('user_preferences')
+    .where({ user_id: user.user_id, setting_name: SETTING_NAME })
     .first();
 
   if (!pref?.setting_value) return false;
@@ -28,7 +28,7 @@ export const dismissDashboardMobileAppCardAction = withAuth(async (
   const { knex } = await createTenantKnex();
   // Compute timestamp before query - CitusDB requires IMMUTABLE values in ON CONFLICT UPDATE
   const now = new Date();
-  await knex('user_preferences')
+  await tenantDb(knex, tenant).table('user_preferences')
     .insert({
       tenant,
       user_id: user.user_id,
@@ -50,8 +50,8 @@ export const restoreDashboardMobileAppCardAction = withAuth(async (
   { tenant }
 ): Promise<{ success: true }> => {
   const { knex } = await createTenantKnex();
-  await knex('user_preferences')
-    .where({ tenant, user_id: user.user_id, setting_name: SETTING_NAME })
+  await tenantDb(knex, tenant).table('user_preferences')
+    .where({ user_id: user.user_id, setting_name: SETTING_NAME })
     .delete();
 
   return { success: true };

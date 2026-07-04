@@ -27,6 +27,9 @@ vi.mock('../../src/services/accountingMappingResolver', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: h.knex, tenant: 'tenant-1' })),
+  tenantDb: vi.fn((knex: any) => ({
+    table: (table: string) => knex(table),
+  })),
 }));
 
 import { AccountingExportValidation } from '../../src/services/accountingExportValidation';

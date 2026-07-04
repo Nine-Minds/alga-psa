@@ -211,7 +211,8 @@ describe("bucketUsageService period selection", () => {
     expect(state.tablesCalled).not.toContain("client_billing_cycles");
     expect(state.recurringWhereCalls[0]).toEqual(
       expect.arrayContaining([
-        [{ tenant: "test-tenant", obligation_type: "client_contract_line", obligation_id: "plan-1" }],
+        ["recurring_service_periods.tenant", "test-tenant"],
+        [{ obligation_type: "client_contract_line", obligation_id: "plan-1" }],
       ]),
     );
   });
@@ -270,7 +271,8 @@ describe("bucketUsageService period selection", () => {
     expect(state.tablesCalled).not.toContain("client_billing_cycles");
     expect(state.recurringWhereCalls[0]).toEqual(
       expect.arrayContaining([
-        [{ tenant: "test-tenant", obligation_type: "contract_line", obligation_id: "plan-1" }],
+        ["recurring_service_periods.tenant", "test-tenant"],
+        [{ obligation_type: "contract_line", obligation_id: "plan-1" }],
       ]),
     );
   });

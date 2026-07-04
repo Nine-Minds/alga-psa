@@ -1,7 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { IProjectMaterial, IService, IServicePrice } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
@@ -21,6 +21,14 @@ export type CatalogPickerItem = Pick<
   default_rate: number;
 };
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 export const searchServiceCatalogForPicker = withAuth(async (
   _user,
   { tenant },
@@ -33,7 +41,7 @@ export const searchServiceCatalogForPicker = withAuth(async (
   const searchTerm = options.search?.trim() ? `%${options.search.trim()}%` : null;
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const base = trx('service_catalog as sc').where({ 'sc.tenant': tenant });
+    const base = tenantScopedTable(trx, 'service_catalog as sc', tenant);
 
     if (options.is_active !== undefined) {
       base.andWhere('sc.is_active', options.is_active);
@@ -88,8 +96,8 @@ export const getServicePrices = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const rows = await trx('service_prices')
-      .where({ tenant, service_id: serviceId })
+    const rows = await tenantScopedTable(trx, 'service_prices', tenant)
+      .where({ service_id: serviceId })
       .select('*')
       .orderBy('currency_code', 'asc');
 
@@ -105,13 +113,12 @@ export const listProjectMaterials = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const rows = await trx('project_materials as pm')
-      .leftJoin('service_catalog as sc', function () {
-        this.on('pm.service_id', '=', 'sc.service_id').andOn('pm.tenant', '=', 'sc.tenant');
-      })
-      .where({ 'pm.tenant': tenant, 'pm.project_id': projectId })
+    const rowsQuery = tenantScopedTable(trx, 'project_materials as pm', tenant)
+      .where({ 'pm.project_id': projectId })
       .select('pm.*', 'sc.service_name as service_name', 'sc.sku as sku')
       .orderBy('pm.created_at', 'desc');
+    tenantDb(trx, tenant).tenantJoin(rowsQuery, 'service_catalog as sc', 'pm.service_id', 'sc.service_id', { type: 'left' });
+    const rows = await rowsQuery;
 
     return rows as IProjectMaterial[];
   });
@@ -133,7 +140,7 @@ export const addProjectMaterial = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const [row] = await trx('project_materials')
+    const [row] = await tenantScopedTable(trx, 'project_materials', tenant)
       .insert({
         tenant,
         project_id: input.project_id,
@@ -159,8 +166,8 @@ export const deleteProjectMaterial = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const row = await trx('project_materials')
-      .where({ tenant, project_material_id: projectMaterialId })
+    const row = await tenantScopedTable(trx, 'project_materials', tenant)
+      .where({ project_material_id: projectMaterialId })
       .select('is_billed')
       .first();
 
@@ -172,8 +179,8 @@ export const deleteProjectMaterial = withAuth(async (
       throw new Error('Cannot delete a billed material.');
     }
 
-    await trx('project_materials')
-      .where({ tenant, project_material_id: projectMaterialId })
+    await tenantScopedTable(trx, 'project_materials', tenant)
+      .where({ project_material_id: projectMaterialId })
       .delete();
   });
 });

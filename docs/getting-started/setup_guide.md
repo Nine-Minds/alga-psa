@@ -2,6 +2,8 @@
 
 This guide provides step-by-step instructions for setting up the PSA system using Docker Compose, supporting both Community Edition (CE) and Enterprise Edition (EE).
 
+If you want a turnkey on-premise install instead of running Docker Compose yourself, see the [Appliance Install Guide](appliance_install.md). It installs and configures AlgaPSA from a single bootable ISO.
+
 > Note: The instructions below focus on the CE prebuilt images. Full EE setup guidance, including any edition-specific overrides, is being prepared and will be added soon.
 
 ## Prerequisites

@@ -8,6 +8,9 @@ const getContractLineServicesWithConfigurations = vi.fn();
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
   withTransaction: async (_knex: unknown, fn: any) => fn(_knex),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+  }),
 }));
 
 vi.mock('@alga-psa/auth/withAuth', () => ({

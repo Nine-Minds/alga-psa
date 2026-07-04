@@ -218,7 +218,12 @@ describe("BillingEngine discount and pricing timing parity", () => {
     );
 
     expect(pricingScheduleBuilder.where).toHaveBeenNthCalledWith(
-      2,
+      1,
+      "contract_pricing_schedules.tenant",
+      "test_tenant",
+    );
+    expect(pricingScheduleBuilder.where).toHaveBeenNthCalledWith(
+      3,
       "effective_date",
       "<",
       "2025-02-01",

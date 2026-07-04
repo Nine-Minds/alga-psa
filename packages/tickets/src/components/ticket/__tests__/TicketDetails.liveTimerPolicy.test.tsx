@@ -178,6 +178,13 @@ vi.mock('@alga-psa/tickets/actions', () => ({
   removeTeamFromTicket: vi.fn().mockResolvedValue(undefined),
 }));
 
+// TicketDetails now imports findBoardById from the direct action module rather
+// than the package barrel (barrel→relative import migration); mock that path too
+// so the board timer-policy lookup resolves to the same spy.
+vi.mock('../../../actions/board-actions/boardActions', () => ({
+  findBoardById: (...args: unknown[]) => findBoardByIdMock(...args),
+}));
+
 vi.mock('@alga-psa/user-composition/actions', () => ({
   findUserById: vi.fn().mockResolvedValue(null),
   getCurrentUser: vi.fn().mockResolvedValue(null),

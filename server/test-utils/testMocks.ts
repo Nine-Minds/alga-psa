@@ -262,3 +262,51 @@ export function setupCommonMocks(options: {
 
   return { tenantId, userId, user };
 }
+
+/**
+ * Complete mock for the bare `@alga-psa/auth` module. Server actions wrapped in
+ * withAuth(...) (and friends) throw at import time when a test mocks
+ * @alga-psa/auth without these exports. Returns faithful pass-throughs wired to
+ * the same currentUserRef / permissionCheckRef the rest of the helpers drive, so
+ * setupCommonMocks / mockRBAC / setMockUser keep controlling auth and permission.
+ *
+ * Use via dynamic import so it stays out of the hoisted vi.mock factory scope:
+ *
+ *   vi.mock('@alga-psa/auth', async () => {
+ *     const { createAuthModuleMock } = await import('<rel>/testMocks');
+ *     return createAuthModuleMock();
+ *   });
+ */
+export function createAuthModuleMock() {
+  const getCurrentUser = vi.fn(async () => currentUserRef.user);
+  const hasPermission = vi.fn((user: IUserWithRoles, resource?: string, action?: string) =>
+    Promise.resolve(permissionCheckRef.fn(user, resource, action))
+  );
+  const getSession = vi.fn(async () =>
+    currentUserRef.user
+      ? { user: { id: currentUserRef.user.user_id, tenant: currentUserRef.user.tenant } }
+      : null
+  );
+  const requireUser = async () => {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('Authentication required');
+    return user;
+  };
+  return {
+    getSession,
+    getCurrentUser,
+    hasPermission,
+    withAuth: (action: (...a: any[]) => any) => async (...args: any[]) => {
+      const user = await requireUser();
+      return action(user, { tenant: user.tenant }, ...args);
+    },
+    withOptionalAuth: (action: (...a: any[]) => any) => async (...args: any[]) => {
+      const user = await getCurrentUser();
+      return action(user ?? null, user ? { tenant: user.tenant } : null, ...args);
+    },
+    withAuthCheck: (action: (...a: any[]) => any) => async (...args: any[]) => {
+      const user = await requireUser();
+      return action(user, ...args);
+    },
+  };
+}

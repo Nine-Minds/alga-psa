@@ -1,6 +1,7 @@
 import { badRequest, dynamic, ok, parseJsonBody, runtime } from '../../_responses';
 import { requireEntraUiFlagEnabled } from '../../_guards';
 import { createTenantKnex, runWithTenant } from '@enterprise/lib/db';
+import { tenantDb } from '@alga-psa/db';
 
 export { dynamic, runtime };
 
@@ -19,11 +20,11 @@ export async function POST(request: Request): Promise<Response> {
 
   await runWithTenant(flagGate.tenantId, async () => {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, flagGate.tenantId);
     const now = knex.fn.now();
 
-    const activeMapping = await knex('entra_client_tenant_mappings')
+    const activeMapping = await db.table('entra_client_tenant_mappings')
       .where({
-        tenant: flagGate.tenantId,
         managed_tenant_id: managedTenantId,
         is_active: true,
       })
@@ -33,9 +34,8 @@ export async function POST(request: Request): Promise<Response> {
       return;
     }
 
-    await knex('entra_client_tenant_mappings')
+    await db.table('entra_client_tenant_mappings')
       .where({
-        tenant: flagGate.tenantId,
         managed_tenant_id: managedTenantId,
         is_active: true,
       })
@@ -44,7 +44,7 @@ export async function POST(request: Request): Promise<Response> {
         updated_at: now,
       });
 
-    await knex('entra_client_tenant_mappings').insert({
+    await db.table('entra_client_tenant_mappings').insert({
       tenant: flagGate.tenantId,
       managed_tenant_id: managedTenantId,
       client_id: null,
@@ -58,9 +58,8 @@ export async function POST(request: Request): Promise<Response> {
     });
 
     if (activeMapping.client_id) {
-      await knex('clients')
+      await db.table('clients')
         .where({
-          tenant: flagGate.tenantId,
           client_id: activeMapping.client_id,
         })
         .update({

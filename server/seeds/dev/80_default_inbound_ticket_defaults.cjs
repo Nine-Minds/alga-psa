@@ -1,15 +1,16 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 exports.seed = async function(knex) {
-  // Get the tenant first
-  const tenant = await knex('tenants').select('tenant').first();
-  if (!tenant) {
-    console.warn('No tenant found, skipping inbound ticket defaults seeding.');
-    return;
-  }
-  const tenantId = tenant.tenant;
+  const context = await getFirstTenantSeedContext(knex, {
+    skipMessage: 'No tenant found, skipping inbound ticket defaults seeding.',
+  });
+  if (!context) return;
+
+  const { db, tenantId } = context;
 
   // Helper function to get IDs for default configuration
   const getDefaultId = async (table, filters, idColumn) => {
-    const result = await knex(table).where({ tenant: tenantId, ...filters }).select(idColumn).first();
+    const result = await db.table(table).where(filters).select(idColumn).first();
     if (!result) {
       console.warn(`Warning: Could not find default ID in table '${table}' for filters:`, filters);
       return null;
@@ -43,8 +44,7 @@ exports.seed = async function(knex) {
   }
 
   // Backfill historical seeded rows where client_id was null.
-  const updatedDefaults = await knex('inbound_ticket_defaults')
-    .where({ tenant: tenantId })
+  const updatedDefaults = await db.table('inbound_ticket_defaults')
     .whereNull('client_id')
     .update({
       client_id: defaultClientId,
@@ -55,8 +55,8 @@ exports.seed = async function(knex) {
   }
 
   // Check if default already exists
-  const existingDefault = await knex('inbound_ticket_defaults')
-    .where({ tenant: tenantId, short_name: 'email-general' })
+  const existingDefault = await db.table('inbound_ticket_defaults')
+    .where({ short_name: 'email-general' })
     .first();
 
   if (existingDefault) {
@@ -65,7 +65,7 @@ exports.seed = async function(knex) {
   }
 
   // Create the default inbound ticket defaults configuration
-  await knex('inbound_ticket_defaults').insert({
+  await db.table('inbound_ticket_defaults').insert({
     id: knex.raw('gen_random_uuid()'),
     tenant: tenantId,
     short_name: 'email-general',

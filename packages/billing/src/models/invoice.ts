@@ -11,6 +11,7 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type {
   IInvoice,
   IInvoiceCharge,
@@ -25,11 +26,64 @@ import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 type InvoiceChargeDetailPeriodRow = {
+  tenant?: string;
   item_id: string;
   service_period_start?: string | Date | null;
   service_period_end?: string | Date | null;
   billing_timing?: 'arrears' | 'advance' | null;
 };
+
+type InvoiceChargeDisplayRow = IInvoiceCharge & {
+  name?: string | null;
+};
+
+type InvoiceAnnotationRow = IInvoiceAnnotation & {
+  tenant: string;
+};
+
+type InvoiceClientDetailsRow = {
+  client_name?: string | null;
+  properties?: unknown;
+  location_address?: string | null;
+};
+
+type InvoiceContactRow = {
+  full_name?: string | null;
+};
+
+type InvoiceTenantClientDetailsRow = {
+  client_id?: string | null;
+  client_name?: string | null;
+  location_address?: string | null;
+};
+
+type RecurringInvoiceSummaryRow = {
+  invoice_id?: string | null;
+  service_period_start?: string | Date | null;
+  service_period_end?: string | Date | null;
+  invoice_window_start?: string | Date | null;
+  invoice_window_end?: string | Date | null;
+  cadence_owner?: string | null;
+};
+
+type CustomFieldRow = ICustomField & {
+  tenant: string;
+};
+
+type ConditionalRuleRow = IConditionalRule & {
+  tenant: string;
+  template_id: string;
+};
+
+const GLOBAL_TEMPLATE_LOOKUP = 'global-template-lookup';
+
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableExpression: string
+) {
+  return tenantDb(conn, tenant).table<Row>(tableExpression);
+}
 
 function normalizeRecurringDetailPeriodDate(
   value: string | Date | null | undefined
@@ -154,7 +208,7 @@ const Invoice = {
       throw new Error('Total amount must be an integer');
     }
 
-    const [createdInvoice] = await knexOrTrx('invoices')
+    const [createdInvoice] = await tenantScopedTable<IInvoice>(knexOrTrx, tenant, 'invoices')
       .insert({ ...invoice, tenant })
       .returning('*');
 
@@ -174,10 +228,9 @@ const Invoice = {
     }
 
     try {
-      const invoice = await knexOrTrx('invoices')
+      const invoice = await tenantScopedTable<IInvoice>(knexOrTrx, tenant, 'invoices')
         .where({
-          invoice_id: invoiceId,
-          tenant
+          invoice_id: invoiceId
         })
         .first();
 
@@ -207,10 +260,9 @@ const Invoice = {
     }
 
     try {
-      const [updatedInvoice] = await knexOrTrx('invoices')
+      const [updatedInvoice] = await tenantScopedTable<IInvoice>(knexOrTrx, tenant, 'invoices')
         .where({
-          invoice_id: invoiceId,
-          tenant
+          invoice_id: invoiceId
         })
         .update(updateData)
         .returning('*');
@@ -242,15 +294,14 @@ const Invoice = {
       // Nullify invoice_id in payment_webhook_events
       const hasPaymentWebhookEvents = await knexOrTrx.schema.hasTable('payment_webhook_events');
       if (hasPaymentWebhookEvents) {
-        await knexOrTrx('payment_webhook_events')
-          .where({ invoice_id: invoiceId, tenant })
+        await tenantScopedTable(knexOrTrx, tenant, 'payment_webhook_events')
+          .where({ invoice_id: invoiceId })
           .update({ invoice_id: null });
       }
 
-      const deleted = await knexOrTrx('invoices')
+      const deleted = await tenantScopedTable(knexOrTrx, tenant, 'invoices')
         .where({
-          invoice_id: invoiceId,
-          tenant
+          invoice_id: invoiceId
         })
         .del();
 
@@ -277,8 +328,7 @@ const Invoice = {
     }
 
     try {
-      const invoices = await knexOrTrx('invoices')
-        .where({ tenant })
+      const invoices = await tenantScopedTable<IInvoice>(knexOrTrx, tenant, 'invoices')
         .select('*');
       return invoices;
     } catch (error) {
@@ -342,7 +392,7 @@ const Invoice = {
       return '';
     };
 
-    const invoice = await knexOrTrx('invoices')
+    const invoice = await tenantScopedTable<IInvoice>(knexOrTrx, tenant, 'invoices')
       .select(
         '*',
         knexOrTrx.raw('CAST(subtotal AS BIGINT) as subtotal'),
@@ -351,8 +401,7 @@ const Invoice = {
         knexOrTrx.raw('CAST(credit_applied AS BIGINT) as credit_applied')
       )
       .where({
-        invoice_id: invoiceId,
-        tenant
+        invoice_id: invoiceId
       })
       .first();
 
@@ -360,17 +409,33 @@ const Invoice = {
       throw new Error('Invoice not found');
     }
 
+    const db = tenantDb(knexOrTrx, tenant);
+    const clientQuery = db.table('clients as c');
+    db.tenantJoin(clientQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+      type: 'left',
+      on(join) {
+        join.andOn(function () {
+          this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
+            .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
+        });
+      },
+    });
+
+    const tenantClientQuery = db.table('tenant_companies as tc');
+    db.tenantJoin(tenantClientQuery, 'clients as c', 'tc.client_id', 'c.client_id');
+    db.tenantJoin(tenantClientQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+      type: 'left',
+      on(join) {
+        join.andOn(function () {
+          this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
+            .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
+        });
+      },
+    });
+
     const [invoiceChargesRaw, client, contact, logoUrl, tenantClientDetails, recurringInvoiceSummaryRows] = await Promise.all([
       Invoice.getInvoiceCharges(knexOrTrx, tenant, invoiceId),
-      knexOrTrx('clients as c')
-        .leftJoin('client_locations as cl', function () {
-          this.on('c.client_id', '=', 'cl.client_id')
-            .andOn('c.tenant', '=', 'cl.tenant')
-            .andOn(function () {
-              this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
-                .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
-            });
-        })
+      clientQuery
         .select(
           'c.client_name',
           'c.properties',
@@ -384,28 +449,16 @@ const Invoice = {
           ) as location_address`)
         )
         .where({
-          'c.client_id': invoice.client_id,
-          'c.tenant': tenant
+          'c.client_id': invoice.client_id
         })
         .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST')
-        .first(),
-      knexOrTrx('contacts')
+        .first() as unknown as Promise<InvoiceClientDetailsRow | undefined>,
+      tenantScopedTable(knexOrTrx, tenant, 'contacts')
         .select('full_name')
-        .where({ client_id: invoice.client_id, tenant })
-        .first(),
+        .where({ client_id: invoice.client_id })
+        .first() as unknown as Promise<InvoiceContactRow | undefined>,
       getClientLogoUrl(invoice.client_id, tenant).catch(() => null),
-      knexOrTrx('tenant_companies as tc')
-        .join('clients as c', function () {
-          this.on('tc.client_id', '=', 'c.client_id').andOn('tc.tenant', '=', 'c.tenant');
-        })
-        .leftJoin('client_locations as cl', function () {
-          this.on('c.client_id', '=', 'cl.client_id')
-            .andOn('c.tenant', '=', 'cl.tenant')
-            .andOn(function () {
-              this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
-                .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
-            });
-        })
+      tenantClientQuery
         .select(
           'tc.client_id',
           'c.client_name',
@@ -419,13 +472,12 @@ const Invoice = {
           ) as location_address`)
         )
         .where({
-          'tc.tenant': tenant,
           'tc.is_default': true
         })
         .whereNull('tc.deleted_at')
         .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST')
-        .first(),
-      knexOrTrx('recurring_service_periods')
+        .first() as unknown as Promise<InvoiceTenantClientDetailsRow | undefined>,
+      tenantScopedTable<RecurringInvoiceSummaryRow>(knexOrTrx, tenant, 'recurring_service_periods')
         .select(
           'service_period_start',
           'service_period_end',
@@ -433,10 +485,7 @@ const Invoice = {
           'invoice_window_end',
           'cadence_owner'
         )
-        .where({
-          tenant,
-          invoice_id: invoiceId,
-        }),
+        .where('invoice_id', invoiceId) as unknown as Promise<RecurringInvoiceSummaryRow[]>,
     ]);
 
     if (!client) {
@@ -455,9 +504,8 @@ const Invoice = {
     }
 
     const resolveTenantNameFallback = async (): Promise<InvoiceViewModel['tenantClient']> => {
-      const tenantRecord = await knexOrTrx('tenants')
+      const tenantRecord = await tenantScopedTable(knexOrTrx, tenant, 'tenants')
         .select('client_name')
-        .where({ tenant })
         .first();
       const fallbackName = asTrimmedString(tenantRecord?.client_name);
       if (fallbackName.length === 0) {
@@ -615,7 +663,7 @@ const Invoice = {
     }
     delete itemToInsert.contract_name;
 
-    const [createdItem] = await knexOrTrx('invoice_charges')
+    const [createdItem] = await tenantScopedTable<IInvoiceCharge>(knexOrTrx, tenant, 'invoice_charges')
       .insert(itemToInsert)
       .returning('*');
 
@@ -635,10 +683,10 @@ const Invoice = {
     }
 
     try {
-      const query = knexOrTrx('invoice_charges as ic')
-        .leftJoin('service_catalog as sc', function () {
-          this.on('ic.service_id', '=', 'sc.service_id').andOn('ic.tenant', '=', 'sc.tenant');
-        })
+      const db = tenantDb(knexOrTrx, tenant);
+      const query = db.table<InvoiceChargeDisplayRow>('invoice_charges as ic');
+      db.tenantJoin(query, 'service_catalog as sc', 'ic.service_id', 'sc.service_id', { type: 'left' });
+      query
         .select(
           'ic.item_id',
           'ic.invoice_id',
@@ -657,12 +705,9 @@ const Invoice = {
           'ic.is_manual',
           'ic.location_id'
         )
-        .where({
-          'ic.invoice_id': invoiceId,
-          'ic.tenant': tenant
-        });
+        .where('ic.invoice_id', invoiceId);
 
-      const items = await query;
+      const items = (await query) as InvoiceChargeDisplayRow[];
       if (items.length === 0) {
         return items;
       }
@@ -670,9 +715,8 @@ const Invoice = {
       const itemIds = items.map((item) => item.item_id).filter(Boolean);
       const detailRows: InvoiceChargeDetailPeriodRow[] = itemIds.length === 0
         ? []
-        : await knexOrTrx('invoice_charge_details')
+        : await tenantScopedTable<InvoiceChargeDetailPeriodRow>(knexOrTrx, tenant, 'invoice_charge_details')
             .select('item_id', 'service_period_start', 'service_period_end', 'billing_timing')
-            .where({ tenant })
             .whereIn('item_id', itemIds)
             .orderBy('service_period_start', 'asc');
 
@@ -697,10 +741,9 @@ const Invoice = {
     }
 
     try {
-      const [updatedItem] = await knexOrTrx('invoice_charges')
+      const [updatedItem] = await tenantScopedTable<IInvoiceCharge>(knexOrTrx, tenant, 'invoice_charges')
         .where({
-          item_id: itemId,
-          tenant
+          item_id: itemId
         })
         .update(updateData)
         .returning('*');
@@ -740,10 +783,9 @@ const Invoice = {
     }
 
     try {
-      const deleted = await knexOrTrx('invoice_charges')
+      const deleted = await tenantScopedTable(knexOrTrx, tenant, 'invoice_charges')
         .where({
-          item_id: itemId,
-          tenant
+          item_id: itemId
         })
         .del();
 
@@ -769,7 +811,7 @@ const Invoice = {
       throw new Error('Tenant context is required for getting templates');
     }
 
-    return knexOrTrx('invoice_templates').where({ tenant }).select('*');
+    return tenantScopedTable<IInvoiceTemplate>(knexOrTrx, tenant, 'invoice_templates').select('*');
   },
 
   /**
@@ -779,7 +821,8 @@ const Invoice = {
   getStandardTemplates: async (
     knexOrTrx: Knex | Knex.Transaction
   ): Promise<IInvoiceTemplate[]> => {
-    const records = await knexOrTrx('standard_invoice_templates')
+    const records = await tenantDb(knexOrTrx, GLOBAL_TEMPLATE_LOOKUP)
+      .unscoped('standard_invoice_templates', 'global standard invoice template catalog')
       .select(
         'template_id',
         'name',
@@ -815,8 +858,7 @@ const Invoice = {
     }
 
     const [tenantTemplates, standardTemplates, tenantAssignment] = await Promise.all([
-      knexOrTrx('invoice_templates')
-        .where({ tenant })
+      tenantScopedTable<IInvoiceTemplate>(knexOrTrx, tenant, 'invoice_templates')
         .select(
           'template_id',
           'name',
@@ -827,9 +869,9 @@ const Invoice = {
           'updated_at'
         ),
       Invoice.getStandardTemplates(knexOrTrx),
-      knexOrTrx('invoice_template_assignments')
+      tenantScopedTable(knexOrTrx, tenant, 'invoice_template_assignments')
         .select('template_source', 'standard_invoice_template_code', 'invoice_template_id')
-        .where({ tenant, scope_type: 'tenant' })
+        .where({ scope_type: 'tenant' })
         .whereNull('scope_id')
         .first()
     ]);
@@ -909,7 +951,7 @@ const Invoice = {
       updateRecord.templateAst = insertRecord.templateAst;
     }
 
-    const [savedTemplate] = await knexOrTrx('invoice_templates')
+    const [savedTemplate] = await tenantScopedTable<IInvoiceTemplate>(knexOrTrx, tenant, 'invoice_templates')
       .insert(insertRecord)
       .onConflict(['tenant', 'template_id'])
       .merge(updateRecord)
@@ -923,9 +965,14 @@ const Invoice = {
    */
   getCustomFields: async (
     knexOrTrx: Knex | Knex.Transaction,
-    _tenant: string
+    tenant: string
   ): Promise<ICustomField[]> => {
-    return knexOrTrx('custom_fields');
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting custom fields');
+    }
+
+    return tenantScopedTable<CustomFieldRow>(knexOrTrx, tenant, 'custom_fields')
+      .select('*');
   },
 
   /**
@@ -935,9 +982,14 @@ const Invoice = {
     knexOrTrx: Knex | Knex.Transaction,
     field: ICustomField
   ): Promise<ICustomField> => {
-    const [savedField] = await knexOrTrx('custom_fields')
-      .insert(field)
-      .onConflict('field_id')
+    const tenant = (field as CustomFieldRow).tenant;
+    if (!tenant) {
+      throw new Error('Tenant context is required for saving custom field');
+    }
+
+    const [savedField] = await tenantScopedTable<CustomFieldRow>(knexOrTrx, tenant, 'custom_fields')
+      .insert(field as CustomFieldRow)
+      .onConflict(['tenant', 'field_id'])
       .merge()
       .returning('*');
     return savedField;
@@ -948,9 +1000,15 @@ const Invoice = {
    */
   getConditionalRules: async (
     knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
     templateId: string
   ): Promise<IConditionalRule[]> => {
-    return knexOrTrx('conditional_display_rules').where({ template_id: templateId });
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting conditional rules');
+    }
+
+    return tenantScopedTable<ConditionalRuleRow>(knexOrTrx, tenant, 'conditional_display_rules')
+      .where({ template_id: templateId });
   },
 
   /**
@@ -960,9 +1018,14 @@ const Invoice = {
     knexOrTrx: Knex | Knex.Transaction,
     rule: IConditionalRule
   ): Promise<IConditionalRule> => {
-    const [savedRule] = await knexOrTrx('conditional_display_rules')
-      .insert(rule)
-      .onConflict('rule_id')
+    const tenant = (rule as ConditionalRuleRow).tenant;
+    if (!tenant) {
+      throw new Error('Tenant context is required for saving conditional rule');
+    }
+
+    const [savedRule] = await tenantScopedTable<ConditionalRuleRow>(knexOrTrx, tenant, 'conditional_display_rules')
+      .insert(rule as ConditionalRuleRow)
+      .onConflict(['tenant', 'rule_id'])
       .merge()
       .returning('*');
     return savedRule;
@@ -973,9 +1036,9 @@ const Invoice = {
    */
   addAnnotation: async (
     knexOrTrx: Knex | Knex.Transaction,
-    annotation: Omit<IInvoiceAnnotation, 'annotation_id'>
+    annotation: Omit<InvoiceAnnotationRow, 'annotation_id'>
   ): Promise<IInvoiceAnnotation> => {
-    const [savedAnnotation] = await knexOrTrx('invoice_annotations')
+    const [savedAnnotation] = await tenantScopedTable<InvoiceAnnotationRow>(knexOrTrx, annotation.tenant, 'invoice_annotations')
       .insert(annotation)
       .returning('*');
 
@@ -1008,10 +1071,9 @@ const Invoice = {
       throw new Error('Tenant context is required for updating invoice annotation');
     }
 
-    const [updatedAnnotation] = await knexOrTrx('invoice_annotations')
+    const [updatedAnnotation] = await tenantScopedTable<InvoiceAnnotationRow>(knexOrTrx, tenant, 'invoice_annotations')
       .where({
         annotation_id: annotationId,
-        tenant,
       })
       .update(updateData)
       .returning('*');
@@ -1040,9 +1102,15 @@ const Invoice = {
    */
   getAnnotations: async (
     knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
     invoiceId: string
   ): Promise<IInvoiceAnnotation[]> => {
-    return knexOrTrx('invoice_annotations').where({ invoice_id: invoiceId });
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting invoice annotations');
+    }
+
+    return tenantScopedTable<InvoiceAnnotationRow>(knexOrTrx, tenant, 'invoice_annotations')
+      .where({ invoice_id: invoiceId });
   },
 
   /**
@@ -1058,10 +1126,9 @@ const Invoice = {
     }
 
     try {
-      const [updatedInvoice] = await knexOrTrx('invoices')
+      const [updatedInvoice] = await tenantScopedTable<IInvoice>(knexOrTrx, tenant, 'invoices')
         .where({
-          invoice_id: invoiceId,
-          tenant
+          invoice_id: invoiceId
         })
         .update({
           status: 'sent',

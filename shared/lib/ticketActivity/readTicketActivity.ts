@@ -13,13 +13,37 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 import type {
   TicketActivityChanges,
   TicketActivityRow,
 } from './types';
 
-export type TicketTimelineEntryType = 'activity' | 'comment';
+export type TicketTimelineEntryType = 'activity' | 'comment' | 'time_entry' | 'alert';
+
+export interface TicketTimelineTimeEntry {
+  entry_id: string;
+  user_id: string | null;
+  user_display_name: string | null;
+  start_time: string;
+  end_time: string | null;
+  billable_duration: number;
+  notes: string | null;
+  work_date: string | null;
+}
+
+export interface TicketTimelineAlert {
+  alert_id: string;
+  severity: string | null;
+  message: string | null;
+  device_name: string | null;
+  occurrence_count: number | null;
+  triggered_at: string;
+  resolved_at: string | null;
+  alert_class: string | null;
+  source_type: string | null;
+}
 
 export interface TicketTimelineEntry {
   /**
@@ -36,6 +60,10 @@ export interface TicketTimelineEntry {
   activity?: TicketActivityRow;
   /** Raw comment row when `type === 'comment'`. */
   comment?: Record<string, unknown>;
+  /** Time entry summary when `type === 'time_entry'`. */
+  timeEntry?: TicketTimelineTimeEntry;
+  /** RMM alert summary when `type === 'alert'`. */
+  alert?: TicketTimelineAlert;
 }
 
 export interface ReadTicketActivityOptions {
@@ -43,6 +71,14 @@ export interface ReadTicketActivityOptions {
   limit?: number;
   /** Filter by event type. */
   eventTypes?: string[];
+}
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
 }
 
 export async function readTicketActivity(
@@ -54,8 +90,8 @@ export async function readTicketActivity(
   if (!tenant) throw new Error('readTicketActivity requires tenant');
   if (!ticketId) throw new Error('readTicketActivity requires ticketId');
 
-  let q = (knex as Knex)('ticket_audit_logs')
-    .where({ tenant, ticket_id: ticketId })
+  let q = tenantScopedTable(knex, 'ticket_audit_logs', tenant)
+    .where({ ticket_id: ticketId })
     .orderBy([
       { column: 'occurred_at', order: 'desc' },
       { column: 'audit_id', order: 'desc' },
@@ -107,8 +143,87 @@ function normalizeActivityRow(row: Record<string, unknown>): TicketActivityRow {
 export interface BuildUnifiedTimelineOptions {
   /** Include internal notes in the merged timeline. Default true. */
   includeInternalNotes?: boolean;
+  /** Include ticket-linked time entries in the merged timeline. Default false. */
+  includeTimeEntries?: boolean;
+  /** Include ticket-linked RMM alerts in the merged timeline. Default false. */
+  includeAlerts?: boolean;
   /** Sort order. Default 'desc' (newest first). */
   order?: 'asc' | 'desc';
+}
+
+function normalizeRequiredIso(value: unknown, fieldName: string): string {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  if (typeof value === 'string' && value.length > 0) {
+    return value;
+  }
+  throw new Error(`${fieldName} is required`);
+}
+
+function normalizeNullableIso(value: unknown, fieldName: string): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  throw new Error(`${fieldName} must be a string, Date, or null`);
+}
+
+function normalizeNullableDate(value: unknown, fieldName: string): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  if (typeof value === 'string') {
+    return value.slice(0, 10);
+  }
+  throw new Error(`${fieldName} must be a string, Date, or null`);
+}
+
+function normalizeRequiredNumber(value: unknown, fieldName: string): number {
+  if (value === null || value === undefined) {
+    throw new Error(`${fieldName} is required`);
+  }
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    throw new Error(`${fieldName} must be numeric`);
+  }
+  return numericValue;
+}
+
+function normalizeNullableNumber(value: unknown, fieldName: string): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    throw new Error(`${fieldName} must be numeric`);
+  }
+  return numericValue;
+}
+
+export function mergeTimelineEntries(
+  entries: TicketTimelineEntry[],
+  order: 'asc' | 'desc' = 'desc',
+): TicketTimelineEntry[] {
+  const merged = [...entries];
+  merged.sort((a, b) => {
+    if (a.occurredAt === b.occurredAt) {
+      return order === 'asc' ? a.sortId.localeCompare(b.sortId) : b.sortId.localeCompare(a.sortId);
+    }
+    return order === 'asc'
+      ? a.occurredAt.localeCompare(b.occurredAt)
+      : b.occurredAt.localeCompare(a.occurredAt);
+  });
+
+  return merged;
 }
 
 /**
@@ -131,11 +246,13 @@ export async function buildUnifiedTicketTimeline(
 
   const order = opts.order ?? 'desc';
   const includeInternal = opts.includeInternalNotes ?? true;
+  const includeTimeEntries = opts.includeTimeEntries ?? false;
+  const includeAlerts = opts.includeAlerts ?? false;
 
   const activityRows = await readTicketActivity(knex, tenant, ticketId);
 
-  let commentQuery = (knex as Knex)('comments')
-    .where({ tenant, ticket_id: ticketId });
+  let commentQuery = tenantScopedTable(knex, 'comments', tenant)
+    .where({ ticket_id: ticketId });
   if (!includeInternal) {
     commentQuery = commentQuery.where((qb) =>
       qb.where('is_internal', false).orWhereNull('is_internal'),
@@ -163,15 +280,89 @@ export async function buildUnifiedTicketTimeline(
     };
   });
 
-  const merged = [...activityEntries, ...commentEntries];
-  merged.sort((a, b) => {
-    if (a.occurredAt === b.occurredAt) {
-      return order === 'asc' ? a.sortId.localeCompare(b.sortId) : b.sortId.localeCompare(a.sortId);
-    }
-    return order === 'asc'
-      ? a.occurredAt.localeCompare(b.occurredAt)
-      : b.occurredAt.localeCompare(a.occurredAt);
-  });
+  let timeEntryEntries: TicketTimelineEntry[] = [];
+  if (includeTimeEntries) {
+    const timeEntryQuery = tenantScopedTable(knex, 'time_entries as te', tenant)
+      .where({
+        'te.work_item_id': ticketId,
+        'te.work_item_type': 'ticket',
+      })
+      .select(
+        'te.entry_id',
+        'te.user_id',
+        'te.start_time',
+        'te.end_time',
+        'te.billable_duration',
+        'te.notes',
+        'te.work_date',
+        knex.raw(
+          "NULLIF(TRIM(CONCAT_WS(' ', NULLIF(u.first_name, ''), NULLIF(u.last_name, ''))), '') AS user_display_name",
+        ),
+      );
+    tenantDb(knex, tenant).tenantJoin(timeEntryQuery, 'users as u', 'te.user_id', 'u.user_id', { type: 'left' });
 
-  return merged;
+    const timeEntryRows = (await timeEntryQuery) as Array<Record<string, unknown>>;
+    timeEntryEntries = timeEntryRows.map((row) => {
+      const startTime = normalizeRequiredIso(row.start_time, 'time_entries.start_time');
+      const timeEntry: TicketTimelineTimeEntry = {
+        entry_id: row.entry_id as string,
+        user_id: (row.user_id as string | null) ?? null,
+        user_display_name: (row.user_display_name as string | null) ?? null,
+        start_time: startTime,
+        end_time: normalizeNullableIso(row.end_time, 'time_entries.end_time'),
+        billable_duration: normalizeRequiredNumber(row.billable_duration, 'time_entries.billable_duration'),
+        notes: (row.notes as string | null) ?? null,
+        work_date: normalizeNullableDate(row.work_date, 'time_entries.work_date'),
+      };
+      return {
+        type: 'time_entry',
+        occurredAt: startTime,
+        sortId: timeEntry.entry_id,
+        timeEntry,
+      };
+    });
+  }
+
+  let alertEntries: TicketTimelineEntry[] = [];
+  if (includeAlerts) {
+    const alertRows = (await tenantScopedTable(knex, 'rmm_alerts', tenant)
+      .where({ ticket_id: ticketId })
+      .select(
+        'alert_id',
+        'severity',
+        'message',
+        'device_name',
+        'occurrence_count',
+        'triggered_at',
+        'resolved_at',
+        'alert_class',
+        'source_type',
+      )) as Array<Record<string, unknown>>;
+
+    alertEntries = alertRows.map((row) => {
+      const triggeredAt = normalizeRequiredIso(row.triggered_at, 'rmm_alerts.triggered_at');
+      const alert: TicketTimelineAlert = {
+        alert_id: row.alert_id as string,
+        severity: (row.severity as string | null) ?? null,
+        message: (row.message as string | null) ?? null,
+        device_name: (row.device_name as string | null) ?? null,
+        occurrence_count: normalizeNullableNumber(row.occurrence_count, 'rmm_alerts.occurrence_count'),
+        triggered_at: triggeredAt,
+        resolved_at: normalizeNullableIso(row.resolved_at, 'rmm_alerts.resolved_at'),
+        alert_class: (row.alert_class as string | null) ?? null,
+        source_type: (row.source_type as string | null) ?? null,
+      };
+      return {
+        type: 'alert',
+        occurredAt: triggeredAt,
+        sortId: alert.alert_id,
+        alert,
+      };
+    });
+  }
+
+  return mergeTimelineEntries(
+    [...activityEntries, ...commentEntries, ...timeEntryEntries, ...alertEntries],
+    order,
+  );
 }

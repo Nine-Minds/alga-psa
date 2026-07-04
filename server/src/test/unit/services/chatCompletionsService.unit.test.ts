@@ -660,9 +660,19 @@ describe('ChatCompletionsService (unit)', () => {
         },
       });
 
-      expect(promptContext).toContain(
-        'Current date/time: March 9, 2026 at 1:50 PM EDT | timezone: America/New_York',
-      );
+      // The service renders in the host timezone, so compute the expected
+      // string the same way instead of hardcoding one machine's zone.
+      const timezone = new Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      const formatted = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: timezone,
+        timeZoneName: 'short',
+      }).format(new Date('2026-03-09T17:50:00Z'));
+      expect(promptContext).toContain(`Current date/time: ${formatted} | timezone: ${timezone}`);
       expect(promptContext).toContain('Pat Lee');
       expect(promptContext).toContain('pat@example.com');
       expect(promptContext).toContain('Ticket Details');

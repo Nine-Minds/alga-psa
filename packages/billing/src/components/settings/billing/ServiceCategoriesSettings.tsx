@@ -443,7 +443,7 @@ const ServiceCategoriesSettings: React.FC = () => {
                 </p>
                 <div className="border rounded-md">
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
-                    <div className="w-8 [&>div]:mb-0">
+                    <div className="w-8">
                       <Checkbox
                         id="select-all-categories"
                         checked={availableReferenceCategories.length > 0 && selectedImportCategories.length === availableReferenceCategories.length}
@@ -466,7 +466,7 @@ const ServiceCategoriesSettings: React.FC = () => {
                         key={category.id}
                         className="flex items-center space-x-2 p-2 hover:bg-muted/30 border-b"
                       >
-                        <div className="w-8 [&>div]:mb-0">
+                        <div className="w-8">
                           <Checkbox
                             id={`import-category-${category.id}`}
                             checked={selectedImportCategories.includes(category.id)}

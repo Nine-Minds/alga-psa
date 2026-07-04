@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { IClientContract } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import type { ClientContractAssignmentCreateInput } from './types';
@@ -59,18 +60,22 @@ const findMixedCurrencyActiveAssignment = async (
       : null;
   if (!targetCurrencyCode) return null;
 
-  const rows = await knexOrTrx('client_contracts as cc')
-    .join('contracts as c', function joinContracts() {
-      this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-    })
+  const db = tenantDb(knexOrTrx, tenant);
+  const query = db.table('client_contracts as cc');
+  db.tenantJoin(query, 'contracts as c', 'cc.contract_id', 'c.contract_id');
+  const rows = await query
     .where({
       'cc.client_id': params.clientId,
-      'cc.tenant': tenant,
       'cc.is_active': true,
       'c.is_active': true,
     })
     .whereNot('c.currency_code', targetCurrencyCode)
-    .select('cc.start_date', 'cc.end_date', 'c.currency_code', 'c.contract_name');
+    .select({
+      start_date: 'cc.start_date',
+      end_date: 'cc.end_date',
+      currency_code: 'c.currency_code',
+      contract_name: 'c.contract_name',
+    });
 
   const activeRow = rows.find((row: {
     start_date: string | null;
@@ -211,11 +216,11 @@ const RENEWAL_DEFAULT_SELECTIONS = [
 ];
 
 const withRenewalDefaultsJoin = (
+  db: ReturnType<typeof tenantDb>,
   query: Knex.QueryBuilder
 ): Knex.QueryBuilder => {
-  return query.leftJoin('default_billing_settings as dbs', function joinDefaultBillingSettings() {
-    this.on('cc.tenant', '=', 'dbs.tenant');
-  });
+  db.tenantJoin(query, 'default_billing_settings as dbs', 'cc.tenant', 'dbs.tenant', { type: 'left' });
+  return query;
 };
 
 export const normalizeClientContract = (row: any): IClientContract => {
@@ -335,14 +340,13 @@ export async function getClientContracts(
   tenant: string,
   clientId: string
 ): Promise<IClientContract[]> {
-  const baseQuery = knexOrTrx('client_contracts as cc')
-    .leftJoin('contracts as c', function joinContracts() {
-      this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-    })
-    .where({ 'cc.client_id': clientId, 'cc.tenant': tenant, 'cc.is_active': true })
+  const db = tenantDb(knexOrTrx, tenant);
+  const baseQuery = db.table('client_contracts as cc')
+    .where({ 'cc.client_id': clientId, 'cc.is_active': true })
     .orderBy('cc.start_date', 'desc');
+  db.tenantJoin(baseQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id', { type: 'left' });
 
-  const rows = await withRenewalDefaultsJoin(baseQuery).select([
+  const rows = await withRenewalDefaultsJoin(db, baseQuery).select([
     'cc.*',
     'c.billing_frequency as contract_billing_frequency',
     'c.status as contract_status',
@@ -359,18 +363,17 @@ export async function getActiveClientContractsByClientIds(
 ): Promise<IClientContract[]> {
   if (clientIds.length === 0) return [];
 
-  const baseQuery = knexOrTrx('client_contracts as cc')
-    .leftJoin('contracts as c', function joinContracts() {
-      this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-    })
+  const db = tenantDb(knexOrTrx, tenant);
+  const baseQuery = db.table('client_contracts as cc')
     .whereIn('cc.client_id', clientIds)
-    .andWhere({ 'cc.tenant': tenant, 'cc.is_active': true })
+    .andWhere({ 'cc.is_active': true })
     .orderBy([
       { column: 'cc.client_id', order: 'asc' },
       { column: 'cc.start_date', order: 'desc' },
     ]);
+  db.tenantJoin(baseQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id', { type: 'left' });
 
-  const rows = await withRenewalDefaultsJoin(baseQuery).select([
+  const rows = await withRenewalDefaultsJoin(db, baseQuery).select([
     'cc.*',
     'c.billing_frequency as contract_billing_frequency',
     'c.status as contract_status',
@@ -385,13 +388,12 @@ export async function getClientContractById(
   tenant: string,
   clientContractId: string
 ): Promise<IClientContract | null> {
-  const baseQuery = knexOrTrx('client_contracts as cc')
-    .leftJoin('contracts as c', function joinContracts() {
-      this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-    })
-    .where({ 'cc.client_contract_id': clientContractId, 'cc.tenant': tenant });
+  const db = tenantDb(knexOrTrx, tenant);
+  const baseQuery = db.table('client_contracts as cc')
+    .where({ 'cc.client_contract_id': clientContractId });
+  db.tenantJoin(baseQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id', { type: 'left' });
 
-  const row = await withRenewalDefaultsJoin(baseQuery)
+  const row = await withRenewalDefaultsJoin(db, baseQuery)
     .select([
       'cc.*',
       'c.billing_frequency as contract_billing_frequency',
@@ -408,13 +410,12 @@ export async function getDetailedClientContract(
   tenant: string,
   clientContractId: string
 ): Promise<any | null> {
-  const baseQuery = knexOrTrx('client_contracts as cc')
-    .join('contracts as c', function joinContracts() {
-      this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-    })
-    .where({ 'cc.client_contract_id': clientContractId, 'cc.tenant': tenant });
+  const db = tenantDb(knexOrTrx, tenant);
+  const baseQuery = db.table('client_contracts as cc')
+    .where({ 'cc.client_contract_id': clientContractId });
+  db.tenantJoin(baseQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
 
-  const clientContract = await withRenewalDefaultsJoin(baseQuery).select(
+  const clientContract = await withRenewalDefaultsJoin(db, baseQuery).select(
     [
       'cc.*',
       'c.contract_name',
@@ -430,16 +431,13 @@ export async function getDetailedClientContract(
 
   const normalized = normalizeClientContract(clientContract);
 
-  const contractLines = await knexOrTrx('client_contracts as cc')
-    .join('contract_lines as cl', function joinContractLines() {
-      this.on('cc.contract_id', '=', 'cl.contract_id').andOn('cc.tenant', '=', 'cl.tenant');
-    })
+  const contractLinesQuery = db.table('client_contracts as cc');
+  db.tenantJoin(contractLinesQuery, 'contract_lines as cl', 'cc.contract_id', 'cl.contract_id');
+  const contractLines = await contractLinesQuery
     .where({
       'cc.client_contract_id': clientContractId,
-      'cc.tenant': tenant,
     })
-    .distinct('cl.contract_line_id', 'cl.contract_line_name')
-    .select('cl.contract_line_name');
+    .distinct({ contract_line_id: 'cl.contract_line_id', contract_line_name: 'cl.contract_line_name' });
 
   return {
     ...normalized,
@@ -453,13 +451,14 @@ export async function createClientContractAssignment(
   tenant: string,
   input: ClientContractAssignmentCreateInput
 ): Promise<IClientContract> {
-  const clientExists = await knexOrTrx('clients').where({ client_id: input.client_id, tenant }).first();
+  const db = tenantDb(knexOrTrx, tenant);
+  const clientExists = await db.table('clients').where({ client_id: input.client_id }).first();
   if (!clientExists) {
     throw new Error(`Client ${input.client_id} not found`);
   }
 
-  const contractQuery = knexOrTrx('contracts')
-    .where({ contract_id: input.contract_id, tenant });
+  const contractQuery = db.table('contracts')
+    .where({ contract_id: input.contract_id });
   if (input.is_active) {
     contractQuery.andWhere({ is_active: true });
   }
@@ -563,7 +562,7 @@ export async function createClientContractAssignment(
   if (hasPoNumber) insertPayload.po_number = input.po_number ?? null;
   if (hasPoAmount) insertPayload.po_amount = input.po_amount ?? null;
 
-  const [created] = await knexOrTrx<IClientContract>('client_contracts').insert(insertPayload).returning('*');
+  const [created] = await db.table<IClientContract>('client_contracts').insert(insertPayload).returning('*');
   return normalizeClientContract(created);
 }
 
@@ -606,8 +605,8 @@ export async function updateClientContractAssignment(
   });
 
   if (updateData.start_date !== undefined && updateData.start_date !== existing.start_date) {
-    const contract = await knexOrTrx('contracts')
-      .where({ contract_id: existing.contract_id, tenant })
+    const contract = await tenantDb(knexOrTrx, tenant).table('contracts')
+      .where({ contract_id: existing.contract_id })
       .first();
 
     if (contract && contract.is_active) {
@@ -615,8 +614,8 @@ export async function updateClientContractAssignment(
     }
   }
 
-  const [updated] = await knexOrTrx<IClientContract>('client_contracts')
-    .where({ tenant, client_contract_id: clientContractId })
+  const [updated] = await tenantDb(knexOrTrx, tenant).table<IClientContract>('client_contracts')
+    .where({ client_contract_id: clientContractId })
     .update(sanitized as any)
     .returning('*');
 
