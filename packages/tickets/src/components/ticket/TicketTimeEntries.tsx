@@ -5,6 +5,7 @@ import { Clock, ChevronDown, ChevronRight, EyeOff, Pencil, Trash2 } from 'lucide
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
+import { useContentCardVariant } from '@alga-psa/ui/components';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { formatMinutesAsHoursAndMinutes, formatDateTime, utcToLocal, getUserTimeZone } from '@alga-psa/core';
 import type {
@@ -59,6 +60,9 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
   onDeleteEntry,
 }) => {
   const { t } = useTranslation('features/tickets');
+  // Inside the Grid layout's "Time logged" tile the tile header already names
+  // the section, so this panel renders as quiet rows instead of a second header.
+  const isBento = useContentCardVariant() === 'bento';
   const { fetchTimeEntriesForTicket } = useSchedulingCallbacks();
   const [summary, setSummary] = useState<TicketTimeEntriesSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -145,16 +149,30 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
   return (
     <div
       {...withDataAutomationId({ id: `${id}-time-entries` })}
-      className="border-t pt-4 space-y-3"
+      className={
+        isBento
+          ? 'border-t border-[rgb(var(--color-border-100))] pt-3 space-y-2'
+          : 'border-t pt-4 space-y-3'
+      }
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium flex items-center gap-2">
-          <Clock className="w-4 h-4 text-[rgb(var(--color-text-700))]" />
-          {t('timeEntries.title', 'Logged Time')}
+        <h3
+          className={
+            isBento
+              ? 'text-sm text-[rgb(var(--color-text-500))]'
+              : 'text-sm font-medium flex items-center gap-2'
+          }
+        >
+          {!isBento && <Clock className="w-4 h-4 text-[rgb(var(--color-text-700))]" />}
+          {isBento ? t('timeEntries.titleShort', 'Logged') : t('timeEntries.title', 'Logged Time')}
         </h3>
         <span
           {...withDataAutomationId({ id: `${id}-time-entries-total` })}
-          className="text-sm font-semibold text-[rgb(var(--color-text-900))]"
+          className={
+            isBento
+              ? 'text-sm font-medium text-[rgb(var(--color-text-800))]'
+              : 'text-sm font-semibold text-[rgb(var(--color-text-900))]'
+          }
         >
           {formatMinutesAsHoursAndMinutes(summary.totalMinutes, durationLabels)}
         </span>
@@ -163,9 +181,11 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
       {!hasAnyEntries && (
         <p
           {...withDataAutomationId({ id: `${id}-time-entries-empty` })}
-          className="text-sm text-muted-foreground"
+          className={isBento ? 'text-sm text-[rgb(var(--color-text-400))]' : 'text-sm text-muted-foreground'}
         >
-          {t('timeEntries.empty', 'No time has been logged on this ticket yet.')}
+          {isBento
+            ? t('timeEntries.emptyShort', 'No time logged yet')
+            : t('timeEntries.empty', 'No time has been logged on this ticket yet.')}
         </p>
       )}
 
