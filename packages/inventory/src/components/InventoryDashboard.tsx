@@ -163,6 +163,33 @@ function KpiTile({
 
 function MovementLine({ m }: { m: DashboardMovement }) {
   const { t } = useTranslation('features/inventory');
+  // Localized labels for the raw enums rendered in this row. The switch below still keys off
+  // the raw movement_type; these only translate the display text. Unknown values fall back to
+  // the raw / humanized string so behavior never regresses.
+  const SOURCE_DOC_TYPE_LABELS: Record<string, string> = {
+    purchase_order: t('dashboard.sourceDocType.purchaseOrder', 'Purchase order'),
+    sales_order: t('dashboard.sourceDocType.salesOrder', 'Sales order'),
+    ticket_material: t('dashboard.sourceDocType.ticketMaterial', 'Ticket material'),
+    project_material: t('dashboard.sourceDocType.projectMaterial', 'Project material'),
+    contract: t('dashboard.sourceDocType.contract', 'Contract'),
+    rma: t('dashboard.sourceDocType.rma', 'RMA'),
+    transfer: t('dashboard.sourceDocType.transfer', 'Transfer'),
+    loan: t('dashboard.sourceDocType.loan', 'Loan'),
+    manual: t('dashboard.sourceDocType.manual', 'Manual'),
+  };
+  const sourceDocTypeLabel = (v?: string | null): string =>
+    (v && SOURCE_DOC_TYPE_LABELS[v]) || (v ? v.replace(/_/g, ' ') : '');
+  // Only the movement types that reach the generic fallback below need a label; the others
+  // render bespoke text. Unknown values fall back to the raw value.
+  const MOVEMENT_TYPE_LABELS: Record<string, string> = {
+    adjust: t('dashboard.movementType.adjust', 'Adjusted'),
+    return_restock: t('dashboard.movementType.returnRestock', 'Restocked'),
+    loan_out: t('dashboard.movementType.loanOut', 'Loaned out'),
+    loan_in: t('dashboard.movementType.loanIn', 'Loan returned'),
+    retire: t('dashboard.movementType.retire', 'Retired'),
+  };
+  const movementTypeLabel = (v?: string | null): string =>
+    (v && MOVEMENT_TYPE_LABELS[v]) || (v ?? '');
   const relTime = (d: string | Date): string => {
     const ts = new Date(d).getTime();
     if (Number.isNaN(ts)) return '';
@@ -178,7 +205,7 @@ function MovementLine({ m }: { m: DashboardMovement }) {
   let tone: keyof typeof CHIP = 'purple';
   let Icon = Package;
   let text: React.ReactNode = t('dashboard.movements.generic', '{{type}} {{qty}} × {{name}}', {
-    type: m.movement_type,
+    type: movementTypeLabel(m.movement_type),
     qty: m.quantity,
     name: svc,
   });
@@ -235,7 +262,7 @@ function MovementLine({ m }: { m: DashboardMovement }) {
     m.movement_type === 'transfer_out' && m.from_location_name && m.to_location_name
       ? `${m.from_location_name} → ${m.to_location_name} · `
       : '';
-  const src = m.source_doc_type ? `${m.source_doc_type.replace(/_/g, ' ')} · ` : '';
+  const src = m.source_doc_type ? `${sourceDocTypeLabel(m.source_doc_type)} · ` : '';
   const who = m.performed_by_name ? t('dashboard.movements.bySuffix', ' · by {{name}}', { name: m.performed_by_name }) : '';
   return (
     <div className="flex gap-3 px-[18px] py-2.5 [&+&]:border-t [&+&]:border-gray-100">

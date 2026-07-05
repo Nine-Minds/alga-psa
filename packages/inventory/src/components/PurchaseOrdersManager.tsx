@@ -146,6 +146,17 @@ export function PurchaseOrdersManager({
     { value: 'received', label: t('purchaseOrders.status.received', 'Received') },
     { value: 'cancelled', label: t('purchaseOrders.status.cancelled', 'Cancelled') },
   ];
+  // Localized display label per raw PO status. Logic/variant lookups still use the raw
+  // enum value; only the badge/toast text is translated. Unknown values fall back to humanize().
+  const PO_STATUS_LABELS: Record<string, string> = {
+    draft: t('purchaseOrders.status.draft', 'Draft'),
+    open: t('purchaseOrders.status.open', 'Open'),
+    partially_received: t('purchaseOrders.status.partiallyReceived', 'Partially received'),
+    received: t('purchaseOrders.status.received', 'Received'),
+    cancelled: t('purchaseOrders.status.cancelled', 'Cancelled'),
+  };
+  const statusLabel = (status?: string | null): string =>
+    (status && PO_STATUS_LABELS[status]) || humanize(status);
   const [pos, setPos] = useState<PurchaseOrderListRow[]>(initialPos || []);
   // Seeded from the server: a failed SSR load must read as an error, not as "no POs".
   const [loadFailed, setLoadFailed] = useState(loadError);
@@ -366,7 +377,7 @@ export function PurchaseOrdersManager({
       if (result.over_receipt) {
         toast(t('purchaseOrders.overReceived', "Received {{quantity}}. You've now received more than was ordered.", { quantity }), { icon: '⚠️' });
       } else {
-        toast.success(t('purchaseOrders.receivedStatus', 'Received {{quantity}}. Purchase order is now {{status}}.', { quantity, status: humanize(result.po_status).toLowerCase() }));
+        toast.success(t('purchaseOrders.receivedStatus', 'Received {{quantity}}. Purchase order is now {{status}}.', { quantity, status: statusLabel(result.po_status).toLowerCase() }));
       }
       // Refresh the open dialog and the list.
       const full = await getPurchaseOrder(line.po_id);
@@ -423,7 +434,7 @@ export function PurchaseOrdersManager({
       dataIndex: 'status',
       render: (v: any) => (
         <Badge variant={statusVariant(v)} size="sm">
-          {humanize(v)}
+          {statusLabel(v)}
         </Badge>
       ),
     },

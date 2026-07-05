@@ -64,6 +64,15 @@ export function TransfersManager({
   const humanize = (s?: string | null): string =>
     s ? s.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) : t('common.emptyValue', '—');
 
+  // Localized display label per raw transfer status (STATUS_VARIANT and the action guards
+  // still key off the raw value). Unknown values fall back to humanize() so nothing regresses.
+  const TRANSFER_STATUS_LABELS: Record<string, string> = {
+    dispatched: t('transfers.status.dispatched', 'Dispatched'),
+    received: t('transfers.status.received', 'Received'),
+    cancelled: t('transfers.status.cancelled', 'Cancelled'),
+  };
+  const statusLabel = (v?: string | null): string => (v && TRANSFER_STATUS_LABELS[v]) || humanize(v);
+
   const [transfers, setTransfers] = useState<IStockTransfer[]>(initialTransfers || []);
   const [locations, setLocations] = useState<IStockLocation[]>(initialLocations || []);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -285,7 +294,7 @@ export function TransfersManager({
       dataIndex: 'status',
       render: (v: any) => (
         <Badge variant={STATUS_VARIANT[v] ?? 'secondary'} size="sm">
-          {humanize(v)}
+          {statusLabel(v)}
         </Badge>
       ),
     },

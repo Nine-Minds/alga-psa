@@ -70,6 +70,30 @@ export function RmaManager({
   const humanize = (s?: string | null): string =>
     s ? s.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) : t('common.emptyValue', '—');
 
+  // Localized display labels. Logic still keys off the raw enum values (STATUS_VARIANT,
+  // status/type checks); only the badge/column text is translated. Unknown values fall
+  // back to humanize() so behavior never regresses.
+  const RMA_STATUS_LABELS: Record<string, string> = {
+    open: t('rma.status.open', 'Open'),
+    awaiting_return: t('rma.status.awaitingReturn', 'Awaiting return'),
+    returned: t('rma.status.returned', 'Returned'),
+    sent_to_vendor: t('rma.status.sentToVendor', 'Sent to vendor'),
+    replacement_received: t('rma.status.replacementReceived', 'Replacement received'),
+    replacement_deployed: t('rma.status.replacementDeployed', 'Replacement deployed'),
+    dead_unit_owed: t('rma.status.deadUnitOwed', 'Dead unit owed'),
+    dead_unit_returned: t('rma.status.deadUnitReturned', 'Dead unit returned'),
+    replaced: t('rma.status.replaced', 'Replaced'),
+    credited: t('rma.status.credited', 'Credited'),
+    charged: t('rma.status.charged', 'Charged'),
+    closed: t('rma.status.closed', 'Closed'),
+  };
+  const statusLabel = (v?: string | null): string => (v && RMA_STATUS_LABELS[v]) || humanize(v);
+  const RMA_TYPE_LABELS: Record<string, string> = {
+    standard: t('rma.types.standard', 'Standard'),
+    advance_replacement: t('rma.types.advanceReplacement', 'Advance replacement'),
+  };
+  const typeLabel = (v?: string | null): string => (v && RMA_TYPE_LABELS[v]) || humanize(v);
+
   const reload = useCallback(async () => {
     try {
       const [list, owed] = await Promise.all([listRmaCases({}), deadUnitsOwedReport()]);
@@ -172,11 +196,11 @@ export function RmaManager({
   };
 
   const caseColumns: ColumnDefinition<IRmaCase>[] = [
-    { title: t('rma.columns.type', 'Type'), dataIndex: 'rma_type', render: (v: any) => humanize(v) },
+    { title: t('rma.columns.type', 'Type'), dataIndex: 'rma_type', render: (v: any) => typeLabel(v) },
     {
       title: t('common.status', 'Status'),
       dataIndex: 'status',
-      render: (v: any) => <Badge variant={STATUS_VARIANT[v] ?? 'secondary'} size="sm">{humanize(v)}</Badge>,
+      render: (v: any) => <Badge variant={STATUS_VARIANT[v] ?? 'secondary'} size="sm">{statusLabel(v)}</Badge>,
     },
     { title: t('rma.columns.returnedUnit', 'Returned unit'), dataIndex: 'returned_unit_id', render: (v: any) => v || t('common.emptyValue', '—') },
     { title: t('rma.columns.client', 'Client'), dataIndex: 'client_id', render: (v: any) => v || t('common.emptyValue', '—') },

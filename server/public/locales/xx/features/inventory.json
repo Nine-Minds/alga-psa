@@ -174,6 +174,24 @@
       "empty": "11111",
       "grandTotal": "11111 {{total}} 11111",
       "title": "11111"
+    },
+    "sourceDocType": {
+      "purchaseOrder": "11111",
+      "salesOrder": "11111",
+      "ticketMaterial": "11111",
+      "projectMaterial": "11111",
+      "contract": "11111",
+      "rma": "11111",
+      "transfer": "11111",
+      "loan": "11111",
+      "manual": "11111"
+    },
+    "movementType": {
+      "adjust": "11111",
+      "returnRestock": "11111",
+      "loanOut": "11111",
+      "loanIn": "11111",
+      "retire": "11111"
     }
   },
   "ghostUsage": {
@@ -629,6 +647,20 @@
     "types": {
       "advanceReplacement": "11111",
       "standard": "11111"
+    },
+    "status": {
+      "open": "11111",
+      "awaitingReturn": "11111",
+      "returned": "11111",
+      "sentToVendor": "11111",
+      "replacementReceived": "11111",
+      "replacementDeployed": "11111",
+      "deadUnitOwed": "11111",
+      "deadUnitReturned": "11111",
+      "replaced": "11111",
+      "credited": "11111",
+      "charged": "11111",
+      "closed": "11111"
     }
   },
   "salesOrders": {
@@ -897,7 +929,17 @@
     "searchTerm": "11111",
     "title": "11111",
     "unitHistoryTitle": "11111",
-    "unitTitle": "11111 {{id}} 11111"
+    "unitTitle": "11111 {{id}} 11111",
+    "status": {
+      "inStock": "11111",
+      "allocated": "11111",
+      "inTransit": "11111",
+      "onLoan": "11111",
+      "delivered": "11111",
+      "returned": "11111",
+      "inRma": "11111",
+      "retired": "11111"
+    }
   },
   "transfers": {
     "addLine": "11111",
@@ -954,7 +996,12 @@
     "shortAtSource": "11111 {{n}} 11111",
     "title": "11111",
     "toLocation": "11111",
-    "vanLoadList": "11111"
+    "vanLoadList": "11111",
+    "status": {
+      "dispatched": "11111",
+      "received": "11111",
+      "cancelled": "11111"
+    }
   },
   "vendorBills": {
     "actions": {

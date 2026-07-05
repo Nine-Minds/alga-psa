@@ -73,9 +73,21 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     { value: 'mac', label: t('stockUnits.searchMode.mac', 'MAC address') },
   ];
 
+  // Localized display label per raw unit status (statusVariant still keys off the raw value).
+  // Unknown values fall back to the humanized raw string so behavior never regresses.
+  const UNIT_STATUS_LABELS: Record<string, string> = {
+    in_stock: t('stockUnits.status.inStock', 'In stock'),
+    allocated: t('stockUnits.status.allocated', 'Allocated'),
+    in_transit: t('stockUnits.status.inTransit', 'In transit'),
+    on_loan: t('stockUnits.status.onLoan', 'On loan'),
+    delivered: t('stockUnits.status.delivered', 'Delivered'),
+    returned: t('stockUnits.status.returned', 'Returned'),
+    in_rma: t('stockUnits.status.inRma', 'In RMA'),
+    retired: t('stockUnits.status.retired', 'Retired'),
+  };
   const humanizeStatus = (v?: string | null): string => {
     if (!v) return t('common.emptyValue', '—');
-    return v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+    return UNIT_STATUS_LABELS[v] ?? v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
   };
 
   const [units, setUnits] = useState<IStockUnit[]>(initialUnits || []);

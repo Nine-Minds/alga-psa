@@ -174,6 +174,24 @@
       "empty": "Nessuna giacenza disponibile.",
       "grandTotal": "Totale complessivo {{total}}",
       "title": "Valore dell'inventario per ubicazione"
+    },
+    "sourceDocType": {
+      "purchaseOrder": "Ordine di acquisto",
+      "salesOrder": "Ordine di vendita",
+      "ticketMaterial": "Materiale ticket",
+      "projectMaterial": "Materiale progetto",
+      "contract": "Contratto",
+      "rma": "RMA",
+      "transfer": "Trasferimento",
+      "loan": "Prestito",
+      "manual": "Manuale"
+    },
+    "movementType": {
+      "adjust": "Rettificato",
+      "returnRestock": "Riassortito",
+      "loanOut": "Prestato",
+      "loanIn": "Prestito reso",
+      "retire": "Dismesso"
     }
   },
   "ghostUsage": {
@@ -629,6 +647,20 @@
     "types": {
       "advanceReplacement": "Sostituzione anticipata",
       "standard": "Standard"
+    },
+    "status": {
+      "open": "Aperto",
+      "awaitingReturn": "In attesa di reso",
+      "returned": "Reso",
+      "sentToVendor": "Inviato al fornitore",
+      "replacementReceived": "Sostituzione ricevuta",
+      "replacementDeployed": "Sostituzione distribuita",
+      "deadUnitOwed": "Unità guasta dovuta",
+      "deadUnitReturned": "Unità guasta resa",
+      "replaced": "Sostituito",
+      "credited": "Accreditato",
+      "charged": "Addebitato",
+      "closed": "Chiuso"
     }
   },
   "salesOrders": {
@@ -897,7 +929,17 @@
     "searchTerm": "Termine di ricerca",
     "title": "Unità di giacenza",
     "unitHistoryTitle": "Cronologia dell'unità",
-    "unitTitle": "Unità {{id}}"
+    "unitTitle": "Unità {{id}}",
+    "status": {
+      "inStock": "In giacenza",
+      "allocated": "Allocato",
+      "inTransit": "In transito",
+      "onLoan": "In prestito",
+      "delivered": "Consegnato",
+      "returned": "Reso",
+      "inRma": "In RMA",
+      "retired": "Dismesso"
+    }
   },
   "transfers": {
     "addLine": "Aggiungi riga",
@@ -954,7 +996,12 @@
     "shortAtSource": "mancano {{n}} all'origine",
     "title": "Trasferimenti",
     "toLocation": "Ubicazione di destinazione",
-    "vanLoadList": "Lista di carico del furgone"
+    "vanLoadList": "Lista di carico del furgone",
+    "status": {
+      "dispatched": "Spedito",
+      "received": "Ricevuto",
+      "cancelled": "Annullato"
+    }
   },
   "vendorBills": {
     "actions": {

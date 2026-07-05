@@ -39,6 +39,31 @@ export function PoLandedCostDialog({
   productName: (serviceId: string) => string;
 }) {
   const { t } = useTranslation('features/inventory');
+  // Localized display labels for the entry enums. The stored values ('freight'/'value'/…)
+  // stay raw in state and requests; only the table text is translated. Unknown values fall
+  // back to the raw value so behavior never regresses.
+  const costTypeLabel = (v?: string | null): string => {
+    switch (v) {
+      case 'freight':
+        return t('poLandedCost.costType.freight', 'Freight');
+      case 'duty':
+        return t('poLandedCost.costType.duty', 'Duty');
+      case 'other':
+        return t('poLandedCost.costType.other', 'Other');
+      default:
+        return v ?? '';
+    }
+  };
+  const allocationMethodLabel = (v?: string | null): string => {
+    switch (v) {
+      case 'value':
+        return t('poLandedCost.allocation.value', 'Line value');
+      case 'quantity':
+        return t('common.quantity', 'Quantity');
+      default:
+        return v ?? '';
+    }
+  };
   const [entries, setEntries] = useState<IPoLandedCost[]>([]);
   const [lines, setLines] = useState<IPurchaseOrderLine[]>([]);
   const [form, setForm] = useState<EntryForm>(emptyEntry());
@@ -174,11 +199,11 @@ export function PoLandedCostDialog({
               {entries.map((e) => (
                 <tr key={e.landed_cost_id} className="border-b last:border-0">
                   <td className="py-2 pr-2 capitalize">
-                    {e.cost_type}
+                    {costTypeLabel(e.cost_type)}
                     {e.description && <span className="ml-2 text-xs text-gray-500">{e.description}</span>}
                   </td>
                   <td className="py-2 px-2 text-right tabular-nums">{money(Number(e.amount), currency)}</td>
-                  <td className="py-2 px-2 capitalize">{e.allocation_method}</td>
+                  <td className="py-2 px-2 capitalize">{allocationMethodLabel(e.allocation_method)}</td>
                   <td className="py-2 px-2">
                     <Badge variant={e.applied ? 'success' : 'secondary'} size="sm">
                       {e.applied ? t('poLandedCost.status.applied', 'Applied') : t('poLandedCost.status.pending', 'Pending')}

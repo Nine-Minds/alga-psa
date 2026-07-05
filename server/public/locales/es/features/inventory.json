@@ -174,6 +174,24 @@
       "empty": "No hay existencias disponibles.",
       "grandTotal": "Total general {{total}}",
       "title": "Valor del inventario por ubicación"
+    },
+    "sourceDocType": {
+      "purchaseOrder": "Orden de compra",
+      "salesOrder": "Orden de venta",
+      "ticketMaterial": "Material de ticket",
+      "projectMaterial": "Material de proyecto",
+      "contract": "Contrato",
+      "rma": "RMA",
+      "transfer": "Transferencia",
+      "loan": "Préstamo",
+      "manual": "Manual"
+    },
+    "movementType": {
+      "adjust": "Ajustado",
+      "returnRestock": "Reabastecido",
+      "loanOut": "Prestado",
+      "loanIn": "Préstamo devuelto",
+      "retire": "Retirado"
     }
   },
   "ghostUsage": {
@@ -629,6 +647,20 @@
     "types": {
       "advanceReplacement": "Reemplazo anticipado",
       "standard": "Estándar"
+    },
+    "status": {
+      "open": "Abierto",
+      "awaitingReturn": "Esperando devolución",
+      "returned": "Devuelto",
+      "sentToVendor": "Enviado al proveedor",
+      "replacementReceived": "Reemplazo recibido",
+      "replacementDeployed": "Reemplazo desplegado",
+      "deadUnitOwed": "Unidad defectuosa pendiente",
+      "deadUnitReturned": "Unidad defectuosa devuelta",
+      "replaced": "Reemplazado",
+      "credited": "Acreditado",
+      "charged": "Cobrado",
+      "closed": "Cerrado"
     }
   },
   "salesOrders": {
@@ -897,7 +929,17 @@
     "searchTerm": "Término de búsqueda",
     "title": "Unidades de existencias",
     "unitHistoryTitle": "Historial de la unidad",
-    "unitTitle": "Unidad {{id}}"
+    "unitTitle": "Unidad {{id}}",
+    "status": {
+      "inStock": "En existencias",
+      "allocated": "Asignado",
+      "inTransit": "En tránsito",
+      "onLoan": "En préstamo",
+      "delivered": "Entregado",
+      "returned": "Devuelto",
+      "inRma": "En RMA",
+      "retired": "Retirado"
+    }
   },
   "transfers": {
     "addLine": "Añadir línea",
@@ -954,7 +996,12 @@
     "shortAtSource": "faltan {{n}} en origen",
     "title": "Transferencias",
     "toLocation": "Ubicación de destino",
-    "vanLoadList": "Lista de carga de la furgoneta"
+    "vanLoadList": "Lista de carga de la furgoneta",
+    "status": {
+      "dispatched": "Despachado",
+      "received": "Recibido",
+      "cancelled": "Cancelado"
+    }
   },
   "vendorBills": {
     "actions": {

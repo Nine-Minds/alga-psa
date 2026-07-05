@@ -174,6 +174,24 @@
       "empty": "55555",
       "grandTotal": "55555 {{total}} 55555",
       "title": "55555"
+    },
+    "sourceDocType": {
+      "purchaseOrder": "55555",
+      "salesOrder": "55555",
+      "ticketMaterial": "55555",
+      "projectMaterial": "55555",
+      "contract": "55555",
+      "rma": "55555",
+      "transfer": "55555",
+      "loan": "55555",
+      "manual": "55555"
+    },
+    "movementType": {
+      "adjust": "55555",
+      "returnRestock": "55555",
+      "loanOut": "55555",
+      "loanIn": "55555",
+      "retire": "55555"
     }
   },
   "ghostUsage": {
@@ -629,6 +647,20 @@
     "types": {
       "advanceReplacement": "55555",
       "standard": "55555"
+    },
+    "status": {
+      "open": "55555",
+      "awaitingReturn": "55555",
+      "returned": "55555",
+      "sentToVendor": "55555",
+      "replacementReceived": "55555",
+      "replacementDeployed": "55555",
+      "deadUnitOwed": "55555",
+      "deadUnitReturned": "55555",
+      "replaced": "55555",
+      "credited": "55555",
+      "charged": "55555",
+      "closed": "55555"
     }
   },
   "salesOrders": {
@@ -897,7 +929,17 @@
     "searchTerm": "55555",
     "title": "55555",
     "unitHistoryTitle": "55555",
-    "unitTitle": "55555 {{id}} 55555"
+    "unitTitle": "55555 {{id}} 55555",
+    "status": {
+      "inStock": "55555",
+      "allocated": "55555",
+      "inTransit": "55555",
+      "onLoan": "55555",
+      "delivered": "55555",
+      "returned": "55555",
+      "inRma": "55555",
+      "retired": "55555"
+    }
   },
   "transfers": {
     "addLine": "55555",
@@ -954,7 +996,12 @@
     "shortAtSource": "55555 {{n}} 55555",
     "title": "55555",
     "toLocation": "55555",
-    "vanLoadList": "55555"
+    "vanLoadList": "55555",
+    "status": {
+      "dispatched": "55555",
+      "received": "55555",
+      "cancelled": "55555"
+    }
   },
   "vendorBills": {
     "actions": {
