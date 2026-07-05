@@ -1126,7 +1126,10 @@
     "status": "Status",
     "addSuccess": "Material hinzugefügt",
     "removeSuccess": "Material entfernt",
-    "clientRequired": "Diesem Ticket muss ein Kunde zugewiesen sein, bevor Materialien hinzugefügt werden können."
+    "clientRequired": "Diesem Ticket muss ein Kunde zugewiesen sein, bevor Materialien hinzugefügt werden können.",
+    "serialUnit": "Seriennummer / MAC (serialisiertes Produkt)",
+    "selectUnit": "Einheit zum Liefern auswählen...",
+    "onHandByLocation": "Bestand nach Standort"
   },
   "watchList": {
     "title": "Beobachtungsliste",
@@ -1243,7 +1246,8 @@
     "materials": {
       "productRequired": "Bitte wähle ein Produkt aus",
       "currencyRequired": "Bitte wähle eine Währung aus",
-      "quantityMin": "Die Menge muss mindestens 1 betragen"
+      "quantityMin": "Die Menge muss mindestens 1 betragen",
+      "unitRequired": "Bitte wählen Sie eine Serie/Einheit zum Liefern aus"
     },
     "watchList": {
       "invalidEmail": "Bitte gib eine gültige E-Mail-Adresse ein.",

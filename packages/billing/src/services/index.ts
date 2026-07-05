@@ -13,9 +13,11 @@ export {
   convertQuoteToDraftContract,
   convertQuoteToDraftContractAndInvoice,
   convertQuoteToDraftInvoice,
+  convertQuoteToDraftSalesOrder,
   type QuoteToContractConversionResult,
   type QuoteToBothConversionResult,
   type QuoteToInvoiceConversionResult,
+  type QuoteToSalesOrderConversionResult,
 } from './quoteConversionService';
 export { ContractLineServiceConfigurationService } from './contractLineServiceConfigurationService';
 export { ClientContractServiceConfigurationService } from './clientContractServiceConfigurationService';

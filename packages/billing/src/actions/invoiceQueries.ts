@@ -114,6 +114,28 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise
 }
 
 /**
+ * Draft-vs-finalized routing state for one invoice, using the same canonical
+ * predicate as the Drafts/Finalized tab queries (draft = finalized_at IS NULL
+ * AND status = 'draft'). Used by deep-link redirects to land on the right subtab.
+ */
+export const getInvoiceRoutingState = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<{ exists: boolean; isDraft: boolean }> => {
+  if (!(await hasPermission(user, 'billing', 'read'))) {
+    return { exists: false, isDraft: false };
+  }
+  const { knex } = await createTenantKnex();
+  const row = await knex('invoices')
+    .where({ tenant, invoice_id: invoiceId })
+    .select('status', 'finalized_at')
+    .first();
+  if (!row) return { exists: false, isDraft: false };
+  return { exists: true, isDraft: !row.finalized_at && row.status === 'draft' };
+});
+
+/**
  * Fetch invoices with server-side pagination and search
  */
 export const fetchInvoicesPaginated = withAuth(async (

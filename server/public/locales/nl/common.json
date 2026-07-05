@@ -324,7 +324,9 @@
     "ariaLabel": "Paginering",
     "totalItems": "{{count}} {{itemLabel}} in totaal",
     "totalRecordsInline": "({{count}} records in totaal)",
-    "pageOf": "Pagina {{current}} van {{total}}"
+    "pageOf": "Pagina {{current}} van {{total}}",
+    "itemsLabel_one": "element",
+    "itemsLabel_other": "elementen"
   },
   "documents": {
     "title": "Documenten",

@@ -206,9 +206,9 @@
     "providerDefault": "Valeur par défaut du fournisseur",
     "inboundEmailDomains": "Domaines de messagerie entrants",
     "inboundEmailDomainsHelp": "Seuls ces domaines seront utilisés pour la mise en correspondance des domaines de courrier électronique entrant (par exemple, acme.com). Les domaines doivent être uniques pour tous les clients.",
-    "noInboundDomains": "Aucun domaine de messagerie entrant configuré. La correspondance de domaine ne sera pas utilisée.",
+    "noInboundDomains": "Ajoutez un domaine pour associer les e-mails entrants à ce client.",
     "inboundTicketDestination": "Destination du ticket entrant",
-    "inboundDestinationPrecedence": "Priorité : remplacement du contact -> destination du client -> valeur par défaut du fournisseur.",
+    "inboundDestinationPrecedence": "Utilise d'abord le remplacement du contact, puis celui du client, puis la valeur par défaut du fournisseur.",
     "manageLocations": "Gérer les emplacements",
     "loadingUsers": "Chargement des utilisateurs...",
     "loadingPolicies": "Chargement des politiques...",
@@ -278,7 +278,12 @@
     "nameAliasRemoveFailed": "Échec de la suppression de l'alias",
     "nameAliasRemoved": "Alias supprimé",
     "nameAliases": "Alias de correspondance",
-    "noNameAliases": "Aucun alias configuré. Le nom du client lui-même correspond toujours."
+    "noNameAliases": "Aucun alias configuré. Le nom du client lui-même correspond toujours.",
+    "equipment": "Équipement",
+    "parentClientSelf": "Un client ne peut pas être son propre parent",
+    "parentClientPlaceholder": "Aucun client parent",
+    "parentClientClear": "Effacer",
+    "parentClientLegacy": "Précédemment saisi comme texte : {{name}}"
   },
   "quickAddClient": {
     "title": "Ajouter un nouveau client",
@@ -616,7 +621,10 @@
     "noActiveBucketPlans": "Aucun plan de compartiment actif trouvé.",
     "noHours": "Aucune heure enregistrée dans la période sélectionnée.",
     "noInvoices": "Aucune facture récente trouvée.",
-    "noUsage": "Aucune donnée d'utilisation trouvée dans la période sélectionnée."
+    "noUsage": "Aucune donnée d'utilisation trouvée dans la période sélectionnée.",
+    "retry": "Réessayer",
+    "loadError": "Le chargement de cette section a échoué.",
+    "balanceDue": "Solde dû"
   },
   "clientContractLineGuide": {
     "title": "Guide de désambiguïsation des lignes de contrat",
@@ -1008,7 +1016,6 @@
     "title": "Paramètres de calcul des taxes",
     "description": "Configurez la façon dont les taxes sont calculées pour ce client.",
     "createDefault": "Créer des paramètres de taxe par défaut",
-    "goToBillingTaxSettings": "Accédez aux paramètres de taxe de facturation",
     "taxExemptStatus": "Statut d'exonération d'impôt",
     "taxExempt": "Exonéré d'impôt",
     "taxExemptHelp": "Lorsqu'elles sont activées, les taxes ne seront pas appliquées aux factures de ce client.",
@@ -1043,13 +1050,13 @@
     "taxExemptUpdatedSuccess": "Statut d'exonération fiscale mis à jour avec succès",
     "taxExemptUpdateError": "Échec de la mise à jour du statut d'exonération fiscale",
     "taxSourceExternal": "Externe",
-    "taxSourceHelp": "Gérez les taux de taxe par défaut des clients dans Paramètres client → Taux de taxe et gérez les taux globaux dans Facturation → Paramètres de taxe.",
+    "taxSourceHelp": "Définissez les taux de ce client dans Facturation → Taux de taxe. Définissez les taux globaux dans Paramètres de facturation → Taxe.",
     "taxSourceInternal": "Interne"
   },
   "clientNotesPanel": {
-    "title": "Notes et informations rapides",
+    "title": "Notes",
     "initialNote": "Remarque initiale",
-    "lastUpdated": "Dernière mise à jour :",
+    "lastUpdated": "Dernière mise à jour : {{value}}",
     "save": "Enregistrer",
     "retry": "Réessayer",
     "loadError": "Les notes n'ont pas pu être chargées",
@@ -1312,7 +1319,9 @@
         "printer": "Imprimante",
         "server": "Serveur",
         "workstation": "Poste de travail"
-      }
+      },
+      "loadError": "Impossible de charger les actifs pour le moment.",
+      "retry": "Réessayer"
     },
     "tickets": {
       "addTicket": "Ajouter un ticket",
@@ -1336,5 +1345,28 @@
         "userNotAuthenticated": "Utilisateur non authentifié"
       }
     }
+  },
+  "clientEquipmentTab": {
+    "retry": "Réessayer",
+    "loadError": "Le chargement de cette section a échoué.",
+    "emptyValue": "—",
+    "orderNumber": "Numéro de commande",
+    "status": "Statut",
+    "ordered": "Commandé",
+    "amount": "Montant",
+    "product": "Produit",
+    "sku": "SKU",
+    "serialNumber": "Numéro de série",
+    "delivered": "Livré",
+    "asset": "Actif",
+    "viewAsset": "Voir l'actif",
+    "rmaNumber": "Numéro de RMA",
+    "opened": "Ouvert",
+    "salesOrders": "Commandes clients",
+    "noSalesOrders": "Aucune commande client pour ce client.",
+    "deliveredUnits": "Unités livrées",
+    "noDeliveredEquipment": "Aucun équipement livré enregistré.",
+    "rmas": "RMAs",
+    "noRmas": "Aucun RMA pour ce client."
   }
 }

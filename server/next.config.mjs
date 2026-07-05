@@ -302,6 +302,12 @@ const nextConfig = {
       '@alga-psa/billing/components': '../packages/billing/src/components/index.ts',
       '@alga-psa/billing/models': '../packages/billing/src/models/index.ts',
       '@alga-psa/billing/services': '../packages/billing/src/services/index.ts',
+      // Inventory package
+      '@alga-psa/inventory': '../packages/inventory/src',
+      '@alga-psa/inventory/': '../packages/inventory/src/',
+      '@alga-psa/inventory/actions': '../packages/inventory/src/actions/index.ts',
+      '@alga-psa/inventory/components': '../packages/inventory/src/components/index.ts',
+      '@alga-psa/inventory/lib': '../packages/inventory/src/lib/index.ts',
       // Projects package
       '@alga-psa/projects': '../packages/projects/src',
       '@alga-psa/projects/': '../packages/projects/src/',
@@ -479,6 +485,7 @@ const nextConfig = {
     '@alga-psa/documents',
     '@alga-psa/reference-data',
     '@alga-psa/billing',
+    '@alga-psa/inventory',
     '@alga-psa/msp-composition',
     '@alga-psa/user-composition',
     '@alga-psa/user-activities',

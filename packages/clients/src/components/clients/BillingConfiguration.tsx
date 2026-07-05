@@ -195,7 +195,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 <TabsList className="mb-4">
                     <TabsTrigger value="general">{t('billingConfiguration.general', { defaultValue: 'General' })}</TabsTrigger>
                     <TabsTrigger value="contracts">{t('billingConfiguration.contracts', { defaultValue: 'Contracts' })}</TabsTrigger>
-                    <TabsTrigger value="taxRates">{t('billingConfiguration.taxRates', { defaultValue: 'Tax Rates' })}</TabsTrigger>
+                    <TabsTrigger value="taxRates">{t('billingConfiguration.taxRates', { defaultValue: 'Tax rates' })}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="general">
                     <BillingConfigForm

@@ -26,6 +26,8 @@ export * from './onlineMeetingActions';
 export * from './contactAvatarActions';
 export * from './queryActions';
 export * from './entraClientSyncActions';
+export * from './clientPulseActions';
+export * from './clientTimelineActions';
 
 // TODO: Create client-specific action files with dual-write logic:
 // - clientActions.ts (replaces clientActions.ts)

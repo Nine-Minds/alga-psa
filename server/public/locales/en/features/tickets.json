@@ -1126,7 +1126,10 @@
     "status": "Status",
     "addSuccess": "Material added",
     "removeSuccess": "Material removed",
-    "clientRequired": "A client must be assigned to this ticket before materials can be added."
+    "clientRequired": "A client must be assigned to this ticket before materials can be added.",
+    "serialUnit": "Serial / MAC (serialized product)",
+    "selectUnit": "Select a unit to deliver...",
+    "onHandByLocation": "On hand by location"
   },
   "watchList": {
     "title": "Watch List",
@@ -1243,7 +1246,8 @@
     "materials": {
       "productRequired": "Please select a product",
       "currencyRequired": "Please select a currency",
-      "quantityMin": "Quantity must be at least 1"
+      "quantityMin": "Quantity must be at least 1",
+      "unitRequired": "Please select a serial/unit to deliver"
     },
     "watchList": {
       "invalidEmail": "Enter a valid email address.",

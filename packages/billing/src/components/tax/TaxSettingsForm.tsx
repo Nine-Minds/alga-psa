@@ -488,7 +488,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">
                     {t('clientTaxSettings.advanced.reverseCharge.label', {
-                      defaultValue: 'Apply Reverse Charge'
+                      defaultValue: 'Apply reverse charge'
                     })}
                   </span>
                   <Tooltip content={t('clientTaxSettings.advanced.reverseCharge.tooltip', {

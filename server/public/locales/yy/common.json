@@ -387,6 +387,8 @@
     "first": "55555",
     "last": "55555",
     "itemsLabel": "55555",
+    "itemsLabel_one": "55555",
+    "itemsLabel_other": "55555",
     "itemsPerPageOption": "55555 {{count}} 55555",
     "itemsPerPagePlaceholder": "55555",
     "reflectionLabel": "55555",

@@ -99,6 +99,64 @@ interface InvoiceDocumentPayload {
   documentType?: 'Invoice' | 'CreditMemo';
 }
 
+type DbVendorBill = {
+  bill_id: string;
+  bill_number: string;
+  vendor_id: string;
+  vendor_name: string | null;
+  bill_date: string | Date;
+  due_date?: string | Date | null;
+  total_amount: number | string;
+  currency_code?: string | null;
+  notes?: string | null;
+};
+
+type DbVendorBillLine = {
+  bill_line_id: string;
+  bill_id: string;
+  service_id?: string | null;
+  service_name?: string | null;
+  description?: string | null;
+  quantity: number | string;
+  unit_cost: number | string;
+  amount: number | string;
+};
+
+type QboBillLine = {
+  Id?: string;
+  Amount: number;
+  DetailType: 'AccountBasedExpenseLineDetail';
+  Description?: string;
+  AccountBasedExpenseLineDetail: {
+    AccountRef: { value: string; name?: string };
+    ClassRef?: { value: string; name?: string };
+  };
+};
+
+type QboBill = {
+  Id?: string;
+  SyncToken?: string;
+  DocNumber?: string;
+  TxnDate?: string;
+  DueDate?: string;
+  VendorRef: { value: string; name?: string };
+  Line: QboBillLine[];
+  CurrencyRef?: { value: string };
+  PrivateNote?: string;
+  TotalAmt?: number;
+};
+
+interface VendorBillDocumentPayload {
+  bill: Omit<QboBill, 'VendorRef'>;
+  billId: string;
+  vendorId: string;
+  vendorName: string;
+  expenseAccountRef: { value: string; name?: string };
+  totals: {
+    amountCents: number;
+  };
+}
+
 export function buildQboPrivateNoteForPurchaseOrder(poNumber: string): string {
   return `PO: ${poNumber}`;
 }
@@ -147,6 +205,10 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     const tenantId = context.batch.tenant;
     if (!tenantId) {
       throw new Error('QuickBooks adapter requires batch tenant identifier');
+    }
+
+    if (context.batch.export_type === 'vendor_bill') {
+      return this.transformVendorBills(context, knex, tenantId);
     }
 
     const companySyncService = CompanyAccountingSyncService.create({
@@ -459,6 +521,14 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       throw new Error('QuickBooks adapter requires a connected QuickBooks Online company to deliver invoices');
     }
     const qboClient = await QboClientService.create(tenantId, realmId);
+
+    if (context.batch.export_type === 'vendor_bill') {
+      return this.deliverVendorBillDocuments(transformResult, context, qboClient, knex, {
+        tenantId,
+        realmId
+      });
+    }
+
     const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
 
     const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
@@ -507,9 +577,374 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       metadata: {
         adapter: this.type,
         deliveredInvoices: transformResult.documents.length - failedDocuments.length,
-        failedInvoices: failedDocuments.length
+      failedInvoices: failedDocuments.length
       }
     };
+  }
+
+  private async transformVendorBills(
+    context: AccountingExportAdapterContext,
+    knex: Knex,
+    tenantId: string
+  ): Promise<AccountingExportTransformResult> {
+    const syncSettings = await getAccountingSyncSettings(knex, tenantId).catch(() => null);
+    const expenseAccountRef = syncSettings?.defaultExpenseAccountRef ?? null;
+    if (!expenseAccountRef) {
+      throw new AppError(
+        'QBO_VENDOR_BILL_EXPENSE_ACCOUNT_REQUIRED',
+        'QuickBooks vendor bill export requires settings.accountingSync.defaultExpenseAccountRef.'
+      );
+    }
+
+    const tenantDefaultClassRef = syncSettings?.defaultClassRef ?? null;
+    const billIds = Array.from(new Set(context.lines.map((line) => line.invoice_id).filter(Boolean)));
+    const [billsById, linesByBillId] = await Promise.all([
+      this.loadVendorBills(knex, tenantId, billIds),
+      this.loadVendorBillLines(knex, tenantId, billIds)
+    ]);
+
+    const exportLinesByBill = groupBy(context.lines, (line) => line.invoice_id);
+    const documents: AccountingExportDocument[] = [];
+
+    for (const [billId, exportLines] of exportLinesByBill.entries()) {
+      const bill = billsById.get(billId);
+      if (!bill) {
+        throw new Error(`QuickBooks adapter: vendor bill ${billId} not found for tenant ${tenantId}`);
+      }
+      const vendorName = bill.vendor_name?.trim();
+      if (!vendorName) {
+        throw new Error(`QuickBooks adapter: vendor bill ${billId} is missing vendor name`);
+      }
+
+      const billLines = linesByBillId.get(billId) ?? [];
+      if (billLines.length === 0) {
+        throw new Error(`QuickBooks adapter: vendor bill ${billId} has no lines`);
+      }
+
+      const qboLines: QboBillLine[] = billLines.map((line) => {
+        const amountCents = Number(line.amount ?? 0);
+        const detail: QboBillLine['AccountBasedExpenseLineDetail'] = {
+          AccountRef: {
+            value: expenseAccountRef.value,
+            name: expenseAccountRef.name
+          }
+        };
+        if (tenantDefaultClassRef) {
+          detail.ClassRef = {
+            value: tenantDefaultClassRef.value,
+            name: tenantDefaultClassRef.name
+          };
+        }
+
+        return {
+          Amount: centsToAmount(amountCents),
+          DetailType: 'AccountBasedExpenseLineDetail',
+          Description: line.description ?? line.service_name ?? undefined,
+          AccountBasedExpenseLineDetail: detail
+        };
+      });
+
+      const qboBill: Omit<QboBill, 'VendorRef'> = {
+        DocNumber: bill.bill_number,
+        TxnDate: formatDate(bill.bill_date),
+        DueDate: formatDate(bill.due_date),
+        Line: qboLines
+      };
+
+      if (bill.currency_code) {
+        qboBill.CurrencyRef = { value: bill.currency_code };
+      }
+      if (bill.notes) {
+        qboBill.PrivateNote = bill.notes;
+      }
+
+      const payload: VendorBillDocumentPayload = {
+        bill: qboBill,
+        billId,
+        vendorId: bill.vendor_id,
+        vendorName,
+        expenseAccountRef,
+        totals: {
+          amountCents: Math.round(Number(bill.total_amount ?? 0))
+        }
+      };
+
+      documents.push({
+        documentId: billId,
+        lineIds: exportLines.map((line) => line.line_id),
+        payload: payload as unknown as Record<string, unknown>
+      });
+    }
+
+    return {
+      documents,
+      metadata: {
+        adapter: this.type,
+        vendorBills: documents.length,
+        lines: context.lines.length
+      }
+    };
+  }
+
+  private async deliverVendorBillDocuments(
+    transformResult: AccountingExportTransformResult,
+    context: AccountingExportAdapterContext,
+    qboClient: QboClientService,
+    knex: Knex,
+    target: { tenantId: string; realmId: string }
+  ): Promise<AccountingExportDeliveryResult> {
+    const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
+    const failedDocuments: AccountingExportDeliveryDocumentFailure[] = [];
+
+    for (const document of transformResult.documents) {
+      try {
+        const externalRef = await this.deliverVendorBillDocument(document, qboClient, knex, target);
+        deliveredLines.push(
+          ...document.lineIds.map((lineId) => ({
+            lineId,
+            externalDocumentRef: externalRef
+          }))
+        );
+      } catch (error) {
+        if (error instanceof AppError && error.code === 'QBO_AUTH_ERROR') {
+          throw error;
+        }
+        const code = error instanceof AppError ? error.code : 'QBO_VENDOR_BILL_DELIVERY_ERROR';
+        const message = error instanceof Error ? error.message : 'Unknown QuickBooks vendor bill delivery error';
+        logger.warn('QuickBooks adapter: vendor bill delivery failed, continuing with remaining bills', {
+          billId: document.documentId,
+          tenant: context.batch.tenant,
+          code,
+          error: message
+        });
+        failedDocuments.push({
+          documentId: document.documentId,
+          lineIds: document.lineIds,
+          code,
+          message
+        });
+      }
+    }
+
+    return {
+      deliveredLines,
+      failedDocuments: failedDocuments.length > 0 ? failedDocuments : undefined,
+      metadata: {
+        adapter: this.type,
+        deliveredVendorBills: transformResult.documents.length - failedDocuments.length,
+        failedVendorBills: failedDocuments.length
+      }
+    };
+  }
+
+  private async deliverVendorBillDocument(
+    document: AccountingExportDocument,
+    qboClient: QboClientService,
+    knex: Knex,
+    target: { tenantId: string; realmId: string }
+  ): Promise<string> {
+    const payload = document.payload as unknown as VendorBillDocumentPayload;
+    const existingMapping = await this.findExternalEntityMapping(knex, {
+      tenantId: target.tenantId,
+      entityType: 'vendor_bill',
+      entityId: document.documentId,
+      targetRealm: target.realmId
+    });
+    if (existingMapping?.external_entity_id) {
+      return existingMapping.external_entity_id;
+    }
+
+    const vendorRef = await this.ensureQboVendor(qboClient, payload.vendorName);
+    const billPayload: QboBill = {
+      ...payload.bill,
+      VendorRef: vendorRef
+    };
+
+    const response = await qboClient.create<QboBill>('Bill', billPayload);
+    const externalRef = response.Id;
+    if (!externalRef) {
+      throw new Error('QuickBooks adapter: QBO response missing Bill Id');
+    }
+
+    await this.upsertExternalEntityMapping(knex, {
+      tenantId: target.tenantId,
+      entityType: 'vendor_bill',
+      entityId: document.documentId,
+      externalEntityId: externalRef,
+      targetRealm: target.realmId,
+      metadata: {
+        sync_token: response.SyncToken ?? null,
+        last_exported_at: new Date().toISOString(),
+        doc_number: response.DocNumber ?? payload.bill.DocNumber ?? null,
+        vendor_id: payload.vendorId,
+        qbo_vendor_id: vendorRef.value,
+        expense_account_ref: payload.expenseAccountRef,
+        exported_total: typeof response.TotalAmt === 'number'
+          ? response.TotalAmt
+          : centsToAmount(payload.totals.amountCents),
+        external_entity_type: 'Bill'
+      }
+    });
+
+    return externalRef;
+  }
+
+  private async ensureQboVendor(
+    qboClient: QboClientService,
+    displayName: string
+  ): Promise<{ value: string; name?: string }> {
+    const escaped = escapeQboString(displayName);
+    const rows = await qboClient.query<any>(`SELECT Id, DisplayName FROM Vendor WHERE DisplayName = '${escaped}'`);
+    const existing = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+    const existingId = existing?.Id ?? existing?.id;
+    if (existingId) {
+      return {
+        value: String(existingId),
+        name: existing.DisplayName ?? displayName
+      };
+    }
+
+    const created = await qboClient.create<any>('Vendor', { DisplayName: displayName });
+    const createdId = created?.Id ?? created?.id;
+    if (!createdId) {
+      throw new Error(`QuickBooks adapter: QBO response missing Vendor Id for ${displayName}`);
+    }
+    return {
+      value: String(createdId),
+      name: created.DisplayName ?? displayName
+    };
+  }
+
+  private async loadVendorBills(
+    knex: Knex,
+    tenantId: string,
+    billIds: string[]
+  ): Promise<Map<string, DbVendorBill>> {
+    if (billIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await knex<DbVendorBill>('vendor_bills as vb')
+      .leftJoin('vendors as v', function joinVendor() {
+        this.on('v.vendor_id', '=', 'vb.vendor_id').andOn('v.tenant', '=', 'vb.tenant');
+      })
+      .where('vb.tenant', tenantId)
+      .whereIn('vb.bill_id', billIds)
+      .select(
+        'vb.bill_id',
+        'vb.bill_number',
+        'vb.vendor_id',
+        'v.vendor_name',
+        'vb.bill_date',
+        'vb.due_date',
+        'vb.total_amount',
+        'vb.currency_code',
+        'vb.notes'
+      );
+
+    return new Map(rows.map((row) => [row.bill_id, row]));
+  }
+
+  private async loadVendorBillLines(
+    knex: Knex,
+    tenantId: string,
+    billIds: string[]
+  ): Promise<Map<string, DbVendorBillLine[]>> {
+    if (billIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await knex<DbVendorBillLine>('vendor_bill_lines as vbl')
+      .leftJoin('service_catalog as sc', function joinService() {
+        this.on('sc.service_id', '=', 'vbl.service_id').andOn('sc.tenant', '=', 'vbl.tenant');
+      })
+      .where('vbl.tenant', tenantId)
+      .whereIn('vbl.bill_id', billIds)
+      .orderBy('vbl.created_at', 'asc')
+      .select(
+        'vbl.bill_line_id',
+        'vbl.bill_id',
+        'vbl.service_id',
+        'sc.service_name',
+        'vbl.description',
+        'vbl.quantity',
+        'vbl.unit_cost',
+        'vbl.amount'
+      );
+
+    return groupBy(rows, (row) => row.bill_id);
+  }
+
+  private async findExternalEntityMapping(
+    knex: Knex,
+    params: {
+      tenantId: string;
+      entityType: string;
+      entityId: string;
+      targetRealm?: string | null;
+    }
+  ): Promise<{ external_entity_id: string; metadata?: unknown } | null> {
+    const query = knex('tenant_external_entity_mappings')
+      .where({
+        tenant: params.tenantId,
+        integration_type: this.type,
+        alga_entity_type: params.entityType,
+        alga_entity_id: params.entityId
+      })
+      .select('external_entity_id', 'metadata');
+
+    if (params.targetRealm) {
+      query.andWhere((builder) => {
+        builder.where('external_realm_id', params.targetRealm as string).orWhereNull('external_realm_id');
+      });
+      query.orderByRaw(
+        'CASE WHEN external_realm_id = ? THEN 0 WHEN external_realm_id IS NULL THEN 1 ELSE 2 END',
+        [params.targetRealm]
+      );
+    } else {
+      query.whereNull('external_realm_id');
+    }
+
+    const row = await query.first();
+    return row ?? null;
+  }
+
+  private async upsertExternalEntityMapping(
+    knex: Knex,
+    params: {
+      tenantId: string;
+      entityType: string;
+      entityId: string;
+      externalEntityId: string;
+      targetRealm?: string | null;
+      metadata?: Record<string, unknown> | null;
+    }
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    await knex('tenant_external_entity_mappings')
+      .insert({
+        id: knex.raw('gen_random_uuid()'),
+        tenant: params.tenantId,
+        integration_type: this.type,
+        alga_entity_type: params.entityType,
+        alga_entity_id: params.entityId,
+        external_entity_id: params.externalEntityId,
+        external_realm_id: params.targetRealm ?? null,
+        sync_status: 'synced',
+        last_synced_at: now,
+        metadata: params.metadata ?? null,
+        created_at: now,
+        updated_at: now
+      })
+      .onConflict(['tenant', 'integration_type', 'alga_entity_type', 'alga_entity_id'])
+      .merge({
+        external_entity_id: params.externalEntityId,
+        external_realm_id: params.targetRealm ?? null,
+        sync_status: 'synced',
+        last_synced_at: now,
+        metadata: params.metadata ?? null,
+        updated_at: now
+      });
   }
 
   private async deliverInvoiceDocument(
@@ -1017,6 +1452,10 @@ function coerceChargeCents(value: unknown): number | null {
 
 function amountToCents(value: number): number {
   return Math.round(value * 100);
+}
+
+function escapeQboString(value: string): string {
+  return value.replace(/'/g, "''");
 }
 
 function formatDate(value?: string | Date | null): string | undefined {

@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Text } from '@radix-ui/themes';
+import { SectionLoadError } from './SectionLoadError';
 import { DataTable } from '@alga-psa/ui/components/DataTable'; // Import DataTable
 import { ColumnDefinition } from '@alga-psa/types'; // Import ColumnDefinition
 import { getRecentClientInvoices, type RecentInvoice } from '@alga-psa/reporting/actions'; // Import action and type
 import { Skeleton } from '@alga-psa/ui/components/Skeleton'; // Import Skeleton for loading state
-import { formatCurrency } from '@alga-psa/core'; // Import currency formatter
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core'; // invoices.total_amount is in cents
 import { formatDateOnly } from '@alga-psa/core'; // Import date formatter
 import { parseISO, subDays, format } from 'date-fns'; // Import date functions
 import {
@@ -19,28 +20,48 @@ import {
 import ChartSkeleton from '@alga-psa/ui/components/skeletons/ChartSkeleton';
 import { BucketUsageChart } from '@alga-psa/ui/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type {
+  PolarAngleAxisProps,
+  RadialBarProps,
+  ResponsiveContainerProps,
+} from 'recharts';
+import type { CategoricalChartProps } from 'recharts/types/chart/generateCategoricalChart';
 
-// Dynamic imports for recharts components with type assertions
-const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer as any), {
-  ssr: false
-}) as any;
-const RadialBarChart = dynamic(() => import('recharts').then(mod => mod.RadialBarChart as any), {
-  ssr: false
-}) as any;
-const RadialBar = dynamic(() => import('recharts').then(mod => mod.RadialBar as any), {
-  ssr: false
-}) as any;
-const PolarAngleAxis = dynamic(() => import('recharts').then(mod => mod.PolarAngleAxis as any), {
-  ssr: false
-}) as any;
+// next/dynamic expects ComponentType; Recharts exports forward-ref/class components.
+// Keep the cast bounded to each exported prop type instead of erasing props to any.
+const rechartsComponent = <P,>(component: unknown): React.ComponentType<P> =>
+  component as React.ComponentType<P>;
+
+const ResponsiveContainer = dynamic<ResponsiveContainerProps>(
+  () => import('recharts').then(mod => rechartsComponent<ResponsiveContainerProps>(mod.ResponsiveContainer)),
+  { ssr: false }
+);
+const RadialBarChart = dynamic<CategoricalChartProps>(
+  () => import('recharts').then(mod => rechartsComponent<CategoricalChartProps>(mod.RadialBarChart)),
+  { ssr: false }
+);
+const RadialBar = dynamic<RadialBarProps>(
+  () => import('recharts').then(mod => rechartsComponent<RadialBarProps>(mod.RadialBar)),
+  { ssr: false }
+);
+const PolarAngleAxis = dynamic<PolarAngleAxisProps>(
+  () => import('recharts').then(mod => rechartsComponent<PolarAngleAxisProps>(mod.PolarAngleAxis)),
+  { ssr: false }
+);
 // Removed Progress import
 
 interface ClientContractLineDashboardProps {
   clientId: string;
 }
 
+interface CustomBucketTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: RemainingBucketUnitsResult }>;
+  label?: string;
+}
+
 // Custom Tooltip Component for Bucket Chart
-const CustomBucketTooltip = ({ active, payload, label }: any) => {
+const CustomBucketTooltip = ({ active, payload, label }: CustomBucketTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload; // Access the full data point for the hovered bar
     return (
@@ -61,42 +82,63 @@ const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = 
  const { t } = useTranslation('msp/clients');
  const notAvailable = t('common.states.na', { defaultValue: 'N/A' });
 
+ // Order is admission priority at narrow widths (computeColumnFit): Status —
+ // what month-close actually needs — sits early instead of being the first
+ // column dropped; Total keeps its rightmost slot via an explicit width
+ // (width-bearing columns are prioritized), leaving Invoice Date as the
+ // drop candidate.
  const invoiceColumns: ColumnDefinition<RecentInvoice>[] = [
   {
-    title: t('clientContractLineDashboard.invoiceNumber', { defaultValue: 'Invoice #' }),
+    title: t('clientContractLineDashboard.invoiceNumber', { defaultValue: 'Invoice number' }),
     dataIndex: 'invoice_number',
     render: (value: string) => value || notAvailable,
   },
   {
-    title: t('clientContractLineDashboard.invoiceDate', { defaultValue: 'Invoice Date' }),
-    dataIndex: 'invoice_date',
-    render: (value: string | Date) => value ? formatDateOnly(typeof value === 'string' ? parseISO(value) : value) : notAvailable,
-  },
-  {
-    title: t('clientContractLineDashboard.dueDate', { defaultValue: 'Due Date' }),
-    dataIndex: 'due_date',
-    render: (value: string | Date) => value ? formatDateOnly(typeof value === 'string' ? parseISO(value) : value) : notAvailable,
-  },
-  {
-   title: t('clientContractLineDashboard.totalAmount', { defaultValue: 'Total Amount' }),
-   dataIndex: 'total_amount',
-   render: (value: number) => <div className="text-right">{formatCurrency(value)}</div>,
- },
- {
     title: t('clientContractLineDashboard.status', { defaultValue: 'Status' }),
     dataIndex: 'status',
     render: (value: string) => value || notAvailable,
   },
+  {
+    title: t('clientContractLineDashboard.dueDate', { defaultValue: 'Due date' }),
+    dataIndex: 'due_date',
+    render: (value: string | Date) => value ? formatDateOnly(typeof value === 'string' ? parseISO(value) : value) : notAvailable,
+  },
+  {
+    title: t('clientContractLineDashboard.invoiceDate', { defaultValue: 'Invoice date' }),
+    dataIndex: 'invoice_date',
+    render: (value: string | Date) => value ? formatDateOnly(typeof value === 'string' ? parseISO(value) : value) : notAvailable,
+  },
+  {
+   title: t('clientContractLineDashboard.totalAmount', { defaultValue: 'Amount' }),
+   dataIndex: 'total_amount',
+   width: '130px',
+   render: (value: number, record: RecentInvoice) => (
+     <div className="text-right">{formatCurrencyFromMinorUnits(value, 'en-US', record.currency_code || 'USD')}</div>
+   ),
+ },
+ {
+   // W6 (roast gap): the one invoice table on the client's billing page
+   // could not say which invoices are unpaid. Drafts owe nothing yet —
+   // em dash, not $0.
+   title: t('clientContractLineDashboard.balanceDue', { defaultValue: 'Balance due' }),
+   dataIndex: 'balance_due',
+   width: '130px',
+   render: (value: number | null, record: RecentInvoice) => (
+     <div className={`text-right ${value ? 'font-semibold text-gray-900' : 'text-gray-400'}`}>
+       {value == null ? '—' : formatCurrencyFromMinorUnits(value, 'en-US', record.currency_code || 'USD')}
+     </div>
+   ),
+ },
  ];
 
  const hoursColumns: ColumnDefinition<HoursByServiceResult>[] = [
  {
-   title: t('clientContractLineDashboard.serviceName', { defaultValue: 'Service Name' }),
+   title: t('clientContractLineDashboard.serviceName', { defaultValue: 'Service' }),
    dataIndex: 'service_name',
    render: (value: string) => value || notAvailable,
  },
  {
-   title: t('clientContractLineDashboard.totalDurationHours', { defaultValue: 'Total Duration (Hours)' }),
+   title: t('clientContractLineDashboard.totalDurationHours', { defaultValue: 'Hours' }),
    dataIndex: 'total_duration',
    render: (value: number) => {
      const hours = (value / 60).toFixed(2);
@@ -107,12 +149,12 @@ const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = 
 
  const usageColumns: ColumnDefinition<UsageMetricResult>[] = [
 {
-  title: t('clientContractLineDashboard.serviceName', { defaultValue: 'Service Name' }),
+  title: t('clientContractLineDashboard.serviceName', { defaultValue: 'Service' }),
   dataIndex: 'service_name',
   render: (value: string) => value || notAvailable,
 },
 {
-  title: t('clientContractLineDashboard.totalQuantity', { defaultValue: 'Total Quantity' }),
+  title: t('clientContractLineDashboard.totalQuantity', { defaultValue: 'Quantity' }),
   dataIndex: 'total_quantity',
   render: (value: number) => <div className="text-right">{value}</div>,
 },
@@ -144,8 +186,6 @@ const [hoursData, setHoursData] = useState<HoursByServiceResult[]>([]);
 // State for Bucket Usage
 const [loadingBuckets, setLoadingBuckets] = useState(true);
 const [bucketData, setBucketData] = useState<RemainingBucketUnitsResult[]>([]);
-// Derived state for chart-specific data (optional, could transform inline)
-// const [chartBucketData, setChartBucketData] = useState<any[]>([]);
 
 // State for Usage Metrics
 const [loadingUsage, setLoadingUsage] = useState(true);
@@ -179,53 +219,53 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
     setUsageCurrentPage(1);
   };
 
-  // Fetch recent invoices on mount
-  useEffect(() => {
-    const fetchInvoices = async () => {
-      try {
-        setLoadingInvoices(true);
-        const fetchedInvoices = await getRecentClientInvoices({ clientId }); // Default limit is 10
-        setInvoices(fetchedInvoices);
-      } catch (error) {
-        console.error("Error fetching recent invoices:", error);
-        // TODO: Add user-facing error handling (e.g., toast notification)
-      } finally {
-        setLoadingInvoices(false);
-      }
-    };
+  // Per-section error flags — a failed fetch must not masquerade as empty.
+  const [invoicesError, setInvoicesError] = useState(false);
+  const [hoursError, setHoursError] = useState(false);
+  const [bucketsError, setBucketsError] = useState(false);
+  const [usageError, setUsageError] = useState(false);
 
-   fetchInvoices();
- }, [clientId]);
+  const fetchInvoices = useCallback(async () => {
+    try {
+      setLoadingInvoices(true);
+      setInvoicesError(false);
+      const fetchedInvoices = await getRecentClientInvoices({ clientId }); // Default limit is 10
+      setInvoices(fetchedInvoices);
+    } catch (error) {
+      console.error("Error fetching recent invoices:", error);
+      setInvoicesError(true);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  }, [clientId]);
 
- // Fetch hours by service on mount and when date range changes
- useEffect(() => {
-   const fetchHours = async () => {
-     try {
-       setLoadingHours(true);
-       const fetchedHours = await getHoursByServiceType({
-         clientId,
+  useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
+
+  const fetchHours = useCallback(async () => {
+    try {
+      setLoadingHours(true);
+      setHoursError(false);
+      const fetchedHours = await getHoursByServiceType({
+        clientId,
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
         groupByServiceType: false // Explicitly set to false
-       });
-       setHoursData(fetchedHours);
-     } catch (error) {
-       console.error("Error fetching hours by service:", error);
-       // TODO: Add user-facing error handling
-     } finally {
-       setLoadingHours(false);
-     }
-   };
+      });
+      setHoursData(fetchedHours);
+    } catch (error) {
+      console.error("Error fetching hours by service:", error);
+      setHoursError(true);
+    } finally {
+      setLoadingHours(false);
+    }
+  }, [clientId, dateRange]);
 
-   fetchHours();
- }, [clientId, dateRange]);
+  useEffect(() => { fetchHours(); }, [fetchHours]);
 
-
-// Fetch bucket usage on mount
-useEffect(() => {
-  const fetchBuckets = async () => {
+  const fetchBuckets = useCallback(async () => {
     try {
       setLoadingBuckets(true);
+      setBucketsError(false);
       const currentDate = format(new Date(), 'yyyy-MM-dd'); // Get current date in YYYY-MM-DD format
       const fetchedBuckets = await getRemainingBucketUnits({
         clientId,
@@ -234,37 +274,36 @@ useEffect(() => {
       setBucketData(fetchedBuckets);
     } catch (error) {
       console.error("Error fetching bucket usage:", error);
-      // TODO: Add user-facing error handling
+      setBucketsError(true);
     } finally {
       setLoadingBuckets(false);
     }
-  };
+  }, [clientId]);
 
-  fetchBuckets();
-}, [clientId]);
+  useEffect(() => { fetchBuckets(); }, [fetchBuckets]);
 
+  const fetchUsage = useCallback(async () => {
+    try {
+      setLoadingUsage(true);
+      setUsageError(false);
+      const fetchedUsage = await getUsageDataMetrics({
+        clientId,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      });
+      setUsageData(fetchedUsage);
+    } catch (error) {
+      console.error("Error fetching usage metrics:", error);
+      setUsageError(true);
+    } finally {
+      setLoadingUsage(false);
+    }
+  }, [clientId, dateRange]);
 
-// Fetch usage metrics on mount and when date range changes
-useEffect(() => {
- const fetchUsage = async () => {
-   try {
-     setLoadingUsage(true);
-     const fetchedUsage = await getUsageDataMetrics({
-       clientId,
-       startDate: dateRange.startDate,
-       endDate: dateRange.endDate,
-     });
-     setUsageData(fetchedUsage);
-   } catch (error) {
-     console.error("Error fetching usage metrics:", error);
-     // TODO: Add user-facing error handling
-   } finally {
-     setLoadingUsage(false);
-   }
- };
+  useEffect(() => { fetchUsage(); }, [fetchUsage]);
 
- fetchUsage();
-}, [clientId, dateRange]);
+  const retryLabel = t('clientContractLineDashboard.retry', { defaultValue: 'Retry' });
+  const loadErrorMessage = t('clientContractLineDashboard.loadError', { defaultValue: 'This section failed to load.' });
 
  // TODO: Add UI elements to change the dateRange state
 
@@ -272,7 +311,7 @@ useEffect(() => {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>{t('clientContractLineDashboard.recentInvoices', { defaultValue: 'Recent Invoices' })}</CardTitle>
+          <CardTitle>{t('clientContractLineDashboard.recentInvoices', { defaultValue: 'Recent invoices' })}</CardTitle>
         </CardHeader>
         <CardContent>
           {loadingInvoices ? (
@@ -281,6 +320,8 @@ useEffect(() => {
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
             </div>
+          ) : invoicesError ? (
+            <SectionLoadError id="client-dashboard-invoices-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={fetchInvoices} />
           ) : invoices.length > 0 ? (
             <DataTable
               id="client-contract-line-dashboard-table"
@@ -300,7 +341,7 @@ useEffect(() => {
 
       <Card>
         <CardHeader>
-         <CardTitle>{t('clientContractLineDashboard.hoursByService', { defaultValue: 'Hours by Service (Last 30 Days)' })}</CardTitle>
+         <CardTitle>{t('clientContractLineDashboard.hoursByService', { defaultValue: 'Hours by service (last 30 days)' })}</CardTitle>
          {/* TODO: Add Date Range Picker here */}
        </CardHeader>
        <CardContent>
@@ -309,6 +350,8 @@ useEffect(() => {
              <Skeleton className="h-8 w-full" />
              <Skeleton className="h-8 w-full" />
            </div>
+         ) : hoursError ? (
+           <SectionLoadError id="client-dashboard-hours-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={fetchHours} />
          ) : hoursData.length > 0 ? (
            <DataTable
              id="hours-by-service-table"
@@ -321,14 +364,14 @@ useEffect(() => {
              onItemsPerPageChange={handleHoursPageSizeChange}
            />
          ) : (
-           <Text>{t('clientContractLineDashboard.noHours', { defaultValue: 'No hours recorded in the selected period.' })}</Text>
+           <Text>{t('clientContractLineDashboard.noHours', { defaultValue: 'No hours logged in the last 30 days.' })}</Text>
          )}
         </CardContent>
       </Card>
 
       <Card>
        <CardHeader>
-         <CardTitle>{t('clientContractLineDashboard.bucketUsage', { defaultValue: 'Bucket Usage' })}</CardTitle>
+         <CardTitle>{t('clientContractLineDashboard.bucketUsage', { defaultValue: 'Bucket usage' })}</CardTitle>
        </CardHeader>
        <CardContent>
          {loadingBuckets ? (
@@ -338,6 +381,8 @@ useEffect(() => {
                <Skeleton key={i} className="h-40 w-full" />
              ))}
            </div>
+         ) : bucketsError ? (
+           <SectionLoadError id="client-dashboard-buckets-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={fetchBuckets} />
          ) : bucketData.length > 0 ? (
            // Render enhanced bucket usage charts in a grid
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -397,7 +442,7 @@ useEffect(() => {
 
       <Card>
        <CardHeader>
-         <CardTitle>{t('clientContractLineDashboard.title', { defaultValue: 'Usage Metrics (Last 30 Days)' })}</CardTitle>
+         <CardTitle>{t('clientContractLineDashboard.title', { defaultValue: 'Usage metrics (last 30 days)' })}</CardTitle>
           {/* TODO: Link this title/data to the Date Range Picker */}
        </CardHeader>
        <CardContent>
@@ -406,6 +451,8 @@ useEffect(() => {
              <Skeleton className="h-8 w-full" />
              <Skeleton className="h-8 w-full" />
            </div>
+         ) : usageError ? (
+           <SectionLoadError id="client-dashboard-usage-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={fetchUsage} />
          ) : usageData.length > 0 ? (
            <DataTable
              id="usage-metrics-table"
@@ -418,7 +465,7 @@ useEffect(() => {
              onItemsPerPageChange={handleUsagePageSizeChange}
            />
          ) : (
-           <Text>{t('clientContractLineDashboard.noUsage', { defaultValue: 'No usage data found in the selected period.' })}</Text>
+           <Text>{t('clientContractLineDashboard.noUsage', { defaultValue: 'No usage data in the last 30 days.' })}</Text>
          )}
        </CardContent>
       </Card>

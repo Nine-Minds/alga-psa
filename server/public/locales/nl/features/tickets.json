@@ -1126,7 +1126,10 @@
     "status": "Status",
     "addSuccess": "Materiaal toegevoegd",
     "removeSuccess": "Materiaal verwijderd",
-    "clientRequired": "Er moet een klant aan dit ticket zijn toegewezen voordat materialen kunnen worden toegevoegd."
+    "clientRequired": "Er moet een klant aan dit ticket zijn toegewezen voordat materialen kunnen worden toegevoegd.",
+    "serialUnit": "Serienummer / MAC (geserialiseerd product)",
+    "selectUnit": "Selecteer een eenheid om te leveren...",
+    "onHandByLocation": "Voorraad per locatie"
   },
   "watchList": {
     "title": "Volglijst",
@@ -1243,7 +1246,8 @@
     "materials": {
       "productRequired": "Selecteer een product",
       "currencyRequired": "Selecteer een valuta",
-      "quantityMin": "Hoeveelheid moet minimaal 1 zijn"
+      "quantityMin": "Hoeveelheid moet minimaal 1 zijn",
+      "unitRequired": "Selecteer een serie/eenheid om te leveren"
     },
     "watchList": {
       "invalidEmail": "Voer een geldig e-mailadres in.",

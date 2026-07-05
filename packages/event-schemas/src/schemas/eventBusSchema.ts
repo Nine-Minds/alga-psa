@@ -159,6 +159,15 @@ import {
   ticketUnassignedEventPayloadSchema,
   ticketUpdatedEventPayloadSchema,
 } from './domain/ticketEventSchemas';
+import {
+  inventoryPoReceivedEventPayloadSchema,
+  inventoryPurchaseOrderSearchEventPayloadSchema,
+  inventoryRmaCreatedEventPayloadSchema,
+  inventorySalesOrderSearchEventPayloadSchema,
+  inventorySoFulfilledEventPayloadSchema,
+  inventoryStockLowEventPayloadSchema,
+  inventoryStockUnitSearchEventPayloadSchema,
+} from './domain/inventoryEventSchemas';
 
 // Define event types
 export const EVENT_TYPES = [
@@ -446,6 +455,21 @@ export const EVENT_TYPES = [
   'RMM_SYNC_COMPLETED',
   'RMM_SYNC_FAILED',
   'RMM_WEBHOOK_RECEIVED',
+
+  // Inventory
+  'INVENTORY_STOCK_LOW',
+  'INVENTORY_PO_RECEIVED',
+  'INVENTORY_SO_FULFILLED',
+  'INVENTORY_RMA_CREATED',
+  'INVENTORY_SALES_ORDER_CREATED',
+  'INVENTORY_SALES_ORDER_UPDATED',
+  'INVENTORY_SALES_ORDER_DELETED',
+  'INVENTORY_PURCHASE_ORDER_CREATED',
+  'INVENTORY_PURCHASE_ORDER_UPDATED',
+  'INVENTORY_PURCHASE_ORDER_DELETED',
+  'INVENTORY_STOCK_UNIT_CREATED',
+  'INVENTORY_STOCK_UNIT_UPDATED',
+  'INVENTORY_STOCK_UNIT_DELETED',
 
   // Generic events
   'CUSTOM_EVENT',
@@ -1325,6 +1349,21 @@ export const EventPayloadSchemas = {
   RMM_SYNC_FAILED: RmmSyncEventPayloadSchema,
   RMM_WEBHOOK_RECEIVED: RmmWebhookEventPayloadSchema,
 
+  // Inventory
+  INVENTORY_STOCK_LOW: inventoryStockLowEventPayloadSchema,
+  INVENTORY_PO_RECEIVED: inventoryPoReceivedEventPayloadSchema,
+  INVENTORY_SO_FULFILLED: inventorySoFulfilledEventPayloadSchema,
+  INVENTORY_RMA_CREATED: inventoryRmaCreatedEventPayloadSchema,
+  INVENTORY_SALES_ORDER_CREATED: inventorySalesOrderSearchEventPayloadSchema,
+  INVENTORY_SALES_ORDER_UPDATED: inventorySalesOrderSearchEventPayloadSchema,
+  INVENTORY_SALES_ORDER_DELETED: inventorySalesOrderSearchEventPayloadSchema,
+  INVENTORY_PURCHASE_ORDER_CREATED: inventoryPurchaseOrderSearchEventPayloadSchema,
+  INVENTORY_PURCHASE_ORDER_UPDATED: inventoryPurchaseOrderSearchEventPayloadSchema,
+  INVENTORY_PURCHASE_ORDER_DELETED: inventoryPurchaseOrderSearchEventPayloadSchema,
+  INVENTORY_STOCK_UNIT_CREATED: inventoryStockUnitSearchEventPayloadSchema,
+  INVENTORY_STOCK_UNIT_UPDATED: inventoryStockUnitSearchEventPayloadSchema,
+  INVENTORY_STOCK_UNIT_DELETED: inventoryStockUnitSearchEventPayloadSchema,
+
   // Generic unknown type for custom events
   UNKNOWN: CustomEventPayloadSchema,
 } as const;
@@ -1422,6 +1461,19 @@ export type RmmSyncStartedEvent = z.infer<typeof EventSchemas.RMM_SYNC_STARTED>;
 export type RmmSyncCompletedEvent = z.infer<typeof EventSchemas.RMM_SYNC_COMPLETED>;
 export type RmmSyncFailedEvent = z.infer<typeof EventSchemas.RMM_SYNC_FAILED>;
 export type RmmWebhookReceivedEvent = z.infer<typeof EventSchemas.RMM_WEBHOOK_RECEIVED>;
+export type InventoryStockLowEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK_LOW>;
+export type InventoryPoReceivedEvent = z.infer<typeof EventSchemas.INVENTORY_PO_RECEIVED>;
+export type InventorySoFulfilledEvent = z.infer<typeof EventSchemas.INVENTORY_SO_FULFILLED>;
+export type InventoryRmaCreatedEvent = z.infer<typeof EventSchemas.INVENTORY_RMA_CREATED>;
+export type InventorySalesOrderCreatedEvent = z.infer<typeof EventSchemas.INVENTORY_SALES_ORDER_CREATED>;
+export type InventorySalesOrderUpdatedEvent = z.infer<typeof EventSchemas.INVENTORY_SALES_ORDER_UPDATED>;
+export type InventorySalesOrderDeletedEvent = z.infer<typeof EventSchemas.INVENTORY_SALES_ORDER_DELETED>;
+export type InventoryPurchaseOrderCreatedEvent = z.infer<typeof EventSchemas.INVENTORY_PURCHASE_ORDER_CREATED>;
+export type InventoryPurchaseOrderUpdatedEvent = z.infer<typeof EventSchemas.INVENTORY_PURCHASE_ORDER_UPDATED>;
+export type InventoryPurchaseOrderDeletedEvent = z.infer<typeof EventSchemas.INVENTORY_PURCHASE_ORDER_DELETED>;
+export type InventoryStockUnitCreatedEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK_UNIT_CREATED>;
+export type InventoryStockUnitUpdatedEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK_UNIT_UPDATED>;
+export type InventoryStockUnitDeletedEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK_UNIT_DELETED>;
 
 export type Event =
   {
@@ -1447,7 +1499,7 @@ export function convertToWorkflowEvent(event: Event, hooks?: WorkflowPublishHook
     workflow_correlation_key: hooks?.correlationKey,
     event_name: hooks?.eventName ?? event.payload?.eventName ?? event.eventType,
     event_type: event.eventType,
-    tenant: event.payload?.tenantId || '',
+    tenant: event.payload?.tenantId ?? event.payload?.tenant ?? '',
     timestamp: event.timestamp,
     from_state: hooks?.fromState,
     to_state: hooks?.toState,

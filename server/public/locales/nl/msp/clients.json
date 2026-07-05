@@ -206,9 +206,9 @@
     "providerDefault": "Standaard van de provider",
     "inboundEmailDomains": "Inkomende e-maildomeinen",
     "inboundEmailDomainsHelp": "Alleen deze domeinen worden gebruikt voor het matchen van binnenkomende e-maildomeinen (bijvoorbeeld acme.com). Domeinen moeten uniek zijn voor alle clients.",
-    "noInboundDomains": "Geen inkomende e-maildomeinen geconfigureerd. Er wordt geen gebruik gemaakt van domeinmatching.",
+    "noInboundDomains": "Voeg een domein toe om inkomende e-mail aan deze klant te koppelen.",
     "inboundTicketDestination": "Inkomende ticketbestemming",
-    "inboundDestinationPrecedence": "Voorrang: Contact overschrijven -> Klantbestemming -> Standaard provider.",
+    "inboundDestinationPrecedence": "Gebruikt eerst de overschrijving van de contactpersoon, daarna die van de klant en daarna de standaard van de provider.",
     "manageLocations": "Beheer locaties",
     "loadingUsers": "Gebruikers laden...",
     "loadingPolicies": "Beleid laden...",
@@ -278,7 +278,12 @@
     "nameAliasRemoveFailed": "Kan alias niet verwijderen",
     "nameAliasRemoved": "Alias verwijderd",
     "nameAliases": "Overeenkomende aliassen",
-    "noNameAliases": "Geen aliassen geconfigureerd. De klantnaam zelf komt altijd overeen."
+    "noNameAliases": "Geen aliassen geconfigureerd. De klantnaam zelf komt altijd overeen.",
+    "equipment": "Apparatuur",
+    "parentClientSelf": "Een klant kan niet zijn eigen bovenliggende klant zijn",
+    "parentClientPlaceholder": "Geen bovenliggende klant",
+    "parentClientClear": "Wissen",
+    "parentClientLegacy": "Eerder als tekst ingevoerd: {{name}}"
   },
   "quickAddClient": {
     "title": "Nieuwe klant toevoegen",
@@ -616,7 +621,10 @@
     "noActiveBucketPlans": "Geen actieve bucketplannen gevonden.",
     "noHours": "Er zijn geen uren geregistreerd in de geselecteerde periode.",
     "noInvoices": "Geen recente facturen gevonden.",
-    "noUsage": "Geen gebruiksgegevens gevonden in de geselecteerde periode."
+    "noUsage": "Geen gebruiksgegevens gevonden in de geselecteerde periode.",
+    "retry": "Opnieuw",
+    "loadError": "Deze sectie kon niet worden geladen.",
+    "balanceDue": "Openstaand saldo"
   },
   "clientContractLineGuide": {
     "title": "Handleiding voor het ondubbelzinnig maken van contractregels",
@@ -1008,7 +1016,6 @@
     "title": "Instellingen voor belastingberekening",
     "description": "Configureer hoe belastingen worden berekend voor deze klant.",
     "createDefault": "Maak standaardbelastinginstellingen",
-    "goToBillingTaxSettings": "Ga naar Factureringsbelastinginstellingen",
     "taxExemptStatus": "Belastingvrijstelling",
     "taxExempt": "Belasting vrijgesteld",
     "taxExemptHelp": "Indien ingeschakeld, worden er geen belastingen toegepast op facturen voor deze klant.",
@@ -1043,13 +1050,13 @@
     "taxExemptUpdatedSuccess": "Status van belastingvrijstelling is succesvol bijgewerkt",
     "taxExemptUpdateError": "Kan de status van belastingvrijstelling niet bijwerken",
     "taxSourceExternal": "Extern",
-    "taxSourceHelp": "Beheer standaard belastingtarieven voor klanten in Klantinstellingen → Belastingtarieven, en beheer globale tarieven in Facturering → Belastinginstellingen.",
+    "taxSourceHelp": "Stel de tarieven van deze klant in via Facturering → Belastingtarieven. Stel globale tarieven in via Factureringsinstellingen → Belasting.",
     "taxSourceInternal": "Intern"
   },
   "clientNotesPanel": {
-    "title": "Opmerkingen en snelle informatie",
+    "title": "Notities",
     "initialNote": "Eerste opmerking",
-    "lastUpdated": "Laatst bijgewerkt:",
+    "lastUpdated": "Laatst bijgewerkt: {{value}}",
     "save": "Opslaan",
     "retry": "Opnieuw proberen",
     "loadError": "Notities kunnen niet worden geladen",
@@ -1312,7 +1319,9 @@
         "printer": "Printer",
         "server": "Server",
         "workstation": "Werkstation"
-      }
+      },
+      "loadError": "Kan assets momenteel niet laden.",
+      "retry": "Opnieuw"
     },
     "tickets": {
       "addTicket": "Ticket toevoegen",
@@ -1336,5 +1345,28 @@
         "userNotAuthenticated": "Gebruiker niet geauthenticeerd"
       }
     }
+  },
+  "clientEquipmentTab": {
+    "retry": "Opnieuw",
+    "loadError": "Deze sectie kon niet worden geladen.",
+    "emptyValue": "—",
+    "orderNumber": "Bestelnummer",
+    "status": "Status",
+    "ordered": "Besteld",
+    "amount": "Bedrag",
+    "product": "Product",
+    "sku": "SKU",
+    "serialNumber": "Serienummer",
+    "delivered": "Geleverd",
+    "asset": "Asset",
+    "viewAsset": "Asset bekijken",
+    "rmaNumber": "RMA-nummer",
+    "opened": "Geopend",
+    "salesOrders": "Verkooporders",
+    "noSalesOrders": "Geen verkooporders voor deze klant.",
+    "deliveredUnits": "Geleverde eenheden",
+    "noDeliveredEquipment": "Geen geleverde apparatuur geregistreerd.",
+    "rmas": "RMA's",
+    "noRmas": "Geen RMA's voor deze klant."
   }
 }

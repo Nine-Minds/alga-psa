@@ -981,7 +981,9 @@
       "description": "Beschrijving",
       "quantity": "Hoeveelheid",
       "rate": "Tarief",
-      "amount": "Hoeveelheid"
+      "amount": "Hoeveelheid",
+      "salesOrder": "Verkooporder",
+      "cogsMargin": "Kostprijs / Marge"
     },
     "labels": {
       "contractSubtotal": "Contractsubtotaal:",

@@ -1000,7 +1000,7 @@
     }
   },
   "assetNotesPanel": {
-    "title": "Opmerkingen en snelle informatie",
+    "title": "Notities",
     "description": "Rich-text notitiepaneel voor asset-specifieke notities en snelle operationele context",
     "errors": {
       "loadTitle": "Notities kunnen niet worden geladen",

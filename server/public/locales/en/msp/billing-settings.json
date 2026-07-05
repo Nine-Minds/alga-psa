@@ -7,7 +7,7 @@
   },
   "general": {
     "currency": {
-      "title": "Default Currency",
+      "title": "Default currency",
       "description": "Set the default currency for new products, services, contracts, and quotes. This can be overridden per client in their billing configuration.",
       "fields": {
         "currency": {
@@ -862,6 +862,19 @@
       },
       "description": {
         "label": "Description"
+      },
+      "inventory": {
+        "label": "Inventory",
+        "track": "Track inventory",
+        "serialized": "Serialized",
+        "kit": "Kit",
+        "createsAsset": "Creates asset on delivery",
+        "defaultAssetType": "Default asset type",
+        "reorderPoint": "Reorder Point",
+        "reorderQuantity": "Reorder Quantity",
+        "kitPricingMode": "Kit Pricing Mode",
+        "kitPricingSum": "Sum of components",
+        "kitPricingFixed": "Fixed price"
       }
     },
     "options": {
@@ -939,7 +952,7 @@
       "title": "Advanced Tax Options",
       "description": "Configure special tax handling for this client.",
       "reverseCharge": {
-        "label": "Apply Reverse Charge",
+        "label": "Apply reverse charge",
         "tooltip": "Reverse charge shifts the tax liability from the seller to the buyer. Common in B2B transactions across borders.",
         "status": {
           "enabled": "Enabled",

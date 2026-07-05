@@ -44,6 +44,8 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/documents": "*",
+    "@alga-psa/email": "*",
+    "@alga-psa/inventory": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",
     "@alga-psa/types": "*",

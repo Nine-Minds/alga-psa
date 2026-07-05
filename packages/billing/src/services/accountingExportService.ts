@@ -180,20 +180,21 @@ export class AccountingExportService {
 
     if (initial.lines.length === 0) {
       const now = new Date().toISOString();
+      const documentLabel = batch.export_type === 'invoice' ? 'invoices' : 'documents';
       await this.repository.updateBatchStatus(batchId, {
         status: 'needs_attention',
         validated_at: now,
-        notes: 'No invoices match the selected filters (or all matching invoices have already been exported).'
+        notes: `No ${documentLabel} match the selected filters (or all matching ${documentLabel} have already been exported).`
       });
       await this.repository.addError({
         batch_id: batchId,
         code: 'ACCOUNTING_EXPORT_EMPTY_BATCH',
-        message: 'No invoices match the selected filters (or all matching invoices have already been exported).',
+        message: `No ${documentLabel} match the selected filters (or all matching ${documentLabel} have already been exported).`,
         metadata: { adapterType: batch.adapter_type, exportType: batch.export_type }
       });
       throw new AppError(
         'ACCOUNTING_EXPORT_EMPTY_BATCH',
-        'No invoices match the selected filters (or all matching invoices have already been exported).',
+        `No ${documentLabel} match the selected filters (or all matching ${documentLabel} have already been exported).`,
         { batchId }
       );
     }
@@ -261,7 +262,7 @@ export class AccountingExportService {
     };
 
     // Determine tax delegation mode from invoice tax_source values
-    const taxDelegationMode = await this.determineTaxDelegationMode(refreshed.lines);
+    const taxDelegationMode = await this.determineTaxDelegationMode(refreshed.batch, refreshed.lines);
     const excludeTaxFromExport = taxDelegationMode === 'delegate';
 
     // Load adapter-specific settings
@@ -330,7 +331,7 @@ export class AccountingExportService {
         await this.repository.updateBatchStatus(batchId, {
           status: hasDeliveredLines ? 'needs_attention' : 'failed',
           delivered_at: hasDeliveredLines ? new Date().toISOString() : undefined,
-          notes: `${failedDocuments.length} of ${transformResult.documents.length} invoice(s) failed to deliver. See batch errors for details.`
+          notes: `${failedDocuments.length} of ${transformResult.documents.length} document(s) failed to deliver. See batch errors for details.`
         });
       }
 
@@ -411,7 +412,11 @@ export class AccountingExportService {
    * Determine tax delegation mode based on invoice tax_source values in the batch.
    * If any invoice has pending_external tax source, we delegate tax calculation.
    */
-  private async determineTaxDelegationMode(lines: AccountingExportLine[]): Promise<TaxDelegationMode> {
+  private async determineTaxDelegationMode(batch: AccountingExportBatch, lines: AccountingExportLine[]): Promise<TaxDelegationMode> {
+    if (batch.export_type !== 'invoice') {
+      return 'none';
+    }
+
     // Extract invoice IDs from the export lines
     const invoiceIds = lines
       .filter(line => line.invoice_id)

@@ -689,6 +689,23 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
                 });
             }
 
+            // Check inventory stock (levels / units / movements) — block deletion if any exist.
+            const stockLevelsCount = parseInt(String((await trx('stock_levels')
+                .where({ service_id: serviceId, tenant }).count('* as count').first())?.count ?? 0));
+            if (stockLevelsCount > 0) {
+                associations.push({ type: 'stock_levels', count: stockLevelsCount, description: `Has stock balances at ${stockLevelsCount} location(s)` });
+            }
+            const stockUnitsCount = parseInt(String((await trx('stock_units')
+                .where({ service_id: serviceId, tenant }).count('* as count').first())?.count ?? 0));
+            if (stockUnitsCount > 0) {
+                associations.push({ type: 'stock_units', count: stockUnitsCount, description: `Has ${stockUnitsCount} serialized unit(s)` });
+            }
+            const stockMovementsCount = parseInt(String((await trx('stock_movements')
+                .where({ service_id: serviceId, tenant }).count('* as count').first())?.count ?? 0));
+            if (stockMovementsCount > 0) {
+                associations.push({ type: 'stock_movements', count: stockMovementsCount, description: `Has ${stockMovementsCount} stock movement(s)` });
+            }
+
             return {
                 canDelete: associations.length === 0,
                 associations

@@ -981,7 +981,9 @@
       "description": "Descrição",
       "quantity": "Quantidade",
       "rate": "Avaliar",
-      "amount": "Quantia"
+      "amount": "Quantia",
+      "salesOrder": "Pedido de venda",
+      "cogsMargin": "Custo / Margem"
     },
     "labels": {
       "contractSubtotal": "Subtotal do contrato:",

@@ -7,9 +7,12 @@ import {
   BarChart3,
   Clock3,
   FileBarChart,
+  Ghost,
   Lock,
   type LucideIcon,
   Mail,
+  Package,
+  Percent,
   Timer,
   Users,
 } from 'lucide-react';
@@ -41,12 +44,13 @@ import {
   type TimeUtilizationReport,
 } from '@alga-psa/reporting/actions';
 
-type ReportCategory = 'helpdesk' | 'operations' | 'billing';
+type ReportCategory = 'helpdesk' | 'operations' | 'billing' | 'inventory';
 type ReportKind = 'embedded' | 'link' | 'planned';
 type EmbeddedReportId = 'ticket-workload' | 'ticket-aging' | 'email-channel-health' | 'time-utilization' | 'team-performance';
+type LinkReportId = 'contract-reports' | 'inventory-margin' | 'inventory-write-offs' | 'inventory-ghost-usage';
 
 interface ReportDefinition {
-  id: EmbeddedReportId | 'contract-reports';
+  id: EmbeddedReportId | LinkReportId;
   titleKey: string;
   titleDefault: string;
   descriptionKey: string;
@@ -56,6 +60,9 @@ interface ReportDefinition {
   minimumTier: TenantTier;
   kind: ReportKind;
   href?: string;
+  /** Label for a 'link' report's open button; defaults to the billing label. */
+  openLabelKey?: string;
+  openLabelDefault?: string;
   icon: LucideIcon;
 }
 
@@ -138,12 +145,58 @@ const REPORTS: ReportDefinition[] = [
     href: '/msp/billing?tab=reports',
     icon: FileBarChart,
   },
+  {
+    id: 'inventory-margin',
+    titleKey: 'reportsPage.reportCatalog.inventoryMargin.title',
+    titleDefault: 'Margin Report',
+    descriptionKey: 'reportsPage.reportCatalog.inventoryMargin.description',
+    descriptionDefault: 'Per-product revenue, cost of goods sold, and margin from fulfilled sales orders.',
+    category: 'inventory',
+    products: ['psa'],
+    minimumTier: 'solo',
+    kind: 'link',
+    href: '/msp/inventory/margin',
+    openLabelKey: 'reportsPage.actions.openReport',
+    openLabelDefault: 'Open report',
+    icon: Percent,
+  },
+  {
+    id: 'inventory-write-offs',
+    titleKey: 'reportsPage.reportCatalog.inventoryWriteOffs.title',
+    titleDefault: 'Write-offs',
+    descriptionKey: 'reportsPage.reportCatalog.inventoryWriteOffs.description',
+    descriptionDefault: 'Inventory shrink and adjustments written off, by reason and period.',
+    category: 'inventory',
+    products: ['psa'],
+    minimumTier: 'solo',
+    kind: 'link',
+    href: '/msp/inventory/write-offs',
+    openLabelKey: 'reportsPage.actions.openReport',
+    openLabelDefault: 'Open report',
+    icon: Package,
+  },
+  {
+    id: 'inventory-ghost-usage',
+    titleKey: 'reportsPage.reportCatalog.inventoryGhostUsage.title',
+    titleDefault: 'Ghost Usage',
+    descriptionKey: 'reportsPage.reportCatalog.inventoryGhostUsage.description',
+    descriptionDefault: 'Closed hardware tickets with no recorded parts — cost the shop may have eaten.',
+    category: 'inventory',
+    products: ['psa'],
+    minimumTier: 'solo',
+    kind: 'link',
+    href: '/msp/inventory/ghost-usage',
+    openLabelKey: 'reportsPage.actions.openReport',
+    openLabelDefault: 'Open report',
+    icon: Ghost,
+  },
 ];
 
 const CATEGORY_LABELS: Record<ReportCategory, { key: string; defaultValue: string }> = {
   helpdesk: { key: 'reportsPage.categories.helpdesk', defaultValue: 'Help desk' },
   operations: { key: 'reportsPage.categories.operations', defaultValue: 'Operations' },
   billing: { key: 'reportsPage.categories.billing', defaultValue: 'Billing' },
+  inventory: { key: 'reportsPage.categories.inventory', defaultValue: 'Inventory' },
 };
 
 function canAccessReport(report: ReportDefinition, productCode: ProductCode, tier: TenantTier): boolean {
@@ -993,7 +1046,9 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
                     hasAccess ? (
                       <Button id={`reports-open-${report.id}`} asChild size="sm" variant="outline">
                         <Link href={report.href}>
-                          {t('reportsPage.actions.openInBilling', { defaultValue: 'Open in billing' })}
+                          {t(report.openLabelKey ?? 'reportsPage.actions.openInBilling', {
+                            defaultValue: report.openLabelDefault ?? 'Open in billing',
+                          })}
                         </Link>
                       </Button>
                     ) : (

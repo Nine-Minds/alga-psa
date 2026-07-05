@@ -13,7 +13,7 @@ export const CLIENT_CADENCE_SCHEDULE_CONTEXT: ClientCadenceScheduleContext = {
   changeScopeDescription:
     'Configure the client billing schedule for recurring lines that invoice on the client cadence. Changes only affect future non-invoiced billing cycles.',
   scheduleDescription:
-    'This schedule drives invoice windows for recurring lines that invoice on the client billing schedule. Contract-anniversary lines keep their own cadence.',
+    'Recurring charges invoice on this schedule. Contract-anniversary charges bill on their own dates.',
   previewDescription:
     'Previewed windows below apply to recurring lines that invoice on the client billing schedule. Contract-anniversary cadence is configured on the recurring line itself and is previewed separately.',
   previewHeading: 'Upcoming client-cadence invoice windows (preview)',

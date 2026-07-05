@@ -45,6 +45,7 @@ import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketR
 import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
+import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
 
@@ -822,65 +823,47 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const quantity = Math.floor(Number(data.quantity));
-    if (!Number.isFinite(quantity) || quantity < 1) {
-      throw new ValidationError('Validation failed', [
-        { path: ['quantity'], message: 'quantity must be greater than 0' },
-      ]);
+    // Delegates to the canonical materials service (F048/F051) so the API path has
+    // full parity with the MSP UI: stock consumption for tracked products, serialized
+    // unit delivery + asset creation, and the negative-stock guard.
+    let created: { ticket_material_id?: string };
+    try {
+      created = (await addMaterial(
+        knex,
+        context.tenant,
+        {
+          parent_type: 'ticket',
+          parent_id: ticketId,
+          service_id: data.service_id,
+          quantity: data.quantity,
+          rate: data.rate,
+          currency_code: data.currency_code,
+          description: data.description ?? null,
+          unit_id: data.unit_id ?? null,
+        },
+        context.userId ?? null,
+      )) as { ticket_material_id?: string };
+    } catch (error) {
+      const name = (error as Error)?.name;
+      if (error instanceof MaterialValidationError || name === 'MaterialValidationError') {
+        const e = error as MaterialValidationError;
+        if (e.path === 'ticket_id') {
+          throw new NotFoundError('Ticket not found');
+        }
+        throw new ValidationError('Validation failed', [
+          { path: [e.path], message: e.message },
+        ]);
+      }
+      if (error instanceof InsufficientStockError || name === 'InsufficientStockError') {
+        throw new ValidationError('Validation failed', [
+          { path: ['quantity'], message: (error as Error).message },
+        ]);
+      }
+      throw error;
     }
-
-    const rate = Math.round(Number(data.rate));
-    if (!Number.isFinite(rate) || rate < 0) {
-      throw new ValidationError('Validation failed', [
-        { path: ['rate'], message: 'rate must be 0 or greater' },
-      ]);
-    }
-
-    const ticket = await tenantScopedTable(knex, 'tickets', context.tenant)
-      .where({ ticket_id: ticketId })
-      .select('ticket_id', 'client_id')
-      .first();
-
-    if (!ticket) {
-      throw new NotFoundError('Ticket not found');
-    }
-
-    if (!ticket.client_id) {
-      throw new ValidationError('Validation failed', [
-        { path: ['ticket_id'], message: 'ticket must be associated with a client' },
-      ]);
-    }
-
-    const product = await tenantScopedTable(knex, 'service_catalog', context.tenant)
-      .where({
-        service_id: data.service_id,
-        item_kind: 'product',
-      })
-      .select('service_id')
-      .first();
-
-    if (!product) {
-      throw new ValidationError('Validation failed', [
-        { path: ['service_id'], message: 'service_id must reference an existing product' },
-      ]);
-    }
-
-    const [createdMaterial] = await tenantScopedTable(knex, 'ticket_materials', context.tenant)
-      .insert({
-        tenant: context.tenant,
-        ticket_id: ticketId,
-        client_id: ticket.client_id,
-        service_id: data.service_id,
-        quantity,
-        rate,
-        currency_code: data.currency_code,
-        description: data.description ?? null,
-        is_billed: false,
-      })
-      .returning('ticket_material_id');
 
     const material = await this.getTicketMaterialById(
-      createdMaterial.ticket_material_id,
+      created.ticket_material_id as string,
       context,
     );
 

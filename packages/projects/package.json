@@ -32,6 +32,7 @@
     "@alga-psa/clients": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/inventory": "*",
     "@alga-psa/documents": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/shared": "*",

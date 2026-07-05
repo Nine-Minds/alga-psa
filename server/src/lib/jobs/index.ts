@@ -16,6 +16,7 @@ import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from '
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
+import { lowStockNotificationHandler, LowStockNotificationJobData } from './handlers/lowStockNotificationHandler';
 import { cleanupTemporaryFormsJob } from '@alga-psa/jobs/handlers/cleanupTemporaryFormsJob';
 import { cleanupWebhookDeliveriesJob, scheduleCleanupWebhookDeliveriesJob } from '@alga-psa/jobs/handlers/cleanupWebhookDeliveriesJob';
 import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from '@alga-psa/jobs/handlers/cleanupAiSessionKeysHandler';
@@ -119,6 +120,11 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     // Register expiring credits notification handler
     jobScheduler.registerJobHandler<ExpiringCreditsNotificationJobData>('expiring-credits-notification', async (job: Job<ExpiringCreditsNotificationJobData>) => {
       await expiringCreditsNotificationHandler(job.data);
+    });
+
+    // Register per-location low-stock alert handler (inventory F037/F038)
+    jobScheduler.registerJobHandler<LowStockNotificationJobData>('inventory-low-stock-notification', async (job: Job<LowStockNotificationJobData>) => {
+      await lowStockNotificationHandler(job.data);
     });
     
     jobScheduler.registerJobHandler<ExpireQuotesJobData>('expire-quotes', async (job: Job<ExpireQuotesJobData>) => {
@@ -411,6 +417,22 @@ export const scheduleExpiringCreditsNotificationJob = async (
     'expiring-credits-notification',
     cronExpression,
     { tenantId, clientId }
+  );
+};
+
+/**
+ * Schedule the daily per-location low-stock alert job (inventory F037/F038).
+ * Each location's alert goes to that location's manager only.
+ */
+export const scheduleLowStockNotificationJob = async (
+  tenantId: string,
+  cronExpression: string = '30 7 * * *' // Default: daily at 7:30 AM
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<LowStockNotificationJobData>(
+    'inventory-low-stock-notification',
+    cronExpression,
+    { tenantId }
   );
 };
 

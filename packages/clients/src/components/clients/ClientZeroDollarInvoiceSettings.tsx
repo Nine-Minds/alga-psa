@@ -115,7 +115,7 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
     <div className="mt-6">
       <div>
         <Text as="div" size="3" mb="4" weight="medium" className="text-gray-900">
-          {t('clientZeroDollarInvoiceSettings.title', { defaultValue: 'Zero-Dollar Invoice Settings' })}
+          {t('clientZeroDollarInvoiceSettings.title', { defaultValue: 'Zero-dollar invoice settings' })}
         </Text>
         <div className="space-y-4">
           <div className="flex items-center space-x-2">

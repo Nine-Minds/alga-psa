@@ -3,6 +3,90 @@
 
 import { ReportDefinition } from '../../core/types';
 
+const ELIGIBLE_INVOICE_FILTER = `
+  inv.tenant = {{tenant}}
+  AND inv.invoice_date >= {{start_of_year}}
+  AND inv.invoice_date < {{end_of_year}}
+  AND inv.status IN ('paid', 'completed', 'sent', 'open', 'overdue')
+`;
+
+const HARDWARE_COGS_SOURCE_SQL = `
+  SELECT DISTINCT
+    sm.tenant,
+    sm.movement_id,
+    COALESCE(sm.cogs_cost, 0) AS cogs_cost
+  FROM invoices AS inv
+  JOIN invoice_charges AS ic
+    ON ic.invoice_id = inv.invoice_id
+   AND ic.tenant = inv.tenant
+  JOIN sales_order_lines AS sol
+    ON sol.so_line_id = ic.so_line_id
+   AND sol.tenant = ic.tenant
+  JOIN stock_movements AS sm
+    ON sm.tenant = inv.tenant
+   AND sm.movement_type = 'consume'
+   AND sm.source_doc_type = 'sales_order'
+   AND sm.source_doc_id = sol.so_id
+   AND sm.service_id = sol.service_id
+  WHERE ${ELIGIBLE_INVOICE_FILTER}
+    AND ic.so_line_id IS NOT NULL
+
+  UNION
+
+  SELECT DISTINCT
+    sm.tenant,
+    sm.movement_id,
+    COALESCE(sm.cogs_cost, 0) AS cogs_cost
+  FROM invoices AS inv
+  JOIN ticket_materials AS tm
+    ON tm.billed_invoice_id = inv.invoice_id
+   AND tm.tenant = inv.tenant
+  JOIN stock_movements AS sm
+    ON sm.tenant = tm.tenant
+   AND sm.movement_type = 'consume'
+   AND sm.source_doc_type = 'ticket_material'
+   AND sm.source_doc_id = tm.ticket_material_id
+  WHERE ${ELIGIBLE_INVOICE_FILTER}
+
+  UNION
+
+  SELECT DISTINCT
+    sm.tenant,
+    sm.movement_id,
+    COALESCE(sm.cogs_cost, 0) AS cogs_cost
+  FROM invoices AS inv
+  JOIN project_materials AS pm
+    ON pm.billed_invoice_id = inv.invoice_id
+   AND pm.tenant = inv.tenant
+  JOIN stock_movements AS sm
+    ON sm.tenant = pm.tenant
+   AND sm.movement_type = 'consume'
+   AND sm.source_doc_type = 'project_material'
+   AND sm.source_doc_id = pm.project_material_id
+  WHERE ${ELIGIBLE_INVOICE_FILTER}
+`;
+
+const HARDWARE_COGS_SUM_SQL = `
+  SELECT COALESCE(SUM(hardware_cogs.cogs_cost), 0)
+  FROM (
+    ${HARDWARE_COGS_SOURCE_SQL}
+  ) AS hardware_cogs
+`;
+
+const REVENUE_SUM_SQL = `
+  SELECT COALESCE(SUM(inv.total_amount), 0)
+  FROM invoices AS inv
+  WHERE ${ELIGIBLE_INVOICE_FILTER}
+`;
+
+const LABOR_COST_SUM_SQL = `
+  SELECT COALESCE(SUM(te.billable_duration * 83.33), 0)
+  FROM time_entries AS te
+  WHERE te.tenant = {{tenant}}
+    AND te.start_time >= {{start_of_year}}
+    AND te.start_time < {{end_of_year}}
+`;
+
 export const contractProfitabilityReport: ReportDefinition = {
   id: 'contracts.profitability',
   name: 'Contract Profitability Report',
@@ -58,7 +142,7 @@ export const contractProfitabilityReport: ReportDefinition = {
           }
         ],
         fields: [
-          'COALESCE(time_entries.billable_duration * 83.33, 0)' // $50/hr = 5000 cents/hr = 83.33 cents/min * billable_duration
+          'COALESCE(time_entries.billable_duration * 83.33, 0)' // $50/hr = 5000 cents/hr = 83.33 cents/min * billable_duration in minutes
         ],
         aggregation: 'sum',
         filters: [
@@ -76,33 +160,40 @@ export const contractProfitabilityReport: ReportDefinition = {
     },
 
     {
-      id: 'ytd_gross_profit',
-      name: 'Year-to-Date Gross Profit',
-      description: 'Revenue minus labor cost (simplified profitability)',
+      id: 'ytd_total_hardware_cogs',
+      name: 'Year-to-Date Hardware COGS',
+      description: 'Hardware cost from inventory consume movements attached to exported invoice lines and billed materials',
       type: 'sum',
       query: {
         table: 'raw_sql',
-        fields: [
-          `
-          SELECT
-            COALESCE(revenue.total_revenue, 0) - COALESCE(cost.total_cost, 0) AS sum
-          FROM (
-            SELECT COALESCE(SUM(total_amount), 0) AS total_revenue
-            FROM invoices
-            WHERE tenant = {{tenant}}
-              AND invoice_date >= {{start_of_year}}
-              AND invoice_date < {{end_of_year}}
-              AND status IN ('paid', 'completed', 'sent', 'open', 'overdue')
-          ) revenue
-          CROSS JOIN (
-            SELECT COALESCE(SUM(COALESCE(billable_duration, 0) * 83.33), 0) AS total_cost
-            FROM time_entries
-            WHERE tenant = {{tenant}}
-              AND start_time >= {{start_of_year}}
-              AND start_time < {{end_of_year}}
-          ) cost
-          `
-        ],
+        fields: [`
+          SELECT (${HARDWARE_COGS_SUM_SQL}) AS sum
+        `],
+        aggregation: 'sum',
+        filters: []
+      },
+      formatting: {
+        // Currency intentionally omitted; resolved to the tenant default at run
+        // time by the ReportEngine (formatting.currency path, owned by WS1).
+        type: 'currency',
+        divisor: 100
+      }
+    },
+
+    {
+      id: 'ytd_gross_profit',
+      name: 'Year-to-Date Gross Profit',
+      description: 'Revenue minus labor cost and hardware COGS',
+      type: 'sum',
+      query: {
+        table: 'raw_sql',
+        fields: [`
+          SELECT (
+            (${REVENUE_SUM_SQL})
+            - (${LABOR_COST_SUM_SQL})
+            - (${HARDWARE_COGS_SUM_SQL})
+          ) AS sum
+        `],
         aggregation: 'sum',
         filters: []
       },
@@ -121,30 +212,16 @@ export const contractProfitabilityReport: ReportDefinition = {
       type: 'ratio',
       query: {
         table: 'raw_sql',
-        fields: [
-          `
+        fields: [`
           SELECT
-            COALESCE(
-              (revenue.total_revenue - cost.total_cost) / NULLIF(revenue.total_revenue, 0) * 100,
-              0
+            (
+              (
+                (${REVENUE_SUM_SQL})
+                - (${LABOR_COST_SUM_SQL})
+                - (${HARDWARE_COGS_SUM_SQL})
+              ) / NULLIF((${REVENUE_SUM_SQL}), 0)
             ) AS sum
-          FROM (
-            SELECT COALESCE(SUM(total_amount), 0) AS total_revenue
-            FROM invoices
-            WHERE tenant = {{tenant}}
-              AND invoice_date >= {{start_of_year}}
-              AND invoice_date < {{end_of_year}}
-              AND status IN ('paid', 'completed', 'sent', 'open', 'overdue')
-          ) revenue
-          CROSS JOIN (
-            SELECT COALESCE(SUM(COALESCE(billable_duration, 0) * 83.33), 0) AS total_cost
-            FROM time_entries
-            WHERE tenant = {{tenant}}
-              AND start_time >= {{start_of_year}}
-              AND start_time < {{end_of_year}}
-          ) cost
-          `
-        ],
+        `],
         aggregation: 'sum',
         filters: []
       },
@@ -161,53 +238,123 @@ export const contractProfitabilityReport: ReportDefinition = {
       type: 'average',
       query: {
         table: 'raw_sql',
-        fields: [
-          `
-          WITH invoice_totals AS (
+        fields: [`
+          SELECT AVG(contract_profit.margin_ratio) AS avg
+          FROM (
             SELECT
-              inv.invoice_id,
-              inv.tenant,
-              COALESCE(SUM(ic.net_amount), 0) AS invoice_revenue
-            FROM invoices inv
-            LEFT JOIN invoice_charges ic
-              ON ic.invoice_id = inv.invoice_id
-             AND ic.tenant = inv.tenant
-            WHERE inv.tenant = {{tenant}}
-              AND inv.invoice_date >= {{start_of_year}}
-              AND inv.invoice_date < {{end_of_year}}
-              AND inv.status IN ('paid', 'completed', 'sent', 'open', 'overdue')
-            GROUP BY inv.invoice_id, inv.tenant
-          ),
-          invoice_costs AS (
-            SELECT
-              ite.invoice_id,
-              ite.tenant,
-              COALESCE(SUM(COALESCE(te.billable_duration, 0) * 83.33), 0) AS invoice_cost
-            FROM invoice_time_entries ite
-            JOIN time_entries te
-              ON te.entry_id = ite.entry_id
-             AND te.tenant = ite.tenant
-            WHERE ite.tenant = {{tenant}}
-              AND te.start_time >= {{start_of_year}}
-              AND te.start_time < {{end_of_year}}
-            GROUP BY ite.invoice_id, ite.tenant
-          )
-          SELECT COALESCE(
-            AVG(
-              CASE
-                WHEN it.invoice_revenue > 0 THEN
-                  (it.invoice_revenue - COALESCE(ic.invoice_cost, 0)) / it.invoice_revenue * 100
-                ELSE NULL
-              END
-            ),
-            0
-          ) AS avg
-          FROM invoice_totals it
-          LEFT JOIN invoice_costs ic
-            ON ic.invoice_id = it.invoice_id
-           AND ic.tenant = it.tenant
-          `
-        ],
+              revenue.client_contract_id,
+              (
+                revenue.revenue_cents
+                - COALESCE(labor.labor_cost_cents, 0)
+                - COALESCE(hardware.hardware_cogs_cents, 0)
+              ) / NULLIF(revenue.revenue_cents, 0) AS margin_ratio
+            FROM (
+              SELECT
+                cc.tenant,
+                cc.client_contract_id,
+                cc.contract_id,
+                COALESCE(SUM(inv.total_amount), 0) AS revenue_cents
+              FROM client_contracts AS cc
+              JOIN invoices AS inv
+                ON inv.tenant = cc.tenant
+               AND inv.client_contract_id = cc.client_contract_id
+              WHERE cc.tenant = {{tenant}}
+                AND inv.invoice_date >= {{start_of_year}}
+                AND inv.invoice_date < {{end_of_year}}
+                AND inv.status IN ('paid', 'completed', 'sent', 'open', 'overdue')
+              GROUP BY cc.tenant, cc.client_contract_id, cc.contract_id
+            ) AS revenue
+            LEFT JOIN (
+              SELECT
+                cc.tenant,
+                cc.client_contract_id,
+                COALESCE(SUM(te.billable_duration * 83.33), 0) AS labor_cost_cents
+              FROM client_contracts AS cc
+              JOIN contract_lines AS cl
+                ON cl.tenant = cc.tenant
+               AND cl.contract_id = cc.contract_id
+              JOIN time_entries AS te
+                ON te.tenant = cl.tenant
+               AND te.contract_line_id = cl.contract_line_id
+              WHERE cc.tenant = {{tenant}}
+                AND te.start_time >= {{start_of_year}}
+                AND te.start_time < {{end_of_year}}
+              GROUP BY cc.tenant, cc.client_contract_id
+            ) AS labor
+              ON labor.tenant = revenue.tenant
+             AND labor.client_contract_id = revenue.client_contract_id
+            LEFT JOIN (
+              SELECT
+                hardware_sources.tenant,
+                hardware_sources.client_contract_id,
+                COALESCE(SUM(hardware_sources.cogs_cost), 0) AS hardware_cogs_cents
+              FROM (
+                SELECT DISTINCT
+                  inv.tenant,
+                  COALESCE(ic.client_contract_id, inv.client_contract_id) AS client_contract_id,
+                  sm.movement_id,
+                  COALESCE(sm.cogs_cost, 0) AS cogs_cost
+                FROM invoices AS inv
+                JOIN invoice_charges AS ic
+                  ON ic.invoice_id = inv.invoice_id
+                 AND ic.tenant = inv.tenant
+                JOIN sales_order_lines AS sol
+                  ON sol.so_line_id = ic.so_line_id
+                 AND sol.tenant = ic.tenant
+                JOIN stock_movements AS sm
+                  ON sm.tenant = inv.tenant
+                 AND sm.movement_type = 'consume'
+                 AND sm.source_doc_type = 'sales_order'
+                 AND sm.source_doc_id = sol.so_id
+                 AND sm.service_id = sol.service_id
+                WHERE ${ELIGIBLE_INVOICE_FILTER}
+                  AND ic.so_line_id IS NOT NULL
+                  AND COALESCE(ic.client_contract_id, inv.client_contract_id) IS NOT NULL
+
+                UNION
+
+                SELECT DISTINCT
+                  inv.tenant,
+                  inv.client_contract_id,
+                  sm.movement_id,
+                  COALESCE(sm.cogs_cost, 0) AS cogs_cost
+                FROM invoices AS inv
+                JOIN ticket_materials AS tm
+                  ON tm.billed_invoice_id = inv.invoice_id
+                 AND tm.tenant = inv.tenant
+                JOIN stock_movements AS sm
+                  ON sm.tenant = tm.tenant
+                 AND sm.movement_type = 'consume'
+                 AND sm.source_doc_type = 'ticket_material'
+                 AND sm.source_doc_id = tm.ticket_material_id
+                WHERE ${ELIGIBLE_INVOICE_FILTER}
+                  AND inv.client_contract_id IS NOT NULL
+
+                UNION
+
+                SELECT DISTINCT
+                  inv.tenant,
+                  inv.client_contract_id,
+                  sm.movement_id,
+                  COALESCE(sm.cogs_cost, 0) AS cogs_cost
+                FROM invoices AS inv
+                JOIN project_materials AS pm
+                  ON pm.billed_invoice_id = inv.invoice_id
+                 AND pm.tenant = inv.tenant
+                JOIN stock_movements AS sm
+                  ON sm.tenant = pm.tenant
+                 AND sm.movement_type = 'consume'
+                 AND sm.source_doc_type = 'project_material'
+                 AND sm.source_doc_id = pm.project_material_id
+                WHERE ${ELIGIBLE_INVOICE_FILTER}
+                  AND inv.client_contract_id IS NOT NULL
+              ) AS hardware_sources
+              GROUP BY hardware_sources.tenant, hardware_sources.client_contract_id
+            ) AS hardware
+              ON hardware.tenant = revenue.tenant
+             AND hardware.client_contract_id = revenue.client_contract_id
+          ) AS contract_profit
+        `],
         aggregation: 'avg',
         filters: []
       },
@@ -221,6 +368,6 @@ export const contractProfitabilityReport: ReportDefinition = {
   caching: {
     ttl: 600, // 10 minutes (less frequent updates for profitability)
     key: 'contracts.profitability.{{tenant}}',
-    invalidateOn: ['invoice.created', 'invoice.updated', 'time_entries.created', 'time_entries.updated']
+    invalidateOn: ['invoice.created', 'invoice.updated', 'time_entries.created', 'time_entries.updated', 'stock_movements.created']
   }
 };

@@ -1,0 +1,866 @@
+[
+  {
+    "id": "F001",
+    "description": "[fulfill-ui] SO list/detail exposes a Fulfill action for orders in status confirmed or partially_fulfilled",
+    "implemented": true,
+    "prdRefs": [
+      "§5.1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "[fulfill-ui] Fulfill dialog lists lines with ordered/fulfilled/remaining and accepts a per-line quantity for non-serialized lines, capped at remaining",
+    "implemented": true,
+    "prdRefs": [
+      "§5.1"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "[fulfill-ui] Serialized lines get a unit picker searchable by serial or MAC, preselecting `remaining` units FIFO by received_at",
+    "implemented": true,
+    "prdRefs": [
+      "§5.1"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "[fulfill-ui] Unit picker excludes units hard-held by other SO lines and visibly labels units soft-allocated to other lines",
+    "implemented": true,
+    "prdRefs": [
+      "§5.1"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "[fulfill-ui] Fulfill dialog offers a source-location selector defaulting to the allocation-resolved location",
+    "implemented": true,
+    "prdRefs": [
+      "§5.1"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "[fulfill-ui] Insufficient availability shows a soft warning in the dialog but does not block submission (soft-consume design)",
+    "implemented": true,
+    "prdRefs": [
+      "§5.1"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "[fulfill-ui] Successful fulfill refreshes the SO status chip (confirmed → partially_fulfilled → fulfilled) without a page reload",
+    "implemented": true,
+    "prdRefs": [
+      "§5.1"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "[invoice] New billing-package action fulfillAndInvoiceSoLine composes inventory fulfill + generateInvoiceForSalesOrder honoring invoice_mode (billing→inventory dependency direction preserved)",
+    "implemented": true,
+    "prdRefs": [
+      "§5.2"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "[invoice] With invoice_mode='on_fulfillment', fulfilling a line automatically bills the newly fulfilled quantity",
+    "implemented": true,
+    "prdRefs": [
+      "§5.2"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "[invoice] SO detail shows per-line quantity_invoiced and links to the generated invoice(s)",
+    "implemented": true,
+    "prdRefs": [
+      "§5.2"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "[invoice] Manual mode exposes a Generate-invoice action that bills uninvoiced quantities and surfaces the created invoice number",
+    "implemented": true,
+    "prdRefs": [
+      "§5.2"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "[dropship] Drop-ship lines expose a Confirm-vendor-shipment UI capturing serials/MAC/warranty (serialized), marking the line fulfilled with on-hand untouched at every location",
+    "implemented": true,
+    "prdRefs": [
+      "§5.3"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "[backorder] SO detail surfaces computed per-line backorder quantity",
+    "implemented": true,
+    "prdRefs": [
+      "§5.4"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "[backorder] Create-draft-PO-from-backorder button wires suggestPoFromBackorder and links the created PO(s) from the SO",
+    "implemented": true,
+    "prdRefs": [
+      "§5.4"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "[reopen] Reopen-to-draft action releases allocations and returns a confirmed SO to draft, enabled only when no line has fulfilled or invoiced quantity",
+    "implemented": true,
+    "prdRefs": [
+      "§5.5"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "[reopen] After reopen, line add/edit/remove work again under the existing draft-only guards",
+    "implemented": true,
+    "prdRefs": [
+      "§5.5"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "[ui-guards] Confirm, Cancel, Fulfill, Generate-invoice, and Reopen buttons disable while their action promise is in flight",
+    "implemented": true,
+    "prdRefs": [
+      "§5.6"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "[locks] confirmSalesOrder, cancelSalesOrder, releaseSalesOrderAllocation, and reopen take a FOR UPDATE lock on the sales_orders row before the status guard",
+    "implemented": true,
+    "prdRefs": [
+      "§6.1"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "[locks] dispatchTransfer, receiveTransfer, and cancelTransfer lock the stock_transfers row; a concurrent duplicate receive/cancel is rejected by the post-lock status guard",
+    "implemented": true,
+    "prdRefs": [
+      "§6.1"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "[locks] receivePoLine and cancelPurchaseOrder lock the purchase_orders header row",
+    "implemented": true,
+    "prdRefs": [
+      "§6.1"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "[locks] Every RMA status transition locks the rma_cases row before asserting current status",
+    "implemented": true,
+    "prdRefs": [
+      "§6.1"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "[locks] Serialized candidate-unit selection in allocation and fulfillment uses FOR UPDATE SKIP LOCKED so two orders cannot claim the same unit",
+    "implemented": true,
+    "prdRefs": [
+      "§6.2"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "[caps] fulfillSalesOrderLine enforces the ordered cap in SQL (UPDATE … WHERE fulfilled + qty <= ordered, rowcount-checked) instead of a blind add",
+    "implemented": true,
+    "prdRefs": [
+      "§6.2"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "[alloc-math] allocateLine reserves min(available, remaining) so reserved_quantity can never exceed quantity_on_hand",
+    "implemented": true,
+    "prdRefs": [
+      "§6.3"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "[alloc-math] Backorder and suggested-PO shortfall math excludes the SO's own reservation (order 10 with 3 on hand suggests buying 7, not 17)",
+    "implemented": true,
+    "prdRefs": [
+      "§6.3"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "[alloc-math] Serialized hard-allocation accounting is symmetric: fulfillment no longer decrements a held_quantity that allocation never incremented",
+    "implemented": true,
+    "prdRefs": [
+      "§6.3"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "[reconcile] reconcileStockLevels recomputes reserved_quantity and held_quantity from live SO allocations in addition to on-hand",
+    "implemented": true,
+    "prdRefs": [
+      "§6.4"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "[reconcile] Permission-gated admin Rebuild-stock-caches action + UI button runs reconcile for the tenant and reports what it corrected",
+    "implemented": true,
+    "prdRefs": [
+      "§6.4"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "[asset-integrity] Asset creation during fulfillment no longer commits mid-transaction: links are created after the stock transaction commits, with failures surfaced for retry (no orphan assets on rollback)",
+    "implemented": true,
+    "prdRefs": [
+      "§6.5"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "[schema-checks] Migration adds CHECKs: reserved_quantity >= 0 and held_quantity >= 0 on stock_levels; quantity > 0 on PO/SO/transfer lines; quantity_received/fulfilled/invoiced >= 0; SO-line fulfilled <= ordered and invoiced <= ordered (quantity_on_hand deliberately unconstrained)",
+    "implemented": true,
+    "prdRefs": [
+      "§6.6"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "[schema-checks] The CHECK migration pre-clamps existing violating rows (negative reserved/held) before adding constraints so it cannot fail on drifted data",
+    "implemented": true,
+    "prdRefs": [
+      "§6.6"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "[scoping] assertLocationWritable enforced in receiveStockManual",
+    "implemented": true,
+    "prdRefs": [
+      "§7.1"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "[scoping] assertLocationWritable enforced in retireStock",
+    "implemented": true,
+    "prdRefs": [
+      "§7.1"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "[scoping] assertLocationWritable enforced on the source location in dispatchTransfer",
+    "implemented": true,
+    "prdRefs": [
+      "§7.1"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "[scoping] assertLocationWritable enforced on the source location in fulfillSalesOrderLine",
+    "implemented": true,
+    "prdRefs": [
+      "§7.1"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "[scoping] assertLocationWritable enforced in loanOut and restock-return flows",
+    "implemented": true,
+    "prdRefs": [
+      "§7.1"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "[alerts] Daily tenant-scoped job resolves low-stock routing and sends a notification (existing notification infra) to each location's manager_user_id covering only that location",
+    "implemented": true,
+    "prdRefs": [
+      "§7.2"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "[alerts] Locations without a manager produce no notification (no firehose); the job logs them in its run summary",
+    "implemented": true,
+    "prdRefs": [
+      "§7.2"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "[rma] deployReplacement accepts standard-track cases (status 'replaced'), delivering the replacement unit and relinking the client asset with updated serial/MAC",
+    "implemented": true,
+    "prdRefs": [
+      "§7.3"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "[rma] chargeForUnreturned creates a draft manual invoice (replacement product at list price) and stores the invoice reference on the RMA case",
+    "implemented": true,
+    "prdRefs": [
+      "§7.3"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "[rma] Unreachable status 'dead_unit_returned' removed from the rma_cases CHECK (dead_unit_returned_at remains the record)",
+    "implemented": true,
+    "prdRefs": [
+      "§7.3"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "[currency] receivePoLine rejects receipts whose cost currency mismatches the product's existing cost_currency (same guard receiveStockManual already has)",
+    "implemented": true,
+    "prdRefs": [
+      "§7.4"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "[currency] createPoFromLowStock groups suggestions by (vendor, currency) and stamps each PO header from its lines instead of hardcoded USD",
+    "implemented": true,
+    "prdRefs": [
+      "§7.4"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "[materials] recordStockConsumption honors creates_asset_on_delivery for serialized units on the ticket/project materials path (asset created + bidirectionally linked)",
+    "implemented": true,
+    "prdRefs": [
+      "§7.5"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "[tax] SO-line tax_rate_id is passed through the invoice bridge onto the generated invoice item",
+    "implemented": true,
+    "prdRefs": [
+      "§7.6"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "[schema] Migration adds composite FK sales_order_lines.tax_rate_id → tax_rates",
+    "implemented": true,
+    "prdRefs": [
+      "§7.6"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "[schema] Migration adds nullable so_line_id backlink on invoice_items; the invoice bridge populates it",
+    "implemented": true,
+    "prdRefs": [
+      "§7.6"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "[schema] Migration adds hot-path indexes: stock_levels (tenant, location_id); sales_orders (tenant, client_id) and (tenant, status); purchase_orders (tenant, vendor_id) and (tenant, status)",
+    "implemented": true,
+    "prdRefs": [
+      "§7.7"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "[schema] Migration adds composite FKs + indexes (ON DELETE SET NULL) for stock_units.allocated_so_line_id, stock_units.source_po_id, purchase_order_lines.source_so_line_id, sales_order_lines.parent_so_line_id",
+    "implemented": true,
+    "prdRefs": [
+      "§7.7"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "[schema] DB trigger rejects UPDATE and DELETE on stock_movements (ledger immutability enforced, not just documented)",
+    "implemented": true,
+    "prdRefs": [
+      "§7.7"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "[serials] Positive serialized adjustments require caller-supplied serial numbers (UI serial entry); fabricated ADJ-* serials removed",
+    "implemented": true,
+    "prdRefs": [
+      "§7.7"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "[vendor-pricing] Migration creates vendor_products: PK (tenant, vendor_id, service_id), vendor_sku, unit_cost (cents), cost_currency, lead_time_days, is_preferred, with composite FKs and a partial unique index enforcing one preferred offer per (tenant, service_id)",
+    "implemented": true,
+    "prdRefs": [
+      "§8"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "[vendor-pricing] CRUD server actions for vendor_products gated by vendor read/update permissions",
+    "implemented": true,
+    "prdRefs": [
+      "§8"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "[vendor-pricing] Vendor detail UI gains a price-list tab: list/add/edit/remove product offers with vendor SKU, cost, currency, lead time, preferred flag",
+    "implemented": true,
+    "prdRefs": [
+      "§8"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "[vendor-pricing] Product inventory settings panel shows that product's vendor offers (read-only)",
+    "implemented": true,
+    "prdRefs": [
+      "§8"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "[vendor-pricing] Adding a PO line defaults unit_cost, currency, and vendor SKU from the PO vendor's vendor_products row when present (fallback: existing average/catalog cost)",
+    "implemented": true,
+    "prdRefs": [
+      "§8"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "[vendor-pricing] PO line UI displays the vendor SKU when known",
+    "implemented": true,
+    "prdRefs": [
+      "§8"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "[vendor-pricing] createPoFromLowStock and suggestPoFromBackorder price suggested lines from the preferred vendor's offer (cost + currency) when one exists",
+    "implemented": true,
+    "prdRefs": [
+      "§8"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "[cycle-count] Migration creates count_sessions (location, status draft/in_progress/review/approved/cancelled, created_by, approved_by, timestamps) and count_lines (service, expected snapshot, counted_qty, counted serials, variance) with composite FKs and status CHECKs",
+    "implemented": true,
+    "prdRefs": [
+      "§9"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "[cycle-count] New cycle_count permission resource (create/read/update/delete) seeded to admin/manager roles",
+    "implemented": true,
+    "prdRefs": [
+      "§9"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "[cycle-count] Start-count action snapshots expected on-hand per tracked product at the location into count_lines",
+    "implemented": true,
+    "prdRefs": [
+      "§9"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "[cycle-count] Count entry UI: per-product counted-quantity entry with in-session search; expected quantities hidden from counters (blind count)",
+    "implemented": true,
+    "prdRefs": [
+      "§9"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "[cycle-count] Serialized count lines accept a serial list; expected-but-unscanned units are flagged missing and unexpected serials flagged for disposition",
+    "implemented": true,
+    "prdRefs": [
+      "§9"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "[cycle-count] Variance review screen (approver-only) shows counted vs expected with quantity delta and value at average cost",
+    "implemented": true,
+    "prdRefs": [
+      "§9"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "[cycle-count] Approval (cycle_count permission + location scope) writes adjust movements with reason 'cycle_count' per variance and closes the session; counting respects location scoping",
+    "implemented": true,
+    "prdRefs": [
+      "§9"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "[cycle-count] On approval, missing serialized units are retired; unexpected serials require explicit disposition (add with real serial or exclude)",
+    "implemented": true,
+    "prdRefs": [
+      "§9"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "[cycle-count] Stock mutations at the location during an open session mark affected count lines stale (recount prompt) instead of corrupting variance math",
+    "implemented": true,
+    "prdRefs": [
+      "§9"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "[cycle-count] Sessions list + per-location history (counter, approver, net variance); cancelling a session discards it with no stock effect",
+    "implemented": true,
+    "prdRefs": [
+      "§9"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "[landed-cost] Migration creates po_landed_costs: cost_type (freight/duty/other), amount (cents), currency matching the PO, allocation_method (value/quantity), applied flag",
+    "implemented": true,
+    "prdRefs": [
+      "§10"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "[landed-cost] Actions + PO UI to add/edit/remove landed-cost entries while unapplied",
+    "implemented": true,
+    "prdRefs": [
+      "§10"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "[landed-cost] Apply-landed-cost action allocates entries across received line quantities by the chosen method; idempotent via the applied flag",
+    "implemented": true,
+    "prdRefs": [
+      "§10"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "[landed-cost] Application adjusts the non-serialized moving-average cost via a cost-only adjustment (no phantom quantity movement)",
+    "implemented": true,
+    "prdRefs": [
+      "§10"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "[landed-cost] Application bumps unit_cost on serialized units received from that PO",
+    "implemented": true,
+    "prdRefs": [
+      "§10"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "[landed-cost] PO detail shows the landed-cost total and per-line effective unit cost (base + allocated)",
+    "implemented": true,
+    "prdRefs": [
+      "§10"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "[vendor-bills] Migration creates vendor_bills (vendor, bill_number unique per tenant+vendor, bill_date, due_date, currency, status draft/open/paid/void, nullable po_id, total cents) and vendor_bill_lines, with composite FKs and status CHECKs",
+    "implemented": true,
+    "prdRefs": [
+      "§11"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "[vendor-bills] New vendor_bill permission resource (CRUD) seeded to admin/back-office roles",
+    "implemented": true,
+    "prdRefs": [
+      "§11"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "[vendor-bills] CRUD actions incl. status transitions draft→open→paid and void",
+    "implemented": true,
+    "prdRefs": [
+      "§11"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "[vendor-bills] Create-bill-from-PO prefills lines from received quantities and costs",
+    "implemented": true,
+    "prdRefs": [
+      "§11"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "[vendor-bills] Due date defaults from the vendor's payment_terms (e.g., net30 → bill_date + 30 days)",
+    "implemented": true,
+    "prdRefs": [
+      "§11"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "[vendor-bills] Bill shows a non-blocking 2-way variance indicator vs the PO's received value",
+    "implemented": true,
+    "prdRefs": [
+      "§11"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "[vendor-bills] Vendor bills list UI with status filter, mark-paid, and void",
+    "implemented": true,
+    "prdRefs": [
+      "§11"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "[vendor-bills] Dashboard widget: open vendor bills with aging (due / overdue buckets)",
+    "implemented": true,
+    "prdRefs": [
+      "§11"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Vendor-owed RMA aging: dashboard attention item for cases sent_to_vendor with days-at-vendor and unit cost at stake (red >= 30 days)",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P2"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Drop-ship confirmations auto-invoice under invoice_mode=on_fulfillment via billing-side confirmDropShipAndInvoice composition (parity with from-stock fulfillment)",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P2"
+    ]
+  },
+  {
+    "id": "F085b",
+    "description": "Unbilled-shipment nag fires on ANY sales-order line with quantity_fulfilled > quantity_invoiced (amber, dollars shown), not only fully-fulfilled orders",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P2"
+    ]
+  },
+  {
+    "id": "F086b",
+    "description": "Write-offs report: /msp/inventory/write-offs page + writeOffReport action — adjustments/retirements/count corrections with signed quantities and dollars, per-user totals over the full range, 500-row display cap flagged",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P2"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Four-eyes count approval: the session creator or anyone who recorded a count cannot approve it when another user holds cycle_count:approve (single-approver tenants may self-approve)",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P2"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Van load list: computeLoadList action (destination shortfalls vs reorder points, capped by source availability, zero-load rows kept visible, FIFO serial suggestions) + Transfers-page dialog that reviews/edits the list and dispatches a branch-to-van transfer in one click",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P3"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "RMA replacement units default to the replaced (dead) unit's cost and currency when received without an explicit cost — free replacements are not free stock",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P3"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Vendor-bill lines carry po_unit_cost and line_variance_cents vs the linked PO (LATERAL, no fan-out); bill detail shows a per-line signed 'vs PO' delta pinpointing price creep",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P3"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Unit chain-of-custody timeline: per-unit History dialog on the units screen (unit card + full movement ledger with locations and reasons) and serial+MAC CSV export of the visible rows for provisioning",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P3"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Delivered-unit asset creation carries the MAC address into the asset's attributes (mac_address)",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P3"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "CSV opening-balance import (migration switch-blocker): validate-then-apply two-phase — RFC-4180 parser, per-row errors (unknown product/location, inactive location, serial dupes in-file and in-DB, serialized/bulk shape mismatches), ADD warnings, all-or-nothing transactional apply as tagged ledger receipts creating units + updating bulk moving averages, optional settings creation for untracked products, 5000-row cap; Stock-page dialog with template download, preview summary, and error/warning panels",
+    "implemented": true,
+    "prdRefs": [
+      "persona-review-P1"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "[ghost-report] CE server action getGhostUsageReport(filters) returns a deterministic \"ghost usage\" funnel: closed tickets that look like hardware work but carry no product/material charge. Tenant-scoped; no AI",
+    "implemented": true,
+    "prdRefs": [
+      "§16.1"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "[ghost-report] Filters are user-selectable: boardIds and categoryIds (parent or subcategory) define what counts as \"hardware work\", plus a closed_at date window. Empty board/category selection = all boards (whole-desk scan)",
+    "implemented": true,
+    "prdRefs": [
+      "§16.2"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "[ghost-report] \"No consumption\" signal is NOT EXISTS a ticket_materials row for the ticket — the authoritative ticket↔product-charge link. Stock consume movements (source_doc_type='ticket_material') are downstream of ticket_materials, so the materials check alone is sufficient",
+    "implemented": true,
+    "prdRefs": [
+      "§16.3"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "[ghost-report] Funnel summary emits per-stage counts with drop-off: closed-in-scope → hardware-scoped (selected boards/categories) → with-consumption → ghost candidates. Counts are monotonic and reconcile (with-consumption = hardware-scoped − candidates)",
+    "implemented": true,
+    "prdRefs": [
+      "§16.4"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "[ghost-report-ui] Reporting page (inventory reports) renders the filter controls, the funnel bars, and a candidate table: ticket_number, title, board_name, category_name, client_name, closed_at, closed_by, assigned_to — each row deep-links to the ticket",
+    "implemented": true,
+    "prdRefs": [
+      "§16.5"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "[ghost-report-ui] Each candidate row offers an \"Add material\" action that deep-links into that ticket's materials dialog so the operator can record the missing consumption in place",
+    "implemented": true,
+    "prdRefs": [
+      "§16.6"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "[perf][ghost-report] Report query is tenant-scoped, joins statuses for the authoritative is_closed (with tickets.is_closed as a fast prefilter), uses NOT EXISTS on ticket_materials, filters closed_at/board_id/category_id on indexes, and excludes cancelled/void tickets",
+    "implemented": true,
+    "prdRefs": [
+      "§16.7"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "[permission][ghost-report] The report requires inventory:read; callers lacking it are denied (server-enforced, not just UI-hidden)",
+    "implemented": true,
+    "prdRefs": [
+      "§16.8"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "[ai-gate] The AI classifier is gated by three independent checks: EE edition (isEnterpriseEdition), the ADD_ONS.AI_ASSISTANT tenant add-on (tenant_addons), and a tenant opt-in toggle in tenant_settings (inventory.ghostUsageAi.enabled). Any missing → UI hidden and a neutral no-op result (attempted=false); the classifier never throws and never blocks the CE report",
+    "implemented": true,
+    "prdRefs": [
+      "§17.1"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "[ai-classify] EE service classifyBatch (ee/server/src/services/inventory/ghostUsageClassifier.ts, CE stub twin in packages/ee/src) resolves the chat provider (resolveChatProvider) and calls client.chat.completions.create with temperature 0 and capped max_tokens; JSON-only output {classification: 'hardware_missing'|'no_hardware'|'unclear', confidence, reason} parsed by tolerant balanced-brace extraction. PARSE failures consume the ticket as 'unclear' (billed output must not re-bill); PROVIDER failures count as failed and leave the ticket classifiable (transient, unbilled — retryable). Modeled on inboundEmailRuleAiClassifier",
+    "implemented": true,
+    "prdRefs": [
+      "§17.2"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "[ai-classify] Classifier input is built from ticket title + concatenated comment markdown_content (internal and external, newest-first, total length capped) plus board/category names — never the raw BlockNote JSON note column",
+    "implemented": true,
+    "prdRefs": [
+      "§17.3"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "[ai-batch] Batch action classifies a bounded page of funnel candidates (hard N cap + concurrency limit), persists each result, and skips tickets that already carry a human disposition so re-runs don't re-bill model calls",
+    "implemented": true,
+    "prdRefs": [
+      "§17.4"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "[review-queue] EE migration adds ghost_usage_reviews: tenant, review_id, ticket_id, ai_classification, ai_confidence, ai_reason, ai_model, disposition ('pending'|'confirmed'|'dismissed'), reviewed_by, reviewed_at, created_at, updated_at; PK (tenant, review_id), unique (tenant, ticket_id), FK ticket_id→tickets ON DELETE CASCADE, CHECK-constrained disposition",
+    "implemented": true,
+    "prdRefs": [
+      "§17.5"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "[review-ui] Review queue UI lists candidates with the AI suggestion, confidence, and reason; the reviewer Confirms (genuine missed consumption) or Dismisses (not hardware / handled elsewhere), persisting the disposition with reviewer id and timestamp",
+    "implemented": true,
+    "prdRefs": [
+      "§17.6"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "[review-flow] Confirmed rows leave the pending funnel and land on an actionable remediation worklist; dismissed rows are suppressed on subsequent report runs; re-classification overwrites the AI fields but preserves the human disposition",
+    "implemented": true,
+    "prdRefs": [
+      "§17.7"
+    ]
+  }
+]

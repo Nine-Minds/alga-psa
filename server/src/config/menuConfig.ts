@@ -21,6 +21,7 @@ import {
   FlaskConical,
   Globe,
   Gauge,
+  Ghost,
   Handshake,
   HelpCircle,
   Home,
@@ -29,6 +30,7 @@ import {
   LayoutDashboard,
   LayoutTemplate,
   ListTodo,
+  ListChecks,
   ListTree,
   Mail,
   MapPin,
@@ -140,6 +142,29 @@ export const navigationSections: NavigationSection[] = [
         translationKey: 'nav.assets',
         icon: Monitor,
         href: '/msp/assets'
+      },
+      {
+        name: 'Inventory',
+        translationKey: 'nav.inventory',
+        icon: Package,
+        subItems: [
+          { name: 'Dashboard', translationKey: 'nav.inventoryDashboard', icon: Gauge, href: '/msp/inventory' },
+          { name: 'Stock', translationKey: 'nav.inventoryStock', icon: Package, href: '/msp/inventory/stock' },
+          { name: 'Stock Locations', translationKey: 'nav.inventoryLocations', icon: MapPin, href: '/msp/inventory/locations' },
+          { name: 'Stock Units', translationKey: 'nav.inventoryUnits', icon: Layers3, href: '/msp/inventory/units' },
+          { name: 'Vendors', translationKey: 'nav.inventoryVendors', icon: Handshake, href: '/msp/inventory/vendors' },
+          { name: 'Purchase Orders', translationKey: 'nav.inventoryPurchaseOrders', icon: Receipt, href: '/msp/inventory/purchase-orders' },
+          { name: 'Vendor Bills', translationKey: 'nav.inventoryVendorBills', icon: Receipt, href: '/msp/inventory/vendor-bills' },
+          { name: 'Sales Orders', translationKey: 'nav.inventorySalesOrders', icon: ReceiptText, href: '/msp/inventory/sales-orders' },
+          { name: 'Transfers', translationKey: 'nav.inventoryTransfers', icon: FileOutput, href: '/msp/inventory/transfers' },
+          { name: 'Cycle Counts', translationKey: 'nav.inventoryCounts', icon: ListChecks, href: '/msp/inventory/counts' },
+          { name: 'Write-offs', translationKey: 'nav.inventoryWriteOffs', icon: FileOutput, href: '/msp/inventory/write-offs' },
+          { name: 'Margin', translationKey: 'nav.inventoryMargin', icon: Percent, href: '/msp/inventory/margin' },
+          { name: 'Ghost Usage', translationKey: 'nav.inventoryGhostUsage', icon: Ghost, href: '/msp/inventory/ghost-usage' },
+          { name: 'RMA', translationKey: 'nav.inventoryRma', icon: ListTree, href: '/msp/inventory/rma' },
+          { name: 'Loaners', translationKey: 'nav.inventoryLoaners', icon: Timer, href: '/msp/inventory/loaners' },
+          { name: 'Kits', translationKey: 'nav.inventoryKits', icon: Package, href: '/msp/inventory/kits' }
+        ]
       },
       {
         name: 'Reports',

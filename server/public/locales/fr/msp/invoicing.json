@@ -981,7 +981,9 @@
       "description": "Description",
       "quantity": "Quantité",
       "rate": "Taux",
-      "amount": "Montant"
+      "amount": "Montant",
+      "salesOrder": "Commande client",
+      "cogsMargin": "Coût des ventes / Marge"
     },
     "labels": {
       "contractSubtotal": "Sous-total du contrat :",

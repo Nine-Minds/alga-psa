@@ -16,7 +16,7 @@ import QuoteItem from '../models/quoteItem';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate } from '../lib/quote-email-templates';
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
-import { buildQuoteConversionPreview, convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, createPDFGenerationService } from '../services';
+import { buildQuoteConversionPreview, convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, convertQuoteToDraftSalesOrder, createPDFGenerationService } from '../services';
 import { Document as DocumentModel, DocumentAssociation } from '@alga-psa/documents/models';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -1586,6 +1586,50 @@ export const convertQuoteToContract = withAuth(async (
 
   return await knex.transaction(async (trx) => {
     return convertQuoteToDraftContract(trx, tenant, quoteId, getActorUserId(user));
+  });
+});
+
+/**
+ * Convert an accepted quote's product one-time lines into a draft sales order
+ * (invoice_mode 'on_fulfillment', sales_orders.quote_id backlink). Product lines
+ * converted here are excluded from any draft-invoice conversion — the SO→invoice
+ * bridge bills them at fulfillment (F001-F003, D2).
+ */
+export const convertQuoteToSalesOrder = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+): Promise<{ quote: IQuote; so_id: string; so_number: string } | ActionPermissionError> => {
+  if ((user as any).user_type === 'client') {
+    throw new Error('Permission denied: operation not available in client portal');
+  }
+
+  const createDenied = await requireBillingCreatePermission(user);
+  if (createDenied) {
+    return createDenied;
+  }
+
+  const updateDenied = await requireBillingUpdatePermission(user);
+  if (updateDenied) {
+    return updateDenied;
+  }
+
+  const { knex } = await createTenantKnex();
+  await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot convert quote'
+  );
+
+  return await knex.transaction(async (trx) => {
+    const result = await convertQuoteToDraftSalesOrder(trx, tenant, quoteId, getActorUserId(user));
+    return {
+      quote: result.quote,
+      so_id: result.salesOrder.so_id,
+      so_number: result.salesOrder.so_number,
+    };
   });
 });
 

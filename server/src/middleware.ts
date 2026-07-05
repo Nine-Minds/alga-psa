@@ -132,7 +132,10 @@ const apiKeySkipPaths = [
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
     (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
-    (pathname.startsWith('/api/documents/') && (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview')));
+    (pathname.startsWith('/api/documents/') && (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview'))) ||
+    // Session-authenticated inventory SO document endpoints (auth enforced in-handler via withAuth).
+    (pathname.startsWith('/api/inventory/sales-orders/') &&
+      (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation')));
 }
 
 export function getVanityClientPortalInternalRedirectTarget(args: {

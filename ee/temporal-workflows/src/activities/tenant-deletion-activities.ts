@@ -45,6 +45,15 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // === LEVEL 0: Sessions (CRITICAL - must be deleted before users/tenants) ===
   'sessions',
 
+  // === Inventory module (children first; parents stock_locations/vendors last) ===
+  'stock_movements', 'stock_transfer_lines', 'rma_cases', 'kit_components',
+  'stock_levels', 'product_inventory_settings', 'count_lines', 'vendor_bill_lines',
+  'po_landed_costs', 'purchase_order_lines', 'sales_order_lines',
+  'document_template_assignments', 'vendor_products', 'ghost_usage_reviews',
+  'stock_units', 'count_sessions', 'vendor_bills', 'sales_orders',
+  'stock_transfers', 'purchase_orders', 'document_templates',
+  'stock_locations', 'vendors',
+
   // === LEVEL 1: Leaf tables with no dependencies ===
   // Global search index (no FKs, denormalized projection)
   'app_search_index',
@@ -1441,6 +1450,24 @@ async function breakCircularDependencies(
   } catch (error) {
     // Ignore if table/column doesn't exist (older schemas)
     log.debug('Could not clear client_id in inbound_ticket_defaults (table or column may not exist)', {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+  }
+
+  // Step 6: NULL out assets.stock_unit_id so stock_units can be deleted before
+  // assets. assets.stock_unit_id -> stock_units and stock_units.asset_id -> assets
+  // form a restrictive cycle; the inventory block deletes stock_units before
+  // assets, so clear the back-reference here (exempted in validate-tenant-management).
+  try {
+    const result6 = await tenantScopedDb.table('assets')
+      .whereNotNull('stock_unit_id')
+      .update({ stock_unit_id: null });
+    if (result6 > 0) {
+      log.info('Cleared stock_unit_id references in assets', { count: result6 });
+    }
+  } catch (error) {
+    // Ignore if table/column doesn't exist (older schemas or CE without inventory)
+    log.debug('Could not clear stock_unit_id in assets (table or column may not exist)', {
       error: error instanceof Error ? error.message : 'Unknown',
     });
   }

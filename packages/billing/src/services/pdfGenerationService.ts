@@ -13,6 +13,7 @@ import { buildDocumentGeneratedPayload } from '@alga-psa/workflow-streams';
 import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
 import { enrichInvoiceViewModelWithLocations } from '../lib/adapters/invoiceAdapters.server';
 import { mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
+import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { resolvePdfPrintOptionsFromAst } from '../lib/invoice-template-ast/printSettings';
@@ -26,6 +27,8 @@ import {
 import Invoice from '../models/invoice';
 import { getStandardQuoteTemplateAstByCode } from '../lib/quote-template-ast/standardTemplates';
 import { resolveQuoteTemplateAst } from '../lib/quote-template-ast/templateSelection';
+import { getStandardSalesOrderTemplateAstByCode } from '../lib/sales-order-template-ast/standardTemplates';
+import { resolveSalesOrderTemplateAst } from '../lib/sales-order-template-ast/templateSelection';
 import { browserPoolService } from './browserPoolService';
 
 // ---------------------------------------------------------------------------
@@ -45,6 +48,14 @@ interface PDFGenerationOptions {
 
 export interface QuotePDFOptions {
   quoteId: string;
+  templateCode?: string;
+  templateAst?: TemplateAst;
+}
+
+export interface SalesOrderPDFOptions {
+  salesOrderId: string;
+  /** Which Sales Order document to render — confirmation (default), packing slip, or pick list. */
+  documentType?: 'sales-order' | 'packing-slip' | 'pick-list';
   templateCode?: string;
   templateAst?: TemplateAst;
 }
@@ -73,7 +84,7 @@ export class PDFGenerationService {
 
   // ---- Generic entry points ------------------------------------------------
 
-  async generatePDF(options: { invoiceId?: string; quoteId?: string; documentId?: string; userId: string; templateAst?: TemplateAst; templateId?: string }): Promise<Buffer> {
+  async generatePDF(options: { invoiceId?: string; quoteId?: string; salesOrderId?: string; salesOrderDocumentType?: 'sales-order' | 'packing-slip' | 'pick-list'; documentId?: string; userId: string; templateAst?: TemplateAst; templateId?: string }): Promise<Buffer> {
     let htmlContent: string;
     let templateAst: TemplateAst | null = null;
 
@@ -85,10 +96,14 @@ export class PDFGenerationService {
       const result = await this.getQuoteHtml({ quoteId: options.quoteId, templateAst: options.templateAst });
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
+    } else if (options.salesOrderId) {
+      const result = await this.getSalesOrderHtml({ salesOrderId: options.salesOrderId, documentType: options.salesOrderDocumentType, templateAst: options.templateAst });
+      htmlContent = result.htmlContent;
+      templateAst = result.templateAst;
     } else if (options.documentId) {
       htmlContent = await this.getDocumentHtml(options.documentId);
     } else {
-      throw new Error('One of invoiceId, quoteId, or documentId must be provided');
+      throw new Error('One of invoiceId, quoteId, salesOrderId, or documentId must be provided');
     }
 
     return this.generatePDFBuffer(htmlContent, templateAst);
@@ -412,6 +427,43 @@ export class PDFGenerationService {
 
       const htmlContent = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
         title: `Quote ${quoteViewModel.quote_number ?? ''}`.trim(),
+        knex,
+      });
+
+      return { htmlContent, templateAst };
+    });
+  }
+
+  // ---- Sales Order HTML ----------------------------------------------------
+
+  private async getSalesOrderHtml(
+    options: SalesOrderPDFOptions
+  ): Promise<{ htmlContent: string; templateAst: TemplateAst | null }> {
+    return runWithTenant(this.tenant, async () => {
+      const { knex } = await createTenantKnex();
+      const viewModel = await mapDbSalesOrderToViewModel(knex, this.tenant, options.salesOrderId);
+
+      if (!viewModel) {
+        throw new Error(`Sales order ${options.salesOrderId} not found`);
+      }
+
+      const documentType = options.documentType ?? 'sales-order';
+      const templateAst = options.templateAst
+        ?? (options.templateCode
+          ? getStandardSalesOrderTemplateAstByCode(options.templateCode)
+          : (await resolveSalesOrderTemplateAst(knex, this.tenant, documentType, { clientId: viewModel.client_id })).ast);
+
+      if (!templateAst) {
+        throw new Error('No sales order template AST available for PDF generation');
+      }
+
+      const evaluation = evaluateTemplateAst(
+        templateAst,
+        viewModel as unknown as Record<string, unknown>
+      );
+
+      const htmlContent = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
+        title: `Sales Order ${viewModel.so_number ?? ''}`.trim(),
         knex,
       });
 

@@ -26,7 +26,8 @@
       "sendReminder": "Wyślij przypomnienie",
       "sendToClient": "Wyślij do Klienta",
       "setAsDefault": "Ustaw jako domyślny",
-      "submitForApproval": "Prześlij do zatwierdzenia"
+      "submitForApproval": "Prześlij do zatwierdzenia",
+      "done": "Gotowe"
     },
     "badges": {
       "standard": "Standardowy"
@@ -151,7 +152,8 @@
       "cancel": "Anuluj",
       "previewPdf": "Podgląd PDF",
       "backToQuotes": "Powrót do wycen",
-      "backToTemplates": "Powrót do szablonów wycen"
+      "backToTemplates": "Powrót do szablonów wycen",
+      "convertToSalesOrder": "Konwertuj na zamówienie sprzedaży"
     },
     "headings": {
       "editQuote": "Edytuj wycenę",
@@ -351,7 +353,8 @@
       "openConvertedInvoice": "Otwórz przekonwertowaną fakturę",
       "preview": "Zapowiedź",
       "saveAsTemplate": "Zapisz jako szablon",
-      "back": "Wstecz"
+      "back": "Wstecz",
+      "openConvertedSalesOrder": "Przekonwertowano na {{number}}"
     },
     "sections": {
       "activityLog": "Dziennik aktywności",
@@ -431,7 +434,8 @@
       "sent": "Wycena wysłana do klienta.",
       "submittedForApproval": "Wycena została przesłana do wewnętrznego zatwierdzenia.",
       "templateAssigned": "Przypisano szablon dokumentu.",
-      "templateCleared": "Szablon dokumentu został wyczyszczony (przy użyciu ustawień domyślnych)."
+      "templateCleared": "Szablon dokumentu został wyczyszczony (przy użyciu ustawień domyślnych).",
+      "createdSalesOrder": "Utworzono wersję roboczą zamówienia sprzedaży {{number}}. Pozycje produktowe zostaną rozliczone przy realizacji."
     },
     "preview": {
       "loading": "Ładowanie podglądu..."
@@ -447,6 +451,9 @@
       "groupHeading": "Lokalizacja",
       "unassigned": "Pozycje bez lokalizacji",
       "subtotal": "Suma częściowa lokalizacji"
+    },
+    "availability": {
+      "onHand": "Na stanie: {{count}}"
     }
   },
   "quoteLineItems": {
@@ -567,6 +574,10 @@
       "both": {
         "label": "Umowa + Faktura",
         "description": "Tworzy zarówno wersję roboczą umowy (dla pozycji cyklicznych), jak i wersję roboczą faktury (dla pozycji jednorazowych)."
+      },
+      "salesOrder": {
+        "label": "Zamówienie sprzedaży (pozycje produktowe)",
+        "description": "Przenosi jednorazowe pozycje produktowe do wersji roboczej zamówienia sprzedaży, które jest rozliczane przy realizacji. Pozycje te są wykluczone z wersji roboczej faktury, więc nic nie jest rozliczane podwójnie."
       }
     },
     "sections": {
@@ -604,12 +615,19 @@
       "convertQuote": "Konwertuj wycenę",
       "invoice": "Utwórz wersję roboczą faktury",
       "both": "Utwórz oba rekordy",
-      "converting": "Konwersja..."
+      "converting": "Konwersja...",
+      "salesOrder": "Utwórz zamówienie sprzedaży"
     },
     "errors": {
       "convert": "Nie udało się przekonwertować wyceny",
       "load": "Nie udało się załadować podglądu konwersji",
       "title": "Błąd"
+    },
+    "salesOrder": {
+      "successTitle": "Utworzono zamówienie sprzedaży {{number}}",
+      "successBody": "Pozycje produktowe zostaną rozliczone przy realizacji.",
+      "openSalesOrders": "Otwórz zamówienia sprzedaży",
+      "note": "Jednorazowe pozycje produktowe przechodzą do wersji roboczej zamówienia sprzedaży (rozliczane przy realizacji) i są wykluczone z konwersji na wersję roboczą faktury, więc nic nie jest rozliczane podwójnie."
     }
   },
   "quoteApproval": {

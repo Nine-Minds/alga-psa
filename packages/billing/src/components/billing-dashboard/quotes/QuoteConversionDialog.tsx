@@ -18,9 +18,24 @@ import {
   convertQuoteToContract,
   convertQuoteToInvoice,
   convertQuoteToBoth,
+  convertQuoteToSalesOrder,
 } from '../../../actions/quoteActions';
 
-type ConversionMode = 'contract' | 'invoice' | 'both';
+type ConversionMode = 'contract' | 'invoice' | 'both' | 'sales_order';
+
+// Product one-time lines are what convert to a sales order (F002/D2): a product-kind
+// service, not recurring, not a discount, and either non-optional or an accepted option.
+function hasConvertibleProductOneTimeItems(quote: IQuote): boolean {
+  return Boolean(
+    (quote.quote_items || []).some(
+      (item) =>
+        item.service_item_kind === 'product' &&
+        !item.is_recurring &&
+        !item.is_discount &&
+        (!item.is_optional || item.is_selected !== false),
+    ),
+  );
+}
 
 interface QuoteConversionDialogProps {
   quote: IQuote;
@@ -54,6 +69,8 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
   const [isConverting, setIsConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedMode, setSelectedMode] = useState<ConversionMode | null>(null);
+  // Sales-order success state (F002): the created SO is shown with a link, not auto-closed.
+  const [soSuccess, setSoSuccess] = useState<{ so_id: string; so_number: string } | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -62,6 +79,7 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
       setPreview(null);
       setSelectedMode(null);
       setError(null);
+      setSoSuccess(null);
     }
   }, [open, quote.quote_id]);
 
@@ -106,10 +124,20 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
         case 'both':
           result = await convertQuoteToBoth(quote.quote_id);
           break;
+        case 'sales_order':
+          result = await convertQuoteToSalesOrder(quote.quote_id);
+          break;
       }
 
       if (result && typeof result === 'object' && 'permissionError' in result) {
         throw new Error((result as { permissionError: string }).permissionError);
+      }
+
+      if (selectedMode === 'sales_order') {
+        // Keep the dialog open on a success panel so the user can jump to the SO (F002).
+        const so = result as { so_id: string; so_number: string };
+        setSoSuccess({ so_id: so.so_id, so_number: so.so_number });
+        return;
       }
 
       const contractId = (result as { contract?: { contract_id?: string } })?.contract?.contract_id;
@@ -130,6 +158,7 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
   const canConvertToContract = preview && preview.contract_items.length > 0 && !quote.converted_contract_id;
   const canConvertToInvoice = preview && preview.invoice_items.length > 0 && !quote.converted_invoice_id;
   const canConvertToBoth = canConvertToContract && canConvertToInvoice;
+  const canConvertToSalesOrder = hasConvertibleProductOneTimeItems(quote);
 
   const getModeLabel = (mode: ConversionMode): string => {
     switch (mode) {
@@ -139,6 +168,8 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
         return t('quoteConversion.mode.invoice.label', { defaultValue: 'Invoice Only' });
       case 'both':
         return t('quoteConversion.mode.both.label', { defaultValue: 'Contract + Invoice' });
+      case 'sales_order':
+        return t('quoteConversion.mode.salesOrder.label', { defaultValue: 'Sales order (product lines)' });
     }
   };
 
@@ -155,6 +186,10 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
       case 'both':
         return t('quoteConversion.mode.both.description', {
           defaultValue: 'Creates both a draft contract (for recurring items) and a draft invoice (for one-time items).',
+        });
+      case 'sales_order':
+        return t('quoteConversion.mode.salesOrder.description', {
+          defaultValue: 'Moves product one-time lines to a draft sales order that bills on fulfillment. These lines are excluded from the draft invoice, so nothing double-bills.',
         });
     }
   };
@@ -175,7 +210,28 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
           })}
         </DialogDescription>
 
-        {isLoading ? (
+        {soSuccess ? (
+          <Alert>
+            <AlertTitle>
+              {t('quoteConversion.salesOrder.successTitle', {
+                defaultValue: 'Sales order {{number}} created',
+                number: soSuccess.so_number,
+              })}
+            </AlertTitle>
+            <AlertDescription>
+              {t('quoteConversion.salesOrder.successBody', {
+                defaultValue: 'Product lines will bill on fulfillment.',
+              })}{' '}
+              <a
+                id="quote-convert-open-sales-order"
+                href="/msp/inventory/sales-orders"
+                className="text-primary-600 underline"
+              >
+                {t('quoteConversion.salesOrder.openSalesOrders', { defaultValue: 'Open sales orders' })}
+              </a>
+            </AlertDescription>
+          </Alert>
+        ) : isLoading ? (
           <div className="py-8">
             <LoadingIndicator
               className="text-muted-foreground"
@@ -226,6 +282,7 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
                   { value: 'contract', label: getModeLabel('contract'), description: getModeDescription('contract'), disabled: !canConvertToContract },
                   { value: 'invoice', label: getModeLabel('invoice'), description: getModeDescription('invoice'), disabled: !canConvertToInvoice },
                   { value: 'both', label: getModeLabel('both'), description: getModeDescription('both'), disabled: !canConvertToBoth },
+                  { value: 'sales_order', label: getModeLabel('sales_order'), description: getModeDescription('sales_order'), disabled: !canConvertToSalesOrder },
                 ])}
               />
             </section>
@@ -319,18 +376,26 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
         ) : null}
 
         <DialogFooter>
-          <Button id="quote-conversion-cancel" variant="outline" onClick={onClose} disabled={isConverting}>
-            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-          </Button>
-          <Button
-            id="quote-conversion-confirm"
-            onClick={() => void handleConvert()}
-            disabled={isLoading || isConverting || !selectedMode || !!error}
-          >
-            {isConverting
-              ? t('quoteConversion.actions.converting', { defaultValue: 'Converting...' })
-              : t('quoteConversion.actions.convertQuote', { defaultValue: 'Convert Quote' })}
-          </Button>
+          {soSuccess ? (
+            <Button id="quote-conversion-done" onClick={onClose}>
+              {t('common.actions.done', { defaultValue: 'Done' })}
+            </Button>
+          ) : (
+            <>
+              <Button id="quote-conversion-cancel" variant="outline" onClick={onClose} disabled={isConverting}>
+                {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+              </Button>
+              <Button
+                id="quote-conversion-confirm"
+                onClick={() => void handleConvert()}
+                disabled={isLoading || isConverting || !selectedMode || !!error}
+              >
+                {isConverting
+                  ? t('quoteConversion.actions.converting', { defaultValue: 'Converting...' })
+                  : t('quoteConversion.actions.convertQuote', { defaultValue: 'Convert Quote' })}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -27,6 +27,10 @@ export interface ManualInvoiceItem { // Add export
   applies_to_item_id?: string;
   applies_to_service_id?: string; // Reference a service instead of an item
   tenant?: string; // Make tenant optional to avoid breaking existing code
+  /** Sales-order line this charge bills (reconciliation backlink — F047). */
+  so_line_id?: string | null;
+  /** Per-line tax override (SO lines carry their own tax_rate_id — F045). */
+  tax_rate_id?: string | null;
 }
 
 interface ManualInvoiceRequest {

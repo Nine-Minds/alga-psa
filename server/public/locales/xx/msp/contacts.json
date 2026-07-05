@@ -571,13 +571,15 @@
       "name": "11111",
       "email": "11111",
       "phoneNumber": "11111",
-      "actions": "11111"
+      "actions": "11111",
+      "role": "11111"
     },
     "filter": {
       "show": "11111",
       "active": "11111",
       "inactive": "11111",
-      "all": "11111"
+      "all": "11111",
+      "searchPlaceholder": "11111"
     },
     "actions": {
       "openMenu": "11111",

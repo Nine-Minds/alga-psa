@@ -1035,7 +1035,9 @@
       "description": "Opis",
       "quantity": "Ilość",
       "rate": "Stawka",
-      "amount": "Kwota"
+      "amount": "Kwota",
+      "salesOrder": "Zamówienie sprzedaży",
+      "cogsMargin": "Koszt własny / Marża"
     },
     "labels": {
       "contractSubtotal": "Suma częściowa kontraktu:",

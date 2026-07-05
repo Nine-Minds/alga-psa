@@ -63,6 +63,8 @@
       "@alga-psa/clients/*": ["packages/clients/src/*"],
       "@alga-psa/billing": ["packages/billing/src"],
       "@alga-psa/billing/*": ["packages/billing/src/*"],
+      "@alga-psa/inventory": ["packages/inventory/src"],
+      "@alga-psa/inventory/*": ["packages/inventory/src/*"],
       "@alga-psa/projects": ["packages/projects/src"],
       "@alga-psa/projects/*": ["packages/projects/src/*"],
       "@alga-psa/tickets": ["packages/tickets/src"],

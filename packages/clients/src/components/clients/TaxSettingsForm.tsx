@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import type { TaxSource, IClientTaxSettings } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -40,7 +39,6 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
   const [taxExemptionCertificate, setTaxExemptionCertificate] = useState('');
   const [originalTaxExempt, setOriginalTaxExempt] = useState(false);
   const [originalCertificate, setOriginalCertificate] = useState('');
-  const [isUpdatingExemptStatus, setIsUpdatingExemptStatus] = useState(false);
 
   const [canOverrideTaxSource, setCanOverrideTaxSource] = useState(false);
   const [effectiveTaxSource, setEffectiveTaxSource] = useState<TaxSource>('internal');
@@ -123,62 +121,17 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
     });
   };
 
-  const handleTaxExemptToggle = async (checked: boolean) => {
-    if (isUpdatingExemptStatus) return;
-
-    setIsUpdatingExemptStatus(true);
-    try {
-      const result = await updateClientTaxExemptStatusAsync(
-        clientId,
-        checked,
-        checked ? taxExemptionCertificate : ''
-      );
-
-      setIsTaxExempt(result.is_tax_exempt);
-      setOriginalTaxExempt(result.is_tax_exempt);
-      if (result.tax_exemption_certificate !== undefined) {
-        setTaxExemptionCertificate(result.tax_exemption_certificate);
-        setOriginalCertificate(result.tax_exemption_certificate);
-      }
-
-      setSuccessMessage(t('taxSettingsForm.taxExemptUpdatedSuccess', { defaultValue: 'Tax exempt status updated successfully' }));
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('taxSettingsForm.taxExemptUpdateError', { defaultValue: 'Failed to update tax exempt status' }));
-      setIsTaxExempt(originalTaxExempt);
-      setTaxExemptionCertificate(originalCertificate);
-    } finally {
-      setIsUpdatingExemptStatus(false);
+  // Single save model: every control on this form stages locally and the one
+  // Save button persists it all — no mix of auto-saving and deferred controls.
+  const handleTaxExemptToggle = (checked: boolean) => {
+    setIsTaxExempt(checked);
+    if (!checked) {
+      setTaxExemptionCertificate('');
     }
   };
 
   const handleCertificateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTaxExemptionCertificate(e.target.value);
-  };
-
-  const saveCertificate = async () => {
-    if (isUpdatingExemptStatus) return;
-
-    setIsUpdatingExemptStatus(true);
-    try {
-      const result = await updateClientTaxExemptStatusAsync(
-        clientId,
-        isTaxExempt,
-        taxExemptionCertificate
-      );
-
-      if (result.tax_exemption_certificate !== undefined) {
-        setOriginalCertificate(result.tax_exemption_certificate);
-      }
-
-      setSuccessMessage(t('taxSettingsForm.certificateUpdatedSuccess', { defaultValue: 'Tax exemption certificate updated successfully' }));
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('taxSettingsForm.certificateUpdateError', { defaultValue: 'Failed to update tax exemption certificate' }));
-      setTaxExemptionCertificate(originalCertificate);
-    } finally {
-      setIsUpdatingExemptStatus(false);
-    }
   };
 
   const handleReverseChargeChange = (checked: boolean) => {
@@ -189,6 +142,10 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
     });
   };
 
+  const exemptDirty = isTaxExempt !== originalTaxExempt || taxExemptionCertificate !== originalCertificate;
+  const settingsDirty = !!taxSettings && !!originalSettings && JSON.stringify(taxSettings) !== JSON.stringify(originalSettings);
+  const hasChanges = exemptDirty || settingsDirty;
+
   const handleSubmit = async () => {
     if (!taxSettings) return;
 
@@ -197,14 +154,32 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
     setSuccessMessage(null);
 
     try {
-      const result = await updateClientTaxSettingsAsync(clientId, taxSettings);
-      if (result) {
-        setTaxSettings(result);
-        setOriginalSettings(JSON.parse(JSON.stringify(result)));
-        setSuccessMessage(t('taxSettingsForm.saveSuccess', { defaultValue: 'Tax settings updated successfully' }));
+      if (exemptDirty) {
+        const exemptResult = await updateClientTaxExemptStatusAsync(
+          clientId,
+          isTaxExempt,
+          isTaxExempt ? taxExemptionCertificate : ''
+        );
+        setIsTaxExempt(exemptResult.is_tax_exempt);
+        setOriginalTaxExempt(exemptResult.is_tax_exempt);
+        const savedCertificate = exemptResult.tax_exemption_certificate ?? '';
+        setTaxExemptionCertificate(savedCertificate);
+        setOriginalCertificate(savedCertificate);
       }
+
+      if (settingsDirty) {
+        const result = await updateClientTaxSettingsAsync(clientId, taxSettings);
+        if (result) {
+          setTaxSettings(result);
+          setOriginalSettings(JSON.parse(JSON.stringify(result)));
+        }
+      }
+
+      setSuccessMessage(t('taxSettingsForm.saveSuccess', { defaultValue: 'Tax settings updated successfully' }));
     } catch (err) {
       setError(err instanceof Error ? err.message : t('taxSettingsForm.saveError', { defaultValue: 'Failed to update tax settings' }));
+      setIsTaxExempt(originalTaxExempt);
+      setTaxExemptionCertificate(originalCertificate);
       if (originalSettings) {
         setTaxSettings(JSON.parse(JSON.stringify(originalSettings)));
       }
@@ -273,7 +248,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('taxSettingsForm.taxExemptStatus', { defaultValue: 'Tax Exempt Status' })}</CardTitle>
+          <CardTitle>{t('taxSettingsForm.taxExemptStatus', { defaultValue: 'Tax exempt status' })}</CardTitle>
           <CardDescription>{t('taxSettingsForm.taxExemptDescription', { defaultValue: 'Mark this client as tax exempt and optionally store a certificate number.' })}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -289,23 +264,18 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
                 <Info className="h-4 w-4 text-gray-500" />
               </Tooltip>
             </div>
-            <Switch checked={isTaxExempt} onCheckedChange={handleTaxExemptToggle} disabled={isUpdatingExemptStatus} />
+            <Switch checked={isTaxExempt} onCheckedChange={handleTaxExemptToggle} disabled={isSubmitting} />
           </div>
 
           {isTaxExempt && (
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t('taxSettingsForm.certificateLabel', { defaultValue: 'Tax Exemption Certificate' })}</label>
-              <div className="flex gap-2">
-                <Input
-                  value={taxExemptionCertificate}
-                  onChange={handleCertificateChange}
-                  placeholder={t('taxSettingsForm.certificatePlaceholder', { defaultValue: 'Certificate number (optional)' })}
-                  disabled={isUpdatingExemptStatus}
-                />
-                <Button id="client-tax-save-certificate" onClick={saveCertificate} disabled={isUpdatingExemptStatus}>
-                  {t('taxSettingsForm.save', { defaultValue: 'Save' })}
-                </Button>
-              </div>
+              <label className="text-sm font-medium">{t('taxSettingsForm.certificateLabel', { defaultValue: 'Exemption certificate' })}</label>
+              <Input
+                value={taxExemptionCertificate}
+                onChange={handleCertificateChange}
+                placeholder={t('taxSettingsForm.certificatePlaceholder', { defaultValue: 'Certificate number (optional)' })}
+                disabled={isSubmitting}
+              />
             </div>
           )}
         </CardContent>
@@ -313,25 +283,21 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('taxSettingsForm.taxCalculationSettings', { defaultValue: 'Tax Calculation Settings' })}</CardTitle>
-          <CardDescription>{t('taxSettingsForm.taxCalculationDescription', { defaultValue: 'Configure how taxes are calculated for this client.' })}</CardDescription>
+          <CardTitle>{t('taxSettingsForm.taxCalculationSettings', { defaultValue: 'Tax calculation' })}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium">{t('taxSettingsForm.reverseCharge', { defaultValue: 'Reverse Charge Applicable' })}</span>
+              <span className="font-medium">{t('taxSettingsForm.reverseCharge', { defaultValue: 'Apply reverse charge' })}</span>
               <Tooltip content={t('taxSettingsForm.reverseChargeTooltip', { defaultValue: 'Reverse charge shifts tax liability to the buyer (common in B2B cross-border transactions).' })}>
                 <Info className="h-4 w-4 text-gray-500" />
               </Tooltip>
             </div>
-            <Switch checked={taxSettings.is_reverse_charge_applicable} onCheckedChange={handleReverseChargeChange} />
+            <Switch checked={taxSettings.is_reverse_charge_applicable} onCheckedChange={handleReverseChargeChange} disabled={isSubmitting} />
           </div>
 
           <div className="text-sm text-gray-500">
-            {t('taxSettingsForm.taxSourceHelp', { defaultValue: 'Manage default client tax rates in Client Settings → Tax Rates, and manage global rates in Billing → Tax Settings.' })}
-            <Link href="/billing/settings/tax" className="ml-1 underline">
-              {t('taxSettingsForm.goToBillingTaxSettings', { defaultValue: 'Go to Billing Tax Settings' })}
-            </Link>
+            {t('taxSettingsForm.taxSourceHelp', { defaultValue: "Set this client's rates in Billing → Tax rates. Set global rates in Billing settings → Tax." })}
           </div>
 
           {canOverrideTaxSource && (
@@ -352,8 +318,8 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
           )}
 
           <div className="flex justify-end">
-            <Button id="client-tax-save-settings" onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? t('taxSettingsForm.saving', { defaultValue: 'Saving...' }) : t('taxSettingsForm.saveTaxSettings', { defaultValue: 'Save Tax Settings' })}
+            <Button id="client-tax-save-settings" onClick={handleSubmit} disabled={isSubmitting || !hasChanges}>
+              {isSubmitting ? t('taxSettingsForm.saving', { defaultValue: 'Saving...' }) : t('taxSettingsForm.saveTaxSettings', { defaultValue: 'Save' })}
             </Button>
           </div>
         </CardContent>

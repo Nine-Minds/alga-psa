@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { randomUUID } from 'node:crypto';
 
 const mockedTenantConnection = vi.hoisted(() => ({
   db: null as any,
@@ -32,6 +33,7 @@ import {
   convertQuoteToDraftContract,
   convertQuoteToDraftContractAndInvoice,
   convertQuoteToDraftInvoice,
+  convertQuoteToDraftSalesOrder,
 } from '../../../../../../packages/billing/src/services/quoteConversionService';
 
 const {
@@ -57,6 +59,8 @@ type QuoteItemSpec = {
   is_recurring?: boolean;
   billing_frequency?: string | null;
   billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit';
+  service_item_kind?: 'service' | 'product';
+  cost?: number | null;
   unit_of_measure?: string;
   is_discount?: boolean;
   discount_type?: 'percentage' | 'fixed' | null;
@@ -111,7 +115,21 @@ describe('Quote conversion infrastructure', () => {
 
     for (const spec of itemSpecs) {
       let serviceId: string | undefined;
-      if (spec.is_recurring || spec.billing_method) {
+      if (spec.service_item_kind === 'product') {
+        serviceId = await createTestService(context, {
+          billing_method: spec.billing_method === 'per_unit' ? 'fixed' : (spec.billing_method as 'fixed' | 'hourly' | 'usage' | undefined) ?? 'fixed',
+          default_rate: spec.unit_price ?? 1000,
+          unit_of_measure: spec.unit_of_measure ?? 'each',
+          service_name: `${spec.description} Product`,
+        });
+        await context.db('service_catalog')
+          .where({ tenant: context.tenantId, service_id: serviceId })
+          .update({
+            item_kind: 'product',
+            cost: spec.cost ?? null,
+            cost_currency: 'USD',
+          });
+      } else if (spec.is_recurring || spec.billing_method) {
         serviceId = await createTestService(context, {
           billing_method: spec.billing_method === 'per_unit' ? 'fixed' : (spec.billing_method as 'fixed' | 'hourly' | 'usage' | undefined) ?? 'fixed',
           default_rate: spec.unit_price ?? 1000,
@@ -553,6 +571,126 @@ describe('Quote conversion infrastructure', () => {
 
     expect(result.quote.status).toBe('converted');
     expect(result.quote.converted_at).toBeTruthy();
+  });
+
+  it('T001: Quote→SO creates a draft sales order for product one-time lines and invoice conversion excludes them', async () => {
+    const label = randomUUID().slice(0, 8);
+    const { quote, items } = await createAcceptedQuote([
+      {
+        description: `T001 managed support ${label}`,
+        quantity: 1,
+        unit_price: 4500,
+        is_recurring: true,
+        billing_frequency: 'monthly',
+        billing_method: 'fixed',
+      },
+      {
+        description: `T001 onsite setup ${label}`,
+        quantity: 1,
+        unit_price: 15000,
+        is_recurring: false,
+        billing_method: 'fixed',
+      },
+      {
+        description: `T001 firewall appliance ${label}`,
+        quantity: 2,
+        unit_price: 125000,
+        is_recurring: false,
+        billing_method: 'per_unit',
+        service_item_kind: 'product',
+        cost: 70000,
+      },
+    ], {
+      title: `T001 mixed conversion ${label}`,
+    });
+
+    const productItem = items.find((item) => item.description === `T001 firewall appliance ${label}`);
+    const soResult = await context.db.transaction((trx) =>
+      convertQuoteToDraftSalesOrder(trx, context.tenantId, quote.quote_id, context.userId)
+    );
+
+    const soRow = await context.db('sales_orders')
+      .where({ tenant: context.tenantId, so_id: soResult.salesOrder.so_id })
+      .first();
+    const soLines = await context.db('sales_order_lines')
+      .where({ tenant: context.tenantId, so_id: soResult.salesOrder.so_id });
+
+    expect(soRow.quote_id).toBe(quote.quote_id);
+    expect(soRow.status).toBe('draft');
+    expect(soRow.invoice_mode).toBe('on_fulfillment');
+    expect(soLines).toHaveLength(1);
+    expect(soLines[0].service_id).toBe(productItem?.service_id);
+    expect(Number(soLines[0].quantity_ordered)).toBe(2);
+    expect(Number(soLines[0].unit_price)).toBe(125000);
+    expect(Number(soLines[0].cost_snapshot)).toBe(70000);
+
+    const invoiceResult = await context.db.transaction((trx) =>
+      convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+    );
+    const invoiceCharges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: invoiceResult.invoice.invoice_id })
+      .orderBy('description', 'asc');
+
+    expect(invoiceCharges).toHaveLength(1);
+    expect(invoiceCharges[0].description).toBe(`T001 onsite setup ${label}`);
+    expect(invoiceCharges.some((charge) => charge.service_id === productItem?.service_id)).toBe(false);
+  });
+
+  it('T018: repeat Quote→SO conversion returns the existing order and product lines are not re-added to invoices', async () => {
+    const label = randomUUID().slice(0, 8);
+    const { quote, items } = await createAcceptedQuote([
+      {
+        description: `T018 installation labor ${label}`,
+        quantity: 1,
+        unit_price: 18000,
+        is_recurring: false,
+        billing_method: 'fixed',
+      },
+      {
+        description: `T018 access point ${label}`,
+        quantity: 3,
+        unit_price: 32000,
+        is_recurring: false,
+        billing_method: 'per_unit',
+        service_item_kind: 'product',
+        cost: 21000,
+      },
+    ], {
+      title: `T018 idempotent SO ${label}`,
+    });
+
+    const productItem = items.find((item) => item.description === `T018 access point ${label}`);
+    const first = await context.db.transaction((trx) =>
+      convertQuoteToDraftSalesOrder(trx, context.tenantId, quote.quote_id, context.userId)
+    );
+    const second = await context.db.transaction((trx) =>
+      convertQuoteToDraftSalesOrder(trx, context.tenantId, quote.quote_id, context.userId)
+    );
+
+    const linkedOrders = await context.db('sales_orders')
+      .where({ tenant: context.tenantId, quote_id: quote.quote_id });
+    const linkedLines = await context.db('sales_order_lines')
+      .where({ tenant: context.tenantId, so_id: first.salesOrder.so_id });
+
+    expect(second.salesOrder.so_id).toBe(first.salesOrder.so_id);
+    expect(second.salesOrder.so_number).toBe(first.salesOrder.so_number);
+    expect(linkedOrders).toHaveLength(1);
+    expect(linkedLines).toHaveLength(1);
+
+    const invoice = await context.db.transaction((trx) =>
+      convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+    );
+    const invoiceAgain = await context.db.transaction((trx) =>
+      convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+    );
+    const invoiceCharges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: invoice.invoice.invoice_id })
+      .orderBy('description', 'asc');
+
+    expect(invoiceAgain.invoice.invoice_id).toBe(invoice.invoice.invoice_id);
+    expect(invoiceCharges).toHaveLength(1);
+    expect(invoiceCharges[0].description).toBe(`T018 installation labor ${label}`);
+    expect(invoiceCharges.some((charge) => charge.service_id === productItem?.service_id)).toBe(false);
   });
 
   it('T116: conversion preview categorizes recurring, one-time, and excluded items correctly', async () => {

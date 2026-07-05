@@ -17,8 +17,17 @@ import {
   getDefaultBillingSettings,
 } from '@alga-psa/billing/actions';
 import { getTaxRates } from '@alga-psa/billing/actions';
+import {
+  getProductInventorySettings,
+  enableInventory,
+  updateInventorySettings,
+  setProductSerialized,
+  setProductKit,
+  listVendorProducts,
+} from '@alga-psa/inventory/actions';
+import toast from 'react-hot-toast';
 import { ITaxRate } from '@alga-psa/types';
-import { IService, IServiceCategory } from '@alga-psa/types';
+import { IService, IServiceCategory, KitPricingMode } from '@alga-psa/types';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
 import { getServiceCategories } from '@alga-psa/billing/actions';
 import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -26,6 +35,18 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 const BILLING_METHOD_OPTION_VALUES = ['usage'] as const;
+
+// Default asset type applied when a delivered serialized unit becomes a managed asset
+// (F027). Mirrors BUILTIN_ASSET_TYPE_SLUGS in @alga-psa/assets (inlined to avoid a
+// cross-package dependency); empty leaves it unset (assetLink falls back to 'unknown').
+const DEFAULT_ASSET_TYPE_OPTIONS = [
+  { value: '', label: 'Unset (unknown)' },
+  { value: 'workstation', label: 'Workstation' },
+  { value: 'network_device', label: 'Network device' },
+  { value: 'server', label: 'Server' },
+  { value: 'mobile_device', label: 'Mobile device' },
+  { value: 'printer', label: 'Printer' },
+];
 
 type PriceDraft = { currency_code: string; rate: number };
 
@@ -79,6 +100,33 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
   const [formPrices, setFormPrices] = useState<PriceDraft[]>([{ currency_code: defaultCurrency, rate: 0 }]);
   const [priceInput, setPriceInput] = useState<string>('');
   const [costInput, setCostInput] = useState<string>('');
+
+  // --- Inventory panel state (only meaningful for item_kind='product') ---
+  type InvDraft = {
+    is_serialized: boolean;
+    is_kit: boolean;
+    creates_asset_on_delivery: boolean;
+    reorder_point: string;
+    reorder_quantity: string;
+    kit_pricing_mode: KitPricingMode;
+    default_asset_type: string;
+  };
+  const defaultInvDraft = (): InvDraft => ({
+    is_serialized: false,
+    is_kit: false,
+    creates_asset_on_delivery: false,
+    reorder_point: '',
+    reorder_quantity: '',
+    kit_pricing_mode: 'sum',
+    default_asset_type: '',
+  });
+  const [invSectionOpen, setInvSectionOpen] = useState(false);
+  const [trackInventory, setTrackInventory] = useState(false);
+  // Whether a product_inventory_settings row already exists in the DB.
+  const [inventoryEnabled, setInventoryEnabled] = useState(false);
+  const [inv, setInv] = useState<InvDraft>(defaultInvDraft());
+  const inventoryServiceId = product?.service_id;
+  const reorderToNum = (v: string): number | null => (v.trim() === '' ? null : Number(v));
   const billingMethodOptions = useMemo(
     () =>
       BILLING_METHOD_OPTION_VALUES.map((value) => ({
@@ -116,6 +164,118 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       setCostInput('');
     }
   }, [isOpen, product]);
+
+  // Vendor price-list offers for this product (read-only view — F055).
+  const [vendorOffers, setVendorOffers] = useState<any[]>([]);
+  useEffect(() => {
+    if (isOpen && product && (product.item_kind ?? 'product') === 'product') {
+      listVendorProducts({ service_id: product.service_id })
+        .then(setVendorOffers)
+        .catch(() => setVendorOffers([])); // decoration only — never block the dialog
+    } else {
+      setVendorOffers([]);
+    }
+  }, [isOpen, product]);
+
+  // Load current inventory settings when opening an existing product.
+  useEffect(() => {
+    if (isOpen && product && (product.item_kind ?? 'product') === 'product') {
+      getProductInventorySettings(product.service_id)
+        .then((s) => {
+          if (s) {
+            setInventoryEnabled(true);
+            setTrackInventory(!!s.track_stock);
+            setInv({
+              is_serialized: !!s.is_serialized,
+              is_kit: !!s.is_kit,
+              creates_asset_on_delivery: !!s.creates_asset_on_delivery,
+              reorder_point: s.reorder_point != null ? String(s.reorder_point) : '',
+              reorder_quantity: s.reorder_quantity != null ? String(s.reorder_quantity) : '',
+              kit_pricing_mode: s.kit_pricing_mode ?? 'sum',
+              default_asset_type: s.default_asset_type ?? '',
+            });
+          } else {
+            setInventoryEnabled(false);
+            setTrackInventory(false);
+            setInv(defaultInvDraft());
+          }
+        })
+        .catch((e) => console.error('[QuickAddProduct] Failed to load inventory settings:', e));
+    } else if (isOpen && !product) {
+      setInventoryEnabled(false);
+      setTrackInventory(false);
+      setInv(defaultInvDraft());
+      setInvSectionOpen(false);
+    }
+  }, [isOpen, product]);
+
+  // Persist a partial inventory patch (edit mode, once a settings row exists).
+  const persistInventoryPatch = (patch: Parameters<typeof updateInventorySettings>[1]) => {
+    if (!isEditMode || !inventoryServiceId || !inventoryEnabled) return;
+    updateInventorySettings(inventoryServiceId, patch).catch((e) => {
+      toast.error(e?.message || 'Failed to update inventory settings');
+    });
+  };
+
+  const handleTrackInventoryChange = async (checked: boolean) => {
+    setTrackInventory(checked);
+    if (!isEditMode || !inventoryServiceId) {
+      // Create mode: settings are applied after the product is created (handleSubmit).
+      return;
+    }
+    try {
+      if (checked && !inventoryEnabled) {
+        await enableInventory(inventoryServiceId, {
+          is_serialized: inv.is_serialized,
+          is_kit: inv.is_kit,
+          creates_asset_on_delivery: inv.creates_asset_on_delivery,
+          reorder_point: reorderToNum(inv.reorder_point),
+          reorder_quantity: reorderToNum(inv.reorder_quantity),
+        });
+        setInventoryEnabled(true);
+        toast.success('Inventory tracking enabled');
+      } else if (inventoryEnabled) {
+        await updateInventorySettings(inventoryServiceId, { track_stock: checked });
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to update inventory tracking');
+      setTrackInventory(!checked);
+    }
+  };
+
+  const handleSerializedChange = async (checked: boolean) => {
+    setInv((prev) => ({ ...prev, is_serialized: checked }));
+    if (isEditMode && inventoryServiceId && inventoryEnabled) {
+      try {
+        await setProductSerialized(inventoryServiceId, checked);
+      } catch (e: any) {
+        toast.error(e?.message || 'Failed to update serialization');
+        setInv((prev) => ({ ...prev, is_serialized: !checked }));
+      }
+    }
+  };
+
+  const handleKitChange = async (checked: boolean) => {
+    setInv((prev) => ({ ...prev, is_kit: checked }));
+    if (isEditMode && inventoryServiceId && inventoryEnabled) {
+      try {
+        await setProductKit(inventoryServiceId, checked);
+      } catch (e: any) {
+        toast.error(e?.message || 'Failed to update kit flag');
+        setInv((prev) => ({ ...prev, is_kit: !checked }));
+      }
+    }
+  };
+
+  const handleCreatesAssetChange = (checked: boolean) => {
+    setInv((prev) => ({ ...prev, creates_asset_on_delivery: checked }));
+    persistInventoryPatch({ creates_asset_on_delivery: checked });
+  };
+
+  const handleKitPricingChange = (mode: KitPricingMode) => {
+    setInv((prev) => ({ ...prev, kit_pricing_mode: mode }));
+    persistInventoryPatch({ kit_pricing_mode: mode });
+  };
 
   // Products and Services draw from one shared Type taxonomy (service_types),
   // managed on the dedicated Service Types settings tab. The full list is
@@ -206,6 +366,10 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     setPriceInput('');
     setCostInput('');
     setError(null);
+    setInvSectionOpen(false);
+    setTrackInventory(false);
+    setInventoryEnabled(false);
+    setInv(defaultInvDraft());
   };
 
   const handleClose = () => {
@@ -281,6 +445,24 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           return;
         }
         await setServicePrices(created.service_id, formPrices);
+
+        // Apply inventory settings collected in the panel (create mode).
+        if (trackInventory) {
+          try {
+            await enableInventory(created.service_id, {
+              is_serialized: inv.is_serialized,
+              is_kit: inv.is_kit,
+              creates_asset_on_delivery: inv.creates_asset_on_delivery,
+              reorder_point: reorderToNum(inv.reorder_point),
+              reorder_quantity: reorderToNum(inv.reorder_quantity),
+            });
+            if (inv.kit_pricing_mode !== 'sum') {
+              await updateInventorySettings(created.service_id, { kit_pricing_mode: inv.kit_pricing_mode });
+            }
+          } catch (invErr: any) {
+            toast.error(invErr?.message || 'Product created, but inventory settings could not be applied');
+          }
+        }
       }
 
       resetForm();
@@ -683,6 +865,175 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               />
             </div>
           </div>
+
+          {(formProduct.item_kind ?? 'product') === 'product' && (
+            <div className="border rounded-lg">
+              <button
+                id="quick-add-product-inventory-toggle-section"
+                type="button"
+                className="w-full flex justify-between items-center px-4 py-3 text-sm font-medium text-[rgb(var(--color-text-700))]"
+                onClick={() => setInvSectionOpen((o) => !o)}
+              >
+                <span>{t('quickAddProduct.fields.inventory.label', { defaultValue: 'Inventory' })}</span>
+                <span className="text-muted-foreground">{invSectionOpen ? '▾' : '▸'}</span>
+              </button>
+              {invSectionOpen && (
+                <div className="px-4 pb-4 pt-3 space-y-3 border-t">
+                  <label className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-700))]">
+                    <input
+                      id="quick-add-product-track-inventory"
+                      type="checkbox"
+                      checked={trackInventory}
+                      onChange={(e) => handleTrackInventoryChange(e.target.checked)}
+                    />
+                    <span>{t('quickAddProduct.fields.inventory.track', { defaultValue: 'Track inventory' })}</span>
+                  </label>
+
+                  {trackInventory && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-700))]">
+                          <input
+                            id="quick-add-product-is-serialized"
+                            type="checkbox"
+                            checked={inv.is_serialized}
+                            onChange={(e) => handleSerializedChange(e.target.checked)}
+                          />
+                          <span>{t('quickAddProduct.fields.inventory.serialized', { defaultValue: 'Serialized' })}</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-700))]">
+                          <input
+                            id="quick-add-product-is-kit"
+                            type="checkbox"
+                            checked={inv.is_kit}
+                            onChange={(e) => handleKitChange(e.target.checked)}
+                          />
+                          <span>{t('quickAddProduct.fields.inventory.kit', { defaultValue: 'Kit' })}</span>
+                        </label>
+                      </div>
+
+                      <label className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-700))]">
+                        <input
+                          id="quick-add-product-creates-asset"
+                          type="checkbox"
+                          checked={inv.creates_asset_on_delivery}
+                          onChange={(e) => handleCreatesAssetChange(e.target.checked)}
+                        />
+                        <span>
+                          {t('quickAddProduct.fields.inventory.createsAsset', {
+                            defaultValue: 'Creates asset on delivery',
+                          })}
+                        </span>
+                      </label>
+
+                      {inv.creates_asset_on_delivery && (
+                        <div>
+                          <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                            {t('quickAddProduct.fields.inventory.defaultAssetType', {
+                              defaultValue: 'Default asset type',
+                            })}
+                          </label>
+                          <CustomSelect
+                            id="quick-add-product-default-asset-type"
+                            options={DEFAULT_ASSET_TYPE_OPTIONS}
+                            value={inv.default_asset_type}
+                            onValueChange={(value) => {
+                              setInv((prev) => ({ ...prev, default_asset_type: value }));
+                              persistInventoryPatch({ default_asset_type: value || null });
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                            {t('quickAddProduct.fields.inventory.reorderPoint', { defaultValue: 'Reorder Point' })}
+                          </label>
+                          <Input
+                            id="quick-add-product-reorder-point"
+                            type="text"
+                            inputMode="numeric"
+                            value={inv.reorder_point}
+                            onChange={(e) =>
+                              setInv((prev) => ({ ...prev, reorder_point: e.target.value.replace(/[^0-9]/g, '') }))
+                            }
+                            onBlur={() => persistInventoryPatch({ reorder_point: reorderToNum(inv.reorder_point) })}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                            {t('quickAddProduct.fields.inventory.reorderQuantity', { defaultValue: 'Reorder Quantity' })}
+                          </label>
+                          <Input
+                            id="quick-add-product-reorder-quantity"
+                            type="text"
+                            inputMode="numeric"
+                            value={inv.reorder_quantity}
+                            onChange={(e) =>
+                              setInv((prev) => ({ ...prev, reorder_quantity: e.target.value.replace(/[^0-9]/g, '') }))
+                            }
+                            onBlur={() => persistInventoryPatch({ reorder_quantity: reorderToNum(inv.reorder_quantity) })}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Vendor offers (read-only — F055): managed on the Vendor's price list. */}
+                      {vendorOffers.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                            Vendor offers
+                          </label>
+                          <div className="space-y-1" id="quick-add-product-vendor-offers">
+                            {vendorOffers.map((o) => (
+                              <div
+                                key={`${o.vendor_id}-${o.service_id}`}
+                                className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-700))]"
+                              >
+                                <span className="font-medium">{o.vendor_name || o.vendor_id}</span>
+                                {o.vendor_sku && <span className="font-mono text-xs text-gray-500">{o.vendor_sku}</span>}
+                                <span className="ml-auto tabular-nums">
+                                  {o.unit_cost != null ? `$${(Number(o.unit_cost) / 100).toFixed(2)} ${o.cost_currency}` : '—'}
+                                </span>
+                                {o.is_preferred && (
+                                  <span className="text-xs rounded bg-green-100 text-green-800 px-1.5 py-0.5">Preferred</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {inv.is_kit && (
+                        <div>
+                          <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                            {t('quickAddProduct.fields.inventory.kitPricingMode', {
+                              defaultValue: 'Kit Pricing Mode',
+                            })}
+                          </label>
+                          <select
+                            id="quick-add-product-kit-pricing-mode"
+                            value={inv.kit_pricing_mode}
+                            onChange={(e) => handleKitPricingChange(e.target.value as KitPricingMode)}
+                            className="w-full rounded-md border border-[rgb(var(--color-border-200))] bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="sum">
+                              {t('quickAddProduct.fields.inventory.kitPricingSum', {
+                                defaultValue: 'Sum of components',
+                              })}
+                            </option>
+                            <option value="fixed">
+                              {t('quickAddProduct.fields.inventory.kitPricingFixed', { defaultValue: 'Fixed price' })}
+                            </option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">

@@ -380,7 +380,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
     <div className="mt-8 border-t pt-6" data-automation-id="client-billing-schedule-section">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">{t('clientBillingSchedule.title', { defaultValue: 'Billing Schedule' })}</h3>
+          <h3 className="text-lg font-semibold">{t('clientBillingSchedule.title', { defaultValue: 'Billing schedule' })}</h3>
           <Tooltip content={cadenceContext.changeScopeDescription}>
             <Info className="h-4 w-4 text-gray-500" />
           </Tooltip>
@@ -396,7 +396,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
           >
             {creatingCycle
               ? t('clientBillingSchedule.createInProgress', { defaultValue: 'Creating...' })
-              : t('clientBillingSchedule.createNextCycle', { defaultValue: 'Create Next Cycle' })}
+              : t('clientBillingSchedule.createNextCycle', { defaultValue: 'Create next cycle' })}
 	          </Button>
 	          <Button
 	            id="client-billing-edit-schedule"
@@ -408,7 +408,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
           >
             {loading
               ? t('common.states.loading', { defaultValue: 'Loading...' })
-              : t('clientBillingSchedule.edit', { defaultValue: 'Edit Schedule' })}
+              : t('clientBillingSchedule.edit', { defaultValue: 'Edit schedule' })}
 	          </Button>
 	        </div>
 	      </div>
@@ -423,7 +423,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
       <Dialog
         isOpen={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title={t('clientBillingSchedule.title', { defaultValue: 'Billing Schedule' })}
+        title={t('clientBillingSchedule.title', { defaultValue: 'Billing schedule' })}
         id="client-billing-schedule-dialog"
         disableFocusTrap
         footer={

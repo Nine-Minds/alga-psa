@@ -49,7 +49,7 @@ export const ContactNotesPanel: React.FC<ContactNotesPanelProps> = ({
     <Card className="bg-white">
       <CardHeader className="pb-2">
         <div className="flex flex-row items-center justify-between">
-          <CardTitle>{t('contactNotesPanel.title', { defaultValue: 'Notes & Quick Info' })}</CardTitle>
+          <CardTitle>{t('contactNotesPanel.title', { defaultValue: 'Notes' })}</CardTitle>
           <Button
             id="save-contact-note-btn"
             variant="ghost"

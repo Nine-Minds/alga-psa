@@ -981,7 +981,9 @@
       "description": "Beschreibung",
       "quantity": "Menge",
       "rate": "Satz",
-      "amount": "Betrag"
+      "amount": "Betrag",
+      "salesOrder": "Kundenauftrag",
+      "cogsMargin": "Wareneinsatz / Marge"
     },
     "labels": {
       "contractSubtotal": "Vertragszwischensumme:",

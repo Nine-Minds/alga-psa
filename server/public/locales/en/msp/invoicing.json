@@ -981,7 +981,9 @@
       "description": "Description",
       "quantity": "Quantity",
       "rate": "Rate",
-      "amount": "Amount"
+      "amount": "Amount",
+      "salesOrder": "Sales Order",
+      "cogsMargin": "COGS / Margin"
     },
     "labels": {
       "contractSubtotal": "Contract Subtotal:",

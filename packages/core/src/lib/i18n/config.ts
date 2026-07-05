@@ -170,6 +170,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing'],
   '/msp/quote-approvals': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/quote-document-templates': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
+  '/msp/inventory': ['common', 'msp/core', 'features/inventory'],
   '/msp/clients': ['common', 'msp/core', 'msp/clients'],
   '/msp/contacts': ['common', 'msp/core', 'msp/contacts'],
   '/msp/assets': ['common', 'msp/core', 'msp/assets'],

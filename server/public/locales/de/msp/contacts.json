@@ -571,13 +571,15 @@
       "name": "Name",
       "email": "E-Mail",
       "phoneNumber": "Telefonnummer",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "role": "Rolle"
     },
     "filter": {
       "show": "Anzeigen:",
       "active": "Aktive Kontakte",
       "inactive": "Inaktive Kontakte",
-      "all": "Alle Kontakte"
+      "all": "Alle Kontakte",
+      "searchPlaceholder": "Kontakte suchen..."
     },
     "actions": {
       "openMenu": "Menü öffnen",
@@ -603,7 +605,7 @@
     "description": "Upload-Bereich für Profilbilder von Kontakten"
   },
   "contactNotesPanel": {
-    "title": "Notizen & Kurzinformationen",
+    "title": "Notizen",
     "description": "Bereich für Rich-Text-Notizen mit Anzeige der alten Notiz sowie Speichern-/Erneut-versuchen-Aktionen",
     "legacy": {
       "initialNote": "Erste Notiz"

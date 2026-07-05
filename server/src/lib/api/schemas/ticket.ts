@@ -69,6 +69,8 @@ export const createTicketMaterialSchema = z.object({
   rate: z.number().min(0, 'Rate must be 0 or greater'),
   currency_code: z.string().trim().min(3).max(3).transform((value) => value.toUpperCase()),
   description: z.string().trim().max(1000).nullable().optional(),
+  // Serialized tracked products require the specific stock unit to deliver.
+  unit_id: uuidSchema.nullable().optional(),
 });
 
 // Ticket filter schema
