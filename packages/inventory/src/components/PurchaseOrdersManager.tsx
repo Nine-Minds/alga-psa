@@ -11,6 +11,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import { PoLandedCostDialog } from './PoLandedCostDialog';
 import type {
@@ -32,14 +33,6 @@ import {
   listInventoryProducts,
   type PurchaseOrderListRow,
 } from '../actions';
-
-/** Closed currency set — the create form picks from these instead of free-typing a code. */
-const CURRENCY_OPTIONS = [
-  { value: 'USD', label: 'USD — US Dollar' },
-  { value: 'CAD', label: 'CAD — Canadian Dollar' },
-  { value: 'EUR', label: 'EUR — Euro' },
-  { value: 'GBP', label: 'GBP — British Pound' },
-];
 
 type ProductOption = {
   service_id: string;
@@ -127,15 +120,6 @@ function statusVariant(status: string) {
   }
 }
 
-const STATUS_FILTER_OPTIONS = [
-  { value: '', label: 'All statuses' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'open', label: 'Open' },
-  { value: 'partially_received', label: 'Partially received' },
-  { value: 'received', label: 'Received' },
-  { value: 'cancelled', label: 'Cancelled' },
-];
-
 /** Statuses that represent money still on order (counted in the header's open total). */
 const OUTSTANDING_STATUSES = new Set(['open', 'partially_received']);
 
@@ -146,6 +130,22 @@ export function PurchaseOrdersManager({
   initialPos: PurchaseOrderListRow[];
   loadError?: boolean;
 }) {
+  const { t } = useTranslation('features/inventory');
+  // Closed currency set — the create form picks from these instead of free-typing a code.
+  const CURRENCY_OPTIONS = [
+    { value: 'USD', label: t('purchaseOrders.currency.usd', 'USD — US Dollar') },
+    { value: 'CAD', label: t('purchaseOrders.currency.cad', 'CAD — Canadian Dollar') },
+    { value: 'EUR', label: t('purchaseOrders.currency.eur', 'EUR — Euro') },
+    { value: 'GBP', label: t('purchaseOrders.currency.gbp', 'GBP — British Pound') },
+  ];
+  const STATUS_FILTER_OPTIONS = [
+    { value: '', label: t('purchaseOrders.status.allStatuses', 'All statuses') },
+    { value: 'draft', label: t('purchaseOrders.status.draft', 'Draft') },
+    { value: 'open', label: t('purchaseOrders.status.open', 'Open') },
+    { value: 'partially_received', label: t('purchaseOrders.status.partiallyReceived', 'Partially received') },
+    { value: 'received', label: t('purchaseOrders.status.received', 'Received') },
+    { value: 'cancelled', label: t('purchaseOrders.status.cancelled', 'Cancelled') },
+  ];
   const [pos, setPos] = useState<PurchaseOrderListRow[]>(initialPos || []);
   // Seeded from the server: a failed SSR load must read as an error, not as "no POs".
   const [loadFailed, setLoadFailed] = useState(loadError);
@@ -174,27 +174,27 @@ export function PurchaseOrdersManager({
     } catch (e) {
       console.error(e);
       setLoadFailed(true);
-      toast.error("Couldn't load purchase orders.");
+      toast.error(t('purchaseOrders.loadError', "Couldn't load purchase orders."));
     }
-  }, []);
+  }, [t]);
 
   const loadVendors = useCallback(async () => {
     try {
       setVendors(await listVendors({}));
     } catch (e) {
       console.error(e);
-      toast.error("Couldn't load vendors.");
+      toast.error(t('purchaseOrders.vendorsLoadError', "Couldn't load vendors."));
     }
-  }, []);
+  }, [t]);
 
   const loadProducts = useCallback(async () => {
     try {
       setProducts((await listInventoryProducts()) as ProductOption[]);
     } catch (e) {
       console.error(e);
-      toast.error("Couldn't load products.");
+      toast.error(t('purchaseOrders.productsLoadError', "Couldn't load products."));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void loadVendors();
@@ -218,7 +218,7 @@ export function PurchaseOrdersManager({
 
   const productOptions = products.map((p) => ({
     value: p.service_id,
-    label: `${p.service_name || 'Unnamed product'}${p.sku ? ` — ${p.sku}` : ''}`,
+    label: `${p.service_name || t('purchaseOrders.unnamedProduct', 'Unnamed product')}${p.sku ? ` — ${p.sku}` : ''}`,
   }));
 
   const openCreate = () => {
@@ -240,11 +240,11 @@ export function PurchaseOrdersManager({
 
   const save = async () => {
     if (!form.vendor_id) {
-      toast.error('Vendor is required');
+      toast.error(t('purchaseOrders.vendorRequired', 'Vendor is required'));
       return;
     }
     if (!form.currency_code.trim()) {
-      toast.error('Currency is required');
+      toast.error(t('purchaseOrders.currencyRequired', 'Currency is required'));
       return;
     }
     const lines = form.lines
@@ -257,7 +257,7 @@ export function PurchaseOrdersManager({
       }));
     for (const l of lines) {
       if (!(l.quantity_ordered > 0)) {
-        toast.error('Each line quantity must be greater than 0');
+        toast.error(t('purchaseOrders.lineQtyRequired', 'Each line quantity must be greater than 0'));
         return;
       }
     }
@@ -269,11 +269,11 @@ export function PurchaseOrdersManager({
         expected_date: form.expected_date || null,
         lines,
       });
-      toast.success('Purchase order created.');
+      toast.success(t('purchaseOrders.created', 'Purchase order created.'));
       setDialogOpen(false);
       await reload();
     } catch (e) {
-      toast.error(errMessage(e, "Couldn't create the purchase order."));
+      toast.error(errMessage(e, t('purchaseOrders.createFailed', "Couldn't create the purchase order.")));
     } finally {
       setSaving(false);
     }
@@ -282,20 +282,20 @@ export function PurchaseOrdersManager({
   const submit = async (po: IPurchaseOrder) => {
     try {
       await submitPurchaseOrder(po.po_id);
-      toast.success('Purchase order submitted.');
+      toast.success(t('purchaseOrders.submitted', 'Purchase order submitted.'));
       await reload();
     } catch (e) {
-      toast.error(errMessage(e, "Couldn't submit the purchase order."));
+      toast.error(errMessage(e, t('purchaseOrders.submitFailed', "Couldn't submit the purchase order.")));
     }
   };
 
   const cancel = async (po: IPurchaseOrder) => {
     try {
       await cancelPurchaseOrder(po.po_id);
-      toast.success('Purchase order cancelled.');
+      toast.success(t('purchaseOrders.cancelled', 'Purchase order cancelled.'));
       await reload();
     } catch (e) {
-      toast.error(errMessage(e, "Couldn't cancel the purchase order."));
+      toast.error(errMessage(e, t('purchaseOrders.cancelFailed', "Couldn't cancel the purchase order.")));
     }
   };
 
@@ -309,7 +309,7 @@ export function PurchaseOrdersManager({
         listStockLocations({ includeInactive: false }),
       ]);
       if (!full) {
-        toast.error('Purchase order not found');
+        toast.error(t('purchaseOrders.notFound', 'Purchase order not found'));
         setReceiveOpen(false);
         return;
       }
@@ -327,7 +327,7 @@ export function PurchaseOrdersManager({
       setReceiveForms(forms);
       setReceivePo(full);
     } catch (e) {
-      toast.error(errMessage(e, "Couldn't load the purchase order."));
+      toast.error(errMessage(e, t('purchaseOrders.loadOneFailed', "Couldn't load the purchase order.")));
       setReceiveOpen(false);
     }
   };
@@ -340,12 +340,12 @@ export function PurchaseOrdersManager({
     const rf = receiveForms[line.po_line_id];
     if (!rf) return;
     if (!rf.location_id) {
-      toast.error('Location is required');
+      toast.error(t('purchaseOrders.locationRequired', 'Location is required'));
       return;
     }
     const quantity = Number(rf.quantity);
     if (!(quantity > 0)) {
-      toast.error('Quantity must be greater than 0');
+      toast.error(t('purchaseOrders.qtyRequired', 'Quantity must be greater than 0'));
       return;
     }
     const serialNumbers = rf.serials
@@ -364,9 +364,9 @@ export function PurchaseOrdersManager({
         serials,
       });
       if (result.over_receipt) {
-        toast(`Received ${quantity}. You've now received more than was ordered.`, { icon: '⚠️' });
+        toast(t('purchaseOrders.overReceived', "Received {{quantity}}. You've now received more than was ordered.", { quantity }), { icon: '⚠️' });
       } else {
-        toast.success(`Received ${quantity}. Purchase order is now ${humanize(result.po_status).toLowerCase()}.`);
+        toast.success(t('purchaseOrders.receivedStatus', 'Received {{quantity}}. Purchase order is now {{status}}.', { quantity, status: humanize(result.po_status).toLowerCase() }));
       }
       // Refresh the open dialog and the list.
       const full = await getPurchaseOrder(line.po_id);
@@ -388,7 +388,7 @@ export function PurchaseOrdersManager({
       }
       await reload();
     } catch (e) {
-      toast.error(errMessage(e, "Couldn't receive this line."));
+      toast.error(errMessage(e, t('purchaseOrders.receiveFailed', "Couldn't receive this line.")));
     } finally {
       setReceiving(false);
     }
@@ -398,12 +398,12 @@ export function PurchaseOrdersManager({
     {
       // The row's identity — the string operators say out loud and search for. Give it
       // weight so it out-ranks the data around it.
-      title: 'PO Number',
+      title: t('purchaseOrders.columns.poNumber', 'PO Number'),
       dataIndex: 'po_number',
       render: (v: any) => <span className="font-medium text-gray-900">{v}</span>,
     },
     {
-      title: 'Vendor',
+      title: t('purchaseOrders.columns.vendor', 'Vendor'),
       dataIndex: 'vendor_id',
       // Server-joined name first; the client-side vendors lookup is only a fallback
       // (it loads async, which used to flash raw UUIDs).
@@ -412,14 +412,14 @@ export function PurchaseOrdersManager({
     {
       // The defining number of a purchase order: Σ(unit_cost × qty_ordered) across lines,
       // in the PO's own currency (which is why there's no separate constant "Currency" column).
-      title: 'Amount',
+      title: t('purchaseOrders.columns.amount', 'Amount'),
       dataIndex: 'total_amount',
       headerClassName: NUM_HEADER,
       cellClassName: `${NUM_CELL} font-medium text-gray-900`,
       render: (v: any, rec: PurchaseOrderListRow) => money(Number(v ?? 0), rec.currency_code),
     },
     {
-      title: 'Status',
+      title: t('common.status', 'Status'),
       dataIndex: 'status',
       render: (v: any) => (
         <Badge variant={statusVariant(v)} size="sm">
@@ -429,26 +429,26 @@ export function PurchaseOrdersManager({
     },
     {
       // The magnitude the "Partially received" badge omits: how much of the order has landed.
-      title: 'Received',
+      title: t('purchaseOrders.columns.received', 'Received'),
       dataIndex: 'qty_received',
       headerClassName: NUM_HEADER,
       cellClassName: NUM_CELL,
       sortable: false,
       render: (_: any, rec: PurchaseOrderListRow) =>
-        rec.line_count === 0 ? '—' : `${rec.qty_received} / ${rec.qty_ordered}`,
+        rec.line_count === 0 ? t('common.emptyValue', '—') : `${rec.qty_received} / ${rec.qty_ordered}`,
     },
     {
       // "When is it arriving" — the question an open PO exists to answer.
-      title: 'Expected',
+      title: t('purchaseOrders.columns.expected', 'Expected'),
       dataIndex: 'expected_date',
-      render: (v: any) => formatDate(v) || '—',
+      render: (v: any) => formatDate(v) || t('common.emptyValue', '—'),
     },
     {
       // Width matches the sibling managers (RMA/SO) so the labels never clip to
       // "Submi"/"Receiv". Only the actions that actually apply to a row's status are
       // rendered — Submit on drafts, Receive on receivable POs, Cancel until terminal —
       // instead of painting all three on every row and greying the inapplicable ones.
-      title: 'Actions',
+      title: t('common.actions', 'Actions'),
       dataIndex: 'po_id',
       width: '230px',
       render: (_: any, rec: IPurchaseOrder) => {
@@ -461,12 +461,12 @@ export function PurchaseOrdersManager({
                 the emphasized soft variant; Cancel stays quiet. One clear action per row. */}
             {canSubmit && (
               <Button id={`submit-po-${rec.po_id}`} variant="soft" size="sm" onClick={() => submit(rec)}>
-                Submit
+                {t('purchaseOrders.actions.submit', 'Submit')}
               </Button>
             )}
             {canReceive && (
               <Button id={`receive-po-${rec.po_id}`} variant="soft" size="sm" onClick={() => openReceive(rec)}>
-                Receive
+                {t('purchaseOrders.actions.receive', 'Receive')}
               </Button>
             )}
             {(rec.status === 'partially_received' || rec.status === 'received') && (
@@ -476,12 +476,12 @@ export function PurchaseOrdersManager({
                 size="sm"
                 onClick={() => setLandedCostPo(rec)}
               >
-                Landed cost
+                {t('purchaseOrders.actions.landedCost', 'Landed cost')}
               </Button>
             )}
             {canCancel && (
               <Button id={`cancel-po-${rec.po_id}`} variant="ghost" size="sm" onClick={() => setPendingCancel(rec)}>
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
             )}
           </div>
@@ -505,7 +505,7 @@ export function PurchaseOrdersManager({
   const filtersActive = Boolean(q || statusFilter || vendorFilter);
 
   const vendorFilterOptions = [
-    { value: '', label: 'All vendors' },
+    { value: '', label: t('purchaseOrders.allVendors', 'All vendors') },
     ...vendors.map((v) => ({ value: v.vendor_id, label: v.vendor_name })),
   ];
 
@@ -519,18 +519,20 @@ export function PurchaseOrdersManager({
     <div className="p-6 space-y-4" id="purchase-orders-page">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Purchase Orders</h1>
+          <h1 className="text-2xl font-semibold">{t('purchaseOrders.title', 'Purchase Orders')}</h1>
           {!loadFailed && (
             <p className="text-sm text-gray-500 mt-0.5">
-              {pos.length} purchase order{pos.length === 1 ? '' : 's'}
+              {pos.length === 1
+                ? t('purchaseOrders.count', '{{count}} purchase order', { count: pos.length })
+                : t('purchaseOrders.countPlural', '{{count}} purchase orders', { count: pos.length })}
               {outstanding.length > 0 && (
-                <span className="font-medium text-gray-700"> · {money(openTotal, openCurrency)} on order</span>
+                <span className="font-medium text-gray-700"> · {t('purchaseOrders.amountOnOrder', '{{amount}} on order', { amount: money(openTotal, openCurrency) })}</span>
               )}
             </p>
           )}
         </div>
         <Button id="purchase-orders-add-button" onClick={openCreate}>
-          Add Purchase Order
+          {t('purchaseOrders.addPurchaseOrder', 'Add Purchase Order')}
         </Button>
       </div>
 
@@ -539,7 +541,7 @@ export function PurchaseOrdersManager({
           <div className="w-72">
             <SearchInput
               id="purchase-orders-search"
-              placeholder="Search PO number or vendor"
+              placeholder={t('purchaseOrders.searchPlaceholder', 'Search PO number or vendor')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onClear={() => setSearch('')}
@@ -551,7 +553,7 @@ export function PurchaseOrdersManager({
               value={statusFilter}
               options={STATUS_FILTER_OPTIONS}
               onValueChange={setStatusFilter}
-              placeholder="All statuses"
+              placeholder={t('purchaseOrders.status.allStatuses', 'All statuses')}
             />
           </div>
           <div className="w-56">
@@ -560,12 +562,12 @@ export function PurchaseOrdersManager({
               value={vendorFilter}
               options={vendorFilterOptions}
               onValueChange={setVendorFilter}
-              placeholder="All vendors"
+              placeholder={t('purchaseOrders.allVendors', 'All vendors')}
             />
           </div>
           {filtersActive && (
             <span className="text-sm text-gray-500">
-              {filtered.length} of {pos.length}
+              {t('purchaseOrders.filteredCount', '{{filtered}} of {{total}}', { filtered: filtered.length, total: pos.length })}
             </span>
           )}
         </div>
@@ -573,30 +575,30 @@ export function PurchaseOrdersManager({
 
       {loadFailed ? (
         <EmptyState
-          title="Couldn't load purchase orders"
-          description="Something went wrong loading this page. Try again."
+          title={t('purchaseOrders.loadErrorTitle', "Couldn't load purchase orders")}
+          description={t('purchaseOrders.loadErrorDescription', 'Something went wrong loading this page. Try again.')}
           action={
             <Button id="purchase-orders-retry" onClick={reload}>
-              Retry
+              {t('common.retry', 'Retry')}
             </Button>
           }
         />
       ) : pos.length === 0 ? (
         <EmptyState
-          title="No purchase orders yet"
-          description="Create a purchase order to track what's on order from your vendors."
+          title={t('purchaseOrders.emptyTitle', 'No purchase orders yet')}
+          description={t('purchaseOrders.emptyDescription', "Create a purchase order to track what's on order from your vendors.")}
           action={
             <Button id="purchase-orders-empty-add" onClick={openCreate}>
-              Add Purchase Order
+              {t('purchaseOrders.addPurchaseOrder', 'Add Purchase Order')}
             </Button>
           }
         />
       ) : filtered.length === 0 ? (
         <EmptyState
-          title="No purchase orders match"
+          title={t('purchaseOrders.noMatchTitle', 'No purchase orders match')}
           action={
             <Button id="purchase-orders-clear-filters" variant="link" onClick={clearFilters}>
-              Clear filters
+              {t('purchaseOrders.clearFilters', 'Clear filters')}
             </Button>
           }
         />
@@ -607,15 +609,15 @@ export function PurchaseOrdersManager({
       <Dialog
         isOpen={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title="Add Purchase Order"
+        title={t('purchaseOrders.addPurchaseOrder', 'Add Purchase Order')}
         id="purchase-order-dialog"
       >
         <div className="space-y-4 p-1">
           <CustomSelect
             id="purchase-order-vendor"
-            label="Vendor"
+            label={t('purchaseOrders.fields.vendor', 'Vendor')}
             required
-            placeholder="Select a vendor…"
+            placeholder={t('purchaseOrders.fields.selectVendor', 'Select a vendor…')}
             value={form.vendor_id}
             onValueChange={(value) => setForm({ ...form, vendor_id: value })}
             options={vendors.map((v) => ({ value: v.vendor_id, label: v.vendor_name }))}
@@ -624,7 +626,7 @@ export function PurchaseOrdersManager({
           <div className="grid grid-cols-2 gap-3">
             <CustomSelect
               id="purchase-order-currency"
-              label="Currency"
+              label={t('purchaseOrders.fields.currency', 'Currency')}
               required
               value={form.currency_code}
               onValueChange={(value) => setForm({ ...form, currency_code: value })}
@@ -632,7 +634,7 @@ export function PurchaseOrdersManager({
             />
             <Input
               id="purchase-order-expected-date"
-              label="Expected date"
+              label={t('purchaseOrders.fields.expectedDate', 'Expected date')}
               type="date"
               value={form.expected_date}
               onChange={(e) => setForm({ ...form, expected_date: e.target.value })}
@@ -641,17 +643,17 @@ export function PurchaseOrdersManager({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium">Items</label>
+              <label className="block text-sm font-medium">{t('purchaseOrders.fields.items', 'Items')}</label>
               <Button id="purchase-order-add-line" variant="outline" size="sm" onClick={addLine}>
-                Add item
+                {t('purchaseOrders.actions.addItem', 'Add item')}
               </Button>
             </div>
             {/* Column headers once, so each line row carries inputs only — not a hand-rolled
                 label per field repeated down the list. */}
             <div className="flex gap-2 items-center text-xs font-medium text-gray-600">
-              <div className="flex-1">Product</div>
-              <div className="w-24 text-right">Qty</div>
-              <div className="w-32 text-right">Unit cost ($)</div>
+              <div className="flex-1">{t('purchaseOrders.columns.product', 'Product')}</div>
+              <div className="w-24 text-right">{t('purchaseOrders.columns.qty', 'Qty')}</div>
+              <div className="w-32 text-right">{t('purchaseOrders.columns.unitCost', 'Unit cost ($)')}</div>
               <div className="w-20" />
             </div>
             {form.lines.map((line, idx) => (
@@ -659,7 +661,7 @@ export function PurchaseOrdersManager({
                 <div className="flex-1">
                   <CustomSelect
                     id={`purchase-order-line-service-${idx}`}
-                    placeholder="Select a product…"
+                    placeholder={t('purchaseOrders.fields.selectProduct', 'Select a product…')}
                     value={line.service_id}
                     onValueChange={(value) => updateLine(idx, { service_id: value })}
                     options={productOptions}
@@ -694,7 +696,7 @@ export function PurchaseOrdersManager({
                   disabled={form.lines.length <= 1}
                   onClick={() => removeLine(idx)}
                 >
-                  Remove
+                  {t('common.remove', 'Remove')}
                 </Button>
               </div>
             ))}
@@ -702,10 +704,10 @@ export function PurchaseOrdersManager({
 
           <div className="flex justify-end gap-2 pt-2">
             <Button id="purchase-order-cancel" variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button id="purchase-order-save" onClick={save} disabled={saving}>
-              {saving ? 'Saving…' : 'Create'}
+              {saving ? t('common.saving', 'Saving…') : t('purchaseOrders.actions.create', 'Create')}
             </Button>
           </div>
         </div>
@@ -714,14 +716,14 @@ export function PurchaseOrdersManager({
       <Dialog
         isOpen={receiveOpen}
         onClose={() => setReceiveOpen(false)}
-        title={receivePo ? `Receive ${receivePo.po_number}` : 'Receive Purchase Order'}
+        title={receivePo ? t('purchaseOrders.receiveTitle', 'Receive {{poNumber}}', { poNumber: receivePo.po_number }) : t('purchaseOrders.receiveTitleDefault', 'Receive Purchase Order')}
         id="receive-po-dialog"
       >
         <div className="space-y-4 p-1">
           {!receivePo ? (
-            <p className="text-sm text-gray-500">Loading purchase order…</p>
+            <p className="text-sm text-gray-500">{t('purchaseOrders.loadingPo', 'Loading purchase order…')}</p>
           ) : (receivePo.lines ?? []).length === 0 ? (
-            <p className="text-sm text-gray-500">This purchase order has no lines.</p>
+            <p className="text-sm text-gray-500">{t('purchaseOrders.noLines', 'This purchase order has no lines.')}</p>
           ) : (
             (receivePo.lines ?? []).map((line) => {
               const rf = receiveForms[line.po_line_id];
@@ -742,15 +744,15 @@ export function PurchaseOrdersManager({
                       )}
                     </span>
                     <span className="text-sm text-gray-600 tabular-nums">
-                      {Number(line.quantity_received)} of {Number(line.quantity_ordered)} received
+                      {t('purchaseOrders.receivedOf', '{{received}} of {{ordered}} received', { received: Number(line.quantity_received), ordered: Number(line.quantity_ordered) })}
                     </span>
                   </div>
                   <div className="flex gap-2 items-end">
                     <div className="flex-1">
                       <CustomSelect
                         id={`receive-line-location-${line.po_line_id}`}
-                        label="Location"
-                        placeholder="Select a location…"
+                        label={t('purchaseOrders.fields.location', 'Location')}
+                        placeholder={t('purchaseOrders.fields.selectLocation', 'Select a location…')}
                         value={rf?.location_id ?? ''}
                         onValueChange={(value) => updateReceiveLine(line.po_line_id, { location_id: value })}
                         options={locations.map((loc) => ({ value: loc.location_id, label: loc.name }))}
@@ -759,7 +761,7 @@ export function PurchaseOrdersManager({
                     <div className="w-24">
                       <Input
                         id={`receive-line-qty-${line.po_line_id}`}
-                        label="Qty"
+                        label={t('purchaseOrders.columns.qty', 'Qty')}
                         type="number"
                         min="1"
                         className="text-right tabular-nums"
@@ -773,7 +775,7 @@ export function PurchaseOrdersManager({
                       disabled={receiving}
                       onClick={() => receiveLine(line)}
                     >
-                      {receiving ? 'Receiving…' : 'Receive'}
+                      {receiving ? t('purchaseOrders.actions.receiving', 'Receiving…') : t('purchaseOrders.actions.receive', 'Receive')}
                     </Button>
                   </div>
                   {/* Serials only matter for serialized products — don't show the field (or its
@@ -781,14 +783,14 @@ export function PurchaseOrdersManager({
                   {isSerialized(line.service_id) && (
                     <TextArea
                       id={`receive-line-serials-${line.po_line_id}`}
-                      label="Serial numbers (one per line)"
+                      label={t('purchaseOrders.fields.serialNumbers', 'Serial numbers (one per line)')}
                       rows={2}
                       value={rf?.serials ?? ''}
                       onChange={(e) => updateReceiveLine(line.po_line_id, { serials: e.target.value })}
                     />
                   )}
                   {fullyReceived && (
-                    <p className="text-xs text-gray-500">This line is fully received.</p>
+                    <p className="text-xs text-gray-500">{t('purchaseOrders.lineFullyReceived', 'This line is fully received.')}</p>
                   )}
                 </div>
               );
@@ -796,7 +798,7 @@ export function PurchaseOrdersManager({
           )}
           <div className="flex justify-end gap-2 pt-2">
             <Button id="receive-po-close" variant="outline" onClick={() => setReceiveOpen(false)}>
-              Close
+              {t('common.close', 'Close')}
             </Button>
           </div>
         </div>
@@ -813,14 +815,14 @@ export function PurchaseOrdersManager({
         id="cancel-po-confirm"
         isOpen={!!pendingCancel}
         onClose={() => setPendingCancel(null)}
-        title="Cancel purchase order"
+        title={t('purchaseOrders.cancelTitle', 'Cancel purchase order')}
         message={
           pendingCancel
-            ? `Are you sure you want to cancel purchase order ${pendingCancel.po_number}? This cannot be undone.`
+            ? t('purchaseOrders.cancelConfirm', 'Are you sure you want to cancel purchase order {{poNumber}}? This cannot be undone.', { poNumber: pendingCancel.po_number })
             : ''
         }
-        confirmLabel="Cancel purchase order"
-        cancelLabel="Keep purchase order"
+        confirmLabel={t('purchaseOrders.cancelTitle', 'Cancel purchase order')}
+        cancelLabel={t('purchaseOrders.keepPo', 'Keep purchase order')}
         onConfirm={async () => {
           if (pendingCancel) {
             await cancel(pendingCancel);

@@ -1,0 +1,1122 @@
+{
+  "common": {
+    "actions": "11111",
+    "active": "11111",
+    "cancel": "11111",
+    "clear": "11111",
+    "close": "11111",
+    "confirm": "11111",
+    "deactivate": "11111",
+    "description": "11111",
+    "edit": "11111",
+    "emptyValue": "11111",
+    "from": "11111",
+    "inactive": "11111",
+    "loading": "11111",
+    "name": "11111",
+    "quantity": "11111",
+    "refresh": "11111",
+    "refreshing": "11111",
+    "remove": "11111",
+    "retry": "11111",
+    "run": "11111",
+    "runReport": "11111",
+    "running": "11111",
+    "save": "11111",
+    "saveFailed": "11111",
+    "saving": "11111",
+    "search": "11111",
+    "status": "11111",
+    "to": "11111",
+    "total": "11111",
+    "unknown": "11111"
+  },
+  "counts": {
+    "adjustments": "11111 {{count}} 11111",
+    "approveApply": "11111",
+    "approveFailed": "11111",
+    "approved": "11111 {{summary}} 11111",
+    "approving": "11111",
+    "blindCountHint": "11111",
+    "cancelCount": "11111",
+    "cancelFailed": "11111",
+    "cancelledDone": "11111",
+    "columns": {
+      "progress": "11111",
+      "started": "11111"
+    },
+    "count": "11111",
+    "counted": "11111 {{qty}} 11111",
+    "detailTitle": "11111 {{location}} 11111",
+    "dispositionAdd": "11111",
+    "dispositionExclude": "11111",
+    "dispositionPlaceholder": "11111",
+    "expected": "11111 {{qty}} 11111",
+    "fields": {
+      "countedQty": "11111",
+      "location": "11111",
+      "locationPlaceholder": "11111",
+      "serialsLabel": "11111"
+    },
+    "loadSessionFailed": "11111",
+    "loadSessionsFailed": "11111",
+    "noProducts": "11111",
+    "open": "11111",
+    "pickLocation": "11111",
+    "progressValue": "11111 {{counted}} 11111 {{total}} 11111",
+    "qtyInvalid": "11111",
+    "recordFailed": "11111",
+    "recorded": "11111",
+    "saveCount": "11111",
+    "staleBadge": "11111",
+    "staleLines": "11111 {{count}} 11111",
+    "startCount": "11111",
+    "startDialogTitle": "11111",
+    "startFailed": "11111",
+    "started": "11111",
+    "starting": "11111",
+    "status": {
+      "approved": "11111",
+      "cancelled": "11111",
+      "counting": "11111",
+      "draft": "11111",
+      "inReview": "11111"
+    },
+    "submitFailed": "11111",
+    "submitForReview": "11111",
+    "submitted": "11111",
+    "submitting": "11111",
+    "subtitle": "11111",
+    "title": "11111",
+    "uncountedLines": "11111 {{count}} 11111",
+    "unexpectedPrompt": "11111",
+    "unitsAdded": "11111 {{count}} 11111",
+    "unitsRetired": "11111 {{count}} 11111",
+    "varianceLabel": "11111"
+  },
+  "dashboard": {
+    "actions": {
+      "newPurchaseOrder": "11111",
+      "receiveStock": "11111"
+    },
+    "attention": {
+      "allClear": "11111",
+      "title": "11111"
+    },
+    "bills": {
+      "acrossBill": "11111 {{total}} 11111 {{count}} 11111",
+      "acrossBills": "11111 {{total}} 11111 {{count}} 11111",
+      "nothingOverdue": "11111",
+      "overdue": "11111 {{count}} 11111 {{total}} 11111",
+      "title": "11111",
+      "viewBills": "11111"
+    },
+    "kpi": {
+      "arrivingToday": "11111 {{count}} 11111",
+      "marginFoot": "11111 {{margin}} 11111 {{revenue}} 11111",
+      "marginMtd": "11111",
+      "onHandUnits": "11111",
+      "onOrder": "11111",
+      "poCount": "11111 {{count}} 11111",
+      "poCountPlural": "11111 {{count}} 11111",
+      "serialized": "11111 {{count}} 11111",
+      "stockedLocation": "11111 {{count}} 11111",
+      "stockedLocations": "11111 {{count}} 11111",
+      "totalValue": "11111"
+    },
+    "movements": {
+      "bySuffix": "11111 {{name}} 11111",
+      "consumed": "11111",
+      "empty": "11111",
+      "fullLedger": "11111",
+      "generic": "11111 {{type}} 11111 {{qty}} 11111 {{name}} 11111",
+      "itemFallback": "11111",
+      "received": "11111",
+      "rma": "11111",
+      "serialSuffix": "11111 {{sn}} 11111",
+      "title": "11111",
+      "transferred": "11111"
+    },
+    "receiving": {
+      "allPos": "11111",
+      "arriving": "11111",
+      "empty": "11111",
+      "open": "11111",
+      "partial": "11111",
+      "receivedOf": "11111 {{received}} 11111 {{ordered}} 11111",
+      "title": "11111",
+      "unit": "11111 {{count}} 11111",
+      "units": "11111 {{count}} 11111",
+      "vendorFallback": "11111"
+    },
+    "relTime": {
+      "dayAgo": "11111 {{count}} 11111",
+      "hrAgo": "11111 {{count}} 11111",
+      "justNow": "11111",
+      "minAgo": "11111 {{count}} 11111"
+    },
+    "stockHealthAcross": "11111 {{subtitle}} 11111",
+    "subtitle": {
+      "location": "11111 {{count}} 11111",
+      "locations": "11111 {{count}} 11111",
+      "van": "11111 {{count}} 11111",
+      "vans": "11111 {{count}} 11111"
+    },
+    "thisWeek": {
+      "rmasOpened": "11111",
+      "title": "11111",
+      "transfers": "11111",
+      "unitsDeployed": "11111",
+      "unitsReceived": "11111"
+    },
+    "title": "11111",
+    "valueByLocation": {
+      "empty": "11111",
+      "grandTotal": "11111 {{total}} 11111",
+      "title": "11111"
+    }
+  },
+  "ghostUsage": {
+    "actions": {
+      "dismiss": "11111",
+      "openTicket": "11111",
+      "openTicketAddMaterial": "11111",
+      "reopen": "11111"
+    },
+    "ai": {
+      "batchHint": "11111 {{count}} 11111",
+      "checking": "11111",
+      "classifiedSummary": "11111 {{classified}} 11111 {{unclear}} 11111 {{failed}} 11111 {{remaining}} 11111",
+      "classifyCandidates": "11111",
+      "classifying": "11111",
+      "didNotRun": "11111 {{reason}} 11111",
+      "requiresEnterprise": "11111",
+      "runFailed": "11111",
+      "toggleFailed": "11111",
+      "toggleLabel": "11111",
+      "toggledOff": "11111",
+      "toggledOn": "11111"
+    },
+    "candidateCapNote": "11111 {{cap}} 11111",
+    "candidateCount": "11111 {{count}} 11111",
+    "candidateCountPlural": "11111 {{count}} 11111",
+    "columns": {
+      "aiVerdict": "11111",
+      "assignedTo": "11111",
+      "board": "11111",
+      "category": "11111",
+      "client": "11111",
+      "closed": "11111",
+      "closedBy": "11111",
+      "ticketNumber": "11111",
+      "title": "11111"
+    },
+    "disposition": {
+      "confirmed": "11111",
+      "dismissed": "11111",
+      "reopened": "11111"
+    },
+    "filters": {
+      "allBoards": "11111",
+      "allCategories": "11111",
+      "board": "11111",
+      "category": "11111"
+    },
+    "funnel": {
+      "closedInWindow": "11111",
+      "ghostCandidates": "11111",
+      "hasMaterials": "11111",
+      "inHardwareScope": "11111"
+    },
+    "loadError": "11111",
+    "loading": "11111",
+    "noCandidates": "11111",
+    "runFailed": "11111",
+    "subtitle": "11111",
+    "title": "11111",
+    "updateFailed": "11111",
+    "verdict": {
+      "hardwareMissing": "11111",
+      "noHardware": "11111",
+      "unclear": "11111"
+    },
+    "worklistTitle": "11111"
+  },
+  "import_": {
+    "actions": {
+      "import": "11111",
+      "importRows": "11111 {{count}} 11111",
+      "importing": "11111",
+      "validate": "11111",
+      "validating": "11111"
+    },
+    "andMore": "11111 {{count}} 11111",
+    "andMoreValidRows": "11111 {{count}} 11111",
+    "apply": {
+      "receipt": "11111 {{count}} 11111",
+      "receipts": "11111 {{count}} 11111",
+      "success": "11111 {{receipts}} 11111 {{units}} 11111 {{value}} 11111 {{label}} 11111",
+      "unit": "11111 {{count}} 11111",
+      "units": "11111 {{count}} 11111"
+    },
+    "chooseFileFirst": "11111",
+    "dialogTitle": "11111",
+    "errors": {
+      "headingPlural": "11111 {{count}} 11111",
+      "headingSingular": "11111 {{count}} 11111"
+    },
+    "fields": {
+      "batchLabel": "11111",
+      "csvFile": "11111",
+      "enableTracking": "11111"
+    },
+    "importFailed": "11111",
+    "intro": {
+      "downloadTemplate": "11111",
+      "forColumns": "11111",
+      "text": "11111"
+    },
+    "openButton": "11111",
+    "readFileFailed": "11111",
+    "rowPrefix": "11111 {{row}} 11111",
+    "summary": {
+      "bulkQuantity": "11111",
+      "locations": "11111",
+      "products": "11111",
+      "rows": "11111",
+      "serializedUnits": "11111",
+      "settingWillEnable": "11111 {{count}} 11111",
+      "settingsWillEnable": "11111 {{count}} 11111",
+      "value": "11111"
+    },
+    "table": {
+      "location": "11111",
+      "product": "11111",
+      "qty": "11111",
+      "serial": "11111",
+      "unitCost": "11111"
+    },
+    "validationFailed": "11111"
+  },
+  "kits": {
+    "addComponent": "11111",
+    "addFailed": "11111",
+    "columns": {
+      "component": "11111",
+      "sku": "11111"
+    },
+    "componentAdded": "11111",
+    "componentRemoved": "11111",
+    "componentRequired": "11111",
+    "componentsHeading": "11111 {{name}} 11111",
+    "fields": {
+      "component": "11111",
+      "componentPlaceholder": "11111"
+    },
+    "loadComponentsFailed": "11111",
+    "loadKitsFailed": "11111",
+    "manage": "11111",
+    "quantityInvalid": "11111",
+    "removeConfirm": "11111 {{name}} 11111",
+    "removeFailed": "11111",
+    "removeTitle": "11111",
+    "title": "11111"
+  },
+  "loaners": {
+    "clientIdRequired": "11111",
+    "columns": {
+      "client": "11111",
+      "due": "11111",
+      "service": "11111",
+      "unitSerial": "11111"
+    },
+    "fields": {
+      "clientId": "11111",
+      "dueDate": "11111",
+      "locationPlaceholder": "11111",
+      "restockLocation": "11111",
+      "restockingFee": "11111",
+      "returnLocation": "11111",
+      "unitId": "11111",
+      "useCurrentLocation": "11111"
+    },
+    "loadFailed": "11111",
+    "loadLocationsFailed": "11111",
+    "loanDialogTitle": "11111",
+    "loanFailed": "11111",
+    "loanOut": "11111",
+    "loanedOut": "11111",
+    "restock": "11111",
+    "restockDialogTitle": "11111",
+    "restockFailed": "11111",
+    "restockFeeInvalid": "11111",
+    "restockReturn": "11111",
+    "restockUnitIdRequired": "11111",
+    "restocked": "11111",
+    "return": "11111",
+    "returnDialogTitle": "11111",
+    "returnFailed": "11111",
+    "returnLocationRequired": "11111",
+    "returned": "11111",
+    "returningPrefix": "11111",
+    "title": "11111",
+    "unitIdRequired": "11111"
+  },
+  "locations": {
+    "addLocation": "11111",
+    "addressLabel": "11111",
+    "assignedPlaceholder": "11111",
+    "cityPlaceholder": "11111",
+    "clearSearch": "11111",
+    "columns": {
+      "assignedTo": "11111",
+      "available": "11111",
+      "onHand": "11111",
+      "product": "11111",
+      "sku": "11111",
+      "stock": "11111",
+      "type": "11111"
+    },
+    "count": "11111 {{n}} 11111",
+    "countPlural": "11111 {{n}} 11111",
+    "create": "11111",
+    "created": "11111",
+    "deactivateConfirm": "11111 {{name}} 11111",
+    "deactivateFailed": "11111",
+    "deactivateTitle": "11111",
+    "deactivated": "11111",
+    "default": "11111",
+    "editLocation": "11111",
+    "emptyDescription": "11111",
+    "emptyTitle": "11111",
+    "filteredCount": "11111 {{shown}} 11111 {{total}} 11111",
+    "holdsStockTooltip": "11111",
+    "keepActive": "11111",
+    "loadErrorDescription": "11111",
+    "loadErrorTitle": "11111",
+    "loadFailed": "11111",
+    "makeDefault": "11111",
+    "nameRequired": "11111",
+    "noActiveDescription": "11111",
+    "noActiveTitle": "11111",
+    "noMatchTitle": "11111",
+    "notAssigned": "11111",
+    "nothingOnHand": "11111",
+    "reactivate": "11111",
+    "reactivateFailed": "11111",
+    "reactivated": "11111",
+    "saveFailed": "11111",
+    "searchPlaceholder": "11111",
+    "selectType": "11111",
+    "setDefault": "11111",
+    "setDefaultFailed": "11111",
+    "setDefaultSuccess": "11111 {{name}} 11111",
+    "showInactive": "11111",
+    "showInactiveCount": "11111 {{n}} 11111",
+    "statePlaceholder": "11111",
+    "stock": {
+      "loadFailed": "11111"
+    },
+    "stockAt": "11111 {{name}} 11111",
+    "stockEmpty": "11111",
+    "stockSearchPlaceholder": "11111",
+    "stockTitle": "11111",
+    "streetPlaceholder": "11111",
+    "suitePlaceholder": "11111",
+    "title": "11111",
+    "type": {
+      "office": "11111",
+      "other": "11111",
+      "van": "11111",
+      "warehouse": "11111"
+    },
+    "updated": "11111",
+    "zipPlaceholder": "11111"
+  },
+  "margin": {
+    "columns": {
+      "cogs": "11111",
+      "margin": "11111",
+      "marginPct": "11111",
+      "product": "11111",
+      "qtySold": "11111",
+      "revenue": "11111"
+    },
+    "empty": "11111",
+    "loading": "11111",
+    "metrics": {
+      "cogs": "11111",
+      "margin": "11111",
+      "marginPct": "11111",
+      "revenue": "11111"
+    },
+    "runFailed": "11111",
+    "subtitle": "11111",
+    "title": "11111"
+  },
+  "poLandedCost": {
+    "actions": {
+      "addEntry": "11111",
+      "adding": "11111",
+      "applyPending": "11111",
+      "applying": "11111"
+    },
+    "addFailed": "11111",
+    "allocation": {
+      "value": "11111"
+    },
+    "amountRequired": "11111",
+    "applied": "11111 {{amount}} 11111 {{count}} 11111",
+    "appliedLabel": "11111",
+    "applyFailed": "11111",
+    "columns": {
+      "allocateBy": "11111",
+      "allocated": "11111",
+      "amount": "11111",
+      "effectiveUnitCost": "11111",
+      "product": "11111",
+      "received": "11111",
+      "type": "11111"
+    },
+    "costType": {
+      "duty": "11111",
+      "freight": "11111",
+      "other": "11111"
+    },
+    "entryAdded": "11111",
+    "fields": {
+      "amount": "11111 {{currency}} 11111"
+    },
+    "loadError": "11111",
+    "nothingReceived": "11111",
+    "nothingToApply": "11111",
+    "pendingLabel": "11111",
+    "previewTitle": "11111",
+    "removeFailed": "11111",
+    "status": {
+      "applied": "11111",
+      "pending": "11111"
+    },
+    "title": "11111",
+    "titleWithPo": "11111 {{poNumber}} 11111"
+  },
+  "purchaseOrders": {
+    "actions": {
+      "addItem": "11111",
+      "create": "11111",
+      "landedCost": "11111",
+      "receive": "11111",
+      "receiving": "11111",
+      "submit": "11111"
+    },
+    "addPurchaseOrder": "11111",
+    "allVendors": "11111",
+    "amountOnOrder": "11111 {{amount}} 11111",
+    "cancelConfirm": "11111 {{poNumber}} 11111",
+    "cancelFailed": "11111",
+    "cancelTitle": "11111",
+    "cancelled": "11111",
+    "clearFilters": "11111",
+    "columns": {
+      "amount": "11111",
+      "expected": "11111",
+      "poNumber": "11111",
+      "product": "11111",
+      "qty": "11111",
+      "received": "11111",
+      "unitCost": "11111",
+      "vendor": "11111"
+    },
+    "count": "11111 {{count}} 11111",
+    "countPlural": "11111 {{count}} 11111",
+    "createFailed": "11111",
+    "created": "11111",
+    "currency": {
+      "cad": "11111",
+      "eur": "11111",
+      "gbp": "11111",
+      "usd": "11111"
+    },
+    "currencyRequired": "11111",
+    "emptyDescription": "11111",
+    "emptyTitle": "11111",
+    "fields": {
+      "currency": "11111",
+      "expectedDate": "11111",
+      "items": "11111",
+      "location": "11111",
+      "selectLocation": "11111",
+      "selectProduct": "11111",
+      "selectVendor": "11111",
+      "serialNumbers": "11111",
+      "vendor": "11111"
+    },
+    "filteredCount": "11111 {{filtered}} 11111 {{total}} 11111",
+    "keepPo": "11111",
+    "lineFullyReceived": "11111",
+    "lineQtyRequired": "11111",
+    "loadError": "11111",
+    "loadErrorDescription": "11111",
+    "loadErrorTitle": "11111",
+    "loadOneFailed": "11111",
+    "loadingPo": "11111",
+    "locationRequired": "11111",
+    "noLines": "11111",
+    "noMatchTitle": "11111",
+    "notFound": "11111",
+    "overReceived": "11111 {{quantity}} 11111",
+    "productsLoadError": "11111",
+    "qtyRequired": "11111",
+    "receiveFailed": "11111",
+    "receiveTitle": "11111 {{poNumber}} 11111",
+    "receiveTitleDefault": "11111",
+    "receivedOf": "11111 {{received}} 11111 {{ordered}} 11111",
+    "receivedStatus": "11111 {{quantity}} 11111 {{status}} 11111",
+    "searchPlaceholder": "11111",
+    "status": {
+      "allStatuses": "11111",
+      "cancelled": "11111",
+      "draft": "11111",
+      "open": "11111",
+      "partiallyReceived": "11111",
+      "received": "11111"
+    },
+    "submitFailed": "11111",
+    "submitted": "11111",
+    "title": "11111",
+    "unnamedProduct": "11111",
+    "vendorRequired": "11111",
+    "vendorsLoadError": "11111"
+  },
+  "rma": {
+    "caseOpened": "11111",
+    "columns": {
+      "client": "11111",
+      "daysRemaining": "11111",
+      "dueDate": "11111",
+      "reason": "11111",
+      "returnedUnit": "11111",
+      "type": "11111",
+      "vendor": "11111"
+    },
+    "deadUnitsOwed": "11111",
+    "fields": {
+      "location": "11111",
+      "locationPlaceholder": "11111",
+      "reason": "11111",
+      "returnedUnitId": "11111",
+      "rmaType": "11111",
+      "vendor": "11111",
+      "vendorPlaceholder": "11111",
+      "vendorRef": "11111"
+    },
+    "loadCasesFailed": "11111",
+    "loadLocationsVendorsFailed": "11111",
+    "openFailed": "11111",
+    "openRma": "11111",
+    "pickLocation": "11111",
+    "pickVendor": "11111",
+    "receiveFailed": "11111",
+    "receiveReturn": "11111",
+    "receiving": "11111",
+    "returnReceived": "11111",
+    "returnedUnitRequired": "11111",
+    "sendToVendor": "11111",
+    "sendVendorFailed": "11111",
+    "sending": "11111",
+    "sentToVendor": "11111",
+    "title": "11111",
+    "types": {
+      "advanceReplacement": "11111",
+      "standard": "11111"
+    }
+  },
+  "salesOrders": {
+    "actions": {
+      "addLine": "11111",
+      "confirmShipment": "11111",
+      "confirming": "11111",
+      "createBackorderPo": "11111",
+      "createDropShipPo": "11111",
+      "createPo": "11111",
+      "creating": "11111",
+      "document": "11111",
+      "emailConfirmation": "11111",
+      "fulfill": "11111",
+      "fulfilling": "11111",
+      "generateInvoice": "11111",
+      "invoicing": "11111",
+      "reopenToDraft": "11111",
+      "reopening": "11111"
+    },
+    "addSalesOrder": "11111",
+    "allocationMode": {
+      "hard": "11111",
+      "soft": "11111"
+    },
+    "availabilityOk": "11111",
+    "backorderBadge": "11111 {{shortfall}} 11111",
+    "billsOnFulfillment": "11111",
+    "cancelDialog": {
+      "confirm": "11111",
+      "keep": "11111",
+      "message": "11111 {{number}} 11111",
+      "title": "11111"
+    },
+    "cancelFailed": "11111",
+    "cancelled": "11111",
+    "clientRequired": "11111",
+    "columns": {
+      "client": "11111",
+      "currency": "11111",
+      "invoiceMode": "11111",
+      "soNumber": "11111"
+    },
+    "confirmFailed": "11111",
+    "confirmShipmentError": "11111",
+    "confirmed": "11111",
+    "createDraftPoError": "11111",
+    "createDropShipPoError": "11111",
+    "createPoDialog": {
+      "note": "11111 {{quantity}} 11111",
+      "title": "11111 {{name}} 11111",
+      "vendor": "11111",
+      "vendorPlaceholder": "11111"
+    },
+    "created": "11111",
+    "currencyRequired": "11111",
+    "detailTitle": "11111 {{number}} 11111",
+    "detailTitleFallback": "11111",
+    "documentFailed": "11111",
+    "documents": {
+      "packingSlip": "11111",
+      "pickList": "11111",
+      "salesOrder": "11111"
+    },
+    "draftPoCreated": "11111 {{numbers}} 11111",
+    "draftPosCreated": "11111 {{numbers}} 11111",
+    "dropShipBadge": "11111",
+    "dropShipDialog": {
+      "addSerial": "11111",
+      "confirmNote": "11111 {{count}} 11111",
+      "macPlaceholder": "11111",
+      "serialPlaceholder": "11111",
+      "serialsNote": "11111",
+      "title": "11111 {{name}} 11111"
+    },
+    "dropShipPoCreated": "11111 {{number}} 11111",
+    "emailDialog": {
+      "confirm": "11111",
+      "message": "11111 {{number}} 11111",
+      "title": "11111"
+    },
+    "emailFailed": "11111",
+    "emailSuccess": "11111 {{recipients}} 11111",
+    "enterSerial": "11111",
+    "fields": {
+      "allocationMode": "11111",
+      "currencyCode": "11111",
+      "invoiceMode": "11111",
+      "lines": "11111",
+      "qty": "11111",
+      "serviceId": "11111",
+      "unitPrice": "11111"
+    },
+    "fromQuote": "11111",
+    "fulfillDialog": {
+      "allocatedToThis": "11111",
+      "hardHeldMany": "11111 {{count}} 11111",
+      "hardHeldOne": "11111 {{count}} 11111",
+      "loadingUnits": "11111",
+      "noUnits": "11111",
+      "remaining": "11111 {{remaining}} 11111 {{ordered}} 11111",
+      "searchPlaceholder": "11111",
+      "selectedMany": "11111 {{count}} 11111",
+      "selectedOne": "11111 {{count}} 11111",
+      "shortStockNote": "11111",
+      "softAllocatedOther": "11111",
+      "sourceLocation": "11111",
+      "title": "11111 {{name}} 11111"
+    },
+    "fulfilledUnits": "11111 {{count}} 11111",
+    "fulfillmentFailed": "11111",
+    "invoiceColumns": {
+      "amount": "11111",
+      "created": "11111",
+      "invoice": "11111"
+    },
+    "invoiceGenFailed": "11111",
+    "invoiceMode": {
+      "manual": "11111",
+      "onFulfillment": "11111"
+    },
+    "invoicedItems": "11111 {{count}} 11111",
+    "invoices": "11111",
+    "invoicingFailed": "11111 {{error}} 11111",
+    "lineColumns": {
+      "availability": "11111",
+      "fulfilled": "11111",
+      "invoiced": "11111",
+      "ordered": "11111",
+      "product": "11111",
+      "unitPrice": "11111"
+    },
+    "lineQtyPositive": "11111",
+    "loadDetailError": "11111",
+    "loadError": "11111",
+    "loadUnitsError": "11111",
+    "loadVendorsError": "11111",
+    "manualInvoicing": "11111",
+    "nothingBackordered": "11111",
+    "nothingToInvoice": "11111",
+    "onlyRemaining": "11111 {{remaining}} 11111",
+    "pickVendor": "11111",
+    "productDefaultLocation": "11111",
+    "qtyPositiveInteger": "11111",
+    "reopenError": "11111",
+    "reopened": "11111",
+    "selectUnit": "11111",
+    "shipmentConfirmed": "11111 {{count}} 11111",
+    "status": {
+      "cancelled": "11111",
+      "closed": "11111",
+      "confirmed": "11111",
+      "draft": "11111",
+      "fulfilled": "11111",
+      "invoiced": "11111",
+      "partiallyFulfilled": "11111"
+    },
+    "title": "11111",
+    "unassignedBackorder": "11111 {{count}} 11111"
+  },
+  "stock": {
+    "actions": {
+      "receive": "11111"
+    },
+    "badge": {
+      "serial": "11111"
+    },
+    "clearFilters": "11111",
+    "columns": {
+      "available": "11111",
+      "location": "11111",
+      "onHand": "11111",
+      "product": "11111",
+      "sku": "11111"
+    },
+    "empty": {
+      "noMatchTitle": "11111",
+      "noProductsDescription": "11111",
+      "noProductsTitle": "11111"
+    },
+    "fields": {
+      "location": "11111",
+      "product": "11111",
+      "unitCost": "11111"
+    },
+    "filteredCount": "11111 {{shown}} 11111 {{total}} 11111",
+    "levels": {
+      "empty": "11111",
+      "loadFailed": "11111",
+      "loading": "11111",
+      "title": "11111 {{name}} 11111"
+    },
+    "loadLocationsFailed": "11111",
+    "loadProductsFailed": "11111",
+    "needsAttention": "11111",
+    "rebuild": {
+      "button": "11111",
+      "consistent": "11111 {{products}} 11111",
+      "correctedMany": "11111 {{products}} 11111 {{n}} 11111",
+      "correctedOne": "11111 {{products}} 11111 {{n}} 11111",
+      "failed": "11111",
+      "inProgress": "11111"
+    },
+    "receive": {
+      "costNonNegative": "11111",
+      "failed": "11111",
+      "inProgress": "11111",
+      "pickLocation": "11111",
+      "pickProduct": "11111",
+      "qtyPositive": "11111",
+      "selectLocation": "11111",
+      "selectProduct": "11111",
+      "serializedHint": "11111",
+      "success": "11111"
+    },
+    "receiveStock": "11111",
+    "searchPlaceholder": "11111",
+    "status": {
+      "low": "11111",
+      "out": "11111",
+      "wordSite": "11111 {{word}} 11111 {{n}} 11111",
+      "wordSites": "11111 {{word}} 11111 {{n}} 11111"
+    },
+    "summary": {
+      "lowSuffix": "11111 {{n}} 11111",
+      "outSuffix": "11111 {{n}} 11111",
+      "productMany": "11111 {{n}} 11111",
+      "productOne": "11111 {{n}} 11111"
+    },
+    "title": "11111",
+    "unnamedProduct": "11111"
+  },
+  "stockUnits": {
+    "columns": {
+      "client": "11111",
+      "location": "11111",
+      "macAddress": "11111",
+      "serialNumber": "11111",
+      "warrantyExpires": "11111"
+    },
+    "detail": {
+      "delivered": "11111",
+      "location": "11111",
+      "mac": "11111",
+      "received": "11111",
+      "serial": "11111",
+      "unitCost": "11111"
+    },
+    "exportCsv": "11111",
+    "history": "11111",
+    "historyLoadFailed": "11111",
+    "historyNotFound": "11111",
+    "loadFailed": "11111",
+    "noMovements": "11111",
+    "qty": "11111",
+    "searchBy": "11111",
+    "searchFailed": "11111",
+    "searchMode": {
+      "mac": "11111",
+      "serial": "11111"
+    },
+    "searchPlaceholder": {
+      "mac": "11111",
+      "serial": "11111"
+    },
+    "searchTerm": "11111",
+    "title": "11111",
+    "unitHistoryTitle": "11111",
+    "unitTitle": "11111 {{id}} 11111"
+  },
+  "transfers": {
+    "addLine": "11111",
+    "cancelConfirm": "11111",
+    "cancelFailed": "11111",
+    "cancelTitle": "11111",
+    "cancelled": "11111",
+    "columns": {
+      "atSource": "11111",
+      "dispatched": "11111",
+      "from": "11111",
+      "loadQty": "11111",
+      "needed": "11111",
+      "product": "11111",
+      "received": "11111",
+      "serials": "11111",
+      "to": "11111"
+    },
+    "compute": "11111",
+    "computeFailed": "11111",
+    "computing": "11111",
+    "dash": "11111",
+    "dispatch": "11111",
+    "dispatchFailed": "11111",
+    "dispatchLoad": "11111",
+    "dispatchTransfer": "11111",
+    "dispatched": "11111",
+    "dispatching": "11111",
+    "dispatchingLoad": "11111",
+    "fifoPicked": "11111",
+    "fromLocation": "11111",
+    "fromSource": "11111",
+    "keepTransfer": "11111",
+    "lineRequired": "11111",
+    "linesLabel": "11111",
+    "loadDestination": "11111",
+    "loadDispatchedMany": "11111 {{n}} 11111",
+    "loadDispatchedOne": "11111 {{n}} 11111",
+    "loadFailed": "11111",
+    "loadList": "11111",
+    "loadLocationsFailed": "11111",
+    "loadQtyRequired": "11111",
+    "locationsMustDiffer": "11111",
+    "locationsRequired": "11111",
+    "noLowStock": "11111",
+    "noSerials": "11111",
+    "receive": "11111",
+    "receiveFailed": "11111",
+    "received": "11111",
+    "selectDestination": "11111",
+    "selectLocation": "11111",
+    "selectSource": "11111",
+    "serviceId": "11111",
+    "shortAtSource": "11111 {{n}} 11111",
+    "title": "11111",
+    "toLocation": "11111",
+    "vanLoadList": "11111"
+  },
+  "vendorBills": {
+    "actions": {
+      "export": "11111",
+      "exporting": "11111",
+      "markPaid": "11111",
+      "open": "11111",
+      "void": "11111"
+    },
+    "addBill": "11111",
+    "allStatuses": "11111",
+    "billCreated": "11111",
+    "billLoadError": "11111",
+    "billNumberRequired": "11111",
+    "billOpened": "11111",
+    "billPaid": "11111",
+    "billVoided": "11111",
+    "billedAbove": "11111 {{amount}} 11111",
+    "billedBelow": "11111 {{amount}} 11111",
+    "columns": {
+      "amount": "11111",
+      "billNumber": "11111",
+      "due": "11111",
+      "line": "11111",
+      "po": "11111",
+      "qty": "11111",
+      "unitCost": "11111",
+      "vendor": "11111",
+      "vsPo": "11111"
+    },
+    "createBill": "11111",
+    "createError": "11111",
+    "createHint": "11111",
+    "creating": "11111",
+    "detailDue": "11111 {{date}} 11111",
+    "detailPo": "11111 {{number}} 11111",
+    "dialog": {
+      "billTitle": "11111",
+      "createTitle": "11111",
+      "detailTitle": "11111 {{number}} 11111 {{vendor}} 11111"
+    },
+    "export": {
+      "error": "11111",
+      "exported": "11111",
+      "notExported": "11111",
+      "pending": "11111"
+    },
+    "exportError": "11111",
+    "exportFailed": "11111",
+    "exportQueued": "11111",
+    "exportedToAccounting": "11111",
+    "fields": {
+      "billNumber": "11111",
+      "noPoPlaceholder": "11111",
+      "prefillPo": "11111",
+      "vendor": "11111",
+      "vendorPlaceholder": "11111"
+    },
+    "loadError": "11111",
+    "matchesPo": "11111",
+    "matchesPoValue": "11111",
+    "pickVendor": "11111",
+    "status": {
+      "draft": "11111",
+      "open": "11111",
+      "paid": "11111",
+      "void": "11111"
+    },
+    "subtitle": "11111",
+    "title": "11111",
+    "updateError": "11111"
+  },
+  "vendorPriceList": {
+    "columns": {
+      "cost": "11111",
+      "leadTime": "11111",
+      "product": "11111",
+      "vendorSku": "11111"
+    },
+    "costNegative": "11111",
+    "dialogTitle": "11111 {{name}} 11111",
+    "emptyState": "11111",
+    "fields": {
+      "cost": "11111",
+      "currency": "11111",
+      "leadTime": "11111",
+      "preferred": "11111",
+      "product": "11111",
+      "productPlaceholder": "11111",
+      "vendorSku": "11111"
+    },
+    "leadTimeDays": "11111 {{days}} 11111",
+    "loadError": "11111",
+    "offerRemoved": "11111",
+    "offerSaved": "11111",
+    "pickProduct": "11111",
+    "preferred": "11111",
+    "removeError": "11111",
+    "saveError": "11111",
+    "saveOffer": "11111",
+    "title": "11111",
+    "unnamedProduct": "11111"
+  },
+  "vendors": {
+    "addVendor": "11111",
+    "columns": {
+      "contact": "11111",
+      "email": "11111",
+      "paymentTerms": "11111",
+      "vendor": "11111"
+    },
+    "created": "11111",
+    "deactivateConfirm": "11111 {{name}} 11111",
+    "deactivateFailed": "11111",
+    "deactivateTitle": "11111",
+    "deactivated": "11111",
+    "editVendor": "11111",
+    "fields": {
+      "accountNumber": "11111",
+      "contactName": "11111",
+      "email": "11111",
+      "name": "11111",
+      "paymentTerms": "11111",
+      "phone": "11111"
+    },
+    "loadError": "11111",
+    "nameRequired": "11111",
+    "priceList": "11111",
+    "title": "11111",
+    "updated": "11111"
+  },
+  "writeOffs": {
+    "badges": {
+      "adjustment": "11111",
+      "countCorrection": "11111",
+      "retired": "11111"
+    },
+    "byUser": "11111",
+    "columns": {
+      "by": "11111",
+      "events": "11111",
+      "foundAdded": "11111",
+      "location": "11111",
+      "net": "11111",
+      "product": "11111",
+      "qty": "11111",
+      "reason": "11111",
+      "type": "11111",
+      "user": "11111",
+      "value": "11111",
+      "when": "11111",
+      "writtenOff": "11111"
+    },
+    "eventsTitle": "11111",
+    "runFailed": "11111",
+    "subtitle": "11111",
+    "title": "11111",
+    "totals": {
+      "foundAdded": "11111",
+      "net": "11111",
+      "writtenOff": "11111"
+    },
+    "truncatedNotice": "11111 {{count}} 11111"
+  }
+}

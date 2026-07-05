@@ -8,6 +8,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, ICountSession, IStockLocation } from '@alga-psa/types';
 import {
@@ -25,14 +26,6 @@ import {
 
 type SessionRow = ICountSession & { location_name: string | null; line_count: number; counted_count: number };
 
-const STATUS_BADGES: Record<string, { label: string; variant: BadgeVariant }> = {
-  draft: { label: 'Draft', variant: 'secondary' },
-  in_progress: { label: 'Counting', variant: 'warning' },
-  review: { label: 'In review', variant: 'info' },
-  approved: { label: 'Approved', variant: 'success' },
-  cancelled: { label: 'Cancelled', variant: 'error' },
-};
-
 const dollars = (cents: number): string => `$${(cents / 100).toFixed(2)}`;
 
 export function CycleCountsManager({
@@ -42,6 +35,7 @@ export function CycleCountsManager({
   initialSessions: SessionRow[];
   locations: IStockLocation[];
 }) {
+  const { t } = useTranslation('features/inventory');
   const [sessions, setSessions] = useState<SessionRow[]>(initialSessions || []);
   const [startOpen, setStartOpen] = useState(false);
   const [startLocation, setStartLocation] = useState('');
@@ -53,13 +47,21 @@ export function CycleCountsManager({
   // Approver dispositions for unexpected serials, keyed by serial.
   const [dispositions, setDispositions] = useState<Record<string, 'add' | 'exclude'>>({});
 
+  const STATUS_BADGES: Record<string, { label: string; variant: BadgeVariant }> = {
+    draft: { label: t('counts.status.draft', 'Draft'), variant: 'secondary' },
+    in_progress: { label: t('counts.status.counting', 'Counting'), variant: 'warning' },
+    review: { label: t('counts.status.inReview', 'In review'), variant: 'info' },
+    approved: { label: t('counts.status.approved', 'Approved'), variant: 'success' },
+    cancelled: { label: t('counts.status.cancelled', 'Cancelled'), variant: 'error' },
+  };
+
   const reload = useCallback(async () => {
     try {
       setSessions(await listCountSessions());
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't load count sessions.");
+      toast.error(e?.message || t('counts.loadSessionsFailed', "Couldn't load count sessions."));
     }
-  }, []);
+  }, [t]);
 
   const openDetail = async (sessionId: string) => {
     try {
@@ -88,25 +90,25 @@ export function CycleCountsManager({
         Object.fromEntries(Object.entries(prev).filter(([serial]) => stillUnexpected.has(serial))),
       );
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't load the session.");
+      toast.error(e?.message || t('counts.loadSessionFailed', "Couldn't load the session."));
     }
   };
 
   const start = async () => {
     if (!startLocation) {
-      toast.error('Pick a location to count.');
+      toast.error(t('counts.pickLocation', 'Pick a location to count.'));
       return;
     }
     setBusy('start');
     try {
       const session = await startCountSession(startLocation);
-      toast.success('Count started — expected quantities were snapshotted.');
+      toast.success(t('counts.started', 'Count started — expected quantities were snapshotted.'));
       setStartOpen(false);
       setStartLocation('');
       await reload();
       await openDetail(session.session_id);
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't start the count.");
+      toast.error(e?.message || t('counts.startFailed', "Couldn't start the count."));
     } finally {
       setBusy(null);
     }
@@ -123,15 +125,15 @@ export function CycleCountsManager({
       } else {
         const qty = Number(raw);
         if (!Number.isInteger(qty) || qty < 0) {
-          toast.error('Count must be a non-negative whole number.');
+          toast.error(t('counts.qtyInvalid', 'Count must be a non-negative whole number.'));
           return;
         }
         await recordCount(detail.session_id, line.service_id, { counted_qty: qty });
       }
-      toast.success('Count recorded.');
+      toast.success(t('counts.recorded', 'Count recorded.'));
       await openDetail(detail.session_id);
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't record the count.");
+      toast.error(e?.message || t('counts.recordFailed', "Couldn't record the count."));
     } finally {
       setBusy(null);
     }
@@ -142,11 +144,11 @@ export function CycleCountsManager({
     setBusy('submit');
     try {
       await submitCountForReview(detail.session_id);
-      toast.success('Submitted for review.');
+      toast.success(t('counts.submitted', 'Submitted for review.'));
       await reload();
       await openDetail(detail.session_id);
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't submit the session.");
+      toast.error(e?.message || t('counts.submitFailed', "Couldn't submit the session."));
     } finally {
       setBusy(null);
     }
@@ -161,21 +163,21 @@ export function CycleCountsManager({
     try {
       const result = await approveCountSession(detail.session_id, dispositionList);
       const parts = [
-        `${result.adjustments.length} adjustment(s)`,
-        result.retired_serials.length ? `${result.retired_serials.length} unit(s) retired` : null,
-        result.added_serials.length ? `${result.added_serials.length} unit(s) added` : null,
+        t('counts.adjustments', '{{count}} adjustment(s)', { count: result.adjustments.length }),
+        result.retired_serials.length ? t('counts.unitsRetired', '{{count}} unit(s) retired', { count: result.retired_serials.length }) : null,
+        result.added_serials.length ? t('counts.unitsAdded', '{{count}} unit(s) added', { count: result.added_serials.length }) : null,
       ].filter(Boolean);
-      toast.success(`Count approved — ${parts.join(', ')}.`);
+      toast.success(t('counts.approved', 'Count approved — {{summary}}.', { summary: parts.join(', ') }));
       if (result.stale_service_ids.length > 0) {
-        toast(`${result.stale_service_ids.length} line(s) were stale (stock moved mid-count) and were skipped — recount them.`, { icon: '⚠️' });
+        toast(t('counts.staleLines', '{{count}} line(s) were stale (stock moved mid-count) and were skipped — recount them.', { count: result.stale_service_ids.length }), { icon: '⚠️' });
       }
       if (result.uncounted_service_ids.length > 0) {
-        toast(`${result.uncounted_service_ids.length} line(s) were never counted and were left untouched.`, { icon: 'ℹ️' });
+        toast(t('counts.uncountedLines', '{{count}} line(s) were never counted and were left untouched.', { count: result.uncounted_service_ids.length }), { icon: 'ℹ️' });
       }
       await reload();
       await openDetail(detail.session_id);
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't approve the session.");
+      toast.error(e?.message || t('counts.approveFailed', "Couldn't approve the session."));
     } finally {
       setBusy(null);
     }
@@ -186,11 +188,11 @@ export function CycleCountsManager({
     setBusy('cancel');
     try {
       await cancelCountSession(detail.session_id);
-      toast.success('Count cancelled — no stock was touched.');
+      toast.success(t('counts.cancelledDone', 'Count cancelled — no stock was touched.'));
       setDetail(null);
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't cancel the session.");
+      toast.error(e?.message || t('counts.cancelFailed', "Couldn't cancel the session."));
     } finally {
       setBusy(null);
     }
@@ -204,9 +206,9 @@ export function CycleCountsManager({
   };
 
   const columns: ColumnDefinition<SessionRow>[] = [
-    { title: 'Location', dataIndex: 'location_name', render: (v: any, rec) => v || rec.location_id },
+    { title: t('counts.fields.location', 'Location'), dataIndex: 'location_name', render: (v: any, rec) => v || rec.location_id },
     {
-      title: 'Status',
+      title: t('common.status', 'Status'),
       dataIndex: 'status',
       render: (v: any) => {
         const meta = STATUS_BADGES[v] ?? { label: String(v), variant: 'secondary' as BadgeVariant };
@@ -218,22 +220,22 @@ export function CycleCountsManager({
       },
     },
     {
-      title: 'Progress',
+      title: t('counts.columns.progress', 'Progress'),
       dataIndex: 'line_count',
-      render: (_: any, rec) => `${rec.counted_count} of ${rec.line_count} counted`,
+      render: (_: any, rec) => t('counts.progressValue', '{{counted}} of {{total}} counted', { counted: rec.counted_count, total: rec.line_count }),
     },
     {
-      title: 'Started',
+      title: t('counts.columns.started', 'Started'),
       dataIndex: 'started_at',
-      render: (v: any) => (v ? new Date(v).toLocaleDateString() : '—'),
+      render: (v: any) => (v ? new Date(v).toLocaleDateString() : t('common.emptyValue', '—')),
     },
     {
-      title: 'Actions',
+      title: t('common.actions', 'Actions'),
       dataIndex: 'session_id',
       width: '120px',
       render: (_: any, rec) => (
         <Button id={`open-count-${rec.session_id}`} variant="outline" size="sm" onClick={() => openDetail(rec.session_id)}>
-          Open
+          {t('counts.open', 'Open')}
         </Button>
       ),
     },
@@ -245,38 +247,38 @@ export function CycleCountsManager({
     <div className="p-6 space-y-4" id="cycle-counts-page">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Cycle Counts</h1>
+          <h1 className="text-2xl font-semibold">{t('counts.title', 'Cycle Counts')}</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Blind per-location stock takes — variances apply through the movement ledger on approval.
+            {t('counts.subtitle', 'Blind per-location stock takes — variances apply through the movement ledger on approval.')}
           </p>
         </div>
         <Button id="cycle-counts-start-button" onClick={() => setStartOpen(true)}>
-          Start count
+          {t('counts.startCount', 'Start count')}
         </Button>
       </div>
 
       <DataTable id="cycle-counts-table" data={sessions} columns={columns} />
 
       {/* ---- Start dialog ---- */}
-      <Dialog isOpen={startOpen} onClose={() => setStartOpen(false)} title="Start a cycle count" id="start-count-dialog">
+      <Dialog isOpen={startOpen} onClose={() => setStartOpen(false)} title={t('counts.startDialogTitle', 'Start a cycle count')} id="start-count-dialog">
         <div className="space-y-4 p-1">
           <CustomSelect
             id="start-count-location"
-            label="Location"
-            placeholder="Select a location…"
+            label={t('counts.fields.location', 'Location')}
+            placeholder={t('counts.fields.locationPlaceholder', 'Select a location…')}
             value={startLocation}
             onValueChange={setStartLocation}
             options={locations.map((l) => ({ value: l.location_id, label: l.name }))}
           />
           <p className="text-xs text-gray-500">
-            Expected quantities are snapshotted now and hidden during counting (blind count).
+            {t('counts.blindCountHint', 'Expected quantities are snapshotted now and hidden during counting (blind count).')}
           </p>
           <div className="flex justify-end gap-2">
             <Button id="start-count-cancel" variant="outline" onClick={() => setStartOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button id="start-count-submit" onClick={start} disabled={busy !== null}>
-              {busy === 'start' ? 'Starting…' : 'Start count'}
+              {busy === 'start' ? t('counts.starting', 'Starting…') : t('counts.startCount', 'Start count')}
             </Button>
           </div>
         </div>
@@ -286,7 +288,7 @@ export function CycleCountsManager({
       <Dialog
         isOpen={detail !== null}
         onClose={() => setDetail(null)}
-        title={detail ? `Count — ${detail.location_name || detail.location_id}` : 'Count'}
+        title={detail ? t('counts.detailTitle', 'Count — {{location}}', { location: detail.location_name || detail.location_id }) : t('counts.count', 'Count')}
         id="count-session-dialog"
         className="max-w-4xl"
       >
@@ -299,24 +301,24 @@ export function CycleCountsManager({
               <div className="flex gap-2">
                 {detail.status === 'in_progress' && (
                   <Button id="count-submit-review" size="sm" disabled={busy !== null} onClick={submit}>
-                    {busy === 'submit' ? 'Submitting…' : 'Submit for review'}
+                    {busy === 'submit' ? t('counts.submitting', 'Submitting…') : t('counts.submitForReview', 'Submit for review')}
                   </Button>
                 )}
                 {detail.can_review && (detail.status === 'review' || detail.status === 'in_progress') && (
                   <Button id="count-approve" size="sm" disabled={busy !== null} onClick={approve}>
-                    {busy === 'approve' ? 'Approving…' : 'Approve & apply'}
+                    {busy === 'approve' ? t('counts.approving', 'Approving…') : t('counts.approveApply', 'Approve & apply')}
                   </Button>
                 )}
                 {(detail.status === 'in_progress' || detail.status === 'review') && (
                   <Button id="count-cancel-session" variant="ghost" size="sm" disabled={busy !== null} onClick={cancel}>
-                    Cancel count
+                    {t('counts.cancelCount', 'Cancel count')}
                   </Button>
                 )}
               </div>
             </div>
 
             {detail.lines.length === 0 ? (
-              <p className="text-sm text-gray-500">No tracked products at this location.</p>
+              <p className="text-sm text-gray-500">{t('counts.noProducts', 'No tracked products at this location.')}</p>
             ) : (
               <div className="space-y-3">
                 {detail.lines.map((line) => {
@@ -328,15 +330,15 @@ export function CycleCountsManager({
                         {line.sku && <span className="text-xs text-gray-500">{line.sku}</span>}
                         {line.stale && (
                           <Badge variant="warning" size="sm">
-                            Stale — stock moved, recount
+                            {t('counts.staleBadge', 'Stale — stock moved, recount')}
                           </Badge>
                         )}
                         {detail.can_review && (
                           <span className="ml-auto text-sm text-gray-600 tabular-nums">
-                            Expected {line.expected_qty_visible}
+                            {t('counts.expected', 'Expected {{qty}}', { qty: line.expected_qty_visible })}
                             {line.variance != null && (
                               <span className={line.variance === 0 ? 'text-gray-500' : line.variance > 0 ? 'text-green-700' : 'text-red-700'}>
-                                {' '}· variance {line.variance > 0 ? '+' : ''}
+                                {' '}{t('counts.varianceLabel', '· variance')} {line.variance > 0 ? '+' : ''}
                                 {line.variance}
                                 {line.variance_value_cents != null && line.variance !== 0 && ` (${dollars(line.variance_value_cents)})`}
                               </span>
@@ -344,14 +346,14 @@ export function CycleCountsManager({
                           </span>
                         )}
                         {!detail.can_review && line.counted_qty != null && (
-                          <span className="ml-auto text-sm text-gray-600 tabular-nums">Counted {line.counted_qty}</span>
+                          <span className="ml-auto text-sm text-gray-600 tabular-nums">{t('counts.counted', 'Counted {{qty}}', { qty: line.counted_qty })}</span>
                         )}
                       </div>
 
                       {line.is_serialized ? (
                         <TextArea
                           id={`count-serials-${line.service_id}`}
-                          label="Serials present (one per line)"
+                          label={t('counts.fields.serialsLabel', 'Serials present (one per line)')}
                           rows={3}
                           disabled={!editable}
                           value={entries[line.service_id] ?? ''}
@@ -361,7 +363,7 @@ export function CycleCountsManager({
                         <div className="w-40">
                           <Input
                             id={`count-qty-${line.service_id}`}
-                            label="Counted quantity"
+                            label={t('counts.fields.countedQty', 'Counted quantity')}
                             type="number"
                             min={0}
                             disabled={!editable}
@@ -379,7 +381,7 @@ export function CycleCountsManager({
                           disabled={busy !== null}
                           onClick={() => saveLine(line)}
                         >
-                          {busy === `line:${line.service_id}` ? 'Saving…' : 'Save count'}
+                          {busy === `line:${line.service_id}` ? t('common.saving', 'Saving…') : t('counts.saveCount', 'Save count')}
                         </Button>
                       )}
 
@@ -387,7 +389,7 @@ export function CycleCountsManager({
                       {unexpected.length > 0 && (
                         <div className="space-y-1 border-t pt-2">
                           <p className="text-xs font-medium text-amber-700">
-                            Unexpected serial(s) — choose what to do before approving:
+                            {t('counts.unexpectedPrompt', 'Unexpected serial(s) — choose what to do before approving:')}
                           </p>
                           {unexpected.map((serial) => (
                             <div key={serial} className="flex items-center gap-2 text-sm">
@@ -395,13 +397,13 @@ export function CycleCountsManager({
                               <CustomSelect
                                 id={`disposition-${line.service_id}-${serial}`}
                                 value={dispositions[serial] ?? ''}
-                                placeholder="Disposition…"
+                                placeholder={t('counts.dispositionPlaceholder', 'Disposition…')}
                                 onValueChange={(value) =>
                                   setDispositions((prev) => ({ ...prev, [serial]: value as 'add' | 'exclude' }))
                                 }
                                 options={[
-                                  { value: 'add', label: 'Add to stock (found unit)' },
-                                  { value: 'exclude', label: 'Exclude from this count' },
+                                  { value: 'add', label: t('counts.dispositionAdd', 'Add to stock (found unit)') },
+                                  { value: 'exclude', label: t('counts.dispositionExclude', 'Exclude from this count') },
                                 ]}
                               />
                             </div>
@@ -416,7 +418,7 @@ export function CycleCountsManager({
 
             <div className="flex justify-end">
               <Button id="count-session-close" variant="outline" onClick={() => setDetail(null)}>
-                Close
+                {t('common.close', 'Close')}
               </Button>
             </div>
           </div>

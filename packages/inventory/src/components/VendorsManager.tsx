@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IVendor } from '@alga-psa/types';
 import { listVendors, createVendor, updateVendor, deactivateVendor } from '../actions';
@@ -31,6 +32,7 @@ const EMPTY_FORM: FormState = {
 };
 
 export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }) {
+  const { t } = useTranslation('features/inventory');
   const [priceListVendor, setPriceListVendor] = useState<IVendor | null>(null);
   const [vendors, setVendors] = useState<IVendor[]>(initialVendors || []);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -44,9 +46,9 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
       setVendors(await listVendors({}));
     } catch (e) {
       console.error(e);
-      toast.error('Failed to load vendors');
+      toast.error(t('vendors.loadError', 'Failed to load vendors'));
     }
-  }, []);
+  }, [t]);
 
   const openCreate = () => {
     setEditing(null);
@@ -69,7 +71,7 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
 
   const save = async () => {
     if (!form.vendor_name.trim()) {
-      toast.error('Vendor name is required');
+      toast.error(t('vendors.nameRequired', 'Vendor name is required'));
       return;
     }
     setSaving(true);
@@ -84,15 +86,15 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
       };
       if (editing) {
         await updateVendor(editing.vendor_id, payload);
-        toast.success('Vendor updated');
+        toast.success(t('vendors.updated', 'Vendor updated'));
       } else {
         await createVendor(payload);
-        toast.success('Vendor created');
+        toast.success(t('vendors.created', 'Vendor created'));
       }
       setDialogOpen(false);
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || 'Save failed');
+      toast.error(e?.message || t('common.saveFailed', 'Save failed'));
     } finally {
       setSaving(false);
     }
@@ -101,36 +103,36 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
   const deactivate = async (vendor: IVendor) => {
     try {
       await deactivateVendor(vendor.vendor_id);
-      toast.success('Vendor deactivated');
+      toast.success(t('vendors.deactivated', 'Vendor deactivated'));
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || 'Deactivate failed');
+      toast.error(e?.message || t('vendors.deactivateFailed', 'Deactivate failed'));
     } finally {
       setPendingDeactivation(null);
     }
   };
 
   const columns: ColumnDefinition<IVendor>[] = [
-    { title: 'Vendor', dataIndex: 'vendor_name' },
-    { title: 'Contact', dataIndex: 'contact_name', render: (v: any) => v || '—' },
-    { title: 'Email', dataIndex: 'email', render: (v: any) => v || '—' },
-    { title: 'Payment Terms', dataIndex: 'payment_terms', render: (v: any) => v || '—' },
+    { title: t('vendors.columns.vendor', 'Vendor'), dataIndex: 'vendor_name' },
+    { title: t('vendors.columns.contact', 'Contact'), dataIndex: 'contact_name', render: (v: any) => v || t('common.emptyValue', '—') },
+    { title: t('vendors.columns.email', 'Email'), dataIndex: 'email', render: (v: any) => v || t('common.emptyValue', '—') },
+    { title: t('vendors.columns.paymentTerms', 'Payment Terms'), dataIndex: 'payment_terms', render: (v: any) => v || t('common.emptyValue', '—') },
     {
-      title: 'Status',
+      title: t('common.status', 'Status'),
       dataIndex: 'is_active',
       render: (v: any) => (
         <Badge variant={v ? 'success' : 'secondary'} size="sm">
-          {v ? 'Active' : 'Inactive'}
+          {v ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
         </Badge>
       ),
     },
     {
-      title: 'Actions',
+      title: t('common.actions', 'Actions'),
       dataIndex: 'vendor_id',
       render: (_: any, rec: IVendor) => (
         <div className="flex gap-2">
           <Button id={`edit-vendor-${rec.vendor_id}`} variant="outline" size="sm" onClick={() => openEdit(rec)}>
-            Edit
+            {t('common.edit', 'Edit')}
           </Button>
           <Button
             id={`price-list-vendor-${rec.vendor_id}`}
@@ -138,7 +140,7 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
             size="sm"
             onClick={() => setPriceListVendor(rec)}
           >
-            Price list
+            {t('vendors.priceList', 'Price list')}
           </Button>
           <Button
             id={`deactivate-vendor-${rec.vendor_id}`}
@@ -147,7 +149,7 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
             disabled={!rec.is_active}
             onClick={() => setPendingDeactivation(rec)}
           >
-            Deactivate
+            {t('common.deactivate', 'Deactivate')}
           </Button>
         </div>
       ),
@@ -157,9 +159,9 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
   return (
     <div className="p-6 space-y-4" id="vendors-page">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Vendors</h1>
+        <h1 className="text-2xl font-semibold">{t('vendors.title', 'Vendors')}</h1>
         <Button id="vendors-add-button" onClick={openCreate}>
-          Add Vendor
+          {t('vendors.addVendor', 'Add Vendor')}
         </Button>
       </div>
 
@@ -170,53 +172,53 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
       <Dialog
         isOpen={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title={editing ? 'Edit Vendor' : 'Add Vendor'}
+        title={editing ? t('vendors.editVendor', 'Edit Vendor') : t('vendors.addVendor', 'Add Vendor')}
         id="vendor-dialog"
       >
         <div className="space-y-4 p-1">
           <Input
             id="vendor-name"
-            label="Vendor name"
+            label={t('vendors.fields.name', 'Vendor name')}
             required
             value={form.vendor_name}
             onChange={(e) => setForm({ ...form, vendor_name: e.target.value })}
           />
           <Input
             id="vendor-contact-name"
-            label="Contact name"
+            label={t('vendors.fields.contactName', 'Contact name')}
             value={form.contact_name}
             onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
           />
           <Input
             id="vendor-email"
-            label="Email"
+            label={t('vendors.fields.email', 'Email')}
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
           <Input
             id="vendor-phone"
-            label="Phone"
+            label={t('vendors.fields.phone', 'Phone')}
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
           />
           <Input
             id="vendor-payment-terms"
-            label="Payment terms"
+            label={t('vendors.fields.paymentTerms', 'Payment terms')}
             value={form.payment_terms}
             onChange={(e) => setForm({ ...form, payment_terms: e.target.value })}
           />
           <Input
             id="vendor-account-number"
-            label="Account number"
+            label={t('vendors.fields.accountNumber', 'Account number')}
             value={form.account_number}
             onChange={(e) => setForm({ ...form, account_number: e.target.value })}
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button id="vendor-cancel" variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button id="vendor-save" onClick={save} disabled={saving}>
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? t('common.saving', 'Saving…') : t('common.save', 'Save')}
             </Button>
           </div>
         </div>
@@ -231,13 +233,13 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
             return deactivate(pendingDeactivation);
           }
         }}
-        title="Deactivate vendor"
+        title={t('vendors.deactivateTitle', 'Deactivate vendor')}
         message={
           pendingDeactivation
-            ? `Are you sure you want to deactivate ${pendingDeactivation.vendor_name}? This vendor will no longer be available for new purchase orders.`
+            ? t('vendors.deactivateConfirm', 'Are you sure you want to deactivate {{name}}? This vendor will no longer be available for new purchase orders.', { name: pendingDeactivation.vendor_name })
             : ''
         }
-        confirmLabel="Deactivate"
+        confirmLabel={t('common.deactivate', 'Deactivate')}
       />
     </div>
   );

@@ -13,6 +13,7 @@ import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockLocation, IUser, StockLocationType } from '@alga-psa/types';
 import {
@@ -25,15 +26,6 @@ import {
 import type { LocationStockRow } from '../actions';
 import { formatStock, formatStockSummary, isLocationOccupied } from '../lib/stockLocationDisplay';
 
-const LOCATION_TYPE_LABELS: Record<StockLocationType, string> = {
-  warehouse: 'Warehouse',
-  // "Vehicle", not "Van" — an engineer's car/truck is a rolling stockroom too; the parts belong to
-  // a person (see the Assigned to field), not a specific kind of van.
-  van: 'Vehicle',
-  office: 'Office',
-  other: 'Other',
-};
-
 /** Display name for a user id, resolved from the loaded engineer list. */
 function userDisplayName(users: IUser[], userId: string | null | undefined): string | null {
   if (!userId) return null;
@@ -43,11 +35,6 @@ function userDisplayName(users: IUser[], userId: string | null | undefined): str
 }
 
 const LOCATION_TYPES: StockLocationType[] = ['warehouse', 'van', 'office', 'other'];
-
-const LOCATION_TYPE_OPTIONS = LOCATION_TYPES.map((t) => ({
-  value: t,
-  label: LOCATION_TYPE_LABELS[t],
-}));
 
 interface FormState {
   name: string;
@@ -92,6 +79,22 @@ export function StockLocationsManager({
   loadError?: boolean;
   users?: IUser[];
 }) {
+  const { t } = useTranslation('features/inventory');
+
+  const LOCATION_TYPE_LABELS: Record<StockLocationType, string> = {
+    warehouse: t('locations.type.warehouse', 'Warehouse'),
+    // "Vehicle", not "Van" — an engineer's car/truck is a rolling stockroom too; the parts belong to
+    // a person (see the Assigned to field), not a specific kind of van.
+    van: t('locations.type.van', 'Vehicle'),
+    office: t('locations.type.office', 'Office'),
+    other: t('locations.type.other', 'Other'),
+  };
+
+  const LOCATION_TYPE_OPTIONS = LOCATION_TYPES.map((tp) => ({
+    value: tp,
+    label: LOCATION_TYPE_LABELS[tp],
+  }));
+
   const [locations, setLocations] = useState<IStockLocation[]>(initialLocations || []);
   // Seeded from the server: a failed SSR load must read as an error, not as "no locations".
   const [loadFailed, setLoadFailed] = useState(loadError);
@@ -121,7 +124,7 @@ export function StockLocationsManager({
         if (!cancelled) setStockRows(rows);
       })
       .catch(() => {
-        if (!cancelled) toast.error("Couldn't load the location's stock.");
+        if (!cancelled) toast.error(t('locations.stock.loadFailed', "Couldn't load the location's stock."));
       })
       .finally(() => {
         if (!cancelled) setStockLoading(false);
@@ -129,7 +132,7 @@ export function StockLocationsManager({
     return () => {
       cancelled = true;
     };
-  }, [stockTarget]);
+  }, [stockTarget, t]);
 
   const reload = useCallback(async () => {
     try {
@@ -138,9 +141,9 @@ export function StockLocationsManager({
     } catch (e) {
       console.error(e);
       setLoadFailed(true);
-      toast.error("Couldn't load locations.");
+      toast.error(t('locations.loadFailed', "Couldn't load locations."));
     }
-  }, []);
+  }, [t]);
 
   const openCreate = () => {
     setEditing(null);
@@ -167,22 +170,22 @@ export function StockLocationsManager({
 
   const save = async () => {
     if (!form.name.trim()) {
-      toast.error('Location name is required');
+      toast.error(t('locations.nameRequired', 'Location name is required'));
       return;
     }
     setSaving(true);
     try {
       if (editing) {
         await updateStockLocation(editing.location_id, form);
-        toast.success('Location updated.');
+        toast.success(t('locations.updated', 'Location updated.'));
       } else {
         await createStockLocation(form);
-        toast.success('Location created.');
+        toast.success(t('locations.created', 'Location created.'));
       }
       setDialogOpen(false);
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't save the location.");
+      toast.error(e?.message || t('locations.saveFailed', "Couldn't save the location."));
     } finally {
       setSaving(false);
     }
@@ -191,20 +194,20 @@ export function StockLocationsManager({
   const deactivate = async (loc: IStockLocation) => {
     try {
       await deactivateStockLocation(loc.location_id);
-      toast.success('Location deactivated.');
+      toast.success(t('locations.deactivated', 'Location deactivated.'));
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't deactivate the location.");
+      toast.error(e?.message || t('locations.deactivateFailed', "Couldn't deactivate the location."));
     }
   };
 
   const reactivate = async (loc: IStockLocation) => {
     try {
       await updateStockLocation(loc.location_id, { is_active: true });
-      toast.success('Location reactivated.');
+      toast.success(t('locations.reactivated', 'Location reactivated.'));
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't reactivate the location.");
+      toast.error(e?.message || t('locations.reactivateFailed', "Couldn't reactivate the location."));
     }
   };
 
@@ -213,16 +216,16 @@ export function StockLocationsManager({
   const setDefault = async (loc: IStockLocation) => {
     try {
       await updateStockLocation(loc.location_id, { is_default: true });
-      toast.success(`"${loc.name}" is now the default location.`);
+      toast.success(t('locations.setDefaultSuccess', '"{{name}}" is now the default location.', { name: loc.name }));
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't set the default location.");
+      toast.error(e?.message || t('locations.setDefaultFailed', "Couldn't set the default location."));
     }
   };
 
   const columns: ColumnDefinition<IStockLocation>[] = [
     {
-      title: 'Name',
+      title: t('common.name', 'Name'),
       dataIndex: 'name',
       // The row's identity — give it weight so it out-ranks the data beside it (matches siblings).
       // The single default is marked here as a badge rather than burning a near-empty column on it,
@@ -235,7 +238,7 @@ export function StockLocationsManager({
               <span className="font-medium text-gray-900">{v}</span>
               {rec.is_default && (
                 <Badge variant="primary" size="sm">
-                  Default
+                  {t('locations.default', 'Default')}
                 </Badge>
               )}
             </div>
@@ -245,12 +248,12 @@ export function StockLocationsManager({
       },
     },
     {
-      title: 'Type',
+      title: t('locations.columns.type', 'Type'),
       dataIndex: 'location_type',
       render: (v: any) => LOCATION_TYPE_LABELS[v as StockLocationType] ?? v,
     },
     {
-      title: 'Stock',
+      title: t('locations.columns.stock', 'Stock'),
       dataIndex: 'item_type_count',
       render: (_: any, rec: IStockLocation) =>
         isLocationOccupied(rec) ? (
@@ -263,28 +266,28 @@ export function StockLocationsManager({
             {formatStock(rec)}
           </button>
         ) : (
-          <span className="text-gray-400">Empty</span>
+          <span className="text-gray-400">{t('locations.stockEmpty', 'Empty')}</span>
         ),
     },
     {
-      title: 'Assigned to',
+      title: t('locations.columns.assignedTo', 'Assigned to'),
       dataIndex: 'assigned_user_id',
       render: (_: any, rec: IStockLocation) => {
         const name = userDisplayName(users, rec.assigned_user_id);
-        return name ? <span>{name}</span> : <span className="text-gray-400">—</span>;
+        return name ? <span>{name}</span> : <span className="text-gray-400">{t('common.emptyValue', '—')}</span>;
       },
     },
     {
-      title: 'Status',
+      title: t('common.status', 'Status'),
       dataIndex: 'is_active',
       render: (v: any) => (
         <Badge variant={(v ? 'success' : 'secondary') as BadgeVariant} size="sm">
-          {v ? 'Active' : 'Inactive'}
+          {v ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
         </Badge>
       ),
     },
     {
-      title: 'Actions',
+      title: t('common.actions', 'Actions'),
       dataIndex: 'location_id',
       // Width matches the sibling managers (PO 230 / SO 260) so the action cluster aligns and labels
       // never clip — here sized for the three-verb active row (Edit · Set default · Deactivate).
@@ -292,15 +295,15 @@ export function StockLocationsManager({
       render: (_: any, rec: IStockLocation) => (
         <div className="flex gap-2">
           <Button id={`edit-location-${rec.location_id}`} variant="outline" size="sm" onClick={() => openEdit(rec)}>
-            Edit
+            {t('common.edit', 'Edit')}
           </Button>
           {rec.is_active && !rec.is_default && (
             <Button id={`set-default-location-${rec.location_id}`} variant="ghost" size="sm" onClick={() => setDefault(rec)}>
-              Set default
+              {t('locations.setDefault', 'Set default')}
             </Button>
           )}
           {rec.is_active ? (
-            <span title={isLocationOccupied(rec) ? 'Holds stock — move it out before deactivating' : undefined}>
+            <span title={isLocationOccupied(rec) ? t('locations.holdsStockTooltip', 'Holds stock — move it out before deactivating') : undefined}>
               <Button
                 id={`deactivate-location-${rec.location_id}`}
                 variant="ghost"
@@ -308,12 +311,12 @@ export function StockLocationsManager({
                 disabled={isLocationOccupied(rec)}
                 onClick={() => setPendingDeactivate(rec)}
               >
-                Deactivate
+                {t('common.deactivate', 'Deactivate')}
               </Button>
             </span>
           ) : (
             <Button id={`reactivate-location-${rec.location_id}`} variant="soft" size="sm" onClick={() => reactivate(rec)}>
-              Reactivate
+              {t('locations.reactivate', 'Reactivate')}
             </Button>
           )}
         </div>
@@ -328,10 +331,10 @@ export function StockLocationsManager({
 
   // Drill-in: the itemized stock at the selected location, filtered by product / SKU.
   const stockColumns: ColumnDefinition<LocationStockRow>[] = [
-    { title: 'Product', dataIndex: 'service_name', render: (v: any) => v || <span className="text-gray-400">—</span> },
-    { title: 'SKU', dataIndex: 'sku', render: (v: any) => v || <span className="text-gray-400">—</span> },
-    { title: 'On hand', dataIndex: 'quantity_on_hand' },
-    { title: 'Available', dataIndex: 'available' },
+    { title: t('locations.columns.product', 'Product'), dataIndex: 'service_name', render: (v: any) => v || <span className="text-gray-400">{t('common.emptyValue', '—')}</span> },
+    { title: t('locations.columns.sku', 'SKU'), dataIndex: 'sku', render: (v: any) => v || <span className="text-gray-400">{t('common.emptyValue', '—')}</span> },
+    { title: t('locations.columns.onHand', 'On hand'), dataIndex: 'quantity_on_hand' },
+    { title: t('locations.columns.available', 'Available'), dataIndex: 'available' },
   ];
   const sq = stockSearch.trim().toLowerCase();
   const stockVisible = sq
@@ -345,15 +348,17 @@ export function StockLocationsManager({
     <div className="p-6 space-y-4" id="stock-locations-page">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Stock Locations</h1>
+          <h1 className="text-2xl font-semibold">{t('locations.title', 'Stock Locations')}</h1>
           {!loadFailed && visible.length > 0 && (
             <p className="text-sm text-gray-500 mt-0.5">
-              {visible.length} location{visible.length === 1 ? '' : 's'}
+              {visible.length === 1
+                ? t('locations.count', '{{n}} location', { n: visible.length })
+                : t('locations.countPlural', '{{n}} locations', { n: visible.length })}
             </p>
           )}
         </div>
         <Button id="add-stock-location-button" onClick={openCreate}>
-          Add Location
+          {t('locations.addLocation', 'Add Location')}
         </Button>
       </div>
 
@@ -362,7 +367,7 @@ export function StockLocationsManager({
           <div className="w-72">
             <SearchInput
               id="stock-locations-search"
-              placeholder="Search locations"
+              placeholder={t('locations.searchPlaceholder', 'Search locations')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onClear={() => setSearch('')}
@@ -370,14 +375,14 @@ export function StockLocationsManager({
           </div>
           {inactiveCount > 0 && (
             <SwitchWithLabel
-              label={`Show inactive (${inactiveCount})`}
+              label={t('locations.showInactiveCount', 'Show inactive ({{n}})', { n: inactiveCount })}
               checked={showInactive}
               onCheckedChange={setShowInactive}
             />
           )}
           {q && (
             <span className="text-sm text-gray-500">
-              {visible.length} of {byStatus.length}
+              {t('locations.filteredCount', '{{shown}} of {{total}}', { shown: visible.length, total: byStatus.length })}
             </span>
           )}
         </div>
@@ -385,41 +390,41 @@ export function StockLocationsManager({
 
       {loadFailed ? (
         <EmptyState
-          title="Couldn't load locations"
-          description="Something went wrong loading this page. Try again."
+          title={t('locations.loadErrorTitle', "Couldn't load locations")}
+          description={t('locations.loadErrorDescription', 'Something went wrong loading this page. Try again.')}
           action={
             <Button id="stock-locations-retry" onClick={reload}>
-              Retry
+              {t('common.retry', 'Retry')}
             </Button>
           }
         />
       ) : locations.length === 0 ? (
         <EmptyState
-          title="No stock locations yet"
-          description="Add a warehouse, van, or office to track where stock lives."
+          title={t('locations.emptyTitle', 'No stock locations yet')}
+          description={t('locations.emptyDescription', 'Add a warehouse, van, or office to track where stock lives.')}
           action={
             <Button id="stock-locations-empty-add" onClick={openCreate}>
-              Add Location
+              {t('locations.addLocation', 'Add Location')}
             </Button>
           }
         />
       ) : visible.length === 0 ? (
         q ? (
           <EmptyState
-            title="No locations match"
+            title={t('locations.noMatchTitle', 'No locations match')}
             action={
               <Button id="stock-locations-clear-search" variant="link" onClick={() => setSearch('')}>
-                Clear search
+                {t('locations.clearSearch', 'Clear search')}
               </Button>
             }
           />
         ) : (
           <EmptyState
-            title="No active locations"
-            description="Every location is deactivated."
+            title={t('locations.noActiveTitle', 'No active locations')}
+            description={t('locations.noActiveDescription', 'Every location is deactivated.')}
             action={
               <Button id="stock-locations-show-inactive" variant="link" onClick={() => setShowInactive(true)}>
-                Show inactive
+                {t('locations.showInactive', 'Show inactive')}
               </Button>
             }
           />
@@ -431,46 +436,46 @@ export function StockLocationsManager({
       <Dialog
         isOpen={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title={editing ? 'Edit Location' : 'Add Location'}
+        title={editing ? t('locations.editLocation', 'Edit Location') : t('locations.addLocation', 'Add Location')}
         id="stock-location-dialog"
       >
         <div className="space-y-4 p-1">
           <Input
             id="stock-location-name"
-            label="Name"
+            label={t('common.name', 'Name')}
             required
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />
           <CustomSelect
             id="stock-location-type"
-            label="Type"
+            label={t('locations.columns.type', 'Type')}
             value={form.location_type}
-            placeholder="Select a type…"
+            placeholder={t('locations.selectType', 'Select a type…')}
             options={LOCATION_TYPE_OPTIONS}
             onValueChange={(val: string) => setForm({ ...form, location_type: val as StockLocationType })}
           />
           <UserPicker
-            label="Assigned to"
+            label={t('locations.columns.assignedTo', 'Assigned to')}
             value={form.assigned_user_id ?? ''}
             users={users}
             onValueChange={(val: string) => setForm({ ...form, assigned_user_id: val || null })}
-            placeholder="Whose location is this?"
-            unassignedLabel="Not assigned"
+            placeholder={t('locations.assignedPlaceholder', 'Whose location is this?')}
+            unassignedLabel={t('locations.notAssigned', 'Not assigned')}
             buttonWidth="full"
           />
           {/* Optional address — blank for a Vehicle, filled for a warehouse/office so an engineer
               knows where to drive. */}
           <Input
             id="stock-location-address1"
-            label="Address (optional)"
-            placeholder="Street address"
+            label={t('locations.addressLabel', 'Address (optional)')}
+            placeholder={t('locations.streetPlaceholder', 'Street address')}
             value={form.address_line1}
             onChange={(e) => setForm({ ...form, address_line1: e.target.value })}
           />
           <Input
             id="stock-location-address2"
-            placeholder="Suite, unit, floor (optional)"
+            placeholder={t('locations.suitePlaceholder', 'Suite, unit, floor (optional)')}
             value={form.address_line2}
             onChange={(e) => setForm({ ...form, address_line2: e.target.value })}
           />
@@ -478,7 +483,7 @@ export function StockLocationsManager({
             <div className="flex-1">
               <Input
                 id="stock-location-city"
-                placeholder="City"
+                placeholder={t('locations.cityPlaceholder', 'City')}
                 value={form.city}
                 onChange={(e) => setForm({ ...form, city: e.target.value })}
               />
@@ -486,7 +491,7 @@ export function StockLocationsManager({
             <div className="w-20">
               <Input
                 id="stock-location-state"
-                placeholder="State"
+                placeholder={t('locations.statePlaceholder', 'State')}
                 value={form.state_province}
                 onChange={(e) => setForm({ ...form, state_province: e.target.value })}
               />
@@ -494,7 +499,7 @@ export function StockLocationsManager({
             <div className="w-28">
               <Input
                 id="stock-location-postal"
-                placeholder="ZIP"
+                placeholder={t('locations.zipPlaceholder', 'ZIP')}
                 value={form.postal_code}
                 onChange={(e) => setForm({ ...form, postal_code: e.target.value })}
               />
@@ -502,16 +507,16 @@ export function StockLocationsManager({
           </div>
           <Checkbox
             id="stock-location-default"
-            label="Make this the default location"
+            label={t('locations.makeDefault', 'Make this the default location')}
             checked={form.is_default}
             onChange={(e) => setForm({ ...form, is_default: e.target.checked })}
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button id="stock-location-cancel" variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button id="stock-location-save" onClick={save} disabled={saving}>
-              {saving ? 'Saving…' : editing ? 'Save' : 'Create'}
+              {saving ? t('common.saving', 'Saving…') : editing ? t('common.save', 'Save') : t('locations.create', 'Create')}
             </Button>
           </div>
         </div>
@@ -521,14 +526,14 @@ export function StockLocationsManager({
         id="deactivate-location-confirm"
         isOpen={!!pendingDeactivate}
         onClose={() => setPendingDeactivate(null)}
-        title="Deactivate location"
+        title={t('locations.deactivateTitle', 'Deactivate location')}
         message={
           pendingDeactivate
-            ? `Deactivate "${pendingDeactivate.name}"? It will stop appearing as a stock destination.`
+            ? t('locations.deactivateConfirm', 'Deactivate "{{name}}"? It will stop appearing as a stock destination.', { name: pendingDeactivate.name })
             : ''
         }
-        confirmLabel="Deactivate"
-        cancelLabel="Keep active"
+        confirmLabel={t('common.deactivate', 'Deactivate')}
+        cancelLabel={t('locations.keepActive', 'Keep active')}
         onConfirm={async () => {
           if (pendingDeactivate) {
             await deactivate(pendingDeactivate);
@@ -540,7 +545,7 @@ export function StockLocationsManager({
       <Dialog
         isOpen={stockTarget !== null}
         onClose={() => setStockTarget(null)}
-        title={stockTarget ? `Stock at ${stockTarget.name}` : 'Stock'}
+        title={stockTarget ? t('locations.stockAt', 'Stock at {{name}}', { name: stockTarget.name }) : t('locations.stockTitle', 'Stock')}
         id="location-stock-dialog"
       >
         <div className="space-y-3 p-1" style={{ minWidth: 560 }}>
@@ -549,7 +554,7 @@ export function StockLocationsManager({
             <div className="w-72">
               <SearchInput
                 id="location-stock-search"
-                placeholder="Search product or SKU"
+                placeholder={t('locations.stockSearchPlaceholder', 'Search product or SKU')}
                 value={stockSearch}
                 onChange={(e) => setStockSearch(e.target.value)}
                 onClear={() => setStockSearch('')}
@@ -557,9 +562,9 @@ export function StockLocationsManager({
             </div>
           )}
           {stockLoading ? (
-            <p className="py-8 text-center text-sm text-gray-500">Loading…</p>
+            <p className="py-8 text-center text-sm text-gray-500">{t('common.loading', 'Loading…')}</p>
           ) : stockRows.length === 0 ? (
-            <p className="py-8 text-center text-sm text-gray-500">Nothing on hand at this location.</p>
+            <p className="py-8 text-center text-sm text-gray-500">{t('locations.nothingOnHand', 'Nothing on hand at this location.')}</p>
           ) : (
             <DataTable id="location-stock-table" data={stockVisible} columns={stockColumns} pageSize={10} />
           )}

@@ -1,0 +1,1122 @@
+{
+  "common": {
+    "actions": "Aktionen",
+    "active": "Aktiv",
+    "cancel": "Abbrechen",
+    "clear": "Zurücksetzen",
+    "close": "Schließen",
+    "confirm": "Bestätigen",
+    "deactivate": "Deaktivieren",
+    "description": "Beschreibung",
+    "edit": "Bearbeiten",
+    "emptyValue": "—",
+    "from": "Von",
+    "inactive": "Inaktiv",
+    "loading": "Wird geladen…",
+    "name": "Name",
+    "quantity": "Menge",
+    "refresh": "Aktualisieren",
+    "refreshing": "Wird aktualisiert…",
+    "remove": "Entfernen",
+    "retry": "Erneut versuchen",
+    "run": "Ausführen",
+    "runReport": "Bericht ausführen",
+    "running": "Wird ausgeführt…",
+    "save": "Speichern",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "saving": "Wird gespeichert…",
+    "search": "Suchen",
+    "status": "Status",
+    "to": "Bis",
+    "total": "Gesamt",
+    "unknown": "Unbekannt"
+  },
+  "counts": {
+    "adjustments": "{{count}} Anpassung(en)",
+    "approveApply": "Genehmigen & übernehmen",
+    "approveFailed": "Die Sitzung konnte nicht genehmigt werden.",
+    "approved": "Zählung genehmigt — {{summary}}.",
+    "approving": "Wird genehmigt…",
+    "blindCountHint": "Die erwarteten Mengen werden jetzt als Momentaufnahme erfasst und während der Zählung ausgeblendet (Blindzählung).",
+    "cancelCount": "Zählung abbrechen",
+    "cancelFailed": "Die Sitzung konnte nicht abgebrochen werden.",
+    "cancelledDone": "Zählung abgebrochen — der Bestand wurde nicht verändert.",
+    "columns": {
+      "progress": "Fortschritt",
+      "started": "Gestartet"
+    },
+    "count": "Zählung",
+    "counted": "{{qty}} gezählt",
+    "detailTitle": "Zählung — {{location}}",
+    "dispositionAdd": "Zum Bestand hinzufügen (gefundene Einheit)",
+    "dispositionExclude": "Von dieser Zählung ausschließen",
+    "dispositionPlaceholder": "Vorgehen…",
+    "expected": "Erwartet {{qty}}",
+    "fields": {
+      "countedQty": "Gezählte Menge",
+      "location": "Standort",
+      "locationPlaceholder": "Standort auswählen…",
+      "serialsLabel": "Vorhandene Seriennummern (eine pro Zeile)"
+    },
+    "loadSessionFailed": "Die Sitzung konnte nicht geladen werden.",
+    "loadSessionsFailed": "Die Zählsitzungen konnten nicht geladen werden.",
+    "noProducts": "Keine nachverfolgten Produkte an diesem Standort.",
+    "open": "Öffnen",
+    "pickLocation": "Wählen Sie einen Standort für die Zählung.",
+    "progressValue": "{{counted}} von {{total}} gezählt",
+    "qtyInvalid": "Die Zählung muss eine nicht-negative ganze Zahl sein.",
+    "recordFailed": "Die Zählung konnte nicht erfasst werden.",
+    "recorded": "Zählung erfasst.",
+    "saveCount": "Zählung speichern",
+    "staleBadge": "Veraltet — Bestand hat sich bewegt, erneut zählen",
+    "staleLines": "{{count}} Position(en) waren veraltet (Bestand hat sich während der Zählung bewegt) und wurden übersprungen — zählen Sie sie erneut.",
+    "startCount": "Zählung starten",
+    "startDialogTitle": "Bestandszählung starten",
+    "startFailed": "Die Zählung konnte nicht gestartet werden.",
+    "started": "Zählung gestartet — die erwarteten Mengen wurden als Momentaufnahme erfasst.",
+    "starting": "Wird gestartet…",
+    "status": {
+      "approved": "Genehmigt",
+      "cancelled": "Abgebrochen",
+      "counting": "Zählung läuft",
+      "draft": "Entwurf",
+      "inReview": "In Prüfung"
+    },
+    "submitFailed": "Die Sitzung konnte nicht eingereicht werden.",
+    "submitForReview": "Zur Prüfung einreichen",
+    "submitted": "Zur Prüfung eingereicht.",
+    "submitting": "Wird eingereicht…",
+    "subtitle": "Blinde Bestandsaufnahmen je Standort — Abweichungen werden bei Genehmigung über das Bewegungsjournal übernommen.",
+    "title": "Bestandszählungen",
+    "uncountedLines": "{{count}} Position(en) wurden nie gezählt und blieben unverändert.",
+    "unexpectedPrompt": "Unerwartete Seriennummer(n) — entscheiden Sie vor der Genehmigung, wie zu verfahren ist:",
+    "unitsAdded": "{{count}} Einheit(en) hinzugefügt",
+    "unitsRetired": "{{count}} Einheit(en) ausgemustert",
+    "varianceLabel": "· Abweichung"
+  },
+  "dashboard": {
+    "actions": {
+      "newPurchaseOrder": "Neue Bestellung",
+      "receiveStock": "Bestand erfassen"
+    },
+    "attention": {
+      "allClear": "Alles in Ordnung — derzeit ist nichts zu beachten.",
+      "title": "Erfordert Aufmerksamkeit"
+    },
+    "bills": {
+      "acrossBill": "{{total}} auf {{count}} Rechnung",
+      "acrossBills": "{{total}} auf {{count}} Rechnungen",
+      "nothingOverdue": "nichts überfällig",
+      "overdue": "{{count}} überfällig · {{total}}",
+      "title": "Offene Lieferantenrechnungen",
+      "viewBills": "Rechnungen anzeigen"
+    },
+    "kpi": {
+      "arrivingToday": " · {{count}} treffen heute ein",
+      "marginFoot": "{{margin}} bei {{revenue}}",
+      "marginMtd": "Marge · seit Monatsbeginn",
+      "onHandUnits": "Vorrätige Einheiten",
+      "onOrder": "Bestellt (offene POs)",
+      "poCount": "{{count}} PO",
+      "poCountPlural": "{{count}} POs",
+      "serialized": "{{count}} serialisiert",
+      "stockedLocation": "{{count}} Standort mit Bestand",
+      "stockedLocations": "{{count}} Standorte mit Bestand",
+      "totalValue": "Gesamter Bestandswert"
+    },
+    "movements": {
+      "bySuffix": " · von {{name}}",
+      "consumed": "Verbraucht",
+      "empty": "Keine aktuellen Bewegungen.",
+      "fullLedger": "Vollständiges Journal",
+      "generic": "{{type}} {{qty}} × {{name}}",
+      "itemFallback": "Artikel",
+      "received": "Erfasst",
+      "rma": "RMA",
+      "serialSuffix": " (SN {{sn}})",
+      "title": "Letzte Bestandsbewegungen",
+      "transferred": "Umgelagert"
+    },
+    "receiving": {
+      "allPos": "Alle POs",
+      "arriving": "Eintreffend",
+      "empty": "Keine offenen Bestellungen.",
+      "open": "Offen",
+      "partial": "Teilweise",
+      "receivedOf": "{{received}} von {{ordered}} erfasst",
+      "title": "Wareneingangs-Warteschlange",
+      "unit": "{{count}} Einheit",
+      "units": "{{count}} Einheiten",
+      "vendorFallback": "Lieferant"
+    },
+    "relTime": {
+      "dayAgo": "vor {{count}} T",
+      "hrAgo": "vor {{count}} Std.",
+      "justNow": "gerade eben",
+      "minAgo": "vor {{count}} Min."
+    },
+    "stockHealthAcross": "Bestandsstatus über {{subtitle}}",
+    "subtitle": {
+      "location": "{{count}} Standort",
+      "locations": "{{count}} Standorte",
+      "van": " & {{count}} Servicefahrzeug",
+      "vans": " & {{count}} Servicefahrzeuge"
+    },
+    "thisWeek": {
+      "rmasOpened": "Eröffnete RMAs",
+      "title": "Diese Woche",
+      "transfers": "Umlagerungen zwischen Standorten",
+      "unitsDeployed": "Eingesetzte Einheiten",
+      "unitsReceived": "Erfasste Einheiten"
+    },
+    "title": "Lagerbestand",
+    "valueByLocation": {
+      "empty": "Kein Bestand vorhanden.",
+      "grandTotal": "Gesamtsumme {{total}}",
+      "title": "Bestandswert nach Standort"
+    }
+  },
+  "ghostUsage": {
+    "actions": {
+      "dismiss": "Verwerfen",
+      "openTicket": "Ticket öffnen",
+      "openTicketAddMaterial": "Ticket öffnen · Material hinzufügen",
+      "reopen": "Erneut öffnen"
+    },
+    "ai": {
+      "batchHint": "Verarbeitet bis zu {{count}} Kandidaten pro Durchlauf.",
+      "checking": "AI-Verfügbarkeit wird geprüft…",
+      "classifiedSummary": "{{classified}} klassifiziert (unklar {{unclear}}, fehlgeschlagen {{failed}}, verbleibend {{remaining}})",
+      "classifyCandidates": "Kandidaten klassifizieren",
+      "classifying": "Wird klassifiziert…",
+      "didNotRun": "Die AI-Triage wurde nicht ausgeführt{{reason}}.",
+      "requiresEnterprise": "Die AI-Triage erfordert Enterprise und das Add-on AI Assistant.",
+      "runFailed": "Die AI-Triage ist fehlgeschlagen.",
+      "toggleFailed": "Die AI-Triage-Einstellung konnte nicht geändert werden.",
+      "toggleLabel": "AI-Triage — Kandidaten-Tickets mit dem AI-Add-on klassifizieren",
+      "toggledOff": "AI-Triage aus.",
+      "toggledOn": "AI-Triage ein."
+    },
+    "candidateCapNote": " (erste {{cap}} werden angezeigt)",
+    "candidateCount": "{{count}} Ghost-Kandidat",
+    "candidateCountPlural": "{{count}} Ghost-Kandidaten",
+    "columns": {
+      "aiVerdict": "AI-Urteil",
+      "assignedTo": "Zugewiesen an",
+      "board": "Board",
+      "category": "Kategorie",
+      "client": "Kunde",
+      "closed": "Geschlossen",
+      "closedBy": "Geschlossen von",
+      "ticketNumber": "Ticket-Nr.",
+      "title": "Titel"
+    },
+    "disposition": {
+      "confirmed": "Bestätigt — in die Arbeitsliste verschoben.",
+      "dismissed": "Verworfen.",
+      "reopened": "Erneut geöffnet."
+    },
+    "filters": {
+      "allBoards": "Alle Boards",
+      "allCategories": "Alle Kategorien",
+      "board": "Board",
+      "category": "Kategorie"
+    },
+    "funnel": {
+      "closedInWindow": "Im Zeitraum geschlossen",
+      "ghostCandidates": "Ghost-Kandidaten",
+      "hasMaterials": "Mit Material",
+      "inHardwareScope": "Im Hardware-Bereich"
+    },
+    "loadError": "Der Ghost-Verbrauchsbericht konnte nicht geladen werden. Versuchen Sie es mit Aktualisieren.",
+    "loading": "Ghost-Kandidaten werden geladen…",
+    "noCandidates": "Keine Ghost-Kandidaten — nichts scheint verschluckt worden zu sein.",
+    "runFailed": "Der Ghost-Verbrauchsbericht konnte nicht ausgeführt werden.",
+    "subtitle": "Geschlossene Hardware-Tickets ohne erfasste Teile — Arbeit, die der Betrieb möglicherweise verschluckt hat.",
+    "title": "Ghost-Verbrauch",
+    "updateFailed": "Dieses Ticket konnte nicht aktualisiert werden.",
+    "verdict": {
+      "hardwareMissing": "Hardware fehlt",
+      "noHardware": "Keine Hardware",
+      "unclear": "Unklar"
+    },
+    "worklistTitle": "Bestätigt — Material erfassen"
+  },
+  "import_": {
+    "actions": {
+      "import": "Importieren",
+      "importRows": "{{count}} Zeilen importieren",
+      "importing": "Wird importiert…",
+      "validate": "Prüfen",
+      "validating": "Wird geprüft…"
+    },
+    "andMore": "…und {{count}} weitere",
+    "andMoreValidRows": "…und {{count}} weitere gültige Zeilen",
+    "apply": {
+      "receipt": "{{count}} Wareneingang",
+      "receipts": "{{count}} Wareneingänge",
+      "success": "{{receipts}} importiert ({{units}}, {{value}}) als \"{{label}}\".",
+      "unit": "{{count}} Einheit",
+      "units": "{{count}} Einheiten"
+    },
+    "chooseFileFirst": "Wählen Sie zuerst eine CSV-Datei.",
+    "dialogTitle": "Anfangsbestände importieren",
+    "errors": {
+      "headingPlural": "{{count}} Fehler — es wird nichts importiert, bis jede Zeile fehlerfrei ist:",
+      "headingSingular": "{{count}} Fehler — es wird nichts importiert, bis jede Zeile fehlerfrei ist:"
+    },
+    "fields": {
+      "batchLabel": "Stapelbezeichnung",
+      "csvFile": "CSV-Datei",
+      "enableTracking": "Bestandsverfolgung für noch nicht verfolgte Produkte aktivieren"
+    },
+    "importFailed": "Import fehlgeschlagen — es wurde nichts geschrieben.",
+    "intro": {
+      "downloadTemplate": "Vorlage herunterladen",
+      "forColumns": "für die erwarteten Spalten.",
+      "text": "Richten Sie den Anfangsbestand aus einer CSV ein. Jede Zeile wird als echter Wareneingang im Journal mit der Stapelbezeichnung erfasst — Zeilen mit einer Seriennummer werden zu einzelnen Einheiten, Zeilen ohne werden zu Mengenbeständen."
+    },
+    "openButton": "Anfangsbestände importieren",
+    "readFileFailed": "Die Datei konnte nicht gelesen werden.",
+    "rowPrefix": "Zeile {{row}}: ",
+    "summary": {
+      "bulkQuantity": "Mengenbestand:",
+      "locations": "Standorte:",
+      "products": "Produkte:",
+      "rows": "Zeilen:",
+      "serializedUnits": "Serialisierte Einheiten:",
+      "settingWillEnable": "{{count}} Produkt wird für die Verfolgung aktiviert",
+      "settingsWillEnable": "{{count}} Produkte werden für die Verfolgung aktiviert",
+      "value": "Wert:"
+    },
+    "table": {
+      "location": "Standort",
+      "product": "Produkt",
+      "qty": "Menge",
+      "serial": "Seriennummer",
+      "unitCost": "Stückkosten"
+    },
+    "validationFailed": "Prüfung fehlgeschlagen."
+  },
+  "kits": {
+    "addComponent": "Komponente hinzufügen",
+    "addFailed": "Hinzufügen fehlgeschlagen",
+    "columns": {
+      "component": "Komponente",
+      "sku": "SKU"
+    },
+    "componentAdded": "Komponente hinzugefügt",
+    "componentRemoved": "Komponente entfernt",
+    "componentRequired": "Komponente ist erforderlich",
+    "componentsHeading": "Komponenten — {{name}}",
+    "fields": {
+      "component": "Komponente",
+      "componentPlaceholder": "Produkt auswählen…"
+    },
+    "loadComponentsFailed": "Komponenten konnten nicht geladen werden",
+    "loadKitsFailed": "Kits konnten nicht geladen werden",
+    "manage": "Verwalten",
+    "quantityInvalid": "Die Menge muss größer als 0 sein",
+    "removeConfirm": "{{name}} aus diesem Kit entfernen?",
+    "removeFailed": "Entfernen fehlgeschlagen",
+    "removeTitle": "Komponente entfernen",
+    "title": "Kits"
+  },
+  "loaners": {
+    "clientIdRequired": "Kunden-ID ist erforderlich",
+    "columns": {
+      "client": "Kunde",
+      "due": "Fällig",
+      "service": "Service",
+      "unitSerial": "Einheit / Seriennummer"
+    },
+    "fields": {
+      "clientId": "Kunden-ID",
+      "dueDate": "Fälligkeitsdatum",
+      "locationPlaceholder": "Standort auswählen…",
+      "restockLocation": "Zurück in Standort einlagern",
+      "restockingFee": "Wiedereinlagerungsgebühr (optional)",
+      "returnLocation": "Rückgabe an Standort",
+      "unitId": "Einheiten-ID",
+      "useCurrentLocation": "Aktuellen Standort der Einheit verwenden"
+    },
+    "loadFailed": "Leihgeräte konnten nicht geladen werden",
+    "loadLocationsFailed": "Bestandsstandorte konnten nicht geladen werden",
+    "loanDialogTitle": "Einheit verleihen",
+    "loanFailed": "Verleihen fehlgeschlagen",
+    "loanOut": "Verleihen",
+    "loanedOut": "Einheit verliehen",
+    "restock": "Wiedereinlagern",
+    "restockDialogTitle": "Rückgabe als verkäuflich wiedereinlagern",
+    "restockFailed": "Wiedereinlagern fehlgeschlagen",
+    "restockFeeInvalid": "Die Wiedereinlagerungsgebühr muss ein nicht-negativer Betrag sein",
+    "restockReturn": "Rückgabe wiedereinlagern",
+    "restockUnitIdRequired": "Für die Wiedereinlagerung ist die Einheiten-ID erforderlich",
+    "restocked": "Einheit als verkäuflich wiedereingelagert",
+    "return": "Rückgabe",
+    "returnDialogTitle": "Leihgerät zurücknehmen",
+    "returnFailed": "Rückgabe fehlgeschlagen",
+    "returnLocationRequired": "Rückgabestandort ist erforderlich",
+    "returned": "Leihgerät zurückgegeben",
+    "returningPrefix": "Rückgabe von",
+    "title": "Leihgeräte",
+    "unitIdRequired": "Einheiten-ID ist erforderlich"
+  },
+  "locations": {
+    "addLocation": "Standort hinzufügen",
+    "addressLabel": "Adresse (optional)",
+    "assignedPlaceholder": "Wem gehört dieser Standort?",
+    "cityPlaceholder": "Stadt",
+    "clearSearch": "Suche zurücksetzen",
+    "columns": {
+      "assignedTo": "Zugewiesen an",
+      "available": "Verfügbar",
+      "onHand": "Vorrätig",
+      "product": "Produkt",
+      "sku": "SKU",
+      "stock": "Bestand",
+      "type": "Typ"
+    },
+    "count": "{{n}} Standort",
+    "countPlural": "{{n}} Standorte",
+    "create": "Erstellen",
+    "created": "Standort erstellt.",
+    "deactivateConfirm": "\"{{name}}\" deaktivieren? Der Standort erscheint dann nicht mehr als Bestandsziel.",
+    "deactivateFailed": "Der Standort konnte nicht deaktiviert werden.",
+    "deactivateTitle": "Standort deaktivieren",
+    "deactivated": "Standort deaktiviert.",
+    "default": "Standard",
+    "editLocation": "Standort bearbeiten",
+    "emptyDescription": "Fügen Sie ein Lager, ein Fahrzeug oder ein Büro hinzu, um zu verfolgen, wo der Bestand liegt.",
+    "emptyTitle": "Noch keine Bestandsstandorte",
+    "filteredCount": "{{shown}} von {{total}}",
+    "holdsStockTooltip": "Enthält Bestand — lagern Sie ihn aus, bevor Sie deaktivieren",
+    "keepActive": "Aktiv lassen",
+    "loadErrorDescription": "Beim Laden dieser Seite ist ein Fehler aufgetreten. Versuchen Sie es erneut.",
+    "loadErrorTitle": "Standorte konnten nicht geladen werden",
+    "loadFailed": "Standorte konnten nicht geladen werden.",
+    "makeDefault": "Diesen Standort als Standard festlegen",
+    "nameRequired": "Standortname ist erforderlich",
+    "noActiveDescription": "Alle Standorte sind deaktiviert.",
+    "noActiveTitle": "Keine aktiven Standorte",
+    "noMatchTitle": "Keine passenden Standorte",
+    "notAssigned": "Nicht zugewiesen",
+    "nothingOnHand": "Kein Bestand an diesem Standort vorhanden.",
+    "reactivate": "Reaktivieren",
+    "reactivateFailed": "Der Standort konnte nicht reaktiviert werden.",
+    "reactivated": "Standort reaktiviert.",
+    "saveFailed": "Der Standort konnte nicht gespeichert werden.",
+    "searchPlaceholder": "Standorte suchen",
+    "selectType": "Typ auswählen…",
+    "setDefault": "Als Standard festlegen",
+    "setDefaultFailed": "Der Standardstandort konnte nicht festgelegt werden.",
+    "setDefaultSuccess": "\"{{name}}\" ist jetzt der Standardstandort.",
+    "showInactive": "Inaktive anzeigen",
+    "showInactiveCount": "Inaktive anzeigen ({{n}})",
+    "statePlaceholder": "Bundesland",
+    "stock": {
+      "loadFailed": "Der Bestand des Standorts konnte nicht geladen werden."
+    },
+    "stockAt": "Bestand bei {{name}}",
+    "stockEmpty": "Leer",
+    "stockSearchPlaceholder": "Produkt oder SKU suchen",
+    "stockTitle": "Bestand",
+    "streetPlaceholder": "Straße",
+    "suitePlaceholder": "Adresszusatz (optional)",
+    "title": "Bestandsstandorte",
+    "type": {
+      "office": "Büro",
+      "other": "Sonstige",
+      "van": "Fahrzeug",
+      "warehouse": "Lager"
+    },
+    "updated": "Standort aktualisiert.",
+    "zipPlaceholder": "ZIP"
+  },
+  "margin": {
+    "columns": {
+      "cogs": "COGS",
+      "margin": "Marge",
+      "marginPct": "Marge %",
+      "product": "Produkt",
+      "qtySold": "Verkaufte Menge",
+      "revenue": "Umsatz"
+    },
+    "empty": "Keine verkaufsbasierte Marge in diesem Zeitraum.",
+    "loading": "Marge wird geladen…",
+    "metrics": {
+      "cogs": "COGS",
+      "margin": "Marge",
+      "marginPct": "Marge %",
+      "revenue": "Umsatz"
+    },
+    "runFailed": "Der Margenbericht konnte nicht ausgeführt werden.",
+    "subtitle": "Umsatz, Wareneinsatz und Marge pro Produkt aus ausgelieferten Kundenaufträgen.",
+    "title": "Margenbericht"
+  },
+  "poLandedCost": {
+    "actions": {
+      "addEntry": "Eintrag hinzufügen",
+      "adding": "Wird hinzugefügt…",
+      "applyPending": "Ausstehende Einträge übernehmen",
+      "applying": "Wird übernommen…"
+    },
+    "addFailed": "Der Eintrag konnte nicht hinzugefügt werden.",
+    "allocation": {
+      "value": "Positionswert"
+    },
+    "amountRequired": "Der Betrag muss größer als 0 sein.",
+    "applied": "{{amount}} über {{count}} Position(en) übernommen — Durchschnittswerte und Stückkosten aktualisiert.",
+    "appliedLabel": "Übernommen:",
+    "applyFailed": "Die Einstandskosten konnten nicht übernommen werden.",
+    "columns": {
+      "allocateBy": "Zuordnen nach",
+      "allocated": "Zugeordnet",
+      "amount": "Betrag",
+      "effectiveUnitCost": "Effektive Stückkosten",
+      "product": "Produkt",
+      "received": "Erfasst",
+      "type": "Typ"
+    },
+    "costType": {
+      "duty": "Zoll",
+      "freight": "Fracht",
+      "other": "Sonstige"
+    },
+    "entryAdded": "Einstandskosten-Eintrag hinzugefügt.",
+    "fields": {
+      "amount": "Betrag ($ {{currency}})"
+    },
+    "loadError": "Einstandskosten konnten nicht geladen werden.",
+    "nothingReceived": "Noch nichts erfasst — erfassen Sie zuerst die Bestellung, dann übernehmen.",
+    "nothingToApply": "Nichts zu übernehmen.",
+    "pendingLabel": "Ausstehend:",
+    "previewTitle": "Zuordnungsvorschau (ausstehende Einträge)",
+    "removeFailed": "Der Eintrag konnte nicht entfernt werden.",
+    "status": {
+      "applied": "Übernommen",
+      "pending": "Ausstehend"
+    },
+    "title": "Einstandskosten",
+    "titleWithPo": "Einstandskosten — {{poNumber}}"
+  },
+  "purchaseOrders": {
+    "actions": {
+      "addItem": "Artikel hinzufügen",
+      "create": "Erstellen",
+      "landedCost": "Einstandskosten",
+      "receive": "Erfassen",
+      "receiving": "Wird erfasst…",
+      "submit": "Einreichen"
+    },
+    "addPurchaseOrder": "Bestellung hinzufügen",
+    "allVendors": "Alle Lieferanten",
+    "amountOnOrder": "{{amount}} bestellt",
+    "cancelConfirm": "Möchten Sie die Bestellung {{poNumber}} wirklich stornieren? Dies kann nicht rückgängig gemacht werden.",
+    "cancelFailed": "Die Bestellung konnte nicht storniert werden.",
+    "cancelTitle": "Bestellung stornieren",
+    "cancelled": "Bestellung storniert.",
+    "clearFilters": "Filter zurücksetzen",
+    "columns": {
+      "amount": "Betrag",
+      "expected": "Erwartet",
+      "poNumber": "PO-Nummer",
+      "product": "Produkt",
+      "qty": "Menge",
+      "received": "Erfasst",
+      "unitCost": "Stückkosten ($)",
+      "vendor": "Lieferant"
+    },
+    "count": "{{count}} Bestellung",
+    "countPlural": "{{count}} Bestellungen",
+    "createFailed": "Die Bestellung konnte nicht erstellt werden.",
+    "created": "Bestellung erstellt.",
+    "currency": {
+      "cad": "CAD — Kanadischer Dollar",
+      "eur": "EUR — Euro",
+      "gbp": "GBP — Britisches Pfund",
+      "usd": "USD — US-Dollar"
+    },
+    "currencyRequired": "Währung ist erforderlich",
+    "emptyDescription": "Erstellen Sie eine Bestellung, um zu verfolgen, was bei Ihren Lieferanten bestellt ist.",
+    "emptyTitle": "Noch keine Bestellungen",
+    "fields": {
+      "currency": "Währung",
+      "expectedDate": "Erwartetes Datum",
+      "items": "Artikel",
+      "location": "Standort",
+      "selectLocation": "Standort auswählen…",
+      "selectProduct": "Produkt auswählen…",
+      "selectVendor": "Lieferant auswählen…",
+      "serialNumbers": "Seriennummern (eine pro Zeile)",
+      "vendor": "Lieferant"
+    },
+    "filteredCount": "{{filtered}} von {{total}}",
+    "keepPo": "Bestellung behalten",
+    "lineFullyReceived": "Diese Position ist vollständig erfasst.",
+    "lineQtyRequired": "Jede Positionsmenge muss größer als 0 sein",
+    "loadError": "Bestellungen konnten nicht geladen werden.",
+    "loadErrorDescription": "Beim Laden dieser Seite ist ein Fehler aufgetreten. Versuchen Sie es erneut.",
+    "loadErrorTitle": "Bestellungen konnten nicht geladen werden",
+    "loadOneFailed": "Die Bestellung konnte nicht geladen werden.",
+    "loadingPo": "Bestellung wird geladen…",
+    "locationRequired": "Standort ist erforderlich",
+    "noLines": "Diese Bestellung hat keine Positionen.",
+    "noMatchTitle": "Keine passenden Bestellungen",
+    "notFound": "Bestellung nicht gefunden",
+    "overReceived": "{{quantity}} erfasst. Sie haben jetzt mehr erfasst als bestellt wurde.",
+    "productsLoadError": "Produkte konnten nicht geladen werden.",
+    "qtyRequired": "Die Menge muss größer als 0 sein",
+    "receiveFailed": "Diese Position konnte nicht erfasst werden.",
+    "receiveTitle": "{{poNumber}} erfassen",
+    "receiveTitleDefault": "Bestellung erfassen",
+    "receivedOf": "{{received}} von {{ordered}} erfasst",
+    "receivedStatus": "{{quantity}} erfasst. Bestellung ist jetzt {{status}}.",
+    "searchPlaceholder": "PO-Nummer oder Lieferant suchen",
+    "status": {
+      "allStatuses": "Alle Status",
+      "cancelled": "Storniert",
+      "draft": "Entwurf",
+      "open": "Offen",
+      "partiallyReceived": "Teilweise erfasst",
+      "received": "Erfasst"
+    },
+    "submitFailed": "Die Bestellung konnte nicht eingereicht werden.",
+    "submitted": "Bestellung eingereicht.",
+    "title": "Bestellungen",
+    "unnamedProduct": "Unbenanntes Produkt",
+    "vendorRequired": "Lieferant ist erforderlich",
+    "vendorsLoadError": "Lieferanten konnten nicht geladen werden."
+  },
+  "rma": {
+    "caseOpened": "RMA-Fall eröffnet.",
+    "columns": {
+      "client": "Kunde",
+      "daysRemaining": "Verbleibende Tage",
+      "dueDate": "Fälligkeitsdatum",
+      "reason": "Grund",
+      "returnedUnit": "Zurückgegebene Einheit",
+      "type": "Typ",
+      "vendor": "Lieferant"
+    },
+    "deadUnitsOwed": "Geschuldete Defekteinheiten",
+    "fields": {
+      "location": "Standort",
+      "locationPlaceholder": "Standort auswählen…",
+      "reason": "Grund",
+      "returnedUnitId": "ID der zurückgegebenen Einheit",
+      "rmaType": "RMA-Typ",
+      "vendor": "Lieferant",
+      "vendorPlaceholder": "Lieferant auswählen…",
+      "vendorRef": "RMA-Referenz des Lieferanten"
+    },
+    "loadCasesFailed": "RMA-Fälle konnten nicht geladen werden.",
+    "loadLocationsVendorsFailed": "Standorte und Lieferanten konnten nicht geladen werden.",
+    "openFailed": "RMA konnte nicht eröffnet werden.",
+    "openRma": "RMA eröffnen",
+    "pickLocation": "Wählen Sie einen Standort.",
+    "pickVendor": "Wählen Sie einen Lieferanten.",
+    "receiveFailed": "Die Rückgabe konnte nicht erfasst werden.",
+    "receiveReturn": "Rückgabe erfassen",
+    "receiving": "Wird erfasst…",
+    "returnReceived": "Rückgabe erfasst.",
+    "returnedUnitRequired": "Die ID der zurückgegebenen Einheit ist erforderlich.",
+    "sendToVendor": "An Lieferanten senden",
+    "sendVendorFailed": "Konnte nicht an den Lieferanten gesendet werden.",
+    "sending": "Wird gesendet…",
+    "sentToVendor": "An Lieferanten gesendet.",
+    "title": "RMA",
+    "types": {
+      "advanceReplacement": "Vorab-Ersatz",
+      "standard": "Standard"
+    }
+  },
+  "salesOrders": {
+    "actions": {
+      "addLine": "Position hinzufügen",
+      "confirmShipment": "Versand bestätigen",
+      "confirming": "Wird bestätigt…",
+      "createBackorderPo": "Entwurfs-PO für Rückstand erstellen",
+      "createDropShipPo": "Direktversand-PO erstellen",
+      "createPo": "PO erstellen",
+      "creating": "Wird erstellt…",
+      "document": "Dokument",
+      "emailConfirmation": "Bestätigung per E-Mail an Kunden senden…",
+      "fulfill": "Ausliefern",
+      "fulfilling": "Wird ausgeliefert…",
+      "generateInvoice": "Rechnung erstellen",
+      "invoicing": "Wird abgerechnet…",
+      "reopenToDraft": "Als Entwurf wieder öffnen",
+      "reopening": "Wird wieder geöffnet…"
+    },
+    "addSalesOrder": "Kundenauftrag hinzufügen",
+    "allocationMode": {
+      "hard": "Fest",
+      "soft": "Weich"
+    },
+    "availabilityOk": "OK",
+    "backorderBadge": "Rückstand {{shortfall}}",
+    "billsOnFulfillment": "Abrechnung bei Auslieferung",
+    "cancelDialog": {
+      "confirm": "Kundenauftrag stornieren",
+      "keep": "Auftrag behalten",
+      "message": "Kundenauftrag {{number}} stornieren? Dies kann nicht rückgängig gemacht werden.",
+      "title": "Kundenauftrag stornieren"
+    },
+    "cancelFailed": "Stornierung fehlgeschlagen",
+    "cancelled": "Kundenauftrag storniert",
+    "clientRequired": "Kunde ist erforderlich",
+    "columns": {
+      "client": "Kunde",
+      "currency": "Währung",
+      "invoiceMode": "Rechnungsmodus",
+      "soNumber": "SO-Nummer"
+    },
+    "confirmFailed": "Bestätigung fehlgeschlagen",
+    "confirmShipmentError": "Der Versand konnte nicht bestätigt werden.",
+    "confirmed": "Kundenauftrag bestätigt",
+    "createDraftPoError": "Die Entwurfs-PO konnte nicht erstellt werden.",
+    "createDropShipPoError": "Die Direktversand-PO konnte nicht erstellt werden.",
+    "createPoDialog": {
+      "note": "Bestellt die volle Menge der Position ({{quantity}}) beim Lieferanten, direkt an den Kunden versendet. Sobald der Lieferant versendet, verwenden Sie \"Versand bestätigen\", um die Position als ausgeliefert zu markieren.",
+      "title": "Direktversand-PO erstellen — {{name}}",
+      "vendor": "Lieferant",
+      "vendorPlaceholder": "Lieferant auswählen…"
+    },
+    "created": "Kundenauftrag erstellt",
+    "currencyRequired": "Währungscode ist erforderlich",
+    "detailTitle": "Kundenauftrag {{number}}",
+    "detailTitleFallback": "Kundenauftrag",
+    "documentFailed": "Das Dokument konnte nicht erstellt werden.",
+    "documents": {
+      "packingSlip": "Lieferschein",
+      "pickList": "Kommissionierliste",
+      "salesOrder": "Auftragsbestätigung"
+    },
+    "draftPoCreated": "Entwurfs-PO erstellt: {{numbers}}",
+    "draftPosCreated": "Entwurfs-POs erstellt: {{numbers}}",
+    "dropShipBadge": "Direktversand",
+    "dropShipDialog": {
+      "addSerial": "Seriennummer hinzufügen",
+      "confirmNote": "Bestätigen Sie, dass der Lieferant die ausstehende(n) {{count}} Einheit(en) an den Kunden versendet hat. Die Position wird als ausgeliefert markiert; der Bestand wird nie verändert.",
+      "macPlaceholder": "MAC (optional)",
+      "serialPlaceholder": "Seriennummer",
+      "serialsNote": "Geben Sie die Seriennummern ein, die der Lieferant versendet hat (mit MAC, sofern zutreffend). Die Einheiten werden als an den Kunden geliefert erfasst — der Bestand wird nie verändert.",
+      "title": "Lieferantenversand bestätigen — {{name}}"
+    },
+    "dropShipPoCreated": "Direktversand-PO {{number}} erstellt — bestätigen Sie den Versand, sobald der Lieferant versendet.",
+    "emailDialog": {
+      "confirm": "E-Mail senden",
+      "message": "Die Auftragsbestätigung für {{number}} per E-Mail an den Rechnungskontakt des Kunden senden?",
+      "title": "Auftragsbestätigung per E-Mail senden"
+    },
+    "emailFailed": "Die Bestätigung konnte nicht per E-Mail gesendet werden.",
+    "emailSuccess": "Bestätigung per E-Mail an {{recipients}} gesendet",
+    "enterSerial": "Geben Sie mindestens eine Seriennummer ein.",
+    "fields": {
+      "allocationMode": "Zuordnungsmodus",
+      "currencyCode": "Währungscode",
+      "invoiceMode": "Rechnungsmodus",
+      "lines": "Positionen",
+      "qty": "Menge",
+      "serviceId": "Service-ID",
+      "unitPrice": "Stückpreis ($)"
+    },
+    "fromQuote": "Aus Angebot",
+    "fulfillDialog": {
+      "allocatedToThis": "Diesem Auftrag zugeordnet",
+      "hardHeldMany": "{{count}} Einheiten sind durch andere Aufträge fest reserviert und werden nicht angezeigt.",
+      "hardHeldOne": "{{count}} Einheit ist durch andere Aufträge fest reserviert und wird nicht angezeigt.",
+      "loadingUnits": "Einheiten werden geladen…",
+      "noUnits": "Keine verfügbaren Einheiten.",
+      "remaining": "{{remaining}} von {{ordered}} verbleibend.",
+      "searchPlaceholder": "Seriennummer oder MAC suchen",
+      "selectedMany": "{{count}} Einheiten ausgewählt",
+      "selectedOne": "{{count}} Einheit ausgewählt",
+      "shortStockNote": "Bestandsmangel wird gewarnt, aber nie blockiert — konsistent mit der automatischen Materialabrechnung.",
+      "softAllocatedOther": "Einem anderen Auftrag weich zugeordnet",
+      "sourceLocation": "Quellstandort",
+      "title": "Ausliefern — {{name}}"
+    },
+    "fulfilledUnits": "{{count}} Einheit(en) ausgeliefert.",
+    "fulfillmentFailed": "Auslieferung fehlgeschlagen.",
+    "invoiceColumns": {
+      "amount": "Betrag",
+      "created": "Erstellt",
+      "invoice": "Rechnung"
+    },
+    "invoiceGenFailed": "Rechnungserstellung fehlgeschlagen.",
+    "invoiceMode": {
+      "manual": "Manuell",
+      "onFulfillment": "Bei Auslieferung"
+    },
+    "invoicedItems": "{{count}} Artikel abgerechnet.",
+    "invoices": "Rechnungen",
+    "invoicingFailed": "Abrechnung fehlgeschlagen: {{error}}. Verwenden Sie \"Rechnung erstellen\", um es erneut zu versuchen.",
+    "lineColumns": {
+      "availability": "Verfügbarkeit",
+      "fulfilled": "Ausgeliefert",
+      "invoiced": "Abgerechnet",
+      "ordered": "Bestellt",
+      "product": "Produkt",
+      "unitPrice": "Stückpreis"
+    },
+    "lineQtyPositive": "Jede Positionsmenge muss größer als 0 sein",
+    "loadDetailError": "Der Kundenauftrag konnte nicht geladen werden.",
+    "loadError": "Kundenaufträge konnten nicht geladen werden",
+    "loadUnitsError": "Verfügbare Einheiten konnten nicht geladen werden.",
+    "loadVendorsError": "Lieferanten konnten nicht geladen werden.",
+    "manualInvoicing": "Manuelle Abrechnung",
+    "nothingBackordered": "Nichts ist im Rückstand.",
+    "nothingToInvoice": "Nichts mehr abzurechnen.",
+    "onlyRemaining": "Nur noch {{remaining}} für diese Position verbleibend.",
+    "pickVendor": "Wählen Sie den Lieferanten, der diese Position versendet.",
+    "productDefaultLocation": "Standardstandort des Produkts",
+    "qtyPositiveInteger": "Die Menge muss eine positive ganze Zahl sein.",
+    "reopenError": "Der Kundenauftrag konnte nicht wieder geöffnet werden.",
+    "reopened": "Kundenauftrag wieder geöffnet — er ist wieder ein Entwurf.",
+    "selectUnit": "Wählen Sie mindestens eine Einheit.",
+    "shipmentConfirmed": "Versand bestätigt — {{count}} Einheit(en) geliefert.",
+    "status": {
+      "cancelled": "Storniert",
+      "closed": "Geschlossen",
+      "confirmed": "Bestätigt",
+      "draft": "Entwurf",
+      "fulfilled": "Ausgeliefert",
+      "invoiced": "Abgerechnet",
+      "partiallyFulfilled": "Teilweise ausgeliefert"
+    },
+    "title": "Kundenaufträge",
+    "unassignedBackorder": "{{count}} rückständige Position(en) haben keinen bevorzugten Lieferanten — erstellen Sie diese POs manuell."
+  },
+  "stock": {
+    "actions": {
+      "receive": "Erfassen"
+    },
+    "badge": {
+      "serial": "Seriennummer"
+    },
+    "clearFilters": "Filter zurücksetzen",
+    "columns": {
+      "available": "Verfügbar",
+      "location": "Standort",
+      "onHand": "Vorrätig",
+      "product": "Produkt",
+      "sku": "SKU"
+    },
+    "empty": {
+      "noMatchTitle": "Keine passenden Produkte",
+      "noProductsDescription": "Aktivieren Sie die Bestandsverfolgung für ein Produkt unter Abrechnung → Produkte und erfassen Sie dann Bestand.",
+      "noProductsTitle": "Noch keine Produkte mit Bestandsverfolgung"
+    },
+    "fields": {
+      "location": "Standort",
+      "product": "Produkt",
+      "unitCost": "Stückkosten (USD)"
+    },
+    "filteredCount": "{{shown}} von {{total}} Produkten",
+    "levels": {
+      "empty": "Für dieses Produkt ist kein Bestand erfasst.",
+      "loadFailed": "Bestandsmengen konnten nicht geladen werden.",
+      "loading": "Bestand wird geladen…",
+      "title": "Bestandsmengen — {{name}}"
+    },
+    "loadLocationsFailed": "Standorte konnten nicht geladen werden.",
+    "loadProductsFailed": "Produkte konnten nicht geladen werden.",
+    "needsAttention": "Erfordert Aufmerksamkeit",
+    "rebuild": {
+      "button": "Bestands-Caches neu aufbauen",
+      "consistent": "{{products}} Produkte geprüft — Caches bereits konsistent.",
+      "correctedMany": "{{products}} Produkte geprüft und {{n}} Werte korrigiert.",
+      "correctedOne": "{{products}} Produkte geprüft und {{n}} Wert korrigiert.",
+      "failed": "Bestands-Caches konnten nicht neu aufgebaut werden.",
+      "inProgress": "Wird neu aufgebaut…"
+    },
+    "receive": {
+      "costNonNegative": "Die Stückkosten dürfen nicht negativ sein.",
+      "failed": "Bestand konnte nicht erfasst werden.",
+      "inProgress": "Wird erfasst…",
+      "pickLocation": "Wählen Sie einen Standort.",
+      "pickProduct": "Wählen Sie ein Produkt.",
+      "qtyPositive": "Die Menge muss eine positive ganze Zahl sein.",
+      "selectLocation": "Standort auswählen…",
+      "selectProduct": "Produkt auswählen…",
+      "serializedHint": "Erfassen Sie serialisierte Produkte einzeln nach Seriennummer.",
+      "success": "Bestand erfasst."
+    },
+    "receiveStock": "Bestand erfassen",
+    "searchPlaceholder": "Produkte oder SKU suchen",
+    "status": {
+      "low": "Niedrig",
+      "out": "Leer",
+      "wordSite": "{{word}} · {{n}} Standort",
+      "wordSites": "{{word}} · {{n}} Standorte"
+    },
+    "summary": {
+      "lowSuffix": " · {{n}} niedrig",
+      "outSuffix": " · {{n}} leer",
+      "productMany": "{{n}} Produkte",
+      "productOne": "{{n}} Produkt"
+    },
+    "title": "Bestand",
+    "unnamedProduct": "Unbenanntes Produkt"
+  },
+  "stockUnits": {
+    "columns": {
+      "client": "Kunde",
+      "location": "Standort",
+      "macAddress": "MAC-Adresse",
+      "serialNumber": "Seriennummer",
+      "warrantyExpires": "Garantie läuft ab"
+    },
+    "detail": {
+      "delivered": "Geliefert",
+      "location": "Standort",
+      "mac": "MAC",
+      "received": "Erfasst",
+      "serial": "Seriennummer",
+      "unitCost": "Stückkosten"
+    },
+    "exportCsv": "CSV exportieren",
+    "history": "Verlauf",
+    "historyLoadFailed": "Einheitenverlauf konnte nicht geladen werden",
+    "historyNotFound": "Einheitenverlauf nicht gefunden",
+    "loadFailed": "Einheiten konnten nicht geladen werden",
+    "noMovements": "Keine Bewegungen erfasst.",
+    "qty": "Menge",
+    "searchBy": "Suchen nach",
+    "searchFailed": "Suche fehlgeschlagen",
+    "searchMode": {
+      "mac": "MAC-Adresse",
+      "serial": "Seriennummer"
+    },
+    "searchPlaceholder": {
+      "mac": "MAC-Adresse…",
+      "serial": "Seriennummer…"
+    },
+    "searchTerm": "Suchbegriff",
+    "title": "Bestandseinheiten",
+    "unitHistoryTitle": "Einheitenverlauf",
+    "unitTitle": "Einheit {{id}}"
+  },
+  "transfers": {
+    "addLine": "Position hinzufügen",
+    "cancelConfirm": "Möchten Sie diese Umlagerung wirklich abbrechen? Dies kann nicht rückgängig gemacht werden.",
+    "cancelFailed": "Abbruch fehlgeschlagen",
+    "cancelTitle": "Umlagerung abbrechen",
+    "cancelled": "Umlagerung abgebrochen",
+    "columns": {
+      "atSource": "Am Quellstandort",
+      "dispatched": "Versendet",
+      "from": "Von",
+      "loadQty": "Lademenge",
+      "needed": "Benötigt",
+      "product": "Produkt",
+      "received": "Erfasst",
+      "serials": "Seriennummern",
+      "to": "Nach"
+    },
+    "compute": "Berechnen",
+    "computeFailed": "Die Ladeliste konnte nicht berechnet werden",
+    "computing": "Wird berechnet...",
+    "dash": "-",
+    "dispatch": "Versenden",
+    "dispatchFailed": "Versand fehlgeschlagen",
+    "dispatchLoad": "Ladung versenden",
+    "dispatchTransfer": "Umlagerung versenden",
+    "dispatched": "Umlagerung versendet",
+    "dispatching": "Wird versendet…",
+    "dispatchingLoad": "Wird versendet...",
+    "fifoPicked": "FIFO ausgewählt",
+    "fromLocation": "Quellstandort",
+    "fromSource": "Von (Quellregal)",
+    "keepTransfer": "Umlagerung behalten",
+    "lineRequired": "Mindestens eine Position mit einem Service ist erforderlich",
+    "linesLabel": "Positionen *",
+    "loadDestination": "Laden (Zielstandort)",
+    "loadDispatchedMany": "Ladung versendet ({{n}} Positionen)",
+    "loadDispatchedOne": "Ladung versendet ({{n}} Position)",
+    "loadFailed": "Umlagerungen konnten nicht geladen werden",
+    "loadList": "Ladeliste",
+    "loadLocationsFailed": "Standorte konnten nicht geladen werden",
+    "loadQtyRequired": "Mindestens eine Lademenge ist erforderlich",
+    "locationsMustDiffer": "Quelle und Ziel müssen sich unterscheiden",
+    "locationsRequired": "Quell- und Zielstandort sind erforderlich",
+    "noLowStock": "Keine Positionen mit niedrigem Bestand für diesen Zielstandort gefunden.",
+    "noSerials": "Keine Seriennummern",
+    "receive": "Erfassen",
+    "receiveFailed": "Erfassen fehlgeschlagen",
+    "received": "Umlagerung erfasst",
+    "selectDestination": "Ziel auswählen...",
+    "selectLocation": "Standort auswählen…",
+    "selectSource": "Quelle auswählen...",
+    "serviceId": "Service-ID",
+    "shortAtSource": "{{n}} zu wenig am Quellstandort",
+    "title": "Umlagerungen",
+    "toLocation": "Zielstandort",
+    "vanLoadList": "Fahrzeug-Ladeliste"
+  },
+  "vendorBills": {
+    "actions": {
+      "export": "Exportieren",
+      "exporting": "Wird exportiert…",
+      "markPaid": "Als bezahlt markieren",
+      "open": "Öffnen",
+      "void": "Stornieren"
+    },
+    "addBill": "Rechnung hinzufügen",
+    "allStatuses": "Alle Status",
+    "billCreated": "Rechnung erstellt (Entwurf).",
+    "billLoadError": "Die Rechnung konnte nicht geladen werden.",
+    "billNumberRequired": "Geben Sie die Rechnungsnummer des Lieferanten ein.",
+    "billOpened": "Rechnung geöffnet.",
+    "billPaid": "Rechnung als bezahlt markiert.",
+    "billVoided": "Rechnung storniert.",
+    "billedAbove": "Um {{amount}} über dem erfassten Wert berechnet.",
+    "billedBelow": "Um {{amount}} unter dem erfassten Wert berechnet.",
+    "columns": {
+      "amount": "Betrag",
+      "billNumber": "Rechnungs-Nr.",
+      "due": "Fällig",
+      "line": "Position",
+      "po": "PO",
+      "qty": "Menge",
+      "unitCost": "Stückkosten",
+      "vendor": "Lieferant",
+      "vsPo": "vs. PO"
+    },
+    "createBill": "Rechnung erstellen",
+    "createError": "Die Rechnung konnte nicht erstellt werden.",
+    "createHint": "Das Fälligkeitsdatum wird aus den Zahlungsbedingungen des Lieferanten übernommen. Aus einer PO vorausgefüllte Rechnungen übernehmen die erfassten Mengen und Kosten.",
+    "creating": "Wird erstellt…",
+    "detailDue": "Fällig {{date}}",
+    "detailPo": "PO {{number}}",
+    "dialog": {
+      "billTitle": "Rechnung",
+      "createTitle": "Lieferantenrechnung hinzufügen",
+      "detailTitle": "Rechnung {{number}} — {{vendor}}"
+    },
+    "export": {
+      "error": "Export fehlgeschlagen",
+      "exported": "Exportiert",
+      "notExported": "Nicht exportiert",
+      "pending": "Export ausstehend"
+    },
+    "exportError": "Die Rechnung konnte nicht exportiert werden.",
+    "exportFailed": "Export fehlgeschlagen.",
+    "exportQueued": "Export in Warteschlange.",
+    "exportedToAccounting": "In die Buchhaltung exportiert.",
+    "fields": {
+      "billNumber": "Rechnungsnummer des Lieferanten",
+      "noPoPlaceholder": "Keine PO — leere Rechnung",
+      "prefillPo": "Aus Bestellung vorausfüllen (optional)",
+      "vendor": "Lieferant",
+      "vendorPlaceholder": "Lieferant auswählen…"
+    },
+    "loadError": "Lieferantenrechnungen konnten nicht geladen werden.",
+    "matchesPo": "entspricht PO",
+    "matchesPoValue": "Entspricht dem erfassten Wert der PO.",
+    "pickVendor": "Wählen Sie einen Lieferanten (oder eine PO zum Vorausfüllen).",
+    "status": {
+      "draft": "Entwurf",
+      "open": "Offen",
+      "paid": "Bezahlt",
+      "void": "Storniert"
+    },
+    "subtitle": "Einfache Kreditorenbuchhaltung: Verfolgen Sie, was Lieferanten in Rechnung gestellt haben, gegenüber dem, was Sie erfasst haben. Kein Hauptbuch — manuell als bezahlt markieren.",
+    "title": "Lieferantenrechnungen",
+    "updateError": "Die Rechnung konnte nicht aktualisiert werden."
+  },
+  "vendorPriceList": {
+    "columns": {
+      "cost": "Kosten",
+      "leadTime": "Lieferzeit",
+      "product": "Produkt",
+      "vendorSku": "Lieferanten-SKU"
+    },
+    "costNegative": "Die Kosten dürfen nicht negativ sein.",
+    "dialogTitle": "Preisliste — {{name}}",
+    "emptyState": "Noch keine Angebote — fügen Sie unten die Teilenummern und Vertragskosten des Lieferanten hinzu.",
+    "fields": {
+      "cost": "Kosten ($)",
+      "currency": "Währung",
+      "leadTime": "Lieferzeit (Tage)",
+      "preferred": "Bevorzugter Lieferant für dieses Produkt (steuert Nachbestellvorschläge)",
+      "product": "Produkt",
+      "productPlaceholder": "Produkt auswählen…",
+      "vendorSku": "Lieferanten-SKU"
+    },
+    "leadTimeDays": "{{days}} T",
+    "loadError": "Die Preisliste konnte nicht geladen werden.",
+    "offerRemoved": "Angebot entfernt.",
+    "offerSaved": "Angebot gespeichert.",
+    "pickProduct": "Wählen Sie ein Produkt.",
+    "preferred": "Bevorzugt",
+    "removeError": "Das Angebot konnte nicht entfernt werden.",
+    "saveError": "Das Angebot konnte nicht gespeichert werden.",
+    "saveOffer": "Angebot speichern",
+    "title": "Preisliste",
+    "unnamedProduct": "Unbenanntes Produkt"
+  },
+  "vendors": {
+    "addVendor": "Lieferant hinzufügen",
+    "columns": {
+      "contact": "Kontakt",
+      "email": "E-Mail",
+      "paymentTerms": "Zahlungsbedingungen",
+      "vendor": "Lieferant"
+    },
+    "created": "Lieferant erstellt",
+    "deactivateConfirm": "Möchten Sie {{name}} wirklich deaktivieren? Dieser Lieferant steht dann für neue Bestellungen nicht mehr zur Verfügung.",
+    "deactivateFailed": "Deaktivierung fehlgeschlagen",
+    "deactivateTitle": "Lieferant deaktivieren",
+    "deactivated": "Lieferant deaktiviert",
+    "editVendor": "Lieferant bearbeiten",
+    "fields": {
+      "accountNumber": "Kontonummer",
+      "contactName": "Kontaktname",
+      "email": "E-Mail",
+      "name": "Lieferantenname",
+      "paymentTerms": "Zahlungsbedingungen",
+      "phone": "Telefon"
+    },
+    "loadError": "Lieferanten konnten nicht geladen werden",
+    "nameRequired": "Lieferantenname ist erforderlich",
+    "priceList": "Preisliste",
+    "title": "Lieferanten",
+    "updated": "Lieferant aktualisiert"
+  },
+  "writeOffs": {
+    "badges": {
+      "adjustment": "Anpassung",
+      "countCorrection": "Zählkorrektur",
+      "retired": "Ausgemustert"
+    },
+    "byUser": "Nach Benutzer",
+    "columns": {
+      "by": "Von",
+      "events": "Ereignisse",
+      "foundAdded": "Gefunden / hinzugefügt",
+      "location": "Standort",
+      "net": "Netto",
+      "product": "Produkt",
+      "qty": "Menge",
+      "reason": "Grund",
+      "type": "Typ",
+      "user": "Benutzer",
+      "value": "Wert",
+      "when": "Wann",
+      "writtenOff": "Abgeschrieben"
+    },
+    "eventsTitle": "Ereignisse",
+    "runFailed": "Der Abschreibungsbericht konnte nicht ausgeführt werden.",
+    "subtitle": "Jede Bestandsabwertung, Ausmusterung und Zählkorrektur — mit dem Namen, der sie freigegeben hat. Journalgestützt; nichts hier kann nachträglich bearbeitet werden.",
+    "title": "Abschreibungen & Anpassungen",
+    "totals": {
+      "foundAdded": "Gefunden / hinzugefügt: ",
+      "net": "Netto: ",
+      "writtenOff": "Abgeschrieben: "
+    },
+    "truncatedNotice": "Es werden die neuesten {{count}} Ereignisse angezeigt — die Summen oben decken weiterhin den gesamten Zeitraum ab. Grenzen Sie den Datumsbereich ein, um alles einzeln aufgeführt zu sehen."
+  }
+}

@@ -1,0 +1,1122 @@
+{
+  "common": {
+    "actions": "Actions",
+    "active": "Actif",
+    "cancel": "Annuler",
+    "clear": "Effacer",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "deactivate": "Désactiver",
+    "description": "Description",
+    "edit": "Modifier",
+    "emptyValue": "—",
+    "from": "De",
+    "inactive": "Inactif",
+    "loading": "Chargement…",
+    "name": "Nom",
+    "quantity": "Quantité",
+    "refresh": "Actualiser",
+    "refreshing": "Actualisation…",
+    "remove": "Retirer",
+    "retry": "Réessayer",
+    "run": "Exécuter",
+    "runReport": "Exécuter le rapport",
+    "running": "Exécution…",
+    "save": "Enregistrer",
+    "saveFailed": "Échec de l'enregistrement",
+    "saving": "Enregistrement…",
+    "search": "Rechercher",
+    "status": "Statut",
+    "to": "À",
+    "total": "Total",
+    "unknown": "Inconnu"
+  },
+  "counts": {
+    "adjustments": "{{count}} ajustement(s)",
+    "approveApply": "Approuver et appliquer",
+    "approveFailed": "Impossible d'approuver la session.",
+    "approved": "Inventaire approuvé — {{summary}}.",
+    "approving": "Approbation…",
+    "blindCountHint": "Les quantités attendues sont figées maintenant et masquées pendant le comptage (comptage à l'aveugle).",
+    "cancelCount": "Annuler l'inventaire",
+    "cancelFailed": "Impossible d'annuler la session.",
+    "cancelledDone": "Inventaire annulé — aucun stock n'a été modifié.",
+    "columns": {
+      "progress": "Progression",
+      "started": "Démarré"
+    },
+    "count": "Compter",
+    "counted": "Compté {{qty}}",
+    "detailTitle": "Comptage — {{location}}",
+    "dispositionAdd": "Ajouter au stock (unité trouvée)",
+    "dispositionExclude": "Exclure de ce comptage",
+    "dispositionPlaceholder": "Disposition…",
+    "expected": "Attendu {{qty}}",
+    "fields": {
+      "countedQty": "Quantité comptée",
+      "location": "Emplacement",
+      "locationPlaceholder": "Sélectionnez un emplacement…",
+      "serialsLabel": "Numéros de série présents (un par ligne)"
+    },
+    "loadSessionFailed": "Impossible de charger la session.",
+    "loadSessionsFailed": "Impossible de charger les sessions de comptage.",
+    "noProducts": "Aucun produit suivi à cet emplacement.",
+    "open": "Ouvrir",
+    "pickLocation": "Choisissez un emplacement à compter.",
+    "progressValue": "{{counted}} sur {{total}} comptés",
+    "qtyInvalid": "Le comptage doit être un nombre entier non négatif.",
+    "recordFailed": "Impossible d'enregistrer le comptage.",
+    "recorded": "Comptage enregistré.",
+    "saveCount": "Enregistrer le comptage",
+    "staleBadge": "Périmé — le stock a bougé, recomptez",
+    "staleLines": "{{count}} ligne(s) étaient périmées (le stock a bougé en cours de comptage) et ont été ignorées — recomptez-les.",
+    "startCount": "Démarrer le comptage",
+    "startDialogTitle": "Démarrer un inventaire tournant",
+    "startFailed": "Impossible de démarrer le comptage.",
+    "started": "Comptage démarré — les quantités attendues ont été figées.",
+    "starting": "Démarrage…",
+    "status": {
+      "approved": "Approuvé",
+      "cancelled": "Annulé",
+      "counting": "Comptage en cours",
+      "draft": "Brouillon",
+      "inReview": "En révision"
+    },
+    "submitFailed": "Impossible de soumettre la session.",
+    "submitForReview": "Soumettre pour révision",
+    "submitted": "Soumis pour révision.",
+    "submitting": "Soumission…",
+    "subtitle": "Relevés de stock à l'aveugle par emplacement — les écarts s'appliquent via le registre des mouvements lors de l'approbation.",
+    "title": "Inventaires tournants",
+    "uncountedLines": "{{count}} ligne(s) n'ont jamais été comptées et sont restées inchangées.",
+    "unexpectedPrompt": "Numéro(s) de série inattendu(s) — choisissez quoi faire avant d'approuver :",
+    "unitsAdded": "{{count}} unité(s) ajoutée(s)",
+    "unitsRetired": "{{count}} unité(s) mise(s) au rebut",
+    "varianceLabel": "· écart"
+  },
+  "dashboard": {
+    "actions": {
+      "newPurchaseOrder": "Nouveau bon de commande",
+      "receiveStock": "Réceptionner du stock"
+    },
+    "attention": {
+      "allClear": "Tout est en ordre — rien ne nécessite d'attention pour le moment.",
+      "title": "Nécessite une attention"
+    },
+    "bills": {
+      "acrossBill": "{{total}} sur {{count}} facture",
+      "acrossBills": "{{total}} sur {{count}} factures",
+      "nothingOverdue": "rien en retard",
+      "overdue": "{{count}} en retard · {{total}}",
+      "title": "Factures fournisseurs dues",
+      "viewBills": "Voir les factures"
+    },
+    "kpi": {
+      "arrivingToday": " · {{count}} arrivent aujourd'hui",
+      "marginFoot": "{{margin}} sur {{revenue}}",
+      "marginMtd": "Marge · depuis le début du mois",
+      "onHandUnits": "Unités en stock",
+      "onOrder": "En commande (PO ouverts)",
+      "poCount": "{{count}} PO",
+      "poCountPlural": "{{count}} PO",
+      "serialized": "{{count}} sérialisées",
+      "stockedLocation": "{{count}} emplacement approvisionné",
+      "stockedLocations": "{{count}} emplacements approvisionnés",
+      "totalValue": "Valeur totale de l'inventaire"
+    },
+    "movements": {
+      "bySuffix": " · par {{name}}",
+      "consumed": "Consommé",
+      "empty": "Aucun mouvement récent.",
+      "fullLedger": "Registre complet",
+      "generic": "{{type}} {{qty}} × {{name}}",
+      "itemFallback": "article",
+      "received": "Réceptionné",
+      "rma": "RMA",
+      "serialSuffix": " (SN {{sn}})",
+      "title": "Mouvements de stock récents",
+      "transferred": "Transféré"
+    },
+    "receiving": {
+      "allPos": "Tous les PO",
+      "arriving": "En arrivée",
+      "empty": "Aucun bon de commande ouvert.",
+      "open": "Ouvert",
+      "partial": "Partiel",
+      "receivedOf": "{{received}} sur {{ordered}} réceptionnés",
+      "title": "File de réception",
+      "unit": "{{count}} unité",
+      "units": "{{count}} unités",
+      "vendorFallback": "Fournisseur"
+    },
+    "relTime": {
+      "dayAgo": "il y a {{count}} j",
+      "hrAgo": "il y a {{count}} h",
+      "justNow": "à l'instant",
+      "minAgo": "il y a {{count}} min"
+    },
+    "stockHealthAcross": "État du stock sur {{subtitle}}",
+    "subtitle": {
+      "location": "{{count}} emplacement",
+      "locations": "{{count}} emplacements",
+      "van": " et {{count}} camionnette de terrain",
+      "vans": " et {{count}} camionnettes de terrain"
+    },
+    "thisWeek": {
+      "rmasOpened": "RMA ouverts",
+      "title": "Cette semaine",
+      "transfers": "Transferts entre sites",
+      "unitsDeployed": "Unités déployées",
+      "unitsReceived": "Unités réceptionnées"
+    },
+    "title": "Inventaire",
+    "valueByLocation": {
+      "empty": "Aucun stock disponible.",
+      "grandTotal": "Total général {{total}}",
+      "title": "Valeur de l'inventaire par emplacement"
+    }
+  },
+  "ghostUsage": {
+    "actions": {
+      "dismiss": "Ignorer",
+      "openTicket": "Ouvrir le ticket",
+      "openTicketAddMaterial": "Ouvrir le ticket · ajouter du matériel",
+      "reopen": "Rouvrir"
+    },
+    "ai": {
+      "batchHint": "S'exécute sur jusqu'à {{count}} candidats par passe.",
+      "checking": "Vérification de la disponibilité de l'AI…",
+      "classifiedSummary": "Classés {{classified}} (incertains {{unclear}}, échoués {{failed}}, restants {{remaining}})",
+      "classifyCandidates": "Classer les candidats",
+      "classifying": "Classification…",
+      "didNotRun": "Le tri AI ne s'est pas exécuté{{reason}}.",
+      "requiresEnterprise": "Le tri AI nécessite Enterprise et le module complémentaire AI Assistant.",
+      "runFailed": "Le tri AI a échoué.",
+      "toggleFailed": "Impossible de modifier le paramètre du tri AI.",
+      "toggleLabel": "Tri AI — classer les tickets candidats avec le module complémentaire AI",
+      "toggledOff": "Tri AI désactivé.",
+      "toggledOn": "Tri AI activé."
+    },
+    "candidateCapNote": " (affichage des {{cap}} premiers)",
+    "candidateCount": "{{count}} candidat fantôme",
+    "candidateCountPlural": "{{count}} candidats fantômes",
+    "columns": {
+      "aiVerdict": "Verdict AI",
+      "assignedTo": "Assigné à",
+      "board": "Tableau",
+      "category": "Catégorie",
+      "client": "Client",
+      "closed": "Fermé",
+      "closedBy": "Fermé par",
+      "ticketNumber": "Ticket n°",
+      "title": "Titre"
+    },
+    "disposition": {
+      "confirmed": "Confirmé — déplacé vers la liste de travail.",
+      "dismissed": "Ignoré.",
+      "reopened": "Rouvert."
+    },
+    "filters": {
+      "allBoards": "Tous les tableaux",
+      "allCategories": "Toutes les catégories",
+      "board": "Tableau",
+      "category": "Catégorie"
+    },
+    "funnel": {
+      "closedInWindow": "Fermés dans la période",
+      "ghostCandidates": "Candidats fantômes",
+      "hasMaterials": "Avec matériel",
+      "inHardwareScope": "Dans le périmètre matériel"
+    },
+    "loadError": "Impossible de charger le rapport d'usage fantôme. Essayez Actualiser.",
+    "loading": "Chargement des candidats fantômes…",
+    "noCandidates": "Aucun candidat fantôme — rien ne semble avoir été absorbé.",
+    "runFailed": "Impossible d'exécuter le rapport d'usage fantôme.",
+    "subtitle": "Tickets matériel fermés sans pièces enregistrées — du travail que l'atelier a peut-être absorbé.",
+    "title": "Usage fantôme",
+    "updateFailed": "Impossible de mettre à jour ce ticket.",
+    "verdict": {
+      "hardwareMissing": "Matériel manquant",
+      "noHardware": "Aucun matériel",
+      "unclear": "Incertain"
+    },
+    "worklistTitle": "Confirmé — enregistrez le matériel"
+  },
+  "import_": {
+    "actions": {
+      "import": "Importer",
+      "importRows": "Importer {{count}} lignes",
+      "importing": "Importation…",
+      "validate": "Valider",
+      "validating": "Validation…"
+    },
+    "andMore": "…et {{count}} de plus",
+    "andMoreValidRows": "…et {{count}} autres lignes valides",
+    "apply": {
+      "receipt": "{{count}} réception",
+      "receipts": "{{count}} réceptions",
+      "success": "Importé {{receipts}} ({{units}}, {{value}}) sous « {{label}} ».",
+      "unit": "{{count}} unité",
+      "units": "{{count}} unités"
+    },
+    "chooseFileFirst": "Choisissez d'abord un fichier CSV.",
+    "dialogTitle": "Importer les soldes d'ouverture",
+    "errors": {
+      "headingPlural": "{{count}} erreurs — rien ne sera importé tant que chaque ligne n'est pas correcte :",
+      "headingSingular": "{{count}} erreur — rien ne sera importé tant que chaque ligne n'est pas correcte :"
+    },
+    "fields": {
+      "batchLabel": "Étiquette de lot",
+      "csvFile": "Fichier CSV",
+      "enableTracking": "Activer le suivi de stock pour les produits pas encore suivis"
+    },
+    "importFailed": "Échec de l'importation — rien n'a été écrit.",
+    "intro": {
+      "downloadTemplate": "Télécharger le modèle",
+      "forColumns": "pour connaître les colonnes attendues.",
+      "text": "Constituez le stock initial à partir d'un CSV. Chaque ligne devient une réception réelle dans le registre, marquée de l'étiquette de lot — les lignes comportant un numéro de série deviennent des unités individuelles, celles sans numéro deviennent des quantités en vrac."
+    },
+    "openButton": "Importer les soldes d'ouverture",
+    "readFileFailed": "Impossible de lire le fichier.",
+    "rowPrefix": "Ligne {{row}} : ",
+    "summary": {
+      "bulkQuantity": "Quantité en vrac :",
+      "locations": "Emplacements :",
+      "products": "Produits :",
+      "rows": "Lignes :",
+      "serializedUnits": "Unités sérialisées :",
+      "settingWillEnable": "{{count}} produit sera activé pour le suivi",
+      "settingsWillEnable": "{{count}} produits seront activés pour le suivi",
+      "value": "Valeur :"
+    },
+    "table": {
+      "location": "Emplacement",
+      "product": "Produit",
+      "qty": "Qté",
+      "serial": "N° de série",
+      "unitCost": "Coût unitaire"
+    },
+    "validationFailed": "La validation a échoué."
+  },
+  "kits": {
+    "addComponent": "Ajouter un composant",
+    "addFailed": "Échec de l'ajout",
+    "columns": {
+      "component": "Composant",
+      "sku": "SKU"
+    },
+    "componentAdded": "Composant ajouté",
+    "componentRemoved": "Composant retiré",
+    "componentRequired": "Le composant est requis",
+    "componentsHeading": "Composants — {{name}}",
+    "fields": {
+      "component": "Composant",
+      "componentPlaceholder": "Sélectionnez un produit…"
+    },
+    "loadComponentsFailed": "Échec du chargement des composants",
+    "loadKitsFailed": "Échec du chargement des kits",
+    "manage": "Gérer",
+    "quantityInvalid": "La quantité doit être supérieure à 0",
+    "removeConfirm": "Retirer {{name}} de ce kit ?",
+    "removeFailed": "Échec du retrait",
+    "removeTitle": "Retirer le composant",
+    "title": "Kits"
+  },
+  "loaners": {
+    "clientIdRequired": "L'ID client est requis",
+    "columns": {
+      "client": "Client",
+      "due": "Échéance",
+      "service": "Service",
+      "unitSerial": "Unité / N° de série"
+    },
+    "fields": {
+      "clientId": "ID client",
+      "dueDate": "Date d'échéance",
+      "locationPlaceholder": "Sélectionnez un emplacement…",
+      "restockLocation": "Réapprovisionner vers l'emplacement",
+      "restockingFee": "Frais de réapprovisionnement (facultatif)",
+      "returnLocation": "Retourner à l'emplacement",
+      "unitId": "ID unité",
+      "useCurrentLocation": "Utiliser l'emplacement actuel de l'unité"
+    },
+    "loadFailed": "Échec du chargement des prêts",
+    "loadLocationsFailed": "Impossible de charger les emplacements de stock",
+    "loanDialogTitle": "Prêter une unité",
+    "loanFailed": "Échec du prêt",
+    "loanOut": "Prêter",
+    "loanedOut": "Unité prêtée",
+    "restock": "Réapprovisionner",
+    "restockDialogTitle": "Réapprovisionner le retour en vendable",
+    "restockFailed": "Échec du réapprovisionnement",
+    "restockFeeInvalid": "Les frais de réapprovisionnement doivent être un montant non négatif",
+    "restockReturn": "Réapprovisionner le retour",
+    "restockUnitIdRequired": "L'ID unité est requis pour réapprovisionner",
+    "restocked": "Unité réapprovisionnée en vendable",
+    "return": "Retourner",
+    "returnDialogTitle": "Retourner le prêt",
+    "returnFailed": "Échec du retour",
+    "returnLocationRequired": "L'emplacement de retour est requis",
+    "returned": "Prêt retourné",
+    "returningPrefix": "Retour",
+    "title": "Prêts",
+    "unitIdRequired": "L'ID unité est requis"
+  },
+  "locations": {
+    "addLocation": "Ajouter un emplacement",
+    "addressLabel": "Adresse (facultatif)",
+    "assignedPlaceholder": "À qui appartient cet emplacement ?",
+    "cityPlaceholder": "Ville",
+    "clearSearch": "Effacer la recherche",
+    "columns": {
+      "assignedTo": "Assigné à",
+      "available": "Disponible",
+      "onHand": "En stock",
+      "product": "Produit",
+      "sku": "SKU",
+      "stock": "Stock",
+      "type": "Type"
+    },
+    "count": "{{n}} emplacement",
+    "countPlural": "{{n}} emplacements",
+    "create": "Créer",
+    "created": "Emplacement créé.",
+    "deactivateConfirm": "Désactiver « {{name}} » ? Il n'apparaîtra plus comme destination de stock.",
+    "deactivateFailed": "Impossible de désactiver l'emplacement.",
+    "deactivateTitle": "Désactiver l'emplacement",
+    "deactivated": "Emplacement désactivé.",
+    "default": "Par défaut",
+    "editLocation": "Modifier l'emplacement",
+    "emptyDescription": "Ajoutez un entrepôt, une camionnette ou un bureau pour suivre où se trouve le stock.",
+    "emptyTitle": "Aucun emplacement de stock pour l'instant",
+    "filteredCount": "{{shown}} sur {{total}}",
+    "holdsStockTooltip": "Contient du stock — sortez-le avant de désactiver",
+    "keepActive": "Garder actif",
+    "loadErrorDescription": "Une erreur s'est produite lors du chargement de cette page. Réessayez.",
+    "loadErrorTitle": "Impossible de charger les emplacements",
+    "loadFailed": "Impossible de charger les emplacements.",
+    "makeDefault": "Définir cet emplacement par défaut",
+    "nameRequired": "Le nom de l'emplacement est requis",
+    "noActiveDescription": "Tous les emplacements sont désactivés.",
+    "noActiveTitle": "Aucun emplacement actif",
+    "noMatchTitle": "Aucun emplacement correspondant",
+    "notAssigned": "Non assigné",
+    "nothingOnHand": "Aucun stock disponible à cet emplacement.",
+    "reactivate": "Réactiver",
+    "reactivateFailed": "Impossible de réactiver l'emplacement.",
+    "reactivated": "Emplacement réactivé.",
+    "saveFailed": "Impossible d'enregistrer l'emplacement.",
+    "searchPlaceholder": "Rechercher des emplacements",
+    "selectType": "Sélectionnez un type…",
+    "setDefault": "Définir par défaut",
+    "setDefaultFailed": "Impossible de définir l'emplacement par défaut.",
+    "setDefaultSuccess": "« {{name}} » est désormais l'emplacement par défaut.",
+    "showInactive": "Afficher les inactifs",
+    "showInactiveCount": "Afficher les inactifs ({{n}})",
+    "statePlaceholder": "État",
+    "stock": {
+      "loadFailed": "Impossible de charger le stock de l'emplacement."
+    },
+    "stockAt": "Stock à {{name}}",
+    "stockEmpty": "Vide",
+    "stockSearchPlaceholder": "Rechercher un produit ou un SKU",
+    "stockTitle": "Stock",
+    "streetPlaceholder": "Adresse (rue)",
+    "suitePlaceholder": "Bureau, unité, étage (facultatif)",
+    "title": "Emplacements de stock",
+    "type": {
+      "office": "Bureau",
+      "other": "Autre",
+      "van": "Véhicule",
+      "warehouse": "Entrepôt"
+    },
+    "updated": "Emplacement mis à jour.",
+    "zipPlaceholder": "ZIP"
+  },
+  "margin": {
+    "columns": {
+      "cogs": "COGS",
+      "margin": "Marge",
+      "marginPct": "Marge %",
+      "product": "Produit",
+      "qtySold": "Qté vendue",
+      "revenue": "Chiffre d'affaires"
+    },
+    "empty": "Aucune marge liée aux ventes sur cette période.",
+    "loading": "Chargement de la marge…",
+    "metrics": {
+      "cogs": "COGS",
+      "margin": "Marge",
+      "marginPct": "Marge %",
+      "revenue": "Chiffre d'affaires"
+    },
+    "runFailed": "Impossible d'exécuter le rapport de marge.",
+    "subtitle": "Chiffre d'affaires, coût des marchandises vendues et marge par produit issus des commandes client livrées.",
+    "title": "Rapport de marge"
+  },
+  "poLandedCost": {
+    "actions": {
+      "addEntry": "Ajouter une entrée",
+      "adding": "Ajout…",
+      "applyPending": "Appliquer les entrées en attente",
+      "applying": "Application…"
+    },
+    "addFailed": "Impossible d'ajouter l'entrée.",
+    "allocation": {
+      "value": "Valeur de la ligne"
+    },
+    "amountRequired": "Le montant doit être supérieur à 0.",
+    "applied": "{{amount}} appliqué sur {{count}} ligne(s) — moyennes et coûts unitaires mis à jour.",
+    "appliedLabel": "Appliqué :",
+    "applyFailed": "Impossible d'appliquer les coûts de revient.",
+    "columns": {
+      "allocateBy": "Répartir par",
+      "allocated": "Réparti",
+      "amount": "Montant",
+      "effectiveUnitCost": "Coût unitaire effectif",
+      "product": "Produit",
+      "received": "Réceptionné",
+      "type": "Type"
+    },
+    "costType": {
+      "duty": "Droits de douane",
+      "freight": "Fret",
+      "other": "Autre"
+    },
+    "entryAdded": "Entrée de coût de revient ajoutée.",
+    "fields": {
+      "amount": "Montant ($ {{currency}})"
+    },
+    "loadError": "Impossible de charger les coûts de revient.",
+    "nothingReceived": "Rien de réceptionné pour l'instant — réceptionnez d'abord le PO, puis appliquez.",
+    "nothingToApply": "Rien à appliquer.",
+    "pendingLabel": "En attente :",
+    "previewTitle": "Aperçu de la répartition (entrées en attente)",
+    "removeFailed": "Impossible de retirer l'entrée.",
+    "status": {
+      "applied": "Appliqué",
+      "pending": "En attente"
+    },
+    "title": "Coût de revient",
+    "titleWithPo": "Coût de revient — {{poNumber}}"
+  },
+  "purchaseOrders": {
+    "actions": {
+      "addItem": "Ajouter un article",
+      "create": "Créer",
+      "landedCost": "Coût de revient",
+      "receive": "Réceptionner",
+      "receiving": "Réception…",
+      "submit": "Soumettre"
+    },
+    "addPurchaseOrder": "Ajouter un bon de commande",
+    "allVendors": "Tous les fournisseurs",
+    "amountOnOrder": "{{amount}} en commande",
+    "cancelConfirm": "Êtes-vous sûr de vouloir annuler le bon de commande {{poNumber}} ? Cette action est irréversible.",
+    "cancelFailed": "Impossible d'annuler le bon de commande.",
+    "cancelTitle": "Annuler le bon de commande",
+    "cancelled": "Bon de commande annulé.",
+    "clearFilters": "Effacer les filtres",
+    "columns": {
+      "amount": "Montant",
+      "expected": "Attendu",
+      "poNumber": "Numéro de PO",
+      "product": "Produit",
+      "qty": "Qté",
+      "received": "Réceptionné",
+      "unitCost": "Coût unitaire ($)",
+      "vendor": "Fournisseur"
+    },
+    "count": "{{count}} bon de commande",
+    "countPlural": "{{count}} bons de commande",
+    "createFailed": "Impossible de créer le bon de commande.",
+    "created": "Bon de commande créé.",
+    "currency": {
+      "cad": "CAD — Dollar canadien",
+      "eur": "EUR — Euro",
+      "gbp": "GBP — Livre sterling",
+      "usd": "USD — Dollar américain"
+    },
+    "currencyRequired": "La devise est requise",
+    "emptyDescription": "Créez un bon de commande pour suivre ce qui est commandé auprès de vos fournisseurs.",
+    "emptyTitle": "Aucun bon de commande pour l'instant",
+    "fields": {
+      "currency": "Devise",
+      "expectedDate": "Date prévue",
+      "items": "Articles",
+      "location": "Emplacement",
+      "selectLocation": "Sélectionnez un emplacement…",
+      "selectProduct": "Sélectionnez un produit…",
+      "selectVendor": "Sélectionnez un fournisseur…",
+      "serialNumbers": "Numéros de série (un par ligne)",
+      "vendor": "Fournisseur"
+    },
+    "filteredCount": "{{filtered}} sur {{total}}",
+    "keepPo": "Conserver le bon de commande",
+    "lineFullyReceived": "Cette ligne est entièrement réceptionnée.",
+    "lineQtyRequired": "La quantité de chaque ligne doit être supérieure à 0",
+    "loadError": "Impossible de charger les bons de commande.",
+    "loadErrorDescription": "Une erreur s'est produite lors du chargement de cette page. Réessayez.",
+    "loadErrorTitle": "Impossible de charger les bons de commande",
+    "loadOneFailed": "Impossible de charger le bon de commande.",
+    "loadingPo": "Chargement du bon de commande…",
+    "locationRequired": "L'emplacement est requis",
+    "noLines": "Ce bon de commande ne comporte aucune ligne.",
+    "noMatchTitle": "Aucun bon de commande correspondant",
+    "notFound": "Bon de commande introuvable",
+    "overReceived": "{{quantity}} réceptionné(s). Vous avez maintenant réceptionné plus que ce qui a été commandé.",
+    "productsLoadError": "Impossible de charger les produits.",
+    "qtyRequired": "La quantité doit être supérieure à 0",
+    "receiveFailed": "Impossible de réceptionner cette ligne.",
+    "receiveTitle": "Réceptionner {{poNumber}}",
+    "receiveTitleDefault": "Réceptionner le bon de commande",
+    "receivedOf": "{{received}} sur {{ordered}} réceptionnés",
+    "receivedStatus": "{{quantity}} réceptionné(s). Le bon de commande est maintenant {{status}}.",
+    "searchPlaceholder": "Rechercher un numéro de PO ou un fournisseur",
+    "status": {
+      "allStatuses": "Tous les statuts",
+      "cancelled": "Annulé",
+      "draft": "Brouillon",
+      "open": "Ouvert",
+      "partiallyReceived": "Partiellement réceptionné",
+      "received": "Réceptionné"
+    },
+    "submitFailed": "Impossible de soumettre le bon de commande.",
+    "submitted": "Bon de commande soumis.",
+    "title": "Bons de commande",
+    "unnamedProduct": "Produit sans nom",
+    "vendorRequired": "Le fournisseur est requis",
+    "vendorsLoadError": "Impossible de charger les fournisseurs."
+  },
+  "rma": {
+    "caseOpened": "Dossier RMA ouvert.",
+    "columns": {
+      "client": "Client",
+      "daysRemaining": "Jours restants",
+      "dueDate": "Date d'échéance",
+      "reason": "Motif",
+      "returnedUnit": "Unité retournée",
+      "type": "Type",
+      "vendor": "Fournisseur"
+    },
+    "deadUnitsOwed": "Unités défectueuses dues",
+    "fields": {
+      "location": "Emplacement",
+      "locationPlaceholder": "Sélectionnez un emplacement…",
+      "reason": "Motif",
+      "returnedUnitId": "ID de l'unité retournée",
+      "rmaType": "Type de RMA",
+      "vendor": "Fournisseur",
+      "vendorPlaceholder": "Sélectionnez un fournisseur…",
+      "vendorRef": "Référence RMA du fournisseur"
+    },
+    "loadCasesFailed": "Impossible de charger les dossiers RMA.",
+    "loadLocationsVendorsFailed": "Impossible de charger les emplacements et les fournisseurs.",
+    "openFailed": "Impossible d'ouvrir le RMA.",
+    "openRma": "Ouvrir un RMA",
+    "pickLocation": "Choisissez un emplacement.",
+    "pickVendor": "Choisissez un fournisseur.",
+    "receiveFailed": "Impossible de réceptionner le retour.",
+    "receiveReturn": "Réceptionner le retour",
+    "receiving": "Réception…",
+    "returnReceived": "Retour réceptionné.",
+    "returnedUnitRequired": "L'ID de l'unité retournée est requis.",
+    "sendToVendor": "Envoyer au fournisseur",
+    "sendVendorFailed": "Impossible d'envoyer au fournisseur.",
+    "sending": "Envoi…",
+    "sentToVendor": "Envoyé au fournisseur.",
+    "title": "RMA",
+    "types": {
+      "advanceReplacement": "Remplacement anticipé",
+      "standard": "Standard"
+    }
+  },
+  "salesOrders": {
+    "actions": {
+      "addLine": "Ajouter une ligne",
+      "confirmShipment": "Confirmer l'expédition",
+      "confirming": "Confirmation…",
+      "createBackorderPo": "Créer un PO brouillon pour le reliquat",
+      "createDropShipPo": "Créer un PO en livraison directe",
+      "createPo": "Créer un PO",
+      "creating": "Création…",
+      "document": "Document",
+      "emailConfirmation": "Envoyer la confirmation au client par e-mail…",
+      "fulfill": "Livrer",
+      "fulfilling": "Livraison…",
+      "generateInvoice": "Générer la facture",
+      "invoicing": "Facturation…",
+      "reopenToDraft": "Rouvrir en brouillon",
+      "reopening": "Réouverture…"
+    },
+    "addSalesOrder": "Ajouter une commande client",
+    "allocationMode": {
+      "hard": "Ferme",
+      "soft": "Souple"
+    },
+    "availabilityOk": "OK",
+    "backorderBadge": "Reliquat {{shortfall}}",
+    "billsOnFulfillment": "Facturé à la livraison",
+    "cancelDialog": {
+      "confirm": "Annuler la commande client",
+      "keep": "Conserver la commande",
+      "message": "Annuler la commande client {{number}} ? Cette action est irréversible.",
+      "title": "Annuler la commande client"
+    },
+    "cancelFailed": "Échec de l'annulation",
+    "cancelled": "Commande client annulée",
+    "clientRequired": "Le client est requis",
+    "columns": {
+      "client": "Client",
+      "currency": "Devise",
+      "invoiceMode": "Mode de facturation",
+      "soNumber": "Numéro de SO"
+    },
+    "confirmFailed": "Échec de la confirmation",
+    "confirmShipmentError": "Impossible de confirmer l'expédition.",
+    "confirmed": "Commande client confirmée",
+    "createDraftPoError": "Impossible de créer le PO brouillon.",
+    "createDropShipPoError": "Impossible de créer le PO en livraison directe.",
+    "createPoDialog": {
+      "note": "Commande la quantité totale de la ligne ({{quantity}}) auprès du fournisseur, expédiée directement au client. Une fois que le fournisseur a expédié, utilisez « Confirmer l'expédition » pour marquer la ligne comme livrée.",
+      "title": "Créer un PO en livraison directe — {{name}}",
+      "vendor": "Fournisseur",
+      "vendorPlaceholder": "Sélectionnez un fournisseur…"
+    },
+    "created": "Commande client créée",
+    "currencyRequired": "Le code de devise est requis",
+    "detailTitle": "Commande client {{number}}",
+    "detailTitleFallback": "Commande client",
+    "documentFailed": "Impossible de générer le document.",
+    "documents": {
+      "packingSlip": "Bon de livraison",
+      "pickList": "Liste de prélèvement",
+      "salesOrder": "Confirmation de commande"
+    },
+    "draftPoCreated": "PO brouillon créé : {{numbers}}",
+    "draftPosCreated": "PO brouillons créés : {{numbers}}",
+    "dropShipBadge": "Livraison directe",
+    "dropShipDialog": {
+      "addSerial": "Ajouter un numéro de série",
+      "confirmNote": "Confirmez que le fournisseur a expédié les {{count}} unité(s) restante(s) au client. La ligne sera marquée comme livrée ; le stock disponible n'est jamais modifié.",
+      "macPlaceholder": "MAC (facultatif)",
+      "serialPlaceholder": "Numéro de série",
+      "serialsNote": "Saisissez les numéros de série expédiés par le fournisseur (avec le MAC le cas échéant). Les unités sont enregistrées comme livrées au client — le stock disponible n'est jamais modifié.",
+      "title": "Confirmer l'expédition du fournisseur — {{name}}"
+    },
+    "dropShipPoCreated": "PO en livraison directe {{number}} créé — confirmez l'expédition une fois que le fournisseur a expédié.",
+    "emailDialog": {
+      "confirm": "Envoyer l'e-mail",
+      "message": "Envoyer la confirmation de commande pour {{number}} au contact de facturation du client par e-mail ?",
+      "title": "Envoyer la confirmation de commande par e-mail"
+    },
+    "emailFailed": "Impossible d'envoyer la confirmation par e-mail.",
+    "emailSuccess": "Confirmation envoyée par e-mail à {{recipients}}",
+    "enterSerial": "Saisissez au moins un numéro de série.",
+    "fields": {
+      "allocationMode": "Mode d'allocation",
+      "currencyCode": "Code de devise",
+      "invoiceMode": "Mode de facturation",
+      "lines": "Lignes",
+      "qty": "Qté",
+      "serviceId": "ID de service",
+      "unitPrice": "Prix unitaire ($)"
+    },
+    "fromQuote": "Depuis le devis",
+    "fulfillDialog": {
+      "allocatedToThis": "Alloué à cette commande",
+      "hardHeldMany": "{{count}} unités sont réservées fermement par d'autres commandes et ne sont pas affichées.",
+      "hardHeldOne": "{{count}} unité est réservée fermement par d'autres commandes et n'est pas affichée.",
+      "loadingUnits": "Chargement des unités…",
+      "noUnits": "Aucune unité disponible.",
+      "remaining": "{{remaining}} sur {{ordered}} restants.",
+      "searchPlaceholder": "Rechercher un numéro de série ou un MAC",
+      "selectedMany": "{{count}} unités sélectionnées",
+      "selectedOne": "{{count}} unité sélectionnée",
+      "shortStockNote": "Un stock insuffisant génère un avertissement mais ne bloque jamais — cohérent avec la facturation automatique des matériels.",
+      "softAllocatedOther": "Alloué de façon souple à une autre commande",
+      "sourceLocation": "Emplacement source",
+      "title": "Livrer — {{name}}"
+    },
+    "fulfilledUnits": "{{count}} unité(s) livrée(s).",
+    "fulfillmentFailed": "Échec de la livraison.",
+    "invoiceColumns": {
+      "amount": "Montant",
+      "created": "Créée",
+      "invoice": "Facture"
+    },
+    "invoiceGenFailed": "Échec de la génération de la facture.",
+    "invoiceMode": {
+      "manual": "Manuel",
+      "onFulfillment": "À la livraison"
+    },
+    "invoicedItems": "{{count}} article(s) facturé(s).",
+    "invoices": "Factures",
+    "invoicingFailed": "Échec de la facturation : {{error}}. Utilisez « Générer la facture » pour réessayer.",
+    "lineColumns": {
+      "availability": "Disponibilité",
+      "fulfilled": "Livré",
+      "invoiced": "Facturé",
+      "ordered": "Commandé",
+      "product": "Produit",
+      "unitPrice": "Prix unitaire"
+    },
+    "lineQtyPositive": "La quantité de chaque ligne doit être supérieure à 0",
+    "loadDetailError": "Impossible de charger la commande client.",
+    "loadError": "Échec du chargement des commandes client",
+    "loadUnitsError": "Impossible de charger les unités disponibles.",
+    "loadVendorsError": "Impossible de charger les fournisseurs.",
+    "manualInvoicing": "Facturation manuelle",
+    "nothingBackordered": "Aucun reliquat.",
+    "nothingToInvoice": "Plus rien à facturer.",
+    "onlyRemaining": "Il ne reste que {{remaining}} sur cette ligne.",
+    "pickVendor": "Choisissez le fournisseur qui expédiera cette ligne.",
+    "productDefaultLocation": "Emplacement par défaut du produit",
+    "qtyPositiveInteger": "La quantité doit être un nombre entier positif.",
+    "reopenError": "Impossible de rouvrir la commande client.",
+    "reopened": "Commande client rouverte — elle est de nouveau à l'état de brouillon.",
+    "selectUnit": "Sélectionnez au moins une unité.",
+    "shipmentConfirmed": "Expédition confirmée — {{count}} unité(s) livrée(s).",
+    "status": {
+      "cancelled": "Annulée",
+      "closed": "Clôturée",
+      "confirmed": "Confirmée",
+      "draft": "Brouillon",
+      "fulfilled": "Livrée",
+      "invoiced": "Facturée",
+      "partiallyFulfilled": "Partiellement livrée"
+    },
+    "title": "Commandes client",
+    "unassignedBackorder": "{{count}} ligne(s) en reliquat n'ont pas de fournisseur préféré — créez ces PO manuellement."
+  },
+  "stock": {
+    "actions": {
+      "receive": "Réceptionner"
+    },
+    "badge": {
+      "serial": "Sérialisé"
+    },
+    "clearFilters": "Effacer les filtres",
+    "columns": {
+      "available": "Disponible",
+      "location": "Emplacement",
+      "onHand": "En stock",
+      "product": "Produit",
+      "sku": "SKU"
+    },
+    "empty": {
+      "noMatchTitle": "Aucun produit correspondant",
+      "noProductsDescription": "Activez le suivi d'inventaire pour un produit dans Facturation → Produits, puis réceptionnez du stock.",
+      "noProductsTitle": "Aucun produit ne suit encore le stock"
+    },
+    "fields": {
+      "location": "Emplacement",
+      "product": "Produit",
+      "unitCost": "Coût unitaire (USD)"
+    },
+    "filteredCount": "{{shown}} sur {{total}} produits",
+    "levels": {
+      "empty": "Aucun stock enregistré pour ce produit.",
+      "loadFailed": "Impossible de charger les niveaux de stock.",
+      "loading": "Chargement du stock…",
+      "title": "Niveaux de stock — {{name}}"
+    },
+    "loadLocationsFailed": "Impossible de charger les emplacements.",
+    "loadProductsFailed": "Impossible de charger les produits.",
+    "needsAttention": "Nécessite une attention",
+    "rebuild": {
+      "button": "Reconstruire les caches de stock",
+      "consistent": "{{products}} produits vérifiés — les caches sont déjà cohérents.",
+      "correctedMany": "{{products}} produits vérifiés et {{n}} valeurs corrigées.",
+      "correctedOne": "{{products}} produits vérifiés et {{n}} valeur corrigée.",
+      "failed": "Impossible de reconstruire les caches de stock.",
+      "inProgress": "Reconstruction…"
+    },
+    "receive": {
+      "costNonNegative": "Le coût unitaire ne peut pas être négatif.",
+      "failed": "Impossible de réceptionner le stock.",
+      "inProgress": "Réception…",
+      "pickLocation": "Choisissez un emplacement.",
+      "pickProduct": "Choisissez un produit.",
+      "qtyPositive": "La quantité doit être un nombre entier positif.",
+      "selectLocation": "Sélectionnez un emplacement…",
+      "selectProduct": "Sélectionnez un produit…",
+      "serializedHint": "Réceptionnez les produits sérialisés un numéro de série à la fois.",
+      "success": "Stock réceptionné."
+    },
+    "receiveStock": "Réceptionner du stock",
+    "searchPlaceholder": "Rechercher des produits ou un SKU",
+    "status": {
+      "low": "Faible",
+      "out": "Épuisé",
+      "wordSite": "{{word}} · {{n}} site",
+      "wordSites": "{{word}} · {{n}} sites"
+    },
+    "summary": {
+      "lowSuffix": " · {{n}} faible",
+      "outSuffix": " · {{n}} épuisé",
+      "productMany": "{{n}} produits",
+      "productOne": "{{n}} produit"
+    },
+    "title": "Stock",
+    "unnamedProduct": "Produit sans nom"
+  },
+  "stockUnits": {
+    "columns": {
+      "client": "Client",
+      "location": "Emplacement",
+      "macAddress": "Adresse MAC",
+      "serialNumber": "Numéro de série",
+      "warrantyExpires": "Expiration de la garantie"
+    },
+    "detail": {
+      "delivered": "Livrée",
+      "location": "Emplacement",
+      "mac": "MAC",
+      "received": "Réceptionnée",
+      "serial": "Numéro de série",
+      "unitCost": "Coût unitaire"
+    },
+    "exportCsv": "Exporter CSV",
+    "history": "Historique",
+    "historyLoadFailed": "Échec du chargement de l'historique de l'unité",
+    "historyNotFound": "Historique de l'unité introuvable",
+    "loadFailed": "Échec du chargement des unités",
+    "noMovements": "Aucun mouvement enregistré.",
+    "qty": "Qté",
+    "searchBy": "Rechercher par",
+    "searchFailed": "Échec de la recherche",
+    "searchMode": {
+      "mac": "Adresse MAC",
+      "serial": "Numéro de série"
+    },
+    "searchPlaceholder": {
+      "mac": "Adresse MAC…",
+      "serial": "Numéro de série…"
+    },
+    "searchTerm": "Terme de recherche",
+    "title": "Unités en stock",
+    "unitHistoryTitle": "Historique de l'unité",
+    "unitTitle": "Unité {{id}}"
+  },
+  "transfers": {
+    "addLine": "Ajouter une ligne",
+    "cancelConfirm": "Êtes-vous sûr de vouloir annuler ce transfert ? Cette action est irréversible.",
+    "cancelFailed": "Échec de l'annulation",
+    "cancelTitle": "Annuler le transfert",
+    "cancelled": "Transfert annulé",
+    "columns": {
+      "atSource": "À la source",
+      "dispatched": "Expédié",
+      "from": "De",
+      "loadQty": "Qté chargée",
+      "needed": "Nécessaire",
+      "product": "Produit",
+      "received": "Réceptionné",
+      "serials": "Numéros de série",
+      "to": "À"
+    },
+    "compute": "Calculer",
+    "computeFailed": "Échec du calcul de la liste de chargement",
+    "computing": "Calcul...",
+    "dash": "-",
+    "dispatch": "Expédier",
+    "dispatchFailed": "Échec de l'expédition",
+    "dispatchLoad": "Expédier le chargement",
+    "dispatchTransfer": "Expédier le transfert",
+    "dispatched": "Transfert expédié",
+    "dispatching": "Expédition…",
+    "dispatchingLoad": "Expédition...",
+    "fifoPicked": "Prélevé en FIFO",
+    "fromLocation": "Emplacement d'origine",
+    "fromSource": "De (étagère source)",
+    "keepTransfer": "Conserver le transfert",
+    "lineRequired": "Au moins une ligne avec un service est requise",
+    "linesLabel": "Lignes *",
+    "loadDestination": "Charger (destination)",
+    "loadDispatchedMany": "Chargement expédié ({{n}} lignes)",
+    "loadDispatchedOne": "Chargement expédié ({{n}} ligne)",
+    "loadFailed": "Échec du chargement des transferts",
+    "loadList": "Liste de chargement",
+    "loadLocationsFailed": "Échec du chargement des emplacements",
+    "loadQtyRequired": "Au moins une quantité de chargement est requise",
+    "locationsMustDiffer": "La source et la destination doivent être différentes",
+    "locationsRequired": "Les emplacements source et destination sont requis",
+    "noLowStock": "Aucune ligne en stock faible trouvée pour cette destination.",
+    "noSerials": "Aucun numéro de série",
+    "receive": "Réceptionner",
+    "receiveFailed": "Échec de la réception",
+    "received": "Transfert réceptionné",
+    "selectDestination": "Sélectionnez la destination...",
+    "selectLocation": "Sélectionnez un emplacement…",
+    "selectSource": "Sélectionnez la source...",
+    "serviceId": "ID de service",
+    "shortAtSource": "manque {{n}} à la source",
+    "title": "Transferts",
+    "toLocation": "Emplacement de destination",
+    "vanLoadList": "Liste de chargement de la camionnette"
+  },
+  "vendorBills": {
+    "actions": {
+      "export": "Exporter",
+      "exporting": "Exportation…",
+      "markPaid": "Marquer comme payée",
+      "open": "Ouvrir",
+      "void": "Annuler"
+    },
+    "addBill": "Ajouter une facture",
+    "allStatuses": "Tous les statuts",
+    "billCreated": "Facture créée (brouillon).",
+    "billLoadError": "Impossible de charger la facture.",
+    "billNumberRequired": "Saisissez le numéro de facture du fournisseur.",
+    "billOpened": "Facture ouverte.",
+    "billPaid": "Facture marquée comme payée.",
+    "billVoided": "Facture annulée.",
+    "billedAbove": "Facturé au-dessus de la valeur réceptionnée de {{amount}}.",
+    "billedBelow": "Facturé en dessous de la valeur réceptionnée de {{amount}}.",
+    "columns": {
+      "amount": "Montant",
+      "billNumber": "N° de facture",
+      "due": "Échéance",
+      "line": "Ligne",
+      "po": "PO",
+      "qty": "Qté",
+      "unitCost": "Coût unitaire",
+      "vendor": "Fournisseur",
+      "vsPo": "vs PO"
+    },
+    "createBill": "Créer la facture",
+    "createError": "Impossible de créer la facture.",
+    "createHint": "La date d'échéance est déduite des conditions de paiement du fournisseur. Les factures préremplies à partir d'un PO reprennent les quantités et coûts réceptionnés.",
+    "creating": "Création…",
+    "detailDue": "Échéance {{date}}",
+    "detailPo": "PO {{number}}",
+    "dialog": {
+      "billTitle": "Facture",
+      "createTitle": "Ajouter une facture fournisseur",
+      "detailTitle": "Facture {{number}} — {{vendor}}"
+    },
+    "export": {
+      "error": "Échec de l'exportation",
+      "exported": "Exportée",
+      "notExported": "Non exportée",
+      "pending": "Exportation en attente"
+    },
+    "exportError": "Impossible d'exporter la facture.",
+    "exportFailed": "Échec de l'exportation.",
+    "exportQueued": "Exportation mise en file d'attente.",
+    "exportedToAccounting": "Exportée vers la comptabilité.",
+    "fields": {
+      "billNumber": "Numéro de facture du fournisseur",
+      "noPoPlaceholder": "Aucun PO — facture vierge",
+      "prefillPo": "Préremplir à partir d'un bon de commande (facultatif)",
+      "vendor": "Fournisseur",
+      "vendorPlaceholder": "Sélectionnez un fournisseur…"
+    },
+    "loadError": "Impossible de charger les factures fournisseurs.",
+    "matchesPo": "correspond au PO",
+    "matchesPoValue": "Correspond à la valeur réceptionnée du PO.",
+    "pickVendor": "Choisissez un fournisseur (ou un PO à partir duquel préremplir).",
+    "status": {
+      "draft": "Brouillon",
+      "open": "Ouverte",
+      "paid": "Payée",
+      "void": "Annulée"
+    },
+    "subtitle": "Comptabilité fournisseurs allégée : suivez ce que les fournisseurs ont facturé par rapport à ce que vous avez réceptionné. Sans grand livre — marquez comme payée manuellement.",
+    "title": "Factures fournisseurs",
+    "updateError": "Impossible de mettre à jour la facture."
+  },
+  "vendorPriceList": {
+    "columns": {
+      "cost": "Coût",
+      "leadTime": "Délai de livraison",
+      "product": "Produit",
+      "vendorSku": "SKU fournisseur"
+    },
+    "costNegative": "Le coût ne peut pas être négatif.",
+    "dialogTitle": "Liste de prix — {{name}}",
+    "emptyState": "Aucune offre pour l'instant — ajoutez ci-dessous les références du fournisseur et les coûts contractuels.",
+    "fields": {
+      "cost": "Coût ($)",
+      "currency": "Devise",
+      "leadTime": "Délai de livraison (jours)",
+      "preferred": "Fournisseur préféré pour ce produit (détermine les suggestions de réapprovisionnement)",
+      "product": "Produit",
+      "productPlaceholder": "Sélectionnez un produit…",
+      "vendorSku": "SKU fournisseur"
+    },
+    "leadTimeDays": "{{days}} j",
+    "loadError": "Impossible de charger la liste de prix.",
+    "offerRemoved": "Offre retirée.",
+    "offerSaved": "Offre enregistrée.",
+    "pickProduct": "Choisissez un produit.",
+    "preferred": "Préféré",
+    "removeError": "Impossible de retirer l'offre.",
+    "saveError": "Impossible d'enregistrer l'offre.",
+    "saveOffer": "Enregistrer l'offre",
+    "title": "Liste de prix",
+    "unnamedProduct": "Produit sans nom"
+  },
+  "vendors": {
+    "addVendor": "Ajouter un fournisseur",
+    "columns": {
+      "contact": "Contact",
+      "email": "E-mail",
+      "paymentTerms": "Conditions de paiement",
+      "vendor": "Fournisseur"
+    },
+    "created": "Fournisseur créé",
+    "deactivateConfirm": "Êtes-vous sûr de vouloir désactiver {{name}} ? Ce fournisseur ne sera plus disponible pour de nouveaux bons de commande.",
+    "deactivateFailed": "Échec de la désactivation",
+    "deactivateTitle": "Désactiver le fournisseur",
+    "deactivated": "Fournisseur désactivé",
+    "editVendor": "Modifier le fournisseur",
+    "fields": {
+      "accountNumber": "Numéro de compte",
+      "contactName": "Nom du contact",
+      "email": "E-mail",
+      "name": "Nom du fournisseur",
+      "paymentTerms": "Conditions de paiement",
+      "phone": "Téléphone"
+    },
+    "loadError": "Échec du chargement des fournisseurs",
+    "nameRequired": "Le nom du fournisseur est requis",
+    "priceList": "Liste de prix",
+    "title": "Fournisseurs",
+    "updated": "Fournisseur mis à jour"
+  },
+  "writeOffs": {
+    "badges": {
+      "adjustment": "Ajustement",
+      "countCorrection": "Correction d'inventaire",
+      "retired": "Mis au rebut"
+    },
+    "byUser": "Par utilisateur",
+    "columns": {
+      "by": "Par",
+      "events": "Événements",
+      "foundAdded": "Trouvé / ajouté",
+      "location": "Emplacement",
+      "net": "Net",
+      "product": "Produit",
+      "qty": "Qté",
+      "reason": "Motif",
+      "type": "Type",
+      "user": "Utilisateur",
+      "value": "Valeur",
+      "when": "Quand",
+      "writtenOff": "Radié"
+    },
+    "eventsTitle": "Événements",
+    "runFailed": "Impossible d'exécuter le rapport de radiation.",
+    "subtitle": "Chaque dépréciation de stock, mise au rebut et correction d'inventaire — avec le nom de la personne qui l'a validée. Adossé au registre ; rien ici ne peut être modifié après coup.",
+    "title": "Radiations et ajustements",
+    "totals": {
+      "foundAdded": "Trouvé / ajouté : ",
+      "net": "Net : ",
+      "writtenOff": "Radié : "
+    },
+    "truncatedNotice": "Affichage des {{count}} événements les plus récents — les totaux ci-dessus couvrent toujours l'ensemble de la période. Réduisez la plage de dates pour tout voir en détail."
+  }
+}

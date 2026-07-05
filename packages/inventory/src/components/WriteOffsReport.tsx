@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { writeOffReport, type WriteOffReportData, type WriteOffRow, type WriteOffByUser } from '../actions';
 
 /**
@@ -24,6 +25,7 @@ const money = (cents: number): string => {
 const dateInputValue = (iso: string): string => iso.slice(0, 10);
 
 export function WriteOffsReport({ initialData }: { initialData: WriteOffReportData | null }) {
+  const { t } = useTranslation('features/inventory');
   const [data, setData] = useState<WriteOffReportData | null>(initialData);
   const [from, setFrom] = useState(initialData ? dateInputValue(initialData.from) : '');
   const [to, setTo] = useState(initialData ? dateInputValue(initialData.to) : '');
@@ -34,27 +36,27 @@ export function WriteOffsReport({ initialData }: { initialData: WriteOffReportDa
     try {
       setData(await writeOffReport({ from: from || null, to: to || null }));
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't run the write-off report.");
+      toast.error(e?.message || t('writeOffs.runFailed', "Couldn't run the write-off report."));
     } finally {
       setLoading(false);
     }
-  }, [from, to]);
+  }, [from, to, t]);
 
   const userColumns: ColumnDefinition<WriteOffByUser>[] = [
-    { title: 'User', dataIndex: 'name', render: (v: any, rec) => v || rec.user_id || 'Unknown' },
-    { title: 'Events', dataIndex: 'events' },
+    { title: t('writeOffs.columns.user', 'User'), dataIndex: 'name', render: (v: any, rec) => v || rec.user_id || t('common.unknown', 'Unknown') },
+    { title: t('writeOffs.columns.events', 'Events'), dataIndex: 'events' },
     {
-      title: 'Written off',
+      title: t('writeOffs.columns.writtenOff', 'Written off'),
       dataIndex: 'losses_cents',
       render: (v: any) => <span className="text-red-700 tabular-nums">{money(Number(v))}</span>,
     },
     {
-      title: 'Found / added',
+      title: t('writeOffs.columns.foundAdded', 'Found / added'),
       dataIndex: 'gains_cents',
       render: (v: any) => <span className="text-green-700 tabular-nums">{money(Number(v))}</span>,
     },
     {
-      title: 'Net',
+      title: t('writeOffs.columns.net', 'Net'),
       dataIndex: 'net_cents',
       render: (v: any) => (
         <span className={`tabular-nums ${Number(v) < 0 ? 'text-red-700' : 'text-gray-700'}`}>{money(Number(v))}</span>
@@ -64,35 +66,35 @@ export function WriteOffsReport({ initialData }: { initialData: WriteOffReportDa
 
   const rowColumns: ColumnDefinition<WriteOffRow>[] = [
     {
-      title: 'When',
+      title: t('writeOffs.columns.when', 'When'),
       dataIndex: 'created_at',
       render: (v: any) => new Date(v).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
     },
     {
-      title: 'Product',
+      title: t('writeOffs.columns.product', 'Product'),
       dataIndex: 'service_name',
       render: (v: any, rec) => (
         <div>
-          <div>{v || '—'}</div>
+          <div>{v || t('common.emptyValue', '—')}</div>
           {rec.serial_number && <div className="text-xs text-gray-500 font-mono">{rec.serial_number}</div>}
         </div>
       ),
     },
-    { title: 'Location', dataIndex: 'location_name', render: (v: any) => v || '—' },
+    { title: t('writeOffs.columns.location', 'Location'), dataIndex: 'location_name', render: (v: any) => v || t('common.emptyValue', '—') },
     {
-      title: 'Type',
+      title: t('writeOffs.columns.type', 'Type'),
       dataIndex: 'movement_type',
       render: (v: any, rec) =>
         rec.count_session_id ? (
-          <Badge variant="warning" size="sm">Count correction</Badge>
+          <Badge variant="warning" size="sm">{t('writeOffs.badges.countCorrection', 'Count correction')}</Badge>
         ) : v === 'retire' ? (
-          <Badge variant="error" size="sm">Retired</Badge>
+          <Badge variant="error" size="sm">{t('writeOffs.badges.retired', 'Retired')}</Badge>
         ) : (
-          <Badge variant="secondary" size="sm">Adjustment</Badge>
+          <Badge variant="secondary" size="sm">{t('writeOffs.badges.adjustment', 'Adjustment')}</Badge>
         ),
     },
     {
-      title: 'Qty',
+      title: t('writeOffs.columns.qty', 'Qty'),
       dataIndex: 'quantity_delta',
       render: (v: any) => (
         <span className={`tabular-nums ${Number(v) < 0 ? 'text-red-700' : 'text-green-700'}`}>
@@ -101,31 +103,30 @@ export function WriteOffsReport({ initialData }: { initialData: WriteOffReportDa
       ),
     },
     {
-      title: 'Value',
+      title: t('writeOffs.columns.value', 'Value'),
       dataIndex: 'value_cents',
       render: (v: any) => (
         <span className={`tabular-nums ${Number(v) < 0 ? 'text-red-700' : 'text-green-700'}`}>{money(Number(v))}</span>
       ),
     },
-    { title: 'Reason', dataIndex: 'reason', render: (v: any) => <span className="text-xs">{v || '—'}</span> },
-    { title: 'By', dataIndex: 'performed_by_name', render: (v: any, rec) => v || rec.performed_by || '—' },
+    { title: t('writeOffs.columns.reason', 'Reason'), dataIndex: 'reason', render: (v: any) => <span className="text-xs">{v || t('common.emptyValue', '—')}</span> },
+    { title: t('writeOffs.columns.by', 'By'), dataIndex: 'performed_by_name', render: (v: any, rec) => v || rec.performed_by || t('common.emptyValue', '—') },
   ];
 
   return (
     <div className="p-6 space-y-4" id="write-offs-page">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold">Write-offs &amp; adjustments</h1>
+          <h1 className="text-2xl font-semibold">{t('writeOffs.title', 'Write-offs & adjustments')}</h1>
           <p className="text-sm text-gray-500">
-            Every stock write-down, retirement, and count correction — with the name that signed it. Ledger-backed;
-            nothing here can be edited after the fact.
+            {t('writeOffs.subtitle', 'Every stock write-down, retirement, and count correction — with the name that signed it. Ledger-backed; nothing here can be edited after the fact.')}
           </p>
         </div>
         <div className="flex items-end gap-2">
-          <Input id="write-offs-from" label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          <Input id="write-offs-to" label="To" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          <Input id="write-offs-from" label={t('common.from', 'From')} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <Input id="write-offs-to" label={t('common.to', 'To')} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           <Button id="write-offs-run" onClick={run} disabled={loading}>
-            {loading ? 'Running…' : 'Run'}
+            {loading ? t('common.running', 'Running…') : t('common.run', 'Run')}
           </Button>
         </div>
       </div>
@@ -134,15 +135,15 @@ export function WriteOffsReport({ initialData }: { initialData: WriteOffReportDa
         <>
           <div className="flex gap-6 text-sm" id="write-offs-totals">
             <div>
-              <span className="text-gray-500">Written off: </span>
+              <span className="text-gray-500">{t('writeOffs.totals.writtenOff', 'Written off: ')}</span>
               <span className="font-semibold text-red-700 tabular-nums">{money(data.total_losses_cents)}</span>
             </div>
             <div>
-              <span className="text-gray-500">Found / added: </span>
+              <span className="text-gray-500">{t('writeOffs.totals.foundAdded', 'Found / added: ')}</span>
               <span className="font-semibold text-green-700 tabular-nums">{money(data.total_gains_cents)}</span>
             </div>
             <div>
-              <span className="text-gray-500">Net: </span>
+              <span className="text-gray-500">{t('writeOffs.totals.net', 'Net: ')}</span>
               <span className={`font-semibold tabular-nums ${data.net_cents < 0 ? 'text-red-700' : 'text-gray-800'}`}>
                 {money(data.net_cents)}
               </span>
@@ -150,16 +151,15 @@ export function WriteOffsReport({ initialData }: { initialData: WriteOffReportDa
           </div>
 
           <div>
-            <h2 className="text-sm font-semibold text-gray-700 mb-1">By user</h2>
+            <h2 className="text-sm font-semibold text-gray-700 mb-1">{t('writeOffs.byUser', 'By user')}</h2>
             <DataTable id="write-offs-by-user-table" data={data.by_user} columns={userColumns} />
           </div>
 
           <div>
-            <h2 className="text-sm font-semibold text-gray-700 mb-1">Events</h2>
+            <h2 className="text-sm font-semibold text-gray-700 mb-1">{t('writeOffs.eventsTitle', 'Events')}</h2>
             {data.truncated && (
               <p className="text-xs text-amber-700 mb-1">
-                Showing the most recent {data.rows.length} events — the totals above still cover the whole period.
-                Narrow the date range to see everything itemized.
+                {t('writeOffs.truncatedNotice', 'Showing the most recent {{count}} events — the totals above still cover the whole period. Narrow the date range to see everything itemized.', { count: data.rows.length })}
               </p>
             )}
             <DataTable id="write-offs-events-table" data={data.rows} columns={rowColumns} />

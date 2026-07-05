@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ChevronDown } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import type {
   ColumnDefinition,
@@ -59,12 +60,13 @@ async function downloadSalesOrderDocument(
   soNumber: string,
   documentType: string = 'sales-order',
   fileSuffix: string = '',
+  t: ReturnType<typeof useTranslation>['t'],
 ): Promise<void> {
   try {
     const query = documentType === 'sales-order' ? '' : `?type=${documentType}`;
     const res = await fetch(`/api/inventory/sales-orders/${soId}/document${query}`);
     if (!res.ok) {
-      let message = "Couldn't generate the document.";
+      let message = t('salesOrders.documentFailed', "Couldn't generate the document.");
       try {
         const body = await res.json();
         if (body?.error) message = body.error;
@@ -84,27 +86,18 @@ async function downloadSalesOrderDocument(
     a.remove();
     URL.revokeObjectURL(url);
   } catch {
-    toast.error("Couldn't generate the document.");
+    toast.error(t('salesOrders.documentFailed', "Couldn't generate the document."));
   }
 }
 
-const INVOICE_MODE_OPTIONS: { value: SalesOrderInvoiceMode; label: string }[] = [
-  { value: 'on_fulfillment', label: 'On fulfillment' },
-  { value: 'manual', label: 'Manual' },
-];
-const ALLOCATION_MODE_OPTIONS: { value: SalesOrderAllocationMode; label: string }[] = [
-  { value: 'soft', label: 'Soft' },
-  { value: 'hard', label: 'Hard' },
-];
-
-const STATUS_BADGES: Record<string, { label: string; variant: BadgeVariant }> = {
-  draft: { label: 'Draft', variant: 'secondary' },
-  confirmed: { label: 'Confirmed', variant: 'warning' },
-  partially_fulfilled: { label: 'Partially fulfilled', variant: 'warning' },
-  fulfilled: { label: 'Fulfilled', variant: 'success' },
-  invoiced: { label: 'Invoiced', variant: 'success' },
-  closed: { label: 'Closed', variant: 'success' },
-  cancelled: { label: 'Cancelled', variant: 'error' },
+const STATUS_VARIANTS: Record<string, BadgeVariant> = {
+  draft: 'secondary',
+  confirmed: 'warning',
+  partially_fulfilled: 'warning',
+  fulfilled: 'success',
+  invoiced: 'success',
+  closed: 'success',
+  cancelled: 'error',
 };
 
 interface LineForm {
@@ -151,6 +144,40 @@ export function SalesOrdersManager({
   generateInvoice,
   confirmDropShip,
 }: SalesOrdersManagerProps) {
+  const { t } = useTranslation('features/inventory');
+  const INVOICE_MODE_OPTIONS: { value: SalesOrderInvoiceMode; label: string }[] = [
+    { value: 'on_fulfillment', label: t('salesOrders.invoiceMode.onFulfillment', 'On fulfillment') },
+    { value: 'manual', label: t('salesOrders.invoiceMode.manual', 'Manual') },
+  ];
+  const ALLOCATION_MODE_OPTIONS: { value: SalesOrderAllocationMode; label: string }[] = [
+    { value: 'soft', label: t('salesOrders.allocationMode.soft', 'Soft') },
+    { value: 'hard', label: t('salesOrders.allocationMode.hard', 'Hard') },
+  ];
+  const documentLabels: Record<string, string> = {
+    'sales-order': t('salesOrders.documents.salesOrder', 'Order Confirmation'),
+    'packing-slip': t('salesOrders.documents.packingSlip', 'Packing Slip'),
+    'pick-list': t('salesOrders.documents.pickList', 'Pick List'),
+  };
+  const statusLabel = (status: string): string => {
+    switch (status) {
+      case 'draft':
+        return t('salesOrders.status.draft', 'Draft');
+      case 'confirmed':
+        return t('salesOrders.status.confirmed', 'Confirmed');
+      case 'partially_fulfilled':
+        return t('salesOrders.status.partiallyFulfilled', 'Partially fulfilled');
+      case 'fulfilled':
+        return t('salesOrders.status.fulfilled', 'Fulfilled');
+      case 'invoiced':
+        return t('salesOrders.status.invoiced', 'Invoiced');
+      case 'closed':
+        return t('salesOrders.status.closed', 'Closed');
+      case 'cancelled':
+        return t('salesOrders.status.cancelled', 'Cancelled');
+      default:
+        return status;
+    }
+  };
   const [sos, setSos] = useState<ISalesOrder[]>(initialSos || []);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
@@ -170,9 +197,9 @@ export function SalesOrdersManager({
       setSos(await listSalesOrders({}));
     } catch (e) {
       console.error(e);
-      toast.error('Failed to load sales orders');
+      toast.error(t('salesOrders.loadError', 'Failed to load sales orders'));
     }
-  }, []);
+  }, [t]);
 
   const openCreate = () => {
     setForm(emptyForm());
@@ -192,11 +219,11 @@ export function SalesOrdersManager({
 
   const save = async () => {
     if (!form.client_id.trim()) {
-      toast.error('Client is required');
+      toast.error(t('salesOrders.clientRequired', 'Client is required'));
       return;
     }
     if (!form.currency_code.trim()) {
-      toast.error('Currency code is required');
+      toast.error(t('salesOrders.currencyRequired', 'Currency code is required'));
       return;
     }
     const lines = form.lines
@@ -209,7 +236,7 @@ export function SalesOrdersManager({
       }));
     for (const l of lines) {
       if (!(l.quantity_ordered > 0)) {
-        toast.error('Each line quantity must be greater than 0');
+        toast.error(t('salesOrders.lineQtyPositive', 'Each line quantity must be greater than 0'));
         return;
       }
     }
@@ -222,11 +249,11 @@ export function SalesOrdersManager({
         allocation_mode: form.allocation_mode,
         lines,
       });
-      toast.success('Sales order created');
+      toast.success(t('salesOrders.created', 'Sales order created'));
       setDialogOpen(false);
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || 'Save failed');
+      toast.error(e?.message || t('common.saveFailed', 'Save failed'));
     } finally {
       setSaving(false);
     }
@@ -237,10 +264,10 @@ export function SalesOrdersManager({
     setBusy(`confirm:${so.so_id}`);
     try {
       await confirmSalesOrder(so.so_id);
-      toast.success('Sales order confirmed');
+      toast.success(t('salesOrders.confirmed', 'Sales order confirmed'));
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || 'Confirm failed');
+      toast.error(e?.message || t('salesOrders.confirmFailed', 'Confirm failed'));
     } finally {
       setBusy(null);
     }
@@ -251,10 +278,10 @@ export function SalesOrdersManager({
     setBusy(`cancel:${so.so_id}`);
     try {
       await cancelSalesOrder(so.so_id);
-      toast.success('Sales order cancelled');
+      toast.success(t('salesOrders.cancelled', 'Sales order cancelled'));
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || 'Cancel failed');
+      toast.error(e?.message || t('salesOrders.cancelFailed', 'Cancel failed'));
     } finally {
       setBusy(null);
       setCancelTarget(null);
@@ -273,12 +300,16 @@ export function SalesOrdersManager({
       });
       const body = await res.json().catch(() => ({}));
       if (res.ok && body?.success) {
-        toast.success(`Confirmation emailed to ${(body.recipients || []).join(', ')}`);
+        toast.success(
+          t('salesOrders.emailSuccess', 'Confirmation emailed to {{recipients}}', {
+            recipients: (body.recipients || []).join(', '),
+          }),
+        );
       } else {
-        toast.error(body?.error || "Couldn't email the confirmation.");
+        toast.error(body?.error || t('salesOrders.emailFailed', "Couldn't email the confirmation."));
       }
     } catch {
-      toast.error("Couldn't email the confirmation.");
+      toast.error(t('salesOrders.emailFailed', "Couldn't email the confirmation."));
     } finally {
       setEmailing(false);
       setEmailTarget(null);
@@ -287,7 +318,7 @@ export function SalesOrdersManager({
 
   const columns: ColumnDefinition<ISalesOrder>[] = [
     {
-      title: 'SO Number',
+      title: t('salesOrders.columns.soNumber', 'SO Number'),
       dataIndex: 'so_number',
       render: (_: any, rec: ISalesOrder) => (
         <button
@@ -301,29 +332,26 @@ export function SalesOrdersManager({
       ),
     },
     {
-      title: 'Client',
+      title: t('salesOrders.columns.client', 'Client'),
       dataIndex: 'client_name',
       render: (_: any, rec: ISalesOrder) => rec.client_name?.trim() || rec.client_id,
     },
     {
-      title: 'Status',
+      title: t('common.status', 'Status'),
       dataIndex: 'status',
       render: (value: any) => {
-        const meta = STATUS_BADGES[value] ?? {
-          label: String(value),
-          variant: 'secondary' as BadgeVariant,
-        };
+        const variant = STATUS_VARIANTS[value] ?? ('secondary' as BadgeVariant);
         return (
-          <Badge variant={meta.variant} size="sm">
-            {meta.label}
+          <Badge variant={variant} size="sm">
+            {statusLabel(String(value))}
           </Badge>
         );
       },
     },
-    { title: 'Invoice Mode', dataIndex: 'invoice_mode' },
-    { title: 'Currency', dataIndex: 'currency_code' },
+    { title: t('salesOrders.columns.invoiceMode', 'Invoice Mode'), dataIndex: 'invoice_mode' },
+    { title: t('salesOrders.columns.currency', 'Currency'), dataIndex: 'currency_code' },
     {
-      title: 'Actions',
+      title: t('common.actions', 'Actions'),
       dataIndex: 'so_id',
       width: '260px',
       render: (_: any, rec: ISalesOrder) => (
@@ -335,7 +363,9 @@ export function SalesOrdersManager({
             onClick={() => confirm(rec)}
             disabled={rec.status !== 'draft' || busy !== null}
           >
-            {busy === `confirm:${rec.so_id}` ? 'Confirming…' : 'Confirm'}
+            {busy === `confirm:${rec.so_id}`
+              ? t('salesOrders.actions.confirming', 'Confirming…')
+              : t('common.confirm', 'Confirm')}
           </Button>
           {/* SO documents (confirmation / packing slip / pick list) — each renders from the same SO
               data via the server PDF route (inventory can't import billing, so the browser fetches
@@ -349,7 +379,7 @@ export function SalesOrdersManager({
                 disabled={rec.status === 'cancelled'}
                 className="gap-1"
               >
-                Document
+                {t('salesOrders.actions.document', 'Document')}
                 <ChevronDown className="h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
@@ -358,9 +388,9 @@ export function SalesOrdersManager({
                 <DropdownMenuItem
                   key={d.type}
                   id={`document-so-${rec.so_id}-${d.type}`}
-                  onClick={() => downloadSalesOrderDocument(rec.so_id, rec.so_number, d.type, d.suffix)}
+                  onClick={() => downloadSalesOrderDocument(rec.so_id, rec.so_number, d.type, d.suffix, t)}
                 >
-                  {d.label}
+                  {documentLabels[d.type] ?? d.label}
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
@@ -368,7 +398,7 @@ export function SalesOrdersManager({
                 id={`email-confirmation-so-${rec.so_id}`}
                 onClick={() => setEmailTarget(rec)}
               >
-                Email confirmation to client…
+                {t('salesOrders.actions.emailConfirmation', 'Email confirmation to client…')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -379,7 +409,7 @@ export function SalesOrdersManager({
             onClick={() => setCancelTarget(rec)}
             disabled={rec.status === 'cancelled' || busy !== null}
           >
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
         </div>
       ),
@@ -389,9 +419,9 @@ export function SalesOrdersManager({
   return (
     <div className="p-6 space-y-4" id="sales-orders-page">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Sales Orders</h1>
+        <h1 className="text-2xl font-semibold">{t('salesOrders.title', 'Sales Orders')}</h1>
         <Button id="sales-orders-add-button" onClick={openCreate}>
-          Add Sales Order
+          {t('salesOrders.addSalesOrder', 'Add Sales Order')}
         </Button>
       </div>
 
@@ -400,12 +430,12 @@ export function SalesOrdersManager({
       <Dialog
         isOpen={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title="Add Sales Order"
+        title={t('salesOrders.addSalesOrder', 'Add Sales Order')}
         id="sales-order-dialog"
       >
         <div className="space-y-4 p-1">
           <div className="space-y-1">
-            <label className="block text-sm font-medium">Client</label>
+            <label className="block text-sm font-medium">{t('salesOrders.columns.client', 'Client')}</label>
             <ClientPicker
               id="sales-order-client"
               clients={clients}
@@ -419,14 +449,14 @@ export function SalesOrdersManager({
           </div>
           <Input
             id="sales-order-currency-code"
-            label="Currency code"
+            label={t('salesOrders.fields.currencyCode', 'Currency code')}
             required
             value={form.currency_code}
             onChange={(e) => setForm({ ...form, currency_code: e.target.value })}
           />
           <CustomSelect
             id="sales-order-invoice-mode"
-            label="Invoice mode"
+            label={t('salesOrders.fields.invoiceMode', 'Invoice mode')}
             options={INVOICE_MODE_OPTIONS}
             value={form.invoice_mode}
             onValueChange={(value) =>
@@ -435,7 +465,7 @@ export function SalesOrdersManager({
           />
           <CustomSelect
             id="sales-order-allocation-mode"
-            label="Allocation mode"
+            label={t('salesOrders.fields.allocationMode', 'Allocation mode')}
             options={ALLOCATION_MODE_OPTIONS}
             value={form.allocation_mode}
             onValueChange={(value) =>
@@ -445,15 +475,15 @@ export function SalesOrdersManager({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium">Lines</label>
+              <label className="block text-sm font-medium">{t('salesOrders.fields.lines', 'Lines')}</label>
               <Button id="sales-order-add-line" variant="outline" size="sm" onClick={addLine}>
-                Add Line
+                {t('salesOrders.actions.addLine', 'Add Line')}
               </Button>
             </div>
             {form.lines.map((line, idx) => (
               <div key={idx} className="grid grid-cols-12 gap-2 items-end">
                 <div className="col-span-5">
-                  <label className="block text-xs mb-1">Service ID</label>
+                  <label className="block text-xs mb-1">{t('salesOrders.fields.serviceId', 'Service ID')}</label>
                   <Input
                     id={`sales-order-line-service-${idx}`}
                     value={line.service_id}
@@ -461,7 +491,7 @@ export function SalesOrdersManager({
                   />
                 </div>
                 <div className="col-span-3">
-                  <label className="block text-xs mb-1">Qty</label>
+                  <label className="block text-xs mb-1">{t('salesOrders.fields.qty', 'Qty')}</label>
                   <Input
                     id={`sales-order-line-qty-${idx}`}
                     type="number"
@@ -470,7 +500,7 @@ export function SalesOrdersManager({
                   />
                 </div>
                 <div className="col-span-3">
-                  <label className="block text-xs mb-1">Unit Price ($)</label>
+                  <label className="block text-xs mb-1">{t('salesOrders.fields.unitPrice', 'Unit Price ($)')}</label>
                   <Input
                     id={`sales-order-line-price-${idx}`}
                     type="number"
@@ -486,7 +516,7 @@ export function SalesOrdersManager({
                     onClick={() => removeLine(idx)}
                     disabled={form.lines.length <= 1}
                   >
-                    Remove
+                    {t('common.remove', 'Remove')}
                   </Button>
                 </div>
               </div>
@@ -495,10 +525,10 @@ export function SalesOrdersManager({
 
           <div className="flex justify-end gap-2 pt-2">
             <Button id="sales-order-cancel" variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button id="sales-order-save" onClick={save} disabled={saving}>
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? t('common.saving', 'Saving…') : t('common.save', 'Save')}
             </Button>
           </div>
         </div>
@@ -509,14 +539,16 @@ export function SalesOrdersManager({
         isOpen={cancelTarget !== null}
         onClose={() => (busy ? undefined : setCancelTarget(null))}
         onConfirm={() => (cancelTarget ? cancel(cancelTarget) : undefined)}
-        title="Cancel sales order"
+        title={t('salesOrders.cancelDialog.title', 'Cancel sales order')}
         message={
           cancelTarget
-            ? `Cancel sales order ${cancelTarget.so_number}? This cannot be undone.`
+            ? t('salesOrders.cancelDialog.message', 'Cancel sales order {{number}}? This cannot be undone.', {
+                number: cancelTarget.so_number,
+              })
             : ''
         }
-        confirmLabel="Cancel sales order"
-        cancelLabel="Keep order"
+        confirmLabel={t('salesOrders.cancelDialog.confirm', 'Cancel sales order')}
+        cancelLabel={t('salesOrders.cancelDialog.keep', 'Keep order')}
         isConfirming={busy?.startsWith('cancel:') ?? false}
       />
 
@@ -535,14 +567,18 @@ export function SalesOrdersManager({
         isOpen={emailTarget !== null}
         onClose={() => (emailing ? undefined : setEmailTarget(null))}
         onConfirm={() => (emailTarget ? emailConfirmation(emailTarget) : undefined)}
-        title="Email order confirmation"
+        title={t('salesOrders.emailDialog.title', 'Email order confirmation')}
         message={
           emailTarget
-            ? `Email the Order Confirmation for ${emailTarget.so_number} to the client's billing contact?`
+            ? t(
+                'salesOrders.emailDialog.message',
+                "Email the Order Confirmation for {{number}} to the client's billing contact?",
+                { number: emailTarget.so_number },
+              )
             : ''
         }
-        confirmLabel="Send email"
-        cancelLabel="Cancel"
+        confirmLabel={t('salesOrders.emailDialog.confirm', 'Send email')}
+        cancelLabel={t('common.cancel', 'Cancel')}
         isConfirming={emailing}
       />
     </div>

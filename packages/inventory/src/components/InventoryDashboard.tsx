@@ -18,6 +18,7 @@ import {
   Plus,
   ArrowRight,
 } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type {
   InventoryDashboardData,
   AttentionItem,
@@ -48,18 +49,6 @@ const EMPTY: InventoryDashboardData = {
 
 function money(cents: number, dp = 0): string {
   return `$${(Number(cents || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp })}`;
-}
-
-function relTime(d: string | Date): string {
-  const t = new Date(d).getTime();
-  if (Number.isNaN(t)) return '';
-  const s = Math.max(0, (Date.now() - t) / 1000);
-  if (s < 60) return 'just now';
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m} min ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h} hr ago`;
-  return `${Math.floor(h / 24)}d ago`;
 }
 
 const PILL: Record<string, string> = {
@@ -173,18 +162,34 @@ function KpiTile({
 }
 
 function MovementLine({ m }: { m: DashboardMovement }) {
-  const svc = m.service_name ?? 'item';
+  const { t } = useTranslation('features/inventory');
+  const relTime = (d: string | Date): string => {
+    const ts = new Date(d).getTime();
+    if (Number.isNaN(ts)) return '';
+    const s = Math.max(0, (Date.now() - ts) / 1000);
+    if (s < 60) return t('dashboard.relTime.justNow', 'just now');
+    const min = Math.floor(s / 60);
+    if (min < 60) return t('dashboard.relTime.minAgo', '{{count}} min ago', { count: min });
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return t('dashboard.relTime.hrAgo', '{{count}} hr ago', { count: hr });
+    return t('dashboard.relTime.dayAgo', '{{count}}d ago', { count: Math.floor(hr / 24) });
+  };
+  const svc = m.service_name ?? t('dashboard.movements.itemFallback', 'item');
   let tone: keyof typeof CHIP = 'purple';
   let Icon = Package;
-  let text: React.ReactNode = `${m.movement_type} ${m.quantity} × ${svc}`;
-  const serial = m.serial_number ? ` (SN ${m.serial_number})` : '';
+  let text: React.ReactNode = t('dashboard.movements.generic', '{{type}} {{qty}} × {{name}}', {
+    type: m.movement_type,
+    qty: m.quantity,
+    name: svc,
+  });
+  const serial = m.serial_number ? t('dashboard.movements.serialSuffix', ' (SN {{sn}})', { sn: m.serial_number }) : '';
   switch (m.movement_type) {
     case 'receipt':
       tone = 'green';
       Icon = ArrowDownToLine;
       text = (
         <>
-          <b className="font-bold">Received</b> {m.quantity} × {svc}
+          <b className="font-bold">{t('dashboard.movements.received', 'Received')}</b> {m.quantity} × {svc}
           {m.to_location_name ? ` → ${m.to_location_name}` : ''}
         </>
       );
@@ -195,7 +200,7 @@ function MovementLine({ m }: { m: DashboardMovement }) {
       Icon = ArrowLeftRight;
       text = (
         <>
-          <b className="font-bold">Transferred</b> {m.quantity} × {svc}
+          <b className="font-bold">{t('dashboard.movements.transferred', 'Transferred')}</b> {m.quantity} × {svc}
           {m.to_location_name ? ` → ${m.to_location_name}` : ''}
         </>
       );
@@ -205,7 +210,7 @@ function MovementLine({ m }: { m: DashboardMovement }) {
       Icon = FileText;
       text = (
         <>
-          <b className="font-bold">Consumed</b> {m.quantity} × {svc}
+          <b className="font-bold">{t('dashboard.movements.consumed', 'Consumed')}</b> {m.quantity} × {svc}
           {serial}
         </>
       );
@@ -217,7 +222,7 @@ function MovementLine({ m }: { m: DashboardMovement }) {
       Icon = RotateCcw;
       text = (
         <>
-          <b className="font-bold">RMA</b> · {svc}
+          <b className="font-bold">{t('dashboard.movements.rma', 'RMA')}</b> · {svc}
           {serial}
         </>
       );
@@ -231,7 +236,7 @@ function MovementLine({ m }: { m: DashboardMovement }) {
       ? `${m.from_location_name} → ${m.to_location_name} · `
       : '';
   const src = m.source_doc_type ? `${m.source_doc_type.replace(/_/g, ' ')} · ` : '';
-  const who = m.performed_by_name ? ` · by ${m.performed_by_name}` : '';
+  const who = m.performed_by_name ? t('dashboard.movements.bySuffix', ' · by {{name}}', { name: m.performed_by_name }) : '';
   return (
     <div className="flex gap-3 px-[18px] py-2.5 [&+&]:border-t [&+&]:border-gray-100">
       <Chip tone={tone} size={30}>
@@ -252,6 +257,7 @@ function MovementLine({ m }: { m: DashboardMovement }) {
 /* ------------------------------- component ------------------------------ */
 
 export function InventoryDashboard({ data }: InventoryDashboardProps) {
+  const { t } = useTranslation('features/inventory');
   const d = data || EMPTY;
   const iv = d.inventory_value || EMPTY.inventory_value;
   const bills = d.vendor_bills || EMPTY.vendor_bills;
@@ -259,30 +265,38 @@ export function InventoryDashboard({ data }: InventoryDashboardProps) {
   const queue = d.receiving_queue || [];
   const movements = d.recent_movements || [];
 
-  const subtitle =
-    `${d.location_count} location${d.location_count === 1 ? '' : 's'}` +
-    (d.van_count > 0 ? ` & ${d.van_count} field van${d.van_count === 1 ? '' : 's'}` : '');
+  const locationsText =
+    d.location_count === 1
+      ? t('dashboard.subtitle.location', '{{count}} location', { count: d.location_count })
+      : t('dashboard.subtitle.locations', '{{count}} locations', { count: d.location_count });
+  const vansText =
+    d.van_count > 0
+      ? d.van_count === 1
+        ? t('dashboard.subtitle.van', ' & {{count}} field van', { count: d.van_count })
+        : t('dashboard.subtitle.vans', ' & {{count}} field vans', { count: d.van_count })
+      : '';
+  const subtitle = `${locationsText}${vansText}`;
 
   return (
     <div className="p-6 space-y-[18px]" id="inventory-dashboard-page">
       {/* page head */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Inventory</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Stock health across {subtitle}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">{t('dashboard.title', 'Inventory')}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{t('dashboard.stockHealthAcross', 'Stock health across {{subtitle}}', { subtitle })}</p>
         </div>
         <div className="flex items-center gap-2.5">
           <a
             href="/msp/inventory/stock"
             className="inline-flex items-center gap-1.5 h-[38px] px-[15px] rounded-lg text-[13.5px] font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-primary-50 hover:border-primary-300"
           >
-            <ArrowDownToLine className="w-[15px] h-[15px]" /> Receive stock
+            <ArrowDownToLine className="w-[15px] h-[15px]" /> {t('dashboard.actions.receiveStock', 'Receive stock')}
           </a>
           <a
             href="/msp/inventory/purchase-orders"
             className="inline-flex items-center gap-1.5 h-[38px] px-[15px] rounded-lg text-[13.5px] font-semibold bg-primary-500 text-white hover:bg-primary-600"
           >
-            <ShoppingCart className="w-[15px] h-[15px]" /> New purchase order
+            <ShoppingCart className="w-[15px] h-[15px]" /> {t('dashboard.actions.newPurchaseOrder', 'New purchase order')}
           </a>
         </div>
       </div>
@@ -290,43 +304,49 @@ export function InventoryDashboard({ data }: InventoryDashboardProps) {
       {/* KPI ribbon */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="inventory-kpi-ribbon">
         <KpiTile
-          label="Total inventory value"
+          label={t('dashboard.kpi.totalValue', 'Total inventory value')}
           value={money(iv.grand_total)}
           chipTone="green"
           icon={<DollarSign className="w-4 h-4" />}
           foot={
-            <span className="text-[12px] text-gray-400">{iv.by_location.length} stocked location{iv.by_location.length === 1 ? '' : 's'}</span>
+            <span className="text-[12px] text-gray-400">
+              {iv.by_location.length === 1
+                ? t('dashboard.kpi.stockedLocation', '{{count}} stocked location', { count: iv.by_location.length })
+                : t('dashboard.kpi.stockedLocations', '{{count}} stocked locations', { count: iv.by_location.length })}
+            </span>
           }
         />
         <KpiTile
-          label="On-hand units"
+          label={t('dashboard.kpi.onHandUnits', 'On-hand units')}
           value={d.on_hand.total_units.toLocaleString()}
           chipTone="purple"
           icon={<Boxes className="w-4 h-4" />}
           foot={
-            <span className="text-[12px] text-gray-400">{d.on_hand.serialized_units} serialized</span>
+            <span className="text-[12px] text-gray-400">{t('dashboard.kpi.serialized', '{{count}} serialized', { count: d.on_hand.serialized_units })}</span>
           }
         />
         <KpiTile
-          label="On order (open POs)"
+          label={t('dashboard.kpi.onOrder', 'On order (open POs)')}
           value={money(d.on_order.on_order_value)}
           chipTone="cyan"
           icon={<Truck className="w-4 h-4" />}
           foot={
             <span className="text-[12px] text-gray-400">
-              {d.on_order.open_po_count} PO{d.on_order.open_po_count === 1 ? '' : 's'}
-              {d.on_order.arriving_today > 0 ? ` · ${d.on_order.arriving_today} arriving today` : ''}
+              {d.on_order.open_po_count === 1
+                ? t('dashboard.kpi.poCount', '{{count}} PO', { count: d.on_order.open_po_count })
+                : t('dashboard.kpi.poCountPlural', '{{count}} POs', { count: d.on_order.open_po_count })}
+              {d.on_order.arriving_today > 0 ? t('dashboard.kpi.arrivingToday', ' · {{count}} arriving today', { count: d.on_order.arriving_today }) : ''}
             </span>
           }
         />
         <KpiTile
-          label="Margin · month to date"
+          label={t('dashboard.kpi.marginMtd', 'Margin · month to date')}
           value={`${d.margin_mtd.margin_pct.toFixed(1)}%`}
           chipTone="green"
           icon={<TrendingUp className="w-4 h-4" />}
           foot={
             <span className="text-[12px] text-gray-400">
-              {money(d.margin_mtd.margin)} on {money(d.margin_mtd.revenue)}
+              {t('dashboard.kpi.marginFoot', '{{margin}} on {{revenue}}', { margin: money(d.margin_mtd.margin), revenue: money(d.margin_mtd.revenue) })}
             </span>
           }
         />
@@ -338,19 +358,21 @@ export function InventoryDashboard({ data }: InventoryDashboardProps) {
           className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white shadow-sm px-[18px] py-3"
           id="inventory-vendor-bills-widget"
         >
-          <span className="text-[13.5px] font-semibold text-gray-900">Vendor bills owed</span>
+          <span className="text-[13.5px] font-semibold text-gray-900">{t('dashboard.bills.title', 'Vendor bills owed')}</span>
           <span className="text-[13.5px] tabular-nums text-gray-700">
-            {money(bills.open_total)} across {bills.open_count} bill{bills.open_count === 1 ? '' : 's'}
+            {bills.open_count === 1
+              ? t('dashboard.bills.acrossBill', '{{total}} across {{count}} bill', { total: money(bills.open_total), count: bills.open_count })
+              : t('dashboard.bills.acrossBills', '{{total}} across {{count}} bills', { total: money(bills.open_total), count: bills.open_count })}
           </span>
           {bills.overdue_count > 0 ? (
             <span className="text-[12.5px] font-semibold text-red-600">
-              {bills.overdue_count} overdue · {money(bills.overdue_total)}
+              {t('dashboard.bills.overdue', '{{count}} overdue · {{total}}', { count: bills.overdue_count, total: money(bills.overdue_total) })}
             </span>
           ) : (
-            <span className="text-[12.5px] text-gray-400">nothing overdue</span>
+            <span className="text-[12.5px] text-gray-400">{t('dashboard.bills.nothingOverdue', 'nothing overdue')}</span>
           )}
           <a href="/msp/inventory/vendor-bills" className="ml-auto text-[12.5px] font-semibold text-primary-600 hover:underline">
-            View bills
+            {t('dashboard.bills.viewBills', 'View bills')}
           </a>
         </div>
       )}
@@ -361,7 +383,7 @@ export function InventoryDashboard({ data }: InventoryDashboardProps) {
         <section className="rounded-lg border border-gray-200 bg-white shadow-sm" id="inventory-needs-attention">
           <div className="flex items-center justify-between px-[18px] py-[15px] border-b border-gray-100">
             <h2 className="flex items-center gap-2.5 text-[15px] font-bold text-gray-900">
-              <AlertTriangle className="w-[17px] h-[17px] text-red-500" /> Needs attention
+              <AlertTriangle className="w-[17px] h-[17px] text-red-500" /> {t('dashboard.attention.title', 'Needs attention')}
               {attention.length > 0 && (
                 <span className="rounded-full border border-red-200 bg-red-50 px-2 py-px text-[11.5px] font-bold text-red-700">
                   {attention.length}
@@ -372,7 +394,7 @@ export function InventoryDashboard({ data }: InventoryDashboardProps) {
           <div className="flex flex-col">
             {attention.length === 0 && (
               <div className="px-[18px] py-10 text-center text-sm text-gray-400">
-                All clear — nothing needs attention right now.
+                {t('dashboard.attention.allClear', 'All clear — nothing needs attention right now.')}
               </div>
             )}
             {attention.map((item) => (
@@ -398,14 +420,14 @@ export function InventoryDashboard({ data }: InventoryDashboardProps) {
         <section className="rounded-lg border border-gray-200 bg-white shadow-sm flex flex-col" id="inventory-receiving-queue">
           <div className="flex items-center justify-between px-[18px] py-[15px] border-b border-gray-100">
             <h2 className="flex items-center gap-2.5 text-[15px] font-bold text-gray-900">
-              <Truck className="w-[17px] h-[17px] text-primary-600" /> Receiving queue
+              <Truck className="w-[17px] h-[17px] text-primary-600" /> {t('dashboard.receiving.title', 'Receiving queue')}
             </h2>
             <a href="/msp/inventory/purchase-orders" className="text-[12.5px] font-semibold text-primary-600 hover:underline inline-flex items-center gap-1">
-              All POs <ArrowRight className="w-3.5 h-3.5" />
+              {t('dashboard.receiving.allPos', 'All POs')} <ArrowRight className="w-3.5 h-3.5" />
             </a>
           </div>
           <div className="py-1.5">
-            {queue.length === 0 && <div className="px-[18px] py-6 text-center text-sm text-gray-400">No open purchase orders.</div>}
+            {queue.length === 0 && <div className="px-[18px] py-6 text-center text-sm text-gray-400">{t('dashboard.receiving.empty', 'No open purchase orders.')}</div>}
             {queue.slice(0, 4).map((po: ReceivingPo) => {
               const initials = (po.vendor_name ?? '?')
                 .split(/\s+/)
@@ -416,7 +438,15 @@ export function InventoryDashboard({ data }: InventoryDashboardProps) {
               const tone: keyof typeof PILL =
                 po.status === 'partially_received' ? 'warn' : po.eta_label === 'ETA today' ? 'ok' : 'muted';
               const label =
-                po.status === 'partially_received' ? 'Partial' : po.eta_label === 'ETA today' ? 'Arriving' : 'Open';
+                po.status === 'partially_received'
+                  ? t('dashboard.receiving.partial', 'Partial')
+                  : po.eta_label === 'ETA today'
+                    ? t('dashboard.receiving.arriving', 'Arriving')
+                    : t('dashboard.receiving.open', 'Open');
+              const unitText =
+                po.ordered === 1
+                  ? t('dashboard.receiving.unit', '{{count}} unit', { count: po.ordered })
+                  : t('dashboard.receiving.units', '{{count}} units', { count: po.ordered });
               return (
                 <div key={po.po_id} className="flex items-center gap-2.5 px-[18px] py-2.5 [&+&]:border-t [&+&]:border-gray-100">
                   <Chip tone="cyan" size={34}>
@@ -424,12 +454,12 @@ export function InventoryDashboard({ data }: InventoryDashboardProps) {
                   </Chip>
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-semibold text-gray-800 truncate">
-                      {po.po_number} · {po.vendor_name ?? 'Vendor'}
+                      {po.po_number} · {po.vendor_name ?? t('dashboard.receiving.vendorFallback', 'Vendor')}
                     </div>
                     <div className="text-[12px] text-gray-500">
                       {po.status === 'partially_received'
-                        ? `${po.received} of ${po.ordered} received`
-                        : `${po.ordered} unit${po.ordered === 1 ? '' : 's'}${po.eta_label ? ` · ${po.eta_label}` : ''}`}
+                        ? t('dashboard.receiving.receivedOf', '{{received}} of {{ordered}} received', { received: po.received, ordered: po.ordered })
+                        : `${unitText}${po.eta_label ? ` · ${po.eta_label}` : ''}`}
                     </div>
                   </div>
                   <div className="text-right">
@@ -443,13 +473,13 @@ export function InventoryDashboard({ data }: InventoryDashboardProps) {
             })}
           </div>
           <div className="border-t border-gray-100 px-[18px] py-3.5 mt-auto">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2.5">This week</div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2.5">{t('dashboard.thisWeek.title', 'This week')}</div>
             <div className="grid grid-cols-2 gap-3">
               {[
-                ['Units received', d.this_week.received],
-                ['Units deployed', d.this_week.deployed],
-                ['Transfers between sites', d.this_week.transfers],
-                ['RMAs opened', d.this_week.rmas_opened],
+                [t('dashboard.thisWeek.unitsReceived', 'Units received'), d.this_week.received],
+                [t('dashboard.thisWeek.unitsDeployed', 'Units deployed'), d.this_week.deployed],
+                [t('dashboard.thisWeek.transfers', 'Transfers between sites'), d.this_week.transfers],
+                [t('dashboard.thisWeek.rmasOpened', 'RMAs opened'), d.this_week.rmas_opened],
               ].map(([k, v]) => (
                 <div key={k as string}>
                   <div className="text-[21px] font-bold text-gray-900 leading-none">{v as number}</div>
@@ -465,11 +495,11 @@ export function InventoryDashboard({ data }: InventoryDashboardProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px]">
         <section className="rounded-lg border border-gray-200 bg-white shadow-sm" id="inventory-value-by-location">
           <div className="flex items-center justify-between px-[18px] py-[15px] border-b border-gray-100">
-            <h2 className="text-[15px] font-bold text-gray-900">Inventory value by location</h2>
-            <span className="text-[12.5px] text-gray-500">Grand total {money(iv.grand_total)}</span>
+            <h2 className="text-[15px] font-bold text-gray-900">{t('dashboard.valueByLocation.title', 'Inventory value by location')}</h2>
+            <span className="text-[12.5px] text-gray-500">{t('dashboard.valueByLocation.grandTotal', 'Grand total {{total}}', { total: money(iv.grand_total) })}</span>
           </div>
           <div className="px-[18px] py-2 pb-4">
-            {iv.by_location.length === 0 && <div className="py-6 text-center text-sm text-gray-400">No stock on hand.</div>}
+            {iv.by_location.length === 0 && <div className="py-6 text-center text-sm text-gray-400">{t('dashboard.valueByLocation.empty', 'No stock on hand.')}</div>}
             {iv.by_location.slice(0, 6).map((loc) => {
               const pct = iv.grand_total > 0 ? Math.round((loc.total_value / iv.grand_total) * 100) : 0;
               const isVan = loc.location_type === 'van';
@@ -503,13 +533,13 @@ export function InventoryDashboard({ data }: InventoryDashboardProps) {
 
         <section className="rounded-lg border border-gray-200 bg-white shadow-sm" id="inventory-recent-movements">
           <div className="flex items-center justify-between px-[18px] py-[15px] border-b border-gray-100">
-            <h2 className="text-[15px] font-bold text-gray-900">Recent stock movements</h2>
+            <h2 className="text-[15px] font-bold text-gray-900">{t('dashboard.movements.title', 'Recent stock movements')}</h2>
             <a href="/msp/inventory/stock" className="text-[12.5px] font-semibold text-primary-600 hover:underline inline-flex items-center gap-1">
-              Full ledger <ArrowRight className="w-3.5 h-3.5" />
+              {t('dashboard.movements.fullLedger', 'Full ledger')} <ArrowRight className="w-3.5 h-3.5" />
             </a>
           </div>
           <div className="py-1">
-            {movements.length === 0 && <div className="px-[18px] py-6 text-center text-sm text-gray-400">No recent movement.</div>}
+            {movements.length === 0 && <div className="px-[18px] py-6 text-center text-sm text-gray-400">{t('dashboard.movements.empty', 'No recent movement.')}</div>}
             {movements.map((m) => (
               <MovementLine key={m.movement_id} m={m} />
             ))}

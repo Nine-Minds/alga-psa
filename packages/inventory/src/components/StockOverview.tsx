@@ -8,6 +8,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IProductInventorySettings, IStockLocation } from '@alga-psa/types';
 import {
@@ -31,14 +32,6 @@ type InventoryProduct = IProductInventorySettings & {
 };
 
 type StockStatus = 'out' | 'low' | 'ok';
-
-/** "Out · 1 site" / "Low · 2 sites" — per-location scope so a summed total never
- *  silently contradicts the pill (e.g. 8 available, but out at one location). */
-function statusLabel(p: InventoryProduct, s: Exclude<StockStatus, 'ok'>): string {
-  const n = s === 'out' ? p.out_locations : p.low_locations;
-  const word = s === 'out' ? 'Out' : 'Low';
-  return n > 0 ? `${word} · ${n} site${n === 1 ? '' : 's'}` : word;
-}
 
 const stockStatus = (p: InventoryProduct): StockStatus =>
   p.any_out ? 'out' : p.needs_reorder ? 'low' : 'ok';
@@ -64,13 +57,26 @@ interface ReceiveForm {
 
 const EMPTY_RECEIVE: ReceiveForm = { service_id: '', location_id: '', quantity: '', unit_cost: '' };
 
-const productLabel = (p: { service_name: string | null; sku: string | null }): string =>
-  `${p.service_name || 'Unnamed product'}${p.sku ? ` — ${p.sku}` : ''}`;
-
 const NUM_HEADER = 'text-right';
 const NUM_CELL = 'text-right tabular-nums';
 
 export function StockOverview({ initialProducts }: { initialProducts: InventoryProduct[] }) {
+  const { t } = useTranslation('features/inventory');
+
+  /** "Out · 1 site" / "Low · 2 sites" — per-location scope so a summed total never
+   *  silently contradicts the pill (e.g. 8 available, but out at one location). */
+  const statusLabel = (p: InventoryProduct, s: Exclude<StockStatus, 'ok'>): string => {
+    const n = s === 'out' ? p.out_locations : p.low_locations;
+    const word = s === 'out' ? t('stock.status.out', 'Out') : t('stock.status.low', 'Low');
+    if (n <= 0) return word;
+    return n === 1
+      ? t('stock.status.wordSite', '{{word}} · {{n}} site', { word, n })
+      : t('stock.status.wordSites', '{{word}} · {{n}} sites', { word, n });
+  };
+
+  const productLabel = (p: { service_name: string | null; sku: string | null }): string =>
+    `${p.service_name || t('stock.unnamedProduct', 'Unnamed product')}${p.sku ? ` — ${p.sku}` : ''}`;
+
   const [products, setProducts] = useState<InventoryProduct[]>(initialProducts || []);
   const [locations, setLocations] = useState<IStockLocation[]>([]);
 
@@ -92,18 +98,18 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
       setProducts(await listInventoryProducts());
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Couldn't load products.");
+      toast.error(e?.message || t('stock.loadProductsFailed', "Couldn't load products."));
     }
-  }, []);
+  }, [t]);
 
   const loadLocations = useCallback(async () => {
     try {
       setLocations(await listStockLocations({ includeInactive: false }));
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Couldn't load locations.");
+      toast.error(e?.message || t('stock.loadLocationsFailed', "Couldn't load locations."));
     }
-  }, []);
+  }, [t]);
 
   const [rebuilding, setRebuilding] = useState(false);
   const rebuildCaches = useCallback(async () => {
@@ -113,16 +119,18 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
       const n = result.corrections.length;
       toast.success(
         n === 0
-          ? `Checked ${result.products_checked} products — caches already consistent.`
-          : `Checked ${result.products_checked} products and corrected ${n} value${n === 1 ? '' : 's'}.`,
+          ? t('stock.rebuild.consistent', 'Checked {{products}} products — caches already consistent.', { products: result.products_checked })
+          : n === 1
+            ? t('stock.rebuild.correctedOne', 'Checked {{products}} products and corrected {{n}} value.', { products: result.products_checked, n })
+            : t('stock.rebuild.correctedMany', 'Checked {{products}} products and corrected {{n}} values.', { products: result.products_checked, n }),
       );
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't rebuild stock caches.");
+      toast.error(e?.message || t('stock.rebuild.failed', "Couldn't rebuild stock caches."));
     } finally {
       setRebuilding(false);
     }
-  }, [reload]);
+  }, [reload, t]);
 
   useEffect(() => {
     loadLocations();
@@ -139,21 +147,21 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
 
   const saveReceive = async () => {
     if (!receiveForm.service_id) {
-      toast.error('Pick a product.');
+      toast.error(t('stock.receive.pickProduct', 'Pick a product.'));
       return;
     }
     if (!receiveForm.location_id) {
-      toast.error('Pick a location.');
+      toast.error(t('stock.receive.pickLocation', 'Pick a location.'));
       return;
     }
     const quantity = Number(receiveForm.quantity);
     if (!Number.isInteger(quantity) || quantity <= 0) {
-      toast.error('Quantity must be a positive whole number.');
+      toast.error(t('stock.receive.qtyPositive', 'Quantity must be a positive whole number.'));
       return;
     }
     const unitDollars = Number(receiveForm.unit_cost);
     if (!Number.isFinite(unitDollars) || unitDollars < 0) {
-      toast.error("Unit cost can't be negative.");
+      toast.error(t('stock.receive.costNonNegative', "Unit cost can't be negative."));
       return;
     }
     setSaving(true);
@@ -164,14 +172,14 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
         quantity,
         unit_cost: Math.round(unitDollars * 100),
       });
-      toast.success('Stock received.');
+      toast.success(t('stock.receive.success', 'Stock received.'));
       if (result?.warnings?.length) {
         result.warnings.forEach((w) => toast.error(w.message));
       }
       setReceiveOpen(false);
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't receive stock.");
+      toast.error(e?.message || t('stock.receive.failed', "Couldn't receive stock."));
     } finally {
       setSaving(false);
     }
@@ -183,7 +191,7 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
     try {
       setLevels((await getStockLevelsForProduct(product.service_id)) as StockLevelRow[]);
     } catch (e: any) {
-      setLevelsError(e?.message || "Couldn't load stock levels.");
+      setLevelsError(e?.message || t('stock.levels.loadFailed', "Couldn't load stock levels."));
     } finally {
       setLevelsLoading(false);
     }
@@ -200,34 +208,34 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
 
   const columns: ColumnDefinition<InventoryProduct>[] = [
     {
-      title: 'Product',
+      title: t('stock.columns.product', 'Product'),
       dataIndex: 'service_name',
       // Product is the wide identifier column; pin it so the responsive table spends
       // slack here (name + Serial badge) rather than hiding a column.
       width: '240px',
       render: (v: any, rec: InventoryProduct) => (
         <div className="flex items-center gap-2 min-w-0">
-          <span className="truncate">{v || 'Unnamed product'}</span>
+          <span className="truncate">{v || t('stock.unnamedProduct', 'Unnamed product')}</span>
           {rec.is_serialized && (
             <Badge variant="secondary" size="sm" className="shrink-0">
-              Serial
+              {t('stock.badge.serial', 'Serial')}
             </Badge>
           )}
         </div>
       ),
     },
-    { title: 'SKU', dataIndex: 'sku', render: (v: any) => v || '—' },
+    { title: t('stock.columns.sku', 'SKU'), dataIndex: 'sku', render: (v: any) => v || t('common.emptyValue', '—') },
     {
       // Lead with Available — the sellable number every judgment (status pill,
       // filter, reorder) is computed from. Physical on-hand lives in the levels dialog.
-      title: 'Available',
+      title: t('stock.columns.available', 'Available'),
       dataIndex: 'available',
       headerClassName: NUM_HEADER,
       cellClassName: `${NUM_CELL} font-semibold text-gray-900`,
       render: (v: any) => Number(v ?? 0).toLocaleString(),
     },
     {
-      title: 'Status',
+      title: t('common.status', 'Status'),
       dataIndex: 'any_out',
       sortable: false,
       render: (_: any, rec: InventoryProduct) => {
@@ -241,7 +249,7 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
       },
     },
     {
-      title: 'Actions',
+      title: t('common.actions', 'Actions'),
       dataIndex: 'service_id',
       headerClassName: 'text-right',
       render: (_: any, rec: InventoryProduct) => (
@@ -255,7 +263,7 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
               openReceive(rec);
             }}
           >
-            Receive
+            {t('stock.actions.receive', 'Receive')}
           </Button>
         </div>
       ),
@@ -266,10 +274,10 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
   // sellable Available (= on hand − reserved − held). The reserved/held split is
   // granular allocation detail, not a peer column here.
   const levelColumns: ColumnDefinition<StockLevelRow>[] = [
-    { title: 'Location', dataIndex: 'location_name', render: (v: any) => v || '—' },
-    { title: 'On hand', dataIndex: 'quantity_on_hand', headerClassName: NUM_HEADER, cellClassName: NUM_CELL },
+    { title: t('stock.columns.location', 'Location'), dataIndex: 'location_name', render: (v: any) => v || t('common.emptyValue', '—') },
+    { title: t('stock.columns.onHand', 'On hand'), dataIndex: 'quantity_on_hand', headerClassName: NUM_HEADER, cellClassName: NUM_CELL },
     {
-      title: 'Available',
+      title: t('stock.columns.available', 'Available'),
       dataIndex: 'available',
       headerClassName: NUM_HEADER,
       cellClassName: `${NUM_CELL} font-semibold text-gray-900`,
@@ -293,11 +301,13 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
     <div className="p-6 space-y-4" id="stock-overview-page">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Stock</h1>
+          <h1 className="text-2xl font-semibold">{t('stock.title', 'Stock')}</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {products.length} product{products.length === 1 ? '' : 's'}
-            {outCount > 0 && <span className="text-red-600 font-medium"> · {outCount} out</span>}
-            {lowCount > 0 && <span className="text-amber-600 font-medium"> · {lowCount} low</span>}
+            {products.length === 1
+              ? t('stock.summary.productOne', '{{n}} product', { n: products.length })
+              : t('stock.summary.productMany', '{{n}} products', { n: products.length })}
+            {outCount > 0 && <span className="text-red-600 font-medium">{t('stock.summary.outSuffix', ' · {{n}} out', { n: outCount })}</span>}
+            {lowCount > 0 && <span className="text-amber-600 font-medium">{t('stock.summary.lowSuffix', ' · {{n}} low', { n: lowCount })}</span>}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -311,10 +321,10 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
             disabled={rebuilding}
             onClick={rebuildCaches}
           >
-            {rebuilding ? 'Rebuilding…' : 'Rebuild stock caches'}
+            {rebuilding ? t('stock.rebuild.inProgress', 'Rebuilding…') : t('stock.rebuild.button', 'Rebuild stock caches')}
           </Button>
           <Button id="stock-overview-add-button" onClick={() => openReceive()}>
-            Receive stock
+            {t('stock.receiveStock', 'Receive stock')}
           </Button>
         </div>
       </div>
@@ -324,7 +334,7 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
           <div className="w-72">
             <Input
               id="stock-overview-search"
-              placeholder="Search products or SKU"
+              placeholder={t('stock.searchPlaceholder', 'Search products or SKU')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -335,11 +345,11 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
             variant={lowOnly ? 'soft' : 'outline'}
             onClick={() => setLowOnly((v) => !v)}
           >
-            Needs attention
+            {t('stock.needsAttention', 'Needs attention')}
           </Button>
           {(q || lowOnly) && (
             <span className="text-sm text-gray-500">
-              {filtered.length} of {products.length} products
+              {t('stock.filteredCount', '{{shown}} of {{total}} products', { shown: filtered.length, total: products.length })}
             </span>
           )}
         </div>
@@ -347,12 +357,12 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
 
       {products.length === 0 ? (
         <EmptyState
-          title="No products track stock yet"
-          description="Turn on inventory tracking for a product in Billing → Products, then receive stock."
+          title={t('stock.empty.noProductsTitle', 'No products track stock yet')}
+          description={t('stock.empty.noProductsDescription', 'Turn on inventory tracking for a product in Billing → Products, then receive stock.')}
         />
       ) : filtered.length === 0 ? (
         <EmptyState
-          title="No products match"
+          title={t('stock.empty.noMatchTitle', 'No products match')}
           action={
             <Button
               id="stock-clear-filters"
@@ -362,7 +372,7 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
                 setLowOnly(false);
               }}
             >
-              Clear filters
+              {t('stock.clearFilters', 'Clear filters')}
             </Button>
           }
         />
@@ -378,31 +388,31 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
       <Dialog
         isOpen={receiveOpen}
         onClose={() => setReceiveOpen(false)}
-        title="Receive stock"
+        title={t('stock.receiveStock', 'Receive stock')}
         id="receive-stock-dialog"
       >
         <div className="space-y-4 p-1">
           <CustomSelect
             id="receive-stock-product"
-            label="Product"
+            label={t('stock.fields.product', 'Product')}
             required
             value={receiveForm.service_id}
-            placeholder="Select a product…"
+            placeholder={t('stock.receive.selectProduct', 'Select a product…')}
             options={products.map((p) => ({ value: p.service_id, label: productLabel(p) }))}
             onValueChange={(v: string) => setReceiveForm({ ...receiveForm, service_id: v })}
           />
           <CustomSelect
             id="receive-stock-location"
-            label="Location"
+            label={t('stock.fields.location', 'Location')}
             required
             value={receiveForm.location_id}
-            placeholder="Select a location…"
+            placeholder={t('stock.receive.selectLocation', 'Select a location…')}
             options={locations.map((loc) => ({ value: loc.location_id, label: loc.name }))}
             onValueChange={(v: string) => setReceiveForm({ ...receiveForm, location_id: v })}
           />
           <Input
             id="receive-stock-quantity"
-            label="Quantity"
+            label={t('common.quantity', 'Quantity')}
             required
             type="number"
             min="1"
@@ -412,7 +422,7 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
           />
           <Input
             id="receive-stock-unit-cost"
-            label="Unit cost (USD)"
+            label={t('stock.fields.unitCost', 'Unit cost (USD)')}
             type="number"
             min="0"
             step="0.01"
@@ -421,15 +431,15 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
           />
           {selectedProduct?.is_serialized && (
             <p className="text-xs text-[rgb(var(--color-text-500))]">
-              Receive serialized products one serial at a time.
+              {t('stock.receive.serializedHint', 'Receive serialized products one serial at a time.')}
             </p>
           )}
           <div className="flex justify-end gap-2 pt-2">
             <Button id="receive-stock-cancel" variant="outline" onClick={() => setReceiveOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button id="receive-stock-save" onClick={saveReceive} disabled={saving}>
-              {saving ? 'Receiving…' : 'Receive'}
+              {saving ? t('stock.receive.inProgress', 'Receiving…') : t('stock.actions.receive', 'Receive')}
             </Button>
           </div>
         </div>
@@ -438,23 +448,23 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
       <Dialog
         isOpen={levelsOpen}
         onClose={() => setLevelsOpen(false)}
-        title={`Stock levels — ${levelsProduct?.service_name || ''}`}
+        title={t('stock.levels.title', 'Stock levels — {{name}}', { name: levelsProduct?.service_name || '' })}
         id="stock-levels-dialog"
       >
         <div className="space-y-4 p-1">
           {levelsLoading ? (
-            <p className="text-sm text-[rgb(var(--color-text-500))]">Loading stock…</p>
+            <p className="text-sm text-[rgb(var(--color-text-500))]">{t('stock.levels.loading', 'Loading stock…')}</p>
           ) : levelsError ? (
             <div className="flex items-center justify-between gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2">
               <p className="text-sm text-red-700">{levelsError}</p>
               {levelsProduct && (
                 <Button id="stock-levels-retry" variant="outline" size="sm" onClick={() => loadLevels(levelsProduct)}>
-                  Retry
+                  {t('common.retry', 'Retry')}
                 </Button>
               )}
             </div>
           ) : levels.length === 0 ? (
-            <p className="text-sm text-[rgb(var(--color-text-500))]">No stock recorded for this product.</p>
+            <p className="text-sm text-[rgb(var(--color-text-500))]">{t('stock.levels.empty', 'No stock recorded for this product.')}</p>
           ) : (
             <DataTable
               id="stock-levels-table"
@@ -476,11 +486,11 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
                   openReceive(levelsProduct);
                 }}
               >
-                Receive stock
+                {t('stock.receiveStock', 'Receive stock')}
               </Button>
             )}
             <Button id="stock-levels-close" variant="outline" onClick={() => setLevelsOpen(false)}>
-              Close
+              {t('common.close', 'Close')}
             </Button>
           </div>
         </div>

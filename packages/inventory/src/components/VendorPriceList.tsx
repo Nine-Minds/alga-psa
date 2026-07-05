@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import type { IVendor, IVendorProduct } from '@alga-psa/types';
 import { listVendorProducts, upsertVendorProduct, deleteVendorProduct, listInventoryProducts } from '../actions';
@@ -37,6 +38,7 @@ const emptyOffer = (): OfferForm => ({
  * drives which vendor auto-suggested POs group under.
  */
 export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; onClose: () => void }) {
+  const { t } = useTranslation('features/inventory');
   const [offers, setOffers] = useState<OfferRow[]>([]);
   const [products, setProducts] = useState<Array<{ service_id: string; service_name: string | null; sku: string | null }>>([]);
   const [form, setForm] = useState<OfferForm>(emptyOffer());
@@ -47,9 +49,9 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
     try {
       setOffers(await listVendorProducts({ vendor_id: vendor.vendor_id }));
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't load the price list.");
+      toast.error(e?.message || t('vendorPriceList.loadError', "Couldn't load the price list."));
     }
-  }, [vendor]);
+  }, [vendor, t]);
 
   useEffect(() => {
     setForm(emptyOffer());
@@ -65,12 +67,12 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
   const save = async () => {
     if (!vendor) return;
     if (!form.service_id) {
-      toast.error('Pick a product.');
+      toast.error(t('vendorPriceList.pickProduct', 'Pick a product.'));
       return;
     }
     const dollars = form.unit_cost.trim() === '' ? null : Number(form.unit_cost);
     if (dollars != null && (!Number.isFinite(dollars) || dollars < 0)) {
-      toast.error("Cost can't be negative.");
+      toast.error(t('vendorPriceList.costNegative', "Cost can't be negative."));
       return;
     }
     const leadDays = form.lead_time_days.trim() === '' ? null : Number(form.lead_time_days);
@@ -85,11 +87,11 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
         lead_time_days: leadDays,
         is_preferred: form.is_preferred,
       });
-      toast.success('Offer saved.');
+      toast.success(t('vendorPriceList.offerSaved', 'Offer saved.'));
       setForm(emptyOffer());
       await load();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't save the offer.");
+      toast.error(e?.message || t('vendorPriceList.saveError', "Couldn't save the offer."));
     } finally {
       setSaving(false);
     }
@@ -99,10 +101,10 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
     if (!vendor) return;
     try {
       await deleteVendorProduct(vendor.vendor_id, offer.service_id);
-      toast.success('Offer removed.');
+      toast.success(t('vendorPriceList.offerRemoved', 'Offer removed.'));
       await load();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't remove the offer.");
+      toast.error(e?.message || t('vendorPriceList.removeError', "Couldn't remove the offer."));
     }
   };
 
@@ -121,21 +123,21 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
     <Dialog
       isOpen={vendor !== null}
       onClose={onClose}
-      title={vendor ? `Price list — ${vendor.vendor_name}` : 'Price list'}
+      title={vendor ? t('vendorPriceList.dialogTitle', 'Price list — {{name}}', { name: vendor.vendor_name }) : t('vendorPriceList.title', 'Price list')}
       id="vendor-price-list-dialog"
       className="max-w-3xl"
     >
       <div className="space-y-4 p-1">
         {offers.length === 0 ? (
-          <p className="text-sm text-gray-500">No offers yet — add the vendor's part numbers and contract costs below.</p>
+          <p className="text-sm text-gray-500">{t('vendorPriceList.emptyState', "No offers yet — add the vendor's part numbers and contract costs below.")}</p>
         ) : (
           <table className="w-full text-sm" id="vendor-price-list-table">
             <thead>
               <tr className="text-left text-gray-500 border-b">
-                <th className="py-2 pr-2 font-medium">Product</th>
-                <th className="py-2 px-2 font-medium">Vendor SKU</th>
-                <th className="py-2 px-2 font-medium text-right">Cost</th>
-                <th className="py-2 px-2 font-medium text-right">Lead time</th>
+                <th className="py-2 pr-2 font-medium">{t('vendorPriceList.columns.product', 'Product')}</th>
+                <th className="py-2 px-2 font-medium">{t('vendorPriceList.columns.vendorSku', 'Vendor SKU')}</th>
+                <th className="py-2 px-2 font-medium text-right">{t('vendorPriceList.columns.cost', 'Cost')}</th>
+                <th className="py-2 px-2 font-medium text-right">{t('vendorPriceList.columns.leadTime', 'Lead time')}</th>
                 <th className="py-2 px-2" />
                 <th className="py-2 pl-2" />
               </tr>
@@ -147,17 +149,17 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
                     <span className="font-medium">{o.service_name || o.service_id}</span>
                     {o.sku && <span className="ml-2 text-xs text-gray-500">{o.sku}</span>}
                   </td>
-                  <td className="py-2 px-2 font-mono text-xs">{o.vendor_sku || '—'}</td>
+                  <td className="py-2 px-2 font-mono text-xs">{o.vendor_sku || t('common.emptyValue', '—')}</td>
                   <td className="py-2 px-2 text-right tabular-nums">
-                    {o.unit_cost != null ? `$${(Number(o.unit_cost) / 100).toFixed(2)} ${o.cost_currency}` : '—'}
+                    {o.unit_cost != null ? `$${(Number(o.unit_cost) / 100).toFixed(2)} ${o.cost_currency}` : t('common.emptyValue', '—')}
                   </td>
                   <td className="py-2 px-2 text-right tabular-nums">
-                    {o.lead_time_days != null ? `${o.lead_time_days}d` : '—'}
+                    {o.lead_time_days != null ? t('vendorPriceList.leadTimeDays', '{{days}}d', { days: o.lead_time_days }) : t('common.emptyValue', '—')}
                   </td>
                   <td className="py-2 px-2">
                     {o.is_preferred && (
                       <Badge variant="success" size="sm">
-                        Preferred
+                        {t('vendorPriceList.preferred', 'Preferred')}
                       </Badge>
                     )}
                   </td>
@@ -168,7 +170,7 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
                       size="sm"
                       onClick={() => startEdit(o)}
                     >
-                      Edit
+                      {t('common.edit', 'Edit')}
                     </Button>
                     <Button
                       id={`vendor-offer-remove-${o.service_id}`}
@@ -176,7 +178,7 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
                       size="sm"
                       onClick={() => remove(o)}
                     >
-                      Remove
+                      {t('common.remove', 'Remove')}
                     </Button>
                   </td>
                 </tr>
@@ -188,38 +190,38 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
         <div className="border rounded p-3 space-y-3">
           <CustomSelect
             id="vendor-offer-product"
-            label="Product"
-            placeholder="Select a product…"
+            label={t('vendorPriceList.fields.product', 'Product')}
+            placeholder={t('vendorPriceList.fields.productPlaceholder', 'Select a product…')}
             value={form.service_id}
             onValueChange={(value) => setForm({ ...form, service_id: value })}
             options={products.map((p) => ({
               value: p.service_id,
-              label: `${p.service_name || 'Unnamed product'}${p.sku ? ` — ${p.sku}` : ''}`,
+              label: `${p.service_name || t('vendorPriceList.unnamedProduct', 'Unnamed product')}${p.sku ? ` — ${p.sku}` : ''}`,
             }))}
           />
           <div className="grid grid-cols-4 gap-2">
             <Input
               id="vendor-offer-sku"
-              label="Vendor SKU"
+              label={t('vendorPriceList.fields.vendorSku', 'Vendor SKU')}
               value={form.vendor_sku}
               onChange={(e) => setForm({ ...form, vendor_sku: e.target.value })}
             />
             <Input
               id="vendor-offer-cost"
-              label="Cost ($)"
+              label={t('vendorPriceList.fields.cost', 'Cost ($)')}
               type="number"
               value={form.unit_cost}
               onChange={(e) => setForm({ ...form, unit_cost: e.target.value })}
             />
             <Input
               id="vendor-offer-currency"
-              label="Currency"
+              label={t('vendorPriceList.fields.currency', 'Currency')}
               value={form.cost_currency}
               onChange={(e) => setForm({ ...form, cost_currency: e.target.value.toUpperCase() })}
             />
             <Input
               id="vendor-offer-lead-time"
-              label="Lead time (days)"
+              label={t('vendorPriceList.fields.leadTime', 'Lead time (days)')}
               type="number"
               value={form.lead_time_days}
               onChange={(e) => setForm({ ...form, lead_time_days: e.target.value })}
@@ -227,20 +229,20 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
           </div>
           <Checkbox
             id="vendor-offer-preferred"
-            label="Preferred vendor for this product (drives reorder suggestions)"
+            label={t('vendorPriceList.fields.preferred', 'Preferred vendor for this product (drives reorder suggestions)')}
             checked={form.is_preferred}
             onChange={(e: any) => setForm({ ...form, is_preferred: Boolean(e?.target?.checked ?? !form.is_preferred) })}
           />
           <div className="flex justify-end">
             <Button id="vendor-offer-save" onClick={save} disabled={saving}>
-              {saving ? 'Saving…' : 'Save offer'}
+              {saving ? t('common.saving', 'Saving…') : t('vendorPriceList.saveOffer', 'Save offer')}
             </Button>
           </div>
         </div>
 
         <div className="flex justify-end">
           <Button id="vendor-price-list-close" variant="outline" onClick={onClose}>
-            Close
+            {t('common.close', 'Close')}
           </Button>
         </div>
       </div>

@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockLocation, IStockMovement, IStockUnit } from '@alga-psa/types';
 import {
@@ -19,11 +20,6 @@ import {
 
 type SearchMode = 'serial' | 'mac';
 type UnitDetail = { unit: IStockUnit; movements: IStockMovement[] };
-
-const SEARCH_MODE_OPTIONS = [
-  { value: 'serial', label: 'Serial number' },
-  { value: 'mac', label: 'MAC address' },
-];
 
 function fmtDate(v?: string | Date | null): string {
   if (!v) return '';
@@ -54,11 +50,6 @@ function csvEscape(v: unknown): string {
   return /[",\n\r]/.test(s) ? `"${s}"` : s;
 }
 
-function humanizeStatus(v?: string | null): string {
-  if (!v) return '—';
-  return v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
-}
-
 function statusVariant(v?: string | null) {
   switch (v) {
     case 'retired':
@@ -75,6 +66,18 @@ function statusVariant(v?: string | null) {
 }
 
 export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[] }) {
+  const { t } = useTranslation('features/inventory');
+
+  const SEARCH_MODE_OPTIONS = [
+    { value: 'serial', label: t('stockUnits.searchMode.serial', 'Serial number') },
+    { value: 'mac', label: t('stockUnits.searchMode.mac', 'MAC address') },
+  ];
+
+  const humanizeStatus = (v?: string | null): string => {
+    if (!v) return t('common.emptyValue', '—');
+    return v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+  };
+
   const [units, setUnits] = useState<IStockUnit[]>(initialUnits || []);
   const [searchMode, setSearchMode] = useState<SearchMode>('serial');
   const [query, setQuery] = useState('');
@@ -93,10 +96,10 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
 
   const locationName = useCallback(
     (locationId?: string | null) => {
-      if (!locationId) return '—';
+      if (!locationId) return t('common.emptyValue', '—');
       return locationMap.get(locationId) || locationId;
     },
-    [locationMap],
+    [locationMap, t],
   );
 
   const reload = useCallback(async () => {
@@ -105,11 +108,11 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
       setUnits(await listStockUnits({}));
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || 'Failed to load units');
+      toast.error(e?.message || t('stockUnits.loadFailed', 'Failed to load units'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const runSearch = useCallback(async () => {
     const term = query.trim();
@@ -126,11 +129,11 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
       setUnits(results);
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || 'Search failed');
+      toast.error(e?.message || t('stockUnits.searchFailed', 'Search failed'));
     } finally {
       setLoading(false);
     }
-  }, [query, searchMode, reload]);
+  }, [query, searchMode, reload, t]);
 
   const clearSearch = useCallback(async () => {
     setQuery('');
@@ -146,7 +149,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
           locations === null ? listStockLocations() : Promise.resolve(locations),
         ]);
         if (!detail) {
-          toast.error('Unit history not found');
+          toast.error(t('stockUnits.historyNotFound', 'Unit history not found'));
           return;
         }
         if (locations === null) {
@@ -155,12 +158,12 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
         setHistoryDetail(detail);
       } catch (e: any) {
         console.error(e);
-        toast.error(e?.message || 'Failed to load unit history');
+        toast.error(e?.message || t('stockUnits.historyLoadFailed', 'Failed to load unit history'));
       } finally {
         setHistoryLoadingUnitId(null);
       }
     },
-    [locations],
+    [locations, t],
   );
 
   const exportCsv = useCallback(() => {
@@ -195,10 +198,10 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
   }, [units]);
 
   const columns: ColumnDefinition<IStockUnit>[] = [
-    { title: 'Serial Number', dataIndex: 'serial_number' },
-    { title: 'MAC Address', dataIndex: 'mac_address', render: (v: any) => v || '' },
+    { title: t('stockUnits.columns.serialNumber', 'Serial Number'), dataIndex: 'serial_number' },
+    { title: t('stockUnits.columns.macAddress', 'MAC Address'), dataIndex: 'mac_address', render: (v: any) => v || '' },
     {
-      title: 'Status',
+      title: t('common.status', 'Status'),
       dataIndex: 'status',
       render: (v: any) => (
         <Badge variant={statusVariant(v)} size="sm">
@@ -206,15 +209,15 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
         </Badge>
       ),
     },
-    { title: 'Location', dataIndex: 'location_id', render: (v: any) => v || '' },
-    { title: 'Client', dataIndex: 'client_id', render: (v: any) => v || '' },
+    { title: t('stockUnits.columns.location', 'Location'), dataIndex: 'location_id', render: (v: any) => v || '' },
+    { title: t('stockUnits.columns.client', 'Client'), dataIndex: 'client_id', render: (v: any) => v || '' },
     {
-      title: 'Warranty Expires',
+      title: t('stockUnits.columns.warrantyExpires', 'Warranty Expires'),
       dataIndex: 'warranty_expires_at',
       render: (v: any) => fmtDate(v),
     },
     {
-      title: 'Actions',
+      title: t('common.actions', 'Actions'),
       dataIndex: 'unit_id',
       width: '120px',
       render: (_: any, rec: IStockUnit) => (
@@ -225,7 +228,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
           onClick={() => openHistory(rec.unit_id)}
           disabled={historyLoadingUnitId !== null}
         >
-          {historyLoadingUnitId === rec.unit_id ? 'Loading…' : 'History'}
+          {historyLoadingUnitId === rec.unit_id ? t('common.loading', 'Loading…') : t('stockUnits.history', 'History')}
         </Button>
       ),
     },
@@ -234,9 +237,9 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
   return (
     <div className="p-6 space-y-4" id="stock-units-page">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Stock Units</h1>
+        <h1 className="text-2xl font-semibold">{t('stockUnits.title', 'Stock Units')}</h1>
         <Button id="stock-units-refresh-button" variant="outline" onClick={reload} disabled={loading}>
-          Refresh
+          {t('common.refresh', 'Refresh')}
         </Button>
       </div>
 
@@ -244,7 +247,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
         <div>
           <CustomSelect
             id="stock-units-search-mode"
-            label="Search by"
+            label={t('stockUnits.searchBy', 'Search by')}
             options={SEARCH_MODE_OPTIONS}
             value={searchMode}
             onValueChange={(value) => setSearchMode(value as SearchMode)}
@@ -253,23 +256,23 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
         <div className="flex-1">
           <Input
             id="stock-units-search-input"
-            label="Search term"
+            label={t('stockUnits.searchTerm', 'Search term')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') runSearch();
             }}
-            placeholder={searchMode === 'serial' ? 'Serial number…' : 'MAC address…'}
+            placeholder={searchMode === 'serial' ? t('stockUnits.searchPlaceholder.serial', 'Serial number…') : t('stockUnits.searchPlaceholder.mac', 'MAC address…')}
           />
         </div>
         <Button id="stock-units-search-button" onClick={runSearch} disabled={loading}>
-          Search
+          {t('common.search', 'Search')}
         </Button>
         <Button id="stock-units-clear-button" variant="ghost" onClick={clearSearch} disabled={loading}>
-          Clear
+          {t('common.clear', 'Clear')}
         </Button>
         <Button id="stock-units-export-csv" variant="outline" onClick={exportCsv} disabled={units.length === 0}>
-          Export CSV
+          {t('stockUnits.exportCsv', 'Export CSV')}
         </Button>
       </div>
 
@@ -280,8 +283,8 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
         onClose={() => setHistoryDetail(null)}
         title={
           historyDetail
-            ? `Unit ${historyDetail.unit.serial_number || historyDetail.unit.unit_id}`
-            : 'Unit history'
+            ? t('stockUnits.unitTitle', 'Unit {{id}}', { id: historyDetail.unit.serial_number || historyDetail.unit.unit_id })
+            : t('stockUnits.unitHistoryTitle', 'Unit history')
         }
         id="unit-history-dialog"
         className="max-w-3xl"
@@ -291,36 +294,36 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
             <div className="rounded border bg-gray-50 p-3">
               <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                  <div className="text-xs text-gray-500">Serial</div>
-                  <div className="font-mono">{historyDetail.unit.serial_number || '—'}</div>
+                  <div className="text-xs text-gray-500">{t('stockUnits.detail.serial', 'Serial')}</div>
+                  <div className="font-mono">{historyDetail.unit.serial_number || t('common.emptyValue', '—')}</div>
                 </div>
                 {historyDetail.unit.mac_address && (
                   <div>
-                    <div className="text-xs text-gray-500">MAC</div>
+                    <div className="text-xs text-gray-500">{t('stockUnits.detail.mac', 'MAC')}</div>
                     <div className="font-mono">{historyDetail.unit.mac_address}</div>
                   </div>
                 )}
                 <div>
-                  <div className="text-xs text-gray-500">Status</div>
+                  <div className="text-xs text-gray-500">{t('common.status', 'Status')}</div>
                   <div>{humanizeStatus(historyDetail.unit.status)}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500">Location</div>
+                  <div className="text-xs text-gray-500">{t('stockUnits.detail.location', 'Location')}</div>
                   <div className="font-mono text-xs">{locationName(historyDetail.unit.location_id)}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500">Unit cost</div>
-                  <div className="font-mono">{fmtCents(historyDetail.unit.unit_cost) || '—'}</div>
+                  <div className="text-xs text-gray-500">{t('stockUnits.detail.unitCost', 'Unit cost')}</div>
+                  <div className="font-mono">{fmtCents(historyDetail.unit.unit_cost) || t('common.emptyValue', '—')}</div>
                 </div>
                 {historyDetail.unit.received_at && (
                   <div>
-                    <div className="text-xs text-gray-500">Received</div>
+                    <div className="text-xs text-gray-500">{t('stockUnits.detail.received', 'Received')}</div>
                     <div className="font-mono">{fmtDate(historyDetail.unit.received_at)}</div>
                   </div>
                 )}
                 {historyDetail.unit.delivered_at && (
                   <div>
-                    <div className="text-xs text-gray-500">Delivered</div>
+                    <div className="text-xs text-gray-500">{t('stockUnits.detail.delivered', 'Delivered')}</div>
                     <div className="font-mono">{fmtDate(historyDetail.unit.delivered_at)}</div>
                   </div>
                 )}
@@ -328,7 +331,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
             </div>
 
             {historyDetail.movements.length === 0 ? (
-              <p className="text-sm text-gray-500">No movements recorded.</p>
+              <p className="text-sm text-gray-500">{t('stockUnits.noMovements', 'No movements recorded.')}</p>
             ) : (
               <div className="space-y-3 border-l border-gray-200 pl-4">
                 {historyDetail.movements.map((movement) => (
@@ -337,12 +340,12 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <div className="text-sm font-medium">{movement.movement_type}</div>
                       <div className="font-mono text-xs text-gray-500">
-                        {fmtDateTime(movement.created_at) || '—'}
+                        {fmtDateTime(movement.created_at) || t('common.emptyValue', '—')}
                       </div>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-gray-600">
                       <span>
-                        Qty <span className="font-mono">{movement.quantity}</span>
+                        {t('stockUnits.qty', 'Qty')} <span className="font-mono">{movement.quantity}</span>
                       </span>
                       <span className="font-mono text-gray-500">
                         {locationName(movement.from_location_id)} → {locationName(movement.to_location_id)}

@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockLocation } from '@alga-psa/types';
 import {
@@ -24,6 +25,7 @@ function formatDue(value: string | Date | null): string {
 }
 
 export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRow[] }) {
+  const { t } = useTranslation('features/inventory');
   const [rows, setRows] = useState<LoanerOutRow[]>(initialLoaners || []);
   const [locations, setLocations] = useState<IStockLocation[]>([]);
 
@@ -55,18 +57,18 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
       setRows(await loanersOutReport());
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || 'Failed to load loaners');
+      toast.error(e?.message || t('loaners.loadFailed', 'Failed to load loaners'));
     }
-  }, []);
+  }, [t]);
 
   const loadLocations = useCallback(async () => {
     try {
       setLocations(await listStockLocations({ includeInactive: false }));
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Couldn't load stock locations");
+      toast.error(e?.message || t('loaners.loadLocationsFailed', "Couldn't load stock locations"));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadLocations();
@@ -79,11 +81,11 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
 
   const submitLoan = async () => {
     if (!loanForm.unit_id.trim()) {
-      toast.error('Unit ID is required');
+      toast.error(t('loaners.unitIdRequired', 'Unit ID is required'));
       return;
     }
     if (!loanForm.client_id.trim()) {
-      toast.error('Client ID is required');
+      toast.error(t('loaners.clientIdRequired', 'Client ID is required'));
       return;
     }
     setSaving(true);
@@ -92,11 +94,11 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
         client_id: loanForm.client_id.trim(),
         loan_due_at: loanForm.loan_due_at ? loanForm.loan_due_at : null,
       });
-      toast.success('Unit loaned out');
+      toast.success(t('loaners.loanedOut', 'Unit loaned out'));
       setLoanOpen(false);
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || 'Loan out failed');
+      toast.error(e?.message || t('loaners.loanFailed', 'Loan out failed'));
     } finally {
       setSaving(false);
     }
@@ -111,17 +113,17 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
   const submitReturn = async () => {
     if (!returnUnit) return;
     if (!returnLocationId) {
-      toast.error('Return location is required');
+      toast.error(t('loaners.returnLocationRequired', 'Return location is required'));
       return;
     }
     setSaving(true);
     try {
       await loanReturn(returnUnit.unit_id, { location_id: returnLocationId });
-      toast.success('Loaner returned');
+      toast.success(t('loaners.returned', 'Loaner returned'));
       setReturnOpen(false);
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || 'Return failed');
+      toast.error(e?.message || t('loaners.returnFailed', 'Return failed'));
     } finally {
       setSaving(false);
     }
@@ -134,7 +136,7 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
 
   const submitRestock = async () => {
     if (!restockForm.unit_id.trim()) {
-      toast.error('Unit ID is required to restock');
+      toast.error(t('loaners.restockUnitIdRequired', 'Unit ID is required to restock'));
       return;
     }
     const feeDollars = restockForm.restocking_fee.trim();
@@ -142,7 +144,7 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
     if (feeDollars) {
       const parsed = Number(feeDollars);
       if (!Number.isFinite(parsed) || parsed < 0) {
-        toast.error('Restocking fee must be a non-negative amount');
+        toast.error(t('loaners.restockFeeInvalid', 'Restocking fee must be a non-negative amount'));
         return;
       }
       restocking_fee_cents = Math.round(parsed * 100);
@@ -154,11 +156,11 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
         location_id: restockForm.location_id || undefined,
         restocking_fee_cents,
       });
-      toast.success('Unit restocked to sellable');
+      toast.success(t('loaners.restocked', 'Unit restocked to sellable'));
       setRestockOpen(false);
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || 'Restock failed');
+      toast.error(e?.message || t('loaners.restockFailed', 'Restock failed'));
     } finally {
       setSaving(false);
     }
@@ -166,7 +168,7 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
 
   const columns: ColumnDefinition<LoanerOutRow>[] = [
     {
-      title: 'Unit / Serial',
+      title: t('loaners.columns.unitSerial', 'Unit / Serial'),
       dataIndex: 'serial_number',
       render: (_: any, rec: LoanerOutRow) => (
         <span>
@@ -175,19 +177,19 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
         </span>
       ),
     },
-    { title: 'Service', dataIndex: 'service_name', render: (v: any) => v || '' },
+    { title: t('loaners.columns.service', 'Service'), dataIndex: 'service_name', render: (v: any) => v || '' },
     {
-      title: 'Client',
+      title: t('loaners.columns.client', 'Client'),
       dataIndex: 'client_name',
       render: (_: any, rec: LoanerOutRow) => rec.client_name || rec.client_id || '',
     },
-    { title: 'Due', dataIndex: 'loan_due_at', render: (v: any) => formatDue(v) },
+    { title: t('loaners.columns.due', 'Due'), dataIndex: 'loan_due_at', render: (v: any) => formatDue(v) },
     {
-      title: 'Actions',
+      title: t('common.actions', 'Actions'),
       dataIndex: 'unit_id',
       render: (_: any, rec: LoanerOutRow) => (
         <Button id={`return-loaner-${rec.unit_id}`} variant="outline" size="sm" onClick={() => openReturn(rec)}>
-          Return
+          {t('loaners.return', 'Return')}
         </Button>
       ),
     },
@@ -196,13 +198,13 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
   return (
     <div className="p-6 space-y-4" id="loaners-page">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Loaners</h1>
+        <h1 className="text-2xl font-semibold">{t('loaners.title', 'Loaners')}</h1>
         <div className="flex gap-2">
           <Button id="loaners-restock-button" variant="outline" onClick={openRestock}>
-            Restock return
+            {t('loaners.restockReturn', 'Restock return')}
           </Button>
           <Button id="loaners-add-button" onClick={openLoan}>
-            Loan out
+            {t('loaners.loanOut', 'Loan out')}
           </Button>
         </div>
       </div>
@@ -210,61 +212,61 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
       <DataTable id="loaners-table" data={rows} columns={columns} />
 
       {/* Loan out */}
-      <Dialog isOpen={loanOpen} onClose={() => setLoanOpen(false)} title="Loan out unit" id="loaner-loan-dialog">
+      <Dialog isOpen={loanOpen} onClose={() => setLoanOpen(false)} title={t('loaners.loanDialogTitle', 'Loan out unit')} id="loaner-loan-dialog">
         <div className="space-y-4 p-1">
           <Input
             id="loaner-loan-unit-id"
-            label="Unit ID"
+            label={t('loaners.fields.unitId', 'Unit ID')}
             required
             value={loanForm.unit_id}
             onChange={(e) => setLoanForm({ ...loanForm, unit_id: e.target.value })}
           />
           <Input
             id="loaner-loan-client-id"
-            label="Client ID"
+            label={t('loaners.fields.clientId', 'Client ID')}
             required
             value={loanForm.client_id}
             onChange={(e) => setLoanForm({ ...loanForm, client_id: e.target.value })}
           />
           <Input
             id="loaner-loan-due-at"
-            label="Due date"
+            label={t('loaners.fields.dueDate', 'Due date')}
             type="date"
             value={loanForm.loan_due_at}
             onChange={(e) => setLoanForm({ ...loanForm, loan_due_at: e.target.value })}
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button id="loaner-loan-cancel" variant="outline" onClick={() => setLoanOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button id="loaner-loan-save" onClick={submitLoan} disabled={saving}>
-              {saving ? 'Saving…' : 'Loan out'}
+              {saving ? t('common.saving', 'Saving…') : t('loaners.loanOut', 'Loan out')}
             </Button>
           </div>
         </div>
       </Dialog>
 
       {/* Return */}
-      <Dialog isOpen={returnOpen} onClose={() => setReturnOpen(false)} title="Return loaner" id="loaner-return-dialog">
+      <Dialog isOpen={returnOpen} onClose={() => setReturnOpen(false)} title={t('loaners.returnDialogTitle', 'Return loaner')} id="loaner-return-dialog">
         <div className="space-y-4 p-1">
           <p className="text-sm text-gray-600">
-            Returning <span className="font-medium">{returnUnit?.serial_number}</span>
+            {t('loaners.returningPrefix', 'Returning')}{' '}<span className="font-medium">{returnUnit?.serial_number}</span>
           </p>
           <CustomSelect
             id="loaner-return-location"
-            label="Return to location"
+            label={t('loaners.fields.returnLocation', 'Return to location')}
             required
             value={returnLocationId}
-            placeholder="Select a location…"
+            placeholder={t('loaners.fields.locationPlaceholder', 'Select a location…')}
             options={locations.map((loc) => ({ value: loc.location_id, label: loc.name }))}
             onValueChange={(v: string) => setReturnLocationId(v)}
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button id="loaner-return-cancel" variant="outline" onClick={() => setReturnOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button id="loaner-return-save" onClick={submitReturn} disabled={saving}>
-              {saving ? 'Saving…' : 'Return'}
+              {saving ? t('common.saving', 'Saving…') : t('loaners.return', 'Return')}
             </Button>
           </div>
         </div>
@@ -274,30 +276,30 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
       <Dialog
         isOpen={restockOpen}
         onClose={() => setRestockOpen(false)}
-        title="Restock return to sellable"
+        title={t('loaners.restockDialogTitle', 'Restock return to sellable')}
         id="loaner-restock-dialog"
       >
         <div className="space-y-4 p-1">
           <Input
             id="loaner-restock-unit-id"
-            label="Unit ID"
+            label={t('loaners.fields.unitId', 'Unit ID')}
             required
             value={restockForm.unit_id}
             onChange={(e) => setRestockForm({ ...restockForm, unit_id: e.target.value })}
           />
           <CustomSelect
             id="loaner-restock-location"
-            label="Restock to location"
+            label={t('loaners.fields.restockLocation', 'Restock to location')}
             value={restockForm.location_id}
             options={[
-              { value: '', label: "Use unit's current location" },
+              { value: '', label: t('loaners.fields.useCurrentLocation', "Use unit's current location") },
               ...locations.map((loc) => ({ value: loc.location_id, label: loc.name })),
             ]}
             onValueChange={(v: string) => setRestockForm({ ...restockForm, location_id: v })}
           />
           <Input
             id="loaner-restock-fee"
-            label="Restocking fee (optional)"
+            label={t('loaners.fields.restockingFee', 'Restocking fee (optional)')}
             type="number"
             min="0"
             step="0.01"
@@ -306,10 +308,10 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button id="loaner-restock-cancel" variant="outline" onClick={() => setRestockOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button id="loaner-restock-save" onClick={submitRestock} disabled={saving}>
-              {saving ? 'Saving…' : 'Restock'}
+              {saving ? t('common.saving', 'Saving…') : t('loaners.restock', 'Restock')}
             </Button>
           </div>
         </div>

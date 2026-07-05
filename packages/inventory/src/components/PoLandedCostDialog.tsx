@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import type { IPurchaseOrder, IPurchaseOrderLine, IPoLandedCost } from '@alga-psa/types';
 import { listPoLandedCosts, addPoLandedCost, removePoLandedCost, applyPoLandedCosts, getPurchaseOrder } from '../actions';
@@ -37,6 +38,7 @@ export function PoLandedCostDialog({
   onChanged: () => void | Promise<void>;
   productName: (serviceId: string) => string;
 }) {
+  const { t } = useTranslation('features/inventory');
   const [entries, setEntries] = useState<IPoLandedCost[]>([]);
   const [lines, setLines] = useState<IPurchaseOrderLine[]>([]);
   const [form, setForm] = useState<EntryForm>(emptyEntry());
@@ -49,9 +51,9 @@ export function PoLandedCostDialog({
       setEntries(entryRows);
       setLines(((full as any)?.lines ?? []).filter((l: IPurchaseOrderLine) => Number(l.quantity_received) > 0));
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't load landed costs.");
+      toast.error(e?.message || t('poLandedCost.loadError', "Couldn't load landed costs."));
     }
-  }, [po]);
+  }, [po, t]);
 
   useEffect(() => {
     setEntries([]);
@@ -89,7 +91,7 @@ export function PoLandedCostDialog({
     if (!po) return;
     const dollars = Number(form.amount);
     if (!Number.isFinite(dollars) || dollars <= 0) {
-      toast.error('Amount must be greater than 0.');
+      toast.error(t('poLandedCost.amountRequired', 'Amount must be greater than 0.'));
       return;
     }
     setBusy('add');
@@ -100,11 +102,11 @@ export function PoLandedCostDialog({
         allocation_method: form.allocation_method,
         description: form.description.trim() || null,
       });
-      toast.success('Landed-cost entry added.');
+      toast.success(t('poLandedCost.entryAdded', 'Landed-cost entry added.'));
       setForm(emptyEntry());
       await load();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't add the entry.");
+      toast.error(e?.message || t('poLandedCost.addFailed', "Couldn't add the entry."));
     } finally {
       setBusy(null);
     }
@@ -116,7 +118,7 @@ export function PoLandedCostDialog({
       await removePoLandedCost(entry.landed_cost_id);
       await load();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't remove the entry.");
+      toast.error(e?.message || t('poLandedCost.removeFailed', "Couldn't remove the entry."));
     } finally {
       setBusy(null);
     }
@@ -128,16 +130,19 @@ export function PoLandedCostDialog({
     try {
       const result = await applyPoLandedCosts(po.po_id);
       if (result.applied_entries === 0) {
-        toast.success('Nothing to apply.');
+        toast.success(t('poLandedCost.nothingToApply', 'Nothing to apply.'));
       } else {
         toast.success(
-          `Applied ${money(result.total_applied_cents, po.currency_code ?? 'USD')} across ${result.allocations.length} line(s) — averages and unit costs updated.`,
+          t('poLandedCost.applied', 'Applied {{amount}} across {{count}} line(s) — averages and unit costs updated.', {
+            amount: money(result.total_applied_cents, po.currency_code ?? 'USD'),
+            count: result.allocations.length,
+          }),
         );
       }
       await load();
       await onChanged();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't apply landed costs.");
+      toast.error(e?.message || t('poLandedCost.applyFailed', "Couldn't apply landed costs."));
     } finally {
       setBusy(null);
     }
@@ -149,7 +154,7 @@ export function PoLandedCostDialog({
     <Dialog
       isOpen={po !== null}
       onClose={onClose}
-      title={po ? `Landed cost — ${po.po_number}` : 'Landed cost'}
+      title={po ? t('poLandedCost.titleWithPo', 'Landed cost — {{poNumber}}', { poNumber: po.po_number }) : t('poLandedCost.title', 'Landed cost')}
       id="po-landed-cost-dialog"
       className="max-w-3xl"
     >
@@ -158,10 +163,10 @@ export function PoLandedCostDialog({
           <table className="w-full text-sm" id="po-landed-cost-entries">
             <thead>
               <tr className="text-left text-gray-500 border-b">
-                <th className="py-2 pr-2 font-medium">Type</th>
-                <th className="py-2 px-2 font-medium text-right">Amount</th>
-                <th className="py-2 px-2 font-medium">Allocate by</th>
-                <th className="py-2 px-2 font-medium">Status</th>
+                <th className="py-2 pr-2 font-medium">{t('poLandedCost.columns.type', 'Type')}</th>
+                <th className="py-2 px-2 font-medium text-right">{t('poLandedCost.columns.amount', 'Amount')}</th>
+                <th className="py-2 px-2 font-medium">{t('poLandedCost.columns.allocateBy', 'Allocate by')}</th>
+                <th className="py-2 px-2 font-medium">{t('common.status', 'Status')}</th>
                 <th className="py-2 pl-2" />
               </tr>
             </thead>
@@ -176,7 +181,7 @@ export function PoLandedCostDialog({
                   <td className="py-2 px-2 capitalize">{e.allocation_method}</td>
                   <td className="py-2 px-2">
                     <Badge variant={e.applied ? 'success' : 'secondary'} size="sm">
-                      {e.applied ? 'Applied' : 'Pending'}
+                      {e.applied ? t('poLandedCost.status.applied', 'Applied') : t('poLandedCost.status.pending', 'Pending')}
                     </Badge>
                   </td>
                   <td className="py-2 pl-2 text-right">
@@ -188,7 +193,7 @@ export function PoLandedCostDialog({
                         disabled={busy !== null}
                         onClick={() => remove(e)}
                       >
-                        Remove
+                        {t('common.remove', 'Remove')}
                       </Button>
                     )}
                   </td>
@@ -198,11 +203,11 @@ export function PoLandedCostDialog({
           </table>
         )}
         <p className="text-sm text-gray-600">
-          Applied: <span className="tabular-nums font-medium">{money(appliedTotal, currency)}</span>
+          {t('poLandedCost.appliedLabel', 'Applied:')} <span className="tabular-nums font-medium">{money(appliedTotal, currency)}</span>
           {unappliedTotal > 0 && (
             <span>
               {' '}
-              · Pending: <span className="tabular-nums font-medium">{money(unappliedTotal, currency)}</span>
+              · {t('poLandedCost.pendingLabel', 'Pending:')} <span className="tabular-nums font-medium">{money(unappliedTotal, currency)}</span>
             </span>
           )}
         </p>
@@ -211,56 +216,56 @@ export function PoLandedCostDialog({
           <div className="grid grid-cols-4 gap-2">
             <CustomSelect
               id="landed-cost-type"
-              label="Type"
+              label={t('poLandedCost.columns.type', 'Type')}
               value={form.cost_type}
               onValueChange={(value) => setForm({ ...form, cost_type: value as EntryForm['cost_type'] })}
               options={[
-                { value: 'freight', label: 'Freight' },
-                { value: 'duty', label: 'Duty' },
-                { value: 'other', label: 'Other' },
+                { value: 'freight', label: t('poLandedCost.costType.freight', 'Freight') },
+                { value: 'duty', label: t('poLandedCost.costType.duty', 'Duty') },
+                { value: 'other', label: t('poLandedCost.costType.other', 'Other') },
               ]}
             />
             <Input
               id="landed-cost-amount"
-              label={`Amount ($ ${currency})`}
+              label={t('poLandedCost.fields.amount', 'Amount ($ {{currency}})', { currency })}
               type="number"
               value={form.amount}
               onChange={(e) => setForm({ ...form, amount: e.target.value })}
             />
             <CustomSelect
               id="landed-cost-method"
-              label="Allocate by"
+              label={t('poLandedCost.columns.allocateBy', 'Allocate by')}
               value={form.allocation_method}
               onValueChange={(value) => setForm({ ...form, allocation_method: value as EntryForm['allocation_method'] })}
               options={[
-                { value: 'value', label: 'Line value' },
-                { value: 'quantity', label: 'Quantity' },
+                { value: 'value', label: t('poLandedCost.allocation.value', 'Line value') },
+                { value: 'quantity', label: t('common.quantity', 'Quantity') },
               ]}
             />
             <Input
               id="landed-cost-description"
-              label="Description"
+              label={t('common.description', 'Description')}
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
           </div>
           <div className="flex justify-end">
             <Button id="landed-cost-add" variant="outline" size="sm" onClick={add} disabled={busy !== null}>
-              {busy === 'add' ? 'Adding…' : 'Add entry'}
+              {busy === 'add' ? t('poLandedCost.actions.adding', 'Adding…') : t('poLandedCost.actions.addEntry', 'Add entry')}
             </Button>
           </div>
         </div>
 
         {preview.length > 0 && (
           <div>
-            <p className="text-sm font-medium mb-1">Allocation preview (pending entries)</p>
+            <p className="text-sm font-medium mb-1">{t('poLandedCost.previewTitle', 'Allocation preview (pending entries)')}</p>
             <table className="w-full text-sm" id="po-landed-cost-preview">
               <thead>
                 <tr className="text-left text-gray-500 border-b">
-                  <th className="py-1 pr-2 font-medium">Product</th>
-                  <th className="py-1 px-2 font-medium text-right">Received</th>
-                  <th className="py-1 px-2 font-medium text-right">Allocated</th>
-                  <th className="py-1 px-2 font-medium text-right">Effective unit cost</th>
+                  <th className="py-1 pr-2 font-medium">{t('poLandedCost.columns.product', 'Product')}</th>
+                  <th className="py-1 px-2 font-medium text-right">{t('poLandedCost.columns.received', 'Received')}</th>
+                  <th className="py-1 px-2 font-medium text-right">{t('poLandedCost.columns.allocated', 'Allocated')}</th>
+                  <th className="py-1 px-2 font-medium text-right">{t('poLandedCost.columns.effectiveUnitCost', 'Effective unit cost')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -277,19 +282,19 @@ export function PoLandedCostDialog({
           </div>
         )}
         {lines.length === 0 && unapplied.length > 0 && (
-          <p className="text-sm text-amber-700">Nothing received yet — receive the PO first, then apply.</p>
+          <p className="text-sm text-amber-700">{t('poLandedCost.nothingReceived', 'Nothing received yet — receive the PO first, then apply.')}</p>
         )}
 
         <div className="flex justify-end gap-2">
           <Button id="po-landed-cost-close" variant="outline" onClick={onClose}>
-            Close
+            {t('common.close', 'Close')}
           </Button>
           <Button
             id="po-landed-cost-apply"
             onClick={apply}
             disabled={busy !== null || unapplied.length === 0 || lines.length === 0}
           >
-            {busy === 'apply' ? 'Applying…' : 'Apply pending entries'}
+            {busy === 'apply' ? t('poLandedCost.actions.applying', 'Applying…') : t('poLandedCost.actions.applyPending', 'Apply pending entries')}
           </Button>
         </div>
       </div>

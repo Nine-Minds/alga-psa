@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import type { ISalesOrder, IStockLocation, IVendor } from '@alga-psa/types';
 import {
@@ -57,14 +58,14 @@ export type ConfirmDropShipFn = (
   invoice: { success: boolean; invoiced: number; invoiceId?: string; error?: string } | null;
 }>;
 
-const STATUS_BADGES: Record<string, { label: string; variant: BadgeVariant }> = {
-  draft: { label: 'Draft', variant: 'secondary' },
-  confirmed: { label: 'Confirmed', variant: 'warning' },
-  partially_fulfilled: { label: 'Partially fulfilled', variant: 'warning' },
-  fulfilled: { label: 'Fulfilled', variant: 'success' },
-  invoiced: { label: 'Invoiced', variant: 'success' },
-  closed: { label: 'Closed', variant: 'success' },
-  cancelled: { label: 'Cancelled', variant: 'error' },
+const STATUS_VARIANTS: Record<string, BadgeVariant> = {
+  draft: 'secondary',
+  confirmed: 'warning',
+  partially_fulfilled: 'warning',
+  fulfilled: 'success',
+  invoiced: 'success',
+  closed: 'success',
+  cancelled: 'error',
 };
 
 const dollars = (cents?: number | null): string =>
@@ -98,6 +99,27 @@ export function SalesOrderDetail({
   generateInvoice,
   confirmDropShip,
 }: SalesOrderDetailProps) {
+  const { t } = useTranslation('features/inventory');
+  const statusLabel = (status: string): string => {
+    switch (status) {
+      case 'draft':
+        return t('salesOrders.status.draft', 'Draft');
+      case 'confirmed':
+        return t('salesOrders.status.confirmed', 'Confirmed');
+      case 'partially_fulfilled':
+        return t('salesOrders.status.partiallyFulfilled', 'Partially fulfilled');
+      case 'fulfilled':
+        return t('salesOrders.status.fulfilled', 'Fulfilled');
+      case 'invoiced':
+        return t('salesOrders.status.invoiced', 'Invoiced');
+      case 'closed':
+        return t('salesOrders.status.closed', 'Closed');
+      case 'cancelled':
+        return t('salesOrders.status.cancelled', 'Cancelled');
+      default:
+        return status;
+    }
+  };
   const [so, setSo] = useState<SalesOrderWithDetail | null>(null);
   const [backorder, setBackorder] = useState<Map<string, BackorderLine>>(new Map());
   const [invoices, setInvoices] = useState<SalesOrderInvoiceLink[]>([]);
@@ -141,11 +163,11 @@ export function SalesOrderDetail({
         setInvoices([]); // invoice backlinks are decoration; the detail still renders
       }
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't load the sales order.");
+      toast.error(e?.message || t('salesOrders.loadDetailError', "Couldn't load the sales order."));
     } finally {
       setLoading(false);
     }
-  }, [soId]);
+  }, [soId, t]);
 
   useEffect(() => {
     setSo(null);
@@ -179,7 +201,7 @@ export function SalesOrderDetail({
         eligible.sort((a, b) => Number(b.allocated_to_this_line) - Number(a.allocated_to_this_line));
         setSelectedUnits(new Set(eligible.slice(0, remainingOf(line)).map((u) => u.unit_id)));
       } catch (e: any) {
-        toast.error(e?.message || "Couldn't load available units.");
+        toast.error(e?.message || t('salesOrders.loadUnitsError', "Couldn't load available units."));
       } finally {
         setCandidatesLoading(false);
       }
@@ -201,7 +223,7 @@ export function SalesOrderDetail({
     let input: Parameters<FulfillAndInvoiceFn>[1];
     if (line.is_serialized) {
       if (selectedUnits.size === 0) {
-        toast.error('Select at least one unit.');
+        toast.error(t('salesOrders.selectUnit', 'Select at least one unit.'));
         return;
       }
       input = { unit_ids: [...selectedUnits] };
@@ -209,11 +231,11 @@ export function SalesOrderDetail({
       const qty = Number(fulfillQty);
       const remaining = remainingOf(line);
       if (!Number.isInteger(qty) || qty <= 0) {
-        toast.error('Quantity must be a positive whole number.');
+        toast.error(t('salesOrders.qtyPositiveInteger', 'Quantity must be a positive whole number.'));
         return;
       }
       if (qty > remaining) {
-        toast.error(`Only ${remaining} remaining on this line.`);
+        toast.error(t('salesOrders.onlyRemaining', 'Only {{remaining}} remaining on this line.', { remaining }));
         return;
       }
       input = { quantity: qty, ...(fulfillLocation ? { location_id: fulfillLocation } : {}) };
@@ -222,19 +244,29 @@ export function SalesOrderDetail({
     setBusy(`fulfill:${line.so_line_id}`);
     try {
       const result = await fulfillAndInvoice(line.so_line_id, input);
-      toast.success(`Fulfilled ${result.fulfillment.quantity_fulfilled} unit(s).`);
+      toast.success(
+        t('salesOrders.fulfilledUnits', 'Fulfilled {{count}} unit(s).', {
+          count: result.fulfillment.quantity_fulfilled,
+        }),
+      );
       for (const w of result.fulfillment.warnings ?? []) toast(w, { icon: '⚠️' });
       if (result.invoice) {
         if (result.invoice.success && result.invoice.invoiced > 0) {
-          toast.success(`Invoiced ${result.invoice.invoiced} item(s).`);
+          toast.success(
+            t('salesOrders.invoicedItems', 'Invoiced {{count}} item(s).', { count: result.invoice.invoiced }),
+          );
         } else if (!result.invoice.success) {
-          toast.error(`Invoicing failed: ${result.invoice.error}. Use "Generate invoice" to retry.`);
+          toast.error(
+            t('salesOrders.invoicingFailed', 'Invoicing failed: {{error}}. Use "Generate invoice" to retry.', {
+              error: result.invoice.error,
+            }),
+          );
         }
       }
       setFulfillLine(null);
       await changed();
     } catch (e: any) {
-      toast.error(e?.message || 'Fulfillment failed.');
+      toast.error(e?.message || t('salesOrders.fulfillmentFailed', 'Fulfillment failed.'));
     } finally {
       setBusy(null);
     }
@@ -261,25 +293,35 @@ export function SalesOrderDetail({
         ...(r.mac_address.trim() ? { mac_address: r.mac_address.trim() } : {}),
       }));
     if (line.is_serialized && serials.length === 0) {
-      toast.error('Enter at least one serial number.');
+      toast.error(t('salesOrders.enterSerial', 'Enter at least one serial number.'));
       return;
     }
     setBusy(`dropship:${line.so_line_id}`);
     try {
       const result = await confirmDropShip({ so_line_id: line.so_line_id }, { serials });
-      toast.success(`Shipment confirmed — ${result.shipment.quantity_fulfilled} unit(s) delivered.`);
+      toast.success(
+        t('salesOrders.shipmentConfirmed', 'Shipment confirmed — {{count}} unit(s) delivered.', {
+          count: result.shipment.quantity_fulfilled,
+        }),
+      );
       for (const w of result.shipment.warnings ?? []) toast(w, { icon: '⚠️' });
       if (result.invoice) {
         if (result.invoice.success && result.invoice.invoiced > 0) {
-          toast.success(`Invoiced ${result.invoice.invoiced} item(s).`);
+          toast.success(
+            t('salesOrders.invoicedItems', 'Invoiced {{count}} item(s).', { count: result.invoice.invoiced }),
+          );
         } else if (!result.invoice.success) {
-          toast.error(`Invoicing failed: ${result.invoice.error}. Use "Generate invoice" to retry.`);
+          toast.error(
+            t('salesOrders.invoicingFailed', 'Invoicing failed: {{error}}. Use "Generate invoice" to retry.', {
+              error: result.invoice.error,
+            }),
+          );
         }
       }
       setDropShipLine(null);
       await changed();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't confirm the shipment.");
+      toast.error(e?.message || t('salesOrders.confirmShipmentError', "Couldn't confirm the shipment."));
     } finally {
       setBusy(null);
     }
@@ -295,24 +337,28 @@ export function SalesOrderDetail({
       setVendors(v);
       if (v.length === 1) setCreatePoVendorId(v[0].vendor_id);
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't load vendors.");
+      toast.error(e?.message || t('salesOrders.loadVendorsError', "Couldn't load vendors."));
     }
   };
 
   const submitCreatePo = async () => {
     if (!createPoLine || busy) return;
     if (!createPoVendorId) {
-      toast.error('Pick the vendor that will ship this line.');
+      toast.error(t('salesOrders.pickVendor', 'Pick the vendor that will ship this line.'));
       return;
     }
     setBusy(`create-po:${createPoLine.so_line_id}`);
     try {
       const po = await createDropShipForSoLine(createPoLine.so_line_id, { vendor_id: createPoVendorId });
-      toast.success(`Drop-ship PO ${po.po_number} created — confirm the shipment once the vendor ships.`);
+      toast.success(
+        t('salesOrders.dropShipPoCreated', 'Drop-ship PO {{number}} created — confirm the shipment once the vendor ships.', {
+          number: po.po_number,
+        }),
+      );
       setCreatePoLine(null);
       await changed();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't create the drop-ship PO.");
+      toast.error(e?.message || t('salesOrders.createDropShipPoError', "Couldn't create the drop-ship PO."));
     } finally {
       setBusy(null);
     }
@@ -327,14 +373,16 @@ export function SalesOrderDetail({
       const result = await generateInvoice(so.so_id);
       if (result.success) {
         toast.success(
-          result.invoiced > 0 ? `Invoiced ${result.invoiced} item(s).` : 'Nothing left to invoice.',
+          result.invoiced > 0
+            ? t('salesOrders.invoicedItems', 'Invoiced {{count}} item(s).', { count: result.invoiced })
+            : t('salesOrders.nothingToInvoice', 'Nothing left to invoice.'),
         );
       } else {
-        toast.error(result.error || 'Invoice generation failed.');
+        toast.error(result.error || t('salesOrders.invoiceGenFailed', 'Invoice generation failed.'));
       }
       await changed();
     } catch (e: any) {
-      toast.error(e?.message || 'Invoice generation failed.');
+      toast.error(e?.message || t('salesOrders.invoiceGenFailed', 'Invoice generation failed.'));
     } finally {
       setBusy(null);
     }
@@ -347,20 +395,28 @@ export function SalesOrderDetail({
       const result = await suggestPoFromBackorder(so.so_id);
       const poNumbers = result.purchaseOrders.map((po) => po.po_number).join(', ');
       if (result.purchaseOrders.length > 0) {
-        toast.success(`Draft PO${result.purchaseOrders.length === 1 ? '' : 's'} created: ${poNumbers}`);
+        toast.success(
+          result.purchaseOrders.length === 1
+            ? t('salesOrders.draftPoCreated', 'Draft PO created: {{numbers}}', { numbers: poNumbers })
+            : t('salesOrders.draftPosCreated', 'Draft POs created: {{numbers}}', { numbers: poNumbers }),
+        );
       }
       if (result.unassigned.length > 0) {
         toast(
-          `${result.unassigned.length} backordered line(s) have no preferred vendor — create those POs manually.`,
+          t(
+            'salesOrders.unassignedBackorder',
+            '{{count}} backordered line(s) have no preferred vendor — create those POs manually.',
+            { count: result.unassigned.length },
+          ),
           { icon: '⚠️' },
         );
       }
       if (result.purchaseOrders.length === 0 && result.unassigned.length === 0) {
-        toast.success('Nothing is backordered.');
+        toast.success(t('salesOrders.nothingBackordered', 'Nothing is backordered.'));
       }
       await changed();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't create the draft PO.");
+      toast.error(e?.message || t('salesOrders.createDraftPoError', "Couldn't create the draft PO."));
     } finally {
       setBusy(null);
     }
@@ -371,10 +427,10 @@ export function SalesOrderDetail({
     setBusy('reopen');
     try {
       await reopenSalesOrder(so.so_id);
-      toast.success('Sales order reopened — it is a draft again.');
+      toast.success(t('salesOrders.reopened', 'Sales order reopened — it is a draft again.'));
       await changed();
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't reopen the sales order.");
+      toast.error(e?.message || t('salesOrders.reopenError', "Couldn't reopen the sales order."));
     } finally {
       setBusy(null);
     }
@@ -382,7 +438,7 @@ export function SalesOrderDetail({
 
   // ---- Render --------------------------------------------------------------
 
-  const statusMeta = so ? STATUS_BADGES[so.status] ?? { label: so.status, variant: 'secondary' as BadgeVariant } : null;
+  const statusVariant = so ? STATUS_VARIANTS[so.status] ?? ('secondary' as BadgeVariant) : null;
   const canFulfill = so && (so.status === 'confirmed' || so.status === 'partially_fulfilled');
   const hasBackorder = [...backorder.values()].some((b) => b.backordered);
   const hasUninvoiced = so?.lines.some((l) => Number(l.quantity_invoiced ?? 0) < Number(l.quantity_ordered)) ?? false;
@@ -399,7 +455,7 @@ export function SalesOrderDetail({
   const hardHeldCount = candidates.filter((u) => u.foreign_hard_hold).length;
 
   const locationOptions = [
-    { value: '', label: 'Product default location' },
+    { value: '', label: t('salesOrders.productDefaultLocation', 'Product default location') },
     ...locations.map((l) => ({ value: l.location_id, label: l.name })),
   ];
 
@@ -407,19 +463,19 @@ export function SalesOrderDetail({
     <Dialog
       isOpen={soId !== null}
       onClose={onClose}
-      title={so ? `Sales Order ${so.so_number}` : 'Sales Order'}
+      title={so ? t('salesOrders.detailTitle', 'Sales Order {{number}}', { number: so.so_number }) : t('salesOrders.detailTitleFallback', 'Sales Order')}
       id="sales-order-detail-dialog"
       className="max-w-4xl"
     >
       <div className="space-y-4 p-1" id="sales-order-detail">
-        {loading && !so && <p className="text-sm text-gray-500">Loading…</p>}
+        {loading && !so && <p className="text-sm text-gray-500">{t('common.loading', 'Loading…')}</p>}
         {so && (
           <>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {statusMeta && (
-                  <Badge variant={statusMeta.variant} size="sm">
-                    {statusMeta.label}
+                {statusVariant && (
+                  <Badge variant={statusVariant} size="sm">
+                    {statusLabel(so.status)}
                   </Badge>
                 )}
                 <span className="text-sm text-gray-500 flex items-center gap-1">
@@ -431,14 +487,16 @@ export function SalesOrderDetail({
                     {so.client_name || so.client_id}
                   </a>
                   <span>· {so.currency_code} ·{' '}
-                  {so.invoice_mode === 'on_fulfillment' ? 'Bills on fulfillment' : 'Manual invoicing'}</span>
+                  {so.invoice_mode === 'on_fulfillment'
+                    ? t('salesOrders.billsOnFulfillment', 'Bills on fulfillment')
+                    : t('salesOrders.manualInvoicing', 'Manual invoicing')}</span>
                   {so.quote_id && (
                     <a
                       id={`so-detail-from-quote-${so.so_id}`}
                       href={`/msp/billing?tab=quotes&quoteId=${so.quote_id}&mode=detail`}
                       className="text-primary-600 hover:underline"
                     >
-                      · From quote
+                      · {t('salesOrders.fromQuote', 'From quote')}
                     </a>
                   )}
                 </span>
@@ -452,7 +510,9 @@ export function SalesOrderDetail({
                     disabled={busy !== null}
                     onClick={runReopen}
                   >
-                    {busy === 'reopen' ? 'Reopening…' : 'Reopen to draft'}
+                    {busy === 'reopen'
+                      ? t('salesOrders.actions.reopening', 'Reopening…')
+                      : t('salesOrders.actions.reopenToDraft', 'Reopen to draft')}
                   </Button>
                 )}
                 {hasBackorder && (
@@ -463,7 +523,9 @@ export function SalesOrderDetail({
                     disabled={busy !== null}
                     onClick={runBackorderPo}
                   >
-                    {busy === 'backorder-po' ? 'Creating…' : 'Create draft PO for backorder'}
+                    {busy === 'backorder-po'
+                      ? t('salesOrders.actions.creating', 'Creating…')
+                      : t('salesOrders.actions.createBackorderPo', 'Create draft PO for backorder')}
                   </Button>
                 )}
                 {so.invoice_mode === 'manual' && so.status !== 'cancelled' && so.status !== 'draft' && (
@@ -473,7 +535,9 @@ export function SalesOrderDetail({
                     disabled={busy !== null || !hasUninvoiced}
                     onClick={runInvoice}
                   >
-                    {busy === 'invoice' ? 'Invoicing…' : 'Generate invoice'}
+                    {busy === 'invoice'
+                      ? t('salesOrders.actions.invoicing', 'Invoicing…')
+                      : t('salesOrders.actions.generateInvoice', 'Generate invoice')}
                   </Button>
                 )}
               </div>
@@ -482,12 +546,12 @@ export function SalesOrderDetail({
             <table className="w-full text-sm" id="so-detail-lines">
               <thead>
                 <tr className="text-left text-gray-500 border-b">
-                  <th className="py-2 pr-2 font-medium">Product</th>
-                  <th className="py-2 px-2 font-medium text-right">Ordered</th>
-                  <th className="py-2 px-2 font-medium text-right">Fulfilled</th>
-                  <th className="py-2 px-2 font-medium text-right">Invoiced</th>
-                  <th className="py-2 px-2 font-medium text-right">Unit price</th>
-                  <th className="py-2 px-2 font-medium">Availability</th>
+                  <th className="py-2 pr-2 font-medium">{t('salesOrders.lineColumns.product', 'Product')}</th>
+                  <th className="py-2 px-2 font-medium text-right">{t('salesOrders.lineColumns.ordered', 'Ordered')}</th>
+                  <th className="py-2 px-2 font-medium text-right">{t('salesOrders.lineColumns.fulfilled', 'Fulfilled')}</th>
+                  <th className="py-2 px-2 font-medium text-right">{t('salesOrders.lineColumns.invoiced', 'Invoiced')}</th>
+                  <th className="py-2 px-2 font-medium text-right">{t('salesOrders.lineColumns.unitPrice', 'Unit price')}</th>
+                  <th className="py-2 px-2 font-medium">{t('salesOrders.lineColumns.availability', 'Availability')}</th>
                   <th className="py-2 pl-2" />
                 </tr>
               </thead>
@@ -503,7 +567,7 @@ export function SalesOrderDetail({
                           {line.sku || ''}
                           {line.fulfillment_type === 'drop_ship' && (
                             <Badge variant="secondary" size="sm" className="ml-1">
-                              Drop-ship
+                              {t('salesOrders.dropShipBadge', 'Drop-ship')}
                             </Badge>
                           )}
                         </div>
@@ -514,11 +578,13 @@ export function SalesOrderDetail({
                       <td className="py-2 px-2 text-right tabular-nums">{dollars(line.unit_price)}</td>
                       <td className="py-2 px-2">
                         {bo?.backordered ? (
-                          <Badge variant="error" size="sm">{`Backorder ${bo.shortfall}`}</Badge>
+                          <Badge variant="error" size="sm">
+                            {t('salesOrders.backorderBadge', 'Backorder {{shortfall}}', { shortfall: bo.shortfall })}
+                          </Badge>
                         ) : line.track_stock && line.fulfillment_type !== 'drop_ship' ? (
-                          <span className="text-xs text-gray-500">OK</span>
+                          <span className="text-xs text-gray-500">{t('salesOrders.availabilityOk', 'OK')}</span>
                         ) : (
-                          <span className="text-xs text-gray-400">—</span>
+                          <span className="text-xs text-gray-400">{t('common.emptyValue', '—')}</span>
                         )}
                       </td>
                       <td className="py-2 pl-2 text-right">
@@ -532,7 +598,7 @@ export function SalesOrderDetail({
                                 disabled={busy !== null}
                                 onClick={() => openDropShip(line)}
                               >
-                                Confirm shipment
+                                {t('salesOrders.actions.confirmShipment', 'Confirm shipment')}
                               </Button>
                               <span className="text-xs text-gray-500">{line.drop_ship_po_number}</span>
                             </div>
@@ -545,7 +611,7 @@ export function SalesOrderDetail({
                               disabled={busy !== null}
                               onClick={() => openCreatePo(line)}
                             >
-                              Create drop-ship PO
+                              {t('salesOrders.actions.createDropShipPo', 'Create drop-ship PO')}
                             </Button>
                           )
                         )}
@@ -556,7 +622,7 @@ export function SalesOrderDetail({
                             disabled={busy !== null}
                             onClick={() => openFulfill(line)}
                           >
-                            Fulfill
+                            {t('salesOrders.actions.fulfill', 'Fulfill')}
                           </Button>
                         )}
                       </td>
@@ -568,14 +634,14 @@ export function SalesOrderDetail({
 
             {invoices.length > 0 && (
               <div className="space-y-1" id="so-detail-invoices">
-                <h3 className="text-sm font-semibold text-gray-700">Invoices</h3>
+                <h3 className="text-sm font-semibold text-gray-700">{t('salesOrders.invoices', 'Invoices')}</h3>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-gray-500 border-b">
-                      <th className="py-2 pr-2 font-medium">Invoice</th>
-                      <th className="py-2 px-2 font-medium">Status</th>
-                      <th className="py-2 px-2 font-medium text-right">Amount</th>
-                      <th className="py-2 pl-2 font-medium">Created</th>
+                      <th className="py-2 pr-2 font-medium">{t('salesOrders.invoiceColumns.invoice', 'Invoice')}</th>
+                      <th className="py-2 px-2 font-medium">{t('common.status', 'Status')}</th>
+                      <th className="py-2 px-2 font-medium text-right">{t('salesOrders.invoiceColumns.amount', 'Amount')}</th>
+                      <th className="py-2 pl-2 font-medium">{t('salesOrders.invoiceColumns.created', 'Created')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -590,10 +656,10 @@ export function SalesOrderDetail({
                             {inv.invoice_number || inv.invoice_id}
                           </a>
                         </td>
-                        <td className="py-2 px-2">{inv.status || '—'}</td>
+                        <td className="py-2 px-2">{inv.status || t('common.emptyValue', '—')}</td>
                         <td className="py-2 px-2 text-right tabular-nums">{dollars(inv.total_amount)}</td>
                         <td className="py-2 pl-2 text-gray-500">
-                          {inv.created_at ? new Date(inv.created_at).toLocaleDateString() : '—'}
+                          {inv.created_at ? new Date(inv.created_at).toLocaleDateString() : t('common.emptyValue', '—')}
                         </td>
                       </tr>
                     ))}
@@ -606,7 +672,7 @@ export function SalesOrderDetail({
 
         <div className="flex justify-end">
           <Button id="so-detail-close" variant="outline" onClick={onClose}>
-            Close
+            {t('common.close', 'Close')}
           </Button>
         </div>
       </div>
@@ -615,26 +681,37 @@ export function SalesOrderDetail({
       <Dialog
         isOpen={fulfillLine !== null}
         onClose={() => setFulfillLine(null)}
-        title={fulfillLine ? `Fulfill — ${fulfillLine.service_name || fulfillLine.service_id}` : 'Fulfill'}
+        title={
+          fulfillLine
+            ? t('salesOrders.fulfillDialog.title', 'Fulfill — {{name}}', {
+                name: fulfillLine.service_name || fulfillLine.service_id,
+              })
+            : t('salesOrders.actions.fulfill', 'Fulfill')
+        }
         id="so-fulfill-dialog"
       >
         {fulfillLine && (
           <div className="space-y-4 p-1">
             <p className="text-sm text-gray-500">
-              {remainingOf(fulfillLine)} of {Number(fulfillLine.quantity_ordered)} remaining.
+              {t('salesOrders.fulfillDialog.remaining', '{{remaining}} of {{ordered}} remaining.', {
+                remaining: remainingOf(fulfillLine),
+                ordered: Number(fulfillLine.quantity_ordered),
+              })}
             </p>
 
             {fulfillLine.is_serialized ? (
               <div className="space-y-2">
                 <Input
                   id="so-fulfill-unit-search"
-                  placeholder="Search serial or MAC"
+                  placeholder={t('salesOrders.fulfillDialog.searchPlaceholder', 'Search serial or MAC')}
                   value={unitSearch}
                   onChange={(e) => setUnitSearch(e.target.value)}
                 />
-                {candidatesLoading && <p className="text-sm text-gray-500">Loading units…</p>}
+                {candidatesLoading && (
+                  <p className="text-sm text-gray-500">{t('salesOrders.fulfillDialog.loadingUnits', 'Loading units…')}</p>
+                )}
                 {!candidatesLoading && filteredCandidates.length === 0 && (
-                  <p className="text-sm text-gray-500">No available units.</p>
+                  <p className="text-sm text-gray-500">{t('salesOrders.fulfillDialog.noUnits', 'No available units.')}</p>
                 )}
                 <div className="max-h-64 overflow-y-auto space-y-1" id="so-fulfill-unit-list">
                   {filteredCandidates.map((u) => (
@@ -652,12 +729,12 @@ export function SalesOrderDetail({
                       <span className="text-xs text-gray-500 ml-auto">{u.location_name || ''}</span>
                       {u.allocated_to_this_line && (
                         <Badge variant="success" size="sm">
-                          Allocated to this order
+                          {t('salesOrders.fulfillDialog.allocatedToThis', 'Allocated to this order')}
                         </Badge>
                       )}
                       {u.foreign_soft_allocated && (
                         <Badge variant="warning" size="sm">
-                          Soft-allocated to another order
+                          {t('salesOrders.fulfillDialog.softAllocatedOther', 'Soft-allocated to another order')}
                         </Badge>
                       )}
                     </label>
@@ -665,19 +742,26 @@ export function SalesOrderDetail({
                 </div>
                 {hardHeldCount > 0 && (
                   <p className="text-xs text-gray-500">
-                    {hardHeldCount} unit{hardHeldCount === 1 ? ' is' : 's are'} hard-held by other orders and not
-                    shown.
+                    {hardHeldCount === 1
+                      ? t('salesOrders.fulfillDialog.hardHeldOne', '{{count}} unit is hard-held by other orders and not shown.', {
+                          count: hardHeldCount,
+                        })
+                      : t('salesOrders.fulfillDialog.hardHeldMany', '{{count}} units are hard-held by other orders and not shown.', {
+                          count: hardHeldCount,
+                        })}
                   </p>
                 )}
                 <p className="text-sm">
-                  {selectedUnits.size} unit{selectedUnits.size === 1 ? '' : 's'} selected
+                  {selectedUnits.size === 1
+                    ? t('salesOrders.fulfillDialog.selectedOne', '{{count}} unit selected', { count: selectedUnits.size })
+                    : t('salesOrders.fulfillDialog.selectedMany', '{{count}} units selected', { count: selectedUnits.size })}
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
                 <Input
                   id="so-fulfill-quantity"
-                  label="Quantity"
+                  label={t('common.quantity', 'Quantity')}
                   type="number"
                   min={1}
                   max={remainingOf(fulfillLine)}
@@ -686,23 +770,25 @@ export function SalesOrderDetail({
                 />
                 <CustomSelect
                   id="so-fulfill-location"
-                  label="Source location"
+                  label={t('salesOrders.fulfillDialog.sourceLocation', 'Source location')}
                   options={locationOptions}
                   value={fulfillLocation}
                   onValueChange={setFulfillLocation}
                 />
                 <p className="text-xs text-gray-500">
-                  Short stock warns but never blocks — consistent with materials auto-bill.
+                  {t('salesOrders.fulfillDialog.shortStockNote', 'Short stock warns but never blocks — consistent with materials auto-bill.')}
                 </p>
               </div>
             )}
 
             <div className="flex justify-end gap-2 pt-2">
               <Button id="so-fulfill-cancel" variant="outline" onClick={() => setFulfillLine(null)}>
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button id="so-fulfill-submit" onClick={submitFulfill} disabled={busy !== null}>
-                {busy?.startsWith('fulfill:') ? 'Fulfilling…' : 'Fulfill'}
+                {busy?.startsWith('fulfill:')
+                  ? t('salesOrders.actions.fulfilling', 'Fulfilling…')
+                  : t('salesOrders.actions.fulfill', 'Fulfill')}
               </Button>
             </div>
           </div>
@@ -715,8 +801,10 @@ export function SalesOrderDetail({
         onClose={() => setDropShipLine(null)}
         title={
           dropShipLine
-            ? `Confirm vendor shipment — ${dropShipLine.service_name || dropShipLine.service_id}`
-            : 'Confirm shipment'
+            ? t('salesOrders.dropShipDialog.title', 'Confirm vendor shipment — {{name}}', {
+                name: dropShipLine.service_name || dropShipLine.service_id,
+              })
+            : t('salesOrders.actions.confirmShipment', 'Confirm shipment')
         }
         id="so-dropship-dialog"
       >
@@ -725,15 +813,14 @@ export function SalesOrderDetail({
             {dropShipLine.is_serialized ? (
               <div className="space-y-2">
                 <p className="text-sm text-gray-500">
-                  Enter the serials the vendor shipped (with MAC where applicable). Units are recorded as
-                  delivered to the client — on-hand is never touched.
+                  {t('salesOrders.dropShipDialog.serialsNote', 'Enter the serials the vendor shipped (with MAC where applicable). Units are recorded as delivered to the client — on-hand is never touched.')}
                 </p>
                 {serialRows.map((row, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-2">
                     <div className="col-span-6">
                       <Input
                         id={`so-dropship-serial-${idx}`}
-                        placeholder="Serial number"
+                        placeholder={t('salesOrders.dropShipDialog.serialPlaceholder', 'Serial number')}
                         value={row.serial_number}
                         onChange={(e) =>
                           setSerialRows((rows) =>
@@ -745,7 +832,7 @@ export function SalesOrderDetail({
                     <div className="col-span-5">
                       <Input
                         id={`so-dropship-mac-${idx}`}
-                        placeholder="MAC (optional)"
+                        placeholder={t('salesOrders.dropShipDialog.macPlaceholder', 'MAC (optional)')}
                         value={row.mac_address}
                         onChange={(e) =>
                           setSerialRows((rows) =>
@@ -773,22 +860,25 @@ export function SalesOrderDetail({
                   size="sm"
                   onClick={() => setSerialRows((rows) => [...rows, { serial_number: '', mac_address: '' }])}
                 >
-                  Add serial
+                  {t('salesOrders.dropShipDialog.addSerial', 'Add serial')}
                 </Button>
               </div>
             ) : (
               <p className="text-sm text-gray-500">
-                Confirm the vendor shipped the outstanding {remainingOf(dropShipLine)} unit(s) to the client. The
-                line will be marked fulfilled; on-hand is never touched.
+                {t('salesOrders.dropShipDialog.confirmNote', 'Confirm the vendor shipped the outstanding {{count}} unit(s) to the client. The line will be marked fulfilled; on-hand is never touched.', {
+                  count: remainingOf(dropShipLine),
+                })}
               </p>
             )}
 
             <div className="flex justify-end gap-2 pt-2">
               <Button id="so-dropship-cancel" variant="outline" onClick={() => setDropShipLine(null)}>
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button id="so-dropship-submit" onClick={submitDropShip} disabled={busy !== null}>
-                {busy?.startsWith('dropship:') ? 'Confirming…' : 'Confirm shipment'}
+                {busy?.startsWith('dropship:')
+                  ? t('salesOrders.actions.confirming', 'Confirming…')
+                  : t('salesOrders.actions.confirmShipment', 'Confirm shipment')}
               </Button>
             </div>
           </div>
@@ -799,29 +889,38 @@ export function SalesOrderDetail({
       <Dialog
         isOpen={createPoLine !== null}
         onClose={() => setCreatePoLine(null)}
-        title={createPoLine ? `Create drop-ship PO — ${createPoLine.service_name || createPoLine.service_id}` : ''}
+        title={
+          createPoLine
+            ? t('salesOrders.createPoDialog.title', 'Create drop-ship PO — {{name}}', {
+                name: createPoLine.service_name || createPoLine.service_id,
+              })
+            : ''
+        }
         id="so-create-dropship-po-dialog"
       >
         {createPoLine && (
           <div className="space-y-4 p-1">
             <p className="text-sm text-gray-500">
-              Orders the line's full quantity ({Number(createPoLine.quantity_ordered)}) from the vendor, shipped
-              straight to the client. Once the vendor ships, use "Confirm shipment" to mark the line fulfilled.
+              {t('salesOrders.createPoDialog.note', 'Orders the line\'s full quantity ({{quantity}}) from the vendor, shipped straight to the client. Once the vendor ships, use "Confirm shipment" to mark the line fulfilled.', {
+                quantity: Number(createPoLine.quantity_ordered),
+              })}
             </p>
             <CustomSelect
               id="so-create-dropship-po-vendor"
-              label="Vendor"
-              placeholder="Select a vendor…"
+              label={t('salesOrders.createPoDialog.vendor', 'Vendor')}
+              placeholder={t('salesOrders.createPoDialog.vendorPlaceholder', 'Select a vendor…')}
               value={createPoVendorId}
               onValueChange={setCreatePoVendorId}
               options={vendors.map((v) => ({ value: v.vendor_id, label: v.vendor_name }))}
             />
             <div className="flex justify-end gap-2 pt-2">
               <Button id="so-create-dropship-po-cancel" variant="outline" onClick={() => setCreatePoLine(null)}>
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button id="so-create-dropship-po-submit" onClick={submitCreatePo} disabled={busy !== null}>
-                {busy?.startsWith('create-po:') ? 'Creating…' : 'Create PO'}
+                {busy?.startsWith('create-po:')
+                  ? t('salesOrders.actions.creating', 'Creating…')
+                  : t('salesOrders.actions.createPo', 'Create PO')}
               </Button>
             </div>
           </div>
