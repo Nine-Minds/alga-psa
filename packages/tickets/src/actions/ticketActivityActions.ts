@@ -31,7 +31,7 @@ export const getTicketTimelineEntries = withAuth(
     user,
     { tenant },
     ticketId: string,
-    opts?: { order?: 'asc' | 'desc' },
+    opts?: { order?: 'asc' | 'desc'; includeTimeEntries?: boolean; includeAlerts?: boolean },
   ): Promise<TicketTimelineEntry[]> => {
     if (!tenant) {
       throw new Error('Tenant required');
@@ -67,6 +67,8 @@ export const getTicketTimelineEntries = withAuth(
       return buildUnifiedTicketTimeline(trx, tenant, ticketId, {
         order: opts?.order ?? 'desc',
         includeInternalNotes: true,
+        includeTimeEntries: opts?.includeTimeEntries ?? false,
+        includeAlerts: opts?.includeAlerts ?? false,
       });
     });
   },

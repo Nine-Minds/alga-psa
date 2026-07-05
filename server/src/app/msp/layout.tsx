@@ -6,6 +6,7 @@ import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import { MspLayoutClient } from "./MspLayoutClient";
 import { registerSlaIntegration } from "@alga-psa/msp-composition/tickets/registerSlaIntegration";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
+import { preloadLocaleResources } from "@/lib/i18n/preloadLocaleResources";
 import { isSelfHostLicensing } from "@alga-psa/licensing";
 import type { Metadata } from 'next';
 
@@ -50,16 +51,19 @@ export default async function MspLayout({
   const sidebarCookie = cookieStore.get('sidebar_collapsed')?.value;
   const initialSidebarCollapsed = sidebarCookie === 'true';
   let needsOnboarding = false;
+  let onboardingResolvedServerSide = false;
   try {
     const tenantSettings = await getTenantSettings();
     if (tenantSettings) {
       needsOnboarding = !tenantSettings.onboarding_completed && !tenantSettings.onboarding_skipped;
+      onboardingResolvedServerSide = true;
     }
   } catch (error) {
     console.error('Failed to load tenant settings for onboarding check:', error);
   }
 
   const locale = await getHierarchicalLocaleAction();
+  const preloadedLocaleResources = await preloadLocaleResources(locale).catch(() => undefined);
   const productCode = await getCurrentTenantProduct();
   // Only self-host installs carry a license_state row; gate the trial/expiry
   // banner here so it never mounts (or calls getLicenseStatus) on hosted/SaaS.
@@ -77,6 +81,8 @@ export default async function MspLayout({
       needsOnboarding={needsOnboarding}
       initialSidebarCollapsed={initialSidebarCollapsed}
       initialLocale={locale}
+      preloadedLocaleResources={preloadedLocaleResources}
+      onboardingResolvedServerSide={onboardingResolvedServerSide}
       selfHostLicensing={selfHostLicensing}
     >
       {children}

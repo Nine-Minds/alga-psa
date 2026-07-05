@@ -17,7 +17,7 @@ import { CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@
 
 // Dynamic import for TextEditor
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
-  loading: () => <RichTextEditorSkeleton height="200px" title="Comment Editor" />,
+  loading: () => <RichTextEditorSkeleton height="200px" />,
   ssr: false
 });
 
@@ -631,7 +631,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       id: ALL_COMMENTS_TAB_ID,
       label: `${t('conversation.allComments', 'All Comments')} (${threadTabState.counts.all})`,
       content: (
-        <ReflectionContainer id={`${id}-all-comments`} label="All Comments">
+        <ReflectionContainer id={`${id}-all-comments`} label={t('conversation.allComments', 'All Comments')}>
           {renderComments(hideInternalTab
             // For client portal, "All Comments" should exclude internal comments (same as "Client Visible")
             ? threadTabState.allTabComments
@@ -644,7 +644,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       id: CLIENT_TAB_ID,
       label: `${t('conversation.client', 'Client')} (${threadTabState.counts.client})`,
       content: (
-        <ReflectionContainer id={`${id}-client-visible-comments`} label="Client Comments">
+        <ReflectionContainer id={`${id}-client-visible-comments`} label={t('conversation.clientComments', 'Client Comments')}>
           {renderComments(threadTabState.clientTabComments)}
           {renderExternalComments()}
         </ReflectionContainer>
@@ -654,7 +654,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       id: INTERNAL_TAB_ID,
       label: `${t('conversation.internal', 'Internal')} (${threadTabState.counts.internal})`,
       content: (
-        <ReflectionContainer id={`${id}-internal-comments`} label="Internal Comments">
+        <ReflectionContainer id={`${id}-internal-comments`} label={t('conversation.internalComments', 'Internal Comments')}>
           <h3 className="text-lg font-medium mb-4">{t('conversation.internalComments', 'Internal Comments')}</h3>
           {renderComments(threadTabState.internalTabComments)}
         </ReflectionContainer>
@@ -664,7 +664,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       id: RESOLUTION_TAB_ID,
       label: `${t('conversation.resolution', 'Resolution')} (${threadTabState.counts.resolution})`,
       content: (
-        <ReflectionContainer id={`${id}-resolution-comments`} label="Resolution Comments">
+        <ReflectionContainer id={`${id}-resolution-comments`} label={t('conversation.resolutionComments', 'Resolution Comments')}>
           <h3 className="text-lg font-medium mb-4">{t('conversation.resolutionComments', 'Resolution Comments')}</h3>
           {renderComments(threadTabState.resolutionTabComments)}
         </ReflectionContainer>
@@ -767,7 +767,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                     </div>
                   )}
                 </div>
-                <Suspense fallback={<RichTextEditorSkeleton height="200px" title="Comment Editor" />}>
+                <Suspense fallback={<RichTextEditorSkeleton height="200px" title={t('conversation.commentEditor', 'Comment Editor')} />}>
                   <TextEditor
                     {...withDataAutomationId({ id: `${compId}-editor` })}
                     key={editorKey}

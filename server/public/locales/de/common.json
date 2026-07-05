@@ -1240,5 +1240,8 @@
     "showingAllColumns": "Alle Spalten werden angezeigt; horizontal scrollen, um sie zu sehen.",
     "showLess": "Weniger anzeigen",
     "columnsHidden": "{{count}} Spalten aufgrund von begrenztem Platz ausgeblendet."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Editor wird geladen…"
   }
 }

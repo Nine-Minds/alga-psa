@@ -10,12 +10,15 @@ interface I18nWrapperProps {
   children: ReactNode;
   initialLocale?: SupportedLocale;
   portal?: 'msp' | 'client';
+  /** Server-embedded namespace resources for the current route (no HTTP fetch). */
+  preloadedResources?: Record<string, Record<string, unknown>>;
 }
 
 export function I18nWrapper({
   children,
   initialLocale,
   portal = 'msp',
+  preloadedResources,
 }: I18nWrapperProps) {
   const [locale, setLocale] = useState<SupportedLocale>(
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
@@ -55,7 +58,12 @@ export function I18nWrapper({
   }
 
   return (
-    <I18nProvider initialLocale={locale} portal={portal} namespaces={namespaces}>
+    <I18nProvider
+      initialLocale={locale}
+      portal={portal}
+      namespaces={namespaces}
+      preloadedResources={preloadedResources}
+    >
       {children}
     </I18nProvider>
   );

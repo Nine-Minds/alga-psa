@@ -282,5 +282,6 @@
     "next": "Successivo",
     "pageOf": "Pagina {{current}} di {{total}}",
     "previous": "Precedente"
-  }
+  },
+  "ticketDocuments": "Documenti del ticket"
 }

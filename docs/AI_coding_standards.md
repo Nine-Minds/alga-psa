@@ -36,6 +36,10 @@ Prefer radix components over other libraries
     - [Table](../packages/ui/src/components/Table.tsx)
     - [TextArea](../packages/ui/src/components/TextArea.tsx)
 
+### Design Guidelines (Typography & Density)
+
+For the product typography scale, tile/card composition patterns, and microcopy voice — derived from the ticket bento layout — see [UI Design Guidelines](ui/design_guidelines.md). New panels, tiles, and cards must follow it.
+
 ### Theme & Dark Mode
 
 For full theming guidelines, CSS variable usage, and provider architecture, see [Theming Documentation](ui/theming.md).

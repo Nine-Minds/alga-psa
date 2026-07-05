@@ -386,10 +386,32 @@ export function useTicketLive({
     setPresence([]);
     setConnectionStatus('connecting');
 
-    void connect('initial');
+    // Defer the live-token fetch + socket handshake until the browser is idle,
+    // so the collaborative sync layer attaches AFTER the ticket has loaded
+    // rather than competing with the initial render's requests. Real-time
+    // presence/updates connect a frame later; the content is already usable.
+    let idleHandle: number | null = null;
+    let timeoutHandle: number | null = null;
+    const startConnect = () => {
+      if (disposedRef.current) return;
+      void connect('initial');
+    };
+    const requestIdle = (window as typeof window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+    }).requestIdleCallback;
+    if (typeof requestIdle === 'function') {
+      idleHandle = requestIdle(startConnect, { timeout: 2000 });
+    } else {
+      timeoutHandle = window.setTimeout(startConnect, 0);
+    }
 
     return () => {
       disposedRef.current = true;
+      if (idleHandle !== null) {
+        (window as typeof window & { cancelIdleCallback?: (h: number) => void })
+          .cancelIdleCallback?.(idleHandle);
+      }
+      if (timeoutHandle !== null) window.clearTimeout(timeoutHandle);
       clearRefreshTimer();
       clearReconnectTimer();
       destroyProvider();

@@ -49,8 +49,8 @@ describe('ticket clipboard image flow end-to-end contract', () => {
     expect(ticketDetailsSource).toContain('resolveCommentReferencedImageDocuments(conversation.note, documents)');
     expect(ticketDetailsSource).toContain("onConfirm={() => handleDeleteConfirm(true)}");
     expect(ticketDetailsSource).toContain("onCancel={deleteDialogHasImages ? () => handleDeleteConfirm(false) : undefined}");
-    expect(ticketDetailsSource).toContain("thirdButtonLabel={deleteDialogHasImages ? 'Delete Comment Only' : undefined}");
-    expect(ticketDetailsSource).toContain("confirmLabel={deleteDialogHasImages ? 'Delete Comment + Images' : 'Delete'}");
+    expect(ticketDetailsSource).toContain("thirdButtonLabel={deleteDialogHasImages ? t('conversation.deleteCommentOnly', 'Delete Comment Only') : undefined}");
+    expect(ticketDetailsSource).toContain("confirmLabel={deleteDialogHasImages ? t('conversation.deleteCommentImages', 'Delete Comment + Images') : t('conversation.delete', 'Delete')}");
     expect(ticketDetailsSource).toContain('const result = await deleteDraftClipboardImages({');
     expect(commentItemSource).toContain('onClick={() => onDelete(conversation)}');
   });

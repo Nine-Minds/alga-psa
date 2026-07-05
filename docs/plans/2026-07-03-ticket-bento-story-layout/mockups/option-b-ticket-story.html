@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Option B — The Ticket Story · Ticket Bento · Alga PSA</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root{
+  --purple:#8A4DEA; --purple-light:#A36FF8; --purple-dark:#7C3AED; --purple-subtle:#F3F0FF;
+  --cyan:#40CFF9; --orange:#FF9C30; --charcoal:#312E38;
+  --night:#0C111D;
+  --s50:#F8FAFC; --s100:#F1F5F9; --s200:#E2E8F0; --s300:#CBD5E1; --s400:#94A3B8; --s500:#64748B; --s600:#475569; --s700:#334155; --s800:#1E293B; --s900:#0F172A;
+  --success:#10B981; --warning:#F59E0B; --danger:#EF4444;
+  --heading:'Poppins',system-ui,sans-serif; --sans:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+  --shadow:0 1px 2px rgba(15,23,42,.05), 0 6px 20px -8px rgba(82,46,140,.12);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--sans);background:linear-gradient(180deg,#FAFAFA 0%,#FAF5FF 60%,#F3F0FF 100%);min-height:100vh;color:var(--s900);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+svg.ic{width:15px;height:15px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.mono{font-family:var(--mono)}
+
+/* chrome */
+.app{display:flex;min-height:100vh}
+.rail{width:60px;background:var(--night);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px;position:sticky;top:0;height:100vh;flex:none}
+.rail .logo{width:34px;height:34px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.rail .logo svg{width:20px;height:22px}
+.rail a{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--s400)}
+.rail a:hover{background:rgba(255,255,255,.08);color:#fff}
+.rail a.active{background:rgba(138,77,234,.35);color:#fff}
+.rail .spacer{flex:1}
+.main{flex:1;min-width:0}
+.topbar{height:52px;background:rgba(255,255,255,.75);backdrop-filter:blur(14px);border-bottom:1px solid var(--s200);display:flex;align-items:center;gap:14px;padding:0 20px;position:sticky;top:0;z-index:40}
+.crumb{display:flex;align-items:center;gap:8px;color:var(--s500);font-size:13px}
+.crumb b{color:var(--s900);font-weight:600}
+.pager{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--s500);border:1px solid var(--s200);border-radius:8px;padding:3px 6px;background:#fff}
+.pager button{border:none;background:none;color:var(--s500);cursor:pointer;display:flex}
+.topbar .grow{flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid transparent;font-family:var(--sans)}
+.btn-primary{background:linear-gradient(135deg,#A36FF8,#8A4DEA);color:#fff;box-shadow:0 2px 8px -2px rgba(138,77,234,.5)}
+.btn-ghost{background:#fff;border-color:var(--s200);color:var(--s700)}
+.btn-soft{background:var(--purple-subtle);color:var(--purple-dark)}
+.avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex:none}
+.bell{position:relative;color:var(--s500)}
+.bell .dot{position:absolute;top:-5px;right:-7px;background:var(--danger);color:#fff;font-size:9px;font-weight:700;border-radius:8px;padding:1px 4px}
+
+/* bento */
+.canvas{max-width:1560px;margin:0 auto;padding:18px 20px 40px}
+.bento{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.tile{background:#fff;border:1px solid rgba(226,232,240,.9);border-radius:18px;box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;min-width:0}
+.tile-h{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.tile-h .t{font-family:var(--heading);font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--s500);display:flex;align-items:center;gap:7px}
+.tile-h .t svg{color:var(--purple)}
+.tile-h .grow{flex:1}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.chip .dot{width:7px;height:7px;border-radius:50%}
+
+/* hero */
+.hero{grid-column:span 12;background:linear-gradient(115deg,#1B1437 0%,#2A1B5C 55%,#4A2490 100%);color:#fff;border:none;position:relative;overflow:hidden;padding:26px 28px}
+.hero::after{content:'';position:absolute;right:-120px;top:-140px;width:420px;height:420px;background:radial-gradient(closest-side,rgba(163,111,248,.5),transparent);pointer-events:none}
+.hero::before{content:'';position:absolute;left:30%;bottom:-190px;width:380px;height:380px;background:radial-gradient(closest-side,rgba(64,207,249,.25),transparent);pointer-events:none}
+.hero .top{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.hero .tno{font-family:var(--mono);font-size:13px;background:rgba(255,255,255,.14);padding:4px 12px;border-radius:8px}
+.hero h1{font-family:var(--heading);font-size:34px;font-weight:700;letter-spacing:-.02em;margin:10px 0 6px;position:relative;z-index:1}
+.hero .sub{font-size:13px;color:rgba(255,255,255,.75);position:relative;z-index:1}
+.hero .sub b{color:#fff}
+.hero .chips{display:flex;gap:8px;margin-top:16px;position:relative;z-index:1;flex-wrap:wrap}
+.hero .chips .chip{background:rgba(255,255,255,.13);color:#fff;border:1px solid rgba(255,255,255,.16);padding:5px 12px}
+.hero .actions{position:absolute;right:26px;top:24px;display:flex;gap:8px;z-index:2}
+.hero .actions .btn-ghost{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff}
+.hero .slab{position:absolute;right:26px;bottom:22px;z-index:2;text-align:right}
+.hero .slab .lab{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.6);font-weight:700}
+.hero .slab .val{font-family:var(--mono);font-size:22px;font-weight:500;color:#FCD34D}
+
+/* left column */
+.c-left{grid-column:span 3;display:flex;flex-direction:column;gap:14px}
+.c-mid{grid-column:span 6}
+.c-right{grid-column:span 3;display:flex;flex-direction:column;gap:14px}
+
+.desc p{color:var(--s600);font-size:13px}
+.desc .quote{border-left:3px solid var(--purple-light);padding:2px 0 2px 12px;margin-top:6px;color:var(--s700);font-style:italic}
+
+.contact .top{display:flex;align-items:center;gap:12px}
+.contact .avatar{width:44px;height:44px;font-size:15px}
+.contact .nm{font-family:var(--heading);font-weight:600;font-size:15px}
+.contact .role{font-size:11.5px;color:var(--s500)}
+.kv{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--s600);padding:4px 0}
+.kv svg{color:var(--s400)}
+.contact .quick{display:flex;gap:8px;margin-top:10px}
+.contact .quick .btn{flex:1;justify-content:center;padding:6px}
+
+.visit .cal{display:flex;gap:12px;align-items:center}
+.visit .datebox{width:52px;background:var(--purple-subtle);border-radius:12px;text-align:center;padding:7px 0}
+.visit .datebox b{font-family:var(--heading);font-size:20px;color:var(--purple-dark);display:block;line-height:1.1}
+.visit .datebox span{font-size:9.5px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.08em}
+.visit .nm{font-weight:600;font-size:13px}
+.visit .sub{font-size:11.5px;color:var(--s500)}
+
+.callrow{display:flex;gap:9px;align-items:center;padding:6px 0;font-size:12.5px;color:var(--s700)}
+.callrow + .callrow{border-top:1px solid var(--s100)}
+.callrow svg{color:var(--s400)}
+.callrow .when{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--s400)}
+
+/* timeline */
+.tl{position:relative;padding-left:4px;flex:1}
+.tl .filters{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.fpill{font-size:11px;font-weight:600;border:1px solid var(--s200);color:var(--s500);border-radius:16px;padding:4px 12px;cursor:pointer;background:#fff}
+.fpill.on{background:var(--charcoal);color:#fff;border-color:var(--charcoal)}
+.tl-list{position:relative}
+.tl-list::before{content:'';position:absolute;left:15px;top:8px;bottom:8px;width:2px;background:linear-gradient(180deg,var(--s200),var(--purple-subtle))}
+.node{display:flex;gap:14px;padding:9px 0;position:relative}
+.node .pin{width:32px;height:32px;border-radius:50%;background:#fff;border:1.5px solid var(--s200);display:flex;align-items:center;justify-content:center;color:var(--s500);z-index:1;flex:none}
+.node.client .pin{background:#E7F9FE;border-color:#B3F3FB;color:#267C95}
+.node.internal .pin{background:#FEF3C7;border-color:#FDE68A;color:#92400E}
+.node.time .pin{background:var(--purple-subtle);border-color:#D4C3FD;color:var(--purple-dark)}
+.node.sys .pin{background:var(--s50);color:var(--s400)}
+.node.alert .pin{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}
+.node .card{flex:1;min-width:0}
+.node .head{display:flex;align-items:baseline;gap:8px}
+.node .who{font-weight:600;font-size:12.5px}
+.node .k{font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;letter-spacing:.05em}
+.k-client{background:#E7F9FE;color:#267C95}
+.k-int{background:#FEF3C7;color:#92400E}
+.k-time{background:var(--purple-subtle);color:var(--purple-dark)}
+.k-sys{background:var(--s100);color:var(--s500)}
+.k-alert{background:#FEF2F2;color:#B91C1C}
+.node .when{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--s400);white-space:nowrap}
+.node p{font-size:12.5px;color:var(--s600);margin-top:2px}
+.node .bubble{background:var(--s50);border:1px solid var(--s100);border-radius:0 12px 12px 12px;padding:9px 12px;margin-top:4px}
+.node.client .bubble{background:#F4FCFF;border-color:#D9F9FD}
+.daybreak{display:flex;align-items:center;gap:10px;margin:8px 0 4px;position:relative;z-index:1}
+.daybreak span{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--s400);background:#fff;border:1px solid var(--s200);border-radius:12px;padding:2px 10px;margin-left:2px}
+.composer{margin-top:14px;border:1px solid var(--s200);border-radius:14px;padding:12px;background:#fff;box-shadow:0 -6px 24px -18px rgba(82,46,140,.4)}
+.composer .ph{color:var(--s400);font-size:13px}
+.composer .row{display:flex;align-items:center;gap:8px;margin-top:10px}
+.seg{display:flex;background:var(--s50);border:1px solid var(--s200);border-radius:8px;overflow:hidden;font-size:11px;font-weight:600}
+.seg span{padding:4px 10px;color:var(--s500);cursor:pointer}
+.seg .on{background:var(--purple-subtle);color:var(--purple-dark)}
+
+/* right column */
+.slas{display:flex;gap:10px}
+.slabox{flex:1;border:1px solid var(--s100);background:var(--s50);border-radius:14px;padding:10px;text-align:center;position:relative}
+.slabox .ringwrap{position:relative;width:58px;height:58px;margin:0 auto}
+.slabox .ringwrap svg{transform:rotate(-90deg)}
+.slabox .rv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:600}
+.slabox .lab{font-size:10px;font-weight:700;color:var(--s500);letter-spacing:.06em;text-transform:uppercase;margin-top:6px}
+.slabox .val{font-size:11px;font-weight:600;margin-top:1px}
+.progressbar{height:6px;background:var(--s100);border-radius:4px;overflow:hidden}
+.progressbar i{display:block;height:100%;border-radius:4px}
+.check{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:12.5px;color:var(--s700)}
+.check .box{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--s300);flex:none;display:flex;align-items:center;justify-content:center}
+.check.done .box{background:var(--success);border-color:var(--success);color:#fff}
+.check.done span{text-decoration:line-through;color:var(--s400)}
+
+.effort .bars{display:flex;align-items:flex-end;gap:7px;height:64px;margin:8px 0 4px}
+.effort .bar{height:100%;justify-content:flex-end}
+.effort .bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.effort .bar i{width:100%;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,#A36FF8,#8A4DEA)}
+.effort .bar.mute i{background:var(--s200)}
+.effort .bar span{font-size:9px;color:var(--s400);font-family:var(--mono)}
+.effort .total{display:flex;justify-content:space-between;align-items:baseline}
+.effort .total b{font-family:var(--heading);font-size:22px}
+.effort .total span{font-size:11px;color:var(--s500)}
+
+.money .row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;color:var(--s600)}
+.money .row + .row{border-top:1px dashed var(--s100)}
+.money .row b{color:var(--s800);font-family:var(--mono);font-weight:600}
+.money .headline{font-family:var(--heading);font-size:22px;font-weight:700;color:var(--s900)}
+.money .headsub{font-size:11px;color:var(--s500);margin-bottom:6px}
+
+.kbrow{display:flex;gap:9px;align-items:center;padding:6px 0;font-size:12.5px;color:var(--s700)}
+.kbrow + .kbrow{border-top:1px solid var(--s100)}
+.kbrow svg{color:var(--purple)}
+.docrow{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:12.5px}
+.docrow + .docrow{border-top:1px solid var(--s100)}
+.docrow .ext{font-size:9px;font-weight:700;background:var(--s100);color:var(--s500);border-radius:4px;padding:2px 5px;font-family:var(--mono)}
+.footer-note{max-width:1560px;margin:14px auto 0;padding:0 20px;font-size:11px;color:var(--s400);text-align:center}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <nav class="rail">
+    <div class="logo"><svg viewBox="0 0 93 105" xmlns="http://www.w3.org/2000/svg"><path d="M83.1924 34.7078C83.0822 14.6906 66.1255 -1.33965 45.7774 0.0885731C28.5946 1.29622 14.6819 15.2255 13.4963 32.4138C12.0846 52.806 28.2086 69.7847 48.303 69.7847C51.0878 69.7847 53.7953 69.4484 56.3981 68.8307C54.8761 81.8998 48.6173 93.5186 39.3808 101.928C37.8367 103.334 39.5407 105.76 41.3825 104.768C65.9655 91.4838 82.7623 65.6434 83.1759 35.8383C83.1869 35.5239 83.198 35.2096 83.198 34.8953C83.198 34.8677 83.198 34.8401 83.198 34.8126C83.1924 34.774 83.1924 34.7409 83.1924 34.7078ZM33.2157 30.8477C31.3518 33.9468 28.17 35.4467 26.1077 34.206C24.0453 32.9653 23.8799 29.4471 25.7382 26.3535C27.6021 23.2545 30.7838 21.7545 32.8462 22.9953C34.9086 24.2305 35.074 27.7487 33.2157 30.8477ZM46.0531 35.9099C45.0164 39.373 42.3089 41.6173 39.9984 40.928C37.6878 40.2387 36.6567 36.875 37.6934 33.4119C38.7301 29.9489 41.4376 27.7046 43.7481 28.3938C46.0587 29.0831 47.0899 32.4469 46.0531 35.9099Z" fill="#8A4DEA"/><path d="M3.39977 55.6639C6.0577 55.7907 8.71012 55.7797 11.3515 55.6418C12.1787 55.5977 13.0058 55.537 13.833 55.4598C14.8807 55.3661 15.4873 54.2246 14.9744 53.3037C14.4671 52.3994 14.0039 51.473 13.5738 50.53C13.2484 49.8131 12.4433 49.4767 11.7099 49.758C11.0427 50.0116 10.3755 50.2543 9.69719 50.4804C7.56313 51.1917 5.38495 51.7707 3.1792 52.2119C1.16645 52.6089 1.34843 55.5701 3.39977 55.6639Z" fill="#8A4DEA"/><path d="M91.8507 66.5163C89.2644 64.5477 86.8712 62.3419 84.682 59.9322C83.9375 59.1105 82.581 59.3917 82.2336 60.445C81.8972 61.4762 81.5333 62.4963 81.1583 63.511C80.9101 64.1782 81.1638 64.9282 81.7759 65.2866C84.4614 66.8527 87.2351 68.2754 90.1026 69.5106C92.0161 70.3323 93.505 67.7736 91.8507 66.5163Z" fill="#8A4DEA"/><path d="M75.9031 74.9215C74.9822 76.5813 74.0006 78.208 72.9639 79.7962C72.6165 80.3311 72.6441 81.0369 73.0577 81.5277C76.2726 85.3657 79.8459 88.9169 83.7556 92.1042C85.3547 93.4056 87.5053 91.3598 86.2646 89.711C82.9615 85.3105 80.3532 80.4027 78.5445 75.1696C78.1309 73.9785 76.5152 73.8131 75.9031 74.9215Z" fill="#8A4DEA"/><path d="M21.6254 62.0382C21.0133 61.4371 20.0483 61.4702 19.4858 62.1099C15.8629 66.2346 11.6609 69.7528 7.02333 72.5375C5.09881 73.6956 3.10813 74.7267 1.05678 75.6366C-0.840165 76.4748 0.0145622 79.3147 2.05488 78.9618C4.65766 78.5096 7.22736 77.9251 9.75846 77.2192C16.1441 75.4381 22.2706 72.8519 28 69.5653C28.943 69.0249 28.954 67.6628 28.0331 67.0838C25.7336 65.6446 23.583 63.9572 21.6254 62.0382Z" fill="#8A4DEA"/></svg></div>
+    <a href="#" title="Home"><svg class="ic" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></a>
+    <a href="#" class="active" title="Tickets"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"/></svg></a>
+    <a href="#" title="Clients"><svg class="ic" viewBox="0 0 24 24"><path d="M3 21V5a2 2 0 0 1 2-2h6v18"/><path d="M11 9h8a2 2 0 0 1 2 2v10"/><path d="M3 21h18"/></svg></a>
+    <a href="#" title="Projects"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></a>
+    <a href="#" title="Billing"><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></a>
+    <a href="#" title="Assets"><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="13" rx="2"/><path d="M8 21h8M12 16v5"/></svg></a>
+    <a href="#" title="Schedule"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></a>
+    <div class="spacer"></div>
+    <a href="#" title="Settings"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.5 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.5-2-1.5c.06-.4.1-.8.1-1.2z"/></svg></a>
+  </nav>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+        <span>›</span> <span>Tickets</span> <span>›</span> <b>#TIC1001</b>
+      </div>
+      <div class="pager"><button>‹</button> <span class="mono">3 / 10</span> <button>›</button></div>
+      <div class="grow"></div>
+      <button class="btn btn-primary"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Quick Create</button>
+      <div class="bell"><svg class="ic" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="dot">12</span></div>
+      <div class="avatar" style="background:linear-gradient(135deg,#A36FF8,#8A4DEA)">GG</div>
+    </header>
+
+    <div class="canvas">
+      <div class="bento">
+
+        <!-- ===== hero ===== -->
+        <section class="tile hero">
+          <div class="actions">
+            <button class="btn btn-ghost"><svg class="ic" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg> Task</button>
+            <button class="btn btn-ghost"><svg class="ic" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> Link</button>
+            <button class="btn btn-primary">Save Changes</button>
+          </div>
+          <div class="top">
+            <span class="tno">#TIC1001</span>
+            <span class="chip"><span class="dot" style="background:#A36FF8"></span> Curious Beginning</span>
+            <span class="chip"><span class="dot" style="background:#EF4444"></span> Enchanted Emergency</span>
+            <span class="chip">Urgent Matters</span>
+          </div>
+          <h1>Missing White Rabbit</h1>
+          <div class="sub">Opened <b>Jun 9</b> by <b>Alice in Wonderland</b> at <b>Cool Cars</b> · assigned to <b>Tin Woodman</b> · due <b>Jun 20</b> · #Urgent #WhiteRabbit</div>
+          <div class="chips">
+            <span class="chip"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Awaiting internal — the ball is in our court</span>
+            <span class="chip"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg> 11h logged</span>
+            <span class="chip"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M9 11l3 3 8-8"/></svg> Checklist 1/3</span>
+          </div>
+          <div class="slab">
+            <div class="lab">Resolution SLA</div>
+            <div class="val">4h 12m left</div>
+          </div>
+        </section>
+
+        <!-- ===== left: about / contact / visit / touchpoints ===== -->
+        <div class="c-left">
+          <section class="tile desc">
+            <div class="tile-h"><div class="t"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg> The Ask</div></div>
+            <p>Client reports their White Rabbit has gone missing during business hours.</p>
+            <div class="quote">“He had the pocket watch with him and we're already very, very late.”</div>
+            <p style="margin-top:8px;font-size:11.5px;color:var(--s400)">Created via Client Portal · original email attached</p>
+          </section>
+
+          <section class="tile contact">
+            <div class="tile-h"><div class="t"><svg class="ic" viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg> Reporter</div><div class="grow"></div><span class="chip" style="background:var(--purple-subtle);color:var(--purple-dark)">VIP</span></div>
+            <div class="top">
+              <div class="avatar" style="background:#40CFF9">AW</div>
+              <div><div class="nm">Alice in Wonderland</div><div class="role">Operations · Cool Cars</div></div>
+            </div>
+            <div style="margin-top:8px">
+              <div class="kv"><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg> alice@wonderland.com</div>
+              <div class="kv"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.4-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg> (555) 013-4092</div>
+              <div class="kv"><svg class="ic" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg> 1010 Emerald Street, Emerald City</div>
+            </div>
+            <div class="quick">
+              <button class="btn btn-soft"><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg></button>
+              <button class="btn btn-soft"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.4-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg></button>
+              <button class="btn btn-soft" style="flex:2">Client history</button>
+            </div>
+          </section>
+
+          <section class="tile visit">
+            <div class="tile-h"><div class="t"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg> Next On-Site</div><div class="grow"></div><span style="color:var(--s400);font-weight:700;cursor:pointer">＋</span></div>
+            <div class="cal">
+              <div class="datebox"><span>Jun</span><b>21</b></div>
+              <div>
+                <div class="nm">Follow-up: release the White Rabbit</div>
+                <div class="sub">9:00 – 10:30 AM · Tin Woodman · with Alice</div>
+              </div>
+            </div>
+            <div class="cal" style="margin-top:10px;opacity:.65">
+              <div class="datebox"><span>Jun</span><b>11</b></div>
+              <div>
+                <div class="nm">Through the Looking Glass Expedition</div>
+                <div class="sub">completed · 2 days on site</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="tile">
+            <div class="tile-h"><div class="t"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.4-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg> Touchpoints</div></div>
+            <div class="callrow"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.4-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg> White Rabbit Investigation Call <span class="when">Jun 8</span></div>
+            <div class="callrow"><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg> White Rabbit Sighting Update <span class="when">Jun 9</span></div>
+            <div class="callrow"><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg> Possible White Rabbit Locations <span class="when">Jun 9</span></div>
+          </section>
+        </div>
+
+        <!-- ===== center: unified timeline ===== -->
+        <section class="tile c-mid">
+          <div class="tile-h">
+            <div class="t"><svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Ticket Story</div>
+            <div class="grow"></div>
+            <span style="font-size:11px;color:var(--s400)">comments · time · system · alerts in one stream</span>
+          </div>
+          <div class="tl">
+            <div class="filters">
+              <span class="fpill on">Everything</span>
+              <span class="fpill">Comments (3)</span>
+              <span class="fpill">Time (4)</span>
+              <span class="fpill">System (5)</span>
+              <span class="fpill">Email (2)</span>
+            </div>
+            <div class="tl-list">
+
+              <div class="daybreak"><span>Jun 9 — opened</span></div>
+
+              <div class="node client">
+                <div class="pin"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                <div class="card">
+                  <div class="head"><span class="who">Alice in Wonderland</span><span class="k k-client">CLIENT</span><span class="when">9:14 AM</span></div>
+                  <div class="bubble"><p>Initial report of missing White Rabbit. Last seen heading towards the tea party.</p></div>
+                </div>
+              </div>
+
+              <div class="node sys">
+                <div class="pin"><svg class="ic" viewBox="0 0 24 24"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></div>
+                <div class="card">
+                  <div class="head"><span class="who">Workflow</span><span class="k k-sys">SYSTEM</span><span class="when">9:15 AM</span></div>
+                  <p>Priority set to <b>Enchanted Emergency</b> → routed to <b>Urgent Matters</b> · SLA <b>Demo SLA</b> started · assigned <b>Tin Woodman</b></p>
+                </div>
+              </div>
+
+              <div class="node internal">
+                <div class="pin"><svg class="ic" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                <div class="card">
+                  <div class="head"><span class="who">Tin Woodman</span><span class="k k-int">INTERNAL</span><span class="when">10:02 AM</span></div>
+                  <div class="bubble"><p>Last seen heading towards the tea party. Checking the Tulgey Wood first, then the tea party grounds.</p></div>
+                </div>
+              </div>
+
+              <div class="daybreak"><span>Jun 10 – 18 — the search</span></div>
+
+              <div class="node time">
+                <div class="pin"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+                <div class="card">
+                  <div class="head"><span class="who">Tin Woodman</span><span class="k k-time">2H LOGGED</span><span class="when">Jun 10</span></div>
+                  <p>Searched for White Rabbit in the Tulgey Wood</p>
+                </div>
+              </div>
+
+              <div class="node time">
+                <div class="pin"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+                <div class="card">
+                  <div class="head"><span class="who">Tin Woodman</span><span class="k k-time">2H LOGGED</span><span class="when">Jun 12</span></div>
+                  <p>Moving on to March Hare's Residence</p>
+                </div>
+              </div>
+
+              <div class="node alert">
+                <div class="pin"><svg class="ic" viewBox="0 0 24 24"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3z"/></svg></div>
+                <div class="card">
+                  <div class="head"><span class="who">Tactical RMM</span><span class="k k-alert">ALERT</span><span class="when">Jun 12</span></div>
+                  <p><b>disk_check</b> on Mad Hatter Tea Time Server — Disk C: at 96% (occurrence 3) · linked to this client</p>
+                </div>
+              </div>
+
+              <div class="node time">
+                <div class="pin"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+                <div class="card">
+                  <div class="head"><span class="who">Scarecrow</span><span class="k k-time">4H LOGGED</span><span class="when">Jun 14</span></div>
+                  <p>Repaired cracks in the Yellow Brick Road near Munchkinland</p>
+                </div>
+              </div>
+
+              <div class="node sys">
+                <div class="pin"><svg class="ic" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/></svg></div>
+                <div class="card">
+                  <div class="head"><span class="who">Scarecrow</span><span class="k k-sys">CHECKLIST</span><span class="when">Jun 14</span></div>
+                  <p>Completed <b>Confirm with customer</b> — 1 of 3 done</p>
+                </div>
+              </div>
+
+              <div class="node time">
+                <div class="pin"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+                <div class="card">
+                  <div class="head"><span class="who">Tin Woodman</span><span class="k k-time">3H LOGGED</span><span class="when">Jun 18</span></div>
+                  <p>Conducted survey of uncharted areas in Wonderland</p>
+                </div>
+              </div>
+
+              <div class="daybreak"><span>Today — Jun 20</span></div>
+
+              <div class="node client">
+                <div class="pin"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                <div class="card">
+                  <div class="head"><span class="who">Alice in Wonderland</span><span class="k k-client">CLIENT</span><span class="when">4:47 PM</span></div>
+                  <div class="bubble"><p>White Rabbit was arrested at the tea party. The Queen's guards are holding him — can you confirm and close this out?</p></div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="composer">
+              <div class="ph">Continue the story — reply to Alice…</div>
+              <div class="row">
+                <div class="seg"><span class="on">Client</span><span>Internal</span><span>Resolution</span></div>
+                <div style="flex:1"></div>
+                <svg class="ic" viewBox="0 0 24 24" style="color:var(--s400)"><path d="m21.4 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.2-9.19a4 4 0 0 1 5.65 5.66l-9.2 9.19a2 2 0 0 1-2.82-2.83l8.49-8.48"/></svg>
+                <svg class="ic" viewBox="0 0 24 24" style="color:var(--s400)"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
+                <button class="btn btn-primary" style="padding:6px 14px">Send</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== right: now-state tiles ===== -->
+        <div class="c-right">
+          <section class="tile">
+            <div class="tile-h"><div class="t"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg> SLA Clocks</div><div class="grow"></div><span class="chip" style="background:var(--s100);color:var(--s500)">Demo SLA</span></div>
+            <div class="slas">
+              <div class="slabox">
+                <div class="ringwrap">
+                  <svg width="58" height="58" viewBox="0 0 58 58"><circle cx="29" cy="29" r="24" fill="none" stroke="#F1F5F9" stroke-width="6"/><circle cx="29" cy="29" r="24" fill="none" stroke="#10B981" stroke-width="6" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="0"/></svg>
+                  <span class="rv" style="color:var(--success)">✓</span>
+                </div>
+                <div class="lab">Response</div>
+                <div class="val" style="color:var(--success)">Met · 42m</div>
+              </div>
+              <div class="slabox">
+                <div class="ringwrap">
+                  <svg width="58" height="58" viewBox="0 0 58 58"><circle cx="29" cy="29" r="24" fill="none" stroke="#F1F5F9" stroke-width="6"/><circle cx="29" cy="29" r="24" fill="none" stroke="#F59E0B" stroke-width="6" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="27"/></svg>
+                  <span class="rv" style="color:#B45309">82%</span>
+                </div>
+                <div class="lab">Resolution</div>
+                <div class="val" style="color:#B45309">4h 12m left</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="tile">
+            <div class="tile-h"><div class="t"><svg class="ic" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg> Path to Done</div><div class="grow"></div><span class="chip" style="background:var(--s100);color:var(--s600)">1/3</span></div>
+            <div class="progressbar" style="margin-bottom:6px"><i style="width:33%;background:var(--success)"></i></div>
+            <div class="check done"><div class="box"><svg class="ic" style="width:10px;height:10px" viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></div><span>Confirm with customer</span></div>
+            <div class="check"><div class="box"></div><span>Verify backups</span></div>
+            <div class="check"><div class="box"></div><span>Close out ticket</span></div>
+          </section>
+
+          <section class="tile effort">
+            <div class="tile-h"><div class="t"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg> Effort</div><div class="grow"></div><span class="chip" style="background:var(--purple-subtle);color:var(--purple-dark)">timer running · 00:03:15</span></div>
+            <div class="total"><b>11h 00m</b><span>across 4 sessions</span></div>
+            <div class="bars">
+              <div class="bar"><i style="height:22px"></i><span>10</span></div>
+              <div class="bar mute"><i style="height:3px"></i><span>11</span></div>
+              <div class="bar"><i style="height:22px"></i><span>12</span></div>
+              <div class="bar mute"><i style="height:3px"></i><span>13</span></div>
+              <div class="bar"><i style="height:44px"></i><span>14</span></div>
+              <div class="bar mute"><i style="height:3px"></i><span>16</span></div>
+              <div class="bar"><i style="height:33px"></i><span>18</span></div>
+            </div>
+            <button class="btn btn-soft" style="justify-content:center;margin-top:6px"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Add time entry</button>
+          </section>
+
+          <section class="tile money">
+            <div class="tile-h"><div class="t"><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> Billing Impact</div></div>
+            <div class="headline">$1,650</div>
+            <div class="headsub">unbilled labor on this ticket · 11h × $150</div>
+            <div class="row"><span>Contract</span><b style="font-family:var(--sans)">Cool Cars MSP Monthly</b></div>
+            <div class="row"><span>Coverage</span><b style="font-family:var(--sans);color:var(--success)">In scope · billable</b></div>
+            <div class="row"><span>Last invoice</span><b>INV-001021 · $8,000</b></div>
+          </section>
+
+          <section class="tile">
+            <div class="tile-h"><div class="t"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Knowledge</div><div class="grow"></div><span style="font-size:10.5px;color:var(--s400)">auto-matched</span></div>
+            <div class="kbrow"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Troubleshooting the Cheshire Cat's Disappearing Act</div>
+            <div class="kbrow"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> FAQ – Wonderland Portal</div>
+          </section>
+
+          <section class="tile">
+            <div class="tile-h"><div class="t"><svg class="ic" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg> Files</div><div class="grow"></div><span style="color:var(--s400);font-weight:700;cursor:pointer">＋</span></div>
+            <div class="docrow"><span class="ext">PDF</span> Alice Lost White Rabbit <span style="margin-left:auto;font-size:10px;color:var(--s400)" class="mono">1.2 MB</span></div>
+            <div class="docrow"><span class="ext">DOC</span> White Rabbit Search Plan <span style="margin-left:auto;font-size:10px;color:var(--s400)" class="mono">84 KB</span></div>
+          </section>
+        </div>
+
+      </div>
+    </div>
+    <p class="footer-note">Option B · “The Ticket Story” — one chronological spine (comments + time + system + RMM), state tiles orbit it. Data drawn live from the Alga PSA dev database.</p>
+  </div>
+</div>
+</body>
+</html>

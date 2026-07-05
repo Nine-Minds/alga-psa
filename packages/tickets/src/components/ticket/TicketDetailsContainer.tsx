@@ -4,6 +4,7 @@ import React, { Suspense, useState, useRef, useCallback, useEffect } from 'react
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
+import type { TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -63,6 +64,8 @@ interface TicketDetailsContainerProps {
   };
   surveySummaryCard?: React.ReactNode;
   associatedAssets?: React.ReactNode;
+  /** Server-gathered startup payload (resolved values + streamed tile promises). */
+  bootstrap?: TicketScreenBootstrap;
   renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
   renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
@@ -89,6 +92,7 @@ export default function TicketDetailsContainer({
   ticketData,
   surveySummaryCard,
   associatedAssets = null,
+  bootstrap,
   renderContactDetails,
   renderCreateProjectTask,
   renderClientDetails,
@@ -162,6 +166,11 @@ export default function TicketDetailsContainer({
       toast.success(t('messages.ticketUpdated', 'Ticket updated successfully'));
     } catch (error) {
       handleError(error, t('errors.updateField', 'Failed to update {{field}}', { field }));
+      // Re-throw so the optimistic caller (handleSelectChange) reverts the field
+      // to its previous value. Without this, a rejected write (e.g. a board
+      // change that the server refuses without a destination status) leaves the
+      // UI showing an unsaved value that never persisted.
+      throw error;
     } finally {
       setIsSubmitting(false);
     }
@@ -285,6 +294,7 @@ export default function TicketDetailsContainer({
       isSubmitting={isSubmitting}
       surveySummaryCard={surveySummaryCard}
       associatedAssets={associatedAssets}
+      bootstrap={bootstrap}
       renderContactDetails={renderContactDetails}
       renderCreateProjectTask={renderCreateProjectTask}
       renderClientDetails={renderClientDetails}
