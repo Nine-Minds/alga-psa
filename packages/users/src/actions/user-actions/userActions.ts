@@ -283,7 +283,7 @@ export const addUser = withAuth(async (
           return {
             success: false,
             code: 'LICENSE_LIMIT_REACHED',
-            error: `You've reached the seat limit (${seatLimit.seats}) of your Alga appliance license.`,
+            error: `You've reached the seat limit (${seatLimit.seats}) of your Alga appliance license. Add seats at nineminds.com/portal, then use "Refresh license now" on the License page.`,
           };
         }
 
