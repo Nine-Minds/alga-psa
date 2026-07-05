@@ -42,7 +42,7 @@
       "items": "Unid",
       "name": "Nome",
       "quoteDate": "Data da cotação",
-      "quoteNumber": "Citar #",
+      "quoteNumber": "Cotação #",
       "source": "Fonte",
       "status": "Status",
       "title": "Título",
@@ -158,7 +158,7 @@
       "editTemplate": "Editar modelo de cotação",
       "newQuote": "Nova cotação",
       "newTemplate": "Novo modelo de cotação",
-      "quote": "Citar",
+      "quote": "Cotação",
       "quoteWithNumber": "orçamento {{quoteNumber}}",
       "quoteWithNumberAndVersion": "orçamento {{quoteNumber}} v{{version}}",
       "templateQuoteFallback": "orçamento de modelo"
@@ -184,7 +184,7 @@
       "accepted": "Orçamento aceito",
       "converted": "Cotação convertida",
       "convertedDescription": "Esta cotação foi convertida em um contrato e/ou fatura.",
-      "quote": "Citar",
+      "quote": "Cotação",
       "rejected": "orçamento rejeitada"
     },
     "dialogs": {
@@ -278,7 +278,7 @@
       "convertedTitle": "Cotação convertida",
       "convertedDescription": "Esta cotação foi convertida em um contrato e/ou fatura."
     },
-    "noticeTitle": "Citar",
+    "noticeTitle": "Cotação",
     "essentials": {
       "title": "Fundamentos",
       "subtitle": "Mostrado ao cliente no documento de cotação.",
