@@ -82,7 +82,6 @@ import { ResponseStateBadge } from '@alga-psa/ui/components';
 import TicketNavigation from './TicketNavigation';
 import LayoutToggle from './bento/LayoutToggle';
 import TicketBentoLayout from './bento/TicketBentoLayout';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
     getTicketLayoutPreference,
     setTicketLayoutPreference,
@@ -469,10 +468,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }), [t]);
     const [ticketInfoDirtyFields, setTicketInfoDirtyFields] = useState<string[]>([]);
 
-    // Grid | Entry layout toggle (per-user preference; toggle shown only when
-    // the ticket-bento-layout flag is on). Entry is the default and renders
-    // the existing layout untouched.
-    const { enabled: bentoFlagEnabled } = useFeatureFlag('ticket-bento-layout');
+    // Grid | Entry layout toggle (per-user preference). Entry is the default
+    // and renders the existing layout untouched.
     const [layoutMode, setLayoutMode] = useState<TicketDetailLayout>(
         bootstrap?.layoutPreference?.layout ?? 'entry',
     );
@@ -504,7 +501,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         void setTicketLayoutPreference({ layout: next }).catch(() => undefined);
     }, []);
 
-    const useGridLayout = Boolean(bentoFlagEnabled) && layoutMode === 'grid' && !isInDrawer;
+    const useGridLayout = layoutMode === 'grid' && !isInDrawer;
     const [ticketPropertiesDirtyFields, setTicketPropertiesDirtyFields] = useState<string[]>([]);
     const [liveHighlightedFields, setLiveHighlightedFields] = useState<string[]>([]);
     const [liveFieldConflicts, setLiveFieldConflicts] = useState<Partial<Record<string, TicketLiveConflictState>>>({});
@@ -2703,7 +2700,7 @@ const handleClose = () => {
                             </div>
 
                             <div className="flex items-center gap-2">
-                                {bentoFlagEnabled && !isInDrawer ? (
+                                {!isInDrawer ? (
                                     <LayoutToggle value={layoutMode} onChange={handleLayoutModeChange} />
                                 ) : null}
                                 {/* Add popout button only when in drawer */}
