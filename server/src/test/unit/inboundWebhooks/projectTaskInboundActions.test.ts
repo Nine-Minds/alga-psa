@@ -12,6 +12,35 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
+  tenantDb: (conn: any, tenant: string) => {
+    const tenantColumnFor = (t: string) => {
+      const match = /\bas\s+([A-Za-z0-9_]+)\s*$/i.exec(String(t).trim());
+      return match ? `${match[1]}.tenant` : 'tenant';
+    };
+    return {
+      table: (t: string) => {
+        const builder = conn(t);
+        const col = tenantColumnFor(t);
+        const originalWhere = builder?.where ? builder.where.bind(builder) : undefined;
+        if (!originalWhere) {
+          return builder;
+        }
+        return new Proxy(builder, {
+          get(target: any, prop: string | symbol, receiver: any) {
+            if (prop === 'where') {
+              return (criteria: any, ...rest: any[]) =>
+                rest.length === 0 && criteria && typeof criteria === 'object' && !Array.isArray(criteria)
+                  ? originalWhere({ [col]: tenant, ...criteria })
+                  : originalWhere(criteria, ...rest);
+            }
+            return Reflect.get(target, prop, receiver);
+          },
+        });
+      },
+      tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+        o?.type === 'left' ? (q.leftJoin?.(t, () => {}) ?? q) : (q.join?.(t, () => {}) ?? q),
+    };
+  },
 }));
 
 vi.mock('@alga-psa/shared/inboundWebhooks/externalEntityMappings', () => ({

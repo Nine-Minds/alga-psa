@@ -41,8 +41,8 @@ import {
   getTaxRates,
   previewBillingPeriodsForSchedule,
   previewBillingHistoryBootstrap,
+  normalizeAnchorSettingsForCycle,
   setClientTemplate,
-  updateClientBillingSchedule,
   updateClientBillingSettings,
   updateClientTaxExemptStatus,
   updateClientTaxSettings,
@@ -58,6 +58,9 @@ import {
   type PaginatedServicesResponse,
   type UpdateClientBillingScheduleInput,
   type ClientTaxSourceInfo,
+  applyClientCadenceChange,
+  previewClientCadenceScheduleChange,
+  type ClientCadenceChangePreview,
 } from '@alga-psa/shared/billingClients';
 import { withAuth, withAuthCheck } from '@alga-psa/auth';
 
@@ -134,11 +137,35 @@ export const updateClientBillingScheduleAsync = withAuth(async (
 ): Promise<{ success: true }> => {
   const { knex } = await createTenantKnex();
 
+  // Route through the shared cadence-change layer so the scalar, anchor, cycle
+  // windows, and recurring_service_periods ledger are updated together. Calling
+  // the bare schedule mutation used to leave the ledger stale, which stranded the
+  // client in a "repair required" state on the invoicing screen.
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await updateClientBillingSchedule(trx, tenant, input);
+    await applyClientCadenceChange(trx, tenant, input);
   });
 
   return { success: true };
+});
+
+export const previewClientCadenceChangeAsync = withAuth(async (
+  _user,
+  { tenant },
+  input: { clientId: string; billingCycle: BillingCycleType; anchor: BillingCycleAnchorSettingsInput }
+): Promise<ClientCadenceChangePreview> => {
+  const { knex } = await createTenantKnex();
+
+  // Read-only: computes how many unbilled periods would regenerate (and whether
+  // billed periods are in range) without writing anything.
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const normalized = normalizeAnchorSettingsForCycle(input.billingCycle, input.anchor);
+    return previewClientCadenceScheduleChange(trx, {
+      tenant,
+      clientId: input.clientId,
+      billingCycle: input.billingCycle,
+      anchor: normalized,
+    });
+  });
 });
 
 export const getClientBillingCycleAnchorAsync = withAuth(async (

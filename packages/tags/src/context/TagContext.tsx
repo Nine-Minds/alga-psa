@@ -57,6 +57,10 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
       const allTags = await getAllTags();
       setTags(allTags);
       setTagsLoaded(true);
+    } catch (error) {
+      // Callers fire-and-forget from effects; an escaping rejection surfaces
+      // as an unhandled rejection instead of a recoverable miss.
+      console.error('Failed to refetch tags:', error);
     } finally {
       setIsLoading(false);
     }

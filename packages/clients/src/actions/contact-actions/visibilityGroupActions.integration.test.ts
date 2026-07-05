@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getClientContactVisibilityContext } from '../../../../tickets/src/lib/clientPortalVisibility';
+import { getClientContactVisibilityContext } from '../../../../tickets/src/lib/clientPortalVisibility.server';
 
 const hasPermissionAsyncMock = vi.fn();
 const createTenantKnexMock = vi.fn(async () => ({ knex: {} as any }));
@@ -8,15 +8,33 @@ const withTransactionMock = vi.fn();
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  tenantDb: (conn: any) => ({
+    table: (table: string) => conn(table),
+    tenantJoin: (query: any) => query.join?.() ?? query,
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
-  withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'msp-user-1' }, { tenant: 'tenant-1' }, ...args),
-  withOptionalAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'msp-user-1' }, { tenant: 'tenant-1' }, ...args),
+  withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'msp-user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
+  withOptionalAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'msp-user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
 }));
 
 vi.mock('../../lib/authHelpers', () => ({
   hasPermissionAsync: (...args: any[]) => hasPermissionAsyncMock(...args),
+  isMspUser: (user: any) => user?.user_type === 'internal',
+  isClientPortalUser: (user: any) => user?.user_type === 'client',
+  hasMspPermission: async (user: any, resource: string, action: string, db?: any) =>
+    user?.user_type === 'internal' && await hasPermissionAsyncMock(user, resource, action, db),
+  assertMspPermission: async (user: any, resource: string, action: string, message: string, db?: any) => {
+    if (!(user?.user_type === 'internal' && await hasPermissionAsyncMock(user, resource, action, db))) {
+      throw new Error(message);
+    }
+  },
+  assertMspOrClientPortalOwnClientPermission: async (user: any, _tenant: string, _clientId: string, resource: string, action: string, message: string, db?: any) => {
+    if (!(user?.user_type === 'internal' && await hasPermissionAsyncMock(user, resource, action, db))) {
+      throw new Error(message);
+    }
+  },
 }));
 
 type VisibilityState = {
@@ -100,9 +118,9 @@ function createVisibilityTrx(state: VisibilityState) {
                 .filter((row) => {
                   const board = state.boards.find((candidate) => candidate.board_id === row.board_id);
                   return (
-                    row.tenant === filters['cvgb.tenant'] &&
+                    (!filters['cvgb.tenant'] || row.tenant === filters['cvgb.tenant']) &&
                     row.group_id === filters['cvgb.group_id'] &&
-                    board?.tenant === filters['cvgb.tenant']
+                    (!filters['cvgb.tenant'] || board?.tenant === filters['cvgb.tenant'])
                   );
                 })
                 .map((row) => ({ board_id: row.board_id })),

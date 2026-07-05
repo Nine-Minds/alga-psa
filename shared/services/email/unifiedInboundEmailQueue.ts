@@ -150,6 +150,16 @@ async function getRedisClient(): Promise<RedisClientType> {
   return redisClientPromise;
 }
 
+/**
+ * Shared accessor for the inbound-email Redis connection. Reused by the inbound
+ * reopen rate limiter so the limiter rides the same connection the email-service
+ * worker already establishes (instead of opening a second one or depending on a
+ * server-only singleton).
+ */
+export async function getInboundEmailRedisClient(): Promise<RedisClientType> {
+  return getRedisClient();
+}
+
 export type UnifiedInboundEmailQueueJobInput =
   | {
       tenantId: string;

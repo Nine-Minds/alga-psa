@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export interface QuoteApprovalWorkflowSettings {
   approvalRequired: boolean;
@@ -32,9 +33,8 @@ export async function getQuoteApprovalWorkflowSettings(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string
 ): Promise<QuoteApprovalWorkflowSettings> {
-  const row = await knexOrTrx('tenant_settings')
+  const row = await tenantDb(knexOrTrx, tenant).table('tenant_settings')
     .select('settings')
-    .where({ tenant })
     .first<{ settings?: unknown }>();
 
   const settings = normalizeSettings(row?.settings);
@@ -48,9 +48,8 @@ export async function setQuoteApprovalWorkflowRequired(
   tenant: string,
   approvalRequired: boolean
 ): Promise<QuoteApprovalWorkflowSettings> {
-  const row = await knexOrTrx('tenant_settings')
+  const row = await tenantDb(knexOrTrx, tenant).table('tenant_settings')
     .select('settings')
-    .where({ tenant })
     .first<{ settings?: unknown }>();
 
   const currentSettings = normalizeSettings(row?.settings);
@@ -65,7 +64,7 @@ export async function setQuoteApprovalWorkflowRequired(
     },
   };
 
-  await knexOrTrx('tenant_settings')
+  await tenantDb(knexOrTrx, tenant).table('tenant_settings')
     .insert({
       tenant,
       settings: JSON.stringify(updatedSettings),

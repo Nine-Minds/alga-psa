@@ -41,11 +41,7 @@ A networked MCP endpoint (`POST /api/mcp`, Streamable HTTP / JSON-RPC) that auth
 **agents** via the tenant's identity provider and enforces governance: distinct agent
 identity, RBAC, and an exportable audit trail. Enterprise-only.
 
-> **Dark release.** The admin UI (**Settings → MCP Server**) is gated behind the
-> `mcp-server` PostHog feature flag and is **off by default** — it appears only when the
-> tenant is Enterprise *and* the flag is enabled for them. This is a UI-only gate: the
-> server endpoints below stay live regardless, so an operator can configure agents via the
-> admin API even before the tab is rolled out. See `docs/features/feature-flags.md`.
+The admin UI (**Settings → MCP Server**) is available to all Enterprise tenants. The server endpoints (`POST /api/mcp`, `/.well-known/oauth-protected-resource`, and the `/api/v1/mcp/*` admin APIs) are live for any Enterprise instance regardless of whether agents have been provisioned.
 
 ### Auth model — OAuth 2.1 resource server (IdP delegation)
 
@@ -90,6 +86,21 @@ are present, the built-in issuers are advertised in the PRM and accepted at toke
 exactly like a registered `agent_idp_providers` row. This covers **interactive / human-delegated**
 agents (auth-code + PKCE through the shared app); the customer configures nothing in their own
 directory.
+
+**4. "Connect with Microsoft/Google" (hosted, interactive).** With the shared apps present, the
+**Settings → MCP Server** agent form shows **Connect with Microsoft** / **Connect with Google**
+buttons (`/api/v1/mcp/connect/start` → consent popup → `/api/v1/mcp/connect/callback`). The
+callback reads the returned id_token's `iss`/`sub` and the screen pre-fills the agent's issuer +
+subject — no client-id or service-account id to paste. The flow is **inert**: it discards every
+token and creates nothing; the agent is still provisioned by the admin-authed
+`POST /api/v1/mcp/agents`. It captures `sub` (not `oid`/`azp`) on purpose — an interactive
+id_token has no `azp`, so the Microsoft built-in falls back to `sub` at validation, matching what
+was stored. Unattended service accounts keep the manual "enter identity" path (their token
+carries `azp` / a service-account `sub`).
+
+> **Deploy step (hosted):** the shared Microsoft app registration and the Google OAuth client
+> must each whitelist `https://<hosted-base>/api/v1/mcp/connect/callback` as a redirect URI, or
+> the IdP returns `redirect_uri_mismatch`. This gates turning the Connect buttons on in prod.
 
 ### Admin setup (the journey)
 

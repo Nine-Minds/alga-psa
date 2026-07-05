@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 
 export interface MentionUser {
@@ -9,6 +9,13 @@ export interface MentionUser {
   display_name: string;
   email: string;
   avatar_url: string | null;
+}
+
+interface MentionUserRow {
+  user_id: string;
+  username: string | null;
+  display_name: string;
+  email: string;
 }
 
 /**
@@ -27,14 +34,14 @@ export const searchUsersForMentions = withAuth(async (
     console.log('[searchUsersForMentions] Searching with query:', query);
     const searchPattern = `%${query.toLowerCase()}%`;
 
-    let queryBuilder = knex('users')
+    let queryBuilder = tenantDb(knex, tenant)
+      .table('users')
       .select(
         'user_id',
         'username',
         knex.raw("CONCAT(first_name, ' ', last_name) as display_name"),
         'email'
       )
-      .where('tenant', tenant)
       .andWhere('user_type', 'internal') // Only internal MSP users can be mentioned
       .andWhere('is_inactive', false); // Only active users
 
@@ -50,7 +57,7 @@ export const searchUsersForMentions = withAuth(async (
 
     const users = await queryBuilder
       .orderBy('first_name')
-      .limit(10);
+      .limit(10) as unknown as MentionUserRow[];
 
     console.log('[searchUsersForMentions] Found users:', users.length);
 

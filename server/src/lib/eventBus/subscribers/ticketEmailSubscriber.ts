@@ -17,6 +17,7 @@ import { getSecret } from '../../utils/getSecret';
 import { createTenantKnex } from '../../db';
 import { formatBlockNoteContent } from '@alga-psa/formatting/blocknoteUtils';
 import { getEmailEventChannel } from '@alga-psa/notifications';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
@@ -28,6 +29,7 @@ import {
   RetryableAccumulatorError,
 } from '../../notifications/NotificationAccumulator';
 import { isValidEmail } from '@alga-psa/core';
+import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { resolveEffectiveTimeZone } from '../../utils/workDate';
 import { rewriteTicketCommentImagesToCid } from './ticketCommentInlineImageEmail';
 import {
@@ -65,8 +67,8 @@ async function resolveTicketingFromAddress(
     // optional sender_display_name override. Falls back to undefined when no
     // matching row or no display name is set; callers then use board-name
     // fallback for backward compatibility.
-    const provider = await knex('email_providers')
-      .where({ tenant: tenantId, mailbox: candidate })
+    const provider = await tenantDb(knex, tenantId).table('email_providers')
+      .where({ mailbox: candidate })
       .first(['sender_display_name']);
 
     const senderDisplayName = typeof provider?.sender_display_name === 'string'
@@ -174,13 +176,16 @@ async function resolveTicketLinks(
 function applyDefaultContactPhoneJoin(
   query: Knex.QueryBuilder,
   knex: Knex,
+  tenantId: string,
   ticketAlias = 't',
   phoneAlias = 'cpn_default'
 ): Knex.QueryBuilder {
-  return query.leftJoin(`contact_phone_numbers as ${phoneAlias}`, function joinDefaultContactPhone() {
-    this.on(`${ticketAlias}.contact_name_id`, '=', `${phoneAlias}.contact_name_id`)
-      .andOn(`${ticketAlias}.tenant`, '=', `${phoneAlias}.tenant`)
-      .andOn(`${phoneAlias}.is_default`, '=', knex.raw('true'));
+  const scopedDb = tenantDb(knex, tenantId);
+  return scopedDb.tenantJoin(query, `contact_phone_numbers as ${phoneAlias}`, `${ticketAlias}.contact_name_id`, `${phoneAlias}.contact_name_id`, {
+    type: 'left',
+    on(join) {
+      join.andOn(`${phoneAlias}.is_default`, '=', knex.raw('true'));
+    },
   });
 }
 
@@ -199,7 +204,8 @@ async function fetchTicketForEmail(
   tenantId: string,
   ticketId: string
 ): Promise<TicketEmailRow> {
-  return db('tickets as t')
+  const scopedDb = tenantDb(db, tenantId);
+  const query = scopedDb.table('tickets as t')
     .select(
       't.*',
       'dcl.email as client_email',
@@ -223,56 +229,69 @@ async function fetchTicketForEmail(
       'cl.state_province',
       'cl.postal_code',
       'cl.country_code'
-    )
-    .leftJoin('clients as c', function() {
-      this.on('t.client_id', 'c.client_id')
-          .andOn('t.tenant', 'c.tenant');
-    })
-    .leftJoin('client_locations as dcl', function() {
-      this.on('dcl.client_id', '=', 't.client_id')
-          .andOn('dcl.tenant', '=', 't.tenant')
-          .andOn('dcl.is_default', '=', db.raw('true'))
-          .andOn('dcl.is_active', '=', db.raw('true'));
-    })
-    .leftJoin('contacts as co', function() {
-      this.on('t.contact_name_id', 'co.contact_name_id')
-          .andOn('t.tenant', 'co.tenant');
-    })
-    .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
-    .leftJoin('users as au', function() {
-      this.on('t.assigned_to', 'au.user_id')
-          .andOn('t.tenant', 'au.tenant');
-    })
-    .leftJoin('users as eb', function() {
-      this.on('t.entered_by', 'eb.user_id')
-          .andOn('t.tenant', 'eb.tenant');
-    })
-    .leftJoin('priorities as p', function() {
-      this.on('t.priority_id', 'p.priority_id')
-          .andOn('t.tenant', 'p.tenant');
-    })
-    .leftJoin('statuses as s', function() {
-      this.on('t.status_id', 's.status_id')
-          .andOn('t.tenant', 's.tenant');
-    })
-    .leftJoin('boards as ch', function() {
-      this.on('t.board_id', 'ch.board_id')
-          .andOn('t.tenant', 'ch.tenant');
-    })
-    .leftJoin('categories as cat', function() {
-      this.on('t.category_id', 'cat.category_id')
-          .andOn('t.tenant', 'cat.tenant');
-    })
-    .leftJoin('categories as subcat', function() {
-      this.on('t.subcategory_id', 'subcat.category_id')
-          .andOn('t.tenant', 'subcat.tenant');
-    })
-    .leftJoin('client_locations as cl', function() {
-      this.on('t.location_id', 'cl.location_id')
-          .andOn('t.tenant', 'cl.tenant');
-    })
-    .where({ 't.ticket_id': ticketId, 't.tenant': tenantId })
+    );
+
+  scopedDb.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+  scopedDb.tenantJoin(query, 'client_locations as dcl', 'dcl.client_id', 't.client_id', {
+    type: 'left',
+    on(join) {
+      join
+        .andOn('dcl.is_default', '=', db.raw('true'))
+        .andOn('dcl.is_active', '=', db.raw('true'));
+    },
+  });
+  scopedDb.tenantJoin(query, 'contacts as co', 't.contact_name_id', 'co.contact_name_id', { type: 'left' });
+  applyDefaultContactPhoneJoin(query, db, tenantId);
+  scopedDb.tenantJoin(query, 'users as au', 't.assigned_to', 'au.user_id', { type: 'left' });
+  scopedDb.tenantJoin(query, 'users as eb', 't.entered_by', 'eb.user_id', { type: 'left' });
+  scopedDb.tenantJoin(query, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+  scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+  scopedDb.tenantJoin(query, 'boards as ch', 't.board_id', 'ch.board_id', { type: 'left' });
+  scopedDb.tenantJoin(query, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
+  scopedDb.tenantJoin(query, 'categories as subcat', 't.subcategory_id', 'subcat.category_id', { type: 'left' });
+  scopedDb.tenantJoin(query, 'client_locations as cl', 't.location_id', 'cl.location_id', { type: 'left' });
+
+  return query
+    .where({ 't.ticket_id': ticketId })
     .first();
+}
+
+async function fetchAdditionalTicketResources(
+  db: Knex,
+  tenantId: string,
+  ticketId: string
+): Promise<Array<{ email?: string | null; user_id?: string | null }>> {
+  const scopedDb = tenantDb(db, tenantId);
+  const query = scopedDb.table('ticket_resources as tr')
+    .select({ email: 'u.email', user_id: 'u.user_id' });
+
+  scopedDb.tenantJoin(query, 'users as u', 'tr.additional_user_id', 'u.user_id', { type: 'left' });
+
+  return query.where({ 'tr.ticket_id': ticketId });
+}
+
+async function fetchBundleChildTicketsForEmail(
+  db: Knex,
+  tenantId: string,
+  masterTicketId: string
+): Promise<Array<Record<string, any>>> {
+  const scopedDb = tenantDb(db, tenantId);
+  const query = scopedDb.table('tickets as t')
+    .select({ ticket_id: 't.ticket_id', ticket_number: 't.ticket_number', contact_name_id: 't.contact_name_id', client_id: 't.client_id', email_metadata: 't.email_metadata', client_email: 'dcl.email', client_name: 'c.client_name', contact_email: 'co.email', contact_name: 'co.full_name', contact_phone: 'cpn_default.phone_number' });
+
+  scopedDb.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+  scopedDb.tenantJoin(query, 'client_locations as dcl', 'dcl.client_id', 't.client_id', {
+    type: 'left',
+    on(join) {
+      join
+        .andOn('dcl.is_default', '=', db.raw('true'))
+        .andOn('dcl.is_active', '=', db.raw('true'));
+    },
+  });
+  scopedDb.tenantJoin(query, 'contacts as co', 't.contact_name_id', 'co.contact_name_id', { type: 'left' });
+  applyDefaultContactPhoneJoin(query, db, tenantId);
+
+  return query.where({ 't.master_ticket_id': masterTicketId });
 }
 
 /**
@@ -340,16 +359,15 @@ async function resolveNotificationGate(
     return cached.value;
   }
 
-  const settings = await knex('notification_settings')
-    .where({ tenant: tenantId })
-    .first();
+  const scopedDb = tenantDb(knex, tenantId);
+  const settings = await scopedDb.table('notification_settings').first();
 
   let gate: NotificationGate;
 
   if (settings && !settings.is_enabled) {
     gate = { kind: 'globally-disabled' };
   } else {
-    const subtype = await knex('notification_subtypes')
+    const subtype = await scopedDb.table('notification_subtypes')
       .where({ name: subtypeName })
       .first();
 
@@ -357,11 +375,11 @@ async function resolveNotificationGate(
       gate = { kind: 'subtype-missing' };
     } else {
       const [subtypeSetting, categorySetting] = await Promise.all([
-        knex('tenant_notification_subtype_settings')
-          .where({ tenant: tenantId, subtype_id: subtype.id })
+        scopedDb.table('tenant_notification_subtype_settings')
+          .where({ subtype_id: subtype.id })
           .first(),
-        knex('tenant_notification_category_settings')
-          .where({ tenant: tenantId, category_id: subtype.category_id })
+        scopedDb.table('tenant_notification_category_settings')
+          .where({ category_id: subtype.category_id })
           .first(),
       ]);
 
@@ -455,6 +473,7 @@ async function sendNotificationIfEnabled(
     }
 
     const { knex } = await createTenantKnex();
+    const scopedDb = tenantDb(knex, params.tenantId);
 
     const gate = await resolveNotificationGate(knex, params.tenantId, subtypeName);
 
@@ -499,9 +518,8 @@ async function sendNotificationIfEnabled(
     // 5. For internal users, check user preferences and rate limiting
     if (recipientUserId) {
       // Check user preferences
-      const preference = await knex('user_notification_preferences')
+      const preference = await scopedDb.table('user_notification_preferences')
         .where({
-          tenant: params.tenantId,
           user_id: recipientUserId,
           subtype_id: subtype.id
         })
@@ -530,7 +548,7 @@ async function sendNotificationIfEnabled(
     // 7. Log the notification (only for internal users with userId)
     if (recipientUserId && subtype) {
       try {
-        await knex('notification_logs').insert({
+        await scopedDb.table('notification_logs').insert({
           tenant: params.tenantId,
           user_id: recipientUserId,
           subtype_id: subtype.id,
@@ -631,22 +649,22 @@ function renderChangeItemHtml(fieldLabel: string, oldValue: string | null, newVa
 /**
  * Format changes record into an HTML fragment for use in the "Changes Made" email box.
  */
-async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC'): Promise<string> {
+async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC', locale: string = 'en'): Promise<string> {
   const items = await Promise.all(
     Object.entries(changes).map(async ([field, value]): Promise<string> => {
       const fieldLabel = formatFieldName(field);
       if (typeof value === 'object' && value !== null && ('old' in value || 'new' in value)) {
         const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
         if (oldVal !== undefined && newVal !== undefined) {
-          const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone);
-          const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone);
+          const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone, locale);
+          const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone, locale);
           return renderChangeItemHtml(fieldLabel, resolvedOldValue, resolvedNewValue);
         }
         const presentVal = newVal !== undefined ? newVal : oldVal;
-        const resolvedValue = await resolveValue(db, field, presentVal, tenantId, timeZone);
+        const resolvedValue = await resolveValue(db, field, presentVal, tenantId, timeZone, locale);
         return renderChangeItemHtml(fieldLabel, null, resolvedValue);
       }
-      const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone);
+      const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone, locale);
       return renderChangeItemHtml(fieldLabel, null, resolvedValue);
     })
   );
@@ -659,16 +677,18 @@ async function formatChanges(db: any, changes: Record<string, unknown>, tenantId
 /**
  * Resolve field values to human-readable names
  */
-async function resolveValue(db: any, field: string, value: unknown, tenantId: string, timeZone: string = 'UTC'): Promise<string> {
+async function resolveValue(db: any, field: string, value: unknown, tenantId: string, timeZone: string = 'UTC', locale: string = 'en'): Promise<string> {
   if (value === null || value === undefined) {
     return 'None';
   }
 
+  const scopedDb = tenantDb(db, tenantId);
+
   // Handle special fields that need resolution
   switch (field) {
     case 'status_id': {
-      const status = await db('statuses')
-        .where({ status_id: value, tenant: tenantId })
+      const status = await scopedDb.table('statuses')
+        .where({ status_id: value })
         .first();
       return status?.name || String(value);
     }
@@ -676,22 +696,22 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
     case 'updated_by':
     case 'assigned_to':
     case 'closed_by': {
-      const user = await db('users')
-        .where({ user_id: value, tenant: tenantId })
+      const user = await scopedDb.table('users')
+        .where({ user_id: value })
         .first();
       return user ? `${user.first_name} ${user.last_name}` : String(value);
     }
 
     case 'priority_id': {
       // Check tenant-specific priorities table first
-      const priority = await db('priorities')
-        .where({ priority_id: value, tenant: tenantId })
+      const priority = await scopedDb.table('priorities')
+        .where({ priority_id: value })
         .first();
       if (priority?.priority_name) {
         return priority.priority_name;
       }
       // Fall back to global standard_priorities table
-      const standardPriority = await db('standard_priorities')
+      const standardPriority = await scopedDb.table('standard_priorities')
         .where({ priority_id: value })
         .first();
       return standardPriority?.priority_name || String(value);
@@ -699,14 +719,14 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
 
     case 'board_id': {
       // Check tenant-specific boards table first
-      const board = await db('boards')
-        .where({ board_id: value, tenant: tenantId })
+      const board = await scopedDb.table('boards')
+        .where({ board_id: value })
         .first();
       if (board?.board_name) {
         return board.board_name;
       }
       // Fall back to global standard_boards table (uses 'id' not 'board_id')
-      const standardBoard = await db('standard_boards')
+      const standardBoard = await scopedDb.table('standard_boards')
         .where({ id: value })
         .first();
       return standardBoard?.board_name || String(value);
@@ -715,14 +735,14 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
     case 'category_id':
     case 'subcategory_id': {
       // Check tenant-specific categories table first
-      const category = await db('categories')
-        .where({ category_id: value, tenant: tenantId })
+      const category = await scopedDb.table('categories')
+        .where({ category_id: value })
         .first();
       if (category?.category_name) {
         return category.category_name;
       }
       // Fall back to global standard_categories table (uses 'id' not 'category_id')
-      const standardCategory = await db('standard_categories')
+      const standardCategory = await scopedDb.table('standard_categories')
         .where({ id: value })
         .first();
       return standardCategory?.category_name || String(value);
@@ -736,14 +756,14 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
           // Check if time is midnight (no time specified)
           const isMidnight = date.getUTCHours() === 0 && date.getUTCMinutes() === 0;
           if (isMidnight) {
-            return date.toLocaleDateString('en-US', {
+            return date.toLocaleDateString(locale, {
               year: 'numeric',
               month: 'short',
               day: 'numeric',
               timeZone
             });
           }
-          return date.toLocaleString('en-US', {
+          return date.toLocaleString(locale, {
             year: 'numeric',
             month: 'short',
             day: 'numeric',
@@ -815,11 +835,13 @@ function formatValue(value: unknown): string {
 
 /**
  * Format a date/time value for display in ticket emails.
- * Uses the resolved timezone (user -> tenant -> UTC).
+ * Uses the resolved timezone (user -> tenant -> UTC) and the resolved
+ * locale (tenant default -> system default 'en').
  */
 function formatTicketDateTime(
   value: Date | string | null | undefined,
-  timeZone: string
+  timeZone: string,
+  locale: string = 'en'
 ): string {
   if (!value) {
     return 'Not available';
@@ -828,7 +850,7 @@ function formatTicketDateTime(
   if (Number.isNaN(date.getTime())) {
     return typeof value === 'string' ? value : 'Not available';
   }
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale, {
     month: 'short',
     day: '2-digit',
     year: 'numeric',
@@ -896,6 +918,10 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
 
     const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, creatorUserId);
+    // Date/time strings are baked into a shared email context reused across all
+    // recipients, so the exact per-recipient locale isn't known here. Use the
+    // tenant default locale (falls back to system default 'en').
+    const emailLocale = await getTenantDefaultLocale(tenantId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -904,7 +930,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
 
     const clientName = safeString(ticket.client_name) || 'Unassigned Client';
 
-    const createdAt = formatTicketDateTime(ticket.entered_at as string | Date | null, emailTimeZone);
+    const createdAt = formatTicketDateTime(ticket.entered_at as string | Date | null, emailTimeZone, emailLocale);
     const createdByName = safeString(ticket.created_by_name) || 'System';
     const createdDetails = `${createdAt} · ${createdByName}`;
 
@@ -977,9 +1003,9 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     // oldest comment) so the "New Ticket" email carries the user's original
     // message instead of "No description provided".
     if (!rawDescription) {
-      const descriptionComment = await db('comments')
+      const descriptionComment = await tenantDb(db, tenantId).table('comments')
         .select('note')
-        .where({ ticket_id: ticket.ticket_id, tenant: tenantId })
+        .where({ ticket_id: ticket.ticket_id })
         .orderBy('created_at', 'asc')
         .first();
       if (descriptionComment?.note) {
@@ -1215,6 +1241,9 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     });
 
     const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, updaterUserId);
+    // Shared context reused across recipients; use tenant default locale
+    // (falls back to system default 'en').
+    const emailLocale = await getTenantDefaultLocale(tenantId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -1293,12 +1322,12 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const description = descriptionText || 'No description provided.';
 
     // Format changes with database lookups
-    const formattedChanges = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone);
+    const formattedChanges = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale);
 
     // Get updater's name
     const updater = updaterUserId
-      ? await db('users')
-          .where({ user_id: updaterUserId, tenant: tenantId })
+      ? await tenantDb(db, tenantId).table('users')
+          .where({ user_id: updaterUserId })
           .first()
       : null;
 
@@ -1400,16 +1429,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     }
 
     // Get and notify all additional resources
-    const additionalResources = await db('ticket_resources as tr')
-      .select('u.email as email', 'u.user_id as user_id')
-      .leftJoin('users as u', function() {
-        this.on('tr.additional_user_id', 'u.user_id')
-            .andOn('tr.tenant', 'u.tenant');
-      })
-      .where({
-        'tr.ticket_id': payload.ticketId,
-        'tr.tenant': tenantId
-      });
+    const additionalResources = await fetchAdditionalTicketResources(db, tenantId, payload.ticketId);
 
     // Send to all additional resources
     for (const resource of additionalResources) {
@@ -1417,7 +1437,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
-          to: resource.email,
+          to: resource.email ?? '',
           subject: `Ticket Updated: ${ticket.title}`,
           template: 'ticket-updated',
           context: buildContext(internalUrl),
@@ -1472,22 +1492,23 @@ async function formatAccumulatedChanges(
   db: any,
   accumulatedChanges: AccumulatedChange[],
   tenantId: string,
-  timeZone: string = 'UTC'
+  timeZone: string = 'UTC',
+  locale: string = 'en'
 ): Promise<string> {
   const formattedSections: string[] = [];
 
   for (let i = 0; i < accumulatedChanges.length; i += 1) {
     const changeSet = accumulatedChanges[i];
     const updater = changeSet.userId
-      ? await db('users')
-          .where({ user_id: changeSet.userId, tenant: tenantId })
+      ? await tenantDb(db, tenantId).table('users')
+          .where({ user_id: changeSet.userId })
           .first()
       : null;
     const updaterName = updater
       ? `${updater.first_name} ${updater.last_name}`
       : (changeSet.userId || 'System');
 
-    const timestamp = new Date(changeSet.timestamp).toLocaleString('en-US', {
+    const timestamp = new Date(changeSet.timestamp).toLocaleString(locale, {
       month: 'short',
       day: '2-digit',
       year: 'numeric',
@@ -1500,15 +1521,18 @@ async function formatAccumulatedChanges(
     const items = await Promise.all(
       Object.entries(changeSet.changes).map(async ([field, value]): Promise<string> => {
         const fieldLabel = formatFieldName(field);
-        if (typeof value === 'object' && value !== null) {
+        if (typeof value === 'object' && value !== null && ('old' in value || 'new' in value)) {
           const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
           if (oldVal !== undefined && newVal !== undefined) {
-            const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone);
-            const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone);
+            const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone, locale);
+            const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone, locale);
             return renderChangeItemHtml(fieldLabel, resolvedOldValue, resolvedNewValue);
           }
+          const presentVal = newVal !== undefined ? newVal : oldVal;
+          const resolvedValue = await resolveValue(db, field, presentVal, tenantId, timeZone);
+          return renderChangeItemHtml(fieldLabel, null, resolvedValue);
         }
-        const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone);
+        const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone, locale);
         return renderChangeItemHtml(fieldLabel, null, resolvedValue);
       })
     );
@@ -1676,9 +1700,11 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
 
     // Resolve timezone for email formatting (tenant-level, no single userId for accumulated changes)
     const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId);
+    // Tenant-level locale (no single recipient); falls back to system default 'en'.
+    const emailLocale = await getTenantDefaultLocale(tenantId);
 
     // Format all accumulated changes
-    const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, tenantId, emailTimeZone);
+    const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, tenantId, emailTimeZone, emailLocale);
 
     // Resolve display name for the "Updated By" row from the set of accumulated updaters.
     const uniqueUpdaterIds = Array.from(
@@ -1690,9 +1716,8 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     );
     let updatedByDisplay = 'System';
     if (uniqueUpdaterIds.length > 0) {
-      const updaterRows = await db('users')
+      const updaterRows = await tenantDb(db, tenantId).table('users')
         .whereIn('user_id', uniqueUpdaterIds)
-        .andWhere({ tenant: tenantId })
         .select('user_id', 'first_name', 'last_name');
       const idToName = new Map<string, string>(
         updaterRows.map((u: { user_id: string; first_name: string; last_name: string }) => [
@@ -1805,23 +1830,14 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       }, 'Ticket Updated', ticket.assigned_to);
     }
 
-    const additionalResources = await db('ticket_resources as tr')
-      .select('u.email as email', 'u.user_id as user_id')
-      .leftJoin('users as u', function() {
-        this.on('tr.additional_user_id', 'u.user_id')
-            .andOn('tr.tenant', 'u.tenant');
-      })
-      .where({
-        'tr.ticket_id': ticketId,
-        'tr.tenant': tenantId
-      });
+    const additionalResources = await fetchAdditionalTicketResources(db, tenantId, ticketId);
 
     for (const resource of additionalResources) {
       if (isValidEmail(resource.email)) {
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
-          to: resource.email,
+          to: resource.email ?? '',
           subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
           template: 'ticket-updated',
           context: buildContext(internalUrl),
@@ -1904,8 +1920,8 @@ async function sendTicketAssignedNotifications(
     }
 
     const assignerName = assignerUserId
-      ? await db('users')
-          .where({ user_id: assignerUserId, tenant: tenantId })
+      ? await tenantDb(db, tenantId).table('users')
+          .where({ user_id: assignerUserId })
           .first()
           .then((user: any) => user ? `${user.first_name} ${user.last_name}` : 'System')
       : 'System';
@@ -2090,9 +2106,9 @@ async function sendTicketAssignedNotifications(
     const assignedTeamId = (payload as any).changes?.assigned_team_id as string | undefined;
     let teamName: string | undefined;
     if (assignedTeamId) {
-      const team = await db('teams')
+      const team = await tenantDb(db, tenantId).table('teams')
         .select('team_name')
-        .where({ team_id: assignedTeamId, tenant: tenantId })
+        .where({ team_id: assignedTeamId })
         .first();
       teamName = team?.team_name;
     }
@@ -2171,16 +2187,7 @@ async function sendTicketAssignedNotifications(
     }
 
     // Get all additional resources
-    const additionalResources = await db('ticket_resources as tr')
-      .select('u.email as email', 'u.user_id as user_id')
-      .leftJoin('users as u', function() {
-        this.on('tr.additional_user_id', 'u.user_id')
-            .andOn('tr.tenant', 'u.tenant');
-      })
-      .where({
-        'tr.ticket_id': payload.ticketId,
-        'tr.tenant': tenantId
-      });
+    const additionalResources = await fetchAdditionalTicketResources(db, tenantId, payload.ticketId);
 
     // Send to all additional resources
     for (const resource of additionalResources) {
@@ -2188,7 +2195,7 @@ async function sendTicketAssignedNotifications(
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
-          to: resource.email,
+          to: resource.email ?? '',
           subject: `You have been added as additional resource to ticket: ${ticket.title}`,
           template: 'ticket-assigned',
           context: buildContext(internalUrl),
@@ -2303,26 +2310,17 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     let commentClosesTicket = false;
 
     if (payload.comment?.id) {
-      const commentAuthor = await db('comments as cm')
-        .select(
-          'cm.user_id as comment_user_id',
-          'cm.metadata as comment_metadata',
-          'cu.contact_id as comment_contact_id',
-          'cu.email as comment_user_email',
-          'cc.email as comment_contact_email'
-        )
-        .leftJoin('users as cu', function() {
-          this.on('cm.user_id', '=', 'cu.user_id')
-            .andOn('cm.tenant', '=', 'cu.tenant');
-        })
-        .leftJoin('contacts as cc', function() {
-          this.on('cu.contact_id', '=', 'cc.contact_name_id')
-            .andOn('cu.tenant', '=', 'cc.tenant');
-        })
-        .where({
-          'cm.tenant': tenantId,
-          'cm.comment_id': payload.comment.id
-        })
+      const scopedDb = tenantDb(db, tenantId);
+      const commentAuthorQuery = scopedDb.table('comments as cm')
+        .select({ comment_user_id: 'cm.user_id', comment_metadata: 'cm.metadata', comment_contact_id: 'cu.contact_id', comment_user_email: 'cu.email', comment_contact_email: 'cc.email' });
+      scopedDb.tenantJoin(commentAuthorQuery, 'users as cu', 'cm.user_id', 'cu.user_id', { type: 'left' });
+      scopedDb.tenantJoin(commentAuthorQuery, 'contacts as cc', 'cu.contact_id', 'cc.contact_name_id', {
+        type: 'left',
+        rootTenantColumn: 'cu.tenant',
+      });
+
+      const commentAuthor = await commentAuthorQuery
+        .where({ 'cm.comment_id': payload.comment.id })
         .first<{
           comment_user_id?: string | null;
           comment_metadata?: Record<string, unknown> | null;
@@ -2439,16 +2437,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const description = descriptionText || 'No description provided.';
 
     // Get all additional resources
-    const additionalResources = await db('ticket_resources as tr')
-      .select('u.email as email', 'u.user_id as user_id')
-      .leftJoin('users as u', function() {
-        this.on('tr.additional_user_id', 'u.user_id')
-            .andOn('tr.tenant', 'u.tenant');
-      })
-      .where({
-        'tr.ticket_id': payload.ticketId,
-        'tr.tenant': tenantId
-      });
+    const additionalResources = await fetchAdditionalTicketResources(db, tenantId, payload.ticketId);
 
     const commentFormatting = formatBlockNoteContent(payload.comment?.content);
     const inlineCommentImageRewrite = await rewriteTicketCommentImagesToCid({
@@ -2562,9 +2551,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     let isFromAgent = false;
     if (commentAuthorUserId) {
-      const author = await db('users')
+      const author = await tenantDb(db, tenantId).table('users')
         .select('user_type')
-        .where({ tenant: tenantId, user_id: commentAuthorUserId })
+        .where({ user_id: commentAuthorUserId })
         .first();
       isFromAgent = author?.user_type === 'internal';
     }
@@ -2617,35 +2606,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     // If this ticket is a bundle master, default behavior is to notify all child requesters for public comments.
     if (isPublicComment && isFromAgent) {
-      const bundleChildren = await db('tickets as t')
-        .select(
-          't.ticket_id',
-          't.ticket_number',
-          't.contact_name_id',
-          't.client_id',
-          't.email_metadata',
-          'dcl.email as client_email',
-          'c.client_name',
-          'co.email as contact_email',
-          'co.full_name as contact_name',
-          'cpn_default.phone_number as contact_phone'
-        )
-        .leftJoin('clients as c', function() {
-          this.on('t.client_id', 'c.client_id')
-            .andOn('t.tenant', 'c.tenant');
-        })
-        .leftJoin('client_locations as dcl', function() {
-          this.on('dcl.client_id', '=', 't.client_id')
-            .andOn('dcl.tenant', '=', 't.tenant')
-            .andOn('dcl.is_default', '=', db.raw('true'))
-            .andOn('dcl.is_active', '=', db.raw('true'));
-        })
-        .leftJoin('contacts as co', function() {
-          this.on('t.contact_name_id', 'co.contact_name_id')
-            .andOn('t.tenant', 'co.tenant');
-        })
-        .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
-        .where({ 't.tenant': tenantId, 't.master_ticket_id': payload.ticketId });
+      const bundleChildren = await fetchBundleChildTicketsForEmail(db, tenantId, payload.ticketId);
 
       if (bundleChildren.length > 0) {
         const bundlePortalCtx = await resolvePortalLinkContext(db, tenantId);
@@ -2765,7 +2726,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
-          to: resource.email,
+          to: resource.email ?? '',
           subject: `New Comment on Ticket: ${ticket.title}`,
           template: 'ticket-comment-added',
           context: buildContext(internalUrl),
@@ -2821,6 +2782,9 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     };
 
     const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, closerUserId);
+    // Shared context reused across recipients; use tenant default locale
+    // (falls back to system default 'en').
+    const emailLocale = await getTenantDefaultLocale(tenantId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -2899,19 +2863,19 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const descriptionText = descriptionFormatting.text.trim();
     const description = descriptionText || 'No description provided.';
 
-    const changes = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone);
+    const changes = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale);
 
     // Get closer's name
     const closer = closerUserId
-      ? await db('users')
-          .where({ user_id: closerUserId, tenant: tenantId })
+      ? await tenantDb(db, tenantId).table('users')
+          .where({ user_id: closerUserId })
           .first()
       : null;
     const closedBy = closer ? `${closer.first_name} ${closer.last_name}` : 'System';
 
     // Get the resolution comment (most recent comment with is_resolution = true)
-    const resolutionComment = await db('comments')
-      .where({ ticket_id: payload.ticketId, tenant: tenantId, is_resolution: true })
+    const resolutionComment = await tenantDb(db, tenantId).table('comments')
+      .where({ ticket_id: payload.ticketId, is_resolution: true })
       .orderBy('created_at', 'desc')
       .first();
     let resolutionHtml = '';
@@ -3026,34 +2990,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     }
 
     // If this ticket is a bundle master, default behavior is to notify all child requesters on closure.
-    const bundleChildren = await db('tickets as t')
-      .select(
-        't.ticket_id',
-        't.ticket_number',
-        't.client_id',
-        't.email_metadata',
-        'dcl.email as client_email',
-        'c.client_name',
-        'co.email as contact_email',
-        'co.full_name as contact_name',
-        'cpn_default.phone_number as contact_phone'
-      )
-      .leftJoin('clients as c', function() {
-        this.on('t.client_id', 'c.client_id')
-          .andOn('t.tenant', 'c.tenant');
-      })
-      .leftJoin('client_locations as dcl', function() {
-        this.on('dcl.client_id', '=', 't.client_id')
-          .andOn('dcl.tenant', '=', 't.tenant')
-          .andOn('dcl.is_default', '=', db.raw('true'))
-          .andOn('dcl.is_active', '=', db.raw('true'));
-      })
-      .leftJoin('contacts as co', function() {
-        this.on('t.contact_name_id', 'co.contact_name_id')
-          .andOn('t.tenant', 'co.tenant');
-      })
-      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
-      .where({ 't.tenant': tenantId, 't.master_ticket_id': payload.ticketId });
+    const bundleChildren = await fetchBundleChildTicketsForEmail(db, tenantId, payload.ticketId);
 
     if (bundleChildren.length > 0) {
       const bundlePortalCtx = await resolvePortalLinkContext(db, tenantId);
@@ -3119,16 +3056,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     }
 
     // Get and notify all additional resources
-    const additionalResources = await db('ticket_resources as tr')
-      .select('u.email as email', 'u.user_id as user_id')
-      .leftJoin('users as u', function() {
-        this.on('tr.additional_user_id', 'u.user_id')
-            .andOn('tr.tenant', 'u.tenant');
-      })
-      .where({
-        'tr.ticket_id': payload.ticketId,
-        'tr.tenant': tenantId
-      });
+    const additionalResources = await fetchAdditionalTicketResources(db, tenantId, payload.ticketId);
 
     // Send to all additional resources
     for (const resource of additionalResources) {
@@ -3136,7 +3064,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
-          to: resource.email,
+          to: resource.email ?? '',
           subject: `Ticket Closed: ${ticket.title}`,
           template: 'ticket-closed',
           context: internalContext,

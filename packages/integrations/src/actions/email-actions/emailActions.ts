@@ -1,7 +1,6 @@
 'use server'
 
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { publishTicketUpdate } from '@alga-psa/event-bus/ticket-live-updates';
 import { Knex } from 'knex';
@@ -61,6 +60,14 @@ export interface FindTicketByEmailThreadOutput {
     threadId?: string;
     originalMessageId?: string;
   };
+}
+
+interface TicketEmailLookupRow {
+  ticketId: string;
+  ticketNumber: string;
+  subject: string;
+  status: string | null;
+  email_metadata: Record<string, any> | null;
 }
 
 export interface ProcessEmailAttachmentInput {
@@ -228,7 +235,7 @@ export const processEmailAttachment = withAuth(async (
     const now = new Date();
 
     // Create document record for the attachment
-    await trx('documents').insert({
+    await tenantDb(trx, tenant).table('documents').insert({
       document_id: documentId,
       tenant,
       name: input.attachmentData.name,
@@ -246,7 +253,7 @@ export const processEmailAttachment = withAuth(async (
     });
 
     // Associate document with ticket
-    await trx('document_associations').insert({
+    await tenantDb(trx, tenant).table('document_associations').insert({
       document_id: documentId,
       entity_type: 'ticket',
       entity_id: input.ticketId,
@@ -284,15 +291,14 @@ export const saveEmailClientAssociation = withAuth(async (
     const now = new Date();
 
     // Check if association already exists
-    const existing = await trx('email_client_associations')
-      .where('tenant', tenant)
+    const existing = await tenantDb(trx, tenant).table('email_client_associations')
       .whereRaw('LOWER(email) = LOWER(?)', [input.email])
       .where('client_id', input.client_id)
       .first();
 
     if (existing) {
       // Update existing association
-      await trx('email_client_associations')
+      await tenantDb(trx, tenant).table('email_client_associations')
         .where('id', existing.id)
         .update({
           contact_id: input.contact_id,
@@ -309,7 +315,7 @@ export const saveEmailClientAssociation = withAuth(async (
       };
     } else {
       // Create new association
-      await trx('email_client_associations').insert({
+      await tenantDb(trx, tenant).table('email_client_associations').insert({
         id: associationId,
         tenant,
         email: input.email.toLowerCase(),
@@ -370,7 +376,7 @@ export const createCommentFromEmail = withAuth(async (
   })();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const [comment] = await trx('comments')
+    const [comment] = await tenantDb(trx, tenant).table('comments')
       .insert({
         tenant,
         ticket_id: commentData.ticket_id,
@@ -385,12 +391,12 @@ export const createCommentFromEmail = withAuth(async (
       .returning('comment_id');
 
     if (normalizedAuthorType === 'client') {
-      await trx('tickets')
-        .where({ ticket_id: commentData.ticket_id, tenant })
+      await tenantDb(trx, tenant).table('tickets')
+        .where({ ticket_id: commentData.ticket_id })
         .update({ response_state: 'awaiting_internal' });
     } else if (normalizedAuthorType === 'internal') {
-      await trx('tickets')
-        .where({ ticket_id: commentData.ticket_id, tenant })
+      await tenantDb(trx, tenant).table('tickets')
+        .where({ ticket_id: commentData.ticket_id })
         .update({ response_state: 'awaiting_client' });
     }
 
@@ -424,7 +430,7 @@ export const createClientFromEmail = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const [client] = await trx('clients')
+    const [client] = await tenantDb(trx, tenant).table('clients')
       .insert({
         tenant,
         client_name: clientData.client_name,
@@ -453,9 +459,9 @@ export const getClientByIdForEmail = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const client = await trx('clients')
+    const client = await tenantDb(trx, tenant).table('clients')
       .select('client_id', 'client_name')
-      .where({ client_id: clientId, tenant })
+      .where({ client_id: clientId })
       .first();
 
     return client || null;
@@ -477,7 +483,7 @@ export const createBoardFromEmail = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const [board] = await trx('boards')
+    const [board] = await tenantDb(trx, tenant).table('boards')
       .insert({
         tenant,
         board_name: boardData.board_name,
@@ -504,8 +510,11 @@ export const createBoardFromEmail = withAuth(async (
  * Find ticket by thread ID
  */
 async function findTicketByThreadId(trx: Knex.Transaction, tenant: string, threadId: string): Promise<FindTicketByEmailThreadOutput | null> {
-  const ticket = await trx('tickets as t')
-    .leftJoin('statuses as s', 't.status_id', 's.status_id')
+  const db = tenantDb(trx, tenant);
+  const ticketQuery = db.table('tickets as t');
+  db.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+
+  const ticket = await ticketQuery
     .select(
       't.ticket_id as ticketId',
       't.ticket_number as ticketNumber', 
@@ -513,12 +522,11 @@ async function findTicketByThreadId(trx: Knex.Transaction, tenant: string, threa
       's.name as status',
       't.email_metadata'
     )
-    .where('t.tenant', tenant)
     .where(function() {
       this.whereRaw("t.email_metadata->>'threadId' = ?", [threadId])
           .orWhereRaw("t.email_metadata->'threadInfo'->>'threadId' = ?", [threadId]);
     })
-    .first();
+    .first() as unknown as TicketEmailLookupRow | undefined;
 
   if (!ticket) return null;
 
@@ -541,8 +549,11 @@ async function findTicketByThreadId(trx: Knex.Transaction, tenant: string, threa
  * Find ticket by original message ID from email metadata
  */
 async function findTicketByOriginalMessageId(trx: Knex.Transaction, tenant: string, messageId: string): Promise<FindTicketByEmailThreadOutput | null> {
-  const ticket = await trx('tickets as t')
-    .leftJoin('statuses as s', 't.status_id', 's.status_id')
+  const db = tenantDb(trx, tenant);
+  const ticketQuery = db.table('tickets as t');
+  db.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+
+  const ticket = await ticketQuery
     .select(
       't.ticket_id as ticketId',
       't.ticket_number as ticketNumber',
@@ -550,13 +561,12 @@ async function findTicketByOriginalMessageId(trx: Knex.Transaction, tenant: stri
       's.name as status',
       't.email_metadata'
     )
-    .where('t.tenant', tenant)
     .where(function() {
       this.whereRaw("t.email_metadata->>'messageId' = ?", [messageId])
           .orWhereRaw("t.email_metadata->>'inReplyTo' = ?", [messageId])
           .orWhereRaw("t.email_metadata->'references' ? ?", [messageId]);
     })
-    .first();
+    .first() as unknown as TicketEmailLookupRow | undefined;
 
   if (!ticket) return null;
 

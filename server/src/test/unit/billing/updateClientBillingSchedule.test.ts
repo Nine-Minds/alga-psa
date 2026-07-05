@@ -5,6 +5,11 @@ type Call =
   | { table: string; method: 'select'; args: unknown[]; where?: unknown[]; andWhere?: unknown[] }
   | { table: string; method: 'insert'; args: unknown[]; where?: unknown[]; andWhere?: unknown[] };
 
+// The shared cadence helpers build queries in several orderings (first()
+// .select(), select().first(), or select() awaited directly) and also assemble
+// `db.subquery(...)` fragments for whereNotExists(). To cover all of them the
+// fake builder is fully chainable (every builder method returns `this`) and
+// thenable: awaiting it resolves to the canned response keyed by table + first().
 class FakeQuery {
   private readonly calls: Call[];
   private readonly table: string;
@@ -35,7 +40,27 @@ class FakeQuery {
     return this;
   }
 
+  whereNotIn(): this {
+    return this;
+  }
+
+  whereNull(): this {
+    return this;
+  }
+
   whereNotNull(): this {
+    return this;
+  }
+
+  whereRaw(): this {
+    return this;
+  }
+
+  andWhereRaw(): this {
+    return this;
+  }
+
+  orWhere(): this {
     return this;
   }
 
@@ -43,12 +68,14 @@ class FakeQuery {
     return this;
   }
 
-  join(_table: string, onFn: Function): this {
-    const clause = {
-      on: () => clause,
-      andOn: () => clause,
-    };
-    onFn.call(clause);
+  join(_table: string, onFn?: Function): this {
+    if (typeof onFn === 'function') {
+      const clause = {
+        on: () => clause,
+        andOn: () => clause,
+      };
+      onFn.call(clause);
+    }
     return this;
   }
 
@@ -56,13 +83,50 @@ class FakeQuery {
     return this;
   }
 
-  first(): this {
+  groupBy(): this {
+    return this;
+  }
+
+  distinct(): this {
+    return this;
+  }
+
+  modify(fn?: (q: this) => void): this {
+    if (typeof fn === 'function') {
+      fn(this);
+    }
+    return this;
+  }
+
+  first(..._args: unknown[]): this {
     this.isFirst = true;
     return this;
   }
 
-  select(...args: unknown[]): any {
+  select(...args: unknown[]): this {
     this.calls.push({ table: this.table, method: 'select', args, where: this.whereClauses, andWhere: this.andWhereClauses });
+    return this;
+  }
+
+  whereNotExists(arg?: Function | unknown): this {
+    if (typeof arg === 'function') {
+      const builder: any = {
+        select: () => builder,
+        from: () => builder,
+        where: () => builder,
+        whereRaw: () => builder,
+        andWhereRaw: () => builder,
+      };
+      (arg as Function).call(builder);
+    }
+    return this;
+  }
+
+  whereExists(arg?: Function | unknown): this {
+    return this.whereNotExists(arg);
+  }
+
+  private resolveResult(): Promise<any> {
     const baseTable = this.table.split(/\s+as\s+/i)[0] ?? this.table;
     if (this.missingTables.has(baseTable)) {
       return Promise.reject(new Error(`relation "${baseTable}" does not exist`));
@@ -71,15 +135,17 @@ class FakeQuery {
     return Promise.resolve(this.responses[key]);
   }
 
-  whereNotExists(subqueryFn: Function): this {
-    const builder = {
-      select: () => builder,
-      from: () => builder,
-      whereRaw: () => builder,
-      andWhereRaw: () => builder,
-    };
-    subqueryFn.call(builder);
-    return this;
+  then(onfulfilled?: ((value: any) => any) | null, onrejected?: ((reason: unknown) => any) | null): Promise<any> {
+    return this.resolveResult().then(onfulfilled ?? undefined, onrejected ?? undefined);
+  }
+
+  catch(onrejected?: (reason: unknown) => any): Promise<any> {
+    return this.resolveResult().catch(onrejected);
+  }
+
+  async pluck(_column?: string): Promise<any[]> {
+    const result = await this.resolveResult();
+    return Array.isArray(result) ? result : [];
   }
 
   update(...args: unknown[]): any {
@@ -89,6 +155,14 @@ class FakeQuery {
 
   insert(...args: unknown[]): any {
     this.calls.push({ table: this.table, method: 'insert', args, where: this.whereClauses, andWhere: this.andWhereClauses });
+    return Promise.resolve(1);
+  }
+
+  del(): any {
+    return Promise.resolve(1);
+  }
+
+  delete(): any {
     return Promise.resolve(1);
   }
 }
@@ -101,6 +175,10 @@ function makeFakeTransaction(
   const trx: any = (table: string) => new FakeQuery(table, calls, responses, options?.missingTables);
   trx.fn = { now: () => 'NOW' };
   trx.raw = (value: string) => value;
+  // The shared schedule helpers branch on isKnexTransaction() (commit+rollback
+  // present) to reuse the caller's transaction instead of opening a new one.
+  trx.commit = async () => {};
+  trx.rollback = async () => {};
   return { trx, calls };
 }
 
@@ -114,6 +192,13 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
   runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
   getTenantContext: vi.fn(async () => 'tenant-1'),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({
@@ -134,10 +219,14 @@ vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(async () => ({ user: { id: 'user-1' } })),
 }));
 
-const mockEnsureClientBillingSettingsRow = vi.fn(async () => undefined);
+const mockEnsureClientBillingSettingsRow = vi.fn(async () => ({ created: false }));
 
-vi.mock('../../../../../packages/billing/src/actions/billingCycleAnchorActions', async () => {
-  const actual = await vi.importActual<any>('../../../../../packages/billing/src/actions/billingCycleAnchorActions');
+// The shared schedule helper imports ensureClientBillingSettingsRow directly from
+// shared/billingClients/billingSettings (billingCycleAnchorActions only re-exports
+// it), so the stub must target that module to keep the heavy settings-row /
+// default-contract bootstrap out of this builder-focused unit test.
+vi.mock('../../../../../shared/billingClients/billingSettings', async () => {
+  const actual = await vi.importActual<any>('../../../../../shared/billingClients/billingSettings');
   return {
     ...actual,
     ensureClientBillingSettingsRow: (...args: any[]) => mockEnsureClientBillingSettingsRow(...args),
@@ -151,7 +240,7 @@ describe('updateClientBillingSchedule', () => {
     vi.resetModules();
   });
 
-  it('T052: updates billing schedule settings and regenerates future recurring service periods beyond billed history instead of mutating future client_billing_cycles', async () => {
+  it('T052: updates billing schedule settings, regenerates future recurring service periods beyond billed history, and retires non-invoiced client_billing_cycles from the billed boundary', async () => {
     const responses = {
       'clients:select:first': { client_id: 'client-1', billing_cycle: 'monthly' },
       'client_billing_cycles as cbc:select:first': { period_end_date: '2026-01-10T00:00:00Z' },
@@ -261,10 +350,16 @@ describe('updateClientBillingSchedule', () => {
       ]),
     );
 
+    // Since 9b88ef86c7 every cadence change also retires non-invoiced
+    // client_billing_cycles windows; billed history stays untouched via the
+    // last-invoiced cutover boundary.
     const deactivateUpdate = calls.find(
       c => c.method === 'update' && c.table === 'client_billing_cycles',
     ) as any;
-    expect(deactivateUpdate).toBeFalsy();
+    expect(deactivateUpdate).toBeTruthy();
+    expect(deactivateUpdate.args[0]).toMatchObject({ is_active: false });
+    expect(deactivateUpdate.where).toContainEqual([{ client_id: 'client-1', is_active: true }]);
+    expect(deactivateUpdate.andWhere).toContainEqual(['period_start_date', '>=', '2026-01-10T00:00:00Z']);
   });
 
   it('T053: legitimate client billing schedule management still updates client settings while regenerating recurring service periods', async () => {
@@ -308,9 +403,13 @@ describe('updateClientBillingSchedule', () => {
       reason_code: 'backfill_materialization',
     });
 
+    // No invoiced history: all active non-invoiced windows are retired.
     const deactivateUpdate = calls.find(
       c => c.method === 'update' && c.table === 'client_billing_cycles',
     ) as any;
-    expect(deactivateUpdate).toBeFalsy();
+    expect(deactivateUpdate).toBeTruthy();
+    expect(deactivateUpdate.args[0]).toMatchObject({ is_active: false });
+    expect(deactivateUpdate.where).toContainEqual([{ client_id: 'client-1', is_active: true }]);
+    expect(deactivateUpdate.andWhere).toEqual([]);
   });
 });

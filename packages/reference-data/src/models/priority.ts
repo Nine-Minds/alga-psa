@@ -7,6 +7,10 @@
 
 import type { Knex } from 'knex';
 import type { IPriority } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
+
+const prioritiesQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
+  tenantDb(knexOrTrx, tenant).table<IPriority>('priorities');
 
 const Priority = {
   getAll: async (
@@ -18,9 +22,8 @@ const Priority = {
       throw new Error('Tenant context is required for priority operations');
     }
 
-    const query = knexOrTrx('priorities')
-      .select('*')
-      .where({ tenant });
+    const query = prioritiesQuery(knexOrTrx, tenant)
+      .select('*');
 
     if (itemType) {
       query.where({ item_type: itemType });
@@ -38,8 +41,8 @@ const Priority = {
       throw new Error('Tenant context is required for priority operations');
     }
 
-    const [priority] = await knexOrTrx('priorities')
-      .where({ priority_id: id, tenant });
+    const [priority] = await prioritiesQuery(knexOrTrx, tenant)
+      .where({ priority_id: id }) as IPriority[];
 
     return priority || null;
   },
@@ -53,7 +56,7 @@ const Priority = {
       throw new Error('Tenant context is required for priority operations');
     }
 
-    const [insertedPriority] = await knexOrTrx('priorities')
+    const [insertedPriority] = await tenantDb(knexOrTrx, tenant).table<IPriority>('priorities')
       .insert({
         ...priority,
         tenant,
@@ -75,10 +78,10 @@ const Priority = {
 
     const { ...updateData } = priority;
 
-    const [updatedPriority] = await knexOrTrx('priorities')
-      .where({ priority_id: id, tenant })
+    const [updatedPriority] = await prioritiesQuery(knexOrTrx, tenant)
+      .where({ priority_id: id })
       .update(updateData)
-      .returning('*');
+      .returning('*') as IPriority[];
 
     return updatedPriority || null;
   },
@@ -92,8 +95,8 @@ const Priority = {
       throw new Error('Tenant context is required for priority operations');
     }
 
-    const deleted = await knexOrTrx('priorities')
-      .where({ priority_id: id, tenant })
+    const deleted = await prioritiesQuery(knexOrTrx, tenant)
+      .where({ priority_id: id })
       .del();
 
     if (deleted === 0) {
@@ -117,4 +120,3 @@ const Priority = {
 };
 
 export default Priority;
-

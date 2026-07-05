@@ -1,222 +1,222 @@
 {
   "profile": {
-    "pageTitle": "Your Profile",
+    "pageTitle": "Seu perfil",
     "tabs": {
-      "profile": "Profile",
-      "security": "Security",
-      "sso": "Single Sign-On",
-      "apiKeys": "API Keys",
-      "notifications": "Notifications",
-      "calendar": "Calendar",
-      "keyboardShortcuts": "Keyboard Shortcuts"
+      "profile": "Perfil",
+      "security": "Segurança",
+      "sso": "Logon único",
+      "apiKeys": "Chaves de API",
+      "notifications": "Notificações",
+      "calendar": "Calendário",
+      "keyboardShortcuts": "Atalhos de teclado"
     },
     "basicInfo": {
-      "title": "Basic Information"
+      "title": "Informações Básicas"
     },
     "fields": {
       "firstName": {
-        "label": "First Name *"
+        "label": "Primeiro nome *"
       },
       "lastName": {
-        "label": "Last Name *"
+        "label": "Sobrenome *"
       },
       "email": {
-        "label": "Email *"
+        "label": "E-mail *"
       },
       "phoneNumber": {
-        "label": "Phone Number"
+        "label": "Número de telefone"
       },
       "timeZone": {
-        "label": "Time Zone"
+        "label": "Fuso horário"
       }
     },
     "actions": {
-      "saveChanges": "Save Changes"
+      "saveChanges": "Salvar alterações"
     },
     "notifications": {
-      "title": "Notification Preferences",
+      "title": "Preferências de notificação",
       "viewSwitcher": {
-        "email": "Email",
-        "internal": "Internal"
+        "email": "E-mail",
+        "internal": "Interno"
       }
     },
-    "loading": "Loading profile...",
+    "loading": "Carregando perfil...",
     "messages": {
       "success": {
-        "profileUpdated": "Profile updated successfully"
+        "profileUpdated": "Perfil atualizado com sucesso"
       },
       "error": {
-        "userNotFound": "User not found",
-        "fillRequiredFields": "Please fill in all required fields",
-        "loadFailed": "Failed to load profile",
-        "saveFailed": "Failed to save profile",
-        "errorPrefix": "Error: {{error}}"
+        "userNotFound": "Usuário não encontrado",
+        "fillRequiredFields": "Por favor preencha todos os campos obrigatórios",
+        "loadFailed": "Falha ao carregar perfil",
+        "saveFailed": "Falha ao salvar o perfil",
+        "errorPrefix": "Erro: {{error}}"
       }
     },
     "validation": {
-      "firstNameRequired": "First name is required",
-      "lastNameRequired": "Last name is required"
+      "firstNameRequired": "O primeiro nome é obrigatório",
+      "lastNameRequired": "O sobrenome é obrigatório"
     },
     "changePassword": {
-      "title": "Change Password",
-      "current": "Current Password",
-      "new": "New Password",
-      "confirm": "Confirm New Password",
-      "validationFailed": "Password does not meet all requirements",
-      "requirements": "Password must be at least 8 characters",
-      "submit": "Change Password",
-      "success": "Password changed successfully",
-      "error": "Failed to change password",
-      "passwordMismatch": "New passwords do not match",
-      "unknownError": "An error occurred while changing password"
+      "title": "Alterar a senha",
+      "current": "Senha atual",
+      "new": "Nova Senha",
+      "confirm": "Confirme a nova senha",
+      "validationFailed": "A senha não atende a todos os requisitos",
+      "requirements": "A senha deve ter pelo menos 8 caracteres",
+      "submit": "Alterar a senha",
+      "success": "Senha alterada com sucesso",
+      "error": "Falha ao alterar a senha",
+      "passwordMismatch": "Novas senhas não coincidem",
+      "unknownError": "Ocorreu um erro ao alterar a senha"
     },
     "loadingStates": {
       "sso": {
-        "title": "Single Sign-On",
-        "description": "Loading SSO settings..."
+        "title": "Logon único",
+        "description": "Carregando configurações de SSO..."
       },
       "calendar": {
-        "title": "Calendar",
-        "description": "Loading calendar settings..."
+        "title": "Calendário",
+        "description": "Carregando configurações de calendário..."
       }
     }
   },
   "security": {
-    "title": "Security Settings",
+    "title": "Configurações de segurança",
     "tabs": {
-      "roles": "Roles",
-      "sessions": "Sessions",
-      "sso": "Single Sign-On",
-      "permissions": "Permissions",
-      "userRoles": "User Roles",
-      "policies": "Policies",
-      "apiKeys": "API Keys",
+      "roles": "Funções",
+      "sessions": "Sessões",
+      "sso": "Logon único",
+      "permissions": "Permissões",
+      "userRoles": "Funções de usuário",
+      "policies": "Políticas",
+      "apiKeys": "Chaves de API",
       "webhooks": "Webhooks"
     },
     "loading": {
-      "roles": "Loading role configuration...",
-      "permissions": "Loading permissions configuration...",
-      "userRoles": "Loading user role configuration...",
-      "policies": "Loading policy configuration...",
-      "apiKeys": "Loading API key configuration...",
-      "webhooks": "Loading webhook configuration...",
-      "sso": "Loading SSO management tools...",
-      "sessions": "Loading active sessions..."
+      "roles": "Carregando configuração de função...",
+      "permissions": "Carregando configuração de permissões...",
+      "userRoles": "Carregando configuração de função de usuário...",
+      "policies": "Carregando configuração de política...",
+      "apiKeys": "Carregando configuração da chave de API...",
+      "webhooks": "Carregando configuração do webhook...",
+      "sso": "Carregando ferramentas de gerenciamento de SSO...",
+      "sessions": "Carregando sessões ativas..."
     },
     "userRoles": {
-      "title": "Assign Roles to Users",
+      "title": "Atribuir funções aos usuários",
       "description": {
-        "msp": "Manage user role assignments for MSP users",
-        "client": "Manage user role assignments for Client Portal users"
+        "msp": "Gerenciar atribuições de funções de usuário para usuários MSP",
+        "client": "Gerenciar atribuições de função de usuário para usuários do Portal do Cliente"
       },
       "viewSwitcher": {
         "msp": "MSP",
-        "clientPortal": "Client Portal"
+        "clientPortal": "Portal do cliente"
       },
-      "showInactive": "Show Inactive Users",
+      "showInactive": "Mostrar usuários inativos",
       "fields": {
-        "selectUser": "Select User",
-        "selectRole": "Select Role"
+        "selectUser": "Selecione o usuário",
+        "selectRole": "Selecione a função"
       },
       "actions": {
-        "assignRole": "Assign Role"
+        "assignRole": "Atribuir função"
       },
       "table": {
-        "user": "User",
-        "email": "Email",
-        "roles": "Roles",
-        "actions": "Actions"
+        "user": "Usuário",
+        "email": "E-mail",
+        "roles": "Funções",
+        "actions": "Ações"
       },
-      "unnamedUser": "Unnamed User",
-      "noRolesAssigned": "No roles assigned",
-      "removeRole": "Remove {{role}}",
+      "unnamedUser": "Usuário Sem Nome",
+      "noRolesAssigned": "Nenhuma função atribuída",
+      "removeRole": "Remover {{role}}",
       "emptyState": {
-        "noUsers": "No {{type}} users found",
-        "inactiveHidden": "(inactive users hidden)"
+        "noUsers": "Nenhum usuário {{type}} encontrado",
+        "inactiveHidden": "(usuários inativos ocultos)"
       },
-      "inactiveTag": "(Inactive)",
+      "inactiveTag": "(Inativo)",
       "messages": {
         "success": {
           "roleAssigned": "Função atribuída com sucesso",
           "roleRemoved": "Função removida com sucesso"
         },
         "error": {
-          "assignFailed": "Falha ao atribuir a função. Tente novamente.",
-          "removeFailed": "Falha ao remover a função. Tente novamente.",
+          "assignFailed": "Falha ao atribuir função. Por favor, tente novamente.",
+          "removeFailed": "Falha ao remover a função. Por favor, tente novamente.",
           "permissionDenied": "Você não tem permissão para alterar funções de usuário."
         }
       }
     },
     "sessions": {
-      "title": "All User Sessions",
+      "title": "Todas as sessões de usuário",
       "filters": {
-        "search": "Search",
-        "searchPlaceholder": "Search by name, email, device, or IP...",
-        "user": "User",
-        "allUsers": "All Users",
-        "loginMethod": "Login Method",
-        "allMethods": "All Methods",
-        "userType": "User Type",
-        "allTypes": "All Types",
-        "from": "From",
-        "to": "To",
-        "selectDate": "Select date",
-        "reset": "Reset"
+        "search": "Procurar",
+        "searchPlaceholder": "Pesquise por nome, e-mail, dispositivo ou IP...",
+        "user": "Usuário",
+        "allUsers": "Todos os usuários",
+        "loginMethod": "Método de login",
+        "allMethods": "Todos os métodos",
+        "userType": "Tipo de usuário",
+        "allTypes": "Todos os tipos",
+        "from": "De",
+        "to": "Para",
+        "selectDate": "Selecione a data",
+        "reset": "Reiniciar"
       },
       "loginMethods": {
-        "password": "Password",
+        "password": "Senha",
         "google": "Google OAuth",
         "microsoft": "Microsoft OAuth",
-        "keycloak": "Keycloak"
+        "keycloak": "Capa de chave"
       },
       "userTypes": {
-        "internal": "Internal",
-        "client": "Client"
+        "internal": "Interno",
+        "client": "Cliente"
       },
       "session": {
-        "yourSession": "Your Session",
-        "unknownDevice": "Unknown Device",
-        "lastActive": "Last active {{time}}",
-        "logout": "Logout",
-        "revoke": "Revoke",
-        "revoking": "Revoking..."
+        "yourSession": "Sua sessão",
+        "unknownDevice": "Dispositivo desconhecido",
+        "lastActive": "Último {{time}} ativo",
+        "logout": "Sair",
+        "revoke": "Revogar",
+        "revoking": "Revogando..."
       },
-      "oauthWarning": "Revoking this session will not revoke {{provider}} OAuth access. Revoke access from your {{provider}} account settings.",
-      "confirmLogout": "Are you sure you want to logout from this device?",
+      "oauthWarning": "A revogação desta sessão não revogará o acesso {{provider}} OAuth. Revogue o acesso das configurações da sua conta {{provider}}.",
+      "confirmLogout": "Tem certeza de que deseja sair deste dispositivo?",
       "messages": {
-        "loadFailed": "Failed to load sessions",
-        "loggingOut": "Logging out...",
-        "revoked": "Session revoked successfully",
-        "revokeFailed": "Failed to revoke session"
+        "loadFailed": "Falha ao carregar sessões",
+        "loggingOut": "Saindo...",
+        "revoked": "Sessão revogada com sucesso",
+        "revokeFailed": "Falha ao revogar sessão"
       },
       "emptyState": {
-        "loading": "Loading sessions...",
-        "noMatch": "No sessions match your search",
-        "noSessions": "No active sessions found"
+        "loading": "Carregando sessões...",
+        "noMatch": "Nenhuma sessão corresponde à sua pesquisa",
+        "noSessions": "Nenhuma sessão ativa encontrada"
       },
-      "subtitle_one": "{{sessionCount}} active session across {{userCount}} user",
-      "subtitle_other": "{{sessionCount}} active sessions across {{userCount}} users"
+      "subtitle_one": "Sessão ativa {{sessionCount}} entre usuário {{userCount}}",
+      "subtitle_other": "Sessões ativas {{sessionCount}} entre usuários {{userCount}}"
     },
     "webhooks": {
-      "title": "Outbound Webhooks",
-      "description": "Create signed ticket lifecycle subscriptions, filter them to specific ticket IDs, inspect delivery history, and rotate secrets without leaving settings.",
-      "newWebhook": "New Webhook",
+      "title": "Webhooks de saída",
+      "description": "Crie assinaturas de ciclo de vida de tickets assinados, filtre-as para IDs de tickets específicos, inspecione o histórico de entrega e alterne segredos sem sair das configurações.",
+      "newWebhook": "Novo webhook",
       "tabs": {
-        "configuration": "Configuration",
-        "deliveries": "Deliveries",
-        "inbound": "Inbound",
-        "outbound": "Outbound"
+        "configuration": "Configuração",
+        "deliveries": "Entregas",
+        "inbound": "Entrada",
+        "outbound": "Saída"
       },
       "inbound": {
         "title": "Webhooks de entrada",
-        "description": "Aceite solicitações autenticadas de sistemas externos e despache-as para ações diretas ou fluxos de trabalho.",
-        "placeholder": "Configure endpoints de webhooks de entrada que verificam solicitações, deduplicam entregas e despacham para ações ou fluxos.",
+        "description": "Aceite solicitações autenticadas de sistemas externos e envie-as para ações diretas ou fluxos de trabalho.",
+        "placeholder": "Configure endpoints de webhook de entrada que verificam solicitações, desduplicam entregas e enviam para ações ou fluxos de trabalho.",
         "newWebhook": "Novo webhook",
         "list": {
           "title": "Webhooks de entrada configurados",
           "loading": "Carregando…",
-          "configuredCount": "{{count}} configurados",
-          "empty": "Nenhum webhook de entrada configurado ainda.",
+          "configuredCount": "{{count}} configurado",
+          "empty": "Nenhum webhooks de entrada configurado ainda.",
           "columns": {
             "name": "Nome",
             "handler": "Manipulador",
@@ -234,12 +234,12 @@
           "inactive": "Inativo"
         },
         "messages": {
-          "loadFailed": "Falha ao carregar os webhooks de entrada.",
+          "loadFailed": "Falha ao carregar webhooks de entrada.",
           "nameRequired": "O nome é obrigatório.",
-          "slugRequired": "O slug é obrigatório.",
+          "slugRequired": "Slug é obrigatório.",
           "actionRequired": "Selecione uma ação antes de salvar.",
-          "workflowRequired": "Selecione um fluxo antes de salvar.",
-          "missingRequiredFields": "Mapeie um valor para os campos obrigatórios: {{fields}}"
+          "workflowRequired": "Selecione um fluxo de trabalho antes de salvar.",
+          "missingRequiredFields": "Mapeie um valor para campos obrigatórios: {{fields}}"
         },
         "dialog": {
           "createTitle": "Criar webhook de entrada",
@@ -254,127 +254,127 @@
           "help": "Nomeie o webhook e escolha o slug seguro para URL usado em seu endpoint receptor.",
           "name": "Nome",
           "namePlaceholder": "Alertas críticos de RMM",
-          "slug": "Slug",
-          "slugPlaceholder": "alertas-criticos-rmm",
+          "slug": "Lesma",
+          "slugPlaceholder": "alertas críticos de rmm",
           "description": "Descrição",
-          "descriptionPlaceholder": "Notas opcionais sobre o sistema de origem e o payload."
+          "descriptionPlaceholder": "Notas opcionais sobre o sistema de origem e a carga útil."
         },
         "auth": {
           "title": "Autenticação",
-          "help": "Escolha como as solicitações de entrada comprovam que estão autorizadas a usar este endpoint.",
+          "help": "Escolha como as solicitações recebidas provam que têm permissão para usar esse endpoint.",
           "method": "Método de autenticação",
           "types": {
             "hmacSha256": "HMAC-SHA256",
-            "bearer": "Token Bearer",
-            "ipAllowlist": "Lista de IPs permitidos",
+            "bearer": "Token do portador",
+            "ipAllowlist": "Lista de permissões de IP",
             "pathToken": "Segredo compartilhado no caminho"
           },
           "signatureHeader": "Cabeçalho de assinatura",
-          "signatureHeaderPlaceholder": "X-Alga-Signature",
-          "bearerToken": "Token Bearer",
+          "signatureHeaderPlaceholder": "Assinatura X-Alga",
+          "bearerToken": "Token do Portador",
           "bearerTokenPlaceholder": "Cole o token ou deixe em branco para gerar um",
           "secretUnchangedPlaceholder": "Deixe em branco para manter o segredo atual",
-          "ipCidrs": "IPs / CIDRs permitidos",
+          "ipCidrs": "IPs/CIDRs permitidos",
           "ipCidrsPlaceholder": "203.0.113.10\n198.51.100.0/24",
           "queryParam": "Parâmetro de consulta",
-          "queryParamPlaceholder": "token",
-          "pathToken": "Token de caminho",
+          "queryParamPlaceholder": "ficha",
+          "pathToken": "Símbolo de caminho",
           "pathTokenPlaceholder": "Cole o token ou deixe em branco para gerar um"
         },
         "secret": {
           "label": "Segredo do webhook",
-          "warning": "Este valor é mostrado apenas agora. Salve-o no sistema de origem antes de fechar esta caixa de diálogo.",
-          "copy": "Copiar",
-          "download": "Baixar como .txt",
+          "warning": "Este valor é mostrado apenas agora. Armazene-o no sistema de origem antes de fechar esta caixa de diálogo.",
+          "copy": "Cópia",
+          "download": "Baixe como .txt",
           "close": "Fechar"
         },
         "idempotency": {
           "title": "Idempotência",
           "help": "Use uma chave estável para detectar entregas duplicadas dentro da janela configurada.",
-          "source": "Origem da chave",
+          "source": "Fonte-chave",
           "types": {
             "header": "Cabeçalho HTTP",
             "jsonata": "Expressão JSONata"
           },
           "headerName": "Nome do cabeçalho",
-          "headerNamePlaceholder": "X-Idempotency-Key",
+          "headerNamePlaceholder": "X-Chave de Idempotência",
           "jsonataExpression": "Expressão JSONata",
-          "jsonataExpressionPlaceholder": "alert.id",
-          "windowSeconds": "Janela de duplicatas (segundos)"
+          "jsonataExpressionPlaceholder": "alerta.id",
+          "windowSeconds": "Janela duplicada (segundos)"
         },
         "active": {
           "title": "Estado ativo",
-          "help": "Pause o endpoint sem excluir sua URL, mapeamentos ou histórico de entregas.",
-          "toggle": "Webhook está ativo",
+          "help": "Pause o endpoint sem excluir sua URL, mapeamentos ou histórico de entrega.",
+          "toggle": "O webhook está ativo",
           "autoDisabled": "Desativado automaticamente em {{date}} após falhas repetidas.",
           "updateFailed": "Falha ao atualizar o estado do webhook de entrada."
         },
         "handler": {
           "title": "Manipulador",
-          "help": "Escolha o que Alga deve fazer após a solicitação ser verificada e deduplicada.",
+          "help": "Escolha o que Alga deve fazer depois que a solicitação for verificada e desduplicada.",
           "type": "Tipo de manipulador",
           "types": {
             "directAction": "Ação direta",
             "workflow": "Fluxo de trabalho"
           },
           "directActionTitle": "Ação direta",
-          "directActionHelp": "Selecione uma ação de entrada e mapeie os campos do payload para seus campos de destino.",
+          "directActionHelp": "Selecione uma ação de entrada e mapeie os campos de carga para seus campos de destino.",
           "action": "Ação",
           "actionPlaceholder": "Selecione uma ação",
-          "actionEmpty": "Nenhuma ação de entrada registrada. Certifique-se de que o servidor inicializou o registro de ações antes de salvar.",
+          "actionEmpty": "Nenhuma ação de entrada é registrada. Certifique-se de que o servidor tenha inicializado o registro de ações antes de salvar.",
           "targetFields": "Campos de destino",
           "required": "Obrigatório",
           "optional": "Opcional",
-          "mappingPlaceholder": "Digite uma expressão JSONata, por ex. payload.field",
+          "mappingPlaceholder": "Digite uma expressão JSONata, por exemplo. carga útil.campo",
           "workflowTitle": "Fluxo de trabalho",
-          "workflowHelp": "Selecione um fluxo para iniciar com o envelope normalizado do webhook.",
+          "workflowHelp": "Selecione um fluxo de trabalho para começar com o envelope de webhook normalizado.",
           "workflow": "Fluxo de trabalho",
-          "workflowPlaceholder": "Selecione um fluxo",
-          "workflowEmpty": "Nenhum fluxo visível neste inquilino. Publique ou exiba um fluxo para usar o manipulador de fluxo.",
-          "envelopeTitle": "Envelope de entrada do fluxo",
+          "workflowPlaceholder": "Selecione um fluxo de trabalho",
+          "workflowEmpty": "Nenhum fluxo de trabalho está visível neste locatário. Publique ou exiba um fluxo de trabalho para usar o manipulador de fluxo de trabalho.",
+          "envelopeTitle": "Envelope de entrada de fluxo de trabalho",
           "fieldTypes": {
-            "string": "string",
+            "string": "corda",
             "int": "inteiro",
             "number": "número",
             "boolean": "booleano",
-            "enum": "enum",
-            "json": "json",
+            "enum": "enumeração",
+            "json": "JSON",
             "ref": "referência"
           }
         },
         "sample": {
-          "title": "Payload de exemplo",
-          "help": "Capture a próxima solicitação verificada para autocompletar de mapeamento.",
-          "createFirst": "Salve o webhook antes de capturar uma solicitação de exemplo.",
-          "captureButton": "Capturar solicitação de exemplo",
+          "title": "Exemplo de carga útil",
+          "help": "Capture a próxima solicitação verificada para preenchimento automático de mapeamento.",
+          "createFirst": "Salve o webhook antes de capturar uma solicitação de amostra.",
+          "captureButton": "Solicitação de amostra de captura",
           "captureActive": "Janela de captura ativa até {{expiresAt}}.",
-          "sampleAvailable": "Payload de exemplo capturado.",
-          "noSample": "Nenhum exemplo capturado ainda.",
-          "captureFailed": "Falha ao ativar a captura de exemplo."
+          "sampleAvailable": "Carga útil de amostra capturada.",
+          "noSample": "Nenhuma amostra capturada ainda.",
+          "captureFailed": "Falha ao ativar a captura de amostra."
         },
         "sampleTree": {
-          "title": "Caminhos de exemplo",
+          "title": "Exemplos de caminhos",
           "help": "Clique em um caminho para inseri-lo em {{field}}.",
-          "focusHelp": "Foque em um campo de mapeamento, depois clique em um caminho para inseri-lo.",
-          "empty": "Capture um payload de exemplo para explorar campos."
+          "focusHelp": "Foque um campo de mapeamento e clique em um caminho para inseri-lo.",
+          "empty": "Capture uma carga de amostra para navegar pelos campos."
         },
         "mapping": {
           "modeStatic": "Valor estático",
-          "modeExpression": "Mapear do payload",
+          "modeExpression": "Mapa da carga útil",
           "unknownReference": "referência desconhecida",
           "loading": "Carregando…",
           "errors": {
-            "INVALID_INT": "O valor \"{{value}}\" deve ser um inteiro.",
+            "INVALID_INT": "O valor \"{{value}}\" deve ser um número inteiro.",
             "INVALID_NUMBER": "O valor \"{{value}}\" deve ser um número.",
-            "INVALID_BOOLEAN": "O valor deve ser \"true\" ou \"false\".",
+            "INVALID_BOOLEAN": "O valor deve ser \"verdadeiro\" ou \"falso\".",
             "INVALID_JSON": "O valor deve ser JSON válido."
           }
         },
         "deliveryLog": {
-          "title": "Registro de entregas",
-          "help": "Entregas verificadas recentes para este webhook de entrada.",
+          "title": "Registro de entrega",
+          "help": "Entregas verificadas recentemente para este webhook de entrada.",
           "empty": "Nenhuma entrega registrada ainda.",
-          "loadFailed": "Falha ao carregar entregas.",
+          "loadFailed": "Falha ao carregar entregas de webhook de entrada.",
           "pageSummary": "Página {{page}} de {{total}}",
           "durationMs": "{{duration}} ms",
           "allStatuses": "Todos os status",
@@ -385,196 +385,196 @@
             "duration": "Duração",
             "actions": "Ações"
           },
-          "view": "Ver",
+          "view": "Visualizar",
           "status": {
             "pending": "pendente",
-            "dispatched": "entregue",
+            "dispatched": "despachado",
             "duplicate": "duplicado",
-            "failed": "falhou"
+            "failed": "fracassado"
           }
         },
         "deliveryDetail": {
           "title": "Detalhe da entrega",
           "close": "Fechar",
           "replay": "Repetir",
-          "replayConfirm": "Reenviar esta entrega através da configuração atual do webhook? Quaisquer efeitos colaterais (criação de tickets, mudanças de status, etc.) serão executados novamente.",
-          "replayFailed": "Falha ao repetir a entrega.",
+          "replayConfirm": "Despachar novamente esta entrega por meio da configuração atual do webhook? Quaisquer efeitos colaterais (criação de tickets, alterações de status, etc.) serão executados novamente.",
+          "replayFailed": "Falha ao reproduzir a entrega.",
           "received": "Recebido",
           "status": "Status",
-          "responseStatus": "Status da resposta",
+          "responseStatus": "Estado da resposta",
           "duration": "Duração",
           "sections": {
-            "headers": "Cabeçalhos da solicitação",
-            "requestBody": "Corpo da solicitação",
-            "responseBody": "Corpo da resposta",
+            "headers": "Solicitar cabeçalhos",
+            "requestBody": "Solicitar corpo",
+            "responseBody": "Corpo de resposta",
             "handlerOutcome": "Resultado do manipulador"
           }
         },
         "test": {
           "openButton": "Enviar teste",
           "title": "Enviar solicitação de teste",
-          "body": "Corpo JSON da solicitação",
+          "body": "Corpo da Solicitação JSON",
           "headers": "Cabeçalhos",
           "cancel": "Cancelar",
           "send": "Enviar teste",
-          "sendFailed": "Falha ao enviar a solicitação de teste do webhook."
+          "sendFailed": "Falha ao enviar teste de webhook de entrada."
         }
       },
       "stats": {
-        "total": "Total webhooks",
-        "active": "Active",
-        "autoDisabled": "Auto-disabled"
+        "total": "Total de webhooks",
+        "active": "Ativo",
+        "autoDisabled": "Desativado automaticamente"
       },
       "secret": {
-        "label": "Signing secret",
-        "warning": "This value is shown only now. Store it in the receiver before you navigate away.",
-        "copy": "Copiar",
-        "copied": "Segredo de assinatura copiado para a área de transferência",
+        "label": "Segredo de assinatura",
+        "warning": "Este valor é mostrado apenas agora. Guarde-o no receptor antes de sair.",
+        "copy": "Cópia",
+        "copied": "Assinatura secreta copiada para a área de transferência",
         "copyFailed": "Falha ao copiar o segredo de assinatura para a área de transferência",
         "close": "Fechar",
-        "download": "Baixar como .txt"
+        "download": "Baixe como .txt"
       },
       "form": {
-        "createTitle": "Create Webhook",
-        "editTitle": "Edit Webhook",
-        "helper": "Retry config is stored as JSON; delivery cadence still uses the platform's standard backoff schedule in v1.",
-        "name": "Name",
-        "namePlaceholder": "Ticket assignment feed",
+        "createTitle": "Criar webhook",
+        "editTitle": "Editar webhook",
+        "helper": "A configuração de nova tentativa é armazenada como JSON; a cadência de entrega ainda usa o cronograma de espera padrão da plataforma na v1.",
+        "name": "Nome",
+        "namePlaceholder": "Feed de atribuição de tickets",
         "url": "URL",
         "urlPlaceholder": "https://example.com/hooks/alga",
-        "events": "Events",
-        "customHeaders": "Custom Headers",
-        "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
-        "ticketFilter": "Ticket Filter",
-        "ticketFilterPlaceholder": "One ticket UUID per line. Leave blank to receive all matching ticket events.",
-        "retryConfig": "Retry Config JSON",
-        "verifySsl": "Verify SSL certificates",
-        "webhookActive": "Webhook is active",
-        "save": "Save Changes",
-        "saving": "Saving…",
-        "create": "Create Webhook",
-        "clear": "Clear",
-        "delete": "Delete",
+        "events": "Eventos",
+        "customHeaders": "Cabeçalhos personalizados",
+        "customHeadersPlaceholder": "Autorização: Portador abc123\nFonte X: alga-psa",
+        "ticketFilter": "Filtro de tickets",
+        "ticketFilterPlaceholder": "Um UUID de ticket por linha. Deixe em branco para receber todos os eventos de tickets correspondentes.",
+        "retryConfig": "Tentar novamente configurar JSON",
+        "verifySsl": "Verifique os certificados SSL",
+        "webhookActive": "O webhook está ativo",
+        "save": "Salvar alterações",
+        "saving": "Salvando…",
+        "create": "Criar webhook",
+        "clear": "Limpar",
+        "delete": "Excluir",
         "payloadFields": "Campos entregues",
         "payloadFieldsHelp": "Todos os campos são enviados por padrão. Desmarque para excluir um campo da entrega. A chave de correlação da entidade (por exemplo, ticket_id) é sempre incluída.",
         "payloadFieldsSelectAll": "Selecionar tudo",
         "payloadFieldsClear": "Limpar"
       },
       "list": {
-        "title": "Configured Webhooks",
-        "loading": "Loading…",
-        "configuredCount": "{{count}} configured",
-        "empty": "No webhooks configured yet.",
+        "title": "Webhooks configurados",
+        "loading": "Carregando…",
+        "configuredCount": "{{count}} configurado",
+        "empty": "Nenhum webhooks configurado ainda.",
         "columns": {
-          "name": "Name",
+          "name": "Nome",
           "status": "Status",
-          "lastDelivery": "Last Delivery",
-          "success": "Success",
-          "actions": "Actions"
+          "lastDelivery": "Última entrega",
+          "success": "Sucesso",
+          "actions": "Ações"
         },
         "actions": {
-          "selected": "Selected",
-          "manage": "Manage",
-          "pause": "Pause",
-          "resume": "Resume",
-          "view": "View",
-          "edit": "Edit"
+          "selected": "Selecionado",
+          "manage": "Gerenciar",
+          "pause": "Pausa",
+          "resume": "Retomar",
+          "view": "Visualizar",
+          "edit": "Editar"
         }
       },
       "detail": {
-        "summary": "{{total}} deliveries, {{successful}} successful, {{failed}} failed.",
-        "sendTest": "Send Test",
-        "sending": "Sending…",
-        "rotateSecret": "Rotate Secret",
-        "rotating": "Rotating…",
-        "back": "Back to webhooks"
+        "summary": "Entregas {{total}}, {{successful}} bem-sucedidas, {{failed}} falhou.",
+        "sendTest": "Enviar teste",
+        "sending": "Enviando…",
+        "rotateSecret": "Girar segredo",
+        "rotating": "Girando…",
+        "back": "Voltar aos webhooks"
       },
       "deliveries": {
-        "title": "Delivery History",
-        "page": "Page {{page}} of {{total}}",
-        "empty": "No deliveries recorded yet.",
+        "title": "Histórico de entrega",
+        "page": "Página {{page}} de {{total}}",
+        "empty": "Nenhuma entrega registrada ainda.",
         "columns": {
-          "event": "Event",
+          "event": "Evento",
           "status": "Status",
-          "attempted": "Attempted",
-          "response": "Response",
-          "action": "Action"
+          "attempted": "Tentativa",
+          "response": "Resposta",
+          "action": "Ação"
         },
-        "testBadge": "Test delivery",
-        "attempt": "Attempt {{number}}",
-        "noResponseCode": "n/a",
-        "noResponseBody": "No response body captured.",
-        "retry": "Retry",
-        "previous": "Previous",
-        "next": "Next"
+        "testBadge": "Entrega de teste",
+        "attempt": "Tentativa {{number}}",
+        "noResponseCode": "n / D",
+        "noResponseBody": "Nenhum corpo de resposta capturado.",
+        "retry": "Tentar novamente",
+        "previous": "Anterior",
+        "next": "Próximo"
       },
       "messages": {
-        "loadFailed": "Failed to load webhook settings.",
-        "loadDeliveriesFailed": "Failed to load webhook deliveries.",
-        "saveFailed": "Failed to save webhook.",
-        "createSuccess": "Webhook created.",
-        "updateSuccess": "Webhook updated.",
-        "deleteConfirm": "Delete webhook \"{{name}}\"?",
-        "deleteSuccess": "Webhook deleted.",
-        "deleteFailed": "Failed to delete webhook.",
-        "testSuccess": "Test sent successfully ({{statusCode}}).",
-        "testFailed": "Test failed: {{message}}",
-        "testRunFailed": "Failed to send webhook test.",
-        "unknownError": "Unknown error",
-        "secretRotated": "Signing secret rotated.",
-        "rotateFailed": "Failed to rotate webhook secret.",
-        "resumed": "Webhook resumed.",
-        "paused": "Webhook paused.",
-        "stateChangeFailed": "Failed to update webhook state.",
-        "retryQueued": "Retry queued for event {{eventId}}.",
-        "retryFailed": "Failed to retry delivery.",
-        "invalidHeaderLine": "Invalid header line: \"{{line}}\"",
-        "invalidRetryConfig": "Retry config must be a JSON object"
+        "loadFailed": "Falha ao carregar as configurações do webhook.",
+        "loadDeliveriesFailed": "Falha ao carregar entregas de webhook.",
+        "saveFailed": "Falha ao salvar o webhook.",
+        "createSuccess": "Webhook criado.",
+        "updateSuccess": "Webhook atualizado.",
+        "deleteConfirm": "Excluir webhook \"{{name}}\"?",
+        "deleteSuccess": "Webhook excluído.",
+        "deleteFailed": "Falha ao excluir o webhook.",
+        "testSuccess": "Teste enviado com sucesso ({{statusCode}}).",
+        "testFailed": "Falha no teste: {{message}}",
+        "testRunFailed": "Falha ao enviar teste de webhook.",
+        "unknownError": "Erro desconhecido",
+        "secretRotated": "Assinatura secreta girada.",
+        "rotateFailed": "Falha ao girar o segredo do webhook.",
+        "resumed": "Webhook retomado.",
+        "paused": "Webhook pausado.",
+        "stateChangeFailed": "Falha ao atualizar o estado do webhook.",
+        "retryQueued": "Nova tentativa na fila para o evento {{eventId}}.",
+        "retryFailed": "Falha ao tentar novamente a entrega.",
+        "invalidHeaderLine": "Linha de cabeçalho inválida: \"{{line}}\"",
+        "invalidRetryConfig": "A configuração de nova tentativa deve ser um objeto JSON"
       },
       "common": {
-        "never": "Never"
+        "never": "Nunca"
       },
       "health": {
-        "healthy": "healthy",
-        "failing": "failing",
-        "disabled": "disabled"
+        "healthy": "saudável",
+        "failing": "falhando",
+        "disabled": "desabilitado"
       },
       "deliveryStatus": {
-        "delivered": "delivered",
-        "retrying": "retrying",
-        "abandoned": "abandoned",
-        "pending": "pending"
+        "delivered": "entregue",
+        "retrying": "tentando novamente",
+        "abandoned": "abandonado",
+        "pending": "pendente"
       }
     },
     "apiKeys": {
       "rateLimit": {
-        "columnTitle": "Rate Limit",
-        "loading": "Loading…",
-        "summary": "{{maxTokens}} burst / {{refillPerMin}} per min",
-        "source": "Source: {{label}}",
+        "columnTitle": "Limite de taxa",
+        "loading": "Carregando…",
+        "summary": "Explosão {{maxTokens}} / {{refillPerMin}} por minuto",
+        "source": "Fonte: {{label}}",
         "sourceLabels": {
-          "key": "Override",
-          "tenant": "Tenant default",
-          "default": "System default"
+          "key": "Substituir",
+          "tenant": "Padrão do locatário",
+          "default": "Padrão do sistema"
         },
-        "remaining": " • Remaining: {{remaining}}/{{maxTokens}}",
-        "remainingUnavailable": " • Remaining: unavailable",
+        "remaining": "• Restante: {{remaining}}/{{maxTokens}}",
+        "remainingUnavailable": "• Restante: indisponível",
         "actions": {
-          "edit": "Edit",
-          "override": "Override",
-          "save": "Save",
-          "cancel": "Cancel",
-          "reset": "Reset"
+          "edit": "Editar",
+          "override": "Substituir",
+          "save": "Salvar",
+          "cancel": "Cancelar",
+          "reset": "Reiniciar"
         },
         "errors": {
-          "saveFailed": "Failed to save API rate limit override.",
-          "clearFailed": "Failed to clear API rate limit override."
+          "saveFailed": "Falha ao salvar a substituição do limite de taxa da API.",
+          "clearFailed": "Falha ao limpar a substituição do limite de taxa da API."
         }
       },
       "generate": {
         "title": "Gerar chave de API",
         "description": "Descrição",
-        "descriptionPlaceholder": "ex.: Chave de API de desenvolvimento",
+        "descriptionPlaceholder": "por exemplo, chave de API de desenvolvimento",
         "expiration": "Data de expiração (opcional)",
         "submit": "Gerar nova chave de API"
       },
@@ -583,15 +583,15 @@
         "searchPlaceholder": "Pesquisar por descrição",
         "filters": {
           "allStatuses": "Todos os status",
-          "active": "Ativa",
-          "inactive": "Inativa",
-          "lastUsedAfter": "Último uso após",
-          "expiresBefore": "Expira antes de",
-          "reset": "Redefinir"
+          "active": "Ativo",
+          "inactive": "Inativo",
+          "lastUsedAfter": "Usado pela última vez depois",
+          "expiresBefore": "Expira antes",
+          "reset": "Reiniciar"
         },
         "columns": {
           "description": "Descrição",
-          "created": "Criada",
+          "created": "Criado",
           "lastUsed": "Último uso",
           "expires": "Expira",
           "status": "Status",
@@ -599,16 +599,16 @@
         },
         "never": "Nunca",
         "status": {
-          "active": "Ativa",
-          "inactive": "Inativa"
+          "active": "Ativo",
+          "inactive": "Inativo"
         },
         "deactivate": "Desativar"
       },
       "newKeyDialog": {
         "title": "Chave de API gerada",
-        "warning": "Copie sua chave de API agora. Por motivos de segurança, ela não será exibida novamente.",
+        "warning": "Copie sua chave API agora. Por motivos de segurança, não será mostrado novamente.",
         "copy": "Copiar para a área de transferência",
-        "download": "Baixar como .txt",
+        "download": "Baixe como .txt",
         "copySuccess": "Chave de API copiada para a área de transferência!",
         "copyFailed": "Falha ao copiar a chave de API para a área de transferência",
         "downloadFailed": "Falha ao baixar a chave de API"
@@ -617,50 +617,50 @@
   },
   "platformUpdates": {
     "detail": {
-      "back": "Back",
+      "back": "Voltar",
       "labels": {
-        "info": "Info",
-        "warning": "Warning",
-        "destructive": "Critical",
-        "success": "Success",
-        "default": "Notice"
+        "info": "Informações",
+        "warning": "Aviso",
+        "destructive": "Crítico",
+        "success": "Sucesso",
+        "default": "Perceber"
       }
     }
   },
   "connectSso": {
     "verify": {
-      "title": "Proteja a sua conta com SSO",
-      "description": "Associe Azure AD ou Google Workspace para reutilizar políticas organizacionais e dispensar pedidos locais de autenticação de dois fatores.",
-      "signedInAs": "Sessão iniciada como",
-      "currentPassword": "Palavra-passe atual",
+      "title": "Proteja sua conta com SSO",
+      "description": "Vincule o Azure AD ou o Google Workspace para reutilizar políticas organizacionais e ignorar solicitações locais de dois fatores.",
+      "signedInAs": "Conectado como",
+      "currentPassword": "Senha atual",
       "twoFactorCode": "Código de dois fatores",
       "twoFactorPlaceholder": "123456",
-      "verifyCredentials": "Verificar Credenciais",
-      "verifying": "A verificar...",
-      "reset": "Repor",
-      "linkedSuccess": "Fornecedor associado com sucesso.",
-      "credentialsVerified": "Credenciais verificadas. Escolha um fornecedor abaixo para concluir a associação da sua conta.",
+      "verifyCredentials": "Verifique as credenciais",
+      "verifying": "Verificando...",
+      "reset": "Reiniciar",
+      "linkedSuccess": "Provedor vinculado com sucesso.",
+      "credentialsVerified": "Credenciais verificadas. Escolha um provedor abaixo para terminar de vincular sua conta.",
       "verifyFailed": "Não foi possível verificar as credenciais.",
-      "verifyBeforeProvider": "Verifique a sua palavra-passe (e código de dois fatores, se necessário) antes de associar um fornecedor."
+      "verifyBeforeProvider": "Verifique sua senha (e código de dois fatores, se necessário) antes de conectar um provedor."
     },
     "providers": {
-      "title": "Associar um fornecedor",
-      "description": "Escolha um fornecedor para concluir a associação SSO. Será redirecionado através do fluxo de autenticação do fornecedor.",
-      "noneConfigured": "Não existem fornecedores SSO configurados para este ambiente. Peça ao seu administrador para configurar credenciais Google ou Microsoft.",
+      "title": "Conecte um provedor",
+      "description": "Escolha um provedor para finalizar o link SSO. Você será redirecionado pelo fluxo de login do provedor.",
+      "noneConfigured": "Nenhum provedor de SSO está configurado para este ambiente. Peça ao seu administrador para configurar as credenciais do Google ou da Microsoft.",
       "notConfigured": "Não configurado",
       "branding": {
-        "google": "Continuar com Google",
-        "microsoft": "Continuar com Microsoft",
+        "google": "Continuar com o Google",
+        "microsoft": "Continuar com a Microsoft",
         "default": "Continuar"
       }
     },
     "linked": {
-      "title": "Contas associadas",
-      "description": "Atualizaremos a associação na próxima vez que iniciar sessão através de um fornecedor conectado.",
-      "empty": "Ainda não há fornecedores SSO associados. Conclua os passos acima para associar um.",
-      "linkedAt": "Associado em {{date}}",
-      "lastUsed": "Última utilização em {{date}}",
-      "notUsedYet": "Ainda não utilizado"
+      "title": "Contas vinculadas",
+      "description": "Atualizaremos o link na próxima vez que você fizer login por meio de um provedor conectado.",
+      "empty": "Nenhum provedor de SSO vinculado ainda. Conclua as etapas acima para conectar um.",
+      "linkedAt": "Vinculado {{date}}",
+      "lastUsed": "{{date}} usado pela última vez",
+      "notUsedYet": "Ainda não usado"
     }
   }
 }

@@ -4,7 +4,7 @@ import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import { getAllBoards, getAllPriorities, getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
-import { getTicketCategoriesByBoard } from '@alga-psa/tickets/actions';
+import { getTicketCategoriesByBoard } from '@alga-psa/tickets/actions/ticketCategoryActions';
 import {
   addBasicFormFieldToDefinitionDraft,
   archiveServiceRequestDefinitionFromManagement,

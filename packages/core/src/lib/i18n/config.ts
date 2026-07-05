@@ -32,7 +32,7 @@ export const LOCALE_CONFIG = {
     nl: 'Nederlands',
     it: 'Italiano',
     pl: 'Polski',
-    pt: 'Português',
+    pt: 'Português (Brasil)',
     xx: 'Pseudo (xx)',
     yy: 'Pseudo (yy)',
   } as const,
@@ -113,24 +113,36 @@ export const I18N_CONFIG = {
 export const PSEUDO_LOCALES: ReadonlyArray<SupportedLocale> = ['xx', 'yy'];
 
 /**
- * Locales whose translation packs are still in progress and should not yet be
- * offered in user-facing pickers. Translations remain on disk so existing
+ * Real locales whose packs are complete enough to preview but are pending
+ * sign-off (e.g. native-speaker review). They behave like pseudo-locales for
+ * gating purposes — selectable in development builds so the surface can be
+ * QA'd, hidden from production language pickers — but they are genuine
+ * translations, not QA fills. Promote to a production locale by removing the
+ * code from this list once review passes.
+ */
+export const PREVIEW_LOCALES: ReadonlyArray<SupportedLocale> = [];
+
+/**
+ * Locales whose translation packs are still in progress and should never be
+ * offered in any picker, dev or prod. Translations remain on disk so existing
  * users who already selected them keep working, and so we can continue
  * iterating on them, but they won't appear as new selections.
  */
-export const INCOMPLETE_LOCALES: ReadonlyArray<SupportedLocale> = ['pt'];
+export const INCOMPLETE_LOCALES: ReadonlyArray<SupportedLocale> = [];
 
 /**
- * Filter pseudo-locales and incomplete locales from a list. Use this for any
- * user-facing language picker. Pseudo-locales stay selectable in development
- * builds so translated surfaces can be QA'd visually.
+ * Filter non-production locales from a list. Use this for any user-facing
+ * language picker. Pseudo-locales and preview locales stay selectable in
+ * development builds (so translated/QA surfaces can be exercised) but are
+ * hidden in production; incomplete locales are hidden in every mode.
  */
 export function filterPseudoLocales(
   locales: readonly SupportedLocale[],
 ): SupportedLocale[] {
-  const includePseudo = process.env.NODE_ENV === 'development';
+  const includeDevOnly = process.env.NODE_ENV === 'development';
   return locales
-    .filter((l) => includePseudo || !(PSEUDO_LOCALES as readonly string[]).includes(l))
+    .filter((l) => includeDevOnly || !(PSEUDO_LOCALES as readonly string[]).includes(l))
+    .filter((l) => includeDevOnly || !(PREVIEW_LOCALES as readonly string[]).includes(l))
     .filter((l) => !(INCOMPLETE_LOCALES as readonly string[]).includes(l));
 }
 

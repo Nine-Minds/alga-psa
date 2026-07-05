@@ -1,4 +1,7 @@
 {
+  "clientNameCell": {
+    "noClient": "Geen klant"
+  },
   "reactions": {
     "ariaSummary_one": "{{emoji}} {{count}} reactie",
     "ariaSummary_other": "{{emoji}} {{count}} reacties",
@@ -1237,5 +1240,8 @@
     "showingAllColumns": "Alle kolommen worden getoond; scroll horizontaal om ze te zien.",
     "showLess": "Minder tonen",
     "columnsHidden": "{{count}} kolommen verborgen vanwege beperkte ruimte."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Editor laden…"
   }
 }

@@ -16,24 +16,30 @@ let testCategoryId: number | undefined;
 let testSubtypeId: number | undefined;
 let testTemplateName: string;
 
-vi.mock('server/src/lib/realtime/internalNotificationBroadcaster', () => ({
+// The actions live in @alga-psa/notifications and import the broadcaster
+// relatively and the DB via @alga-psa/db — mock those seams, not server/src.
+vi.mock('@alga-psa/notifications/realtime/internalNotificationBroadcaster', () => ({
   broadcastNotification: vi.fn().mockResolvedValue(undefined),
   broadcastNotificationRead: vi.fn().mockResolvedValue(undefined),
   broadcastAllNotificationsRead: vi.fn().mockResolvedValue(undefined),
   broadcastUnreadCount: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn(async () => ({
-    knex: testDb,
-    tenant: testTenantId
-  })),
-  getConnection: vi.fn(async () => testDb)
-}));
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({
+      knex: testDb,
+      tenant: testTenantId
+    })),
+    getConnection: vi.fn(async () => testDb)
+  };
+});
 
 import {
   broadcastNotification
-} from 'server/src/lib/realtime/internalNotificationBroadcaster';
+} from '@alga-psa/notifications/realtime/internalNotificationBroadcaster';
 
 let createNotificationFromTemplateAction: typeof import('@alga-psa/notifications/actions')['createNotificationFromTemplateAction'];
 

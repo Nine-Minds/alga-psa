@@ -81,6 +81,8 @@ const DEFAULTS = [
 ];
 
 exports.seed = async function (knex, tenantId) {
+  const { tenantDb } = await import('@alga-psa/db');
+
   if (!tenantId) {
     const tenant = await knex('tenants').select('tenant').first();
     if (!tenant) {
@@ -90,10 +92,10 @@ exports.seed = async function (knex, tenantId) {
     tenantId = tenant.tenant;
   }
 
+  const db = tenantDb(knex, tenantId);
+
   // Clear existing defaults so the seed is idempotent and picks up new structure
-  await knex('document_default_folders')
-    .where({ tenant: tenantId })
-    .del();
+  await db.table('document_default_folders').del();
 
   const now = knex.fn.now();
 
@@ -113,7 +115,7 @@ exports.seed = async function (knex, tenantId) {
         updated_by: null,
       }));
 
-      await knex('document_default_folders').insert(rows);
+      await db.table('document_default_folders').insert(rows);
     }
   }
 

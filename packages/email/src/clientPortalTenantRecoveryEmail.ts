@@ -2,9 +2,11 @@
 
 import { getSystemEmailService } from './system/SystemEmailService';
 import logger from '@alga-psa/core/logger';
-import { getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { SupportedLocale, LOCALE_CONFIG } from './lib/localeConfig';
 import { resolveEmailLocale } from './emailLocaleResolver';
+
+const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
 
 interface TenantLoginInfo {
   tenantId: string;
@@ -28,9 +30,11 @@ async function fetchTemplate(
 ): Promise<{ subject: string; html: string; text: string } | null> {
   try {
     const knex = await getConnection();
+    const systemTemplatesQuery = () =>
+      tenantDb(knex, SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT).table('system_email_templates');
 
     // Try system template in requested language
-    let template = await knex('system_email_templates')
+    let template = await systemTemplatesQuery()
       .where({ name: templateName, language_code: locale })
       .first();
 
@@ -44,7 +48,7 @@ async function fetchTemplate(
 
     // Fallback to English
     if (locale !== 'en') {
-      template = await knex('system_email_templates')
+      template = await systemTemplatesQuery()
         .where({ name: templateName, language_code: 'en' })
         .first();
 

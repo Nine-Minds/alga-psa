@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import { TIER_FEATURES } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '../db/db';
 import { ApiKeyService } from '@alga-psa/auth';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
@@ -14,6 +15,7 @@ import { enforceMobileOttExchangeLimit, enforceMobileRefreshLimit } from '../sec
 import { TierAccessError, assertTenantTierAccess } from '../tier-gating/assertTierAccess';
 
 let connectionFactory = getConnection;
+const MOBILE_AUTH_TENANT_DISCOVERY = 'tenant-discovery';
 
 export function __setMobileAuthConnectionFactoryForTests(factory: typeof getConnection): void {
   connectionFactory = factory;
@@ -98,7 +100,7 @@ export async function issueMobileOtt(input: {
   const expiresAt = new Date(Date.now() + config.ottTtlSec * 1000);
 
   const knex = await connectionFactory(null);
-  const [row] = await knex('mobile_auth_otts')
+  const [row] = await tenantDb(knex, input.tenantId).table('mobile_auth_otts')
     .insert({
       tenant: input.tenantId,
       user_id: input.userId,
@@ -143,7 +145,8 @@ async function consumeMobileOtt(input: {
   const knex = await connectionFactory(null);
   const ottHash = sha256(input.ott);
 
-  const rows = await knex('mobile_auth_otts')
+  const rows = await tenantDb(knex, MOBILE_AUTH_TENANT_DISCOVERY)
+    .unscoped('mobile_auth_otts', 'tenant discovery from mobile one-time token exchange')
     .where({ ott_hash: ottHash, state: input.state })
     .whereNull('used_at')
     .where('expires_at', '>', knex.fn.now())
@@ -172,7 +175,8 @@ type RefreshTokenRow = {
 
 async function getActiveRefreshTokenByHash(hash: string, trx?: Knex | Knex.Transaction): Promise<RefreshTokenRow | null> {
   const db = trx ?? await connectionFactory(null);
-  let query = db('mobile_refresh_tokens')
+  let query = tenantDb(db, MOBILE_AUTH_TENANT_DISCOVERY)
+    .unscoped('mobile_refresh_tokens', 'tenant discovery from mobile refresh token hash')
     .where({ token_hash: hash })
     .whereNull('revoked_at')
     .where('expires_at', '>', db.fn.now());
@@ -197,7 +201,7 @@ async function insertRefreshToken(input: {
   const tokenHash = sha256(token);
   const db = trx ?? await connectionFactory(null);
 
-  const [row] = await db('mobile_refresh_tokens')
+  const [row] = await tenantDb(db, input.tenantId).table('mobile_refresh_tokens')
     .insert({
       tenant: input.tenantId,
       user_id: input.userId,
@@ -218,9 +222,9 @@ async function insertRefreshToken(input: {
   return { token, id };
 }
 
-async function revokeRefreshToken(input: { id: string; replacedById?: string | null }, trx?: Knex | Knex.Transaction): Promise<void> {
+async function revokeRefreshToken(input: { id: string; tenantId: string; replacedById?: string | null }, trx?: Knex | Knex.Transaction): Promise<void> {
   const db = trx ?? await connectionFactory(null);
-  await db('mobile_refresh_tokens')
+  await tenantDb(db, input.tenantId).table('mobile_refresh_tokens')
     .where({ mobile_refresh_token_id: input.id })
     .update({
       revoked_at: db.fn.now(),
@@ -229,9 +233,9 @@ async function revokeRefreshToken(input: { id: string; replacedById?: string | n
     });
 }
 
-async function setRefreshTokenLastUsed(id: string): Promise<void> {
+async function setRefreshTokenLastUsed(id: string, tenantId: string): Promise<void> {
   const knex = await connectionFactory(null);
-  await knex('mobile_refresh_tokens')
+  await tenantDb(knex, tenantId).table('mobile_refresh_tokens')
     .where({ mobile_refresh_token_id: id })
     .update({ last_used_at: knex.fn.now() });
 }
@@ -259,8 +263,8 @@ export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSch
 
   if (consumed.session_id) {
     const tenantKnex = await connectionFactory(tenantId);
-    const session = await tenantKnex('sessions')
-      .where({ tenant: tenantId, session_id: consumed.session_id })
+    const session = await tenantDb(tenantKnex, tenantId).table('sessions')
+      .where({ session_id: consumed.session_id })
       .first();
 
     if (!session || session.revoked_at || new Date(session.expires_at).getTime() <= Date.now()) {
@@ -396,7 +400,11 @@ export async function refreshMobileSession(input: z.infer<typeof refreshSessionS
       device: input.device ? { ...input.device } : undefined,
     }, trx);
 
-    await revokeRefreshToken({ id: existing.mobile_refresh_token_id, replacedById: newRefreshId }, trx);
+    await revokeRefreshToken({
+      id: existing.mobile_refresh_token_id,
+      tenantId: existing.tenant,
+      replacedById: newRefreshId,
+    }, trx);
 
     return { existing, apiKeyRecord, newRefreshToken, newRefreshId, accessExpiresAt, refreshExpiresAt };
   });
@@ -455,7 +463,11 @@ export async function revokeMobileSession(input: z.infer<typeof revokeSessionSch
     return;
   }
 
-  await revokeRefreshToken({ id: existing.mobile_refresh_token_id, replacedById: null });
+  await revokeRefreshToken({
+    id: existing.mobile_refresh_token_id,
+    tenantId: existing.tenant,
+    replacedById: null,
+  });
   if (existing.api_key_id) {
     await ApiKeyService.deactivateApiKey(existing.api_key_id, existing.tenant).catch(() => {});
   }
@@ -471,7 +483,7 @@ export async function revokeMobileSession(input: z.infer<typeof revokeSessionSch
     },
   });
 
-  await setRefreshTokenLastUsed(existing.mobile_refresh_token_id).catch(() => {});
+  await setRefreshTokenLastUsed(existing.mobile_refresh_token_id, existing.tenant).catch(() => {});
 }
 
 async function safeAuditLog(input: {

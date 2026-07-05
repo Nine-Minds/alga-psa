@@ -1,4 +1,5 @@
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { getActiveEntraPartnerConnection } from './connectionRepository';
 import { mapEntraManagedTenantRow } from './entraRowMappers';
 import { getEntraProviderAdapter } from './providers';
@@ -40,6 +41,7 @@ export async function discoverManagedTenantsForTenant(
 
   const persistedRows = await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
     const now = new Date().toISOString();
 
     const insertRows = discovered.map((item) => ({
@@ -55,7 +57,7 @@ export async function discoverManagedTenantsForTenant(
       updated_at: now,
     }));
 
-    await knex('entra_managed_tenants')
+    await db.table('entra_managed_tenants')
       .insert(insertRows)
       .onConflict(['tenant', 'entra_tenant_id'])
       .merge({
@@ -67,8 +69,7 @@ export async function discoverManagedTenantsForTenant(
         updated_at: now,
       });
 
-    return knex('entra_managed_tenants')
-      .where({ tenant })
+    return db.table('entra_managed_tenants')
       .whereIn('entra_tenant_id', discoveredTenantIds)
       .orderBy('display_name', 'asc')
       .select('*');

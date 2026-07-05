@@ -7,24 +7,54 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./actions": {
-      "types": "./dist/actions/index.d.ts",
+      "types": "./src/actions/index.ts",
       "import": "./dist/actions/index.mjs",
       "require": "./dist/actions/index.js"
     },
     "./components": {
-      "types": "./dist/components/index.d.ts",
+      "types": "./src/components/index.ts",
       "import": "./dist/components/index.mjs",
       "require": "./dist/components/index.js"
     },
     "./hooks": {
-      "types": "./dist/hooks/index.d.ts",
+      "types": "./src/hooks/index.ts",
       "import": "./dist/hooks/index.mjs",
       "require": "./dist/hooks/index.js"
+    },
+    "./handler-utils/*": {
+      "types": "./src/lib/handler-utils/*.ts",
+      "import": "./dist/lib/handler-utils/*.mjs",
+      "require": "./dist/lib/handler-utils/*.js"
+    },
+    "./handlers/*": {
+      "types": "./src/lib/handlers/*.ts",
+      "import": "./dist/lib/handlers/*.mjs",
+      "require": "./dist/lib/handlers/*.js"
+    },
+    "./runners/*": {
+      "types": "./src/lib/jobs/runners/*.ts",
+      "import": "./dist/lib/jobs/runners/*.mjs",
+      "require": "./dist/lib/jobs/runners/*.js"
+    },
+    "./fanout": {
+      "types": "./src/lib/fanout/index.ts",
+      "import": "./dist/lib/fanout/index.mjs",
+      "require": "./dist/lib/fanout/index.js"
+    },
+    "./runner": {
+      "types": "./src/lib/jobRunnerAccessor.ts",
+      "import": "./dist/lib/jobRunnerAccessor.mjs",
+      "require": "./dist/lib/jobRunnerAccessor.js"
+    },
+    "./scheduler": {
+      "types": "./src/lib/jobSchedulerAccessor.ts",
+      "import": "./dist/lib/jobSchedulerAccessor.mjs",
+      "require": "./dist/lib/jobSchedulerAccessor.js"
     }
   },
   "scripts": {
@@ -33,14 +63,31 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@alga-psa/auth": "*",
+    "@alga-psa/billing": "*",
+    "@alga-psa/clients": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/event-bus": "*",
+    "@alga-psa/integrations": "*",
+    "@alga-psa/notifications": "*",
+    "@alga-psa/scheduling": "*",
+    "@alga-psa/search": "file:../search",
+    "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",
+    "@alga-psa/tickets": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/types": "*",
     "@alga-psa/validation": "*",
+    "@alga-psa/workflows": "*",
+    "@temporalio/client": "~1.14.1",
+    "@js-temporal/polyfill": "^0.4.4",
     "date-fns": "^4.1.0",
-    "lucide-react": "^0.428.0"
+    "date-fns-tz": "^3.2.0",
+    "knex": "^3.1.0",
+    "lucide-react": "^0.428.0",
+    "pg-boss": "^10.1.5",
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

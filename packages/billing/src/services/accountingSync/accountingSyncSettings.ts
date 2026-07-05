@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 /** A reference to a named QBO entity (account, class, department, etc.). */
 export interface QboRef {
@@ -66,8 +67,7 @@ function normalize(raw: unknown): AccountingSyncSettings {
 }
 
 export async function getAccountingSyncSettings(knex: Knex, tenantId: string): Promise<AccountingSyncSettings> {
-  const row = await knex('tenant_settings')
-    .where({ tenant: tenantId })
+  const row = await tenantDb(knex, tenantId).table('tenant_settings')
     .select('settings')
     .first();
 
@@ -79,8 +79,8 @@ export async function updateAccountingSyncSettings(
   tenantId: string,
   patch: Partial<AccountingSyncSettings>
 ): Promise<AccountingSyncSettings> {
-  const row = await knex('tenant_settings')
-    .where({ tenant: tenantId })
+  const db = tenantDb(knex, tenantId);
+  const row = await db.table('tenant_settings')
     .select('settings')
     .first();
 
@@ -88,14 +88,13 @@ export async function updateAccountingSyncSettings(
   const next: AccountingSyncSettings = { ...current, ...patch };
 
   if (row) {
-    await knex('tenant_settings')
-      .where({ tenant: tenantId })
+    await db.table('tenant_settings')
       .update({
         settings: { ...(row.settings ?? {}), accountingSync: next },
         updated_at: knex.fn.now()
       });
   } else {
-    await knex('tenant_settings').insert({
+    await db.table('tenant_settings').insert({
       tenant: tenantId,
       settings: { accountingSync: next }
     });

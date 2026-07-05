@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients';
 import {
   buildClientCreatedPayload,
@@ -50,9 +50,9 @@ async function getClientNameById(
     return '';
   }
 
-  const client = await trx('clients')
+  const client = await tenantDb(trx, tenant).table('clients')
     .select('client_name')
-    .where({ client_id: clientId, tenant })
+    .where({ client_id: clientId })
     .first<{ client_name?: string | null }>();
 
   return client?.client_name ?? '';
@@ -66,9 +66,8 @@ export const getIntegrationClients = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const query = trx('clients')
+    const query = tenantDb(trx, tenant).table('clients')
       .select('*')
-      .where('tenant', tenant)
       .orderBy('client_name', 'asc');
 
     if (!includeInactive) {
@@ -77,6 +76,28 @@ export const getIntegrationClients = withAuth(async (
 
     return query;
   }) as unknown as IClient[];
+});
+
+export const getIntegrationContacts = withAuth(async (
+  _user,
+  { tenant },
+  includeInactive: boolean = false
+): Promise<IContact[]> => {
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const query = tenantDb(trx, tenant).table('contacts')
+      .select('*')
+      .orderBy('full_name', 'asc');
+
+    if (!includeInactive) {
+      query.andWhere(function activeOnly(this: Knex.QueryBuilder) {
+        this.where('is_inactive', false).orWhereNull('is_inactive');
+      });
+    }
+
+    return query;
+  }) as unknown as IContact[];
 });
 
 export const findIntegrationContactByEmailAddress = withAuth(async (
@@ -146,9 +167,9 @@ export const createOrFindIntegrationContactByEmail = withAuth(async (
       is_inactive: false,
     }, tenant, trx);
 
-    const client = await trx('clients')
+    const client = await tenantDb(trx, tenant).table('clients')
       .select('client_name')
-      .where({ client_id: input.clientId, tenant })
+      .where({ client_id: input.clientId })
       .first();
 
     return {
@@ -188,7 +209,7 @@ export const createIntegrationClient = withAuth(async (
     }
 
     const createdClient = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const [created] = await trx<IClient>('clients')
+      const [created] = await tenantDb(trx, tenant).table<IClient>('clients')
         .insert({
           ...clientData,
           tenant,

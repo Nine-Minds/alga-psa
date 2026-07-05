@@ -1,4 +1,4 @@
-import { requireTenantId } from '@alga-psa/db';
+import { requireTenantId, tenantDb } from '@alga-psa/db';
 import type { IServiceRateTier, ICreateServiceRateTier, IUpdateServiceRateTier } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
@@ -19,6 +19,13 @@ const log = {
     globalThis.console.error(message, ...args);
   }
 };
+
+function tenantScopedTable<Row extends object = IServiceRateTier>(
+  conn: Knex | Knex.Transaction,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>('service_rate_tiers');
+}
 
 // Schema for validating service rate tiers
 export const serviceRateTierSchema = z.object({
@@ -49,10 +56,9 @@ const ServiceRateTier = {
     log.info(`[ServiceRateTier.getByServiceId] Fetching rate tiers for service: ${serviceId} in tenant: ${tenant}`);
 
     try {
-      const tiers = await knexOrTrx<IServiceRateTier>('service_rate_tiers')
+      const tiers = await tenantScopedTable(knexOrTrx, tenant)
         .where({ 
-          service_id: serviceId,
-          tenant 
+          service_id: serviceId
         })
         .orderBy('min_quantity', 'asc')
         .select(
@@ -88,10 +94,9 @@ const ServiceRateTier = {
     log.info(`[ServiceRateTier.getById] Fetching rate tier with ID: ${tierId} for tenant: ${tenant}`);
 
     try {
-      const [tier] = await knexOrTrx<IServiceRateTier>('service_rate_tiers')
+      const [tier] = await tenantScopedTable(knexOrTrx, tenant)
         .where({
-          tier_id: tierId,
-          tenant
+          tier_id: tierId
         })
         .select(
           'tier_id',
@@ -144,7 +149,7 @@ const ServiceRateTier = {
     log.info('[ServiceRateTier.create] Creating new rate tier:', newTier);
 
     try {
-      const [createdTier] = await knexOrTrx('service_rate_tiers')
+      const [createdTier] = await tenantScopedTable(knexOrTrx, tenant)
         .insert(newTier)
         .returning('*');
 
@@ -181,10 +186,9 @@ const ServiceRateTier = {
         );
       }
 
-      const [updatedTier] = await knexOrTrx<IServiceRateTier>('service_rate_tiers')
+      const [updatedTier] = await tenantScopedTable(knexOrTrx, tenant)
         .where({
-          tier_id: tierId,
-          tenant
+          tier_id: tierId
         })
         .update({
           ...tierData,
@@ -220,10 +224,9 @@ const ServiceRateTier = {
     const tenant = await requireTenantId(knexOrTrx);
 
     try {
-      const deletedCount = await knexOrTrx<IServiceRateTier>('service_rate_tiers')
+      const deletedCount = await tenantScopedTable(knexOrTrx, tenant)
         .where({
-          tier_id: tierId,
-          tenant
+          tier_id: tierId
         })
         .del();
 
@@ -242,10 +245,9 @@ const ServiceRateTier = {
     const tenant = await requireTenantId(knexOrTrx);
 
     try {
-      const deletedCount = await knexOrTrx<IServiceRateTier>('service_rate_tiers')
+      const deletedCount = await tenantScopedTable(knexOrTrx, tenant)
         .where({
-          service_id: serviceId,
-          tenant
+          service_id: serviceId
         })
         .del();
 
@@ -271,10 +273,9 @@ const ServiceRateTier = {
 
     try {
       // Build a query to find overlapping tiers
-      const query = knexOrTrx<IServiceRateTier>('service_rate_tiers')
+      const query = tenantScopedTable(knexOrTrx, tenant)
         .where({
-          service_id: serviceId,
-          tenant
+          service_id: serviceId
         })
         .where(function() {
           // Case 1: New tier's min is within an existing tier's range

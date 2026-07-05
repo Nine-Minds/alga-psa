@@ -1,4 +1,5 @@
 import { Context } from '@temporalio/activity';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin.js';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { generateTemporaryPassword as generatePassword } from './email-activities.js';
@@ -17,40 +18,45 @@ export interface AuditEventInput {
   details: Record<string, any>;
 }
 
+export interface WelcomeEmailUserRow {
+  user_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+}
+
 export async function getTenant(tenantId: string) {
   const log = logger();
   log.info('Getting tenant', { tenantId });
 
   const knex = await getAdminConnection();
-  return knex('tenants').where({ tenant: tenantId }).first();
+  return tenantDb(knex, tenantId).table('tenants').first();
 }
 
-export async function getUser(userId: string, tenantId: string) {
+export async function getUser(userId: string, tenantId: string): Promise<WelcomeEmailUserRow | undefined> {
   const log = logger();
   log.info('Getting user', { userId, tenantId });
 
   const knex = await getAdminConnection();
-  return knex('users').where({ user_id: userId, tenant: tenantId }).first();
+  return tenantDb(knex, tenantId)
+    .table<WelcomeEmailUserRow>('users')
+    .where({ user_id: userId })
+    .first();
 }
 
-export async function findAdminUser(tenantId: string) {
+export async function findAdminUser(tenantId: string): Promise<WelcomeEmailUserRow | undefined> {
   const log = logger();
   log.info('Finding admin user for tenant', { tenantId });
 
   const knex = await getAdminConnection();
-  const user = await knex('users as u')
-    .join('user_roles as ur', function () {
-      this.on('u.user_id', '=', 'ur.user_id').andOn('u.tenant', '=', 'ur.tenant');
-    })
-    .join('roles as r', function () {
-      this.on('ur.role_id', '=', 'r.role_id').andOn('ur.tenant', '=', 'r.tenant');
-    })
-    .where({
-      'u.tenant': tenantId,
-      'r.role_name': 'Admin',
-      'u.is_inactive': false,
-    })
-    .select('u.*')
+  const db = tenantDb(knex, tenantId);
+  const userQuery = db.table<WelcomeEmailUserRow>('users as u');
+  db.tenantJoin(userQuery, 'user_roles as ur', 'u.user_id', 'ur.user_id');
+  db.tenantJoin(userQuery, 'roles as r', 'ur.role_id', 'r.role_id');
+  const user = await userQuery
+    .where('r.role_name', 'Admin')
+    .andWhere('u.is_inactive', false)
+    .select('u.user_id', 'u.email', 'u.first_name', 'u.last_name')
     .first();
 
   log.info('Admin user search result', { found: !!user, tenantId });
@@ -77,8 +83,8 @@ export async function updateUserPassword(
   await retryOnAdminReadOnly(
     async () => {
       const knex = await getAdminConnection();
-      await knex('users')
-        .where({ user_id: userId, tenant: tenantId })
+      await tenantDb(knex, tenantId).table('users')
+        .where({ user_id: userId })
         .update({
           hashed_password: hashedPassword,
           updated_at: knex.fn.now(),
@@ -141,7 +147,7 @@ export async function logAuditEvent(input: AuditEventInput): Promise<void> {
     async () => {
       const knex = await getAdminConnection();
       // Log to extension_audit_logs table (unified table for all extension actions)
-      await knex('extension_audit_logs').insert({
+      await tenantDb(knex, MASTER_BILLING_TENANT_ID).table('extension_audit_logs').insert({
         tenant: MASTER_BILLING_TENANT_ID,  // Extension actions logged under master tenant
         event_type: `tenant.${input.action.toLowerCase().replace(/_/g, '.')}`,
         user_id: input.triggeredBy,

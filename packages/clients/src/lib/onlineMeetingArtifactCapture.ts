@@ -1,7 +1,7 @@
 import { revalidatePath } from 'next/cache';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { isEnterprise } from '@alga-psa/core/features';
 import type { IOnlineMeeting, IOnlineMeetingArtifact, OnlineMeetingArtifactType } from '@alga-psa/types';
 import OnlineMeetingModel from '../models/onlineMeeting';
@@ -80,8 +80,7 @@ async function noopDownloadRecording(): Promise<string | null> {
 async function loadCaptureSettings(tenantId: string): Promise<CaptureSettings> {
   const { knex } = await createTenantKnex(tenantId);
   try {
-    const row = await knex('teams_integrations')
-      .where({ tenant: tenantId })
+    const row = await tenantDb(knex, tenantId).table('teams_integrations')
       .first('download_recordings', 'expose_recordings_in_portal');
 
     return {
@@ -102,8 +101,8 @@ async function loadMeetingEntity(tenantId: string, meeting: IOnlineMeeting): Pro
   }
 
   const { knex } = await createTenantKnex(tenantId);
-  const row = await knex('interactions')
-    .where({ tenant: tenantId, interaction_id: meeting.interaction_id })
+  const row = await tenantDb(knex, tenantId).table('interactions')
+    .where({ interaction_id: meeting.interaction_id })
     .first('client_id', 'contact_name_id');
 
   return {
@@ -137,7 +136,7 @@ export async function createTranscriptDocument(input: CreateTranscriptDocumentIn
   const documentName = `Transcript - ${input.meeting.subject}`;
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await trx('documents').insert({
+    await tenantDb(trx, input.tenantId).table('documents').insert({
       document_id: documentId,
       document_name: documentName,
       user_id: input.actorUserId,
@@ -150,7 +149,7 @@ export async function createTranscriptDocument(input: CreateTranscriptDocumentIn
       updated_at: new Date(),
     });
 
-    await trx('document_block_content').insert({
+    await tenantDb(trx, input.tenantId).table('document_block_content').insert({
       content_id: contentId,
       document_id: documentId,
       block_data: JSON.stringify(transcriptBlockData(input.artifact.transcriptContent ?? '')),
@@ -160,7 +159,7 @@ export async function createTranscriptDocument(input: CreateTranscriptDocumentIn
     });
 
     if (input.entity.clientId) {
-      await trx('document_associations').insert({
+      await tenantDb(trx, input.tenantId).table('document_associations').insert({
         association_id: uuidv4(),
         document_id: documentId,
         entity_id: input.entity.clientId,
@@ -171,7 +170,7 @@ export async function createTranscriptDocument(input: CreateTranscriptDocumentIn
     }
 
     if (input.entity.contactNameId) {
-      await trx('document_associations').insert({
+      await tenantDb(trx, input.tenantId).table('document_associations').insert({
         association_id: uuidv4(),
         document_id: documentId,
         entity_id: input.entity.contactNameId,

@@ -7,7 +7,7 @@
  * Provides metrics, compliance rates, breach statistics, and trend data.
  */
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import {
@@ -30,12 +30,9 @@ import {
  */
 function applyFilters(
   query: Knex.QueryBuilder,
-  tenant: string,
   filters: ISlaReportingFilters,
   tableAlias: string = 't'
 ): Knex.QueryBuilder {
-  query.where(`${tableAlias}.tenant`, tenant);
-
   if (filters.dateFrom) {
     query.where(`${tableAlias}.entered_at`, '>=', filters.dateFrom);
   }
@@ -76,15 +73,17 @@ export const getSlaComplianceRate = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
+
     // Get tickets with SLA tracking that have been closed/resolved
-    let query = trx('tickets as t')
+    let query = scopedDb.table<any>('tickets as t')
       .whereNotNull('t.sla_policy_id')
       .where(function() {
         this.whereNotNull('t.sla_response_met')
           .orWhereNotNull('t.sla_resolution_met');
       });
 
-    query = applyFilters(query, tenant, filters);
+    query = applyFilters(query, filters);
 
     const tickets = await query.select(
       't.sla_response_met',
@@ -139,11 +138,13 @@ export const getAverageTimesMetrics = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
+
     // Get average actual times
-    let query = trx('tickets as t')
+    let query = scopedDb.table<any>('tickets as t')
       .whereNotNull('t.sla_policy_id');
 
-    query = applyFilters(query, tenant, filters);
+    query = applyFilters(query, filters);
 
     const avgTimes = await query
       .select(
@@ -155,15 +156,15 @@ export const getAverageTimesMetrics = withAuth(async (
       .first() as unknown as { avg_response_minutes: number; avg_resolution_minutes: number } | undefined;
 
     // Get average target times from policy targets
-    let targetQuery = trx('tickets as t')
-      .join('sla_policy_targets as spt', function() {
-        this.on('t.sla_policy_id', 'spt.sla_policy_id')
-            .andOn('t.priority_id', 'spt.priority_id')
-            .andOn('t.tenant', 'spt.tenant');
-      })
+    let targetQuery = scopedDb.table<any>('tickets as t')
       .whereNotNull('t.sla_policy_id');
+    scopedDb.tenantJoin(targetQuery, 'sla_policy_targets as spt', 't.sla_policy_id', 'spt.sla_policy_id', {
+      on: (join) => {
+        join.andOn('t.priority_id', 'spt.priority_id');
+      },
+    });
 
-    targetQuery = applyFilters(targetQuery, tenant, filters);
+    targetQuery = applyFilters(targetQuery, filters);
 
     const avgTargets = await targetQuery
       .select(
@@ -198,18 +199,16 @@ export const getBreachRateByPriority = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    let query = trx('tickets as t')
-      .join('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-            .andOn('t.tenant', 'p.tenant');
-      })
+    const scopedDb = tenantDb(trx, tenant);
+    let query = scopedDb.table<any>('tickets as t')
       .whereNotNull('t.sla_policy_id')
       .where(function() {
         this.whereNotNull('t.sla_response_met')
           .orWhereNotNull('t.sla_resolution_met');
       });
+    scopedDb.tenantJoin(query, 'priorities as p', 't.priority_id', 'p.priority_id');
 
-    query = applyFilters(query, tenant, filters);
+    query = applyFilters(query, filters);
 
     const results = await query
       .select(
@@ -244,19 +243,17 @@ export const getBreachRateByTechnician = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    let query = trx('tickets as t')
-      .leftJoin('users as u', function() {
-        this.on('t.assigned_to', 'u.user_id')
-            .andOn('t.tenant', 'u.tenant');
-      })
+    const scopedDb = tenantDb(trx, tenant);
+    let query = scopedDb.table<any>('tickets as t')
       .whereNotNull('t.sla_policy_id')
       .whereNotNull('t.assigned_to')
       .where(function() {
         this.whereNotNull('t.sla_response_met')
           .orWhereNotNull('t.sla_resolution_met');
       });
+    scopedDb.tenantJoin(query, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
 
-    query = applyFilters(query, tenant, filters);
+    query = applyFilters(query, filters);
 
     const results = await query
       .select(
@@ -292,18 +289,16 @@ export const getBreachRateByClient = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    let query = trx('tickets as t')
-      .join('clients as c', function() {
-        this.on('t.client_id', 'c.client_id')
-            .andOn('t.tenant', 'c.tenant');
-      })
+    const scopedDb = tenantDb(trx, tenant);
+    let query = scopedDb.table<any>('tickets as t')
       .whereNotNull('t.sla_policy_id')
       .where(function() {
         this.whereNotNull('t.sla_response_met')
           .orWhereNotNull('t.sla_resolution_met');
       });
+    scopedDb.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id');
 
-    query = applyFilters(query, tenant, filters);
+    query = applyFilters(query, filters);
 
     const results = await query
       .select(
@@ -344,12 +339,12 @@ export const getSlaTrend = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
     const dateFrom = filters.dateFrom || new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    let query = trx('tickets as t')
+    let query = scopedDb.table<any>('tickets as t')
       .whereNotNull('t.sla_policy_id')
       .whereNotNull('t.closed_at')
-      .where('t.tenant', tenant)
       .where('t.closed_at', '>=', dateFrom);
 
     if (filters.dateTo) {
@@ -405,26 +400,18 @@ export const getRecentBreaches = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    let query = trx('tickets as t')
-      .join('clients as c', function() {
-        this.on('t.client_id', 'c.client_id')
-            .andOn('t.tenant', 'c.tenant');
-      })
-      .join('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-            .andOn('t.tenant', 'p.tenant');
-      })
-      .leftJoin('users as u', function() {
-        this.on('t.assigned_to', 'u.user_id')
-            .andOn('t.tenant', 'u.tenant');
-      })
+    const scopedDb = tenantDb(trx, tenant);
+    let query = scopedDb.table<any>('tickets as t')
       .whereNotNull('t.sla_policy_id')
       .where(function() {
         this.where('t.sla_response_met', false)
           .orWhere('t.sla_resolution_met', false);
       });
+    scopedDb.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id');
+    scopedDb.tenantJoin(query, 'priorities as p', 't.priority_id', 'p.priority_id');
+    scopedDb.tenantJoin(query, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
 
-    query = applyFilters(query, tenant, filters);
+    query = applyFilters(query, filters);
 
     const results = await query
       .select(
@@ -470,27 +457,17 @@ export const getTicketsAtRisk = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
     const now = new Date();
 
     // Get open tickets with SLA tracking
-    const tickets = await trx('tickets as t')
-      .join('clients as c', function() {
-        this.on('t.client_id', 'c.client_id')
-            .andOn('t.tenant', 'c.tenant');
-      })
-      .join('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-            .andOn('t.tenant', 'p.tenant');
-      })
-      .leftJoin('users as u', function() {
-        this.on('t.assigned_to', 'u.user_id')
-            .andOn('t.tenant', 'u.tenant');
-      })
-      .join('statuses as s', function() {
-        this.on('t.status_id', 's.status_id')
-            .andOn('t.tenant', 's.tenant');
-      })
-      .where('t.tenant', tenant)
+    const ticketsQuery = scopedDb.table<any>('tickets as t');
+    scopedDb.tenantJoin(ticketsQuery, 'clients as c', 't.client_id', 'c.client_id');
+    scopedDb.tenantJoin(ticketsQuery, 'priorities as p', 't.priority_id', 'p.priority_id');
+    scopedDb.tenantJoin(ticketsQuery, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketsQuery, 'statuses as s', 't.status_id', 's.status_id');
+
+    const tickets = await ticketsQuery
       .whereNotNull('t.sla_policy_id')
       .where('s.is_closed', false)
       .whereNull('t.sla_paused_at') // Not paused
@@ -602,21 +579,20 @@ export const getSlaOverview = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
+
     // Get compliance metrics - call the wrapped functions directly with just filters
     // (they get user/tenant from session automatically)
     const complianceResult = await getSlaComplianceRate(filters);
     const averageTimesResult = await getAverageTimesMetrics(filters);
 
     // Get active ticket counts
-    let activeQuery = trx('tickets as t')
-      .join('statuses as s', function() {
-        this.on('t.status_id', 's.status_id')
-            .andOn('t.tenant', 's.tenant');
-      })
+    let activeQuery = scopedDb.table<any>('tickets as t')
       .whereNotNull('t.sla_policy_id')
       .where('s.is_closed', false);
+    scopedDb.tenantJoin(activeQuery, 'statuses as s', 't.status_id', 's.status_id');
 
-    activeQuery = applyFilters(activeQuery, tenant, filters);
+    activeQuery = applyFilters(activeQuery, filters);
 
     const activeCounts = await activeQuery
       .select(

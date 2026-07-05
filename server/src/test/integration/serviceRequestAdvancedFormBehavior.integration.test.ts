@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { getVisiblePublishedServiceRequestDefinitionDetail } from '../../lib/service-requests/portalDetail';
 import { submitPortalServiceRequest } from '../../lib/service-requests/submissionService';
@@ -29,14 +30,28 @@ function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
 }
 
+function tenantTable(tenant: string, table: string) {
+  return tenantDb(db, tenant).table(table);
+}
+
+function tenantRows() {
+  return tenantDb(db, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+function schemaTable(table: string) {
+  return tenantDb(db, '__test_schema__')
+    .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+}
+
 async function cleanupTenant(tenant: string): Promise<void> {
-  await db('service_request_submission_attachments').where({ tenant }).del();
-  await db('service_request_submissions').where({ tenant }).del();
-  await db('service_request_definition_versions').where({ tenant }).del();
-  await db('service_request_definitions').where({ tenant }).del();
-  await db('clients').where({ tenant }).del();
-  await db('users').where({ tenant }).del();
-  await db('tenants').where({ tenant }).del();
+  await tenantTable(tenant, 'service_request_submission_attachments').del();
+  await tenantTable(tenant, 'service_request_submissions').del();
+  await tenantTable(tenant, 'service_request_definition_versions').del();
+  await tenantTable(tenant, 'service_request_definitions').del();
+  await tenantTable(tenant, 'clients').del();
+  await tenantTable(tenant, 'users').del();
+  await tenantRows().where({ tenant }).del();
 }
 
 async function createAdvancedFixture(): Promise<AdvancedFixture> {
@@ -45,7 +60,7 @@ async function createAdvancedFixture(): Promise<AdvancedFixture> {
   const clientId = uuidv4();
   tenantsToCleanup.add(tenant);
 
-  await db('tenants').insert({
+  await tenantRows().insert({
     tenant,
     ...(hasColumn(tenantColumns, 'company_name')
       ? { company_name: `Tenant ${tenant.slice(0, 8)}` }
@@ -55,7 +70,7 @@ async function createAdvancedFixture(): Promise<AdvancedFixture> {
     ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('users').insert({
+  await tenantTable(tenant, 'users').insert({
     tenant,
     user_id: requesterUserId,
     username: `requester-${tenant.slice(0, 8)}`,
@@ -66,7 +81,7 @@ async function createAdvancedFixture(): Promise<AdvancedFixture> {
     ...(hasColumn(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('clients').insert({
+  await tenantTable(tenant, 'clients').insert({
     tenant,
     client_id: clientId,
     client_name: `Client ${tenant.slice(0, 8)}`,
@@ -87,7 +102,7 @@ async function createPublishedAdvancedDefinition(args: {
   formSchemaSnapshot: Record<string, unknown>;
   formBehaviorConfig: Record<string, unknown>;
 }) {
-  await db('service_request_definitions').insert({
+  await tenantTable(args.tenant, 'service_request_definitions').insert({
     tenant: args.tenant,
     definition_id: args.definitionId,
     name: 'Advanced Behavior Request',
@@ -101,7 +116,7 @@ async function createPublishedAdvancedDefinition(args: {
     lifecycle_state: 'published',
   });
 
-  await db('service_request_definition_versions').insert({
+  await tenantTable(args.tenant, 'service_request_definition_versions').insert({
     tenant: args.tenant,
     version_id: args.versionId,
     definition_id: args.definitionId,
@@ -120,9 +135,9 @@ async function createPublishedAdvancedDefinition(args: {
 describe('service request advanced form behavior', () => {
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
-    tenantColumns = await db('tenants').columnInfo();
-    userColumns = await db('users').columnInfo();
-    clientColumns = await db('clients').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
+    clientColumns = await schemaTable('clients').columnInfo();
 
     resetServiceRequestProviderRegistry();
     registerServiceRequestProviders(await getServiceRequestEnterpriseProviderRegistrations());
@@ -256,7 +271,7 @@ describe('service request advanced form behavior', () => {
     expect(submitResult.executionStatus).toBe('succeeded');
 
     const invalidDefinitionId = uuidv4();
-    await db('service_request_definitions').insert({
+    await tenantTable(fixture.tenant, 'service_request_definitions').insert({
       tenant: fixture.tenant,
       definition_id: invalidDefinitionId,
       name: 'Invalid Advanced Rule Draft',

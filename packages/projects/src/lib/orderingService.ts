@@ -1,8 +1,16 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { generateKeyForPosition } from './orderingUtils';
+
+function tenantScopedTable(
+  conn: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  table: string,
+  tenant: string,
+) {
+  return tenantDb(conn, tenant).table(table);
+}
 
 /**
  * Reorder a project task to a new position
@@ -19,8 +27,8 @@ export const reorderProjectTask = withAuth(async (
 
   const { knex: db } = await createTenantKnex();
 
-  await db('project_tasks')
-    .where({ task_id: taskId, tenant })
+  await tenantScopedTable(db, 'project_tasks', tenant)
+    .where({ task_id: taskId })
     .update({
       project_status_mapping_id: targetStatusId,
       order_key: newKey,
@@ -44,8 +52,8 @@ export const reorderProjectPhase = withAuth(async (
 
   const { knex: db } = await createTenantKnex();
 
-  await db('project_phases')
-    .where({ phase_id: phaseId, tenant })
+  await tenantScopedTable(db, 'project_phases', tenant)
+    .where({ phase_id: phaseId })
     .update({
       order_key: newKey,
       updated_at: db.fn.now(),

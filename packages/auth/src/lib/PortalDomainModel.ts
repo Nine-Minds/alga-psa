@@ -1,6 +1,9 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export const PORTAL_DOMAIN_TABLE = 'portal_domains';
+const PORTAL_DOMAIN_HOSTNAME_DISCOVERY_TENANT = '__portal_domain_hostname_discovery__';
+const PORTAL_DOMAIN_HOSTNAME_DISCOVERY_REASON = 'Tenant discovery by portal hostname before tenant context exists';
 
 export const PORTAL_DOMAIN_STATUSES = [
   'pending_dns',
@@ -73,7 +76,8 @@ function mapRow(row: PortalDomainRecord): PortalDomain {
 }
 
 export async function getPortalDomain(knex: Knex, tenant: string): Promise<PortalDomain | null> {
-  const record = await knex<PortalDomainRecord>(PORTAL_DOMAIN_TABLE).where({ tenant }).first();
+  const record = await tenantDb(knex, tenant).table<PortalDomainRecord>(PORTAL_DOMAIN_TABLE)
+    .first() as PortalDomainRecord | undefined;
 
   if (!record) {
     return null;
@@ -84,8 +88,10 @@ export async function getPortalDomain(knex: Knex, tenant: string): Promise<Porta
 
 export async function getPortalDomainByHostname(knex: Knex, domain: string): Promise<PortalDomain | null> {
   const normalized = normalizeHostname(domain);
-  const record = await knex<PortalDomainRecord>(PORTAL_DOMAIN_TABLE).where({ domain: normalized }).first();
+  const record = await tenantDb(knex, PORTAL_DOMAIN_HOSTNAME_DISCOVERY_TENANT)
+    .unscoped<PortalDomainRecord>(PORTAL_DOMAIN_TABLE, PORTAL_DOMAIN_HOSTNAME_DISCOVERY_REASON)
+    .where({ domain: normalized })
+    .first();
 
   return record ? mapRow(record) : null;
 }
-

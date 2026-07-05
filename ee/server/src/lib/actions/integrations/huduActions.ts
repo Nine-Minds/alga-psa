@@ -5,8 +5,8 @@
  *
  * connect / test / getStatus / disconnect for the per-tenant Hudu connection.
  * Gating mirrors requireHuduUiFlagEnabled (and the Entra action gating): EE
- * tier, `system_settings` RBAC (read=view, update=manage),
- * and the `hudu-integration` feature flag — enforced on every action.
+ * tier and `system_settings` RBAC (read=view, update=manage) — enforced on
+ * every action.
  *
  * SECURITY: the api key is only ever written to the secret provider
  * (`hudu_api_key`/`hudu_base_url` tenant secrets) and is never returned to the
@@ -20,10 +20,9 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { TIER_FEATURES } from '@alga-psa/types';
-import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
-import { HuduClient } from '../../integrations/hudu/huduClient';
+import { HuduClient, buildHuduApiBaseUrl } from '../../integrations/hudu/huduClient';
 import type { HuduErrorKind, HuduValidationResult } from '../../integrations/hudu/huduClient';
 import { HUDU_SECRET_KEYS, resolveHuduCredentials } from '../../integrations/hudu/secrets';
 import { clearHuduReferenceCacheForTenant } from '../../integrations/hudu/referenceData';
@@ -32,6 +31,13 @@ import {
   setHuduIntegrationActive,
   upsertHuduIntegration,
 } from '../../integrations/hudu/huduIntegrationRepository';
+import type { HuduSyncStatus } from '../../integrations/hudu/huduIntegrationRepository';
+import type { HuduTenantSyncSummary } from '../../integrations/hudu/tenantSync';
+
+export interface HuduAutoSyncStatus {
+  enabled: boolean;
+  cadence: string;
+}
 
 export interface HuduConnectionStatusData {
   connected: boolean;
@@ -40,6 +46,28 @@ export interface HuduConnectionStatusData {
   connectedAt: string | null;
   lastSyncedAt: string | null;
   passwordAccess: boolean;
+  /** Tenant-wide import/sync run state (RMM-style). */
+  syncStatus: HuduSyncStatus;
+  syncError: string | null;
+  lastFullSyncAt: string | null;
+  lastSync: HuduTenantSyncSummary | null;
+  autoSync: HuduAutoSyncStatus;
+}
+
+const DEFAULT_AUTO_SYNC: HuduAutoSyncStatus = { enabled: false, cadence: 'daily' };
+
+function settingsAutoSync(settings: Record<string, unknown> | null | undefined): HuduAutoSyncStatus {
+  const raw = settings?.autoSync as Partial<HuduAutoSyncStatus> | undefined;
+  if (!raw || typeof raw !== 'object') return DEFAULT_AUTO_SYNC;
+  return {
+    enabled: raw.enabled === true,
+    cadence: typeof raw.cadence === 'string' ? raw.cadence : 'daily',
+  };
+}
+
+function settingsLastSync(settings: Record<string, unknown> | null | undefined): HuduTenantSyncSummary | null {
+  const raw = settings?.last_sync as HuduTenantSyncSummary | undefined;
+  return raw && typeof raw === 'object' ? raw : null;
 }
 
 export interface HuduTestConnectionData {
@@ -59,8 +87,9 @@ export interface HuduCredentialsInput {
 }
 
 /**
- * Connect input. `apiKey` may be omitted to keep using the already-stored key
- * (the UI never round-trips the stored value, so "blank key" means "keep").
+ * Connect input. `apiKey` may be omitted only when revalidating the currently
+ * stored base URL with the already-stored key (the UI never round-trips the
+ * stored value, so "blank key" means "keep" for the same instance).
  */
 export interface HuduConnectInput {
   baseUrl: string;
@@ -85,14 +114,6 @@ function withHuduSettingsAccess<TArgs extends unknown[], TResult>(
 
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
 
-    const enabled = await featureFlags.isEnabled('hudu-integration', {
-      userId: user.user_id,
-      tenantId: context.tenant,
-    });
-    if (!enabled) {
-      throw new Error('Hudu integration is disabled for this tenant.');
-    }
-
     return handler(user, context as { tenant: string }, ...args);
   });
 }
@@ -104,6 +125,44 @@ function toErrorMessage(error: unknown): string {
 function toIso(value: Date | string | null | undefined): string | null {
   if (value === null || value === undefined) return null;
   return value instanceof Date ? value.toISOString() : String(value);
+}
+
+/**
+ * Converge the daily auto-sync schedule to the tenant's current desired state
+ * (settings.autoSync + is_active). Best-effort: a scheduling blip must never
+ * fail the connect/disconnect flow. Mirrors the RMM connect→reconcile call.
+ */
+async function convergeHuduAutoSyncSchedule(tenant: string): Promise<void> {
+  try {
+    const { scheduleHuduAutoSyncJob } = await import('server/src/lib/jobs/handlers/huduAutoSyncHandler');
+    await scheduleHuduAutoSyncJob(tenant);
+  } catch (error) {
+    logger.warn('[HuduActions] auto-sync schedule converge skipped', { tenant, error: toErrorMessage(error) });
+  }
+}
+
+function sameHuduBaseUrl(left: string, right: string): boolean {
+  return buildHuduApiBaseUrl(left) === buildHuduApiBaseUrl(right);
+}
+
+async function resolveCredentialsForCandidate(
+  tenant: string,
+  baseUrl: string | undefined,
+  apiKey: string | undefined
+): Promise<HuduCredentialsInput | null> {
+  if (baseUrl && apiKey) {
+    return { baseUrl, apiKey };
+  }
+
+  const stored = await resolveHuduCredentials(tenant);
+  const candidateBaseUrl = baseUrl || stored.baseUrl;
+  const candidateApiKey = apiKey || stored.apiKey;
+
+  if (!baseUrl || apiKey || sameHuduBaseUrl(candidateBaseUrl, stored.baseUrl)) {
+    return { baseUrl: candidateBaseUrl, apiKey: candidateApiKey };
+  }
+
+  return null;
 }
 
 function settingsPasswordAccess(settings: Record<string, unknown> | null | undefined): boolean {
@@ -132,18 +191,17 @@ export const connectHudu = withHuduSettingsAccess(
   async (_user, { tenant }, input: HuduConnectInput): Promise<HuduActionResult<HuduConnectionStatusData>> => {
     try {
       const baseUrl = input?.baseUrl?.trim();
-      let apiKey = input?.apiKey?.trim();
-      if (baseUrl && !apiKey) {
-        // Keep-existing-key: fall back to the stored credential.
-        apiKey = await resolveHuduCredentials(tenant)
-          .then((stored) => stored.apiKey)
-          .catch(() => undefined);
-      }
-      if (!baseUrl || !apiKey) {
+      const apiKey = input?.apiKey?.trim();
+      if (!baseUrl) {
         return { success: false, error: 'Hudu base URL and API key are required.' };
       }
 
-      const validation = await validateCandidate(tenant, { baseUrl, apiKey });
+      const credentials = await resolveCredentialsForCandidate(tenant, baseUrl, apiKey).catch(() => null);
+      if (!credentials) {
+        return { success: false, error: 'Hudu API key is required when changing the base URL.' };
+      }
+
+      const validation = await validateCandidate(tenant, credentials);
       if (!validation.ok || !validation.connected) {
         return {
           success: false,
@@ -153,16 +211,20 @@ export const connectHudu = withHuduSettingsAccess(
       }
 
       const secretProvider = await getSecretProviderInstance();
-      await secretProvider.setTenantSecret(tenant, HUDU_SECRET_KEYS.apiKey, apiKey);
-      await secretProvider.setTenantSecret(tenant, HUDU_SECRET_KEYS.baseUrl, baseUrl);
+      await secretProvider.setTenantSecret(tenant, HUDU_SECRET_KEYS.apiKey, credentials.apiKey);
+      await secretProvider.setTenantSecret(tenant, HUDU_SECRET_KEYS.baseUrl, credentials.baseUrl);
 
       const { knex } = await createTenantKnex(tenant);
       const row = await upsertHuduIntegration(knex, tenant, {
-        base_url: baseUrl,
+        base_url: credentials.baseUrl,
         is_active: true,
         connected_at: new Date().toISOString(),
         settings: { password_access: validation.passwordAccess },
       });
+
+      // Connecting doesn't enable auto-sync (opt-in), but converge so a
+      // previously-enabled toggle is honored on reconnect.
+      await convergeHuduAutoSyncSchedule(tenant);
 
       logger.info('[HuduActions] Hudu connected', { tenant });
 
@@ -175,6 +237,11 @@ export const connectHudu = withHuduSettingsAccess(
           connectedAt: toIso(row.connected_at),
           lastSyncedAt: toIso(row.last_synced_at),
           passwordAccess: validation.passwordAccess,
+          syncStatus: row.sync_status ?? 'idle',
+          syncError: row.sync_error ?? null,
+          lastFullSyncAt: toIso(row.last_full_sync_at),
+          lastSync: settingsLastSync(row.settings),
+          autoSync: settingsAutoSync(row.settings),
         },
       };
     } catch (error) {
@@ -196,18 +263,12 @@ export const testHuduConnection = withHuduSettingsAccess(
       const baseUrl = input?.baseUrl?.trim();
       const apiKey = input?.apiKey?.trim();
 
-      let validation: HuduValidationResult;
-      if (baseUrl && apiKey) {
-        validation = await validateCandidate(tenant, { baseUrl, apiKey });
-      } else {
-        // Merge partial candidates with the stored credentials so a blank key
-        // (or blank base URL) means "use the stored value".
-        const stored = await resolveHuduCredentials(tenant);
-        validation = await validateCandidate(tenant, {
-          baseUrl: baseUrl || stored.baseUrl,
-          apiKey: apiKey || stored.apiKey,
-        });
+      const credentials = await resolveCredentialsForCandidate(tenant, baseUrl, apiKey);
+      if (!credentials) {
+        return { success: false, error: 'Hudu API key is required when changing the base URL.' };
       }
+
+      const validation: HuduValidationResult = await validateCandidate(tenant, credentials);
 
       if (!validation.ok || !validation.connected) {
         return {
@@ -253,6 +314,11 @@ export const getHuduConnectionStatus = withHuduSettingsAccess(
             connectedAt: null,
             lastSyncedAt: null,
             passwordAccess: false,
+            syncStatus: 'idle',
+            syncError: null,
+            lastFullSyncAt: null,
+            lastSync: null,
+            autoSync: DEFAULT_AUTO_SYNC,
           },
         };
       }
@@ -266,6 +332,11 @@ export const getHuduConnectionStatus = withHuduSettingsAccess(
           connectedAt: toIso(row.connected_at),
           lastSyncedAt: toIso(row.last_synced_at),
           passwordAccess: settingsPasswordAccess(row.settings),
+          syncStatus: row.sync_status ?? 'idle',
+          syncError: row.sync_error ?? null,
+          lastFullSyncAt: toIso(row.last_full_sync_at),
+          lastSync: settingsLastSync(row.settings),
+          autoSync: settingsAutoSync(row.settings),
         },
       };
     } catch (error) {
@@ -294,6 +365,9 @@ export const disconnectHudu = withHuduSettingsAccess(
       // T111: drop this tenant's cached Hudu lists so a reconnect with a new
       // key can never be served data fetched under the old credentials.
       clearHuduReferenceCacheForTenant(tenant);
+
+      // Inactive connection ⇒ cancel any recurring auto-sync schedule.
+      await convergeHuduAutoSyncSchedule(tenant);
 
       logger.info('[HuduActions] Hudu disconnected', { tenant });
 

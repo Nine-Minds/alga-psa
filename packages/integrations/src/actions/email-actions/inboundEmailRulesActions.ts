@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import {
   inboundEmailRuleInputSchema,
@@ -85,9 +85,9 @@ async function assertReferencedDefaultsExist(
   }
   if (!referencedIds.size) return;
 
-  const rows = await trx('inbound_ticket_defaults')
+  const rows = await tenantDb(trx, tenant).table('inbound_ticket_defaults')
     .select('id')
-    .where({ tenant, is_active: true })
+    .where({ is_active: true })
     .whereIn('id', Array.from(referencedIds));
   const found = new Set(rows.map((row: { id: string }) => row.id));
   for (const id of referencedIds) {
@@ -104,8 +104,7 @@ export const getInboundEmailRules = withAuth(async (
   await assertEmailSettingsPermission(user, 'read');
   const { knex } = await createTenantKnex();
 
-  const rules = await knex('inbound_email_rules')
-    .where({ tenant })
+  const rules = await tenantDb(knex, tenant).table('inbound_email_rules')
     .orderBy('position', 'asc')
     .orderBy('id', 'asc')
     .select(...RULE_COLUMNS);
@@ -124,14 +123,14 @@ export const createInboundEmailRule = withAuth(async (
 
   const rule = await withTransaction(knex, async (trx: Knex.Transaction) => {
     await assertReferencedDefaultsExist(trx, tenant, input);
+    const db = tenantDb(trx, tenant);
 
-    const maxRow = await trx('inbound_email_rules')
-      .where({ tenant })
+    const maxRow = await db.table('inbound_email_rules')
       .max('position as max')
       .first();
     const nextPosition = (Number((maxRow as any)?.max) || 0) + 1;
 
-    const [row] = await trx('inbound_email_rules')
+    const [row] = await db.table('inbound_email_rules')
       .insert({
         tenant,
         name: input.name,
@@ -164,8 +163,8 @@ export const updateInboundEmailRule = withAuth(async (
   const rule = await withTransaction(knex, async (trx: Knex.Transaction) => {
     await assertReferencedDefaultsExist(trx, tenant, input);
 
-    const [row] = await trx('inbound_email_rules')
-      .where({ tenant, id })
+    const [row] = await tenantDb(trx, tenant).table('inbound_email_rules')
+      .where({ id })
       .update({
         name: input.name,
         is_active: input.is_active,
@@ -197,8 +196,8 @@ export const setInboundEmailRuleActive = withAuth(async (
   await assertEmailSettingsPermission(user, 'update');
   const { knex } = await createTenantKnex();
 
-  const [rule] = await knex('inbound_email_rules')
-    .where({ tenant, id })
+  const [rule] = await tenantDb(knex, tenant).table('inbound_email_rules')
+    .where({ id })
     .update({ is_active: isActive, updated_at: knex.fn.now() })
     .returning([...RULE_COLUMNS]);
 
@@ -216,7 +215,7 @@ export const deleteInboundEmailRule = withAuth(async (
   await assertEmailSettingsPermission(user, 'delete');
   const { knex } = await createTenantKnex();
 
-  const deleted = await knex('inbound_email_rules').where({ tenant, id }).delete();
+  const deleted = await tenantDb(knex, tenant).table('inbound_email_rules').where({ id }).delete();
   if (!deleted) {
     throw new Error('Inbound email rule not found');
   }
@@ -235,20 +234,20 @@ export const reorderInboundEmailRules = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const rules = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const existing = await trx('inbound_email_rules').where({ tenant }).select('id');
+    const db = tenantDb(trx, tenant);
+    const existing = await db.table('inbound_email_rules').select('id');
     const existingIds = new Set(existing.map((row: { id: string }) => row.id));
     if (existingIds.size !== orderedIds.length || orderedIds.some((id) => !existingIds.has(id))) {
       throw new Error('Rule ordering payload does not match the current rule set');
     }
 
     for (let index = 0; index < orderedIds.length; index += 1) {
-      await trx('inbound_email_rules')
-        .where({ tenant, id: orderedIds[index] })
+      await db.table('inbound_email_rules')
+        .where({ id: orderedIds[index] })
         .update({ position: index + 1, updated_at: trx.fn.now() });
     }
 
-    return trx('inbound_email_rules')
-      .where({ tenant })
+    return db.table('inbound_email_rules')
       .orderBy('position', 'asc')
       .select(...RULE_COLUMNS);
   });
@@ -274,9 +273,9 @@ export const getInboundEmailRuleAiAvailability = withAuth(async (
   try {
     const { ADD_ONS, tenantHasAddOn } = await import('@alga-psa/types');
     const { knex } = await createTenantKnex();
-    const rows = await knex('tenant_addons')
-      .select('addon_key', 'expires_at')
-      .where({ tenant }) as Array<{ addon_key: string; expires_at: string | Date | null }>;
+    const rows = await tenantDb(knex, tenant)
+      .table<{ addon_key: string; expires_at: string | Date | null }>('tenant_addons')
+      .select('addon_key', 'expires_at');
 
     const now = Date.now();
     const knownAddOns = new Set<string>(Object.values(ADD_ONS));
@@ -316,13 +315,17 @@ export const addClientNameAliasFromRuleTester = withAuth(async (
 
   const { knex } = await createTenantKnex();
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const client = await trx('clients').select('client_id').where({ tenant, client_id: clientId }).first();
+    const client = await tenantDb(trx, tenant)
+      .table('clients')
+      .select('client_id')
+      .where({ client_id: clientId })
+      .first();
     if (!client) {
       throw new Error('Client not found');
     }
 
     try {
-      await trx('client_name_aliases').insert({
+      await tenantDb(trx, tenant).table('client_name_aliases').insert({
         tenant,
         id: trx.raw('gen_random_uuid()'),
         client_id: clientId,

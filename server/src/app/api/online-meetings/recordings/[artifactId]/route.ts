@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { isEnterprise } from '@alga-psa/core/features';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -29,8 +29,7 @@ async function loadEeTeamsMeetingModule(): Promise<EeTeamsMeetingModule> {
 
 async function portalVisibilityEnabled(knex: any, tenant: string): Promise<boolean> {
   try {
-    const row = await knex('teams_integrations')
-      .where({ tenant })
+    const row = await tenantDb(knex, tenant).table('teams_integrations')
       .first('expose_recordings_in_portal');
     return row?.expose_recordings_in_portal === true;
   } catch {
@@ -53,8 +52,9 @@ async function clientUserOwnsMeeting(
     return false;
   }
 
-  const interaction = await knex('interactions')
-    .where({ tenant, interaction_id: interactionId })
+  const db = tenantDb(knex, tenant);
+  const interaction = await db.table('interactions')
+    .where({ interaction_id: interactionId })
     .first('client_id', 'contact_name_id');
   if (!interaction) {
     return false;
@@ -65,8 +65,8 @@ async function clientUserOwnsMeeting(
   }
 
   if (interaction.client_id) {
-    const contact = await knex('contacts')
-      .where({ tenant, contact_name_id: contactId })
+    const contact = await db.table('contacts')
+      .where({ contact_name_id: contactId })
       .first('client_id');
     if (contact?.client_id && contact.client_id === interaction.client_id) {
       return true;
@@ -110,23 +110,20 @@ export async function GET(
     return new NextResponse('Forbidden', { status: 403 });
   }
 
-  const artifact = await knex('online_meeting_artifacts as artifact')
-    .join('online_meetings as meeting', function joinMeeting() {
-      this.on('artifact.tenant', '=', 'meeting.tenant')
-        .andOn('artifact.meeting_id', '=', 'meeting.meeting_id');
-    })
+  const db = tenantDb(knex, tenant);
+  const artifactQuery = db.table('online_meeting_artifacts as artifact')
     .where({
-      'artifact.tenant': tenant,
       'artifact.artifact_id': artifactId,
       'artifact.artifact_type': 'recording',
-    })
-    .first(
-      'artifact.content_url',
-      'artifact.provider_artifact_id',
-      'artifact.file_id',
-      'meeting.meeting_id',
-      'meeting.interaction_id',
-    );
+    });
+  db.tenantJoin(artifactQuery, 'online_meetings as meeting', 'artifact.meeting_id', 'meeting.meeting_id');
+  const artifact = await artifactQuery.first(
+    'artifact.content_url',
+    'artifact.provider_artifact_id',
+    'artifact.file_id',
+    'meeting.meeting_id',
+    'meeting.interaction_id',
+  );
 
   if (!artifact) {
     return new NextResponse('Recording not found', { status: 404 });

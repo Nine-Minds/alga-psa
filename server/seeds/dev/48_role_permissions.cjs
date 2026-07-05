@@ -1,15 +1,18 @@
-exports.seed = async function (knex) {
-    // Get the tenant ID
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
 
-    console.log(`Seeding role permissions for tenant ${tenant.tenant}`);
+exports.seed = async function (knex) {
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { db, tenantId } = context;
+
+    console.log(`Seeding role permissions for tenant ${tenantId}`);
 
     // Get all roles for this tenant
-    const roles = await knex('roles').where({ tenant: tenant.tenant });
+    const roles = await db.table('roles');
     
     // Get all permissions for this tenant
-    const permissions = await knex('permissions').where({ tenant: tenant.tenant });
+    const permissions = await db.table('permissions');
     
     // Create permission map for easy lookup
     const permissionMap = new Map();
@@ -23,7 +26,7 @@ exports.seed = async function (knex) {
     });
     
     // Clear existing role permissions
-    await knex('role_permissions').where({ tenant: tenant.tenant }).del();
+    await db.table('role_permissions').del();
     console.log('Cleared existing role permissions');
     
     for (const role of roles) {
@@ -39,6 +42,7 @@ exports.seed = async function (knex) {
         // MSP Finance - Based on permissions_list.md
         else if (role.role_name === 'Finance' && role.msp === true) {
             const financePermissions = [
+                'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp', 'interaction:delete:msp',
                 'asset:read:msp',
                 'billing:create:msp', 'billing:read:msp', 'billing:update:msp', 'billing:delete:msp',
                 'client:create:msp', 'client:read:msp', 'client:update:msp', 'client:delete:msp',
@@ -68,6 +72,7 @@ exports.seed = async function (knex) {
         // MSP Manager - parity baseline: technician capabilities plus scoped approvals and user/team visibility
         else if (role.role_name === 'Manager' && role.msp === true) {
             const managerPermissions = [
+                'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp',
                 'asset:create:msp', 'asset:read:msp', 'asset:update:msp',
                 'client:read:msp', 'client:delete:msp',
                 'contact:read:msp', 'contact:delete:msp',
@@ -96,6 +101,7 @@ exports.seed = async function (knex) {
         // MSP Technician - Based on permissions_list.md
         else if (role.role_name === 'Technician' && role.msp === true) {
             const technicianPermissions = [
+                'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp',
                 'asset:create:msp', 'asset:read:msp', 'asset:update:msp',
                 'client:read:msp', 'client:delete:msp',
                 'contact:read:msp', 'contact:delete:msp',
@@ -122,6 +128,7 @@ exports.seed = async function (knex) {
         // MSP Project Manager - Based on permissions_list.md
         else if (role.role_name === 'Project Manager' && role.msp === true) {
             const projectManagerPermissions = [
+                'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp',
                 'asset:read:msp',
                 'billing:read:msp',
                 'client:create:msp', 'client:read:msp', 'client:update:msp',
@@ -152,6 +159,7 @@ exports.seed = async function (knex) {
         // MSP Dispatcher - Based on permissions_list.md
         else if (role.role_name === 'Dispatcher' && role.msp === true) {
             const dispatcherPermissions = [
+                'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp',
                 'asset:read:msp',
                 'client:read:msp',
                 'contact:read:msp',
@@ -229,13 +237,13 @@ exports.seed = async function (knex) {
         if (rolePermissionIds.length > 0) {
             // Insert role permissions
             const rolePermissionsToAdd = rolePermissionIds.map(permId => ({
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 role_id: role.role_id,
                 permission_id: permId
             }));
 
-            await knex('role_permissions').insert(rolePermissionsToAdd);
-            console.log(`Added ${rolePermissionsToAdd.length} permissions to ${role.role_name} role (${role.msp ? 'MSP' : 'Client'}) for tenant ${tenant.tenant}`);
+            await db.table('role_permissions').insert(rolePermissionsToAdd);
+            console.log(`Added ${rolePermissionsToAdd.length} permissions to ${role.role_name} role (${role.msp ? 'MSP' : 'Client'}) for tenant ${tenantId}`);
         } else {
             console.log(`No permissions found for ${role.role_name} role (${role.msp ? 'MSP' : 'Client'})`);
         }

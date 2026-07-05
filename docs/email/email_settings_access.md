@@ -14,6 +14,22 @@ The Email Settings interface is now available in the main Settings page:
 Alternatively, you can directly access it via:
 - URL: `/msp/settings?tab=email`
 
+## Inbound vs. Outbound Providers
+
+> **Microsoft 365 / Entra (and Gmail) connectors are inbound-only.** They read a
+> mailbox and turn messages into tickets — they are never used to send email.
+> A Microsoft provider showing **Ready** only means its Entra app credentials
+> (client ID + client secret) are configured; it does not enable outbound sending.
+>
+> Outbound email is sent through **SMTP** (available on all tiers) or **managed
+> Resend domains** (Solo tier and up). On appliance / Essentials-tier installs the
+> outbound provider is locked to SMTP: go to **Settings → Email → Outbound**, fill in
+> the SMTP host, port, username, password, and From address, then save. The outbound
+> domain is derived from the SMTP From address (not from any inbound mailbox), which
+> enables the "Ticketing From" field.
+>
+> See `../inbound-email/setup/microsoft.md` for details.
+
 ## Features Available
 
 ### 1. Email Providers Configuration

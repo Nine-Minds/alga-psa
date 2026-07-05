@@ -1,10 +1,11 @@
 import { isEnterprise } from './features';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
-import { logger, registerFeatureFlagChecker } from '@alga-psa/core';
+import { logger, registerFeatureFlagChecker, registerJobEnqueuer } from '@alga-psa/core';
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
 import User from '@alga-psa/db/models/user';
+import { tenantDb } from '@alga-psa/db';
 import { hashPassword, generateSecurePassword } from 'server/src/utils/encryption/encryption';
 import { JobScheduler, IJobScheduler } from 'server/src/lib/jobs/jobScheduler';
 import { JobService } from 'server/src/services/job.service';
@@ -28,6 +29,7 @@ import { EventEmailRetryQueue } from './notifications/EventEmailRetryQueue';
 import { registerAuthEmailProvider } from '@alga-psa/auth';
 import { registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime';
 import { registerWorkflowScheduleJobRunner } from '@alga-psa/workflows/lib/jobRunnerProvider';
+import { registerQboConnectionChangeHandler } from '@alga-psa/integrations/lib/qbo/qboConnectionChangeProvider';
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -133,6 +135,24 @@ export async function initializeApp() {
       EmailProviderManager: EmailProviderManager as any,
     });
     registerWorkflowScheduleJobRunner(async () => initializeJobRunner());
+    // Let vertical packages (billing, client-portal) enqueue jobs without
+    // importing @alga-psa/jobs (which would create a vertical -> jobs cycle).
+    registerJobEnqueuer(async (jobName, data) => {
+      const jobService = await JobService.create();
+      const { jobRecord, scheduledJobId } = await jobService.createAndScheduleJob(
+        jobName,
+        data as Parameters<typeof jobService.createAndScheduleJob>[1],
+        'immediate',
+      );
+      return { jobId: jobRecord.id as string, scheduledJobId };
+    });
+    // Converge the accounting-sync schedule the moment a tenant connects or
+    // disconnects QuickBooks, so connected-only scheduling doesn't wait for the
+    // next startup reconcile.
+    registerQboConnectionChangeHandler(async (tenantId) => {
+      const { scheduleAccountingSyncCycleJob } = await import('./jobs/handlers/accountingSyncCycleHandler');
+      await scheduleAccountingSyncCycleJob(tenantId);
+    });
     logger.info('Email provider registries initialized');
 
     // Schedule entries are now read directly by @alga-psa/user-activities via the
@@ -162,8 +182,7 @@ export async function initializeApp() {
           email: async (tenantId: string): Promise<BucketConfig> => {
             try {
               const knex = await getConnection(tenantId);
-              const settings = await knex('notification_settings')
-                .where({ tenant: tenantId })
+              const settings = await tenantDb(knex, tenantId).table('notification_settings')
                 .first();
 
               const ratePerMinute = settings?.rate_limit_per_minute ?? 60;
@@ -444,7 +463,9 @@ async function initializeJobScheduler(storageService: StorageService) {
     jobScheduler.registerJobHandler('createClientContractLineCycles', async () => {
       // Get all tenants
       const rootKnex = await getConnection(null);
-      const tenants = await rootKnex('tenants').select('tenant');
+      const tenants = await tenantDb(rootKnex, '__billing_cycle_tenant_enumeration__')
+        .unscoped('tenants', 'legacy billing cycle scheduler enumerates all tenants to run per-tenant cycle jobs')
+        .select('tenant');
 
       // Process each tenant
       for (const { tenant } of tenants) {
@@ -453,7 +474,7 @@ async function initializeJobScheduler(storageService: StorageService) {
           const tenantKnex = await getConnection(tenant);
 
           // Get all active clients for this tenant
-          const clients = await tenantKnex('clients')
+          const clients = await tenantDb(tenantKnex, tenant).table('clients')
             .where({ is_inactive: false })
             .select('*');
 
@@ -590,7 +611,9 @@ async function initializeJobScheduler(storageService: StorageService) {
 
   // Schedule the time periods job for each tenant
   const rootKnex = await getConnection(null);
-  const tenants = await rootKnex('tenants').select('tenant');
+  const tenants = await tenantDb(rootKnex, '__time_period_tenant_enumeration__')
+    .unscoped('tenants', 'legacy time period scheduler enumerates all tenants to schedule per-tenant jobs')
+    .select('tenant');
 
   for (const { tenant } of tenants) {
     try {
@@ -620,7 +643,7 @@ async function initializeJobScheduler(storageService: StorageService) {
     const RECONCILER_INTERVAL_MS = 5 * 60 * 1000;
     const tick = async () => {
       try {
-        const { reconcileRmmPollingSchedules } = await import('./jobs/handlers/rmmAlertPollingHandlers');
+        const { reconcileRmmPollingSchedules } = await import('@alga-psa/jobs/handlers/rmmAlertPollingHandlers');
         const runner = await initializeJobRunner();
         await reconcileRmmPollingSchedules(runner);
       } catch (error) {

@@ -1,7 +1,7 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { unparseCSV } from '@alga-psa/core';
@@ -29,6 +29,53 @@ import {
   IPriorityResolution,
   ICategoryResolution,
 } from '@alga-psa/types';
+
+function tenantWhereColumnSql(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  leftTenantColumn: string,
+  rightTenantColumn: string
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const fragmentSource = (conn as Knex)('__tenant_where_fragment__').select(conn.raw('1'));
+
+  tenantDb(conn, tenant).tenantWhereColumn(fragmentSource, leftTenantColumn, rightTenantColumn);
+
+  const compiled = fragmentSource.toSQL();
+  const marker = ' where ';
+  const markerIndex = compiled.sql.indexOf(marker);
+
+  if (markerIndex < 0) {
+    throw new Error('Unable to compile tenant where column SQL fragment');
+  }
+
+  return {
+    sql: compiled.sql.slice(markerIndex + marker.length),
+    bindings: compiled.bindings as Knex.RawBinding[],
+  };
+}
+
+function tenantScopedTicketBatchUpdateScopeSql(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  ticketIds: string[]
+): {
+  sql: string;
+  bindings: Knex.RawBinding[];
+  targetTenantPredicate: { sql: string; bindings: Knex.RawBinding[] };
+} {
+  const scoped = tenantDb(conn, tenant)
+    .table('tickets')
+    .select('ticket_id', 'tenant')
+    .whereIn('ticket_id', ticketIds)
+    .toSQL();
+  const targetTenantPredicate = tenantWhereColumnSql(conn, tenant, 'target.tenant', 'scoped_tickets.tenant');
+
+  return {
+    sql: `(${scoped.sql}) scoped_tickets`,
+    bindings: scoped.bindings as Knex.RawBinding[],
+    targetTenantPredicate,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // CSV template
@@ -134,60 +181,54 @@ export const getTicketImportReferenceData = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
     const [boards, users, teams, priorities, clients, contacts, allStatuses, allCategories] = await Promise.all([
       // Active boards (include priority_type for ITIL enforcement)
-      trx('boards')
+      tenantScopedTable('boards')
         .select('board_id', 'board_name', 'is_default', 'priority_type')
-        .where('tenant', tenant)
         .where('is_inactive', false)
         .orderBy('board_name'),
 
       // Active internal users
-      trx('users')
+      tenantScopedTable('users')
         .select('user_id', 'username', 'first_name', 'last_name', 'email', 'user_type', 'is_inactive', 'tenant')
-        .where('tenant', tenant)
         .where('is_inactive', false)
         .where('user_type', 'internal')
         .orderBy(['first_name', 'last_name']),
 
       // Teams
-      trx('teams')
+      tenantScopedTable('teams')
         .select('team_id', 'team_name')
-        .where('tenant', tenant)
         .orderBy('team_name'),
 
       // Ticket priorities (include ITIL flag for board-type enforcement)
-      trx('priorities')
+      tenantScopedTable('priorities')
         .select('priority_id', 'priority_name', 'is_from_itil_standard')
-        .where('tenant', tenant)
         .where('item_type', 'ticket')
         .orderBy('order_number'),
 
       // Active clients
-      trx('clients')
+      tenantScopedTable('clients')
         .select('client_id', 'client_name')
-        .where('tenant', tenant)
         .where('is_inactive', false)
         .orderBy('client_name'),
 
       // Active contacts
-      trx('contacts')
+      tenantScopedTable('contacts')
         .select('contact_name_id', 'full_name', 'email', 'client_id')
-        .where('tenant', tenant)
         .where('is_inactive', false)
         .orderBy('full_name'),
 
       // All ticket statuses (with board_id)
-      trx('statuses')
+      tenantScopedTable('statuses')
         .select('status_id', 'name', 'board_id', 'is_default', 'is_closed')
-        .where('tenant', tenant)
         .where('status_type', 'ticket')
         .orderBy('order_number'),
 
       // All ticket categories (with board_id)
-      trx('categories')
+      tenantScopedTable('categories')
         .select('category_id', 'category_name', 'board_id', 'parent_category')
-        .where('tenant', tenant)
         .orderBy('category_name'),
     ]);
 
@@ -310,6 +351,8 @@ export const importTickets = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
     if (!await hasPermission(user, 'ticket', 'create')) {
       throw new Error('Permission denied: Cannot create tickets');
     }
@@ -339,8 +382,8 @@ export const importTickets = withAuth(async (
     }
 
     // Check board priority_type for ITIL enforcement
-    const board = await trx('boards')
-      .where({ board_id: defaultBoardId, tenant })
+    const board = await tenantScopedTable('boards')
+      .where({ board_id: defaultBoardId })
       .select('priority_type')
       .first();
     const boardPriorityType = board?.priority_type || 'custom';
@@ -376,7 +419,7 @@ export const importTickets = withAuth(async (
     for (const resolution of clientResolutions) {
       if (resolution.action === 'create') {
         const result = await safeInsert(`Failed to create client "${resolution.originalClientName}"`, async () => {
-          const [newClient] = await trx('clients')
+          const [newClient] = await tenantScopedTable('clients')
             .insert({
               client_id: trx.raw('gen_random_uuid()'),
               tenant,
@@ -398,13 +441,13 @@ export const importTickets = withAuth(async (
     for (const resolution of statusResolutions) {
       if (resolution.action === 'create') {
         const result = await safeInsert(`Failed to create status "${resolution.originalStatusName}"`, async () => {
-          const maxOrder = await trx('statuses')
-            .where({ tenant, board_id: resolution.boardId, status_type: 'ticket' })
+          const maxOrder = await tenantScopedTable('statuses')
+            .where({ board_id: resolution.boardId, status_type: 'ticket' })
             .max('order_number as max')
             .first();
           const nextOrder = ((maxOrder?.max as number) || 0) + 1;
 
-          const [newStatus] = await trx('statuses')
+          const [newStatus] = await tenantScopedTable('statuses')
             .insert({
               status_id: trx.raw('gen_random_uuid()'),
               tenant,
@@ -429,13 +472,13 @@ export const importTickets = withAuth(async (
     for (const resolution of priorityResolutions) {
       if (resolution.action === 'create') {
         const result = await safeInsert(`Failed to create priority "${resolution.originalPriorityName}"`, async () => {
-          const maxOrder = await trx('priorities')
-            .where({ tenant, item_type: 'ticket' })
+          const maxOrder = await tenantScopedTable('priorities')
+            .where({ item_type: 'ticket' })
             .max('order_number as max')
             .first();
           const nextOrder = ((maxOrder?.max as number) || 0) + 1;
 
-          const [newPriority] = await trx('priorities')
+          const [newPriority] = await tenantScopedTable('priorities')
             .insert({
               priority_id: trx.raw('gen_random_uuid()'),
               tenant,
@@ -459,7 +502,7 @@ export const importTickets = withAuth(async (
     for (const resolution of categoryResolutions) {
       if (resolution.action === 'create') {
         const result = await safeInsert(`Failed to create category "${resolution.originalCategoryName}"`, async () => {
-          const [newCategory] = await trx('categories')
+          const [newCategory] = await tenantScopedTable('categories')
             .insert({
               category_id: trx.raw('gen_random_uuid()'),
               tenant,
@@ -477,15 +520,15 @@ export const importTickets = withAuth(async (
     }
 
     // Step 5: Get default status and priority for fallbacks
-    const defaultStatusRow = await trx('statuses')
-      .where({ tenant, board_id: defaultBoardId, status_type: 'ticket', is_default: true })
+    const defaultStatusRow = await tenantScopedTable('statuses')
+      .where({ board_id: defaultBoardId, status_type: 'ticket', is_default: true })
       .first();
     const fallbackStatusId = defaultStatusRow?.status_id;
 
     // If no default status, get the first one
     const firstStatusRow = !fallbackStatusId
-      ? await trx('statuses')
-          .where({ tenant, board_id: defaultBoardId, status_type: 'ticket' })
+      ? await tenantScopedTable('statuses')
+          .where({ board_id: defaultBoardId, status_type: 'ticket' })
           .orderBy('order_number')
           .first()
       : null;
@@ -496,8 +539,8 @@ export const importTickets = withAuth(async (
     }
 
     // Get first priority as fallback
-    const firstPriority = await trx('priorities')
-      .where({ tenant, item_type: 'ticket' })
+    const firstPriority = await tenantScopedTable('priorities')
+      .where({ item_type: 'ticket' })
       .orderBy('order_number')
       .first();
     const fallbackPriorityId = firstPriority?.priority_id;
@@ -507,8 +550,8 @@ export const importTickets = withAuth(async (
     }
 
     // Pre-load all status is_closed flags to avoid per-ticket queries
-    const allStatuses = await trx('statuses')
-      .where({ tenant, status_type: 'ticket' })
+    const allStatuses = await tenantScopedTable('statuses')
+      .where({ status_type: 'ticket' })
       .select('status_id', 'is_closed');
     const statusClosedMap = new Map<string, boolean>();
     for (const s of allStatuses) {
@@ -516,8 +559,7 @@ export const importTickets = withAuth(async (
     }
 
     // Pre-load contact → client_id mapping for cross-client validation
-    const allContacts = await trx('contacts')
-      .where({ tenant })
+    const allContacts = await tenantScopedTable('contacts')
       .select('contact_name_id', 'client_id');
     const contactClientMap = new Map<string, string | null>();
     for (const c of allContacts) {
@@ -617,7 +659,7 @@ export const importTickets = withAuth(async (
         if (createdContactMap.has(dedupeKey)) {
           contactId = createdContactMap.get(dedupeKey)!;
         } else {
-          const [newContact] = await trx('contacts')
+          const [newContact] = await tenantScopedTable('contacts')
             .insert({
               contact_name_id: trx.raw('gen_random_uuid()'),
               tenant,
@@ -741,9 +783,18 @@ export const importTickets = withAuth(async (
       const values = batch.map(() => '(?::uuid, ?::timestamptz)').join(', ');
       const params: (string)[] = [];
       for (const u of batch) { params.push(u.ticket_id, u.entered_at); }
+      const ticketScope = tenantScopedTicketBatchUpdateScopeSql(trx, tenant, batch.map((u) => u.ticket_id));
       await trx.raw(
-        `UPDATE tickets t SET entered_at = v.entered_at FROM (VALUES ${values}) AS v(tid, entered_at) WHERE t.ticket_id = v.tid AND t.tenant = ?`,
-        [...params, tenant]
+        `
+          UPDATE tickets AS target
+          SET entered_at = v.entered_at
+          FROM ${ticketScope.sql}
+          JOIN (VALUES ${values}) AS v(tid, entered_at)
+            ON scoped_tickets.ticket_id = v.tid
+          WHERE target.ticket_id = scoped_tickets.ticket_id
+            AND ${ticketScope.targetTenantPredicate.sql}
+        `,
+        [...ticketScope.bindings, ...params, ...ticketScope.targetTenantPredicate.bindings]
       );
     }
     for (let i = 0; i < closedUpdates.length; i += BATCH_SIZE) {
@@ -751,9 +802,19 @@ export const importTickets = withAuth(async (
       const values = batch.map(() => '(?::uuid, ?::timestamptz, ?::uuid)').join(', ');
       const params: (string)[] = [];
       for (const u of batch) { params.push(u.ticket_id, u.closed_at, u.closed_by); }
+      const ticketScope = tenantScopedTicketBatchUpdateScopeSql(trx, tenant, batch.map((u) => u.ticket_id));
       await trx.raw(
-        `UPDATE tickets t SET closed_at = v.closed_at, closed_by = v.closed_by FROM (VALUES ${values}) AS v(tid, closed_at, closed_by) WHERE t.ticket_id = v.tid AND t.tenant = ?`,
-        [...params, tenant]
+        `
+          UPDATE tickets AS target
+          SET closed_at = v.closed_at,
+              closed_by = v.closed_by
+          FROM ${ticketScope.sql}
+          JOIN (VALUES ${values}) AS v(tid, closed_at, closed_by)
+            ON scoped_tickets.ticket_id = v.tid
+          WHERE target.ticket_id = scoped_tickets.ticket_id
+            AND ${ticketScope.targetTenantPredicate.sql}
+        `,
+        [...ticketScope.bindings, ...params, ...ticketScope.targetTenantPredicate.bindings]
       );
     }
 

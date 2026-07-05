@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { tenantDb } from '@alga-psa/db'
 import type { Knex } from 'knex'
 import path from 'node:path'
 import { createRequire } from 'node:module'
@@ -10,6 +11,15 @@ let db: Knex
 let tenantId: string
 
 const require = createRequire(import.meta.url)
+const TEST_BOUNDARY_TENANT = '__invoicing_host_api_test_boundary__'
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table)
+}
+
+function unscopedTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, TEST_BOUNDARY_TENANT).unscoped(table, reason)
+}
 
 vi.mock('@/lib/db/db', () => ({
   getConnection: vi.fn(async () => db),
@@ -38,9 +48,9 @@ describe('Invoicing Host API – internal endpoint + DB integration', () => {
 
   beforeEach(async () => {
     // Best-effort cleanup for isolation (targeted to extension install artifacts).
-    await db('tenant_extension_install').delete().catch(() => undefined)
-    await db('extension_version').delete().catch(() => undefined)
-    await db('extension_registry').delete().catch(() => undefined)
+    await unscopedTable(db, 'tenant_extension_install', 'invoicing host API test cleanup removes installs across test tenants').delete().catch(() => undefined)
+    await unscopedTable(db, 'extension_version', 'invoicing host API test cleanup removes global extension versions').delete().catch(() => undefined)
+    await unscopedTable(db, 'extension_registry', 'invoicing host API test cleanup removes global extension registry rows').delete().catch(() => undefined)
   }, HOOK_TIMEOUT)
 
   it('T008: rejects requests with missing/invalid x-runner-auth', async () => {
@@ -81,7 +91,7 @@ describe('Invoicing Host API – internal endpoint + DB integration', () => {
     })
 
     const clientId = uuidv4()
-    await db('clients').insert({
+    await tenantTable(db, tenantId, 'clients').insert({
       tenant: tenantId,
       client_id: clientId,
       client_name: `Ext Invoice Client ${clientId.slice(0, 6)}`,
@@ -113,7 +123,7 @@ describe('Invoicing Host API – internal endpoint + DB integration', () => {
     expect(typeof res.body?.invoice?.total).toBe('number')
 
     const invoiceId = res.body.invoice.invoiceId as string
-    const invoiceRow = await db('invoices')
+    const invoiceRow = await tenantTable(db, tenantId, 'invoices')
       .where({ invoice_id: invoiceId, tenant: tenantId })
       .first(['invoice_id', 'status', 'is_manual'])
     expect(invoiceRow?.invoice_id).toBe(invoiceId)
@@ -153,7 +163,7 @@ describe('Invoicing Host API – internal endpoint + DB integration', () => {
     })
 
     const clientId = uuidv4()
-    await db('clients').insert({
+    await tenantTable(db, tenantId, 'clients').insert({
       tenant: tenantId,
       client_id: clientId,
       client_name: `Ext Invoice Client ${clientId.slice(0, 6)}`,
@@ -186,7 +196,7 @@ describe('Invoicing Host API – internal endpoint + DB integration', () => {
     })
 
     const clientId = uuidv4()
-    await db('clients').insert({
+    await tenantTable(db, tenantId, 'clients').insert({
       tenant: tenantId,
       client_id: clientId,
       client_name: `Ext Invoice Client ${clientId.slice(0, 6)}`,
@@ -217,7 +227,7 @@ describe('Invoicing Host API – internal endpoint + DB integration', () => {
     expect(res.body?.success).toBe(true)
 
     const invoiceId = res.body.invoice.invoiceId as string
-    const row = await db('invoices')
+    const row = await tenantTable(db, tenantId, 'invoices')
       .where({ invoice_id: invoiceId, tenant: tenantId })
       .first(['invoice_date', 'due_date', 'po_number'])
     const storedInvoiceDate = row?.invoice_date ? new Date(row.invoice_date as any).toISOString().slice(0, 10) : null
@@ -229,10 +239,11 @@ describe('Invoicing Host API – internal endpoint + DB integration', () => {
 })
 
 async function ensureTenant(db: Knex): Promise<string> {
-  const row = await db('tenants').first<{ tenant: string }>('tenant')
+  const row = await unscopedTable(db, 'tenants', 'invoicing host API test reuses a seeded tenant when one exists')
+    .first<{ tenant: string }>('tenant')
   if (row?.tenant) return row.tenant
   const id = uuidv4()
-  await db('tenants').insert({
+  await tenantTable(db, id, 'tenants').insert({
     tenant: id,
     client_name: `Test Co ${id.slice(0, 6)}`,
     email: `test-${id.slice(0, 6)}@example.com`,
@@ -244,7 +255,7 @@ async function ensureTenant(db: Knex): Promise<string> {
 
 async function seedService(db: Knex, tenant: string): Promise<{ serviceTypeId: string; serviceId: string }> {
   const serviceTypeId = uuidv4()
-  await db('service_types').insert({
+  await tenantTable(db, tenant, 'service_types').insert({
     id: serviceTypeId,
     tenant,
     name: `Ext Service Type ${serviceTypeId.slice(0, 6)}`,
@@ -255,7 +266,7 @@ async function seedService(db: Knex, tenant: string): Promise<{ serviceTypeId: s
   })
 
   const serviceId = uuidv4()
-  await db('service_catalog').insert({
+  await tenantTable(db, tenant, 'service_catalog').insert({
     tenant,
     service_id: serviceId,
     service_name: `Ext Service ${serviceId.slice(0, 6)}`,
@@ -280,7 +291,7 @@ async function seedInstalledExtension(
   const versionId = uuidv4()
   const installId = uuidv4()
 
-  await db('extension_registry').insert({
+  await unscopedTable(db, 'extension_registry', 'invoicing host API test seeds global extension registry metadata').insert({
     id: registryId,
     publisher: 'vitest',
     name: `ext-${registryId.slice(0, 8)}`,
@@ -290,7 +301,7 @@ async function seedInstalledExtension(
     updated_at: db.fn.now(),
   })
 
-  await db('extension_version').insert({
+  await unscopedTable(db, 'extension_version', 'invoicing host API test seeds global extension version metadata').insert({
     id: versionId,
     registry_id: registryId,
     version: '1.0.0',
@@ -303,7 +314,7 @@ async function seedInstalledExtension(
     created_at: db.fn.now(),
   })
 
-  await db('tenant_extension_install').insert({
+  await tenantTable(db, tenantId, 'tenant_extension_install').insert({
     id: installId,
     tenant_id: tenantId,
     registry_id: registryId,

@@ -12,9 +12,18 @@
 import type { Knex } from 'knex';
 import type { IProject, IProjectPhase, IProjectStatusMapping, IProjectTask, IStatus, IStandardStatus, ItemType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 /** Status enriched with mapping metadata as returned by getProjectTaskStatuses. */
 export type ProjectTaskStatus = (IStatus | IStandardStatus) & Pick<IProjectStatusMapping, 'project_status_mapping_id' | 'phase_id' | 'custom_name' | 'display_order' | 'is_visible'> & { is_standard: boolean };
+
+function tenantScopedTable<Row extends object = Record<string, any>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder<Row, any[]> {
+  return tenantDb(conn, tenant).table<Row>(table) as Knex.QueryBuilder<Row, any[]>;
+}
 
 /**
  * Project model with tenant-explicit methods.
@@ -34,8 +43,8 @@ const ProjectModel = {
     }
 
     try {
-      let query = knexOrTrx<IProject>('projects')
-        .where('projects.tenant', tenant)
+      const db = tenantDb(knexOrTrx, tenant);
+      let query = tenantScopedTable(knexOrTrx, 'projects', tenant)
         .select(
           'projects.*',
           'clients.client_name as client_name',
@@ -44,23 +53,11 @@ const ProjectModel = {
           'contacts.full_name as contact_name',
           's.name as status_name',
           's.is_closed'
-        )
-        .leftJoin('clients', function () {
-          this.on('projects.client_id', 'clients.client_id')
-            .andOn('projects.tenant', 'clients.tenant');
-        })
-        .leftJoin('users', function () {
-          this.on('projects.assigned_to', 'users.user_id')
-            .andOn('projects.tenant', 'users.tenant');
-        })
-        .leftJoin('contacts', function () {
-          this.on('projects.contact_name_id', 'contacts.contact_name_id')
-            .andOn('projects.tenant', 'contacts.tenant');
-        })
-        .leftJoin('statuses as s', function () {
-          this.on('projects.status', 's.status_id')
-            .andOn('projects.tenant', 's.tenant');
-        });
+        );
+      db.tenantJoin(query, 'clients', 'projects.client_id', 'clients.client_id', { type: 'left' });
+      db.tenantJoin(query, 'users', 'projects.assigned_to', 'users.user_id', { type: 'left' });
+      db.tenantJoin(query, 'contacts', 'projects.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+      db.tenantJoin(query, 'statuses as s', 'projects.status', 's.status_id', { type: 'left' });
 
       if (!includeInactive) {
         query = query.where('projects.is_inactive', false);
@@ -68,7 +65,7 @@ const ProjectModel = {
 
       const projects = await query
         .orderBy('projects.created_at', 'desc')
-        .orderBy('projects.project_number', 'desc');
+        .orderBy('projects.project_number', 'desc') as IProject[];
 
       return projects;
     } catch (error) {
@@ -90,8 +87,8 @@ const ProjectModel = {
     }
 
     try {
-      const project = await knexOrTrx<IProject>('projects')
-        .where('projects.tenant', tenant)
+      const db = tenantDb(knexOrTrx, tenant);
+      const query = tenantScopedTable(knexOrTrx, 'projects', tenant)
         .select(
           'projects.*',
           'clients.client_name as client_name',
@@ -100,25 +97,14 @@ const ProjectModel = {
           'contacts.full_name as contact_name',
           's.name as status_name',
           's.is_closed'
-        )
-        .leftJoin('clients', function () {
-          this.on('projects.client_id', 'clients.client_id')
-            .andOn('projects.tenant', 'clients.tenant');
-        })
-        .leftJoin('users', function () {
-          this.on('projects.assigned_to', 'users.user_id')
-            .andOn('projects.tenant', 'users.tenant');
-        })
-        .leftJoin('contacts', function () {
-          this.on('projects.contact_name_id', 'contacts.contact_name_id')
-            .andOn('projects.tenant', 'contacts.tenant');
-        })
-        .leftJoin('statuses as s', function () {
-          this.on('projects.status', 's.status_id')
-            .andOn('projects.tenant', 's.tenant');
-        })
+        );
+      db.tenantJoin(query, 'clients', 'projects.client_id', 'clients.client_id', { type: 'left' });
+      db.tenantJoin(query, 'users', 'projects.assigned_to', 'users.user_id', { type: 'left' });
+      db.tenantJoin(query, 'contacts', 'projects.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+      db.tenantJoin(query, 'statuses as s', 'projects.status', 's.status_id', { type: 'left' });
+      const project = await query
         .where('projects.project_id', projectId)
-        .first();
+        .first() as IProject | undefined;
 
       return project || null;
     } catch (error) {
@@ -161,7 +147,7 @@ const ProjectModel = {
         finalInsertData.client_portal_config = JSON.stringify(client_portal_config);
       }
 
-      const [newProject] = await knexOrTrx<IProject>('projects')
+      const [newProject] = await tenantScopedTable<IProject>(knexOrTrx, 'projects', tenant)
         .insert(finalInsertData)
         .returning('*');
 
@@ -212,9 +198,8 @@ const ProjectModel = {
         finalUpdateData.client_portal_config = JSON.stringify(client_portal_config);
       }
 
-      const [updatedProject] = await knexOrTrx<IProject>('projects')
+      const [updatedProject] = await tenantScopedTable<IProject>(knexOrTrx, 'projects', tenant)
         .where('project_id', projectId)
-        .andWhere('tenant', tenant)
         .update(finalUpdateData)
         .returning('*');
 
@@ -249,25 +234,22 @@ const ProjectModel = {
 
     try {
       // First, get all phases for this project
-      const phases = await trx('project_phases')
+      const phases = await tenantScopedTable(trx, 'project_phases', tenant)
         .where('project_id', projectId)
-        .andWhere('tenant', tenant)
-        .select('phase_id');
+        .select('phase_id') as Array<{ phase_id: string }>;
 
       const phaseIds = phases.map((phase): string => phase.phase_id);
 
       // Build subquery for task IDs in this project's phases
-      const taskIdsSubquery = trx('project_tasks')
+      const taskIdsSubquery = tenantScopedTable(trx, 'project_tasks', tenant)
         .select('task_id')
-        .whereIn('phase_id', phaseIds)
-        .andWhere('tenant', tenant);
+        .whereIn('phase_id', phaseIds);
 
       // Check for time entries linked to tasks in this project
       if (phaseIds.length > 0) {
-        const timeEntriesCount = await trx('time_entries')
+        const timeEntriesCount = await tenantScopedTable(trx, 'time_entries', tenant)
           .whereIn('work_item_id', taskIdsSubquery)
           .andWhere('work_item_type', 'project_task')
-          .andWhere('tenant', tenant)
           .count('* as count')
           .first();
 
@@ -280,81 +262,70 @@ const ProjectModel = {
 
       // Delete task dependencies (both predecessor and successor references)
       if (phaseIds.length > 0) {
-        await trx('project_task_dependencies')
+        await tenantScopedTable(trx, 'project_task_dependencies', tenant)
           .where(function() {
             this.whereIn('predecessor_task_id', taskIdsSubquery)
               .orWhereIn('successor_task_id', taskIdsSubquery);
           })
-          .andWhere('tenant', tenant)
           .del();
       }
 
       // Delete task comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
       if (phaseIds.length > 0) {
-        const commentIdsSubquery = trx('project_task_comments')
+        const commentIdsSubquery = tenantScopedTable(trx, 'project_task_comments', tenant)
           .select('task_comment_id')
-          .whereIn('task_id', taskIdsSubquery)
-          .andWhere('tenant', tenant);
-        await trx('project_task_comment_reactions')
+          .whereIn('task_id', taskIdsSubquery);
+        await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
           .whereIn('task_comment_id', commentIdsSubquery)
-          .andWhere('tenant', tenant)
           .del();
       }
 
       // Delete task comments
       if (phaseIds.length > 0) {
-        await trx('project_task_comments')
+        await tenantScopedTable(trx, 'project_task_comments', tenant)
           .whereIn('task_id', taskIdsSubquery)
-          .andWhere('tenant', tenant)
           .del();
       }
 
       // Delete task resources (additional assignees)
       if (phaseIds.length > 0) {
-        await trx('task_resources')
+        await tenantScopedTable(trx, 'task_resources', tenant)
           .whereIn('task_id', taskIdsSubquery)
-          .andWhere('tenant', tenant)
           .del();
       }
 
       // Delete checklist items for all tasks in all phases
       if (phaseIds.length > 0) {
-        await trx('task_checklist_items')
+        await tenantScopedTable(trx, 'task_checklist_items', tenant)
           .whereIn('task_id', taskIdsSubquery)
-          .andWhere('tenant', tenant)
           .del();
       }
 
       // Delete all tasks in all phases
       if (phaseIds.length > 0) {
-        await trx('project_tasks')
+        await tenantScopedTable(trx, 'project_tasks', tenant)
           .whereIn('phase_id', phaseIds)
-          .andWhere('tenant', tenant)
           .del();
       }
 
       // Delete project ticket links
-      await trx('project_ticket_links')
+      await tenantScopedTable(trx, 'project_ticket_links', tenant)
         .where('project_id', projectId)
-        .andWhere('tenant', tenant)
         .del();
 
       // Delete all phases
-      await trx('project_phases')
+      await tenantScopedTable(trx, 'project_phases', tenant)
         .where('project_id', projectId)
-        .andWhere('tenant', tenant)
         .del();
 
       // Delete project status mappings
-      await trx('project_status_mappings')
+      await tenantScopedTable(trx, 'project_status_mappings', tenant)
         .where('project_id', projectId)
-        .andWhere('tenant', tenant)
         .del();
 
       // Finally, delete the project
-      const deleted = await trx('projects')
+      const deleted = await tenantScopedTable(trx, 'projects', tenant)
         .where('project_id', projectId)
-        .andWhere('tenant', tenant)
         .del();
 
       if (deleted === 0) {
@@ -386,10 +357,9 @@ const ProjectModel = {
     }
 
     try {
-      const phases = await knexOrTrx<IProjectPhase>('project_phases')
+      const phases = await tenantScopedTable(knexOrTrx, 'project_phases', tenant)
         .where('project_id', projectId)
-        .andWhere('tenant', tenant)
-        .orderBy('wbs_code');
+        .orderBy('wbs_code') as IProjectPhase[];
 
       // Sort phases by numeric values in WBS code
       return phases.sort((a, b) => {
@@ -426,13 +396,13 @@ const ProjectModel = {
     try {
       // Generate order_key for the new phase
       const { generateKeyBetween } = await import('fractional-indexing');
-      const lastPhase = await knexOrTrx('project_phases')
-        .where({ project_id: phaseData.project_id, tenant })
+      const lastPhase = await tenantScopedTable(knexOrTrx, 'project_phases', tenant)
+        .where({ project_id: phaseData.project_id })
         .orderBy('order_key', 'desc')
         .first();
       const orderKey = generateKeyBetween(lastPhase?.order_key || null, null);
 
-      const [newPhase] = await knexOrTrx<IProjectPhase>('project_phases')
+      const [newPhase] = await tenantScopedTable<IProjectPhase>(knexOrTrx, 'project_phases', tenant)
         .insert({
           ...phaseData,
           phase_id: uuidv4(),
@@ -464,9 +434,8 @@ const ProjectModel = {
     }
 
     try {
-      const [updatedPhase] = await knexOrTrx<IProjectPhase>('project_phases')
+      const [updatedPhase] = await tenantScopedTable<IProjectPhase>(knexOrTrx, 'project_phases', tenant)
         .where('phase_id', phaseId)
-        .andWhere('tenant', tenant)
         .update({
           ...phaseData,
           updated_at: knexOrTrx.fn.now()
@@ -501,16 +470,14 @@ const ProjectModel = {
 
     try {
       // Build subquery for task IDs in this phase
-      const taskIdsSubquery = trx('project_tasks')
+      const taskIdsSubquery = tenantScopedTable(trx, 'project_tasks', tenant)
         .select('task_id')
-        .where('phase_id', phaseId)
-        .andWhere('tenant', tenant);
+        .where('phase_id', phaseId);
 
       // Check for time entries linked to tasks in this phase
-      const timeEntriesCount = await trx('time_entries')
+      const timeEntriesCount = await tenantScopedTable(trx, 'time_entries', tenant)
         .whereIn('work_item_id', taskIdsSubquery)
         .andWhere('work_item_type', 'project_task')
-        .andWhere('tenant', tenant)
         .count('* as count')
         .first();
 
@@ -521,52 +488,44 @@ const ProjectModel = {
       }
 
       // Delete task dependencies (both predecessor and successor references)
-      await trx('project_task_dependencies')
+      await tenantScopedTable(trx, 'project_task_dependencies', tenant)
         .where(function() {
           this.whereIn('predecessor_task_id', taskIdsSubquery)
             .orWhereIn('successor_task_id', taskIdsSubquery);
         })
-        .andWhere('tenant', tenant)
         .del();
 
       // Delete task comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
-      const commentIdsSubquery = trx('project_task_comments')
+      const commentIdsSubquery = tenantScopedTable(trx, 'project_task_comments', tenant)
         .select('task_comment_id')
-        .whereIn('task_id', taskIdsSubquery)
-        .andWhere('tenant', tenant);
-      await trx('project_task_comment_reactions')
+        .whereIn('task_id', taskIdsSubquery);
+      await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
         .whereIn('task_comment_id', commentIdsSubquery)
-        .andWhere('tenant', tenant)
         .del();
 
       // Delete task comments
-      await trx('project_task_comments')
+      await tenantScopedTable(trx, 'project_task_comments', tenant)
         .whereIn('task_id', taskIdsSubquery)
-        .andWhere('tenant', tenant)
         .del();
 
       // Delete task resources (additional assignees)
-      await trx('task_resources')
+      await tenantScopedTable(trx, 'task_resources', tenant)
         .whereIn('task_id', taskIdsSubquery)
-        .andWhere('tenant', tenant)
         .del();
 
       // Delete all checklist items for tasks in this phase
-      await trx('task_checklist_items')
+      await tenantScopedTable(trx, 'task_checklist_items', tenant)
         .whereIn('task_id', taskIdsSubquery)
-        .andWhere('tenant', tenant)
         .del();
 
       // Delete all tasks in the phase
-      await trx('project_tasks')
+      await tenantScopedTable(trx, 'project_tasks', tenant)
         .where('phase_id', phaseId)
-        .andWhere('tenant', tenant)
         .del();
 
       // Finally, delete the phase itself
-      const deleted = await trx('project_phases')
+      const deleted = await tenantScopedTable(trx, 'project_phases', tenant)
         .where('phase_id', phaseId)
-        .andWhere('tenant', tenant)
         .del();
 
       if (deleted === 0) {
@@ -599,9 +558,8 @@ const ProjectModel = {
     }
 
     try {
-      const query = knexOrTrx<IProjectStatusMapping>('project_status_mappings')
-        .where('project_id', projectId)
-        .andWhere('tenant', tenant);
+      const query = tenantScopedTable(knexOrTrx, 'project_status_mappings', tenant)
+        .where('project_id', projectId) as Knex.QueryBuilder;
 
       if (phaseId) {
         query.andWhere('phase_id', phaseId);
@@ -651,12 +609,11 @@ const ProjectModel = {
       throw new Error('Tenant context is required for getting projects by client');
     }
 
-    const projects = await knexOrTrx<IProject>('projects')
+    const projects = await tenantScopedTable(knexOrTrx, 'projects', tenant)
       .where({
-        client_id: clientId,
-        tenant
+        client_id: clientId
       })
-      .select('*');
+      .select('*') as IProject[];
 
     return projects;
   },
@@ -667,10 +624,9 @@ const ProjectModel = {
     }
 
     try {
-      const statuses = await knexOrTrx<IStatus>('statuses')
+      const statuses = await tenantScopedTable(knexOrTrx, 'statuses', tenant)
         .where('status_type', statusType)
-        .andWhere('tenant', tenant)
-        .orderBy('order_number');
+        .orderBy('order_number') as IStatus[];
       return statuses;
     } catch (error) {
       console.error('Error getting statuses by type:', error);
@@ -688,7 +644,7 @@ const ProjectModel = {
     }
 
     try {
-      const standardStatuses = await knexOrTrx<IStandardStatus>('standard_statuses')
+      const standardStatuses = await tenantScopedTable<IStandardStatus>(knexOrTrx, 'standard_statuses', tenant)
         .where('item_type', itemType)
         .orderBy('display_order');
       return standardStatuses;
@@ -709,7 +665,7 @@ const ProjectModel = {
     }
 
     try {
-      const [newMapping] = await knexOrTrx<IProjectStatusMapping>('project_status_mappings')
+      const [newMapping] = await tenantScopedTable<IProjectStatusMapping>(knexOrTrx, 'project_status_mappings', tenant)
         .insert({
           ...mappingData,
           project_id: projectId,
@@ -730,7 +686,7 @@ const ProjectModel = {
     }
 
     try {
-      const standardStatus = await knexOrTrx<IStandardStatus>('standard_statuses')
+      const standardStatus = await tenantScopedTable<IStandardStatus>(knexOrTrx, 'standard_statuses', tenant)
         .where('standard_status_id', standardStatusId)
         .first();
       return standardStatus || null;
@@ -746,10 +702,9 @@ const ProjectModel = {
     }
 
     try {
-      const customStatus = await knexOrTrx<IStatus>('statuses')
+      const customStatus = await tenantScopedTable(knexOrTrx, 'statuses', tenant)
         .where('status_id', statusId)
-        .andWhere('tenant', tenant)
-        .first();
+        .first() as IStatus | undefined;
       return customStatus || null;
     } catch (error) {
       console.error('Error getting custom status:', error);
@@ -777,10 +732,10 @@ const ProjectModel = {
 
       const [standardStatusRows, customStatusRows] = await Promise.all([
         standardIds.length > 0
-          ? knexOrTrx<IStandardStatus>('standard_statuses').whereIn('standard_status_id', standardIds)
+          ? tenantScopedTable<IStandardStatus>(knexOrTrx, 'standard_statuses', tenant).whereIn('standard_status_id', standardIds)
           : [],
         customIds.length > 0
-          ? knexOrTrx<IStatus>('statuses').whereIn('status_id', customIds).andWhere('tenant', tenant)
+          ? tenantScopedTable(knexOrTrx, 'statuses', tenant).whereIn('status_id', customIds)
           : []
       ]);
 
@@ -840,7 +795,7 @@ const ProjectModel = {
     const trx = isTransaction ? (knexOrTrx as Knex.Transaction) : await knexOrTrx.transaction();
 
     try {
-      const [newStatus] = await trx<IStatus>('statuses')
+      const [newStatus] = await tenantScopedTable<IStatus>(trx, 'statuses', tenant)
         .insert({
           ...statusData,
           status_id: uuidv4(),
@@ -848,7 +803,7 @@ const ProjectModel = {
         })
         .returning('*');
 
-      await trx<IProjectStatusMapping>('project_status_mappings').insert({
+      await tenantScopedTable<IProjectStatusMapping>(trx, 'project_status_mappings', tenant).insert({
         project_id: projectId,
         status_id: newStatus.status_id,
         is_standard: false,
@@ -888,12 +843,11 @@ const ProjectModel = {
     const trx = isTransaction ? (knexOrTrx as Knex.Transaction) : await knexOrTrx.transaction();
 
     try {
-      const [updatedStatus] = await trx<IStatus>('statuses').where('status_id', statusId).andWhere('tenant', tenant).update({ ...statusData }).returning('*');
+      const [updatedStatus] = await tenantScopedTable<IStatus>(trx, 'statuses', tenant).where('status_id', statusId).update({ ...statusData }).returning('*');
 
       if (mappingData) {
-        await trx<IProjectStatusMapping>('project_status_mappings')
+        await tenantScopedTable(trx, 'project_status_mappings', tenant)
           .where('status_id', statusId)
-          .andWhere('tenant', tenant)
           .update(mappingData);
       }
 
@@ -921,18 +875,17 @@ const ProjectModel = {
 
     try {
       // First, check if the status is being used by any tasks
-      const tasksUsingStatus = await trx<IProjectTask>('project_tasks')
+      const tasksUsingStatus = await tenantScopedTable(trx, 'project_tasks', tenant)
         .where('project_status_mapping_id', statusId)
-        .andWhere('tenant', tenant)
         .first();
 
       if (tasksUsingStatus) {
         throw new Error('Cannot delete status: it is being used by one or more tasks');
       }
 
-      await trx<IProjectStatusMapping>('project_status_mappings').where('status_id', statusId).andWhere('tenant', tenant).del();
+      await tenantScopedTable(trx, 'project_status_mappings', tenant).where('status_id', statusId).del();
 
-      await trx<IStatus>('statuses').where('status_id', statusId).andWhere('tenant', tenant).del();
+      await tenantScopedTable(trx, 'statuses', tenant).where('status_id', statusId).del();
 
       if (!isTransaction) {
         await trx.commit();
@@ -952,7 +905,7 @@ const ProjectModel = {
     }
 
     try {
-      const phase = await knexOrTrx<IProjectPhase>('project_phases').where('phase_id', phaseId).andWhere('tenant', tenant).first();
+      const phase = await tenantScopedTable(knexOrTrx, 'project_phases', tenant).where('phase_id', phaseId).first() as IProjectPhase | undefined;
       return phase || null;
     } catch (error) {
       console.error('Error getting project phase by ID:', error);
@@ -980,9 +933,8 @@ const ProjectModel = {
         }
         // Remove wbs_code from updates to prevent override
         const { wbs_code: _wbs, ...phaseUpdate } = phase as any;
-        await trx('project_phases')
+        await tenantScopedTable(trx, 'project_phases', tenant)
           .where({ project_id: projectId, phase_id: phase.phase_id })
-          .andWhere('tenant', tenant)
           .update({
             ...phaseUpdate,
             updated_at: trx.fn.now(),
@@ -994,9 +946,8 @@ const ProjectModel = {
         }
         // Remove wbs_code from updates to prevent override
         const { wbs_code: _wbs, ...taskUpdate } = task as any;
-        await trx('project_tasks')
+        await tenantScopedTable(trx, 'project_tasks', tenant)
           .where({ task_id: task.task_id })
-          .andWhere('tenant', tenant)
           .update({
             ...taskUpdate,
             updated_at: trx.fn.now(),
@@ -1023,7 +974,7 @@ const ProjectModel = {
     try {
       // If no parent code, get next project number
       if (!parentWbsCode) {
-        const projects = await knexOrTrx('projects').whereNot('wbs_code', '').andWhere('tenant', tenant).select('wbs_code');
+        const projects = await tenantScopedTable(knexOrTrx, 'projects', tenant).whereNot('wbs_code', '').select('wbs_code') as Array<{ wbs_code: string }>;
 
         if (projects.length === 0) return '1';
 
@@ -1040,7 +991,7 @@ const ProjectModel = {
 
       // For project level (single number), get next phase number
       if (parts.length === 1) {
-        const phases = await knexOrTrx('project_phases').where('wbs_code', 'like', `${parentWbsCode}.%`).andWhere('tenant', tenant).select('wbs_code');
+        const phases = await tenantScopedTable(knexOrTrx, 'project_phases', tenant).where('wbs_code', 'like', `${parentWbsCode}.%`).select('wbs_code') as Array<{ wbs_code: string }>;
 
         if (phases.length === 0) return `${parentWbsCode}.1`;
 
@@ -1057,7 +1008,7 @@ const ProjectModel = {
 
       // For phase level (two numbers), get next task number
       if (parts.length === 2) {
-        const tasks = await knexOrTrx('project_tasks').where('wbs_code', 'like', `${parentWbsCode}.%`).andWhere('tenant', tenant).select('wbs_code');
+        const tasks = await tenantScopedTable(knexOrTrx, 'project_tasks', tenant).where('wbs_code', 'like', `${parentWbsCode}.%`).select('wbs_code') as Array<{ wbs_code: string }>;
 
         if (tasks.length === 0) return `${parentWbsCode}.1`;
 
@@ -1089,10 +1040,9 @@ const ProjectModel = {
     }
 
     try {
-      const mapping = await knexOrTrx<IProjectStatusMapping>('project_status_mappings')
+      const mapping = await tenantScopedTable(knexOrTrx, 'project_status_mappings', tenant)
         .where('project_status_mapping_id', mappingId)
-        .andWhere('tenant', tenant)
-        .first();
+        .first() as IProjectStatusMapping | undefined;
       return mapping || null;
     } catch (error) {
       console.error('Error getting project status mapping:', error);

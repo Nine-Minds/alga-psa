@@ -522,6 +522,17 @@
       "5": "Freitag",
       "6": "Samstag",
       "7": "Sonntag"
+    },
+    "reviewError": "Auswirkung dieser Änderung konnte nicht geprüft werden",
+    "reviewing": "Auswirkung wird geprüft …",
+    "confirmSave": "Bestätigen und speichern",
+    "reviewChanges": "Änderungen prüfen",
+    "impact": {
+      "title": "Vor dem Anwenden prüfen",
+      "periods": "{{count}} bevorstehende(r) Abrechnungszeitraum/-räume über {{lines}} Vertragsposition(en) werden an den neuen Zeitplan angepasst.",
+      "from": "Neu aufgebaut ab {{date}}.",
+      "billedPreserved": "Bereits in Rechnung gestellte Posten bleiben erhalten und ändern sich nicht.",
+      "confirmHint": "Wählen Sie „Bestätigen und speichern“, um anzuwenden."
     }
   },
   "clientContractAssignment": {

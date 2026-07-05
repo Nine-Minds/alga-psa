@@ -1,4 +1,7 @@
 {
+  "clientNameCell": {
+    "noClient": "No Client"
+  },
   "reactions": {
     "ariaSummary_one": "{{emoji}} {{count}} reaction",
     "ariaSummary_other": "{{emoji}} {{count}} reactions",
@@ -1238,6 +1241,9 @@
     "showAll": "Show all",
     "showingAllColumns": "Showing all columns; scroll horizontally to see them.",
     "showLess": "Show less",
-    "columnsHidden": "{{count}} columns hidden."
+    "columnsHidden": "{{count}} columns hidden due to limited space."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Loading editor…"
   }
 }

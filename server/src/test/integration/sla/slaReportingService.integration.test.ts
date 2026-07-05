@@ -15,13 +15,15 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { createTenant, createUser, createClient } from '../../../../test-utils/testDataFactory';
 
 // Mock external dependencies
 vi.mock('server/src/lib/utils/getSecret', () => ({
-  getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+  getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -29,7 +31,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
     getAppSecret: async () => '',
   })),
   secretProvider: {
-    getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+    getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
   },
 }));
 
@@ -66,12 +69,16 @@ vi.mock('server/src/lib/eventBus', () => ({
 let mockTenantId: string;
 let mockDb: Knex;
 
-vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: vi.fn(async () => ({ knex: mockDb, tenant: mockTenantId })),
-  withTransaction: vi.fn(async (db: Knex, callback: (trx: Knex.Transaction) => Promise<any>) => {
-    return db.transaction(async (trx) => callback(trx));
-  }),
-}));
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: mockDb, tenant: mockTenantId })),
+    withTransaction: vi.fn(async (db: Knex, callback: (trx: Knex.Transaction) => Promise<any>) => {
+      return db.transaction(async (trx) => callback(trx));
+    }),
+  };
+});
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: vi.fn((fn: Function) => {
@@ -90,6 +97,9 @@ let getSlaTrend: typeof import('@alga-psa/sla/actions').getSlaTrend;
 let getRecentBreaches: typeof import('@alga-psa/sla/actions').getRecentBreaches;
 let getTicketsAtRisk: typeof import('@alga-psa/sla/actions').getTicketsAtRisk;
 let getSlaOverview: typeof import('@alga-psa/sla/actions').getSlaOverview;
+
+const tenantTable = (dbOrTrx: Knex | Knex.Transaction, tenant: string, tableName: string) =>
+  tenantDb(dbOrTrx, tenant).table(tableName);
 
 describe('SLA Reporting Service Integration Tests', () => {
   let db: Knex;
@@ -152,17 +162,17 @@ describe('SLA Reporting Service Integration Tests', () => {
       user_type: 'internal',
     });
 
-    // Create company (for tickets)
+    // Create client (for tickets; companies table was renamed to clients)
     companyId = uuidv4();
-    await db('companies').insert({
+    await tenantTable(db, tenantId, 'clients').insert({
       tenant: tenantId,
-      company_id: companyId,
-      company_name: 'Reporting Test Company',
+      client_id: companyId,
+      client_name: 'Reporting Test Company',
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });
 
-    // Create client linked to company
+    // Create secondary client for contacts
     clientId = await createClient(db, tenantId, 'Reporting Test Client');
     contactId = await createContact(db, tenantId, clientId, companyId, `report-contact-${uuidv4().slice(0, 8)}@example.com`);
 
@@ -195,8 +205,8 @@ describe('SLA Reporting Service Integration Tests', () => {
 
   beforeEach(async () => {
     // Clean up tickets before each test
-    await db('tickets').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('tickets').where({ tenant: otherTenantId }).delete().catch(() => undefined);
+    await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId }).delete().catch(() => undefined);
+    await tenantTable(db, otherTenantId, 'tickets').where({ tenant: otherTenantId }).delete().catch(() => undefined);
     mockTenantId = tenantId;
   });
 
@@ -550,7 +560,7 @@ describe('SLA Reporting Service Integration Tests', () => {
       const responseDueAt = new Date(now.getTime() + 30 * 60000); // Due in 30 minutes (started 90 min ago, 30 min target = 120 total, 75% elapsed)
       const resolutionDueAt = new Date(now.getTime() + 60 * 60000);
 
-      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).update({
+      await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).update({
         sla_started_at: startedAt,
         sla_response_due_at: responseDueAt,
         sla_resolution_due_at: resolutionDueAt,
@@ -591,7 +601,7 @@ describe('SLA Reporting Service Integration Tests', () => {
       const startedAt = new Date(now.getTime() - 90 * 60000);
       const responseDueAt = new Date(now.getTime() + 30 * 60000);
 
-      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).update({
+      await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).update({
         sla_started_at: startedAt,
         sla_response_due_at: responseDueAt,
         sla_resolution_due_at: new Date(now.getTime() + 60 * 60000),
@@ -626,7 +636,7 @@ describe('SLA Reporting Service Integration Tests', () => {
       const startedAt = new Date(now.getTime() - 90 * 60000);
       const responseDueAt = new Date(now.getTime() + 30 * 60000);
 
-      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).update({
+      await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).update({
         sla_started_at: startedAt,
         sla_response_due_at: responseDueAt,
         sla_resolution_due_at: new Date(now.getTime() + 60 * 60000),
@@ -673,13 +683,13 @@ describe('SLA Reporting Service Integration Tests', () => {
         slaPolicyId,
       });
 
-      await db('tickets').where({ tenant: tenantId, ticket_id: openTicketId }).update({
+      await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: openTicketId }).update({
         sla_started_at: new Date(now.getTime() - 90 * 60000),
         sla_response_due_at: new Date(now.getTime() + 30 * 60000),
         sla_resolution_due_at: new Date(now.getTime() + 60 * 60000),
       });
 
-      await db('tickets').where({ tenant: tenantId, ticket_id: closedTicketId }).update({
+      await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: closedTicketId }).update({
         sla_started_at: new Date(now.getTime() - 90 * 60000),
         sla_response_due_at: new Date(now.getTime() + 30 * 60000),
         sla_resolution_due_at: new Date(now.getTime() + 60 * 60000),
@@ -702,6 +712,10 @@ describe('SLA Reporting Service Integration Tests', () => {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const sixtyDaysAgo = new Date(today);
       sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+      // dateTo is a date-only string (midnight), so keep the recent ticket
+      // strictly inside the window rather than "now"
+      const fiveDaysAgo = new Date(today);
+      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
 
       // Recent ticket (within 30 days) - breached
       await createTicketWithSlaResult(db, tenantId, {
@@ -713,7 +727,7 @@ describe('SLA Reporting Service Integration Tests', () => {
         assignedTo: internalUserId,
         responseMet: false,
         resolutionMet: false,
-        createdAt: today,
+        createdAt: fiveDaysAgo,
       });
 
       // Old ticket (60 days ago) - met
@@ -766,10 +780,10 @@ describe('SLA Reporting Service Integration Tests', () => {
         user_type: 'internal',
       });
       const otherCompanyId = uuidv4();
-      await db('companies').insert({
+      await tenantTable(db, otherTenantId, 'clients').insert({
         tenant: otherTenantId,
-        company_id: otherCompanyId,
-        company_name: 'Other Company',
+        client_id: otherCompanyId,
+        client_name: 'Other Company',
         created_at: db.fn.now(),
         updated_at: db.fn.now(),
       });
@@ -859,7 +873,7 @@ describe('SLA Reporting Service Integration Tests', () => {
 
 async function createContact(db: Knex, tenant: string, clientId: string, companyId: string, email: string): Promise<string> {
   const contactId = uuidv4();
-  await db('contacts').insert({
+  await tenantTable(db, tenant, 'contacts').insert({
     tenant,
     contact_name_id: contactId,
     full_name: 'Reporting Test Contact',
@@ -873,13 +887,11 @@ async function createContact(db: Knex, tenant: string, clientId: string, company
 
 async function createBoard(db: Knex, tenant: string, name: string): Promise<string> {
   const boardId = uuidv4();
-  await db('boards').insert({
+  await tenantTable(db, tenant, 'boards').insert({
     tenant,
     board_id: boardId,
-    name,
+    board_name: name,
     description: 'Test board for SLA reporting',
-    created_at: db.fn.now(),
-    updated_at: db.fn.now(),
   });
   return boardId;
 }
@@ -892,7 +904,7 @@ async function createStatus(
   isClosed: boolean
 ): Promise<string> {
   const statusId = uuidv4();
-  await db('statuses').insert({
+  await tenantTable(db, tenant, 'statuses').insert({
     tenant,
     board_id: boardId,
     status_id: statusId,
@@ -906,12 +918,11 @@ async function createStatus(
 
 async function createPriority(db: Knex, tenant: string, name: string, orderNumber: number, createdBy: string): Promise<string> {
   const priorityId = uuidv4();
-  await db('priorities').insert({
+  await tenantTable(db, tenant, 'priorities').insert({
     tenant,
     priority_id: priorityId,
     priority_name: name,
     color: '#808080',
-    priority_order: orderNumber,
     order_number: orderNumber,
     created_by: createdBy,
     created_at: db.fn.now(),
@@ -921,7 +932,7 @@ async function createPriority(db: Knex, tenant: string, name: string, orderNumbe
 
 async function createBusinessHoursSchedule(db: Knex, tenant: string, name: string): Promise<string> {
   const scheduleId = uuidv4();
-  await db('business_hours_schedules').insert({
+  await tenantTable(db, tenant, 'business_hours_schedules').insert({
     tenant,
     schedule_id: scheduleId,
     schedule_name: name,
@@ -942,7 +953,7 @@ async function createSlaPolicy(
   isDefault: boolean
 ): Promise<string> {
   const policyId = uuidv4();
-  await db('sla_policies').insert({
+  await tenantTable(db, tenant, 'sla_policies').insert({
     tenant,
     sla_policy_id: policyId,
     policy_name: name,
@@ -964,7 +975,7 @@ async function createSlaPolicyTarget(
   resolutionTimeMinutes: number
 ): Promise<string> {
   const targetId = uuidv4();
-  await db('sla_policy_targets').insert({
+  await tenantTable(db, tenant, 'sla_policy_targets').insert({
     tenant,
     target_id: targetId,
     sla_policy_id: slaPolicyId,
@@ -994,12 +1005,12 @@ async function insertTicket(db: Knex, params: {
   assignedTo: string | null;
   slaPolicyId: string | null;
 }): Promise<void> {
-  await db('tickets').insert({
+  await tenantTable(db, params.tenant, 'tickets').insert({
     tenant: params.tenant,
     ticket_id: params.ticketId,
     ticket_number: params.ticketNumber,
     title: params.title,
-    company_id: params.companyId,
+    client_id: params.companyId,
     contact_name_id: params.contactId,
     status_id: params.statusId,
     priority_id: params.priorityId,
@@ -1029,7 +1040,7 @@ async function createTicketWithSlaResult(db: Knex, tenant: string, params: {
   const closedAt = params.closedAt || now;
 
   // Create a simple contact for the ticket
-  await db('contacts').insert({
+  await tenantTable(db, tenant, 'contacts').insert({
     tenant,
     contact_name_id: contactId,
     full_name: 'Test Contact',
@@ -1038,12 +1049,12 @@ async function createTicketWithSlaResult(db: Knex, tenant: string, params: {
     updated_at: db.fn.now(),
   }).catch(() => {}); // Ignore if contact already exists
 
-  await db('tickets').insert({
+  await tenantTable(db, tenant, 'tickets').insert({
     tenant,
     ticket_id: ticketId,
     ticket_number: `SLA-${uuidv4().slice(0, 6)}`,
     title: `SLA Test Ticket ${uuidv4().slice(0, 6)}`,
-    company_id: params.companyId,
+    client_id: params.companyId,
     contact_name_id: contactId,
     status_id: params.statusId,
     priority_id: params.priorityId,
@@ -1058,7 +1069,6 @@ async function createTicketWithSlaResult(db: Knex, tenant: string, params: {
     sla_resolution_due_at: new Date(now.getTime() + 120 * 60000),
     sla_resolution_met: params.resolutionMet,
     closed_at: closedAt,
-    created_at: now,
     entered_at: now,
     updated_at: now,
   });

@@ -21,6 +21,21 @@ if (typeof (globalThis as any).AsyncLocalStorage === 'undefined') {
   (globalThis as any).AsyncLocalStorage = AsyncLocalStorage;
 }
 
+// The route handlers connect through @alga-psa/db getConnection(), whose config
+// freezes DB_NAME_SERVER at module import (before the TestContext bootstrap
+// points it at test_database). Route it at the live test context instead.
+const dbRef = vi.hoisted(() => ({ context: null as { db: unknown } | null }));
+
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
+  getConnection: vi.fn(async () => {
+    if (!dbRef.context) {
+      throw new Error('Test context not initialized');
+    }
+    return dbRef.context.db;
+  }),
+}));
+
 process.env.DB_USER_SERVER = process.env.DB_USER_SERVER || 'app_user';
 process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'test_password';
 process.env.DB_PASSWORD_ADMIN = process.env.DB_PASSWORD_ADMIN || 'test_password';
@@ -41,6 +56,7 @@ describe('Storage Route Handlers', () => {
   beforeAll(async () => {
     const ctx = await testHelpers.beforeAll();
     tenantId = ctx.tenantId;
+    dbRef.context = ctx;
     await ensureStorageTables();
     await resetStorageTables();
   }, 120_000);
@@ -52,6 +68,7 @@ describe('Storage Route Handlers', () => {
   beforeEach(async () => {
     const ctx = await testHelpers.beforeEach();
     tenantId = ctx.tenantId;
+    dbRef.context = ctx;
     await resetStorageTables(tenantId);
   });
 

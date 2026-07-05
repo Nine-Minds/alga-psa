@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { eeIndexers } from '@ee/lib/search/indexers';
-import { allIndexers, getIndexer, registeredObjectTypes } from '../../lib/search';
-import { ceIndexers } from '../../lib/search/indexers';
+import { allIndexers, getIndexer, registeredObjectTypes } from '@alga-psa/search';
+import { ceIndexers } from '@alga-psa/search/indexers';
 import type { EntityIndexer } from '@alga-psa/types';
 
 describe('search indexer registry', () => {

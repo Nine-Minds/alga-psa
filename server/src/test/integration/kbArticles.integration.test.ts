@@ -15,6 +15,7 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
@@ -66,10 +67,18 @@ let createdIds: CreatedIds = {
   documentIds: []
 };
 
+function tenantTable(table: string, tenant = tenantId) {
+  return tenantDb(db, tenant).table(table);
+}
+
+function tenantRows(tenant = tenantId) {
+  return tenantDb(db, tenant).unscoped('tenants', 'KB article integration test fixture creates and removes tenant rows');
+}
+
 async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds): Promise<void> {
   const safeDelete = async (table: string, where: Record<string, unknown>) => {
     try {
-      await db(table).where(where).del();
+      await tenantDb(db, tenantId).table(table).where(where).del();
     } catch {
       // Ignore cleanup issues
     }
@@ -171,7 +180,7 @@ describe('KB Articles Integration Tests', () => {
       expect(createdArticle.status).toBe('draft');
 
       // Verify document record
-      const doc = await db('documents')
+      const doc = await tenantTable('documents')
         .where({ tenant: tenantId, document_id: createdArticle.document_id })
         .first();
       expect(doc).toBeDefined();
@@ -227,7 +236,7 @@ describe('KB Articles Integration Tests', () => {
       createdIds.documentIds.push(created.document_id);
 
       // Initially not visible
-      let doc = await db('documents')
+      let doc = await tenantTable('documents')
         .where({ tenant: tenantId, document_id: created.document_id })
         .first();
       expect(doc.is_client_visible).toBe(false);
@@ -236,7 +245,7 @@ describe('KB Articles Integration Tests', () => {
       await publishArticle(created.article_id);
 
       // Now should be visible
-      doc = await db('documents')
+      doc = await tenantTable('documents')
         .where({ tenant: tenantId, document_id: created.document_id })
         .first();
       expect(doc.is_client_visible).toBe(true);
@@ -257,7 +266,7 @@ describe('KB Articles Integration Tests', () => {
       await publishArticle(created.article_id);
 
       // Should remain not visible
-      const doc = await db('documents')
+      const doc = await tenantTable('documents')
         .where({ tenant: tenantId, document_id: created.document_id })
         .first();
       expect(doc.is_client_visible).toBe(false);
@@ -280,12 +289,12 @@ describe('KB Articles Integration Tests', () => {
       await publishArticle(created.article_id);
 
       // Verify published and visible
-      let articleRecord = await db('kb_articles')
+      let articleRecord = await tenantTable('kb_articles')
         .where({ tenant: tenantId, article_id: created.article_id })
         .first();
       expect(articleRecord.status).toBe('published');
 
-      let doc = await db('documents')
+      let doc = await tenantTable('documents')
         .where({ tenant: tenantId, document_id: created.document_id })
         .first();
       expect(doc.is_client_visible).toBe(true);
@@ -294,12 +303,12 @@ describe('KB Articles Integration Tests', () => {
       await archiveArticle(created.article_id);
 
       // Verify archived and not visible
-      articleRecord = await db('kb_articles')
+      articleRecord = await tenantTable('kb_articles')
         .where({ tenant: tenantId, article_id: created.article_id })
         .first();
       expect(articleRecord.status).toBe('archived');
 
-      doc = await db('documents')
+      doc = await tenantTable('documents')
         .where({ tenant: tenantId, document_id: created.document_id })
         .first();
       expect(doc.is_client_visible).toBe(false);
@@ -320,7 +329,7 @@ describe('KB Articles Integration Tests', () => {
       createdIds.documentIds.push(created.document_id);
 
       // Verify draft
-      let record = await db('kb_articles')
+      let record = await tenantTable('kb_articles')
         .where({ tenant: tenantId, article_id: created.article_id })
         .first();
       expect(record.status).toBe('draft');
@@ -328,13 +337,13 @@ describe('KB Articles Integration Tests', () => {
       // Submit for review
       await submitForReview(created.article_id, [reviewerId]);
 
-      record = await db('kb_articles')
+      record = await tenantTable('kb_articles')
         .where({ tenant: tenantId, article_id: created.article_id })
         .first();
       expect(record.status).toBe('review');
 
       // Verify reviewer assignment
-      const reviewerRecord = await db('kb_article_reviewers')
+      const reviewerRecord = await tenantTable('kb_article_reviewers')
         .where({
           tenant: tenantId,
           article_id: created.article_id,
@@ -354,7 +363,7 @@ describe('KB Articles Integration Tests', () => {
       await completeReview(created.article_id, 'approved', 'Looks good!');
 
       // Verify review completed
-      const completedReview = await db('kb_article_reviewers')
+      const completedReview = await tenantTable('kb_article_reviewers')
         .where({
           tenant: tenantId,
           article_id: created.article_id,
@@ -373,7 +382,7 @@ describe('KB Articles Integration Tests', () => {
 
       await publishArticle(created.article_id);
 
-      record = await db('kb_articles')
+      record = await tenantTable('kb_articles')
         .where({ tenant: tenantId, article_id: created.article_id })
         .first();
       expect(record.status).toBe('published');
@@ -382,7 +391,7 @@ describe('KB Articles Integration Tests', () => {
       // Archive
       await archiveArticle(created.article_id);
 
-      record = await db('kb_articles')
+      record = await tenantTable('kb_articles')
         .where({ tenant: tenantId, article_id: created.article_id })
         .first();
       expect(record.status).toBe('archived');
@@ -460,7 +469,7 @@ describe('KB Articles Integration Tests', () => {
       // Manually set next_review_due to past
       const pastDate = new Date();
       pastDate.setDate(pastDate.getDate() - 1);
-      await db('kb_articles')
+      await tenantTable('kb_articles')
         .where({ tenant: tenantId, article_id: a1.article_id })
         .update({ next_review_due: pastDate });
 
@@ -504,7 +513,7 @@ describe('KB Articles Integration Tests', () => {
       // Set past review date but keep as draft
       const pastDate = new Date();
       pastDate.setDate(pastDate.getDate() - 10);
-      await db('kb_articles')
+      await tenantTable('kb_articles')
         .where({ tenant: tenantId, article_id: a1.article_id })
         .update({ next_review_due: pastDate });
 
@@ -530,7 +539,7 @@ describe('KB Articles Integration Tests', () => {
       createdIds.documentIds.push(created.document_id);
 
       // Initial count should be 0
-      let record = await db('kb_articles')
+      let record = await tenantTable('kb_articles')
         .where({ tenant: tenantId, article_id: created.article_id })
         .first();
       expect(record.view_count).toBe(0);
@@ -541,7 +550,7 @@ describe('KB Articles Integration Tests', () => {
       await recordArticleView(created.article_id);
 
       // Count should be 3
-      record = await db('kb_articles')
+      record = await tenantTable('kb_articles')
         .where({ tenant: tenantId, article_id: created.article_id })
         .first();
       expect(record.view_count).toBe(3);
@@ -559,7 +568,7 @@ describe('KB Articles Integration Tests', () => {
       createdIds.documentIds.push(created.document_id);
 
       // Initial counts should be 0
-      let record = await db('kb_articles')
+      let record = await tenantTable('kb_articles')
         .where({ tenant: tenantId, article_id: created.article_id })
         .first();
       expect(record.helpful_count).toBe(0);
@@ -571,7 +580,7 @@ describe('KB Articles Integration Tests', () => {
       await recordArticleFeedback(created.article_id, false); // not helpful
 
       // Verify counts
-      record = await db('kb_articles')
+      record = await tenantTable('kb_articles')
         .where({ tenant: tenantId, article_id: created.article_id })
         .first();
       expect(record.helpful_count).toBe(2);
@@ -647,7 +656,7 @@ describe('KB Articles Integration Tests', () => {
       const tenant2Id = uuidv4();
       const now = new Date().toISOString();
 
-      await db('tenants').insert({
+      await tenantRows(tenant2Id).insert({
         tenant: tenant2Id,
         client_name: 'Tenant 2',
         phone_number: '555-0200',
@@ -661,19 +670,19 @@ describe('KB Articles Integration Tests', () => {
       });
 
       // Try to query from Tenant 2 context (simulate by direct DB query with different tenant)
-      const tenant2Articles = await db('kb_articles')
+      const tenant2Articles = await tenantTable('kb_articles', tenant2Id)
         .where({ tenant: tenant2Id });
 
       // Should be empty - no articles in tenant 2
       expect(tenant2Articles.length).toBe(0);
 
       // Verify article exists in tenant 1
-      const tenant1Articles = await db('kb_articles')
+      const tenant1Articles = await tenantTable('kb_articles')
         .where({ tenant: tenantId });
       expect(tenant1Articles.some((a: { article_id: string }) => a.article_id === created.article_id)).toBe(true);
 
       // Cleanup tenant 2
-      await db('tenants').where({ tenant: tenant2Id }).del();
+      await tenantRows(tenant2Id).where({ tenant: tenant2Id }).del();
     });
   });
 });

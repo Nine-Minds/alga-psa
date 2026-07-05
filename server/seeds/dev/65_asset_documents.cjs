@@ -1,17 +1,23 @@
-exports.seed = async function(knex) {
-    // Get necessary references
-    const tenant = await knex('tenants').select('tenant').first();
-    const docType = await knex('document_types').where({ type_name: 'Manual' }).first();
-    const glinda = await knex('users').where({ username: 'glinda' }).first();
-    const assets = await knex('assets').select('asset_id', 'name');
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
 
-    if (tenant && docType && glinda) {
+exports.seed = async function(knex) {
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { tenantId, db } = context;
+
+    // Get necessary references
+    const docType = await db.table('document_types').where({ type_name: 'Manual' }).first();
+    const glinda = await db.table('users').where({ username: 'glinda' }).first();
+    const assets = await db.table('assets').select('asset_id', 'name');
+
+    if (docType && glinda) {
         const now = new Date().toISOString();
 
         // Create new documents
-        const [doc1, doc2, doc3, doc4] = await knex('documents').insert([
+        const [doc1, doc2, doc3, doc4] = await db.table('documents').insert([
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 document_name: 'Ruby Slippers Server Manual',
                 type_id: docType.type_id,
                 user_id: glinda.user_id,
@@ -35,7 +41,7 @@ exports.seed = async function(knex) {
                     - Crystal realignment steps`
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 document_name: 'Looking Glass Workstation Guide',
                 type_id: docType.type_id,
                 user_id: glinda.user_id,
@@ -59,7 +65,7 @@ exports.seed = async function(knex) {
                     - Reality sync maintenance`
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 document_name: 'Tea Time Server Procedures',
                 type_id: docType.type_id,
                 user_id: glinda.user_id,
@@ -83,7 +89,7 @@ exports.seed = async function(knex) {
                     - Monthly riddle database update`
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 document_name: 'Crystal Ball Workstation Setup',
                 type_id: docType.type_id,
                 user_id: glinda.user_id,
@@ -109,9 +115,9 @@ exports.seed = async function(knex) {
         ]).returning(['document_id', 'document_name']);
 
         // Create document associations
-        await knex('asset_document_associations').insert([
+        await db.table('asset_document_associations').insert([
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 asset_id: assets.find(a => a.name === 'Ruby Slippers Server').asset_id,
                 document_id: doc1.document_id,
                 notes: 'Official server documentation and procedures',
@@ -119,7 +125,7 @@ exports.seed = async function(knex) {
                 created_at: now
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 asset_id: assets.find(a => a.name === 'Looking Glass Workstation').asset_id,
                 document_id: doc2.document_id,
                 notes: 'Essential setup and maintenance procedures',
@@ -127,7 +133,7 @@ exports.seed = async function(knex) {
                 created_at: now
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 asset_id: assets.find(a => a.name === 'Mad Hatter Tea Time Server').asset_id,
                 document_id: doc3.document_id,
                 notes: 'Critical tea time server procedures',
@@ -135,7 +141,7 @@ exports.seed = async function(knex) {
                 created_at: now
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 asset_id: assets.find(a => a.name === 'Crystal Ball Workstation').asset_id,
                 document_id: doc4.document_id,
                 notes: 'Workstation setup and maintenance guide',

@@ -60,6 +60,7 @@ const TRIAL_DURATION_MS = 15 * 24 * 60 * 60 * 1000;
  */
 export async function getLicenseStateRow(): Promise<LicenseStateRow | null> {
   const knex = await getAdminConnection();
+  // Admin-scoped singleton: keep raw admin DB access so tenantDb fails closed.
   const row = await knex('license_state').orderBy('id').first();
   return row ?? null;
 }
@@ -72,6 +73,7 @@ export async function upsertLicenseState(
   fields: Partial<Omit<LicenseStateRow, 'id' | 'updated_at'>>
 ): Promise<void> {
   const knex = await getAdminConnection();
+  // Admin-scoped singleton: keep raw admin DB access so tenantDb fails closed.
   const existing = await knex('license_state').first('id');
   if (existing) {
     await knex('license_state')

@@ -1,770 +1,770 @@
 {
   "common": {
     "actions": {
-      "approve": "Approve",
-      "back": "Back",
-      "cancel": "Cancel",
-      "close": "Close",
-      "clone": "Clone",
-      "convert": "Convert",
-      "delete": "Delete",
-      "downloadPdf": "Download PDF",
-      "duplicate": "Duplicate",
-      "edit": "Edit",
-      "editAsCopy": "Edit as Copy",
-      "newLayout": "New Layout",
-      "newQuote": "New Quote",
-      "newTemplate": "New Template",
-      "open": "Open",
-      "requestChanges": "Request Changes",
-      "resend": "Resend",
-      "revise": "Revise",
-      "save": "Save",
-      "saveQuote": "Save Quote",
-      "saveTemplate": "Save Template",
-      "send": "Send",
-      "sendReminder": "Send Reminder",
-      "sendToClient": "Send to Client",
-      "setAsDefault": "Set as Default",
-      "submitForApproval": "Submit for Approval"
+      "approve": "Aprovar",
+      "back": "Voltar",
+      "cancel": "Cancelar",
+      "close": "Fechar",
+      "clone": "Clonar",
+      "convert": "Converter",
+      "delete": "Excluir",
+      "downloadPdf": "Baixar PDF",
+      "duplicate": "Duplicado",
+      "edit": "Editar",
+      "editAsCopy": "Editar como cópia",
+      "newLayout": "Novo layout",
+      "newQuote": "Nova cotação",
+      "newTemplate": "Novo modelo",
+      "open": "Abrir",
+      "requestChanges": "Solicitar alterações",
+      "resend": "Reenviar",
+      "revise": "Rever",
+      "save": "Salvar",
+      "saveQuote": "Salvar cotação",
+      "saveTemplate": "Salvar modelo",
+      "send": "Enviar",
+      "sendReminder": "Enviar lembrete",
+      "sendToClient": "Enviar para o cliente",
+      "setAsDefault": "Definir como padrão",
+      "submitForApproval": "Enviar para aprovação"
     },
     "badges": {
-      "standard": "Standard"
+      "standard": "Padrão"
     },
     "columns": {
-      "actions": "Actions",
-      "amount": "Amount",
-      "client": "Client",
-      "created": "Created",
-      "currency": "Currency",
-      "date": "Date",
-      "default": "Default",
-      "items": "Items",
-      "name": "Name",
-      "quoteDate": "Quote Date",
-      "quoteNumber": "Quote #",
-      "source": "Source",
+      "actions": "Ações",
+      "amount": "Quantia",
+      "client": "Cliente",
+      "created": "Criado",
+      "currency": "Moeda",
+      "date": "Data",
+      "default": "Padrão",
+      "items": "Unid",
+      "name": "Nome",
+      "quoteDate": "Data da cotação",
+      "quoteNumber": "Cotação #",
+      "source": "Fonte",
       "status": "Status",
-      "title": "Title",
+      "title": "Título",
       "total": "Total",
-      "validUntil": "Valid Until"
+      "validUntil": "Válido até"
     },
     "labels": {
-      "client": "Client",
-      "contact": "Contact",
-      "currency": "Currency",
-      "description": "Description / Scope",
-      "discounts": "Discounts",
-      "lineItems": "Line Items",
-      "poNumber": "PO Number",
-      "quoteDate": "Quote Date",
-      "quoteLayout": "Quote Layout",
+      "client": "Cliente",
+      "contact": "Contato",
+      "currency": "Moeda",
+      "description": "Descrição/Escopo",
+      "discounts": "Descontos",
+      "lineItems": "Itens de linha",
+      "poNumber": "Número do pedido",
+      "quoteDate": "Data da cotação",
+      "quoteLayout": "Layout de cotação",
       "subtotal": "Subtotal",
-      "tax": "Tax",
-      "termsAndConditions": "Terms & Conditions",
-      "title": "Title",
+      "tax": "Imposto",
+      "termsAndConditions": "Termos e Condições",
+      "title": "Título",
       "total": "Total",
-      "validUntil": "Valid Until"
+      "validUntil": "Válido até"
     },
     "states": {
-      "generating": "Generating...",
-      "loading": "Loading...",
-      "saving": "Saving...",
-      "sending": "Sending..."
+      "generating": "Gerando...",
+      "loading": "Carregando...",
+      "saving": "Salvando...",
+      "sending": "Enviando..."
     }
   },
   "quotesTab": {
-    "title": "Quotes",
+    "title": "Citações",
     "actions": {
-      "quoteActions": "Quote actions"
+      "quoteActions": "Ações de cotação"
     },
     "tabs": {
-      "active": "Active ({{count}})",
-      "approval": "Approval Queue",
-      "closed": "Closed ({{count}})",
-      "sent": "Sent ({{count}})"
+      "active": "Ativo ({{count}})",
+      "approval": "Fila de aprovação",
+      "closed": "Fechado ({{count}})",
+      "sent": "Enviado ({{count}})"
     },
     "filters": {
-      "allClients": "All clients",
-      "client": "Client"
+      "allClients": "Todos os clientes",
+      "client": "Cliente"
     },
     "empty": {
-      "byCategory": "No quotes in this category.",
-      "title": "No quotes found",
-      "description": "Create a quote to get started."
+      "byCategory": "Não há citações nesta categoria.",
+      "title": "Nenhuma cotação encontrada",
+      "description": "Crie uma cotação para começar."
     },
     "dialogs": {
       "delete": {
-        "title": "Delete Quote",
-        "description": "This action cannot be undone."
+        "title": "Excluir cotação",
+        "description": "Esta ação não pode ser desfeita."
       },
       "send": {
-        "additionalEmails": "Additional Recipients",
-        "additionalEmailsPlaceholder": "email@example.com, another@example.com",
-        "additionalRecipients": "Additional recipients (comma-separated)",
-        "description": "This will email the quote PDF to the client's billing contacts and change its status to \"Sent\".",
-        "message": "Message",
-        "messageOptional": "Message (optional)",
-        "messagePlaceholder": "Add a personal note for the recipient...",
-        "title": "Send Quote"
+        "additionalEmails": "Destinatários Adicionais",
+        "additionalEmailsPlaceholder": "email@exemplo.com, outro@exemplo.com",
+        "additionalRecipients": "Destinatários adicionais (separados por vírgula)",
+        "description": "Isso enviará o PDF da cotação por e-mail para os contatos de cobrança do cliente e alterará seu status para \"Enviado\".",
+        "message": "Mensagem",
+        "messageOptional": "Mensagem (opcional)",
+        "messagePlaceholder": "Adicione uma nota pessoal para o destinatário...",
+        "title": "Enviar cotação"
       }
     },
     "errors": {
-      "delete": "Failed to delete quote.",
-      "duplicate": "Failed to duplicate quote.",
-      "load": "Failed to load quotes",
-      "send": "Failed to send quote."
+      "delete": "Falha ao excluir cotação.",
+      "duplicate": "Falha ao duplicar a cotação.",
+      "load": "Falha ao carregar cotações",
+      "send": "Falha ao enviar cotação."
     },
-    "loading": "Loading quotes...",
+    "loading": "Carregando cotações...",
     "rowActions": {
-      "delete": "Delete",
-      "downloadPdf": "Download PDF",
-      "duplicate": "Duplicate",
-      "open": "Open",
-      "resend": "Resend",
-      "sendReminder": "Send Reminder",
-      "sendToClient": "Send to Client"
+      "delete": "Excluir",
+      "downloadPdf": "Baixar PDF",
+      "duplicate": "Duplicado",
+      "open": "Abrir",
+      "resend": "Reenviar",
+      "sendReminder": "Enviar lembrete",
+      "sendToClient": "Enviar para o cliente"
     }
   },
   "quoteForm": {
     "actions": {
-      "cancelQuote": "Cancel Quote",
-      "convertToBoth": "Convert to Both",
-      "convertToContract": "Convert to Contract",
-      "convertToInvoice": "Convert to Invoice",
-      "createNewRevision": "Create New Revision",
-      "sendQuote": "Send Quote",
-      "saving": "Saving…",
-      "saveTemplate": "Save template",
-      "saveQuote": "Save quote",
-      "requestApproval": "Request approval",
-      "sendToClient": "Send to client",
-      "approve": "Approve",
-      "revise": "Revise",
-      "requestChanges": "Request changes",
-      "resend": "Resend",
-      "sendReminder": "Send reminder",
+      "cancelQuote": "Cancelar cotação",
+      "convertToBoth": "Converter para ambos",
+      "convertToContract": "Converter em contrato",
+      "convertToInvoice": "Converter em fatura",
+      "createNewRevision": "Criar nova revisão",
+      "sendQuote": "Enviar cotação",
+      "saving": "Salvando…",
+      "saveTemplate": "Salvar modelo",
+      "saveQuote": "Salvar cotação",
+      "requestApproval": "Solicitar aprovação",
+      "sendToClient": "Enviar para o cliente",
+      "approve": "Aprovar",
+      "revise": "Rever",
+      "requestChanges": "Solicitar alterações",
+      "resend": "Reenviar",
+      "sendReminder": "Enviar lembrete",
       "pdf": "PDF",
-      "duplicate": "Duplicate",
-      "back": "Back",
-      "moreActions": "More actions",
-      "cancel": "Cancel",
-      "previewPdf": "Preview PDF",
-      "backToQuotes": "Voltar para orçamentos",
-      "backToTemplates": "Voltar para modelos de orçamento"
+      "duplicate": "Duplicado",
+      "back": "Voltar",
+      "moreActions": "Mais ações",
+      "cancel": "Cancelar",
+      "previewPdf": "Visualizar PDF",
+      "backToQuotes": "Voltar para citações",
+      "backToTemplates": "Voltar aos modelos de cotação"
     },
     "headings": {
-      "editQuote": "Edit Quote",
-      "editTemplate": "Edit Quote Template",
-      "newQuote": "New Quote",
-      "newTemplate": "New Quote Template",
-      "quote": "Quote",
-      "quoteWithNumber": "Quote {{quoteNumber}}",
-      "quoteWithNumberAndVersion": "Quote {{quoteNumber}} v{{version}}",
-      "templateQuoteFallback": "Template quote"
+      "editQuote": "Editar cotação",
+      "editTemplate": "Editar modelo de cotação",
+      "newQuote": "Nova cotação",
+      "newTemplate": "Novo modelo de cotação",
+      "quote": "Cotação",
+      "quoteWithNumber": "orçamento {{quoteNumber}}",
+      "quoteWithNumberAndVersion": "orçamento {{quoteNumber}} v{{version}}",
+      "templateQuoteFallback": "orçamento de modelo"
     },
     "fields": {
-      "additionalEmails": "Additional email addresses (comma-separated)",
-      "clientNotes": "Notes to Client",
-      "createFromTemplate": "Create From Template",
-      "messageOptional": "Message (optional)",
-      "quoteLayoutHelp": "Choose which layout to use for this quote's PDF. Leave empty to use the default.",
-      "recipients": "Recipients"
+      "additionalEmails": "Endereços de e-mail adicionais (separados por vírgula)",
+      "clientNotes": "Notas para o cliente",
+      "createFromTemplate": "Criar a partir do modelo",
+      "messageOptional": "Mensagem (opcional)",
+      "quoteLayoutHelp": "Escolha qual layout usar para o PDF desta cotação. Deixe em branco para usar o padrão.",
+      "recipients": "Destinatários"
     },
     "placeholders": {
-      "additionalEmails": "email@example.com, another@example.com",
-      "message": "Add a personal note for the client...",
-      "selectClient": "Select client",
-      "selectContact": "Select contact",
-      "selectCurrency": "Select currency",
-      "startFromScratch": "Start from scratch",
-      "useDefaultLayout": "Use default layout"
+      "additionalEmails": "email@exemplo.com, outro@exemplo.com",
+      "message": "Adicione uma nota pessoal para o cliente...",
+      "selectClient": "Selecione o cliente",
+      "selectContact": "Selecione o contato",
+      "selectCurrency": "Selecione a moeda",
+      "startFromScratch": "Comece do zero",
+      "useDefaultLayout": "Usar layout padrão"
     },
     "alerts": {
-      "accepted": "Quote Accepted",
-      "converted": "Quote Converted",
-      "convertedDescription": "This quote has been converted to a contract and/or invoice.",
-      "quote": "Quote",
-      "rejected": "Quote Rejected"
+      "accepted": "Orçamento aceito",
+      "converted": "Cotação convertida",
+      "convertedDescription": "Esta cotação foi convertida em um contrato e/ou fatura.",
+      "quote": "Cotação",
+      "rejected": "orçamento rejeitada"
     },
     "dialogs": {
       "approval": {
-        "approveDescription": "Approve this quote so it can be sent to the client.",
-        "approveTitle": "Approve Quote",
-        "approveComment": "Comment (optional)",
-        "approveCommentPlaceholder": "Add an optional note...",
-        "changesDescription": "Return this quote to draft with requested changes.",
-        "changesTitle": "Request Changes",
-        "changesComment": "Requested changes",
-        "changesCommentPlaceholder": "Describe the changes needed...",
-        "processing": "Processing..."
+        "approveDescription": "Aprove este orçamento para que possa ser enviado ao cliente.",
+        "approveTitle": "Aprovar cotação",
+        "approveComment": "Comentário (opcional)",
+        "approveCommentPlaceholder": "Adicione uma nota opcional...",
+        "changesDescription": "Devolva esta cotação ao rascunho com as alterações solicitadas.",
+        "changesTitle": "Solicitar alterações",
+        "changesComment": "Alterações solicitadas",
+        "changesCommentPlaceholder": "Descreva as mudanças necessárias...",
+        "processing": "Processamento..."
       },
       "conversion": {
-        "title": "Conversion Preview",
-        "description": "Review what this quote conversion will create before confirming."
+        "title": "Pré-visualização da conversão",
+        "description": "Revise o que esta conversão de cotação criará antes de confirmar."
       },
       "send": {
-        "description": "This will email the quote to the client's billing contacts and change its status to \"Sent\".",
-        "title": "Send Quote to Client",
-        "additionalEmails": "Additional Recipients",
-        "message": "Message"
+        "description": "Isso enviará a cotação por e-mail aos contatos de cobrança do cliente e alterará seu status para \"Enviado\".",
+        "title": "Enviar cotação ao cliente",
+        "additionalEmails": "Destinatários Adicionais",
+        "message": "Mensagem"
       }
     },
     "errorActions": {
-      "approveQuote": "approve quote",
-      "cancelQuote": "cancel quote",
-      "requestChanges": "request changes",
-      "resendQuote": "resend quote",
-      "sendQuote": "send quote",
-      "sendReminder": "send reminder",
-      "submitForApproval": "submit for approval"
+      "approveQuote": "aprovar cotação",
+      "cancelQuote": "cancelar cotação",
+      "requestChanges": "solicitar alterações",
+      "resendQuote": "reenviar cotação",
+      "sendQuote": "enviar cotação",
+      "sendReminder": "enviar lembrete",
+      "submitForApproval": "enviar para aprovação"
     },
     "errors": {
-      "convert": "Failed to convert quote",
-      "createRevision": "Failed to create revision",
-      "downloadPdf": "Failed to download PDF",
-      "duplicate": "Failed to duplicate quote",
-      "load": "Failed to load quote form",
-      "loadConversionPreview": "Failed to load conversion preview",
-      "notFound": "Quote not found",
-      "save": "Failed to save quote",
-      "saveFailed": "Quote save failed",
-      "workflowAction": "Failed to {{action}}"
+      "convert": "Falha ao converter cotação",
+      "createRevision": "Falha ao criar revisão",
+      "downloadPdf": "Falha ao baixar o PDF",
+      "duplicate": "Falha ao duplicar cotação",
+      "load": "Falha ao carregar o formulário de cotação",
+      "loadConversionPreview": "Falha ao carregar a visualização da conversão",
+      "notFound": "Cotação não encontrada",
+      "save": "Falha ao salvar cotação",
+      "saveFailed": "Falha ao salvar cotação",
+      "workflowAction": "Falha ao {{action}}"
     },
-    "loading": "Loading quote form...",
+    "loading": "Carregando formulário de cotação...",
     "notices": {
-      "approved": "Quote approved and is ready to send.",
-      "cancelled": "Quote cancelled.",
-      "createdDraftContract": "Created draft contract {{name}}.",
-      "createdDraftContractAndInvoice": "Created draft contract {{contractName}} and draft invoice {{invoiceName}}.",
-      "createdDraftInvoice": "Created draft invoice {{name}}.",
-      "reminderSent": "Quote reminder sent.",
-      "requestedChanges": "Quote returned to draft with requested changes.",
-      "resent": "Quote resent.",
-      "sent": "Quote sent to the client.",
-      "submittedForApproval": "Quote submitted for internal approval."
+      "approved": "Orçamento aprovado e pronto para envio.",
+      "cancelled": "Orçamento cancelado.",
+      "createdDraftContract": "Criou minuta de contrato {{name}}.",
+      "createdDraftContractAndInvoice": "Criou minuta de contrato {{contractName}} e minuta de fatura {{invoiceName}}.",
+      "createdDraftInvoice": "Projeto de fatura criado {{name}}.",
+      "reminderSent": "Lembrete de cotação enviado.",
+      "requestedChanges": "A cotação voltou ao rascunho com as alterações solicitadas.",
+      "resent": "orçamento ressentida.",
+      "sent": "Orçamento enviado ao cliente.",
+      "submittedForApproval": "Orçamento submetido para aprovação interna."
     },
-    "readOnlyNotice": "This quote is read-only. To make changes, create a new revision.",
+    "readOnlyNotice": "Esta orçamento é somente leitura. Para fazer alterações, crie uma nova revisão.",
     "validation": {
-      "clientRequired": "Client is required",
-      "titleRequired": "Title is required unless creating from template"
+      "clientRequired": "O cliente é obrigatório",
+      "titleRequired": "O título é obrigatório, a menos que seja criado a partir do modelo"
     },
     "header": {
-      "editTemplate": "Edit Quote Template",
-      "newTemplate": "New Quote Template",
-      "editQuote": "Edit Quote",
-      "newQuote": "New Quote",
+      "editTemplate": "Editar modelo de cotação",
+      "newTemplate": "Novo modelo de cotação",
+      "editQuote": "Editar cotação",
+      "newQuote": "Nova cotação",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Quote total"
+      "quoteTotalLabel": "Cotação total"
     },
     "breadcrumb": {
-      "billing": "Billing",
-      "quoteTemplates": "Quote Templates",
-      "quotes": "Quotes",
-      "newQuote": "New quote"
+      "billing": "Faturamento",
+      "quoteTemplates": "Modelos de cotação",
+      "quotes": "Citações",
+      "newQuote": "Nova cotação"
     },
     "subtitle": {
-      "template": "Template · {{description}}",
-      "forClient": "For {{clientName}}",
-      "expires": "Expires {{date}}"
+      "template": "Modelo · {{description}}",
+      "forClient": "Para {{clientName}}",
+      "expires": "Expira {{date}}"
     },
     "banners": {
-      "acceptedTitle": "Quote Accepted",
-      "acceptedBy": "Accepted by: {{name}}",
-      "acceptedOn": "Accepted on: {{date}}",
-      "rejectedTitle": "Quote Rejected",
-      "rejectedOn": "Rejected on: {{date}}",
-      "rejectedReason": "Reason: {{reason}}",
-      "convertedTitle": "Quote Converted",
-      "convertedDescription": "This quote has been converted to a contract and/or invoice."
+      "acceptedTitle": "Orçamento aceito",
+      "acceptedBy": "Aceito por: {{name}}",
+      "acceptedOn": "Aceito em: {{date}}",
+      "rejectedTitle": "orçamento rejeitada",
+      "rejectedOn": "Rejeitado em: {{date}}",
+      "rejectedReason": "Razão: {{reason}}",
+      "convertedTitle": "Cotação convertida",
+      "convertedDescription": "Esta cotação foi convertida em um contrato e/ou fatura."
     },
-    "noticeTitle": "Quote",
+    "noticeTitle": "Cotação",
     "essentials": {
-      "title": "Essentials",
-      "subtitle": "Shown to the client on the quote document.",
-      "titleField": "Title",
-      "descriptionField": "Description / Scope",
-      "descriptionHelp": "A short paragraph that appears just under the title on the PDF.",
-      "client": "Client",
-      "clientPlaceholder": "Select client",
-      "contact": "Contact",
-      "contactPlaceholder": "Select contact",
-      "currency": "Currency",
-      "currencyPlaceholder": "Select currency",
-      "quoteDate": "Quote date",
-      "validUntil": "Valid until",
-      "validUntilHelp": "Quote auto-expires on this date."
+      "title": "Fundamentos",
+      "subtitle": "Mostrado ao cliente no documento de cotação.",
+      "titleField": "Título",
+      "descriptionField": "Descrição/Escopo",
+      "descriptionHelp": "Um pequeno parágrafo que aparece logo abaixo do título do PDF.",
+      "client": "Cliente",
+      "clientPlaceholder": "Selecione o cliente",
+      "contact": "Contato",
+      "contactPlaceholder": "Selecione o contato",
+      "currency": "Moeda",
+      "currencyPlaceholder": "Selecione a moeda",
+      "quoteDate": "Data da cotação",
+      "validUntil": "Válido até",
+      "validUntilHelp": "A cotação expira automaticamente nesta data."
     },
     "lineItems": {
-      "title": "Line items",
-      "subtitleEmpty": "No items yet.",
-      "subtitleCount": "{{count}} items · {{mix}}",
-      "mixBoth": "recurring and one-time",
-      "mixRecurring": "recurring",
-      "mixOneTime": "one-time",
-      "addLocation": "+ Add location",
-      "fromTemplate": "+ From template"
+      "title": "Itens de linha",
+      "subtitleEmpty": "Nenhum item ainda.",
+      "subtitleCount": "Itens {{count}} · {{mix}}",
+      "mixBoth": "recorrente e único",
+      "mixRecurring": "recorrente",
+      "mixOneTime": "uma vez",
+      "addLocation": "+ Adicionar localização",
+      "fromTemplate": "+ Do modelo"
     },
     "clientFacing": {
-      "title": "Client-facing text",
-      "subtitle": "Appears on the PDF, below the totals.",
-      "notes": "Notes to client (Optional)",
-      "terms": "Terms & conditions (Optional)"
+      "title": "Texto voltado para o cliente",
+      "subtitle": "Aparece no PDF, abaixo dos totais.",
+      "notes": "Notas para o cliente (opcional)",
+      "terms": "Termos e condições (opcional)"
     },
     "moreDetails": {
-      "title": "More details",
-      "subtitle": "PO number, opportunity, PDF layout",
-      "poNumber": "PO number",
-      "opportunity": "Opportunity",
-      "opportunityPlaceholder": "Opportunity ID (optional)",
-      "pdfLayout": "PDF layout",
-      "pdfLayoutPlaceholder": "Use default layout",
-      "pdfLayoutHelp": "Choose which layout the client will see. Leave default to use tenant default."
+      "title": "Mais detalhes",
+      "subtitle": "Número do pedido, oportunidade, layout do PDF",
+      "poNumber": "Número do pedido",
+      "opportunity": "Oportunidade",
+      "opportunityPlaceholder": "ID da oportunidade (opcional)",
+      "pdfLayout": "Layout de PDF",
+      "pdfLayoutPlaceholder": "Usar layout padrão",
+      "pdfLayoutHelp": "Escolha qual layout o cliente verá. Deixe o padrão para usar o padrão do locatário."
     },
     "footer": {
-      "savedAgo": "Changes saved · {{ago}}",
-      "saving": "Saving…",
-      "unsaved": "Unsaved changes"
+      "savedAgo": "Alterações salvas · {{ago}}",
+      "saving": "Salvando…",
+      "unsaved": "Alterações não salvas"
     },
     "sidebar": {
-      "quoteTotal": "Quote total",
-      "recurringPerMonth": "{{amount}} recurring / month",
+      "quoteTotal": "Cotação total",
+      "recurringPerMonth": "{{amount}} recorrente / mês",
       "subtotal": "Subtotal",
-      "discounts": "Discounts",
-      "tax": "Tax",
+      "discounts": "Descontos",
+      "tax": "Imposto",
       "statusLabel": "Status",
-      "approvalLabel": "Approval",
-      "approvalMessage": "Quotes need sales lead approval before sending.",
-      "documentLayoutLabel": "Document layout",
-      "defaultLayout": "Tenant default",
-      "standardLayout": "Standard",
-      "customLayout": "Custom",
-      "tenantDefault": "Tenant default",
-      "changeLayout": "Change"
+      "approvalLabel": "Aprovação",
+      "approvalMessage": "As cotações precisam da aprovação do líder de vendas antes do envio.",
+      "documentLayoutLabel": "Layout do documento",
+      "defaultLayout": "Padrão do locatário",
+      "standardLayout": "Padrão",
+      "customLayout": "Personalizado",
+      "tenantDefault": "Padrão do locatário",
+      "changeLayout": "Mudar"
     }
   },
   "quoteDetail": {
-    "title": "Quote Detail",
+    "title": "Detalhes da cotação",
     "actions": {
-      "backToQuotes": "Back to Quotes",
-      "openConvertedContract": "Open Converted Contract",
-      "openConvertedInvoice": "Open Converted Invoice",
-      "preview": "Preview",
-      "saveAsTemplate": "Save as Template",
+      "backToQuotes": "Voltar para citações",
+      "openConvertedContract": "Contrato Convertido Aberto",
+      "openConvertedInvoice": "Abrir fatura convertida",
+      "preview": "Visualização",
+      "saveAsTemplate": "Salvar como modelo",
       "back": "Voltar"
     },
     "sections": {
-      "activityLog": "Activity Log",
-      "clientNotes": "Client Notes",
-      "internalNotes": "Internal Notes",
-      "lineItems": "Line Items",
-      "quoteLayout": "Quote Layout",
-      "scopeOfWork": "Scope of Work",
-      "termsAndConditions": "Terms & Conditions",
-      "versionHistory": "Version History"
+      "activityLog": "Registro de atividades",
+      "clientNotes": "Notas do cliente",
+      "internalNotes": "Notas internas",
+      "lineItems": "Itens de linha",
+      "quoteLayout": "Layout de cotação",
+      "scopeOfWork": "Escopo do Trabalho",
+      "termsAndConditions": "Termos e Condições",
+      "versionHistory": "Histórico de versões"
     },
     "alerts": {
-      "clientConfigurationSubmitted": "Client Configuration Submitted",
-      "clientConfigurationSubmittedDescription": "Review the optional line items below before converting this quote. Selected items are marked as included, and declined items are highlighted for follow-up.",
-      "update": "Quote Update"
+      "clientConfigurationSubmitted": "Configuração do cliente enviada",
+      "clientConfigurationSubmittedDescription": "Revise os itens de linha opcionais abaixo antes de converter esta cotação. Os itens selecionados são marcados como incluídos e os itens recusados ​​são destacados para acompanhamento.",
+      "update": "Atualização de cotação"
     },
     "dialogs": {
       "approval": {
-        "approveDescription": "Approve this quote so it can be sent to the client. You may add an optional comment.",
-        "changesDescription": "Return this quote to draft with requested changes. Please describe what needs to be revised."
+        "approveDescription": "Aprove este orçamento para que possa ser enviado ao cliente. Você pode adicionar um comentário opcional.",
+        "changesDescription": "Devolva esta cotação ao rascunho com as alterações solicitadas. Descreva o que precisa ser revisado."
       },
       "send": {
-        "message": "Optional message to include in the email"
+        "message": "Mensagem opcional para incluir no e-mail"
       }
     },
     "status": {
-      "accepted": "Quote Accepted",
-      "acceptedBy": "Accepted by:",
-      "acceptedOn": "Accepted on:",
-      "reason": "Reason:",
-      "rejected": "Quote Rejected",
-      "rejectedOn": "Rejected on:"
+      "accepted": "Orçamento aceito",
+      "acceptedBy": "Aceito por:",
+      "acceptedOn": "Aceito em:",
+      "reason": "Razão:",
+      "rejected": "orçamento rejeitada",
+      "rejectedOn": "Rejeitado em:"
     },
     "empty": {
-      "activity": "No quote activity recorded yet.",
-      "lineItems": "No line items on this quote yet.",
-      "revisions": "No prior revisions for this quote yet."
+      "activity": "Nenhuma atividade de cotação registrada ainda.",
+      "lineItems": "Ainda não há itens de linha nesta cotação.",
+      "revisions": "Nenhuma revisão anterior para esta cotação ainda."
     },
     "clientSelections": {
-      "declinedOptionalItem": "Client declined this optional item",
-      "selectedOptionalItem": "Client selected this optional item"
+      "declinedOptionalItem": "O cliente recusou este item opcional",
+      "selectedOptionalItem": "O cliente selecionou este item opcional"
     },
     "errors": {
-      "approve": "Failed to approve quote",
-      "assignTemplate": "Failed to assign template",
-      "cancel": "Failed to cancel quote",
-      "convert": "Failed to convert quote",
-      "delete": "Failed to delete quote",
-      "deleteUnavailable": "Quote could not be deleted",
-      "downloadPdf": "Failed to generate quote PDF",
-      "duplicate": "Failed to duplicate quote",
-      "load": "Failed to load quote detail",
-      "loadConversionPreview": "Failed to load conversion preview",
-      "notFound": "Quote not found",
-      "preview": "Failed to generate quote preview",
-      "requestChanges": "Failed to request quote changes",
-      "resend": "Failed to resend quote",
-      "revise": "Failed to create quote revision",
-      "saveAsTemplate": "Failed to save quote as template",
-      "send": "Failed to send quote",
-      "sendReminder": "Failed to send quote reminder",
-      "submitForApproval": "Failed to submit quote for approval"
+      "approve": "Falha ao aprovar cotação",
+      "assignTemplate": "Falha ao atribuir modelo",
+      "cancel": "Falha ao cancelar cotação",
+      "convert": "Falha ao converter cotação",
+      "delete": "Falha ao excluir cotação",
+      "deleteUnavailable": "Não foi possível excluir a cotação",
+      "downloadPdf": "Falha ao gerar o PDF da cotação",
+      "duplicate": "Falha ao duplicar cotação",
+      "load": "Falha ao carregar detalhes da cotação",
+      "loadConversionPreview": "Falha ao carregar a visualização da conversão",
+      "notFound": "Cotação não encontrada",
+      "preview": "Falha ao gerar visualização da cotação",
+      "requestChanges": "Falha ao solicitar alterações de cotação",
+      "resend": "Falha ao reenviar cotação",
+      "revise": "Falha ao criar revisão de cotação",
+      "saveAsTemplate": "Falha ao salvar cotação como modelo",
+      "send": "Falha ao enviar cotação",
+      "sendReminder": "Falha ao enviar lembrete de cotação",
+      "submitForApproval": "Falha ao enviar orçamento para aprovação"
     },
     "labels": {
-      "phase": "Phase: {{phase}}",
-      "templateQuote": "Template quote",
+      "phase": "Fase: {{phase}}",
+      "templateQuote": "orçamento de modelo",
       "customItem": "Item personalizado",
       "optional": "Opcional",
       "recurring": "Recorrente"
     },
-    "loading": "Loading quote details...",
+    "loading": "Carregando detalhes da cotação...",
     "notices": {
-      "approved": "Quote approved and is ready to send.",
-      "reminderSent": "Quote reminder sent to the configured billing recipients.",
-      "requestedChanges": "Quote returned to draft with requested changes.",
-      "resent": "Quote resent to the configured billing recipients.",
-      "sent": "Quote sent to the client.",
-      "submittedForApproval": "Quote submitted for internal approval.",
-      "templateAssigned": "Document template assigned.",
-      "templateCleared": "Document template cleared (using default)."
+      "approved": "Orçamento aprovado e pronto para envio.",
+      "reminderSent": "Lembrete de cotação enviado aos destinatários de cobrança configurados.",
+      "requestedChanges": "A cotação voltou ao rascunho com as alterações solicitadas.",
+      "resent": "Cotação reenviada para os destinatários de cobrança configurados.",
+      "sent": "Orçamento enviado ao cliente.",
+      "submittedForApproval": "Orçamento submetido para aprovação interna.",
+      "templateAssigned": "Modelo de documento atribuído.",
+      "templateCleared": "Modelo de documento desmarcado (usando o padrão)."
     },
     "preview": {
-      "loading": "Loading preview..."
+      "loading": "Carregando visualização..."
     },
     "table": {
-      "description": "Description",
+      "description": "Descrição",
       "billing": "Faturamento",
-      "quantity": "Qtd.",
+      "quantity": "Quantidade",
       "total": "Total",
       "unitPrice": "Preço unitário"
     },
     "locations": {
-      "groupHeading": "Location",
-      "unassigned": "Items without a location",
-      "subtotal": "Location subtotal"
+      "groupHeading": "Localização",
+      "unassigned": "Itens sem localização",
+      "subtotal": "Subtotal de localização"
     }
   },
   "quoteLineItems": {
-    "title": "Line Items",
+    "title": "Itens de linha",
     "actions": {
-      "addDiscount": "Add Discount",
-      "collapse": "Collapse",
-      "expand": "Expand",
-      "hideDiscount": "Hide Discount",
-      "remove": "Remove"
+      "addDiscount": "Adicionar desconto",
+      "collapse": "Colapso",
+      "expand": "Expandir",
+      "hideDiscount": "Ocultar desconto",
+      "remove": "Remover"
     },
     "billingMethods": {
-      "fixed": "Fixed",
-      "hourly": "Hourly",
-      "perUnit": "Per Unit",
-      "usage": "Usage Based"
+      "fixed": "Fixo",
+      "hourly": "De hora em hora",
+      "perUnit": "Por unidade",
+      "usage": "Baseado no uso"
     },
     "columns": {
-      "actions": "Actions",
-      "billing": "Billing",
-      "flags": "Flags",
+      "actions": "Ações",
+      "billing": "Faturamento",
+      "flags": "Bandeiras",
       "item": "Item",
-      "move": "Move",
-      "quantity": "Qty",
+      "move": "Mover",
+      "quantity": "Quantidade",
       "total": "Total",
-      "unitPrice": "Unit Price"
+      "unitPrice": "Preço unitário"
     },
     "labels": {
-      "customItem": "Custom item",
-      "itemCountOne": "1 item",
-      "itemCountOther": "{{count}} items",
-      "noPriceInCurrency": "No price in {{currencyCode}}",
-      "optional": "Optional",
-      "phaseSection": "Phase / Section",
-      "recurring": "Recurring",
-      "service": "service",
-      "setPrice": "Set price",
-      "ungroupedItems": "Ungrouped Items"
+      "customItem": "Item personalizado",
+      "itemCountOne": "1 artigo",
+      "itemCountOther": "Itens {{count}}",
+      "noPriceInCurrency": "Sem preço em {{currencyCode}}",
+      "optional": "Opcional",
+      "phaseSection": "Fase/Seção",
+      "recurring": "Recorrente",
+      "service": "serviço",
+      "setPrice": "Definir preço",
+      "ungroupedItems": "Itens desagrupados"
     },
     "placeholders": {
-      "phaseSection": "e.g. Discovery, Rollout, Ongoing",
-      "selectItem": "Select item",
-      "selectService": "Select service",
-      "servicePicker": "Search or type custom item name..."
+      "phaseSection": "por exemplo Descoberta, lançamento, em andamento",
+      "selectItem": "Selecione o item",
+      "selectService": "Selecione o serviço",
+      "servicePicker": "Pesquise ou digite o nome do item personalizado..."
     },
     "discounts": {
-      "badge": "Discount",
+      "badge": "Desconto",
       "description": {
-        "fixed": "Discount",
-        "percentage": "Discount ({{value}}%)"
+        "fixed": "Desconto",
+        "percentage": "Desconto ({{value}}%)"
       },
-      "fixed": "Fixed discount",
-      "fullQuoteSubtotal": "Applies to the full quote subtotal",
-      "fullQuote": "Whole quote",
-      "item": "Specific item",
-      "percentage": "Percentage discount",
-      "service": "Specific service",
+      "fixed": "Desconto fixo",
+      "fullQuoteSubtotal": "Aplica-se ao subtotal da cotação completa",
+      "fullQuote": "orçamento completa",
+      "item": "Item específico",
+      "percentage": "Desconto percentual",
+      "service": "Serviço específico",
       "targets": {
-        "fullQuote": "on full quote",
-        "namedItem": "on \"{{name}}\"",
-        "namedService": "on {{name}}",
-        "specificItem": "on specific item",
-        "specificService": "on specific service"
+        "fullQuote": "na cotação completa",
+        "namedItem": "em \"{{name}}\"",
+        "namedService": "em {{name}}",
+        "specificItem": "em item específico",
+        "specificService": "em serviço específico"
       },
       "types": {
-        "fixed": "Fixed",
-        "percentage": "Percentage"
+        "fixed": "Fixo",
+        "percentage": "Percentagem"
       }
     },
     "markup": {
-      "badge": "{{sign}}{{value}}% markup",
-      "unavailable": "Markup unavailable",
-      "unavailableTooltip": "Markup can't be calculated because cost is tracked in {{costCurrency}} and this quote is in {{quoteCurrency}}."
+      "badge": "Marcação {{sign}}{{value}}%",
+      "unavailable": "Marcação indisponível",
+      "unavailableTooltip": "A marcação não pode ser calculada porque o custo é rastreado em {{costCurrency}} e esta cotação está em {{quoteCurrency}}."
     },
-    "empty": "No line items yet. Use the catalog search above to add your first item.",
-    "searchPlaceholder": "Search or type custom item name...",
+    "empty": "Ainda não há itens de linha. Use a pesquisa de catálogo acima para adicionar seu primeiro item.",
+    "searchPlaceholder": "Pesquise ou digite o nome do item personalizado...",
     "locations": {
-      "groupHeading": "Location {{index}}",
-      "pickerPlaceholder": "Select a location",
-      "unassigned": "Items without a location are listed here until one is chosen.",
-      "removeGroup": "Remove location",
-      "subtotal": "Location subtotal",
-      "addLocationButton": "+ Add location",
-      "needMoreLocations": "This client only has one active location. Add a second location in Client settings to enable multi-site quoting.",
-      "emptyGroup": "No items yet for this location."
+      "groupHeading": "Localização {{index}}",
+      "pickerPlaceholder": "Selecione um local",
+      "unassigned": "Itens sem localização são listados aqui até que um seja escolhido.",
+      "removeGroup": "Remover local",
+      "subtotal": "Subtotal de localização",
+      "addLocationButton": "+ Adicionar localização",
+      "needMoreLocations": "Este cliente possui apenas um local ativo. Adicione um segundo local nas configurações do cliente para ativar a cotação de vários sites.",
+      "emptyGroup": "Ainda não há itens para este local."
     }
   },
   "quoteRecipients": {
     "trigger": {
-      "add": "Add internal user or client contact...",
-      "noClient": "Select a client first",
-      "noneAvailable": "No users or contacts available"
+      "add": "Adicionar usuário interno ou contato do cliente...",
+      "noClient": "Selecione um cliente primeiro",
+      "noneAvailable": "Nenhum usuário ou contato disponível"
     },
-    "searchPlaceholder": "Search by name or email...",
+    "searchPlaceholder": "Pesquise por nome ou e-mail...",
     "empty": {
-      "noMatches": "No matches",
-      "noneAvailable": "No recipients available"
+      "noMatches": "Nenhuma correspondência",
+      "noneAvailable": "Nenhum destinatário disponível"
     },
     "kind": {
-      "contact": "Contact",
-      "internal": "Internal"
+      "contact": "Contato",
+      "internal": "Interno"
     },
-    "removeAriaLabel": "Remove {{email}}"
+    "removeAriaLabel": "Remover {{email}}"
   },
   "quoteConversion": {
-    "title": "Convert Quote",
-    "description": "Convert the accepted quote \"{{title}}\" into contracts and/or invoices.",
-    "loading": "Loading conversion preview...",
+    "title": "Converter cotação",
+    "description": "Converta a cotação aceita \"{{title}}\" em contratos e/ou faturas.",
+    "loading": "Carregando visualização da conversão...",
     "mode": {
       "contract": {
-        "label": "Contract Only",
-        "description": "Creates a draft contract with recurring service lines. One-time items will not be included."
+        "label": "Somente contrato",
+        "description": "Cria uma minuta de contrato com linhas de serviço recorrentes. Itens únicos não serão incluídos."
       },
       "invoice": {
-        "label": "Invoice Only",
-        "description": "Creates a draft invoice with one-time charges. Recurring items will not be included."
+        "label": "Somente fatura",
+        "description": "Cria um rascunho de fatura com cobranças únicas. Itens recorrentes não serão incluídos."
       },
       "both": {
-        "label": "Contract + Invoice",
-        "description": "Creates both a draft contract (for recurring items) and a draft invoice (for one-time items)."
+        "label": "Contrato + Fatura",
+        "description": "Cria um rascunho de contrato (para itens recorrentes) e um rascunho de fatura (para itens únicos)."
       }
     },
     "sections": {
-      "contractItems": "Contract Items",
-      "conversionMode": "Conversion Mode",
-      "excludedItems": "Excluded Items",
-      "excludedFromConversion": "Excluded from Conversion",
-      "invoiceItems": "Invoice Items",
-      "itemMappingPreview": "Item Mapping Preview",
-      "quoteTotal": "Quote Total",
-      "statusAfterConversion": "Status After Conversion",
-      "willBecomeContractLines": "Will Become Contract Lines",
-      "willBecomeInvoiceCharges": "Will Become Invoice Charges"
+      "contractItems": "Itens do contrato",
+      "conversionMode": "Modo de conversão",
+      "excludedItems": "Itens excluídos",
+      "excludedFromConversion": "Excluído da conversão",
+      "invoiceItems": "Itens de fatura",
+      "itemMappingPreview": "Visualização do mapeamento de itens",
+      "quoteTotal": "Cotação Total",
+      "statusAfterConversion": "Status após a conversão",
+      "willBecomeContractLines": "Se tornarão linhas de contrato",
+      "willBecomeInvoiceCharges": "Se tornarão cobranças de fatura"
     },
     "empty": {
-      "contractItems": "No recurring items will convert to a contract.",
-      "invoiceItems": "No one-time items will convert to an invoice."
+      "contractItems": "Nenhum item recorrente será convertido em contrato.",
+      "invoiceItems": "Nenhum item único será convertido em uma fatura."
     },
     "summary": {
-      "converted": "Converted",
-      "discount": "Discount",
-      "fixed": "fixed",
-      "notConverted": "Not converted"
+      "converted": "Convertido",
+      "discount": "Desconto",
+      "fixed": "fixo",
+      "notConverted": "Não convertido"
     },
     "partial": {
-      "alreadyConverted": "This quote has already been partially converted.",
-      "contractCreated": "A contract was created.",
-      "invoiceCreated": "An invoice was created.",
-      "remainingItems": "You can convert the remaining items.",
-      "title": "Partial Conversion",
-      "description": "Some records for this quote already exist."
+      "alreadyConverted": "Esta cotação já foi parcialmente convertida.",
+      "contractCreated": "Um contrato foi criado.",
+      "invoiceCreated": "Uma fatura foi criada.",
+      "remainingItems": "Você pode converter os itens restantes.",
+      "title": "Conversão Parcial",
+      "description": "Alguns registros desta orçamento já existem."
     },
     "actions": {
-      "contract": "Criar contrato rascunho",
-      "convertQuote": "Convert Quote",
-      "invoice": "Criar fatura rascunho",
-      "both": "Create Both Records",
-      "converting": "Converting..."
+      "contract": "Criar rascunho de contrato",
+      "convertQuote": "Converter cotação",
+      "invoice": "Criar rascunho de fatura",
+      "both": "Crie ambos os registros",
+      "converting": "Convertendo..."
     },
     "errors": {
-      "convert": "Failed to convert quote",
-      "load": "Failed to load conversion preview",
-      "title": "Error"
+      "convert": "Falha ao converter cotação",
+      "load": "Falha ao carregar a visualização da conversão",
+      "title": "Erro"
     }
   },
   "quoteApproval": {
-    "title": "Quote Approvals",
-    "description": "Review quotes waiting for manager approval before they can be sent to clients.",
+    "title": "Aprovações de cotação",
+    "description": "Revise as cotações que aguardam a aprovação do gerente antes de serem enviadas aos clientes.",
     "actions": {
-      "backToQuotes": "Back to Quotes"
+      "backToQuotes": "Voltar para citações"
     },
     "settings": {
-      "label": "Approval required before sending",
-      "enabled": "Orçamentos em rascunho devem ser aprovados antes do envio.",
-      "disabled": "Orçamentos em rascunho podem ser enviados sem aprovação."
+      "label": "Aprovação necessária antes do envio",
+      "enabled": "Os rascunhos de cotações devem ser aprovados antes do envio.",
+      "disabled": "Rascunhos de cotações podem ser enviados sem aprovação."
     },
     "filters": {
       "status": "Status",
-      "approved": "Approved",
-      "pendingApproval": "Pending Approval"
+      "approved": "Aprovado",
+      "pendingApproval": "Aprovação pendente"
     },
     "empty": {
-      "approved": "There are no quotes in the approved queue right now.",
-      "pendingApproval": "There are no quotes in the pending approval queue right now.",
-      "title": "No quotes found"
+      "approved": "Não há cotações na fila de aprovados no momento.",
+      "pendingApproval": "Não há cotações na fila de aprovação pendente no momento.",
+      "title": "Nenhuma cotação encontrada"
     },
     "errors": {
-      "load": "Failed to load quote approvals",
-      "settings": "Failed to update quote approval settings"
+      "load": "Falha ao carregar aprovações de cotação",
+      "settings": "Falha ao atualizar as configurações de aprovação de cotação"
     },
-    "loading": "Loading approval queue..."
+    "loading": "Carregando fila de aprovação..."
   },
   "quoteTemplates": {
-    "title": "Templates",
-    "description": "Quote templates let you save reusable sets of line items, terms, and notes. Select a template when creating a new quote to start with prefilled data.",
+    "title": "Modelos",
+    "description": "Os modelos de cotação permitem salvar conjuntos reutilizáveis ​​de itens de linha, termos e notas. Selecione um modelo ao criar uma nova cotação para começar com dados pré-preenchidos.",
     "empty": {
-      "inline": "No quote templates yet. Create a template by clicking \"Save as Template\" from any quote's detail view.",
-      "title": "No quote templates yet",
-      "description": "Use Save as Template from a quote to create your first reusable template."
+      "inline": "Ainda não há modelos de cotação. Crie um modelo clicando em \"Salvar como modelo\" na visualização detalhada de qualquer cotação.",
+      "title": "Ainda não há modelos de cotação",
+      "description": "Use Salvar como modelo de uma cotação para criar seu primeiro modelo reutilizável."
     },
     "actions": {
-      "createQuoteFromTemplate": "Create Quote from Template",
-      "delete": "Delete",
-      "editTemplate": "Edit Template",
-      "templateActions": "Template actions"
+      "createQuoteFromTemplate": "Criar cotação a partir do modelo",
+      "delete": "Excluir",
+      "editTemplate": "Editar modelo",
+      "templateActions": "Ações de modelo"
     },
     "dialogs": {
       "delete": {
-        "message": "Are you sure you want to delete this quote template? This action cannot be undone.",
-        "title": "Delete Template"
+        "message": "Tem certeza de que deseja excluir este modelo de cotação? Esta ação não pode ser desfeita.",
+        "title": "Excluir modelo"
       }
     },
     "errors": {
-      "delete": "Failed to delete template.",
-      "load": "Failed to load templates"
+      "delete": "Falha ao excluir modelo.",
+      "load": "Falha ao carregar modelos"
     },
-    "loading": "Loading templates..."
+    "loading": "Carregando modelos..."
   },
   "quotePreview": {
-    "title": "Quote Preview",
+    "title": "Visualização da cotação",
     "empty": {
-      "selectQuote": "Select a quote to preview",
-      "unavailable": "Could not display preview. Data might be missing."
+      "selectQuote": "Selecione uma cotação para visualizar",
+      "unavailable": "Não foi possível exibir a visualização. Os dados podem estar faltando."
     },
     "placeholders": {
-      "selectLayout": "Select quote layout..."
+      "selectLayout": "Selecione o layout da cotação..."
     },
     "actions": {
-      "openQuote": "Open Quote"
+      "openQuote": "Cotação aberta"
     },
     "errors": {
-      "downloadPdf": "Failed to download PDF. Please try again.",
-      "load": "Failed to load preview"
+      "downloadPdf": "Falha ao baixar o PDF. Por favor, tente novamente.",
+      "load": "Falha ao carregar a visualização"
     },
-    "loading": "Loading Preview..."
+    "loading": "Carregando visualização..."
   },
   "templateEditor": {
     "actions": {
-      "backToLayouts": "Back to Layouts",
-      "rerun": "Re-run",
-      "saveLayout": "Save Layout"
+      "backToLayouts": "Voltar para Layouts",
+      "rerun": "Executar novamente",
+      "saveLayout": "Salvar layout"
     },
-    "codeReadonly": "Code view is generated from the Visual workspace and is read-only.",
+    "codeReadonly": "A visualização de código é gerada a partir do espaço de trabalho Visual e é somente leitura.",
     "defaults": {
-      "copyOf": "Copy of {{name}}",
-      "standardTemplate": "Standard Template"
+      "copyOf": "Cópia de {{name}}",
+      "standardTemplate": "Modelo padrão"
     },
-    "title": "Quote Layout Editor",
-    "description": "Design the quote layout using the visual editor, then preview with sample data.",
+    "title": "Editor de layout de cotação",
+    "description": "Projete o layout da cotação usando o editor visual e visualize-o com dados de amostra.",
     "errors": {
-      "exportAst": "Failed to export template AST from visual workspace: {{message}}",
-      "load": "Failed to load quote template editor",
-      "nameRequired": "Template name is required.",
-      "notFound": "Quote document template not found.",
-      "previewPipeline": "Preview pipeline failed.",
-      "saveFailed": "Failed to save quote template",
-      "unknownAstExport": "Unknown AST export error"
+      "exportAst": "Falha ao exportar o modelo AST do espaço de trabalho visual: {{message}}",
+      "load": "Falha ao carregar o editor de modelo de cotação",
+      "nameRequired": "O nome do modelo é obrigatório.",
+      "notFound": "Modelo de documento de cotação não encontrado.",
+      "previewPipeline": "Falha no pipeline de visualização.",
+      "saveFailed": "Falha ao salvar o modelo de cotação",
+      "unknownAstExport": "Erro de exportação AST desconhecido"
     },
     "fields": {
-      "layoutDetails": "Layout Details",
-      "templateName": "Template Name",
-      "version": "Version"
+      "layoutDetails": "Detalhes do layout",
+      "templateName": "Nome do modelo",
+      "version": "Versão"
     },
     "footer": {
-      "created": "Created:",
-      "lastUpdated": "Last Updated:"
+      "created": "Criado:",
+      "lastUpdated": "Última atualização:"
     },
     "headings": {
-      "editLayout": "Edit Quote Layout",
-      "newLayout": "New Quote Layout"
+      "editLayout": "Editar layout de cotação",
+      "newLayout": "Novo layout de cotação"
     },
     "placeholders": {
-      "templateName": "Quote Template"
+      "templateName": "Modelo de cotação"
     },
     "preview": {
-      "renderFailed": "Preview rendering failed.",
-      "rendering": "Shaping and rendering preview...",
-      "sampleScenario": "Sample Scenario",
-      "selectScenario": "Select scenario...",
-      "selectScenarioPrompt": "Select a sample scenario to generate an authoritative preview.",
-      "templateGenerationFailed": "Preview template could not be generated from the current workspace."
+      "renderFailed": "Falha na renderização de visualização.",
+      "rendering": "Visualização de modelagem e renderização...",
+      "sampleScenario": "Cenário de amostra",
+      "selectScenario": "Selecione o cenário...",
+      "selectScenarioPrompt": "Selecione um cenário de amostra para gerar uma visualização oficial.",
+      "templateGenerationFailed": "O modelo de visualização não pôde ser gerado no espaço de trabalho atual."
     },
     "pipeline": {
-      "render": "Render",
-      "shape": "Shape",
+      "render": "Renderizar",
+      "shape": "Forma",
       "renderFailed": "Falha na renderização.",
-      "shapeFailed": "Falha na modelagem dos dados.",
-      "shapingFailed": "Falha ao modelar os dados."
+      "shapeFailed": "A forma falhou.",
+      "shapingFailed": "A modelagem falhou."
     },
     "tabs": {
-      "code": "Code",
-      "design": "Design",
-      "preview": "Preview",
-      "transforms": "Transforms",
+      "code": "Código",
+      "design": "Projeto",
+      "preview": "Visualização",
+      "transforms": "Transformações",
       "visual": "Visual"
     }
   },
   "templatesPage": {
-    "title": "Quote Layouts",
-    "description": "Design the layouts used to render quote PDFs and previews.",
+    "title": "Layouts de cotação",
+    "description": "Projete os layouts usados ​​para renderizar PDFs de cotação e visualizações.",
     "actions": {
-      "openMenu": "Open menu"
+      "openMenu": "Abrir menu"
     },
     "cards": {
-      "availableLayouts": "Available Layouts"
+      "availableLayouts": "Layouts Disponíveis"
     },
     "dialogs": {
-      "deleteConfirm": "Are you sure you want to delete \"{{name}}\"?"
+      "deleteConfirm": "Tem certeza de que deseja excluir \"{{name}}\"?"
     },
     "errors": {
-      "clone": "Failed to clone template",
-      "delete": "Failed to delete template",
-      "editCopy": "Failed to create editable copy",
-      "load": "Failed to load quote document templates",
-      "setDefault": "Failed to set default template"
+      "clone": "Falha ao clonar modelo",
+      "delete": "Falha ao excluir modelo",
+      "editCopy": "Falha ao criar cópia editável",
+      "load": "Falha ao carregar modelos de documentos de cotação",
+      "setDefault": "Falha ao definir o modelo padrão"
     },
     "labels": {
-      "custom": "Custom"
+      "custom": "Personalizado"
     }
   }
 }

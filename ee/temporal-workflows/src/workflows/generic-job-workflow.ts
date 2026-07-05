@@ -6,6 +6,7 @@ import {
   log,
   sleep,
   workflowInfo,
+  ApplicationFailure,
 } from '@temporalio/workflow';
 import type { JobStatus } from '../types/job.js';
 
@@ -182,25 +183,39 @@ export async function genericJobWorkflow(
     state.step = 'executing';
     state.progress = 10;
 
-    await activities.updateJobStatus({
-      jobId,
-      tenantId,
-      status: 'processing' as JobStatus,
-      metadata: { workflowId: workflowInfo().workflowId },
-    });
+    // Status/detail tracking is bookkeeping — it must never block the actual
+    // job (a broken tracker row once kept handlers from running for 9 days
+    // while every run looked green).
+    try {
+      await activities.updateJobStatus({
+        jobId,
+        tenantId,
+        status: 'processing' as JobStatus,
+        metadata: { workflowId: workflowInfo().workflowId },
+      });
 
-    // Create a job detail for the execution start
-    await activities.createJobDetail({
-      jobId,
-      tenantId,
-      stepName: 'execution_started',
-      status: 'processing',
-      metadata: {
+      // Create a job detail for the execution start
+      await activities.createJobDetail({
+        jobId,
+        tenantId,
+        stepName: 'execution_started',
+        status: 'processing',
+        metadata: {
+          jobName,
+          workflowId: workflowInfo().workflowId,
+          startedAt: state.startedAt,
+        },
+      });
+    } catch (bookkeepingError) {
+      log.warn('Job bookkeeping failed before handler execution; continuing', {
+        jobId,
         jobName,
-        workflowId: workflowInfo().workflowId,
-        startedAt: state.startedAt,
-      },
-    });
+        error:
+          bookkeepingError instanceof Error
+            ? bookkeepingError.message
+            : String(bookkeepingError),
+      });
+    }
 
     state.progress = 20;
 
@@ -231,29 +246,40 @@ export async function genericJobWorkflow(
     state.progress = 100;
     state.completedAt = new Date().toISOString();
 
-    await activities.updateJobStatus({
-      jobId,
-      tenantId,
-      status: 'completed' as JobStatus,
-      metadata: {
-        workflowId: workflowInfo().workflowId,
-        completedAt: state.completedAt,
-      },
-    });
+    try {
+      await activities.updateJobStatus({
+        jobId,
+        tenantId,
+        status: 'completed' as JobStatus,
+        metadata: {
+          workflowId: workflowInfo().workflowId,
+          completedAt: state.completedAt,
+        },
+      });
 
-    // Create a job detail for the execution completion
-    await activities.createJobDetail({
-      jobId,
-      tenantId,
-      stepName: 'execution_completed',
-      status: 'completed',
-      metadata: {
+      // Create a job detail for the execution completion
+      await activities.createJobDetail({
+        jobId,
+        tenantId,
+        stepName: 'execution_completed',
+        status: 'completed',
+        metadata: {
+          jobName,
+          workflowId: workflowInfo().workflowId,
+          completedAt: state.completedAt,
+          result: result.result,
+        },
+      });
+    } catch (bookkeepingError) {
+      log.warn('Job bookkeeping failed after successful handler run', {
+        jobId,
         jobName,
-        workflowId: workflowInfo().workflowId,
-        completedAt: state.completedAt,
-        result: result.result,
-      },
-    });
+        error:
+          bookkeepingError instanceof Error
+            ? bookkeepingError.message
+            : String(bookkeepingError),
+      });
+    }
 
     log.info('Generic job workflow completed successfully', {
       jobId,
@@ -311,14 +337,16 @@ export async function genericJobWorkflow(
       });
     }
 
-    // Return a terminal failure result so schedule-driven workflows close cleanly.
-    // Re-throwing a plain Error here causes workflow-task failures and can leave
-    // the schedule run wedged in Running state.
-    return {
-      success: false,
-      jobId,
-      error: state.error,
-      completedAt: state.completedAt,
-    };
+    // Fail the workflow so the run is visible as FAILED in Temporal (returning
+    // a failure-shaped result showed every broken run as COMPLETED, which hid
+    // a multi-day outage). ApplicationFailure closes the run cleanly — the
+    // wedged-in-Running hazard only applies to non-Temporal errors, which fail
+    // the workflow task and retry forever.
+    throw ApplicationFailure.create({
+      message: state.error ?? 'Job handler failed',
+      type: 'GenericJobFailure',
+      nonRetryable: true,
+      details: [{ jobId, jobName, completedAt: state.completedAt }],
+    });
   }
 }

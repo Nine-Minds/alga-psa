@@ -14,7 +14,6 @@ const BASE_URL = 'https://docs.example.com';
 const internalUser = { user_id: 'user-1', tenant: TENANT, user_type: 'internal' };
 
 const hasPermissionMock = vi.fn();
-const isEnabledMock = vi.fn();
 const assertTierAccessMock = vi.fn();
 
 const getTenantSecretMock = vi.fn();
@@ -38,10 +37,6 @@ vi.mock('@alga-psa/auth', () => ({
     (...args: unknown[]) =>
       handler(internalUser, { tenant: TENANT }, ...args),
   hasPermission: hasPermissionMock,
-}));
-
-vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
-  featureFlags: { isEnabled: isEnabledMock },
 }));
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
@@ -68,6 +63,8 @@ vi.mock('@ee/lib/integrations/hudu/huduIntegrationRepository', () => ({
 }));
 
 vi.mock('@ee/lib/integrations/hudu/huduClient', () => ({
+  buildHuduApiBaseUrl: (baseUrl: string) =>
+    baseUrl.trim().replace(/\/+$/, '').replace(/\/api(?:\/v1)?$/, '').concat('/api/v1'),
   HuduClient: class {
     constructor(config: unknown) {
       huduClientConstructorSpy(config);
@@ -94,7 +91,6 @@ beforeEach(() => {
   delete process.env.HUDU_BASE_URL;
 
   hasPermissionMock.mockResolvedValue(true);
-  isEnabledMock.mockResolvedValue(true);
   assertTierAccessMock.mockResolvedValue(undefined);
 
   getTenantSecretMock.mockResolvedValue(null);
@@ -163,7 +159,23 @@ describe('T023: connectHudu', () => {
     expect(upsertHuduIntegrationMock).not.toHaveBeenCalled();
   });
 
-  it('F033: reuses the stored api key when the input omits it (keep-existing-key)', async () => {
+  it('reuses the stored api key only when the input keeps the stored base URL', async () => {
+    getTenantSecretMock.mockImplementation(async (_tenant: string, name: string) =>
+      name === 'hudu_api_key' ? API_KEY : BASE_URL
+    );
+    const { connectHudu } = await importActions();
+
+    const result = await connectHudu({ baseUrl: BASE_URL });
+
+    expect(result).toMatchObject({ success: true, data: { connected: true } });
+    expect(huduClientConstructorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ credentials: { apiKey: API_KEY, baseUrl: BASE_URL } })
+    );
+    expect(setTenantSecretMock).toHaveBeenCalledWith(TENANT, 'hudu_api_key', API_KEY);
+    expect(setTenantSecretMock).toHaveBeenCalledWith(TENANT, 'hudu_base_url', BASE_URL);
+  });
+
+  it('requires a fresh api key when changing the base URL', async () => {
     getTenantSecretMock.mockImplementation(async (_tenant: string, name: string) =>
       name === 'hudu_api_key' ? API_KEY : BASE_URL
     );
@@ -171,12 +183,9 @@ describe('T023: connectHudu', () => {
 
     const result = await connectHudu({ baseUrl: 'https://new.example.com' });
 
-    expect(result).toMatchObject({ success: true, data: { connected: true } });
-    expect(huduClientConstructorSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ credentials: { apiKey: API_KEY, baseUrl: 'https://new.example.com' } })
-    );
-    expect(setTenantSecretMock).toHaveBeenCalledWith(TENANT, 'hudu_api_key', API_KEY);
-    expect(setTenantSecretMock).toHaveBeenCalledWith(TENANT, 'hudu_base_url', 'https://new.example.com');
+    expect(result).toEqual({ success: false, error: 'Hudu API key is required when changing the base URL.' });
+    expect(huduClientConstructorSpy).not.toHaveBeenCalled();
+    expect(setTenantSecretMock).not.toHaveBeenCalled();
   });
 
   it('F033: still requires an api key when none is stored', async () => {
@@ -184,7 +193,7 @@ describe('T023: connectHudu', () => {
 
     const result = await connectHudu({ baseUrl: BASE_URL });
 
-    expect(result).toEqual({ success: false, error: 'Hudu base URL and API key are required.' });
+    expect(result).toEqual({ success: false, error: 'Hudu API key is required when changing the base URL.' });
     expect(validateConnectionMock).not.toHaveBeenCalled();
     expect(setTenantSecretMock).not.toHaveBeenCalled();
   });
@@ -197,15 +206,6 @@ describe('T023: connectHudu', () => {
       /insufficient permissions \(update\)/
     );
     expect(hasPermissionMock).toHaveBeenCalledWith(internalUser, 'system_settings', 'update');
-  });
-
-  it('rejects when the hudu-integration flag is off', async () => {
-    isEnabledMock.mockResolvedValue(false);
-    const { connectHudu } = await importActions();
-
-    await expect(connectHudu({ baseUrl: BASE_URL, apiKey: API_KEY })).rejects.toThrow(
-      /disabled for this tenant/
-    );
   });
 });
 
@@ -254,7 +254,7 @@ describe('T024: testHuduConnection', () => {
     );
   });
 
-  it('F033: merges a base-URL-only candidate with the stored api key', async () => {
+  it('requires a fresh api key when testing a changed base URL', async () => {
     getTenantSecretMock.mockImplementation(async (_tenant: string, name: string) =>
       name === 'hudu_api_key' ? API_KEY : BASE_URL
     );
@@ -262,10 +262,8 @@ describe('T024: testHuduConnection', () => {
 
     const result = await testHuduConnection({ baseUrl: 'https://new.example.com' });
 
-    expect(result).toEqual({ success: true, data: { connected: true, passwordAccess: true } });
-    expect(huduClientConstructorSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ credentials: { apiKey: API_KEY, baseUrl: 'https://new.example.com' } })
-    );
+    expect(result).toEqual({ success: false, error: 'Hudu API key is required when changing the base URL.' });
+    expect(huduClientConstructorSpy).not.toHaveBeenCalled();
     expect(setTenantSecretMock).not.toHaveBeenCalled();
   });
 
@@ -309,6 +307,11 @@ describe('T025: getHuduConnectionStatus', () => {
         connectedAt: '2026-06-09T00:00:00.000Z',
         lastSyncedAt: null,
         passwordAccess: true,
+        syncStatus: 'idle',
+        syncError: null,
+        lastFullSyncAt: null,
+        lastSync: null,
+        autoSync: { enabled: false, cadence: 'daily' },
       },
     });
 
@@ -334,6 +337,11 @@ describe('T025: getHuduConnectionStatus', () => {
         connectedAt: null,
         lastSyncedAt: null,
         passwordAccess: false,
+        syncStatus: 'idle',
+        syncError: null,
+        lastFullSyncAt: null,
+        lastSync: null,
+        autoSync: { enabled: false, cadence: 'daily' },
       },
     });
   });

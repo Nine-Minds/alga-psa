@@ -140,6 +140,14 @@
       "fromAddress": {
         "label": "Adres nadawcy",
         "placeholder": "noreply@example.com"
+      },
+      "authHint": "Pozostaw nazwę użytkownika i hasło puste, jeśli przekaźnik akceptuje pocztę bez uwierzytelniania.",
+      "security": {
+        "title": "Bezpieczeństwo połączenia",
+        "secure": "Użyj niejawnego TLS (SSL przy połączeniu, zwykle port 465)",
+        "requireTls": "Wymagaj uaktualnienia STARTTLS (porty 587 / 25)",
+        "verifyCert": "Weryfikuj certyfikat serwera",
+        "verifyCertHint": "Wyłącz tę opcję tylko dla zaufanego przekaźnika we własnej sieci używającego certyfikatu z podpisem własnym."
       }
     },
     "resend": {
@@ -169,7 +177,16 @@
       "loadEmailSettings": "Nie udało się załadować ustawień poczty",
       "saveSettings": "Nie udało się zapisać ustawień",
       "addDomain": "Nie udało się dodać domeny",
-      "verifyDomain": "Nie udało się zweryfikować domeny"
+      "verifyDomain": "Nie udało się zweryfikować domeny",
+      "testOutbound": "Nie udało się przetestować poczty wychodzącej"
+    },
+    "test": {
+      "title": "Przetestuj pocztę wychodzącą",
+      "description": "Zapisuje bieżące ustawienia, a następnie weryfikuje połączenie z dostawcą. Wpisz adres, aby wysłać także wiadomość testową.",
+      "recipientLabel": "Wyślij test do (opcjonalnie)",
+      "recipientPlaceholder": "ty@przyklad.com",
+      "run": "Testuj połączenie",
+      "testing": "Testowanie..."
     }
   },
   "microsoft365": {

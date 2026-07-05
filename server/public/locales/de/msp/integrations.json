@@ -1017,6 +1017,27 @@
         },
         "toasts": {
           "errorTitle": "Hudu-Verbindungsfehler"
+        },
+        "sync": {
+          "title": "Synchronisierung & Automatisierung",
+          "description": "Importieren Sie Assets für alle zugeordneten Kunden auf einmal und halten Sie sie automatisch aktuell. Das Zuordnen eines Unternehmens oder Layouts konfiguriert nur die Integration – Assets erscheinen erst nach einem Import.",
+          "summary": "{{created}} erstellt · {{updated}} aktualisiert · {{skipped}} übersprungen · {{failed}} fehlgeschlagen",
+          "toastErrorTitle": "Hudu-Synchronisierungsfehler",
+          "importDoneTitle": "Hudu-Import abgeschlossen",
+          "syncDoneTitle": "Hudu-Synchronisierung abgeschlossen",
+          "importing": "Wird importiert…",
+          "importAll": "Alle zugeordneten Kunden importieren",
+          "syncing2": "Wird synchronisiert…",
+          "syncAll": "Alle synchronisieren",
+          "autoSyncLabel": "Tägliche automatische Synchronisierung",
+          "autoSyncHint": "Importiert täglich automatisch neue Assets und aktualisiert bestehende für jeden zugeordneten Kunden.",
+          "neverRun": "Noch kein mandantenweiter Lauf.",
+          "lastRun": "Letzter Lauf {{at}}: {{created}} erstellt · {{updated}} aktualisiert · {{skipped}} übersprungen · {{failed}} fehlgeschlagen",
+          "status": {
+            "syncing": "Läuft…",
+            "completed": "Abgeschlossen",
+            "error": "Fehler"
+          }
         }
       }
     },
@@ -1334,6 +1355,8 @@
           },
           "connected": "Mit NinjaOne verbunden",
           "connectedWithErrors": "NinjaOne verbunden mit Synchronisierungsfehlern",
+          "reconnectRequired": "NinjaOne-Neuverbindung erforderlich",
+          "reconnectRequiredDescription": "Die NinjaOne-Autorisierung kann nicht mehr aktualisiert werden (Token abgelaufen oder widerrufen). Stellen Sie die Verbindung erneut her, um Gerätesynchronisierung, Warnungen und Fernzugriff wiederherzustellen.",
           "instanceLabel": "Instanz:",
           "organizations": "{{count}} Organisationen",
           "devices": "{{count}} Geräte",
@@ -1584,6 +1607,14 @@
           "unavailable": "Webhook-Informationen nicht verfügbar. (Benötigt Leseberechtigung für Einstellungen.)",
           "url": "Webhook-URL",
           "urlCopied": "Webhook-URL in die Zwischenablage kopiert."
+        },
+        "mappings": {
+          "org": "Tactical-Organisation",
+          "client": "Alga-Kunde",
+          "defaultContact": "Standardkontakt"
+        },
+        "contact": {
+          "select": "Kontakt auswählen"
         }
       },
       "tanium": {
@@ -1635,7 +1666,9 @@
           "mappedClient": "Zugeordneter Kunde",
           "noScopes": "Noch keine Tanium-Scopes erkannt.",
           "scopeIdLabel": "ID: {{id}}",
-          "unmapped": "Nicht zugeordnet"
+          "unmapped": "Nicht zugeordnet",
+          "defaultContact": "Standardkontakt",
+          "selectContact": "Kontakt auswählen"
         },
         "status": {
           "connected": "Verbunden",
@@ -1701,7 +1734,9 @@
           "loading": "Wird geladen…",
           "mappedClient": "Zugeordneter Kunde",
           "noGroups": "Noch keine Gruppen ermittelt. Führen Sie zuerst \"Gruppen ermitteln\" aus.",
-          "unmapped": "Nicht zugeordnet"
+          "unmapped": "Nicht zugeordnet",
+          "defaultContact": "Standardkontakt",
+          "selectContact": "Kontakt auswählen"
         },
         "status": {
           "connected": "Verbunden",
@@ -1732,6 +1767,76 @@
           "showSecret": "Secret anzeigen",
           "title": "Warnungs-Webhook",
           "url": "Webhook-URL"
+        }
+      },
+      "huntress": {
+        "columns": {
+          "organization": "Huntress-Organisation",
+          "client": "Alga-Kunde",
+          "defaultContact": "Standardkontakt",
+          "createTickets": "Tickets erstellen",
+          "status": "Status"
+        },
+        "selectContact": "Kontakt auswählen",
+        "status": {
+          "autoMatched": "Automatisch zugeordnet",
+          "mapped": "Zugeordnet",
+          "unmapped": "Nicht zugeordnet → Triage"
+        },
+        "title": "Organisationszuordnung",
+        "description": "Ordnen Sie Huntress-Organisationen Kunden zu. Vorfälle nicht zugeordneter Organisationen gehen an den Fallback-Kunden und das Triage-Board.",
+        "unmappedSuffix": "({{count}} nicht zugeordnet)",
+        "syncButton": "Organisationen synchronisieren",
+        "loading": "Wird geladen …",
+        "empty": "Noch keine Organisationen – klicken Sie auf „Organisationen synchronisieren“.",
+        "errors": {
+          "load": "Organisationszuordnungen konnten nicht geladen werden",
+          "sync": "Synchronisierung fehlgeschlagen",
+          "updateMapping": "Zuordnung konnte nicht aktualisiert werden",
+          "updateContact": "Standardkontakt konnte nicht aktualisiert werden"
+        }
+      },
+      "ninjaone": {
+        "columns": {
+          "organization": "NinjaOne-Organisation",
+          "company": "Alga-Unternehmen",
+          "defaultContact": "Standardkontakt",
+          "autoSync": "Auto-Sync",
+          "status": "Status"
+        },
+        "orgFallback": "Org. {{id}}",
+        "idLabel": "ID: {{id}}",
+        "selectCompany": "Unternehmen auswählen",
+        "selectContact": "Kontakt auswählen",
+        "status": {
+          "mapped": "Zugeordnet",
+          "unmapped": "Nicht zugeordnet"
+        },
+        "title": "Organisationszuordnungen",
+        "description": "Ordnen Sie NinjaOne-Organisationen Alga-Unternehmen zu, um die Gerätesynchronisierung zu aktivieren.",
+        "loading": "Organisationszuordnungen werden geladen …",
+        "syncing": "Wird synchronisiert …",
+        "refreshButton": "Organisationen aktualisieren",
+        "summary": {
+          "mapped": "{{count}} zugeordnet",
+          "unmapped": "{{count}} nicht zugeordnet"
+        },
+        "empty": {
+          "title": "Noch keine Organisationen synchronisiert.",
+          "hint": "Klicken Sie auf „Organisationen aktualisieren“, um Organisationen von NinjaOne abzurufen."
+        },
+        "unmappedNote": "Geräte aus nicht zugeordneten Organisationen werden nicht synchronisiert. Ordnen Sie jede Organisation einem Alga-Unternehmen zu, um die Gerätesynchronisierung zu aktivieren.",
+        "success": {
+          "synced": "{{processed}} Organisationen synchronisiert ({{created}} neu, {{updated}} aktualisiert)",
+          "mappingUpdated": "Zuordnung erfolgreich aktualisiert",
+          "contactUpdated": "Standardkontakt erfolgreich aktualisiert"
+        },
+        "errors": {
+          "load": "Organisationszuordnungen konnten nicht geladen werden",
+          "sync": "Organisationen konnten nicht synchronisiert werden",
+          "updateMapping": "Zuordnung konnte nicht aktualisiert werden",
+          "updateContact": "Standardkontakt konnte nicht aktualisiert werden",
+          "updateAutoSync": "Auto-Sync-Einstellung konnte nicht aktualisiert werden"
         }
       }
     },
@@ -2321,8 +2426,5 @@
         "publishableKeyFormat": "Publishable Key sollte mit pk_ beginnen"
       }
     }
-  },
-  "ninjaone": {
-    "selectCompany": "Unternehmen auswählen"
   }
 }

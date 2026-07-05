@@ -15,10 +15,23 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (query: any, _table?: string, _left?: string, _right?: string, options: any = {}) => {
+      const join = options?.type === 'left' ? query.leftJoin : query.join;
+      return typeof join === 'function' ? join.call(query) : query;
+    },
+  }),
 }));
 
 vi.mock('@alga-psa/tickets/lib', () => ({
   applyVisibilityBoardFilter: (...args: any[]) => applyVisibilityBoardFilterMock(...args),
+}));
+
+// The dashboard now imports the visibility context resolver from the `.server` subpath
+// (@alga-psa/tickets/lib/clientPortalVisibility.server), so it must be mocked there.
+vi.mock('@alga-psa/tickets/lib/clientPortalVisibility.server', () => ({
   getClientContactVisibilityContext: (...args: any[]) => getVisibilityContextMock(...args),
 }));
 

@@ -16,6 +16,7 @@ const config = require('../knexfile.cjs');
 
 async function verifyMigration() {
   console.log('Verifying plan service configuration migration...');
+  const { tenantDb } = await import('@alga-psa/db');
   
   // Create knex instance
   const db = knex(config.development);
@@ -33,10 +34,14 @@ async function verifyMigration() {
     // Process each tenant separately
     for (const { tenant } of tenants) {
       console.log(`\nVerifying tenant: ${tenant}`);
+      const tenantFacade = tenantDb(db, tenant);
+      const legacyPlanTable = (table) =>
+        tenantFacade
+          .unscoped(table, 'legacy plan service migration verification reads retired plan service tables')
+          .where({ tenant });
       
       // Get all billing plans for this tenant
-      const plans = await db('contract_lines')
-        .where({ tenant })
+      const plans = await tenantFacade.table('contract_lines')
         .select('*');
       
       totalPlans += plans.length;
@@ -45,20 +50,18 @@ async function verifyMigration() {
       // Process each plan
       for (const plan of plans) {
         // Get original services
-        const oldServices = await db('plan_services')
+        const oldServices = await legacyPlanTable('plan_services')
           .where({
-            'contract_line_id': plan.contract_line_id,
-            'tenant': tenant
+            'contract_line_id': plan.contract_line_id
           })
           .select('*');
         
         totalOldServices += oldServices.length;
         
         // Get new configurations
-        const newConfigurations = await db('plan_service_configuration')
+        const newConfigurations = await legacyPlanTable('plan_service_configuration')
           .where({
-            'contract_line_id': plan.contract_line_id,
-            'tenant': tenant
+            'contract_line_id': plan.contract_line_id
           })
           .select('*');
         
@@ -86,40 +89,36 @@ async function verifyMigration() {
           
           switch (config.configuration_type) {
             case 'Fixed':
-              const fixedConfig = await db('plan_service_fixed_config')
+              const fixedConfig = await legacyPlanTable('plan_service_fixed_config')
                 .where({
-                  'config_id': config.config_id,
-                  'tenant': tenant
+                  'config_id': config.config_id
                 })
                 .first();
               typeConfigExists = !!fixedConfig;
               break;
               
             case 'Hourly':
-              const hourlyConfig = await db('plan_service_hourly_config')
+              const hourlyConfig = await legacyPlanTable('plan_service_hourly_config')
                 .where({
-                  'config_id': config.config_id,
-                  'tenant': tenant
+                  'config_id': config.config_id
                 })
                 .first();
               typeConfigExists = !!hourlyConfig;
               break;
               
             case 'Usage':
-              const usageConfig = await db('plan_service_usage_config')
+              const usageConfig = await legacyPlanTable('plan_service_usage_config')
                 .where({
-                  'config_id': config.config_id,
-                  'tenant': tenant
+                  'config_id': config.config_id
                 })
                 .first();
               typeConfigExists = !!usageConfig;
               break;
               
             case 'Bucket':
-              const bucketConfig = await db('plan_service_bucket_config')
+              const bucketConfig = await legacyPlanTable('plan_service_bucket_config')
                 .where({
-                  'config_id': config.config_id,
-                  'tenant': tenant
+                  'config_id': config.config_id
                 })
                 .first();
               typeConfigExists = !!bucketConfig;

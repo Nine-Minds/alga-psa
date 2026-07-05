@@ -1,21 +1,31 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IClientLocation } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
+import { assertMspOrClientPortalOwnClientPermission } from '../lib/authHelpers';
 
-export const getClientLocations = withAuth(async (_user, { tenant }, clientId: string): Promise<IClientLocation[]> => {
+export const getClientLocations = withAuth(async (user, { tenant }, clientId: string): Promise<IClientLocation[]> => {
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const locations = await trx('client_locations')
+    await assertMspOrClientPortalOwnClientPermission(
+      user,
+      tenant,
+      clientId,
+      'client',
+      'read',
+      'Permission denied: Cannot read client locations',
+      trx
+    );
+
+    const locations = await tenantDb(trx, tenant).table<IClientLocation>('client_locations')
       .where({
         client_id: clientId,
-        tenant: tenant,
         is_active: true
       })
       .orderBy('is_default', 'desc')
@@ -25,14 +35,36 @@ export const getClientLocations = withAuth(async (_user, { tenant }, clientId: s
   });
 });
 
-export const getClientLocation = withAuth(async (_user, { tenant }, locationId: string): Promise<IClientLocation | null> => {
+export const getClientLocation = withAuth(async (user, { tenant }, locationId: string): Promise<IClientLocation | null> => {
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const location = await trx('client_locations')
+    const db = tenantDb(trx, tenant);
+
+    const locationScope = await db.table<IClientLocation>('client_locations')
+      .select('client_id')
       .where({
         location_id: locationId,
-        tenant: tenant
+      })
+      .first();
+
+    if (!locationScope) {
+      return null;
+    }
+
+    await assertMspOrClientPortalOwnClientPermission(
+      user,
+      tenant,
+      locationScope.client_id,
+      'client',
+      'read',
+      'Permission denied: Cannot read client locations',
+      trx
+    );
+
+    const location = await db.table<IClientLocation>('client_locations')
+      .where({
+        location_id: locationId,
       })
       .first();
 
@@ -41,23 +73,34 @@ export const getClientLocation = withAuth(async (_user, { tenant }, locationId: 
 });
 
 export const createClientLocation = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
   locationData: Omit<IClientLocation, 'location_id' | 'tenant' | 'created_at' | 'updated_at'>
 ): Promise<IClientLocation> => {
   const { knex } = await createTenantKnex();
 
-  const locationId = uuidv4();
-
   const newLocation = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await assertMspOrClientPortalOwnClientPermission(
+      user,
+      tenant,
+      clientId,
+      'client',
+      'update',
+      'Permission denied: Cannot update client locations',
+      trx
+    );
+
+    const locationId = uuidv4();
+
     // If this is set as default, clear any existing active defaults first
     // Only clear active locations to preserve historical audit data on inactive rows
     if (locationData.is_default) {
-      await trx('client_locations')
+      const db = tenantDb(trx, tenant);
+
+      await db.table<IClientLocation>('client_locations')
         .where({
           client_id: clientId,
-          tenant: tenant,
           is_default: true,
           is_active: true
         })
@@ -67,10 +110,11 @@ export const createClientLocation = withAuth(async (
         });
     } else {
       // If not setting as default, check if we need to auto-set as default
-      const existingDefault = await trx('client_locations')
+      const db = tenantDb(trx, tenant);
+
+      const existingDefault = await db.table<IClientLocation>('client_locations')
         .where({
           client_id: clientId,
-          tenant: tenant,
           is_default: true,
           is_active: true
         })
@@ -82,7 +126,7 @@ export const createClientLocation = withAuth(async (
       }
     }
 
-    const [location] = await trx('client_locations')
+    const [location] = await tenantDb(trx, tenant).table<IClientLocation>('client_locations')
       .insert({
         location_id: locationId,
         tenant: tenant,
@@ -104,7 +148,7 @@ export const createClientLocation = withAuth(async (
 });
 
 export const updateClientLocation = withAuth(async (
-  _user,
+  user,
   { tenant },
   locationId: string,
   locationData: Partial<Omit<IClientLocation, 'location_id' | 'tenant' | 'client_id' | 'created_at'>>
@@ -114,10 +158,12 @@ export const updateClientLocation = withAuth(async (
   const updatedLocation = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get the existing location first to check current state
     // Filter by is_active for consistency (we filter by is_active everywhere)
-    const existingLocation = await trx('client_locations')
+    const db = tenantDb(trx, tenant);
+
+    const existingLocation = await db.table<IClientLocation>('client_locations')
+      .select('client_id', 'is_default')
       .where({
         location_id: locationId,
-        tenant: tenant,
         is_active: true
       })
       .first();
@@ -126,14 +172,23 @@ export const updateClientLocation = withAuth(async (
       throw new Error('Active location not found');
     }
 
+    await assertMspOrClientPortalOwnClientPermission(
+      user,
+      tenant,
+      existingLocation.client_id,
+      'client',
+      'update',
+      'Permission denied: Cannot update client locations',
+      trx
+    );
+
     // If setting is_default to true, first clear other defaults for this client
     if (locationData.is_default === true) {
       // Clear is_default from all other active locations for this client
       // Only clear active locations to preserve historical audit data on inactive rows
-      await trx('client_locations')
+      await db.table<IClientLocation>('client_locations')
         .where({
           client_id: existingLocation.client_id,
-          tenant: tenant,
           is_default: true,
           is_active: true
         })
@@ -147,10 +202,9 @@ export const updateClientLocation = withAuth(async (
     // If unsetting is_default on the current default, reassign to another active location
     // (same logic as deleteClientLocation to ensure there's always one default)
     if (locationData.is_default === false && existingLocation.is_default) {
-      const nextDefault = await trx('client_locations')
+      const nextDefault = await db.table<IClientLocation>('client_locations')
         .where({
           client_id: existingLocation.client_id,
-          tenant: tenant,
           is_active: true
         })
         .whereNot('location_id', locationId)
@@ -161,20 +215,18 @@ export const updateClientLocation = withAuth(async (
       }
 
       // Clear current default first, then promote next (avoids unique constraint violation)
-      await trx('client_locations')
+      await db.table<IClientLocation>('client_locations')
         .where({
           location_id: locationId,
-          tenant: tenant
         })
         .update({
           is_default: false,
           updated_at: trx.fn.now()
         });
 
-      await trx('client_locations')
+      await db.table<IClientLocation>('client_locations')
         .where({
           location_id: nextDefault.location_id,
-          tenant: tenant
         })
         .update({
           is_default: true,
@@ -186,10 +238,9 @@ export const updateClientLocation = withAuth(async (
     }
 
     // Filter by is_active for consistency (we filter by is_active everywhere)
-    const [location] = await trx('client_locations')
+    const [location] = await db.table<IClientLocation>('client_locations')
       .where({
         location_id: locationId,
-        tenant: tenant,
         is_active: true
       })
       .update({
@@ -211,15 +262,17 @@ export const updateClientLocation = withAuth(async (
   return updatedLocation;
 });
 
-export const deleteClientLocation = withAuth(async (_user, { tenant }, locationId: string): Promise<void> => {
+export const deleteClientLocation = withAuth(async (user, { tenant }, locationId: string): Promise<void> => {
   const { knex } = await createTenantKnex();
 
   const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if this is the default location
-    const location = await trx('client_locations')
+    const db = tenantDb(trx, tenant);
+
+    const location = await db.table<IClientLocation>('client_locations')
+      .select('client_id', 'is_default')
       .where({
         location_id: locationId,
-        tenant: tenant
       })
       .first();
 
@@ -227,12 +280,22 @@ export const deleteClientLocation = withAuth(async (_user, { tenant }, locationI
       throw new Error('Location not found');
     }
 
+    await assertMspOrClientPortalOwnClientPermission(
+      user,
+      tenant,
+      location.client_id,
+      'client',
+      'update',
+      'Permission denied: Cannot update client locations',
+      trx
+    );
+
     // Check for dependencies before deletion
     const dependencies: string[] = [];
 
     // Check for tickets referencing this location
-    const ticketCount = await trx('tickets')
-      .where({ location_id: locationId, tenant })
+    const ticketCount = await db.table('tickets')
+      .where({ location_id: locationId })
       .count('ticket_id as count')
       .first();
 
@@ -241,8 +304,8 @@ export const deleteClientLocation = withAuth(async (_user, { tenant }, locationI
     }
 
     // Check for client tax rates referencing this location
-    const taxRateCount = await trx('client_tax_rates')
-      .where({ location_id: locationId, tenant })
+    const taxRateCount = await db.table('client_tax_rates')
+      .where({ location_id: locationId })
       .count('tax_rate_id as count')
       .first();
 
@@ -257,20 +320,18 @@ export const deleteClientLocation = withAuth(async (_user, { tenant }, locationI
 
     // If this was the default location, assign default to another active location first
     if (location.is_default) {
-      const nextDefault = await trx('client_locations')
+      const nextDefault = await db.table<IClientLocation>('client_locations')
         .where({
           client_id: location.client_id,
-          tenant: tenant,
           is_active: true
         })
         .whereNot('location_id', locationId)
         .first();
 
       if (nextDefault) {
-        await trx('client_locations')
+        await db.table<IClientLocation>('client_locations')
           .where({
             location_id: nextDefault.location_id,
-            tenant: tenant
           })
           .update({
             is_default: true,
@@ -280,10 +341,9 @@ export const deleteClientLocation = withAuth(async (_user, { tenant }, locationI
     }
 
     // Hard delete the location
-    await trx('client_locations')
+    await db.table<IClientLocation>('client_locations')
       .where({
         location_id: locationId,
-        tenant: tenant
       })
       .delete();
 
@@ -294,16 +354,18 @@ export const deleteClientLocation = withAuth(async (_user, { tenant }, locationI
   revalidatePath('/client-portal/client-settings');
 });
 
-export const setDefaultClientLocation = withAuth(async (_user, { tenant }, locationId: string): Promise<void> => {
+export const setDefaultClientLocation = withAuth(async (user, { tenant }, locationId: string): Promise<void> => {
   const { knex } = await createTenantKnex();
 
   const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get the location to find its client_id
     // Only active locations can be set as default
-    const location = await trx('client_locations')
+    const db = tenantDb(trx, tenant);
+
+    const location = await db.table<IClientLocation>('client_locations')
+      .select('client_id')
       .where({
         location_id: locationId,
-        tenant: tenant,
         is_active: true
       })
       .first();
@@ -312,12 +374,21 @@ export const setDefaultClientLocation = withAuth(async (_user, { tenant }, locat
       throw new Error('Active location not found');
     }
 
+    await assertMspOrClientPortalOwnClientPermission(
+      user,
+      tenant,
+      location.client_id,
+      'client',
+      'update',
+      'Permission denied: Cannot update client locations',
+      trx
+    );
+
     // Remove default from all other active locations for this client
     // Only clear active locations to preserve historical audit data on inactive rows
-    await trx('client_locations')
+    await db.table<IClientLocation>('client_locations')
       .where({
         client_id: location.client_id,
-        tenant: tenant,
         is_default: true,
         is_active: true
       })
@@ -328,10 +399,9 @@ export const setDefaultClientLocation = withAuth(async (_user, { tenant }, locat
       });
 
     // Set this location as default
-    await trx('client_locations')
+    await db.table<IClientLocation>('client_locations')
       .where({
         location_id: locationId,
-        tenant: tenant
       })
       .update({
         is_default: true,
@@ -345,14 +415,23 @@ export const setDefaultClientLocation = withAuth(async (_user, { tenant }, locat
   revalidatePath('/client-portal/client-settings');
 });
 
-export const getDefaultClientLocation = withAuth(async (_user, { tenant }, clientId: string): Promise<IClientLocation | null> => {
+export const getDefaultClientLocation = withAuth(async (user, { tenant }, clientId: string): Promise<IClientLocation | null> => {
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const location = await trx('client_locations')
+    await assertMspOrClientPortalOwnClientPermission(
+      user,
+      tenant,
+      clientId,
+      'client',
+      'read',
+      'Permission denied: Cannot read client locations',
+      trx
+    );
+
+    const location = await tenantDb(trx, tenant).table<IClientLocation>('client_locations')
       .where({
         client_id: clientId,
-        tenant: tenant,
         is_default: true,
         is_active: true
       })

@@ -1,4 +1,4 @@
-import { computeWorkDateFields, createTenantKnex, resolveUserTimeZone, withTransaction } from '@alga-psa/db';
+import { computeWorkDateFields, createTenantKnex, resolveUserTimeZone, tenantDb, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
@@ -43,6 +43,7 @@ const createTimeEntryAction: InboundActionDefinition<CreateTimeEntryMappedValues
   async handle(ctx, mappedValues) {
     const { knex } = await createTenantKnex(ctx.tenant);
     const timeEntry = await withTransaction(knex, async (trx) => {
+      const scopedDb = tenantDb(trx, ctx.tenant);
       const startTime = new Date(mappedValues.start_time);
       if (Number.isNaN(startTime.getTime())) {
         throw new Error('VALIDATION_ERROR: start_time must be a valid timestamp');
@@ -67,7 +68,7 @@ const createTimeEntryAction: InboundActionDefinition<CreateTimeEntryMappedValues
       const timeSheetId = await getOrCreateTimeSheetForWorkDate(trx, ctx.tenant, mappedValues.user_id, work_date);
       const billableDuration = mappedValues.is_billable === false ? 0 : mappedValues.duration_minutes;
 
-      const [created] = await trx('time_entries')
+      const [created] = await scopedDb.table('time_entries')
         .insert({
           tenant: ctx.tenant,
           user_id: mappedValues.user_id,
@@ -139,13 +140,14 @@ async function assertTimeEntryReferences(args: {
   workItemType: CreateTimeEntryMappedValues['work_item_type'];
   workItemId?: string;
 }): Promise<void> {
-  const user = await args.trx('users').where({ tenant: args.tenant, user_id: args.userId }).first('user_id');
+  const scopedDb = tenantDb(args.trx, args.tenant);
+  const user = await scopedDb.table('users').where({ user_id: args.userId }).first('user_id');
   if (!user) {
     throw new Error(`VALIDATION_ERROR: user_id "${args.userId}" does not exist`);
   }
 
-  const service = await args.trx('service_catalog')
-    .where({ tenant: args.tenant, service_id: args.serviceId })
+  const service = await scopedDb.table('service_catalog')
+    .where({ service_id: args.serviceId })
     .first('service_id');
   if (!service) {
     throw new Error(`VALIDATION_ERROR: service_id "${args.serviceId}" does not exist`);
@@ -164,8 +166,8 @@ async function assertTimeEntryReferences(args: {
     return;
   }
 
-  const workItem = await args.trx(workItemTable.table)
-    .where({ tenant: args.tenant, [workItemTable.idColumn]: args.workItemId })
+  const workItem = await scopedDb.table(workItemTable.table)
+    .where({ [workItemTable.idColumn]: args.workItemId })
     .first(workItemTable.idColumn);
   if (!workItem) {
     throw new Error(`VALIDATION_ERROR: ${args.workItemType} work_item_id "${args.workItemId}" does not exist`);
@@ -197,8 +199,8 @@ async function getOrCreateTimeSheetForWorkDate(
   userId: string,
   workDate: string,
 ): Promise<string> {
-  const period = await trx('time_periods')
-    .where({ tenant })
+  const scopedDb = tenantDb(trx, tenant);
+  const period = await scopedDb.table('time_periods')
     .where('start_date', '<=', workDate)
     .where('end_date', '>', workDate)
     .first('period_id');
@@ -207,9 +209,8 @@ async function getOrCreateTimeSheetForWorkDate(
     throw new Error(`VALIDATION_ERROR: no time period found for work_date "${workDate}"`);
   }
 
-  const existing = await trx('time_sheets')
+  const existing = await scopedDb.table('time_sheets')
     .where({
-      tenant,
       period_id: period.period_id,
       user_id: userId,
     })
@@ -219,7 +220,7 @@ async function getOrCreateTimeSheetForWorkDate(
     return existing.id;
   }
 
-  const [created] = await trx('time_sheets')
+  const [created] = await scopedDb.table('time_sheets')
     .insert({
       tenant,
       period_id: period.period_id,

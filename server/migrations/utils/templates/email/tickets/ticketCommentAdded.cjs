@@ -201,6 +201,32 @@ const COPY = {
     isSimplified: true,
   },
 };
+SUBJECTS.pt = 'Novo comentário • {{ticket.title}}';
+COPY.pt = {
+  headerLabel: 'Novo comentário adicionado',
+  intro: 'Um novo comentário foi adicionado a um ticket para <strong>{{ticket.clientName}}</strong>.',
+  badgePrefix: 'Ticket #',
+  priority: 'Prioridade',
+  status: 'Status',
+  commentBy: 'Comentado por',
+  commentByVar: '{{comment.author}}',
+  assignedTo: 'Atribuído a',
+  requester: 'Solicitante',
+  board: 'Quadro',
+  category: 'Categoria',
+  location: 'Localização',
+  commentLabel: '&#x1F4AC; Comentário',
+  commentVar: '{{{comment.content}}}',
+  viewButton: 'Ver ticket',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Novo comentário adicionado',
+  textCommentBy: 'Comentado por',
+  textAssigned: 'Atribuído a',
+  textRequester: 'Solicitante',
+  textComment: 'Comentário',
+  textView: 'Ver ticket',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtmlStandard(c) {

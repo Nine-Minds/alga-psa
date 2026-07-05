@@ -10,7 +10,11 @@ export function formatTimeForInput(date: Date): string {
 export function parseTimeToDate(timeString: string, baseDate: Date): Date {
   const [hours, minutes] = timeString.split(':').map(Number);
   const newDate = new Date(baseDate);
-  return setMinutes(setHours(newDate, hours || 0), minutes || 0);
+  const withTime = setMinutes(setHours(newDate, hours || 0), minutes || 0);
+  // HH:MM input is minute-granular; drop any seconds/ms inherited from baseDate so the
+  // computed duration matches the displayed times (see workDate.truncateToMinute).
+  withTime.setSeconds(0, 0);
+  return withTime;
 }
 
 export function calculateDuration(startTime: Date, endTime: Date): number {

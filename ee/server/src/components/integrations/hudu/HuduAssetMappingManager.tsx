@@ -49,7 +49,7 @@ import type {
   HuduAssetBulkImportSummary,
   HuduAssetImportFailure,
   HuduAssetImportResult,
-} from '../../../lib/actions/integrations/huduAssetImportActions';
+} from '../../../lib/integrations/hudu/assetImportCore';
 import { syncHuduClientAssets } from '../../../lib/actions/integrations/huduAssetSyncActions';
 import type { HuduAssetSuggestionSource } from '../../../lib/integrations/hudu/assetMatching';
 

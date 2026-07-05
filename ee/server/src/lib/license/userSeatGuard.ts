@@ -18,6 +18,8 @@ export async function checkApplianceLicenseSeatLimit(
 ): Promise<{ seats: number } | null> {
   try {
     const adminKnex = await getAdminConnection();
+    // license_state is install-wide admin metadata; keep it on the admin
+    // connection rather than tenantDb.
     const licenseRow = await adminKnex('license_state').orderBy('id').first();
     if (!licenseRow) return null;
 

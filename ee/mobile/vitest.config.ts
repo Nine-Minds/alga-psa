@@ -16,6 +16,7 @@ export default defineConfig({
       "@expo/vector-icons": path.resolve(__dirname, "test/mocks/expo-vector-icons.ts"),
       "@sentry/react-native": path.resolve(__dirname, "test/mocks/sentry-react-native.ts"),
       "expo-constants": path.resolve(__dirname, "test/mocks/expo-constants.ts"),
+      "expo-notifications": path.resolve(__dirname, "test/mocks/expo-notifications.ts"),
     },
   },
   test: {

@@ -8,6 +8,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrency } from '@alga-psa/core';
@@ -41,7 +42,8 @@ const RECONCILIATION_TAB_IDS = ['all', 'open', 'in-review', 'resolved'] as const
 
 // Define a type that extends ICreditReconciliationReport with client_name
 type ExtendedReconciliationReport = ICreditReconciliationReport & {
-  client_name?: string
+  client_name?: string;
+  logoUrl?: string | null;
 };
 
 // Define a function to create columns for the reconciliation reports table
@@ -52,7 +54,7 @@ const createColumns = (
   {
     title: t('columns.client', { defaultValue: 'Client' }),
     dataIndex: 'client_name',
-    render: (value: string | undefined) => value || t('status.na', { defaultValue: 'N/A' })
+    render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />
   },
   {
     title: t('columns.discrepancy', { defaultValue: 'Discrepancy' }),

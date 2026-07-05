@@ -74,13 +74,14 @@ describe('teams runtime EE ownership', () => {
       'utf8'
     );
 
-    expect(eeTeamsActionsSource).toContain("knex('teams_integrations')");
+    // tenant scoping of the integration/profile reads now lives in the tenantDb facade
+    expect(eeTeamsActionsSource).toContain("tenantDb(knex, tenant).table<TeamsIntegrationRow>('teams_integrations')");
     expect(eeTeamsPackageActionsSource).toContain('selected_profile_id');
-    expect(eeTeamsNotificationSource).toContain("knex('microsoft_profiles')");
+    expect(eeTeamsNotificationSource).toContain("tenantDb(knex, tenant).table<MicrosoftProfileRow>('microsoft_profiles')");
     expect(eeTeamsTenantContextSource).toContain("teams.selected_profile_id");
     expect(eeTeamsTenantContextSource).toContain("profiles.profile_id");
     expect(eeTeamsActionsWrapperSource).toContain("@alga-psa/ee-microsoft-teams/actions");
-    expect(eeTeamsActionsWrapperSource).not.toContain("knex('teams_integrations')");
+    expect(eeTeamsActionsWrapperSource).not.toContain("'teams_integrations'");
     expect(fs.existsSync(repoPath('ee/server/src/lib/actions/integrations/teamsMicrosoftActions.ts'))).toBe(false);
   });
 

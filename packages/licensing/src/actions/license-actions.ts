@@ -3,7 +3,7 @@
 import { headers } from 'next/headers.js';
 import { getLicenseUsage, type LicenseUsage } from '../lib/get-license-usage';
 import { isSelfHostLicensing } from '../lib/license-state';
-import { getConnection, getTenantContext } from '@alga-psa/db';
+import { getConnection, getTenantContext, tenantDb } from '@alga-psa/db';
 
 /**
  * Resolve the current request's tenant from the async tenant context, falling
@@ -64,9 +64,8 @@ export async function getLicenseUsageAction(): Promise<{
 export async function getActiveUserCount(tenantId: string): Promise<number> {
   const knex = await getConnection(tenantId);
 
-  const result = await knex('users')
+  const result = await tenantDb(knex, tenantId).table('users')
     .where({
-      tenant: tenantId,
       user_type: 'internal',
       is_inactive: false
     })

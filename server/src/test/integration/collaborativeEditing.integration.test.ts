@@ -7,6 +7,7 @@ import { prosemirrorJSONToYXmlFragment } from 'y-prosemirror';
 import { schema } from 'prosemirror-schema-basic';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
+import { tenantDb } from '@alga-psa/db';
 
 /**
  * Collaborative Editing — Integration Tests
@@ -44,6 +45,15 @@ const waitForSynced = (provider: HocuspocusProvider) => new Promise<void>((resol
   };
   provider.on('synced', handleSynced);
 });
+
+function tenantTable(tenant: string, table: string) {
+  return tenantDb(db, tenant).table(table);
+}
+
+function tenantRows() {
+  return tenantDb(db, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
 
 // Mock createTenantKnex to use test DB
 vi.mock('@alga-psa/db', async () => {
@@ -105,10 +115,10 @@ describe('Collaborative Editing — Integration Tests', () => {
     for (const table of ['document_block_content', 'documents', 'users', 'tenants']) {
       try {
         if (table === 'tenants') {
-          await db(table).whereIn('tenant', [tenantId, secondTenantId]).del();
+          await tenantRows().whereIn('tenant', [tenantId, secondTenantId]).del();
         } else {
-          await db(table).where({ tenant: tenantId }).del();
-          await db(table).where({ tenant: secondTenantId }).del();
+          await tenantTable(tenantId, table).where({ tenant: tenantId }).del();
+          await tenantTable(secondTenantId, table).where({ tenant: secondTenantId }).del();
         }
       } catch (e) {
         // table may not exist in test DB — ignore
@@ -124,8 +134,8 @@ describe('Collaborative Editing — Integration Tests', () => {
 
     afterEach(async () => {
       if (testDocId) {
-        await db('document_block_content').where({ document_id: testDocId, tenant: tenantId }).del();
-        await db('documents').where({ document_id: testDocId, tenant: tenantId }).del();
+        await tenantTable(tenantId, 'document_block_content').where({ document_id: testDocId, tenant: tenantId }).del();
+        await tenantTable(tenantId, 'documents').where({ document_id: testDocId, tenant: tenantId }).del();
         testDocId = '';
       }
     });
@@ -134,18 +144,18 @@ describe('Collaborative Editing — Integration Tests', () => {
       testDocId = uuidv4();
       const now = db.fn.now();
 
-      await db('documents').insert({
+      await tenantTable(tenantId, 'documents').insert({
         document_id: testDocId,
         document_name: 'Collab Test Doc',
         user_id: userId,
         created_by: userId,
         tenant: tenantId,
         order_number: 0,
-        created_at: now,
+        entered_at: now,
         updated_at: now,
       });
 
-      await db('document_block_content').insert({
+      await tenantTable(tenantId, 'document_block_content').insert({
         content_id: uuidv4(),
         document_id: testDocId,
         block_data: JSON.stringify({ type: 'doc', content: [] }),
@@ -154,11 +164,11 @@ describe('Collaborative Editing — Integration Tests', () => {
         updated_at: now,
       });
 
-      const doc = await db('documents').where({ document_id: testDocId, tenant: tenantId }).first();
+      const doc = await tenantTable(tenantId, 'documents').where({ document_id: testDocId, tenant: tenantId }).first();
       expect(doc).toBeDefined();
       expect(doc.document_name).toBe('Collab Test Doc');
 
-      const content = await db('document_block_content')
+      const content = await tenantTable(tenantId, 'document_block_content')
         .where({ document_id: testDocId, tenant: tenantId })
         .first();
       expect(content).toBeDefined();
@@ -169,18 +179,18 @@ describe('Collaborative Editing — Integration Tests', () => {
       testDocId = uuidv4();
       const now = db.fn.now();
 
-      await db('documents').insert({
+      await tenantTable(tenantId, 'documents').insert({
         document_id: testDocId,
         document_name: 'Tenant Isolation Doc',
         user_id: userId,
         created_by: userId,
         tenant: tenantId,
         order_number: 0,
-        created_at: now,
+        entered_at: now,
         updated_at: now,
       });
 
-      await db('document_block_content').insert({
+      await tenantTable(tenantId, 'document_block_content').insert({
         content_id: uuidv4(),
         document_id: testDocId,
         block_data: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph' }] }),
@@ -190,13 +200,13 @@ describe('Collaborative Editing — Integration Tests', () => {
       });
 
       // Query with wrong tenant should return nothing
-      const wrongTenant = await db('document_block_content')
+      const wrongTenant = await tenantTable(secondTenantId, 'document_block_content')
         .where({ document_id: testDocId, tenant: secondTenantId })
         .first();
       expect(wrongTenant).toBeUndefined();
 
       // Query with correct tenant should return the content
-      const correctTenant = await db('document_block_content')
+      const correctTenant = await tenantTable(tenantId, 'document_block_content')
         .where({ document_id: testDocId, tenant: tenantId })
         .first();
       expect(correctTenant).toBeDefined();
@@ -212,18 +222,18 @@ describe('Collaborative Editing — Integration Tests', () => {
       testDocId = uuidv4();
       const now = db.fn.now();
 
-      await db('documents').insert({
+      await tenantTable(tenantId, 'documents').insert({
         document_id: testDocId,
         document_name: 'Snapshot Test Doc',
         user_id: userId,
         created_by: userId,
         tenant: tenantId,
         order_number: 0,
-        created_at: now,
+        entered_at: now,
         updated_at: now,
       });
 
-      await db('document_block_content').insert({
+      await tenantTable(tenantId, 'document_block_content').insert({
         content_id: uuidv4(),
         document_id: testDocId,
         block_data: JSON.stringify({ type: 'doc', content: [] }),
@@ -234,8 +244,8 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     afterEach(async () => {
-      await db('document_block_content').where({ document_id: testDocId, tenant: tenantId }).del();
-      await db('documents').where({ document_id: testDocId, tenant: tenantId }).del();
+      await tenantTable(tenantId, 'document_block_content').where({ document_id: testDocId, tenant: tenantId }).del();
+      await tenantTable(tenantId, 'documents').where({ document_id: testDocId, tenant: tenantId }).del();
     });
 
     it('should update block_data when syncing a snapshot from collab state', async () => {
@@ -249,7 +259,7 @@ describe('Collaborative Editing — Integration Tests', () => {
         ],
       };
 
-      const [updated] = await db('document_block_content')
+      const [updated] = await tenantTable(tenantId, 'document_block_content')
         .where({ document_id: testDocId, tenant: tenantId })
         .update({
           block_data: JSON.stringify(collabContent),
@@ -260,7 +270,7 @@ describe('Collaborative Editing — Integration Tests', () => {
       expect(updated).toBeDefined();
 
       // Verify the snapshot was written correctly
-      const content = await db('document_block_content')
+      const content = await tenantTable(tenantId, 'document_block_content')
         .where({ document_id: testDocId, tenant: tenantId })
         .first();
 
@@ -271,19 +281,19 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     it('should preserve document metadata when syncing snapshot', async () => {
-      const beforeSync = await db('documents')
+      const beforeSync = await tenantTable(tenantId, 'documents')
         .where({ document_id: testDocId, tenant: tenantId })
         .first();
 
       // Simulate snapshot sync — only updates block_content, not the document record
-      await db('document_block_content')
+      await tenantTable(tenantId, 'document_block_content')
         .where({ document_id: testDocId, tenant: tenantId })
         .update({
           block_data: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph' }] }),
           updated_at: db.fn.now(),
         });
 
-      const afterSync = await db('documents')
+      const afterSync = await tenantTable(tenantId, 'documents')
         .where({ document_id: testDocId, tenant: tenantId })
         .first();
 
@@ -382,18 +392,18 @@ describe('Collaborative Editing — Integration Tests', () => {
         ],
       };
 
-      await db('documents').insert({
+      await tenantTable(tenantId, 'documents').insert({
         document_id: testDocId,
         document_name: 'Existing Doc',
         user_id: userId,
         created_by: userId,
         tenant: tenantId,
         order_number: 0,
-        created_at: now,
+        entered_at: now,
         updated_at: now,
       });
 
-      await db('document_block_content').insert({
+      await tenantTable(tenantId, 'document_block_content').insert({
         content_id: uuidv4(),
         document_id: testDocId,
         block_data: JSON.stringify(existingContent),
@@ -404,12 +414,12 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     afterEach(async () => {
-      await db('document_block_content').where({ document_id: testDocId, tenant: tenantId }).del();
-      await db('documents').where({ document_id: testDocId, tenant: tenantId }).del();
+      await tenantTable(tenantId, 'document_block_content').where({ document_id: testDocId, tenant: tenantId }).del();
+      await tenantTable(tenantId, 'documents').where({ document_id: testDocId, tenant: tenantId }).del();
     });
 
     it('should load existing block_data as TipTap-compatible JSON for Y.js initialization', async () => {
-      const content = await db('document_block_content')
+      const content = await tenantTable(tenantId, 'document_block_content')
         .where({ document_id: testDocId, tenant: tenantId })
         .first();
 
@@ -431,7 +441,7 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     it('should return null block_data for non-existent document', async () => {
-      const content = await db('document_block_content')
+      const content = await tenantTable(tenantId, 'document_block_content')
         .where({ document_id: uuidv4(), tenant: tenantId })
         .first();
 
@@ -611,18 +621,18 @@ describeIfHocuspocus('Hocuspocus persistence', () => {
     const docId = uuidv4();
     const now = new Date();
 
-    await db('documents').insert({
+    await tenantTable(tenantId, 'documents').insert({
       document_id: docId,
       document_name: 'Snapshot Test',
-      document_type: 'text',
       tenant: tenantId,
+      user_id: userId,
       created_by: userId,
-      updated_by: userId,
-      created_at: now,
+      edited_by: userId,
+      entered_at: now,
       updated_at: now,
     });
 
-    await db('document_block_content').insert({
+    await tenantTable(tenantId, 'document_block_content').insert({
       content_id: uuidv4(),
       document_id: docId,
       block_data: JSON.stringify({ type: 'doc', content: [] }),
@@ -665,7 +675,7 @@ describeIfHocuspocus('Hocuspocus persistence', () => {
 
     expect(result?.success).toBe(true);
 
-    const content = await db('document_block_content')
+    const content = await tenantTable(tenantId, 'document_block_content')
       .where({ document_id: docId, tenant: tenantId })
       .first();
 

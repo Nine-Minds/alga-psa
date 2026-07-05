@@ -191,6 +191,31 @@ const COPY = {
     textView: 'Zobacz zgłoszenie',
   },
 };
+SUBJECTS.pt = 'Novo ticket • {{ticket.title}} ({{ticket.priority}})';
+COPY.pt = {
+  headerLabel: 'Novo ticket criado',
+  intro: 'Um novo ticket foi registrado para <strong>{{ticket.clientName}}</strong>. Revise o resumo abaixo e acesse o link para tomar as próximas ações.',
+  badgePrefix: 'Ticket #',
+  priority: 'Prioridade',
+  status: 'Status',
+  created: 'Criado',
+  assignedTo: 'Atribuído a',
+  requester: 'Solicitante',
+  board: 'Quadro',
+  category: 'Categoria',
+  location: 'Localização',
+  descriptionLabel: 'Descrição',
+  descriptionVar: '{{{ticket.description}}}',
+  viewButton: 'Ver ticket',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Novo ticket criado para {{ticket.clientName}}',
+  textCreated: 'Criado',
+  textAssigned: 'Atribuído a',
+  textRequester: 'Solicitante',
+  textDescription: 'Descrição',
+  textView: 'Ver ticket',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

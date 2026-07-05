@@ -30,7 +30,7 @@ import {
   validateFieldsSchema,
   type AssetTypeRegistryError,
   type FieldSchemaIssue,
-} from '../../lib/assetTypeRegistry';
+} from '../../lib/assetTypeSchema';
 import AssetTypeSchemaEditor, {
   newSchemaEditorField,
   toEditorFields,

@@ -11,7 +11,7 @@
 import { Context } from '@temporalio/activity';
 import crypto from 'crypto';
 import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.js';
-import { retryOnReadOnly } from '@alga-psa/db';
+import { getTenantTableScope, retryOnReadOnly, tenantDb, type TenantTableScope } from '@alga-psa/db';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 import { getSecret } from '@alga-psa/core/secrets';
@@ -425,6 +425,15 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'agent_idp_providers',
   'agents',
 
+  // === MCP OAuth Authorization Server (EE) ===
+  // No DB FKs (relations enforced in app code), so order is advisory. Children
+  // first: auth_codes + refresh_tokens reference grants (grant_id), so delete them
+  // before grants. (mcp_oauth_clients + mcp_oauth_signing_keys are instance-wide —
+  // no tenant column — and are intentionally not tenant-scoped here.)
+  'mcp_oauth_auth_codes',
+  'mcp_oauth_refresh_tokens',
+  'mcp_oauth_grants',
+
   'users',      // Delete users LAST (they have NOT NULL contact_id → contacts)
 
   // SLA policies (referenced by clients.sla_policy_id and boards.sla_policy_id - must come after both)
@@ -498,6 +507,18 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tenant_settings',
 ];
 
+const TENANT_TABLES_DELETION_SET = new Set(TENANT_TABLES_DELETION_ORDER);
+const MANAGEMENT_TENANT_DISCOVERY_CONTEXT = '__tenant_deletion_management_tenant_discovery__';
+
+type TenantColumnName = 'tenant' | 'tenant_id';
+
+interface TenantDeletionTableBoundary {
+  tableName: string;
+  tenantColumn: TenantColumnName;
+  metadataScope: TenantTableScope | undefined;
+  reason: string;
+}
+
 const logger = () => Context.current().log;
 
 /**
@@ -506,7 +527,8 @@ const logger = () => Context.current().log;
 async function getManagementTenantIdInternal(knex: Knex): Promise<string | null> {
   const MANAGEMENT_TENANT_NAME = 'Nine Minds LLC';
 
-  const tenant = await knex('tenants')
+  const tenant = await tenantDb(knex, MANAGEMENT_TENANT_DISCOVERY_CONTEXT)
+    .unscoped('tenants', 'tenant deletion must discover the management tenant before tenant context is known')
     .where('client_name', MANAGEMENT_TENANT_NAME)
     .first();
 
@@ -526,9 +548,16 @@ async function findCustomerClientInManagementTenant(
   managementTenantId: string,
   log: ReturnType<typeof logger>
 ): Promise<{ client_id: string; client_name: string } | null> {
+  type ClientLookupRow = { client_id: string; client_name: string };
+  type ContactLookupRow = { client_id: string | null; email: string | null };
+  type UserLookupRow = { user_id: string; email: string | null };
+
+  const tenantScopedDb = tenantDb(knex, tenantId);
+  const managementDb = tenantDb(knex, managementTenantId);
+
   // Strategy 1: Look for client with tenant_id in properties matching the tenantId
-  let customerClient = await knex('clients')
-    .where({ tenant: managementTenantId })
+  let customerClient = await managementDb.table<ClientLookupRow>('clients')
+    .select('client_id', 'client_name')
     .whereRaw("properties->>'tenant_id' = ?", [tenantId])
     .first();
 
@@ -541,10 +570,11 @@ async function findCustomerClientInManagementTenant(
   }
 
   // Strategy 2: Look for client by exact name match
-  const tenant = await knex('tenants').where({ tenant: tenantId }).first();
+  const tenant = await tenantScopedDb.table('tenants').first();
   if (tenant) {
-    customerClient = await knex('clients')
-      .where({ tenant: managementTenantId, client_name: tenant.client_name })
+    customerClient = await managementDb.table<ClientLookupRow>('clients')
+      .select('client_id', 'client_name')
+      .where({ client_name: tenant.client_name })
       .first();
 
     if (customerClient) {
@@ -558,32 +588,30 @@ async function findCustomerClientInManagementTenant(
 
   // Strategy 3: Find by tenant admin user's email
   // Get the admin user's email from the tenant being deleted
-  const adminUser = await knex('users')
-    .where({ tenant: tenantId })
-    .whereIn('user_id', function() {
-      this.select('user_id')
-        .from('user_roles')
-        .where({ tenant: tenantId })
-        .whereIn('role_id', function() {
-          this.select('role_id')
-            .from('roles')
-            .where({ tenant: tenantId, role_name: 'Admin' });
-        });
-    })
+  const adminUserIds = tenantScopedDb.table('user_roles')
+    .select('user_id')
+    .whereIn('role_id', tenantScopedDb.table('roles')
+      .select('role_id')
+      .where({ role_name: 'Admin' }));
+  const adminUser = await tenantScopedDb.table<UserLookupRow>('users')
+    .select('email')
+    .whereIn('user_id', adminUserIds)
     .first();
 
   if (adminUser?.email) {
     log.info('Trying email-based lookup', { email: adminUser.email });
 
     // Find a contact in the management tenant with this email
-    const contact = await knex('contacts')
-      .where({ tenant: managementTenantId, email: adminUser.email })
+    const contact = await managementDb.table<ContactLookupRow>('contacts')
+      .select('client_id')
+      .where({ email: adminUser.email })
       .whereNotNull('client_id')
       .first();
 
     if (contact?.client_id) {
-      customerClient = await knex('clients')
-        .where({ tenant: managementTenantId, client_id: contact.client_id })
+      customerClient = await managementDb.table<ClientLookupRow>('clients')
+        .select('client_id', 'client_name')
+        .where({ client_id: contact.client_id })
         .first();
 
       if (customerClient) {
@@ -598,22 +626,24 @@ async function findCustomerClientInManagementTenant(
   }
 
   // Strategy 4: Try any user email from the tenant (fallback)
-  const anyUser = await knex('users')
-    .where({ tenant: tenantId })
+  const anyUser = await tenantScopedDb.table<UserLookupRow>('users')
+    .select('email')
     .whereNotNull('email')
     .first();
 
   if (anyUser?.email) {
     log.info('Trying email-based lookup with any user', { email: anyUser.email });
 
-    const contact = await knex('contacts')
-      .where({ tenant: managementTenantId, email: anyUser.email })
+    const contact = await managementDb.table<ContactLookupRow>('contacts')
+      .select('client_id')
+      .where({ email: anyUser.email })
       .whereNotNull('client_id')
       .first();
 
     if (contact?.client_id) {
-      customerClient = await knex('clients')
-        .where({ tenant: managementTenantId, client_id: contact.client_id })
+      customerClient = await managementDb.table<ClientLookupRow>('clients')
+        .select('client_id', 'client_name')
+        .where({ client_id: contact.client_id })
         .first();
 
       if (customerClient) {
@@ -651,7 +681,7 @@ export async function validateTenantDeletion(
     const managementTenantId = await getManagementTenantIdInternal(adminKnex);
 
     // Check if tenant exists
-    const tenant = await adminKnex('tenants').where({ tenant: tenantId }).first();
+    const tenant = await tenantDb(adminKnex, tenantId).table('tenants').first();
     const tenantExists = !!tenant;
 
     // CRITICAL: Check if this is the management tenant
@@ -717,8 +747,8 @@ export async function deactivateAllTenantUsers(
   try {
     const adminKnex = await getAdminConnection();
 
-    const result = await adminKnex('users')
-      .where({ tenant: tenantId, is_inactive: false })
+    const result = await tenantDb(adminKnex, tenantId).table('users')
+      .where({ is_inactive: false })
       .update({ is_inactive: true, updated_at: adminKnex.fn.now() });
 
     log.info('Users deactivated successfully', { tenantId, deactivatedCount: result });
@@ -745,8 +775,8 @@ export async function reactivateTenantUsers(
   try {
     const adminKnex = await getAdminConnection();
 
-    const result = await adminKnex('users')
-      .where({ tenant: tenantId, is_inactive: true })
+    const result = await tenantDb(adminKnex, tenantId).table('users')
+      .where({ is_inactive: true })
       .update({ is_inactive: false, updated_at: adminKnex.fn.now() });
 
     log.info('Users reactivated successfully', { tenantId, reactivatedCount: result });
@@ -851,11 +881,15 @@ export async function removeClientCanceledTag(tenantId: string): Promise<void> {
     }
 
     // Remove the 'Canceled' tag mapping
-    await adminKnex('tag_mappings')
-      .where({ tenant: managementTenantId, tagged_id: customerClient.client_id })
-      .whereIn('tag_id', function() {
-        this.select('tag_id').from('tag_definitions').where({ tenant: managementTenantId, tag_text: 'Canceled' });
-      })
+    const managementDb = tenantDb(adminKnex, managementTenantId);
+    await managementDb.table('tag_mappings')
+      .where({ tagged_id: customerClient.client_id })
+      .whereIn(
+        'tag_id',
+        managementDb.table('tag_definitions')
+          .select('tag_id')
+          .where({ tag_text: 'Canceled' })
+      )
       .del();
 
     log.info('Canceled tag removed from client', {
@@ -907,8 +941,10 @@ export async function deactivateMasterTenantClient(
     const clientId = customerClient.client_id;
 
     // Deactivate the client
-    await adminKnex('clients')
-      .where({ tenant: managementTenantId, client_id: clientId })
+    const managementDb = tenantDb(adminKnex, managementTenantId);
+
+    await managementDb.table('clients')
+      .where({ client_id: clientId })
       .update({ is_inactive: true, updated_at: adminKnex.fn.now() });
 
     log.info('Deactivated client in master tenant', {
@@ -918,8 +954,8 @@ export async function deactivateMasterTenantClient(
     });
 
     // Deactivate all contacts for this client
-    const contactsUpdated = await adminKnex('contacts')
-      .where({ tenant: managementTenantId, client_id: clientId })
+    const contactsUpdated = await managementDb.table('contacts')
+      .where({ client_id: clientId })
       .update({ is_inactive: true, updated_at: adminKnex.fn.now() });
 
     log.info('Deactivated contacts for client in master tenant', {
@@ -974,13 +1010,15 @@ export async function reactivateMasterTenantClient(tenantId: string): Promise<vo
     const clientId = customerClient.client_id;
 
     // Reactivate the client
-    await adminKnex('clients')
-      .where({ tenant: managementTenantId, client_id: clientId })
+    const managementDb = tenantDb(adminKnex, managementTenantId);
+
+    await managementDb.table('clients')
+      .where({ client_id: clientId })
       .update({ is_inactive: false, updated_at: adminKnex.fn.now() });
 
     // Reactivate contacts
-    await adminKnex('contacts')
-      .where({ tenant: managementTenantId, client_id: clientId })
+    await managementDb.table('contacts')
+      .where({ client_id: clientId })
       .update({ is_inactive: false, updated_at: adminKnex.fn.now() });
 
     log.info('Reactivated client and contacts in master tenant', {
@@ -1006,6 +1044,8 @@ export async function collectTenantStats(tenantId: string): Promise<TenantStats>
   try {
     const adminKnex = await getAdminConnection();
 
+    const tenantScopedDb = tenantDb(adminKnex, tenantId);
+
     // Get all counts in parallel for efficiency
     const [
       userCountResult,
@@ -1019,24 +1059,26 @@ export async function collectTenantStats(tenantId: string): Promise<TenantStats>
       contactCountResult,
       tenantInfo,
     ] = await Promise.all([
-      adminKnex('users').where({ tenant: tenantId }).count('* as count').first(),
-      adminKnex('users').where({ tenant: tenantId, is_inactive: false }).count('* as count').first(),
-      adminKnex('tickets').where({ tenant: tenantId }).count('* as count').first().catch(() => ({ count: 0 })),
+      tenantScopedDb.table('users').count('* as count').first(),
+      tenantScopedDb.table('users').where({ is_inactive: false }).count('* as count').first(),
+      tenantScopedDb.table('tickets').count('* as count').first().catch(() => ({ count: 0 })),
       // Open tickets - exclude closed status
-      adminKnex('tickets')
-        .where({ tenant: tenantId })
-        .whereNotIn('status_id', function() {
-          this.select('status_id').from('statuses').where({ tenant: tenantId, is_closed: true });
-        })
+      tenantScopedDb.table('tickets')
+        .whereNotIn(
+          'status_id',
+          tenantScopedDb.table('statuses')
+            .select('status_id')
+            .where({ is_closed: true })
+        )
         .count('* as count')
         .first()
         .catch(() => ({ count: 0 })),
-      adminKnex('invoices').where({ tenant: tenantId }).count('* as count').first().catch(() => ({ count: 0 })),
-      adminKnex('projects').where({ tenant: tenantId }).count('* as count').first().catch(() => ({ count: 0 })),
-      adminKnex('documents').where({ tenant: tenantId }).count('* as count').first().catch(() => ({ count: 0 })),
-      adminKnex('clients').where({ tenant: tenantId }).count('* as count').first().catch(() => ({ count: 0 })),
-      adminKnex('contacts').where({ tenant: tenantId }).count('* as count').first().catch(() => ({ count: 0 })),
-      adminKnex('tenants').where({ tenant: tenantId }).select('licensed_user_count').first(),
+      tenantScopedDb.table('invoices').count('* as count').first().catch(() => ({ count: 0 })),
+      tenantScopedDb.table('projects').count('* as count').first().catch(() => ({ count: 0 })),
+      tenantScopedDb.table('documents').count('* as count').first().catch(() => ({ count: 0 })),
+      tenantScopedDb.table('clients').count('* as count').first().catch(() => ({ count: 0 })),
+      tenantScopedDb.table('contacts').count('* as count').first().catch(() => ({ count: 0 })),
+      tenantScopedDb.table('tenants').select('licensed_user_count').first(),
     ]);
 
     const stats: TenantStats = {
@@ -1072,7 +1114,7 @@ export async function getTenantName(tenantId: string): Promise<string> {
 
   try {
     const adminKnex = await getAdminConnection();
-    const tenant = await adminKnex('tenants').where({ tenant: tenantId }).first();
+    const tenant = await tenantDb(adminKnex, tenantId).table('tenants').first();
     return tenant?.client_name || tenantId;
   } catch (error) {
     log.error('Failed to get tenant name', {
@@ -1109,14 +1151,15 @@ export async function recordPendingDeletion(
       } : null,
     };
 
+    const deletionDb = tenantDb(adminKnex, data.tenantId);
+
     // Remove any previous completed/rolled-back/failed deletion records for this tenant
     // to avoid violating the unique constraint on the tenant column
-    await adminKnex('pending_tenant_deletions')
-      .where({ tenant: data.tenantId })
+    await deletionDb.table('pending_tenant_deletions')
       .whereIn('status', ['deleted', 'rolled_back', 'failed'])
       .delete();
 
-    await adminKnex('pending_tenant_deletions').insert({
+    await deletionDb.table('pending_tenant_deletions').insert({
       deletion_id: data.deletionId,
       tenant: data.tenantId,
       trigger_source: data.triggerSource,
@@ -1195,7 +1238,7 @@ export async function updateDeletionStatus(
 async function getTableTenantColumn(
   knex: Knex,
   tableName: string
-): Promise<string | null> {
+): Promise<TenantColumnName | null> {
   try {
     const result = await knex.raw(`
       SELECT column_name
@@ -1203,16 +1246,89 @@ async function getTableTenantColumn(
       WHERE table_name = ?
         AND column_name IN ('tenant', 'tenant_id')
         AND table_schema = 'public'
+      ORDER BY CASE column_name WHEN 'tenant' THEN 1 WHEN 'tenant_id' THEN 2 END
       LIMIT 1
     `, [tableName]);
 
     if (result.rows && result.rows.length > 0) {
-      return result.rows[0].column_name;
+      return result.rows[0].column_name as TenantColumnName;
     }
     return null;
   } catch {
     return null;
   }
+}
+
+function requireTenantDeletionBoundaryReason(reason: string): void {
+  if (!reason || !reason.trim()) {
+    throw new Error('Tenant deletion dynamic table boundary requires a reason');
+  }
+}
+
+function tenantDeletionBoundaryReason(tableName: string): string {
+  return `tenant deletion dynamic cleanup for schema-verified table ${tableName} from TENANT_TABLES_DELETION_ORDER`;
+}
+
+function tenantMetadataColumn(scope: Extract<TenantTableScope, { scope: 'tenant' }>): TenantColumnName {
+  const column = scope.tenantColumn ?? 'tenant';
+  if (column !== 'tenant' && column !== 'tenant_id') {
+    throw new Error(`Unsupported tenant metadata column ${column}`);
+  }
+  return column;
+}
+
+async function resolveTenantDeletionTableBoundary(
+  knex: Knex,
+  tableName: string,
+  reason: string
+): Promise<TenantDeletionTableBoundary | null> {
+  requireTenantDeletionBoundaryReason(reason);
+
+  if (!TENANT_TABLES_DELETION_SET.has(tableName)) {
+    throw new Error(`Table ${tableName} is not in TENANT_TABLES_DELETION_ORDER`);
+  }
+
+  const tenantColumn = await getTableTenantColumn(knex, tableName);
+  if (!tenantColumn) {
+    return null;
+  }
+
+  const metadataScope = getTenantTableScope(tableName);
+  if (metadataScope?.scope === 'tenant') {
+    const expectedTenantColumn = tenantMetadataColumn(metadataScope);
+    if (tenantColumn !== expectedTenantColumn) {
+      throw new Error(
+        `Tenant deletion metadata/schema mismatch for ${tableName}: metadata expects ${expectedTenantColumn}, information_schema found ${tenantColumn}`
+      );
+    }
+  }
+
+  return {
+    tableName,
+    tenantColumn,
+    metadataScope,
+    reason,
+  };
+}
+
+function explicitTenantDeletionTableQuery(
+  knex: Knex,
+  tenantId: string,
+  boundary: TenantDeletionTableBoundary
+) {
+  const scopedDb = tenantDb(knex, tenantId);
+
+  if (boundary.metadataScope?.scope === 'tenant') {
+    return scopedDb.table(boundary.tableName);
+  }
+
+  if (boundary.metadataScope?.scope === 'admin') {
+    throw new Error(`Admin table ${boundary.tableName} cannot be deleted through tenant deletion`);
+  }
+
+  return scopedDb
+    .unscoped(boundary.tableName, boundary.reason)
+    .where({ [boundary.tenantColumn]: tenantId });
 }
 
 /**
@@ -1247,11 +1363,11 @@ async function breakCircularDependencies(
   log: ReturnType<typeof logger>
 ): Promise<void> {
   log.info('Breaking circular dependencies for tenant', { tenantId });
+  const tenantScopedDb = tenantDb(knex, tenantId);
 
   // Step 1: NULL out account_manager_id in clients to break clients → users dependency
   try {
-    const result1 = await knex('clients')
-      .where({ tenant: tenantId })
+    const result1 = await tenantScopedDb.table('clients')
       .whereNotNull('account_manager_id')
       .update({ account_manager_id: null });
     if (result1 > 0) {
@@ -1266,8 +1382,7 @@ async function breakCircularDependencies(
 
   // Step 2: NULL out client_id in contacts to break contacts → clients dependency
   try {
-    const result2 = await knex('contacts')
-      .where({ tenant: tenantId })
+    const result2 = await tenantScopedDb.table('contacts')
       .whereNotNull('client_id')
       .update({ client_id: null });
     if (result2 > 0) {
@@ -1283,8 +1398,7 @@ async function breakCircularDependencies(
   // Step 3: NULL out statuses.board_id so boards can be deleted before statuses
   // without hitting the statuses_tenant_board_id_fk constraint (NO ACTION).
   try {
-    const result3 = await knex('statuses')
-      .where({ tenant: tenantId })
+    const result3 = await tenantScopedDb.table('statuses')
       .whereNotNull('board_id')
       .update({ board_id: null });
     if (result3 > 0) {
@@ -1300,8 +1414,7 @@ async function breakCircularDependencies(
   // Step 4: NULL out authorization_bundles.published_revision_id so
   // authorization_bundle_revisions can be deleted before authorization_bundles.
   try {
-    const result4 = await knex('authorization_bundles')
-      .where({ tenant: tenantId })
+    const result4 = await tenantScopedDb.table('authorization_bundles')
       .whereNotNull('published_revision_id')
       .update({ published_revision_id: null });
     if (result4 > 0) {
@@ -1319,8 +1432,7 @@ async function breakCircularDependencies(
   // configuration block). The reverse FK clients.inbound_ticket_defaults_id
   // is naturally cleared by the time we delete inbound_ticket_defaults.
   try {
-    const result5 = await knex('inbound_ticket_defaults')
-      .where({ tenant: tenantId })
+    const result5 = await tenantScopedDb.table('inbound_ticket_defaults')
       .whereNotNull('client_id')
       .update({ client_id: null });
     if (result5 > 0) {
@@ -1393,7 +1505,7 @@ export async function deleteTenantData(
     // ============================================================
     // CRITICAL SAFEGUARD 2: Verify the tenant exists and get info
     // ============================================================
-    const tenantInfo = await adminKnex('tenants').where({ tenant: tenantId }).first();
+    const tenantInfo = await tenantDb(adminKnex, tenantId).table('tenants').first();
     if (!tenantInfo) {
       log.error('Tenant not found for deletion', { tenantId, deletionId });
       return {
@@ -1422,12 +1534,15 @@ export async function deleteTenantData(
     // Step 2: Delete from each table in order
     for (const tableName of TENANT_TABLES_DELETION_ORDER) {
       try {
-        const tenantColumn = await getTableTenantColumn(adminKnex, tableName);
+        const tableBoundary = await resolveTenantDeletionTableBoundary(
+          adminKnex,
+          tableName,
+          tenantDeletionBoundaryReason(tableName)
+        );
 
-        if (tenantColumn) {
+        if (tableBoundary) {
           // Count records first - with explicit tenant check
-          const countResult = await adminKnex(tableName)
-            .where({ [tenantColumn]: tenantId })
+          const countResult = await explicitTenantDeletionTableQuery(adminKnex, tenantId, tableBoundary)
             .count('* as count')
             .first();
 
@@ -1442,7 +1557,7 @@ export async function deleteTenantData(
               // Log what we're about to delete for audit trail
               log.info(`Pre-deletion check: ${tableName}`, {
                 tableName,
-                tenantColumn,
+                tenantColumn: tableBoundary.tenantColumn,
                 tenantId,
                 managementTenantId,
                 recordCount: count,
@@ -1452,7 +1567,7 @@ export async function deleteTenantData(
 
             // Delete records with explicit tenant filter
             const deleted = await withReadOnlyRetry(
-              (k) => k(tableName).where({ [tenantColumn]: tenantId }).delete(),
+              (k) => explicitTenantDeletionTableQuery(k, tenantId, tableBoundary).delete(),
               `delete:${tableName}`
             );
 
@@ -1477,8 +1592,7 @@ export async function deleteTenantData(
     try {
       const deletedPending = await withReadOnlyRetry(
         (k) =>
-          k('pending_tenant_deletions')
-            .where({ tenant: tenantId })
+          tenantDb(k, tenantId).table('pending_tenant_deletions')
             .whereNot({ deletion_id: deletionId })
             .delete(),
         'delete:pending_tenant_deletions'
@@ -1502,7 +1616,7 @@ export async function deleteTenantData(
       }
 
       await withReadOnlyRetry(
-        (k) => k('tenants').where({ tenant: tenantId }).delete(),
+        (k) => tenantDb(k, tenantId).table('tenants').delete(),
         'delete:tenants'
       );
 
@@ -1576,8 +1690,9 @@ export async function cancelTenantStripeSubscription(
     const adminKnex = await getAdminConnection();
 
     // Find any billable subscription for this tenant (active, trialing, past_due, or unpaid)
-    const activeSubscription = await adminKnex('stripe_subscriptions')
-      .where({ tenant: tenantId })
+    const tenantScopedDb = tenantDb(adminKnex, tenantId);
+
+    const activeSubscription = await tenantScopedDb.table('stripe_subscriptions')
       .whereIn('status', ['active', 'trialing', 'past_due', 'unpaid'])
       .first();
 
@@ -1613,7 +1728,7 @@ export async function cancelTenantStripeSubscription(
     const canceledSubscription = await stripe.subscriptions.cancel(subscriptionExternalId);
 
     // Update our database to reflect the cancellation
-    await adminKnex('stripe_subscriptions')
+    await tenantScopedDb.table('stripe_subscriptions')
       .where({ stripe_subscription_id: activeSubscription.stripe_subscription_id })
       .update({
         status: 'canceled',
@@ -1845,9 +1960,8 @@ export async function sendCancellationConfirmationEmail(
     const adminKnex = await getAdminConnection();
 
     // Get the tenant's registered email address
-    const tenant = await adminKnex('tenants')
+    const tenant = await tenantDb(adminKnex, tenantId).table('tenants')
       .select('email', 'client_name')
-      .where({ tenant: tenantId })
       .first();
 
     if (!tenant?.email) {
@@ -1902,8 +2016,9 @@ export async function linkSubscriptionToExistingTenant(
   const log = Context.current().log;
   const knex = await getAdminConnection();
 
-  const existingActiveSubscription = await knex('stripe_subscriptions')
-    .where({ tenant: input.tenantId })
+  const tenantScopedDb = tenantDb(knex, input.tenantId);
+
+  const existingActiveSubscription = await tenantScopedDb.table('stripe_subscriptions')
     .whereIn('status', ['active', 'trialing'])
     .first('stripe_subscription_external_id');
 
@@ -1921,16 +2036,16 @@ export async function linkSubscriptionToExistingTenant(
   }
 
   const result = await knex.transaction(async (trx) => {
-    let stripeCustomer = await trx('stripe_customers')
+    const tenantScopedTrx = tenantDb(trx, input.tenantId);
+
+    let stripeCustomer = await tenantScopedTrx.table('stripe_customers')
       .where({
-        tenant: input.tenantId,
         stripe_customer_external_id: input.stripeCustomerId,
       })
       .first('*');
 
     if (!stripeCustomer) {
-      stripeCustomer = await trx('stripe_customers')
-        .where({ tenant: input.tenantId })
+      stripeCustomer = await tenantScopedTrx.table('stripe_customers')
         .orderBy('created_at', 'asc')
         .first('*');
     }
@@ -1941,7 +2056,7 @@ export async function linkSubscriptionToExistingTenant(
         throw new Error('MASTER_BILLING_TENANT_ID not configured');
       }
 
-      [stripeCustomer] = await trx('stripe_customers')
+      [stripeCustomer] = await tenantScopedTrx.table('stripe_customers')
         .insert({
           tenant: input.tenantId,
           stripe_customer_id: trx.raw('gen_random_uuid()'),
@@ -1985,8 +2100,7 @@ export async function triggerReactivationPasswordReset(
   input: TriggerReactivationPasswordResetInput,
 ): Promise<{ success: boolean }> {
   const knex = await getAdminConnection();
-  const tenant = await knex('tenants')
-    .where('tenant', input.tenantId)
+  const tenant = await tenantDb(knex, input.tenantId).table('tenants')
     .first('email');
   const email = tenant?.email;
   if (!email) {
@@ -2031,7 +2145,7 @@ export async function recordReactivationPaymentAlert(
   const log = Context.current().log;
   const knex = await getAdminConnection();
 
-  await knex('pending_reactivation_refunds').insert({
+  await tenantDb(knex, input.tenantId).table('pending_reactivation_refunds').insert({
     tenant: input.tenantId,
     stripe_checkout_session_id: input.stripeCheckoutSessionId ?? null,
     stripe_payment_intent_id: input.stripePaymentIntentId ?? null,

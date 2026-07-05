@@ -522,12 +522,30 @@ export function createEmptyTicketMobileRichTextDocument(): TicketMobileRichTextD
 }
 
 export function parseTicketMobileRichTextDocument(
-  content: string | null | undefined,
+  content: string | object | null | undefined,
   options?: {
     onParseError?: (error: unknown) => void;
   }
 ): TicketMobileRichTextDocument {
   if (!content) {
+    return createEmptyTicketMobileRichTextDocument();
+  }
+
+  if (typeof content !== 'string') {
+    if (Array.isArray(content)) {
+      return {
+        format: 'blocknote',
+        sourceFormat: 'blocknote',
+        content: content.length > 0 ? (content as PartialBlock[]) : cloneDefaultBlock(),
+      };
+    }
+    if (isProseMirrorDoc(content)) {
+      return {
+        format: 'prosemirror',
+        sourceFormat: 'prosemirror',
+        content: content,
+      };
+    }
     return createEmptyTicketMobileRichTextDocument();
   }
 
@@ -568,7 +586,7 @@ export function parseTicketMobileRichTextDocument(
 }
 
 export function parseTicketRichTextContent(
-  content: string | null | undefined,
+  content: string | object | null | undefined,
   options?: {
     onParseError?: (error: unknown) => void;
   }

@@ -1,3 +1,4 @@
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '../db/db';
 import logger from '@alga-psa/core/logger';
 
@@ -17,8 +18,8 @@ export async function upsertPushToken(
   appVersion?: string,
 ): Promise<void> {
   const now = new Date().toISOString();
-  const db = await getConnection(tenant);
-  await db('mobile_push_tokens')
+  const db = tenantDb(await getConnection(tenant), tenant);
+  await db.table('mobile_push_tokens')
     .insert({
       tenant,
       user_id: userId,
@@ -46,9 +47,9 @@ export async function deactivatePushToken(
   userId: string,
   deviceId: string,
 ): Promise<void> {
-  const db = await getConnection(tenant);
-  await db('mobile_push_tokens')
-    .where({ tenant, user_id: userId, device_id: deviceId })
+  const db = tenantDb(await getConnection(tenant), tenant);
+  await db.table('mobile_push_tokens')
+    .where({ user_id: userId, device_id: deviceId })
     .update({ is_active: false, updated_at: new Date().toISOString() });
 }
 
@@ -56,10 +57,10 @@ export async function getActivePushTokensForUser(
   tenant: string,
   userId: string,
 ): Promise<PushTokenRow[]> {
-  const db = await getConnection(tenant);
-  return db('mobile_push_tokens')
+  const db = tenantDb(await getConnection(tenant), tenant);
+  return db.table('mobile_push_tokens')
     .select('mobile_push_token_id', 'expo_push_token', 'device_id', 'platform')
-    .where({ tenant, user_id: userId, is_active: true });
+    .where({ user_id: userId, is_active: true });
 }
 
 export async function deactivateInvalidTokens(
@@ -67,9 +68,8 @@ export async function deactivateInvalidTokens(
   expoPushTokens: string[],
 ): Promise<void> {
   if (expoPushTokens.length === 0) return;
-  const db = await getConnection(tenant);
-  await db('mobile_push_tokens')
-    .where({ tenant })
+  const db = tenantDb(await getConnection(tenant), tenant);
+  await db.table('mobile_push_tokens')
     .whereIn('expo_push_token', expoPushTokens)
     .update({ is_active: false, updated_at: new Date().toISOString() });
 

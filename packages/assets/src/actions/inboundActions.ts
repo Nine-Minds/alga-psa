@@ -1,4 +1,4 @@
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { ingestNormalizedRmmDeviceSnapshot } from '@alga-psa/shared/rmm/sharedAssetIngestionService';
 import type { NormalizedRmmExternalDeviceSnapshot } from '@alga-psa/shared/rmm/contracts';
 import type { RmmProvider } from '@alga-psa/types';
@@ -135,14 +135,14 @@ const upsertAssetByExternalIdAction: InboundActionDefinition<UpsertAssetByExtern
       }
 
       if (lookup) {
-        const [updated] = await trx('assets')
-          .where({ tenant: ctx.tenant, asset_id: lookup.algaEntityId })
+        const [updated] = await tenantDb(trx, ctx.tenant).table('assets')
+          .where({ asset_id: lookup.algaEntityId })
           .update(payload)
           .returning<{ asset_id: string; name: string }[]>(['asset_id', 'name']);
         return updated;
       }
 
-      const [created] = await trx('assets')
+      const [created] = await tenantDb(trx, ctx.tenant).table('assets')
         .insert({
           tenant: ctx.tenant,
           ...payload,

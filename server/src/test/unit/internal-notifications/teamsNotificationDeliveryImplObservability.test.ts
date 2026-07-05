@@ -76,6 +76,9 @@ const hoisted = vi.hoisted(() => {
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: hoisted.createTenantKnexMock,
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+  }),
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({

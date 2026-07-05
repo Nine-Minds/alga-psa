@@ -1,0 +1,295 @@
+'use client';
+
+import React, { use, useEffect, useRef, useState } from 'react';
+import { Calendar, Phone, CreditCard, Plus } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { Button } from '@alga-psa/ui/components/Button';
+import { BentoTile, BentoTileEmpty } from './BentoTile';
+import {
+  getTicketScheduleEntries,
+  getTicketInteractions,
+  getTicketBillingRollup,
+  type TicketScheduleEntrySummary,
+  type TicketInteractionSummary,
+  type TicketBillingRollup,
+} from '../../../actions/ticketBentoActions';
+
+/**
+ * Tile data source. When `initial` (a server-started promise from the RSC
+ * page) is provided, the FIRST paint resolves it via React `use()` — the tile
+ * suspends into its <Suspense> skeleton and issues NO network request. The
+ * mount fetch is skipped; later dep changes (refreshKey after a mutation)
+ * fall back to the client action as before. Without `initial`, behavior is
+ * the legacy fetch-on-mount.
+ */
+function useTileData<T>(
+  load: () => Promise<T>,
+  deps: React.DependencyList,
+  t: (key: string, defaultValue: string) => string,
+  initial?: Promise<T>,
+): {
+  data: T | null;
+  error: string | null;
+  loading: boolean;
+} {
+  // Conditional use() is allowed by React; a resolved streamed promise
+  // returns synchronously on re-renders.
+  const initialData = initial ? use(initial) : null;
+  const [data, setData] = useState<T | null>(initialData);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(!initial);
+  const skipFirstLoad = useRef(Boolean(initial));
+
+  useEffect(() => {
+    if (skipFirstLoad.current) {
+      skipFirstLoad.current = false;
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    load()
+      .then((result) => {
+        if (!cancelled) setData(result);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : t('bento.tiles.couldNotLoad', 'Could not load this tile'));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+
+  return { data, error, loading };
+}
+
+function TileSkeleton({ id }: { id: string }) {
+  return <div id={id} className="animate-pulse bg-[rgb(var(--color-border-100))] h-16 rounded-md" />;
+}
+
+function formatShortDate(iso: string): { month: string; day: string } {
+  const d = new Date(iso);
+  return {
+    month: d.toLocaleString(undefined, { month: 'short' }),
+    day: String(d.getDate()),
+  };
+}
+
+function formatTimeRange(startIso: string, endIso: string): string {
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  const sameDay = start.toDateString() === end.toDateString();
+  const time = (d: Date) => d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  if (sameDay) return `${time(start)} – ${time(end)}`;
+  const day = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return `${day(start)} – ${day(end)}`;
+}
+
+/** "Next visit" tile — schedule entries linked to this ticket. */
+export function NextVisitTile({
+  id,
+  ticketId,
+  refreshKey = 0,
+  initialData,
+}: {
+  id: string;
+  ticketId: string;
+  refreshKey?: number;
+  initialData?: Promise<TicketScheduleEntrySummary[]>;
+}) {
+  const { t } = useTranslation('features/tickets');
+  const { data, error, loading } = useTileData(
+    () => getTicketScheduleEntries(ticketId),
+    [ticketId, refreshKey],
+    t,
+    initialData,
+  );
+
+  const upcoming = (data ?? []).filter((entry) => entry.isUpcoming);
+  const past = (data ?? []).filter((entry) => !entry.isUpcoming).slice(0, 1);
+
+  return (
+    <BentoTile id={id} title={t('bento.tiles.nextVisit', 'Next visit')} icon={<Calendar className="h-4 w-4" />} error={error}>
+      {loading ? (
+        <TileSkeleton id={`${id}-loading`} />
+      ) : upcoming.length === 0 && past.length === 0 ? (
+        <div>
+          <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.nothingScheduled', 'Nothing scheduled')}</BentoTileEmpty>
+          <a
+            id={`${id}-schedule-link`}
+            href="/msp/technician-dispatch"
+            className="inline-flex items-center gap-1 text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline mt-1"
+          >
+            <Plus className="h-3 w-3" /> {t('bento.tiles.scheduleVisit', 'Schedule a visit')}
+          </a>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {[...upcoming.slice(0, 2), ...(upcoming.length === 0 ? past : [])].map((entry) => (
+            <ScheduleRow key={entry.entryId} id={`${id}-entry-${entry.entryId}`} entry={entry} t={t} />
+          ))}
+        </div>
+      )}
+    </BentoTile>
+  );
+}
+
+function ScheduleRow({ id, entry, t }: { id: string; entry: TicketScheduleEntrySummary; t: (key: string, defaultValue: string) => string }) {
+  const date = formatShortDate(entry.scheduledStart);
+  return (
+    <div id={id} className={`flex items-center gap-3 ${entry.isUpcoming ? '' : 'opacity-60'}`}>
+      <div className="w-10 flex-shrink-0 rounded-md bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-400)/0.15)] text-center py-1">
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-[rgb(var(--color-primary-500))]">{date.month}</div>
+        <div className="text-base font-semibold leading-none text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))]">{date.day}</div>
+      </div>
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-[rgb(var(--color-text-800))] truncate">{entry.title || t('bento.tiles.scheduledWork', 'Scheduled work')}</div>
+        <div className="text-xs text-[rgb(var(--color-text-500))] truncate">
+          {formatTimeRange(entry.scheduledStart, entry.scheduledEnd)}
+          {entry.assignedUserNames.length > 0 ? ` · ${entry.assignedUserNames.join(', ')}` : ''}
+          {!entry.isUpcoming ? ` · ${t('bento.tiles.scheduleDone', 'done')}` : ''}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** "Calls and emails" tile — interactions logged against this ticket. */
+export function CallsEmailsTile({
+  id,
+  ticketId,
+  refreshKey = 0,
+  viewAllHref,
+  initialData,
+}: {
+  id: string;
+  ticketId: string;
+  refreshKey?: number;
+  viewAllHref?: string;
+  initialData?: Promise<TicketInteractionSummary[]>;
+}) {
+  const { t } = useTranslation('features/tickets');
+  const { data, error, loading } = useTileData(
+    () => getTicketInteractions(ticketId, { limit: 5 }),
+    [ticketId, refreshKey],
+    t,
+    initialData,
+  );
+
+  return (
+    <BentoTile
+      id={id}
+      title={t('bento.tiles.callsAndEmails', 'Calls and emails')}
+      icon={<Phone className="h-4 w-4" />}
+      error={error}
+      action={
+        viewAllHref && data && data.length > 0 ? (
+          <a
+            id={`${id}-view-all`}
+            href={viewAllHref}
+            className="text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+          >
+            {t('bento.tiles.viewAll', 'View all')}
+          </a>
+        ) : undefined
+      }
+    >
+      {loading ? (
+        <TileSkeleton id={`${id}-loading`} />
+      ) : !data || data.length === 0 ? (
+        <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.noCallsOrEmails', 'No calls or emails logged')}</BentoTileEmpty>
+      ) : (
+        <ul className="divide-y divide-[rgb(var(--color-border-100))]">
+          {data.map((interaction) => (
+            <InteractionRow key={interaction.interactionId} id={`${id}-row-${interaction.interactionId}`} interaction={interaction} t={t} />
+          ))}
+        </ul>
+      )}
+    </BentoTile>
+  );
+}
+
+function InteractionRow({ id, interaction, t }: { id: string; interaction: TicketInteractionSummary; t: (key: string, defaultValue: string) => string }) {
+  return (
+    <li id={id} className="py-1.5 first:pt-0 last:pb-0 flex items-baseline gap-2 text-sm">
+      <span className="min-w-0 truncate text-[rgb(var(--color-text-700))]">
+        {interaction.title || interaction.typeName || t('bento.tiles.interaction', 'Interaction')}
+      </span>
+      <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
+        {new Date(interaction.interactionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+      </span>
+    </li>
+  );
+}
+
+function formatMinutes(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${rest}m`;
+  return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`;
+}
+
+/** "Billing" tile — hours-only rollup for this ticket (v1: no dollar amounts). */
+export function BillingTile({
+  id,
+  ticketId,
+  refreshKey = 0,
+  initialData,
+}: {
+  id: string;
+  ticketId: string;
+  refreshKey?: number;
+  initialData?: Promise<TicketBillingRollup | null>;
+}) {
+  const { t } = useTranslation('features/tickets');
+  const { data, error, loading } = useTileData(
+    () => getTicketBillingRollup(ticketId),
+    [ticketId, refreshKey],
+    t,
+    initialData,
+  );
+
+  const rollup: TicketBillingRollup | null = data;
+
+  return (
+    <BentoTile id={id} title={t('bento.tiles.billing', 'Billing')} icon={<CreditCard className="h-4 w-4" />} error={error}>
+      {loading ? (
+        <TileSkeleton id={`${id}-loading`} />
+      ) : !rollup || rollup.entryCount === 0 ? (
+        <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.noTimeLogged', 'No time logged yet')}</BentoTileEmpty>
+      ) : (
+        <div className="text-sm space-y-1.5">
+          <div className="flex justify-between">
+            <span className="text-[rgb(var(--color-text-500))]">{t('bento.tiles.logged', 'Logged')}</span>
+            <span className="font-medium text-[rgb(var(--color-text-800))]">
+              {formatMinutes(rollup.totalMinutes)} · {t('bento.tiles.billableAmount', '{{amount}} billable', { amount: formatMinutes(rollup.billableMinutes) })}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[rgb(var(--color-text-500))]">{t('bento.tiles.invoicing', 'Invoicing')}</span>
+            <span className="font-medium text-[rgb(var(--color-text-800))]">
+              {rollup.uninvoicedBillableMinutes > 0
+                ? t('bento.tiles.notInvoicedYet', '{{amount}} not invoiced yet', { amount: formatMinutes(rollup.uninvoicedBillableMinutes) })
+                : t('bento.tiles.nothingWaiting', 'Nothing waiting')}
+            </span>
+          </div>
+          {rollup.contractName ? (
+            <div className="flex justify-between gap-2">
+              <span className="text-[rgb(var(--color-text-500))] flex-shrink-0">{t('bento.tiles.contract', 'Contract')}</span>
+              <span className="font-medium text-[rgb(var(--color-text-800))] truncate" title={rollup.contractName}>
+                {rollup.contractName}
+              </span>
+            </div>
+          ) : null}
+          {rollup.contractName ? (
+            <p className="text-xs text-green-700 dark:text-green-400">{t('bento.tiles.coveredByContract', 'Covered by contract')}</p>
+          ) : null}
+        </div>
+      )}
+    </BentoTile>
+  );
+}

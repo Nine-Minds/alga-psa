@@ -9,6 +9,7 @@ import {
   getWorkflowModuleAvailabilityRegistry,
   type WorkflowModuleAvailabilityResolver
 } from '../../../../../shared/workflow/runtime/registries/moduleAvailabilityRegistry';
+import { workflowTenantTable } from '../lib/workflowTenantDb';
 
 export type IntegrationWorkflowModuleRegistration = {
   module: WorkflowIntegrationModuleDefinition;
@@ -74,8 +75,8 @@ export async function resolveAvailableIntegrationModuleKeys(
  */
 export function rmmIntegrationAvailability(provider: string): WorkflowModuleAvailabilityResolver {
   return async (knex: Knex, tenantId: string): Promise<boolean> => {
-    const row = await knex('rmm_integrations')
-      .where({ tenant: tenantId, provider, is_active: true })
+    const row = await workflowTenantTable(knex, tenantId, 'rmm_integrations')
+      .where({ provider, is_active: true })
       .whereNotNull('connected_at')
       .first();
     return Boolean(row);

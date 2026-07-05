@@ -13,24 +13,25 @@ function createMaterialsListBuilder(rows: unknown[]) {
   return builder;
 }
 
-function createTicketBuilder(ticket: unknown) {
-  return {
-    where: vi.fn(() => ({
-      select: vi.fn(() => ({
-        first: vi.fn().mockResolvedValue(ticket),
-      })),
-    })),
+// tenantDb prepends where('<alias>.tenant', tenant) on the root builder, so
+// where/select must chain back to the same builder before first() resolves.
+function createFirstRowBuilder(row: unknown) {
+  const builder = {
+    where: vi.fn(() => builder),
+    select: vi.fn(() => builder),
+    first: vi.fn().mockResolvedValue(row),
   };
+
+  return builder;
 }
 
-function createProductBuilder(product: unknown) {
-  return {
-    where: vi.fn(() => ({
-      select: vi.fn(() => ({
-        first: vi.fn().mockResolvedValue(product),
-      })),
-    })),
+function createInsertBuilder(insertSpy: ReturnType<typeof vi.fn>) {
+  const builder = {
+    where: vi.fn(() => builder),
+    insert: insertSpy,
   };
+
+  return builder;
 }
 
 describe('TicketService materials', () => {
@@ -94,20 +95,19 @@ describe('TicketService materials', () => {
     const insertSpy = vi.fn(() => ({
       returning: vi.fn().mockResolvedValue([{ ticket_material_id: materialId }]),
     }));
+    const ticketBuilder = createFirstRowBuilder({ ticket_id: ticketId, client_id: 'client-1' });
 
     const knex = vi.fn((table: string) => {
       if (table === 'tickets') {
-        return createTicketBuilder({ ticket_id: ticketId, client_id: 'client-1' });
+        return ticketBuilder;
       }
 
       if (table === 'service_catalog') {
-        return createProductBuilder({ service_id: 'service-1' });
+        return createFirstRowBuilder({ service_id: 'service-1' });
       }
 
       if (table === 'ticket_materials') {
-        return {
-          insert: insertSpy,
-        };
+        return createInsertBuilder(insertSpy);
       }
 
       throw new Error(`Unexpected table ${table}`);
@@ -135,6 +135,7 @@ describe('TicketService materials', () => {
       description: 'Replacement drive',
     }, context);
 
+    expect(ticketBuilder.where).toHaveBeenCalledWith('tickets.tenant', 'tenant-1');
     expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({
       ticket_id: ticketId,
       client_id: 'client-1',
@@ -180,11 +181,11 @@ describe('TicketService materials', () => {
     const service = new TicketService();
     const knex = vi.fn((table: string) => {
       if (table === 'tickets') {
-        return createTicketBuilder({ ticket_id: ticketId, client_id: 'client-1' });
+        return createFirstRowBuilder({ ticket_id: ticketId, client_id: 'client-1' });
       }
 
       if (table === 'service_catalog') {
-        return createProductBuilder(null);
+        return createFirstRowBuilder(null);
       }
 
       throw new Error(`Unexpected table ${table}`);

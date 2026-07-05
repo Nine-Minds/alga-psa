@@ -16,6 +16,11 @@ import type {
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
   withTransaction: vi.fn(),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => {

@@ -209,12 +209,14 @@
           "priorityPlaceholder": "Wybierz priorytet...",
           "allPriorities": "Wszystkie priorytety",
           "dueDateRange": "Zakres terminów",
+          "createdDateRange": "Zakres dat utworzenia",
           "showClosedTasks": "Pokaż zamknięte zadania"
         },
         "actions": {
           "reset": "Resetuj",
           "cancel": "Anuluj",
-          "apply": "Zastosuj filtry"
+          "apply": "Zastosuj filtry",
+          "clearDates": "Wyczyść"
         }
       }
     },
@@ -252,12 +254,14 @@
           "priorityPlaceholder": "Wybierz priorytet...",
           "allPriorities": "Wszystkie priorytety",
           "dueDateRange": "Zakres terminów",
+          "createdDateRange": "Zakres dat utworzenia",
           "showClosedTickets": "Pokaż zamknięte zgłoszenia"
         },
         "actions": {
           "reset": "Resetuj",
           "cancel": "Anuluj",
-          "apply": "Zastosuj filtry"
+          "apply": "Zastosuj filtry",
+          "clearDates": "Wyczyść"
         }
       }
     },
@@ -297,13 +301,15 @@
           "priorityMedium": "Średni",
           "priorityLow": "Niski",
           "dueDateRange": "Zakres terminów",
+          "createdDateRange": "Zakres dat utworzenia",
           "showClosedTasks": "Pokaż zamknięte zadania",
           "includeHiddenTasks": "Uwzględnij ukryte zadania"
         },
         "actions": {
           "reset": "Resetuj",
           "cancel": "Anuluj",
-          "apply": "Zastosuj filtry"
+          "apply": "Zastosuj filtry",
+          "clearDates": "Wyczyść"
         }
       },
       "listDrawer": {
@@ -441,6 +447,7 @@
       "search": "Szukaj",
       "client": "Klient",
       "dueDateShort": "Termin",
+      "createdShort": "Utworzono",
       "tags": "Tagi",
       "tagsSelected": "{{count}} tagów",
       "tasksCompact": "Zadania",
@@ -470,7 +477,9 @@
     },
     "actions": {
       "reset": "Resetuj",
-      "clearClient": "Wyczyść filtr klienta"
+      "clearClient": "Wyczyść filtr klienta",
+      "clearDueDate": "Wyczyść filtr terminu",
+      "clearCreatedDate": "Wyczyść filtr daty utworzenia"
     },
     "statusClosedSuffix": " (zamknięte)",
     "summary": {

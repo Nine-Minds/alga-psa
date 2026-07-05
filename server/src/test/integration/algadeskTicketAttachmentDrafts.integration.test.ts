@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 const dbRef = vi.hoisted(() => ({
@@ -39,19 +40,28 @@ const HOOK_TIMEOUT = 180_000;
 let db: Knex;
 const tenantsToCleanup = new Set<string>();
 
+function tenantTable(tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function tenantRows() {
+  return tenantDb(db, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
 async function cleanupTenant(tenantId: string): Promise<void> {
-  await db('document_associations').where({ tenant: tenantId }).del();
-  await db('documents').where({ tenant: tenantId }).del();
-  await db('comments').where({ tenant: tenantId }).del();
-  await db('tickets').where({ tenant: tenantId }).del();
-  await db('next_number').where({ tenant: tenantId }).del();
-  await db('statuses').where({ tenant: tenantId }).del();
-  await db('priorities').where({ tenant: tenantId }).del();
-  await db('boards').where({ tenant: tenantId }).del();
-  await db('contacts').where({ tenant: tenantId }).del();
-  await db('clients').where({ tenant: tenantId }).del();
-  await db('users').where({ tenant: tenantId }).del();
-  await db('tenants').where({ tenant: tenantId }).del();
+  await tenantTable(tenantId, 'document_associations').del();
+  await tenantTable(tenantId, 'documents').del();
+  await tenantTable(tenantId, 'comments').del();
+  await tenantTable(tenantId, 'tickets').del();
+  await tenantTable(tenantId, 'next_number').del();
+  await tenantTable(tenantId, 'statuses').del();
+  await tenantTable(tenantId, 'priorities').del();
+  await tenantTable(tenantId, 'boards').del();
+  await tenantTable(tenantId, 'contacts').del();
+  await tenantTable(tenantId, 'clients').del();
+  await tenantTable(tenantId, 'users').del();
+  await tenantRows().where({ tenant: tenantId }).del();
 }
 
 async function seedFixture() {
@@ -65,7 +75,7 @@ async function seedFixture() {
 
   tenantsToCleanup.add(tenantId);
 
-  await db('tenants').insert({
+  await tenantRows().insert({
     tenant: tenantId,
     client_name: `Tenant ${tenantId.slice(0, 8)}`,
     email: `tenant-${tenantId.slice(0, 8)}@example.com`,
@@ -74,7 +84,7 @@ async function seedFixture() {
     updated_at: db.fn.now(),
   });
 
-  await db('users').insert({
+  await tenantTable(tenantId, 'users').insert({
     tenant: tenantId,
     user_id: userId,
     username: `user-${tenantId.slice(0, 8)}`,
@@ -85,7 +95,7 @@ async function seedFixture() {
     created_at: db.fn.now(),
   });
 
-  await db('clients').insert({
+  await tenantTable(tenantId, 'clients').insert({
     tenant: tenantId,
     client_id: clientId,
     client_name: `Client ${tenantId.slice(0, 8)}`,
@@ -95,17 +105,15 @@ async function seedFixture() {
     updated_at: db.fn.now(),
   });
 
-  await db('boards').insert({
+  await tenantTable(tenantId, 'boards').insert({
     tenant: tenantId,
     board_id: boardId,
     board_name: 'Support',
     is_default: true,
-    is_active: true,
-    created_at: db.fn.now(),
-    updated_at: db.fn.now(),
+    is_inactive: false,
   });
 
-  await db('priorities').insert({
+  await tenantTable(tenantId, 'priorities').insert({
     tenant: tenantId,
     priority_id: priorityId,
     priority_name: 'High',
@@ -117,7 +125,7 @@ async function seedFixture() {
     updated_at: db.fn.now(),
   });
 
-  await db('statuses').insert({
+  await tenantTable(tenantId, 'statuses').insert({
     tenant: tenantId,
     status_id: statusId,
     board_id: boardId,
@@ -128,10 +136,9 @@ async function seedFixture() {
     order_number: 10,
     created_by: userId,
     created_at: db.fn.now(),
-    updated_at: db.fn.now(),
   });
 
-  await db('tickets').insert({
+  await tenantTable(tenantId, 'tickets').insert({
     tenant: tenantId,
     ticket_id: ticketId,
     ticket_number: `T-${Date.now()}`,
@@ -148,16 +155,20 @@ async function seedFixture() {
   const deletableDocumentId = uuidv4();
   const blockedDocumentId = uuidv4();
 
-  await db('documents').insert([
+  await tenantTable(tenantId, 'documents').insert([
     {
       tenant: tenantId,
       document_id: deletableDocumentId,
       document_name: 'draft-inline-image.png',
       mime_type: 'image/png',
-      file_id: uuidv4(),
+      // documents.file_id has an FK to external_files; drafts in this test
+      // never touch storage, so leave it unset (the action's reference-token
+      // matching falls back to document_id).
+      file_id: null,
       content: null,
       created_by: userId,
-      created_at: db.fn.now(),
+      user_id: userId,
+      entered_at: db.fn.now(),
       updated_at: db.fn.now(),
       is_client_visible: false,
     },
@@ -166,22 +177,22 @@ async function seedFixture() {
       document_id: blockedDocumentId,
       document_name: 'shared-image.png',
       mime_type: 'image/png',
-      file_id: uuidv4(),
+      file_id: null,
       content: null,
       created_by: userId,
-      created_at: db.fn.now(),
+      user_id: userId,
+      entered_at: db.fn.now(),
       updated_at: db.fn.now(),
       is_client_visible: false,
     },
   ]);
 
-  await db('document_associations').insert([
+  await tenantTable(tenantId, 'document_associations').insert([
     {
       tenant: tenantId,
       document_id: deletableDocumentId,
       entity_type: 'ticket',
       entity_id: ticketId,
-      uploaded_by: userId,
       created_at: db.fn.now(),
     },
     {
@@ -189,7 +200,6 @@ async function seedFixture() {
       document_id: blockedDocumentId,
       entity_type: 'ticket',
       entity_id: ticketId,
-      uploaded_by: userId,
       created_at: db.fn.now(),
     },
     {
@@ -197,7 +207,6 @@ async function seedFixture() {
       document_id: blockedDocumentId,
       entity_type: 'client',
       entity_id: clientId,
-      uploaded_by: userId,
       created_at: db.fn.now(),
     },
   ]);
@@ -237,8 +246,8 @@ describe('AlgaDesk ticket attachment draft integration', () => {
       documentIds: [fixture.deletableDocumentId, fixture.blockedDocumentId],
       deleteDocumentFn: async (documentId: string) => {
         deletedByAction.push(documentId);
-        await db('document_associations').where({ tenant: fixture.tenantId, document_id: documentId }).del();
-        await db('documents').where({ tenant: fixture.tenantId, document_id: documentId }).del();
+        await tenantTable(fixture.tenantId, 'document_associations').where({ document_id: documentId }).del();
+        await tenantTable(fixture.tenantId, 'documents').where({ document_id: documentId }).del();
         return { success: true, deleted: true };
       },
     });

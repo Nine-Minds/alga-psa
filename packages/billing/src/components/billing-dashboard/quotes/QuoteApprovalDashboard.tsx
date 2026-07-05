@@ -8,6 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { ColumnDefinition, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -99,7 +100,7 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
     {
       title: t('common.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name' as const,
-      render: (value: string | null | undefined) => value || '—',
+      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />,
     },
     {
       title: t('common.columns.title', { defaultValue: 'Title' }),

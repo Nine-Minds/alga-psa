@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { configureGmailProvider } from '@alga-psa/integrations/actions/email-actions/configureGmailProvider';
@@ -26,9 +27,10 @@ export async function POST(request: NextRequest) {
     
     // Get database connection
     const knex = await getAdminConnection();
+    const db = tenantDb(knex, user.tenant);
     
     // Get the email provider and its Google config
-    const provider = await knex('email_providers')
+    const provider = await db.table('email_providers')
       .where('id', providerId)
       .where('provider_type', 'google')
       .where('is_active', true)
@@ -38,7 +40,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Gmail provider not found' }, { status: 404 });
     }
     
-    const googleConfig = await knex('google_email_provider_config')
+    const googleConfig = await db.table('google_email_provider_config')
       .where('email_provider_id', providerId)
       .first();
     

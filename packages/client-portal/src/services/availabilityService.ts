@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 import {
   ITimeSlot,
   IAvailableDate,
@@ -13,6 +13,17 @@ import { formatInTimeZone } from 'date-fns-tz';
  * AvailabilityService
  * Handles all time slot calculation and availability checking logic for appointment scheduling
  */
+
+type AvailabilityHoursRow = {
+  user_id: string;
+  start_time: string;
+  end_time: string;
+  buffer_before_minutes: number | null;
+  buffer_after_minutes: number | null;
+  setting_type?: string;
+  day_of_week?: number;
+  is_available?: boolean;
+};
 
 /**
  * Convert a local time in a given IANA timezone to a UTC Date.
@@ -55,8 +66,7 @@ function zonedTimeToUtc(
  * Returns null if not set, so callers can fall back to UTC.
  */
 async function getTenantTimezone(knex: Knex, tenantId: string): Promise<string | null> {
-  const row = await knex('tenant_settings')
-    .where({ tenant: tenantId })
+  const row = await tenantDb(knex, tenantId).table('tenant_settings')
     .select('settings')
     .first();
   const tz = row?.settings?.timezone;
@@ -83,6 +93,7 @@ export async function getAvailableTimeSlots(
 ): Promise<ITimeSlot[]> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
+    const scopedDb = tenantDb(knex, tenantId);
     const tenantTimezone = await getTenantTimezone(knex, tenantId);
 
     // Validate date is not in the past and within booking window. "Today" is
@@ -108,6 +119,11 @@ export async function getAvailableTimeSlots(
     let minNoticeHours = 24; // default
 
     if (serviceSettings) {
+      // A service_rules row marked unavailable disables booking outright.
+      if (serviceSettings.is_available === false) {
+        return [];
+      }
+
       const maxAdvanceDays = serviceSettings.advance_booking_days ?? 90;
       const maxDate = new Date();
       maxDate.setDate(maxDate.getDate() + maxAdvanceDays);
@@ -123,9 +139,8 @@ export async function getAvailableTimeSlots(
     const dayOfWeek = targetDate.getUTCDay();
 
     // Check for company-wide exceptions first (user_id is NULL)
-    const companyWideException = await knex('availability_exceptions')
+    const companyWideException = await scopedDb.table('availability_exceptions')
       .where({
-        tenant: tenantId,
         date: date
       })
       .whereNull('user_id')
@@ -140,9 +155,8 @@ export async function getAvailableTimeSlots(
     let userIds: string[] = [];
     if (userId) {
       // Check if the specific user has availability for this day of week
-      const userHasAvailability = await knex('availability_settings')
+      const userHasAvailability = await scopedDb.table('availability_settings')
         .where({
-          tenant: tenantId,
           setting_type: 'user_hours',
           user_id: userId,
           day_of_week: dayOfWeek,
@@ -151,9 +165,8 @@ export async function getAvailableTimeSlots(
         .first();
 
       // Or check if user has an availability exception for this specific date
-      const userHasException = await knex('availability_exceptions')
+      const userHasException = await scopedDb.table('availability_exceptions')
         .where({
-          tenant: tenantId,
           user_id: userId,
           date: date,
           is_available: true
@@ -166,9 +179,8 @@ export async function getAvailableTimeSlots(
       }
     } else {
       // Get all users with availability settings for this day
-      const usersWithSettings = await knex('availability_settings')
+      const usersWithSettings = await scopedDb.table('availability_settings')
         .where({
-          tenant: tenantId,
           setting_type: 'user_hours',
           day_of_week: dayOfWeek,
           is_available: true
@@ -181,9 +193,8 @@ export async function getAvailableTimeSlots(
 
       // Also check for user-specific exceptions that make them available on this date
       // (even if they don't normally work this day of week)
-      const availableExceptions = await knex('availability_exceptions')
+      const availableExceptions = await scopedDb.table('availability_exceptions')
         .where({
-          tenant: tenantId,
           date: date,
           is_available: true
         })
@@ -204,9 +215,8 @@ export async function getAvailableTimeSlots(
     }
 
     // Check for user-specific availability exceptions
-    const userExceptions = await knex('availability_exceptions')
+    const userExceptions = await scopedDb.table('availability_exceptions')
       .where({
-        tenant: tenantId,
         date: date
       })
       .whereIn('user_id', userIds)
@@ -229,9 +239,8 @@ export async function getAvailableTimeSlots(
       return [];
     }
 
-    let workingHours = await knex('availability_settings')
+    let workingHours: AvailabilityHoursRow[] = await scopedDb.table<AvailabilityHoursRow>('availability_settings')
       .where({
-        tenant: tenantId,
         setting_type: 'user_hours',
         day_of_week: dayOfWeek,
         is_available: true
@@ -246,9 +255,8 @@ export async function getAvailableTimeSlots(
     );
 
     if (usersWithoutHours.length > 0) {
-      const alternateHours = await knex('availability_settings')
+      const alternateHours = await scopedDb.table('availability_settings')
         .where({
-          tenant: tenantId,
           setting_type: 'user_hours',
           is_available: true
         })
@@ -272,16 +280,14 @@ export async function getAvailableTimeSlots(
     const startOfDay = new Date(Date.UTC(yearForQuery, monthForQuery - 1, dayForQuery, 0, 0, 0, 0));
     const endOfDay = new Date(Date.UTC(yearForQuery, monthForQuery - 1, dayForQuery, 23, 59, 59, 999));
 
-    const scheduleEntries = await knex('schedule_entries')
-      .where({ tenant: tenantId })
+    const scheduleEntries = await scopedDb.table('schedule_entries')
       .whereBetween('scheduled_start', [startOfDay.toISOString(), endOfDay.toISOString()])
       .select('entry_id', 'scheduled_start', 'scheduled_end');
 
     // Get assignees for schedule entries
     const entryIds = scheduleEntries.map((e: any) => e.entry_id);
     const assignees = entryIds.length > 0
-      ? await knex('schedule_entry_assignees')
-          .where({ tenant: tenantId })
+      ? await scopedDb.table('schedule_entry_assignees')
           .whereIn('entry_id', entryIds)
           .whereIn('user_id', userIds)
           .select('entry_id', 'user_id')
@@ -297,12 +303,9 @@ export async function getAvailableTimeSlots(
     });
 
     // Check max appointments per day
-    const appointmentCounts = await knex('schedule_entries as se')
-      .join('schedule_entry_assignees as sea', function() {
-        this.on('se.entry_id', 'sea.entry_id')
-            .andOn('se.tenant', 'sea.tenant');
-      })
-      .where({ 'se.tenant': tenantId })
+    const appointmentCountsQuery = scopedDb.table('schedule_entries as se');
+    scopedDb.tenantJoin(appointmentCountsQuery, 'schedule_entry_assignees as sea', 'se.entry_id', 'sea.entry_id');
+    const appointmentCounts = await appointmentCountsQuery
       .whereBetween('se.scheduled_start', [startOfDay.toISOString(), endOfDay.toISOString()])
       .whereIn('sea.user_id', userIds)
       .groupBy('sea.user_id')
@@ -315,9 +318,8 @@ export async function getAvailableTimeSlots(
     });
 
     // Get max appointments settings
-    const maxAppointmentSettings = await knex('availability_settings')
+    const maxAppointmentSettings = await scopedDb.table('availability_settings')
       .where({
-        tenant: tenantId,
         setting_type: 'user_hours',
         day_of_week: dayOfWeek
       })
@@ -470,6 +472,7 @@ export async function isSlotAvailable(
   void userTimezone;
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
+    const scopedDb = tenantDb(knex, tenantId);
     const tenantTimezone = await getTenantTimezone(knex, tenantId);
 
     const start = new Date(startTime);
@@ -480,9 +483,8 @@ export async function isSlotAvailable(
     const dayOfWeek = start.getDay();
 
     // Check for company-wide exceptions first
-    const companyWideException = await knex('availability_exceptions')
+    const companyWideException = await scopedDb.table('availability_exceptions')
       .where({
-        tenant: tenantId,
         date: date
       })
       .whereNull('user_id')
@@ -494,9 +496,8 @@ export async function isSlotAvailable(
     }
 
     // Build user query
-    let userQuery = knex('availability_settings')
+    let userQuery = scopedDb.table('availability_settings')
       .where({
-        tenant: tenantId,
         setting_type: 'user_hours',
         day_of_week: dayOfWeek,
         is_available: true
@@ -508,13 +509,12 @@ export async function isSlotAvailable(
       userQuery = userQuery.where({ user_id: userId });
     }
 
-    const workingHours = await userQuery;
+    const workingHours: AvailabilityHoursRow[] = await userQuery as AvailabilityHoursRow[];
 
     // Check for user-specific availability exceptions
     const userIds = workingHours.map((wh: any) => wh.user_id);
-    const exceptions = await knex('availability_exceptions')
+    const exceptions = await scopedDb.table('availability_exceptions')
       .where({
-        tenant: tenantId,
         date: date
       })
       .whereIn('user_id', userIds)
@@ -526,9 +526,8 @@ export async function isSlotAvailable(
       .map((ex: any) => ex.user_id);
 
     // Check if there are exception-available users for this date
-    const exceptionAvailableUsers = await knex('availability_exceptions')
+    const exceptionAvailableUsers = await scopedDb.table('availability_exceptions')
       .where({
-        tenant: tenantId,
         date: date,
         is_available: true
       })
@@ -540,15 +539,15 @@ export async function isSlotAvailable(
       // User has an exception making them available - allow the check to proceed
       if (workingHours.length === 0) {
         // Get hours from another day as template
-        const alternateHours = await knex('availability_settings')
+        const alternateHours = await scopedDb.table<AvailabilityHoursRow>('availability_settings')
           .where({
-            tenant: tenantId,
             setting_type: 'user_hours',
             user_id: userId,
             is_available: true
           })
           .whereNotNull('start_time')
           .whereNotNull('end_time')
+          .select('user_id', 'start_time', 'end_time', 'buffer_before_minutes', 'buffer_after_minutes')
           .first();
 
         if (alternateHours) {
@@ -586,15 +585,12 @@ export async function isSlotAvailable(
       }
 
       // Check for schedule conflicts
-      const conflicts = await knex('schedule_entries as se')
-        .join('schedule_entry_assignees as sea', function() {
-          this.on('se.entry_id', 'sea.entry_id')
-              .andOn('se.tenant', 'sea.tenant');
-        })
+      const conflictsQuery = scopedDb.table('schedule_entries as se')
         .where({
-          'se.tenant': tenantId,
           'sea.user_id': userHours.user_id
-        })
+        });
+      scopedDb.tenantJoin(conflictsQuery, 'schedule_entry_assignees as sea', 'se.entry_id', 'sea.entry_id');
+      const conflicts = await conflictsQuery
         .where(function() {
           this.where('se.scheduled_start', '<', end.toISOString())
               .andWhere('se.scheduled_end', '>', start.toISOString());
@@ -688,14 +684,14 @@ export async function getAvailableServicesForClient(
 ): Promise<any[]> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
+    const scopedDb = tenantDb(knex, tenantId);
 
     // Get active contracts for the client
     const today = new Date().toISOString().split('T')[0];
 
     // First get the contract_id from client_contracts
-    const clientContracts = await knex('client_contracts')
+    const clientContracts = await scopedDb.table('client_contracts')
       .where({
-        tenant: tenantId,
         client_id: clientId,
         is_active: true
       })
@@ -713,20 +709,7 @@ export async function getAvailableServicesForClient(
     const contractIds = clientContracts.map(c => c.contract_id);
 
     // Now get services from the contract lines (contract_lines contains contract_id directly)
-    const services = await knex('contract_lines as cl')
-      .join('contract_line_services as cls', function() {
-        this.on('cl.contract_line_id', 'cls.contract_line_id')
-            .andOn('cl.tenant', 'cls.tenant');
-      })
-      .join('service_catalog as sc', function() {
-        this.on('cls.service_id', 'sc.service_id')
-            .andOn('cls.tenant', 'sc.tenant');
-      })
-      .leftJoin('service_types as st', function() {
-        this.on('sc.custom_service_type_id', '=', 'st.id')
-            .andOn('sc.tenant', '=', 'st.tenant');
-      })
-      .where('cl.tenant', tenantId)
+    const servicesQuery = scopedDb.table('contract_lines as cl')
       .whereIn('cl.contract_id', contractIds)
       .select(
         'sc.service_id',
@@ -738,6 +721,10 @@ export async function getAvailableServicesForClient(
         'sc.default_rate'
       )
       .distinct();
+    scopedDb.tenantJoin(servicesQuery, 'contract_line_services as cls', 'cl.contract_line_id', 'cls.contract_line_id');
+    scopedDb.tenantJoin(servicesQuery, 'service_catalog as sc', 'cls.service_id', 'sc.service_id');
+    scopedDb.tenantJoin(servicesQuery, 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' });
+    const services = await servicesQuery;
 
     return services;
   });
@@ -753,18 +740,10 @@ export async function getServicesForPublicBooking(
 ): Promise<any[]> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
+    const scopedDb = tenantDb(knex, tenantId);
 
-    const services = await knex('availability_settings as avs')
-      .join('service_catalog as sc', function() {
-        this.on('avs.service_id', 'sc.service_id')
-            .andOn('avs.tenant', 'sc.tenant');
-      })
-      .leftJoin('service_types as st', function() {
-        this.on('sc.custom_service_type_id', '=', 'st.id')
-            .andOn('sc.tenant', '=', 'st.tenant');
-      })
+    const servicesQuery = scopedDb.table('availability_settings as avs')
       .where({
-        'avs.tenant': tenantId,
         'avs.setting_type': 'service_rules',
         'avs.allow_without_contract': true
       })
@@ -779,6 +758,9 @@ export async function getServicesForPublicBooking(
         'avs.config_json'
       )
       .distinct();
+    scopedDb.tenantJoin(servicesQuery, 'service_catalog as sc', 'avs.service_id', 'sc.service_id');
+    scopedDb.tenantJoin(servicesQuery, 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' });
+    const services = await servicesQuery;
 
     return services;
   });
@@ -792,13 +774,12 @@ async function getServiceSettings(
   tenantId: string,
   serviceId: string
 ): Promise<IAvailabilitySetting | null> {
-  const setting = await knex('availability_settings')
+  const setting = await tenantDb(knex, tenantId).table('availability_settings')
     .where({
-      tenant: tenantId,
       setting_type: 'service_rules',
       service_id: serviceId
     })
     .first();
 
-  return setting || null;
+  return (setting as IAvailabilitySetting | undefined) || null;
 }

@@ -1,4 +1,5 @@
 import { createTenantKnex } from '../lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { ExtensionRegistry } from '@enterprise/lib/extensions/registry';
 
 async function checkExtensions() {
@@ -6,7 +7,10 @@ async function checkExtensions() {
     const { knex } = await createTenantKnex();
     
     // Get first tenant
-    const firstTenant = await knex('tenants').select('tenant').first();
+    const firstTenant = await tenantDb(knex, '__extension_check_tenant_discovery__')
+      .unscoped('tenants', 'extension check script selects a tenant for diagnostic listing')
+      .select('tenant')
+      .first();
     if (!firstTenant) {
       console.log('No tenants found');
       await knex.destroy();

@@ -35,10 +35,12 @@ const mockGetSettings = vi.mocked(getAccountingSyncSettings);
 
 /** Build a fake knex that returns the given invoice_type for any invoice lookup. */
 function makeKnex(invoiceType: string | null = 'standard'): any {
-  const first = vi.fn(async () => invoiceType !== null ? { invoice_type: invoiceType } : null);
-  const select = vi.fn(function () { return ({ first }); });
-  const where = vi.fn(function () { return ({ select }); });
-  const table = vi.fn(function () { return ({ where }); });
+  const query: any = {
+    where: vi.fn(() => query),
+    select: vi.fn(() => query),
+    first: vi.fn(async () => invoiceType !== null ? { invoice_type: invoiceType } : null)
+  };
+  const table = vi.fn(() => query);
   const fn = Object.assign(table, { fn: { now: vi.fn() } });
   return fn;
 }
@@ -49,9 +51,11 @@ function makeKnex(invoiceType: string | null = 'standard'): any {
  */
 function makeVoidKnex(hasMapping: boolean = true): any {
   const mappingRow = hasMapping ? { id: 'map-1' } : null;
-  const first = vi.fn(async (..._args: any[]) => mappingRow);
-  const where = vi.fn(function () { return ({ first }); });
-  const table = vi.fn(function () { return ({ where }); });
+  const query: any = {
+    where: vi.fn(() => query),
+    first: vi.fn(async (..._args: any[]) => mappingRow)
+  };
+  const table = vi.fn(() => query);
   const fn = Object.assign(table, { fn: { now: vi.fn() } });
   return fn;
 }

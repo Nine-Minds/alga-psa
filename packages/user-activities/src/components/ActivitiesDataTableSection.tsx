@@ -1,7 +1,7 @@
 'use client';
 
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   Activity,
   ActivityFilters,
@@ -176,15 +176,20 @@ function formatActivityPrintDate(dateString?: string): string {
   const [filters, setFilters] = useState<ActivityFilters>(
     hasExplicitFilters ? initialFilters : DEFAULT_FILTERS
   );
-  const [filtersInitialized, setFiltersInitialized] = useState(hasExplicitFilters);
+  // Whether the user has made their own filter edit (which must not be overwritten by a
+  // late-arriving saved value). Explicit "View All" filters count as an intentional choice.
+  const userEditedFiltersRef = useRef(hasExplicitFilters);
 
-  // Once saved preferences load, apply them (unless explicit filters were provided)
+  // Mirror saved preferences into local filter state until the user makes their own edit.
+  // This intentionally keeps syncing (rather than latching once) because useUserPreference
+  // resolves in two stages — localStorage first, then the authoritative server value. A
+  // one-shot sync could capture the initial default before the persisted value arrives and
+  // then lock, silently dropping saved filters (due/created dates, client, tags…) on reload.
   useEffect(() => {
-    if (filtersLoaded && !hasExplicitFilters && !filtersInitialized) {
+    if (filtersLoaded && !hasExplicitFilters && !userEditedFiltersRef.current) {
       setFilters(savedFilters);
-      setFiltersInitialized(true);
     }
-  }, [filtersLoaded, hasExplicitFilters, filtersInitialized, savedFilters]);
+  }, [filtersLoaded, hasExplicitFilters, savedFilters]);
   
   // Use the enhanced cache hook with loading state
   const {
@@ -391,6 +396,8 @@ function formatActivityPrintDate(dateString?: string): string {
   }, [adHocTitle, isAddingAdHoc, invalidateCache, loadActivities, t]);
 
   const handleFilterChange = useCallback((newFilters: ActivityFilters) => {
+    // Mark that the user has taken control so the saved-preference mirror stops overwriting.
+    userEditedFiltersRef.current = true;
     setFilters(newFilters);
     setSavedFilters(newFilters);
     setCurrentPage(1);

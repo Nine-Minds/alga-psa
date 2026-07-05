@@ -12,6 +12,7 @@ import {
 } from '@alga-psa/shared/ticketClients/contacts';
 import { getClientLocations as getClientLocationsModel } from '@alga-psa/shared/ticketClients/locations';
 import { withAuth } from '@alga-psa/auth';
+import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 
 export const getAllClients = withAuth(async (_user, { tenant }, includeInactive: boolean = true): Promise<IClient[]> => {
   const { knex } = await createTenantKnex();
@@ -24,9 +25,18 @@ export const getAllClients = withAuth(async (_user, { tenant }, includeInactive:
 export const getClientById = withAuth(async (_user, { tenant }, clientId: string): Promise<IClient | null> => {
   const { knex } = await createTenantKnex();
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+  const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientByIdModel(trx, tenant, clientId);
   });
+
+  if (!client) {
+    return null;
+  }
+
+  // Resolve the uploaded logo so the client drawer opened from the tickets list
+  // shows the real logo (matching the table), not just initials.
+  const logoUrl = await getClientLogoUrl(clientId, tenant);
+  return { ...client, logoUrl };
 });
 
 export const getContactsByClient = withAuth(async (

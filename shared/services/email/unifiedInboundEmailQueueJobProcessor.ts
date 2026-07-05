@@ -1,5 +1,6 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import axios from 'axios';
 import type {
@@ -15,6 +16,7 @@ import {
 import { GmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAdapter';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { resolveListRewriteSender } from '@alga-psa/shared/lib/email/listRewriteSender';
+import { extractRelevantInboundHeaders } from '@alga-psa/shared/lib/email/automatedMessage';
 
 export class SourceMessageUnavailableError extends Error {
   public readonly reason: string;
@@ -245,8 +247,8 @@ async function refreshImapAccessToken(params: {
     Date.now() + (Number.isFinite(expiresInSeconds) ? expiresInSeconds : 3600) * 1000
   ).toISOString();
 
-  await db('imap_email_provider_config')
-    .where({ email_provider_id: provider.id, tenant: provider.tenant })
+  await tenantDb(db, provider.tenant).table('imap_email_provider_config')
+    .where({ email_provider_id: provider.id })
     .update({
       access_token: accessToken,
       token_expires_at: expiresAt,
@@ -267,12 +269,11 @@ async function refreshImapAccessToken(params: {
 
 async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<EmailProviderConfig> {
   const db = await getAdminConnection();
-  const row = await db('microsoft_email_provider_config as mc')
-    .join('email_providers as ep', function () {
-      this.on('mc.email_provider_id', '=', 'ep.id').andOn('mc.tenant', '=', 'ep.tenant');
-    })
+  const tenantScopedDb = tenantDb(db, job.tenantId);
+  const query = tenantScopedDb.table('microsoft_email_provider_config as mc');
+  tenantScopedDb.tenantJoin(query, 'email_providers as ep', 'mc.email_provider_id', 'ep.id');
+  const row = (await query
     .where('ep.id', job.providerId)
-    .andWhere('ep.tenant', job.tenantId)
     .andWhere('ep.provider_type', 'microsoft')
     .first(
       'ep.*',
@@ -285,7 +286,7 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
       db.raw('mc.webhook_subscription_id as mc_webhook_subscription_id'),
       db.raw('mc.webhook_expires_at as mc_webhook_expires_at'),
       db.raw('mc.folder_filters as mc_folder_filters')
-    );
+    )) as any;
 
   if (!row) {
     throw new SourceMessageUnavailableError('microsoft_provider_not_found');
@@ -336,15 +337,16 @@ async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob): Prom
   config: EmailProviderConfig;
 }> {
   const db = await getAdminConnection();
-  const provider = await db('email_providers')
-    .where({ id: job.providerId, tenant: job.tenantId, provider_type: 'google' })
+  const tenantScopedDb = tenantDb(db, job.tenantId);
+  const provider = await tenantScopedDb.table('email_providers')
+    .where({ id: job.providerId, provider_type: 'google' })
     .first();
   if (!provider) {
     throw new SourceMessageUnavailableError('google_provider_not_found');
   }
 
-  const googleConfig = await db('google_email_provider_config')
-    .where({ email_provider_id: provider.id, tenant: provider.tenant })
+  const googleConfig = await tenantScopedDb.table('google_email_provider_config')
+    .where({ email_provider_id: provider.id })
     .first();
   if (!googleConfig) {
     throw new SourceMessageUnavailableError('google_provider_config_not_found');
@@ -523,12 +525,11 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
   }
 
   const db = await getAdminConnection();
-  const provider = await db('imap_email_provider_config as ic')
-    .join('email_providers as ep', function () {
-      this.on('ic.email_provider_id', '=', 'ep.id').andOn('ic.tenant', '=', 'ep.tenant');
-    })
+  const tenantScopedDb = tenantDb(db, job.tenantId);
+  const query = tenantScopedDb.table('imap_email_provider_config as ic');
+  tenantScopedDb.tenantJoin(query, 'email_providers as ep', 'ic.email_provider_id', 'ep.id');
+  const provider = (await query
     .where('ep.id', job.providerId)
-    .andWhere('ep.tenant', job.tenantId)
     .andWhere('ep.provider_type', 'imap')
     .first(
       'ep.id',
@@ -547,7 +548,7 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
       'ic.oauth_client_secret',
       'ic.refresh_token',
       'ic.token_expires_at'
-    );
+    )) as any;
   if (!provider) {
     throw new SourceMessageUnavailableError('imap_provider_not_found');
   }
@@ -754,8 +755,8 @@ async function persistGoogleHistoryCursor(job: UnifiedInboundEmailQueueJob): Pro
   if (!historyId) return;
 
   const db = await getAdminConnection();
-  await db('google_email_provider_config')
-    .where({ tenant: job.tenantId, email_provider_id: job.providerId })
+  await tenantDb(db, job.tenantId).table('google_email_provider_config')
+    .where({ email_provider_id: job.providerId })
     .update({
       history_id: historyId,
       updated_at: db.fn.now(),
@@ -770,7 +771,7 @@ async function insertProcessingRecord(params: {
 }): Promise<boolean> {
   const db = await getAdminConnection();
   try {
-    await db('email_processed_messages').insert({
+    await tenantDb(db, params.job.tenantId).table('email_processed_messages').insert({
       message_id: params.externalIdentity,
       provider_id: params.job.providerId,
       tenant: params.job.tenantId,
@@ -807,11 +808,10 @@ async function updateProcessingRecord(params: {
   metadata?: Record<string, unknown>;
 }): Promise<void> {
   const db = await getAdminConnection();
-  await db('email_processed_messages')
+  await tenantDb(db, params.job.tenantId).table('email_processed_messages')
     .where({
       message_id: params.externalIdentity,
       provider_id: params.job.providerId,
-      tenant: params.job.tenantId,
     })
     .update({
       processing_status: params.status,
@@ -850,6 +850,7 @@ function buildProcessingMetadata(params: {
             from: params.emailData.from?.email ?? null,
             to: (params.emailData.to ?? []).map((recipient) => recipient.email),
             subject: params.emailData.subject ?? null,
+            relevantHeaders: extractRelevantInboundHeaders(params.emailData),
           },
         }
       : {}),

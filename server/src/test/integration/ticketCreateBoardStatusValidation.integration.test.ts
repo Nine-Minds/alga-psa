@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { TicketModel } from '@shared/models/ticketModel';
 
@@ -33,15 +34,29 @@ function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
 }
 
+function tenantTable(tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function tenantRows() {
+  return tenantDb(db, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+function schemaTable(table: string) {
+  return tenantDb(db, '__test_schema__')
+    .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+}
+
 async function cleanupTenant(tenantId: string): Promise<void> {
-  await db('tickets').where({ tenant: tenantId }).del();
-  await db('next_number').where({ tenant: tenantId }).del();
-  await db('statuses').where({ tenant: tenantId }).del();
-  await db('priorities').where({ tenant: tenantId }).del();
-  await db('boards').where({ tenant: tenantId }).del();
-  await db('clients').where({ tenant: tenantId }).del();
-  await db('users').where({ tenant: tenantId }).del();
-  await db('tenants').where({ tenant: tenantId }).del();
+  await tenantTable(tenantId, 'tickets').del();
+  await tenantTable(tenantId, 'next_number').del();
+  await tenantTable(tenantId, 'statuses').del();
+  await tenantTable(tenantId, 'priorities').del();
+  await tenantTable(tenantId, 'boards').del();
+  await tenantTable(tenantId, 'clients').del();
+  await tenantTable(tenantId, 'users').del();
+  await tenantRows().where({ tenant: tenantId }).del();
 }
 
 async function createFixture(): Promise<TicketCreateFixture> {
@@ -56,7 +71,7 @@ async function createFixture(): Promise<TicketCreateFixture> {
 
   tenantsToCleanup.add(tenantId);
 
-  await db('tenants').insert({
+  await tenantRows().insert({
     tenant: tenantId,
     ...(hasColumn(tenantColumns, 'company_name')
       ? { company_name: `Tenant ${tenantId.slice(0, 8)}` }
@@ -66,7 +81,7 @@ async function createFixture(): Promise<TicketCreateFixture> {
     ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('users').insert({
+  await tenantTable(tenantId, 'users').insert({
     tenant: tenantId,
     user_id: userId,
     username: `user-${tenantId.slice(0, 8)}`,
@@ -77,7 +92,7 @@ async function createFixture(): Promise<TicketCreateFixture> {
     ...(hasColumn(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('clients').insert({
+  await tenantTable(tenantId, 'clients').insert({
     tenant: tenantId,
     client_id: clientId,
     client_name: `Client ${tenantId.slice(0, 8)}`,
@@ -88,7 +103,7 @@ async function createFixture(): Promise<TicketCreateFixture> {
     ...(hasColumn(clientColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('boards').insert([
+  await tenantTable(tenantId, 'boards').insert([
     {
       tenant: tenantId,
       board_id: boardAId,
@@ -119,7 +134,7 @@ async function createFixture(): Promise<TicketCreateFixture> {
     },
   ]);
 
-  await db('priorities').insert({
+  await tenantTable(tenantId, 'priorities').insert({
     tenant: tenantId,
     priority_id: priorityId,
     priority_name: 'High',
@@ -132,7 +147,7 @@ async function createFixture(): Promise<TicketCreateFixture> {
     ...(hasColumn(priorityColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('statuses').insert([
+  await tenantTable(tenantId, 'statuses').insert([
     {
       tenant: tenantId,
       status_id: boardAStatusId,
@@ -184,12 +199,12 @@ describe('Ticket board/status validation integration', () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.DB_PORT = process.env.DB_PORT || '5432';
     db = await createTestDbConnection({ runSeeds: false });
-    tenantColumns = await db('tenants').columnInfo();
-    userColumns = await db('users').columnInfo();
-    boardColumns = await db('boards').columnInfo();
-    clientColumns = await db('clients').columnInfo();
-    statusColumns = await db('statuses').columnInfo();
-    priorityColumns = await db('priorities').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
+    boardColumns = await schemaTable('boards').columnInfo();
+    clientColumns = await schemaTable('clients').columnInfo();
+    statusColumns = await schemaTable('statuses').columnInfo();
+    priorityColumns = await schemaTable('priorities').columnInfo();
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -240,8 +255,7 @@ describe('Ticket board/status validation integration', () => {
       ).rejects.toThrow('selected status does not belong to the selected board');
     });
 
-    const createdTickets = await db('tickets')
-      .where({ tenant: fixture.tenantId })
+    const createdTickets = await tenantTable(fixture.tenantId, 'tickets')
       .orderBy('ticket_number', 'asc');
 
     expect(createdTickets).toHaveLength(1);
@@ -280,8 +294,8 @@ describe('Ticket board/status validation integration', () => {
       ).rejects.toThrow('selected status does not belong to the selected board');
     });
 
-    const persistedTicket = await db('tickets')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId })
+    const persistedTicket = await tenantTable(fixture.tenantId, 'tickets')
+      .where({ ticket_id: ticketId })
       .first('status_id', 'board_id');
 
     expect(persistedTicket?.status_id).toBe(fixture.boardAStatusId);

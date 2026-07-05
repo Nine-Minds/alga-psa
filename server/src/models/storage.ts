@@ -1,4 +1,4 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { FileStore } from '../types/storage';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -18,7 +18,7 @@ export class FileStoreModel {
     }
     const newFileId = uuidv4();
     
-    const [file] = await knexOrTrx('external_files')
+    const [file] = await tenantDb(knexOrTrx, tenant).table('external_files')
       .insert({
         file_id: newFileId,
         file_name: data.file_name,
@@ -43,8 +43,8 @@ export class FileStoreModel {
       throw new Error('Tenant context is required');
     }
     
-    await knexOrTrx('external_files')
-      .where({ file_id: fileId, tenant })
+    await tenantDb(knexOrTrx, tenant).table('external_files')
+      .where({ file_id: fileId })
       .update({ metadata });
   }
 
@@ -57,8 +57,8 @@ export class FileStoreModel {
       throw new Error('Tenant context is required');
     }
 
-    const file = await knexOrTrx('external_files')
-      .where({ tenant, file_id, is_deleted: false })
+    const file = await tenantDb(knexOrTrx, tenant).table('external_files')
+      .where({ file_id, is_deleted: false })
       .first();
 
     return file || null;
@@ -74,8 +74,8 @@ export class FileStoreModel {
       throw new Error('Tenant context is required');
     }
     
-    const [file] = await knexOrTrx('external_files')
-      .where({ tenant, file_id })
+    const [file] = await tenantDb(knexOrTrx, tenant).table('external_files')
+      .where({ file_id })
       .update({
         is_deleted: true,
         deleted_at: new Date().toISOString(),
@@ -91,7 +91,7 @@ export class FileStoreModel {
       throw new Error('Tenant context is required');
     }
     
-    return await knexOrTrx('external_files').where({ tenant, is_deleted: false });
+    return await tenantDb(knexOrTrx, tenant).table('external_files').where({ is_deleted: false });
   }
 
   static async createDocumentSystemEntry(
@@ -106,7 +106,7 @@ export class FileStoreModel {
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    await knexOrTrx('document_system_entries').insert({
+    await tenantDb(knexOrTrx, tenant).table('document_system_entries').insert({
       tenant,
       file_id: options.fileId,
       category: options.category,

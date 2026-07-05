@@ -14,10 +14,20 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('../lib/billingHelpers', () => ({
   cloneTemplateContractLineAsync: (...args: any[]) => cloneTemplateContractLineAsyncMock(...args),
+}));
+
+vi.mock('../lib/authHelpers', () => ({
+  assertMspPermission: vi.fn(async () => {}),
+  hasMspPermission: vi.fn(async () => true),
 }));
 
 function buildReadTrx(rows: any[]) {
@@ -32,7 +42,11 @@ function buildReadTrx(rows: any[]) {
     builder.where = vi.fn(() => builder);
     builder.andWhere = vi.fn(() => builder);
     builder.select = vi.fn(() => builder);
-    builder.orderBy = vi.fn().mockResolvedValue(rows);
+    builder.orderBy = vi.fn(() => builder);
+    // tenantDb facade keeps `query` as the builder and awaits it directly
+    // (`return await query`), so the builder must be thenable like real knex.
+    builder.then = (onFulfilled: any, onRejected: any) =>
+      Promise.resolve(rows).then(onFulfilled, onRejected);
     return builder;
   }) as any;
 
@@ -58,9 +72,10 @@ function buildWriteTrx(params: { templateLine: Record<string, unknown>; insertMo
     if (table === 'contract_lines') {
       return {
         where: vi.fn((criteria: Record<string, unknown>) => {
+          // tenantDb facade scopes by tenant internally, so `tenant` is no
+          // longer part of the explicit `.where(...)` criteria here.
           if (
             criteria.contract_line_id === templateLine.contract_line_id &&
-            criteria.tenant === 'tenant-1' &&
             !('contract_id' in criteria)
           ) {
             return {
@@ -70,7 +85,6 @@ function buildWriteTrx(params: { templateLine: Record<string, unknown>; insertMo
 
           if (
             criteria.contract_id === 'live-contract-1' &&
-            criteria.tenant === 'tenant-1' &&
             criteria.is_active === true
           ) {
             return {

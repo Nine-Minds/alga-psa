@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@/lib/db'
 import { withAuth, hasPermission } from '@alga-psa/auth'
+import { tenantDb } from '@alga-psa/db'
 
 export interface ExtensionVersionListItem {
   versionId: string
@@ -22,7 +23,8 @@ export const fetchExtensionVersions = withAuth(async (user, { tenant }, extensio
   const allowed = await hasPermission(user, 'extension', 'read', knex)
   if (!allowed) throw new Error('Insufficient permissions')
 
-  const versions = await knex('extension_version')
+  const extensionDb = tenantDb(knex, tenant)
+  const versions = await extensionDb.table('extension_version')
     .where({ registry_id: extensionId })
     .select(['id', 'version', 'created_at'])
     .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'id', order: 'desc' }])
@@ -32,7 +34,7 @@ export const fetchExtensionVersions = withAuth(async (user, { tenant }, extensio
   }
 
   const versionIds = versions.map((row: any) => String(row.id))
-  const bundles = await knex('extension_bundle')
+  const bundles = await extensionDb.table('extension_bundle')
     .whereIn('version_id', versionIds)
     .select(['version_id', 'content_hash', 'created_at'])
     .orderBy([
@@ -49,8 +51,8 @@ export const fetchExtensionVersions = withAuth(async (user, { tenant }, extensio
     }
   }
 
-  const install = await knex('tenant_extension_install')
-    .where({ tenant_id: tenant, registry_id: extensionId })
+  const install = await tenantDb(knex, tenant).table('tenant_extension_install')
+    .where({ registry_id: extensionId })
     .first(['version_id'])
   const installedVersionId = install?.version_id ? String(install.version_id) : null
 

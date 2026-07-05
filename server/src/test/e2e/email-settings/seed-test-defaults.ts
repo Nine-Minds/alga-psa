@@ -4,13 +4,15 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export async function seedTestDefaults(db: Knex, tenantId: string): Promise<void> {
   console.log('     🌱 Seeding test inbound ticket defaults...');
+  const scopedDb = tenantDb(db, tenantId);
   
   // Check if defaults already exist
-  const existingDefaults = await db('inbound_ticket_defaults')
-    .where({ tenant: tenantId, is_default: true })
+  const existingDefaults = await scopedDb.table('inbound_ticket_defaults')
+    .where({ is_default: true })
     .first();
     
   if (existingDefaults) {
@@ -20,16 +22,16 @@ export async function seedTestDefaults(db: Knex, tenantId: string): Promise<void
   
   // Get default IDs for required fields
   const [board, status, priority] = await Promise.all([
-    db('boards').where({ tenant: tenantId }).first(),
-    db('statuses').where({ tenant: tenantId }).first(),
-    db('priorities').where({ tenant: tenantId }).first()
+    scopedDb.table('boards').first(),
+    scopedDb.table('statuses').first(),
+    scopedDb.table('priorities').first()
   ]);
   
   if (!board || !status || !priority) {
     console.error('     ❌ Could not find required fields for ticket defaults');
-    console.log('       Available boards:', await db('boards').where({ tenant: tenantId }).select('board_id', 'name'));
-    console.log('       Available statuses:', await db('statuses').where({ tenant: tenantId }).select('status_id', 'name'));
-    console.log('       Available priorities:', await db('priorities').where({ tenant: tenantId }).select('priority_id', 'name'));
+    console.log('       Available boards:', await scopedDb.table('boards').select('board_id', 'name'));
+    console.log('       Available statuses:', await scopedDb.table('statuses').select('status_id', 'name'));
+    console.log('       Available priorities:', await scopedDb.table('priorities').select('priority_id', 'name'));
     throw new Error('Missing required fields for ticket defaults');
   }
   
@@ -54,7 +56,7 @@ export async function seedTestDefaults(db: Knex, tenantId: string): Promise<void
     updated_at: new Date()
   };
   
-  await db('inbound_ticket_defaults').insert(testDefaults);
+  await scopedDb.table('inbound_ticket_defaults').insert(testDefaults);
   
   console.log('     ✅ Created test inbound ticket defaults');
   console.log(`       - Board: ${board.name} (${board.board_id})`);

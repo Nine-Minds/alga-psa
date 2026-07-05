@@ -522,6 +522,17 @@
       "5": "Friday",
       "6": "Saturday",
       "7": "Sunday"
+    },
+    "reviewError": "Failed to check the impact of this change",
+    "reviewing": "Checking impact...",
+    "confirmSave": "Confirm & save",
+    "reviewChanges": "Review changes",
+    "impact": {
+      "title": "Review before you apply",
+      "periods": "{{count}} upcoming charge period(s) across {{lines}} contract line(s) will be rebuilt to match the new schedule.",
+      "from": "Rebuilt from {{date}} onward.",
+      "billedPreserved": "Charges that were already invoiced are preserved and will not change.",
+      "confirmHint": "Choose \"Confirm & save\" to apply."
     }
   },
   "clientContractAssignment": {

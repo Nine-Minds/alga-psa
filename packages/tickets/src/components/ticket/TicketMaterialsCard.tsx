@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -33,6 +33,8 @@ interface TicketMaterialsCardProps {
   id?: string;
   ticketId: string;
   clientId?: string | null;
+  /** Server-started materials promise; when provided the mount fetch is skipped. */
+  initialMaterials?: Promise<ITicketMaterial[]>;
 }
 
 // On-hand badge for tracked products in the picker (F012): red at zero, amber at/below
@@ -54,10 +56,11 @@ export default function TicketMaterialsCard({
   id = 'ticket-materials-card',
   ticketId,
   clientId,
+  initialMaterials,
 }: TicketMaterialsCardProps) {
   const { t } = useTranslation('features/tickets');
   const [materials, setMaterials] = useState<ITicketMaterial[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialMaterials);
   const [isAdding, setIsAdding] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -93,7 +96,24 @@ export default function TicketMaterialsCard({
     }
   }, [ticketId, t]);
 
+  // Server-started materials ride the RSC payload; the mount fetch is skipped.
+  const skipMaterialsFetch = useRef(Boolean(initialMaterials));
   useEffect(() => {
+    if (!initialMaterials) return;
+    let cancelled = false;
+    initialMaterials.then((data) => {
+      if (!cancelled) setMaterials(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialMaterials]);
+
+  useEffect(() => {
+    if (skipMaterialsFetch.current) {
+      skipMaterialsFetch.current = false;
+      return;
+    }
     loadMaterials();
   }, [loadMaterials]);
 

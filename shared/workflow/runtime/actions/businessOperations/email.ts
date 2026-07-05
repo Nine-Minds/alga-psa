@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { tenantDb } from '@alga-psa/db';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 import { EmailProviderError } from '@alga-psa/types';
@@ -112,8 +113,9 @@ export function registerEmailActions(): void {
         }
         const maxPerAttachment = provider.capabilities.maxAttachmentSize ?? MAX_ATTACHMENT_BYTES;
         const storage = await StorageProviderFactory.createProvider();
+        const db = tenantDb(tx.trx, tx.tenantId);
         for (const fileId of attachmentFileIds) {
-          const file = await tx.trx('external_files').where({ tenant: tx.tenantId, file_id: fileId, is_deleted: false }).first();
+          const file = await db.table('external_files').where({ file_id: fileId, is_deleted: false }).first();
           if (!file) {
             throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Attachment file not found', details: { file_id: fileId } });
           }

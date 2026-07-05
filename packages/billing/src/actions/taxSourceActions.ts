@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { TaxSource } from '@alga-psa/types';
 import { getTaxImportState } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
@@ -39,9 +39,11 @@ export const getEffectiveTaxSourceForClient = withAuth(async (
     };
   }
 
+  const db = tenantDb(knex, tenant);
+
   // First check if the client has an override
-  const clientSettings = await knex('client_tax_settings')
-    .where({ client_id: clientId, tenant })
+  const clientSettings = await db.table('client_tax_settings')
+    .where({ client_id: clientId })
     .select('tax_source_override')
     .first();
 
@@ -53,8 +55,7 @@ export const getEffectiveTaxSourceForClient = withAuth(async (
   }
 
   // Fall back to tenant settings
-  const tenantSettings = await knex('tenant_settings')
-    .where({ tenant })
+  const tenantSettings = await db.table('tenant_settings')
     .select('default_tax_source', 'allow_external_tax_override')
     .first();
 
@@ -125,8 +126,10 @@ export const validateInvoiceFinalization = withAuth(async (
     return { canFinalize: false, code: 'no_tenant', error: 'No tenant context' };
   }
 
-  const invoice = await knex('invoices')
-    .where({ invoice_id: invoiceId, tenant })
+  const db = tenantDb(knex, tenant);
+
+  const invoice = await db.table('invoices')
+    .where({ invoice_id: invoiceId })
     .select('tax_source', 'status')
     .first();
 
@@ -171,8 +174,10 @@ export const updateInvoiceTaxSource = withAuth(async (
     return { success: false, error: 'No tenant context' };
   }
 
-  const invoice = await knex('invoices')
-    .where({ invoice_id: invoiceId, tenant })
+  const db = tenantDb(knex, tenant);
+
+  const invoice = await db.table('invoices')
+    .where({ invoice_id: invoiceId })
     .select('status', 'tax_source')
     .first();
 
@@ -189,8 +194,8 @@ export const updateInvoiceTaxSource = withAuth(async (
     (invoice.tax_source === 'external' || invoice.tax_source === 'pending_external') &&
     newTaxSource === 'internal'
   ) {
-    await knex('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
+    await db.table('invoice_charges')
+      .where({ invoice_id: invoiceId })
       .update({
         external_tax_amount: null,
         external_tax_code: null,
@@ -199,8 +204,8 @@ export const updateInvoiceTaxSource = withAuth(async (
       });
   }
 
-  await knex('invoices')
-    .where({ invoice_id: invoiceId, tenant })
+  await db.table('invoices')
+    .where({ invoice_id: invoiceId })
     .update({
       tax_source: newTaxSource,
       updated_at: knex.fn.now()
@@ -220,8 +225,9 @@ export const canClientOverrideTaxSource = withAuth(async (_user, { tenant }): Pr
     return false;
   }
 
-  const tenantSettings = await knex('tenant_settings')
-    .where({ tenant })
+  const db = tenantDb(knex, tenant);
+
+  const tenantSettings = await db.table('tenant_settings')
     .select('allow_external_tax_override')
     .first();
 

@@ -60,7 +60,7 @@ const ClientCheckbox: React.FC<ClientCheckboxProps> = ({ clientId, checked, onCl
   });
 
   return (
-    <div className="[&>div]:mb-0">
+    <div>
       <Checkbox
         id={checkboxId}
         checked={checked}

@@ -26,7 +26,9 @@ describe('inbound webhook permissions migration and seed', () => {
     }
 
     expect(permissionMigration).toContain(".where({ tenant, role_name: 'Admin', msp: true })");
-    expect(permissionMigration).toContain("await knex('role_permissions').insert");
+    // per-tenant writes flow through the migration tenantDb facade
+    expect(permissionMigration).toContain('const db = tenantDb(knex, tenant);');
+    expect(permissionMigration).toContain("await db.table('role_permissions').insert");
     expect(permissionMigration).toContain('role_id: adminRole.role_id');
     expect(permissionMigration).toContain('permission_id: permissionId');
   });

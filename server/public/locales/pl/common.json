@@ -1,4 +1,7 @@
 {
+  "clientNameCell": {
+    "noClient": "Brak klienta"
+  },
   "reactions": {
     "ariaSummary_one": "{{emoji}} {{count}} reakcja",
     "ariaSummary_few": "{{emoji}} {{count}} reakcje",
@@ -1267,5 +1270,8 @@
     "columnsHidden": "Ukryto {{count}} kolumn z powodu ograniczonej przestrzeni.",
     "columnsHidden_few": "Ukryto {{count}} kolumny z powodu ograniczonego miejsca.",
     "columnsHidden_many": "Ukryto {{count}} kolumn z powodu ograniczonego miejsca."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Ładowanie edytora…"
   }
 }

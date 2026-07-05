@@ -5,6 +5,7 @@ import { createInboundDelivery } from '@/lib/inboundWebhooks/deliveryPersistence
 function createInsertKnex() {
   const now = new Date('2026-05-11T12:00:00.000Z');
   const builder = {
+    where: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue([{ delivery_id: 'delivery-1' }]),
   };
@@ -42,6 +43,7 @@ describe('inbound webhook delivery persistence', () => {
     ).resolves.toEqual({ deliveryId: 'delivery-1' });
 
     expect(knex).toHaveBeenCalledWith('inbound_webhook_deliveries');
+    expect(builder.where).toHaveBeenCalledWith('inbound_webhook_deliveries.tenant', 'tenant-a');
     expect(builder.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         tenant: 'tenant-a',

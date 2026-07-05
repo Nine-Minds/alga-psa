@@ -291,6 +291,9 @@ vi.mock('@alga-psa/core/secrets', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: hoisted.knexMock }),
+  tenantDb: (_knex: unknown, tenant: string) => ({
+    table: (table: string) => hoisted.knexMock(table).where({ tenant }),
+  }),
 }));
 
 import {

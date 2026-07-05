@@ -1,7 +1,7 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { Asset, IUserWithRoles } from '@alga-psa/types';
 
@@ -47,6 +47,14 @@ const SORT_FIELDS: Record<ClientAssetSortField, string> = {
   updated_at: 'updated_at',
 };
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 function serializeAsset(asset: Asset & Record<string, unknown>): Asset {
   const toIso = (v: unknown) =>
     v instanceof Date ? v.toISOString() : (v as string | undefined);
@@ -71,8 +79,8 @@ async function resolveClientId(
     throw new Error('Unauthorized: Contact information not found');
   }
 
-  const contact = await trx('contacts')
-    .where({ contact_name_id: user.contact_id, tenant })
+  const contact = await tenantScopedTable(trx, 'contacts', tenant)
+    .where({ contact_name_id: user.contact_id })
     .select('client_id')
     .first();
 
@@ -100,7 +108,7 @@ export const listClientAssets = withAuth(async (
     const clientId = await resolveClientId(trx, user, tenant);
 
     const baseQuery = () => {
-      const q = trx('assets').where({ tenant, client_id: clientId });
+      const q = tenantScopedTable(trx, 'assets', tenant).where({ client_id: clientId });
       if (params.asset_type) q.where('asset_type', params.asset_type);
       if (params.status === 'active') q.whereNot('status', 'inactive');
       if (params.status === 'inactive') q.where('status', 'inactive');
@@ -120,15 +128,15 @@ export const listClientAssets = withAuth(async (
     // or filters the table).
     const [filteredCount, statusCounts, typeRows] = await Promise.all([
       baseQuery().count<{ count: string }>('asset_id as count').first(),
-      trx('assets')
-        .where({ tenant, client_id: clientId })
+      tenantScopedTable(trx, 'assets', tenant)
+        .where({ client_id: clientId })
         .select(
           trx.raw(`SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END)::int as inactive`),
           trx.raw(`SUM(CASE WHEN status <> 'inactive' OR status IS NULL THEN 1 ELSE 0 END)::int as active`),
         )
         .first<{ active: number | null; inactive: number | null }>(),
-      trx('assets')
-        .where({ tenant, client_id: clientId })
+      tenantScopedTable(trx, 'assets', tenant)
+        .where({ client_id: clientId })
         .groupBy('asset_type')
         .select<Array<{ asset_type: string | null; count: string }>>(
           'asset_type',
@@ -180,8 +188,8 @@ export const getClientAssets = withAuth(async (
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const clientId = await resolveClientId(trx, user, tenant);
-    const assets = await trx('assets')
-      .where({ tenant, client_id: clientId })
+    const assets = await tenantScopedTable(trx, 'assets', tenant)
+      .where({ client_id: clientId })
       .orderBy('updated_at', 'desc');
     return assets.map(serializeAsset);
   });
@@ -201,8 +209,8 @@ export const getClientAssetById = withAuth(async (
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const clientId = await resolveClientId(trx, user, tenant);
-    const row = await trx('assets')
-      .where({ tenant, client_id: clientId, asset_id: assetId })
+    const row = await tenantScopedTable(trx, 'assets', tenant)
+      .where({ client_id: clientId, asset_id: assetId })
       .first();
     return row ? serializeAsset(row) : null;
   });

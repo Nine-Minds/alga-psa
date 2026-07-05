@@ -87,6 +87,14 @@ function createFakeKnex(rows: RowSet) {
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
   withTransaction: async (_knex: unknown, fn: any) => fn(_knex),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (builder: any, table: string, left: string, right: string, options: any = {}) =>
+      options.type === 'left'
+        ? builder.leftJoin(table, left, right)
+        : builder.join(table, left, right),
+  }),
 }));
 
 vi.mock('@alga-psa/auth/withAuth', () => ({

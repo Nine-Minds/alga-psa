@@ -201,7 +201,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
               const isDisabled = record.approval_status === 'CHANGES_REQUESTED' || record.approval_status === 'APPROVED';
               const isChecked = rangeSelect.isSelected(record.id);
               return (
-                <div className="[&>div]:mb-0" onClick={(e) => e.stopPropagation()}>
+                <div onClick={(e) => e.stopPropagation()}>
                   {/* Unique ID for UI reflection system */}
                   <Checkbox
                     id={`timesheet-select-${record.id}`}

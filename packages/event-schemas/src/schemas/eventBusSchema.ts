@@ -38,6 +38,7 @@ import {
   contractRenewalUpcomingEventPayloadSchema,
   contractStatusChangedEventPayloadSchema,
   contractUpdatedEventPayloadSchema,
+  creditExpiringEventPayloadSchema,
   creditNoteAppliedEventPayloadSchema,
   creditNoteCreatedEventPayloadSchema,
   creditNoteVoidedEventPayloadSchema,
@@ -129,11 +130,13 @@ import {
   mediaProcessingFailedEventPayloadSchema,
   mediaProcessingSucceededEventPayloadSchema,
 } from './domain/assetMediaEventSchemas';
+import { maintenanceJobRequestedEventPayloadSchema } from './domain/maintenanceEventSchemas';
 import {
   ticketApprovalGrantedEventPayloadSchema,
   ticketApprovalRejectedEventPayloadSchema,
   ticketApprovalRequestedEventPayloadSchema,
   ticketAssignedEventPayloadSchema,
+  ticketAutoCloseWarningEventPayloadSchema,
   ticketClosedEventPayloadSchema,
   ticketCreatedEventPayloadSchema,
   ticketCustomerRepliedEventPayloadSchema,
@@ -172,6 +175,9 @@ export const EVENT_TYPES = [
   'TICKET_CREATED',
   'TICKET_UPDATED',
   'TICKET_CLOSED',
+  'TICKET_AUTO_CLOSE_WARNING',
+  // Maintenance / system (worker emits; server subscriber runs the handler)
+  'MAINTENANCE_JOB_REQUESTED',
   'TICKET_ASSIGNED',
   'TICKET_ADDITIONAL_AGENT_ASSIGNED',
   'TICKET_COMMENT_ADDED',
@@ -292,6 +298,7 @@ export const EVENT_TYPES = [
   'CREDIT_NOTE_CREATED',
   'CREDIT_NOTE_APPLIED',
   'CREDIT_NOTE_VOIDED',
+  'CREDIT_EXPIRING',
   'CONTRACT_CREATED',
   'CONTRACT_UPDATED',
   'CONTRACT_DELETED',
@@ -1032,6 +1039,8 @@ export const RmmWebhookEventPayloadSchema = BasePayloadSchema.extend({
 const TicketCreatedPayloadSchema = z.union([TicketEventPayloadSchema, ticketCreatedEventPayloadSchema]);
 const TicketUpdatedPayloadSchema = z.union([TicketEventPayloadSchema, ticketUpdatedEventPayloadSchema]);
 const TicketClosedPayloadSchema = z.union([TicketEventPayloadSchema, ticketClosedEventPayloadSchema]);
+const TicketAutoCloseWarningPayloadSchema = z.union([TicketEventPayloadSchema, ticketAutoCloseWarningEventPayloadSchema]);
+const MaintenanceJobRequestedPayloadSchema = maintenanceJobRequestedEventPayloadSchema;
 const TicketAssignedPayloadSchema = z.union([TicketEventPayloadSchema, ticketAssignedEventPayloadSchema]);
 const TicketResponseStateChangedPayloadSchemaV2 = z.union([
   TicketResponseStateChangedPayloadSchema,
@@ -1059,6 +1068,8 @@ export const EventPayloadSchemas = {
   TICKET_CREATED: TicketCreatedPayloadSchema,
   TICKET_UPDATED: TicketUpdatedPayloadSchema,
   TICKET_CLOSED: TicketClosedPayloadSchema,
+  TICKET_AUTO_CLOSE_WARNING: TicketAutoCloseWarningPayloadSchema,
+  MAINTENANCE_JOB_REQUESTED: MaintenanceJobRequestedPayloadSchema,
   TICKET_DELETED: TicketEventPayloadSchema,
   TICKET_ASSIGNED: TicketAssignedPayloadSchema,
   TICKET_ADDITIONAL_AGENT_ASSIGNED: TicketAdditionalAgentPayloadSchema,
@@ -1179,6 +1190,7 @@ export const EventPayloadSchemas = {
   CREDIT_NOTE_CREATED: creditNoteCreatedEventPayloadSchema,
   CREDIT_NOTE_APPLIED: creditNoteAppliedEventPayloadSchema,
   CREDIT_NOTE_VOIDED: creditNoteVoidedEventPayloadSchema,
+  CREDIT_EXPIRING: creditExpiringEventPayloadSchema,
   CONTRACT_CREATED: ContractCreatedPayloadSchema,
   CONTRACT_UPDATED: ContractUpdatedPayloadSchema,
   CONTRACT_DELETED: ContractSearchEventPayloadSchema,
@@ -1380,6 +1392,8 @@ export type BaseEvent = z.infer<typeof BaseEventSchema>;
 export type TicketCreatedEvent = z.infer<typeof EventSchemas.TICKET_CREATED>;
 export type TicketUpdatedEvent = z.infer<typeof EventSchemas.TICKET_UPDATED>;
 export type TicketClosedEvent = z.infer<typeof EventSchemas.TICKET_CLOSED>;
+export type TicketAutoCloseWarningEvent = z.infer<typeof EventSchemas.TICKET_AUTO_CLOSE_WARNING>;
+export type MaintenanceJobRequestedEvent = z.infer<typeof EventSchemas.MAINTENANCE_JOB_REQUESTED>;
 export type TicketDeletedEvent = z.infer<typeof EventSchemas.TICKET_DELETED>;
 export type TicketAssignedEvent = z.infer<typeof EventSchemas.TICKET_ASSIGNED>;
 export type TicketAdditionalAgentAssignedEvent = z.infer<typeof EventSchemas.TICKET_ADDITIONAL_AGENT_ASSIGNED>;
@@ -1405,6 +1419,7 @@ export type TimeEntryChangesRequestedEvent = z.infer<typeof EventSchemas.TIME_EN
 export type TagDefinitionDeletedEvent = z.infer<typeof EventSchemas.TAG_DEFINITION_DELETED>;
 export type InvoiceGeneratedEvent = z.infer<typeof EventSchemas.INVOICE_GENERATED>;
 export type InvoiceFinalizedEvent = z.infer<typeof EventSchemas.INVOICE_FINALIZED>;
+export type CreditExpiringEvent = z.infer<typeof EventSchemas.CREDIT_EXPIRING>;
 export type CustomEvent = z.infer<typeof EventSchemas.CUSTOM_EVENT>;
 export type InboundEmailReceivedEvent = z.infer<typeof EventSchemas.INBOUND_EMAIL_RECEIVED>;
 export type AccountingExportCompletedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_COMPLETED>;

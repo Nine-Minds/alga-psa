@@ -13,6 +13,7 @@ import { getSession } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 
+import { tenantDb } from '@alga-psa/db';
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
 import { getDueDate } from './billingAndTax';
 
@@ -66,6 +67,17 @@ export const generateManualInvoice = withAuth(async (
     return { success: false, error: emailValidation.error! };
   }
 
+  // Resolve the currency: explicit request value, then the client's configured currency,
+  // then the tenant's default billing currency (default_billing_settings), with 'USD' only
+  // as the absolute final fallback.
+  let currencyCode = request.currency_code || client.default_currency_code;
+  if (!currencyCode) {
+    const billingSettings = await tenantDb(knex, tenant).table('default_billing_settings')
+      .select('default_currency_code')
+      .first();
+    currencyCode = billingSettings?.default_currency_code || 'USD';
+  }
+
   const currentDate = Temporal.Now.plainDateISO().toString();
   const dueDate = await getDueDate(clientId, currentDate);
 
@@ -85,7 +97,7 @@ export const generateManualInvoice = withAuth(async (
     due_date: dueDate,
     invoice_number: invoiceNumber,
     status: 'draft',
-    currency_code: request.currency_code || client.default_currency_code || 'USD',
+    currency_code: currencyCode,
     subtotal: 0,
     tax: 0,
     total_amount: 0,
@@ -97,7 +109,7 @@ export const generateManualInvoice = withAuth(async (
 
   return await knex.transaction(async (trx) => {
     // Insert invoice
-    await trx('invoices').insert(invoice);
+    await tenantDb(trx, tenant).table('invoices').insert(invoice);
 
     // Persist manual invoice items using the dedicated service function
     await invoiceService.persistManualInvoiceCharges(
@@ -166,7 +178,7 @@ export const updateManualInvoice = withAuth(async (
   const { clientId, items } = request;
 
   // Verify invoice exists and is manual
-  const existingInvoice = await knex('invoices')
+  const existingInvoice = await tenantDb(knex, tenant).table('invoices')
     .where({
       invoice_id: invoiceId,
       is_manual: true,
@@ -186,7 +198,7 @@ export const updateManualInvoice = withAuth(async (
   // Delete existing items and insert new ones
   await knex.transaction(async (trx) => {
     // Delete existing items
-    await trx('invoice_charges')
+    await tenantDb(trx, tenant).table('invoice_charges')
       .where({
         invoice_id: invoiceId,
         tenant
@@ -204,7 +216,7 @@ export const updateManualInvoice = withAuth(async (
     );
 
     // Update invoice updated_at timestamp and currency if provided
-    await trx('invoices')
+    await tenantDb(trx, tenant).table('invoices')
       .where({ invoice_id: invoiceId })
       .update({
         updated_at: currentDate,

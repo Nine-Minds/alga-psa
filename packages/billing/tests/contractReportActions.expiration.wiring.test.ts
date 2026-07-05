@@ -37,7 +37,7 @@ describe('contractReportActions expiration report wiring', () => {
     expect(source).toContain("if (assignmentStatus !== 'active') {");
     expect(source).toContain('const key = row.client_contract_id;');
     expect(source).toContain('const expirationMap = new Map<string, ContractExpiration>();');
-    expect(source).toContain('existing.monthly_value += row.monthly_value || 0;');
+    expect(source).toContain('existing.monthly_value += Number(row.monthly_value ?? 0) || 0;');
   });
 
   it('keeps fixed-term expiration rows even when renewal fields are unset', () => {

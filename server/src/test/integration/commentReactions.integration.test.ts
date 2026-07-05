@@ -5,6 +5,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } 
 import { TestContext } from 'server/test-utils/testContext';
 import { setupCommonMocks } from 'server/test-utils/testMocks';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { toggleCommentReaction, getCommentsReactionsBatch } from '@alga-psa/tickets/actions/comment-actions/commentReactionActions';
 import { toggleTaskCommentReaction, getTaskCommentsReactionsBatch } from '@alga-psa/projects/actions/projectTaskCommentReactionActions';
@@ -35,6 +36,10 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => (...args: any[]) =>
     action(userRef.user, { tenant: dbRef.tenant }, ...args),
   hasPermission: vi.fn(async () => true),
+  getCurrentUser: vi.fn(async () => userRef.user),
+  getSession: vi.fn(async () =>
+    userRef.user ? { user: { id: userRef.user.user_id, tenant: dbRef.tenant } } : null
+  ),
 }));
 
 const HOOK_TIMEOUT = 120_000;
@@ -47,6 +52,10 @@ const {
 } = TestContext.createHelpers();
 
 let context: TestContext;
+
+function scopedDb(tenant = context.tenantId) {
+  return tenantDb(context.db, tenant);
+}
 
 beforeAll(async () => {
   context = await setupContext({
@@ -92,14 +101,14 @@ describe('Comment Reactions - Ticket Comments', () => {
 
     // Get or create a default ticket status
     let statusId: string;
-    const existingStatus = await context.db('statuses')
-      .where({ tenant: context.tenantId, status_type: 'ticket' })
+    const existingStatus = await scopedDb().table('statuses')
+      .where({ status_type: 'ticket' })
       .first();
 
     if (existingStatus) {
       statusId = existingStatus.status_id;
     } else {
-      const [status] = await context.db('statuses')
+      const [status] = await scopedDb().table('statuses')
         .insert({
           tenant: context.tenantId,
           name: 'Open',
@@ -113,7 +122,7 @@ describe('Comment Reactions - Ticket Comments', () => {
       statusId = status.status_id;
     }
 
-    await context.db('tickets').insert({
+    await scopedDb().table('tickets').insert({
       ticket_id: ticketId,
       tenant: context.tenantId,
       ticket_number: `TEST-${Date.now()}`,
@@ -123,14 +132,33 @@ describe('Comment Reactions - Ticket Comments', () => {
       entered_by: context.userId,
     });
 
-    // Create two comments
+    // Create two comments (comments.thread_id is NOT NULL and references comment_threads)
     commentId = uuidv4();
     secondCommentId = uuidv4();
-    await context.db('comments').insert([
+    const threadId = uuidv4();
+    const secondThreadId = uuidv4();
+    await scopedDb().table('comment_threads').insert([
+      {
+        tenant: context.tenantId,
+        thread_id: threadId,
+        ticket_id: ticketId,
+        root_comment_id: commentId,
+        is_internal: false,
+      },
+      {
+        tenant: context.tenantId,
+        thread_id: secondThreadId,
+        ticket_id: ticketId,
+        root_comment_id: secondCommentId,
+        is_internal: false,
+      },
+    ]);
+    await scopedDb().table('comments').insert([
       {
         comment_id: commentId,
         tenant: context.tenantId,
         ticket_id: ticketId,
+        thread_id: threadId,
         user_id: context.userId,
         note: '[]',
         is_internal: false,
@@ -141,6 +169,7 @@ describe('Comment Reactions - Ticket Comments', () => {
         comment_id: secondCommentId,
         tenant: context.tenantId,
         ticket_id: ticketId,
+        thread_id: secondThreadId,
         user_id: context.userId,
         note: '[]',
         is_internal: false,
@@ -159,8 +188,8 @@ describe('Comment Reactions - Ticket Comments', () => {
     expect(result).toEqual({ added: true });
 
     // Verify in database
-    const rows = await context.db('comment_reactions')
-      .where({ tenant: context.tenantId, comment_id: commentId });
+    const rows = await scopedDb().table('comment_reactions')
+      .where({ comment_id: commentId });
     expect(rows).toHaveLength(1);
     expect(rows[0].emoji).toBe('\u{1F44D}');
     expect(rows[0].user_id).toBe(context.userId);
@@ -171,8 +200,8 @@ describe('Comment Reactions - Ticket Comments', () => {
     const result = await toggleCommentReaction(commentId, '\u{1F44D}');
     expect(result).toEqual({ added: false });
 
-    const rows = await context.db('comment_reactions')
-      .where({ tenant: context.tenantId, comment_id: commentId });
+    const rows = await scopedDb().table('comment_reactions')
+      .where({ comment_id: commentId });
     expect(rows).toHaveLength(0);
   });
 
@@ -181,8 +210,8 @@ describe('Comment Reactions - Ticket Comments', () => {
     await toggleCommentReaction(commentId, '\u{2764}\u{FE0F}');
     await toggleCommentReaction(commentId, '\u{1F525}');
 
-    const rows = await context.db('comment_reactions')
-      .where({ tenant: context.tenantId, comment_id: commentId });
+    const rows = await scopedDb().table('comment_reactions')
+      .where({ comment_id: commentId });
     expect(rows).toHaveLength(3);
 
     const emojis = rows.map((r: any) => r.emoji).sort();
@@ -231,8 +260,8 @@ describe('Comment Reactions - Ticket Comments', () => {
     const result = await toggleCommentReaction(commentId, ':alga:');
     expect(result).toEqual({ added: true });
 
-    const rows = await context.db('comment_reactions')
-      .where({ tenant: context.tenantId, comment_id: commentId });
+    const rows = await scopedDb().table('comment_reactions')
+      .where({ comment_id: commentId });
     expect(rows).toHaveLength(1);
     expect(rows[0].emoji).toBe(':alga:');
   });
@@ -243,7 +272,7 @@ describe('Comment Reactions - Ticket Comments', () => {
 
     // Create a second user and add their reaction directly in DB
     const secondUserId = uuidv4();
-    await context.db('users').insert({
+    await scopedDb().table('users').insert({
       user_id: secondUserId,
       tenant: context.tenantId,
       username: `second-user-${Date.now()}`,
@@ -253,7 +282,7 @@ describe('Comment Reactions - Ticket Comments', () => {
       hashed_password: 'placeholder',
       is_inactive: false,
     });
-    await context.db('comment_reactions').insert({
+    await scopedDb().table('comment_reactions').insert({
       tenant: context.tenantId,
       comment_id: commentId,
       user_id: secondUserId,
@@ -278,20 +307,20 @@ describe('Comment Reactions - Ticket Comments', () => {
     await toggleCommentReaction(commentId, '\u{1F44D}');
     await toggleCommentReaction(commentId, '\u{2764}\u{FE0F}');
 
-    let rows = await context.db('comment_reactions')
-      .where({ tenant: context.tenantId, comment_id: commentId });
+    let rows = await scopedDb().table('comment_reactions')
+      .where({ comment_id: commentId });
     expect(rows).toHaveLength(2);
 
     // Delete reactions first, then comment (CitusDB doesn't support ON DELETE CASCADE)
-    await context.db('comment_reactions')
-      .where({ tenant: context.tenantId, comment_id: commentId })
+    await scopedDb().table('comment_reactions')
+      .where({ comment_id: commentId })
       .del();
-    await context.db('comments')
-      .where({ tenant: context.tenantId, comment_id: commentId })
+    await scopedDb().table('comments')
+      .where({ comment_id: commentId })
       .del();
 
-    rows = await context.db('comment_reactions')
-      .where({ tenant: context.tenantId, comment_id: commentId });
+    rows = await scopedDb().table('comment_reactions')
+      .where({ comment_id: commentId });
     expect(rows).toHaveLength(0);
   });
 });
@@ -315,14 +344,14 @@ describe('Comment Reactions - Task Comments', () => {
 
     // Get or create default project status
     let statusId: string;
-    const existingStatus = await context.db('statuses')
-      .where({ tenant: context.tenantId, status_type: 'project' })
+    const existingStatus = await scopedDb().table('statuses')
+      .where({ status_type: 'project' })
       .first();
 
     if (existingStatus) {
       statusId = existingStatus.status_id;
     } else {
-      const [status] = await context.db('statuses')
+      const [status] = await scopedDb().table('statuses')
         .insert({
           tenant: context.tenantId,
           name: 'Active',
@@ -338,7 +367,7 @@ describe('Comment Reactions - Task Comments', () => {
 
     // Create a project
     const projectId = uuidv4();
-    await context.db('projects').insert({
+    await scopedDb().table('projects').insert({
       project_id: projectId,
       tenant: context.tenantId,
       project_name: 'Test Project for Reactions',
@@ -350,7 +379,7 @@ describe('Comment Reactions - Task Comments', () => {
 
     // Create a phase
     const phaseId = uuidv4();
-    await context.db('project_phases').insert({
+    await scopedDb().table('project_phases').insert({
       phase_id: phaseId,
       tenant: context.tenantId,
       project_id: projectId,
@@ -362,22 +391,20 @@ describe('Comment Reactions - Task Comments', () => {
 
     // Get or create default project task status mapping
     let taskStatusMappingId: string;
-    const existingTaskStatus = await context.db('project_status_mappings')
-      .where({ tenant: context.tenantId })
-      .first();
+    const existingTaskStatus = await scopedDb().table('project_status_mappings').first();
 
     if (existingTaskStatus) {
       taskStatusMappingId = existingTaskStatus.project_status_mapping_id;
     } else {
       // Create a task status, then a project_status_mappings row that references it
       let taskStatusId: string;
-      const taskStatus = await context.db('statuses')
-        .where({ tenant: context.tenantId, status_type: 'project_task' })
+      const taskStatus = await scopedDb().table('statuses')
+        .where({ status_type: 'project_task' })
         .first();
       if (taskStatus) {
         taskStatusId = taskStatus.status_id;
       } else {
-        const [newStatus] = await context.db('statuses')
+        const [newStatus] = await scopedDb().table('statuses')
           .insert({
             tenant: context.tenantId,
             name: 'To Do',
@@ -391,7 +418,7 @@ describe('Comment Reactions - Task Comments', () => {
         taskStatusId = newStatus.status_id;
       }
 
-      const [mapping] = await context.db('project_status_mappings')
+      const [mapping] = await scopedDb().table('project_status_mappings')
         .insert({
           tenant: context.tenantId,
           project_id: projectId,
@@ -405,7 +432,7 @@ describe('Comment Reactions - Task Comments', () => {
 
     // Create a task
     taskId = uuidv4();
-    await context.db('project_tasks').insert({
+    await scopedDb().table('project_tasks').insert({
       task_id: taskId,
       tenant: context.tenantId,
       phase_id: phaseId,
@@ -414,14 +441,33 @@ describe('Comment Reactions - Task Comments', () => {
       wbs_code: '1.1',
     });
 
-    // Create two task comments
+    // Create two task comments (thread_id is NOT NULL and references comment_threads)
     taskCommentId = uuidv4();
     secondTaskCommentId = uuidv4();
-    await context.db('project_task_comments').insert([
+    const taskThreadId = uuidv4();
+    const secondTaskThreadId = uuidv4();
+    await scopedDb().table('comment_threads').insert([
+      {
+        tenant: context.tenantId,
+        thread_id: taskThreadId,
+        project_task_id: taskId,
+        root_comment_id: taskCommentId,
+        is_internal: false,
+      },
+      {
+        tenant: context.tenantId,
+        thread_id: secondTaskThreadId,
+        project_task_id: taskId,
+        root_comment_id: secondTaskCommentId,
+        is_internal: false,
+      },
+    ]);
+    await scopedDb().table('project_task_comments').insert([
       {
         task_comment_id: taskCommentId,
         tenant: context.tenantId,
         task_id: taskId,
+        thread_id: taskThreadId,
         user_id: context.userId,
         note: '[]',
         author_type: 'internal',
@@ -430,6 +476,7 @@ describe('Comment Reactions - Task Comments', () => {
         task_comment_id: secondTaskCommentId,
         tenant: context.tenantId,
         task_id: taskId,
+        thread_id: secondTaskThreadId,
         user_id: context.userId,
         note: '[]',
         author_type: 'internal',
@@ -445,8 +492,8 @@ describe('Comment Reactions - Task Comments', () => {
     const result = await toggleTaskCommentReaction(taskCommentId, '\u{1F44D}');
     expect(result).toEqual({ added: true });
 
-    const rows = await context.db('project_task_comment_reactions')
-      .where({ tenant: context.tenantId, task_comment_id: taskCommentId });
+    const rows = await scopedDb().table('project_task_comment_reactions')
+      .where({ task_comment_id: taskCommentId });
     expect(rows).toHaveLength(1);
     expect(rows[0].emoji).toBe('\u{1F44D}');
   });
@@ -456,8 +503,8 @@ describe('Comment Reactions - Task Comments', () => {
     const result = await toggleTaskCommentReaction(taskCommentId, '\u{1F44D}');
     expect(result).toEqual({ added: false });
 
-    const rows = await context.db('project_task_comment_reactions')
-      .where({ tenant: context.tenantId, task_comment_id: taskCommentId });
+    const rows = await scopedDb().table('project_task_comment_reactions')
+      .where({ task_comment_id: taskCommentId });
     expect(rows).toHaveLength(0);
   });
 
@@ -465,8 +512,8 @@ describe('Comment Reactions - Task Comments', () => {
     await toggleTaskCommentReaction(taskCommentId, '\u{1F680}');
     await toggleTaskCommentReaction(taskCommentId, '\u{1F525}');
 
-    const rows = await context.db('project_task_comment_reactions')
-      .where({ tenant: context.tenantId, task_comment_id: taskCommentId });
+    const rows = await scopedDb().table('project_task_comment_reactions')
+      .where({ task_comment_id: taskCommentId });
     expect(rows).toHaveLength(2);
   });
 
@@ -492,26 +539,26 @@ describe('Comment Reactions - Task Comments', () => {
     await toggleTaskCommentReaction(taskCommentId, '\u{2764}\u{FE0F}');
 
     // Verify reactions exist
-    let rows = await context.db('project_task_comment_reactions')
-      .where({ tenant: context.tenantId, task_comment_id: taskCommentId });
+    let rows = await scopedDb().table('project_task_comment_reactions')
+      .where({ task_comment_id: taskCommentId });
     expect(rows).toHaveLength(2);
 
     // Delete reactions first, then comment (CitusDB doesn't support ON DELETE CASCADE)
-    await context.db('project_task_comment_reactions')
-      .where({ tenant: context.tenantId, task_comment_id: taskCommentId })
+    await scopedDb().table('project_task_comment_reactions')
+      .where({ task_comment_id: taskCommentId })
       .del();
-    await context.db('project_task_comments')
-      .where({ tenant: context.tenantId, task_comment_id: taskCommentId })
+    await scopedDb().table('project_task_comments')
+      .where({ task_comment_id: taskCommentId })
       .del();
 
     // Verify reactions are gone
-    rows = await context.db('project_task_comment_reactions')
-      .where({ tenant: context.tenantId, task_comment_id: taskCommentId });
+    rows = await scopedDb().table('project_task_comment_reactions')
+      .where({ task_comment_id: taskCommentId });
     expect(rows).toHaveLength(0);
 
     // Verify comment is gone
-    const comment = await context.db('project_task_comments')
-      .where({ tenant: context.tenantId, task_comment_id: taskCommentId })
+    const comment = await scopedDb().table('project_task_comments')
+      .where({ task_comment_id: taskCommentId })
       .first();
     expect(comment).toBeUndefined();
   });
@@ -530,8 +577,8 @@ describe('Comment Reactions - Task Comments', () => {
     const result = await toggleTaskCommentReaction(taskCommentId, ':alga:');
     expect(result).toEqual({ added: true });
 
-    const rows = await context.db('project_task_comment_reactions')
-      .where({ tenant: context.tenantId, task_comment_id: taskCommentId });
+    const rows = await scopedDb().table('project_task_comment_reactions')
+      .where({ task_comment_id: taskCommentId });
     expect(rows).toHaveLength(1);
     expect(rows[0].emoji).toBe(':alga:');
   });
@@ -542,7 +589,7 @@ describe('Comment Reactions - Task Comments', () => {
 
     // Create a second user and add their reaction directly in DB
     const secondUserId = uuidv4();
-    await context.db('users').insert({
+    await scopedDb().table('users').insert({
       user_id: secondUserId,
       tenant: context.tenantId,
       username: `second-user-${Date.now()}`,
@@ -552,7 +599,7 @@ describe('Comment Reactions - Task Comments', () => {
       hashed_password: 'placeholder',
       is_inactive: false,
     });
-    await context.db('project_task_comment_reactions').insert({
+    await scopedDb().table('project_task_comment_reactions').insert({
       tenant: context.tenantId,
       task_comment_id: taskCommentId,
       user_id: secondUserId,
@@ -629,13 +676,13 @@ describe('Tenant Isolation', () => {
     userRef.user = context.user;
 
     // Create a ticket and comment for the primary tenant
-    const existingStatus = await context.db('statuses')
-      .where({ tenant: context.tenantId, status_type: 'ticket' })
+    const existingStatus = await scopedDb().table('statuses')
+      .where({ status_type: 'ticket' })
       .first();
 
     const statusId = existingStatus
       ? existingStatus.status_id
-      : (await context.db('statuses')
+      : (await scopedDb().table('statuses')
           .insert({
             tenant: context.tenantId,
             name: 'Open',
@@ -648,7 +695,7 @@ describe('Tenant Isolation', () => {
           .returning('status_id'))[0].status_id;
 
     const ticketId = uuidv4();
-    await context.db('tickets').insert({
+    await scopedDb().table('tickets').insert({
       ticket_id: ticketId,
       tenant: context.tenantId,
       ticket_number: `TEST-ISO-${Date.now()}`,
@@ -659,10 +706,19 @@ describe('Tenant Isolation', () => {
     });
 
     commentId = uuidv4();
-    await context.db('comments').insert({
+    const threadId = uuidv4();
+    await scopedDb().table('comment_threads').insert({
+      tenant: context.tenantId,
+      thread_id: threadId,
+      ticket_id: ticketId,
+      root_comment_id: commentId,
+      is_internal: false,
+    });
+    await scopedDb().table('comments').insert({
       comment_id: commentId,
       tenant: context.tenantId,
       ticket_id: ticketId,
+      thread_id: threadId,
       user_id: context.userId,
       note: '[]',
       is_internal: false,
@@ -682,13 +738,14 @@ describe('Tenant Isolation', () => {
     // Insert a reaction row with a foreign tenant directly in DB
     // (bypassing FK constraints since this is within the test transaction)
     const otherTenant = uuidv4();
-    await context.db('tenants').insert({
+    const otherTenantDb = scopedDb(otherTenant);
+    await otherTenantDb.table('tenants').insert({
       tenant: otherTenant,
       client_name: 'Other Tenant',
       email: `other-tenant-${Date.now()}@test.com`,
     });
     const otherUserId = uuidv4();
-    await context.db('users').insert({
+    await otherTenantDb.table('users').insert({
       user_id: otherUserId,
       tenant: otherTenant,
       username: `other-tenant-user-${Date.now()}`,
@@ -701,7 +758,7 @@ describe('Tenant Isolation', () => {
 
     // Create a comment in the other tenant with the same comment_id
     // (possible because PK is (comment_id, tenant))
-    const otherStatusId = (await context.db('statuses')
+    const otherStatusId = (await otherTenantDb.table('statuses')
       .insert({
         tenant: otherTenant,
         name: 'Open',
@@ -714,14 +771,14 @@ describe('Tenant Isolation', () => {
       .returning('status_id'))[0].status_id;
 
     const otherClientId = uuidv4();
-    await context.db('clients').insert({
+    await otherTenantDb.table('clients').insert({
       client_id: otherClientId,
       tenant: otherTenant,
       client_name: 'Other Tenant Client',
     });
 
     const otherTicketId = uuidv4();
-    await context.db('tickets').insert({
+    await otherTenantDb.table('tickets').insert({
       ticket_id: otherTicketId,
       tenant: otherTenant,
       ticket_number: `OTHER-${Date.now()}`,
@@ -731,18 +788,27 @@ describe('Tenant Isolation', () => {
       entered_by: otherUserId,
     });
 
-    await context.db('comments').insert({
+    const otherThreadId = uuidv4();
+    await otherTenantDb.table('comment_threads').insert({
+      tenant: otherTenant,
+      thread_id: otherThreadId,
+      ticket_id: otherTicketId,
+      root_comment_id: commentId,
+      is_internal: false,
+    });
+    await otherTenantDb.table('comments').insert({
       comment_id: commentId, // same comment_id, different tenant
       tenant: otherTenant,
       ticket_id: otherTicketId,
       user_id: otherUserId,
+      thread_id: otherThreadId,
       note: '[]',
       is_internal: false,
       is_resolution: false,
       author_type: 'internal',
     });
 
-    await context.db('comment_reactions').insert({
+    await otherTenantDb.table('comment_reactions').insert({
       tenant: otherTenant,
       comment_id: commentId,
       user_id: otherUserId,

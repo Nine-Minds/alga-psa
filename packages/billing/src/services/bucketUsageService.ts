@@ -1,7 +1,7 @@
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import type { ISO8601String, IClientContractLine } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db'; // Assuming needed if trx doesn't carry tenant context reliably
+import { createTenantKnex, tenantDb } from '@alga-psa/db'; // Assuming needed if trx doesn't carry tenant context reliably
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import {
     buildClientCadencePostDropObligationRef,
@@ -82,28 +82,22 @@ async function calculatePeriod(
 
     console.debug(`[calculatePeriod] Inputs: tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
 
+    const db = tenantDb(trx, tenant);
+
     // Find the active client-owned contract line that covers the target date AND
     // is associated with a bucket configuration for the given serviceCatalogId.
-    const clientPlan = await trx('client_contracts as cc')
-        .join('contracts as ct', function() {
-            this.on('ct.contract_id', '=', 'cc.contract_id')
-                .andOn('ct.tenant', '=', 'cc.tenant');
-        })
-        .join('contract_lines as cl', function() {
-            this.on('cl.contract_id', '=', 'ct.contract_id')
-                .andOn('cl.tenant', '=', 'ct.tenant');
-        })
-        .join('contract_line_service_configuration as psc', function() {
-            this.on('cl.contract_line_id', '=', 'psc.contract_line_id')
-                .andOn('cl.tenant', '=', 'psc.tenant')
-                .andOnVal('psc.service_id', '=', serviceCatalogId);
-        })
-        .join('contract_line_service_bucket_config as psbc', function() {
-            this.on('psc.config_id', '=', 'psbc.config_id')
-                .andOn('psc.tenant', '=', 'psbc.tenant');
-        })
+    const clientPlanQuery = db.table('client_contracts as cc');
+    db.tenantJoin(clientPlanQuery, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
+    db.tenantJoin(clientPlanQuery, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
+    db.tenantJoin(clientPlanQuery, 'contract_line_service_configuration as psc', 'cl.contract_line_id', 'psc.contract_line_id', {
+        on(join) {
+            join.andOnVal('psc.service_id', '=', serviceCatalogId);
+        },
+    });
+    db.tenantJoin(clientPlanQuery, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id');
+
+    const clientPlan = await clientPlanQuery
         .where('cc.client_id', clientId)
-        .andWhere('cc.tenant', tenant)
         .andWhere('cc.is_active', true)
         .andWhere('cc.start_date', '<=', targetDateISO) // Plan must start on or before the target date
         .andWhere(function() {
@@ -134,26 +128,18 @@ async function calculatePeriod(
         return null;
     }
 
-    const conflictingClientPlan = await trx('client_contracts as cc')
-        .join('contracts as ct', function() {
-            this.on('ct.contract_id', '=', 'cc.contract_id')
-                .andOn('ct.tenant', '=', 'cc.tenant');
-        })
-        .join('contract_lines as cl', function() {
-            this.on('cl.contract_id', '=', 'ct.contract_id')
-                .andOn('cl.tenant', '=', 'ct.tenant');
-        })
-        .join('contract_line_service_configuration as psc', function() {
-            this.on('cl.contract_line_id', '=', 'psc.contract_line_id')
-                .andOn('cl.tenant', '=', 'psc.tenant')
-                .andOnVal('psc.service_id', '=', serviceCatalogId);
-        })
-        .join('contract_line_service_bucket_config as psbc', function() {
-            this.on('psc.config_id', '=', 'psbc.config_id')
-                .andOn('psc.tenant', '=', 'psbc.tenant');
-        })
+    const conflictingClientPlanQuery = db.table('client_contracts as cc');
+    db.tenantJoin(conflictingClientPlanQuery, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
+    db.tenantJoin(conflictingClientPlanQuery, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
+    db.tenantJoin(conflictingClientPlanQuery, 'contract_line_service_configuration as psc', 'cl.contract_line_id', 'psc.contract_line_id', {
+        on(join) {
+            join.andOnVal('psc.service_id', '=', serviceCatalogId);
+        },
+    });
+    db.tenantJoin(conflictingClientPlanQuery, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id');
+
+    const conflictingClientPlan = await conflictingClientPlanQuery
         .where('cc.client_id', clientId)
-        .andWhere('cc.tenant', tenant)
         .andWhere('cc.is_active', true)
         .andWhere('cc.start_date', '<=', targetDateISO)
         .andWhere(function() {
@@ -185,9 +171,8 @@ async function calculatePeriod(
             chargeFamily: 'bucket',
         });
 
-    const matchingRecurringServicePeriod = await trx('recurring_service_periods')
+    const matchingRecurringServicePeriod = await db.table('recurring_service_periods')
         .where({
-            tenant,
             obligation_type: recurringObligation.obligationType,
             obligation_id: recurringObligation.obligationId,
         })
@@ -319,10 +304,11 @@ export async function findOrCreateCurrentBucketUsageRecord(
     const periodStartISO = toISODate(periodStart);
     const periodEndISO = toISODate(periodEnd);
 
+    const db = tenantDb(trx, tenant);
+
     // 2. Find Existing Record for the Calculated Period
-    const existingRecord = await trx('bucket_usage')
+    const existingRecord = await db.table('bucket_usage')
         .where({
-            tenant: tenant,
             client_id: clientId,
             service_catalog_id: serviceCatalogId,
             period_start: periodStartISO,
@@ -338,9 +324,8 @@ export async function findOrCreateCurrentBucketUsageRecord(
     // 3. Create New Record - Fetch Bucket Configuration
 
     // First, get the contract_line_service_configuration to find the config_id
-    const planServiceConfig = await trx('contract_line_service_configuration')
+    const planServiceConfig = await db.table('contract_line_service_configuration')
         .where({
-            tenant: tenant,
             contract_line_id: planId,
             service_id: serviceCatalogId,
         })
@@ -350,9 +335,8 @@ export async function findOrCreateCurrentBucketUsageRecord(
         throw new Error(`Plan service configuration not found for plan ${planId}, service ${serviceCatalogId} in tenant ${tenant}. Cannot create usage record.`);
     }
 
-    const bucketConfig = await trx('contract_line_service_bucket_config')
+    const bucketConfig = await db.table('contract_line_service_bucket_config')
         .where({
-            tenant: tenant,
             config_id: planServiceConfig.config_id,
         })
         .first<IContractLineServiceBucketConfigLocal | undefined>();
@@ -372,9 +356,8 @@ export async function findOrCreateCurrentBucketUsageRecord(
 
         try {
             if (source === 'recurring_service_period' && recurringScheduleKey) {
-                const previousRecurringServicePeriod = await trx('recurring_service_periods')
+                const previousRecurringServicePeriod = await db.table('recurring_service_periods')
                     .where({
-                        tenant,
                         schedule_key: recurringScheduleKey,
                     })
                     .whereNotNull('service_period_start')
@@ -439,9 +422,8 @@ export async function findOrCreateCurrentBucketUsageRecord(
         const prevPeriodEndISO = toISODate(prevPeriodEnd);
 
         // Find the usage record for the previous period
-        const previousRecord = await trx('bucket_usage')
+        const previousRecord = await db.table('bucket_usage')
             .where({
-                tenant: tenant,
                 client_id: clientId,
                 service_catalog_id: serviceCatalogId,
                 period_start: prevPeriodStartISO,
@@ -476,7 +458,7 @@ export async function findOrCreateCurrentBucketUsageRecord(
     };
 
     try {
-        const insertedRecords = await trx('bucket_usage')
+        const insertedRecords = await db.table<IBucketUsage>('bucket_usage')
             .insert(newRecordData)
             .returning('*'); // Return the full record including DB-generated IDs/timestamps
 
@@ -518,19 +500,17 @@ export async function updateBucketUsageMinutes(
         throw new Error("Tenant context could not be determined for bucket usage update.");
     }
 
-    const currentUsage = await trx('bucket_usage as bu')
-        .join('contract_line_service_configuration as psc', function() {
-            this.on('bu.contract_line_id', '=', 'psc.contract_line_id')
-                .andOn('bu.service_catalog_id', '=', 'psc.service_id')
-                .andOn('bu.tenant', '=', 'psc.tenant');
-        })
-        .join('contract_line_service_bucket_config as psbc', function() {
-            this.on('psc.config_id', '=', 'psbc.config_id')
-                .andOn('psc.tenant', '=', 'psbc.tenant')
-                .andOn('bu.tenant', '=', 'psbc.tenant')
-        })
+    const db = tenantDb(trx, tenant);
+    const currentUsageQuery = db.table('bucket_usage as bu');
+    db.tenantJoin(currentUsageQuery, 'contract_line_service_configuration as psc', 'psc.contract_line_id', 'bu.contract_line_id', {
+        on(join) {
+            join.andOn('psc.service_id', '=', 'bu.service_catalog_id');
+        },
+    });
+    db.tenantJoin(currentUsageQuery, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id');
+
+    const currentUsage = await currentUsageQuery
         .where('bu.usage_id', bucketUsageId)
-        .andWhere('bu.tenant', tenant)
         .select(
             'bu.minutes_used',
             'bu.rolled_over_minutes',
@@ -548,10 +528,9 @@ export async function updateBucketUsageMinutes(
 
     const newOverageMinutes = Math.max(0, newMinutesUsed - totalAvailableMinutes);
 
-    const updateCount = await trx('bucket_usage')
+    const updateCount = await db.table('bucket_usage')
         .where({
             usage_id: bucketUsageId,
-            tenant: tenant,
         })
         .update({
             minutes_used: newMinutesUsed,
@@ -588,19 +567,17 @@ export async function reconcileBucketUsageRecord(
    }
 
    // 2. Fetch Bucket Usage Record and Config
-   const usageRecord = await trx('bucket_usage as bu')
-       .join('contract_line_service_configuration as psc', function() {
-           this.on('bu.contract_line_id', '=', 'psc.contract_line_id')
-               .andOn('bu.service_catalog_id', '=', 'psc.service_id')
-               .andOn('bu.tenant', '=', 'psc.tenant')
-       })
-       .join('contract_line_service_bucket_config as psbc', function() {
-           this.on('psc.config_id', '=', 'psbc.config_id')
-               .andOn('psc.tenant', '=', 'psbc.tenant')
-               .andOn('bu.tenant', '=', 'psbc.tenant')
-       })
+   const db = tenantDb(trx, tenant);
+   const usageRecordQuery = db.table('bucket_usage as bu');
+   db.tenantJoin(usageRecordQuery, 'contract_line_service_configuration as psc', 'psc.contract_line_id', 'bu.contract_line_id', {
+       on(join) {
+           join.andOn('psc.service_id', '=', 'bu.service_catalog_id');
+       },
+   });
+   db.tenantJoin(usageRecordQuery, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id');
+
+   const usageRecord = await usageRecordQuery
        .where('bu.usage_id', bucketUsageId)
-       .andWhere('bu.tenant', tenant)
        .select(
            'bu.client_id',
            'bu.service_catalog_id',
@@ -625,9 +602,8 @@ export async function reconcileBucketUsageRecord(
    const { client_id, service_catalog_id, period_start, period_end, total_minutes } = usageRecord;
 
    // 3. Sum Billable Time Entries (billable_duration is in minutes)
-   const timeEntrySumResult = await trx('time_entries')
+   const timeEntrySumResult = await db.table('time_entries')
        .where({
-           tenant: tenant,
            client_id: client_id,
            service_id: service_catalog_id,
            is_billable: true,
@@ -641,9 +617,8 @@ export async function reconcileBucketUsageRecord(
    console.log(`Reconciliation: Found ${timeEntryMinutes} minutes from time entries.`);
 
    // 4. Sum Billable Usage Tracking (assuming 1 quantity = 1 minute)
-   const usageTrackingSumResult = await trx('usage_tracking')
+   const usageTrackingSumResult = await db.table('usage_tracking')
        .where({
-           tenant: tenant,
            client_id: client_id,
            service_id: service_catalog_id,
            is_billable: true,
@@ -664,10 +639,9 @@ export async function reconcileBucketUsageRecord(
    console.log(`Reconciliation: Calculated total_minutes_used = ${totalMinutesUsed}, new_overage_minutes = ${newOverageMinutes}`);
 
    // 6. Update Bucket Usage Record
-   const updateCount = await trx('bucket_usage')
+   const updateCount = await db.table('bucket_usage')
        .where({
            usage_id: bucketUsageId,
-           tenant: tenant,
        })
        .update({
            minutes_used: totalMinutesUsed,

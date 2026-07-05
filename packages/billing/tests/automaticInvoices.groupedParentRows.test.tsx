@@ -262,9 +262,10 @@ describe('AutomaticInvoices grouped parent rows', () => {
       expect(screen.getByTestId('automatic-invoices-table-row-count')).toHaveTextContent('1');
     });
 
-    expect(screen.getByText('Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.')).toBeInTheDocument();
     expect(screen.getByTestId('automatic-invoices-table')).toBeInTheDocument();
     expect(screen.getAllByTestId('automatic-invoices-table-row')).toHaveLength(1);
+    // One parent row collapses the two child obligations into a single grouped row.
+    expect(screen.getByText('2 line items')).toBeInTheDocument();
   });
 
   it('renders parent summary child count, aggregate amount, and invoice window (T002)', async () => {
@@ -273,10 +274,11 @@ describe('AutomaticInvoices grouped parent rows', () => {
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await waitFor(() => {
-      expect(screen.getByText('2 obligations')).toBeInTheDocument();
+      expect(screen.getByText('2 line items')).toBeInTheDocument();
     });
 
-    expect(screen.getAllByText('2026-03-01 to 2026-04-01').length).toBeGreaterThan(0);
+    // The grouped Service Period column renders the candidate's compact window.
+    expect(screen.getAllByText('2026-03-01').length).toBeGreaterThan(0);
     expect(screen.getByText('$300.00')).toBeInTheDocument();
   });
 
@@ -288,13 +290,15 @@ describe('AutomaticInvoices grouped parent rows', () => {
     const expandButton = await screen.findByRole('button', { name: 'Expand' });
     fireEvent.click(expandButton);
 
-    expect(
-      await screen.findByTestId('child-row-parent-group:client-1:2026-03-01:2026-04-01-exec-1'),
-    ).toBeInTheDocument();
+    // Expanding surfaces each child execution row (identified by its child checkbox).
+    await waitFor(() => {
+      expect(
+        document.getElementById('select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1'),
+      ).not.toBeNull();
+    });
     expect(screen.getAllByText('Assigned work item').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Cadence: Contract anniversary').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Billing timing: Advance').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Service period: 2026-03-01 to 2026-04-01').length).toBeGreaterThan(0);
+    // Cadence and billing timing share one compact line in the grouped grid.
+    expect(screen.getAllByText('Contract anniversary · Advance').length).toBeGreaterThan(0);
     expect(screen.getByText('$125.00')).toBeInTheDocument();
   });
 
@@ -408,7 +412,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
     await waitFor(() => {
       expect(parentCheckbox.checked).toBe(true);
     });
-    expect(screen.getByText('Generate Invoices for Selected Periods (2)')).toBeInTheDocument();
+    expect(screen.getByText('Generate Invoices (2)')).toBeInTheDocument();
   });
 
   it('non-combinable parent stays disabled while child rows remain selectable (T010)', async () => {
@@ -508,11 +512,11 @@ describe('AutomaticInvoices grouped parent rows', () => {
       'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
     ) as HTMLInputElement;
 
-    expect(
-      screen.getByTestId('child-row-parent-group:client-1:2026-03-01:2026-04-01-exec-2'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Contains blocked items')).toBeInTheDocument();
-    expect(screen.queryByText('Must invoice separately')).not.toBeInTheDocument();
+    // The blocked child row stays visible (its child checkbox is present) while the
+    // group reports a Blocked status rather than a Separate one.
+    expect(blockedChild).not.toBeNull();
+    expect(screen.getByText('Blocked')).toBeInTheDocument();
+    expect(screen.queryByText('Separate')).not.toBeInTheDocument();
     expect(blockedChild.disabled).toBe(true);
     expect(blockedChild.checked).toBe(false);
     expect(readyChild.checked).toBe(true);
@@ -630,7 +634,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
       'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
     ) as HTMLInputElement;
     fireEvent.click(childOne);
-    fireEvent.click(screen.getByRole('button', { name: 'Generate Invoices for Selected Periods (1)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Invoices (1)' }));
 
     await waitFor(() => {
       expect(mockGenerateGroupedInvoicesAsRecurringBillingRun).toHaveBeenCalledTimes(1);
@@ -681,7 +685,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
     });
     expect(screen.queryByTestId('grouped-preview-unavailable-copy')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Generate Invoices for Selected Periods (1)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Invoices (1)' }));
     await waitFor(() => {
       expect(mockGenerateGroupedInvoicesAsRecurringBillingRun).toHaveBeenCalledTimes(1);
     });

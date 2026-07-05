@@ -2,7 +2,7 @@
 
 import crypto from 'node:crypto';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { z } from 'zod';
 
@@ -462,9 +462,8 @@ export const getWebhookSummary = withAuth(async (user, _ctx, webhookId: string) 
 
 export const getWebhookStatsSnapshot = withAuth(async (user) => {
   await assertWebhookPermission(user, 'read');
-  const { knex } = await createTenantKnex();
-  const totals = await knex('webhooks')
-    .where({ tenant: user.tenant })
+  const { knex } = await createTenantKnex(user.tenant);
+  const totals = await tenantDb(knex, user.tenant).table('webhooks')
     .select(
       knex.raw('count(*)::int as total'),
       knex.raw('sum(case when is_active then 1 else 0 end)::int as active'),

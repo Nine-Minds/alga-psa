@@ -4,7 +4,7 @@
  */
 
 import { randomUUID } from 'crypto';
-import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { convertMarkdownToBlocks, type BlockNoteBlock } from '@shared/lib/utils/markdownToBlocks';
 import { ListOptions } from '../controllers/types';
 import { NotFoundError } from '../middleware/apiMiddleware';
@@ -105,18 +105,15 @@ export class KbArticleService extends BaseService<any> {
       order,
     } = options;
 
-    let dataQuery = knex('kb_articles as ka')
+    const db = tenantDb(knex, context.tenant);
+    let dataQuery = db.table('kb_articles as ka')
       .select([
         ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
         'd.document_name',
-      ])
-      .leftJoin('documents as d', function () {
-        this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
-      })
-      .where('ka.tenant', context.tenant);
+      ]);
+    db.tenantJoin(dataQuery, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
 
-    let countQuery = knex('kb_articles')
-      .where('tenant', context.tenant);
+    let countQuery = this.buildTenantScopedQuery(knex, context);
 
     // Apply filters
     if (filters.status) {
@@ -140,15 +137,14 @@ export class KbArticleService extends BaseService<any> {
       dataQuery = dataQuery.where(function () {
         this.whereILike('d.document_name', term).orWhereILike('ka.slug', term);
       });
-      countQuery = countQuery.whereExists(function () {
-        this.select('*')
-          .from('documents as d2')
+      countQuery = countQuery.whereExists(
+        db.table('documents as d2')
+          .select('*')
           .whereRaw('d2.document_id = kb_articles.document_id')
-          .andWhereRaw('d2.tenant = kb_articles.tenant')
           .andWhere(function () {
             this.whereILike('d2.document_name', term);
-          });
-      });
+          })
+      );
     }
 
     // Sorting
@@ -174,19 +170,17 @@ export class KbArticleService extends BaseService<any> {
   async getById(id: string, context: ServiceContext): Promise<any | null> {
     const { knex } = await this.getKnex();
 
-    const article = await knex('kb_articles as ka')
+    const db = tenantDb(knex, context.tenant);
+    const articleQuery = db.table('kb_articles as ka')
       .select([
         ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
         'd.document_name',
         'dbc.block_data',
-      ])
-      .leftJoin('documents as d', function () {
-        this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
-      })
-      .leftJoin('document_block_content as dbc', function () {
-        this.on('dbc.document_id', '=', 'ka.document_id').andOn('dbc.tenant', '=', 'ka.tenant');
-      })
-      .where('ka.tenant', context.tenant)
+      ]);
+    db.tenantJoin(articleQuery, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
+    db.tenantJoin(articleQuery, 'document_block_content as dbc', 'dbc.document_id', 'ka.document_id', { type: 'left' });
+
+    const article = await articleQuery
       .andWhere('ka.article_id', id)
       .first();
 
@@ -195,6 +189,7 @@ export class KbArticleService extends BaseService<any> {
 
   async create(data: CreateKbArticleData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
+    const db = tenantDb(knex, context.tenant);
 
     if (!data.title?.trim()) {
       throw new Error('Title is required');
@@ -205,7 +200,7 @@ export class KbArticleService extends BaseService<any> {
     const audience = data.audience || 'internal';
 
     // Ensure slug uniqueness
-    const existingSlug = await knex('kb_articles').where({ tenant: context.tenant, slug }).first();
+    const existingSlug = await this.buildTenantScopedQuery(knex, context).where('slug', slug).first();
     if (existingSlug) {
       if (data.slug?.trim()) {
         throw new Error('An article with this slug already exists');
@@ -213,7 +208,7 @@ export class KbArticleService extends BaseService<any> {
       let suffix = 2;
       while (true) {
         const candidate = `${slug}-${suffix}`;
-        const collision = await knex('kb_articles').where({ tenant: context.tenant, slug: candidate }).first();
+        const collision = await this.buildTenantScopedQuery(knex, context).where('slug', candidate).first();
         if (!collision) {
           slug = candidate;
           break;
@@ -226,7 +221,7 @@ export class KbArticleService extends BaseService<any> {
     const documentId = randomUUID();
     const now = new Date();
 
-    await knex('documents').insert({
+    await db.table('documents').insert({
       tenant: context.tenant,
       document_id: documentId,
       document_name: data.title.trim(),
@@ -248,7 +243,7 @@ export class KbArticleService extends BaseService<any> {
       }
 
       if (blocks.length > 0) {
-        await knex('document_block_content').insert({
+        await db.table('document_block_content').insert({
           content_id: randomUUID(),
           document_id: documentId,
           tenant: context.tenant,
@@ -266,7 +261,7 @@ export class KbArticleService extends BaseService<any> {
       : null;
 
     try {
-      await knex('kb_articles').insert({
+      await db.table('kb_articles').insert({
         tenant: context.tenant,
         article_id: articleId,
         document_id: documentId,
@@ -281,8 +276,8 @@ export class KbArticleService extends BaseService<any> {
         updated_by: context.userId,
       });
     } catch (err) {
-      await knex('documents')
-        .where({ tenant: context.tenant, document_id: documentId })
+      await db.table('documents')
+        .where('document_id', documentId)
         .del()
         .catch(() => {});
       throw err;
@@ -294,8 +289,8 @@ export class KbArticleService extends BaseService<any> {
   async update(id: string, data: UpdateKbArticleData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 
-    const existing = await knex('kb_articles')
-      .where({ tenant: context.tenant, article_id: id })
+    const existing = await this.buildTenantScopedQuery(knex, context)
+      .where('article_id', id)
       .first();
 
     if (!existing) {
@@ -308,15 +303,15 @@ export class KbArticleService extends BaseService<any> {
     };
 
     if (data.title !== undefined) {
-      await knex('documents')
-        .where({ tenant: context.tenant, document_id: existing.document_id })
+      await tenantDb(knex, context.tenant).table('documents')
+        .where('document_id', existing.document_id)
         .update({ document_name: data.title.trim(), updated_at: knex.fn.now() });
     }
 
     if (data.slug !== undefined) {
       const newSlug = data.slug.trim();
-      const collision = await knex('kb_articles')
-        .where({ tenant: context.tenant, slug: newSlug })
+      const collision = await this.buildTenantScopedQuery(knex, context)
+        .where('slug', newSlug)
         .whereNot('article_id', id)
         .first();
       if (collision) {
@@ -337,8 +332,8 @@ export class KbArticleService extends BaseService<any> {
       }
     }
 
-    await knex('kb_articles')
-      .where({ tenant: context.tenant, article_id: id })
+    await this.buildTenantScopedQuery(knex, context)
+      .where('article_id', id)
       .update(updates);
 
     return this.getById(id, context);
@@ -347,8 +342,8 @@ export class KbArticleService extends BaseService<any> {
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
 
-    const article = await knex('kb_articles')
-      .where({ tenant: context.tenant, article_id: id })
+    const article = await this.buildTenantScopedQuery(knex, context)
+      .where('article_id', id)
       .first();
 
     if (!article) {
@@ -356,17 +351,17 @@ export class KbArticleService extends BaseService<any> {
     }
 
     // Delete article, then associated document
-    await knex('kb_articles')
-      .where({ tenant: context.tenant, article_id: id })
+    await this.buildTenantScopedQuery(knex, context)
+      .where('article_id', id)
       .del();
 
-    await knex('document_block_content')
-      .where({ tenant: context.tenant, document_id: article.document_id })
+    await tenantDb(knex, context.tenant).table('document_block_content')
+      .where('document_id', article.document_id)
       .del()
       .catch(() => {});
 
-    await knex('documents')
-      .where({ tenant: context.tenant, document_id: article.document_id })
+    await tenantDb(knex, context.tenant).table('documents')
+      .where('document_id', article.document_id)
       .del()
       .catch(() => {});
   }
@@ -374,8 +369,8 @@ export class KbArticleService extends BaseService<any> {
   async publish(id: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 
-    const article = await knex('kb_articles')
-      .where({ tenant: context.tenant, article_id: id })
+    const article = await this.buildTenantScopedQuery(knex, context)
+      .where('article_id', id)
       .first();
 
     if (!article) {
@@ -383,8 +378,8 @@ export class KbArticleService extends BaseService<any> {
     }
 
     const now = knex.fn.now();
-    await knex('kb_articles')
-      .where({ tenant: context.tenant, article_id: id })
+    await this.buildTenantScopedQuery(knex, context)
+      .where('article_id', id)
       .update({
         status: 'published',
         published_at: now,
@@ -395,8 +390,8 @@ export class KbArticleService extends BaseService<any> {
 
     // Auto-set client visibility for client/public audience
     if (article.audience === 'client' || article.audience === 'public') {
-      await knex('documents')
-        .where({ tenant: context.tenant, document_id: article.document_id })
+      await tenantDb(knex, context.tenant).table('documents')
+        .where('document_id', article.document_id)
         .update({ is_client_visible: true, updated_at: now });
     }
 
@@ -406,8 +401,8 @@ export class KbArticleService extends BaseService<any> {
   async archive(id: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 
-    const article = await knex('kb_articles')
-      .where({ tenant: context.tenant, article_id: id })
+    const article = await this.buildTenantScopedQuery(knex, context)
+      .where('article_id', id)
       .first();
 
     if (!article) {
@@ -415,8 +410,8 @@ export class KbArticleService extends BaseService<any> {
     }
 
     const now = knex.fn.now();
-    await knex('kb_articles')
-      .where({ tenant: context.tenant, article_id: id })
+    await this.buildTenantScopedQuery(knex, context)
+      .where('article_id', id)
       .update({
         status: 'archived',
         updated_at: now,
@@ -424,8 +419,8 @@ export class KbArticleService extends BaseService<any> {
       });
 
     // Clear client visibility
-    await knex('documents')
-      .where({ tenant: context.tenant, document_id: article.document_id })
+    await tenantDb(knex, context.tenant).table('documents')
+      .where('document_id', article.document_id)
       .update({ is_client_visible: false, updated_at: now });
 
     return this.getById(id, context);
@@ -434,12 +429,12 @@ export class KbArticleService extends BaseService<any> {
   async getContent(id: string, context: ServiceContext): Promise<{ content: string; format: string } | null> {
     const { knex } = await this.getKnex();
 
-    const article = await knex('kb_articles as ka')
-      .select('dbc.block_data')
-      .leftJoin('document_block_content as dbc', function () {
-        this.on('dbc.document_id', '=', 'ka.document_id').andOn('dbc.tenant', '=', 'ka.tenant');
-      })
-      .where('ka.tenant', context.tenant)
+    const db = tenantDb(knex, context.tenant);
+    const articleQuery = db.table('kb_articles as ka')
+      .select({ block_data: 'dbc.block_data' });
+    db.tenantJoin(articleQuery, 'document_block_content as dbc', 'dbc.document_id', 'ka.document_id', { type: 'left' });
+
+    const article = await articleQuery
       .andWhere('ka.article_id', id)
       .first();
 
@@ -464,8 +459,8 @@ export class KbArticleService extends BaseService<any> {
   async updateContent(id: string, data: UpdateKbArticleContentData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 
-    const article = await knex('kb_articles')
-      .where({ tenant: context.tenant, article_id: id })
+    const article = await this.buildTenantScopedQuery(knex, context)
+      .where('article_id', id)
       .first();
 
     if (!article) {
@@ -480,16 +475,16 @@ export class KbArticleService extends BaseService<any> {
     }
 
     const now = new Date();
-    const existing = await knex('document_block_content')
-      .where({ tenant: context.tenant, document_id: article.document_id })
+    const existing = await tenantDb(knex, context.tenant).table('document_block_content')
+      .where('document_id', article.document_id)
       .first();
 
     if (existing) {
-      await knex('document_block_content')
-        .where({ tenant: context.tenant, document_id: article.document_id })
+      await tenantDb(knex, context.tenant).table('document_block_content')
+        .where('document_id', article.document_id)
         .update({ block_data: JSON.stringify(blocks), updated_at: now });
     } else {
-      await knex('document_block_content').insert({
+      await tenantDb(knex, context.tenant).table('document_block_content').insert({
         content_id: randomUUID(),
         document_id: article.document_id,
         tenant: context.tenant,
@@ -500,8 +495,8 @@ export class KbArticleService extends BaseService<any> {
     }
 
     // Update article timestamp
-    await knex('kb_articles')
-      .where({ tenant: context.tenant, article_id: id })
+    await this.buildTenantScopedQuery(knex, context)
+      .where('article_id', id)
       .update({ updated_at: now, updated_by: context.userId });
 
     return this.getById(id, context);
@@ -510,7 +505,7 @@ export class KbArticleService extends BaseService<any> {
   async getCategories(context: ServiceContext): Promise<any[]> {
     const { knex } = await this.getKnex();
 
-    return knex('standard_categories')
+    return tenantDb(knex, context.tenant).table('standard_categories')
       .select('id', 'category_name', 'parent_category_uuid', 'display_order')
       .orderBy('display_order', 'asc')
       .orderBy('category_name', 'asc');
@@ -519,8 +514,7 @@ export class KbArticleService extends BaseService<any> {
   async getTemplates(context: ServiceContext, articleType?: string): Promise<any[]> {
     const { knex } = await this.getKnex();
 
-    let query = knex('kb_article_templates')
-      .where('tenant', context.tenant);
+    let query = tenantDb(knex, context.tenant).table('kb_article_templates');
 
     if (articleType) {
       query = query.where('article_type', articleType);
@@ -532,8 +526,8 @@ export class KbArticleService extends BaseService<any> {
   async createFromTicket(ticketId: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 
-    const ticket = await knex('tickets')
-      .where({ tenant: context.tenant, ticket_id: ticketId })
+    const ticket = await tenantDb(knex, context.tenant).table('tickets')
+      .where('ticket_id', ticketId)
       .first();
 
     if (!ticket) {

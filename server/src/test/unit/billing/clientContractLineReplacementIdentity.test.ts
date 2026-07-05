@@ -9,6 +9,12 @@ const cloneTemplateContractLineAsync = vi.fn();
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
   withTransaction: (...args: any[]) => withTransaction(...args),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -16,6 +22,12 @@ vi.mock('@alga-psa/auth', () => ({
     fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
   withAuthCheck: (fn: any) => (...args: any[]) =>
     fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
+}));
+
+// Grant the MSP permission gate so the domain logic under test actually runs.
+vi.mock('../../../../../packages/clients/src/lib/authHelpers', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  assertMspPermission: vi.fn(async () => {}),
 }));
 
 vi.mock('../../../../../packages/clients/src/lib/billingHelpers.ts', () => ({

@@ -1,7 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const updateTicketStateMock = vi.fn();
+const ticketAuditLogInsertMock = vi.fn(async () => undefined);
+const displayNameFirstMock = vi.fn(async () => null);
+const tenantSettingsFirstMock = vi.fn(async () => ({
+  ticket_display_settings: { responseStateTrackingEnabled: true },
+}));
 const trxMock = vi.fn((table: string) => {
+  if (table === 'tenant_settings') {
+    return {
+      select: vi.fn().mockReturnThis(),
+      first: tenantSettingsFirstMock,
+    };
+  }
+
+  if (table === 'ticket_audit_logs') {
+    return {
+      insert: ticketAuditLogInsertMock,
+    };
+  }
+
+  if (table === 'contacts' || table === 'users') {
+    return {
+      where: vi.fn().mockReturnThis(),
+      first: displayNameFirstMock,
+    };
+  }
+
   if (table !== 'tickets') {
     throw new Error(`Unexpected table access in test: ${table}`);
   }
@@ -22,6 +47,9 @@ const publishWorkflowEventMock = vi.fn();
 vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
     withAdminTransactionMock(callback),
+  tenantDb: (trx: any) => ({
+    table: (tableName: string) => trx(tableName),
+  }),
 }));
 
 vi.mock('@alga-psa/shared/models/ticketModel', () => ({
@@ -48,7 +76,12 @@ describe('createCommentFromEmail response source metadata', () => {
     createCommentMock.mockResolvedValue({
       comment_id: 'comment-1',
     });
+    tenantSettingsFirstMock.mockResolvedValue({
+      ticket_display_settings: { responseStateTrackingEnabled: true },
+    });
     updateTicketStateMock.mockResolvedValue(1);
+    ticketAuditLogInsertMock.mockResolvedValue(undefined);
+    displayNameFirstMock.mockResolvedValue(null);
   });
 
   it('T002: persists metadata.responseSource=inbound_email', async () => {

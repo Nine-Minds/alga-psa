@@ -1,17 +1,21 @@
+'use client';
+
 import React from 'react';
 import { Type, Bold, Italic, List, ListOrdered, Quote, Link, Image } from 'lucide-react';
+import { useTranslation } from '../../lib/i18n/client';
 
 interface RichTextEditorSkeletonProps {
   height?: string;
   showToolbar?: boolean;
+  /** @deprecated No longer rendered; the loading label is a localized generic string. */
   title?: string;
 }
 
-const RichTextEditorSkeleton = ({ 
-  height = "300px", 
+const RichTextEditorSkeleton = ({
+  height = "300px",
   showToolbar = true,
-  title = "Rich Text Editor"
 }: RichTextEditorSkeletonProps) => {
+  const { t } = useTranslation('common');
   return (
     <div className="animate-pulse border rounded-lg overflow-hidden bg-white dark:bg-[rgb(var(--color-border-100))]">
       {/* Toolbar Skeleton */}
@@ -97,7 +101,7 @@ const RichTextEditorSkeleton = ({
         <div className="absolute inset-0 bg-white/50 dark:bg-black/50 flex items-center justify-center">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
-            <p className="text-gray-500 dark:text-[rgb(var(--color-text-400))] text-sm">Loading {title.toLowerCase()}...</p>
+            <p className="text-gray-500 dark:text-[rgb(var(--color-text-400))] text-sm">{t('richTextEditorSkeleton.loading', 'Loading editor…')}</p>
           </div>
         </div>
       </div>

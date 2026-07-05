@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use server';
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import {
@@ -32,6 +32,28 @@ export interface PaginatedInvoicesResult {
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+function buildInvoiceDetailServicePeriodSubquery(
+  db: ReturnType<typeof tenantDb>,
+  aggregate: 'min' | 'max',
+  outerInvoiceAlias: string,
+): Knex.QueryBuilder {
+  const servicePeriodColumn = aggregate === 'min'
+    ? 'iid.service_period_start'
+    : 'iid.service_period_end';
+  const subquery = db.subquery('invoice_charges as ic')
+    .whereRaw('?? = ??', ['ic.invoice_id', `${outerInvoiceAlias}.invoice_id`]);
+
+  if (aggregate === 'min') {
+    subquery.min(servicePeriodColumn);
+  } else {
+    subquery.max(servicePeriodColumn);
+  }
+
+  db.tenantJoin(subquery, 'invoice_charge_details as iid', 'ic.item_id', 'iid.item_id');
+
+  return db.tenantWhereColumn(subquery, 'ic.tenant', `${outerInvoiceAlias}.tenant`);
 }
 
 // Helper function to create basic invoice view model
@@ -140,14 +162,12 @@ export const fetchInvoicesPaginated = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
       // Build base query for counting and fetching
       const buildBaseQuery = () => {
-        const query = trx('invoices')
-          .join('clients', function () {
-            this.on('invoices.client_id', '=', 'clients.client_id')
-              .andOn('invoices.tenant', '=', 'clients.tenant');
-          })
-          .where('invoices.tenant', tenant);
+        const query = db.table('invoices');
+        db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id');
 
         // Apply status filter
         if (status === 'draft') {
@@ -192,12 +212,9 @@ export const fetchInvoicesPaginated = withAuth(async (
 
       // Build data query with pagination
       // Use a subquery to get distinct invoice IDs first, then join for full data
-      const invoiceIdsQuery = trx('invoices')
-        .join('clients', function () {
-          this.on('invoices.client_id', '=', 'clients.client_id')
-            .andOn('invoices.tenant', '=', 'clients.tenant');
-        })
-        .where('invoices.tenant', tenant)
+      const invoiceIdsQuery = db.table('invoices');
+      db.tenantJoin(invoiceIdsQuery, 'clients', 'invoices.client_id', 'clients.client_id');
+      invoiceIdsQuery
         .select('invoices.invoice_id');
 
       // Apply status filter to subquery
@@ -248,20 +265,24 @@ export const fetchInvoicesPaginated = withAuth(async (
 
       // Now fetch full invoice data for the paginated IDs
       // IMPORTANT: Always include tenant filter for defense-in-depth security
-      const invoices = await trx('invoices')
-        .join('clients', function () {
-          this.on('invoices.client_id', '=', 'clients.client_id')
-            .andOn('invoices.tenant', '=', 'clients.tenant');
-        })
-        .leftJoin('client_locations', function () {
-          this.on('clients.client_id', '=', 'client_locations.client_id')
-            .andOn('clients.tenant', '=', 'client_locations.tenant')
-            .andOn(function() {
+      const invoicesQuery = db.table('invoices');
+      db.tenantJoin(invoicesQuery, 'clients', 'invoices.client_id', 'clients.client_id');
+      db.tenantJoin(
+        invoicesQuery,
+        'client_locations',
+        'clients.client_id',
+        'client_locations.client_id',
+        {
+          type: 'left',
+          on(join) {
+            join.andOn(function() {
               this.on('client_locations.is_billing_address', '=', trx.raw('true'))
-                  .orOn('client_locations.is_default', '=', trx.raw('true'));
+                .orOn('client_locations.is_default', '=', trx.raw('true'));
             });
-        })
-        .where('invoices.tenant', tenant)
+          }
+        }
+      );
+      const invoices = await invoicesQuery
         .whereIn('invoices.invoice_id', ids)
         .select(
           'invoices.invoice_id',
@@ -283,24 +304,10 @@ export const fetchInvoicesPaginated = withAuth(async (
           // Invoice list and summary surfaces flatten canonical recurring detail rows to one
           // summary range. Full rerender or preview-refresh flows must use the
           // detail-aware reader below rather than relying on these list projections alone.
-          trx.raw(`(
-            SELECT MIN(iid.service_period_start)
-            FROM invoice_charges ic
-            JOIN invoice_charge_details iid
-              ON ic.item_id = iid.item_id
-             AND ic.tenant = iid.tenant
-            WHERE ic.invoice_id = invoices.invoice_id
-              AND ic.tenant = invoices.tenant
-          ) as service_period_start`),
-          trx.raw(`(
-            SELECT MAX(iid.service_period_end)
-            FROM invoice_charges ic
-            JOIN invoice_charge_details iid
-              ON ic.item_id = iid.item_id
-             AND ic.tenant = iid.tenant
-            WHERE ic.invoice_id = invoices.invoice_id
-              AND ic.tenant = invoices.tenant
-          ) as service_period_end`),
+          {
+            service_period_start: buildInvoiceDetailServicePeriodSubquery(db, 'min', 'invoices'),
+            service_period_end: buildInvoiceDetailServicePeriodSubquery(db, 'max', 'invoices'),
+          },
           'clients.client_name',
           'clients.properties',
           'client_locations.address_line1',
@@ -394,19 +401,26 @@ export const fetchInvoicesByClient = withAuth(async (
     
     // Get invoices with client info and location data in a single query, filtered by client_id
     const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoices')
-        .join('clients', function() {
-          this.on('invoices.client_id', '=', 'clients.client_id')
-              .andOn('invoices.tenant', '=', 'clients.tenant');
-        })
-        .leftJoin('client_locations', function () {
-          this.on('clients.client_id', '=', 'client_locations.client_id')
-            .andOn('clients.tenant', '=', 'client_locations.tenant')
-            .andOn(function() {
+      const db = tenantDb(trx, tenant);
+      const query = db.table('invoices');
+      db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id');
+      db.tenantJoin(
+        query,
+        'client_locations',
+        'clients.client_id',
+        'client_locations.client_id',
+        {
+          type: 'left',
+          on(join) {
+            join.andOn(function() {
               this.on('client_locations.is_billing_address', '=', trx.raw('true'))
-                  .orOn('client_locations.is_default', '=', trx.raw('true'));
+                .orOn('client_locations.is_default', '=', trx.raw('true'));
             });
-        })
+          }
+        }
+      );
+
+      return await query
         .where({
           'invoices.client_id': clientId,
           'invoices.tenant': tenant
@@ -426,24 +440,10 @@ export const fetchInvoicesByClient = withAuth(async (
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
-          trx.raw(`(
-            SELECT MIN(iid.service_period_start)
-            FROM invoice_charges ic
-            JOIN invoice_charge_details iid
-              ON ic.item_id = iid.item_id
-             AND ic.tenant = iid.tenant
-            WHERE ic.invoice_id = invoices.invoice_id
-              AND ic.tenant = invoices.tenant
-          ) as service_period_start`),
-          trx.raw(`(
-            SELECT MAX(iid.service_period_end)
-            FROM invoice_charges ic
-            JOIN invoice_charge_details iid
-              ON ic.item_id = iid.item_id
-             AND ic.tenant = iid.tenant
-            WHERE ic.invoice_id = invoices.invoice_id
-              AND ic.tenant = invoices.tenant
-          ) as service_period_end`),
+          {
+            service_period_start: buildInvoiceDetailServicePeriodSubquery(db, 'min', 'invoices'),
+            service_period_end: buildInvoiceDetailServicePeriodSubquery(db, 'max', 'invoices'),
+          },
           'clients.client_name',
           'clients.properties',
           // Location fields
@@ -508,15 +508,12 @@ export const fetchInvoicesByContract = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoices')
-        .join('client_contracts', function () {
-          this.on('invoices.client_contract_id', '=', 'client_contracts.client_contract_id')
-            .andOn('invoices.tenant', '=', 'client_contracts.tenant');
-        })
-        .join('clients', function() {
-          this.on('invoices.client_id', '=', 'clients.client_id')
-            .andOn('invoices.tenant', '=', 'clients.tenant');
-        })
+      const db = tenantDb(trx, tenant);
+      const query = db.table('invoices');
+      db.tenantJoin(query, 'client_contracts', 'invoices.client_contract_id', 'client_contracts.client_contract_id');
+      db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id');
+
+      return await query
         .where({
           'invoices.client_contract_id': contractId,
           'invoices.tenant': tenant
@@ -538,24 +535,10 @@ export const fetchInvoicesByContract = withAuth(async (
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
-          trx.raw(`(
-            SELECT MIN(iid.service_period_start)
-            FROM invoice_charges ic
-            JOIN invoice_charge_details iid
-              ON ic.item_id = iid.item_id
-             AND ic.tenant = iid.tenant
-            WHERE ic.invoice_id = invoices.invoice_id
-              AND ic.tenant = invoices.tenant
-          ) as service_period_start`),
-          trx.raw(`(
-            SELECT MAX(iid.service_period_end)
-            FROM invoice_charges ic
-            JOIN invoice_charge_details iid
-              ON ic.item_id = iid.item_id
-             AND ic.tenant = iid.tenant
-            WHERE ic.invoice_id = invoices.invoice_id
-              AND ic.tenant = invoices.tenant
-          ) as service_period_end`),
+          {
+            service_period_start: buildInvoiceDetailServicePeriodSubquery(db, 'min', 'invoices'),
+            service_period_end: buildInvoiceDetailServicePeriodSubquery(db, 'max', 'invoices'),
+          },
           'clients.client_name',
           'clients.properties'
         )
@@ -615,8 +598,10 @@ export const getEnrichedInvoiceViewModel = withAuth(async (
     return null;
   }
 
-  const { mapDbInvoiceToWasmViewModel, enrichInvoiceViewModelWithLocations } =
+  const { mapDbInvoiceToWasmViewModel } =
     await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
+  const { enrichInvoiceViewModelWithLocations } =
+    await import('@alga-psa/billing/lib/adapters/invoiceAdapters.server');
 
   const viewModel = mapDbInvoiceToWasmViewModel(dbInvoiceData);
   if (!viewModel) {
@@ -634,7 +619,9 @@ export const getResolvedInvoiceTemplateId = withAuth(async (
 ): Promise<string | null> => {
   const { knex } = await createTenantKnex();
 
-  const invoice = await knex('invoices')
+  const db = tenantDb(knex, tenant);
+
+  const invoice = await db.table('invoices')
     .select('client_id')
     .where({
       invoice_id: invoiceId,
@@ -647,7 +634,7 @@ export const getResolvedInvoiceTemplateId = withAuth(async (
   }
 
   try {
-    const client = await knex('clients')
+    const client = await db.table('clients')
       .select('invoice_template_id')
       .where({
         client_id: invoice.client_id,
@@ -687,8 +674,8 @@ export const getInvoicePurchaseOrderSummary = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  const invoice = await knex('invoices')
-    .where({ tenant, invoice_id: invoiceId })
+  const invoice = await tenantDb(knex, tenant).table('invoices')
+    .where({ invoice_id: invoiceId })
     .select('invoice_id', 'client_contract_id', 'po_number')
     .first();
 

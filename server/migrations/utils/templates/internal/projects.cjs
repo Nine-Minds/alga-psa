@@ -13,6 +13,7 @@ const TEMPLATES = [
       nl: { title: 'Project toegewezen', message: 'Project "{{projectName}}" is aan u toegewezen' },
       it: { title: 'Progetto assegnato', message: 'Il progetto "{{projectName}}" le è stato assegnato' },
       pl: { title: 'Projekt przypisany', message: 'Projekt "{{projectName}}" został do Ciebie przypisany' },
+      pt: { title: 'Projeto atribuído', message: 'O projeto "{{projectName}}" foi atribuído a você' },
     },
   },
   {
@@ -26,6 +27,7 @@ const TEMPLATES = [
       nl: { title: 'Nieuw project aangemaakt', message: 'Project "{{projectName}}" is aangemaakt voor {{clientName}}' },
       it: { title: 'Nuovo progetto creato', message: 'Il progetto "{{projectName}}" è stato creato per {{clientName}}' },
       pl: { title: 'Nowy projekt utworzony', message: 'Projekt "{{projectName}}" został utworzony dla {{clientName}}' },
+      pt: { title: 'Novo projeto criado', message: 'O projeto "{{projectName}}" foi criado para {{clientName}}' },
     },
   },
   {
@@ -39,6 +41,7 @@ const TEMPLATES = [
       nl: { title: 'Taak toegewezen', message: 'De taak "{{taskName}}" in project "{{projectName}}" is aan u toegewezen' },
       it: { title: 'Attività assegnata', message: "L'attività \"{{taskName}}\" del progetto \"{{projectName}}\" le è stata assegnata" },
       pl: { title: 'Zadanie przypisane', message: 'Zadanie "{{taskName}}" w projekcie "{{projectName}}" zostało do Ciebie przypisane' },
+      pt: { title: 'Tarefa atribuída', message: 'A tarefa "{{taskName}}" no projeto "{{projectName}}" foi atribuída a você' },
     },
   },
   {
@@ -52,6 +55,7 @@ const TEMPLATES = [
       nl: { title: 'Nieuwe opmerking bij taak', message: '{{authorName}} heeft een opmerking toegevoegd aan taak "{{taskName}}"' },
       it: { title: 'Nuovo commento sul task', message: '{{authorName}} ha aggiunto un commento al task "{{taskName}}"' },
       pl: { title: 'Nowy komentarz do zadania', message: '{{authorName}} dodał(a) komentarz do zadania "{{taskName}}"' },
+      pt: { title: 'Comentário sobre nova tarefa', message: '{{authorName}} adicionou um comentário à tarefa "{{taskName}}"' },
     },
   },
   {
@@ -65,6 +69,7 @@ const TEMPLATES = [
       nl: { title: 'Mijlpaal voltooid', message: 'De mijlpaal "{{milestoneName}}" in project "{{projectName}}" is voltooid' },
       it: { title: 'Traguardo completato', message: 'La milestone "{{milestoneName}}" del progetto "{{projectName}}" è stata completata' },
       pl: { title: 'Kamień milowy ukończony', message: 'Kamień milowy "{{milestoneName}}" w projekcie "{{projectName}}" został ukończony' },
+      pt: { title: 'Meta concluída', message: 'A meta "{{milestoneName}}" no projeto "{{projectName}}" foi concluída' },
     },
   },
   {
@@ -78,6 +83,7 @@ const TEMPLATES = [
       nl: { title: 'Toegevoegd als extra agent', message: 'U bent toegevoegd als extra agent aan taak "{{taskName}}" in project "{{projectName}}"' },
       it: { title: 'Aggiunto come agente aggiuntivo', message: 'Sei stato aggiunto come agente aggiuntivo al task "{{taskName}}" nel progetto "{{projectName}}"' },
       pl: { title: 'Dodano jako dodatkowego agenta', message: 'Zostałeś(aś) dodany(a) jako dodatkowy agent do zadania "{{taskName}}" w projekcie "{{projectName}}"' },
+      pt: { title: 'Adicionado como agente adicional', message: 'Você foi adicionado como agente adicional na tarefa "{{taskName}}" no projeto "{{projectName}}"' },
     },
   },
   {
@@ -91,6 +97,7 @@ const TEMPLATES = [
       nl: { title: 'Extra agent toegevoegd', message: '{{additionalAgentName}} is toegevoegd als extra agent aan uw taak "{{taskName}}" in project "{{projectName}}"' },
       it: { title: 'Agente aggiuntivo aggiunto', message: '{{additionalAgentName}} è stato aggiunto come agente aggiuntivo al suo task "{{taskName}}" nel progetto "{{projectName}}"' },
       pl: { title: 'Dodano dodatkowego agenta', message: '{{additionalAgentName}} został(a) dodany(a) jako dodatkowy agent do Twojego zadania "{{taskName}}" w projekcie "{{projectName}}"' },
+      pt: { title: 'Agente Adicional Adicionado', message: '{{additionalAgentName}} foi adicionado como agente adicional na sua tarefa "{{taskName}}" no projeto "{{projectName}}"' },
     },
   },
   {
@@ -104,6 +111,7 @@ const TEMPLATES = [
       nl: { title: 'Team toegewezen aan taak', message: "Team '{{teamName}}' is toegewezen aan taak '{{taskName}}' in project '{{projectName}}' door {{performedByName}}" },
       it: { title: 'Team assegnato al task', message: "Il team '{{teamName}}' è stato assegnato al task '{{taskName}}' nel progetto '{{projectName}}' da {{performedByName}}" },
       pl: { title: 'Zespół przypisany do zadania', message: "Zespół '{{teamName}}' został przypisany do zadania '{{taskName}}' w projekcie '{{projectName}}' przez {{performedByName}}" },
+      pt: { title: 'Equipe atribuída à tarefa', message: 'A equipe \'{{teamName}}\' foi designada para a tarefa \'{{taskName}}\' no projeto \'{{projectName}}\' por {{performedByName}}' },
     },
   },
 ];

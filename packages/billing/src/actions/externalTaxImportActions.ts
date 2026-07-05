@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
   getExternalTaxImportService,
   SingleImportResult,
@@ -104,21 +104,21 @@ export const getInvoicesPendingExternalTax = withAuth(async (
     throw new Error('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
+  const facade = tenantDb(knex, tenant);
 
-  const invoices = await knex('invoices as i')
-    .join('clients as c', function() {
-      this.on('i.client_id', '=', 'c.client_id')
-        .andOn('i.tenant', '=', 'c.tenant');
-    })
-    .leftJoin('tenant_external_entity_mappings as m', function() {
-      this.on('i.invoice_id', '=', 'm.alga_entity_id')
-        .andOn('i.tenant', '=', 'm.tenant')
-        .andOnVal('m.alga_entity_type', '=', 'invoice');
-    })
+  const query = facade.table('invoices as i')
     .where({
-      'i.tenant': tenant,
       'i.tax_source': 'pending_external'
-    })
+    });
+  facade.tenantJoin(query, 'clients as c', 'i.client_id', 'c.client_id');
+  facade.tenantJoin(query, 'tenant_external_entity_mappings as m', 'i.invoice_id', 'm.alga_entity_id', {
+    type: 'left',
+    on: (join) => {
+      join.andOnVal('m.alga_entity_type', '=', 'invoice');
+    },
+  });
+
+  const invoices = await query
     .select(
       'i.invoice_id',
       'i.invoice_number',
@@ -127,7 +127,14 @@ export const getInvoicesPendingExternalTax = withAuth(async (
       'i.created_at',
       'm.integration_type as adapter_type'
     )
-    .orderBy('i.created_at', 'desc');
+    .orderBy('i.created_at', 'desc') as unknown as Array<{
+      invoice_id: string;
+      invoice_number: string;
+      client_name: string;
+      total_amount: number;
+      created_at: string;
+      adapter_type?: string;
+    }>;
 
   return invoices;
 });

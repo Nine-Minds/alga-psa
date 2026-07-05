@@ -1,6 +1,9 @@
 namespace: msp
 env: production
 edition: enterprise
+# Appliance deployment profile -> capabilities (portal-domain provisioner = direct,
+# trustForwardedHost = true). Custom portal domains use a bring-your-own reverse proxy.
+deploymentProfile: appliance
 host: alga.local
 appUrl: https://alga.local
 domainSuffix: alga.local
@@ -78,6 +81,12 @@ pgbouncer:
   service:
     name: pgbouncer
     port: 6432
+
+# Share the tenant-secret store with email-service via a host directory so the
+# IMAP passwords written here by the filesystem secret provider are readable by
+# the email-service pod.
+sharedTenantSecrets:
+  enabled: true
 
 config:
   storage:

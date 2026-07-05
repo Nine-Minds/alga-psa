@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import {
@@ -45,8 +45,16 @@ function displayName(user: { first_name?: string | null; last_name?: string | nu
   return [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username || '';
 }
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 async function requireTicket(trx: Knex.Transaction | Knex, tenant: string, ticketId: string) {
-  const ticket = await trx('tickets').where({ tenant, ticket_id: ticketId }).first();
+  const ticket = await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: ticketId }).first();
   if (!ticket) {
     throw new Error('Ticket not found');
   }
@@ -56,11 +64,15 @@ async function requireTicket(trx: Knex.Transaction | Knex, tenant: string, ticke
 export const getTicketChecklistItems = withAuth(
   async (_user, { tenant }, ticketId: string): Promise<ITicketChecklistItem[]> => {
     const { knex: db } = await createTenantKnex();
-    return db('ticket_checklist_items as tci')
-      .leftJoin('users as u', function joinUsers() {
-        this.on('u.user_id', 'tci.completed_by').andOn('u.tenant', 'tci.tenant');
-      })
-      .where({ 'tci.tenant': tenant, 'tci.ticket_id': ticketId })
+    return tenantDb(db, tenant)
+      .tenantJoin(
+        tenantScopedTable(db, 'ticket_checklist_items as tci', tenant),
+        'users as u',
+        'u.user_id',
+        'tci.completed_by',
+        { type: 'left' }
+      )
+      .where({ 'tci.ticket_id': ticketId })
       .orderBy('tci.order_number', 'asc')
       .select(
         'tci.checklist_item_id',
@@ -93,12 +105,12 @@ export const addChecklistItem = withAuth(
     return withTransaction(db, async (trx: Knex.Transaction) => {
       await requireTicket(trx, tenant, ticketId);
 
-      const maxOrder = await trx('ticket_checklist_items')
-        .where({ tenant, ticket_id: ticketId })
+      const maxOrder = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
+        .where({ ticket_id: ticketId })
         .max('order_number as max')
         .first();
 
-      const [row] = await trx('ticket_checklist_items')
+      const [row] = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
         .insert({
           tenant,
           ticket_id: ticketId,
@@ -124,8 +136,8 @@ export const updateChecklistItem = withAuth(
 
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const existing = await trx('ticket_checklist_items')
-        .where({ tenant, checklist_item_id: itemId })
+      const existing = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
+        .where({ checklist_item_id: itemId })
         .first();
       if (!existing) {
         throw new Error('Checklist item not found');
@@ -140,8 +152,8 @@ export const updateChecklistItem = withAuth(
       if (input.assigned_to !== undefined) updates.assigned_to = input.assigned_to || null;
       if (input.is_required !== undefined) updates.is_required = input.is_required;
 
-      const [row] = await trx('ticket_checklist_items')
-        .where({ tenant, checklist_item_id: itemId })
+      const [row] = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
+        .where({ checklist_item_id: itemId })
         .update(updates)
         .returning('*');
       return row;
@@ -156,7 +168,7 @@ export const deleteChecklistItem = withAuth(
     }
 
     const { knex: db } = await createTenantKnex();
-    await db('ticket_checklist_items').where({ tenant, checklist_item_id: itemId }).del();
+    await tenantScopedTable(db, 'ticket_checklist_items', tenant).where({ checklist_item_id: itemId }).del();
   }
 );
 
@@ -169,8 +181,8 @@ export const reorderChecklistItems = withAuth(
     const { knex: db } = await createTenantKnex();
     await withTransaction(db, async (trx: Knex.Transaction) => {
       for (let i = 0; i < orderedItemIds.length; i++) {
-        await trx('ticket_checklist_items')
-          .where({ tenant, ticket_id: ticketId, checklist_item_id: orderedItemIds[i] })
+        await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
+          .where({ ticket_id: ticketId, checklist_item_id: orderedItemIds[i] })
           .update({ order_number: i, updated_at: trx.fn.now() });
       }
     });
@@ -185,8 +197,8 @@ export const setChecklistItemCompleted = withAuth(
 
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const existing = await trx('ticket_checklist_items')
-        .where({ tenant, checklist_item_id: itemId })
+      const existing = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
+        .where({ checklist_item_id: itemId })
         .first();
       if (!existing) {
         throw new Error('Checklist item not found');
@@ -196,8 +208,8 @@ export const setChecklistItemCompleted = withAuth(
       }
 
       const now = new Date().toISOString();
-      const [row] = await trx('ticket_checklist_items')
-        .where({ tenant, checklist_item_id: itemId })
+      const [row] = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
+        .where({ checklist_item_id: itemId })
         .update({
           completed,
           completed_by: completed ? user.user_id : null,

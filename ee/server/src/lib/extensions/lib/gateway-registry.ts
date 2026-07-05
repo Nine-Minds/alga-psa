@@ -16,8 +16,11 @@
  */
 
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { tenantDb } from '@alga-psa/db';
 import { getInstallConfig } from '../installConfig';
 import type { Method } from './gateway-utils';
+
+const EXTENSION_REGISTRY_GLOBAL_TENANT = '__extension_registry_global__';
 
 export interface ApiEndpointDef {
   method: Method;
@@ -57,7 +60,9 @@ class DbRegistryFacade implements RegistryFacade {
 
   async getManifest(versionId: string): Promise<ManifestV2 | null> {
     const db = await getAdminConnection();
-    const row = await db('extension_version').where({ id: versionId }).first(['api_endpoints', 'api']);
+    const row = await tenantDb(db, EXTENSION_REGISTRY_GLOBAL_TENANT).table('extension_version')
+      .where({ id: versionId })
+      .first(['api_endpoints', 'api']);
     if (!row) return null;
 
     // Prefer v2 `api_endpoints` (array) and fall back to legacy `api.endpoints` when present.

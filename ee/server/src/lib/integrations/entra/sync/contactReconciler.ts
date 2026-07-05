@@ -1,5 +1,6 @@
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { queueAmbiguousEntraMatch } from '../reconciliationQueueService';
 import { findContactMatchesByEmail } from './contactMatcher';
@@ -93,9 +94,8 @@ async function upsertContactLink(
     );
   }
 
-  await trx('contacts')
+  await tenantDb(trx, tenantId).table('contacts')
     .where({
-      tenant: tenantId,
       contact_name_id: contactNameId,
     })
     .update({
@@ -114,9 +114,8 @@ async function findExistingLinkedContactId(
   tenantId: string,
   user: EntraSyncUser
 ): Promise<string | null> {
-  const existing = await trx('entra_contact_links')
+  const existing = await tenantDb(trx, tenantId).table('entra_contact_links')
     .where({
-      tenant: tenantId,
       entra_tenant_id: user.entraTenantId,
       entra_object_id: user.entraObjectId,
     })
@@ -132,9 +131,8 @@ async function findExistingClientContactByEmail(
   clientId: string,
   email: string
 ): Promise<string | null> {
-  const existing = await trx('contacts')
+  const existing = await tenantDb(trx, tenantId).table('contacts')
     .where({
-      tenant: tenantId,
       client_id: clientId,
     })
     .andWhereRaw('lower(email) = ?', [email.trim().toLowerCase()])

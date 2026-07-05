@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
 import { handleApiError, UnauthorizedError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 import { issueMobileOtt } from '@/lib/mobileAuth/mobileAuthService';
 import {
@@ -53,6 +54,8 @@ type IdentityRow = {
   apple_refresh_token_enc: string | null;
 };
 
+const MOBILE_TENANT_DISCOVERY = 'tenant-discovery';
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const body = await req.json().catch(() => ({}));
@@ -73,13 +76,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const knex = await getConnection(null);
 
     // 1. Previously-linked identity takes priority (stable across email relay rotations).
-    let identity = (await knex('apple_user_identities')
+    let identity = (await tenantDb(knex, MOBILE_TENANT_DISCOVERY)
+      .unscoped('apple_user_identities', 'tenant discovery from Apple user id during sign-in')
       .where({ apple_user_id: appleUserId })
       .first()) as IdentityRow | undefined;
 
     // 2. Otherwise try to link by verified email, but only if exactly one user matches.
     if (!identity && email && emailVerified) {
-      const matches = await knex('users')
+      const matches = await tenantDb(knex, MOBILE_TENANT_DISCOVERY)
+        .unscoped('users', 'tenant discovery from verified Apple email during sign-in')
         .whereRaw('LOWER(email) = ?', [email])
         .where({ is_inactive: false })
         .where({ user_type: 'internal' })
@@ -103,7 +108,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           }
         }
 
-        await knex('apple_user_identities')
+        await tenantDb(knex, match.tenant).table('apple_user_identities')
           .insert({
             apple_user_id: appleUserId,
             tenant: match.tenant,
@@ -151,7 +156,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         const tokens = await exchangeAppleAuthorizationCode(parsed.authorizationCode, cfg);
         if (tokens?.refresh_token) {
           const enc = await encryptAppleRefreshToken(tokens.refresh_token);
-          await knex('apple_user_identities')
+          await tenantDb(knex, identity.tenant).table('apple_user_identities')
             .where({ apple_user_id: appleUserId })
             .update({ apple_refresh_token_enc: enc });
         }
@@ -162,7 +167,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }
     }
 
-    await knex('apple_user_identities')
+    await tenantDb(knex, identity.tenant).table('apple_user_identities')
       .where({ apple_user_id: appleUserId })
       .update({ last_sign_in_at: knex.fn.now() });
 

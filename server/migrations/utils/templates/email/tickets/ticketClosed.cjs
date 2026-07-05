@@ -215,6 +215,34 @@ const COPY = {
     hasPriority: true,
   },
 };
+SUBJECTS.pt = 'Ticket encerrado • {{ticket.title}}';
+COPY.pt = {
+  headerLabel: 'Ticket encerrado',
+  intro: 'Um ticket para <strong>{{ticket.clientName}}</strong> foi resolvido e encerrado. Revise os detalhes da resolução abaixo.',
+  badgePrefix: 'Ticket #',
+  status: 'Status',
+  closedStatusLabel: 'Encerrado',
+  closedBy: 'Encerrado por',
+  closedByVar: '{{ticket.closedBy}}',
+  assignedTo: 'Atribuído a',
+  requester: 'Solicitante',
+  board: 'Quadro',
+  category: 'Categoria',
+  location: 'Localização',
+  resolutionLabel: 'Resolução',
+  resolutionVar: '{{{ticket.resolution}}}',
+  viewButton: 'Ver ticket',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Ticket encerrado',
+  textClosedBy: 'Encerrado por',
+  textStatus: 'Status',
+  textClosedStatus: 'Encerrado',
+  textAssigned: 'Atribuído a',
+  textRequester: 'Solicitante',
+  textResolution: 'Resolução',
+  textView: 'Ver ticket',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

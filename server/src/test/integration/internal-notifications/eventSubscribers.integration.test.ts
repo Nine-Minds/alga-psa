@@ -165,18 +165,30 @@ function createConnectionStub(responses: Record<string, any | any[]>) {
   return knexStub;
 }
 
+// Mirrors the subscription list in internalNotificationSubscriber's
+// registerInternalNotificationSubscriber (additional-agent split 81a4a60b09,
+// appointment requests a58b44ab3e, comment-update events 65c688f47a).
 const expectedEventTypes = [
   'TICKET_CREATED',
   'TICKET_ASSIGNED',
+  'TICKET_ADDITIONAL_AGENT_ASSIGNED',
   'TICKET_UPDATED',
   'TICKET_CLOSED',
   'TICKET_COMMENT_ADDED',
+  'TICKET_COMMENT_UPDATED',
+  'TASK_COMMENT_ADDED',
+  'TASK_COMMENT_UPDATED',
   'PROJECT_CREATED',
   'PROJECT_ASSIGNED',
   'PROJECT_TASK_ASSIGNED',
+  'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
   'INVOICE_GENERATED',
   'MESSAGE_SENT',
-  'USER_MENTIONED_IN_DOCUMENT'
+  'USER_MENTIONED_IN_DOCUMENT',
+  'APPOINTMENT_REQUEST_CREATED',
+  'APPOINTMENT_REQUEST_APPROVED',
+  'APPOINTMENT_REQUEST_DECLINED',
+  'APPOINTMENT_REQUEST_CANCELLED'
 ];
 
 let registerInternalNotificationSubscriber: typeof import('server/src/lib/eventBus/subscribers/internalNotificationSubscriber').registerInternalNotificationSubscriber;
@@ -260,6 +272,9 @@ describe('internal notification event handling', () => {
     getConnectionMock.mockResolvedValue(knexStub);
     createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
 
+    // Since 81a4a60b09 the handler trusts payload.userId as the assignee
+    // (publishers set userId = assigned_to) and reads the performer from
+    // assignedByUserId.
     const assignmentEvent = {
       id: uuidv4(),
       eventType: 'TICKET_ASSIGNED' as const,
@@ -267,7 +282,8 @@ describe('internal notification event handling', () => {
       payload: {
         tenantId,
         ticketId,
-        userId: performedBy
+        userId: assignedUser,
+        assignedByUserId: performedBy
       }
     };
 
@@ -291,9 +307,13 @@ describe('internal notification event handling', () => {
     const tenantId = uuidv4();
     const primaryAssigneeId = uuidv4();
     const additionalAgentId = uuidv4();
+    const assignedById = uuidv4();
     const contactId = uuidv4();
     const contactUserId = uuidv4();
 
+    // users queue follows the handler's lookup order: assigner name,
+    // additional-agent name (primary notification), portal contact,
+    // additional-agent name again (client notification).
     const knexStub = createConnectionStub({
       'tickets as t': [
         {
@@ -308,6 +328,11 @@ describe('internal notification event handling', () => {
         }
       ],
       users: [
+        {
+          user_id: assignedById,
+          first_name: 'Alex',
+          last_name: 'Assigner'
+        },
         {
           user_id: additionalAgentId,
           first_name: 'Addy',
@@ -329,15 +354,19 @@ describe('internal notification event handling', () => {
     getConnectionMock.mockResolvedValue(knexStub);
     createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
 
+    // Since 81a4a60b09 additional-agent assignments publish their own event
+    // type with an explicit primary/additional/assigner payload instead of
+    // TICKET_ASSIGNED + isAdditionalAgent.
     const event = {
       id: uuidv4(),
-      eventType: 'TICKET_ASSIGNED' as const,
+      eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED' as const,
       timestamp: new Date().toISOString(),
       payload: {
         tenantId,
         ticketId,
-        userId: additionalAgentId,
-        isAdditionalAgent: true
+        primaryAgentId: primaryAssigneeId,
+        additionalAgentId,
+        assignedByUserId: assignedById
       }
     };
 
@@ -513,6 +542,11 @@ describe('internal notification event handling', () => {
     const contactId = uuidv4();
     const contactUserId = uuidv4();
 
+    const closedById = uuidv4();
+
+    // Since 81a4a60b09 the handler notifies every assignee via
+    // getAllTicketAssignees (second tickets read + ticket_resources scan) and
+    // resolves the closer's name before that.
     const knexStub = createConnectionStub({
       tickets: [
         {
@@ -522,9 +556,18 @@ describe('internal notification event handling', () => {
           assigned_to: assignedUserId,
           contact_name_id: contactId,
           tenant: tenantId
+        },
+        {
+          assigned_to: assignedUserId
         }
       ],
+      ticket_resources: [[]],
       users: [
+        {
+          user_id: closedById,
+          first_name: 'Casey',
+          last_name: 'Closer'
+        },
         {
           user_id: contactUserId,
           user_type: 'client'
@@ -542,7 +585,7 @@ describe('internal notification event handling', () => {
       payload: {
         tenantId,
         ticketId,
-        userId: uuidv4()
+        userId: closedById
       }
     };
 
@@ -641,12 +684,21 @@ describe('internal notification event handling', () => {
     const projectId = uuidv4();
     const taskId = uuidv4();
     const assignedUserId = uuidv4();
+    const assignedById = uuidv4();
 
     const knexStub = createConnectionStub({
       'project_tasks as pt': [
         {
           task_name: 'Configure firewall',
           project_name: 'Migration'
+        }
+      ],
+      // The handler resolves the assigner's name whenever assignedByUserId is set.
+      users: [
+        {
+          user_id: assignedById,
+          first_name: 'Al',
+          last_name: 'Assigner'
         }
       ]
     });
@@ -664,7 +716,7 @@ describe('internal notification event handling', () => {
         taskId,
         assignedToId: assignedUserId,
         assignedToType: 'user' as const,
-        assignedByUserId: uuidv4()
+        assignedByUserId: assignedById
       }
     };
 

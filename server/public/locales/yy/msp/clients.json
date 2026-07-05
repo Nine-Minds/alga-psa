@@ -195,6 +195,7 @@
     "clientOnly": "55555",
     "accountManager": "55555",
     "clientName": "55555",
+    "clientNameRequired": "55555",
     "clientType": "55555",
     "industry": "55555",
     "companySize": "55555",
@@ -228,9 +229,6 @@
     "entraSyncError": "55555",
     "entraSyncStarted": "55555 {{runId}} 55555",
     "entraSyncStatusUnknown": "55555",
-    "clientNameRequired": "55555",
-    "deactivateClientAndContacts": "55555",
-    "reactivateClientAndContacts": "55555",
     "inboundDomainAdded": "55555",
     "inboundDomainAddFailed": "55555",
     "inboundDomainRemoved": "55555",
@@ -256,6 +254,8 @@
     "syncEntraNow": "55555",
     "deactivateClient": "55555",
     "reactivateClient": "55555",
+    "deactivateClientAndContacts": "55555",
+    "reactivateClientAndContacts": "55555",
     "deactivatePrompt": "55555 {{count}} 55555",
     "reactivatePrompt": "55555 {{count}} 55555",
     "deactivatePortalWarning": "55555",
@@ -522,6 +522,17 @@
       "5": "55555",
       "6": "55555",
       "7": "55555"
+    },
+    "reviewError": "55555",
+    "reviewing": "55555",
+    "confirmSave": "55555",
+    "reviewChanges": "55555",
+    "impact": {
+      "title": "55555",
+      "periods": "55555 {{count}} 55555 {{lines}} 55555",
+      "from": "55555 {{date}} 55555",
+      "billedPreserved": "55555",
+      "confirmHint": "55555"
     }
   },
   "clientContractAssignment": {

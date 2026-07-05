@@ -80,7 +80,7 @@ const REVENUE_SUM_SQL = `
 `;
 
 const LABOR_COST_SUM_SQL = `
-  SELECT COALESCE(SUM(te.billable_duration * 833.33), 0)
+  SELECT COALESCE(SUM(te.billable_duration * 83.33), 0)
   FROM time_entries AS te
   WHERE te.tenant = {{tenant}}
     AND te.start_time >= {{start_of_year}}
@@ -117,8 +117,9 @@ export const contractProfitabilityReport: ReportDefinition = {
         ]
       },
       formatting: {
+        // Currency intentionally omitted; resolved to the tenant default at run
+        // time by the ReportEngine (formatting.currency path, owned by WS1).
         type: 'currency',
-        currency: 'USD',
         divisor: 100
       }
     },
@@ -141,7 +142,7 @@ export const contractProfitabilityReport: ReportDefinition = {
           }
         ],
         fields: [
-          'COALESCE(time_entries.billable_duration * 833.33, 0)' // $50/hr = 5000 cents/hr = 833.33 cents/min * billable_duration in minutes
+          'COALESCE(time_entries.billable_duration * 83.33, 0)' // $50/hr = 5000 cents/hr = 83.33 cents/min * billable_duration in minutes
         ],
         aggregation: 'sum',
         filters: [
@@ -151,8 +152,9 @@ export const contractProfitabilityReport: ReportDefinition = {
         ]
       },
       formatting: {
+        // Currency intentionally omitted; resolved to the tenant default at run
+        // time by the ReportEngine (formatting.currency path, owned by WS1).
         type: 'currency',
-        currency: 'USD',
         divisor: 100
       }
     },
@@ -171,8 +173,9 @@ export const contractProfitabilityReport: ReportDefinition = {
         filters: []
       },
       formatting: {
+        // Currency intentionally omitted; resolved to the tenant default at run
+        // time by the ReportEngine (formatting.currency path, owned by WS1).
         type: 'currency',
-        currency: 'USD',
         divisor: 100
       }
     },
@@ -195,8 +198,9 @@ export const contractProfitabilityReport: ReportDefinition = {
         filters: []
       },
       formatting: {
+        // Currency intentionally omitted; resolved to the tenant default at run
+        // time by the ReportEngine (formatting.currency path, owned by WS1).
         type: 'currency',
-        currency: 'USD',
         divisor: 100
       }
     },
@@ -264,7 +268,7 @@ export const contractProfitabilityReport: ReportDefinition = {
               SELECT
                 cc.tenant,
                 cc.client_contract_id,
-                COALESCE(SUM(te.billable_duration * 833.33), 0) AS labor_cost_cents
+                COALESCE(SUM(te.billable_duration * 83.33), 0) AS labor_cost_cents
               FROM client_contracts AS cc
               JOIN contract_lines AS cl
                 ON cl.tenant = cc.tenant

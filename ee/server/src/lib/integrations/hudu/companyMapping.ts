@@ -15,6 +15,7 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { HUDU_INTEGRATION_TYPE, HUDU_MAPPING_TABLE } from './contracts';
 import type { HuduCompany } from './contracts';
 
@@ -291,9 +292,10 @@ export async function setHuduCompanyMappingRow(
   input: SetHuduCompanyMappingInput
 ): Promise<HuduMappingWriteResult> {
   const externalId = String(input.huduCompanyId);
+  const db = tenantDb(knex, tenant);
 
-  const clientTaken = await knex(HUDU_MAPPING_TABLE)
-    .where({ tenant, ...huduMappingScope, alga_entity_id: input.clientId })
+  const clientTaken = await db.table(HUDU_MAPPING_TABLE)
+    .where({ ...huduMappingScope, alga_entity_id: input.clientId })
     .first('id', 'external_entity_id');
   if (clientTaken) {
     return {
@@ -303,8 +305,8 @@ export async function setHuduCompanyMappingRow(
     };
   }
 
-  const companyTaken = await knex(HUDU_MAPPING_TABLE)
-    .where({ tenant, ...huduMappingScope, external_entity_id: externalId })
+  const companyTaken = await db.table(HUDU_MAPPING_TABLE)
+    .where({ ...huduMappingScope, external_entity_id: externalId })
     .first('id', 'alga_entity_id');
   if (companyTaken) {
     return {
@@ -315,7 +317,7 @@ export async function setHuduCompanyMappingRow(
   }
 
   try {
-    const [row] = await knex(HUDU_MAPPING_TABLE)
+    const [row] = await db.table(HUDU_MAPPING_TABLE)
       .insert({
         tenant,
         ...huduMappingScope,
@@ -358,7 +360,7 @@ export async function clearHuduCompanyMappingRow(
     throw new Error('clearHuduCompanyMappingRow requires mappingId or huduCompanyId');
   }
 
-  const query = knex(HUDU_MAPPING_TABLE).where({ tenant, ...huduMappingScope });
+  const query = tenantDb(knex, tenant).table(HUDU_MAPPING_TABLE).where(huduMappingScope);
   if (ref.mappingId) {
     query.andWhere({ id: ref.mappingId });
   } else {
@@ -372,11 +374,16 @@ export async function getHuduCompanyMappingRows(
   knex: Knex,
   tenant: string
 ): Promise<Array<HuduCompanyMappingRow & { client_name: string | null }>> {
-  return knex(`${HUDU_MAPPING_TABLE} as m`)
-    .leftJoin('clients as c', function joinClients() {
-      this.on('c.tenant', '=', 'm.tenant').andOn(knex.raw('c.client_id::text = m.alga_entity_id'));
-    })
-    .where({ 'm.tenant': tenant, 'm.integration_type': HUDU_INTEGRATION_TYPE, 'm.alga_entity_type': HUDU_MAPPING_ENTITY_TYPE })
+  const db = tenantDb(knex, tenant);
+  const query = db.table(`${HUDU_MAPPING_TABLE} as m`);
+  db.tenantJoin(query, 'clients as c', 'c.tenant', 'm.tenant', {
+    type: 'left',
+    on(join) {
+      join.andOn(knex.raw('c.client_id::text = m.alga_entity_id'));
+    },
+  });
+  return query
+    .where({ 'm.integration_type': HUDU_INTEGRATION_TYPE, 'm.alga_entity_type': HUDU_MAPPING_ENTITY_TYPE })
     .select('m.*', 'c.client_name as client_name');
 }
 
@@ -387,8 +394,8 @@ export async function resolveHuduCompanyIdForClient(
   tenant: string,
   clientId: string
 ): Promise<string | null> {
-  const row = await knex(HUDU_MAPPING_TABLE)
-    .where({ tenant, ...huduMappingScope, alga_entity_id: clientId })
+  const row = await tenantDb(knex, tenant).table(HUDU_MAPPING_TABLE)
+    .where({ ...huduMappingScope, alga_entity_id: clientId })
     .first('external_entity_id');
   return row?.external_entity_id ?? null;
 }
@@ -398,8 +405,8 @@ export async function resolveClientIdForHuduCompany(
   tenant: string,
   huduCompanyId: string | number
 ): Promise<string | null> {
-  const row = await knex(HUDU_MAPPING_TABLE)
-    .where({ tenant, ...huduMappingScope, external_entity_id: String(huduCompanyId) })
+  const row = await tenantDb(knex, tenant).table(HUDU_MAPPING_TABLE)
+    .where({ ...huduMappingScope, external_entity_id: String(huduCompanyId) })
     .first('alga_entity_id');
   return row?.alga_entity_id ?? null;
 }

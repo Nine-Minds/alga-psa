@@ -15,6 +15,7 @@ import { revalidatePath } from 'next/cache';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { TIER_FEATURES } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex } from '@/lib/db';
 import { auditLog } from '@/lib/logging/auditLog';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
@@ -228,10 +229,11 @@ export const getNinjaOneConnectionStatus = withAdvancedAssetsAccess(async (user,
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration record
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -248,21 +250,29 @@ export const getNinjaOneConnectionStatus = withAdvancedAssetsAccess(async (user,
     const hasCredentials = !!credentialsJson;
 
     // Get organization and device counts
-    const orgCount = await knex('rmm_organization_mappings')
-      .where({ tenant, integration_id: integration.integration_id })
+    const orgCount = await db.table('rmm_organization_mappings')
+      .where('integration_id', integration.integration_id)
       .count('mapping_id as count')
       .first();
 
     // Get active alert count
-    const alertCount = await knex('rmm_alerts')
-      .where({ tenant, integration_id: integration.integration_id, status: 'active' })
+    const alertCount = await db.table('rmm_alerts')
+      .where({ integration_id: integration.integration_id, status: 'active' })
       .count('alert_id as count')
       .first();
+
+    // The proactive token-refresh job marks the token lifecycle 'reconnect_required'
+    // when the OAuth refresh permanently fails (e.g. invalid_token). Credentials are
+    // still stored (is_connected true), so surface this so the UI can prompt re-auth.
+    const tokenLifecycleStatus = (integration as { settings?: { tokenLifecycle?: { status?: string } } })
+      ?.settings?.tokenLifecycle?.status;
+    const reconnectRequired = tokenLifecycleStatus === 'reconnect_required';
 
     return {
       provider: 'ninjaone',
       is_connected: hasCredentials && integration.is_active,
       is_active: integration.is_active,
+      reconnect_required: reconnectRequired,
       instance_url: integration.instance_url || undefined,
       connected_at: integration.connected_at || undefined,
       last_sync_at: integration.last_sync_at || undefined,
@@ -293,6 +303,7 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // 1. Try to remove webhook from NinjaOne before clearing credentials
     // This is best-effort - we proceed even if it fails
@@ -316,8 +327,8 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
     }
 
     // 2. Load the integration row and stop its lifecycle workflow before mutating secrets.
-    let existingIntegration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    let existingIntegration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first();
 
     if (existingIntegration?.integration_id) {
@@ -327,8 +338,8 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
         'disconnect'
       );
 
-      existingIntegration = await knex('rmm_integrations')
-        .where({ tenant, provider: 'ninjaone' })
+      existingIntegration = await db.table('rmm_integrations')
+        .where('provider', 'ninjaone')
         .first();
     }
 
@@ -362,8 +373,8 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
       delete settings.webhookSecret;
       delete settings.webhookRegisteredAt;
 
-      await knex('rmm_integrations')
-        .where({ tenant, provider: 'ninjaone' })
+      await db.table('rmm_integrations')
+        .where('provider', 'ninjaone')
         .update({
           is_active: false,
           sync_status: 'pending',
@@ -377,7 +388,7 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
       // waiting for the periodic reconciler tick.
       try {
         const { reconcileRmmPollingSchedules } = await import(
-          'server/src/lib/jobs/handlers/rmmAlertPollingHandlers'
+          '@alga-psa/jobs/handlers/rmmAlertPollingHandlers'
         );
         const { initializeJobRunner } = await import('server/src/lib/jobs/initializeJobRunner');
         await reconcileRmmPollingSchedules(await initializeJobRunner());
@@ -468,10 +479,11 @@ export const syncNinjaOneOrganizations = withAdvancedAssetsAccess(async (user, {
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -495,8 +507,9 @@ export const syncNinjaOneOrganizations = withAdvancedAssetsAccess(async (user, {
     // Try to update sync status to error
     try {
       const { knex } = await createTenantKnex();
-      await knex('rmm_integrations')
-        .where({ tenant, provider: 'ninjaone' })
+      const db = tenantDb(knex, tenant);
+      await db.table('rmm_integrations')
+        .where('provider', 'ninjaone')
         .update({
           sync_status: 'error',
           sync_error: errorMessage,
@@ -533,10 +546,11 @@ export const getNinjaOneOrganizationMappings = withAdvancedAssetsAccess(async (u
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -544,20 +558,20 @@ export const getNinjaOneOrganizationMappings = withAdvancedAssetsAccess(async (u
     }
 
     // Get mappings with company names
-    const mappings = await knex('rmm_organization_mappings as rom')
-      .leftJoin('clients as c', function() {
-        this.on('rom.tenant', '=', 'c.tenant')
-          .andOn('rom.client_id', '=', 'c.client_id');
-      })
-      .where('rom.tenant', tenant)
+    const mappingsQuery = db.table('rmm_organization_mappings as rom');
+    db.tenantJoin(mappingsQuery, 'clients as c', 'c.client_id', 'rom.client_id', { type: 'left' });
+    type OrganizationMappingRow = Omit<RmmOrganizationMapping, 'metadata'> & {
+      metadata?: string | Record<string, unknown> | null;
+    };
+    const mappings = (await mappingsQuery
       .where('rom.integration_id', integration.integration_id)
       .select(
         'rom.*',
         'c.client_name as company_name'
       )
-      .orderBy('rom.external_organization_name');
+      .orderBy('rom.external_organization_name')) as unknown as OrganizationMappingRow[];
 
-    return mappings.map(m => ({
+    return mappings.map((m): RmmOrganizationMapping => ({
       ...m,
       metadata: typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata || {},
     }));
@@ -576,6 +590,7 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
   mappingId: string,
   updates: {
     company_id?: string | null;
+    default_contact_id?: string | null;
     auto_sync_assets?: boolean;
     auto_create_tickets?: boolean;
   }
@@ -588,6 +603,7 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Map company_id to client_id (database column name)
     const dbUpdates: Record<string, unknown> = {};
@@ -600,9 +616,12 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
     if ('auto_create_tickets' in updates) {
       dbUpdates.auto_create_tickets = updates.auto_create_tickets;
     }
+    if ('default_contact_id' in updates) {
+      dbUpdates.default_contact_id = updates.default_contact_id;
+    }
 
-    await knex('rmm_organization_mappings')
-      .where({ tenant, mapping_id: mappingId })
+    await db.table('rmm_organization_mappings')
+      .where('mapping_id', mappingId)
       .update({
         ...dbUpdates,
         updated_at: knex.fn.now(),
@@ -678,10 +697,11 @@ export const triggerNinjaOneFullSync = withAdvancedAssetsAccess(async (
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -732,10 +752,11 @@ export const triggerNinjaOneIncrementalSync = withAdvancedAssetsAccess(async (us
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -794,10 +815,11 @@ export const syncNinjaOneDevice = withAdvancedAssetsAccess(async (user, { tenant
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -839,10 +861,11 @@ export const getNinjaOneRemoteAccessUrl = withAdvancedAssetsAccess(async (user, 
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get the asset to find the RMM device ID
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where('asset_id', assetId)
       .first();
 
     if (!asset) {
@@ -913,10 +936,11 @@ export const getAssetAlerts = withAdvancedAssetsAccess(async (user, { tenant }, 
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get the asset to verify RMM management
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where('asset_id', assetId)
       .first();
 
     if (!asset) {
@@ -928,8 +952,8 @@ export const getAssetAlerts = withAdvancedAssetsAccess(async (user, { tenant }, 
     }
 
     // Get alerts for this asset
-    const alerts = await knex('rmm_alerts')
-      .where({ tenant, asset_id: assetId })
+    const alerts = await db.table('rmm_alerts')
+      .where('asset_id', assetId)
       .whereIn('status', ['active', 'acknowledged'])
       .orderBy('triggered_at', 'desc')
       .limit(50);
@@ -963,10 +987,11 @@ export const acknowledgeRmmAlert = withAdvancedAssetsAccess(async (user, { tenan
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Update the alert
-    const updated = await knex('rmm_alerts')
-      .where({ tenant, alert_id: alertId })
+    const updated = await db.table('rmm_alerts')
+      .where('alert_id', alertId)
       .update({
         status: 'acknowledged',
         acknowledged_at: knex.fn.now(),
@@ -1034,10 +1059,11 @@ export const getNinjaOneDeviceDetails = withAdvancedAssetsAccess(async (user, { 
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get the asset to find the RMM device ID
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where('asset_id', assetId)
       .first();
 
     if (!asset) {
@@ -1082,10 +1108,11 @@ export const triggerPatchStatusSync = withAdvancedAssetsAccess(async (user, { te
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -1141,10 +1168,11 @@ export const triggerSoftwareInventorySync = withAdvancedAssetsAccess(async (user
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -1255,18 +1283,17 @@ export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { t
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get total RMM-managed devices
-    const totalDevicesResult = await knex('assets')
-      .where({ tenant })
+    const totalDevicesResult = await db.table('assets')
       .where('rmm_provider', 'ninjaone')
       .whereNotNull('rmm_device_id')
       .count('asset_id as count')
       .first();
 
     // Get devices by status
-    const devicesByStatus = await knex('assets')
-      .where({ tenant })
+    const devicesByStatus = await db.table('assets')
       .where('rmm_provider', 'ninjaone')
       .whereNotNull('rmm_device_id')
       .select('agent_status')
@@ -1279,18 +1306,15 @@ export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { t
     });
 
     // Get devices with active alerts
-    const devicesWithAlertsResult = await knex('rmm_alerts')
-      .where({ tenant, status: 'active' })
+    const devicesWithAlertsResult = await db.table('rmm_alerts')
+      .where('status', 'active')
       .countDistinct('asset_id as count')
       .first();
 
     // Get patch statistics from workstations
-    const workstationPatches = await knex('workstation_assets as aw')
-      .join('assets as a', function() {
-        this.on('aw.tenant', '=', 'a.tenant')
-          .andOn('aw.asset_id', '=', 'a.asset_id');
-      })
-      .where('aw.tenant', tenant)
+    const workstationPatchesQuery = db.table('workstation_assets as aw');
+    db.tenantJoin(workstationPatchesQuery, 'assets as a', 'a.asset_id', 'aw.asset_id');
+    const workstationPatches = await workstationPatchesQuery
       .where('a.rmm_provider', 'ninjaone')
       .select(
         knex.raw('COALESCE(SUM(COALESCE(aw.pending_patches, 0)), 0) as pending'),
@@ -1300,12 +1324,9 @@ export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { t
       .first<{ pending: string | number; failed: string | number; needing_patches: string | number }>();
 
     // Get patch statistics from servers
-    const serverPatches = await knex('server_assets as asrv')
-      .join('assets as a', function() {
-        this.on('asrv.tenant', '=', 'a.tenant')
-          .andOn('asrv.asset_id', '=', 'a.asset_id');
-      })
-      .where('asrv.tenant', tenant)
+    const serverPatchesQuery = db.table('server_assets as asrv');
+    db.tenantJoin(serverPatchesQuery, 'assets as a', 'a.asset_id', 'asrv.asset_id');
+    const serverPatches = await serverPatchesQuery
       .where('a.rmm_provider', 'ninjaone')
       .select(
         knex.raw('COALESCE(SUM(COALESCE(asrv.pending_patches, 0)), 0) as pending'),
@@ -1315,8 +1336,8 @@ export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { t
       .first<{ pending: string | number; failed: string | number; needing_patches: string | number }>();
 
     // Get last sync time
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .select('last_sync_at')
       .first();
 

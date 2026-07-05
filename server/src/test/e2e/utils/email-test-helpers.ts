@@ -1,4 +1,5 @@
 import { PersistentE2ETestContext } from './persistent-test-context';
+import { tenantDb } from '@alga-psa/db';
 
 /**
  * Email Test Configuration
@@ -90,15 +91,15 @@ export class EmailTestHelpers {
       },
 
       getTickets: async () => {
-        return await this.getTicketsForContact(contact.email);
+        return await this.getTicketsForContact(tenant.tenant, contact.email);
       },
 
       getComments: async (ticketId: string) => {
-        return await this.getCommentsForTicket(ticketId);
+        return await this.getCommentsForTicket(tenant.tenant, ticketId);
       },
 
       getDocuments: async () => {
-        return await this.getDocumentsForContact(contact.email);
+        return await this.getDocumentsForContact(tenant.tenant, contact.email);
       }
     };
 
@@ -138,7 +139,7 @@ export class EmailTestHelpers {
       },
 
       getTickets: async () => {
-        return await this.getTicketsForContact(unknownEmail);
+        return await this.getTicketsForContact(tenant.tenant, unknownEmail);
       }
     };
   }
@@ -150,7 +151,7 @@ export class EmailTestHelpers {
     console.log('🔄 Ensuring tenant synchronization...');
 
     // Verify tenant exists in database
-    const tenantCheck = await this.context.db('tenants').where('tenant', tenant.tenant).first();
+    const tenantCheck = await tenantDb(this.context.db, tenant.tenant).table('tenants').first();
     if (!tenantCheck) {
       throw new Error(`Tenant ${tenant.tenant} not found in database after creation`);
     }
@@ -198,48 +199,51 @@ export class EmailTestHelpers {
   /**
    * Get tickets for a specific contact email
    */
-  private async getTicketsForContact(contactEmail: string): Promise<any[]> {
-    const ticketResult = await this.context.db.raw(`
-      SELECT t.*, c.email as contact_email, comp.client_name
-      FROM tickets t 
-      JOIN contacts c ON t.contact_name_id = c.contact_name_id
-      LEFT JOIN clients comp ON c.client_id = comp.client_id
-      WHERE c.email = ?
-      ORDER BY t.entered_at DESC
-    `, [contactEmail]);
-    
-    return ticketResult.rows || ticketResult;
+  private async getTicketsForContact(tenantId: string, contactEmail: string): Promise<any[]> {
+    const scopedDb = tenantDb(this.context.db, tenantId);
+    const query = scopedDb.table('tickets as t')
+      .select('t.*', 'c.email as contact_email', 'comp.client_name')
+      .where('c.email', contactEmail)
+      .orderBy('t.entered_at', 'desc');
+
+    scopedDb.tenantJoin(query, 'contacts as c', 'c.contact_name_id', 't.contact_name_id');
+    scopedDb.tenantJoin(query, 'clients as comp', 'comp.client_id', 'c.client_id', { type: 'left' });
+
+    return await query;
   }
 
   /**
    * Get comments for a specific ticket
    */
-  private async getCommentsForTicket(ticketId: string): Promise<any[]> {
-    const commentResult = await this.context.db.raw(`
-      SELECT c.* 
-      FROM comments c
-      WHERE c.ticket_id = ?
-      ORDER BY c.created_at
-    `, [ticketId]);
-    
-    return commentResult.rows || commentResult;
+  private async getCommentsForTicket(tenantId: string, ticketId: string): Promise<any[]> {
+    return await tenantDb(this.context.db, tenantId).table('comments as c')
+      .select('c.*')
+      .where('c.ticket_id', ticketId)
+      .orderBy('c.created_at');
   }
 
   /**
    * Get documents/attachments for a contact's tickets
    */
-  private async getDocumentsForContact(contactEmail: string): Promise<any[]> {
-    const documentResult = await this.context.db.raw(`
-      SELECT t.*, d.document_name as file_name, d.file_size, d.mime_type
-      FROM tickets t 
-      JOIN contacts c ON t.contact_name_id = c.contact_name_id
-      LEFT JOIN document_associations da ON da.entity_id = t.ticket_id AND da.entity_type = 'ticket'
-      LEFT JOIN documents d ON d.document_id = da.document_id AND d.tenant = da.tenant
-      WHERE c.email = ? AND d.document_name IS NOT NULL
-      ORDER BY t.entered_at DESC
-    `, [contactEmail]);
-    
-    return documentResult.rows || documentResult;
+  private async getDocumentsForContact(tenantId: string, contactEmail: string): Promise<any[]> {
+    const scopedDb = tenantDb(this.context.db, tenantId);
+    const query = scopedDb.table('tickets as t')
+      .select('t.*', 'd.document_name as file_name', 'd.file_size', 'd.mime_type')
+      .where('c.email', contactEmail)
+      .whereNotNull('d.document_name')
+      .orderBy('t.entered_at', 'desc');
+
+    scopedDb.tenantJoin(query, 'contacts as c', 'c.contact_name_id', 't.contact_name_id');
+    scopedDb.tenantJoin(query, 'document_associations as da', 'da.entity_id', 't.ticket_id', {
+      type: 'left',
+      on: (join) => join.andOnVal('da.entity_type', '=', 'ticket'),
+    });
+    scopedDb.tenantJoin(query, 'documents as d', 'd.document_id', 'da.document_id', {
+      type: 'left',
+      rootTenantColumn: 'da.tenant',
+    });
+
+    return await query;
   }
 
   /**

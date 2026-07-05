@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
 import { handleApiError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 import { issueMobileOtt } from '@/lib/mobileAuth/mobileAuthService';
 import {
@@ -57,11 +58,14 @@ type ExistingSubscription = {
   status: string;
 };
 
+const MOBILE_TENANT_DISCOVERY = 'tenant-discovery';
+
 async function findExistingSubscription(
   originalTransactionId: string,
 ): Promise<ExistingSubscription | null> {
   const knex = await getConnection(null);
-  const row = await knex('apple_iap_subscriptions')
+  const row = await tenantDb(knex, MOBILE_TENANT_DISCOVERY)
+    .unscoped('apple_iap_subscriptions', 'tenant discovery from Apple original transaction id during provision')
     .where({ original_transaction_id: originalTransactionId })
     .first();
   return (row as ExistingSubscription) ?? null;
@@ -69,8 +73,8 @@ async function findExistingSubscription(
 
 async function findAdminUserForTenant(tenantId: string): Promise<{ userId: string } | null> {
   const knex = await getConnection(null);
-  const row = await knex('users')
-    .where({ tenant: tenantId, user_type: 'internal' })
+  const row = await tenantDb(knex, tenantId).table('users')
+    .where({ user_type: 'internal' })
     .orderBy('created_at', 'asc')
     .first('user_id');
   if (!row) return null;

@@ -1,11 +1,14 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 exports.seed = async function (knex) {
     // Get the tenant ID
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
 
-    return knex('policies').insert([
+    const { tenantId, db } = context;
+    return db.table('policies').insert([
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             policy_name: 'Admin Full Access',
             resource: 'all',
             action: 'all',
@@ -18,7 +21,7 @@ exports.seed = async function (knex) {
             ])
         },
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             policy_name: 'Manager Ticket Access',
             resource: 'ticket',
             action: 'read',
@@ -31,7 +34,7 @@ exports.seed = async function (knex) {
             ])
         },
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             policy_name: 'Technician Ticket View',
             resource: 'ticket',
             action: 'read',
@@ -44,7 +47,7 @@ exports.seed = async function (knex) {
             ])
         },
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             policy_name: 'High Priority Ticket Edit',
             resource: 'ticket',
             action: 'update',

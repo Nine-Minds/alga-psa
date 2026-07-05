@@ -2,6 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ tenant: 'test-tenant' })),
+  tenantDb: (conn: any, tenant: string) => ({
+    tenant,
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (query: any, table: string, _left?: string, _right?: string, opts?: any) =>
+      opts?.type === 'left' ? query.leftJoin?.(table) ?? query : query.join?.(table) ?? query,
+  }),
 }));
 
 import { findOrCreateCurrentBucketUsageRecord } from '../src/services/bucketUsageService';

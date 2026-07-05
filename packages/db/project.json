@@ -14,7 +14,8 @@
         "{projectRoot}/dist"
       ],
       "options": {
-        "command": "tsc -b",
+        "comment": "Run the full package build (tsc -b + tsc-alias), not bare tsc. @alga-psa/db is type:module, so the dist needs explicit .js import extensions for raw Node ESM consumers (e.g. the knex migration runner); tsc -b alone emits extensionless imports that only a bundler can resolve.",
+        "command": "npm run build",
         "cwd": "packages/db"
       }
     },

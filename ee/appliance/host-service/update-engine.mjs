@@ -6,13 +6,18 @@ import { applyFluxSource, applyReleaseSelectionConfiguration, applyRuntimeValues
 import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 
 const DEFAULT_STATE_FILE = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
-// Must honor ALGA_APPLIANCE_RELEASE_SELECTION_FILE like setup-engine/status-engine do:
-// the control-plane Deployment sets it to /var/lib/alga-appliance (the only writable
-// mount). Hardcoding /etc made POST /api/updates die at write-release-selection with
-// `EACCES: mkdir /etc/alga-appliance`, so the app-channel update flow never worked.
-const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
+// release-selection.json lives in /var/lib/alga-appliance — the writable hostPath
+// mount owned by the service uid (10001). /etc/alga-appliance is root-owned 0750,
+// so an /etc default silently broke updates two ways: the write EACCES'd, and the
+// read returned empty, which made the rebuild reset the app URL (NEXTAUTH_URL) to
+// the placeholder host. Default to the real location; the env override still wins.
+const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/var/lib/alga-appliance/release-selection.json';
 const DEFAULT_UPDATE_HISTORY_FILE = process.env.ALGA_APPLIANCE_UPDATE_HISTORY_FILE || '/var/lib/alga-appliance/update-history.json';
-const DEFAULT_KUBECONFIG = '/etc/rancher/k3s/k3s.yaml';
+// Honor the control plane's configured kubeconfig (the pod's in-cluster
+// kubeconfig at /tmp/alga-appliance/kubeconfig), matching setup-engine/status-engine.
+// Hardcoding the bare-host /etc/rancher/k3s/k3s.yaml made the flux/helm reconcile
+// step fail in the pod with `stat /etc/rancher/k3s/k3s.yaml: no such file`.
+const DEFAULT_KUBECONFIG = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 
 function nowIso() {
   return new Date().toISOString();
@@ -51,6 +56,42 @@ function appendUpdateHistory(entry, historyFile) {
   writeSecureJsonFile(historyFile, payload);
 }
 
+// Read the alga-core HelmRelease Ready condition so a non-zero `flux reconcile`
+// exit can be judged against the release's *actual* state instead of the CLI's
+// (often transient) result. Returns { readable, ready, hardFailed, reason,
+// message }; readable=false means we could not determine the state.
+// LEVERAGE: pattern appliance-transient-reconcile-vs-failure — status-engine
+// already distinguishes transient Helm convergence from real failure
+// (isTransientHelmReleaseConvergenceIssue); this is the same judgment applied to
+// the update path. A shared classifier would unify them.
+function readHelmReleaseReadiness(options = {}) {
+  const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
+  const name = options.helmReleaseName || 'alga-core';
+  const namespace = options.helmReleaseNamespace || 'alga-system';
+  const cmd = options.readHelmReleaseCommand
+    || `kubectl --kubeconfig ${kubeconfigPath} -n ${namespace} get helmrelease ${name} -o json`;
+  const res = spawnSync('sh', ['-c', cmd], { env: process.env, encoding: 'utf8' });
+  if (res.status !== 0) return { readable: false };
+  let condition = null;
+  try {
+    const hr = JSON.parse(res.stdout || '{}');
+    condition = (hr?.status?.conditions || []).find((c) => c.type === 'Ready') || null;
+  } catch {
+    return { readable: false };
+  }
+  if (!condition) return { readable: false };
+  const status = condition.status || 'Unknown';
+  const reason = condition.reason || 'Unknown';
+  return {
+    readable: true,
+    ready: status === 'True',
+    // helm-controller terminal reasons; anything else is still converging.
+    hardFailed: status === 'False' && /Failed|RetriesExceeded|Stalled|Exhausted/i.test(reason),
+    reason,
+    message: condition.message || ''
+  };
+}
+
 function reconcileFluxAndHelm(options = {}) {
   const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
   const fluxSourceName = options.fluxSourceName || 'alga-appliance';
@@ -75,11 +116,31 @@ function reconcileFluxAndHelm(options = {}) {
 
   const helm = spawnSync('sh', ['-c', reconcileHelmCmd], { env: process.env, encoding: 'utf8' });
   if (helm.status !== 0) {
+    const cliCause = (helm.stderr || helm.stdout || '').trim() || `exit ${helm.status ?? 1}`;
+    // `flux reconcile helmrelease --with-source` kicks a reconcile and waits for
+    // the Ready condition; a non-zero exit is frequently transient — the
+    // controller is already reconciling, or the wait times out while the roll
+    // continues. The runtime values + release-selection are already written, so
+    // Flux keeps converging regardless. Judge the outcome from the HelmRelease's
+    // actual Ready condition rather than the CLI exit code; only a genuinely
+    // failed release (or one we cannot read at all) is reported as a block.
+    const readiness = readHelmReleaseReadiness(options);
+    if (readiness.readable && readiness.ready) {
+      return { ok: true, phase: 'flux', message: 'Flux source and HelmRelease reconcile completed.' };
+    }
+    if (readiness.readable && !readiness.hardFailed) {
+      return {
+        ok: true,
+        phase: 'flux',
+        pending: true,
+        message: 'Update applied; services are still reconciling in the background.'
+      };
+    }
     return {
       ok: false,
       phase: 'flux',
       message: 'HelmRelease reconcile failed during app update.',
-      suspectedCause: (helm.stderr || helm.stdout || '').trim() || `exit ${helm.status ?? 1}`,
+      suspectedCause: readiness.message || cliCause,
       suggestedNextStep: 'Inspect alga-core HelmRelease events and controller logs.',
       retrySafe: true
     };
@@ -93,12 +154,42 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
   const releaseSelectionFile = options.releaseSelectionFile || DEFAULT_RELEASE_SELECTION_FILE;
   const updateHistoryFile = options.updateHistoryFile || DEFAULT_UPDATE_HISTORY_FILE;
 
-  const previousSelection = readJsonFile(releaseSelectionFile) || {};
+  const previousSelection = readJsonFile(releaseSelectionFile);
+  // An app-channel update rebuilds runtime values from the release's baked template
+  // and re-applies the operator's app hostname (and DNS) from the persisted release
+  // selection. If that selection can't be read, the rebuild would silently reset the
+  // app URL (NEXTAUTH_URL) to the placeholder host and break sign-in. Refuse loudly
+  // instead — unless the caller passed an explicit hostname to apply. (A selection
+  // whose runtime.appHostname is an empty string is a deliberate default-host install
+  // and is allowed through.)
+  if (!rawInputs.appHostname && (!previousSelection || !previousSelection.runtime)) {
+    const channel = String(rawInputs.channel || '').trim() || 'stable';
+    const failure = {
+      ok: false,
+      phase: 'registry-release-source',
+      step: 'read-release-selection',
+      message: 'Cannot run app update: the saved release selection (release-selection.json) is missing or unreadable, so the configured app URL cannot be preserved. Re-run setup before updating.',
+      suspectedCause: `Release selection not found or invalid at ${releaseSelectionFile}.`,
+      suggestedNextStep: 'Re-run setup so the app hostname is persisted, then retry the update.',
+      retrySafe: false
+    };
+    writeInstallState({
+      status: 'update-blocked',
+      phase: failure.phase,
+      lastAction: failure.message,
+      failure,
+      updatedAt: nowIso(),
+      update: { requestedChannel: channel, scope: 'application-only' }
+    }, stateFile);
+    appendUpdateHistory({ at: nowIso(), channel, ok: false, phase: failure.phase, message: failure.message }, updateHistoryFile);
+    return failure;
+  }
+  const selection = previousSelection || {};
   const validated = validateSetupInputs({
     channel: rawInputs.channel,
-    appHostname: rawInputs.appHostname || previousSelection.runtime?.appHostname || '',
-    dnsMode: rawInputs.dnsMode || previousSelection.runtime?.dnsMode || 'system',
-    dnsServers: rawInputs.dnsServers || previousSelection.runtime?.dnsServers || '',
+    appHostname: rawInputs.appHostname || selection.runtime?.appHostname || '',
+    dnsMode: rawInputs.dnsMode || selection.runtime?.dnsMode || 'system',
+    dnsServers: rawInputs.dnsServers || selection.runtime?.dnsServers || '',
     releaseRef: rawInputs.releaseRef || ''
   }, { requireInitialTenant: false });
 
@@ -190,7 +281,9 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
   const result = {
     ok: true,
     phase: 'registry-release-source',
-    message: `App-channel update applied for ${validated.channel}; OS and k3s updates remain manual in v1.`,
+    message: reconcileResult.pending
+      ? `App-channel update applied for ${validated.channel}; services are reconciling in the background.`
+      : `App-channel update applied for ${validated.channel}; OS and k3s updates remain manual in v1.`,
     releaseVersion: releaseSelection.releaseVersion,
     selectedChannel: validated.channel,
     updateScope: 'application-only'

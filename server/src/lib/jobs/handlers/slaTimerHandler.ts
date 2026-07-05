@@ -12,7 +12,7 @@
  * - Not currently paused (sla_paused_at is null)
  */
 
-import { createTenantKnex, runWithTenant, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { findCrossedThresholds } from '@alga-psa/sla';
 import { calculateElapsedBusinessMinutes } from '@alga-psa/sla/services/businessHoursCalculator';
@@ -109,33 +109,19 @@ async function getTicketsNeedingSlaCheck(
   trx: Knex.Transaction,
   tenant: string
 ): Promise<TicketSlaData[]> {
-  const tickets = await trx('tickets as t')
-    .leftJoin('sla_policy_targets as spt', function() {
-      this.on('t.sla_policy_id', 'spt.sla_policy_id')
-          .andOn('t.tenant', 'spt.tenant')
-          .andOn('t.priority_id', 'spt.priority_id');
-    })
-    .where('t.tenant', tenant)
+  const db = tenantDb(trx, tenant);
+  const ticketsQuery = db.table('tickets as t')
     .whereNotNull('t.sla_policy_id')
     .whereNull('t.sla_resolution_at') // Not yet resolved
     .whereNull('t.sla_paused_at') // Not currently paused
-    .select(
-      't.ticket_id',
-      't.ticket_number',
-      't.sla_policy_id',
-      't.sla_started_at',
-      't.sla_response_due_at',
-      't.sla_response_at',
-      't.sla_response_met',
-      't.sla_resolution_due_at',
-      't.sla_resolution_at',
-      't.sla_resolution_met',
-      't.sla_paused_at',
-      't.sla_total_pause_minutes',
-      't.attributes',
-      'spt.response_time_minutes',
-      'spt.resolution_time_minutes'
-    );
+    .select({ ticket_id: 't.ticket_id', ticket_number: 't.ticket_number', sla_policy_id: 't.sla_policy_id', sla_started_at: 't.sla_started_at', sla_response_due_at: 't.sla_response_due_at', sla_response_at: 't.sla_response_at', sla_response_met: 't.sla_response_met', sla_resolution_due_at: 't.sla_resolution_due_at', sla_resolution_at: 't.sla_resolution_at', sla_resolution_met: 't.sla_resolution_met', sla_paused_at: 't.sla_paused_at', sla_total_pause_minutes: 't.sla_total_pause_minutes', attributes: 't.attributes', response_time_minutes: 'spt.response_time_minutes', resolution_time_minutes: 'spt.resolution_time_minutes' });
+  db.tenantJoin(ticketsQuery, 'sla_policy_targets as spt', 't.sla_policy_id', 'spt.sla_policy_id', {
+    type: 'left',
+    on(join) {
+      join.andOn('t.priority_id', '=', 'spt.priority_id');
+    },
+  });
+  const tickets = await ticketsQuery;
 
   // Extract the last notified thresholds from attributes
   return tickets.map((ticket) => ({
@@ -212,8 +198,8 @@ async function processTicketSla(
 
     // Check if response SLA is breached (100%+) and not already marked
     if (elapsedPercent >= 100 && ticket.sla_response_met === null) {
-      await trx('tickets')
-        .where({ tenant, ticket_id: ticket.ticket_id })
+      await tenantDb(trx, tenant).table('tickets')
+        .where({ ticket_id: ticket.ticket_id })
         .update({
           sla_response_met: false,
           sla_response_at: now // Mark as "responded" with breach
@@ -272,8 +258,8 @@ async function processTicketSla(
 
     // Check if resolution SLA is breached (100%+) and not already marked
     if (elapsedPercent >= 100 && ticket.sla_resolution_met === null) {
-      await trx('tickets')
-        .where({ tenant, ticket_id: ticket.ticket_id })
+      await tenantDb(trx, tenant).table('tickets')
+        .where({ ticket_id: ticket.ticket_id })
         .update({ sla_resolution_met: false });
 
       logger.info(`Resolution SLA breached for ticket ${ticket.ticket_number}`, {
@@ -285,14 +271,15 @@ async function processTicketSla(
 
   // Update the last notified thresholds in attributes
   if (needsUpdate) {
-    const currentAttributes = await trx('tickets')
-      .where({ tenant, ticket_id: ticket.ticket_id })
+    const db = tenantDb(trx, tenant);
+    const currentAttributes = await db.table('tickets')
+      .where({ ticket_id: ticket.ticket_id })
       .select('attributes')
       .first()
       .then((t) => t?.attributes || {});
 
-    await trx('tickets')
-      .where({ tenant, ticket_id: ticket.ticket_id })
+    await db.table('tickets')
+      .where({ ticket_id: ticket.ticket_id })
       .update({
         attributes: JSON.stringify({
           ...currentAttributes,
@@ -311,8 +298,9 @@ async function getBusinessHoursSchedule(
   tenant: string,
   policyId: string
 ): Promise<IBusinessHoursScheduleWithEntries | null> {
-  const policy = await trx('sla_policies')
-    .where({ tenant, sla_policy_id: policyId })
+  const db = tenantDb(trx, tenant);
+  const policy = await db.table('sla_policies')
+    .where({ sla_policy_id: policyId })
     .select('business_hours_schedule_id', 'is_24x7')
     .first();
 
@@ -320,20 +308,20 @@ async function getBusinessHoursSchedule(
     return null;
   }
 
-  const schedule = await trx('business_hours_schedules')
-    .where({ tenant, schedule_id: policy.business_hours_schedule_id })
+  const schedule = await db.table('business_hours_schedules')
+    .where({ schedule_id: policy.business_hours_schedule_id })
     .first();
 
   if (!schedule) {
     return null;
   }
 
-  const entries = await trx('business_hours_entries')
-    .where({ tenant, schedule_id: schedule.schedule_id })
+  const entries = await db.table('business_hours_entries')
+    .where({ schedule_id: schedule.schedule_id })
     .orderBy('day_of_week');
 
-  const holidays = await trx('holidays')
-    .where({ tenant, schedule_id: schedule.schedule_id });
+  const holidays = await db.table('holidays')
+    .where({ schedule_id: schedule.schedule_id });
 
   return {
     ...schedule,

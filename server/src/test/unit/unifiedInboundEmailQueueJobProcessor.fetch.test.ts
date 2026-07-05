@@ -22,6 +22,14 @@ vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: (...args: any[]) => getAdminConnectionMock(...args),
 }));
 
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
+}));
+
 vi.mock('@alga-psa/shared/services/email/processInboundEmailInApp', () => ({
   processInboundEmailInApp: (...args: any[]) => processInboundEmailInAppMock(...args),
 }));

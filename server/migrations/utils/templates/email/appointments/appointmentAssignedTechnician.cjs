@@ -231,6 +231,35 @@ const COPY = {
     textCalendar: 'Dodaj do kalendarza',
   },
 };
+SUBJECTS.pt = 'Agendamento atribuído - {{serviceName}} em {{appointmentDate}}';
+COPY.pt = {
+  headerLabel: 'Agendamento atribuído',
+  headerSub: 'Você tem um novo agendamento',
+  greeting: 'Olá {{technicianName}},',
+  intro: 'Você foi atribuído(a) a um novo agendamento. Revise os detalhes abaixo.',
+  appointmentTitle: 'Detalhes do agendamento',
+  service: 'Serviço',
+  date: 'Data',
+  time: 'Horário',
+  duration: 'Duração',
+  durationUnit: 'minutos',
+  clientTitle: 'Cliente',
+  notesTitle: 'Observações',
+  calendarButton: 'Adicionar ao calendário',
+  contactMsg: 'Se tiver dúvidas, entre em contato pelo email {{contactEmail}}{{#if contactPhone}} ou ligue para {{contactPhone}}{{/if}}.',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Agendamento atribuído',
+  textAppointmentHeader: 'DETALHES DO AGENDAMENTO',
+  textService: 'Serviço',
+  textDate: 'Data',
+  textTime: 'Horário',
+  textDuration: 'Duração',
+  textDurationUnit: 'minutos',
+  textClient: 'Cliente',
+  textNotes: 'Observações',
+  textCalendar: 'Adicionar ao calendário',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

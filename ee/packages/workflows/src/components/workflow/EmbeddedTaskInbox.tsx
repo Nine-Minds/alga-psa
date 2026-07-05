@@ -3,7 +3,7 @@ import { TaskList } from './TaskList';
 import { TaskDetailsComponent } from './TaskDetails';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { WorkflowTaskStatus } from '@alga-psa/workflows/persistence';
+import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence/workflowTaskStatus';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface EmbeddedTaskInboxProps {

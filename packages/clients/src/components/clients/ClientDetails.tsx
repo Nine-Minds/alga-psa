@@ -283,7 +283,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     editedClient
   );
   const shouldRenderPsaOnlyClientSurfaces = !isAlgaDeskMode;
-  // F070: EE + hudu-integration flag + Hudu connected + this client mapped.
+  // F070: EE + Hudu connected + this client mapped.
   const huduClientTab = useHuduClientTab(client.client_id);
   // F023: shown only when the current user has inventory:read.
   const clientEquipmentTab = useClientEquipmentTab();

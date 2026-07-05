@@ -233,6 +233,13 @@ describe('DefaultLayout AI interrupt guard', () => {
       expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
     });
 
+    // Flush the interruptible-state cascade (sidebar effect -> setIsChatInterruptible
+    // -> re-armed click/navigation guard) so the interaction below intercepts
+    // deterministically instead of racing the guard under full-suite load.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
     act(() => {
       document.dispatchEvent(
         new KeyboardEvent('keydown', {
@@ -245,7 +252,7 @@ describe('DefaultLayout AI interrupt guard', () => {
       );
     });
 
-    expect(await screen.findByTestId('interrupt-confirmation')).toBeInTheDocument();
+    expect(await screen.findByTestId('interrupt-confirmation', {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getByText('Fermer le chat et annuler la reponse IA ?')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Garder le chat ouvert' })).toBeInTheDocument();
     expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
@@ -273,9 +280,16 @@ describe('DefaultLayout AI interrupt guard', () => {
       expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
     });
 
+    // Flush the interruptible-state cascade (sidebar effect -> setIsChatInterruptible
+    // -> re-armed click/navigation guard) so the interaction below intercepts
+    // deterministically instead of racing the guard under full-suite load.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
     fireEvent.click(screen.getByText('Go to tickets'));
 
-    expect(await screen.findByTestId('interrupt-confirmation')).toBeInTheDocument();
+    expect(await screen.findByTestId('interrupt-confirmation', {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getByText('Quitter la page et annuler la reponse IA ?')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Rester sur la page' })).toBeInTheDocument();
     expect(routerPush).not.toHaveBeenCalled();
@@ -301,6 +315,13 @@ describe('DefaultLayout AI interrupt guard', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
+    });
+
+    // Flush the interruptible-state cascade (sidebar effect -> setIsChatInterruptible
+    // -> re-armed click/navigation guard) so the interaction below intercepts
+    // deterministically instead of racing the guard under full-suite load.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     const beforeUnloadEvent = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;

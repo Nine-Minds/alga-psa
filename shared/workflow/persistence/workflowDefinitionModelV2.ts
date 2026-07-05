@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export type WorkflowDefinitionRecord = {
   workflow_id: string;
@@ -66,11 +67,18 @@ const assertTenantId = (tenantId: string | null | undefined): string => {
   return normalized;
 };
 
+function workflowDefinitions(
+  knex: Knex,
+  tenant: string,
+): Knex.QueryBuilder<WorkflowDefinitionRecord, WorkflowDefinitionRecord[]> {
+  return tenantDb(knex, tenant).table<WorkflowDefinitionRecord>('workflow_definitions');
+}
+
 const WorkflowDefinitionModelV2 = {
   create: async (knex: Knex, tenantId: string, data: Partial<WorkflowDefinitionRecord>): Promise<WorkflowDefinitionRecord> => {
     const tenant = assertTenantId(tenantId);
     const normalized = normalizeWorkflowDefinitionWrite(data);
-    const [record] = await knex<WorkflowDefinitionRecord>('workflow_definitions')
+    const [record] = await workflowDefinitions(knex, tenant)
       .insert({
         ...normalized,
         tenant,
@@ -87,8 +95,8 @@ const WorkflowDefinitionModelV2 = {
     const normalized = normalizeWorkflowDefinitionWrite(data);
     delete (normalized as Record<string, unknown>).tenant_id;
     delete (normalized as Record<string, unknown>).tenant;
-    const [record] = await knex<WorkflowDefinitionRecord>('workflow_definitions')
-      .where({ workflow_id: workflowId, tenant })
+    const [record] = await workflowDefinitions(knex, tenant)
+      .where({ workflow_id: workflowId })
       .update({
         ...normalized,
         is_system: false,
@@ -100,17 +108,15 @@ const WorkflowDefinitionModelV2 = {
 
   getById: async (knex: Knex, tenantId: string, workflowId: string): Promise<WorkflowDefinitionRecord | null> => {
     const tenant = assertTenantId(tenantId);
-    const record = await knex<WorkflowDefinitionRecord>('workflow_definitions')
-      .where({ workflow_id: workflowId, tenant })
+    const record = await workflowDefinitions(knex, tenant)
+      .where({ workflow_id: workflowId })
       .first();
     return record || null;
   },
 
   list: async (knex: Knex, tenantId: string): Promise<WorkflowDefinitionRecord[]> => {
     const tenant = assertTenantId(tenantId);
-    return knex<WorkflowDefinitionRecord>('workflow_definitions')
-      .select('*')
-      .where({ tenant });
+    return workflowDefinitions(knex, tenant).select('*');
   }
 };
 

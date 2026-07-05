@@ -19,7 +19,7 @@ import { timePeriodSchema, timePeriodSettingsSchema } from '../schemas/timeSheet
 import { formatUtcDateNoTime, toPlainDate } from '@alga-psa/core';
 import { parse } from 'path';
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex, withTransaction, getTenantContext } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, getTenantContext } from '@alga-psa/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { getSession, withAuth } from '@alga-psa/auth';
@@ -395,6 +395,79 @@ export const deleteTimePeriod = withAuth(async (_user, { tenant }, periodId: str
     console.error('Error in deleteTimePeriod:', error);
     throw error;
   }
+});
+
+/**
+ * Remove unused/unneeded time periods directly from the Time Entry list. A period is only
+ * removable when it is completely unused: no timesheets exist for it (for any user, which
+ * also implies no time entries) and it is not the current period. Because deleting a period
+ * is tenant-wide, this is restricted to team managers. Removal is per-id and isolated, so a
+ * blocked period only fails itself (reported in `failed`) without aborting the batch.
+ */
+export const deleteTimePeriods = withAuth(async (
+  user,
+  { tenant },
+  periodIds: string[]
+): Promise<{ deletedIds: string[]; failed: Array<{ periodId: string; message: string }> }> => {
+  const { knex } = await createTenantKnex();
+
+  // Manager gate: mirrors how the Time Entry page derives isManager (manages any team).
+  const managedTeam = await tenantDb(knex, tenant).table('teams')
+    .where({ manager_id: user.user_id })
+    .first('team_id');
+  const isManager = !!managedTeam;
+
+  const uniqueIds = Array.from(
+    new Set((periodIds ?? []).filter((id) => typeof id === 'string' && id.length > 0))
+  );
+
+  const deletedIds: string[] = [];
+  const failed: Array<{ periodId: string; message: string }> = [];
+
+  if (!isManager) {
+    for (const periodId of uniqueIds) {
+      failed.push({ periodId, message: 'Only managers can remove time periods' });
+    }
+    return { deletedIds, failed };
+  }
+
+  const today = formatISO(new Date(), { representation: 'date' });
+
+  for (const periodId of uniqueIds) {
+    try {
+      const period = await TimePeriod.findById(knex, tenant, periodId);
+      if (!period) {
+        throw new Error('Time period not found');
+      }
+
+      // Tenant-wide guard: refuse if any timesheet exists for the period.
+      const editable = await TimePeriod.isEditable(knex, tenant, periodId);
+      if (!editable) {
+        throw new Error('Cannot remove a period that has timesheets');
+      }
+
+      // Never remove the active period (defense in depth; the UI also hides it).
+      const start = toPlainDate(period.start_date).toString();
+      const end = toPlainDate(period.end_date).toString();
+      if (today >= start && today < end) {
+        throw new Error('Cannot remove the current period');
+      }
+
+      await TimePeriod.delete(knex, tenant, periodId);
+      deletedIds.push(periodId);
+    } catch (error) {
+      failed.push({
+        periodId,
+        message: error instanceof Error ? error.message : 'Failed to remove time period'
+      });
+    }
+  }
+
+  if (deletedIds.length > 0) {
+    revalidatePath('/msp/time-entry');
+  }
+
+  return { deletedIds, failed };
 });
 
 export const updateTimePeriod = withAuth(async (

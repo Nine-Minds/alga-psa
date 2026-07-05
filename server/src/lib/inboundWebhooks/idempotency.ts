@@ -1,4 +1,5 @@
 import { evaluateExpressionSource } from '@alga-psa/workflows/runtime/expressionEngine';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { InboundWebhookIdempotencySource } from './types';
 
@@ -43,9 +44,8 @@ export async function findDuplicateInboundDelivery(args: {
   }
 
   const since = new Date(Date.now() - args.windowSeconds * 1000);
-  const row = await args.knex('inbound_webhook_deliveries')
+  const row = await tenantDb(args.knex, args.tenant).table('inbound_webhook_deliveries')
     .where({
-      tenant: args.tenant,
       inbound_webhook_id: args.inboundWebhookId,
       idempotency_key: args.idempotencyKey,
     })

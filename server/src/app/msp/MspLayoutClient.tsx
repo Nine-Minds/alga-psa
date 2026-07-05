@@ -31,6 +31,14 @@ interface Props {
   needsOnboarding: boolean;
   initialSidebarCollapsed: boolean;
   initialLocale?: SupportedLocale | null;
+  /** Server-embedded i18n resources for the route (skips per-namespace HTTP fetches). */
+  preloadedLocaleResources?: Record<string, Record<string, unknown>>;
+  /**
+   * True when the server authoritatively resolved onboarding status from tenant
+   * settings this request. Lets the client skip its defensive re-fetch of
+   * getTenantSettings (the server value already drives `needsOnboarding`).
+   */
+  onboardingResolvedServerSide?: boolean;
   /** Self-host install (license_state row present). Hosted/SaaS = false. */
   selfHostLicensing?: boolean;
 }
@@ -67,6 +75,8 @@ export function MspLayoutClient({
   needsOnboarding,
   initialSidebarCollapsed,
   initialLocale,
+  preloadedLocaleResources,
+  onboardingResolvedServerSide = false,
   selfHostLicensing = false,
 }: Props) {
   const router = useRouter();
@@ -94,9 +104,11 @@ export function MspLayoutClient({
     let isCancelled = false;
 
     setClientNeedsOnboarding(false);
-    setClientOnboardingCheckComplete(false);
+    // The server already resolved onboarding from tenant settings; trust it and
+    // skip the client re-fetch (avoids a getTenantSettings round-trip on load).
+    setClientOnboardingCheckComplete(onboardingResolvedServerSide);
 
-    if (needsOnboarding || isOnboardingPage || !sessionTenant) {
+    if (onboardingResolvedServerSide || needsOnboarding || isOnboardingPage || !sessionTenant) {
       return () => {
         isCancelled = true;
       };
@@ -193,7 +205,7 @@ export function MspLayoutClient({
   );
 
   return (
-    <I18nWrapper portal="msp" initialLocale={initialLocale || undefined}>
+    <I18nWrapper portal="msp" initialLocale={initialLocale || undefined} preloadedResources={preloadedLocaleResources}>
       {content}
     </I18nWrapper>
   );

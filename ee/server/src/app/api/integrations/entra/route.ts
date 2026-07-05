@@ -1,6 +1,7 @@
 import { dynamic, ok, runtime } from './_responses';
 import { requireEntraUiFlagEnabled } from './_guards';
 import { createTenantKnex, runWithTenant } from '@enterprise/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { getActiveEntraPartnerConnection } from '@enterprise/lib/integrations/entra/connectionRepository';
 import { getEntraCippCredentials } from '@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore';
 import { resolveMicrosoftCredentialsForTenant } from '@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver';
@@ -17,18 +18,17 @@ export async function GET(): Promise<Response> {
 
   const summary = await runWithTenant(flagGate.tenantId, async () => {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, flagGate.tenantId);
 
     const [mappingCountRow, lastDiscoveryRow, syncSettingsRow] = await Promise.all([
-      knex('entra_client_tenant_mappings')
-        .where({ tenant: flagGate.tenantId, is_active: true, mapping_state: 'mapped' })
+      db.table('entra_client_tenant_mappings')
+        .where({ is_active: true, mapping_state: 'mapped' })
         .count<{ count: string }>('* as count')
         .first(),
-      knex('entra_managed_tenants')
-        .where({ tenant: flagGate.tenantId })
+      db.table('entra_managed_tenants')
         .max<{ last_discovered_at: string | null }>('discovered_at as last_discovered_at')
         .first(),
-      knex('entra_sync_settings')
-        .where({ tenant: flagGate.tenantId })
+      db.table('entra_sync_settings')
         .first(['sync_interval_minutes']),
     ]);
 

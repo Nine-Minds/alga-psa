@@ -1,6 +1,6 @@
 'use server';
 
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { IContractLineServiceRateTier, IUserTypeRate, IContractLineServiceConfiguration, IContractLineServiceFixedConfig, IContractLineServiceHourlyConfig, IContractLineServiceUsageConfig, IContractLineServiceBucketConfig } from '@alga-psa/types';
 import { IContractLineService } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
@@ -8,18 +8,27 @@ import { IService } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import * as planServiceConfigActions from './contractLineServiceConfigurationActions';
-import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+
+type TenantScopedKnex = Knex | Knex.Transaction;
+
+function tenantScopedTable(
+  conn: TenantScopedKnex,
+  tenant: string,
+  table: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
 
 async function findTemplateLine(
   trx: Knex.Transaction,
   tenant: string,
   contractLineId: string
 ) {
-  return trx('contract_template_lines')
-    .where({ tenant, template_line_id: contractLineId })
+  return tenantScopedTable(trx, tenant, 'contract_template_lines')
+    .where({ template_line_id: contractLineId })
     .first();
 }
 
@@ -51,24 +60,22 @@ export const getContractLineServices = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const templateLine = await findTemplateLine(trx, tenant, contractLineId);
     if (templateLine) {
-      const services = await trx('contract_template_line_services')
+      const services = await tenantScopedTable(trx, tenant, 'contract_template_line_services')
         .where({
           template_line_id: contractLineId,
-          tenant
         })
         .select('*');
 
       return services.map(mapTemplateServiceRow);
     }
 
-    const services = await trx('contract_line_services')
+    const services = await tenantScopedTable(trx, tenant, 'contract_line_services')
       .where({
         contract_line_id: contractLineId,
-        tenant
       })
       .select('*');
 
-    return services;
+    return services as Array<IContractLineService & { service_name?: string }>;
   });
 });
 
@@ -85,21 +92,20 @@ export const getContractLineServicesWithNames = withAuth(async (
   }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const services = await trx('contract_line_services as cls')
-      .leftJoin('service_catalog as sc', function() {
-        this.on('cls.service_id', '=', 'sc.service_id')
-          .andOn('cls.tenant', '=', 'sc.tenant');
-      })
+    const facade = tenantDb(trx, tenant);
+    const query = facade.table('contract_line_services as cls');
+    facade.tenantJoin(query, 'service_catalog as sc', 'cls.service_id', 'sc.service_id', { type: 'left' });
+
+    const services = await query
       .where({
         'cls.contract_line_id': contractLineId,
-        'cls.tenant': tenant
       })
       .select(
         'cls.*',
         'sc.service_name'
       );
 
-    return services;
+    return services as unknown as Array<IContractLineService & { service_name?: string }>;
   });
 });
 
@@ -122,22 +128,20 @@ export const getContractLineService = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const templateLine = await findTemplateLine(trx, tenant, contractLineId);
     if (templateLine) {
-      const service = await trx('contract_template_line_services')
+      const service = await tenantScopedTable(trx, tenant, 'contract_template_line_services')
         .where({
           template_line_id: contractLineId,
           service_id: serviceId,
-          tenant
         })
         .first();
 
       return service ? mapTemplateServiceRow(service) : null;
     }
 
-    const service = await trx('contract_line_services')
+    const service = await tenantScopedTable(trx, tenant, 'contract_line_services')
       .where({
         contract_line_id: contractLineId,
         service_id: serviceId,
-        tenant
       })
       .first();
 
@@ -157,8 +161,8 @@ async function addServiceToTemplateLine(
     throw new Error('Service management for template lines currently supports fixed fee lines only.');
   }
 
-  const service = await trx('service_catalog')
-    .where({ service_id: serviceId, tenant })
+  const service = await tenantScopedTable(trx, tenant, 'service_catalog')
+    .where({ service_id: serviceId })
     .first() as IService | undefined;
 
   if (!service) {
@@ -174,20 +178,20 @@ async function addServiceToTemplateLine(
         ? Number(service.default_rate)
         : null;
 
-  const existingService = await trx('contract_template_line_services')
-    .where({ tenant, template_line_id: templateLine.template_line_id, service_id: serviceId })
+  const existingService = await tenantScopedTable(trx, tenant, 'contract_template_line_services')
+    .where({ template_line_id: templateLine.template_line_id, service_id: serviceId })
     .first();
 
   if (existingService) {
-    await trx('contract_template_line_services')
-      .where({ tenant, template_line_id: templateLine.template_line_id, service_id: serviceId })
+    await tenantScopedTable(trx, tenant, 'contract_template_line_services')
+      .where({ template_line_id: templateLine.template_line_id, service_id: serviceId })
       .update({
         quantity: resolvedQuantity,
         custom_rate: resolvedRate,
         updated_at: now,
       });
   } else {
-    await trx('contract_template_line_services').insert({
+    await tenantScopedTable(trx, tenant, 'contract_template_line_services').insert({
       tenant,
       template_line_id: templateLine.template_line_id,
       service_id: serviceId,
@@ -198,15 +202,15 @@ async function addServiceToTemplateLine(
     });
   }
 
-  const existingConfig = await trx('contract_template_line_service_configuration')
-    .where({ tenant, template_line_id: templateLine.template_line_id, service_id: serviceId })
+  const existingConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
+    .where({ template_line_id: templateLine.template_line_id, service_id: serviceId })
     .first();
 
   const configId = existingConfig ? existingConfig.config_id : uuidv4();
 
   if (existingConfig) {
-    await trx('contract_template_line_service_configuration')
-      .where({ tenant, config_id: existingConfig.config_id })
+    await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
+      .where({ config_id: existingConfig.config_id })
       .update({
         configuration_type: 'Fixed',
         custom_rate: resolvedRate,
@@ -214,7 +218,7 @@ async function addServiceToTemplateLine(
         updated_at: now,
       });
   } else {
-    await trx('contract_template_line_service_configuration').insert({
+    await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration').insert({
       tenant,
       config_id: configId,
       template_line_id: templateLine.template_line_id,
@@ -256,10 +260,9 @@ export const addServiceToContractLine = withAuth(async (
       return addServiceToTemplateLine(trx, tenant, templateLine, serviceId, quantity, customRate);
     }
 
-  const service = await trx('service_catalog')
+  const service = await tenantScopedTable(trx, tenant, 'service_catalog')
     .where({
       service_id: serviceId,
-      tenant
     })
     .first() as IService | undefined;
 
@@ -268,10 +271,9 @@ export const addServiceToContractLine = withAuth(async (
   }
 
   // Get plan details
-  const plan = await trx('contract_lines')
+  const plan = await tenantScopedTable(trx, tenant, 'contract_lines')
     .where({
       contract_line_id: contractLineId,
-      tenant
     })
     .first();
 
@@ -293,15 +295,14 @@ export const addServiceToContractLine = withAuth(async (
 
     // Validate that the product has pricing in the contract currency unless an override is provided.
     const contract = plan.contract_id
-      ? await trx('contracts').where({ tenant, contract_id: plan.contract_id }).select('currency_code').first()
+      ? await tenantScopedTable(trx, tenant, 'contracts').where({ contract_id: plan.contract_id }).select('currency_code').first()
       : null;
     const currencyCode = contract?.currency_code ?? 'USD';
 
     const hasOverride = customRate !== undefined && customRate !== null;
     if (!hasOverride) {
-      const priceRow = await trx('service_prices')
+      const priceRow = await tenantScopedTable(trx, tenant, 'service_prices')
         .where({
-          tenant,
           service_id: serviceId,
           currency_code: currencyCode
         })
@@ -399,7 +400,7 @@ export const addServiceToContractLine = withAuth(async (
 
   // If not, add it to the contract_line_services table
   if (!existingPlanService) {
-    await trx('contract_line_services').insert({
+    await tenantScopedTable(trx, tenant, 'contract_line_services').insert({
       contract_line_id: contractLineId,
       service_id: serviceId,
       tenant: tenant
@@ -536,41 +537,35 @@ export const removeServiceFromContractLine = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const templateLine = await findTemplateLine(trx, tenant, contractLineId);
     if (templateLine) {
-      const templateConfigs = await trx('contract_template_line_service_configuration')
+      const templateConfigs = await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
         .where({
-          tenant,
           template_line_id: contractLineId,
           service_id: serviceId,
         })
         .select('config_id');
 
       if (templateConfigs.length > 0) {
-        const configIds = templateConfigs.map((config) => config.config_id);
+        const configIds = (templateConfigs as any[]).map((config: any) => config.config_id);
 
-        await trx('contract_template_line_service_hourly_config')
-          .where({ tenant })
+        await tenantScopedTable(trx, tenant, 'contract_template_line_service_hourly_config')
           .whereIn('config_id', configIds)
           .delete();
 
-        await trx('contract_template_line_service_usage_config')
-          .where({ tenant })
+        await tenantScopedTable(trx, tenant, 'contract_template_line_service_usage_config')
           .whereIn('config_id', configIds)
           .delete();
 
-        await trx('contract_template_line_service_bucket_config')
-          .where({ tenant })
+        await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
           .whereIn('config_id', configIds)
           .delete();
 
-        await trx('contract_template_line_service_configuration')
-          .where({ tenant })
+        await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
           .whereIn('config_id', configIds)
           .delete();
       }
 
-      await trx('contract_template_line_services')
+      await tenantScopedTable(trx, tenant, 'contract_template_line_services')
         .where({
-          tenant,
           template_line_id: contractLineId,
           service_id: serviceId,
         })
@@ -588,11 +583,10 @@ export const removeServiceFromContractLine = withAuth(async (
   }
 
   // Remove the service from the contract_line_services table
-  await trx('contract_line_services')
+  await tenantScopedTable(trx, tenant, 'contract_line_services')
     .where({
       contract_line_id: contractLineId,
       service_id: serviceId,
-      tenant
     })
       .delete();
 
@@ -625,9 +619,8 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const templateLine = await findTemplateLine(trx, tenant, contractLineId);
     if (templateLine) {
-      const configurations = await trx('contract_template_line_service_configuration')
+      const configurations = await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
         .where({
-          tenant,
           template_line_id: contractLineId,
         })
         .select('*');
@@ -640,13 +633,13 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
       }> = [];
 
       for (const config of configurations) {
-        const service = await trx('service_catalog as sc')
-          .leftJoin('service_types as st', function () {
-            this.on('sc.custom_service_type_id', '=', 'st.id').andOn('sc.tenant', '=', 'st.tenant');
-          })
+        const facade = tenantDb(trx, tenant);
+        const query = facade.table('service_catalog as sc');
+        facade.tenantJoin(query, 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' });
+
+        const service = await query
           .where({
             'sc.service_id': config.service_id,
-            'sc.tenant': tenant,
           })
           .select('sc.*', 'st.name as service_type_name')
           .first() as IService & { service_type_name?: string } | undefined;
@@ -659,16 +652,16 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
           null;
 
         if (config.configuration_type === 'Bucket') {
-          typeConfig = await trx('contract_template_line_service_bucket_config')
-            .where({ tenant, config_id: config.config_id })
+          typeConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
+            .where({ config_id: config.config_id })
             .first();
         } else if (config.configuration_type === 'Hourly') {
-          typeConfig = await trx('contract_template_line_service_hourly_config')
-            .where({ tenant, config_id: config.config_id })
+          typeConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_hourly_config')
+            .where({ config_id: config.config_id })
             .first();
         } else if (config.configuration_type === 'Usage') {
-          typeConfig = await trx('contract_template_line_service_usage_config')
-            .where({ tenant, config_id: config.config_id })
+          typeConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_usage_config')
+            .where({ config_id: config.config_id })
             .first();
         }
 
@@ -719,17 +712,16 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
     }
 
     // Join service_catalog with service_types to get the name
-    const service = await trx('service_catalog as sc')
-      .leftJoin('service_types as st', function() {
-        this.on('sc.custom_service_type_id', '=', 'st.id')
-            .andOn('sc.tenant', '=', 'st.tenant');
-      })
+    const facade = tenantDb(trx, tenant);
+    const query = facade.table('service_catalog as sc');
+    facade.tenantJoin(query, 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' });
+
+    const service = await query
       .where({
         'sc.service_id': serviceId,
-        'sc.tenant': tenant
       })
       .select('sc.*', 'st.name as service_type_name')
-      .first() as IService & { service_type_name?: string };
+      .first() as unknown as IService & { service_type_name?: string };
 
     if (!service) {
       continue;
@@ -780,9 +772,8 @@ export const getTemplateLineServicesWithConfigurations = withAuth(async (
   }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const configurations = await trx('contract_template_line_service_configuration')
+    const configurations = await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
       .where({
-        tenant,
         template_line_id: templateLineId,
       })
       .select('*');
@@ -819,14 +810,13 @@ export const getTemplateLineServicesWithConfigurations = withAuth(async (
         continue;
       }
 
-      const service = await trx('service_catalog as sc')
-        .leftJoin('service_types as st', function joinTypes() {
-          this.on('sc.custom_service_type_id', '=', 'st.id')
-            .andOn('sc.tenant', '=', 'st.tenant');
-        })
+      const facade = tenantDb(trx, tenant);
+      const query = facade.table('service_catalog as sc');
+      facade.tenantJoin(query, 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' });
+
+      const service = await query
         .where({
           'sc.service_id': serviceId,
-          'sc.tenant': tenant,
         })
         .select('sc.*', 'st.name as service_type_name')
         .first() as (IService & { service_type_name?: string }) | undefined;
@@ -842,23 +832,20 @@ export const getTemplateLineServicesWithConfigurations = withAuth(async (
         | null = null;
 
       if (configToUse.configuration_type === 'Bucket') {
-        typeConfig = await trx('contract_template_line_service_bucket_config')
+        typeConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
           .where({
-            tenant,
             config_id: configToUse.config_id,
           })
           .first();
       } else if (configToUse.configuration_type === 'Hourly') {
-        typeConfig = await trx('contract_template_line_service_hourly_config')
+        typeConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_hourly_config')
           .where({
-            tenant,
             config_id: configToUse.config_id,
           })
           .first();
       } else if (configToUse.configuration_type === 'Usage') {
-        typeConfig = await trx('contract_template_line_service_usage_config')
+        typeConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_usage_config')
           .where({
-            tenant,
             config_id: configToUse.config_id,
           })
           .first();
@@ -870,9 +857,8 @@ export const getTemplateLineServicesWithConfigurations = withAuth(async (
       // 2) bucket row attached directly to the primary Hourly/Usage config_id.
       const bucketConfigId = bucketConfigRecord?.config_id ?? configToUse.config_id;
       const bucketConfigDetails =
-        (await trx('contract_template_line_service_bucket_config')
+        (await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
           .where({
-            tenant,
             config_id: bucketConfigId,
           })
           .first()) ?? null;

@@ -14,7 +14,7 @@ import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
 import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrations/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction, getTeamsBasic } from '@alga-psa/teams/actions';
-import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions';
+import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions/ticketActions';
 import { getProjectsWithPhases } from '@alga-psa/projects/actions/projectActions';
 import { getProjectTaskData } from '@alga-psa/projects/actions/projectTaskActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';

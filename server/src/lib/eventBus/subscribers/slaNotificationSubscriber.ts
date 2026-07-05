@@ -9,7 +9,7 @@
 import logger from '@alga-psa/core/logger';
 import { getEventBus } from '../index';
 import { EventSchemas } from '@alga-psa/event-schemas';
-import { createTenantKnex, runWithTenant, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, withTransaction, tenantDb } from '@alga-psa/db';
 import {
   sendSlaNotification,
   type SlaNotificationContext,
@@ -56,27 +56,14 @@ async function handleSlaThresholdReachedEvent(event: unknown): Promise<void> {
       const { knex } = await createTenantKnex();
 
       await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const ticket = await trx('tickets as t')
-          .leftJoin('clients as c', function () {
-            this.on('t.client_id', 'c.client_id').andOn('t.tenant', 'c.tenant');
-          })
-          .leftJoin('priorities as p', function () {
-            this.on('t.priority_id', 'p.priority_id').andOn('t.tenant', 'p.tenant');
-          })
-          .where('t.tenant', tenantId)
+        const scopedDb = tenantDb(trx, tenantId);
+        const ticketQuery = scopedDb.table('tickets as t');
+        scopedDb.tenantJoin(ticketQuery, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+        scopedDb.tenantJoin(ticketQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+
+        const ticket = await ticketQuery
           .where('t.ticket_id', ticketId)
-          .select(
-            't.ticket_id',
-            't.ticket_number',
-            't.title',
-            't.assigned_to',
-            't.board_id',
-            't.sla_policy_id',
-            't.sla_response_due_at',
-            't.sla_resolution_due_at',
-            'c.client_name as client_name',
-            'p.priority_name'
-          )
+          .select({ ticket_id: 't.ticket_id', ticket_number: 't.ticket_number', title: 't.title', assigned_to: 't.assigned_to', board_id: 't.board_id', sla_policy_id: 't.sla_policy_id', sla_response_due_at: 't.sla_response_due_at', sla_resolution_due_at: 't.sla_resolution_due_at', client_name: 'c.client_name', priority_name: 'p.priority_name' })
           .first();
 
         if (!ticket || !ticket.sla_policy_id) {

@@ -1,5 +1,5 @@
-import { Knex } from 'knex';
-import { getConnection } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import { tenantDb, getConnection } from '@alga-psa/db';
 import { EmailProviderManager } from './providers/EmailProviderManager';
 import { 
   TenantEmailSettings, 
@@ -200,14 +200,23 @@ export class TenantEmailService extends BaseEmailService {
           this.tenantSettings = settings;
         }
 
+        // Preserve the real cause (e.g. "SMTP initialization failed: ...") so it
+        // can surface to the admin if no working provider is available.
+        const realError = error instanceof Error ? error.message : String(error);
+
         if (isEnterprise) {
           logger.info(`[${this.getServiceName()}] Using system email provider (Enterprise Edition)`);
           try {
             const systemProvider = await SystemEmailProviderFactory.createProvider();
-            return systemProvider;
+            if (systemProvider) {
+              return systemProvider;
+            }
           } catch (fallbackError) {
             logger.error(`[${this.getServiceName()}] Failed to create system email provider:`, fallbackError);
           }
+          // No system fallback available: the tenant provider error is the real
+          // reason sending is unavailable, so don't mask it as "disabled".
+          this.providerInitError = realError;
           return null;
         }
 
@@ -260,8 +269,7 @@ export class TenantEmailService extends BaseEmailService {
     knex: Knex | Knex.Transaction
   ): Promise<TenantEmailSettings | null> {
     try {
-      const settings = await knex('tenant_email_settings')
-        .where({ tenant: tenantId })
+      const settings = await tenantDb(knex, tenantId).table('tenant_email_settings')
         .first();
       
       if (!settings) {
@@ -273,6 +281,69 @@ export class TenantEmailService extends BaseEmailService {
     } catch (error) {
       logger.error(`[TenantEmailService] Error fetching tenant email settings:`, error);
       return null;
+    }
+  }
+
+  /**
+   * Verify the tenant's outbound provider configuration and, optionally, send a
+   * test message. Uses a fresh provider manager (not the cached singleton) so it
+   * always reflects the currently-saved settings and returns the real failure
+   * reason (SMTP auth/TLS/connection error) rather than a generic message.
+   */
+  static async testConnection(
+    tenantId: string,
+    toAddress?: string
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    const knex = await getConnection(tenantId);
+    const settings = await this.getTenantEmailSettings(tenantId, knex);
+
+    if (!settings) {
+      return { success: false, error: 'No outbound email settings are configured.' };
+    }
+
+    const enabled = settings.providerConfigs.find(config => config.isEnabled);
+    if (!enabled) {
+      return { success: false, error: 'No outbound email provider is enabled.' };
+    }
+
+    const manager = new EmailProviderManager();
+    try {
+      // For SMTP this opens a connection and runs verify() (incl. AUTH/TLS).
+      await manager.initialize(settings);
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+
+    const providers = await manager.getAvailableProviders(tenantId);
+    if (providers.length === 0) {
+      return { success: false, error: 'The provider did not initialize. Check host, port, and credentials.' };
+    }
+
+    const providerLabel = enabled.providerType.toUpperCase();
+    if (!toAddress) {
+      return { success: true, message: `${providerLabel} connection verified.` };
+    }
+
+    const fromEmail =
+      (typeof enabled.config?.from === 'string' && enabled.config.from.trim()) ||
+      (settings.defaultFromDomain ? `noreply@${settings.defaultFromDomain}` : 'noreply@localhost');
+
+    const message: EmailMessage = {
+      from: { email: fromEmail, name: 'Alga PSA' },
+      to: [{ email: toAddress }],
+      subject: 'Alga PSA outbound email test',
+      text: 'This is a test message confirming your outbound email configuration works.',
+      html: '<p>This is a test message confirming your outbound email configuration works.</p>'
+    };
+
+    try {
+      const result = await manager.sendEmail(message, tenantId);
+      if (result.success) {
+        return { success: true, message: `Test email sent to ${toAddress} via ${providerLabel}.` };
+      }
+      return { success: false, error: result.error || 'The provider rejected the test message.' };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 

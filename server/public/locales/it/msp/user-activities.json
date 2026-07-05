@@ -209,12 +209,14 @@
           "priorityPlaceholder": "Selezioni la priorità...",
           "allPriorities": "Tutte le priorità",
           "dueDateRange": "Intervallo della data di scadenza",
+          "createdDateRange": "Intervallo della data di creazione",
           "showClosedTasks": "Mostra le attività chiuse"
         },
         "actions": {
           "reset": "Reimposta",
           "cancel": "Annulla",
-          "apply": "Applica filtri"
+          "apply": "Applica filtri",
+          "clearDates": "Cancella"
         }
       }
     },
@@ -252,12 +254,14 @@
           "priorityPlaceholder": "Selezioni la priorità...",
           "allPriorities": "Tutte le priorità",
           "dueDateRange": "Intervallo della data di scadenza",
+          "createdDateRange": "Intervallo della data di creazione",
           "showClosedTickets": "Mostra i ticket chiusi"
         },
         "actions": {
           "reset": "Reimposta",
           "cancel": "Annulla",
-          "apply": "Applica filtri"
+          "apply": "Applica filtri",
+          "clearDates": "Cancella"
         }
       }
     },
@@ -297,13 +301,15 @@
           "priorityMedium": "Media",
           "priorityLow": "Bassa",
           "dueDateRange": "Intervallo della data di scadenza",
+          "createdDateRange": "Intervallo della data di creazione",
           "showClosedTasks": "Mostra le attività chiuse",
           "includeHiddenTasks": "Includi attività nascoste"
         },
         "actions": {
           "reset": "Reimposta",
           "cancel": "Annulla",
-          "apply": "Applica filtri"
+          "apply": "Applica filtri",
+          "clearDates": "Cancella"
         }
       },
       "listDrawer": {
@@ -441,6 +447,7 @@
       "search": "Cerca",
       "client": "Cliente",
       "dueDateShort": "Scadenza",
+      "createdShort": "Creato",
       "tags": "Tag",
       "tagsSelected": "{{count}} tag",
       "tasksCompact": "Attività",
@@ -470,7 +477,9 @@
     },
     "actions": {
       "reset": "Reimposta",
-      "clearClient": "Rimuovi filtro cliente"
+      "clearClient": "Rimuovi filtro cliente",
+      "clearDueDate": "Cancella filtro data di scadenza",
+      "clearCreatedDate": "Cancella filtro data di creazione"
     },
     "statusClosedSuffix": " (chiuso)",
     "summary": {

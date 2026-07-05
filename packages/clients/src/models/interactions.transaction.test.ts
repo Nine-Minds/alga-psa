@@ -2,10 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
   createTenantKnexMock: vi.fn(),
+  tenantDbMock: vi.fn((conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    tenantJoin: (query: any) => query,
+  })),
 }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: hoisted.createTenantKnexMock,
+  tenantDb: hoisted.tenantDbMock,
 }));
 
 // getById hydrates the linked online meeting via OnlineMeetingModel (its own createTenantKnex);
@@ -124,6 +129,7 @@ function interactionInput(overrides: Row = {}) {
 describe('InteractionModel transaction support', () => {
   beforeEach(() => {
     hoisted.createTenantKnexMock.mockReset();
+    hoisted.tenantDbMock.mockClear();
   });
 
   it('writes addInteraction through the passed transaction so rollback leaves the base store unchanged', async () => {

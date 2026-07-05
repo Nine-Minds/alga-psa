@@ -9,8 +9,7 @@
  * @see ee/docs/plans/asset-detail-view-enhancement.md §1.4.2
  */
 
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import {
@@ -26,6 +25,10 @@ export interface AssetNoteContent {
   lastUpdated: string | null;
 }
 
+function tenantScopedTable(conn: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder<any, any> {
+  return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
+}
+
 /**
  * Get note content for an asset
  * Returns the BlockNote content if the asset has a linked notes document
@@ -35,8 +38,8 @@ export const getAssetNoteContent = withAuth(async (_user, { tenant }, assetId: s
 
   try {
     // Get the asset to find notes_document_id
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await tenantScopedTable(knex, tenant, 'assets')
+      .where({ asset_id: assetId })
       .select('notes_document_id')
       .first();
 
@@ -54,8 +57,8 @@ export const getAssetNoteContent = withAuth(async (_user, { tenant }, assetId: s
     }
 
     // Get the document
-    const document = await knex('documents')
-      .where({ tenant, document_id: asset.notes_document_id })
+    const document = await tenantScopedTable(knex, tenant, 'documents')
+      .where({ document_id: asset.notes_document_id })
       .first() as IDocument | undefined;
 
     if (!document) {
@@ -109,8 +112,8 @@ export const saveAssetNote = withAuth(async (
 
   try {
     // Get the asset
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await tenantScopedTable(knex, tenant, 'assets')
+      .where({ asset_id: assetId })
       .select('asset_id', 'name', 'notes_document_id')
       .first();
 
@@ -137,8 +140,8 @@ export const saveAssetNote = withAuth(async (
       });
 
       // Update asset with notes_document_id
-      await knex('assets')
-        .where({ tenant, asset_id: assetId })
+      await tenantScopedTable(knex, tenant, 'assets')
+        .where({ asset_id: assetId })
         .update({
           notes_document_id: document_id,
           updated_at: knex.fn.now(),
@@ -166,8 +169,8 @@ export const deleteAssetNote = withAuth(async (
 
   try {
     // Get the asset
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await tenantScopedTable(knex, tenant, 'assets')
+      .where({ asset_id: assetId })
       .select('notes_document_id')
       .first();
 
@@ -177,8 +180,8 @@ export const deleteAssetNote = withAuth(async (
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Unlink the document from the asset
-      await trx('assets')
-        .where({ tenant, asset_id: assetId })
+      await tenantScopedTable(trx, tenant, 'assets')
+        .where({ asset_id: assetId })
         .update({
           notes_document_id: null,
           updated_at: trx.fn.now(),
@@ -187,18 +190,18 @@ export const deleteAssetNote = withAuth(async (
       // Optionally delete the document entirely
       if (deleteDocument) {
         // Delete block content first (due to FK)
-        await trx('document_block_content')
-          .where({ tenant, document_id: asset.notes_document_id })
+        await tenantScopedTable(trx, tenant, 'document_block_content')
+          .where({ document_id: asset.notes_document_id })
           .delete();
 
         // Delete document associations
-        await trx('document_associations')
-          .where({ tenant, document_id: asset.notes_document_id })
+        await tenantScopedTable(trx, tenant, 'document_associations')
+          .where({ document_id: asset.notes_document_id })
           .delete();
 
         // Delete the document
-        await trx('documents')
-          .where({ tenant, document_id: asset.notes_document_id })
+        await tenantScopedTable(trx, tenant, 'documents')
+          .where({ document_id: asset.notes_document_id })
           .delete();
       }
     });

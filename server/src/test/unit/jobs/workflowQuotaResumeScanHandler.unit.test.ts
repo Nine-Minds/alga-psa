@@ -61,13 +61,22 @@ function buildMockKnex(initialWaits: WaitRow[]) {
         forUpdate: () => chain,
         skipLocked: () => chain,
         limit: () => chain,
-        select: async () => selectCandidates(),
+        select: () => chain,
+        // The scanner builds the query then awaits the builder directly, so it
+        // must be thenable and resolve to the candidate rows (evaluated lazily so
+        // repeated scans observe resolved waits).
+        then: (resolve: (rows: any[]) => any, reject?: (reason: unknown) => any) =>
+          Promise.resolve(selectCandidates()).then(resolve, reject),
+        catch: (reject: (reason: unknown) => any) => Promise.resolve(selectCandidates()).catch(reject),
       };
       return chain;
     }
 
     if (table === 'workflow_run_waits') {
       const chain: any = {
+        // The facade applies a tenant predicate via where() before the SUT's
+        // whereIn/andWhere update chain.
+        where: () => chain,
         whereIn: (_col: string, ids: string[]) => {
           selectedWaitIds = ids;
           return chain;
@@ -85,6 +94,9 @@ function buildMockKnex(initialWaits: WaitRow[]) {
 
     if (table === 'workflow_runs') {
       const chain: any = {
+        // The facade applies a tenant predicate via where() before the SUT's
+        // whereIn/andWhere update chain.
+        where: () => chain,
         whereIn: () => chain,
         andWhere: () => chain,
         update: async () => undefined,
@@ -122,7 +134,7 @@ describe('workflowQuotaResumeScanHandler', () => {
       return { effectiveLimit: 5, usedCount: 2, periodStart: '2026-04-01T00:00:00.000Z', periodEnd: '2026-05-01T00:00:00.000Z' };
     });
 
-    const { workflowQuotaResumeScanHandler } = await import('../../../lib/jobs/handlers/workflowQuotaResumeScanHandler');
+    const { workflowQuotaResumeScanHandler } = await import('@alga-psa/jobs/handlers/workflowQuotaResumeScanHandler');
     await workflowQuotaResumeScanHandler({ tenantId: 'ignored', batchSize: 10 });
 
     expect(mocks.signalQuotaResume).toHaveBeenCalledTimes(1);
@@ -150,7 +162,7 @@ describe('workflowQuotaResumeScanHandler', () => {
       periodEnd: '2026-05-01T00:00:00.000Z',
     });
 
-    const { workflowQuotaResumeScanHandler } = await import('../../../lib/jobs/handlers/workflowQuotaResumeScanHandler');
+    const { workflowQuotaResumeScanHandler } = await import('@alga-psa/jobs/handlers/workflowQuotaResumeScanHandler');
     await workflowQuotaResumeScanHandler({ tenantId: 'ignored', batchSize: 10 });
     await workflowQuotaResumeScanHandler({ tenantId: 'ignored', batchSize: 10 });
 

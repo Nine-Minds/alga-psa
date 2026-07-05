@@ -1050,7 +1050,6 @@ export function TemplateTaskForm({
                           checked={item.completed}
                           onChange={(e) => updateChecklistItem(item.id, 'completed', e.target.checked)}
                           className="flex-none"
-                          containerClassName=""
                         />
                         {isItemEditing ? (
                           <div className="flex-1">

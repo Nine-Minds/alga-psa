@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export type WorkflowActionInvocationRecord = {
   invocation_id: string;
@@ -21,9 +22,21 @@ export type WorkflowActionInvocationRecord = {
   completed_at?: string | null;
 };
 
+function workflowActionInvocations(
+  knex: Knex,
+  tenant?: string | null,
+): Knex.QueryBuilder<WorkflowActionInvocationRecord, WorkflowActionInvocationRecord[]> {
+  return tenant
+    ? tenantDb(knex, tenant).table<WorkflowActionInvocationRecord>('workflow_action_invocations')
+    : tenantDb(knex, '__workflow_action_invocation_unscoped__').unscoped<WorkflowActionInvocationRecord>(
+      'workflow_action_invocations',
+      'workflow action invocation model supports legacy idempotency/run lookups before the tenant is resolved'
+    );
+}
+
 const WorkflowActionInvocationModelV2 = {
   create: async (knex: Knex, data: Partial<WorkflowActionInvocationRecord>): Promise<WorkflowActionInvocationRecord> => {
-    const [record] = await knex<WorkflowActionInvocationRecord>('workflow_action_invocations')
+    const [record] = await workflowActionInvocations(knex, data.tenant)
       .insert({
         ...data,
         created_at: data.created_at ?? new Date().toISOString()
@@ -33,9 +46,8 @@ const WorkflowActionInvocationModelV2 = {
   },
 
   update: async (knex: Knex, invocationId: string, data: Partial<WorkflowActionInvocationRecord>, tenant?: string | null): Promise<WorkflowActionInvocationRecord> => {
-    const query = knex<WorkflowActionInvocationRecord>('workflow_action_invocations').where({ invocation_id: invocationId });
-    if (tenant) query.andWhere({ tenant });
-    const [record] = await query
+    const [record] = await workflowActionInvocations(knex, tenant)
+      .where({ invocation_id: invocationId })
       .update({
         ...data
       })
@@ -50,21 +62,20 @@ const WorkflowActionInvocationModelV2 = {
     idempotencyKey: string,
     tenant?: string | null
   ): Promise<WorkflowActionInvocationRecord | null> => {
-    const query = knex<WorkflowActionInvocationRecord>('workflow_action_invocations')
+    const record = await workflowActionInvocations(knex, tenant)
       .where({
         action_id: actionId,
         action_version: actionVersion,
         idempotency_key: idempotencyKey
-      });
-    if (tenant) query.andWhere({ tenant });
-    const record = await query.first();
+      })
+      .first();
     return record || null;
   },
 
   listByRun: async (knex: Knex, runId: string, tenant?: string | null): Promise<WorkflowActionInvocationRecord[]> => {
-    const query = knex<WorkflowActionInvocationRecord>('workflow_action_invocations').where({ run_id: runId });
-    if (tenant) query.andWhere({ tenant });
-    return query.orderBy('created_at', 'asc');
+    return workflowActionInvocations(knex, tenant)
+      .where({ run_id: runId })
+      .orderBy('created_at', 'asc');
   }
 };
 

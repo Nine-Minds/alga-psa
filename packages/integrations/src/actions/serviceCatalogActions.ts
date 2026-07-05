@@ -1,7 +1,7 @@
 'use server';
 
 import type { IService } from '@alga-psa/types';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 
@@ -36,7 +36,7 @@ export const getServices = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const offset = (page - 1) * pageSize;
 
-    const base = trx('service_catalog as sc').where({ 'sc.tenant': tenant });
+    const base = tenantDb(trx, tenant).table('service_catalog as sc');
     if (itemKind !== 'any') {
       base.andWhere('sc.item_kind', itemKind);
     }

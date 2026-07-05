@@ -1,11 +1,19 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { OrderingService } from '../lib/orderingUtils';
 import type { IProjectPhase, IProjectTask } from '@alga-psa/types';
 import { Knex } from 'knex';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
 
 /**
  * Regenerates order keys for all tasks in a phase/status to ensure they follow proper fractional indexing
@@ -23,11 +31,10 @@ export const regenerateOrderKeysForStatus = withAuth(async (
       throw new Error('Permission denied: Cannot update project');
     }
     // Get all tasks in this status, ordered by current order_key
-    const tasks = await trx<IProjectTask>('project_tasks')
+    const tasks = await tenantScopedTable(trx, 'project_tasks', tenant)
       .where('phase_id', phaseId)
       .where('project_status_mapping_id', statusId)
-      .where('tenant', tenant)
-      .orderBy('order_key', 'asc');
+      .orderBy('order_key', 'asc') as IProjectTask[];
 
     if (tasks.length === 0) return;
 
@@ -36,9 +43,8 @@ export const regenerateOrderKeysForStatus = withAuth(async (
 
     // Update each task with its new order key
     for (let i = 0; i < tasks.length; i++) {
-      await trx('project_tasks')
+      await tenantScopedTable(trx, 'project_tasks', tenant)
         .where('task_id', tasks[i].task_id)
-        .where('tenant', tenant)
         .update({
           order_key: newKeys[i],
           updated_at: trx.fn.now()
@@ -64,12 +70,11 @@ export const validateAndFixOrderKeys = withAuth(async (
     throw new Error('Permission denied: Cannot update project');
   }
 
-  const tasks = await db<IProjectTask>('project_tasks')
+  const tasks = await tenantScopedTable(db, 'project_tasks', tenant)
     .where('phase_id', phaseId)
     .where('project_status_mapping_id', statusId)
-    .where('tenant', tenant)
     .orderBy('order_key', 'asc')
-    .select('task_id', 'order_key', 'task_name');
+    .select('task_id', 'order_key', 'task_name') as Pick<IProjectTask, 'task_id' | 'order_key' | 'task_name'>[];
 
   // Check for issues
   let needsRegeneration = false;
@@ -122,9 +127,8 @@ export const regenerateOrderKeysForPhases = withAuth(async (
       throw new Error('Permission denied: Cannot update project');
     }
     // Get all phases in this project, ordered by current order_key (or fallback to end_date)
-    const phases = await trx<IProjectPhase>('project_phases')
+    const phases = await tenantScopedTable(trx, 'project_phases', tenant)
       .where('project_id', projectId)
-      .where('tenant', tenant)
       .orderByRaw(`
         CASE
           WHEN order_key IS NULL THEN 1
@@ -132,7 +136,7 @@ export const regenerateOrderKeysForPhases = withAuth(async (
         END,
         order_key ASC,
         end_date ASC
-      `);
+      `) as IProjectPhase[];
 
     if (phases.length === 0) return;
 
@@ -141,9 +145,8 @@ export const regenerateOrderKeysForPhases = withAuth(async (
 
     // Update each phase with its new order key
     for (let i = 0; i < phases.length; i++) {
-      await trx('project_phases')
+      await tenantScopedTable(trx, 'project_phases', tenant)
         .where('phase_id', phases[i].phase_id)
-        .where('tenant', tenant)
         .update({
           order_key: newKeys[i],
           updated_at: trx.fn.now()
@@ -168,11 +171,10 @@ export const validateAndFixPhaseOrderKeys = withAuth(async (
     throw new Error('Permission denied: Cannot update project');
   }
 
-  const phases = await db<IProjectPhase>('project_phases')
+  const phases = await tenantScopedTable(db, 'project_phases', tenant)
     .where('project_id', projectId)
-    .where('tenant', tenant)
     .orderBy('order_key', 'asc')
-    .select('phase_id', 'order_key', 'phase_name');
+    .select('phase_id', 'order_key', 'phase_name') as Pick<IProjectPhase, 'phase_id' | 'order_key' | 'phase_name'>[];
 
   // Check for issues
   let needsRegeneration = false;

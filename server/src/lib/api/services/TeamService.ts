@@ -5,7 +5,7 @@
 
 import { Knex } from 'knex';
 import { v4 as uuid4 } from 'uuid';
-import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { ITeam, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { NotFoundError, ValidationError, ConflictError, BadRequestError } from '../middleware/apiMiddleware';
 
@@ -114,6 +114,7 @@ export class TeamService extends BaseService<ITeam> {
    */
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<ITeam>> {
       const { knex } = await this.getKnex();
+      const scopedDb = tenantDb(knex, context.tenant);
       
       const {
         page = 1,
@@ -124,19 +125,14 @@ export class TeamService extends BaseService<ITeam> {
       } = options;
   
       // Build base query with manager and client joins
-      let dataQuery = knex('teams as t')
-        .leftJoin('users as manager', function() {
-          this.on('t.manager_id', '=', 'manager.user_id')
-              .andOn('t.tenant', '=', 'manager.tenant');
-        })
-        .where('t.tenant', context.tenant);
+      let dataQuery = scopedDb.table('teams as t');
+      dataQuery = scopedDb.tenantJoin(dataQuery, 'users as manager', 't.manager_id', 'manager.user_id', { type: 'left' });
   
-      let countQuery = knex('teams as t')
-        .where('t.tenant', context.tenant);
+      let countQuery = scopedDb.table('teams as t');
   
       // Apply filters
-      dataQuery = this.applyTeamFilters(dataQuery, filters, knex, true);  // has manager join
-      countQuery = this.applyTeamFilters(countQuery, filters, knex, false); // no manager join
+      dataQuery = this.applyTeamFilters(dataQuery, filters, knex, context.tenant, true);  // has manager join
+      countQuery = this.applyTeamFilters(countQuery, filters, knex, context.tenant, false); // no manager join
   
       // Apply sorting with runtime allowlists; API inputs are not trusted even when typed.
       const allowedSortFields = new Set(['team_id', 'team_name', 'manager_id', 'created_at', 'updated_at', 'manager_name', 'member_count']);
@@ -161,39 +157,29 @@ export class TeamService extends BaseService<ITeam> {
       // Select fields with member count
       dataQuery = dataQuery.select(
         't.*',
-        knex.raw('COALESCE(manager.first_name || \' \' || manager.last_name, manager.username) as manager_name'),
-        knex.raw(`(
-          SELECT COUNT(*)
-          FROM team_members tm
-          JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant
-          WHERE tm.team_id = t.team_id
-          AND tm.tenant = t.tenant
-          AND u.is_inactive = false
-        ) as member_count`)
-      );
+        knex.raw('COALESCE(manager.first_name || \' \' || manager.last_name, manager.username) as manager_name')
+      ).select({
+        member_count: this.activeMemberCountSubquery(knex, context.tenant, 't'),
+      });
   
       // Execute queries
       const [teams, [{ count }]] = await Promise.all([
         dataQuery,
-        countQuery.count('* as count')
+        countQuery.count('* as count') as unknown as Promise<Array<{ count: string }>>
       ]);
   
       // Enhance teams with members and HATEOAS links
       const enhancedTeams = await Promise.all(
         teams.map(async (team: any) => {
-          const memberIds = await knex('team_members')
-            .where({ 'team_members.team_id': team.team_id, 'team_members.tenant': team.tenant })
-            .join('users', function() {
-              this.on('team_members.user_id', '=', 'users.user_id')
-                  .andOn('team_members.tenant', '=', 'users.tenant');
-            })
+          const memberQuery = scopedDb.table('team_members')
+            .where('team_members.team_id', team.team_id)
+            .modify((q) => scopedDb.tenantJoin(q, 'users', 'team_members.user_id', 'users.user_id'))
             .where('users.is_inactive', false)
-            .pluck('team_members.user_id');
+          const memberIds = await memberQuery.pluck('team_members.user_id');
           // Get user details for members
           const members = memberIds.length > 0 
-            ? await knex('users')
+            ? await tenantDb(knex, context.tenant).table('users')
                 .whereIn('user_id', memberIds)
-                .where('tenant', team.tenant)
                 .select('user_id', 'username', 'email', 'first_name', 'last_name')
             : [];
           
@@ -244,18 +230,17 @@ export class TeamService extends BaseService<ITeam> {
    */
   async getById(id: string, context: ServiceContext, options: TeamServiceOptions = {}): Promise<ITeam | null> {
       const { knex } = await this.getKnex();
+      const scopedDb = tenantDb(knex, context.tenant);
   
-      const team = await knex('teams as t')
-        .leftJoin('users as manager', function() {
-          this.on('t.manager_id', '=', 'manager.user_id')
-              .andOn('t.tenant', '=', 'manager.tenant');
-        })
+      const teamQuery = scopedDb.table('teams as t');
+      scopedDb.tenantJoin(teamQuery, 'users as manager', 't.manager_id', 'manager.user_id', { type: 'left' });
+      const team = await teamQuery
         .select(
           't.*',
           knex.raw('COALESCE(manager.first_name || \' \' || manager.last_name, manager.username) as manager_name'),
           'manager.email as manager_email'
         )
-        .where({ 't.team_id': id, 't.tenant': context.tenant })
+        .where('t.team_id', id)
         .first();
   
       if (!team) {
@@ -263,19 +248,15 @@ export class TeamService extends BaseService<ITeam> {
       }
   
       // Get team members
-      const memberIds = await knex('team_members')
-        .where({ 'team_members.team_id': id, 'team_members.tenant': team.tenant })
-        .join('users', function() {
-          this.on('team_members.user_id', '=', 'users.user_id')
-              .andOn('team_members.tenant', '=', 'users.tenant');
-        })
+      const memberQuery = scopedDb.table('team_members')
+        .where('team_members.team_id', id)
+        .modify((q) => scopedDb.tenantJoin(q, 'users', 'team_members.user_id', 'users.user_id'))
         .where('users.is_inactive', false)
-        .pluck('team_members.user_id');
+      const memberIds = await memberQuery.pluck('team_members.user_id');
       // Get user details for members
       const members = memberIds.length > 0 
-        ? await knex('users')
+        ? await tenantDb(knex, context.tenant).table('users')
             .whereIn('user_id', memberIds)
-            .where('tenant', context.tenant)
             .select('user_id', 'username', 'email', 'first_name', 'last_name')
         : [];
   
@@ -287,8 +268,8 @@ export class TeamService extends BaseService<ITeam> {
       // Add manager details if requested
       if (options.includeManager && team.manager_id) {
         try {
-          const manager = await knex('users')
-            .where({ user_id: team.manager_id, tenant: team.tenant })
+          const manager = await tenantDb(knex, context.tenant).table('users')
+            .where('user_id', team.manager_id)
             .select('user_id', 'username', 'email', 'first_name', 'last_name')
             .first();
           enhancedTeam.manager = manager;
@@ -359,8 +340,7 @@ export class TeamService extends BaseService<ITeam> {
   
       return withTransaction(knex, async (trx) => {
         // Validate team name uniqueness
-        const existingTeams = await trx('teams')
-          .where('tenant', context.tenant)
+        const existingTeams = await tenantDb(trx, context.tenant).table('teams')
           .pluck('team_name');
         
         if (!validateTeamNameUniqueness(data.team_name, existingTeams)) {
@@ -369,8 +349,8 @@ export class TeamService extends BaseService<ITeam> {
   
         // Validate manager if provided
         if (data.manager_id) {
-          const manager = await trx('users')
-            .where({ user_id: data.manager_id, tenant: context.tenant, is_inactive: false })
+          const manager = await tenantDb(trx, context.tenant).table('users')
+            .where({ user_id: data.manager_id, is_inactive: false })
             .first();
           
           if (!manager) {
@@ -393,7 +373,7 @@ export class TeamService extends BaseService<ITeam> {
           updated_at: new Date()
         };
   
-        const [team] = await trx('teams').insert(teamData).returning('*');
+        const [team] = await tenantDb(trx, context.tenant).table('teams').insert(teamData).returning('*');
   
         // Collect all member IDs including the manager
         const allMemberIds = new Set<string>();
@@ -417,7 +397,7 @@ export class TeamService extends BaseService<ITeam> {
             created_at: new Date()
           }));
 
-          await trx('team_members').insert(memberInserts);
+          await tenantDb(trx, context.tenant).table('team_members').insert(memberInserts);
         }
   
         // Publish team created event
@@ -440,8 +420,8 @@ export class TeamService extends BaseService<ITeam> {
 
     return withTransaction(knex, async (trx) => {
       // Check team exists
-      const existingTeam = await trx('teams')
-        .where({ team_id: id, tenant: context.tenant })
+      const existingTeam = await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', id)
         .first();
       
       if (!existingTeam) {
@@ -450,8 +430,7 @@ export class TeamService extends BaseService<ITeam> {
 
       // Validate team name uniqueness if changing
       if (data.team_name && data.team_name !== existingTeam.team_name) {
-        const existingTeams = await trx('teams')
-          .where('tenant', context.tenant)
+        const existingTeams = await tenantDb(trx, context.tenant).table('teams')
           .whereNot('team_id', id)
           .pluck('team_name');
         
@@ -463,8 +442,8 @@ export class TeamService extends BaseService<ITeam> {
       // Validate manager if changing
       if (data.manager_id !== undefined) {
         if (data.manager_id) {
-          const manager = await trx('users')
-            .where({ user_id: data.manager_id, tenant: context.tenant, is_inactive: false })
+          const manager = await tenantDb(trx, context.tenant).table('users')
+            .where({ user_id: data.manager_id, is_inactive: false })
             .first();
           
           if (!manager) {
@@ -472,14 +451,12 @@ export class TeamService extends BaseService<ITeam> {
           }
 
           // Validate manager is not a member
-          const memberIds = await trx('team_members')
-            .where({ 'team_members.team_id': id, 'team_members.tenant': context.tenant })
-            .join('users', function() {
-              this.on('team_members.user_id', '=', 'users.user_id')
-                  .andOn('team_members.tenant', '=', 'users.tenant');
-            })
+          const scopedDb = tenantDb(trx, context.tenant);
+          const memberQuery = scopedDb.table('team_members')
+            .where('team_members.team_id', id)
+            .modify((q) => scopedDb.tenantJoin(q, 'users', 'team_members.user_id', 'users.user_id'))
             .where('users.is_inactive', false)
-            .pluck('team_members.user_id');
+          const memberIds = await memberQuery.pluck('team_members.user_id');
           // Managers can be team members, so no need to validate this restriction
         }
       }
@@ -497,8 +474,8 @@ export class TeamService extends BaseService<ITeam> {
         updated_at: new Date()
       };
 
-      await trx('teams')
-        .where({ team_id: id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', id)
         .update(updateData);
 
       // Publish team updated event
@@ -508,8 +485,8 @@ export class TeamService extends BaseService<ITeam> {
       });
 
       // Return updated team
-      const updatedTeam = await trx('teams')
-        .where({ team_id: id, tenant: context.tenant })
+      const updatedTeam = await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', id)
         .first();
       
       return updatedTeam as ITeam;
@@ -524,8 +501,8 @@ export class TeamService extends BaseService<ITeam> {
 
     return withTransaction(knex, async (trx) => {
       // Check team exists
-      const team = await trx('teams')
-        .where({ team_id: id, tenant: context.tenant })
+      const team = await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', id)
         .first();
       
       if (!team) {
@@ -533,13 +510,13 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Delete team members first (only table that exists)
-      await trx('team_members')
-        .where({ team_id: id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('team_members')
+        .where('team_id', id)
         .del();
 
       // Delete the team
-      await trx('teams')
-        .where({ team_id: id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', id)
         .del();
 
       // Publish team deleted event
@@ -562,8 +539,8 @@ export class TeamService extends BaseService<ITeam> {
 
     return withTransaction(knex, async (trx) => {
       // Validate team exists
-      const team = await trx('teams')
-        .where({ team_id: teamId, tenant: context.tenant })
+      const team = await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', teamId)
         .first();
       
       if (!team) {
@@ -571,8 +548,8 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Validate user exists and is active
-      const user = await trx('users')
-        .where({ user_id: userId, tenant: context.tenant, is_inactive: false })
+      const user = await tenantDb(trx, context.tenant).table('users')
+        .where({ user_id: userId, is_inactive: false })
         .first();
       
       if (!user) {
@@ -580,8 +557,8 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Check if user is already a member
-      const existingMember = await trx('team_members')
-        .where({ team_id: teamId, user_id: userId, tenant: context.tenant })
+      const existingMember = await tenantDb(trx, context.tenant).table('team_members')
+        .where({ team_id: teamId, user_id: userId })
         .first();
       
       if (existingMember) {
@@ -591,8 +568,8 @@ export class TeamService extends BaseService<ITeam> {
       // Managers can be team members, so no need to check this restriction
 
       // Check team size limit
-      const currentMemberCount = await trx('team_members')
-        .where({ team_id: teamId, tenant: context.tenant })
+      const currentMemberCount = await tenantDb(trx, context.tenant).table('team_members')
+        .where('team_id', teamId)
         .count('* as count')
         .first();
       
@@ -601,7 +578,7 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Add member
-      await trx('team_members').insert({
+      await tenantDb(trx, context.tenant).table('team_members').insert({
         team_id: teamId,
         user_id: userId,
         tenant: context.tenant,
@@ -626,8 +603,8 @@ export class TeamService extends BaseService<ITeam> {
 
     return withTransaction(knex, async (trx) => {
       // Validate team exists
-      const team = await trx('teams')
-        .where({ team_id: teamId, tenant: context.tenant })
+      const team = await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', teamId)
         .first();
       
       if (!team) {
@@ -635,8 +612,8 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Check if user is a member
-      const existingMember = await trx('team_members')
-        .where({ team_id: teamId, user_id: userId, tenant: context.tenant })
+      const existingMember = await tenantDb(trx, context.tenant).table('team_members')
+        .where({ team_id: teamId, user_id: userId })
         .first();
       
       if (!existingMember) {
@@ -644,13 +621,13 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Remove member
-      await trx('team_members')
-        .where({ team_id: teamId, user_id: userId, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('team_members')
+        .where({ team_id: teamId, user_id: userId })
         .del();
 
       // Remove any specific task assignments
-      await trx('task_assignments')
-        .where({ team_id: teamId, user_id: userId, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('task_assignments')
+        .where({ team_id: teamId, user_id: userId })
         .del();
 
       // Publish member removed event
@@ -671,8 +648,8 @@ export class TeamService extends BaseService<ITeam> {
 
     return withTransaction(knex, async (trx) => {
       // Validate team exists
-      const team = await trx('teams')
-        .where({ team_id: teamId, tenant: context.tenant })
+      const team = await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', teamId)
         .first();
       
       if (!team) {
@@ -680,9 +657,9 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Validate all users exist and are active
-      const users = await trx('users')
+      const users = await tenantDb(trx, context.tenant).table('users')
         .whereIn('user_id', userIds)
-        .where({ tenant: context.tenant, is_inactive: false });
+        .where('is_inactive', false);
       
       if (users.length !== userIds.length) {
         throw new BadRequestError('Some users not found or inactive');
@@ -691,9 +668,9 @@ export class TeamService extends BaseService<ITeam> {
       // Managers can be team members, so no need to check this restriction
 
       // Check for existing members
-      const existingMembers = await trx('team_members')
+      const existingMembers = await tenantDb(trx, context.tenant).table('team_members')
         .whereIn('user_id', userIds)
-        .where({ team_id: teamId, tenant: context.tenant })
+        .where('team_id', teamId)
         .pluck('user_id');
       
       if (existingMembers.length > 0) {
@@ -701,8 +678,8 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Check team size limit
-      const currentMemberCount = await trx('team_members')
-        .where({ team_id: teamId, tenant: context.tenant })
+      const currentMemberCount = await tenantDb(trx, context.tenant).table('team_members')
+        .where('team_id', teamId)
         .count('* as count')
         .first();
       
@@ -719,7 +696,7 @@ export class TeamService extends BaseService<ITeam> {
         joined_at: new Date()
       }));
 
-      await trx('team_members').insert(memberInserts);
+      await tenantDb(trx, context.tenant).table('team_members').insert(memberInserts);
 
       // Publish bulk members added event
       await publishEvent({
@@ -739,8 +716,8 @@ export class TeamService extends BaseService<ITeam> {
 
     return withTransaction(knex, async (trx) => {
       // Validate team exists
-      const team = await trx('teams')
-        .where({ team_id: teamId, tenant: context.tenant })
+      const team = await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', teamId)
         .first();
       
       if (!team) {
@@ -748,15 +725,15 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Remove members
-      await trx('team_members')
+      await tenantDb(trx, context.tenant).table('team_members')
         .whereIn('user_id', userIds)
-        .where({ team_id: teamId, tenant: context.tenant })
+        .where('team_id', teamId)
         .del();
 
       // Remove any specific task assignments
-      await trx('task_assignments')
+      await tenantDb(trx, context.tenant).table('task_assignments')
         .whereIn('user_id', userIds)
-        .where({ team_id: teamId, tenant: context.tenant })
+        .where('team_id', teamId)
         .del();
 
       // Publish bulk members removed event
@@ -777,8 +754,8 @@ export class TeamService extends BaseService<ITeam> {
 
     return withTransaction(knex, async (trx) => {
       // Validate team exists
-      const team = await trx('teams')
-        .where({ team_id: teamId, tenant: context.tenant })
+      const team = await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', teamId)
         .first();
       
       if (!team) {
@@ -786,8 +763,8 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Validate manager exists and is active
-      const manager = await trx('users')
-        .where({ user_id: managerId, tenant: context.tenant, is_inactive: false })
+      const manager = await tenantDb(trx, context.tenant).table('users')
+        .where({ user_id: managerId, is_inactive: false })
         .first();
       
       if (!manager) {
@@ -795,13 +772,13 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Check if manager is currently a team member
-      const isCurrentMember = await trx('team_members')
-        .where({ team_id: teamId, user_id: managerId, tenant: context.tenant })
+      const isCurrentMember = await tenantDb(trx, context.tenant).table('team_members')
+        .where({ team_id: teamId, user_id: managerId })
         .first();
 
       // Update team manager
-      await trx('teams')
-        .where({ team_id: teamId, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', teamId)
         .update({ 
           manager_id: managerId,
           updated_at: new Date()
@@ -809,7 +786,7 @@ export class TeamService extends BaseService<ITeam> {
 
       // Add manager as team member if they're not already a member
       if (!isCurrentMember) {
-        await trx('team_members').insert({
+        await tenantDb(trx, context.tenant).table('team_members').insert({
           team_id: teamId,
           user_id: managerId,
           tenant: context.tenant,
@@ -824,8 +801,8 @@ export class TeamService extends BaseService<ITeam> {
       });
 
       // Fetch updated team using the transaction to ensure we see the changes
-      const updatedTeam = await trx('teams')
-        .where({ team_id: teamId, tenant: context.tenant })
+      const updatedTeam = await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', teamId)
         .first();
 
       return updatedTeam as ITeam;
@@ -841,33 +818,22 @@ export class TeamService extends BaseService<ITeam> {
    */
   async getTeamHierarchy(context: ServiceContext): Promise<TeamHierarchyNode[]> {
     const { knex } = await this.getKnex();
+    const scopedDb = tenantDb(knex, context.tenant);
 
     // Get all teams with their basic info
-    const teams = await knex('teams as t')
-      .leftJoin('users as m', function() {
-        this.on('t.manager_id', '=', 'm.user_id')
-            .andOn('t.tenant', '=', 'm.tenant');
-      })
-      .leftJoin('team_hierarchy as th', function() {
-        this.on('t.team_id', '=', 'th.child_team_id')
-            .andOn('t.tenant', '=', 'th.tenant');
-      })
-      .where('t.tenant', context.tenant)
+    const hierarchyQuery = scopedDb.table('teams as t');
+    scopedDb.tenantJoin(hierarchyQuery, 'users as m', 't.manager_id', 'm.user_id', { type: 'left' });
+    scopedDb.tenantJoin(hierarchyQuery, 'team_hierarchy as th', 't.team_id', 'th.child_team_id', { type: 'left' });
+    const teams = await hierarchyQuery
       .select(
         't.team_id',
         't.team_name',
         't.manager_id',
         knex.raw('COALESCE(m.first_name || \' \' || m.last_name, m.username) as manager_name'),
-        'th.parent_team_id',
-        knex.raw(`(
-          SELECT COUNT(*)
-          FROM team_members tm
-          JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant
-          WHERE tm.team_id = t.team_id
-          AND tm.tenant = t.tenant
-          AND u.is_inactive = false
-        ) as member_count`)
-      );
+        'th.parent_team_id'
+      ).select({
+        member_count: this.activeMemberCountSubquery(knex, context.tenant, 't'),
+      });
 
     // Build hierarchy structure
     const teamMap = new Map<string, TeamHierarchyNode>();
@@ -916,8 +882,8 @@ export class TeamService extends BaseService<ITeam> {
     return withTransaction(knex, async (trx) => {
       // Validate both teams exist
       const [parentTeam, childTeam] = await Promise.all([
-        trx('teams').where({ team_id: parentTeamId, tenant: context.tenant }).first(),
-        trx('teams').where({ team_id: childTeamId, tenant: context.tenant }).first()
+        tenantDb(trx, context.tenant).table('teams').where('team_id', parentTeamId).first(),
+        tenantDb(trx, context.tenant).table('teams').where('team_id', childTeamId).first()
       ]);
 
       if (!parentTeam || !childTeam) {
@@ -930,7 +896,7 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Create or update hierarchy relationship
-      await trx('team_hierarchy')
+      await tenantDb(trx, context.tenant).table('team_hierarchy')
         .insert({
           parent_team_id: parentTeamId,
           child_team_id: childTeamId,
@@ -957,8 +923,8 @@ export class TeamService extends BaseService<ITeam> {
   async removeTeamHierarchy(childTeamId: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
 
-    await knex('team_hierarchy')
-      .where({ child_team_id: childTeamId, tenant: context.tenant })
+    await tenantDb(knex, context.tenant).table('team_hierarchy')
+      .where('child_team_id', childTeamId)
       .del();
 
     // Publish hierarchy removed event
@@ -986,8 +952,8 @@ export class TeamService extends BaseService<ITeam> {
 
     return withTransaction(knex, async (trx) => {
       // Validate team exists
-      const team = await trx('teams')
-        .where({ team_id: teamId, tenant: context.tenant })
+      const team = await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', teamId)
         .first();
       
       if (!team) {
@@ -995,7 +961,7 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Grant permission
-      await trx('team_permissions').insert({
+      await tenantDb(trx, context.tenant).table('team_permissions').insert({
         permission_id: uuid4(),
         team_id: teamId,
         resource,
@@ -1021,16 +987,16 @@ export class TeamService extends BaseService<ITeam> {
   async revokePermission(permissionId: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
 
-    const permission = await knex('team_permissions')
-      .where({ permission_id: permissionId, tenant: context.tenant })
+    const permission = await tenantDb(knex, context.tenant).table('team_permissions')
+      .where('permission_id', permissionId)
       .first();
 
     if (!permission) {
       throw new NotFoundError('Permission not found');
     }
 
-    await knex('team_permissions')
-      .where({ permission_id: permissionId, tenant: context.tenant })
+    await tenantDb(knex, context.tenant).table('team_permissions')
+      .where('permission_id', permissionId)
       .update({ 
         is_active: false,
         revoked_at: new Date(),
@@ -1050,10 +1016,9 @@ export class TeamService extends BaseService<ITeam> {
   async getTeamPermissions(teamId: string, context: ServiceContext): Promise<any[]> {
     const { knex } = await this.getKnex();
 
-    const permissions = await knex('team_permissions')
+    const permissions = await tenantDb(knex, context.tenant).table('team_permissions')
       .where({
         team_id: teamId,
-        tenant: context.tenant,
         is_active: true
       })
       .where(function() {
@@ -1088,8 +1053,8 @@ export class TeamService extends BaseService<ITeam> {
     return withTransaction(knex, async (trx) => {
       // Validate team and project exist
       const [team, project] = await Promise.all([
-        trx('teams').where({ team_id: teamId, tenant: context.tenant }).first(),
-        trx('projects').where({ project_id: projectId, tenant: context.tenant }).first()
+        tenantDb(trx, context.tenant).table('teams').where('team_id', teamId).first(),
+        tenantDb(trx, context.tenant).table('projects').where('project_id', projectId).first()
       ]);
 
       if (!team || !project) {
@@ -1105,7 +1070,7 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Create assignment
-      await trx('project_team_assignments').insert({
+      await tenantDb(trx, context.tenant).table('project_team_assignments').insert({
         assignment_id: uuid4(),
         team_id: teamId,
         project_id: projectId,
@@ -1133,15 +1098,13 @@ export class TeamService extends BaseService<ITeam> {
    */
   async getTeamProjects(teamId: string, context: ServiceContext): Promise<any[]> {
     const { knex } = await this.getKnex();
+    const scopedDb = tenantDb(knex, context.tenant);
 
-    const projects = await knex('project_team_assignments as pta')
-      .join('projects as p', function() {
-        this.on('pta.project_id', '=', 'p.project_id')
-            .andOn('pta.tenant', '=', 'p.tenant');
-      })
+    const projectQuery = scopedDb.table('project_team_assignments as pta');
+    scopedDb.tenantJoin(projectQuery, 'projects as p', 'pta.project_id', 'p.project_id');
+    const projects = await projectQuery
       .where({
         'pta.team_id': teamId,
-        'pta.tenant': context.tenant,
         'pta.is_active': true
       })
       .select(
@@ -1174,13 +1137,14 @@ export class TeamService extends BaseService<ITeam> {
     } = {}
   ): Promise<TeamAnalyticsResponse> {
     const { knex } = await this.getKnex();
+    const scopedDb = tenantDb(knex, context.tenant);
 
     const startDate = options.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
     const endDate = options.endDate || new Date();
 
     // Get team basic info
-    const team = await knex('teams')
-      .where({ team_id: teamId, tenant: context.tenant })
+    const team = await tenantDb(knex, context.tenant).table('teams')
+      .where('team_id', teamId)
       .first();
 
     if (!team) {
@@ -1188,14 +1152,11 @@ export class TeamService extends BaseService<ITeam> {
     }
 
     // Get member count
-    const memberCount = await knex('team_members as tm')
-      .join('users as u', function() {
-        this.on('tm.user_id', '=', 'u.user_id')
-            .andOn('tm.tenant', '=', 'u.tenant');
-      })
+    const memberCountQuery = scopedDb.table('team_members as tm');
+    scopedDb.tenantJoin(memberCountQuery, 'users as u', 'tm.user_id', 'u.user_id');
+    const memberCount = await memberCountQuery
       .where({
         'tm.team_id': teamId,
-        'tm.tenant': context.tenant,
         'u.is_inactive': false
       })
       .count('* as count')
@@ -1203,28 +1164,20 @@ export class TeamService extends BaseService<ITeam> {
 
     // Get project statistics
     const [activeProjects, completedProjects] = await Promise.all([
-      knex('project_team_assignments as pta')
-        .join('projects as p', function() {
-          this.on('pta.project_id', '=', 'p.project_id')
-              .andOn('pta.tenant', '=', 'p.tenant');
-        })
+      scopedDb.table('project_team_assignments as pta')
+        .modify((q) => scopedDb.tenantJoin(q, 'projects as p', 'pta.project_id', 'p.project_id'))
         .where({
           'pta.team_id': teamId,
-          'pta.tenant': context.tenant,
           'pta.is_active': true,
           'p.status': 'active'
         })
         .count('* as count')
         .first(),
       
-      knex('project_team_assignments as pta')
-        .join('projects as p', function() {
-          this.on('pta.project_id', '=', 'p.project_id')
-              .andOn('pta.tenant', '=', 'p.tenant');
-        })
+      scopedDb.table('project_team_assignments as pta')
+        .modify((q) => scopedDb.tenantJoin(q, 'projects as p', 'pta.project_id', 'p.project_id'))
         .where({
-          'pta.team_id': teamId,
-          'pta.tenant': context.tenant
+          'pta.team_id': teamId
         })
         .whereIn('p.status', ['completed', 'closed'])
         .count('* as count')
@@ -1232,15 +1185,10 @@ export class TeamService extends BaseService<ITeam> {
     ]);
 
     // Get time tracking statistics
-    const timeStats = await knex('time_entries as te')
-      .join('team_members as tm', function() {
-        this.on('te.user_id', '=', 'tm.user_id')
-            .andOn('te.tenant', '=', 'tm.tenant');
-      })
-      .where({
-        'tm.team_id': teamId,
-        'tm.tenant': context.tenant
-      })
+    const timeStatsQuery = scopedDb.table('time_entries as te');
+    scopedDb.tenantJoin(timeStatsQuery, 'team_members as tm', 'te.user_id', 'tm.user_id');
+    const timeStats = await timeStatsQuery
+      .where('tm.team_id', teamId)
       .whereBetween('te.start_time', [startDate, endDate])
       .select(
         knex.raw('SUM(EXTRACT(EPOCH FROM (te.end_time - te.start_time)) / 3600) as total_hours'),
@@ -1249,19 +1197,17 @@ export class TeamService extends BaseService<ITeam> {
       .first();
 
     // Get member utilization
-    const memberUtilization = await knex('team_members as tm')
-      .join('users as u', function() {
-        this.on('tm.user_id', '=', 'u.user_id')
-            .andOn('tm.tenant', '=', 'u.tenant');
-      })
-      .leftJoin('time_entries as te', function() {
-        this.on('tm.user_id', '=', 'te.user_id')
-            .andOn('tm.tenant', '=', 'te.tenant')
-            .andOnBetween('te.start_time', [startDate, endDate]);
-      })
+    const utilizationQuery = scopedDb.table('team_members as tm');
+    scopedDb.tenantJoin(utilizationQuery, 'users as u', 'tm.user_id', 'u.user_id');
+    scopedDb.tenantJoin(utilizationQuery, 'time_entries as te', 'tm.user_id', 'te.user_id', {
+      type: 'left',
+      on(join) {
+        join.andOnBetween('te.start_time', [startDate, endDate]);
+      },
+    });
+    const memberUtilization = await utilizationQuery
       .where({
         'tm.team_id': teamId,
-        'tm.tenant': context.tenant,
         'u.is_inactive': false
       })
       .groupBy('tm.user_id', 'u.first_name', 'u.last_name', 'u.username')
@@ -1354,14 +1300,11 @@ export class TeamService extends BaseService<ITeam> {
     paginationOptions: { page?: number; limit?: number } = {}
   ): Promise<ListResult<ITeam>> {
     const { knex } = await this.getKnex();
+    const scopedDb = tenantDb(knex, context.tenant);
     const { page = 1, limit = 25 } = paginationOptions;
 
-    let query = knex('teams as t')
-      .leftJoin('users as manager', function() {
-        this.on('t.manager_id', '=', 'manager.user_id')
-            .andOn('t.tenant', '=', 'manager.tenant');
-      })
-      .where('t.tenant', context.tenant);
+    let query = scopedDb.table('teams as t');
+    query = scopedDb.tenantJoin(query, 'users as manager', 't.manager_id', 'manager.user_id', { type: 'left' });
 
     // Apply search filters
     if (searchOptions.query) {
@@ -1395,20 +1338,19 @@ export class TeamService extends BaseService<ITeam> {
         't.*',
         knex.raw('COALESCE(manager.first_name || \' \' || manager.last_name, manager.username) as manager_name')
       ),
-      countQuery.count('* as count')
+      countQuery.count('* as count') as unknown as Promise<Array<{ count: string }>>
     ]);
 
     // Enhance with members
     const enhancedTeams = await Promise.all(
       teams.map(async (team: any) => {
-        const memberIds = await knex('team_members')
-          .where({ team_id: team.team_id, tenant: context.tenant })
+        const memberIds = await tenantDb(knex, context.tenant).table('team_members')
+          .where('team_id', team.team_id)
           .pluck('user_id');
         // Get user details for members
       const members = memberIds.length > 0 
-        ? await knex('users')
+        ? await tenantDb(knex, context.tenant).table('users')
             .whereIn('user_id', memberIds)
-            .where('tenant', context.tenant)
             .select('user_id', 'username', 'email', 'first_name', 'last_name')
         : [];
         
@@ -1481,6 +1423,12 @@ export class TeamService extends BaseService<ITeam> {
   async getTeamStats(context: ServiceContext): Promise<TeamStatsResponse> {
     const { knex } = await this.getKnex();
 
+    const totalStatsQuery = tenantDb(knex, context.tenant).table('teams as t');
+    this.joinActiveMemberCounts(totalStatsQuery, knex, context.tenant, 't', 'amc', 'left');
+
+    const largestTeamQuery = tenantDb(knex, context.tenant).table('teams as t');
+    this.joinActiveMemberCounts(largestTeamQuery, knex, context.tenant, 't', 'amc', 'left');
+
     const [
       totalStats,
       largestTeamData,
@@ -1489,36 +1437,19 @@ export class TeamService extends BaseService<ITeam> {
       performanceStats
     ] = await Promise.all([
       // Total and active team counts
-      knex('teams')
-        .where('tenant', context.tenant)
+      totalStatsQuery
         .select(
           knex.raw('COUNT(*) as total_teams'),
-          knex.raw('COUNT(CASE WHEN manager_id IS NOT NULL THEN 1 END) as teams_with_managers'),
-          knex.raw(`AVG((
-            SELECT COUNT(*)
-            FROM team_members tm
-            JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant
-            WHERE tm.team_id = teams.team_id
-            AND tm.tenant = teams.tenant
-            AND u.is_inactive = false
-          )) as average_team_size`),
-          knex.raw(`SUM((
-            SELECT COUNT(*)
-            FROM team_members tm
-            JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant
-            WHERE tm.team_id = teams.team_id
-            AND tm.tenant = teams.tenant
-            AND u.is_inactive = false
-          )) as total_members`)
+          knex.raw('COUNT(CASE WHEN t.manager_id IS NOT NULL THEN 1 END) as teams_with_managers'),
+          knex.raw('AVG(COALESCE(amc.member_count, 0)) as average_team_size'),
+          knex.raw('SUM(COALESCE(amc.member_count, 0)) as total_members')
         )
         .first(),
 
       // Get largest team size
-      knex('team_members')
-        .where({ tenant: context.tenant })
-        .select('team_id')
-        .count('* as size')
-        .groupBy('team_id')
+      largestTeamQuery
+        .select({ team_id: 't.team_id' })
+        .select(knex.raw('COALESCE(amc.member_count, 0) as size'))
         .orderBy('size', 'desc')
         .first(),
 
@@ -1576,9 +1507,64 @@ export class TeamService extends BaseService<ITeam> {
   // ============================================================================
 
   /**
-   * Apply team-specific filters
+   * Build active team member count queries.
    */
-  private applyTeamFilters(query: Knex.QueryBuilder, filters: TeamFilterData, knex: Knex, hasManagerJoin: boolean = false): Knex.QueryBuilder {
+  private activeMemberCountsByTeamQuery(knex: Knex, tenant: string, countAlias = 'member_count'): Knex.QueryBuilder {
+    const scopedDb = tenantDb(knex, tenant);
+    const query = scopedDb.table('team_members as tm')
+      .select({ team_id: 'tm.team_id', tenant: 'tm.tenant' })
+      .count(`* as ${countAlias}`)
+      .where('u.is_inactive', false)
+      .groupBy('tm.team_id', 'tm.tenant');
+
+    scopedDb.tenantJoin(query, 'users as u', 'tm.user_id', 'u.user_id');
+
+    return query;
+  }
+
+  private activeMemberCountsByTeamSubquery(knex: Knex, tenant: string, alias = 'amc'): Knex.QueryBuilder {
+    return this.activeMemberCountsByTeamQuery(knex, tenant).as(alias);
+  }
+
+  private joinActiveMemberCounts(
+    query: Knex.QueryBuilder,
+    knex: Knex,
+    tenant: string,
+    teamAlias: string,
+    countsAlias = 'amc',
+    type: 'inner' | 'left' = 'inner'
+  ): Knex.QueryBuilder {
+    return tenantDb(knex, tenant).tenantJoinSubquery(
+      query,
+      this.activeMemberCountsByTeamSubquery(knex, tenant, countsAlias),
+      `${teamAlias}.team_id`,
+      `${countsAlias}.team_id`,
+      {
+        type,
+        rootTenantColumn: `${teamAlias}.tenant`,
+        joinedTenantColumn: `${countsAlias}.tenant`,
+      }
+    );
+  }
+
+  private activeMemberCountSubquery(knex: Knex, tenant: string, teamAlias: string): Knex.QueryBuilder {
+    const scopedDb = tenantDb(knex, tenant);
+    const subquery = scopedDb.table('team_members as tm')
+      .count('*')
+      .whereRaw('?? = ??', ['tm.team_id', `${teamAlias}.team_id`])
+      .where('u.is_inactive', false);
+
+    scopedDb.tenantJoin(subquery, 'users as u', 'tm.user_id', 'u.user_id');
+    scopedDb.tenantWhereColumn(subquery, 'tm.tenant', `${teamAlias}.tenant`);
+
+    return subquery;
+  }
+
+  /**
+   * Apply team-specific filters.
+   */
+  private applyTeamFilters(query: Knex.QueryBuilder, filters: TeamFilterData, knex: Knex, tenant: string, hasManagerJoin: boolean = false): Knex.QueryBuilder {
+    const scopedDb = tenantDb(knex, tenant);
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
 
@@ -1597,34 +1583,19 @@ export class TeamService extends BaseService<ITeam> {
           }
           break;
         case 'member_count_min':
-          query.whereRaw(`(
-            SELECT COUNT(*)
-            FROM team_members tm
-            JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant
-            WHERE tm.team_id = t.team_id
-            AND tm.tenant = t.tenant
-            AND u.is_inactive = false
-          ) >= ?`, [value]);
+          query.whereRaw('(?) >= ?', [this.activeMemberCountSubquery(knex, tenant, 't'), value]);
           break;
         case 'member_count_max':
-          query.whereRaw(`(
-            SELECT COUNT(*)
-            FROM team_members tm
-            JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant
-            WHERE tm.team_id = t.team_id
-            AND tm.tenant = t.tenant
-            AND u.is_inactive = false
-          ) <= ?`, [value]);
+          query.whereRaw('(?) <= ?', [this.activeMemberCountSubquery(knex, tenant, 't'), value]);
           break;
         case 'project_id':
-          query.whereExists(function() {
-            this.select('*')
-                .from('project_team_assignments as pta')
-                .whereRaw('pta.team_id = t.team_id')
-                .andWhere('pta.project_id', value)
-                .andWhere('pta.tenant', '=', knex.ref('t.tenant'))
-                .andWhere('pta.is_active', true);
-          });
+          query.whereExists(
+            scopedDb.subquery('project_team_assignments as pta')
+              .select('*')
+              .whereRaw('pta.team_id = t.team_id')
+              .andWhere('pta.project_id', value)
+              .andWhere('pta.is_active', true)
+          );
           break;
         case 'search':
           query.where(function() {
@@ -1675,8 +1646,8 @@ export class TeamService extends BaseService<ITeam> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<string[]> {
-    const directChildren = await trx('team_hierarchy')
-      .where({ parent_team_id: teamId, tenant: context.tenant })
+    const directChildren = await tenantDb(trx, context.tenant).table('team_hierarchy')
+      .where('parent_team_id', teamId)
       .pluck('child_team_id');
 
     const allDescendants = [...directChildren];
@@ -1696,10 +1667,9 @@ export class TeamService extends BaseService<ITeam> {
     const { knex } = await this.getKnex();
 
     // Get current allocations
-    const allocations = await knex('project_team_assignments')
+    const allocations = await tenantDb(knex, context.tenant).table('project_team_assignments')
       .where({
         team_id: teamId,
-        tenant: context.tenant,
         is_active: true
       })
       .sum('allocation_percentage as total_allocation')
@@ -1746,10 +1716,11 @@ export class TeamService extends BaseService<ITeam> {
    */
   async getTeamMembers(teamId: string, context: ServiceContext): Promise<any[]> {
     const { knex } = await this.getKnex();
+    const scopedDb = tenantDb(knex, context.tenant);
 
     // Check team exists
-    const team = await knex('teams')
-      .where({ team_id: teamId, tenant: context.tenant })
+    const team = await tenantDb(knex, context.tenant).table('teams')
+      .where('team_id', teamId)
       .first();
     
     if (!team) {
@@ -1757,14 +1728,11 @@ export class TeamService extends BaseService<ITeam> {
     }
 
     // Get team members with user details
-    const members = await knex('team_members as tm')
-      .join('users as u', function() {
-        this.on('tm.user_id', '=', 'u.user_id')
-            .andOn('tm.tenant', '=', 'u.tenant');
-      })
+    const membersQuery = scopedDb.table('team_members as tm');
+    scopedDb.tenantJoin(membersQuery, 'users as u', 'tm.user_id', 'u.user_id');
+    const members = await membersQuery
       .where({
         'tm.team_id': teamId,
-        'tm.tenant': context.tenant,
         'u.is_inactive': false
       })
       .select(
@@ -1789,8 +1757,8 @@ export class TeamService extends BaseService<ITeam> {
 
     return withTransaction(knex, async (trx) => {
       // Check team exists
-      const team = await trx('teams')
-        .where({ team_id: teamId, tenant: context.tenant })
+      const team = await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', teamId)
         .first();
       
       if (!team) {
@@ -1798,8 +1766,8 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Check user exists
-      const user = await trx('users')
-        .where({ user_id: data.user_id, tenant: context.tenant, is_inactive: false })
+      const user = await tenantDb(trx, context.tenant).table('users')
+        .where({ user_id: data.user_id, is_inactive: false })
         .first();
       
       if (!user) {
@@ -1807,11 +1775,10 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Check if user is already a member
-      const existingMember = await trx('team_members')
+      const existingMember = await tenantDb(trx, context.tenant).table('team_members')
         .where({
           team_id: teamId,
-          user_id: data.user_id,
-          tenant: context.tenant
+          user_id: data.user_id
         })
         .first();
       
@@ -1820,7 +1787,7 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Add member
-      const [member] = await trx('team_members')
+      const [member] = await tenantDb(trx, context.tenant).table('team_members')
         .insert({
           team_id: teamId,
           user_id: data.user_id,
@@ -1848,8 +1815,8 @@ export class TeamService extends BaseService<ITeam> {
 
     return withTransaction(knex, async (trx) => {
       // Check team exists
-      const team = await trx('teams')
-        .where({ team_id: teamId, tenant: context.tenant })
+      const team = await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', teamId)
         .first();
       
       if (!team) {
@@ -1857,11 +1824,10 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Remove member
-      const deleted = await trx('team_members')
+      const deleted = await tenantDb(trx, context.tenant).table('team_members')
         .where({
           team_id: teamId,
-          user_id: userId,
-          tenant: context.tenant
+          user_id: userId
         })
         .delete();
       
@@ -1879,8 +1845,8 @@ export class TeamService extends BaseService<ITeam> {
 
     return withTransaction(knex, async (trx) => {
       // Check team exists
-      const team = await trx('teams')
-        .where({ team_id: teamId, tenant: context.tenant })
+      const team = await tenantDb(trx, context.tenant).table('teams')
+        .where('team_id', teamId)
         .first();
       
       if (!team) {
@@ -1888,9 +1854,9 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Validate all users exist
-      const users = await trx('users')
+      const users = await tenantDb(trx, context.tenant).table('users')
         .whereIn('user_id', data.user_ids)
-        .where({ tenant: context.tenant, is_inactive: false })
+        .where('is_inactive', false)
         .select('user_id', 'username', 'email', 'first_name', 'last_name');
       
       const foundUserIds = users.map(u => u.user_id);
@@ -1901,8 +1867,8 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Check existing members
-      const existingMembers = await trx('team_members')
-        .where({ team_id: teamId, tenant: context.tenant })
+      const existingMembers = await tenantDb(trx, context.tenant).table('team_members')
+        .where('team_id', teamId)
         .whereIn('user_id', data.user_ids)
         .pluck('user_id');
 
@@ -1924,7 +1890,7 @@ export class TeamService extends BaseService<ITeam> {
         created_at: new Date()
       }));
 
-      await trx('team_members').insert(membersToAdd);
+      await tenantDb(trx, context.tenant).table('team_members').insert(membersToAdd);
 
       // Return results
       const addedUsers = users.filter(u => newUserIds.includes(u.user_id));
@@ -1948,49 +1914,35 @@ export class TeamService extends BaseService<ITeam> {
    */
   async getTeamStatistics(context: ServiceContext): Promise<TeamStatsResponse> {
     const { knex } = await this.getKnex();
+    const teamsWithMembersQuery = tenantDb(knex, context.tenant).table('teams as t');
+    this.joinActiveMemberCounts(teamsWithMembersQuery, knex, context.tenant, 't');
 
     const [
       totalTeams,
       teamsWithMembers,
-      teamSizes,
-      largestTeam
+      teamSizes
     ] = await Promise.all([
       // Total teams
-      knex('teams')
-        .where({ tenant: context.tenant })
+      tenantDb(knex, context.tenant).table('teams')
         .count('* as count')
         .first(),
       
       // Teams with members
-      knex('teams as t')
-        .join('team_members as tm', function() {
-          this.on('t.team_id', '=', 'tm.team_id')
-              .andOn('t.tenant', '=', 'tm.tenant');
-        })
-        .where('t.tenant', context.tenant)
+      teamsWithMembersQuery
         .countDistinct('t.team_id as count')
         .first(),
       
       // Average team size
-      knex('team_members')
-        .where({ tenant: context.tenant })
-        .select('team_id')
-        .count('* as size')
-        .groupBy('team_id'),
-      
-      // Largest team
-      knex('team_members')
-        .where({ tenant: context.tenant })
-        .select('team_id')
-        .count('* as size')
-        .groupBy('team_id')
-        .orderBy('size', 'desc')
-        .first()
+      this.activeMemberCountsByTeamQuery(knex, context.tenant, 'size')
     ]);
 
     const avgTeamSize = teamSizes.length > 0
       ? teamSizes.reduce((sum, t) => sum + parseInt(t.size as string), 0) / teamSizes.length
       : 0;
+    const largestTeamSize = teamSizes.reduce(
+      (largest, t) => Math.max(largest, parseInt(t.size as string)),
+      0
+    );
 
     return {
       total_teams: parseInt(totalTeams?.count as string || '0'),
@@ -1998,7 +1950,7 @@ export class TeamService extends BaseService<ITeam> {
       teams_with_managers: parseInt(teamsWithMembers?.count as string || '0'),
       teams_with_members: parseInt(teamsWithMembers?.count as string || '0'),
       average_team_size: Math.round(avgTeamSize * 10) / 10,
-      largest_team_size: largestTeam ? parseInt(largestTeam.size as string) : 0,
+      largest_team_size: largestTeamSize,
       total_members: teamSizes.reduce((sum, t) => sum + parseInt(t.size as string), 0),
       teams_by_department: {},
       teams_by_location: {},
@@ -2023,11 +1975,11 @@ export class TeamService extends BaseService<ITeam> {
     return await knex.transaction(async (trx) => {
       // Verify both teams exist and belong to the tenant
       const [team, parentTeam] = await Promise.all([
-        trx('teams')
-          .where({ team_id: teamId, tenant: context.tenant })
+        tenantDb(trx, context.tenant).table('teams')
+          .where('team_id', teamId)
           .first(),
-        trx('teams')
-          .where({ team_id: parentTeamId, tenant: context.tenant })
+        tenantDb(trx, context.tenant).table('teams')
+          .where('team_id', parentTeamId)
           .first()
       ]);
 
@@ -2040,11 +1992,10 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Check if hierarchy already exists
-      const existingHierarchy = await trx('team_hierarchy')
+      const existingHierarchy = await tenantDb(trx, context.tenant).table('team_hierarchy')
         .where({
           child_team_id: teamId,
-          parent_team_id: parentTeamId,
-          tenant: context.tenant
+          parent_team_id: parentTeamId
         })
         .first();
 
@@ -2072,7 +2023,7 @@ export class TeamService extends BaseService<ITeam> {
         created_at: new Date()
       };
 
-      await trx('team_hierarchy').insert(hierarchy);
+      await tenantDb(trx, context.tenant).table('team_hierarchy').insert(hierarchy);
 
       return {
         child_team_id: teamId,
@@ -2089,11 +2040,8 @@ export class TeamService extends BaseService<ITeam> {
   async removeFromHierarchy(teamId: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
 
-    const result = await knex('team_hierarchy')
-      .where({
-        child_team_id: teamId,
-        tenant: context.tenant
-      })
+    const result = await tenantDb(knex, context.tenant).table('team_hierarchy')
+      .where('child_team_id', teamId)
       .delete();
 
     if (result === 0) {
@@ -2111,11 +2059,8 @@ export class TeamService extends BaseService<ITeam> {
     tenant: string
   ): Promise<boolean> {
     // Get all parent teams of the proposed parent
-    const parents = await trx('team_hierarchy')
-      .where({
-        child_team_id: parentId,
-        tenant
-      })
+    const parents = await tenantDb(trx, tenant).table('team_hierarchy')
+      .where('child_team_id', parentId)
       .pluck('parent_team_id');
 
     // If the child is in the parent's hierarchy, it would create a circle
@@ -2129,8 +2074,7 @@ export class TeamService extends BaseService<ITeam> {
     const { knex } = await this.getKnex();
     
     // Build base query
-    let query = knex('teams')
-      .where('teams.tenant', context.tenant);
+    let query = tenantDb(knex, context.tenant).table('teams');
 
     // Apply search filters
     if (filters.query) {
@@ -2145,8 +2089,8 @@ export class TeamService extends BaseService<ITeam> {
     }
 
     if (filters.manager_name) {
-      query = query
-        .leftJoin('users as manager', 'teams.manager_id', 'manager.user_id')
+      query = tenantDb(knex, context.tenant)
+        .tenantJoin(query, 'users as manager', 'teams.manager_id', 'manager.user_id', { type: 'left' })
         .where(knex.raw(`CONCAT(manager.first_name, ' ', manager.last_name)`), 'ilike', `%${filters.manager_name}%`);
     }
 
@@ -2160,7 +2104,7 @@ export class TeamService extends BaseService<ITeam> {
 
     // Get total count
     const countQuery = query.clone().clearSelect().count('* as count');
-    const [{ count }] = await countQuery;
+    const [{ count }] = (await countQuery) as Array<{ count: string }>;
 
     // Apply pagination
     const page = options?.page || 1;
@@ -2198,12 +2142,9 @@ export class TeamService extends BaseService<ITeam> {
 
     // Get all child teams recursively
     const getChildTeams = async (parentId: string): Promise<any[]> => {
-      const children = await knex('team_hierarchy as th')
-        .join('teams as t', 'th.child_team_id', 't.team_id')
-        .where({
-          'th.parent_team_id': parentId,
-          'th.tenant': context.tenant
-        })
+      const children = await tenantDb(knex, context.tenant).table('team_hierarchy as th')
+        .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'teams as t', 'th.child_team_id', 't.team_id'))
+        .where('th.parent_team_id', parentId)
         .select('t.*');
 
       const childrenWithSubTeams = await Promise.all(
@@ -2217,11 +2158,8 @@ export class TeamService extends BaseService<ITeam> {
     };
 
     // Get parent team if exists
-    const parentRelation = await knex('team_hierarchy')
-      .where({
-        child_team_id: teamId,
-        tenant: context.tenant
-      })
+    const parentRelation = await tenantDb(knex, context.tenant).table('team_hierarchy')
+      .where('child_team_id', teamId)
       .first();
 
     let parent: ITeam | null = null;

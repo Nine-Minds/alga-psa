@@ -2,17 +2,20 @@
  * Development seed to create test ITIL board with priorities
  * This is for development/testing only - actual ITIL standards come from migrations
  */
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
 
 exports.seed = async function(knex) {
-  const tenant = await knex('tenants').first();
-  if (!tenant) {
-    console.log('No tenant found, skipping ITIL board creation');
+  const context = await getFirstTenantSeedContext(knex, {
+    skipMessage: 'No tenant found, skipping ITIL board creation',
+  });
+  if (!context) {
     return;
   }
 
+  const { db, tenantId } = context;
+
   // Check if ITIL test board already exists
-  const itilBoard = await knex('boards')
-    .where('tenant', tenant.tenant)
+  const itilBoard = await db.table('boards')
     .where('board_name', 'ITIL Support')
     .first();
 
@@ -23,9 +26,9 @@ exports.seed = async function(knex) {
 
   // Create ITIL-enabled board for testing
   const boardId = knex.raw('gen_random_uuid()');
-  await knex('boards').insert({
+  await db.table('boards').insert({
     board_id: boardId,
-    tenant: tenant.tenant,
+    tenant: tenantId,
     board_name: 'ITIL Support',
     description: 'ITIL-compliant support board for testing',
     category_type: 'itil',
@@ -42,8 +45,7 @@ exports.seed = async function(knex) {
 
   console.log('Created ITIL Support board for testing');
 
-  const createdByUser = await knex('users')
-    .where('tenant', tenant.tenant)
+  const createdByUser = await db.table('users')
     .orderBy('created_at')
     .first();
 
@@ -60,16 +62,15 @@ exports.seed = async function(knex) {
 
   for (const stdPriority of itilStandardPriorities) {
     // Check if already exists in tenant priorities
-    const existing = await knex('priorities')
-      .where('tenant', tenant.tenant)
+    const existing = await db.table('priorities')
       .where('priority_name', stdPriority.priority_name)
       .where('item_type', stdPriority.item_type)
       .first();
 
     if (!existing) {
-      await knex('priorities').insert({
+      await db.table('priorities').insert({
         priority_id: knex.raw('gen_random_uuid()'),
-        tenant: tenant.tenant,
+        tenant: tenantId,
         priority_name: stdPriority.priority_name,
         color: stdPriority.color,
         order_number: stdPriority.order_number,

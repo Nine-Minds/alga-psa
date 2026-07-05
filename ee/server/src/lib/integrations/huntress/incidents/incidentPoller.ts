@@ -5,6 +5,7 @@
  */
 
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex } from '@/lib/db';
 import { runRmmSyncWithTransport } from '../../rmm/sync/syncOrchestration';
 import { createHuntressClient } from '../huntressClient';
@@ -32,9 +33,10 @@ export async function pollHuntressIncidents(
 ): Promise<HuntressPollResult> {
   const { tenantId, integrationId } = input;
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenantId);
 
-  const row = await knex('rmm_integrations')
-    .where({ tenant: tenantId, integration_id: integrationId, provider: 'huntress' })
+  const row = await db.table('rmm_integrations')
+    .where({ integration_id: integrationId, provider: 'huntress' })
     .first();
   if (!row || !row.is_active) {
     return { success: false, skipped: 'integration_not_found', processed: 0, failed: 0 };
@@ -48,8 +50,8 @@ export async function pollHuntressIncidents(
 
   const client = await createHuntressClient(tenantId);
   if (!client) {
-    await knex('rmm_integrations')
-      .where({ tenant: tenantId, integration_id: integrationId })
+    await db.table('rmm_integrations')
+      .where({ integration_id: integrationId })
       .update({
         sync_status: 'error',
         sync_error: 'Missing Huntress API credentials',
@@ -64,8 +66,8 @@ export async function pollHuntressIncidents(
     };
   }
 
-  await knex('rmm_integrations')
-    .where({ tenant: tenantId, integration_id: integrationId })
+  await db.table('rmm_integrations')
+    .where({ integration_id: integrationId })
     .update({ sync_status: 'syncing', updated_at: knex.fn.now() });
 
   let incidents;
@@ -82,8 +84,8 @@ export async function pollHuntressIncidents(
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    await knex('rmm_integrations')
-      .where({ tenant: tenantId, integration_id: integrationId })
+    await db.table('rmm_integrations')
+      .where({ integration_id: integrationId })
       .update({ sync_status: 'error', sync_error: message, updated_at: knex.fn.now() });
     logger.error('[Huntress] Incident list failed', { tenantId, error: message });
     return { success: false, processed: 0, failed: 0, error: message };
@@ -118,16 +120,16 @@ export async function pollHuntressIncidents(
 
   // Re-read settings before writing the cursor so config edits made while
   // the poll ran are not clobbered.
-  const latest = await knex('rmm_integrations')
-    .where({ tenant: tenantId, integration_id: integrationId })
+  const latest = await db.table('rmm_integrations')
+    .where({ integration_id: integrationId })
     .first('settings');
   const merged = {
     ...parseHuntressSettings(latest?.settings ?? row.settings),
     incidentCursor: cursor ?? undefined,
   };
 
-  await knex('rmm_integrations')
-    .where({ tenant: tenantId, integration_id: integrationId })
+  await db.table('rmm_integrations')
+    .where({ integration_id: integrationId })
     .update({
       settings: JSON.stringify(merged),
       sync_status: failure ? 'error' : 'completed',

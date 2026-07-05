@@ -707,7 +707,8 @@
       "refreshStatusFailed": "Nie udało się odświeżyć stanu domeny",
       "domainRemovalScheduled": "Zaplanowano usunięcie domeny",
       "domainRemovalScheduledWithClear": "Zaplanowano usunięcie domeny i wyczyszczono adres nadawcy zgłoszeń",
-      "removeDomainFailed": "Nie udało się usunąć domeny"
+      "removeDomainFailed": "Nie udało się usunąć domeny",
+      "testOutboundFailed": "Nie udało się przetestować poczty wychodzącej"
     },
     "tabs": {
       "inboundEmail": "Poczta przychodząca",
@@ -741,11 +742,27 @@
         "usernamePlaceholder": "twoj-email@przyklad.pl",
         "passwordLabel": "Hasło",
         "passwordPlaceholder": "Wprowadź hasło",
+        "authHint": "Pozostaw nazwę użytkownika i hasło puste, jeśli przekaźnik akceptuje pocztę bez uwierzytelniania.",
         "fromLabel": "Adres nadawcy",
         "fromPlaceholder": "noreply@przyklad.pl",
         "fromHelp": "Domyślny adres nadawcy dla poczty wychodzącej.",
+        "security": {
+          "title": "Bezpieczeństwo połączenia",
+          "secure": "Użyj niejawnego TLS (SSL przy połączeniu, zwykle port 465)",
+          "requireTls": "Wymagaj uaktualnienia STARTTLS (porty 587 / 25)",
+          "verifyCert": "Weryfikuj certyfikat serwera",
+          "verifyCertHint": "Wyłącz tę opcję tylko dla zaufanego przekaźnika we własnej sieci używającego certyfikatu z podpisem własnym."
+        },
         "savingButton": "Zapisywanie…",
-        "saveButton": "Zapisz ustawienia SMTP"
+        "saveButton": "Zapisz ustawienia SMTP",
+        "test": {
+          "title": "Przetestuj pocztę wychodzącą",
+          "description": "Zapisuje bieżące ustawienia, a następnie weryfikuje połączenie z dostawcą. Wpisz adres, aby wysłać także wiadomość testową.",
+          "recipientLabel": "Wyślij test do (opcjonalnie)",
+          "recipientPlaceholder": "ty@przyklad.com",
+          "testingButton": "Testowanie...",
+          "runButton": "Testuj połączenie"
+        }
       },
       "ticketingFrom": {
         "title": "Adres nadawcy zgłoszeń",
@@ -837,7 +854,13 @@
       "missingHelp": "Nie wykryliśmy jeszcze tego rekordu w DNS. Sprawdź, czy istnieje u Twojego dostawcy DNS z dokładną wartością pokazaną powyżej.",
       "mismatchHelp": "Rekord DNS istnieje, ale wartość nie pasuje do tego, czego oczekuje Resend.",
       "matchedHelp": "Wykryta wartość pasuje do oczekiwanej.",
-      "unknownHelp": "Nie sprawdziliśmy jeszcze DNS. Sprawdź DNS ponownie, aby uruchomić weryfikację."
+      "unknownHelp": "Nie sprawdziliśmy jeszcze DNS. Sprawdź DNS ponownie, aby uruchomić weryfikację.",
+      "hostLabel": "Host",
+      "fqdnLabel": "Pełna nazwa",
+      "valueLabel": "Wartość",
+      "copyHostAriaLabel": "Kopiuj host",
+      "copyFqdnAriaLabel": "Kopiuj pełną nazwę",
+      "hostHint": "Wskazówka: u swojego dostawcy DNS wpisz tylko Host pokazany powyżej. Większość dostawców (Namecheap, GoDaddy, Cloudflare i inni) automatycznie dodaje „{{domain}}”. Jeśli wkleisz pełną nazwę, domena zostanie powtórzona (…{{domain}}.{{domain}}) i rekord nigdy nie zostanie zweryfikowany."
     }
   },
   "inboundRules": {

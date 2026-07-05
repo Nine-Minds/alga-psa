@@ -8,7 +8,7 @@
 
 import { v4 as uuid4 } from 'uuid';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { TaxSource } from '@alga-psa/types';
 import { parseCSV } from '@alga-psa/core';
 import {
@@ -161,6 +161,8 @@ export class CSVTaxImportService {
       const invoiceResults: SingleInvoiceUpdateResult[] = [];
 
       await knex.transaction(async (trx: any) => {
+        const scopedDb = tenantDb(trx, tenant);
+
         for (const [invoiceNo, taxData] of aggregatedTax) {
           const invoiceInfo = validation.matchedInvoices.get(invoiceNo);
           if (!invoiceInfo) continue;
@@ -192,7 +194,7 @@ export class CSVTaxImportService {
         // 5. Record the import
         const summary = this.calculateSummary(invoiceResults);
 
-        await trx('external_tax_imports').insert({
+        await scopedDb.table('external_tax_imports').insert({
           import_id: importId,
           tenant,
           invoice_id: null, // Batch import - no single invoice
@@ -263,10 +265,11 @@ export class CSVTaxImportService {
     taxRate?: number
   ): Promise<SingleInvoiceUpdateResult> {
     const { invoiceId, invoiceNumber } = invoiceInfo;
+    const scopedDb = tenantDb(knex, tenant);
 
     // 1. Get current charges and their tax
-    const charges = await knex('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
+    const charges = await scopedDb.table('invoice_charges')
+      .where({ invoice_id: invoiceId })
       .select('item_id', 'net_amount', 'tax_amount')
       .orderBy('created_at')
       .orderBy('item_id');
@@ -319,8 +322,8 @@ export class CSVTaxImportService {
         distributedTax += chargeTax;
       }
 
-      await knex('invoice_charges')
-        .where({ item_id: charge.item_id, tenant })
+      await scopedDb.table('invoice_charges')
+        .where({ item_id: charge.item_id })
         .update({
           external_tax_amount: chargeTax,
           external_tax_code: taxCode ?? null,
@@ -332,16 +335,16 @@ export class CSVTaxImportService {
     }
 
     // 5. Update invoice tax_source to 'external'
-    await knex('invoices')
-      .where({ invoice_id: invoiceId, tenant })
+    await scopedDb.table('invoices')
+      .where({ invoice_id: invoiceId })
       .update({
         tax_source: 'external' as TaxSource,
         updated_at: knex.fn.now()
       });
 
     // 6. Recalculate invoice total
-    const newTotals = await knex('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
+    const newTotals = await scopedDb.table('invoice_charges')
+      .where({ invoice_id: invoiceId })
       .select(
         knex.raw('COALESCE(SUM(net_amount), 0) as subtotal'),
         knex.raw('COALESCE(SUM(COALESCE(external_tax_amount, tax_amount, 0)), 0) as tax')
@@ -350,8 +353,8 @@ export class CSVTaxImportService {
 
     const newTotal = Number(newTotals?.subtotal ?? 0) + Number(newTotals?.tax ?? 0);
 
-    await knex('invoices')
-      .where({ invoice_id: invoiceId, tenant })
+    await scopedDb.table('invoices')
+      .where({ invoice_id: invoiceId })
       .update({
         total_amount: newTotal,
         updated_at: knex.fn.now()
@@ -450,8 +453,8 @@ export class CSVTaxImportService {
       return [];
     }
 
-    const imports = await knex('external_tax_imports')
-      .where({ tenant, adapter_type: 'quickbooks_csv' })
+    const imports = await tenantDb(knex, tenant).table('external_tax_imports')
+      .where({ adapter_type: 'quickbooks_csv' })
       .orderBy('imported_at', 'desc')
       .limit(limit)
       .select('*');
@@ -485,8 +488,8 @@ export class CSVTaxImportService {
 
     try {
       // Get the import record
-      const importRecord = await knex('external_tax_imports')
-        .where({ import_id: importId, tenant })
+      const importRecord = await tenantDb(knex, tenant).table('external_tax_imports')
+        .where({ import_id: importId })
         .first();
 
       if (!importRecord) {
@@ -501,16 +504,17 @@ export class CSVTaxImportService {
       let invoicesReverted = 0;
 
       await knex.transaction(async (trx: any) => {
+        const scopedDb = tenantDb(trx, tenant);
+
         // Get invoice IDs from numbers
-        const invoices = await trx('invoices')
-          .where({ tenant })
+        const invoices = await scopedDb.table('invoices')
           .whereIn('invoice_number', invoiceNumbers)
           .select('invoice_id');
 
         for (const invoice of invoices) {
           // Clear external tax from charges
-          await trx('invoice_charges')
-            .where({ invoice_id: invoice.invoice_id, tenant })
+          await scopedDb.table('invoice_charges')
+            .where({ invoice_id: invoice.invoice_id })
             .update({
               external_tax_amount: null,
               external_tax_code: null,
@@ -519,16 +523,16 @@ export class CSVTaxImportService {
             });
 
           // Revert invoice tax_source
-          await trx('invoices')
-            .where({ invoice_id: invoice.invoice_id, tenant })
+          await scopedDb.table('invoices')
+            .where({ invoice_id: invoice.invoice_id })
             .update({
               tax_source: 'pending_external' as TaxSource,
               updated_at: trx.fn.now()
             });
 
           // Recalculate invoice total
-          const totals = await trx('invoice_charges')
-            .where({ invoice_id: invoice.invoice_id, tenant })
+          const totals = await scopedDb.table('invoice_charges')
+            .where({ invoice_id: invoice.invoice_id })
             .select(
               trx.raw('COALESCE(SUM(net_amount), 0) as subtotal'),
               trx.raw('COALESCE(SUM(tax_amount), 0) as tax')
@@ -537,8 +541,8 @@ export class CSVTaxImportService {
 
           const newTotal = Number(totals?.subtotal ?? 0) + Number(totals?.tax ?? 0);
 
-          await trx('invoices')
-            .where({ invoice_id: invoice.invoice_id, tenant })
+          await scopedDb.table('invoices')
+            .where({ invoice_id: invoice.invoice_id })
             .update({
               total_amount: newTotal,
               updated_at: trx.fn.now()
@@ -548,8 +552,8 @@ export class CSVTaxImportService {
         }
 
         // Update import status
-        await trx('external_tax_imports')
-          .where({ import_id: importId, tenant })
+        await scopedDb.table('external_tax_imports')
+          .where({ import_id: importId })
           .update({
             import_status: 'rolled_back',
             metadata: {

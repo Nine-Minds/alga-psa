@@ -211,6 +211,34 @@ const COPY = {
     textRequestButton: 'Zg\u0142o\u015b inny termin',
   },
 };
+SUBJECTS.pt = 'Atualização da solicitação de agendamento - {{serviceName}}';
+COPY.pt = {
+  headerLabel: 'Atualização da solicitação de agendamento',
+  headerSub: 'Sobre sua solicitação recente de agendamento',
+  greeting: 'Olá{{#if requesterName}} {{requesterName}}{{/if}},',
+  intro: 'Agradecemos seu interesse em agendar um horário conosco. Infelizmente, não conseguimos atender sua solicitação no horário solicitado.',
+  detailsTitle: 'Solicitação original',
+  service: 'Serviço:',
+  requestedDate: 'Data solicitada:',
+  requestedTime: 'Horário solicitado:',
+  reference: 'Referência:',
+  reasonTitle: 'Motivo',
+  helpTitle: 'Ainda queremos ajudar',
+  helpBody: 'Pedimos desculpas por qualquer inconveniente. Recomendamos que você envie uma nova solicitação para outra data e horário que se ajuste melhor à nossa disponibilidade.',
+  requestButton: 'Solicitar outro horário',
+  contactMsg: 'Se tiver dúvidas ou quiser ajuda para encontrar um horário disponível, entre em contato pelo email {{contactEmail}}{{#if contactPhone}} ou ligue para {{contactPhone}}{{/if}}. Nossa equipe está pronta para ajudar você a encontrar um horário adequado.',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Atualização da solicitação de agendamento',
+  textDetailsHeader: 'SOLICITAÇÃO ORIGINAL',
+  textService: 'Serviço',
+  textRequestedDate: 'Data solicitada',
+  textRequestedTime: 'Horário solicitado',
+  textReference: 'Referência',
+  textReasonHeader: 'MOTIVO',
+  textHelpHeader: 'AINDA QUEREMOS AJUDAR',
+  textRequestButton: 'Solicitar outro horário',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

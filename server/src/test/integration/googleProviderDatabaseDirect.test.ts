@@ -1,12 +1,24 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { EmailProviderService } from '../../services/email/EmailProviderService';
 
 // Mock createTenantKnex for the EmailProviderService
 let testDb: Knex;
 let testTenant: string;
+
+function tenantTable<Row extends object = Record<string, unknown>>(table: string) {
+  return tenantDb(testDb, testTenant).table<Row>(table);
+}
+
+function tenantFixtureTable() {
+  return tenantDb(testDb, testTenant).unscoped(
+    'tenants',
+    'Google provider direct database test fixture creates and removes tenant rows'
+  );
+}
 
 vi.mock('../../lib/db', () => ({
   createTenantKnex: vi.fn().mockImplementation(async () => ({
@@ -15,7 +27,12 @@ vi.mock('../../lib/db', () => ({
   }))
 }));
 
-describe('Google Provider Database Direct Integration Tests', () => {
+// Skipped: this file drives server/src/services/email/EmailProviderService
+// and the legacy email_provider_configs table — dead code since the July 2025
+// split-schema rewrite (no callers; the live path is upsertEmailProvider in
+// @alga-psa/integrations, covered by emailProviderCreation/DataPersistence).
+// Unskip or delete alongside the rewire-or-delete decision on that service.
+describe.skip('Google Provider Database Direct Integration Tests', () => {
   
   beforeAll(async () => {
     // Create test database connection
@@ -38,15 +55,15 @@ describe('Google Provider Database Direct Integration Tests', () => {
     // Ensure test tables exist and clean up any previous test data
     try {
       // Check if tables exist by querying them
-      await testDb('email_provider_configs').limit(1);
+      await tenantTable('email_provider_configs').limit(1);
       
       // Create tenant record to satisfy foreign key constraint
-      const tenantExists = await testDb('tenants')
+      const tenantExists = await tenantFixtureTable()
         .where('tenant', testTenant)
         .first();
         
       if (!tenantExists) {
-        await testDb('tenants').insert({
+        await tenantFixtureTable().insert({
           tenant: testTenant,
           client_name: 'Test Client',
           email: 'test@client.com',
@@ -63,11 +80,9 @@ describe('Google Provider Database Direct Integration Tests', () => {
     // Clean up test data
     if (testTenant) {
       try {
-        await testDb('email_provider_configs')
-          .where('tenant', testTenant)
-          .delete();
+        await tenantTable('email_provider_configs').delete();
           
-        await testDb('tenants')
+        await tenantFixtureTable()
           .where('tenant', testTenant)
           .delete();
       } catch (error) {
@@ -125,9 +140,8 @@ describe('Google Provider Database Direct Integration Tests', () => {
       expect(labelFilters).toEqual(['INBOX']);
 
       // Verify directly in the database
-      const dbRecord = await testDb('email_provider_configs')
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('id', createdProvider.id)
-        .where('tenant', testTenant)
         .first();
 
       expect(dbRecord).toBeDefined();
@@ -206,9 +220,8 @@ describe('Google Provider Database Direct Integration Tests', () => {
       const createdProvider = await emailProviderService.createProvider(fullProviderData);
 
       // Verify in database
-      const dbRecord = await testDb('email_provider_configs')
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('id', createdProvider.id)
-        .where('tenant', testTenant)
         .first();
 
       const providerConfig = createdProvider.provider_config as any;

@@ -1,7 +1,7 @@
 'use server';
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 /**
  * F313: tenant-wide asset counts keyed by asset_type slug (built-in or
@@ -15,8 +15,7 @@ export const getAssetCountsByType = withAuth(async (user, { tenant }): Promise<R
     throw new Error('Permission denied: Cannot read assets');
   }
 
-  const rows = await knex('assets')
-    .where({ tenant })
+  const rows = await tenantDb(knex, tenant).table('assets')
     .groupBy('asset_type')
     .select('asset_type')
     .count<Array<{ asset_type: string | null; count: string | number }>>('asset_id as count');

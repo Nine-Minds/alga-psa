@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -16,14 +17,18 @@ const TEST_CONFIG = {
   baseUrl: resolvePlaywrightBaseUrl(),
 };
 
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
 async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: string): Promise<{
   boardId: string;
   statusId: string;
   priorityId: string;
 }> {
-  const existingBoard = await db('boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
+  const existingBoard = await tenantTable(db, tenantId, 'boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
   if (!existingBoard?.board_id) {
-    await db('boards').insert({
+    await tenantTable(db, tenantId, 'boards').insert({
       tenant: tenantId,
       board_id: uuidv4(),
       board_name: 'Email',
@@ -35,11 +40,11 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
     });
   }
 
-  const existingOpenStatus = await db('statuses')
+  const existingOpenStatus = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, status_type: 'ticket', is_closed: false })
     .first<{ status_id: string }>('status_id');
   if (!existingOpenStatus?.status_id) {
-    await db('statuses').insert({
+    await tenantTable(db, tenantId, 'statuses').insert({
       tenant: tenantId,
       status_id: uuidv4(),
       name: 'Open',
@@ -52,11 +57,11 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
     });
   }
 
-  const existingClosedStatus = await db('statuses')
+  const existingClosedStatus = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, status_type: 'ticket', is_closed: true })
     .first<{ status_id: string }>('status_id');
   if (!existingClosedStatus?.status_id) {
-    await db('statuses').insert({
+    await tenantTable(db, tenantId, 'statuses').insert({
       tenant: tenantId,
       status_id: uuidv4(),
       name: 'Closed',
@@ -69,11 +74,11 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
     });
   }
 
-  const existingPriority = await db('priorities')
+  const existingPriority = await tenantTable(db, tenantId, 'priorities')
     .where({ tenant: tenantId })
     .first<{ priority_id: string }>('priority_id');
   if (!existingPriority?.priority_id) {
-    await db('priorities').insert({
+    await tenantTable(db, tenantId, 'priorities').insert({
       tenant: tenantId,
       priority_id: uuidv4(),
       priority_name: 'Normal',
@@ -85,8 +90,8 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
     });
   }
 
-  const board = await db('boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
-  const statusOpen = await db('statuses')
+  const board = await tenantTable(db, tenantId, 'boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
+  const statusOpen = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, is_closed: false })
     .andWhere(function () {
       this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
@@ -94,7 +99,7 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
     .orderBy('is_default', 'desc')
     .orderBy('order_number', 'asc')
     .first<{ status_id: string }>('status_id');
-  const priority = await db('priorities')
+  const priority = await tenantTable(db, tenantId, 'priorities')
     .where({ tenant: tenantId })
     .orderBy('order_number', 'asc')
     .first<{ priority_id: string }>('priority_id');
@@ -107,13 +112,13 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
   const statusId = statusOpen.status_id;
   const priorityId = priority.priority_id;
 
-  const existingDefaults = await db('inbound_ticket_defaults')
+  const existingDefaults = await tenantTable(db, tenantId, 'inbound_ticket_defaults')
     .where({ tenant: tenantId, is_active: true })
     .whereNotNull('entered_by')
     .first<{ id: string }>('id');
 
   if (!existingDefaults?.id) {
-    await db('inbound_ticket_defaults').insert({
+    await tenantTable(db, tenantId, 'inbound_ticket_defaults').insert({
       id: uuidv4(),
       tenant: tenantId,
       short_name: `pw-defaults-${uuidv4().slice(0, 8)}`,
@@ -138,7 +143,7 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
 
 async function createContact(db: Knex, tenantId: string, clientId: string, email: string): Promise<string> {
   const contactId = uuidv4();
-  await db('contacts').insert({
+  await tenantTable(db, tenantId, 'contacts').insert({
     tenant: tenantId,
     contact_name_id: contactId,
     full_name: 'Playwright Contact',
@@ -160,7 +165,7 @@ async function insertTicket(db: Knex, params: {
   priorityId: string;
   title: string;
 }) {
-  await db('tickets').insert({
+  await tenantTable(db, params.tenant, 'tickets').insert({
     tenant: params.tenant,
     ticket_id: params.ticketId,
     ticket_number: `PW-${Date.now()}`,
@@ -194,7 +199,7 @@ async function attachDocumentToTicket(db: Knex, params: {
   const storagePath = `test/${params.tenant}/${fileId}`;
 
   await db.transaction(async (trx) => {
-    await trx('external_files').insert({
+    await tenantTable(trx, params.tenant, 'external_files').insert({
       tenant: params.tenant,
       file_id: fileId,
       file_name: params.fileName,
@@ -207,7 +212,7 @@ async function attachDocumentToTicket(db: Knex, params: {
       updated_at: now,
     });
 
-    await trx('documents').insert({
+    await tenantTable(trx, params.tenant, 'documents').insert({
       tenant: params.tenant,
       document_id: documentId,
       document_name: params.fileName,
@@ -223,7 +228,7 @@ async function attachDocumentToTicket(db: Knex, params: {
       file_size: params.fileSize,
     });
 
-    await trx('document_associations').insert({
+    await tenantTable(trx, params.tenant, 'document_associations').insert({
       tenant: params.tenant,
       association_id: uuidv4(),
       document_id: documentId,
@@ -316,7 +321,7 @@ test('New ticket: email attachments are stored and appear in Ticket Documents', 
     await openTicketDocumentsTab(page, ticketUrl);
     await expect(page.getByText(fileName).first()).toBeVisible({ timeout: 30_000 });
 
-    const association = await db('document_associations').where({ tenant: tenantId, entity_type: 'ticket', entity_id: ticketId }).first();
+    const association = await tenantTable(db, tenantId, 'document_associations').where({ tenant: tenantId, entity_type: 'ticket', entity_id: ticketId }).first();
     expect(association).toBeDefined();
   } finally {
     await db.destroy().catch(() => undefined);
@@ -703,10 +708,10 @@ test('Duplicate inbound replay does not create duplicate embedded-image or .eml 
       fileSize: Buffer.from('From: sender@example.com\r\n\r\nsource', 'utf-8').length,
     });
 
-    const embeddedRows = await db('documents')
+    const embeddedRows = await tenantTable(db, tenantId, 'documents')
       .where({ tenant: tenantId, document_name: embeddedFileName })
       .select('document_id');
-    const emlRows = await db('documents')
+    const emlRows = await tenantTable(db, tenantId, 'documents')
       .where({ tenant: tenantId, document_name: emlFileName })
       .select('document_id');
 

@@ -1,20 +1,22 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { IInvoiceTemplate } from '@alga-psa/types';
 
 export async function getInvoiceTemplates(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string
 ): Promise<IInvoiceTemplate[]> {
+  const db = tenantDb(knexOrTrx, tenant);
+
   const [tenantTemplates, standardTemplates, tenantAssignment] = await Promise.all([
-    knexOrTrx('invoice_templates')
-      .where({ tenant })
+    db.table('invoice_templates')
       .select('template_id', 'name', 'version', 'is_default', 'templateAst', 'created_at', 'updated_at'),
-    knexOrTrx('standard_invoice_templates')
+    db.table('standard_invoice_templates')
       .select('template_id', 'name', 'version', 'standard_invoice_template_code', 'templateAst', 'is_default', 'created_at', 'updated_at')
       .orderBy('name'),
-    knexOrTrx('invoice_template_assignments')
+    db.table('invoice_template_assignments')
       .select('template_source', 'standard_invoice_template_code', 'invoice_template_id')
-      .where({ tenant, scope_type: 'tenant' })
+      .where({ scope_type: 'tenant' })
       .whereNull('scope_id')
       .first()
   ]);
@@ -69,5 +71,8 @@ export async function setClientTemplate(
   const normalizedTemplateId =
     typeof templateId === 'string' && templateId.trim().length === 0 ? null : templateId;
 
-  await knexOrTrx('clients').where({ client_id: clientId, tenant }).update({ invoice_template_id: normalizedTemplateId });
+  await tenantDb(knexOrTrx, tenant)
+    .table('clients')
+    .where({ client_id: clientId })
+    .update({ invoice_template_id: normalizedTemplateId });
 }

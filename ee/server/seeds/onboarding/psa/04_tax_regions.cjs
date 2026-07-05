@@ -1,4 +1,6 @@
 exports.seed = async function (knex, tenantId) {
+    const { tenantDb } = await import('@alga-psa/db');
+
     // Use provided tenantId or fall back to first tenant
     if (!tenantId) {
         const tenant = await knex('tenants').select('tenant').first();
@@ -9,13 +11,15 @@ exports.seed = async function (knex, tenantId) {
         tenantId = tenant.tenant;
     }
 
+    const db = tenantDb(knex, tenantId);
+
     // Check if default tax region already exists
-    const existingRegion = await knex('tax_regions')
-        .where({ tenant: tenantId, region_code: 'DEFAULT' })
+    const existingRegion = await db.table('tax_regions')
+        .where({ region_code: 'DEFAULT' })
         .first();
 
     if (!existingRegion) {
-        await knex('tax_regions').insert({
+        await db.table('tax_regions').insert({
             tenant: tenantId,
             region_code: 'DEFAULT',
             region_name: 'Default Tax Region',

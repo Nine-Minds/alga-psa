@@ -522,6 +522,17 @@
       "5": "Venerdì",
       "6": "Sabato",
       "7": "Domenica"
+    },
+    "reviewError": "Impossibile verificare l’impatto di questa modifica",
+    "reviewing": "Verifica dell’impatto…",
+    "confirmSave": "Conferma e salva",
+    "reviewChanges": "Esamina le modifiche",
+    "impact": {
+      "title": "Verifica prima di applicare",
+      "periods": "{{count}} periodo/i di addebito imminenti su {{lines}} riga/righe di contratto verranno ricostruiti in base al nuovo programma.",
+      "from": "Ricostruito a partire dal {{date}}.",
+      "billedPreserved": "Gli addebiti già fatturati vengono conservati e non cambieranno.",
+      "confirmHint": "Scegli «Conferma e salva» per applicare."
     }
   },
   "clientContractAssignment": {
