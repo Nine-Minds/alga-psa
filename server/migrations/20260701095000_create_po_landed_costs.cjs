@@ -6,6 +6,8 @@
  * not-yet-consumed serialized units from that PO.
  */
 
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 exports.up = async function up(knex) {
   await knex.schema.createTable('po_landed_costs', (t) => {
     t.uuid('tenant').notNullable();
@@ -28,6 +30,10 @@ exports.up = async function up(knex) {
       .onDelete('CASCADE');
     t.index(['tenant', 'po_id'], 'idx_po_landed_costs_po');
   });
+
+  // Distribute on Citus (colocated with tenants).
+  await ensureTenantDistribution(knex, 'po_landed_costs');
+
   await knex.raw(`
     ALTER TABLE po_landed_costs ADD CONSTRAINT po_landed_costs_type_check
       CHECK (cost_type = ANY (ARRAY['freight'::text, 'duty'::text, 'other'::text]))
@@ -42,3 +48,5 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('po_landed_costs');
 };
+
+exports.config = { transaction: false };

@@ -2,6 +2,8 @@
  * Inventory module — in-transit transfers + RMA cases (standard + advance-replacement).
  */
 
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 exports.up = async function up(knex) {
   await knex.schema.createTable('stock_transfers', (table) => {
     table.uuid('tenant').notNullable();
@@ -96,6 +98,11 @@ exports.up = async function up(knex) {
   `);
   await knex.raw(`CREATE INDEX idx_rma_cases_status ON rma_cases (tenant, status)`);
   await knex.raw(`CREATE INDEX idx_rma_cases_due ON rma_cases (tenant, dead_unit_due_date)`);
+
+  // Distribute on Citus (colocated with tenants); transfers before transfer_lines.
+  await ensureTenantDistribution(knex, 'stock_transfers');
+  await ensureTenantDistribution(knex, 'stock_transfer_lines');
+  await ensureTenantDistribution(knex, 'rma_cases');
 };
 
 exports.down = async function down(knex) {
@@ -106,3 +113,5 @@ exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('stock_transfer_lines');
   await knex.schema.dropTableIfExists('stock_transfers');
 };
+
+exports.config = { transaction: false };

@@ -11,6 +11,8 @@
  * to avoid circular table-creation ordering; the order tables are created in later migrations.
  */
 
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 exports.up = async function up(knex) {
   // --- product_inventory_settings ---
   await knex.schema.createTable('product_inventory_settings', (table) => {
@@ -164,6 +166,14 @@ exports.up = async function up(knex) {
     table.foreign(['tenant', 'kit_service_id']).references(['tenant', 'service_id']).inTable('service_catalog').onDelete('CASCADE');
     table.foreign(['tenant', 'component_service_id']).references(['tenant', 'service_id']).inTable('service_catalog').onDelete('RESTRICT');
   });
+
+  // Distribute on Citus (colocated with tenants), FK-parent-first
+  // (stock_units before stock_movements, which references it).
+  await ensureTenantDistribution(knex, 'stock_levels');
+  await ensureTenantDistribution(knex, 'stock_units');
+  await ensureTenantDistribution(knex, 'stock_movements');
+  await ensureTenantDistribution(knex, 'product_inventory_settings');
+  await ensureTenantDistribution(knex, 'kit_components');
 };
 
 exports.down = async function down(knex) {
@@ -181,3 +191,5 @@ exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('stock_levels');
   await knex.schema.dropTableIfExists('product_inventory_settings');
 };
+
+exports.config = { transaction: false };

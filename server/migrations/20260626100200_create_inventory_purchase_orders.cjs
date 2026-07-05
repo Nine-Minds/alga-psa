@@ -4,6 +4,8 @@
  * patterned after invoice/ticket/project/quote numbering.
  */
 
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 exports.up = async function up(knex) {
   await knex.schema.createTable('purchase_orders', (table) => {
     table.uuid('tenant').notNullable();
@@ -59,6 +61,10 @@ exports.up = async function up(knex) {
 
   await knex.raw(`CREATE INDEX idx_po_lines_po ON purchase_order_lines (tenant, po_id)`);
 
+  // Distribute on Citus (colocated with tenants), parent-first.
+  await ensureTenantDistribution(knex, 'purchase_orders');
+  await ensureTenantDistribution(knex, 'purchase_order_lines');
+
   // Seed PURCHASE_ORDER numbering for all existing tenants (prefix PO, padding 5)
   await knex.raw(`
     INSERT INTO next_number (tenant, entity_type, last_number, initial_value, prefix, padding_length)
@@ -74,3 +80,5 @@ exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('purchase_order_lines');
   await knex.schema.dropTableIfExists('purchase_orders');
 };
+
+exports.config = { transaction: false };

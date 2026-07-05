@@ -5,10 +5,15 @@
  * Deliberately light (D9): no GL, no payment rails — mark-paid is manual.
  */
 
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 const RESOURCE = 'vendor_bill';
 const ACTIONS = ['create', 'read', 'update', 'delete'];
 
 exports.up = async function up(knex) {
+  const citusRes = await knex.raw("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citus') AS enabled");
+  const isCitus = Boolean(citusRes.rows?.[0]?.enabled);
+
   await knex.schema.createTable('vendor_bills', (t) => {
     t.uuid('tenant').notNullable();
     t.uuid('bill_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
@@ -31,10 +36,8 @@ exports.up = async function up(knex) {
     t.foreign(['tenant', 'vendor_id'], 'fk_vendor_bills_vendor')
       .references(['tenant', 'vendor_id'])
       .inTable('vendors');
-    t.foreign(['tenant', 'po_id'], 'fk_vendor_bills_po')
-      .references(['tenant', 'po_id'])
-      .inTable('purchase_orders')
-      .onDelete('SET NULL');
+    // fk_vendor_bills_po is added after distribution below: a composite
+    // (tenant, po_id) SET NULL FK is invalid on a distributed table.
     t.index(['tenant', 'vendor_id'], 'idx_vendor_bills_vendor');
     t.index(['tenant', 'status'], 'idx_vendor_bills_status');
     t.index(['tenant', 'po_id'], 'idx_vendor_bills_po');
@@ -43,6 +46,17 @@ exports.up = async function up(knex) {
     ALTER TABLE vendor_bills ADD CONSTRAINT vendor_bills_status_check
       CHECK (status = ANY (ARRAY['draft'::text, 'open'::text, 'paid'::text, 'void'::text]))
   `);
+
+  // Distribute on Citus (colocated with tenants), then add the PO back-reference.
+  // On Citus the FK degrades to NO ACTION (SET NULL on the tenant dist key is
+  // rejected) — same treatment as 20260611150000_fix_tenant_nulling_foreign_keys.cjs.
+  await ensureTenantDistribution(knex, 'vendor_bills');
+  await knex.schema.alterTable('vendor_bills', (t) => {
+    t.foreign(['tenant', 'po_id'], 'fk_vendor_bills_po')
+      .references(['tenant', 'po_id'])
+      .inTable('purchase_orders')
+      .onDelete(isCitus ? 'NO ACTION' : 'SET NULL');
+  });
 
   await knex.schema.createTable('vendor_bill_lines', (t) => {
     t.uuid('tenant').notNullable();
@@ -67,6 +81,9 @@ exports.up = async function up(knex) {
     t.index(['tenant', 'bill_id'], 'idx_vendor_bill_lines_bill');
   });
   await knex.raw(`ALTER TABLE vendor_bill_lines ADD CONSTRAINT vendor_bill_lines_qty_check CHECK (quantity > 0)`);
+
+  // Distribute on Citus (colocated with tenants), after its parent vendor_bills.
+  await ensureTenantDistribution(knex, 'vendor_bill_lines');
 
   // Permissions (pattern of 20260626100600_add_inventory_permissions.cjs).
   const tenants = await knex('tenants').select('tenant');
@@ -119,3 +136,5 @@ exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('vendor_bill_lines');
   await knex.schema.dropTableIfExists('vendor_bills');
 };
+
+exports.config = { transaction: false };

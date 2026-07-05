@@ -14,11 +14,25 @@ exports.up = async function up(knex) {
   // No ON DELETE SET NULL: on a composite FK Postgres nulls BOTH columns, and
   // tenant is NOT NULL — a quote delete would fail with a confusing not-null
   // violation. The plain FK blocks deleting a quote with a linked SO, clearly.
-  await knex.schema.alterTable('sales_orders', (table) => {
-    table.foreign(['tenant', 'quote_id'], 'fk_sales_orders_quote')
-      .references(['tenant', 'quote_id'])
-      .inTable('quotes');
-  });
+  //
+  // On Citus, sales_orders is a distributed table but `quotes` is not distributed,
+  // so the FK is rejected ("referenced table must be a distributed or reference
+  // table"). Add the FK only when it is valid; otherwise the quote link stays
+  // logical and the unique index below still enforces quote->SO idempotency.
+  // Mirrors server/migrations/20250613190110_add_location_to_tickets.cjs.
+  const { rows: citusRows } = await knex.raw("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citus') AS enabled");
+  let canAddQuoteFk = true;
+  if (Boolean(citusRows?.[0]?.enabled)) {
+    const { rows } = await knex.raw("SELECT EXISTS (SELECT 1 FROM pg_dist_partition WHERE logicalrelid = 'quotes'::regclass) AS is_distributed");
+    canAddQuoteFk = Boolean(rows?.[0]?.is_distributed);
+  }
+  if (canAddQuoteFk) {
+    await knex.schema.alterTable('sales_orders', (table) => {
+      table.foreign(['tenant', 'quote_id'], 'fk_sales_orders_quote')
+        .references(['tenant', 'quote_id'])
+        .inTable('quotes');
+    });
+  }
 
   await knex.raw(`
     CREATE UNIQUE INDEX idx_sales_orders_quote

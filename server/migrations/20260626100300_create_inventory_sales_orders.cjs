@@ -6,6 +6,8 @@
  * under their kit parent line.
  */
 
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 exports.up = async function up(knex) {
   await knex.schema.createTable('sales_orders', (table) => {
     table.uuid('tenant').notNullable();
@@ -77,6 +79,10 @@ exports.up = async function up(knex) {
   `);
   await knex.raw(`CREATE INDEX idx_so_lines_so ON sales_order_lines (tenant, so_id)`);
 
+  // Distribute on Citus (colocated with tenants), parent-first.
+  await ensureTenantDistribution(knex, 'sales_orders');
+  await ensureTenantDistribution(knex, 'sales_order_lines');
+
   // Seed SALES_ORDER numbering for all existing tenants (prefix SO, padding 5)
   await knex.raw(`
     INSERT INTO next_number (tenant, entity_type, last_number, initial_value, prefix, padding_length)
@@ -92,3 +98,5 @@ exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('sales_order_lines');
   await knex.schema.dropTableIfExists('sales_orders');
 };
+
+exports.config = { transaction: false };

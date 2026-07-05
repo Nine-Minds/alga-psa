@@ -5,6 +5,8 @@
  * vendor_sku snapshot so the paperwork shows the number the vendor recognizes.
  */
 
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 exports.up = async function up(knex) {
   await knex.schema.createTable('vendor_products', (t) => {
     t.uuid('tenant').notNullable();
@@ -30,6 +32,9 @@ exports.up = async function up(knex) {
     t.index(['tenant', 'service_id'], 'idx_vendor_products_service');
   });
 
+  // Distribute on Citus (colocated with tenants).
+  await ensureTenantDistribution(knex, 'vendor_products');
+
   // One preferred offer per (tenant, product) — DB-enforced like the default location.
   await knex.raw(`
     CREATE UNIQUE INDEX idx_vendor_products_one_preferred
@@ -47,3 +52,5 @@ exports.down = async function down(knex) {
   });
   await knex.schema.dropTableIfExists('vendor_products');
 };
+
+exports.config = { transaction: false };

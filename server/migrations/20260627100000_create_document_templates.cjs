@@ -4,6 +4,8 @@
  * Built-in STANDARD templates live in code (the document-type registry), not here — this table
  * holds only tenant-authored customizations.
  */
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 const TABLE_NAME = 'document_templates';
 
 exports.up = async function up(knex) {
@@ -27,8 +29,13 @@ exports.up = async function up(knex) {
     table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
     table.index(['tenant', 'document_type'], 'document_templates_tenant_type_idx');
   });
+
+  // Distribute on Citus (colocated with tenants).
+  await ensureTenantDistribution(knex, TABLE_NAME);
 };
 
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists(TABLE_NAME);
 };
+
+exports.config = { transaction: false };

@@ -17,6 +17,20 @@
  */
 
 exports.up = async function up(knex) {
+  // On Citus the inventory tenant tables are distributed, which forbids three
+  // things this migration would otherwise do: (1) ON DELETE SET NULL on a
+  // composite FK whose columns include the `tenant` distribution key, (2) a
+  // trigger on a distributed table, and (3) a distributed<->local join in the
+  // tax sanitize UPDATE (tax_rates is not distributed here). On Citus we degrade
+  // each the same way the codebase already does elsewhere:
+  //   - SET NULL composite FKs -> NO ACTION  (server/migrations/20260611150000_fix_tenant_nulling_foreign_keys.cjs)
+  //   - append-only trigger -> skipped, app-level discipline enforces it (workflow-v2 / shared_document_types precedent)
+  //   - tax sanitize UPDATE -> skipped (there is no tax FK to satisfy anyway).
+  // On plain Postgres (CE) behaviour is unchanged.
+  const citusRes = await knex.raw("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citus') AS enabled");
+  const isCitus = Boolean(citusRes.rows?.[0]?.enabled);
+  const linkFkOnDelete = isCitus ? 'NO ACTION' : 'SET NULL';
+
   // --- RMA (F040/F041) ---
   await knex.schema.alterTable('rma_cases', (t) => {
     t.uuid('charge_invoice_id').nullable();
@@ -31,17 +45,21 @@ exports.up = async function up(knex) {
   `);
 
   // --- Tax FK (F046) ---
-  await knex.raw(`
-    UPDATE sales_order_lines sol SET tax_rate_id = NULL
-    WHERE tax_rate_id IS NOT NULL
-      AND NOT EXISTS (SELECT 1 FROM tax_rates tr WHERE tr.tax_rate_id = sol.tax_rate_id)
-  `);
-  await knex.schema.alterTable('sales_order_lines', (t) => {
-    t.foreign('tax_rate_id', 'fk_so_lines_tax_rate')
-      .references('tax_rate_id')
-      .inTable('tax_rates')
-      .onDelete('SET NULL');
-  });
+  // Sanitize orphan tax_rate_id references (kept even without the FK below).
+  // Skipped on Citus: sales_order_lines is distributed and tax_rates is not, so
+  // this correlated NOT EXISTS is an unsupported distributed<->local join. With
+  // no tax FK there is nothing for it to satisfy.
+  if (!isCitus) {
+    await knex.raw(`
+      UPDATE sales_order_lines sol SET tax_rate_id = NULL
+      WHERE tax_rate_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM tax_rates tr WHERE tr.tax_rate_id = sol.tax_rate_id)
+    `);
+  }
+  // No fk_so_lines_tax_rate FK: once sales_order_lines is distributed on Citus a
+  // single-column FK to tax_rates (which is distributed with a composite key on
+  // prod) is invalid. The reference stays logical — same precedent as
+  // ee/server/migrations/citus/20260703120000_convert_tax_child_tables_to_reference.cjs.
 
   // --- SO line ↔ invoice charge backlink (F047) ---
   // invoice_items is a VIEW over invoice_charges; the persistent column lives on
@@ -51,7 +69,7 @@ exports.up = async function up(knex) {
     t.foreign(['tenant', 'so_line_id'], 'fk_invoice_charges_so_line')
       .references(['tenant', 'so_line_id'])
       .inTable('sales_order_lines')
-      .onDelete('SET NULL');
+      .onDelete(linkFkOnDelete);
     t.index(['tenant', 'so_line_id'], 'idx_invoice_charges_so_line');
   });
 
@@ -101,42 +119,48 @@ exports.up = async function up(knex) {
     t.foreign(['tenant', 'allocated_so_line_id'], 'fk_stock_units_allocated_so_line')
       .references(['tenant', 'so_line_id'])
       .inTable('sales_order_lines')
-      .onDelete('SET NULL');
+      .onDelete(linkFkOnDelete);
     t.index(['tenant', 'allocated_so_line_id'], 'idx_stock_units_allocated_so_line');
     t.foreign(['tenant', 'source_po_id'], 'fk_stock_units_source_po')
       .references(['tenant', 'po_id'])
       .inTable('purchase_orders')
-      .onDelete('SET NULL');
+      .onDelete(linkFkOnDelete);
     t.index(['tenant', 'source_po_id'], 'idx_stock_units_source_po');
   });
   await knex.schema.alterTable('purchase_order_lines', (t) => {
     t.foreign(['tenant', 'source_so_line_id'], 'fk_po_lines_source_so_line')
       .references(['tenant', 'so_line_id'])
       .inTable('sales_order_lines')
-      .onDelete('SET NULL');
+      .onDelete(linkFkOnDelete);
     t.index(['tenant', 'source_so_line_id'], 'idx_po_lines_source_so_line');
   });
   await knex.schema.alterTable('sales_order_lines', (t) => {
     t.foreign(['tenant', 'parent_so_line_id'], 'fk_so_lines_parent')
       .references(['tenant', 'so_line_id'])
       .inTable('sales_order_lines')
-      .onDelete('SET NULL');
+      .onDelete(linkFkOnDelete);
     t.index(['tenant', 'parent_so_line_id'], 'idx_so_lines_parent');
   });
 
   // --- Append-only ledger, enforced (F050) ---
-  await knex.raw(`
-    CREATE OR REPLACE FUNCTION forbid_stock_movement_mutation() RETURNS trigger AS $$
-    BEGIN
-      RAISE EXCEPTION 'stock_movements is an append-only ledger; % is not allowed', TG_OP;
-    END;
-    $$ LANGUAGE plpgsql
-  `);
-  await knex.raw(`
-    CREATE TRIGGER trg_stock_movements_immutable
-      BEFORE UPDATE OR DELETE ON stock_movements
-      FOR EACH ROW EXECUTE FUNCTION forbid_stock_movement_mutation()
-  `);
+  // Citus rejects triggers on distributed tables (unless citus.enable_unsafe_triggers).
+  // stock_movements is distributed there, so skip the DB trigger and rely on the
+  // application's append-only discipline — the same trade-off the codebase makes for
+  // other triggers on distributed tables (e.g. shared_document_types / workflow-v2).
+  if (!isCitus) {
+    await knex.raw(`
+      CREATE OR REPLACE FUNCTION forbid_stock_movement_mutation() RETURNS trigger AS $$
+      BEGIN
+        RAISE EXCEPTION 'stock_movements is an append-only ledger; % is not allowed', TG_OP;
+      END;
+      $$ LANGUAGE plpgsql
+    `);
+    await knex.raw(`
+      CREATE TRIGGER trg_stock_movements_immutable
+        BEFORE UPDATE OR DELETE ON stock_movements
+        FOR EACH ROW EXECUTE FUNCTION forbid_stock_movement_mutation()
+    `);
+  }
 };
 
 exports.down = async function down(knex) {
@@ -176,9 +200,7 @@ exports.down = async function down(knex) {
     t.dropColumn('so_line_id');
   });
 
-  await knex.schema.alterTable('sales_order_lines', (t) => {
-    t.dropForeign(['tax_rate_id'], 'fk_so_lines_tax_rate');
-  });
+  // fk_so_lines_tax_rate is intentionally not created in up(), so nothing to drop here.
 
   await knex.raw('ALTER TABLE rma_cases DROP CONSTRAINT IF EXISTS rma_cases_status_check');
   await knex.raw(`

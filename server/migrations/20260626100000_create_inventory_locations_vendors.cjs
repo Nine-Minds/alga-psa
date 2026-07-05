@@ -9,6 +9,8 @@
  * See ee/docs/plans/2026-06-26-inventory-module/ and docs/plans/2026-06-26-inventory-module-design.md (§4).
  */
 
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 exports.up = async function up(knex) {
   await knex.schema.createTable('stock_locations', (table) => {
     table.uuid('tenant').notNullable();
@@ -62,6 +64,10 @@ exports.up = async function up(knex) {
     table.unique(['tenant', 'vendor_name']);
   });
 
+  // Distribute on Citus (colocated with tenants) before any tenant-joined backfill.
+  await ensureTenantDistribution(knex, 'stock_locations');
+  await ensureTenantDistribution(knex, 'vendors');
+
   // Seed one default location per existing tenant
   await knex.raw(`
     INSERT INTO stock_locations (tenant, location_id, name, location_type, is_default, is_active)
@@ -90,3 +96,5 @@ exports.down = async function down(knex) {
   await knex.raw('DROP INDEX IF EXISTS idx_stock_locations_one_default');
   await knex.schema.dropTableIfExists('stock_locations');
 };
+
+exports.config = { transaction: false };

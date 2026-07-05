@@ -11,6 +11,8 @@
  * policy, not schema).
  */
 
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 const RESOURCE = 'cycle_count';
 const ACTIONS = ['create', 'read', 'update', 'delete', 'approve'];
 
@@ -66,6 +68,10 @@ exports.up = async function up(knex) {
       .inTable('service_catalog');
   });
 
+  // Distribute on Citus (colocated with tenants); sessions before lines.
+  await ensureTenantDistribution(knex, 'count_sessions');
+  await ensureTenantDistribution(knex, 'count_lines');
+
   // Permissions (pattern of 20260626100600_add_inventory_permissions.cjs).
   const tenants = await knex('tenants').select('tenant');
   for (const { tenant } of tenants) {
@@ -117,3 +123,5 @@ exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('count_lines');
   await knex.schema.dropTableIfExists('count_sessions');
 };
+
+exports.config = { transaction: false };

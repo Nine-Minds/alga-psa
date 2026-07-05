@@ -2,6 +2,8 @@
  * Create ghost_usage_reviews for AI-assisted review of material-less hardware tickets.
  */
 
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 exports.up = async function up(knex) {
   await knex.schema.createTable('ghost_usage_reviews', (table) => {
     table.uuid('tenant').notNullable();
@@ -35,6 +37,9 @@ exports.up = async function up(knex) {
     );
   });
 
+  // Distribute on Citus (colocated with tenants).
+  await ensureTenantDistribution(knex, 'ghost_usage_reviews');
+
   await knex.raw(`
     CREATE INDEX IF NOT EXISTS idx_ghost_usage_reviews_disposition
     ON ghost_usage_reviews (tenant, disposition);
@@ -45,3 +50,5 @@ exports.down = async function down(knex) {
   await knex.raw(`DROP INDEX IF EXISTS idx_ghost_usage_reviews_disposition;`);
   await knex.schema.dropTableIfExists('ghost_usage_reviews');
 };
+
+exports.config = { transaction: false };
