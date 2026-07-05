@@ -4,40 +4,40 @@
   "private": true,
   "main": "./dist/index.js",
   "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.js"
     },
     "./actions": {
-      "types": "./dist/actions/index.d.ts",
+      "types": "./src/actions/index.ts",
       "import": "./dist/actions/index.js",
       "require": "./dist/actions/index.js"
     },
     "./actions/*": {
-      "types": "./dist/actions/*.d.ts",
+      "types": "./src/actions/*.ts",
       "import": "./dist/actions/*.js",
       "require": "./dist/actions/*.js"
     },
     "./components": {
-      "types": "./dist/components/index.d.ts",
+      "types": "./src/components/index.ts",
       "import": "./dist/components/index.js",
       "require": "./dist/components/index.js"
     },
     "./components/*": {
-      "types": "./dist/components/*.d.ts",
+      "types": "./src/components/*.tsx",
       "import": "./dist/components/*.js",
       "require": "./dist/components/*.js"
     },
     "./lib": {
-      "types": "./dist/lib/index.d.ts",
+      "types": "./src/lib/index.ts",
       "import": "./dist/lib/index.js",
       "require": "./dist/lib/index.js"
     },
     "./lib/*": {
-      "types": "./dist/lib/*.d.ts",
+      "types": "./src/lib/*.ts",
       "import": "./dist/lib/*.js",
       "require": "./dist/lib/*.js"
     }
