@@ -278,7 +278,12 @@
     "nameAliasRemoveFailed": "Alias konnte nicht entfernt werden",
     "nameAliasRemoved": "Alias entfernt",
     "nameAliases": "Aliasse für den Abgleich",
-    "noNameAliases": "Keine Aliasse konfiguriert. Der Kundenname selbst wird immer abgeglichen."
+    "noNameAliases": "Keine Aliasse konfiguriert. Der Kundenname selbst wird immer abgeglichen.",
+    "equipment": "Ausrüstung",
+    "parentClientSelf": "Ein Kunde kann nicht sein eigener übergeordneter Kunde sein",
+    "parentClientPlaceholder": "Kein übergeordneter Kunde",
+    "parentClientClear": "Löschen",
+    "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}"
   },
   "quickAddClient": {
     "title": "Neuen Kunden hinzufügen",
@@ -616,7 +621,10 @@
     "noActiveBucketPlans": "Keine aktiven Bucket-Pläne gefunden.",
     "noHours": "Im ausgewählten Zeitraum wurden keine Stunden erfasst.",
     "noInvoices": "Keine aktuellen Rechnungen gefunden.",
-    "noUsage": "Im ausgewählten Zeitraum wurden keine Nutzungsdaten gefunden."
+    "noUsage": "Im ausgewählten Zeitraum wurden keine Nutzungsdaten gefunden.",
+    "retry": "Wiederholen",
+    "loadError": "Dieser Abschnitt konnte nicht geladen werden.",
+    "balanceDue": "Offener Betrag"
   },
   "clientContractLineGuide": {
     "title": "Leitfaden zur Begriffsklärung von Vertragszeilen",
@@ -1311,7 +1319,9 @@
         "printer": "Drucker",
         "server": "Server",
         "workstation": "Arbeitsplatz"
-      }
+      },
+      "loadError": "Assets können derzeit nicht geladen werden.",
+      "retry": "Wiederholen"
     },
     "tickets": {
       "addTicket": "Ticket hinzufügen",
@@ -1335,5 +1345,28 @@
         "userNotAuthenticated": "Benutzer nicht authentifiziert"
       }
     }
+  },
+  "clientEquipmentTab": {
+    "retry": "Wiederholen",
+    "loadError": "Dieser Abschnitt konnte nicht geladen werden.",
+    "emptyValue": "—",
+    "orderNumber": "Bestellnummer",
+    "status": "Status",
+    "ordered": "Bestellt",
+    "amount": "Betrag",
+    "product": "Produkt",
+    "sku": "SKU",
+    "serialNumber": "Seriennummer",
+    "delivered": "Geliefert",
+    "asset": "Asset",
+    "viewAsset": "Asset anzeigen",
+    "rmaNumber": "RMA-Nummer",
+    "opened": "Geöffnet",
+    "salesOrders": "Kundenaufträge",
+    "noSalesOrders": "Keine Kundenaufträge für diesen Kunden.",
+    "deliveredUnits": "Gelieferte Einheiten",
+    "noDeliveredEquipment": "Keine gelieferte Ausrüstung erfasst.",
+    "rmas": "RMAs",
+    "noRmas": "Keine RMAs für diesen Kunden."
   }
 }

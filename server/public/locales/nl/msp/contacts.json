@@ -571,13 +571,15 @@
       "name": "Naam",
       "email": "E-mail",
       "phoneNumber": "Telefoonnummer",
-      "actions": "Acties"
+      "actions": "Acties",
+      "role": "Rol"
     },
     "filter": {
       "show": "Toon:",
       "active": "Actieve contacten",
       "inactive": "Inactieve contacten",
-      "all": "Alle contacten"
+      "all": "Alle contacten",
+      "searchPlaceholder": "Contacten zoeken..."
     },
     "actions": {
       "openMenu": "Menu openen",

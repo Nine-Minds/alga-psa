@@ -575,13 +575,15 @@
       "name": "Nazwa",
       "email": "E-mail",
       "phoneNumber": "Numer telefonu",
-      "actions": "Akcje"
+      "actions": "Akcje",
+      "role": "Rola"
     },
     "filter": {
       "show": "Pokaż:",
       "active": "Aktywne kontakty",
       "inactive": "Nieaktywne kontakty",
-      "all": "Wszystkie kontakty"
+      "all": "Wszystkie kontakty",
+      "searchPlaceholder": "Szukaj kontaktów..."
     },
     "actions": {
       "openMenu": "Otwórz menu",

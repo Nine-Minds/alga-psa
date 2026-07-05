@@ -862,6 +862,19 @@
       },
       "description": {
         "label": "Beschreibung"
+      },
+      "inventory": {
+        "label": "Bestand",
+        "track": "Bestand verfolgen",
+        "serialized": "Serialisiert",
+        "kit": "Set",
+        "createsAsset": "Erstellt Asset bei Lieferung",
+        "defaultAssetType": "Standard-Asset-Typ",
+        "reorderPoint": "Meldebestand",
+        "reorderQuantity": "Nachbestellmenge",
+        "kitPricingMode": "Set-Preismodus",
+        "kitPricingSum": "Summe der Komponenten",
+        "kitPricingFixed": "Festpreis"
       }
     },
     "options": {

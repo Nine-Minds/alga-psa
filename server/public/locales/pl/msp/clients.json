@@ -308,7 +308,12 @@
     "nameAliasRemoveFailed": "Nie udało się usunąć aliasu",
     "nameAliasRemoved": "Usunięto alias",
     "nameAliases": "Aliasy dopasowania",
-    "noNameAliases": "Nie skonfigurowano aliasów. Nazwa klienta zawsze jest dopasowywana."
+    "noNameAliases": "Nie skonfigurowano aliasów. Nazwa klienta zawsze jest dopasowywana.",
+    "equipment": "Sprzęt",
+    "parentClientSelf": "Klient nie może być swoim własnym klientem nadrzędnym",
+    "parentClientPlaceholder": "Brak klienta nadrzędnego",
+    "parentClientClear": "Wyczyść",
+    "parentClientLegacy": "Wcześniej wprowadzono jako tekst: {{name}}"
   },
   "quickAddClient": {
     "title": "Dodaj nowego klienta",
@@ -646,7 +651,10 @@
     "noActiveBucketPlans": "Nie znaleziono aktywnych planów zasobników.",
     "noHours": "Brak godzin zarejestrowanych w wybranym okresie.",
     "noInvoices": "Nie znaleziono żadnych ostatnich faktur.",
-    "noUsage": "Nie znaleziono danych o użytkowaniu w wybranym okresie."
+    "noUsage": "Nie znaleziono danych o użytkowaniu w wybranym okresie.",
+    "retry": "Ponów",
+    "loadError": "Nie udało się załadować tej sekcji.",
+    "balanceDue": "Do zapłaty"
   },
   "clientContractLineGuide": {
     "title": "Przewodnik ujednoznaczniania linii kontraktu",
@@ -1341,7 +1349,9 @@
         "printer": "Drukarka",
         "server": "Serwer",
         "workstation": "Stacja robocza"
-      }
+      },
+      "loadError": "Nie można teraz załadować zasobów.",
+      "retry": "Ponów"
     },
     "tickets": {
       "addTicket": "Dodaj zgłoszenie",
@@ -1365,5 +1375,28 @@
         "userNotAuthenticated": "Użytkownik nieuwierzytelniony"
       }
     }
+  },
+  "clientEquipmentTab": {
+    "retry": "Ponów",
+    "loadError": "Nie udało się załadować tej sekcji.",
+    "emptyValue": "—",
+    "orderNumber": "Numer zamówienia",
+    "status": "Status",
+    "ordered": "Zamówiono",
+    "amount": "Kwota",
+    "product": "Produkt",
+    "sku": "SKU",
+    "serialNumber": "Numer seryjny",
+    "delivered": "Dostarczono",
+    "asset": "Zasób",
+    "viewAsset": "Zobacz zasób",
+    "rmaNumber": "Numer RMA",
+    "opened": "Otwarto",
+    "salesOrders": "Zamówienia sprzedaży",
+    "noSalesOrders": "Brak zamówień sprzedaży dla tego klienta.",
+    "deliveredUnits": "Dostarczone jednostki",
+    "noDeliveredEquipment": "Brak zarejestrowanego dostarczonego sprzętu.",
+    "rmas": "RMA",
+    "noRmas": "Brak RMA dla tego klienta."
   }
 }

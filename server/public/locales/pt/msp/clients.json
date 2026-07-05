@@ -278,7 +278,12 @@
     "nameAliasRemoveFailed": "Falha ao remover o alias",
     "nameAliasRemoved": "Alias ​​removida",
     "nameAliases": "Aliases correspondentes",
-    "noNameAliases": "Nenhum aliase configurado. O próprio nome do cliente sempre corresponde."
+    "noNameAliases": "Nenhum aliase configurado. O próprio nome do cliente sempre corresponde.",
+    "equipment": "Equipamento",
+    "parentClientSelf": "Um cliente não pode ser seu próprio cliente principal",
+    "parentClientPlaceholder": "Sem cliente principal",
+    "parentClientClear": "Limpar",
+    "parentClientLegacy": "Inserido anteriormente como texto: {{name}}"
   },
   "quickAddClient": {
     "title": "Adicionar novo cliente",
@@ -616,7 +621,10 @@
     "noActiveBucketPlans": "Nenhum plano de bucket ativo encontrado.",
     "noHours": "Nenhuma hora registrada no período selecionado.",
     "noInvoices": "Nenhuma fatura recente encontrada.",
-    "noUsage": "Nenhum dado de uso encontrado no período selecionado."
+    "noUsage": "Nenhum dado de uso encontrado no período selecionado.",
+    "retry": "Tentar novamente",
+    "loadError": "Falha ao carregar esta seção.",
+    "balanceDue": "Saldo devedor"
   },
   "clientContractLineGuide": {
     "title": "Guia de desambiguação de linha de contrato",
@@ -1008,7 +1016,6 @@
     "title": "Configurações de cálculo de impostos",
     "description": "Configure como os impostos são calculados para este cliente.",
     "createDefault": "Criar configurações fiscais padrão",
-    "goToBillingTaxSettings": "Vá para Configurações de imposto de faturamento",
     "taxExemptStatus": "Status de isenção fiscal",
     "taxExempt": "Isento de impostos",
     "taxExemptHelp": "Quando ativado, os impostos não serão aplicados às faturas deste cliente.",
@@ -1049,7 +1056,7 @@
   "clientNotesPanel": {
     "title": "Notas e informações rápidas",
     "initialNote": "Nota Inicial",
-    "lastUpdated": "Última atualização:",
+    "lastUpdated": "Última atualização: {{value}}",
     "save": "Salvar",
     "retry": "Tentar novamente",
     "loadError": "As notas não foram carregadas",
@@ -1312,7 +1319,9 @@
         "printer": "Impressora",
         "server": "Servidor",
         "workstation": "Estação de trabalho"
-      }
+      },
+      "loadError": "Não é possível carregar os ativos no momento.",
+      "retry": "Tentar novamente"
     },
     "tickets": {
       "addTicket": "Adicionar ticket",
@@ -1336,5 +1345,28 @@
         "userNotAuthenticated": "Usuário não autenticado"
       }
     }
+  },
+  "clientEquipmentTab": {
+    "retry": "Tentar novamente",
+    "loadError": "Falha ao carregar esta seção.",
+    "emptyValue": "—",
+    "orderNumber": "Número do pedido",
+    "status": "Status",
+    "ordered": "Pedido",
+    "amount": "Valor",
+    "product": "Produto",
+    "sku": "SKU",
+    "serialNumber": "Número de série",
+    "delivered": "Entregue",
+    "asset": "Ativo",
+    "viewAsset": "Ver ativo",
+    "rmaNumber": "Número de RMA",
+    "opened": "Aberto",
+    "salesOrders": "Pedidos de venda",
+    "noSalesOrders": "Nenhum pedido de venda para este cliente.",
+    "deliveredUnits": "Unidades entregues",
+    "noDeliveredEquipment": "Nenhum equipamento entregue registrado.",
+    "rmas": "RMAs",
+    "noRmas": "Nenhum RMA para este cliente."
   }
 }

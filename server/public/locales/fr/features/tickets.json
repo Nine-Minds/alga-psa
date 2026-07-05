@@ -1126,7 +1126,10 @@
     "status": "Statut",
     "addSuccess": "Matériel ajouté",
     "removeSuccess": "Matériau retiré",
-    "clientRequired": "Un client doit être attribué à ce ticket avant de pouvoir ajouter des matériaux."
+    "clientRequired": "Un client doit être attribué à ce ticket avant de pouvoir ajouter des matériaux.",
+    "serialUnit": "Numéro de série / MAC (produit sérialisé)",
+    "selectUnit": "Sélectionnez une unité à livrer...",
+    "onHandByLocation": "En stock par emplacement"
   },
   "watchList": {
     "title": "Liste de surveillance",
@@ -1243,7 +1246,8 @@
     "materials": {
       "productRequired": "Veuillez sélectionner un produit",
       "currencyRequired": "Veuillez sélectionner une devise",
-      "quantityMin": "La quantité doit être d'au moins 1"
+      "quantityMin": "La quantité doit être d'au moins 1",
+      "unitRequired": "Veuillez sélectionner une série/unité à livrer"
     },
     "watchList": {
       "invalidEmail": "Entrez une adresse e-mail valide.",

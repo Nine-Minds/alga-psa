@@ -862,6 +862,19 @@
       },
       "description": {
         "label": "Description"
+      },
+      "inventory": {
+        "label": "Inventaire",
+        "track": "Suivre l'inventaire",
+        "serialized": "Sérialisé",
+        "kit": "Kit",
+        "createsAsset": "Crée un actif à la livraison",
+        "defaultAssetType": "Type d'actif par défaut",
+        "reorderPoint": "Seuil de réapprovisionnement",
+        "reorderQuantity": "Quantité de réapprovisionnement",
+        "kitPricingMode": "Mode de tarification du kit",
+        "kitPricingSum": "Somme des composants",
+        "kitPricingFixed": "Prix fixe"
       }
     },
     "options": {

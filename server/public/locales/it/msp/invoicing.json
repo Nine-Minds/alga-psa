@@ -981,7 +981,9 @@
       "description": "Descrizione",
       "quantity": "Quantità",
       "rate": "Tariffa",
-      "amount": "Importo"
+      "amount": "Importo",
+      "salesOrder": "Ordine di vendita",
+      "cogsMargin": "Costo del venduto / Margine"
     },
     "labels": {
       "contractSubtotal": "Totale parziale del contratto:",

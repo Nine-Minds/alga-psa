@@ -384,7 +384,11 @@
     "ariaLabel": "Stronicowanie",
     "totalItems": "{{count}} {{itemLabel}} łącznie",
     "totalRecordsInline": "({{count}} łącznie rekordów)",
-    "pageOf": "Strona {{current}} z {{total}}"
+    "pageOf": "Strona {{current}} z {{total}}",
+    "itemsLabel_one": "element",
+    "itemsLabel_few": "elementy",
+    "itemsLabel_many": "elementów",
+    "itemsLabel_other": "elementów"
   },
   "documents": {
     "title": "Dokumenty",

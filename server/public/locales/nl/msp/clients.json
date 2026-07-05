@@ -278,7 +278,12 @@
     "nameAliasRemoveFailed": "Kan alias niet verwijderen",
     "nameAliasRemoved": "Alias verwijderd",
     "nameAliases": "Overeenkomende aliassen",
-    "noNameAliases": "Geen aliassen geconfigureerd. De klantnaam zelf komt altijd overeen."
+    "noNameAliases": "Geen aliassen geconfigureerd. De klantnaam zelf komt altijd overeen.",
+    "equipment": "Apparatuur",
+    "parentClientSelf": "Een klant kan niet zijn eigen bovenliggende klant zijn",
+    "parentClientPlaceholder": "Geen bovenliggende klant",
+    "parentClientClear": "Wissen",
+    "parentClientLegacy": "Eerder als tekst ingevoerd: {{name}}"
   },
   "quickAddClient": {
     "title": "Nieuwe klant toevoegen",
@@ -616,7 +621,10 @@
     "noActiveBucketPlans": "Geen actieve bucketplannen gevonden.",
     "noHours": "Er zijn geen uren geregistreerd in de geselecteerde periode.",
     "noInvoices": "Geen recente facturen gevonden.",
-    "noUsage": "Geen gebruiksgegevens gevonden in de geselecteerde periode."
+    "noUsage": "Geen gebruiksgegevens gevonden in de geselecteerde periode.",
+    "retry": "Opnieuw",
+    "loadError": "Deze sectie kon niet worden geladen.",
+    "balanceDue": "Openstaand saldo"
   },
   "clientContractLineGuide": {
     "title": "Handleiding voor het ondubbelzinnig maken van contractregels",
@@ -1311,7 +1319,9 @@
         "printer": "Printer",
         "server": "Server",
         "workstation": "Werkstation"
-      }
+      },
+      "loadError": "Kan assets momenteel niet laden.",
+      "retry": "Opnieuw"
     },
     "tickets": {
       "addTicket": "Ticket toevoegen",
@@ -1335,5 +1345,28 @@
         "userNotAuthenticated": "Gebruiker niet geauthenticeerd"
       }
     }
+  },
+  "clientEquipmentTab": {
+    "retry": "Opnieuw",
+    "loadError": "Deze sectie kon niet worden geladen.",
+    "emptyValue": "—",
+    "orderNumber": "Bestelnummer",
+    "status": "Status",
+    "ordered": "Besteld",
+    "amount": "Bedrag",
+    "product": "Product",
+    "sku": "SKU",
+    "serialNumber": "Serienummer",
+    "delivered": "Geleverd",
+    "asset": "Asset",
+    "viewAsset": "Asset bekijken",
+    "rmaNumber": "RMA-nummer",
+    "opened": "Geopend",
+    "salesOrders": "Verkooporders",
+    "noSalesOrders": "Geen verkooporders voor deze klant.",
+    "deliveredUnits": "Geleverde eenheden",
+    "noDeliveredEquipment": "Geen geleverde apparatuur geregistreerd.",
+    "rmas": "RMA's",
+    "noRmas": "Geen RMA's voor deze klant."
   }
 }

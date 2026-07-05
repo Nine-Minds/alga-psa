@@ -368,7 +368,9 @@
     "ariaLabel": "Paginación",
     "totalItems": "{{count}} {{itemLabel}} en total",
     "totalRecordsInline": "({{count}} registros en total)",
-    "pageOf": "Página {{current}} de {{total}}"
+    "pageOf": "Página {{current}} de {{total}}",
+    "itemsLabel_one": "elemento",
+    "itemsLabel_other": "elementos"
   },
   "documents": {
     "title": "Documentos",

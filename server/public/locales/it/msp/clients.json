@@ -278,7 +278,12 @@
     "nameAliasRemoveFailed": "Impossibile rimuovere l'alias",
     "nameAliasRemoved": "Alias rimosso",
     "nameAliases": "Alias corrispondenti",
-    "noNameAliases": "Nessun alias configurato. Il nome del cliente corrisponde sempre."
+    "noNameAliases": "Nessun alias configurato. Il nome del cliente corrisponde sempre.",
+    "equipment": "Attrezzatura",
+    "parentClientSelf": "Un cliente non può essere il proprio cliente principale",
+    "parentClientPlaceholder": "Nessun cliente principale",
+    "parentClientClear": "Cancella",
+    "parentClientLegacy": "Inserito in precedenza come testo: {{name}}"
   },
   "quickAddClient": {
     "title": "Aggiungi nuovo cliente",
@@ -616,7 +621,10 @@
     "noActiveBucketPlans": "Nessun piano bucket attivo trovato.",
     "noHours": "Nessuna ora registrata nel periodo selezionato.",
     "noInvoices": "Nessuna fattura recente trovata.",
-    "noUsage": "Nessun dato di utilizzo trovato nel periodo selezionato."
+    "noUsage": "Nessun dato di utilizzo trovato nel periodo selezionato.",
+    "retry": "Riprova",
+    "loadError": "Impossibile caricare questa sezione.",
+    "balanceDue": "Saldo dovuto"
   },
   "clientContractLineGuide": {
     "title": "Guida alla disambiguazione delle linee contrattuali",
@@ -1048,7 +1056,7 @@
   "clientNotesPanel": {
     "title": "Note e informazioni rapide",
     "initialNote": "Nota iniziale",
-    "lastUpdated": "Ultimo aggiornamento:",
+    "lastUpdated": "Ultimo aggiornamento: {{value}}",
     "save": "Salva",
     "retry": "Riprova",
     "loadError": "Impossibile caricare le note",
@@ -1311,7 +1319,9 @@
         "printer": "Stampante",
         "server": "Server",
         "workstation": "Stazione di lavoro"
-      }
+      },
+      "loadError": "Impossibile caricare gli asset in questo momento.",
+      "retry": "Riprova"
     },
     "tickets": {
       "addTicket": "Aggiungi ticket",
@@ -1335,5 +1345,28 @@
         "userNotAuthenticated": "Utente non autenticato"
       }
     }
+  },
+  "clientEquipmentTab": {
+    "retry": "Riprova",
+    "loadError": "Impossibile caricare questa sezione.",
+    "emptyValue": "—",
+    "orderNumber": "Numero d'ordine",
+    "status": "Stato",
+    "ordered": "Ordinato",
+    "amount": "Importo",
+    "product": "Prodotto",
+    "sku": "SKU",
+    "serialNumber": "Numero di serie",
+    "delivered": "Consegnato",
+    "asset": "Asset",
+    "viewAsset": "Visualizza asset",
+    "rmaNumber": "Numero RMA",
+    "opened": "Aperto",
+    "salesOrders": "Ordini di vendita",
+    "noSalesOrders": "Nessun ordine di vendita per questo cliente.",
+    "deliveredUnits": "Unità consegnate",
+    "noDeliveredEquipment": "Nessuna attrezzatura consegnata registrata.",
+    "rmas": "RMA",
+    "noRmas": "Nessun RMA per questo cliente."
   }
 }

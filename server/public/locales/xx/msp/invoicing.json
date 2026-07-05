@@ -981,7 +981,9 @@
       "description": "11111",
       "quantity": "11111",
       "rate": "11111",
-      "amount": "11111"
+      "amount": "11111",
+      "salesOrder": "11111",
+      "cogsMargin": "11111"
     },
     "labels": {
       "contractSubtotal": "11111",

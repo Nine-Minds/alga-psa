@@ -26,7 +26,8 @@
       "sendReminder": "55555",
       "sendToClient": "55555",
       "setAsDefault": "55555",
-      "submitForApproval": "55555"
+      "submitForApproval": "55555",
+      "done": "55555"
     },
     "badges": {
       "standard": "55555"
@@ -151,7 +152,8 @@
       "cancel": "55555",
       "previewPdf": "55555",
       "backToQuotes": "55555",
-      "backToTemplates": "55555"
+      "backToTemplates": "55555",
+      "convertToSalesOrder": "55555"
     },
     "headings": {
       "editQuote": "55555",
@@ -351,7 +353,8 @@
       "openConvertedInvoice": "55555",
       "preview": "55555",
       "saveAsTemplate": "55555",
-      "back": "55555"
+      "back": "55555",
+      "openConvertedSalesOrder": "55555 {{number}} 55555"
     },
     "sections": {
       "activityLog": "55555",
@@ -431,7 +434,8 @@
       "sent": "55555",
       "submittedForApproval": "55555",
       "templateAssigned": "55555",
-      "templateCleared": "55555"
+      "templateCleared": "55555",
+      "createdSalesOrder": "55555 {{number}} 55555"
     },
     "preview": {
       "loading": "55555"
@@ -447,6 +451,9 @@
       "groupHeading": "55555",
       "unassigned": "55555",
       "subtotal": "55555"
+    },
+    "availability": {
+      "onHand": "55555 {{count}} 55555"
     }
   },
   "quoteLineItems": {
@@ -567,6 +574,10 @@
       "both": {
         "label": "55555",
         "description": "55555"
+      },
+      "salesOrder": {
+        "label": "55555",
+        "description": "55555"
       }
     },
     "sections": {
@@ -604,12 +615,19 @@
       "convertQuote": "55555",
       "invoice": "55555",
       "both": "55555",
-      "converting": "55555"
+      "converting": "55555",
+      "salesOrder": "55555"
     },
     "errors": {
       "convert": "55555",
       "load": "55555",
       "title": "55555"
+    },
+    "salesOrder": {
+      "successTitle": "55555 {{number}} 55555",
+      "successBody": "55555",
+      "openSalesOrders": "55555",
+      "note": "55555"
     }
   },
   "quoteApproval": {

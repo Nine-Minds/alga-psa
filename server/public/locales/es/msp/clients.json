@@ -278,7 +278,12 @@
     "nameAliasRemoveFailed": "Error al eliminar el alias",
     "nameAliasRemoved": "Alias eliminado",
     "nameAliases": "Alias de coincidencia",
-    "noNameAliases": "No hay alias configurados. El propio nombre del cliente siempre coincide."
+    "noNameAliases": "No hay alias configurados. El propio nombre del cliente siempre coincide.",
+    "equipment": "Equipos",
+    "parentClientSelf": "Un cliente no puede ser su propio cliente principal",
+    "parentClientPlaceholder": "Sin cliente principal",
+    "parentClientClear": "Borrar",
+    "parentClientLegacy": "Introducido anteriormente como texto: {{name}}"
   },
   "quickAddClient": {
     "title": "Agregar nuevo cliente",
@@ -616,7 +621,10 @@
     "noActiveBucketPlans": "No se encontraron planes de bucket activos.",
     "noHours": "No se registraron horas en el período seleccionado.",
     "noInvoices": "No se encontraron facturas recientes.",
-    "noUsage": "No se encontraron datos de uso en el período seleccionado."
+    "noUsage": "No se encontraron datos de uso en el período seleccionado.",
+    "retry": "Reintentar",
+    "loadError": "No se pudo cargar esta sección.",
+    "balanceDue": "Saldo pendiente"
   },
   "clientContractLineGuide": {
     "title": "Guía de desambiguación de líneas de contrato",
@@ -1311,7 +1319,9 @@
         "printer": "Impresora",
         "server": "Servidor",
         "workstation": "Estación de trabajo"
-      }
+      },
+      "loadError": "No se pueden cargar los activos en este momento.",
+      "retry": "Reintentar"
     },
     "tickets": {
       "addTicket": "Agregar ticket",
@@ -1335,5 +1345,28 @@
         "userNotAuthenticated": "Usuario no autenticado"
       }
     }
+  },
+  "clientEquipmentTab": {
+    "retry": "Reintentar",
+    "loadError": "No se pudo cargar esta sección.",
+    "emptyValue": "—",
+    "orderNumber": "Número de pedido",
+    "status": "Estado",
+    "ordered": "Pedido",
+    "amount": "Importe",
+    "product": "Producto",
+    "sku": "SKU",
+    "serialNumber": "Número de serie",
+    "delivered": "Entregado",
+    "asset": "Activo",
+    "viewAsset": "Ver activo",
+    "rmaNumber": "Número de RMA",
+    "opened": "Abierto",
+    "salesOrders": "Órdenes de venta",
+    "noSalesOrders": "No hay órdenes de venta para este cliente.",
+    "deliveredUnits": "Unidades entregadas",
+    "noDeliveredEquipment": "No hay equipos entregados registrados.",
+    "rmas": "RMAs",
+    "noRmas": "No hay RMAs para este cliente."
   }
 }

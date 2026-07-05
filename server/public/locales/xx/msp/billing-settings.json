@@ -862,6 +862,19 @@
       },
       "description": {
         "label": "11111"
+      },
+      "inventory": {
+        "label": "11111",
+        "track": "11111",
+        "serialized": "11111",
+        "kit": "11111",
+        "createsAsset": "11111",
+        "defaultAssetType": "11111",
+        "reorderPoint": "11111",
+        "reorderQuantity": "11111",
+        "kitPricingMode": "11111",
+        "kitPricingSum": "11111",
+        "kitPricingFixed": "11111"
       }
     },
     "options": {

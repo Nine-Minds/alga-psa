@@ -26,7 +26,8 @@
       "sendReminder": "Enviar lembrete",
       "sendToClient": "Enviar para o cliente",
       "setAsDefault": "Definir como padrão",
-      "submitForApproval": "Enviar para aprovação"
+      "submitForApproval": "Enviar para aprovação",
+      "done": "Concluído"
     },
     "badges": {
       "standard": "Padrão"
@@ -151,7 +152,8 @@
       "cancel": "Cancelar",
       "previewPdf": "Visualizar PDF",
       "backToQuotes": "Voltar para citações",
-      "backToTemplates": "Voltar aos modelos de cotação"
+      "backToTemplates": "Voltar aos modelos de cotação",
+      "convertToSalesOrder": "Converter em pedido de venda"
     },
     "headings": {
       "editQuote": "Editar cotação",
@@ -351,7 +353,8 @@
       "openConvertedInvoice": "Abrir fatura convertida",
       "preview": "Visualização",
       "saveAsTemplate": "Salvar como modelo",
-      "back": "Voltar"
+      "back": "Voltar",
+      "openConvertedSalesOrder": "Convertido em {{number}}"
     },
     "sections": {
       "activityLog": "Registro de atividades",
@@ -431,7 +434,8 @@
       "sent": "Orçamento enviado ao cliente.",
       "submittedForApproval": "Orçamento submetido para aprovação interna.",
       "templateAssigned": "Modelo de documento atribuído.",
-      "templateCleared": "Modelo de documento desmarcado (usando o padrão)."
+      "templateCleared": "Modelo de documento desmarcado (usando o padrão).",
+      "createdSalesOrder": "Pedido de venda em rascunho {{number}} criado. As linhas de produto serão faturadas na entrega."
     },
     "preview": {
       "loading": "Carregando visualização..."
@@ -447,6 +451,9 @@
       "groupHeading": "Localização",
       "unassigned": "Itens sem localização",
       "subtotal": "Subtotal de localização"
+    },
+    "availability": {
+      "onHand": "Em estoque: {{count}}"
     }
   },
   "quoteLineItems": {
@@ -567,6 +574,10 @@
       "both": {
         "label": "Contrato + Fatura",
         "description": "Cria um rascunho de contrato (para itens recorrentes) e um rascunho de fatura (para itens únicos)."
+      },
+      "salesOrder": {
+        "label": "Pedido de venda (linhas de produto)",
+        "description": "Move as linhas de produto avulsas para um pedido de venda em rascunho que é faturado na entrega. Essas linhas são excluídas da fatura em rascunho, para que nada seja cobrado em duplicidade."
       }
     },
     "sections": {
@@ -604,12 +615,19 @@
       "convertQuote": "Converter cotação",
       "invoice": "Criar rascunho de fatura",
       "both": "Crie ambos os registros",
-      "converting": "Convertendo..."
+      "converting": "Convertendo...",
+      "salesOrder": "Criar pedido de venda"
     },
     "errors": {
       "convert": "Falha ao converter cotação",
       "load": "Falha ao carregar a visualização da conversão",
       "title": "Erro"
+    },
+    "salesOrder": {
+      "successTitle": "Pedido de venda {{number}} criado",
+      "successBody": "As linhas de produto serão faturadas na entrega.",
+      "openSalesOrders": "Abrir pedidos de venda",
+      "note": "As linhas de produto avulsas passam para um pedido de venda em rascunho (faturado na entrega) e são excluídas de qualquer conversão em fatura de rascunho, para que nada seja cobrado em duplicidade."
     }
   },
   "quoteApproval": {

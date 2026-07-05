@@ -26,7 +26,8 @@
       "sendReminder": "Send Reminder",
       "sendToClient": "Send to Client",
       "setAsDefault": "Set as Default",
-      "submitForApproval": "Submit for Approval"
+      "submitForApproval": "Submit for Approval",
+      "done": "Done"
     },
     "badges": {
       "standard": "Standard"
@@ -151,7 +152,8 @@
       "cancel": "Cancel",
       "previewPdf": "Preview PDF",
       "backToQuotes": "Back to Quotes",
-      "backToTemplates": "Back to Quote Templates"
+      "backToTemplates": "Back to Quote Templates",
+      "convertToSalesOrder": "Convert to Sales Order"
     },
     "headings": {
       "editQuote": "Edit Quote",
@@ -351,7 +353,8 @@
       "openConvertedInvoice": "Open Converted Invoice",
       "preview": "Preview",
       "saveAsTemplate": "Save as Template",
-      "back": "Back"
+      "back": "Back",
+      "openConvertedSalesOrder": "Converted to {{number}}"
     },
     "sections": {
       "activityLog": "Activity Log",
@@ -431,7 +434,8 @@
       "sent": "Quote sent to the client.",
       "submittedForApproval": "Quote submitted for internal approval.",
       "templateAssigned": "Document template assigned.",
-      "templateCleared": "Document template cleared (using default)."
+      "templateCleared": "Document template cleared (using default).",
+      "createdSalesOrder": "Created draft sales order {{number}}. Product lines will bill on fulfillment."
     },
     "preview": {
       "loading": "Loading preview..."
@@ -447,6 +451,9 @@
       "groupHeading": "Location",
       "unassigned": "Items without a location",
       "subtotal": "Location subtotal"
+    },
+    "availability": {
+      "onHand": "On hand: {{count}}"
     }
   },
   "quoteLineItems": {
@@ -567,6 +574,10 @@
       "both": {
         "label": "Contract + Invoice",
         "description": "Creates both a draft contract (for recurring items) and a draft invoice (for one-time items)."
+      },
+      "salesOrder": {
+        "label": "Sales order (product lines)",
+        "description": "Moves product one-time lines to a draft sales order that bills on fulfillment. These lines are excluded from the draft invoice, so nothing double-bills."
       }
     },
     "sections": {
@@ -604,12 +615,19 @@
       "convertQuote": "Convert Quote",
       "invoice": "Create Draft Invoice",
       "both": "Create Both Records",
-      "converting": "Converting..."
+      "converting": "Converting...",
+      "salesOrder": "Create Sales Order"
     },
     "errors": {
       "convert": "Failed to convert quote",
       "load": "Failed to load conversion preview",
       "title": "Error"
+    },
+    "salesOrder": {
+      "successTitle": "Sales order {{number}} created",
+      "successBody": "Product lines will bill on fulfillment.",
+      "openSalesOrders": "Open sales orders",
+      "note": "Product one-time lines move to a draft sales order (billed on fulfillment) and are excluded from any draft-invoice conversion, so nothing double-bills."
     }
   },
   "quoteApproval": {

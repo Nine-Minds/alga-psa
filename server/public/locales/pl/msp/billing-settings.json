@@ -864,6 +864,19 @@
       },
       "description": {
         "label": "Opis"
+      },
+      "inventory": {
+        "label": "Magazyn",
+        "track": "Śledź stan magazynowy",
+        "serialized": "Numerowany seryjnie",
+        "kit": "Zestaw",
+        "createsAsset": "Tworzy zasób przy dostawie",
+        "defaultAssetType": "Domyślny typ zasobu",
+        "reorderPoint": "Punkt ponownego zamówienia",
+        "reorderQuantity": "Ilość ponownego zamówienia",
+        "kitPricingMode": "Tryb wyceny zestawu",
+        "kitPricingSum": "Suma składników",
+        "kitPricingFixed": "Cena stała"
       }
     },
     "options": {

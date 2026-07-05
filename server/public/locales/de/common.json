@@ -324,7 +324,9 @@
     "ariaLabel": "Seitennavigation",
     "totalItems": "{{count}} {{itemLabel}} insgesamt",
     "totalRecordsInline": "({{count}} Gesamteinträge)",
-    "pageOf": "Seite {{current}} von {{total}}"
+    "pageOf": "Seite {{current}} von {{total}}",
+    "itemsLabel_one": "Eintrag",
+    "itemsLabel_other": "Einträge"
   },
   "documents": {
     "title": "Dokumente",

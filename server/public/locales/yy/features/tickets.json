@@ -1126,7 +1126,10 @@
     "status": "55555",
     "addSuccess": "55555",
     "removeSuccess": "55555",
-    "clientRequired": "55555"
+    "clientRequired": "55555",
+    "serialUnit": "55555",
+    "selectUnit": "55555",
+    "onHandByLocation": "55555"
   },
   "watchList": {
     "title": "55555",
@@ -1243,7 +1246,8 @@
     "materials": {
       "productRequired": "55555",
       "currencyRequired": "55555",
-      "quantityMin": "55555"
+      "quantityMin": "55555",
+      "unitRequired": "55555"
     },
     "watchList": {
       "invalidEmail": "55555",

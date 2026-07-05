@@ -278,7 +278,12 @@
     "nameAliasRemoveFailed": "Failed to remove alias",
     "nameAliasRemoved": "Alias removed",
     "nameAliases": "Matching aliases",
-    "noNameAliases": "No aliases configured. The client name itself always matches."
+    "noNameAliases": "No aliases configured. The client name itself always matches.",
+    "equipment": "Equipment",
+    "parentClientSelf": "A client cannot be its own parent",
+    "parentClientPlaceholder": "No parent client",
+    "parentClientClear": "Clear",
+    "parentClientLegacy": "Previously entered as text: {{name}}"
   },
   "quickAddClient": {
     "title": "Add New Client",
@@ -616,7 +621,10 @@
     "noActiveBucketPlans": "No active bucket plans found.",
     "noHours": "No hours logged in the last 30 days.",
     "noInvoices": "No recent invoices found.",
-    "noUsage": "No usage data in the last 30 days."
+    "noUsage": "No usage data in the last 30 days.",
+    "retry": "Retry",
+    "loadError": "This section failed to load.",
+    "balanceDue": "Balance due"
   },
   "clientContractLineGuide": {
     "title": "Contract Line Disambiguation Guide",
@@ -1311,7 +1319,9 @@
         "printer": "Printer",
         "server": "Server",
         "workstation": "Workstation"
-      }
+      },
+      "loadError": "Unable to load assets right now.",
+      "retry": "Retry"
     },
     "tickets": {
       "addTicket": "Add Ticket",
@@ -1335,5 +1345,28 @@
         "userNotAuthenticated": "User not authenticated"
       }
     }
+  },
+  "clientEquipmentTab": {
+    "retry": "Retry",
+    "loadError": "This section failed to load.",
+    "emptyValue": "—",
+    "orderNumber": "Order number",
+    "status": "Status",
+    "ordered": "Ordered",
+    "amount": "Amount",
+    "product": "Product",
+    "sku": "SKU",
+    "serialNumber": "Serial number",
+    "delivered": "Delivered",
+    "asset": "Asset",
+    "viewAsset": "View asset",
+    "rmaNumber": "RMA number",
+    "opened": "Opened",
+    "salesOrders": "Sales Orders",
+    "noSalesOrders": "No sales orders for this client.",
+    "deliveredUnits": "Delivered units",
+    "noDeliveredEquipment": "No delivered equipment on record.",
+    "rmas": "RMAs",
+    "noRmas": "No RMAs for this client."
   }
 }
