@@ -4,34 +4,32 @@ import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   BriefcaseBusiness,
-  CheckCircle2,
   ExternalLink,
   FileText,
   Mail,
   MessageSquarePlus,
   NotebookPen,
-  Phone,
+  Pencil,
   ShieldCheck,
   Ticket,
-  UserRound,
 } from 'lucide-react';
 import type { IClient, IContact, IDocument, IInteraction, ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
-import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { Switch } from '@alga-psa/ui/components/Switch';
-import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
+import { InteractionIcon } from '@alga-psa/ui/components/InteractionIcon';
+import { BentoTile, BentoTileAddButton, BentoTileEmpty, BentoTileEmptyAction } from '@alga-psa/ui/components/bento/BentoTile';
 import { TagManager } from '@alga-psa/tags/components';
-import { useToast } from '@alga-psa/ui';
+import { useToast, useDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { updateContact } from '@alga-psa/clients/actions';
 import { QuickAddInteraction } from '../../interactions/QuickAddInteraction';
 import { ContactPortalTab } from '../ContactPortalTab';
+import ContactDetailsEdit from '../ContactDetailsEdit';
 import type {
+  ContactPortalSummary,
   ContactRelatedWorkSummary,
   ContactStatsSummary,
   ContactTicketsSummary,
@@ -53,6 +51,9 @@ interface ContactBentoLayoutProps {
   stats?: ContactStatsSummary | null;
   ticketsSummary?: ContactTicketsSummary | null;
   relatedWork?: ContactRelatedWorkSummary | null;
+  portalSummary?: ContactPortalSummary | null;
+  /** Prebuilt create-ticket route href (built by the page; clients can't depend on the tickets package). */
+  newTicketHref?: string;
   userId?: string;
   userPermissions?: PortalPermissions;
   quickView?: boolean;
@@ -69,11 +70,15 @@ function formatDate(value?: string | Date | null): string {
   return date.toLocaleDateString();
 }
 
-function formatDateTime(value?: string | Date | null): string {
-  if (!value) return '—';
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+function relativeDays(value?: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const days = Math.floor((Date.now() - date.getTime()) / 86_400_000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 60) return `${days}d ago`;
+  return null;
 }
 
 function emailType(contact: IContact): string {
@@ -100,23 +105,79 @@ function statusChipClass(isPositive: boolean) {
     : 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] text-[rgb(var(--color-text-600))]';
 }
 
-function RowLink({
+const URGENT_LEVELS = new Set(['critical', 'high', 'urgent']);
+
+function ticketPill(row: NonNullable<ContactTicketsSummary>['rows'][number]): { label: string; className: string } {
+  if (row.is_closed) {
+    return { label: row.status_name || 'Closed', className: 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-500))]' };
+  }
+  if (URGENT_LEVELS.has((row.urgency ?? '').toLowerCase()) || (row.itil_urgency != null && row.itil_urgency <= 2)) {
+    return { label: 'Urgent', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' };
+  }
+  if ((row.status_name ?? '').toLowerCase().includes('wait')) {
+    return { label: row.status_name as string, className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' };
+  }
+  return { label: row.status_name || 'Open', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' };
+}
+
+function documentBadge(document: IDocument): string {
+  const name = ((document as any).file_name as string | undefined) || document.document_name || '';
+  const dotIndex = name.lastIndexOf('.');
+  const ext = dotIndex > 0 ? name.slice(dotIndex + 1) : '';
+  if (ext && ext.length <= 4) return ext.toUpperCase();
+  const mimeSubtype = ((document as any).mime_type as string | undefined)?.split('/')[1];
+  if (mimeSubtype) {
+    const cleaned = mimeSubtype.replace(/[^a-z0-9]/gi, '').slice(0, 4).toUpperCase();
+    if (cleaned) return cleaned;
+  }
+  return 'DOC';
+}
+
+/** Hairline-separated single-line rows: content left, metadata right-aligned. */
+function TileRows({ children }: { children: React.ReactNode }) {
+  return <div className="divide-y divide-[rgb(var(--color-border-100))]">{children}</div>;
+}
+
+function TileRow({
   href,
-  title,
+  leading,
+  primary,
   meta,
+  emphasize = true,
 }: {
-  href: string;
-  title: string;
-  meta?: string;
+  href?: string;
+  leading?: React.ReactNode;
+  primary: React.ReactNode;
+  meta?: React.ReactNode;
+  emphasize?: boolean;
 }) {
+  const body = (
+    <>
+      {leading}
+      <span className={`min-w-0 truncate text-sm ${emphasize ? 'font-medium text-[rgb(var(--color-text-800))]' : 'text-[rgb(var(--color-text-700))]'}`}>
+        {primary}
+      </span>
+      {meta != null ? <span className="ml-auto shrink-0 pl-3 text-xs text-[rgb(var(--color-text-500))]">{meta}</span> : null}
+    </>
+  );
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="flex min-w-0 items-center gap-2 py-2 hover:bg-[rgb(var(--color-border-50))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-400))]"
+      >
+        {body}
+      </Link>
+    );
+  }
+  return <div className="flex min-w-0 items-center gap-2 py-2">{body}</div>;
+}
+
+function Eyebrow({ children, first = false }: { children: React.ReactNode; first?: boolean }) {
   return (
-    <Link
-      href={href}
-      className="block min-w-0 rounded-md px-2 py-2 hover:bg-[rgb(var(--color-border-100))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-400))]"
-    >
-      <div className="truncate text-sm font-medium text-[rgb(var(--color-text-800))]">{title}</div>
-      {meta ? <div className="truncate text-xs text-[rgb(var(--color-text-500))]">{meta}</div> : null}
-    </Link>
+    <div className={`mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-[rgb(var(--color-text-400))] ${first ? '' : 'mt-3'}`}>
+      {children}
+    </div>
   );
 }
 
@@ -130,10 +191,10 @@ export function ContactBentoLayout({
   stats,
   ticketsSummary,
   relatedWork,
-  userId,
+  portalSummary,
+  newTicketHref,
   userPermissions = { canInvite: false, canUpdateRoles: false, canRead: false },
   quickView = false,
-  clientReadOnly = false,
   onContactUpdated,
   onChangesSaved,
   onDocumentCreated,
@@ -141,9 +202,12 @@ export function ContactBentoLayout({
   const { t } = useTranslation('msp/contacts');
   const { toast } = useToast();
   const { renderDocuments } = useDocumentsCrossFeature();
+  const { openDrawer, closeDrawer } = useDrawer();
   const [contact, setContact] = useState(initialContact);
   const [roleDraft, setRoleDraft] = useState(contact.role ?? '');
+  const [isEditingRole, setIsEditingRole] = useState(false);
   const [notesDraft, setNotesDraft] = useState(contact.notes ?? '');
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isSavingField, setIsSavingField] = useState<string | null>(null);
   const [isPortalOpen, setIsPortalOpen] = useState(false);
   const [isDocumentsOpen, setIsDocumentsOpen] = useState(false);
@@ -158,19 +222,19 @@ export function ContactBentoLayout({
     || contact.phone_numbers?.find((phone) => phone.is_default)?.phone_number
     || contact.phone_numbers?.[0]?.phone_number
     || null;
-  const primaryPhoneType = contact.phone_numbers?.find((phone) => phone.phone_number === primaryPhone);
-  const portalState = contact.is_inactive ? 'Inactive' : contact.is_client_admin ? 'Admin' : userPermissions.canRead ? 'Available' : 'None';
-  const visibleStats = quickView
-    ? [
-        { label: 'Open tickets', value: String(stats?.openTickets ?? ticketsSummary?.openCount ?? 0), subline: `${stats?.urgentTickets ?? ticketsSummary?.urgentCount ?? 0} urgent` },
-        { label: 'Last touch', value: stats?.lastInteraction?.date ? formatDate(stats.lastInteraction.date) : '—', subline: stats?.lastInteraction?.type ?? 'No interactions yet' },
-      ]
-    : [
-        { label: 'Open tickets', value: String(stats?.openTickets ?? ticketsSummary?.openCount ?? 0), subline: `${stats?.urgentTickets ?? ticketsSummary?.urgentCount ?? 0} urgent · ${stats?.totalTickets ?? ticketsSummary?.totalCount ?? 0} total` },
-        { label: 'Last touch', value: stats?.lastInteraction?.date ? formatDate(stats.lastInteraction.date) : '—', subline: stats?.lastInteraction?.title ?? 'No interactions yet' },
-        { label: 'Satisfaction', value: stats?.satisfaction.count ? (stats.satisfaction.average ?? 0).toFixed(1) : '—', subline: stats?.satisfaction.count ? `${stats.satisfaction.count} responses` : 'No surveys yet' },
-        { label: 'Portal', value: portalState, subline: contact.is_client_admin ? 'Client admin' : 'Standard contact' },
-      ];
+  const primaryPhoneEntry = contact.phone_numbers?.find((phone) => phone.phone_number === primaryPhone);
+
+  const portalChip = (() => {
+    if (!portalSummary) return null;
+    if (portalSummary.hasAccount) {
+      if (portalSummary.accountInactive) return 'Portal · deactivated';
+      const rel = relativeDays(portalSummary.lastSignIn);
+      if (rel) return `Portal · signed in ${rel}`;
+      return portalSummary.lastSignIn ? `Portal · signed in ${formatDate(portalSummary.lastSignIn)}` : 'Portal · never signed in';
+    }
+    if (portalSummary.invitedAt) return 'Portal · invited';
+    return 'No portal access';
+  })();
 
   const saveField = async (field: keyof IContact, value: string | boolean | null) => {
     const previous = contact;
@@ -202,9 +266,33 @@ export function ContactBentoLayout({
     }
   };
 
+  const openEditDrawer = () => {
+    openDrawer(
+      <ContactDetailsEdit
+        id={`${id}-edit`}
+        initialContact={contact}
+        clients={clients}
+        isInDrawer
+        onSave={(updated) => {
+          setContact(updated);
+          setRoleDraft(updated.role ?? '');
+          setNotesDraft(updated.notes ?? '');
+          closeDrawer();
+          void onContactUpdated?.();
+        }}
+        onCancel={closeDrawer}
+      />,
+    );
+  };
+
+  const commitRole = () => {
+    setIsEditingRole(false);
+    if (roleDraft !== (contact.role ?? '')) void saveField('role', roleDraft);
+  };
+
   const hero = (
     <BentoTile id={`${id}-hero`} className="col-span-12">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 gap-3">
           <ContactAvatar
             contactId={contact.contact_name_id}
@@ -219,47 +307,63 @@ export function ContactBentoLayout({
               <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusChipClass(!contact.is_inactive)}`}>
                 {contact.is_inactive ? 'Inactive' : 'Active'}
               </span>
-              <span className="rounded-full border border-[rgb(var(--color-border-200))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))]">
-                {portalState}
-              </span>
+              {portalChip ? (
+                <span className="rounded-full border border-[rgb(var(--color-border-200))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))]">
+                  {portalChip}
+                </span>
+              ) : null}
             </div>
-            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[rgb(var(--color-text-600))]">
-              <span className="truncate">{contact.email ? `${contact.email} · ${emailType(contact)}` : 'No primary email'}</span>
-              <span className="hidden text-[rgb(var(--color-text-300))] sm:inline">•</span>
-              <span className="truncate">{primaryPhone ? `${primaryPhone}${primaryPhoneType ? ` · ${phoneType(primaryPhoneType)}` : ''}` : 'No phone number'}</span>
-            </div>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
-              <label className="space-y-1">
-                <span className="text-[10px] font-semibold uppercase text-[rgb(var(--color-text-400))]">Role</span>
-                <Input
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[rgb(var(--color-text-600))]">
+              {isEditingRole ? (
+                <input
                   id={`${id}-role-input`}
+                  autoFocus
                   value={roleDraft}
                   onChange={(event) => setRoleDraft(event.target.value)}
-                  onBlur={() => {
-                    if (roleDraft !== (contact.role ?? '')) void saveField('role', roleDraft);
+                  onBlur={commitRole}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') commitRole();
+                    if (event.key === 'Escape') {
+                      setRoleDraft(contact.role ?? '');
+                      setIsEditingRole(false);
+                    }
                   }}
                   disabled={isSavingField === 'role'}
+                  placeholder="Add role"
+                  className="w-40 rounded-sm border border-[rgb(var(--color-border-200))] bg-transparent px-1 py-0 text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-400))]"
                 />
-              </label>
-              <label className="space-y-1">
-                <span className="text-[10px] font-semibold uppercase text-[rgb(var(--color-text-400))]">Client</span>
-                <ClientPicker
-                  id={`${id}-client-picker`}
-                  clients={clients}
-                  selectedClientId={contact.client_id ?? null}
-                  onSelect={(value: string | null) => void saveField('client_id', value)}
-                  filterState="all"
-                  onFilterStateChange={() => {}}
-                  clientTypeFilter="all"
-                  onClientTypeFilterChange={() => {}}
-                  disabled={clientReadOnly || isSavingField === 'client_id'}
-                  placeholder={clientName ?? 'No client'}
-                />
-              </label>
+              ) : (
+                <button
+                  id={`${id}-role-edit`}
+                  type="button"
+                  onClick={() => setIsEditingRole(true)}
+                  title="Click to edit role"
+                  className={`cursor-text border-b border-dashed border-[rgb(var(--color-border-300))] ${contact.role ? 'font-medium text-[rgb(var(--color-text-700))]' : 'text-[rgb(var(--color-text-400))]'}`}
+                >
+                  {contact.role || 'Add role'}
+                </button>
+              )}
+              {contact.client_id && clientName ? (
+                <span>
+                  at{' '}
+                  <Link
+                    id={`${id}-client-link`}
+                    href={`/msp/clients/${contact.client_id}`}
+                    className="font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+                  >
+                    {clientName}
+                  </Link>
+                </span>
+              ) : (
+                <span className="text-[rgb(var(--color-text-400))]">No client</span>
+              )}
+              <span className="truncate">{contact.email || 'No primary email'}</span>
+              <span className="truncate">
+                {primaryPhone ? `${primaryPhone}${primaryPhoneEntry ? ` · ${phoneType(primaryPhoneEntry).toLowerCase()}` : ''}` : 'No phone number'}
+              </span>
             </div>
             {contact.contact_name_id ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase text-[rgb(var(--color-text-400))]">Tags</span>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
                 <TagManager
                   entityId={contact.contact_name_id}
                   entityType="contact"
@@ -271,73 +375,111 @@ export function ContactBentoLayout({
             ) : null}
           </div>
         </div>
-        <div className="flex shrink-0 flex-col gap-2 text-xs text-[rgb(var(--color-text-500))] lg:items-end">
+        <div className="flex shrink-0 flex-col gap-1 text-xs text-[rgb(var(--color-text-500))] lg:items-end">
           <span>Contact since {formatDate(contact.created_at)}</span>
-          <span>Last updated {formatDate(contact.updated_at)}</span>
-          <label className="mt-1 flex items-center gap-2 text-sm text-[rgb(var(--color-text-700))]">
-            <Switch
-              checked={!contact.is_inactive}
-              onCheckedChange={(checked) => void saveField('is_inactive', !checked)}
-              disabled={isSavingField === 'is_inactive'}
-            />
-            Active
-          </label>
+          <span>
+            Last touch{' '}
+            {stats?.lastInteraction?.date
+              ? `${formatDate(stats.lastInteraction.date)}${stats.lastInteraction.type ? ` · ${stats.lastInteraction.type.toLowerCase()}` : ''}`
+              : '—'}
+          </span>
+          <Button id={`${id}-edit-contact`} size="sm" variant="outline" onClick={openEditDrawer} className="mt-1">
+            <Pencil className="mr-1 h-3.5 w-3.5" /> Edit contact
+          </Button>
         </div>
-      </div>
-      <div className={`mt-4 grid border-t border-[rgb(var(--color-border-200))] pt-3 ${quickView ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-4'}`}>
-        {visibleStats.map((stat, index) => (
-          <div key={stat.label} className={`min-w-0 px-3 first:pl-0 ${index > 0 ? 'border-l border-[rgb(var(--color-border-200))]' : ''}`}>
-            <div className="text-[10px] font-semibold uppercase text-[rgb(var(--color-text-400))]">{stat.label}</div>
-            <div className="truncate text-base font-semibold text-[rgb(var(--color-text-900))]">{stat.value}</div>
-            <div className="truncate text-xs text-[rgb(var(--color-text-500))]">{stat.subline}</div>
-          </div>
-        ))}
       </div>
     </BentoTile>
   );
 
   const reachTile = (
-    <BentoTile id={`${id}-reach-tile`} title="Reach" icon={<Mail className="h-4 w-4" />} className={quickView ? '' : 'lg:col-span-4 col-span-12'}>
-      <div className="space-y-4">
+    <BentoTile
+      id={`${id}-reach-tile`}
+      title="Reach"
+      icon={<Mail className="h-4 w-4" />}
+      action={<BentoTileAddButton id={`${id}-reach-add`} label="Add email or phone" onClick={openEditDrawer} />}
+    >
+      <Eyebrow first>Email</Eyebrow>
+      <TileRows>
+        {contact.email ? (
+          <TileRow
+            primary={contact.email}
+            meta={`${emailType(contact).toLowerCase()} · primary`}
+            emphasize={false}
+          />
+        ) : null}
+        {(contact.additional_email_addresses ?? []).slice(0, 3).map((email) => (
+          <TileRow
+            key={email.contact_additional_email_address_id ?? email.email_address}
+            primary={email.email_address}
+            meta={(email.custom_type || email.canonical_type || 'other').toLowerCase()}
+            emphasize={false}
+          />
+        ))}
+      </TileRows>
+      {!contact.email && !(contact.additional_email_addresses ?? []).length ? (
         <div>
-          <div className="mb-1 text-[10px] font-semibold uppercase text-[rgb(var(--color-text-400))]">Email</div>
-          {contact.email ? (
-            <div className="truncate text-sm text-[rgb(var(--color-text-800))]">{contact.email} <span className="text-xs text-[rgb(var(--color-text-500))]">Primary</span></div>
-          ) : (
-            <BentoTileEmpty id={`${id}-email-empty`}>No primary email</BentoTileEmpty>
-          )}
-          {(contact.additional_email_addresses ?? []).slice(0, 3).map((email) => (
-            <div key={email.contact_additional_email_address_id ?? email.email_address} className="truncate text-sm text-[rgb(var(--color-text-700))]">
-              {email.email_address} <span className="text-xs text-[rgb(var(--color-text-500))]">{email.custom_type || email.canonical_type || 'Other'}</span>
-            </div>
+          <BentoTileEmpty id={`${id}-email-empty`}>No email addresses</BentoTileEmpty>
+          <BentoTileEmptyAction id={`${id}-email-add`} onClick={openEditDrawer}>Add an email</BentoTileEmptyAction>
+        </div>
+      ) : null}
+      <Eyebrow>Phone</Eyebrow>
+      {contact.phone_numbers?.length ? (
+        <TileRows>
+          {contact.phone_numbers.slice(0, 4).map((phone) => (
+            <TileRow
+              key={phone.contact_phone_number_id ?? phone.phone_number}
+              primary={phone.phone_number}
+              meta={[phoneType(phone).toLowerCase(), phone.is_default ? 'primary' : null].filter(Boolean).join(' · ')}
+              emphasize={false}
+            />
           ))}
-        </div>
+        </TileRows>
+      ) : (
         <div>
-          <div className="mb-1 text-[10px] font-semibold uppercase text-[rgb(var(--color-text-400))]">Phone</div>
-          {contact.phone_numbers?.length ? contact.phone_numbers.slice(0, 4).map((phone) => (
-            <div key={phone.contact_phone_number_id ?? phone.phone_number} className="truncate text-sm text-[rgb(var(--color-text-700))]">
-              {phone.phone_number} <span className="text-xs text-[rgb(var(--color-text-500))]">{phone.is_default ? 'Primary · ' : ''}{phoneType(phone)}</span>
-            </div>
-          )) : (
-            <BentoTileEmpty id={`${id}-phone-empty`}>No phone numbers</BentoTileEmpty>
-          )}
+          <BentoTileEmpty id={`${id}-phone-empty`}>No phone numbers</BentoTileEmpty>
+          <BentoTileEmptyAction id={`${id}-phone-add`} onClick={openEditDrawer}>Add a phone number</BentoTileEmptyAction>
         </div>
-      </div>
+      )}
     </BentoTile>
   );
+
+  const portalStatus = (() => {
+    if (!portalSummary) return { label: '—', positive: false };
+    if (portalSummary.hasAccount) {
+      return portalSummary.accountInactive
+        ? { label: 'Deactivated', positive: false }
+        : { label: 'Active account', positive: true };
+    }
+    if (portalSummary.invitedAt) return { label: 'Invitation sent', positive: false };
+    return { label: 'No access', positive: false };
+  })();
 
   const portalTile = userPermissions.canRead ? (
     <BentoTile
       id={`${id}-portal-tile`}
       title="Portal access"
       icon={<ShieldCheck className="h-4 w-4" />}
-      className={quickView ? '' : 'lg:col-span-4 col-span-12'}
       action={<Button id={`${id}-portal-manage`} size="sm" variant="ghost" onClick={() => setIsPortalOpen(true)}>Manage</Button>}
     >
-      <dl className="space-y-2 text-sm">
-        <div className="flex justify-between gap-3"><dt className="text-[rgb(var(--color-text-500))]">Status</dt><dd className="font-medium text-[rgb(var(--color-text-800))]">{portalState}</dd></div>
-        <div className="flex justify-between gap-3"><dt className="text-[rgb(var(--color-text-500))]">Role</dt><dd className="font-medium text-[rgb(var(--color-text-800))]">{contact.is_client_admin ? 'Client admin' : 'Standard'}</dd></div>
-        <div className="flex justify-between gap-3"><dt className="text-[rgb(var(--color-text-500))]">Visibility</dt><dd className="truncate font-medium text-[rgb(var(--color-text-800))]">{contact.portal_visibility_group_id ? 'Custom group' : 'Default'}</dd></div>
+      <dl className="text-sm">
+        <div className="flex justify-between gap-3 py-0.5">
+          <dt className="text-[rgb(var(--color-text-500))]">Status</dt>
+          <dd className={`font-medium ${portalStatus.positive ? 'text-[rgb(var(--badge-success-text))]' : 'text-[rgb(var(--color-text-800))]'}`}>
+            {portalStatus.label}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-3 py-0.5">
+          <dt className="text-[rgb(var(--color-text-500))]">Role</dt>
+          <dd className="font-medium text-[rgb(var(--color-text-800))]">{contact.is_client_admin ? 'Client admin' : 'Standard'}</dd>
+        </div>
+        <div className="flex justify-between gap-3 py-0.5">
+          <dt className="text-[rgb(var(--color-text-500))]">Last sign-in</dt>
+          <dd className="font-medium text-[rgb(var(--color-text-800))]">{portalSummary?.lastSignIn ? formatDate(portalSummary.lastSignIn) : '—'}</dd>
+        </div>
+        <div className="flex justify-between gap-3 py-0.5">
+          <dt className="text-[rgb(var(--color-text-500))]">Invited</dt>
+          <dd className="font-medium text-[rgb(var(--color-text-800))]">{portalSummary?.invitedAt ? formatDate(portalSummary.invitedAt) : '—'}</dd>
+        </div>
       </dl>
     </BentoTile>
   ) : null;
@@ -356,113 +498,249 @@ export function ContactBentoLayout({
     );
   }
 
-  return (
-    <div id={id} className="grid grid-cols-12 gap-3">
-      {hero}
+  const ticketsTile = (
       <BentoTile
         id={`${id}-tickets-tile`}
         title="Tickets"
         icon={<Ticket className="h-4 w-4" />}
-        className="col-span-12 lg:col-span-8"
-        action={<Button id={`${id}-tickets-view-all`} size="sm" variant="ghost" asChild><Link href={`/msp/tickets?contactId=${contact.contact_name_id}`}>View all {ticketsSummary?.totalCount ?? 0}</Link></Button>}
+        action={
+          <div className="flex items-center gap-1">
+            <Button id={`${id}-tickets-view-all`} size="sm" variant="ghost" asChild><Link href={`/msp/tickets?contactId=${contact.contact_name_id}`}>View all {ticketsSummary?.totalCount ?? 0}</Link></Button>
+            {newTicketHref ? <BentoTileAddButton id={`${id}-tickets-add`} label="Create ticket" href={newTicketHref} /> : null}
+          </div>
+        }
       >
-        {ticketsSummary?.rows.length ? ticketsSummary.rows.map((ticket) => (
-          <RowLink
-            key={ticket.ticket_id}
-            href={`/msp/tickets/${ticket.ticket_id}`}
-            title={ticket.title || `Ticket ${ticket.ticket_number ?? ''}`}
-            meta={`#${ticket.ticket_number ?? '—'} · ${ticket.status_name ?? 'No status'} · ${formatDate(ticket.entered_at)}`}
-          />
-        )) : (
-          <BentoTileEmpty id={`${id}-tickets-empty`}>No tickets yet</BentoTileEmpty>
+        {ticketsSummary?.rows.length ? (
+          <TileRows>
+            {ticketsSummary.rows.map((ticket) => {
+              const pill = ticketPill(ticket);
+              return (
+                <TileRow
+                  key={ticket.ticket_id}
+                  href={`/msp/tickets/${ticket.ticket_id}`}
+                  leading={<span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${pill.className}`}>{pill.label}</span>}
+                  primary={ticket.title || `Ticket ${ticket.ticket_number ?? ''}`}
+                  meta={`#${ticket.ticket_number ?? '—'} · ${formatDate(ticket.entered_at)}`}
+                />
+              );
+            })}
+          </TileRows>
+        ) : (
+          <div>
+            <BentoTileEmpty id={`${id}-tickets-empty`}>No tickets yet</BentoTileEmpty>
+            {newTicketHref ? (
+              <BentoTileEmptyAction id={`${id}-tickets-create`} href={newTicketHref}>Create a ticket</BentoTileEmptyAction>
+            ) : null}
+          </div>
         )}
       </BentoTile>
-      {reachTile}
+  );
+
+  const interactionsTile = (
       <BentoTile
         id={`${id}-interactions-tile`}
         title="Interactions"
         icon={<MessageSquarePlus className="h-4 w-4" />}
-        className="col-span-12 lg:col-span-8"
         action={
           <div className="flex items-center gap-1">
-            <Button id={`${id}-interactions-log`} size="sm" variant="ghost" onClick={() => setIsInteractionOpen(true)}>Log</Button>
             <Button id={`${id}-interactions-view-all`} size="sm" variant="ghost" asChild><Link href={`/msp/contacts/${contact.contact_name_id}/activity`}>View all</Link></Button>
+            <BentoTileAddButton id={`${id}-interactions-log`} label="Log interaction" onClick={() => setIsInteractionOpen(true)} />
           </div>
         }
       >
-        {interactions.length ? interactions.slice(0, 5).map((interaction) => (
-          <div key={interaction.interaction_id} className="rounded-md px-2 py-2">
-            <div className="truncate text-sm font-medium text-[rgb(var(--color-text-800))]">{interaction.title || interaction.type_name || 'Interaction'}</div>
-            <div className="truncate text-xs text-[rgb(var(--color-text-500))]">
-              {[interaction.type_name, formatDateTime(interaction.interaction_date), interaction.user_name].filter(Boolean).join(' · ')}
-            </div>
+        {interactions.length ? (
+          <TileRows>
+            {interactions.slice(0, 5).map((interaction) => (
+              <TileRow
+                key={interaction.interaction_id}
+                leading={<InteractionIcon icon={interaction.icon} typeName={interaction.type_name} size="sm" className="shrink-0" />}
+                primary={interaction.title || interaction.type_name || 'Interaction'}
+                meta={[
+                  formatDate(interaction.interaction_date),
+                  interaction.duration ? `${interaction.duration}m` : null,
+                  interaction.user_name,
+                ].filter(Boolean).join(' · ')}
+              />
+            ))}
+          </TileRows>
+        ) : (
+          <div>
+            <BentoTileEmpty id={`${id}-interactions-empty`}>No interactions logged</BentoTileEmpty>
+            <BentoTileEmptyAction id={`${id}-interactions-log-first`} onClick={() => setIsInteractionOpen(true)}>Log an interaction</BentoTileEmptyAction>
           </div>
-        )) : (
-          <BentoTileEmpty id={`${id}-interactions-empty`}>No interactions logged</BentoTileEmpty>
         )}
       </BentoTile>
-      {portalTile}
+  );
+
+  const documentsTile = (
       <BentoTile
         id={`${id}-documents-tile`}
         title="Documents"
         icon={<FileText className="h-4 w-4" />}
-        className="col-span-12 lg:col-span-4"
-        action={<Button id={`${id}-documents-view-all`} size="sm" variant="ghost" onClick={() => setIsDocumentsOpen(true)}>View all {documents.length}</Button>}
-      >
-        {documents.length ? documents.slice(0, 4).map((document) => (
-          <div key={document.document_id} className="rounded-md px-2 py-2">
-            <div className="truncate text-sm font-medium text-[rgb(var(--color-text-800))]">{document.document_name || (document as any).file_name || 'Document'}</div>
-            <div className="truncate text-xs text-[rgb(var(--color-text-500))]">{formatDate((document as any).updated_at || (document as any).created_at)}</div>
+        action={
+          <div className="flex items-center gap-1">
+            <Button id={`${id}-documents-view-all`} size="sm" variant="ghost" onClick={() => setIsDocumentsOpen(true)}>View all {documents.length}</Button>
+            <BentoTileAddButton id={`${id}-documents-add`} label="Add document" onClick={() => setIsDocumentsOpen(true)} />
           </div>
-        )) : (
-          <BentoTileEmpty id={`${id}-documents-empty`}>No documents yet</BentoTileEmpty>
+        }
+      >
+        {documents.length ? (
+          <TileRows>
+            {documents.slice(0, 4).map((document) => (
+              <TileRow
+                key={document.document_id}
+                leading={
+                  <span className="shrink-0 rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] px-1 py-px text-[9px] font-semibold tracking-wide text-[rgb(var(--color-text-500))]">
+                    {documentBadge(document)}
+                  </span>
+                }
+                primary={document.document_name || (document as any).file_name || 'Document'}
+                meta={formatDate((document as any).updated_at || (document as any).created_at)}
+                emphasize={false}
+              />
+            ))}
+          </TileRows>
+        ) : (
+          <div>
+            <BentoTileEmpty id={`${id}-documents-empty`}>No documents yet</BentoTileEmpty>
+            <BentoTileEmptyAction id={`${id}-documents-add-first`} onClick={() => setIsDocumentsOpen(true)}>Add a document</BentoTileEmptyAction>
+          </div>
         )}
       </BentoTile>
-      <BentoTile id={`${id}-related-work-tile`} title="Related work" icon={<BriefcaseBusiness className="h-4 w-4" />} className="col-span-12 lg:col-span-4">
+  );
+
+  const relatedWorkTile = (
+      <BentoTile id={`${id}-related-work-tile`} title="Related work" icon={<BriefcaseBusiness className="h-4 w-4" />}>
         {relatedWork?.projects.length || relatedWork?.quotes.length ? (
-          <div className="space-y-3">
-            <div>
-              <div className="mb-1 text-[10px] font-semibold uppercase text-[rgb(var(--color-text-400))]">Projects</div>
-              {relatedWork.projects.length ? relatedWork.projects.map((project) => (
-                <RowLink key={project.project_id} href={`/msp/projects/${project.project_id}`} title={project.project_name || `Project ${project.project_number ?? ''}`} meta={project.status_name ?? 'No status'} />
-              )) : <BentoTileEmpty id={`${id}-projects-empty`}>No projects</BentoTileEmpty>}
-            </div>
-            <div>
-              <div className="mb-1 text-[10px] font-semibold uppercase text-[rgb(var(--color-text-400))]">Quotes</div>
-              {relatedWork.quotes.length ? relatedWork.quotes.map((quote) => (
-                <RowLink key={quote.quote_id} href={`/msp/billing?tab=quotes&quoteId=${quote.quote_id}`} title={quote.title || quote.quote_number || 'Quote'} meta={`${centsToMoney(quote.total_amount, quote.currency_code)} · ${quote.status ?? 'No status'}`} />
-              )) : <BentoTileEmpty id={`${id}-quotes-empty`}>No quotes</BentoTileEmpty>}
-            </div>
+          <div>
+            <Eyebrow first>Projects</Eyebrow>
+            {relatedWork.projects.length ? (
+              <TileRows>
+                {relatedWork.projects.map((project) => (
+                  <TileRow
+                    key={project.project_id}
+                    href={`/msp/projects/${project.project_id}`}
+                    primary={project.project_name || `Project ${project.project_number ?? ''}`}
+                    meta={(project.status_name ?? 'No status').toLowerCase()}
+                    emphasize={false}
+                  />
+                ))}
+              </TileRows>
+            ) : <BentoTileEmpty id={`${id}-projects-empty`}>No projects</BentoTileEmpty>}
+            <Eyebrow>Quotes</Eyebrow>
+            {relatedWork.quotes.length ? (
+              <TileRows>
+                {relatedWork.quotes.map((quote) => (
+                  <TileRow
+                    key={quote.quote_id}
+                    href={`/msp/billing?tab=quotes&quoteId=${quote.quote_id}`}
+                    primary={quote.title || quote.quote_number || 'Quote'}
+                    meta={`${(quote.status ?? 'no status').toLowerCase()} · ${centsToMoney(quote.total_amount, quote.currency_code)}`}
+                    emphasize={false}
+                  />
+                ))}
+              </TileRows>
+            ) : <BentoTileEmpty id={`${id}-quotes-empty`}>No quotes</BentoTileEmpty>}
           </div>
         ) : (
           <BentoTileEmpty id={`${id}-related-empty`}>No related projects or quotes</BentoTileEmpty>
         )}
       </BentoTile>
-      <BentoTile id={`${id}-notes-tile`} title="Notes" icon={<NotebookPen className="h-4 w-4" />} className="col-span-12 lg:col-span-4">
+  );
+
+  const notesTile = (
+      <BentoTile
+        id={`${id}-notes-tile`}
+        title="Notes"
+        icon={<NotebookPen className="h-4 w-4" />}
+        action={
+          !contact.notes_document_id && !isEditingNotes && contact.notes ? (
+            <Button
+              id={`${id}-notes-edit`}
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setNotesDraft(contact.notes ?? '');
+                setIsEditingNotes(true);
+              }}
+            >
+              Edit
+            </Button>
+          ) : undefined
+        }
+      >
         {contact.notes_document_id ? (
           <Link className="inline-flex items-center gap-1 text-sm font-medium text-[rgb(var(--color-primary-600))]" href={`/msp/documents/${contact.notes_document_id}`}>
             Open note document <ExternalLink className="h-3 w-3" />
           </Link>
-        ) : (
+        ) : isEditingNotes ? (
           <div className="space-y-2">
             <TextArea
               id={`${id}-notes-textarea`}
               value={notesDraft}
               onChange={(event) => setNotesDraft(event.target.value)}
-              rows={6}
+              rows={5}
               placeholder="No notes yet"
             />
-            <Button
-              id={`${id}-notes-save`}
-              size="sm"
-              disabled={notesDraft === (contact.notes ?? '') || isSavingField === 'notes'}
-              onClick={() => void saveField('notes', notesDraft)}
+            <div className="flex items-center gap-2">
+              <Button
+                id={`${id}-notes-save`}
+                size="sm"
+                disabled={isSavingField === 'notes'}
+                onClick={async () => {
+                  await saveField('notes', notesDraft);
+                  setIsEditingNotes(false);
+                }}
+              >
+                Save notes
+              </Button>
+              <Button
+                id={`${id}-notes-cancel`}
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setNotesDraft(contact.notes ?? '');
+                  setIsEditingNotes(false);
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : contact.notes ? (
+          <p className="whitespace-pre-wrap text-sm text-[rgb(var(--color-text-700))]">{contact.notes}</p>
+        ) : (
+          <div>
+            <BentoTileEmpty id={`${id}-notes-empty`}>No notes yet</BentoTileEmpty>
+            <BentoTileEmptyAction
+              id={`${id}-notes-add`}
+              onClick={() => {
+                setNotesDraft(contact.notes ?? '');
+                setIsEditingNotes(true);
+              }}
             >
-              Save notes
-            </Button>
+              Add notes
+            </BentoTileEmptyAction>
           </div>
         )}
       </BentoTile>
+  );
+
+  return (
+    <div id={id} className="grid grid-cols-12 gap-3 items-start">
+      {hero}
+      {/* Independent rails so tile heights don't row-align across columns. */}
+      <div className="col-span-12 lg:col-span-8 min-w-0 flex flex-col gap-3">
+        {ticketsTile}
+        {interactionsTile}
+      </div>
+      <div className="col-span-12 lg:col-span-4 min-w-0 flex flex-col gap-3">
+        {reachTile}
+        {portalTile}
+        {documentsTile}
+        {relatedWorkTile}
+        {notesTile}
+      </div>
 
       <PortalDialog />
       <Dialog

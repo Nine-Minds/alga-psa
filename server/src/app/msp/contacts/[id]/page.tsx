@@ -7,6 +7,7 @@ import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentAction
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   getContactByContactNameId,
+  getContactPortalSummary,
   getContactRelatedWork,
   getContactStats,
   getContactTicketsSummary,
@@ -14,6 +15,7 @@ import {
 } from '@alga-psa/clients/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getContactPortalPermissions } from '@alga-psa/auth/actions';
+import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AIChatContextBoundary } from '@product/chat/context';
@@ -76,7 +78,7 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
       return notFound();
     }
 
-    const [clients, permissions, documentsResponse, interactions, tags, stats, ticketsSummary, relatedWork] = await Promise.all([
+    const [clients, permissions, documentsResponse, interactions, tags, stats, ticketsSummary, relatedWork, portalSummary] = await Promise.all([
       getAllClients(),
       getContactPortalPermissions(),
       isAlgaDesk ? Promise.resolve([]) : settledValue(getDocumentsByEntity(id, 'contact'), [] as any),
@@ -85,6 +87,7 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
       settledValue(getContactStats(id), null),
       settledValue(getContactTicketsSummary(id), null),
       settledValue(getContactRelatedWork(id), null),
+      settledValue(getContactPortalSummary(id), null),
     ]);
 
     let documents: IDocument[] = [];
@@ -118,6 +121,18 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
             stats={stats}
             ticketsSummary={ticketsSummary}
             relatedWork={relatedWork}
+            portalSummary={portalSummary}
+            newTicketHref={buildCreateTicketHref({
+              contact: { id: contact.contact_name_id, name: contact.full_name },
+              ...(contact.client_id
+                ? {
+                    client: {
+                      id: contact.client_id,
+                      name: clients.find((client) => client.client_id === contact.client_id)?.client_name ?? '',
+                    },
+                  }
+                : {}),
+            })}
             userId={currentUser.user_id}
             userPermissions={permissions}
           />

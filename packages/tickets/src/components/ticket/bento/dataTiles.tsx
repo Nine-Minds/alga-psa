@@ -119,6 +119,7 @@ export function NextVisitTile({
       ) : upcoming.length === 0 && past.length === 0 ? (
         <div>
           <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.nothingScheduled', 'Nothing scheduled')}</BentoTileEmpty>
+          {/* LEVERAGE: pattern bento-empty-action — this hand-rolled "+ verb" empty-state link now exists as BentoTileEmptyAction (and header adds as BentoTileAddButton) in @alga-psa/ui bento/BentoTile; migrate ticket tiles to them. */}
           <a
             id={`${id}-schedule-link`}
             href="/msp/technician-dispatch"

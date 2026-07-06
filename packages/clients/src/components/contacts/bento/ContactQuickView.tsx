@@ -3,6 +3,7 @@
 import type { IClient, IContact, IDocument, IInteraction, ITag } from '@alga-psa/types';
 import ContactBentoLayout from './ContactBentoLayout';
 import type {
+  ContactPortalSummary,
   ContactRelatedWorkSummary,
   ContactStatsSummary,
   ContactTicketsSummary,
@@ -18,6 +19,7 @@ interface ContactQuickViewProps {
   stats?: ContactStatsSummary | null;
   ticketsSummary?: ContactTicketsSummary | null;
   relatedWork?: ContactRelatedWorkSummary | null;
+  portalSummary?: ContactPortalSummary | null;
   userId?: string;
   userPermissions?: {
     canInvite: boolean;
