@@ -37,7 +37,7 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useQuickAddClient } from '@alga-psa/ui/context';
-import { QuickAddInteraction } from '@alga-psa/clients/components/interactions/QuickAddInteraction';
+import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from '@alga-psa/ui/components/BentoTile';
 import { BentoHero } from './BentoHero';
@@ -47,6 +47,15 @@ import { NextVisitTile, AppointmentRequestsTile, CallsEmailsTile, BillingTile } 
 import { TimeLoggedSummary } from './TimeLoggedSummary';
 import type { TicketSlaFields } from './slaClocks';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
+
+// Lazy-load the log-interaction modal. It statically pulls in the clients
+// server actions (and their server-only storage deps), so keeping it out of
+// the static import graph avoids bundling server code into the client — and,
+// paired with mounting it only when open, keeps it out of unit-test bundles.
+const QuickAddInteraction = dynamic(
+  () => import('@alga-psa/clients/components/interactions/QuickAddInteraction').then((m) => m.QuickAddInteraction),
+  { ssr: false },
+);
 
 function formatElapsed(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -598,7 +607,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           initialData={props.bentoStreams?.interactions}
         />
       </Suspense>
-      {effectiveClientId ? (
+      {isLogInteractionOpen && effectiveClientId ? (
         <QuickAddInteraction
           id={`${id}-log-interaction`}
           isOpen={isLogInteractionOpen}
