@@ -221,7 +221,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   isAlgaDeskMode = false,
 }) => {
   const { t } = useTranslation('msp/clients');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets, getSlaPolicies } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -1785,6 +1785,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             }}
             onNewTicket={() => setIsQuickAddTicketOpen(true)}
             onManageLocations={() => setIsLocationsDialogOpen(true)}
+            onOpenTicketDetails={openTicketDetails ?? null}
             surveySummary={surveySummary}
             renderSurveySummaryCard={renderSurveySummaryCard}
             t={t}

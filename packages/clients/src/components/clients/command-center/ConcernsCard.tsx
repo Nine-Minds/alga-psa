@@ -3,25 +3,27 @@
 import React from 'react';
 import type { ClientAttentionFlag } from '../../../lib/commandCenterTypes';
 
-interface AttentionStripProps {
-  idPrefix: string;
+interface ConcernsCardProps {
+  id: string;
   flags: ClientAttentionFlag[];
   formatMoney: (cents: number) => string;
   onFlagClick: (flag: ClientAttentionFlag) => void;
+  className?: string;
   t: (key: string, options?: Record<string, unknown>) => string;
 }
 
-const severityClasses: Record<ClientAttentionFlag['severity'], string> = {
-  amber: 'bg-amber-100 text-amber-800 hover:bg-amber-200',
-  blue: 'bg-blue-100 text-blue-800 hover:bg-blue-200',
-  gray: 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50',
+const severityDot: Record<ClientAttentionFlag['severity'], string> = {
+  amber: 'bg-amber-400',
+  blue: 'bg-blue-400',
+  gray: 'bg-gray-300',
 };
 
 /**
- * Cross-module exceptions, one pill per flag (D8). Labels are built here from
- * structured server facts; the strip renders nothing when there are no flags.
+ * Cross-module exceptions grouped into one card (D8). Labels are built here
+ * from structured server facts; the card renders nothing when there are no
+ * flags — an empty "Concerns" card would be a placeholder.
  */
-export default function AttentionStrip({ idPrefix, flags, formatMoney, onFlagClick, t }: AttentionStripProps) {
+export default function ConcernsCard({ id, flags, formatMoney, onFlagClick, className = '', t }: ConcernsCardProps) {
   if (!flags.length) {
     return null;
   }
@@ -102,18 +104,35 @@ export default function AttentionStrip({ idPrefix, flags, formatMoney, onFlagCli
   };
 
   return (
-    <div id={`${idPrefix}-attention-strip`} className="flex flex-wrap gap-2 mb-4" data-print-hide>
-      {flags.map((flag, index) => (
-        <button
-          key={`${flag.kind}-${flag.refId ?? index}`}
-          id={`${idPrefix}-flag-${flag.kind}-${index}`}
-          type="button"
-          onClick={() => onFlagClick(flag)}
-          className={`rounded-lg px-3.5 py-2 text-[13px] font-medium transition-colors ${severityClasses[flag.severity]}`}
-        >
-          {labelFor(flag)} <span className="opacity-60">→</span>
-        </button>
-      ))}
+    <div
+      id={id}
+      data-print-hide
+      className={`border border-amber-200 bg-amber-50/50 rounded-xl p-4 min-w-0 ${className}`}
+    >
+      <div className="flex items-center mb-2.5">
+        <h3 className="text-xs font-bold uppercase tracking-wide text-amber-800">
+          {t('clientCommandCenter.cards.concerns', { defaultValue: 'Concerns' })}
+        </h3>
+        <span className="ml-2 rounded-full bg-amber-200/70 text-amber-900 px-1.5 text-[10.5px] font-bold leading-4">
+          {flags.length}
+        </span>
+      </div>
+      <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+        {flags.map((flag, index) => (
+          <li key={`${flag.kind}-${flag.refId ?? index}`} className="min-w-0">
+            <button
+              id={`${id}-flag-${flag.kind}-${index}`}
+              type="button"
+              onClick={() => onFlagClick(flag)}
+              className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[13px] text-gray-800 hover:bg-white/80 transition-colors"
+            >
+              <span className={`w-2 h-2 rounded-full shrink-0 ${severityDot[flag.severity]}`} aria-hidden="true" />
+              <span className="min-w-0 truncate">{labelFor(flag)}</span>
+              <span className="ml-auto text-gray-400 shrink-0">→</span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

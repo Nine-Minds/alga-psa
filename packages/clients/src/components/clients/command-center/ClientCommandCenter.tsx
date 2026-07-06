@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { MapPin } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
@@ -11,7 +12,7 @@ import type {
   ClientPulse,
   ClientTimelineEvent,
 } from '../../../lib/commandCenterTypes';
-import AttentionStrip from './AttentionStrip';
+import ConcernsCard from './ConcernsCard';
 import ClientTimelinePanel from './ClientTimelinePanel';
 import FocusViewHost from './FocusViewHost';
 import {
@@ -41,14 +42,16 @@ interface ClientCommandCenterProps {
   onDiscardRecordChanges: () => void;
   onNewTicket: () => void;
   onManageLocations: () => void;
+  /** Open a ticket in the shared drawer (composition-provided); falls back to navigation. */
+  onOpenTicketDetails?: ((ticketId: string) => void | Promise<void>) | null;
   surveySummary: SurveyClientSatisfactionSummary | null;
   renderSurveySummaryCard: (props: { summary: SurveyClientSatisfactionSummary | null }) => React.ReactNode;
   t: TFn;
 }
 
-function SkeletonCard() {
+function SkeletonCard({ className = '' }: { className?: string }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4 animate-pulse">
+    <div className={`bg-white border border-gray-200 rounded-xl p-4 animate-pulse ${className}`}>
       <div className="h-3 w-24 bg-gray-200 rounded mb-4" />
       <div className="h-6 w-16 bg-gray-100 rounded mb-2" />
       <div className="h-3 w-full bg-gray-100 rounded mb-1.5" />
@@ -71,6 +74,7 @@ export default function ClientCommandCenter({
   onDiscardRecordChanges,
   onNewTicket,
   onManageLocations,
+  onOpenTicketDetails,
   surveySummary,
   renderSurveySummaryCard,
   t,
@@ -160,7 +164,13 @@ export default function ClientCommandCenter({
   const navigateToRef = useCallback((refType: string, refId: string) => {
     switch (refType) {
       case 'ticket':
-        router.push(`/msp/tickets/${refId}`);
+        // Stay on the client page: open the ticket in a drawer when the
+        // composition layer provides one; full navigation is the fallback.
+        if (onOpenTicketDetails) {
+          void onOpenTicketDetails(refId);
+        } else {
+          router.push(`/msp/tickets/${refId}`);
+        }
         return;
       case 'invoice':
         router.push(`/msp/invoices/${refId}`);
@@ -187,7 +197,7 @@ export default function ClientCommandCenter({
       default:
         break;
     }
-  }, [router, resolveTab, openFocus]);
+  }, [router, resolveTab, openFocus, onOpenTicketDetails]);
 
   const handleFlagClick = useCallback((flag: ClientAttentionFlag) => {
     if (flag.refType && flag.refId) {
@@ -202,7 +212,7 @@ export default function ClientCommandCenter({
   // The reach-the-customer basics, always visible: default location's phone
   // and email, website, and primary address. Only fields that exist render.
   const identityLocation = pulse?.locations.find((location) => location.is_default) ?? pulse?.locations[0] ?? null;
-  const identityItems: Array<{ key: string; href: string | null; text: string }> = [];
+  const identityItems: Array<{ key: string; href: string | null; text: React.ReactNode }> = [];
   if (identityLocation?.phone) {
     identityItems.push({ key: 'phone', href: `tel:${identityLocation.phone}`, text: `☎ ${identityLocation.phone}` });
   }
@@ -217,7 +227,12 @@ export default function ClientCommandCenter({
     identityItems.push({
       key: 'address',
       href: null,
-      text: `📍 ${[identityLocation.address_line1, identityLocation.city].filter(Boolean).join(', ')}`,
+      text: (
+        <>
+          <MapPin className="inline w-3.5 h-3.5 -mt-0.5 mr-1 text-gray-500" aria-hidden="true" />
+          {[identityLocation.address_line1, identityLocation.city].filter(Boolean).join(', ')}
+        </>
+      ),
     });
   }
 
@@ -243,31 +258,33 @@ export default function ClientCommandCenter({
         )}
       </div>
 
-      {pulse && (
-        <AttentionStrip
-          idPrefix={idPrefix}
-          flags={pulse.attention}
-          formatMoney={formatMoney}
-          onFlagClick={handleFlagClick}
-          t={t}
-        />
-      )}
-
       {pulseError && (
         <p id={`${idPrefix}-pulse-error`} className="text-[13px] text-red-600 mb-4">{pulseError}</p>
       )}
 
+      {/* Bento mosaic: a 6-column canvas where tiles earn different widths —
+          Concerns full-bleed, Service the hero, halves and thirds below. */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-6 gap-4">
           {!pulse && !pulseError && (
             <>
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
+              <SkeletonCard className="sm:col-span-4" />
+              <SkeletonCard className="sm:col-span-2" />
+              <SkeletonCard className="sm:col-span-3" />
+              <SkeletonCard className="sm:col-span-3" />
             </>
           )}
 
+          {pulse && (
+            <ConcernsCard
+              id={`${idPrefix}-card-concerns`}
+              flags={pulse.attention}
+              formatMoney={formatMoney}
+              onFlagClick={handleFlagClick}
+              className="sm:col-span-6"
+              t={t}
+            />
+          )}
           {pulse?.service && (
             <ServiceCard
               id={`${idPrefix}-card-service`}
@@ -275,6 +292,17 @@ export default function ClientCommandCenter({
               onOpen={focusOpener('tickets')}
               onOpenTicket={(ticketId) => navigateToRef('ticket', ticketId)}
               onNewTicket={onNewTicket}
+              className="sm:col-span-4"
+              t={t}
+            />
+          )}
+          {pulse && (
+            <RecordCard
+              id={`${idPrefix}-card-record`}
+              data={pulse.record}
+              onOpen={focusOpener('details')}
+              onOpenAdditionalInfo={focusOpener('additional-info')}
+              className={pulse.service ? 'sm:col-span-2' : 'sm:col-span-6'}
               t={t}
             />
           )}
@@ -287,6 +315,7 @@ export default function ClientCommandCenter({
               onOpenInvoice={(invoiceId) => navigateToRef('invoice', invoiceId)}
               onOpenBillingSetup={focusOpener('billing')}
               onOpenTaxSettings={focusOpener('tax-settings')}
+              className="sm:col-span-3"
               t={t}
             />
           )}
@@ -299,6 +328,7 @@ export default function ClientCommandCenter({
               // header already opens Assets and the footer link would duplicate it.
               onOpenAssetList={tabIds.has('equipment') ? focusOpener('assets') : null}
               onOpenAsset={(assetId) => router.push(`/msp/assets/${assetId}`)}
+              className="sm:col-span-3"
               t={t}
             />
           )}
@@ -307,6 +337,7 @@ export default function ClientCommandCenter({
               id={`${idPrefix}-card-people`}
               data={pulse.people}
               onOpen={focusOpener('contacts')}
+              className="sm:col-span-3"
               t={t}
             />
           )}
@@ -315,6 +346,7 @@ export default function ClientCommandCenter({
               id={`${idPrefix}-card-locations`}
               locations={pulse.locations}
               onManage={onManageLocations}
+              className="sm:col-span-3"
               t={t}
             />
           )}
@@ -323,6 +355,7 @@ export default function ClientCommandCenter({
               id={`${idPrefix}-card-documents`}
               data={pulse.documents}
               onOpen={focusOpener('documents')}
+              className="sm:col-span-2"
               t={t}
             />
           )}
@@ -331,15 +364,7 @@ export default function ClientCommandCenter({
               id={`${idPrefix}-card-notes`}
               data={pulse.notes}
               onOpen={focusOpener('notes')}
-              t={t}
-            />
-          )}
-          {pulse && (
-            <RecordCard
-              id={`${idPrefix}-card-record`}
-              data={pulse.record}
-              onOpen={focusOpener('details')}
-              onOpenAdditionalInfo={focusOpener('additional-info')}
+              className="sm:col-span-2"
               t={t}
             />
           )}
@@ -347,13 +372,13 @@ export default function ClientCommandCenter({
               responses — an empty one said "no data" four ways. */}
           {pulse && surveySummary && (
             surveySummary.totalResponses > 0 ? (
-              <div id={`${idPrefix}-card-csat`} className="min-w-0">
+              <div id={`${idPrefix}-card-csat`} className="min-w-0 sm:col-span-2">
                 {renderSurveySummaryCard({ summary: surveySummary })}
               </div>
             ) : (
               <div
                 id={`${idPrefix}-card-csat`}
-                className="bg-white border border-gray-200 rounded-xl px-4 py-3 min-w-0 text-[13px] text-gray-400 italic self-start"
+                className="bg-white border border-gray-200 rounded-xl px-4 py-3 min-w-0 sm:col-span-2 text-[13px] text-gray-400 italic self-start"
               >
                 {t('clientCommandCenter.csatEmpty', { defaultValue: 'No survey responses yet.' })}
               </div>

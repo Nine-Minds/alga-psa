@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { MapPin } from 'lucide-react';
+import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import type {
   ClientPulseService,
   ClientPulseMoney,
@@ -141,12 +143,13 @@ function SlaChip({ sla, t }: { sla: ClientPulseTicketSla; t: TFn }) {
 
 // ── Service ──────────────────────────────────────────────────────────────────
 
-export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, t }: {
+export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, className, t }: {
   id: string;
   data: ClientPulseService;
   onOpen: (() => void) | null;
   onOpenTicket: (ticketId: string) => void;
   onNewTicket: () => void;
+  className?: string;
   t: TFn;
 }) {
   return (
@@ -154,6 +157,7 @@ export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, t }: 
       id={id}
       title={t('clientCommandCenter.cards.service', { defaultValue: 'Service' })}
       action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      className={className}
     >
       <div className="flex gap-6 mb-3">
         <Stat value={data.openCount} label={t('clientCommandCenter.service.open', { defaultValue: 'open tickets' })} />
@@ -227,7 +231,7 @@ export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, t }: 
 
 // ── Money ────────────────────────────────────────────────────────────────────
 
-export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpenBillingSetup, onOpenTaxSettings, t }: {
+export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpenBillingSetup, onOpenTaxSettings, className, t }: {
   id: string;
   data: ClientPulseMoney;
   formatMoney: (cents: number) => string;
@@ -235,6 +239,7 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
   onOpenInvoice: (invoiceId: string) => void;
   onOpenBillingSetup: (() => void) | null;
   onOpenTaxSettings: (() => void) | null;
+  className?: string;
   t: TFn;
 }) {
   const buckets = [
@@ -251,6 +256,7 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
       id={id}
       title={t('clientCommandCenter.cards.money', { defaultValue: 'Money' })}
       action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      className={className}
       footerLinks={[
         onOpenBillingSetup
           ? { id: 'billing-setup', label: t('clientCommandCenter.money.billingSetup', { defaultValue: '⚙ Billing setup' }), onClick: onOpenBillingSetup }
@@ -363,13 +369,14 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
 
 // ── Install base ─────────────────────────────────────────────────────────────
 
-export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset, t }: {
+export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset, className, t }: {
   id: string;
   data: ClientPulseInstallBase;
   onOpen: (() => void) | null;
   /** Assets focus view, when Equipment holds the header action (both tabs exist). */
   onOpenAssetList: (() => void) | null;
   onOpenAsset: (assetId: string) => void;
+  className?: string;
   t: TFn;
 }) {
   return (
@@ -377,6 +384,7 @@ export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset
       id={id}
       title={t('clientCommandCenter.cards.installBase', { defaultValue: 'Install base' })}
       action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      className={className}
       footerLinks={[
         onOpenAssetList
           ? { id: 'assets', label: t('clientCommandCenter.installBase.assetsLink', { defaultValue: 'Managed assets ↗' }), onClick: onOpenAssetList }
@@ -455,10 +463,11 @@ export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset
 
 // ── People ───────────────────────────────────────────────────────────────────
 
-export function PeopleCard({ id, data, onOpen, t }: {
+export function PeopleCard({ id, data, onOpen, className, t }: {
   id: string;
   data: ClientPulsePeople;
   onOpen: (() => void) | null;
+  className?: string;
   t: TFn;
 }) {
   return (
@@ -466,6 +475,7 @@ export function PeopleCard({ id, data, onOpen, t }: {
       id={id}
       title={t('clientCommandCenter.cards.people', { defaultValue: 'People' })}
       action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      className={className}
     >
       {data.top.length === 0 ? (
         <EmptyLine text={t('clientCommandCenter.people.none', { defaultValue: 'No contacts yet.' })} />
@@ -473,9 +483,13 @@ export function PeopleCard({ id, data, onOpen, t }: {
         <ul className="divide-y divide-gray-100">
           {data.top.map((contact) => (
             <li key={contact.contact_name_id} className="py-2 flex items-center gap-2.5 text-[13px]">
-              <span className="w-7 h-7 rounded-full bg-primary-50 text-primary-700 flex items-center justify-center text-[10.5px] font-bold shrink-0">
-                {contact.full_name.split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()}
-              </span>
+              <ContactAvatar
+                contactId={contact.contact_name_id}
+                contactName={contact.full_name}
+                avatarUrl={contact.avatarUrl}
+                size="sm"
+                className="shrink-0"
+              />
               <span className="min-w-0">
                 <span className="block font-semibold text-gray-900 truncate">
                   {contact.full_name}
@@ -516,10 +530,11 @@ export function PeopleCard({ id, data, onOpen, t }: {
 
 // ── Locations ────────────────────────────────────────────────────────────────
 
-export function LocationsCard({ id, locations, onManage, t }: {
+export function LocationsCard({ id, locations, onManage, className, t }: {
   id: string;
   locations: ClientPulseLocation[];
   onManage: (() => void) | null;
+  className?: string;
   t: TFn;
 }) {
   return (
@@ -527,6 +542,7 @@ export function LocationsCard({ id, locations, onManage, t }: {
       id={id}
       title={t('clientCommandCenter.cards.locations', { defaultValue: 'Locations' })}
       action={onManage ? { label: t('clientCommandCenter.locations.manage', { defaultValue: 'Manage ↗' }), onClick: onManage } : null}
+      className={className}
     >
       {locations.length === 0 ? (
         <EmptyLine text={t('clientCommandCenter.locations.none', { defaultValue: 'No locations yet.' })} />
@@ -534,9 +550,12 @@ export function LocationsCard({ id, locations, onManage, t }: {
         <ul className="divide-y divide-gray-100">
           {locations.slice(0, 3).map((location) => (
             <li key={location.location_id} className="py-2 text-[13px]">
-              <div className="font-semibold text-gray-900">
-                📍 {location.location_name || location.address_line1}
-                {location.is_default ? ' ★' : ''}
+              <div className="font-semibold text-gray-900 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-gray-500 shrink-0" aria-hidden="true" />
+                <span className="truncate">
+                  {location.location_name || location.address_line1}
+                  {location.is_default ? ' ★' : ''}
+                </span>
               </div>
               <div className="text-[12px] text-gray-500 truncate">
                 {[location.address_line1, location.city].filter(Boolean).join(', ')}
@@ -579,10 +598,11 @@ export function LocationsCard({ id, locations, onManage, t }: {
 
 // ── Documents ────────────────────────────────────────────────────────────────
 
-export function DocumentsCard({ id, data, onOpen, t }: {
+export function DocumentsCard({ id, data, onOpen, className, t }: {
   id: string;
   data: ClientPulseDocuments;
   onOpen: (() => void) | null;
+  className?: string;
   t: TFn;
 }) {
   return (
@@ -590,6 +610,7 @@ export function DocumentsCard({ id, data, onOpen, t }: {
       id={id}
       title={t('clientCommandCenter.cards.documents', { defaultValue: 'Documents' })}
       action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      className={className}
     >
       {data.recent.length === 0 ? (
         <EmptyLine text={t('clientCommandCenter.documents.none', { defaultValue: 'No documents yet.' })} />
@@ -614,15 +635,17 @@ export function DocumentsCard({ id, data, onOpen, t }: {
 
 // ── Notes ────────────────────────────────────────────────────────────────────
 
-export function NotesCard({ id, data, onOpen, t }: {
+export function NotesCard({ id, data, onOpen, className, t }: {
   id: string;
   data: ClientPulseNotes;
   onOpen: (() => void) | null;
+  className?: string;
   t: TFn;
 }) {
   return (
     <CardShell
       id={id}
+      className={className}
       title={t('clientCommandCenter.cards.notes', { defaultValue: 'Notes' })}
       action={onOpen
         ? {
@@ -658,11 +681,12 @@ export function NotesCard({ id, data, onOpen, t }: {
 
 // ── Client record ────────────────────────────────────────────────────────────
 
-export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, t }: {
+export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, className, t }: {
   id: string;
   data: ClientPulseRecord;
   onOpen: (() => void) | null;
   onOpenAdditionalInfo: (() => void) | null;
+  className?: string;
   t: TFn;
 }) {
   // W5: tax region + inbound domains were plumbing on the overview (they live
@@ -687,6 +711,7 @@ export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, t }: {
       id={id}
       title={t('clientCommandCenter.cards.record', { defaultValue: 'Client record' })}
       action={onOpen ? { label: t('clientCommandCenter.record.edit', { defaultValue: 'Edit ↗' }), onClick: onOpen } : null}
+      className={className}
       footerLinks={[
         onOpenAdditionalInfo
           ? { id: 'additional-info', label: t('clientCommandCenter.record.additionalInfo', { defaultValue: 'Additional info' }), onClick: onOpenAdditionalInfo }
