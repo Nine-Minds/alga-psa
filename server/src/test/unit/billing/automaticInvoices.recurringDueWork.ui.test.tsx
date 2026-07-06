@@ -12,6 +12,7 @@ import * as billingAndTaxActions from '@alga-psa/billing/actions/billingAndTax';
 import * as billingCycleActions from '@alga-psa/billing/actions/billingCycleActions';
 import * as invoiceGenerationActions from '@alga-psa/billing/actions/invoiceGeneration';
 import * as recurringBillingRunActions from '@alga-psa/billing/actions/recurringBillingRunActions';
+import * as recurringServicePeriodActions from '@alga-psa/billing/actions/recurringServicePeriodActions';
 import type { IRecurringDueWorkInvoiceCandidate } from '@alga-psa/types';
 
 type Row = Record<string, any>;
@@ -476,6 +477,10 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     billingCycleActions,
     'hardDeleteRecurringInvoice',
   );
+  const repairAllRecurringServicePeriodsForTenantMock = vi.spyOn(
+    recurringServicePeriodActions,
+    'repairAllRecurringServicePeriodsForTenant',
+  );
 
   // Unmount after every test (not just before the next): the jsdom document can
   // be reused across test files, and a tree left mounted by this file's last
@@ -631,6 +636,14 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       invoicesCreated: 0,
       failedCount: 0,
       failures: [],
+    });
+    repairAllRecurringServicePeriodsForTenantMock.mockResolvedValue({
+      clientsScanned: 0,
+      clientsRepaired: 0,
+      schedulesRepaired: 0,
+      rowsBackfilled: 0,
+      rowsRealigned: 0,
+      rowsSuperseded: 0,
     });
   });
 
@@ -997,6 +1010,65 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       'href',
       '/msp/billing?tab=service-periods&scheduleKey=schedule%3Atenant-1%3Aclient_contract_line%3Aline-1%3Aclient%3Aadvance',
     );
+  });
+
+  it('uses a refresh-only callback for Fix all repairs', async () => {
+    getAvailableRecurringDueWorkMock.mockResolvedValueOnce({
+      invoiceCandidates: [],
+      materializationGaps: [
+        {
+          executionIdentityKey: 'client_schedule:client-1:schedule:tenant-1:client_contract_line:line-1:client:advance:period:2025-03-01:2025-04-01:2025-03-01:2025-04-01',
+          selectionKey: 'client_schedule:client-1:schedule:tenant-1:client_contract_line:line-1:client:advance:period:2025-03-01:2025-04-01',
+          clientId: 'client-1',
+          clientName: 'Acme Co',
+          scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:advance',
+          periodKey: 'period:2025-03-01:2025-04-01',
+          billingCycleId: 'cycle-2025-03',
+          invoiceWindowStart: '2025-03-01',
+          invoiceWindowEnd: '2025-04-01',
+          servicePeriodStart: '2025-03-01',
+          servicePeriodEnd: '2025-04-01',
+          reason: 'missing_service_period_materialization' as const,
+          detail: 'Recurring service periods were not materialized for this canonical client-cadence execution window.',
+        },
+      ],
+      total: 0,
+      page: 1,
+      pageSize: 10,
+      totalPages: 0,
+    });
+    repairAllRecurringServicePeriodsForTenantMock.mockResolvedValueOnce({
+      clientsScanned: 1,
+      clientsRepaired: 0,
+      schedulesRepaired: 0,
+      rowsBackfilled: 0,
+      rowsRealigned: 0,
+      rowsSuperseded: 0,
+    });
+    const onGenerateSuccess = vi.fn();
+    const onRefreshNeeded = vi.fn();
+
+    render(
+      <AutomaticInvoices
+        onGenerateSuccess={onGenerateSuccess}
+        onRefreshNeeded={onRefreshNeeded}
+      />,
+    );
+
+    const gapPanel = await screen.findByTestId('recurring-materialization-gap-panel');
+    fireEvent.click(within(gapPanel).getByRole('button', { name: 'Fix all' }));
+
+    await waitFor(() => {
+      expect(repairAllRecurringServicePeriodsForTenantMock).toHaveBeenCalledTimes(1);
+      expect(onRefreshNeeded).toHaveBeenCalledTimes(1);
+    });
+
+    expect(onGenerateSuccess).not.toHaveBeenCalled();
+    expect(
+      within(gapPanel).getByText(
+        'All billing schedules are already up to date. Anything still listed below needs individual review.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('T010: AutomaticInvoices can render and act on a client-cadence recurring row whose bridge metadata is null', async () => {

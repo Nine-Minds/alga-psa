@@ -12,6 +12,7 @@ export interface BackfillRecurringServicePeriodsInput {
   sourceRunKey: string;
   existingRecords?: IRecurringServicePeriodRecord[];
   legacyBilledThroughEnd?: ISO8601String | null;
+  candidateCoverageEnd?: ISO8601String;
   regenerationReasonCode?: RegeneratedRecurringServicePeriodReasonCode;
   recordIdFactory?: (input: {
     scheduleKey: string;
@@ -167,6 +168,7 @@ export function backfillRecurringServicePeriods(
   const regenerationPlan = regenerateRecurringServicePeriods({
     existingRecords: futureScopeExistingRecords,
     candidateRecords: futureCandidates,
+    candidateCoverageEnd: input.candidateCoverageEnd,
     regeneratedAt: input.backfilledAt,
     sourceRuleVersion: input.sourceRuleVersion,
     sourceRunKey: input.sourceRunKey,

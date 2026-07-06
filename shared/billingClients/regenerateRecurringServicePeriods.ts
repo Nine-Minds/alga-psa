@@ -21,6 +21,7 @@ export interface IRecurringServicePeriodRegenerationConflict {
 export interface RegenerateRecurringServicePeriodsInput {
   existingRecords: IRecurringServicePeriodRecord[];
   candidateRecords: IRecurringServicePeriodRecord[];
+  candidateCoverageEnd?: ISO8601String;
   regeneratedAt: ISO8601String;
   sourceRuleVersion: string;
   sourceRunKey: string;
@@ -69,6 +70,13 @@ function isPreservedOverrideRecord(record: IRecurringServicePeriodRecord) {
     || record.lifecycleState === 'locked'
     || record.lifecycleState === 'billed'
   );
+}
+
+function startsAtOrAfterCoverageEnd(
+  record: IRecurringServicePeriodRecord,
+  candidateCoverageEnd: ISO8601String | undefined,
+) {
+  return Boolean(candidateCoverageEnd && record.servicePeriod.start >= candidateCoverageEnd);
 }
 
 function areEquivalentFutureRecords(
@@ -175,6 +183,12 @@ export function regenerateRecurringServicePeriods(
     }
 
     if (!candidate) {
+      if (startsAtOrAfterCoverageEnd(existing, input.candidateCoverageEnd)) {
+        preservedRecords.push(existing);
+        activeRecords.push(existing);
+        continue;
+      }
+
       supersededRecords.push({
         ...existing,
         lifecycleState: 'superseded',

@@ -213,6 +213,7 @@
       "fixAll": "Correggi tutto",
       "fixAllBusy": "Ricostruzione…",
       "fixAllResult": "Ricostruiti {{schedules}} programma/i su {{clients}} cliente/i.",
+      "fixAllNoop": "Tutti i programmi di fatturazione sono già aggiornati. Qualsiasi elemento ancora elencato sotto richiede una revisione individuale.",
       "fixAllError": "Impossibile ricostruire i periodi di servizio. Riprova.",
       "fixAllDenied": "Non hai l’autorizzazione per ricostruire i periodi di servizio."
     },

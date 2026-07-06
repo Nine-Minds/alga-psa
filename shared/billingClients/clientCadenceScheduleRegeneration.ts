@@ -257,21 +257,28 @@ function buildScheduleSourceRuleVersion(
   ].join('|');
 }
 
-async function loadLastInvoicedClientBillingBoundary(
+async function loadClientBilledLedgerBoundary(
   trx: Knex.Transaction,
   params: { tenant: string; clientId: string },
 ) {
   const db = tenantDb(trx, params.tenant);
-  const query = db.table('client_billing_cycles as cbc');
-  db.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id');
-  const lastInvoiced = await query
-    .andWhere('cbc.client_id', params.clientId)
-    .orderBy('cbc.period_end_date', 'desc')
+  const query = db.table('recurring_service_periods as rsp');
+  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+  db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+  const lastBilled = await query
+    .where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)
+    .where('rsp.cadence_owner', 'client')
+    .where('ct.owner_client_id', params.clientId)
+    .where((builder) => {
+      builder.where('rsp.lifecycle_state', 'billed')
+        .orWhereNotNull('rsp.invoice_charge_detail_id');
+    })
+    .orderBy('rsp.service_period_end', 'desc')
     .first()
-    .select({ period_end_date: 'cbc.period_end_date' });
+    .select({ service_period_end: 'rsp.service_period_end' });
 
-  return lastInvoiced?.period_end_date
-    ? normalizeDateOnlyValue(lastInvoiced.period_end_date)
+  return lastBilled?.service_period_end
+    ? normalizeDateOnlyValue(lastBilled.service_period_end)
     : null;
 }
 
@@ -438,7 +445,7 @@ async function computeClientCadenceRegeneration(
   trx: Knex.Transaction,
   params: ClientCadenceScheduleChangeParams,
 ): Promise<ClientCadenceRegenerationComputation> {
-  const billedBoundaryEnd = await loadLastInvoicedClientBillingBoundary(trx, params);
+  const billedBoundaryEnd = await loadClientBilledLedgerBoundary(trx, params);
   const obligations = await loadClientCadenceRecurringObligations(trx, params);
   const materializedAt = new Date().toISOString();
   const sourceRuleVersion = buildScheduleSourceRuleVersion(
@@ -491,6 +498,7 @@ async function computeClientCadenceRegeneration(
     const plan = backfillRecurringServicePeriods({
       candidateRecords,
       existingRecords,
+      candidateCoverageEnd: materialized.generationRangeEnd,
       backfilledAt: materializedAt,
       sourceRuleVersion,
       sourceRunKey,

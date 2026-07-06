@@ -213,6 +213,7 @@
       "fixAll": "Tout réparer",
       "fixAllBusy": "Reconstruction…",
       "fixAllResult": "{{schedules}} planning(s) reconstruit(s) pour {{clients}} client(s).",
+      "fixAllNoop": "Tous les plannings de facturation sont déjà à jour. Tout élément encore listé ci-dessous doit être examiné individuellement.",
       "fixAllError": "Impossible de reconstruire les périodes de service. Veuillez réessayer.",
       "fixAllDenied": "Vous n’avez pas l’autorisation de reconstruire les périodes de service."
     },
