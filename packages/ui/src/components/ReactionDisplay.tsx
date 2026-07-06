@@ -61,10 +61,10 @@ export function ReactionDisplay({
           <button
             type="button"
             id={`${id}-add-reaction-button`}
-            className="inline-flex items-center justify-center w-7 h-7 rounded-full text-[rgb(var(--color-text-400))] hover:bg-[rgb(var(--color-border-100))] hover:text-[rgb(var(--color-text-600))] transition-colors opacity-0 group-hover/comment:opacity-100"
-            aria-label="Add reaction"
+            className="inline-flex items-center gap-1 h-7 px-2 rounded-full text-xs font-medium text-[rgb(var(--color-text-400))] opacity-70 hover:opacity-100 hover:bg-[rgb(var(--color-border-100))] hover:text-[rgb(var(--color-text-600))] transition"
           >
             <SmilePlus size={16} />
+            <span>{t('reactions.add', 'React')}</span>
           </button>
         </EmojiPickerPopover>
       </div>

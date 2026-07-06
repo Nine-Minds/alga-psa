@@ -561,7 +561,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               );
             })()
           )}
-          {reactions && onToggleReaction && (!isCompact || reactions.length > 0) && (
+          {reactions && onToggleReaction && (
             <ReactionDisplay
               id={`${commentId}-reactions`}
               reactions={reactions}

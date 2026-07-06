@@ -3,6 +3,7 @@
     "noClient": "Geen klant"
   },
   "reactions": {
+    "add": "Reageren",
     "ariaSummary_one": "{{emoji}} {{count}} reactie",
     "ariaSummary_other": "{{emoji}} {{count}} reacties",
     "ariaYouReacted": ", jij hebt gereageerd"

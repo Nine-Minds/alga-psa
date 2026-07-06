@@ -3,6 +3,7 @@
     "noClient": "Nessun cliente"
   },
   "reactions": {
+    "add": "Reagisci",
     "ariaSummary_one": "{{emoji}} {{count}} reazione",
     "ariaSummary_other": "{{emoji}} {{count}} reazioni",
     "ariaYouReacted": ", hai reagito"
