@@ -135,4 +135,89 @@ describe('regenerateRecurringServicePeriods', () => {
     expect(plan.preservedRecords.map((record) => record.recordId)).toEqual(['record-august-r1']);
     expect(plan.activeRecords.map((record) => record.recordId)).toEqual(['record-august-r1']);
   });
+
+  it('treats persisted UTC-midnight date ranges as equivalent to fresh date-only candidates', () => {
+    const existing = makeRecord({
+      recordId: 'record-june-r1',
+      scheduleKey: 'schedule:tenant-1:contract_line:line-1:client:arrears',
+      periodKey: 'period:2026-06-01:2026-07-01',
+      revision: 1,
+      duePosition: 'arrears',
+      servicePeriod: {
+        start: '2026-06-01T00:00:00Z',
+        end: '2026-07-01T00:00:00Z',
+        semantics: 'half_open',
+      },
+      invoiceWindow: {
+        start: '2026-07-01T00:00:00Z',
+        end: '2026-08-01T00:00:00Z',
+        semantics: 'half_open',
+      },
+    });
+    const candidate = makeRecord({
+      recordId: 'candidate-june-r1',
+      scheduleKey: existing.scheduleKey,
+      periodKey: existing.periodKey,
+      revision: 1,
+      duePosition: 'arrears',
+      servicePeriod: {
+        start: '2026-06-01',
+        end: '2026-07-01',
+        semantics: 'half_open',
+      },
+      invoiceWindow: {
+        start: '2026-07-01',
+        end: '2026-08-01',
+        semantics: 'half_open',
+      },
+    });
+
+    const plan = regenerateRecurringServicePeriods({
+      existingRecords: [existing],
+      candidateRecords: [candidate],
+      regeneratedAt: '2026-07-06T18:00:00.000Z',
+      sourceRuleVersion: 'rule-v1',
+      sourceRunKey: 'repair-rerun',
+    });
+
+    expect(plan.supersededRecords).toEqual([]);
+    expect(plan.regeneratedRecords).toEqual([]);
+    expect(plan.newRecords).toEqual([]);
+    expect(plan.activeRecords).toEqual([existing]);
+  });
+
+  it('assigns new records a revision above superseded ledger history', () => {
+    const superseded = makeRecord({
+      recordId: 'record-june-r1',
+      scheduleKey: 'schedule:tenant-1:contract_line:line-1:client:arrears',
+      periodKey: 'period:2026-06-01:2026-07-01',
+      revision: 1,
+      duePosition: 'arrears',
+      lifecycleState: 'superseded',
+    });
+    const candidate = makeRecord({
+      recordId: 'candidate-june-r1',
+      scheduleKey: superseded.scheduleKey,
+      periodKey: superseded.periodKey,
+      revision: 1,
+      duePosition: 'arrears',
+    });
+
+    const plan = regenerateRecurringServicePeriods({
+      existingRecords: [superseded],
+      candidateRecords: [candidate],
+      regeneratedAt: '2026-07-06T18:00:00.000Z',
+      sourceRuleVersion: 'rule-v1',
+      sourceRunKey: 'repair-after-superseded',
+    });
+
+    expect(plan.newRecords).toMatchObject([
+      {
+        recordId: `${candidate.scheduleKey}:${candidate.periodKey}:r2`,
+        revision: 2,
+        lifecycleState: 'generated',
+      },
+    ]);
+    expect(plan.supersededRecords).toEqual([]);
+  });
 });
