@@ -1538,7 +1538,10 @@
       "addContact": "Add contact",
       "setClientToAddContact": "Set a client first to add a contact",
       "logInteraction": "Log call or email",
-      "changeClient": "Change client"
+      "changeClient": "Change client",
+      "teamFallback": "Team",
+      "teamSectionLabel": "Assign a team",
+      "addAgentsOrTeam": "Add agents or a team…"
     },
     "timeline": {
       "subtitle": "Replies, time, and system changes in one place",

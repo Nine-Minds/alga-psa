@@ -3238,6 +3238,9 @@ const handleClose = () => {
                     onAddAgent={handleAddAgent}
                     onRemoveAgent={handleRemoveAgent}
                     teams={teams}
+                    team={team}
+                    onAssignTeam={handleAssignTeam}
+                    onRemoveTeamAssignment={handleRemoveTeamAssignment}
                     onUpdateWatchList={handleUpdateWatchList}
                     watchListSaving={isWatchListSaving}
                     contacts={contacts}

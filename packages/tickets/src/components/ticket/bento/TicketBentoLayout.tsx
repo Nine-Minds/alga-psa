@@ -1,15 +1,15 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useRef } from 'react';
 import type { PartialBlock } from '@blocknote/core';
-import { FileText, User, Play, Pause, StopCircle, Clock, Users, X, Pencil } from 'lucide-react';
+import { FileText, User, Play, Pause, StopCircle, Clock, Users, Pencil } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
+import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { ContentCardVariantProvider } from '@alga-psa/ui/components';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -159,6 +159,12 @@ export interface TicketBentoLayoutProps {
   /** Takes the ticket_resources assignment id (not the user id). */
   onRemoveAgent: (assignmentId: string) => void;
   teams?: ITeam[];
+  team?: ITeam | null;
+  onAssignTeam?: (teamId: string) => Promise<void> | void;
+  onRemoveTeamAssignment?: (
+    mode: 'remove_all' | 'keep_all' | 'selective',
+    keepUserIds?: string[],
+  ) => Promise<void> | void;
   onUpdateWatchList?: (watchList: any[]) => Promise<boolean>;
   watchListSaving?: boolean;
   contacts?: IContact[];
@@ -188,6 +194,8 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const ticketId = ticket.ticket_id ?? '';
   const { enabled: billingEnabled } = useFeatureFlag('billing-enabled');
   const [requestExpanded, setRequestExpanded] = React.useState(false);
+  // Guards against re-entrant add/remove churn on rapid multi-select changes.
+  const isProcessingAgentsRef = useRef(false);
 
   const ticketLocation = React.useMemo(() => {
     if (!ticket.location_id || !props.locations) return null;
@@ -677,53 +685,73 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       icon={<Users className="h-4 w-4" />}
     >
       <div className="space-y-2 mb-3">
-        {props.additionalAgents.length > 0 ? (
-          props.additionalAgents.map((agent) => {
-            const agentUser = props.availableAgents.find((user) => user.user_id === agent.additional_user_id);
-            const name = agentUser ? `${agentUser.first_name} ${agentUser.last_name}` : t('bento.tiles.agentFallback', 'Agent');
-            return (
-              <div key={agent.assignment_id ?? agent.additional_user_id ?? name} className="flex items-center gap-2 text-sm">
-                <UserAvatar userId={agentUser?.user_id ?? ''} userName={name} avatarUrl={null} size="xs" />
-                {props.onAgentClick && agent.additional_user_id ? (
-                  <button
-                    id={`${id}-team-agent-${agent.additional_user_id}`}
-                    type="button"
-                    className="text-[rgb(var(--color-text-700))] truncate hover:underline text-left"
-                    onClick={() => props.onAgentClick?.(agent.additional_user_id!)}
-                  >
-                    {name}
-                  </button>
-                ) : (
-                  <span className="text-[rgb(var(--color-text-700))] truncate">{name}</span>
-                )}
-                <button
-                  id={`${id}-team-remove-${agent.additional_user_id}`}
-                  type="button"
-                  aria-label={t('bento.tiles.removeAgent', 'Remove {{name}}', { name })}
-                  className="ml-auto text-[rgb(var(--color-text-400))] hover:text-red-600 dark:hover:text-red-400"
-                  onClick={() => agent.assignment_id && props.onRemoveAgent(agent.assignment_id)}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            );
-          })
-        ) : (
-          <BentoTileEmpty id={`${id}-team-empty`}>{t('bento.tiles.noAdditionalAgents', 'No additional agents')}</BentoTileEmpty>
-        )}
-        <CustomSelect
-          id={`${id}-team-add-select`}
-          value=""
-          placeholder={t('bento.tiles.addAgent', 'Add an agent…')}
-          options={props.availableAgents
-            .filter(
-              (user) =>
-                user.user_id !== ticket.assigned_to &&
-                !props.additionalAgents.some((agent) => agent.additional_user_id === user.user_id),
-            )
-            .map((user) => ({ value: user.user_id, label: `${user.first_name} ${user.last_name}` }))}
-          onValueChange={(value: string) => value && props.onAddAgent(value)}
-          className="!w-full"
+        {ticket.assigned_team_id && props.team ? (
+          <div className="flex items-center gap-2 text-sm" {...withDataAutomationId({ id: `${id}-team-assigned` })}>
+            <TeamAvatar
+              teamId={props.team.team_id}
+              teamName={props.team.team_name || t('bento.tiles.teamFallback', 'Team')}
+              avatarUrl={null}
+              size="xs"
+            />
+            <span className="text-[rgb(var(--color-text-700))] truncate">
+              {props.team.team_name || t('bento.tiles.teamFallback', 'Team')}
+            </span>
+          </div>
+        ) : null}
+        <MultiUserAndTeamPicker
+          id={`${id}-team-agents`}
+          values={props.additionalAgents.filter((a) => a.additional_user_id).map((a) => a.additional_user_id!)}
+          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+          getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+          teams={props.teams}
+          teamSectionLabel={t('bento.tiles.teamSectionLabel', 'Assign a team')}
+          teamValues={ticket.assigned_team_id ? [ticket.assigned_team_id] : []}
+          onTeamValuesChange={(selectedTeamIds) => {
+            const currentTeamId = ticket.assigned_team_id ?? null;
+            // The picker appends the newly picked team to the existing selection,
+            // so the "new" id is whichever one isn't the currently assigned team.
+            const newTeamId = selectedTeamIds.find((tid) => tid !== currentTeamId);
+            if (newTeamId) {
+              // assignTeamToTicket reassigns server-side (handleAssignTeam swaps the
+              // team in state), so switching teams is a straight call — no dialog.
+              props.onAssignTeam?.(newTeamId);
+            } else if (currentTeamId && !selectedTeamIds.includes(currentTeamId)) {
+              // Selection cleared / team pill removed → drop assignment, keep agents.
+              props.onRemoveTeamAssignment?.('keep_all');
+            }
+          }}
+          onValuesChange={async (newUserIds) => {
+            if (isProcessingAgentsRef.current) {
+              return;
+            }
+            isProcessingAgentsRef.current = true;
+
+            try {
+              const currentUserIds = props.additionalAgents
+                .filter((a) => a.additional_user_id)
+                .map((a) => a.additional_user_id!);
+
+              const addedUserIds = newUserIds.filter((uid) => !currentUserIds.includes(uid));
+              const removedUserIds = currentUserIds.filter((uid) => !newUserIds.includes(uid));
+
+              for (const userId of addedUserIds) {
+                await props.onAddAgent(userId);
+              }
+
+              for (const userId of removedUserIds) {
+                const agent = props.additionalAgents.find((a) => a.additional_user_id === userId);
+                if (agent?.assignment_id) {
+                  await props.onRemoveAgent(agent.assignment_id);
+                }
+              }
+            } finally {
+              isProcessingAgentsRef.current = false;
+            }
+          }}
+          users={props.availableAgents.filter((agent) => agent.user_id !== ticket.assigned_to)}
+          size="sm"
+          placeholder={t('bento.tiles.addAgentsOrTeam', 'Add agents or a team…')}
+          onUserClick={props.onAgentClick}
         />
       </div>
 
