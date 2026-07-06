@@ -70,8 +70,34 @@ describe('profitability report action SQL contracts', () => {
     expect(source).toContain("FROM ticket_materials tm");
     expect(source).toContain("FROM project_materials pm");
     expect(source).toContain("(mr.created_at AT TIME ZONE 'UTC')::date");
-    expect(source).toContain('(sc.cost IS NULL) AS uncosted');
+    expect(source).toContain('(cogs.cogs_cents IS NULL AND sc.cost IS NULL) AS uncosted');
     expect(source).toContain('(COALESCE(mr.currency_code, ?) <> ?) AS currency_mismatch');
+  });
+
+  it('prefers actual inventory COGS over the catalog standard-cost estimate for materials', () => {
+    expect(source).toContain('WHEN COALESCE(cogs.mismatched_count, 0) = 0 AND cogs.cogs_cents IS NOT NULL THEN cogs.cogs_cents::bigint');
+    expect(source).toContain("AND sm.source_doc_type = mr.material_type || '_material'");
+    expect(source).toContain('AND sm.source_doc_id = mr.material_id');
+    expect(source).toContain("AND sm.movement_type = 'consume'");
+  });
+
+  it('recovers sales-order hardware COGS through so_line_id-linked consume movements, deduped per movement', () => {
+    expect(source).toContain('WITH so_cogs_movements');
+    expect(source).toContain('DISTINCT ON (sm.movement_id)');
+    expect(source).toContain('AND sol.so_line_id = ic.so_line_id');
+    expect(source).toContain("AND sm.source_doc_type = 'sales_order'");
+    expect(source).toContain('AND sm.source_doc_id = sol.so_id');
+    expect(source).toContain('AND sm.service_id = sol.service_id');
+    expect(source).toContain('AND ic.so_line_id IS NOT NULL');
+    expect(source).toContain('COALESCE(ic.client_contract_id, inv.client_contract_id) AS client_contract_id');
+  });
+
+  it('treats COGS as tenant-default-currency only and flags foreign-currency movements instead of mixing them', () => {
+    expect(source).toContain('(COALESCE(sm.cost_currency, pis.cost_currency, ?) <> ?) AS currency_mismatch');
+    expect(source).toContain('SUM(sm.cogs_cost) FILTER (WHERE COALESCE(sm.cost_currency, pis.cost_currency, ?) = ?) AS cogs_cents');
+    expect(source).toContain('COUNT(*) FILTER (WHERE COALESCE(sm.cost_currency, pis.cost_currency, ?) <> ?) AS mismatched_count');
+    expect(source).toContain('(COALESCE(cogs.mismatched_count, 0) > 0) AS cogs_currency_mismatch');
+    expect(source).toContain('WHEN COALESCE(cogs.mismatched_count, 0) = 0 AND cogs.cogs_cents IS NOT NULL THEN cogs.cogs_cents::bigint');
   });
 
   it('attributes ticket hourly revenue only through item_id-linked invoice time entries', () => {

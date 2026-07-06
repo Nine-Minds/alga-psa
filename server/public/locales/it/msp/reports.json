@@ -313,6 +313,7 @@
       "warnings": {
         "title": "Avvisi del report",
         "uncostedMinutes": "{{hours}} ore senza costo",
+        "unattributedMinutes": "{{hours}} ore non attribuite",
         "unapprovedMinutes": "{{hours}} ore non approvate incluse",
         "zeroDuration": "{{count}} voci a durata zero",
         "uncostedMaterials": "{{count}} materiali senza costo",

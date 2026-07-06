@@ -1217,18 +1217,20 @@
       "title": "Domyślna stawka kosztu tenanta",
       "current": "Bieżąca stawka domyślna: {{rate}} od {{date}}",
       "missing": "Nie skonfigurowano stawki domyślnej tenanta. Użytkownicy bez indywidualnych stawek będą bez wyceny.",
-      "history": "Historia stawki domyślnej"
+      "history": "Historia stawki domyślnej",
+      "empty": "Brak stawek domyślnych."
     },
     "empty": {
       "title": "Stawki kosztów nie są skonfigurowane",
       "description": "Najpierw ustaw stawkę domyślną tenanta, aby raporty mogły wycenić pracę użytkowników bez indywidualnych stawek."
     },
     "table": {
-      "user": "Użytkownik",
       "currentRate": "Bieżąca stawka",
       "actions": "Akcje",
       "usesDefault": "Używa domyślnej",
-      "uncosted": "Bez wyceny"
+      "uncosted": "Bez wyceny",
+      "status": "Status",
+      "user": "Użytkownik"
     },
     "history": {
       "empty": "Brak indywidualnych stawek użytkowników."
@@ -1254,6 +1256,7 @@
     },
     "actions": {
       "setDefault": "Ustaw domyślną",
+      "addRate": "Dodaj stawkę",
       "addUserRate": "Dodaj stawkę użytkownika",
       "edit": "Edytuj",
       "delete": "Usuń",
@@ -1278,9 +1281,17 @@
     },
     "formats": {
       "noRate": "—",
-      "hourlyRate": "${{amount}}/godz.",
+      "hourlyRate": "{{amount}}/godz.",
       "dateRange": "{{start}} - {{end}}",
       "openDateRange": "od {{start}}"
+    },
+    "status": {
+      "current": "Aktualna",
+      "scheduled": "Zaplanowana",
+      "ended": "Zakończona"
+    },
+    "sections": {
+      "userRates": "Stawki użytkowników"
     }
   }
 }

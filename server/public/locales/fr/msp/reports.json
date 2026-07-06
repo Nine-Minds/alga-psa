@@ -313,6 +313,7 @@
       "warnings": {
         "title": "Avertissements du rapport",
         "uncostedMinutes": "{{hours}} heures non valorisées",
+        "unattributedMinutes": "{{hours}} heures non attribuées",
         "unapprovedMinutes": "{{hours}} heures non approuvées incluses",
         "zeroDuration": "{{count}} saisies à durée nulle",
         "uncostedMaterials": "{{count}} matériaux non valorisés",

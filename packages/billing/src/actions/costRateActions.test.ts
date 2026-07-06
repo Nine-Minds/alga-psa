@@ -73,10 +73,25 @@ function makeInternalUsersQuery(rows: Array<Record<string, unknown>>) {
   };
 }
 
+function makeBillingSettingsQuery(currency: string | null) {
+  return {
+    select: vi.fn().mockReturnThis(),
+    first: vi.fn(async () => (currency ? { default_currency_code: currency } : undefined)),
+  };
+}
+
+function seedTableMock(users: Array<Record<string, unknown>>, currency: string | null = 'USD') {
+  tableMock.mockImplementation((tableName: string) => (
+    tableName === 'default_billing_settings'
+      ? makeBillingSettingsQuery(currency)
+      : makeInternalUsersQuery(users)
+  ));
+}
+
 describe('cost rate actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    tableMock.mockReturnValue(makeInternalUsersQuery([]));
+    seedTableMock([]);
   });
 
   it('requires billing.read to list cost rates', async () => {
@@ -101,9 +116,9 @@ describe('cost rate actions', () => {
     );
   });
 
-  it('lists only internal users and returns current per-user history', async () => {
+  it('lists only internal users and returns current per-user history in the tenant currency', async () => {
     vi.mocked(hasPermission).mockResolvedValue(true);
-    tableMock.mockReturnValue(makeInternalUsersQuery([
+    seedTableMock([
       {
         user_id: 'user-1',
         username: 'alice',
@@ -112,13 +127,14 @@ describe('cost rate actions', () => {
         email: 'alice@example.com',
         is_inactive: false,
       },
-    ]));
+    ], 'EUR');
 
     const result = await callListCostRates({ user_id: 'u1' }, { tenant: 'tenant-1' });
 
     expect(tableMock).toHaveBeenCalledWith('users');
     const query = tableMock.mock.results[0]?.value;
     expect(query.where).toHaveBeenCalledWith({ user_type: 'internal' });
+    expect(result.currency_code).toBe('EUR');
     expect(result.users).toEqual([
       {
         user_id: 'user-1',

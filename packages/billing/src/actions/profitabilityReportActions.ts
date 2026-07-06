@@ -41,6 +41,7 @@ export interface ProfitabilityMetricFields {
 
 export interface ProfitabilitySummary extends ProfitabilityMetricFields {
   costRatesConfigured: boolean;
+  currencyCode: string;
 }
 
 export interface ClientProfitabilityRow extends ProfitabilityMetricFields {
@@ -126,7 +127,19 @@ interface MaterialFact {
   revenue_cents: number | null;
   cost_cents: number | null;
   currency_mismatch: boolean;
+  cogs_currency_mismatch: boolean;
   uncosted: boolean;
+}
+
+interface SalesOrderCogsFact {
+  movement_id: string;
+  client_id: string | null;
+  client_name: string | null;
+  client_contract_id: string | null;
+  contract_id: string | null;
+  contract_name: string | null;
+  cogs_cents: number | null;
+  currency_mismatch: boolean;
 }
 
 interface TicketRevenueFact {
@@ -173,6 +186,7 @@ type FactBundle = {
   revenueFacts: RevenueFact[];
   laborFacts: LaborFact[];
   materialFacts: MaterialFact[];
+  salesOrderCogsFacts: SalesOrderCogsFact[];
   ticketRevenueFacts: TicketRevenueFact[];
   ticketMeta: Map<string, TicketMeta>;
 };
@@ -217,10 +231,29 @@ class MetricAccumulator {
     }
   }
 
+  addSalesOrderCogs(fact: SalesOrderCogsFact) {
+    // Cost recorded in a non-default currency can't be converted (no rate
+    // source on movements) — exclude it and surface it, mirroring materials.
+    if (fact.currency_mismatch) {
+      this.materialCurrencyMismatchCount += 1;
+      return;
+    }
+    if (fact.cogs_cents === null) {
+      this.uncostedMaterialCount += 1;
+    } else {
+      this.materialCost += fact.cogs_cents;
+    }
+  }
+
   addMaterial(fact: MaterialFact, includeRevenue: boolean, includeCost: boolean) {
     if (fact.currency_mismatch) {
       this.materialCurrencyMismatchCount += 1;
       return;
+    }
+    // Actual COGS in a foreign currency: the fact falls back to the catalog
+    // estimate for cost_cents; still flag it so the totals aren't trusted blindly.
+    if (fact.cogs_currency_mismatch) {
+      this.materialCurrencyMismatchCount += 1;
     }
     if (includeRevenue) {
       this.revenue += fact.revenue_cents ?? 0;
@@ -582,11 +615,13 @@ async function fetchMaterialFacts(
         ELSE ROUND(((mr.quantity * mr.rate)::numeric * inv.exchange_rate_basis_points::numeric) / 10000)::bigint
       END AS revenue_cents,
       CASE
+        WHEN COALESCE(cogs.mismatched_count, 0) = 0 AND cogs.cogs_cents IS NOT NULL THEN cogs.cogs_cents::bigint
         WHEN sc.cost IS NULL THEN NULL
         ELSE (mr.quantity * sc.cost)::bigint
       END AS cost_cents,
       (COALESCE(mr.currency_code, ?) <> ?) AS currency_mismatch,
-      (sc.cost IS NULL) AS uncosted
+      (COALESCE(cogs.mismatched_count, 0) > 0) AS cogs_currency_mismatch,
+      (cogs.cogs_cents IS NULL AND sc.cost IS NULL) AS uncosted
     FROM material_rows mr
     JOIN clients cl
       ON cl.tenant = ?
@@ -594,6 +629,24 @@ async function fetchMaterialFacts(
     LEFT JOIN service_catalog sc
       ON sc.tenant = ?
      AND sc.service_id = mr.service_id
+    LEFT JOIN LATERAL (
+      -- Actual inventory COGS recorded when the material consumed stock; wins
+      -- over the catalog standard-cost estimate when present, but only in the
+      -- tenant default currency (movements carry no exchange rate) — any
+      -- foreign-currency movement drops the material back to the estimate.
+      SELECT
+        SUM(sm.cogs_cost) FILTER (WHERE COALESCE(sm.cost_currency, pis.cost_currency, ?) = ?) AS cogs_cents,
+        COUNT(*) FILTER (WHERE COALESCE(sm.cost_currency, pis.cost_currency, ?) <> ?) AS mismatched_count
+      FROM stock_movements sm
+      LEFT JOIN product_inventory_settings pis
+        ON pis.tenant = sm.tenant
+       AND pis.service_id = sm.service_id
+      WHERE sm.tenant = ?
+        AND sm.movement_type = 'consume'
+        AND sm.source_doc_type = mr.material_type || '_material'
+        AND sm.source_doc_id = mr.material_id
+        AND sm.cogs_cost IS NOT NULL
+    ) cogs ON true
     LEFT JOIN invoices inv
       ON inv.tenant = ?
      AND inv.invoice_id = mr.billed_invoice_id
@@ -616,6 +669,11 @@ async function fetchMaterialFacts(
     defaultCurrency,
     defaultCurrency,
     tenant,
+    tenant,
+    defaultCurrency,
+    defaultCurrency,
+    defaultCurrency,
+    defaultCurrency,
     tenant,
     tenant,
     COUNTABLE_INVOICE_STATUSES,
@@ -642,7 +700,93 @@ async function fetchMaterialFacts(
     revenue_cents: row.revenue_cents === null || row.revenue_cents === undefined ? null : Number(row.revenue_cents),
     cost_cents: row.cost_cents === null || row.cost_cents === undefined ? null : Number(row.cost_cents),
     currency_mismatch: Boolean(row.currency_mismatch),
+    cogs_currency_mismatch: Boolean(row.cogs_currency_mismatch),
     uncosted: Boolean(row.uncosted),
+  }));
+}
+
+async function fetchSalesOrderCogsFacts(
+  knex: Knex,
+  tenant: string,
+  startDate: string,
+  endDate: string,
+  defaultCurrency: string
+): Promise<SalesOrderCogsFact[]> {
+  // Hardware billed through sales orders: the SO line's invoice charge carries the
+  // revenue (already in revenueFacts), and the fulfillment/drop-ship consume
+  // movements carry the actual COGS. Movements attach by (so_id, service_id)
+  // because fulfillment records source_doc_id = so_id, not the line id; DISTINCT ON
+  // keeps one row per movement when an SO is billed across several invoices.
+  const result = await knex.raw(`
+    WITH so_cogs_movements AS (
+      SELECT DISTINCT ON (sm.movement_id)
+        sm.movement_id,
+        sm.cogs_cost,
+        (COALESCE(sm.cost_currency, pis.cost_currency, ?) <> ?) AS currency_mismatch,
+        inv.client_id,
+        cl.client_name,
+        COALESCE(ic.client_contract_id, inv.client_contract_id) AS client_contract_id
+      FROM invoice_charges ic
+      JOIN invoices inv
+        ON inv.tenant = ic.tenant
+       AND inv.invoice_id = ic.invoice_id
+      JOIN sales_order_lines sol
+        ON sol.tenant = ic.tenant
+       AND sol.so_line_id = ic.so_line_id
+      JOIN stock_movements sm
+        ON sm.tenant = ic.tenant
+       AND sm.movement_type = 'consume'
+       AND sm.source_doc_type = 'sales_order'
+       AND sm.source_doc_id = sol.so_id
+       AND sm.service_id = sol.service_id
+      LEFT JOIN product_inventory_settings pis
+        ON pis.tenant = sm.tenant
+       AND pis.service_id = sm.service_id
+      LEFT JOIN clients cl
+        ON cl.tenant = inv.tenant
+       AND cl.client_id = inv.client_id
+      WHERE ic.tenant = ?
+        AND ic.so_line_id IS NOT NULL
+        AND inv.status = ANY(?::text[])
+        AND inv.invoice_date::date >= ?::date
+        AND inv.invoice_date::date <= ?::date
+      ORDER BY sm.movement_id, inv.invoice_date, inv.invoice_id
+    )
+    SELECT
+      m.movement_id,
+      m.cogs_cost::bigint AS cogs_cents,
+      m.currency_mismatch,
+      m.client_id,
+      m.client_name,
+      m.client_contract_id,
+      cc.contract_id,
+      c.contract_name
+    FROM so_cogs_movements m
+    LEFT JOIN client_contracts cc
+      ON cc.tenant = ?
+     AND cc.client_contract_id = m.client_contract_id
+    LEFT JOIN contracts c
+      ON c.tenant = cc.tenant
+     AND c.contract_id = cc.contract_id
+  `, [
+    defaultCurrency,
+    defaultCurrency,
+    tenant,
+    COUNTABLE_INVOICE_STATUSES,
+    startDate,
+    endDate,
+    tenant,
+  ]);
+
+  return rawRows<Record<string, unknown>>(result).map((row) => ({
+    movement_id: String(row.movement_id),
+    client_id: row.client_id ? String(row.client_id) : null,
+    client_name: row.client_name ? String(row.client_name) : null,
+    client_contract_id: row.client_contract_id ? String(row.client_contract_id) : null,
+    contract_id: row.contract_id ? String(row.contract_id) : null,
+    contract_name: row.contract_name ? String(row.contract_name) : null,
+    cogs_cents: row.cogs_cents === null || row.cogs_cents === undefined ? null : Number(row.cogs_cents),
+    currency_mismatch: Boolean(row.currency_mismatch),
   }));
 }
 
@@ -928,10 +1072,11 @@ function buildAllocatedTicketRevenue(
 async function fetchFacts(knex: Knex, tenant: string, startDate: string, endDate: string): Promise<FactBundle> {
   const defaultCurrency = await getTenantDefaultCurrency(knex, tenant);
   const costRateCount = await tenantDb(knex, tenant).table('user_cost_rates').count<{ count: string }[]>({ count: '*' }).first();
-  const [revenueFacts, laborFacts, materialFacts, exactTicketRevenueFacts, allocationChargeFacts] = await Promise.all([
+  const [revenueFacts, laborFacts, materialFacts, salesOrderCogsFacts, exactTicketRevenueFacts, allocationChargeFacts] = await Promise.all([
     fetchRevenueFacts(knex, tenant, startDate, endDate, defaultCurrency),
     fetchLaborFacts(knex, tenant, startDate, endDate),
     fetchMaterialFacts(knex, tenant, startDate, endDate, defaultCurrency),
+    fetchSalesOrderCogsFacts(knex, tenant, startDate, endDate, defaultCurrency),
     fetchTicketRevenueFacts(knex, tenant, startDate, endDate, defaultCurrency),
     fetchTicketAllocationChargeFacts(knex, tenant, startDate, endDate, defaultCurrency),
   ]);
@@ -972,6 +1117,7 @@ async function fetchFacts(knex: Knex, tenant: string, startDate: string, endDate
     revenueFacts,
     laborFacts,
     materialFacts,
+    salesOrderCogsFacts,
     ticketRevenueFacts,
     ticketMeta,
   };
@@ -1003,6 +1149,11 @@ function applyAllFactsToAccumulator(acc: MetricAccumulator, facts: FactBundle) {
     // only at ticket grain, where charges carry no ticket linkage.
     acc.addMaterial(fact, false, true);
   }
+  for (const fact of facts.salesOrderCogsFacts) {
+    // SO hardware revenue is already in revenueFacts (the SO line's invoice
+    // charge); the consume movements contribute only the cost side.
+    acc.addSalesOrderCogs(fact);
+  }
 }
 
 async function getFactBundleForAction(user: Parameters<typeof hasPermission>[0], tenant: string | null | undefined, input: ProfitabilityDateInput) {
@@ -1026,6 +1177,7 @@ export const getProfitabilitySummary = withAuth(async (
   return {
     ...acc.toFields(),
     costRatesConfigured: facts.costRatesConfigured,
+    currencyCode: facts.defaultCurrency,
   };
 });
 
@@ -1055,6 +1207,9 @@ export const getClientProfitability = withAuth(async (
     // Revenue excluded: the billed material's invoice charge is already in
     // revenueFacts (see applyAllFactsToAccumulator).
     getRow(fact.client_id, fact.client_name).acc.addMaterial(fact, false, true);
+  }
+  for (const fact of facts.salesOrderCogsFacts) {
+    getRow(fact.client_id, fact.client_name).acc.addSalesOrderCogs(fact);
   }
 
   return Array.from(rows.values()).map((row) => ({
@@ -1163,6 +1318,17 @@ export const getAgreementProfitability = withAuth(async (
     // invoice charge in revenueFacts (NULL client_contract_id); only the cost
     // side comes from the material fact, in the Unattributed row (D13).
     getBucket(fact.client_id, fact.client_name, 'unattributed', null, null, null).acc.addMaterial(fact, false, true);
+  }
+
+  for (const fact of facts.salesOrderCogsFacts) {
+    if (!includeClient(fact.client_id)) continue;
+    // Mirror the SO charge's revenue bucketing so cost and revenue net out in
+    // the same row: contract-linked charges land on the agreement, the rest on
+    // Ad-hoc alongside the hardware sale's revenue.
+    const rowType = fact.client_contract_id ? 'agreement' : 'ad_hoc';
+    const bucket = getBucket(fact.client_id, fact.client_name, rowType, fact.client_contract_id, fact.contract_id, fact.contract_name);
+    bucket.acc.addSalesOrderCogs(fact);
+    getLine(bucket, null, null).acc.addSalesOrderCogs(fact);
   }
 
   return Array.from(buckets.values()).map((bucket) => ({

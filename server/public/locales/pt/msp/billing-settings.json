@@ -1215,18 +1215,20 @@
       "title": "Taxa de custo padrão do locatário",
       "current": "Padrão atual: {{rate}} a partir de {{date}}",
       "missing": "Nenhum padrão do locatário está configurado. Usuários sem substituições ficarão sem custo definido.",
-      "history": "Histórico da taxa padrão"
+      "history": "Histórico da taxa padrão",
+      "empty": "Ainda não há taxas padrão."
     },
     "empty": {
       "title": "As taxas de custo não estão configuradas",
       "description": "Defina primeiro o padrão do locatário para que os relatórios possam custear a mão de obra de usuários sem substituições."
     },
     "table": {
-      "user": "Usuário",
       "currentRate": "Taxa atual",
       "actions": "Ações",
       "usesDefault": "Usa o padrão",
-      "uncosted": "Sem custo definido"
+      "uncosted": "Sem custo definido",
+      "status": "Status",
+      "user": "Usuário"
     },
     "history": {
       "empty": "Nenhuma taxa específica por usuário."
@@ -1252,6 +1254,7 @@
     },
     "actions": {
       "setDefault": "Definir padrão",
+      "addRate": "Adicionar taxa",
       "addUserRate": "Adicionar taxa por usuário",
       "edit": "Editar",
       "delete": "Excluir",
@@ -1276,9 +1279,17 @@
     },
     "formats": {
       "noRate": "—",
-      "hourlyRate": "${{amount}}/h",
+      "hourlyRate": "{{amount}}/h",
       "dateRange": "{{start}} - {{end}}",
       "openDateRange": "{{start}} - em aberto"
+    },
+    "status": {
+      "current": "Atual",
+      "scheduled": "Agendada",
+      "ended": "Encerrada"
+    },
+    "sections": {
+      "userRates": "Taxas por usuário"
     }
   }
 }

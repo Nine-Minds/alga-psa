@@ -1215,18 +1215,20 @@
       "title": "Tenant default cost rate",
       "current": "Current default: {{rate}} from {{date}}",
       "missing": "No tenant default is configured. Users without overrides will be uncosted.",
-      "history": "Default rate history"
+      "history": "Default rate history",
+      "empty": "No default rates yet."
     },
     "empty": {
       "title": "Cost rates are not configured",
       "description": "Set the tenant default first so reports can cost labor for users without overrides."
     },
     "table": {
-      "user": "User",
       "currentRate": "Current Rate",
       "actions": "Actions",
       "usesDefault": "Uses default",
-      "uncosted": "Uncosted"
+      "uncosted": "Uncosted",
+      "status": "Status",
+      "user": "User"
     },
     "history": {
       "empty": "No user-specific rates."
@@ -1252,6 +1254,7 @@
     },
     "actions": {
       "setDefault": "Set Default",
+      "addRate": "Add Rate",
       "addUserRate": "Add user rate",
       "edit": "Edit",
       "delete": "Delete",
@@ -1276,9 +1279,17 @@
     },
     "formats": {
       "noRate": "—",
-      "hourlyRate": "${{amount}}/hr",
+      "hourlyRate": "{{amount}}/hr",
       "dateRange": "{{start}} - {{end}}",
       "openDateRange": "{{start}} - open"
+    },
+    "status": {
+      "current": "Current",
+      "scheduled": "Scheduled",
+      "ended": "Ended"
+    },
+    "sections": {
+      "userRates": "User rates"
     }
   }
 }

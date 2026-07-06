@@ -131,6 +131,7 @@ function seedRawMocks(options?: {
   revenue?: Array<Record<string, unknown>>;
   labor?: Array<Record<string, unknown>>;
   materials?: Array<Record<string, unknown>>;
+  salesOrderCogs?: Array<Record<string, unknown>>;
   ticketRevenue?: Array<Record<string, unknown>>;
   allocations?: Array<Record<string, unknown>>;
   weights?: Array<Record<string, unknown>>;
@@ -138,6 +139,9 @@ function seedRawMocks(options?: {
   rawMock.mockImplementation(async (sql: string) => {
     if (sql.includes('WITH charge_details')) {
       return { rows: options?.revenue ?? revenueRows };
+    }
+    if (sql.includes('WITH so_cogs_movements')) {
+      return { rows: options?.salesOrderCogs ?? [] };
     }
     if (sql.includes('WITH ticket_allocation_weights')) {
       return { rows: options?.weights ?? [] };
@@ -197,6 +201,142 @@ describe('profitability report actions', () => {
       effectiveHourlyRate: 13000,
       costRatesConfigured: true,
     });
+  });
+
+  it('folds sales-order hardware COGS into material cost at summary, client, and agreement grain', async () => {
+    const soChargeRow = {
+      ...revenueRows[0],
+      item_id: 'item-so',
+      client_contract_id: null,
+      contract_id: null,
+      contract_name: null,
+      contract_line_id: null,
+      contract_line_name: null,
+      amount_cents: 20000,
+    };
+    seedRawMocks({
+      revenue: [...revenueRows, soChargeRow],
+      salesOrderCogs: [
+        {
+          movement_id: 'mv-1',
+          client_id: 'client-1',
+          client_name: 'Acme',
+          client_contract_id: null,
+          contract_id: null,
+          contract_name: null,
+          cogs_cents: 12000,
+        },
+        {
+          movement_id: 'mv-2',
+          client_id: 'client-1',
+          client_name: 'Acme',
+          client_contract_id: null,
+          contract_id: null,
+          contract_name: null,
+          cogs_cents: null,
+        },
+      ],
+    });
+
+    const summary = await (getProfitabilitySummary as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+    // materialCost = 1000 (material fact) + 12000 (SO movement); the costless
+    // movement surfaces as an uncosted material, not silently as zero cost.
+    expect(summary).toMatchObject({
+      revenue: 30000,
+      laborCost: 5000,
+      materialCost: 13000,
+      margin: 12000,
+      uncostedMaterialCount: 1,
+    });
+
+    const clients = await (getClientProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+    expect(clients).toHaveLength(1);
+    expect(clients[0]).toMatchObject({ clientId: 'client-1', materialCost: 13000, uncostedMaterialCount: 1 });
+
+    const agreements = await (getAgreementProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+    // Contract-less SO cost mirrors its revenue's Ad-hoc bucket, so the
+    // hardware sale's margin nets out within one row.
+    const adHoc = agreements.find((row: any) => row.rowType === 'ad_hoc');
+    expect(adHoc).toMatchObject({ revenue: 20000, materialCost: 12000, uncostedMaterialCount: 1 });
+  });
+
+  it('excludes foreign-currency COGS from totals and counts it as a currency mismatch', async () => {
+    seedRawMocks({
+      salesOrderCogs: [
+        {
+          movement_id: 'mv-eur',
+          client_id: 'client-1',
+          client_name: 'Acme',
+          client_contract_id: null,
+          contract_id: null,
+          contract_name: null,
+          cogs_cents: 9000,
+          currency_mismatch: true,
+        },
+      ],
+      materials: [
+        {
+          ...materialRows[0],
+          material_id: 'mat-eur',
+          // SQL already fell back to the catalog estimate for cost_cents; the
+          // flag still has to surface in the mismatch counter.
+          cost_cents: 1000,
+          cogs_currency_mismatch: true,
+        },
+      ],
+    });
+
+    const summary = await (getProfitabilitySummary as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+
+    // Foreign SO COGS contributes nothing; the material keeps its catalog
+    // fallback cost. Both raise the mismatch counter.
+    expect(summary).toMatchObject({
+      materialCost: 1000,
+      materialCurrencyMismatchCount: 2,
+      currencyCode: 'USD',
+    });
+  });
+
+  it('attributes contract-linked sales-order COGS to the agreement bucket', async () => {
+    seedRawMocks({
+      salesOrderCogs: [
+        {
+          movement_id: 'mv-3',
+          client_id: 'client-1',
+          client_name: 'Acme',
+          client_contract_id: 'cc-1',
+          contract_id: 'contract-1',
+          contract_name: 'Managed Services',
+          cogs_cents: 4000,
+        },
+      ],
+    });
+
+    const agreements = await (getAgreementProfitability as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+    const agreement = agreements.find((row: any) => row.rowType === 'agreement' && row.clientContractId === 'cc-1');
+    expect(agreement).toMatchObject({ materialCost: 4000 });
+    const unassignedLine = agreement.lines.find((line: any) => line.rowType === 'unassigned');
+    expect(unassignedLine).toMatchObject({ materialCost: 4000 });
   });
 
   it('reduces revenue for negative invoice charge facts', async () => {
@@ -541,6 +681,7 @@ describe('profitability report actions', () => {
       if (sql.includes('WITH ticket_allocation_weights')) return { rows: [] };
       if (sql.includes('FROM time_entries te')) return { rows: [] };
       if (sql.includes('WITH material_rows')) return { rows: [] };
+      if (sql.includes('WITH so_cogs_movements')) return { rows: [] };
       if (sql.includes('WITH linked_time')) return { rows: [] };
       if (sql.includes('WITH allocation_charges')) return { rows: [] };
       throw new Error('Unexpected SQL');

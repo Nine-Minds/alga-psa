@@ -313,6 +313,7 @@
       "warnings": {
         "title": "55555",
         "uncostedMinutes": "55555 {{hours}} 55555",
+        "unattributedMinutes": "55555 {{hours}} 55555",
         "unapprovedMinutes": "55555 {{hours}} 55555",
         "zeroDuration": "55555 {{count}} 55555",
         "uncostedMaterials": "55555 {{count}} 55555",

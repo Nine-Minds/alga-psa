@@ -96,6 +96,7 @@ export async function recordStockConsumption(
       from_location_id: unit.location_id,
       unit_id: opts.unit_id,
       cogs_cost: unit.unit_cost ?? null,
+      cost_currency: unit.cost_currency ?? settings.cost_currency,
       source_doc_type: opts.source_doc_type,
       source_doc_id: opts.source_doc_id,
       performed_by: opts.performed_by ?? null,
@@ -150,7 +151,9 @@ export async function recordStockConsumption(
     service_id: opts.service_id,
     quantity: opts.quantity,
     from_location_id: loc,
-    cogs_cost: settings.average_cost ?? null,
+    // cogs_cost is the movement's extended cost (readers sum it without ×quantity)
+    cogs_cost: settings.average_cost == null ? null : Math.round(Number(settings.average_cost) * opts.quantity),
+    cost_currency: settings.cost_currency,
     source_doc_type: opts.source_doc_type,
     source_doc_id: opts.source_doc_id,
     performed_by: opts.performed_by ?? null,

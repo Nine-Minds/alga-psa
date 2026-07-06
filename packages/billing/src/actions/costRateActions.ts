@@ -29,6 +29,7 @@ export interface CostRateUserRow {
 export interface ListCostRatesResult {
   default_rate_history: IUserCostRate[];
   users: CostRateUserRow[];
+  currency_code: string;
 }
 
 export interface UpsertCostRateResult {
@@ -92,7 +93,12 @@ export const listCostRates = withAuth(async (
 
   const today = new Date().toISOString().slice(0, 10);
 
+  const billingSettings = await tenantDb(knex, tenantId).table('default_billing_settings')
+    .select('default_currency_code')
+    .first();
+
   return {
+    currency_code: (billingSettings?.default_currency_code as string | undefined) || 'USD',
     default_rate_history: ratesByUser.get(null) ?? [],
     users: users.map((row: Record<string, unknown>) => {
       const history = ratesByUser.get(row.user_id as string) ?? [];

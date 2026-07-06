@@ -1215,18 +1215,20 @@
       "title": "Taux de coût par défaut du locataire",
       "current": "Valeur par défaut actuelle : {{rate}} depuis le {{date}}",
       "missing": "Aucune valeur par défaut du locataire n'est configurée. Les utilisateurs sans taux spécifique ne seront pas valorisés.",
-      "history": "Historique du taux par défaut"
+      "history": "Historique du taux par défaut",
+      "empty": "Aucun taux par défaut pour le moment."
     },
     "empty": {
       "title": "Les taux de coût ne sont pas configurés",
       "description": "Définissez d'abord la valeur par défaut du locataire afin que les rapports puissent valoriser la main-d'œuvre des utilisateurs sans taux spécifique."
     },
     "table": {
-      "user": "Utilisateur",
       "currentRate": "Taux actuel",
       "actions": "Actions",
       "usesDefault": "Utilise la valeur par défaut",
-      "uncosted": "Non valorisé"
+      "uncosted": "Non valorisé",
+      "status": "Statut",
+      "user": "Utilisateur"
     },
     "history": {
       "empty": "Aucun taux spécifique à un utilisateur."
@@ -1252,6 +1254,7 @@
     },
     "actions": {
       "setDefault": "Définir la valeur par défaut",
+      "addRate": "Ajouter un taux",
       "addUserRate": "Ajouter un taux utilisateur",
       "edit": "Modifier",
       "delete": "Supprimer",
@@ -1276,9 +1279,17 @@
     },
     "formats": {
       "noRate": "—",
-      "hourlyRate": "{{amount}} $/h",
+      "hourlyRate": "{{amount}}/h",
       "dateRange": "{{start}} - {{end}}",
       "openDateRange": "{{start}} - en cours"
+    },
+    "status": {
+      "current": "Actuel",
+      "scheduled": "Planifié",
+      "ended": "Terminé"
+    },
+    "sections": {
+      "userRates": "Taux par utilisateur"
     }
   }
 }

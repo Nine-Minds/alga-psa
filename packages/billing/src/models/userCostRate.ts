@@ -81,6 +81,12 @@ function lockKey(tenant: string, userId: string | null): string {
   return `${tenant}:${userId ?? 'default'}`;
 }
 
+function dayBefore(date: string): string {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  parsed.setUTCDate(parsed.getUTCDate() - 1);
+  return parsed.toISOString().slice(0, 10);
+}
+
 export function buildCostRateResolutionLateralJoin(
   entryAlias: string,
   rateAlias = 'resolved_cost_rate'
@@ -185,25 +191,27 @@ export const UserCostRate = {
         await this.assertInternalUserExists(trx, tenant, input.user_id);
       }
 
+      // A new open-ended rate supersedes the scope's current open-ended rate:
+      // starting later closes the predecessor the day before; starting the same
+      // day re-rates the predecessor in place (day granularity can't hold both).
+      if (!input.rate_id && !input.effective_to) {
+        input = await this.resolveOpenRateSupersession(trx, tenant, input);
+      }
+
       await this.assertNoOverlap(trx, tenant, input);
 
       const now = trx.fn.now();
-      const rateId = input.rate_id ?? uuidv4();
-      const row = {
-        tenant,
-        rate_id: rateId,
-        user_id: input.user_id,
-        cost_rate: input.cost_rate,
-        effective_from: input.effective_from,
-        effective_to: input.effective_to ?? null,
-        updated_at: now,
-        ...(input.rate_id ? {} : { created_at: now, created_by: input.created_by ?? null }),
-      };
 
       if (input.rate_id) {
         const updated = await tenantDb(trx, tenant).table(TABLE)
           .where({ rate_id: input.rate_id })
-          .update(row)
+          .update({
+            user_id: input.user_id,
+            cost_rate: input.cost_rate,
+            effective_from: input.effective_from,
+            effective_to: input.effective_to ?? null,
+            updated_at: now,
+          })
           .returning('*');
 
         if (updated.length === 0) {
@@ -214,11 +222,61 @@ export const UserCostRate = {
       }
 
       const inserted = await tenantDb(trx, tenant).table(TABLE)
-        .insert(row)
+        .insert({
+          tenant,
+          rate_id: uuidv4(),
+          user_id: input.user_id,
+          cost_rate: input.cost_rate,
+          effective_from: input.effective_from,
+          effective_to: input.effective_to ?? null,
+          updated_at: now,
+          created_at: now,
+          created_by: input.created_by ?? null,
+        })
         .returning('*');
 
       return normalizeRate(inserted[0]);
     });
+  },
+
+  async resolveOpenRateSupersession(
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    input: UpsertUserCostRateInput
+  ): Promise<UpsertUserCostRateInput> {
+    const query = tenantDb(knexOrTrx, tenant).table(TABLE)
+      .select('rate_id', 'effective_from')
+      .whereNull('effective_to');
+
+    if (input.user_id === null) {
+      query.whereNull('user_id');
+    } else {
+      query.where({ user_id: input.user_id });
+    }
+
+    const openRate = await query.first();
+    if (!openRate) {
+      return input;
+    }
+
+    const openFrom = normalizeDateOnly(openRate.effective_from as string | Date | null);
+    if (openFrom === input.effective_from) {
+      // Same-day re-rate: take over the existing row instead of duplicating it.
+      return { ...input, rate_id: String(openRate.rate_id) };
+    }
+
+    if (openFrom && openFrom < input.effective_from) {
+      await tenantDb(knexOrTrx, tenant).table(TABLE)
+        .where({ rate_id: openRate.rate_id })
+        .update({
+          effective_to: dayBefore(input.effective_from),
+          updated_at: knexOrTrx.fn.now(),
+        });
+    }
+
+    // An open rate starting after the new one can't be superseded — the
+    // overlap check reports it.
+    return input;
   },
 
   async delete(knex: Knex | Knex.Transaction, tenant: string, rateId: string): Promise<IUserCostRate> {

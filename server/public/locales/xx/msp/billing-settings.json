@@ -1215,18 +1215,20 @@
       "title": "11111",
       "current": "11111 {{rate}} 11111 {{date}} 11111",
       "missing": "11111",
-      "history": "11111"
+      "history": "11111",
+      "empty": "11111"
     },
     "empty": {
       "title": "11111",
       "description": "11111"
     },
     "table": {
-      "user": "11111",
       "currentRate": "11111",
       "actions": "11111",
       "usesDefault": "11111",
-      "uncosted": "11111"
+      "uncosted": "11111",
+      "status": "11111",
+      "user": "11111"
     },
     "history": {
       "empty": "11111"
@@ -1252,6 +1254,7 @@
     },
     "actions": {
       "setDefault": "11111",
+      "addRate": "11111",
       "addUserRate": "11111",
       "edit": "11111",
       "delete": "11111",
@@ -1279,6 +1282,14 @@
       "hourlyRate": "11111 {{amount}} 11111",
       "dateRange": "11111 {{start}} 11111 {{end}} 11111",
       "openDateRange": "11111 {{start}} 11111"
+    },
+    "status": {
+      "current": "11111",
+      "scheduled": "11111",
+      "ended": "11111"
+    },
+    "sections": {
+      "userRates": "11111"
     }
   }
 }

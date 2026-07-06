@@ -313,6 +313,7 @@
       "warnings": {
         "title": "Report warnings",
         "uncostedMinutes": "{{hours}} uncosted hours",
+        "unattributedMinutes": "{{hours}} unattributed hours",
         "unapprovedMinutes": "{{hours}} unapproved hours included",
         "zeroDuration": "{{count}} zero-duration entries",
         "uncostedMaterials": "{{count}} uncosted materials",

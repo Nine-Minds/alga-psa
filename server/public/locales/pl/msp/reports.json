@@ -313,6 +313,7 @@
       "warnings": {
         "title": "Ostrzeżenia raportu",
         "uncostedMinutes": "Godziny bez wyceny: {{hours}}",
+        "unattributedMinutes": "{{hours}} godz. nieprzypisanych",
         "unapprovedMinutes": "Uwzględnione godziny niezatwierdzone: {{hours}}",
         "zeroDuration": "Wpisy o zerowym czasie trwania: {{count}}",
         "uncostedMaterials": "Materiały bez wyceny: {{count}}",

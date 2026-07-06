@@ -68,6 +68,39 @@ function hasWarnings(fields: ProfitabilityMetricFields): boolean {
     || fields.materialCurrencyMismatchCount > 0;
 }
 
+function warningItems(fields: ProfitabilityMetricFields, t: ReturnType<typeof useTranslation>['t']): string[] {
+  return [
+    fields.uncostedMinutes > 0 && t('contractReports.profitability.warnings.uncostedMinutes', {
+      defaultValue: '{{hours}} uncosted hours',
+      hours: (fields.uncostedMinutes / 60).toFixed(1),
+    }),
+    fields.unattributedMinutes > 0 && t('contractReports.profitability.warnings.unattributedMinutes', {
+      defaultValue: '{{hours}} unattributed hours',
+      hours: (fields.unattributedMinutes / 60).toFixed(1),
+    }),
+    fields.unapprovedMinutes > 0 && t('contractReports.profitability.warnings.unapprovedMinutes', {
+      defaultValue: '{{hours}} unapproved hours included',
+      hours: (fields.unapprovedMinutes / 60).toFixed(1),
+    }),
+    fields.zeroDurationEntryCount > 0 && t('contractReports.profitability.warnings.zeroDuration', {
+      defaultValue: '{{count}} zero-duration entries',
+      count: fields.zeroDurationEntryCount,
+    }),
+    fields.uncostedMaterialCount > 0 && t('contractReports.profitability.warnings.uncostedMaterials', {
+      defaultValue: '{{count}} uncosted materials',
+      count: fields.uncostedMaterialCount,
+    }),
+    fields.unconvertedRevenueCount > 0 && t('contractReports.profitability.warnings.unconvertedRevenue', {
+      defaultValue: '{{count}} unconverted revenue rows',
+      count: fields.unconvertedRevenueCount,
+    }),
+    fields.materialCurrencyMismatchCount > 0 && t('contractReports.profitability.warnings.materialCurrencyMismatch', {
+      defaultValue: '{{count}} material currency mismatches',
+      count: fields.materialCurrencyMismatchCount,
+    }),
+  ].filter(Boolean) as string[];
+}
+
 function rowName(row: AgreementProfitabilityRow): string {
   return row.contractName;
 }
@@ -88,7 +121,8 @@ const ProfitabilityReport: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const formatCents = (cents: number): string => formatCurrency(cents / 100, 'USD');
+  const currencyCode = summary?.currencyCode ?? 'USD';
+  const formatCents = (cents: number): string => formatCurrency(cents / 100, currencyCode);
   const formatPercent = (value: number | null): string => (
     value === null
       ? t('units.dash', { defaultValue: '-' })
@@ -204,7 +238,14 @@ const ProfitabilityReport: React.FC = () => {
     render: (value: string, record: ClientProfitabilityRow) => (
       <div className="flex items-center gap-2">
         <span className="font-medium">{value}</span>
-        {hasWarnings(record) && <AlertCircle className="h-4 w-4 text-amber-600" aria-hidden="true" />}
+        {hasWarnings(record) && (
+          <span
+            className="inline-flex"
+            title={warningItems(record, t).join(t('contractReports.profitability.formats.listSeparator', { defaultValue: ', ' }))}
+          >
+            <AlertCircle className="h-4 w-4 text-amber-600" aria-hidden="true" />
+          </span>
+        )}
       </div>
     ),
   });
@@ -303,32 +344,7 @@ const ProfitabilityReport: React.FC = () => {
     !selectedAgreementKey || ticket.clientContractId === selectedAgreementKey
   ));
 
-  const warningItems = summary ? [
-    summary.uncostedMinutes > 0 && t('contractReports.profitability.warnings.uncostedMinutes', {
-      defaultValue: '{{hours}} uncosted hours',
-      hours: (summary.uncostedMinutes / 60).toFixed(1),
-    }),
-    summary.unapprovedMinutes > 0 && t('contractReports.profitability.warnings.unapprovedMinutes', {
-      defaultValue: '{{hours}} unapproved hours included',
-      hours: (summary.unapprovedMinutes / 60).toFixed(1),
-    }),
-    summary.zeroDurationEntryCount > 0 && t('contractReports.profitability.warnings.zeroDuration', {
-      defaultValue: '{{count}} zero-duration entries',
-      count: summary.zeroDurationEntryCount,
-    }),
-    summary.uncostedMaterialCount > 0 && t('contractReports.profitability.warnings.uncostedMaterials', {
-      defaultValue: '{{count}} uncosted materials',
-      count: summary.uncostedMaterialCount,
-    }),
-    summary.unconvertedRevenueCount > 0 && t('contractReports.profitability.warnings.unconvertedRevenue', {
-      defaultValue: '{{count}} unconverted revenue rows',
-      count: summary.unconvertedRevenueCount,
-    }),
-    summary.materialCurrencyMismatchCount > 0 && t('contractReports.profitability.warnings.materialCurrencyMismatch', {
-      defaultValue: '{{count}} material currency mismatches',
-      count: summary.materialCurrencyMismatchCount,
-    }),
-  ].filter(Boolean) : [];
+  const summaryWarnings = summary ? warningItems(summary, t) : [];
 
   const applyDateRange = (event: React.FormEvent) => {
     event.preventDefault();
@@ -431,13 +447,13 @@ const ProfitabilityReport: React.FC = () => {
         </Alert>
       )}
 
-      {warningItems.length > 0 && (
+      {summaryWarnings.length > 0 && (
         <Alert id="profitability-warning-alert">
           <AlertDescription>
             <p className="font-medium mb-1">
               {t('contractReports.profitability.warnings.title', { defaultValue: 'Report warnings' })}
             </p>
-            <p className="text-sm">{warningItems.join(t('contractReports.profitability.formats.listSeparator', { defaultValue: ', ' }))}</p>
+            <p className="text-sm">{summaryWarnings.join(t('contractReports.profitability.formats.listSeparator', { defaultValue: ', ' }))}</p>
           </AlertDescription>
         </Alert>
       )}

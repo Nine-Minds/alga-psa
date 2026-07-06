@@ -1215,18 +1215,20 @@
       "title": "Tarifa de costo predeterminada del tenant",
       "current": "Predeterminada actual: {{rate}} desde {{date}}",
       "missing": "No hay una tarifa predeterminada del tenant configurada. Los usuarios sin tarifa propia quedarán sin costear.",
-      "history": "Historial de la tarifa predeterminada"
+      "history": "Historial de la tarifa predeterminada",
+      "empty": "Aún no hay tarifas predeterminadas."
     },
     "empty": {
       "title": "Las tarifas de costo no están configuradas",
       "description": "Establezca primero la tarifa predeterminada del tenant para que los informes puedan costear la mano de obra de los usuarios sin tarifa propia."
     },
     "table": {
-      "user": "Usuario",
       "currentRate": "Tarifa actual",
       "actions": "Acciones",
       "usesDefault": "Usa la predeterminada",
-      "uncosted": "Sin costear"
+      "uncosted": "Sin costear",
+      "status": "Estado",
+      "user": "Usuario"
     },
     "history": {
       "empty": "No hay tarifas específicas por usuario."
@@ -1252,6 +1254,7 @@
     },
     "actions": {
       "setDefault": "Establecer predeterminada",
+      "addRate": "Añadir tarifa",
       "addUserRate": "Agregar tarifa de usuario",
       "edit": "Editar",
       "delete": "Eliminar",
@@ -1276,9 +1279,17 @@
     },
     "formats": {
       "noRate": "—",
-      "hourlyRate": "${{amount}}/h",
+      "hourlyRate": "{{amount}}/h",
       "dateRange": "{{start}} - {{end}}",
       "openDateRange": "{{start}} en adelante"
+    },
+    "status": {
+      "current": "Actual",
+      "scheduled": "Programada",
+      "ended": "Finalizada"
+    },
+    "sections": {
+      "userRates": "Tarifas por usuario"
     }
   }
 }

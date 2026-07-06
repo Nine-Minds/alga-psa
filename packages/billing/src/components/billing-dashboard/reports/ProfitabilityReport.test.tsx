@@ -26,7 +26,7 @@ const tMock = vi.hoisted(() => (
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: tMock }),
   useFormatters: () => ({
-    formatCurrency: (value: number) => `$${value.toFixed(2)}`,
+    formatCurrency: (value: number, currency: string = 'USD') => `${currency} ${value.toFixed(2)}`,
   }),
 }));
 
@@ -126,6 +126,7 @@ const metricFields = {
 const summary = {
   ...metricFields,
   costRatesConfigured: true,
+  currencyCode: 'EUR',
 };
 
 const clients = [
@@ -207,11 +208,12 @@ describe('ProfitabilityReport', () => {
     vi.useRealTimers();
   });
 
-  it('renders summary cards and the timing-basis tooltip', async () => {
+  it('renders summary cards and the timing-basis tooltip in the tenant currency', async () => {
     await renderReport();
 
-    expect(screen.getAllByText('$1000.00').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('$300.00').length).toBeGreaterThan(0);
+    // Every money cell formats with the summary's tenant currency, not a hardcoded one.
+    expect(screen.getAllByText('EUR 1000.00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('EUR 300.00').length).toBeGreaterThan(0);
     expect(screen.getByTitle(/Revenue is filtered by invoice date/)).toBeInTheDocument();
   });
 

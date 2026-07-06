@@ -313,6 +313,7 @@
       "warnings": {
         "title": "Rapportwaarschuwingen",
         "uncostedMinutes": "{{hours}} uur zonder kostentarief",
+        "unattributedMinutes": "{{hours}} niet-toegewezen uren",
         "unapprovedMinutes": "{{hours}} niet-goedgekeurde uren meegerekend",
         "zeroDuration": "{{count}} registraties zonder duur",
         "uncostedMaterials": "{{count}} materialen zonder kostprijs",

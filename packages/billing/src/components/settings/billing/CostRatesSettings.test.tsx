@@ -27,6 +27,9 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
     t: tMock,
   }),
+  useFormatters: () => ({
+    formatCurrency: (value: number, currency: string = 'USD') => `${currency} ${value.toFixed(2)}`,
+  }),
 }));
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
@@ -44,7 +47,47 @@ vi.mock('@alga-psa/billing/actions', () => ({
   checkCostRateWorkedTimeImpact: (...args: unknown[]) => checkCostRateWorkedTimeImpactMock(...args),
 }));
 
+vi.mock('@alga-psa/ui/components/DataTable', () => ({
+  DataTable: ({ id, data, columns }: {
+    id: string;
+    data: Array<Record<string, unknown>>;
+    columns: Array<{ dataIndex: string; render?: (value: unknown, row: unknown, index: number) => React.ReactNode }>;
+  }) => (
+    <div data-testid={id}>
+      {data.map((row, rowIndex) => (
+        <div key={rowIndex} role="row">
+          {columns.map((column, columnIndex) => (
+            <span key={columnIndex}>
+              {column.render
+                ? column.render(row[column.dataIndex], row, rowIndex)
+                : String(row[column.dataIndex] ?? '')}
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/DatePicker', () => ({
+  DatePicker: ({ id, value, onChange }: {
+    id?: string;
+    value?: Date;
+    onChange: (date: Date | undefined) => void;
+  }) => (
+    <input
+      id={id}
+      type="date"
+      value={value
+        ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
+        : ''}
+      onChange={(event) => onChange(event.target.value ? new Date(`${event.target.value}T00:00:00`) : undefined)}
+    />
+  ),
+}));
+
 const defaultData = {
+  currency_code: 'EUR',
   default_rate_history: [
     {
       rate_id: 'default-rate-1',
@@ -77,6 +120,13 @@ const defaultData = {
           effective_from: '2026-01-01',
           effective_to: null,
         },
+        {
+          rate_id: 'user-rate-0',
+          user_id: 'user-1',
+          cost_rate: 5500,
+          effective_from: '2025-01-01',
+          effective_to: '2025-12-31',
+        },
       ],
     },
   ],
@@ -95,45 +145,53 @@ describe('CostRatesSettings', () => {
     cleanup();
   });
 
-  it('renders the default banner, internal user list, current rates, and history', async () => {
+  it('renders default and user rates as separate tables in the tenant currency', async () => {
     const { default: CostRatesSettings } = await import('./CostRatesSettings');
     render(<CostRatesSettings />);
 
-    expect(await screen.findByText('Tenant default cost rate')).toBeInTheDocument();
-    expect(screen.getByText('Current default: $50.00/hr from 2026-01-01')).toBeInTheDocument();
-    expect(screen.getByText('Alice A')).toBeInTheDocument();
-    expect(screen.getByText('$62.50/hr')).toBeInTheDocument();
-
-    fireEvent.click(document.getElementById('toggle-cost-rate-history-user-1') as HTMLElement);
-
-    expect(screen.getAllByText('2026-01-01 - open')).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Edit' })).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(2);
+    // Rates format in the tenant default currency returned by listCostRates.
+    expect(await screen.findByText('Current default: EUR 50.00/hr from 2026-01-01')).toBeInTheDocument();
+    // Tenant-default history lives in its own table, away from the users table.
+    expect(screen.getByText('Tenant default cost rate')).toBeInTheDocument();
+    expect(screen.getByTestId('cost-rates-default-table')).toBeInTheDocument();
+    expect(screen.getByText('EUR 50.00/hr')).toBeInTheDocument();
+    expect(screen.getByText('User rates')).toBeInTheDocument();
+    expect(screen.getByTestId('cost-rates-users-table')).toBeInTheDocument();
+    expect(screen.getAllByText('Alice A')).toHaveLength(2);
+    expect(screen.getByText('EUR 62.50/hr')).toBeInTheDocument();
+    // One edit/delete pair per rate, with a status chip separating current from history.
+    expect(screen.getAllByRole('button', { name: 'Edit' })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(3);
+    expect(screen.getAllByText('Current')).toHaveLength(2);
+    expect(screen.getAllByText('Ended')).toHaveLength(1);
   });
 
-  it('shows the tenant-default empty state when no rates exist', async () => {
-    listCostRatesMock.mockResolvedValue({ default_rate_history: [], users: [] });
+  it('shows a single Add Rate action and per-section empty states when no rates exist', async () => {
+    listCostRatesMock.mockResolvedValue({ currency_code: 'EUR', default_rate_history: [], users: [] });
 
     const { default: CostRatesSettings } = await import('./CostRatesSettings');
     render(<CostRatesSettings />);
 
-    expect(await screen.findByText('Cost rates are not configured')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Set Default' })).toHaveLength(2);
+    expect(await screen.findByText('No default rates yet.')).toBeInTheDocument();
+    expect(screen.getByText('No user-specific rates.')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Add Rate' })).toHaveLength(1);
+    expect(screen.getByText('No tenant default is configured. Users without overrides will be uncosted.')).toBeInTheDocument();
   });
 
-  it('stores currency input as integer cents when saving a user rate', async () => {
+  it('stores currency input as integer cents when saving a new rate', async () => {
     const { default: CostRatesSettings } = await import('./CostRatesSettings');
     render(<CostRatesSettings />);
 
-    await screen.findByText('Alice A');
-    fireEvent.click(screen.getByRole('button', { name: 'Add user rate' }));
+    await screen.findAllByText('Alice A');
+    fireEvent.click(screen.getByRole('button', { name: 'Add Rate' }));
     fireEvent.change(document.querySelector('input[type="number"]') as HTMLInputElement, { target: { value: '62.50' } });
-    fireEvent.change(document.querySelector('input[type="date"]') as HTMLInputElement, { target: { value: '2026-02-01' } });
+    fireEvent.change(document.getElementById('cost-rate-effective-from') as HTMLInputElement, { target: { value: '2026-02-01' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
       expect(upsertCostRateMock).toHaveBeenCalledWith({
-        user_id: 'user-1',
+        rate_id: undefined,
+        user_id: null,
         cost_rate: 6250,
         effective_from: '2026-02-01',
         effective_to: null,
@@ -147,9 +205,9 @@ describe('CostRatesSettings', () => {
     const { default: CostRatesSettings } = await import('./CostRatesSettings');
     render(<CostRatesSettings />);
 
-    await screen.findByText('Alice A');
-    fireEvent.click(document.getElementById('toggle-cost-rate-history-user-1') as HTMLElement);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0]);
+    await screen.findAllByText('Alice A');
+    // Rows sort default-scope first, so the second Edit belongs to Alice's rate.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[1]);
     fireEvent.change(document.querySelector('input[type="number"]') as HTMLInputElement, { target: { value: '70.00' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 

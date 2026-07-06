@@ -1215,18 +1215,20 @@
       "title": "Standaardkostentarief van de tenant",
       "current": "Huidige standaard: {{rate}} vanaf {{date}}",
       "missing": "Er is geen tenantstandaard geconfigureerd. Gebruikers zonder eigen tarief blijven zonder kostentarief.",
-      "history": "Geschiedenis van het standaardtarief"
+      "history": "Geschiedenis van het standaardtarief",
+      "empty": "Nog geen standaardtarieven."
     },
     "empty": {
       "title": "Kostentarieven zijn niet geconfigureerd",
       "description": "Stel eerst de tenantstandaard in, zodat rapporten arbeidskosten kunnen berekenen voor gebruikers zonder eigen tarief."
     },
     "table": {
-      "user": "Gebruiker",
       "currentRate": "Huidig tarief",
       "actions": "Acties",
       "usesDefault": "Gebruikt standaard",
-      "uncosted": "Zonder kostentarief"
+      "uncosted": "Zonder kostentarief",
+      "status": "Status",
+      "user": "Gebruiker"
     },
     "history": {
       "empty": "Geen gebruikersspecifieke tarieven."
@@ -1252,6 +1254,7 @@
     },
     "actions": {
       "setDefault": "Standaard instellen",
+      "addRate": "Tarief toevoegen",
       "addUserRate": "Gebruikerstarief toevoegen",
       "edit": "Bewerken",
       "delete": "Verwijderen",
@@ -1276,9 +1279,17 @@
     },
     "formats": {
       "noRate": "—",
-      "hourlyRate": "${{amount}}/u",
+      "hourlyRate": "{{amount}}/u",
       "dateRange": "{{start}} - {{end}}",
       "openDateRange": "{{start}} - heden"
+    },
+    "status": {
+      "current": "Huidig",
+      "scheduled": "Gepland",
+      "ended": "Beëindigd"
+    },
+    "sections": {
+      "userRates": "Gebruikerstarieven"
     }
   }
 }

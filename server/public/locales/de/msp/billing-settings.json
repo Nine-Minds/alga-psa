@@ -1215,18 +1215,20 @@
       "title": "Standardkostensatz des Mandanten",
       "current": "Aktueller Standard: {{rate}} ab {{date}}",
       "missing": "Es ist kein Mandantenstandard konfiguriert. Benutzer ohne individuelle Sätze bleiben ohne Kostensatz.",
-      "history": "Verlauf des Standardsatzes"
+      "history": "Verlauf des Standardsatzes",
+      "empty": "Noch keine Standardsätze."
     },
     "empty": {
       "title": "Es sind keine Kostensätze konfiguriert",
       "description": "Legen Sie zuerst den Mandantenstandard fest, damit Berichte die Arbeitszeit von Benutzern ohne individuelle Sätze bewerten können."
     },
     "table": {
-      "user": "Benutzer",
       "currentRate": "Aktueller Satz",
       "actions": "Aktionen",
       "usesDefault": "Verwendet Standard",
-      "uncosted": "Ohne Kostensatz"
+      "uncosted": "Ohne Kostensatz",
+      "status": "Status",
+      "user": "Benutzer"
     },
     "history": {
       "empty": "Keine benutzerspezifischen Sätze."
@@ -1252,6 +1254,7 @@
     },
     "actions": {
       "setDefault": "Standard festlegen",
+      "addRate": "Satz hinzufügen",
       "addUserRate": "Benutzersatz hinzufügen",
       "edit": "Bearbeiten",
       "delete": "Löschen",
@@ -1276,9 +1279,17 @@
     },
     "formats": {
       "noRate": "—",
-      "hourlyRate": "${{amount}}/Std.",
+      "hourlyRate": "{{amount}}/Std.",
       "dateRange": "{{start}} - {{end}}",
       "openDateRange": "{{start}} - offen"
+    },
+    "status": {
+      "current": "Aktuell",
+      "scheduled": "Geplant",
+      "ended": "Beendet"
+    },
+    "sections": {
+      "userRates": "Benutzersätze"
     }
   }
 }

@@ -26,6 +26,7 @@ function rawDateValue(value: unknown) {
 function compareValues(left: unknown, operator: string, right: unknown) {
   const normalizedRight = rawDateValue(right);
   if (operator === '=') return left === normalizedRight;
+  if (operator === '<') return String(left) < String(normalizedRight);
   if (operator === '<=') return String(left) <= String(normalizedRight);
   if (operator === '>=') return String(left) >= String(normalizedRight);
   if (operator === '<>') return left !== normalizedRight;
@@ -281,6 +282,66 @@ describe('UserCostRate model behavior', () => {
       effective_from: '2026-04-01',
       effective_to: '2026-04-30',
     })).rejects.toBeInstanceOf(CostRateValidationError);
+  });
+
+  it('supersedes the current open-ended rate when a new open-ended rate starts later', async () => {
+    await UserCostRate.upsert({} as any, 'tenant-1', {
+      user_id: null,
+      cost_rate: 5000,
+      effective_from: '2026-01-01',
+    });
+    // Another scope's open-ended rate must be untouched by the supersede.
+    await UserCostRate.upsert({} as any, 'tenant-1', {
+      user_id: 'user-1',
+      cost_rate: 7000,
+      effective_from: '2026-01-01',
+    });
+
+    const superseding = await UserCostRate.upsert({} as any, 'tenant-1', {
+      user_id: null,
+      cost_rate: 6000,
+      effective_from: '2026-07-01',
+    });
+
+    expect(superseding).toMatchObject({ user_id: null, cost_rate: 6000, effective_to: null });
+    const defaults = store.tables.user_cost_rates.filter((row) => row.user_id === null);
+    expect(defaults).toHaveLength(2);
+    expect(defaults.find((row) => row.cost_rate === 5000)?.effective_to).toBe('2026-06-30');
+    const userRate = store.tables.user_cost_rates.find((row) => row.user_id === 'user-1');
+    expect(userRate?.effective_to).toBeNull();
+  });
+
+  it('re-rates in place when a new open-ended rate starts the same day as the current one', async () => {
+    const original = await UserCostRate.upsert({} as any, 'tenant-1', {
+      user_id: null,
+      cost_rate: 5000,
+      effective_from: '2026-07-06',
+    });
+
+    const rerated = await UserCostRate.upsert({} as any, 'tenant-1', {
+      user_id: null,
+      cost_rate: 100000,
+      effective_from: '2026-07-06',
+    });
+
+    // Same row, new cost — no duplicate open-ended rate for the scope.
+    expect(rerated.rate_id).toBe(original.rate_id);
+    expect(rerated.cost_rate).toBe(100000);
+    expect(store.tables.user_cost_rates.filter((row) => row.user_id === null)).toHaveLength(1);
+  });
+
+  it('still rejects a new open-ended rate starting before the current open-ended one', async () => {
+    await UserCostRate.upsert({} as any, 'tenant-1', {
+      user_id: null,
+      cost_rate: 5000,
+      effective_from: '2026-06-01',
+    });
+
+    await expect(UserCostRate.upsert({} as any, 'tenant-1', {
+      user_id: null,
+      cost_rate: 6000,
+      effective_from: '2026-01-01',
+    })).rejects.toMatchObject({ code: 'overlap' });
   });
 
   it('allows adjacent ranges for one user', async () => {
