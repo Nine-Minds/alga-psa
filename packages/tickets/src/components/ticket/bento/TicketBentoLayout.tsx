@@ -8,6 +8,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { RichTextViewer } from '@alga-psa/ui/editor';
@@ -416,14 +418,22 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         ) : props.contactInfo || props.client ? (
           <div className="space-y-1.5 text-sm">
             {props.contactInfo ? (
-              <button
-                id={`${id}-contact-open`}
-                type="button"
-                className="font-medium text-[rgb(var(--color-primary-600))] hover:underline text-left"
-                onClick={props.onContactClick}
-              >
-                {props.contactInfo.full_name}
-              </button>
+              <div className="flex items-center gap-2 min-w-0">
+                <ContactAvatar
+                  contactId={props.contactInfo.contact_name_id || ''}
+                  contactName={props.contactInfo.full_name || ''}
+                  avatarUrl={props.contactInfo.avatarUrl ?? null}
+                  size="sm"
+                />
+                <button
+                  id={`${id}-contact-open`}
+                  type="button"
+                  className="font-medium text-[rgb(var(--color-primary-600))] hover:underline text-left truncate"
+                  onClick={props.onContactClick}
+                >
+                  {props.contactInfo.full_name}
+                </button>
+              </div>
             ) : canEditContact ? (
               <button
                 id={`${id}-contact-add`}
@@ -447,7 +457,13 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             ) : null}
             {props.client ? (
               <div className="pt-1 border-t border-[rgb(var(--color-border-100))]">
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
+                  <ClientAvatar
+                    clientId={props.client.client_id}
+                    clientName={props.client.client_name}
+                    logoUrl={props.client.logoUrl ?? null}
+                    size="sm"
+                  />
                   <span className="text-xs text-[rgb(var(--color-text-400))]">{t('bento.tiles.client', 'Client')}</span>{' '}
                   <button
                     id={`${id}-client-open`}
