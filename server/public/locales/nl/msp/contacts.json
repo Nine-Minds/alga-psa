@@ -693,5 +693,11 @@
         "userNotAuthenticated": "Gebruiker niet geauthenticeerd"
       }
     }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Contact bijgewerkt",
+      "saveFailed": "Contact kon niet worden bijgewerkt"
+    }
   }
 }

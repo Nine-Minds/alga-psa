@@ -693,5 +693,11 @@
         "userNotAuthenticated": "Utilisateur non authentifié"
       }
     }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Contact mis a jour",
+      "saveFailed": "Impossible de mettre a jour le contact"
+    }
   }
 }

@@ -697,5 +697,11 @@
         "userNotAuthenticated": "Użytkownik nieuwierzytelniony"
       }
     }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Kontakt zaktualizowany",
+      "saveFailed": "Nie mozna zaktualizowac kontaktu"
+    }
   }
 }
