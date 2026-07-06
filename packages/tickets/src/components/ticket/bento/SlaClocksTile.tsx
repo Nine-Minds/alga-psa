@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Clock } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { BentoTile, BentoTileEmpty } from './BentoTile';
+import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/BentoTile';
 import { getTicketSlaPolicyName } from '../../../actions/ticketBentoActions';
 import { computeSlaClocks, formatSlaLabel, type SlaClock, type TicketSlaFields } from './slaClocks';
 

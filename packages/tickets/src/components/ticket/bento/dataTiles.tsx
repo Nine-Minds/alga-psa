@@ -4,7 +4,7 @@ import React, { use, useEffect, useRef, useState } from 'react';
 import { Calendar, Phone, CreditCard, Plus } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
-import { BentoTile, BentoTileEmpty } from './BentoTile';
+import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/BentoTile';
 import {
   getTicketScheduleEntries,
   getTicketInteractions,
@@ -164,12 +164,15 @@ export function CallsEmailsTile({
   ticketId,
   refreshKey = 0,
   viewAllHref,
+  onLogInteraction,
   initialData,
 }: {
   id: string;
   ticketId: string;
   refreshKey?: number;
   viewAllHref?: string;
+  /** When provided, renders a "Log" affordance in the header that opens the quick-add flow. */
+  onLogInteraction?: () => void;
   initialData?: Promise<TicketInteractionSummary[]>;
 }) {
   const { t } = useTranslation('features/tickets');
@@ -180,6 +183,8 @@ export function CallsEmailsTile({
     initialData,
   );
 
+  const showViewAll = Boolean(viewAllHref && data && data.length > 0);
+
   return (
     <BentoTile
       id={id}
@@ -187,14 +192,29 @@ export function CallsEmailsTile({
       icon={<Phone className="h-4 w-4" />}
       error={error}
       action={
-        viewAllHref && data && data.length > 0 ? (
-          <a
-            id={`${id}-view-all`}
-            href={viewAllHref}
-            className="text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline"
-          >
-            {t('bento.tiles.viewAll', 'View all')}
-          </a>
+        showViewAll || onLogInteraction ? (
+          <div className="flex items-center gap-2">
+            {showViewAll ? (
+              <a
+                id={`${id}-view-all`}
+                href={viewAllHref}
+                className="text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+              >
+                {t('bento.tiles.viewAll', 'View all')}
+              </a>
+            ) : null}
+            {onLogInteraction ? (
+              <button
+                id={`${id}-log-interaction`}
+                type="button"
+                aria-label={t('bento.tiles.logInteraction', 'Log call or email')}
+                className="text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))]"
+                onClick={onLogInteraction}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
         ) : undefined
       }
     >
@@ -260,14 +280,12 @@ export function BillingTile({
       {loading ? (
         <TileSkeleton id={`${id}-loading`} />
       ) : !rollup || rollup.entryCount === 0 ? (
-        <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.noTimeLogged', 'No time logged yet')}</BentoTileEmpty>
+        <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.nothingBillable', 'Nothing billable yet')}</BentoTileEmpty>
       ) : (
         <div className="text-sm space-y-1.5">
           <div className="flex justify-between">
-            <span className="text-[rgb(var(--color-text-500))]">{t('bento.tiles.logged', 'Logged')}</span>
-            <span className="font-medium text-[rgb(var(--color-text-800))]">
-              {formatMinutes(rollup.totalMinutes)} · {t('bento.tiles.billableAmount', '{{amount}} billable', { amount: formatMinutes(rollup.billableMinutes) })}
-            </span>
+            <span className="text-[rgb(var(--color-text-500))]">{t('bento.tiles.billable', 'Billable')}</span>
+            <span className="font-medium text-[rgb(var(--color-text-800))]">{formatMinutes(rollup.billableMinutes)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-[rgb(var(--color-text-500))]">{t('bento.tiles.invoicing', 'Invoicing')}</span>

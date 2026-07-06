@@ -9,7 +9,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TagManager } from '@alga-psa/tags/components';
 import type { ITag, ITicket } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { BentoTile } from './BentoTile';
+import { BentoTile } from '@alga-psa/ui/components/BentoTile';
 import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
 
 interface HeroSelectOption {
@@ -176,15 +176,32 @@ export function BentoHero({
     void onSelectChange('due_date', next.toISOString());
   };
 
-  const slaClocks = useMemo(() => computeSlaClocks(ticket), [ticket]);
+  // Re-derive the SLA countdown once a minute so "2h left" doesn't go stale
+  // while the screen sits open (mirrors SlaClocksTile).
+  const [slaTick, setSlaTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setSlaTick((n) => n + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const slaClocks = useMemo(() => computeSlaClocks(ticket), [ticket, slaTick]);
 
+  const committingTitleRef = React.useRef(false);
   const commitTitle = async () => {
+    // Enter calls this, which unmounts the input and fires onBlur → a second
+    // call; guard so the title is only submitted once.
+    if (committingTitleRef.current) return;
+    committingTitleRef.current = true;
     setIsEditingTitle(false);
     const next = titleDraft.trim();
-    if (next && next !== ticket.title) {
-      await onSelectChange('title', next);
-    } else {
-      setTitleDraft(ticket.title ?? '');
+    try {
+      if (next && next !== ticket.title) {
+        await onSelectChange('title', next);
+      } else {
+        setTitleDraft(ticket.title ?? '');
+      }
+    } finally {
+      committingTitleRef.current = false;
     }
   };
 

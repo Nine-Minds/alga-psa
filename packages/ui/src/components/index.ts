@@ -7,6 +7,7 @@ export { default as AvatarIcon } from './AvatarIcon';
 export * from './BackNav';
 export { default as BackNav } from './BackNav';
 export * from './Badge';
+export * from './BentoTile';
 export * from './Breadcrumbs';
 export * from './BulkActionBar';
 export { default as BulkActionBar } from './BulkActionBar';

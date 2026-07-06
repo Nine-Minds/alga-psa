@@ -7,6 +7,8 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { ContentCardVariantProvider } from '@alga-psa/ui/components';
@@ -32,8 +34,10 @@ import TicketWatchListCard from './../TicketWatchListCard';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useQuickAddClient } from '@alga-psa/ui/context';
+import { QuickAddInteraction } from '@alga-psa/clients/components/interactions/QuickAddInteraction';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from './BentoTile';
+import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from '@alga-psa/ui/components/BentoTile';
 import { BentoHero } from './BentoHero';
 import { BentoTimelineTile } from './BentoTimelineTile';
 import { SlaClocksTile } from './SlaClocksTile';
@@ -121,6 +125,12 @@ export interface TicketBentoLayoutProps {
   client?: IClient | null;
   onContactClick: () => void;
   onClientClick: () => void;
+  /** Clients list, used to scope the quick-add-contact modal. */
+  clients?: IClient[];
+  /** Persists a contact change (or clear, when null). Enables inline contact editing on the tile — the picker pool is the existing `contacts` prop. */
+  onChangeContact?: (contactId: string | null) => void;
+  /** Repoints the ticket to a different client (resets contact + location). Enables the inline ClientPicker on the tile. */
+  onChangeClient?: (clientId: string) => void;
   // Checklist
   checklistItems: any[];
   onChecklistItemsChanged: (items: any[]) => void;
@@ -186,6 +196,62 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
     return [location.location_name, location.address_line1, location.city].filter(Boolean).join(', ');
   }, [ticket.location_id, props.locations]);
 
+  const contactPhone = props.contactInfo
+    ? props.contactInfo.default_phone_number ?? props.contactInfo.phone_numbers?.[0]?.phone_number ?? null
+    : null;
+
+  // Inline contact editing: the tile picks from the same client-scoped contacts
+  // the all-fields drawer uses, and quick-add attaches a brand-new one. Editing
+  // is only offered when TicketDetails wired a change handler and the ticket has
+  // a client to scope the picker/quick-add to.
+  const { renderQuickAddContact } = useQuickAddClient();
+  const effectiveClientId = props.client?.client_id ?? ticket.client_id ?? undefined;
+  const canEditContact = Boolean(props.onChangeContact) && Boolean(effectiveClientId);
+  const [contactEditOpen, setContactEditOpen] = React.useState(false);
+  const [selectedContactId, setSelectedContactId] = React.useState<string | null>(null);
+  const [pickerContacts, setPickerContacts] = React.useState<IContact[]>(props.contacts ?? []);
+  const [isQuickAddContactOpen, setIsQuickAddContactOpen] = React.useState(false);
+
+  // Repoint the ticket to a different client. Mirrors the legacy Contact Info
+  // card: an inline ClientPicker that, on save, resets contact + location
+  // (handled by the wired onChangeClient handler in TicketDetails).
+  const canChangeClient = Boolean(props.onChangeClient);
+  const [clientPickerOpen, setClientPickerOpen] = React.useState(false);
+  const [selectedNewClientId, setSelectedNewClientId] = React.useState<string | null>(null);
+  const [clientFilterState, setClientFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
+  // props.clients can contain the same company more than once (joins upstream);
+  // dedupe by client_id so the picker shows each company once.
+  const uniqueClients = React.useMemo(() => {
+    const seen = new Set<string>();
+    return (props.clients ?? []).filter((client) => {
+      if (!client || typeof client.client_id === 'undefined') return false;
+      if (seen.has(client.client_id)) return false;
+      seen.add(client.client_id);
+      return true;
+    });
+  }, [props.clients]);
+
+  // Log call/email: the quick-add-interaction flow needs a client, so it is only
+  // offered when the ticket resolves to one. A successful add bumps the refresh
+  // key so the Calls and emails tile refetches and shows the new row.
+  const canLogInteraction = Boolean(effectiveClientId);
+  const [isLogInteractionOpen, setIsLogInteractionOpen] = React.useState(false);
+  const [interactionRefreshKey, setInteractionRefreshKey] = React.useState(0);
+  const logInteractionContactId = props.contactInfo?.contact_name_id ?? ticket.contact_name_id ?? null;
+
+  React.useEffect(() => {
+    setPickerContacts(props.contacts ?? []);
+  }, [props.contacts]);
+
+  const openContactEditor = React.useCallback(() => {
+    setSelectedContactId(props.contactInfo?.contact_name_id ?? null);
+    setContactEditOpen(true);
+  }, [props.contactInfo?.contact_name_id]);
+
+  const requestBodyRef = React.useRef<HTMLDivElement>(null);
+  const [requestOverflows, setRequestOverflows] = React.useState(false);
+
   const descriptionBlocks = React.useMemo(
     () => parseTicketRichTextContent(ticket.attributes?.description as string | object | undefined),
     [ticket.attributes?.description],
@@ -199,6 +265,12 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       ),
     [descriptionBlocks],
   );
+
+  React.useEffect(() => {
+    const el = requestBodyRef.current;
+    if (!el || requestExpanded) return;
+    setRequestOverflows(el.scrollHeight > el.clientHeight + 4);
+  }, [descriptionBlocks, requestExpanded, hasDescription]);
 
   const leftRail = (
     <div className="space-y-4 min-w-0">
@@ -220,10 +292,10 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       >
         {hasDescription ? (
           <>
-            <div className={`text-sm ${requestExpanded ? '' : 'max-h-40 overflow-hidden'}`}>
+            <div ref={requestBodyRef} className={`text-sm ${requestExpanded ? '' : 'max-h-40 overflow-hidden'}`}>
               <RichTextViewer id={`${id}-request-description`} content={descriptionBlocks} />
             </div>
-            {descriptionBlocks.length > 3 ? (
+            {requestOverflows || requestExpanded ? (
               <button
                 id={`${id}-request-expand`}
                 type="button"
@@ -245,8 +317,85 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         </p>
       </BentoTile>
 
-      <BentoTile id={`${id}-contact-tile`} title={t('bento.tiles.contact', 'Contact')} icon={<User className="h-4 w-4" />}>
-        {props.contactInfo || props.client ? (
+      <BentoTile
+        id={`${id}-contact-tile`}
+        title={t('bento.tiles.contact', 'Contact')}
+        icon={<User className="h-4 w-4" />}
+        action={
+          canEditContact ? (
+            <button
+              id={`${id}-contact-edit`}
+              type="button"
+              aria-label={t('bento.tiles.editContact', 'Edit contact')}
+              className="text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))]"
+              onClick={() => {
+                if (contactEditOpen) {
+                  setContactEditOpen(false);
+                  setSelectedContactId(null);
+                } else {
+                  openContactEditor();
+                }
+              }}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          ) : undefined
+        }
+      >
+        {contactEditOpen ? (
+          <div className="space-y-2">
+            <ContactPicker
+              id={`${id}-contact-picker`}
+              contacts={pickerContacts}
+              value={selectedContactId ?? props.contactInfo?.contact_name_id ?? ''}
+              onValueChange={setSelectedContactId}
+              clientId={effectiveClientId}
+              placeholder={t('bento.tiles.selectOrChangeContact', 'Select or change contact')}
+              onAddNew={() => setIsQuickAddContactOpen(true)}
+            />
+            <div className="flex items-center justify-between gap-2">
+              {props.contactInfo ? (
+                <button
+                  id={`${id}-contact-clear`}
+                  type="button"
+                  className="text-xs font-medium text-red-500 hover:text-red-700"
+                  onClick={() => {
+                    props.onChangeContact?.(null);
+                    setContactEditOpen(false);
+                    setSelectedContactId(null);
+                  }}
+                >
+                  {t('bento.tiles.clearContact', 'Clear contact')}
+                </button>
+              ) : (
+                <span />
+              )}
+              <div className="flex items-center gap-2">
+                <Button
+                  {...withDataAutomationId({ id: `${id}-contact-cancel` })}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setContactEditOpen(false);
+                    setSelectedContactId(null);
+                  }}
+                >
+                  {t('bento.tiles.cancel', 'Cancel')}
+                </Button>
+                <Button
+                  {...withDataAutomationId({ id: `${id}-contact-save` })}
+                  size="sm"
+                  onClick={() => {
+                    props.onChangeContact?.(selectedContactId);
+                    setContactEditOpen(false);
+                  }}
+                >
+                  {t('bento.tiles.save', 'Save')}
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : props.contactInfo || props.client ? (
           <div className="space-y-1.5 text-sm">
             {props.contactInfo ? (
               <button
@@ -257,38 +406,133 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
               >
                 {props.contactInfo.full_name}
               </button>
+            ) : canEditContact ? (
+              <button
+                id={`${id}-contact-add`}
+                type="button"
+                className="font-medium text-[rgb(var(--color-primary-600))] hover:underline text-left"
+                onClick={openContactEditor}
+              >
+                {t('bento.tiles.addContact', 'Add contact')}
+              </button>
             ) : (
               <BentoTileEmpty id={`${id}-contact-none`}>{t('bento.tiles.noContactOnTicket', 'No contact on this ticket')}</BentoTileEmpty>
             )}
             {props.contactInfo?.email ? (
               <div className="text-[rgb(var(--color-text-600))] truncate">{props.contactInfo.email}</div>
             ) : null}
-            {(props.contactInfo as { phone_number?: string } | null)?.phone_number ? (
-              <div className="text-[rgb(var(--color-text-600))] truncate">
-                {(props.contactInfo as { phone_number?: string }).phone_number}
-              </div>
+            {contactPhone ? (
+              <div className="text-[rgb(var(--color-text-600))] truncate">{contactPhone}</div>
             ) : null}
             {ticketLocation ? (
               <div className="text-[rgb(var(--color-text-500))] text-xs truncate">{ticketLocation}</div>
             ) : null}
             {props.client ? (
               <div className="pt-1 border-t border-[rgb(var(--color-border-100))]">
-                <span className="text-xs text-[rgb(var(--color-text-400))]">{t('bento.tiles.client', 'Client')}</span>{' '}
-                <button
-                  id={`${id}-client-open`}
-                  type="button"
-                  className="font-medium text-[rgb(var(--color-primary-600))] hover:underline"
-                  onClick={props.onClientClick}
-                >
-                  {props.client.client_name}
-                </button>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-[rgb(var(--color-text-400))]">{t('bento.tiles.client', 'Client')}</span>{' '}
+                  <button
+                    id={`${id}-client-open`}
+                    type="button"
+                    className="font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+                    onClick={props.onClientClick}
+                  >
+                    {props.client.client_name}
+                  </button>
+                  {canChangeClient ? (
+                    <button
+                      id={`${id}-client-edit`}
+                      type="button"
+                      aria-label={t('bento.tiles.changeClient', 'Change client')}
+                      className="ml-auto text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))]"
+                      onClick={() => {
+                        if (clientPickerOpen) {
+                          setClientPickerOpen(false);
+                          setSelectedNewClientId(null);
+                        } else {
+                          setSelectedNewClientId(props.client?.client_id ?? null);
+                          setClientPickerOpen(true);
+                        }
+                      }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  ) : null}
+                </div>
+                {clientPickerOpen ? (
+                  <div className="mt-1.5 space-y-2">
+                    <ClientPicker
+                      id={`${id}-client-picker`}
+                      clients={uniqueClients}
+                      onSelect={setSelectedNewClientId}
+                      selectedClientId={selectedNewClientId || props.client?.client_id || ''}
+                      filterState={clientFilterState}
+                      onFilterStateChange={setClientFilterState}
+                      clientTypeFilter={clientTypeFilter}
+                      onClientTypeFilterChange={setClientTypeFilter}
+                      fitContent={false}
+                    />
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        {...withDataAutomationId({ id: `${id}-client-cancel` })}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setClientPickerOpen(false);
+                          setSelectedNewClientId(null);
+                        }}
+                      >
+                        {t('bento.tiles.cancel', 'Cancel')}
+                      </Button>
+                      <Button
+                        {...withDataAutomationId({ id: `${id}-client-save` })}
+                        size="sm"
+                        onClick={() => {
+                          if (selectedNewClientId && selectedNewClientId !== props.client?.client_id) {
+                            props.onChangeClient?.(selectedNewClientId);
+                          }
+                          setClientPickerOpen(false);
+                        }}
+                      >
+                        {t('bento.tiles.save', 'Save')}
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
         ) : (
-          <BentoTileEmpty id={`${id}-contact-empty`}>{t('bento.tiles.noContactOnTicket', 'No contact on this ticket')}</BentoTileEmpty>
+          <div className="space-y-1">
+            <BentoTileEmpty id={`${id}-contact-empty`}>{t('bento.tiles.noContactOnTicket', 'No contact on this ticket')}</BentoTileEmpty>
+            {props.onChangeContact && !effectiveClientId ? (
+              <p className="text-xs text-[rgb(var(--color-text-400))]">
+                {t('bento.tiles.setClientToAddContact', 'Set a client first to add a contact')}
+              </p>
+            ) : null}
+          </div>
         )}
       </BentoTile>
+      {renderQuickAddContact({
+        isOpen: isQuickAddContactOpen,
+        onClose: () => setIsQuickAddContactOpen(false),
+        onContactAdded: (newContact) => {
+          setPickerContacts((prev) => {
+            const existingIndex = prev.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
+            if (existingIndex >= 0) {
+              const next = [...prev];
+              next[existingIndex] = newContact;
+              return next;
+            }
+            return [...prev, newContact];
+          });
+          setSelectedContactId(newContact.contact_name_id);
+          setIsQuickAddContactOpen(false);
+          setContactEditOpen(true);
+        },
+        clients: uniqueClients,
+        selectedClientId: effectiveClientId ?? null,
+      })}
 
       {props.associatedAssets ? (
         <div id={`${id}-assets-container`}>{props.associatedAssets}</div>
@@ -305,10 +549,27 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         <CallsEmailsTile
           id={`${id}-calls-emails-tile`}
           ticketId={ticketId}
+          refreshKey={interactionRefreshKey}
           viewAllHref={ticket.contact_name_id ? `/msp/contacts/${ticket.contact_name_id}/activity` : undefined}
+          onLogInteraction={canLogInteraction ? () => setIsLogInteractionOpen(true) : undefined}
           initialData={props.bentoStreams?.interactions}
         />
       </Suspense>
+      {effectiveClientId ? (
+        <QuickAddInteraction
+          id={`${id}-log-interaction`}
+          isOpen={isLogInteractionOpen}
+          onClose={() => setIsLogInteractionOpen(false)}
+          entityId={logInteractionContactId ?? effectiveClientId}
+          entityType={logInteractionContactId ? 'contact' : 'client'}
+          clientId={effectiveClientId}
+          ticketId={ticketId || undefined}
+          onInteractionAdded={() => {
+            setIsLogInteractionOpen(false);
+            setInteractionRefreshKey((key) => key + 1);
+          }}
+        />
+      ) : null}
     </div>
   );
 
@@ -340,7 +601,8 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
                   variant="ghost"
                   size="sm"
                   onClick={props.onStart}
-                  aria-disabled={props.isTimerLocked}
+                  aria-label={t('bento.tiles.startTimer', 'Start timer')}
+                  title={props.isTimerLocked ? t('bento.tiles.timerLockedHint', 'Another timer is already running') : undefined}
                   className={props.isTimerLocked ? 'opacity-60' : ''}
                 >
                   <Play className="h-4 w-4" />
@@ -411,7 +673,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const teamTile = (
     <BentoTile
       id={`${id}-team-tile`}
-      title={t('bento.tiles.teamAndWatchers', 'Team and watchers')}
+      title={t('bento.tiles.team', 'Team')}
       icon={<Users className="h-4 w-4" />}
     >
       <div className="space-y-2 mb-3">

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 
 interface BentoTileProps {
   id: string;
@@ -18,6 +18,13 @@ interface BentoTileProps {
   children: React.ReactNode;
 }
 
+/** Rounding, border, card background and padding shared by every bento surface (also used by ContentCard's `variant="bento"`). */
+export const BENTO_TILE_BASE =
+  'rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4';
+
+/** Full tile shell: the shared bento surface plus the tile's vertical flex layout. */
+export const BENTO_TILE_SHELL = `${BENTO_TILE_BASE} flex flex-col min-w-0`;
+
 /**
  * Shared surface for every cell in the ticket "Grid" layout. Mirrors the
  * ContentCard look (card token background, border, rounded corners) so Grid
@@ -28,7 +35,7 @@ export function BentoTile({ id, title, icon, action, subtitle, error, className,
     <ReflectionContainer id={id} label={title ?? id}>
       <section
         id={id}
-        className={`rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 flex flex-col min-w-0 ${className ?? ''}`}
+        className={`${BENTO_TILE_SHELL} ${className ?? ''}`}
       >
         {title ? (
           <div className="flex items-center gap-2 mb-2">

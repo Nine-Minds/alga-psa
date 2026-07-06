@@ -799,6 +799,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             return;
         }
 
+        // A remote field-only change moves none of timelineRefreshKey's counters
+        // (comments/activity/time), so the grid timeline would never refetch its
+        // system rows. Bump the activity key so the "changed status/priority/…"
+        // row appears live, the same way remote comments already do.
+        if (pendingUpdate.updatedFields.some((field) => field !== 'comments')) {
+            setActivityLogRefreshKey((value) => value + 1);
+        }
+
         if (nonOverlappingFields.length > 0) {
             highlightLiveFields(nonOverlappingFields);
         }
@@ -3018,6 +3026,9 @@ const handleClose = () => {
                     client={client}
                     onContactClick={handleContactClick}
                     onClientClick={handleClientClick}
+                    clients={clients}
+                    onChangeContact={handleContactChange}
+                    onChangeClient={handleClientChange}
                     checklistItems={checklistItems ?? []}
                     onChecklistItemsChanged={setChecklistItems}
                     hideTimeEntry={hideTimeEntry}

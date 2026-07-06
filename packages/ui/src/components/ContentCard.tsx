@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { Button } from './Button';
+import { BENTO_TILE_BASE } from './BentoTile';
 import styles from '../editor/TicketDetails.module.css';
 
 export type ContentCardVariant = 'default' | 'bento';
@@ -62,7 +63,9 @@ interface ContentCardProps {
   variant?: ContentCardVariant;
 }
 
-const BENTO_SHELL = 'rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 space-y-3 min-w-0';
+// Same bento surface as BentoTile (BENTO_TILE_BASE); ContentCard stacks its
+// header/body blocks with space-y-3 instead of the tile's flex column.
+const BENTO_SHELL = `${BENTO_TILE_BASE} space-y-3 min-w-0`;
 const BENTO_HEADER = 'text-sm font-semibold text-[rgb(var(--color-text-800))] flex items-center min-w-0';
 
 interface ContentCardHeaderProps {
