@@ -96,7 +96,22 @@ export function IntervalManagement({
     );
     return calculateTotalDuration(selectedIntervals);
   }, [filteredIntervals, selectedIntervalIds]);
-  
+
+  // Stable TimeEntryDialog props. The live ticket timer re-renders this subtree
+  // every second; without memoization the inline workItem/Date props change
+  // identity each tick, re-firing the dialog's init effect (flash + input reset).
+  const dialogWorkItem = useMemo(() => ({
+    work_item_id: timeEntryData?.work_item_id || '',
+    type: timeEntryData?.work_item_type || 'ticket',
+    name: t('intervals.entryName', { defaultValue: 'Ticket Time Entry' }),
+    description: timeEntryData?.notes || '',
+    is_billable: true,
+  }), [timeEntryData, t]);
+  const dialogDate = useMemo(() => new Date(), [timeEntryData]);
+  const dialogStartTime = useMemo(() => new Date(timeEntryData?.start_time || ''), [timeEntryData]);
+  const dialogEndTime = useMemo(() => new Date(timeEntryData?.end_time || ''), [timeEntryData]);
+  const dialogExistingEntries = useMemo(() => [], []);
+
   // Handle interval selection
   const toggleIntervalSelection = (intervalId: string) => {
     setSelectedIntervalIds(prevSelected => {
@@ -362,19 +377,13 @@ export function IntervalManagement({
         <TimeEntryDialog
           isOpen={isTimeEntryDialogOpen}
           onClose={() => setIsTimeEntryDialogOpen(false)}
-          workItem={{
-            work_item_id: timeEntryData.work_item_id || '',
-            type: timeEntryData.work_item_type || 'ticket',
-            name: t('intervals.entryName', { defaultValue: 'Ticket Time Entry' }),
-            description: timeEntryData.notes || '',
-            is_billable: true
-          }}
-          date={new Date()}
-          existingEntries={[]}
+          workItem={dialogWorkItem}
+          date={dialogDate}
+          existingEntries={dialogExistingEntries}
           timePeriod={currentTimePeriod}
           isEditable={true}
-          defaultStartTime={new Date(timeEntryData.start_time || '')}
-          defaultEndTime={new Date(timeEntryData.end_time || '')}
+          defaultStartTime={dialogStartTime}
+          defaultEndTime={dialogEndTime}
           timeSheetId={currentTimeSheet.id}
           onSave={handleSaveTimeEntry}
           inDrawer={true}
