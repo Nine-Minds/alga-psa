@@ -49,6 +49,12 @@ interface BentoHeroProps {
   /** Opens the agent schedule drawer when an additional agent is clicked. */
   onAgentClick?: (userId: string) => void;
   onSelectChange: (field: keyof ITicket, newValue: string | null) => Promise<void> | void;
+  /**
+   * Coalesced multi-field save. Hero edits are buffered and debounced, then
+   * flushed here as ONE combined update (one server write + one live broadcast
+   * + one timeline row). Falls back to per-field onSelectChange when absent.
+   */
+  onBatchSelectChange?: (changes: Record<string, string | null>) => Promise<void> | void;
   responseStateTrackingEnabled?: boolean;
   hideSlaStatus?: boolean;
   /** Locks workflow fields when the ticket is a bundle child. */
@@ -106,6 +112,7 @@ export function BentoHero({
   getTeamAvatarUrlsBatch,
   onAgentClick,
   onSelectChange,
+  onBatchSelectChange,
   responseStateTrackingEnabled,
   hideSlaStatus,
   workflowLocked,
@@ -123,16 +130,124 @@ export function BentoHero({
 }: BentoHeroProps) {
   const { t } = useTranslation('features/tickets');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [titleDraft, setTitleDraft] = useState(ticket.title ?? '');
 
-  // The bento saves each field immediately, so there is no pending edit to
-  // revert on conflict — instead we remember the last value this user set per
-  // field so "Keep yours" can re-save it over the remote change.
+  // "Keep yours" on a live conflict re-saves the last value THIS user set for a
+  // field (the remote value is already applied to `ticket`).
   const lastLocalEditRef = React.useRef<Record<string, string | null | undefined>>({});
+
+  // --- Debounced coalescing (Task 3 / B) --------------------------------------
+  // Rapid consecutive hero edits are buffered and flushed as ONE combined
+  // update instead of a write + broadcast + timeline row per field. Two layers:
+  //   - `pendingEdits`   : optimistic display overrides so a control reflects
+  //                        the change instantly; cleared per-field once the real
+  //                        `ticket` value lands (effect below), never eagerly.
+  //   - `bufferRef`      : the not-yet-flushed changes; cleared on flush (sent).
+  const [pendingEdits, setPendingEdits] = useState<Record<string, string | null>>({});
+  const bufferRef = React.useRef<Record<string, string | null>>({});
+  const flushTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Displayed value for a field: the pending override (present even when null,
+  // e.g. cleared due date / "no reply needed") wins over the persisted value.
+  const displayValue = (field: keyof ITicket): string | null => {
+    const key = field as string;
+    if (key in pendingEdits) return pendingEdits[key];
+    const raw = ticket[field] as unknown;
+    return raw == null ? null : (raw as string);
+  };
+
+  const flushPending = React.useCallback(() => {
+    if (flushTimerRef.current) {
+      clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = null;
+    }
+    const changes = bufferRef.current;
+    bufferRef.current = {};
+    if (Object.keys(changes).length === 0) return;
+    if (onBatchSelectChange) {
+      void onBatchSelectChange(changes);
+    } else {
+      // No batch handler wired: fall back to per-field immediate saves.
+      for (const [field, value] of Object.entries(changes)) {
+        void onSelectChange(field as keyof ITicket, value);
+      }
+    }
+  }, [onBatchSelectChange, onSelectChange]);
+
+  // Record a hero edit: remember it for F7 "Keep yours", show it optimistically,
+  // buffer it, and (re)arm the debounce so a burst flushes as one update.
   const commitField = (field: keyof ITicket, value: string | null) => {
     lastLocalEditRef.current[field as string] = value;
-    return onSelectChange(field, value);
+    bufferRef.current = { ...bufferRef.current, [field as string]: value };
+    setPendingEdits((prev) => ({ ...prev, [field as string]: value }));
+    if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+    flushTimerRef.current = setTimeout(() => flushPending(), 700);
   };
+
+  // Drop each optimistic override exactly when the persisted `ticket` value
+  // catches up to it — so the control never flickers back to the old value and
+  // a stale override never lingers.
+  useEffect(() => {
+    setPendingEdits((prev) => {
+      const keys = Object.keys(prev);
+      if (keys.length === 0) return prev;
+      let changed = false;
+      const next = { ...prev };
+      for (const key of keys) {
+        const raw = ticket[key as keyof ITicket] as unknown;
+        const ticketValue = raw == null ? null : (raw as string);
+        if (ticketValue === prev[key]) {
+          delete next[key];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [ticket]);
+
+  // A live conflict (F7) supersedes any buffered/optimistic local edit for that
+  // field: refreshTicketSnapshot has already written the authoritative remote
+  // value into `ticket`, and the user now resolves via the Keep/Take banner
+  // (backed by lastLocalEditRef, not pendingEdits). Drop the override so "Take
+  // theirs" isn't masked by a stale local value, and drop it from the buffer so
+  // a not-yet-flushed edit can't silently re-clobber the remote value.
+  useEffect(() => {
+    const conflicted = liveFieldConflicts ? Object.keys(liveFieldConflicts) : [];
+    if (conflicted.length === 0) return;
+    for (const field of conflicted) {
+      if (field in bufferRef.current) {
+        const nextBuffer = { ...bufferRef.current };
+        delete nextBuffer[field];
+        bufferRef.current = nextBuffer;
+      }
+    }
+    setPendingEdits((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const field of conflicted) {
+        if (field in next) {
+          delete next[field];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [liveFieldConflicts]);
+
+  // Never lose a buffered edit: flush on unmount and when focus leaves the hero.
+  const flushPendingRef = React.useRef(flushPending);
+  useEffect(() => {
+    flushPendingRef.current = flushPending;
+  }, [flushPending]);
+  useEffect(() => {
+    return () => flushPendingRef.current();
+  }, []);
+  const handleHeroBlurCapture = (event: React.FocusEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      flushPending();
+    }
+  };
+
+  const [titleDraft, setTitleDraft] = useState(ticket.title ?? '');
 
   const responseStateOptions = useMemo<SelectOption[]>(
     () => [
@@ -143,9 +258,12 @@ export function BentoHero({
     [t],
   );
 
+  // The title reflects its pending override while a save is in flight, so the
+  // draft (re)opens on whatever is currently shown, not the stale persisted one.
+  const displayedTitle = displayValue('title') ?? '';
   useEffect(() => {
-    if (!isEditingTitle) setTitleDraft(ticket.title ?? '');
-  }, [ticket.title, isEditingTitle]);
+    if (!isEditingTitle) setTitleDraft(displayedTitle);
+  }, [displayedTitle, isEditingTitle]);
 
   const isFrozen = (field: string) => liveFrozenFields.includes(field);
   const fieldWrapClass = (field: string) =>
@@ -153,14 +271,19 @@ export function BentoHero({
       ? 'rounded-md ring-2 ring-[rgb(var(--color-primary-300))] transition-shadow'
       : '';
 
-  // Statuses are board-scoped in the options payload; only offer the ones
-  // that belong to this ticket's board (plus unscoped statuses).
+  // Ticket statuses are board-scoped. Match legacy TicketInfo (which fetches
+  // getTicketStatuses(boardId) — strictly board_id = boardId) and offer only
+  // this board's statuses. We intentionally drop the old `!option.board_id`
+  // inclusion: board-less statuses (project/global standard statuses) were
+  // leaking into the dropdown. The ticket's current status is always kept so
+  // switching to a board whose statuses are still board-less can't blank it.
   const scopedStatusOptions = useMemo(
     () =>
       statusOptions.filter(
-        (option) => !option.board_id || option.board_id === ticket.board_id,
+        (option) =>
+          option.board_id === ticket.board_id || option.value === ticket.status_id,
       ),
-    [statusOptions, ticket.board_id],
+    [statusOptions, ticket.board_id, ticket.status_id],
   );
 
   // Priority options may carry the priority color; render it as a dot.
@@ -207,7 +330,8 @@ export function BentoHero({
     [additionalAgents, availableAgents, t],
   );
 
-  const dueDate = ticket.due_date ? new Date(ticket.due_date as unknown as string) : undefined;
+  const dueRaw = displayValue('due_date');
+  const dueDate = dueRaw ? new Date(dueRaw as unknown as string) : undefined;
 
   const handleDueDateChange = (date: Date | undefined) => {
     if (!date) {
@@ -241,10 +365,10 @@ export function BentoHero({
     setIsEditingTitle(false);
     const next = titleDraft.trim();
     try {
-      if (next && next !== ticket.title) {
-        await commitField('title', next);
+      if (next && next !== displayedTitle) {
+        commitField('title', next);
       } else {
-        setTitleDraft(ticket.title ?? '');
+        setTitleDraft(displayedTitle);
       }
     } finally {
       committingTitleRef.current = false;
@@ -353,7 +477,7 @@ export function BentoHero({
 
   return (
     <BentoTile id={id}>
-      <div>
+      <div onBlurCapture={handleHeroBlurCapture}>
         <div className="flex items-start gap-3 flex-wrap">
           <div className="min-w-0 flex-1" {...editHandlers('title')}>
             <div className={`transition-opacity ${isRemotelyEdited('title') ? 'opacity-60' : ''}`.trim()}>
@@ -366,7 +490,7 @@ export function BentoHero({
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') void commitTitle();
                     if (event.key === 'Escape') {
-                      setTitleDraft(ticket.title ?? '');
+                      setTitleDraft(displayedTitle);
                       setIsEditingTitle(false);
                     }
                   }}
@@ -376,7 +500,7 @@ export function BentoHero({
                 />
               ) : (
                 <h2 className="text-lg font-bold text-[rgb(var(--color-text-900))] flex items-center gap-2 min-w-0">
-                  <span className="truncate">{ticket.title}</span>
+                  <span className="truncate">{displayedTitle}</span>
                   <button
                     id={`${id}-title-edit`}
                     type="button"
@@ -452,7 +576,7 @@ export function BentoHero({
               <CustomSelect
                 id={`${id}-status-select`}
                 placeholder={t('bento.hero.status', 'Status')}
-                value={ticket.status_id ?? ''}
+                value={displayValue('status_id') ?? ''}
                 options={scopedStatusOptions}
                 onValueChange={(value: string) => void commitField('status_id', value)}
                 disabled={workflowLocked || isFrozen('status_id')}
@@ -465,7 +589,7 @@ export function BentoHero({
               <CustomSelect
                 id={`${id}-priority-select`}
                 placeholder={t('bento.hero.priority', 'Priority')}
-                value={ticket.priority_id ?? ''}
+                value={displayValue('priority_id') ?? ''}
                 options={priorityJsxOptions}
                 onValueChange={(value: string) => void commitField('priority_id', value)}
                 disabled={workflowLocked || isFrozen('priority_id')}
@@ -478,7 +602,7 @@ export function BentoHero({
               <CustomSelect
                 id={`${id}-board-select`}
                 placeholder={t('bento.hero.board', 'Board')}
-                value={ticket.board_id ?? ''}
+                value={displayValue('board_id') ?? ''}
                 options={boardOptions}
                 onValueChange={(value: string) => void commitField('board_id', value)}
                 disabled={workflowLocked || isFrozen('board_id')}
@@ -491,7 +615,7 @@ export function BentoHero({
               <>
               <UserAndTeamPicker
                 id={`${id}-assignee-picker`}
-                value={ticket.assigned_to ?? ''}
+                value={displayValue('assigned_to') ?? ''}
                 onValueChange={(value) => void commitField('assigned_to', value)}
                 onTeamSelect={async (teamId) => {
                   await onAssignTeam?.(teamId);
@@ -567,7 +691,7 @@ export function BentoHero({
                 <CustomSelect
                   id={`${id}-response-state-select`}
                   placeholder={t('bento.hero.replyStatus', 'Reply status')}
-                  value={(ticket.response_state as string | null) ?? 'none'}
+                  value={displayValue('response_state') ?? 'none'}
                   options={responseStateOptions}
                   onValueChange={(value: string) =>
                     void commitField('response_state', value === 'none' ? null : value)

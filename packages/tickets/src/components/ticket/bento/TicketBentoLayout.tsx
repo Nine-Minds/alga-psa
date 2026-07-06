@@ -71,6 +71,8 @@ export interface TicketBentoLayoutProps {
   boardOptions: { value: string; label: string }[];
   agentOptions: { value: string; label: string }[];
   onSelectChange: (field: keyof ITicket, newValue: string | null) => Promise<void> | void;
+  /** Coalesced multi-field hero save (debounced batch); forwarded to BentoHero. */
+  onBatchSelectChange?: (changes: Record<string, string | null>) => Promise<void> | void;
   responseStateTrackingEnabled?: boolean;
   hideSlaStatus?: boolean;
   workflowLocked?: boolean;
@@ -879,6 +881,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
           onAgentClick={props.onAgentClick}
           onSelectChange={props.onSelectChange}
+          onBatchSelectChange={props.onBatchSelectChange}
           responseStateTrackingEnabled={props.responseStateTrackingEnabled}
           hideSlaStatus={props.hideSlaStatus}
           workflowLocked={props.workflowLocked}

@@ -1584,11 +1584,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         // Optimistically update the UI
         setTicket(prevTicket => ({ ...prevTicket, [field]: normalizedValue }));
 
+        let updateSucceeded = false;
         try {
             await runWithPendingLiveFields([field], async () => {
                 // Use the optimized handler if provided
                 if (onTicketUpdate) {
                     await onTicketUpdate(field, normalizedValue);
+                    updateSucceeded = true;
                     if (field === 'board_id') {
                         setSavedBoardId(normalizedValue);
                     }
@@ -1600,6 +1602,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     const result = await updateTicket(ticket.ticket_id || '', { [field]: normalizedValue });
 
                     if (result === 'success') {
+                        updateSucceeded = true;
                         console.log(`${field} changed to: ${normalizedValue}`);
                         if (field === 'board_id') {
                             setSavedBoardId(normalizedValue);
@@ -1623,6 +1626,15 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     }
                 }
             });
+
+            // A local field change (like a remote one) moves none of the grid
+            // timeline's counters, so its "changed <field>" system row would never
+            // appear until a full reload. Mirror the remote-update bump so the
+            // local edit shows live. One bump per successful save (never on
+            // error/revert).
+            if (updateSucceeded) {
+                setActivityLogRefreshKey((value) => value + 1);
+            }
         } catch (error) {
             console.error(`Error updating ticket ${field}:`, error);
             // Revert to previous value on error
@@ -2324,6 +2336,11 @@ const handleClose = () => {
                     ...changes,
                     updated_at: new Date().toISOString()
                 }));
+                // Refetch the grid timeline so the "changed <field>" system rows
+                // from this local batch appear live (single bump per batch). The
+                // individual-save fallback below relies on handleSelectChange,
+                // which bumps per field on its own.
+                setActivityLogRefreshKey((value) => value + 1);
             }
             return success;
         }
@@ -3186,6 +3203,7 @@ const handleClose = () => {
                     boardOptions={boardOptions}
                     agentOptions={agentOptions}
                     onSelectChange={handleSelectChange}
+                    onBatchSelectChange={(changes) => { void handleBatchSaveChanges(changes); }}
                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                     hideSlaStatus={hideSlaStatus}
                     workflowLocked={Boolean(bundle?.isBundleChild)}
