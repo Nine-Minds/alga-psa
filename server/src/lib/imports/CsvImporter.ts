@@ -7,7 +7,7 @@ import type {
 } from '../../types/imports.types';
 import { ImportValidationError } from '@/lib/imports/errors';
 import Papa, { ParseResult, ParseMeta, ParseError } from 'papaparse';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 export interface CsvImporterOptions {
   sourceType?: string;
@@ -120,20 +120,23 @@ export class CsvImporter extends AbstractImporter {
   }
 
   private async parseXlsx(buffer: Buffer): Promise<ParsedRecord[]> {
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    const worksheet = workbook.worksheets[0];
 
-    if (!sheetName) {
+    if (!worksheet) {
       throw new Error('No worksheets found in XLSX file');
     }
 
-    const worksheet = workbook.Sheets[sheetName];
-    const rows: (string | number | boolean | null)[][] = XLSX.utils.sheet_to_json(worksheet, {
-      header: 1,
-      raw: false,
-      blankrows: false,
-      defval: null,
-      dateNF: 'yyyy-mm-dd"T"HH:MM:ss',
+    const rows: (string | null)[][] = [];
+    worksheet.eachRow((row) => {
+      const values: (string | null)[] = [];
+      for (let column = 1; column <= row.cellCount; column += 1) {
+        values.push(this.formatCellValue(row.getCell(column).value));
+      }
+      if (values.some((value) => value !== null && value !== '')) {
+        rows.push(values);
+      }
     });
 
     if (rows.length === 0) {
@@ -175,6 +178,48 @@ export class CsvImporter extends AbstractImporter {
       }
     });
     return normalized;
+  }
+
+  private formatCellValue(value: ExcelJS.CellValue): string | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+    if (value instanceof Date) {
+      return this.formatDate(value);
+    }
+    if (typeof value === 'object') {
+      if ('richText' in value) {
+        return value.richText.map((part) => part.text).join('');
+      }
+      if ('error' in value) {
+        return null;
+      }
+      if ('result' in value) {
+        return this.formatCellValue(value.result as ExcelJS.CellValue);
+      }
+      if ('text' in value) {
+        return this.formatCellValue(value.text as ExcelJS.CellValue);
+      }
+      if ('hyperlink' in value) {
+        return value.hyperlink;
+      }
+    }
+    return String(value);
+  }
+
+  // ExcelJS parses date cells as UTC; format with UTC getters to keep the sheet's wall-clock time.
+  private formatDate(value: Date): string {
+    const pad = (part: number) => String(part).padStart(2, '0');
+    return (
+      `${value.getUTCFullYear()}-${pad(value.getUTCMonth() + 1)}-${pad(value.getUTCDate())}` +
+      `T${pad(value.getUTCHours())}:${pad(value.getUTCMinutes())}:${pad(value.getUTCSeconds())}`
+    );
   }
 
   private isXlsx(buffer: Buffer): boolean {

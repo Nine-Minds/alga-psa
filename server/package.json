@@ -149,6 +149,7 @@
     "date-fns-tz": "^3.2.0",
     "dotenv": "^16.4.7",
     "elkjs": "^0.10.0",
+    "exceljs": "^4.4.0",
     "expo-server-sdk": "^6.1.0",
     "express": "^5.1.0",
     "file-type": "^21.3.2",
@@ -176,7 +177,7 @@
     "next-i18next": "^15.4.2",
     "next-themes": "^0.4.6",
     "node-vault": "^0.10.2",
-    "nodemailer": "^8.0.4",
+    "nodemailer": "^9.0.3",
     "papaparse": "^5.5.3",
     "parsimmon": "^1.18.1",
     "pdf-lib": "^1.17.1",
@@ -225,7 +226,6 @@
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0",
     "ws": "^8.20.1",
-    "xlsx": "^0.18.5",
     "zod": "^3.25.67",
     "zod-to-json-schema": "^3.24.6"
   },
@@ -262,9 +262,6 @@
     "tsx": "^4.20.3",
     "typescript-eslint": "^8.19.1",
     "vitest": "^3.2.4"
-  },
-  "optionalDependencies": {
-    "ngrok": "^4.3.3"
   },
   "main": "eslint.config.js",
   "keywords": [],
