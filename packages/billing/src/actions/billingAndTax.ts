@@ -637,6 +637,66 @@ async function fetchClientCadenceMaterializationGaps(
     return materializationGaps;
 }
 
+async function filterRepairableMaterializationGaps(
+    trx: BillingQueryExecutor,
+    tenant: string,
+    gaps: RecurringDueWorkMaterializationGap[],
+): Promise<RecurringDueWorkMaterializationGap[]> {
+    if (gaps.length === 0) {
+        return gaps;
+    }
+
+    const db = tenantDb(trx, tenant);
+    const scheduleKeys = Array.from(new Set(gaps.map((gap) => gap.scheduleKey).filter(Boolean)));
+    const periodKeys = Array.from(new Set(gaps.map((gap) => gap.periodKey).filter(Boolean)));
+
+    const liveRows = await db.table('recurring_service_periods')
+        .whereIn('schedule_key', scheduleKeys)
+        .whereIn('period_key', periodKeys)
+        .whereNotIn('lifecycle_state', ['superseded', 'archived'])
+        .select('schedule_key', 'period_key') as Array<{
+            schedule_key: string;
+            period_key: string;
+        }>;
+
+    const liveGapKeys = new Set(
+        liveRows.map((row) => `${row.schedule_key}:${row.period_key}`),
+    );
+
+    const billedRows = await db.table('recurring_service_periods')
+        .whereIn('schedule_key', scheduleKeys)
+        .where((builder) => {
+            builder.where('lifecycle_state', 'billed')
+                .orWhereNotNull('invoice_charge_detail_id');
+        })
+        .select('schedule_key', 'service_period_end') as Array<{
+            schedule_key: string;
+            service_period_end: ISO8601String | null;
+        }>;
+
+    const billedBoundaryByScheduleKey = new Map<string, ISO8601String>();
+    for (const row of billedRows) {
+        if (!row.service_period_end) {
+            continue;
+        }
+
+        const rowBoundary = normalizeDateOnly(row.service_period_end) as ISO8601String;
+        const currentBoundary = billedBoundaryByScheduleKey.get(row.schedule_key);
+        if (!currentBoundary || rowBoundary > currentBoundary) {
+            billedBoundaryByScheduleKey.set(row.schedule_key, rowBoundary);
+        }
+    }
+
+    return gaps.filter((gap) => {
+        if (liveGapKeys.has(`${gap.scheduleKey}:${gap.periodKey}`)) {
+            return false;
+        }
+
+        const billedBoundary = billedBoundaryByScheduleKey.get(gap.scheduleKey);
+        return !billedBoundary || gap.servicePeriodEnd > billedBoundary;
+    });
+}
+
 function mapPersistedRecurringDueWorkDbRowsToRows(
     rows: PersistedRecurringDueWorkDbRow[],
     asOf: ISO8601String,
@@ -1478,7 +1538,12 @@ export const getAvailableRecurringDueWork = withAuth(async (
         const persistedIdentityKeys = new Set(
             persistedRows.map((row) => row.executionIdentityKey),
         );
-        const materializationGaps = rawMaterializationGaps.filter(
+        const repairableMaterializationGaps = await filterRepairableMaterializationGaps(
+            knex,
+            tenant,
+            rawMaterializationGaps,
+        );
+        const materializationGaps = repairableMaterializationGaps.filter(
             (gap) => !persistedIdentityKeys.has(gap.executionIdentityKey),
         );
         const backfillSuppressionKeys = new Set(

@@ -46,6 +46,7 @@ export interface MaterializeClientCadenceServicePeriodsInput {
 export interface IClientCadenceMaterializedServicePeriodPlan {
   scheduleKey: string;
   coverage: IRecurringServicePeriodGenerationCoverageStatus;
+  generationRangeEnd: ISO8601String;
   records: IRecurringServicePeriodRecord[];
 }
 
@@ -105,8 +106,11 @@ function resolveNextInvoiceWindow(
 export function materializeClientCadenceServicePeriods(
   input: MaterializeClientCadenceServicePeriodsInput,
 ): IClientCadenceMaterializedServicePeriodPlan {
+  const horizonAnchor = toDateOnly(input.asOf) > toDateOnly(input.materializedAt)
+    ? toDateOnly(input.asOf)
+    : toDateOnly(input.materializedAt);
   const horizon = resolveRecurringServicePeriodGenerationHorizon({
-    asOf: toDateOnly(input.asOf),
+    asOf: horizonAnchor,
     targetHorizonDays: input.targetHorizonDays,
     replenishmentThresholdDays: input.replenishmentThresholdDays,
   });
@@ -165,8 +169,9 @@ export function materializeClientCadenceServicePeriods(
 
   return {
     scheduleKey,
+    generationRangeEnd: horizon.targetHorizonEnd,
     coverage: assessRecurringServicePeriodGenerationCoverage({
-      asOf: toDateOnly(input.asOf),
+      asOf: horizonAnchor,
       targetHorizonDays: input.targetHorizonDays,
       replenishmentThresholdDays: input.replenishmentThresholdDays,
       futurePeriods: records.map((record) => record.servicePeriod),

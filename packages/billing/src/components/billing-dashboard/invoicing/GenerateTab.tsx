@@ -72,12 +72,18 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
     onGenerateSuccess();
   };
 
+  const handleRefreshNeeded = () => {
+    setInternalRefreshTrigger(prev => prev + 1);
+    onGenerateSuccess();
+  };
+
   const renderContent = () => {
     switch (invoiceType) {
       case 'automatic':
         return (
           <AutomaticInvoices
             onGenerateSuccess={handleGenerateSuccess}
+            onRefreshNeeded={handleRefreshNeeded}
             refreshTrigger={refreshTrigger + internalRefreshTrigger}
           />
         );

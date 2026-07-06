@@ -213,6 +213,7 @@
       "fixAll": "Alles herstellen",
       "fixAllBusy": "Opnieuw opbouwen…",
       "fixAllResult": "{{schedules}} planning(en) opnieuw opgebouwd voor {{clients}} klant(en).",
+      "fixAllNoop": "Alle factureringsplanningen zijn al bijgewerkt. Alles wat hieronder nog staat, moet afzonderlijk worden gecontroleerd.",
       "fixAllError": "Kan serviceperioden niet opnieuw opbouwen. Probeer het opnieuw.",
       "fixAllDenied": "Je hebt geen toestemming om serviceperioden opnieuw op te bouwen."
     },

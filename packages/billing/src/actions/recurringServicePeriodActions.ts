@@ -29,6 +29,7 @@ import {
 } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
 import {
   isClientCadencePostDropObligationType,
+  CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
   POST_DROP_RECURRING_OBLIGATION_TYPES,
   buildPersistedClientCadencePostDropObligationRef,
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
@@ -678,22 +679,29 @@ async function loadScheduleRows(input: {
     .orderBy('revision', 'asc') as unknown as Promise<DbRecordRow[]>;
 }
 
-async function loadLastInvoicedClientBillingBoundary(
+async function loadClientBilledLedgerBoundary(
   trx: any,
   params: { tenant: string; clientId: string },
 ) {
   const db = tenantDb(trx, params.tenant);
-  const query = db.table('client_billing_cycles as cbc');
-  db.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id');
+  const query = db.table('recurring_service_periods as rsp');
+  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+  db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
 
-  const lastInvoiced = await query
-    .andWhere('cbc.client_id', params.clientId)
-    .orderBy('cbc.period_end_date', 'desc')
+  const lastBilled = await query
+    .where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)
+    .where('rsp.cadence_owner', 'client')
+    .where('ct.owner_client_id', params.clientId)
+    .where((builder: any) => {
+      builder.where('rsp.lifecycle_state', 'billed')
+        .orWhereNotNull('rsp.invoice_charge_detail_id');
+    })
+    .orderBy('rsp.service_period_end', 'desc')
     .first()
-    .select('cbc.period_end_date as period_end_date') as { period_end_date?: unknown } | undefined;
+    .select('rsp.service_period_end as service_period_end') as { service_period_end?: unknown } | undefined;
 
-  return lastInvoiced?.period_end_date
-    ? normalizeUtcMidnightDateValue(lastInvoiced.period_end_date)
+  return lastBilled?.service_period_end
+    ? normalizeUtcMidnightDateValue(lastBilled.service_period_end)
     : null;
 }
 
@@ -841,7 +849,7 @@ async function repairScheduleMaterialization(input: {
   }
 
   const billingSchedule = await getClientBillingCycleAnchor(trx, tenant, context.client_id);
-  const billedBoundaryEnd = await loadLastInvoicedClientBillingBoundary(trx, {
+  const billedBoundaryEnd = await loadClientBilledLedgerBoundary(trx, {
     tenant,
     clientId: context.client_id,
   });
@@ -871,7 +879,7 @@ async function repairScheduleMaterialization(input: {
     billingSchedule.anchor,
   );
   const sourceRunKey = `operator-repair:${schedule.scheduleKey}:${repairedAt}`;
-  const candidateRecords = materializeClientCadenceServicePeriods({
+  const materialized = materializeClientCadenceServicePeriods({
     asOf: regenerationStart,
     materializedAt: repairedAt,
     billingCycle: billingSchedule.billingCycle,
@@ -885,10 +893,12 @@ async function repairScheduleMaterialization(input: {
     sourceRunKey,
     anchorSettings: billingSchedule.anchor,
     recordIdFactory: recurringServicePeriodRecordIdFactory,
-  }).records;
+  });
+  const candidateRecords = materialized.records;
   const repairPlan = backfillRecurringServicePeriods({
     candidateRecords,
     existingRecords,
+    candidateCoverageEnd: materialized.generationRangeEnd,
     backfilledAt: repairedAt,
     sourceRuleVersion,
     sourceRunKey,

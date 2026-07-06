@@ -213,6 +213,7 @@
       "fixAll": "Alle reparieren",
       "fixAllBusy": "Wird neu aufgebaut…",
       "fixAllResult": "{{schedules}} Zeitplan/Zeitpläne über {{clients}} Kunde(n) neu aufgebaut.",
+      "fixAllNoop": "Alle Abrechnungspläne sind bereits aktuell. Alles, was unten noch aufgeführt ist, muss einzeln geprüft werden.",
       "fixAllError": "Leistungszeiträume konnten nicht neu aufgebaut werden. Bitte versuchen Sie es erneut.",
       "fixAllDenied": "Sie haben keine Berechtigung, Leistungszeiträume neu aufzubauen."
     },

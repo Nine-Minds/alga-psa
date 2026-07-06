@@ -213,6 +213,7 @@
       "fixAll": "Fix all",
       "fixAllBusy": "Rebuilding…",
       "fixAllResult": "Rebuilt {{schedules}} schedule(s) across {{clients}} client(s).",
+      "fixAllNoop": "All billing schedules are already up to date. Anything still listed below needs individual review.",
       "fixAllError": "Could not rebuild service periods. Please try again.",
       "fixAllDenied": "You do not have permission to rebuild service periods."
     },

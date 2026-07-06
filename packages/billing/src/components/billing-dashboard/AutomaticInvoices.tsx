@@ -55,6 +55,7 @@ import { useRangeSelection } from '@alga-psa/ui/hooks';
 
 interface AutomaticInvoicesProps {
   onGenerateSuccess: () => void;
+  onRefreshNeeded?: () => void;
   refreshTrigger?: number;
 }
 
@@ -561,7 +562,7 @@ const matchesAutomaticInvoiceView = (
   }
 };
 
-const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, refreshTrigger = 0 }) => {
+const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, onRefreshNeeded, refreshTrigger = 0 }) => {
   const { t } = useTranslation('msp/invoicing');
   const { formatDate } = useFormatters();
   const router = useRouter();
@@ -839,12 +840,17 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         }));
         return;
       }
-      setRepairAllMessage(t('automaticInvoices.materializationGap.fixAllResult', {
-        schedules: result.schedulesRepaired,
-        clients: result.clientsRepaired,
-        defaultValue: 'Rebuilt {{schedules}} schedule(s) across {{clients}} client(s).',
-      }));
-      onGenerateSuccess?.();
+      const repairedCount = result.schedulesRepaired + result.rowsBackfilled + result.rowsRealigned + result.rowsSuperseded;
+      setRepairAllMessage(repairedCount > 0
+        ? t('automaticInvoices.materializationGap.fixAllResult', {
+          schedules: result.schedulesRepaired,
+          clients: result.clientsRepaired,
+          defaultValue: 'Rebuilt {{schedules}} schedule(s) across {{clients}} client(s).',
+        })
+        : t('automaticInvoices.materializationGap.fixAllNoop', {
+          defaultValue: 'All billing schedules are already up to date. Anything still listed below needs individual review.',
+        }));
+      onRefreshNeeded?.();
     } catch (error) {
       console.error('Error rebuilding recurring service periods:', error);
       setRepairAllMessage(t('automaticInvoices.materializationGap.fixAllError', {
