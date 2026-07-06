@@ -266,6 +266,47 @@
       "message": "{{count}} contactos ya existen. ¿Desea actualizarlos con los nuevos datos?"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "Direcciones de correo electrónico",
+    "description": "Añada una o más direcciones de correo electrónico y elija exactamente una predeterminada.",
+    "actions": {
+      "addEmail": "Añadir correo"
+    },
+    "emailTypes": {
+      "work": "Trabajo",
+      "personal": "Personal",
+      "billing": "Facturación",
+      "other": "Otro",
+      "custom": "Personalizado"
+    },
+    "primary": {
+      "title": "Correo electrónico principal",
+      "description": "Esta sigue siendo la dirección predeterminada almacenada en el registro del contacto"
+    },
+    "row": {
+      "title": "Correo adicional {{number}}",
+      "secondaryDescription": "Almacenado como una dirección de correo no predeterminada",
+      "defaultLabel": "Predeterminado",
+      "noEmailYet": "Aún no se ha introducido ningún correo",
+      "editLabel": "Editar",
+      "edit": "Editar el correo adicional {{number}}",
+      "doneLabel": "Hecho",
+      "done": "Terminar de editar el correo adicional {{number}}",
+      "moveUp": "Mover el correo adicional {{number}} hacia arriba",
+      "moveDown": "Mover el correo adicional {{number}} hacia abajo",
+      "remove": "Eliminar el correo adicional {{number}}"
+    },
+    "fields": {
+      "emailAddress": "Dirección de correo electrónico",
+      "emailPlaceholder": "nombre@ejemplo.com",
+      "emailLabel": "Tipo de correo",
+      "customEmailLabel": "Tipo de correo personalizado",
+      "customTypePlaceholder": "Seleccione o escriba un tipo de correo personalizado",
+      "customTypeSearchPlaceholder": "Busque o escriba un tipo de correo personalizado...",
+      "customTypeEmpty": "No hay tipos de correo personalizados que coincidan.",
+      "customTypeUseValue": "Usar \"{{value}}\""
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "Números de teléfono",
     "description": "Editor de números de teléfono con gestión de tipos, validación, valores predeterminados y compatibilidad con extensiones",

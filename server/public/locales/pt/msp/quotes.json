@@ -75,7 +75,7 @@
     }
   },
   "quotesTab": {
-    "title": "Citações",
+    "title": "Cotações",
     "actions": {
       "quoteActions": "Ações de cotação"
     },
@@ -90,7 +90,7 @@
       "client": "Cliente"
     },
     "empty": {
-      "byCategory": "Não há citações nesta categoria.",
+      "byCategory": "Não há cotações nesta categoria.",
       "title": "Nenhuma cotação encontrada",
       "description": "Crie uma cotação para começar."
     },
@@ -151,7 +151,7 @@
       "moreActions": "Mais ações",
       "cancel": "Cancelar",
       "previewPdf": "Visualizar PDF",
-      "backToQuotes": "Voltar para citações",
+      "backToQuotes": "Voltar para cotações",
       "backToTemplates": "Voltar aos modelos de cotação",
       "convertToSalesOrder": "Converter em pedido de venda"
     },
@@ -161,9 +161,9 @@
       "newQuote": "Nova cotação",
       "newTemplate": "Novo modelo de cotação",
       "quote": "Cotação",
-      "quoteWithNumber": "orçamento {{quoteNumber}}",
-      "quoteWithNumberAndVersion": "orçamento {{quoteNumber}} v{{version}}",
-      "templateQuoteFallback": "orçamento de modelo"
+      "quoteWithNumber": "Cotação {{quoteNumber}}",
+      "quoteWithNumberAndVersion": "Cotação {{quoteNumber}} v{{version}}",
+      "templateQuoteFallback": "Cotação modelo"
     },
     "fields": {
       "additionalEmails": "Endereços de e-mail adicionais (separados por vírgula)",
@@ -183,15 +183,15 @@
       "useDefaultLayout": "Usar layout padrão"
     },
     "alerts": {
-      "accepted": "Orçamento aceito",
+      "accepted": "Cotação aceita",
       "converted": "Cotação convertida",
       "convertedDescription": "Esta cotação foi convertida em um contrato e/ou fatura.",
       "quote": "Cotação",
-      "rejected": "orçamento rejeitada"
+      "rejected": "Cotação rejeitada"
     },
     "dialogs": {
       "approval": {
-        "approveDescription": "Aprove este orçamento para que possa ser enviado ao cliente.",
+        "approveDescription": "Aprove esta cotação para que possa ser enviada ao cliente.",
         "approveTitle": "Aprovar cotação",
         "approveComment": "Comentário (opcional)",
         "approveCommentPlaceholder": "Adicione uma nota opcional...",
@@ -235,18 +235,18 @@
     },
     "loading": "Carregando formulário de cotação...",
     "notices": {
-      "approved": "Orçamento aprovado e pronto para envio.",
-      "cancelled": "Orçamento cancelado.",
+      "approved": "Cotação aprovada e pronta para envio.",
+      "cancelled": "Cotação cancelada.",
       "createdDraftContract": "Criou minuta de contrato {{name}}.",
       "createdDraftContractAndInvoice": "Criou minuta de contrato {{contractName}} e minuta de fatura {{invoiceName}}.",
       "createdDraftInvoice": "Projeto de fatura criado {{name}}.",
       "reminderSent": "Lembrete de cotação enviado.",
       "requestedChanges": "A cotação voltou ao rascunho com as alterações solicitadas.",
-      "resent": "orçamento ressentida.",
-      "sent": "Orçamento enviado ao cliente.",
-      "submittedForApproval": "Orçamento submetido para aprovação interna."
+      "resent": "Cotação reenviada.",
+      "sent": "Cotação enviada ao cliente.",
+      "submittedForApproval": "Cotação submetida para aprovação interna."
     },
-    "readOnlyNotice": "Esta orçamento é somente leitura. Para fazer alterações, crie uma nova revisão.",
+    "readOnlyNotice": "Esta cotação é somente leitura. Para fazer alterações, crie uma nova revisão.",
     "validation": {
       "clientRequired": "O cliente é obrigatório",
       "titleRequired": "O título é obrigatório, a menos que seja criado a partir do modelo"
@@ -262,7 +262,7 @@
     "breadcrumb": {
       "billing": "Faturamento",
       "quoteTemplates": "Modelos de cotação",
-      "quotes": "Citações",
+      "quotes": "Cotações",
       "newQuote": "Nova cotação"
     },
     "subtitle": {
@@ -271,10 +271,10 @@
       "expires": "Expira {{date}}"
     },
     "banners": {
-      "acceptedTitle": "Orçamento aceito",
+      "acceptedTitle": "Cotação aceita",
       "acceptedBy": "Aceito por: {{name}}",
       "acceptedOn": "Aceito em: {{date}}",
-      "rejectedTitle": "orçamento rejeitada",
+      "rejectedTitle": "Cotação rejeitada",
       "rejectedOn": "Rejeitado em: {{date}}",
       "rejectedReason": "Razão: {{reason}}",
       "convertedTitle": "Cotação convertida",
@@ -348,7 +348,7 @@
   "quoteDetail": {
     "title": "Detalhes da cotação",
     "actions": {
-      "backToQuotes": "Voltar para citações",
+      "backToQuotes": "Voltar para cotações",
       "openConvertedContract": "Contrato Convertido Aberto",
       "openConvertedInvoice": "Abrir fatura convertida",
       "preview": "Visualização",
@@ -373,7 +373,7 @@
     },
     "dialogs": {
       "approval": {
-        "approveDescription": "Aprove este orçamento para que possa ser enviado ao cliente. Você pode adicionar um comentário opcional.",
+        "approveDescription": "Aprove esta cotação para que possa ser enviada ao cliente. Você pode adicionar um comentário opcional.",
         "changesDescription": "Devolva esta cotação ao rascunho com as alterações solicitadas. Descreva o que precisa ser revisado."
       },
       "send": {
@@ -381,11 +381,11 @@
       }
     },
     "status": {
-      "accepted": "Orçamento aceito",
+      "accepted": "Cotação aceita",
       "acceptedBy": "Aceito por:",
       "acceptedOn": "Aceito em:",
       "reason": "Razão:",
-      "rejected": "orçamento rejeitada",
+      "rejected": "Cotação rejeitada",
       "rejectedOn": "Rejeitado em:"
     },
     "empty": {
@@ -416,23 +416,23 @@
       "saveAsTemplate": "Falha ao salvar cotação como modelo",
       "send": "Falha ao enviar cotação",
       "sendReminder": "Falha ao enviar lembrete de cotação",
-      "submitForApproval": "Falha ao enviar orçamento para aprovação"
+      "submitForApproval": "Falha ao enviar cotação para aprovação"
     },
     "labels": {
       "phase": "Fase: {{phase}}",
-      "templateQuote": "orçamento de modelo",
+      "templateQuote": "Cotação modelo",
       "customItem": "Item personalizado",
       "optional": "Opcional",
       "recurring": "Recorrente"
     },
     "loading": "Carregando detalhes da cotação...",
     "notices": {
-      "approved": "Orçamento aprovado e pronto para envio.",
+      "approved": "Cotação aprovada e pronta para envio.",
       "reminderSent": "Lembrete de cotação enviado aos destinatários de cobrança configurados.",
       "requestedChanges": "A cotação voltou ao rascunho com as alterações solicitadas.",
       "resent": "Cotação reenviada para os destinatários de cobrança configurados.",
-      "sent": "Orçamento enviado ao cliente.",
-      "submittedForApproval": "Orçamento submetido para aprovação interna.",
+      "sent": "Cotação enviada ao cliente.",
+      "submittedForApproval": "Cotação submetida para aprovação interna.",
       "templateAssigned": "Modelo de documento atribuído.",
       "templateCleared": "Modelo de documento desmarcado (usando o padrão).",
       "createdSalesOrder": "Pedido de venda em rascunho {{number}} criado. As linhas de produto serão faturadas na entrega."
@@ -507,7 +507,7 @@
       },
       "fixed": "Desconto fixo",
       "fullQuoteSubtotal": "Aplica-se ao subtotal da cotação completa",
-      "fullQuote": "orçamento completa",
+      "fullQuote": "Cotação completa",
       "item": "Item específico",
       "percentage": "Desconto percentual",
       "service": "Serviço específico",
@@ -608,7 +608,7 @@
       "invoiceCreated": "Uma fatura foi criada.",
       "remainingItems": "Você pode converter os itens restantes.",
       "title": "Conversão Parcial",
-      "description": "Alguns registros desta orçamento já existem."
+      "description": "Alguns registros desta cotação já existem."
     },
     "actions": {
       "contract": "Criar rascunho de contrato",
@@ -634,7 +634,7 @@
     "title": "Aprovações de cotação",
     "description": "Revise as cotações que aguardam a aprovação do gerente antes de serem enviadas aos clientes.",
     "actions": {
-      "backToQuotes": "Voltar para citações"
+      "backToQuotes": "Voltar para cotações"
     },
     "settings": {
       "label": "Aprovação necessária antes do envio",

@@ -266,6 +266,47 @@
       "message": "{{count}} contacten bestaan al. Wil je ze bijwerken met de nieuwe gegevens?"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "E-mailadressen",
+    "description": "Voeg een of meer e-mailadressen toe en kies precies één standaardadres.",
+    "actions": {
+      "addEmail": "E-mail toevoegen"
+    },
+    "emailTypes": {
+      "work": "Werk",
+      "personal": "Persoonlijk",
+      "billing": "Facturatie",
+      "other": "Overig",
+      "custom": "Aangepast"
+    },
+    "primary": {
+      "title": "Primair e-mailadres",
+      "description": "Dit blijft het standaardadres dat bij het contact is opgeslagen"
+    },
+    "row": {
+      "title": "Extra e-mailadres {{number}}",
+      "secondaryDescription": "Opgeslagen als niet-standaard e-mailadres",
+      "defaultLabel": "Standaard",
+      "noEmailYet": "Nog geen e-mailadres ingevoerd",
+      "editLabel": "Bewerken",
+      "edit": "Extra e-mailadres {{number}} bewerken",
+      "doneLabel": "Klaar",
+      "done": "Bewerken van extra e-mailadres {{number}} afronden",
+      "moveUp": "Extra e-mailadres {{number}} omhoog verplaatsen",
+      "moveDown": "Extra e-mailadres {{number}} omlaag verplaatsen",
+      "remove": "Extra e-mailadres {{number}} verwijderen"
+    },
+    "fields": {
+      "emailAddress": "E-mailadres",
+      "emailPlaceholder": "naam@voorbeeld.com",
+      "emailLabel": "E-mailtype",
+      "customEmailLabel": "Aangepast e-mailtype",
+      "customTypePlaceholder": "Selecteer of voer een aangepast e-mailtype in",
+      "customTypeSearchPlaceholder": "Zoek of voer een aangepast e-mailtype in...",
+      "customTypeEmpty": "Geen overeenkomende aangepaste e-mailtypen.",
+      "customTypeUseValue": "Gebruik \"{{value}}\""
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "Telefoonnummers",
     "description": "Telefoonnummer-editor met typebeheer, validatie, standaardwaarden en extensieondersteuning",

@@ -4,7 +4,7 @@
   "tabs": {
     "overview": "Visão geral",
     "invoices": "Faturas",
-    "quotes": "Citações"
+    "quotes": "Cotações"
   },
   "currentContractLine": "Linha de contrato atual",
   "nextInvoice": "Próxima fatura",
@@ -152,10 +152,10 @@
   },
   "quoteForm": {
     "noticeTitle": "Cotação",
-    "readOnlyNotice": "Esta orçamento é somente leitura. Para fazer alterações, crie uma nova revisão.",
+    "readOnlyNotice": "Esta cotação é somente leitura. Para fazer alterações, crie uma nova revisão.",
     "breadcrumb": {
       "billing": "Faturamento",
-      "quotes": "Citações",
+      "quotes": "Cotações",
       "quoteTemplates": "Modelos de cotação",
       "newQuote": "Nova cotação"
     },
@@ -196,10 +196,10 @@
       "cancelQuote": "Cancelar cotação"
     },
     "banners": {
-      "acceptedTitle": "Orçamento aceito",
+      "acceptedTitle": "Cotação aceita",
       "acceptedBy": "Aceito por: {{name}}",
       "acceptedOn": "Aceito em: {{date}}",
-      "rejectedTitle": "orçamento rejeitada",
+      "rejectedTitle": "Cotação rejeitada",
       "rejectedOn": "Rejeitado em: {{date}}",
       "rejectedReason": "Razão: {{reason}}",
       "convertedTitle": "Cotação convertida",
@@ -297,14 +297,14 @@
     "quoteStatusDescription": {
       "draft": "A cotação está sendo preparada",
       "pending_approval": "A cotação está aguardando aprovação interna",
-      "approved": "O orçamento foi aprovado e pronto para ser enviado",
+      "approved": "A cotação foi aprovada e está pronta para ser enviada",
       "sent": "A cotação foi enviada ao cliente",
-      "accepted": "O cliente aceitou o orçamento",
+      "accepted": "O cliente aceitou a cotação",
       "rejected": "O cliente rejeitou a cotação",
       "expired": "A cotação passou da data de validade",
       "converted": "A cotação foi convertida em registros de faturamento",
       "cancelled": "A cotação foi cancelada antes da conversão",
-      "superseded": "A orçamento foi substituída por uma revisão",
+      "superseded": "A cotação foi substituída por uma revisão",
       "archived": "A cotação é arquivada e somente leitura"
     },
     "invoiceStatus": {
