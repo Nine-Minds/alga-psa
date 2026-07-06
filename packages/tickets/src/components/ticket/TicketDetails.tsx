@@ -3176,7 +3176,7 @@ const handleClose = () => {
                     conversations={conversations}
                     userMap={userMap}
                     contactMap={contactMap}
-                    timelineRefreshKey={conversations.length + activityLogRefreshKey + timeEntriesRefreshKey}
+                    timelineRefreshKey={`${conversations.length}-${activityLogRefreshKey}-${timeEntriesRefreshKey}`}
                     timelineInitialOrder={timelinePrefOrder}
                     editorKey={editorKey}
                     isSubmitting={isSubmitting}

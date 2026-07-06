@@ -60,7 +60,7 @@ interface BentoTimelineTileProps {
   contactFirstName?: string | null;
   ticketCreatedAt?: string | null;
   /** Bumped by the parent whenever a save/comment lands so the stream refetches. */
-  refreshKey?: number;
+  refreshKey?: number | string;
   initialOrder?: 'asc' | 'desc';
   // Composer plumbing — same pipeline TicketConversation uses.
   editorKey: number;

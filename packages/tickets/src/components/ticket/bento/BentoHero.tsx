@@ -291,6 +291,7 @@ export function BentoHero({
             <div className={fieldWrapClass('status_id')}>
               <CustomSelect
                 id={`${id}-status-select`}
+                placeholder={t('bento.hero.status', 'Status')}
                 value={ticket.status_id ?? ''}
                 options={scopedStatusOptions}
                 onValueChange={(value: string) => void onSelectChange('status_id', value)}
@@ -303,6 +304,7 @@ export function BentoHero({
             <div className={fieldWrapClass('priority_id')}>
               <CustomSelect
                 id={`${id}-priority-select`}
+                placeholder={t('bento.hero.priority', 'Priority')}
                 value={ticket.priority_id ?? ''}
                 options={priorityJsxOptions}
                 onValueChange={(value: string) => void onSelectChange('priority_id', value)}
@@ -315,6 +317,7 @@ export function BentoHero({
             <div className={fieldWrapClass('board_id')}>
               <CustomSelect
                 id={`${id}-board-select`}
+                placeholder={t('bento.hero.board', 'Board')}
                 value={ticket.board_id ?? ''}
                 options={boardOptions}
                 onValueChange={(value: string) => void onSelectChange('board_id', value)}
@@ -327,6 +330,7 @@ export function BentoHero({
             <div className={fieldWrapClass('assigned_to')}>
               <CustomSelect
                 id={`${id}-assignee-select`}
+                placeholder={t('bento.hero.assignedTo', 'Assigned to')}
                 value={ticket.assigned_to ?? 'unassigned'}
                 options={agentJsxOptions}
                 onValueChange={(value: string) => void onSelectChange('assigned_to', value)}
@@ -351,6 +355,7 @@ export function BentoHero({
               <div className={fieldWrapClass('response_state')}>
                 <CustomSelect
                   id={`${id}-response-state-select`}
+                  placeholder={t('bento.hero.replyStatus', 'Reply status')}
                   value={(ticket.response_state as string | null) ?? 'none'}
                   options={responseStateOptions}
                   onValueChange={(value: string) =>

@@ -85,7 +85,7 @@ export interface TicketBentoLayoutProps {
   conversations: IComment[];
   userMap: Record<string, CommentUserAuthor>;
   contactMap: Record<string, CommentContactAuthor>;
-  timelineRefreshKey: number;
+  timelineRefreshKey: number | string;
   timelineInitialOrder: 'asc' | 'desc';
   editorKey: number;
   isSubmitting?: boolean;
