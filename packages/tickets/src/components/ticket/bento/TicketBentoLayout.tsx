@@ -838,6 +838,13 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           priorityOptions={props.priorityOptions}
           boardOptions={props.boardOptions}
           agentOptions={props.agentOptions}
+          availableAgents={props.availableAgents}
+          teams={props.teams}
+          additionalAgents={props.additionalAgents}
+          onAssignTeam={props.onAssignTeam}
+          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+          getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+          onAgentClick={props.onAgentClick}
           onSelectChange={props.onSelectChange}
           responseStateTrackingEnabled={props.responseStateTrackingEnabled}
           hideSlaStatus={props.hideSlaStatus}

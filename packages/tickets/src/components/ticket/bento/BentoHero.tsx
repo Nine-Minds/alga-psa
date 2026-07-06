@@ -6,8 +6,14 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import UserAndTeamPicker, { type GetTeamAvatarUrlsBatch } from '@alga-psa/ui/components/UserAndTeamPicker';
+import type { GetUserAvatarUrlsBatch } from '@alga-psa/ui/components/UserPicker';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
+import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { TagManager } from '@alga-psa/tags/components';
-import type { ITag, ITicket } from '@alga-psa/types';
+import type { ITag, ITicket, ITeam, ITicketResource, IUserWithRoles } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile } from '@alga-psa/ui/components/BentoTile';
 import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
@@ -27,6 +33,19 @@ interface BentoHeroProps {
   priorityOptions: HeroSelectOption[];
   boardOptions: HeroSelectOption[];
   agentOptions: HeroSelectOption[];
+  /** Full user objects backing the assignee picker (individual agents). */
+  availableAgents: IUserWithRoles[];
+  /** Teams selectable as the assignee (renders the assigned-team badge too). */
+  teams?: ITeam[];
+  /** Extra assigned agents; surfaced as a compact "+N" indicator. */
+  additionalAgents?: ITicketResource[];
+  /** Immediately reassigns the ticket to a team (server re-expands members). */
+  onAssignTeam?: (teamId: string) => Promise<void> | void;
+  /** Batch avatar loaders threaded to the assignee picker. */
+  getUserAvatarUrlsBatch?: GetUserAvatarUrlsBatch;
+  getTeamAvatarUrlsBatch?: GetTeamAvatarUrlsBatch;
+  /** Opens the agent schedule drawer when an additional agent is clicked. */
+  onAgentClick?: (userId: string) => void;
   onSelectChange: (field: keyof ITicket, newValue: string | null) => Promise<void> | void;
   responseStateTrackingEnabled?: boolean;
   hideSlaStatus?: boolean;
@@ -55,16 +74,6 @@ function HeroField({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .map((part) => part[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-}
-
 /**
  * Grid layout hero band: the fields a technician touches constantly, editable
  * in place (each control persists immediately through the existing
@@ -77,6 +86,13 @@ export function BentoHero({
   priorityOptions,
   boardOptions,
   agentOptions,
+  availableAgents,
+  teams,
+  additionalAgents,
+  onAssignTeam,
+  getUserAvatarUrlsBatch,
+  getTeamAvatarUrlsBatch,
+  onAgentClick,
   onSelectChange,
   responseStateTrackingEnabled,
   hideSlaStatus,
@@ -142,23 +158,27 @@ export function BentoHero({
     [priorityOptions],
   );
 
-  const agentJsxOptions = useMemo<SelectOption[]>(
-    () => [
-      { value: 'unassigned', label: t('bento.hero.notAssigned', 'Not assigned') },
-      ...agentOptions.map((option) => ({
-        value: option.value,
-        textValue: option.label,
-        label: (
-          <span className="inline-flex items-center gap-2 min-w-0">
-            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[rgb(var(--color-primary-100))] dark:bg-[rgb(var(--color-primary-400)/0.3)] text-[8px] font-bold text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))] flex-shrink-0">
-              {initials(option.label)}
-            </span>
-            <span className="truncate">{option.label}</span>
-          </span>
-        ),
-      })),
-    ],
-    [agentOptions, t],
+  // The team currently assigned to the ticket, resolved from the teams pool so
+  // the picker can sit beside a compact team badge (mirrors the legacy layout).
+  const assignedTeam = useMemo(
+    () => (ticket.assigned_team_id ? teams?.find((team) => team.team_id === ticket.assigned_team_id) ?? null : null),
+    [teams, ticket.assigned_team_id],
+  );
+
+  // Extra assigned agents are surfaced as a "+N" indicator; resolve each name
+  // from the full agent pool (the resource rows only carry the user id).
+  const additionalAgentEntries = useMemo(
+    () =>
+      (additionalAgents ?? [])
+        .filter((agent) => agent.additional_user_id)
+        .map((agent) => {
+          const user = availableAgents.find((candidate) => candidate.user_id === agent.additional_user_id);
+          const name = user
+            ? `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || t('bento.hero.unknownAgent', 'Unknown agent')
+            : t('bento.hero.unknownAgent', 'Unknown agent');
+          return { userId: agent.additional_user_id as string, name };
+        }),
+    [additionalAgents, availableAgents, t],
   );
 
   const dueDate = ticket.due_date ? new Date(ticket.due_date as unknown as string) : undefined;
@@ -327,16 +347,65 @@ export function BentoHero({
             </div>
           </HeroField>
           <HeroField label={t('bento.hero.assignedTo', 'Assigned to')}>
-            <div className={fieldWrapClass('assigned_to')}>
-              <CustomSelect
-                id={`${id}-assignee-select`}
-                placeholder={t('bento.hero.assignedTo', 'Assigned to')}
-                value={ticket.assigned_to ?? 'unassigned'}
-                options={agentJsxOptions}
-                onValueChange={(value: string) => void onSelectChange('assigned_to', value)}
-                disabled={isFrozen('assigned_to')}
-                className="!w-full"
+            <div className={`${fieldWrapClass('assigned_to')} flex items-center gap-1.5 flex-wrap`}>
+              <UserAndTeamPicker
+                id={`${id}-assignee-picker`}
+                value={ticket.assigned_to ?? ''}
+                onValueChange={(value) => void onSelectChange('assigned_to', value)}
+                onTeamSelect={async (teamId) => {
+                  await onAssignTeam?.(teamId);
+                }}
+                users={availableAgents}
+                teams={teams ?? []}
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatch}
+                getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatch}
+                labelStyle="none"
+                buttonWidth="fit"
+                size="sm"
+                placeholder={t('bento.hero.notAssigned', 'Not assigned')}
+                disabled={workflowLocked || isFrozen('assigned_to')}
               />
+              {assignedTeam ? (
+                <Tooltip content={assignedTeam.team_name}>
+                  <Badge variant="info" size="sm" className="gap-1 cursor-help">
+                    <TeamAvatar
+                      teamId={assignedTeam.team_id}
+                      teamName={assignedTeam.team_name}
+                      avatarUrl={null}
+                      size="xs"
+                    />
+                  </Badge>
+                </Tooltip>
+              ) : null}
+              {additionalAgentEntries.length > 0 ? (
+                <Tooltip
+                  content={
+                    <div className="text-xs space-y-1.5">
+                      <div className="font-medium text-gray-300 mb-1">
+                        {t('bento.hero.additionalAgentsTooltip', 'Additional agents:')}
+                      </div>
+                      {additionalAgentEntries.map((agent) => (
+                        <div key={agent.userId} className="flex items-center gap-2">
+                          <UserAvatar userId={agent.userId} userName={agent.name} avatarUrl={null} size="xs" />
+                          <span>{agent.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  }
+                >
+                  <Badge
+                    variant="info"
+                    size="sm"
+                    className="cursor-pointer"
+                    onClick={() => {
+                      const first = additionalAgentEntries[0];
+                      if (first) onAgentClick?.(first.userId);
+                    }}
+                  >
+                    +{additionalAgentEntries.length}
+                  </Badge>
+                </Tooltip>
+              ) : null}
             </div>
           </HeroField>
           <HeroField label={t('bento.hero.due', 'Due')}>

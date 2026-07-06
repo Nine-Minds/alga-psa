@@ -1449,6 +1449,8 @@
       "noDueDate": "No due date",
       "escalated": "Escalated",
       "notAssigned": "Not assigned",
+      "additionalAgentsTooltip": "Additional agents:",
+      "unknownAgent": "Unknown agent",
       "resolutionSla": "Resolution SLA:",
       "responseWaitingOnUs": "Waiting on us",
       "responseWaitingOnClient": "Waiting on client",
