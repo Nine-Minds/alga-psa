@@ -551,7 +551,7 @@ const ProfitabilityReport: React.FC = () => {
             columns={agreementColumns}
             pagination
             pageSize={10}
-            onRowClick={setSelectedAgreement}
+            onRowClick={(row) => setSelectedAgreement(row)}
             rowClassName={(record) => (
               (record.clientContractId ?? record.rowType) === (selectedAgreement?.clientContractId ?? selectedAgreement?.rowType)
               ? 'bg-[rgb(var(--color-primary-50))]'

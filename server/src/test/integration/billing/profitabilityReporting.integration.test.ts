@@ -514,12 +514,14 @@ describe('Profitability Reporting Integration', () => {
   });
 
   it('rejects an overlapping cost-rate range against the live schema', async () => {
+    // Bounded range: an open-ended insert would instead supersede the
+    // current open default rate and rewrite the timeline for later tests.
     await expect(
       UserCostRate.upsert(db, tenantId, {
         user_id: null,
         cost_rate: 7000,
         effective_from: '2025-03-01',
-        effective_to: null,
+        effective_to: '2025-03-31',
       })
     ).rejects.toBeInstanceOf(CostRateValidationError);
   });
