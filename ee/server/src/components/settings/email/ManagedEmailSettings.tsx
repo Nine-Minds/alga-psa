@@ -35,6 +35,7 @@ type OutboundProvider = 'resend' | 'smtp';
 type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
   defaultFromDomain?: string | null;
   ticketingFromEmail?: string | null;
+  ticketingFromName?: string | null;
 };
 
 type ManagedEmailOverrides = {
@@ -98,6 +99,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const [inboundProviders, setInboundProviders] = useState<EmailProvider[]>([]);
   const [ticketingFromOption, setTicketingFromOption] = useState<string>('custom');
   const [ticketingFromCustom, setTicketingFromCustom] = useState('');
+  const [ticketingFromName, setTicketingFromName] = useState('');
   const [ticketingFromError, setTicketingFromError] = useState<string | null>(null);
   const [ticketingFromWarning, setTicketingFromWarning] = useState<string | null>(null);
   const [savingTicketingFrom, setSavingTicketingFrom] = useState(false);
@@ -220,6 +222,8 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       setTicketingFromCustom('');
     }
 
+    setTicketingFromName(settings?.ticketingFromName?.trim() || '');
+
     setTicketingFromError(current ? validateTicketingFrom(current, outboundDomain) : null);
 
     if (mailboxes.length > 0 && current && !hasMatch) {
@@ -266,6 +270,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       const normalized = candidate.trim();
       const updated = await updateEmailSettings({
         ticketingFromEmail: normalized,
+        ticketingFromName: ticketingFromName.trim() || null,
         defaultFromDomain: outboundDomain || emailSettings?.defaultFromDomain
       } satisfies EmailSettingsUpdateInput);
 
@@ -289,6 +294,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     try {
       const updated = await updateEmailSettings({
         ticketingFromEmail: null,
+        ticketingFromName: null,
       } satisfies EmailSettingsUpdateInput);
 
       setEmailSettings(updated);
@@ -759,6 +765,20 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                     </p>
                   </div>
                 )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="ticketing-from-name">{t('managed.outbound.ticketingFrom.nameLabel')}</Label>
+                  <Input
+                    id="ticketing-from-name"
+                    value={ticketingFromName}
+                    disabled={loadingOutbound || !outboundDomain}
+                    placeholder={t('managed.outbound.ticketingFrom.namePlaceholder')}
+                    onChange={(e) => setTicketingFromName(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t('managed.outbound.ticketingFrom.nameHelp')}
+                  </p>
+                </div>
 
                 {ticketingFromWarning && (
                   <Alert variant="warning">

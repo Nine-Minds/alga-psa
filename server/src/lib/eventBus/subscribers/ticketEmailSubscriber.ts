@@ -61,21 +61,31 @@ async function resolveTicketingFromAddress(
       return undefined;
     }
 
-    // Look up the inbound provider row matching this mailbox to pick up the
-    // optional sender_display_name override. Falls back to undefined when no
-    // matching row or no display name is set; callers then use board-name
-    // fallback for backward compatibility.
-    const provider = await knex('email_providers')
-      .where({ tenant: tenantId, mailbox: candidate })
-      .first(['sender_display_name']);
-
-    const senderDisplayName = typeof provider?.sender_display_name === 'string'
-      ? provider.sender_display_name.trim()
+    // Prefer the tenant-configured ticketing display name (set alongside the
+    // ticketing From address). When it is blank, fall back to the inbound
+    // provider row matching this mailbox to pick up the optional
+    // sender_display_name override. Falls back to undefined when neither is
+    // set; callers then use board-name fallback for backward compatibility.
+    const configuredName = typeof settings?.ticketingFromName === 'string'
+      ? settings.ticketingFromName.trim()
       : '';
+
+    let providerName = '';
+    if (!configuredName) {
+      const provider = await knex('email_providers')
+        .where({ tenant: tenantId, mailbox: candidate })
+        .first(['sender_display_name']);
+
+      providerName = typeof provider?.sender_display_name === 'string'
+        ? provider.sender_display_name.trim()
+        : '';
+    }
+
+    const name = configuredName || providerName;
 
     return {
       email: candidate,
-      name: senderDisplayName.length > 0 ? senderDisplayName : undefined
+      name: name.length > 0 ? name : undefined
     };
   } catch (error) {
     logger.warn('[TicketEmailSubscriber] Failed to resolve ticketing from address', {
