@@ -87,6 +87,7 @@ vi.mock('@alga-psa/ui/context', () => ({
   useSchedulingCallbacks: () => ({
     renderAgentSchedule: vi.fn(),
     launchTimeEntry: vi.fn(),
+    launchScheduleEntry: vi.fn(),
     fetchTimeEntriesForTicket: vi.fn(),
     deleteTimeEntry: vi.fn(),
   }),

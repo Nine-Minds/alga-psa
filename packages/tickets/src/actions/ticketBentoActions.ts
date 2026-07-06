@@ -347,6 +347,94 @@ export const getTicketBillingRollup = withAuth(
   },
 );
 
+export interface TicketAppointmentRequestSummary {
+  appointmentRequestId: string;
+  serviceName: string | null;
+  status: string;
+  /** YYYY-MM-DD (client-requested calendar date). */
+  requestedDate: string | null;
+  /** HH:MM (client-requested start time, in requesterTimezone). */
+  requestedTime: string | null;
+  requestedDurationMinutes: number | null;
+  requesterTimezone: string | null;
+}
+
+function normalizeDateOnly(value: unknown): string | null {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  if (typeof value === 'string' && value.length >= 10) {
+    return value.slice(0, 10);
+  }
+  return null;
+}
+
+function normalizeTimeOnly(value: unknown): string | null {
+  if (value instanceof Date) {
+    return value.toISOString().slice(11, 16);
+  }
+  if (typeof value === 'string' && value.length >= 5) {
+    return value.slice(0, 5);
+  }
+  return null;
+}
+
+/**
+ * Client-requested appointment slots linked to a ticket, for the "Appointment
+ * requests" tile. Distinct from booked schedule entries ("Next visit"): these
+ * are pending/approved/declined requests awaiting or reflecting a dispatch
+ * decision. Query mirrors the legacy getTicketAppointmentRequests in
+ * ticketActions but returns a typed, internal-only summary.
+ */
+export const getTicketAppointmentRequests = withAuth(
+  async (
+    user,
+    { tenant },
+    ticketId: string,
+  ): Promise<TicketAppointmentRequestSummary[]> => {
+    if (!tenant) {
+      throw new Error('Tenant required');
+    }
+    if (!ticketId) {
+      throw new Error('ticketId required');
+    }
+
+    assertInternalUser(user as { user_type?: string });
+
+    const { knex } = await createTenantKnex();
+
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCanReadTicket(user, trx, tenant, ticketId);
+
+      const query = tenantScopedTable(trx, 'appointment_requests as ar', tenant)
+        .where('ar.ticket_id', ticketId)
+        .orderBy('ar.created_at', 'desc')
+        .select(
+          'ar.appointment_request_id',
+          'ar.status',
+          'ar.requested_date',
+          'ar.requested_time',
+          'ar.requested_duration',
+          'ar.requester_timezone',
+          'sc.service_name',
+        );
+
+      tenantDb(trx, tenant).tenantJoin(query, 'service_catalog as sc', 'ar.service_id', 'sc.service_id', { type: 'left' });
+
+      const rows = (await query) as Array<Record<string, unknown>>;
+      return rows.map((row) => ({
+        appointmentRequestId: row.appointment_request_id as string,
+        serviceName: (row.service_name as string | null) ?? null,
+        status: (row.status as string | null) ?? 'pending',
+        requestedDate: normalizeDateOnly(row.requested_date),
+        requestedTime: normalizeTimeOnly(row.requested_time),
+        requestedDurationMinutes: normalizeNullableNumber(row.requested_duration, 'appointment_requests.requested_duration'),
+        requesterTimezone: (row.requester_timezone as string | null) ?? null,
+      }));
+    });
+  },
+);
+
 /**
  * Name of the SLA policy applied to a ticket, for the "SLA clocks" tile
  * header. Returns null when no policy applies.

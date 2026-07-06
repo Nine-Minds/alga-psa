@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { PartialBlock } from '@blocknote/core';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
-import { Pencil, Trash, Lock, CheckCircle, Cog, CornerUpLeft } from 'lucide-react';
+import { Pencil, Trash, Lock, CheckCircle, Cog, CornerUpLeft, MessageCircle } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { IComment } from '@alga-psa/types';
@@ -406,6 +406,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     </span>
                   </Tooltip>
                 )}
+                {!conversation.is_internal && !conversation.is_resolution && (
+                  <Tooltip content={t('conversation.clientCommentTooltip', 'Client-facing comment')}>
+                    <span {...withDataAutomationId({ id: `${commentId}-client-badge` })}>
+                      <MessageCircle className="h-4 w-4 text-blue-500" />
+                    </span>
+                  </Tooltip>
+                )}
                 {commentSource && (
                   <ResponseSourceBadge
                     source={commentSource}
@@ -561,7 +568,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               );
             })()
           )}
-          {reactions && onToggleReaction && (!isCompact || reactions.length > 0) && (
+          {reactions && onToggleReaction && (
             <ReactionDisplay
               id={`${commentId}-reactions`}
               reactions={reactions}

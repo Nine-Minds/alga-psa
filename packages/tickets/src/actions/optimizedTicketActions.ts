@@ -509,6 +509,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       // Users - removed document joins that were causing duplicates
       // Avatar URLs are fetched later using getUserAvatarUrl()
       tenantScopedTable(trx, 'users', tenant)
+        .where('user_type', 'internal')
+        .where('is_inactive', false)
         .orderBy('first_name', 'asc'),
       
       // Statuses

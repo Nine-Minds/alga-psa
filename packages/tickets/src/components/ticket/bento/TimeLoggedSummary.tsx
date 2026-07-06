@@ -28,9 +28,16 @@ const MAX_BARS = 10;
 
 function entryDayKey(entry: { work_date: string | null; start_time: string }): string {
   const raw = entry.work_date || entry.start_time;
+  // A date-only string already denotes a calendar day — keep it verbatim.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) return String(raw).slice(0, 10);
-  return d.toISOString().slice(0, 10);
+  // Bucket by the viewer's LOCAL calendar day so an evening entry at a negative
+  // UTC offset stays on the day it was logged (matches dayLabel's local parse).
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function dayLabel(key: string): string {

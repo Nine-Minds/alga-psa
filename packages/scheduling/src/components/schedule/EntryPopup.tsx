@@ -61,6 +61,12 @@ interface EntryPopupProps {
   focusedTechnicianId: string | null;
   canAssignOthers: boolean; // Derived from user_schedule:update permission in parent
   viewOnly?: boolean;
+  /**
+   * Pre-selects a work item for a NEW entry (the `slot` path), so the editor
+   * opens scoped to e.g. a ticket instead of ad-hoc. Ignored when editing an
+   * existing `event`.
+   */
+  initialWorkItem?: Omit<IWorkItem, 'tenant'> | null;
 }
 
 const EntryPopup: React.FC<EntryPopupProps> = ({
@@ -79,7 +85,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   canModifySchedule,
   focusedTechnicianId,
   canAssignOthers,
-  viewOnly = false
+  viewOnly = false,
+  initialWorkItem = null
 }) => {
   const [entryData, setEntryData] = useState<Omit<IScheduleEntry, 'tenant'>>(() => {
     if (event) {
@@ -93,15 +100,15 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     } else if (slot) {
       return {
         entry_id: '',
-        title: '',
+        title: initialWorkItem?.name || '',
         scheduled_start: new Date(slot.start),
         scheduled_end: new Date(slot.end),
         notes: '',
         created_at: new Date(),
         updated_at: new Date(),
-        work_item_id: null,
+        work_item_id: initialWorkItem?.work_item_id ?? null,
         status: 'scheduled',
-        work_item_type: 'ad_hoc',
+        work_item_type: initialWorkItem?.type ?? 'ad_hoc',
         // Use assigned_user_ids from slot if provided, otherwise default to focused technician or current user
         assigned_user_ids: slot.assigned_user_ids || (focusedTechnicianId ? [focusedTechnicianId] : [currentUserId]),
         is_private: false,
@@ -109,22 +116,22 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     } else {
       return {
         entry_id: '',
-        title: '',
+        title: initialWorkItem?.name || '',
         scheduled_start: new Date(),
         scheduled_end: new Date(),
         notes: '',
         created_at: new Date(),
         updated_at: new Date(),
-        work_item_id: null,
+        work_item_id: initialWorkItem?.work_item_id ?? null,
         status: 'scheduled',
-        work_item_type: 'ad_hoc',
+        work_item_type: initialWorkItem?.type ?? 'ad_hoc',
         // Default to focused technician if available, otherwise current user
         assigned_user_ids: focusedTechnicianId ? [focusedTechnicianId] : [currentUserId],
         is_private: false,
       };
     }
   });
-  const [selectedWorkItem, setSelectedWorkItem] = useState<Omit<IWorkItem, 'tenant'> | null>(null);
+  const [selectedWorkItem, setSelectedWorkItem] = useState<Omit<IWorkItem, 'tenant'> | null>(initialWorkItem ?? null);
   const [recurrencePattern, setRecurrencePattern] = useState<IRecurrencePattern | null>(null);
   const [isEditingWorkItem, setIsEditingWorkItem] = useState(false);
   const [availableWorkItems, setAvailableWorkItems] = useState<IWorkItem[]>([]);
@@ -292,17 +299,20 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       } else if (slot) {
         setEntryData({
           entry_id: '',
-          title: '',
+          title: initialWorkItem?.name || '',
           scheduled_start: new Date(slot.start),
           scheduled_end: new Date(slot.end),
           notes: '',
           created_at: new Date(),
           updated_at: new Date(),
-          work_item_id: null,
+          work_item_id: initialWorkItem?.work_item_id ?? null,
           status: 'scheduled',
-          work_item_type: 'ad_hoc',
+          work_item_type: initialWorkItem?.type ?? 'ad_hoc',
           assigned_user_ids: slot.assigned_user_ids || (focusedTechnicianId ? [focusedTechnicianId] : [currentUserId]),
         });
+        if (initialWorkItem) {
+          setSelectedWorkItem(initialWorkItem);
+        }
       }
     };
 

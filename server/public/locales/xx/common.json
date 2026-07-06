@@ -3,6 +3,7 @@
     "noClient": "11111"
   },
   "reactions": {
+    "add": "11111",
     "ariaSummary_one": "11111 {{emoji}} 11111 {{count}} 11111",
     "ariaSummary_other": "11111 {{emoji}} 11111 {{count}} 11111",
     "ariaYouReacted": "11111"

@@ -799,6 +799,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             return;
         }
 
+        // A remote field-only change moves none of timelineRefreshKey's counters
+        // (comments/activity/time), so the grid timeline would never refetch its
+        // system rows. Bump the activity key so the "changed status/priority/…"
+        // row appears live, the same way remote comments already do.
+        if (pendingUpdate.updatedFields.some((field) => field !== 'comments')) {
+            setActivityLogRefreshKey((value) => value + 1);
+        }
+
         if (nonOverlappingFields.length > 0) {
             highlightLiveFields(nonOverlappingFields);
         }
@@ -969,6 +977,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isRunning, setIsRunning] = useState(false);
     const [timeDescription, setTimeDescription] = useState('');
     const [timeEntriesRefreshKey, setTimeEntriesRefreshKey] = useState(0);
+    const [nextVisitRefreshKey, setNextVisitRefreshKey] = useState(0);
     const [tags, setTags] = useState<ITag[]>(bootstrap?.tags ?? []);
     const { tags: allTags } = useTags();
     const [currentTimeSheet, setCurrentTimeSheet] = useState<ITimeSheet | null>(null);
@@ -1013,7 +1022,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // NOTE: ITIL categories are now managed through the unified category system
 
     const { openDrawer, closeDrawer, replaceDrawer } = useDrawer();
-    const { launchTimeEntry, deleteTimeEntry } = useSchedulingCallbacks();
+    const { launchTimeEntry, deleteTimeEntry, launchScheduleEntry } = useSchedulingCallbacks();
 
     const resetTicketDeleteState = useCallback(() => {
         if (isTicketDeleteProcessing) return;
@@ -1575,11 +1584,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         // Optimistically update the UI
         setTicket(prevTicket => ({ ...prevTicket, [field]: normalizedValue }));
 
+        let updateSucceeded = false;
         try {
             await runWithPendingLiveFields([field], async () => {
                 // Use the optimized handler if provided
                 if (onTicketUpdate) {
                     await onTicketUpdate(field, normalizedValue);
+                    updateSucceeded = true;
                     if (field === 'board_id') {
                         setSavedBoardId(normalizedValue);
                     }
@@ -1591,6 +1602,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     const result = await updateTicket(ticket.ticket_id || '', { [field]: normalizedValue });
 
                     if (result === 'success') {
+                        updateSucceeded = true;
                         console.log(`${field} changed to: ${normalizedValue}`);
                         if (field === 'board_id') {
                             setSavedBoardId(normalizedValue);
@@ -1614,6 +1626,15 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     }
                 }
             });
+
+            // A local field change (like a remote one) moves none of the grid
+            // timeline's counters, so its "changed <field>" system row would never
+            // appear until a full reload. Mirror the remote-update bump so the
+            // local edit shows live. One bump per successful save (never on
+            // error/revert).
+            if (updateSucceeded) {
+                setActivityLogRefreshKey((value) => value + 1);
+            }
         } catch (error) {
             console.error(`Error updating ticket ${field}:`, error);
             // Revert to previous value on error
@@ -2108,6 +2129,29 @@ const handleClose = () => {
         }
     };
 
+    const handleScheduleVisit = async () => {
+        try {
+            if (!ticket.ticket_id) {
+                toast.error(t('messages.ticketIdMissing'));
+                return;
+            }
+
+            await launchScheduleEntry({
+                openDrawer,
+                closeDrawer,
+                context: {
+                    workItemId: ticket.ticket_id,
+                    workItemType: 'ticket',
+                    title: ticket.title || t('bento.tiles.scheduledWork', 'Scheduled work'),
+                    clientName: client?.client_name ?? null,
+                },
+                onComplete: () => setNextVisitRefreshKey((value) => value + 1),
+            });
+        } catch (error) {
+            handleError(error, t('messages.scheduleVisitFailed', { defaultValue: 'Failed to open the scheduler' }));
+        }
+    };
+
     const handleEditTimeEntry = async (entry: { entry_id: string }) => {
         try {
             if (!ticket.ticket_id) {
@@ -2292,6 +2336,11 @@ const handleClose = () => {
                     ...changes,
                     updated_at: new Date().toISOString()
                 }));
+                // Refetch the grid timeline so the "changed <field>" system rows
+                // from this local batch appear live (single bump per batch). The
+                // individual-save fallback below relies on handleSelectChange,
+                // which bumps per field on its own.
+                setActivityLogRefreshKey((value) => value + 1);
             }
             return success;
         }
@@ -2667,6 +2716,190 @@ const handleClose = () => {
             ? t('liveUpdates.connection.unavailable', 'Live updates unavailable')
             : null;
 
+    const bundleAndCloseBanners = (
+        <>
+                                {bundle?.isBundleChild && bundle?.masterTicket ? (
+                                    <div className="mb-3 rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-4 py-2 text-sm text-amber-900 dark:text-amber-200" id="ticket-bundle-child-banner">
+                                        This ticket is bundled under{' '}
+                                        <a className="font-medium underline" href={`/msp/tickets/${bundle.masterTicket.ticket_id}`}>
+                                            {bundle.masterTicket.ticket_number}
+                                        </a>
+                                        . Workflow fields are locked; work from the master ticket.
+                                    </div>
+                                ) : null}
+
+                                {bundle?.isBundleMaster ? (
+                                    <div className="mb-3 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 px-4 py-2 text-sm text-indigo-900 dark:text-indigo-200" id="ticket-bundle-master-banner">
+                                        {t('details.bundle.masterBanner', 'This ticket is the master of a bundle ({{count}} children). Mode: {{mode}}.', {
+                                            count: Array.isArray(bundle.children) ? bundle.children.length : 0,
+                                            mode: (bundle.mode || 'sync_updates').split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+                                        })}
+                                        {bundleHasMultipleClients ? (
+                                            <span className="ml-2 inline-flex items-center rounded bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:text-amber-200">
+                                                {t('details.bundle.multipleClients', 'Multiple clients')}
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                ) : null}
+
+                                {bundle?.isBundleMaster ? (
+                                    <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3" id="ticket-bundle-master-panel">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="text-sm font-semibold text-gray-900">{t('details.bundle.title', 'Bundle')}</div>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    id="ticket-bundle-toggle-mode-button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={handleToggleBundleMode}
+                                                    disabled={isUpdatingBundleSettings}
+                                                >
+                                                    {t('details.bundle.mode', 'Mode: {{mode}}', { mode: (bundle.mode || 'sync_updates').split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') })}
+                                                </Button>
+                                                <Button
+                                                    id="ticket-bundle-unbundle-button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={handleUnbundleMaster}
+                                                >
+                                                    {t('details.bundle.unbundle', 'Unbundle')}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <div className="text-xs text-gray-500 mb-2">
+                                            {t('details.bundle.childrenDescription')}
+                                        </div>
+                                        <div className="flex items-center gap-2 mb-3" ref={searchContainerRef}>
+                                            <div className="relative flex-1">
+                                                <Input
+                                                    id="ticket-bundle-add-child-input"
+                                                    ref={searchInputRef}
+                                                    value={addChildTicketNumber}
+                                                    onChange={handleSearchInputChange}
+                                                    onFocus={() => addChildTicketNumber.trim() && setShowSearchResults(true)}
+                                                    placeholder={t('details.bundle.searchPlaceholder', 'Search ticket number or title…')}
+                                                    className="h-8"
+                                                    containerClassName="mb-0"
+                                                    autoComplete="off"
+                                                />
+                                                {isSearching && (
+                                                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                                        <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+                                                    </div>
+                                                )}
+                                                {showSearchResults && (
+                                                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                                        {searchResults.length > 0 ? (
+                                                            <ul className="py-1">
+                                                                {searchResults.map((result) => (
+                                                                    <li
+                                                                        key={result.ticket_id}
+                                                                        className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+                                                                        onClick={() => handleSelectSearchResult(result)}
+                                                                    >
+                                                                        <div className="min-w-0">
+                                                                            <span className="text-sm text-blue-600">
+                                                                                {result.ticket_number}
+                                                                            </span>
+                                                                            <div className="text-xs text-gray-500 truncate">
+                                                                                {(result.client_name ? `${result.client_name} · ` : '')}{result.title}
+                                                                            </div>
+                                                                        </div>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        ) : addChildTicketNumber.trim().length > 0 && !isSearching ? (
+                                                            <div className="px-3 py-2 text-sm text-gray-500">
+                                                                {t('messages.noTickets', 'No tickets found')}
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <Button
+                                                id="ticket-bundle-add-child-button"
+                                                size="sm"
+                                                onClick={handleAddChildToBundle}
+                                                disabled={!addChildTicketNumber.trim()}
+                                            >
+                                                {t('details.bundle.add', 'Add')}
+                                            </Button>
+                                        </div>
+                                        <div className="max-h-56 overflow-y-auto rounded border border-gray-100">
+                                            {Array.isArray(bundle.children) && bundle.children.length > 0 ? (
+                                                <ul>
+                                                    {bundle.children.map((child: any) => (
+                                                        <li key={child.ticket_id} className="flex items-center justify-between gap-3 px-3 py-2 border-b border-gray-100 last:border-b-0">
+                                                            <div className="min-w-0">
+                                                                <a className="text-sm text-blue-600 hover:underline" href={`/msp/tickets/${child.ticket_id}`}>
+                                                                    {child.ticket_number}
+                                                                </a>
+                                                                <div className="text-xs text-gray-500 truncate">
+                                                                    {(child.client_name ? `${child.client_name} · ` : '')}{child.title}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <Button
+                                                                    id={`ticket-bundle-promote-child-${child.ticket_id}`}
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handlePromoteChildToMaster(child.ticket_id)}
+                                                                >
+                                                                    {t('details.bundle.promote', 'Promote')}
+                                                                </Button>
+                                                                <Button
+                                                                    id={`ticket-bundle-remove-child-${child.ticket_id}`}
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleRemoveChildFromBundle(child.ticket_id)}
+                                                                >
+                                                                    {t('details.bundle.remove', 'Remove')}
+                                                                </Button>
+                                                            </div>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <div className="px-3 py-2 text-sm text-gray-500">{t('details.bundle.noChildren', 'No children in this bundle.')}</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : null}
+
+                                {(autoCloseState || checklistSummary.requiredTotal > 0) && (
+                                    <div id={`${id}-close-rules-banner`} className="mb-4 flex flex-wrap items-center gap-2">
+                                        {autoCloseState && (
+                                            <div
+                                                id={`${id}-auto-close-banner`}
+                                                className="flex-1 min-w-[260px] rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                                            >
+                                                {`Will close automatically on ${new Date(autoCloseState.scheduled_close_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })} unless there's new activity.`}
+                                                {autoCloseState.warning_sent_at ? ' The customer has been warned.' : ''}
+                                            </div>
+                                        )}
+                                        {checklistSummary.requiredTotal > 0 && (
+                                            <button
+                                                type="button"
+                                                id={`${id}-checklist-progress-chip`}
+                                                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium ${
+                                                    checklistSummary.requiredDone === checklistSummary.requiredTotal
+                                                        ? 'border-green-300 bg-green-50 text-green-800'
+                                                        : 'border-amber-300 bg-amber-50 text-amber-900'
+                                                }`}
+                                                onClick={() =>
+                                                    document
+                                                        .getElementById(`${id}-checklist-section`)
+                                                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                                                }
+                                            >
+                                                {`${checklistSummary.requiredDone} of ${checklistSummary.requiredTotal} required checklist items done`}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+        </>
+    );
+
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-gray-100 dark:bg-gray-900">
@@ -2960,6 +3193,7 @@ const handleClose = () => {
                     isConfirming={isDeletingTimeEntry}
                 />
 
+                {bundleAndCloseBanners}
                 {useGridLayout ? (
                 <TicketBentoLayout
                     id={`${id}-bento`}
@@ -2969,6 +3203,7 @@ const handleClose = () => {
                     boardOptions={boardOptions}
                     agentOptions={agentOptions}
                     onSelectChange={handleSelectChange}
+                    onBatchSelectChange={(changes) => { void handleBatchSaveChanges(changes); }}
                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                     hideSlaStatus={hideSlaStatus}
                     workflowLocked={Boolean(bundle?.isBundleChild)}
@@ -2978,12 +3213,17 @@ const handleClose = () => {
                     taskActions={renderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
                     liveHighlightedFields={liveHighlightedFields}
                     liveFrozenFields={Object.keys(liveFieldConflicts)}
+                    liveFieldConflicts={liveFieldConflicts}
+                    onKeepLiveConflict={handleKeepLiveConflict}
+                    onTakeLiveConflict={handleTakeLiveConflict}
+                    liveEditingUsers={liveEditingUsers}
+                    onLiveEditingFieldChange={ticketLive.setEditingField}
                     onAgentClick={handleAgentClick}
                     locations={locations}
                     conversations={conversations}
                     userMap={userMap}
                     contactMap={contactMap}
-                    timelineRefreshKey={conversations.length + activityLogRefreshKey + timeEntriesRefreshKey}
+                    timelineRefreshKey={`${conversations.length}-${activityLogRefreshKey}-${timeEntriesRefreshKey}`}
                     timelineInitialOrder={timelinePrefOrder}
                     editorKey={editorKey}
                     isSubmitting={isSubmitting}
@@ -3018,6 +3258,9 @@ const handleClose = () => {
                     client={client}
                     onContactClick={handleContactClick}
                     onClientClick={handleClientClick}
+                    clients={clients}
+                    onChangeContact={handleContactChange}
+                    onChangeClient={handleClientChange}
                     checklistItems={checklistItems ?? []}
                     onChecklistItemsChanged={setChecklistItems}
                     hideTimeEntry={hideTimeEntry}
@@ -3031,6 +3274,8 @@ const handleClose = () => {
                     onPause={handlePauseClick}
                     onStop={handleStopClick}
                     onAddTimeEntry={handleAddTimeEntry}
+                    onScheduleVisit={handleScheduleVisit}
+                    nextVisitRefreshKey={nextVisitRefreshKey}
                     userId={userId || ''}
                     dateTimeFormat={dateTimeFormat}
                     timeEntriesRefreshKey={timeEntriesRefreshKey}
@@ -3042,6 +3287,9 @@ const handleClose = () => {
                     onAddAgent={handleAddAgent}
                     onRemoveAgent={handleRemoveAgent}
                     teams={teams}
+                    team={team}
+                    onAssignTeam={handleAssignTeam}
+                    onRemoveTeamAssignment={handleRemoveTeamAssignment}
                     onUpdateWatchList={handleUpdateWatchList}
                     watchListSaving={isWatchListSaving}
                     contacts={contacts}
@@ -3064,186 +3312,6 @@ const handleClose = () => {
                     <div className="flex-grow col-span-2 min-w-0" id="ticket-main-content">
                         <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse bg-gray-200 dark:bg-gray-800 h-64 rounded-lg mb-6"></div>}>
                             <div className="mb-6">
-                                {bundle?.isBundleChild && bundle?.masterTicket ? (
-                                    <div className="mb-3 rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-4 py-2 text-sm text-amber-900 dark:text-amber-200" id="ticket-bundle-child-banner">
-                                        This ticket is bundled under{' '}
-                                        <a className="font-medium underline" href={`/msp/tickets/${bundle.masterTicket.ticket_id}`}>
-                                            {bundle.masterTicket.ticket_number}
-                                        </a>
-                                        . Workflow fields are locked; work from the master ticket.
-                                    </div>
-                                ) : null}
-
-                                {bundle?.isBundleMaster ? (
-                                    <div className="mb-3 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 px-4 py-2 text-sm text-indigo-900 dark:text-indigo-200" id="ticket-bundle-master-banner">
-                                        {t('details.bundle.masterBanner', 'This ticket is the master of a bundle ({{count}} children). Mode: {{mode}}.', {
-                                            count: Array.isArray(bundle.children) ? bundle.children.length : 0,
-                                            mode: (bundle.mode || 'sync_updates').split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
-                                        })}
-                                        {bundleHasMultipleClients ? (
-                                            <span className="ml-2 inline-flex items-center rounded bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:text-amber-200">
-                                                {t('details.bundle.multipleClients', 'Multiple clients')}
-                                            </span>
-                                        ) : null}
-                                    </div>
-                                ) : null}
-
-                                {bundle?.isBundleMaster ? (
-                                    <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3" id="ticket-bundle-master-panel">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="text-sm font-semibold text-gray-900">{t('details.bundle.title', 'Bundle')}</div>
-                                            <div className="flex items-center gap-2">
-                                                <Button
-                                                    id="ticket-bundle-toggle-mode-button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={handleToggleBundleMode}
-                                                    disabled={isUpdatingBundleSettings}
-                                                >
-                                                    {t('details.bundle.mode', 'Mode: {{mode}}', { mode: (bundle.mode || 'sync_updates').split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') })}
-                                                </Button>
-                                                <Button
-                                                    id="ticket-bundle-unbundle-button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={handleUnbundleMaster}
-                                                >
-                                                    {t('details.bundle.unbundle', 'Unbundle')}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                        <div className="text-xs text-gray-500 mb-2">
-                                            {t('details.bundle.childrenDescription')}
-                                        </div>
-                                        <div className="flex items-center gap-2 mb-3" ref={searchContainerRef}>
-                                            <div className="relative flex-1">
-                                                <Input
-                                                    id="ticket-bundle-add-child-input"
-                                                    ref={searchInputRef}
-                                                    value={addChildTicketNumber}
-                                                    onChange={handleSearchInputChange}
-                                                    onFocus={() => addChildTicketNumber.trim() && setShowSearchResults(true)}
-                                                    placeholder={t('details.bundle.searchPlaceholder', 'Search ticket number or title…')}
-                                                    className="h-8"
-                                                    containerClassName="mb-0"
-                                                    autoComplete="off"
-                                                />
-                                                {isSearching && (
-                                                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                                                        <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
-                                                    </div>
-                                                )}
-                                                {showSearchResults && (
-                                                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                                                        {searchResults.length > 0 ? (
-                                                            <ul className="py-1">
-                                                                {searchResults.map((result) => (
-                                                                    <li
-                                                                        key={result.ticket_id}
-                                                                        className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
-                                                                        onClick={() => handleSelectSearchResult(result)}
-                                                                    >
-                                                                        <div className="min-w-0">
-                                                                            <span className="text-sm text-blue-600">
-                                                                                {result.ticket_number}
-                                                                            </span>
-                                                                            <div className="text-xs text-gray-500 truncate">
-                                                                                {(result.client_name ? `${result.client_name} · ` : '')}{result.title}
-                                                                            </div>
-                                                                        </div>
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-                                                        ) : addChildTicketNumber.trim().length > 0 && !isSearching ? (
-                                                            <div className="px-3 py-2 text-sm text-gray-500">
-                                                                {t('messages.noTickets', 'No tickets found')}
-                                                            </div>
-                                                        ) : null}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <Button
-                                                id="ticket-bundle-add-child-button"
-                                                size="sm"
-                                                onClick={handleAddChildToBundle}
-                                                disabled={!addChildTicketNumber.trim()}
-                                            >
-                                                {t('details.bundle.add', 'Add')}
-                                            </Button>
-                                        </div>
-                                        <div className="max-h-56 overflow-y-auto rounded border border-gray-100">
-                                            {Array.isArray(bundle.children) && bundle.children.length > 0 ? (
-                                                <ul>
-                                                    {bundle.children.map((child: any) => (
-                                                        <li key={child.ticket_id} className="flex items-center justify-between gap-3 px-3 py-2 border-b border-gray-100 last:border-b-0">
-                                                            <div className="min-w-0">
-                                                                <a className="text-sm text-blue-600 hover:underline" href={`/msp/tickets/${child.ticket_id}`}>
-                                                                    {child.ticket_number}
-                                                                </a>
-                                                                <div className="text-xs text-gray-500 truncate">
-                                                                    {(child.client_name ? `${child.client_name} · ` : '')}{child.title}
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <Button
-                                                                    id={`ticket-bundle-promote-child-${child.ticket_id}`}
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() => handlePromoteChildToMaster(child.ticket_id)}
-                                                                >
-                                                                    {t('details.bundle.promote', 'Promote')}
-                                                                </Button>
-                                                                <Button
-                                                                    id={`ticket-bundle-remove-child-${child.ticket_id}`}
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() => handleRemoveChildFromBundle(child.ticket_id)}
-                                                                >
-                                                                    {t('details.bundle.remove', 'Remove')}
-                                                                </Button>
-                                                            </div>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            ) : (
-                                                <div className="px-3 py-2 text-sm text-gray-500">{t('details.bundle.noChildren', 'No children in this bundle.')}</div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ) : null}
-
-                                {(autoCloseState || checklistSummary.requiredTotal > 0) && (
-                                    <div id={`${id}-close-rules-banner`} className="mb-4 flex flex-wrap items-center gap-2">
-                                        {autoCloseState && (
-                                            <div
-                                                id={`${id}-auto-close-banner`}
-                                                className="flex-1 min-w-[260px] rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
-                                            >
-                                                {`Will close automatically on ${new Date(autoCloseState.scheduled_close_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })} unless there's new activity.`}
-                                                {autoCloseState.warning_sent_at ? ' The customer has been warned.' : ''}
-                                            </div>
-                                        )}
-                                        {checklistSummary.requiredTotal > 0 && (
-                                            <button
-                                                type="button"
-                                                id={`${id}-checklist-progress-chip`}
-                                                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium ${
-                                                    checklistSummary.requiredDone === checklistSummary.requiredTotal
-                                                        ? 'border-green-300 bg-green-50 text-green-800'
-                                                        : 'border-amber-300 bg-amber-50 text-amber-900'
-                                                }`}
-                                                onClick={() =>
-                                                    document
-                                                        .getElementById(`${id}-checklist-section`)
-                                                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                                                }
-                                            >
-                                                {`${checklistSummary.requiredDone} of ${checklistSummary.requiredTotal} required checklist items done`}
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-
                                 <TicketInfo
                                     id={`${id}-info`}
                                     titleRef={cardTitleRef}

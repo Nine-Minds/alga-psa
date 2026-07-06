@@ -76,7 +76,7 @@ export const getInteractionsForEntity = withAuth(async (
   user,
   { tenant },
   entityId: string,
-  entityType: 'contact' | 'client'
+  entityType: 'contact' | 'client' | 'ticket'
 ): Promise<IInteraction[]> => {
   await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
 

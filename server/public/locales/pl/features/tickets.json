@@ -336,7 +336,8 @@
     "commentWithImagesDeleted_many": "Komentarz i {{count}} wklejonych obrazów zostało pomyślnie usuniętych.",
     "pastedImageDeleteFailed_few": "Komentarz usunięto, ale nie udało się usunąć {{count}} wklejonych obrazów.",
     "pastedImageDeleteFailed_many": "Komentarz usunięto, ale nie udało się usunąć {{count}} wklejonych obrazów.",
-    "closeFailed": "Nie udało się zamknąć zgłoszenia"
+    "closeFailed": "Nie udało się zamknąć zgłoszenia",
+    "scheduleVisitFailed": "Nie udało się otworzyć harmonogramu"
   },
   "conversation": {
     "comments": "Komentarze",
@@ -384,7 +385,8 @@
     "commentEditor": "Edytor komentarzy",
     "deleteComment": "Usuń komentarz",
     "deleteCommentImages": "Usuń komentarz i obrazy",
-    "deleteCommentOnly": "Usuń tylko komentarz"
+    "deleteCommentOnly": "Usuń tylko komentarz",
+    "clientCommentTooltip": "Komentarz widoczny dla klienta"
   },
   "responseState": {
     "awaitingYourResponse": "Oczekuje na Twoją odpowiedź",
@@ -1591,7 +1593,9 @@
       "resolutionSla": "SLA rozwiązania:",
       "responseWaitingOnUs": "Oczekuje na nas",
       "responseWaitingOnClient": "Oczekuje na klienta",
-      "responseNone": "Odpowiedź niepotrzebna"
+      "responseNone": "Odpowiedź niepotrzebna",
+      "additionalAgentsTooltip": "Dodatkowi agenci:",
+      "unknownAgent": "Nieznany agent"
     },
     "layout": {
       "grid": "Siatka",
@@ -1666,7 +1670,34 @@
       "acrossEntries_one": "w {{count}} wpisie",
       "acrossEntries_few": "w {{count}} wpisach",
       "acrossEntries_many": "w {{count}} wpisach",
-      "acrossEntries_other": "w {{count}} wpisach"
+      "acrossEntries_other": "w {{count}} wpisach",
+      "team": "Zespół",
+      "startTimer": "Uruchom licznik czasu",
+      "timerLockedHint": "Inny licznik czasu jest już uruchomiony",
+      "billable": "Rozliczalne",
+      "nothingBillable": "Brak pozycji do rozliczenia",
+      "editContact": "Edytuj kontakt",
+      "selectOrChangeContact": "Wybierz lub zmień kontakt",
+      "clearContact": "Wyczyść kontakt",
+      "cancel": "Anuluj",
+      "save": "Zapisz",
+      "addContact": "Dodaj kontakt",
+      "setClientToAddContact": "Najpierw wybierz klienta, aby dodać kontakt",
+      "logInteraction": "Zarejestruj rozmowę lub e-mail",
+      "changeClient": "Zmień klienta",
+      "teamFallback": "Zespół",
+      "teamSectionLabel": "Przypisz zespół",
+      "addAgentsOrTeam": "Dodaj agentów lub zespół…",
+      "appointmentRequests": "Prośby o wizytę",
+      "noAppointmentRequests": "Brak próśb o wizytę",
+      "appointment": "Wizyta",
+      "appointmentTimeUnset": "Nie ustawiono godziny",
+      "apptStatus": {
+        "pending": "Oczekująca",
+        "approved": "Zatwierdzona",
+        "declined": "Odrzucona",
+        "cancelled": "Anulowana"
+      }
     },
     "timeline": {
       "subtitle": "Odpowiedzi, czas i zmiany systemowe w jednym miejscu",
@@ -1704,7 +1735,53 @@
       "logged": "zarejestrowano",
       "monitoringActor": "Monitorowanie",
       "occurrence": "(wystąpienie {{count}})",
-      "loadError": "Nie udało się wczytać osi czasu"
+      "loadError": "Nie udało się wczytać osi czasu",
+      "fieldCleared": "wyczyszczono {{field}}",
+      "field": {
+        "title": "tytuł",
+        "status": "status",
+        "priority": "priorytet",
+        "assigned_to": "przypisany agent",
+        "assigned_team": "zespół",
+        "board": "tablica",
+        "category": "kategoria",
+        "subcategory": "podkategoria",
+        "client": "klient",
+        "contact_name": "kontakt",
+        "contact": "kontakt",
+        "due_date": "termin realizacji",
+        "response_state": "status odpowiedzi",
+        "closed_at": "data zamknięcia",
+        "closed_by": "zamknięte przez",
+        "url": "URL"
+      },
+      "event": {
+        "created": "utworzono",
+        "updated": "zaktualizowano",
+        "status_changed": "zmieniono status",
+        "closed": "zamknięto",
+        "reopened": "ponownie otwarto",
+        "priority_changed": "zmieniono priorytet",
+        "assigned": "przypisano",
+        "unassigned": "usunięto przypisanie",
+        "board_moved": "zmieniono tablicę",
+        "response_state_changed": "zmieniono status odpowiedzi",
+        "comment_added": "dodano komentarz",
+        "comment_updated": "zaktualizowano komentarz",
+        "internal_note_added": "dodano notatkę wewnętrzną",
+        "customer_replied": "klient odpowiedział",
+        "message_added": "dodano wiadomość",
+        "document_attached": "załączono dokument",
+        "document_removed": "usunięto dokument",
+        "inbound_email_received": "otrzymano wiadomość e-mail",
+        "bundle_reopened": "ponownie otwarto pakiet",
+        "checklist_item_completed": "ukończono pozycję listy kontrolnej",
+        "checklist_item_uncompleted": "cofnięto ukończenie pozycji listy kontrolnej",
+        "checklist_template_applied": "zastosowano szablon listy kontrolnej",
+        "close_rules_overridden": "nadpisano reguły zamykania",
+        "close_rules_bypassed": "pominięto reguły zamykania",
+        "auto_close_warning_sent": "wysłano ostrzeżenie o automatycznym zamknięciu"
+      }
     }
   }
 }

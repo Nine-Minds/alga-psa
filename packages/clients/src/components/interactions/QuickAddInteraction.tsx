@@ -47,19 +47,21 @@ interface QuickAddInteractionProps {
   entityId: string;
   entityType: 'contact' | 'client';
   clientId?: string;
+  ticketId?: string; // Links the new interaction to a ticket (create mode only)
   onInteractionAdded: (newInteraction: IInteraction) => void;
   isOpen: boolean;
   onClose: () => void;
   editingInteraction?: IInteraction; // Optional prop for editing mode
 }
 
-export function QuickAddInteraction({ 
+export function QuickAddInteraction({
   id = 'quick-add-interaction',
-  entityId, 
-  entityType, 
-  clientId, 
-  onInteractionAdded, 
-  isOpen, 
+  entityId,
+  entityType,
+  clientId,
+  ticketId,
+  onInteractionAdded,
+  isOpen,
   onClose,
   editingInteraction
 }: QuickAddInteractionProps) {
@@ -613,6 +615,9 @@ export function QuickAddInteraction({
           interactionData.client_id = clientId;
         } else {
           interactionData.client_id = entityId;
+        }
+        if (ticketId) {
+          interactionData.ticket_id = ticketId;
         }
       }
   

@@ -43,7 +43,7 @@ class InteractionModel {
     );
   }
 
-  static async getForEntity(entityId: string, entityType: 'contact' | 'client', tenantId: string): Promise<IInteraction[]> {
+  static async getForEntity(entityId: string, entityType: 'contact' | 'client' | 'ticket', tenantId: string): Promise<IInteraction[]> {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
     const scopedTenant = tenant ?? tenantId;
     const facade = tenantDb(db, scopedTenant);
@@ -82,6 +82,8 @@ class InteractionModel {
 
       if (entityType === 'contact') {
         query.where('interactions.contact_name_id', entityId);
+      } else if (entityType === 'ticket') {
+        query.where('interactions.ticket_id', entityId);
       } else {
         query.where('interactions.client_id', entityId);
       }

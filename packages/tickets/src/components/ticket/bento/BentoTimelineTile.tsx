@@ -3,12 +3,12 @@
 import React, { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { PartialBlock } from '@blocknote/core';
-import { Activity, AlertTriangle, ArrowDownUp, CheckCircle, Clock, CornerDownRight, Lock, MessageSquare, MessagesSquare } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowDownUp, CheckCircle, Clock, Lock, MessageSquare } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
-import { buildCommentThreadGroups, type CommentThreadGroup } from '@alga-psa/ui/components';
-import CommentThreadDrawer from '@alga-psa/ui/components/CommentThreadDrawer';
+import { buildCommentThreadGroups, HybridThreadNode, type CommentThreadGroup } from '@alga-psa/ui/components';
+import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
@@ -23,8 +23,7 @@ import {
   toggleCommentReaction,
   getCommentsReactionsBatch,
 } from '../../../actions/comment-actions/commentReactionActions';
-import { resolveCommentAuthor, type CommentUserAuthor, type CommentContactAuthor } from '../../../lib/commentAuthorResolution';
-import { parseTicketRichTextContent } from '../../../lib/ticketRichText';
+import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/commentAuthorResolution';
 import type { TicketReactionsBootstrap } from '../../../lib/ticketScreenBootstrap';
 import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
 
@@ -61,7 +60,7 @@ interface BentoTimelineTileProps {
   contactFirstName?: string | null;
   ticketCreatedAt?: string | null;
   /** Bumped by the parent whenever a save/comment lands so the stream refetches. */
-  refreshKey?: number;
+  refreshKey?: number | string;
   initialOrder?: 'asc' | 'desc';
   // Composer plumbing — same pipeline TicketConversation uses.
   editorKey: number;
@@ -113,6 +112,74 @@ function formatMinutes(minutes: number): string {
 
 type Translator = (key: string, fallback: string, opts?: Record<string, unknown>) => string;
 
+// English defaults for the curated ticket fields the activity log can change,
+// keyed by the field name after stripping a trailing `_id`. Unknown fields fall
+// back to a humanized version of the raw token so nothing ever breaks.
+const TIMELINE_FIELD_LABELS: Record<string, string> = {
+  title: 'title',
+  status: 'status',
+  priority: 'priority',
+  assigned_to: 'assignee',
+  assigned_team: 'team',
+  board: 'board',
+  category: 'category',
+  subcategory: 'subcategory',
+  client: 'client',
+  contact_name: 'contact',
+  contact: 'contact',
+  due_date: 'due date',
+  response_state: 'response state',
+  closed_at: 'closed date',
+  closed_by: 'closed by',
+  url: 'URL',
+};
+
+// English defaults for the TICKET_* activity event types, keyed by the name
+// after stripping the `TICKET_` prefix and lowercasing.
+const TIMELINE_EVENT_LABELS: Record<string, string> = {
+  created: 'created',
+  updated: 'updated',
+  status_changed: 'status changed',
+  closed: 'closed',
+  reopened: 'reopened',
+  priority_changed: 'priority changed',
+  assigned: 'assigned',
+  unassigned: 'unassigned',
+  board_moved: 'board moved',
+  response_state_changed: 'response state changed',
+  comment_added: 'comment added',
+  comment_updated: 'comment updated',
+  internal_note_added: 'internal note added',
+  customer_replied: 'customer replied',
+  message_added: 'message added',
+  document_attached: 'document attached',
+  document_removed: 'document removed',
+  inbound_email_received: 'inbound email received',
+  bundle_reopened: 'bundle reopened',
+  checklist_item_completed: 'checklist item completed',
+  checklist_item_uncompleted: 'checklist item uncompleted',
+  checklist_template_applied: 'checklist template applied',
+  close_rules_overridden: 'close rules overridden',
+  close_rules_bypassed: 'close rules bypassed',
+  auto_close_warning_sent: 'auto-close warning sent',
+};
+
+/** Localized label for a changed ticket field; humanizes unknown tokens. */
+function fieldLabel(field: string, t: Translator): string {
+  const normalized = field.replace(/_id$/, '');
+  const known = TIMELINE_FIELD_LABELS[normalized];
+  if (known) return t(`bento.timeline.field.${normalized}`, known);
+  return normalized.replace(/_/g, ' ');
+}
+
+/** Localized label for a TICKET_* event type; humanizes unknown tokens. */
+function eventLabel(eventType: string, t: Translator): string {
+  const normalized = eventType.replace(/^TICKET_/, '').toLowerCase();
+  const known = TIMELINE_EVENT_LABELS[normalized];
+  if (known) return t(`bento.timeline.event.${normalized}`, known);
+  return normalized.replace(/_/g, ' ');
+}
+
 /** Compact one-line description of a system (activity) entry. */
 function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string {
   const activity = entry.activity;
@@ -122,18 +189,15 @@ function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string 
   const changeLines = Object.entries(changes).map(([field, change]) => {
     const from = change?.oldLabel ?? null;
     const to = change?.newLabel ?? null;
-    const fieldName = field.replace(/_id$/, '').replace(/_/g, ' ');
+    const fieldName = fieldLabel(field, t);
     if (to != null) {
       return from != null
         ? t('bento.timeline.fieldChanged', '{{actor}} changed {{field}}: {{from}} → {{to}}', { actor, field: fieldName, from, to })
         : t('bento.timeline.fieldSet', '{{field}} set to {{to}}', { field: fieldName, to });
     }
-    return fieldName;
+    return t('bento.timeline.fieldCleared', 'cleared {{field}}', { field: fieldName });
   });
-  const eventName = activity.event_type
-    .replace(/^TICKET_/, '')
-    .toLowerCase()
-    .replace(/_/g, ' ');
+  const eventName = eventLabel(activity.event_type, t);
   return changeLines.length > 0
     ? changeLines.join(', ')
     : t('bento.timeline.actorEvent', '{{actor}} · {{eventName}}', { actor, eventName });
@@ -145,33 +209,6 @@ function commentAccentClasses(comment: IComment | undefined): string {
   if (comment.is_resolution) return 'border-green-400 dark:border-green-500/50';
   if (comment.is_internal) return 'border-amber-400 dark:border-amber-500/50';
   return 'border-[rgb(var(--color-secondary-400))]';
-}
-
-/** Best-effort plain text of a comment's rich-text note, for quote snippets. */
-function commentPlainText(comment: IComment | undefined): string {
-  if (!comment?.note) return '';
-  try {
-    const blocks = parseTicketRichTextContent(comment.note, { onParseError: () => undefined });
-    const parts: string[] = [];
-    const walk = (items: unknown): void => {
-      if (!Array.isArray(items)) return;
-      for (const item of items) {
-        if (!item || typeof item !== 'object') continue;
-        const record = item as Record<string, unknown>;
-        if (typeof record.text === 'string') parts.push(record.text);
-        walk(record.content);
-        walk(record.children);
-      }
-    };
-    walk(blocks as unknown);
-    return parts.join(' ').replace(/\s+/g, ' ').trim();
-  } catch {
-    return '';
-  }
-}
-
-function truncateSnippet(text: string, max = 56): string {
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
 /**
@@ -282,10 +319,8 @@ export function BentoTimelineTile({
   const [hasDraft, setHasDraft] = useState(false);
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
-  // Threading: which comment's thread is open in the drawer (also the reply
-  // target), and which card is flash-highlighted after a quote-chip jump.
-  const [openThreadCommentId, setOpenThreadCommentId] = useState<string | null>(null);
-  const [flashCommentId, setFlashCommentId] = useState<string | null>(null);
+  // Threading: which comment currently has its inline reply composer open.
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
 
   const { deleteDocument } = useDocumentsCrossFeature();
   const composeUploadSession = useTicketRichTextUploadSession({
@@ -424,42 +459,7 @@ export function BentoTimelineTile({
     };
   }, [ticketId, refreshKey]);
 
-  const nodes = useMemo<TimelineNode[]>(() => {
-    const commentNodes: TimelineNode[] = conversations.map((comment) => ({
-      key: `comment-${comment.comment_id}`,
-      lane: 'reply',
-      occurredAt:
-        typeof comment.created_at === 'string'
-          ? comment.created_at
-          : new Date(comment.created_at as unknown as string).toISOString(),
-      sortId: comment.comment_id ?? '',
-      comment,
-    }));
-
-    const entryNodes: TimelineNode[] = systemEntries.map((entry) => ({
-      key: `${entry.type}-${entry.sortId}`,
-      lane: laneForEntryType(entry.type),
-      occurredAt: entry.occurredAt,
-      sortId: entry.sortId,
-      entry,
-    }));
-
-    return sortTimelineNodes([...commentNodes, ...entryNodes], order);
-  }, [conversations, systemEntries, order]);
-
-  const counts = useMemo(() => laneCounts(nodes), [nodes]);
-
-  const visible = filterByLane(nodes, filter);
-
-  // ---- Threading (flat spine + one-level indent + drawer for full trees) ----
-  const commentById = useMemo(() => {
-    const map = new Map<string, IComment>();
-    for (const comment of conversations) {
-      if (comment.comment_id) map.set(comment.comment_id, comment);
-    }
-    return map;
-  }, [conversations]);
-
+  // ---- Threading: nested threads anchored at their root on the spine ----
   const threadGroups = useMemo(
     () =>
       buildCommentThreadGroups<IComment>({
@@ -482,33 +482,34 @@ export function BentoTimelineTile({
     return map;
   }, [threadGroups]);
 
-  const openThread = useCallback((commentId: string) => setOpenThreadCommentId(commentId), []);
-  const closeThread = useCallback(() => setOpenThreadCommentId(null), []);
+  const nodes = useMemo<TimelineNode[]>(() => {
+    // Only thread roots occupy the spine; replies nest under their root via
+    // HybridThreadNode. Each thread anchors at its root's timestamp.
+    const commentNodes: TimelineNode[] = threadGroups.map(({ root }) => ({
+      key: `comment-${root.comment_id}`,
+      lane: 'reply',
+      occurredAt:
+        typeof root.created_at === 'string'
+          ? root.created_at
+          : new Date(root.created_at as unknown as string).toISOString(),
+      sortId: root.comment_id ?? '',
+      comment: root,
+    }));
 
-  // Quote-chip jump: scroll to the parent's card and flash it. If the parent
-  // isn't rendered (lane filter), fall back to opening the thread drawer.
-  const jumpToComment = useCallback(
-    (commentId: string) => {
-      const el = document.getElementById(`${id}-comment-${commentId}`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setFlashCommentId(commentId);
-        window.setTimeout(() => {
-          setFlashCommentId((current) => (current === commentId ? null : current));
-        }, 1600);
-      } else {
-        openThread(commentId);
-      }
-    },
-    [id, openThread],
-  );
+    const entryNodes: TimelineNode[] = systemEntries.map((entry) => ({
+      key: `${entry.type}-${entry.sortId}`,
+      lane: laneForEntryType(entry.type),
+      occurredAt: entry.occurredAt,
+      sortId: entry.sortId,
+      entry,
+    }));
 
-  const openThreadGroup = openThreadCommentId
-    ? groupByCommentId.get(openThreadCommentId) ?? null
-    : null;
-  const openThreadComment = openThreadCommentId && openThreadGroup
-    ? openThreadGroup.comments.find((comment) => comment.comment_id === openThreadCommentId) ?? openThreadGroup.root
-    : null;
+    return sortTimelineNodes([...commentNodes, ...entryNodes], order);
+  }, [threadGroups, systemEntries, order]);
+
+  const counts = useMemo(() => laneCounts(nodes), [nodes]);
+
+  const visible = filterByLane(nodes, filter);
 
   const toggleOrder = useCallback(() => {
     const next = order === 'asc' ? 'desc' : 'asc';
@@ -525,6 +526,63 @@ export function BentoTimelineTile({
     }
     return success;
   }, [onAddNewComment, composerLane, composeUploadSession]);
+
+  // A single comment card plus, when it's the active reply target, an inline
+  // reply composer beneath it. Used for every node in a nested thread.
+  const renderThreadComment = (comment: IComment): React.ReactNode => {
+    const commentId = comment.comment_id ?? '';
+    const accent = commentAccentClasses(comment);
+    return (
+      <>
+        <CommentItem
+          variant="compact"
+          accentBorderClassName={accent || undefined}
+          id={commentId ? `${id}-comment-${commentId}` : `${id}-comment-unknown`}
+          conversation={comment}
+          currentUserId={currentUser?.id}
+          isEditing={isEditing && currentComment?.comment_id === commentId}
+          currentComment={currentComment}
+          ticketId={ticketId}
+          userMap={userMap}
+          contactMap={contactMap}
+          onContentChange={onContentChange}
+          onSave={onSaveComment}
+          onClose={onCloseEdit}
+          onEdit={() => onEditComment(comment)}
+          onDelete={onDeleteComment}
+          onReply={
+            onAddReplyComment && commentId
+              ? () => setReplyingToCommentId(commentId)
+              : undefined
+          }
+          uploadFile={editUploadSession.uploadFile}
+          reactions={reactionsMap[commentId] || []}
+          onToggleReaction={handleToggleReaction}
+          userNames={reactionUserNames}
+          canViewCommentMetadataDebug={canViewCommentMetadataDebug}
+        />
+        {replyingToCommentId === commentId && commentId ? (
+          <InlineReplyComposer
+            id={`${id}-reply-${commentId}`}
+            parentCommentId={commentId}
+            roomName={`ticket-${ticketId}-reply-${commentId}`}
+            initialInternal={Boolean(comment.is_internal)}
+            showInternalToggle={false}
+            isSubmitting={isSubmitting}
+            uploadFile={editUploadSession.uploadFile}
+            searchMentions={searchUsersForMentions}
+            onSubmit={async ({ content, parentCommentId, isInternal }) => {
+              const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
+              if (success) {
+                setReplyingToCommentId(null);
+              }
+            }}
+            onCancel={() => setReplyingToCommentId(null)}
+          />
+        ) : null}
+      </>
+    );
+  };
 
   const composer = (
     <div
@@ -679,95 +737,19 @@ export function BentoTimelineTile({
                   </div>
                   <div className="flex-1 min-w-0 pb-1.5">
                     {node.lane === 'reply' && node.comment ? (() => {
-                      const comment = node.comment;
-                      if (!comment) return null;
-                      const commentId = comment.comment_id ?? '';
-                      const parentId = comment.parent_comment_id || null;
-                      const parent = parentId ? commentById.get(parentId) : undefined;
-                      const parentAuthor = parent
-                        ? resolveCommentAuthor(parent, { userMap, contactMap }).displayName
-                        : null;
-                      const parentText = commentPlainText(parent);
-                      const group = commentId ? groupByCommentId.get(commentId) : undefined;
-                      const isThreadRoot = Boolean(
-                        group && group.replyCount > 0 && group.root.comment_id === commentId,
-                      );
+                      const rootComment = node.comment;
+                      const rootId = rootComment.comment_id ?? '';
+                      const group = rootId ? groupByCommentId.get(rootId) : undefined;
+                      if (!group) {
+                        return renderThreadComment(rootComment);
+                      }
                       return (
-                        <div
-                          className={
-                            parentId
-                              ? "relative ml-5 before:content-[''] before:absolute before:-left-3.5 before:-top-2 before:h-7 before:w-3 before:rounded-bl-lg before:border-l-2 before:border-b-2 before:border-[rgb(var(--color-border-200))]"
-                              : undefined
-                          }
-                        >
-                          {parentId && parent ? (
-                            <button
-                              id={`${id}-comment-${commentId}-parent-ref`}
-                              type="button"
-                              onClick={() => jumpToComment(parentId)}
-                              title={parentText
-                                ? t('bento.timeline.replyingToWithText', 'Replying to {{name}}: {{text}}', { name: parentAuthor, text: parentText })
-                                : t('bento.timeline.replyingTo', 'Replying to {{name}}', { name: parentAuthor })}
-                              className="mb-1 flex max-w-full items-center gap-1 rounded-full bg-[rgb(var(--color-border-100))] px-2.5 py-0.5 text-[11px] text-[rgb(var(--color-text-500))] hover:bg-[rgb(var(--color-border-200))]"
-                            >
-                              <CornerDownRight className="h-3 w-3 flex-shrink-0" />
-                              <span className="flex-shrink-0 font-semibold text-[rgb(var(--color-text-700))]">
-                                {(parentAuthor || t('bento.timeline.unknownAuthor', 'Unknown')).split(' ')[0]}
-                              </span>
-                              {parentText ? (
-                                <span className="min-w-0 truncate">· “{truncateSnippet(parentText)}”</span>
-                              ) : null}
-                            </button>
-                          ) : null}
-                          <div
-                            className={
-                              flashCommentId === commentId
-                                ? 'rounded-lg ring-2 ring-[rgb(var(--color-primary-400))] transition-shadow'
-                                : undefined
-                            }
-                          >
-                            <CommentItem
-                              variant="compact"
-                              accentBorderClassName={v.accent || undefined}
-                              id={commentId ? `${id}-comment-${commentId}` : `${id}-comment-unknown`}
-                              conversation={comment}
-                              currentUserId={currentUser?.id}
-                              isEditing={isEditing && currentComment?.comment_id === commentId}
-                              currentComment={currentComment}
-                              ticketId={ticketId}
-                              userMap={userMap}
-                              contactMap={contactMap}
-                              onContentChange={onContentChange}
-                              onSave={onSaveComment}
-                              onClose={onCloseEdit}
-                              onEdit={() => onEditComment(comment)}
-                              onDelete={onDeleteComment}
-                              onReply={
-                                onAddReplyComment && commentId
-                                  ? () => openThread(commentId)
-                                  : undefined
-                              }
-                              uploadFile={editUploadSession.uploadFile}
-                              reactions={reactionsMap[commentId] || []}
-                              onToggleReaction={handleToggleReaction}
-                              userNames={reactionUserNames}
-                              canViewCommentMetadataDebug={canViewCommentMetadataDebug}
-                            />
-                          </div>
-                          {isThreadRoot && group ? (
-                            <button
-                              id={`${id}-comment-${commentId}-thread-pill`}
-                              type="button"
-                              onClick={() => openThread(commentId)}
-                              className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-400)/0.15)] px-2.5 py-0.5 text-xs font-semibold text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))] hover:bg-[rgb(var(--color-primary-100))] dark:hover:bg-[rgb(var(--color-primary-400)/0.25)]"
-                            >
-                              <MessagesSquare className="h-3 w-3" />
-                              {group.replyCount === 1
-                                ? t('bento.timeline.threadReply', 'Thread · {{count}} reply', { count: group.replyCount })
-                                : t('bento.timeline.threadReplies', 'Thread · {{count}} replies', { count: group.replyCount })}
-                            </button>
-                          ) : null}
-                        </div>
+                        <HybridThreadNode<IComment>
+                          group={group}
+                          comment={group.root}
+                          getCommentId={(comment) => comment.comment_id}
+                          renderComment={(comment) => renderThreadComment(comment)}
+                        />
                       );
                     })() : (
                       <TimelineNodeView id={`${id}-node`} node={node} t={t} />
@@ -781,51 +763,6 @@ export function BentoTimelineTile({
       )}
 
       {composer}
-
-      {/* Full thread tree (existing hybrid nesting + reply composer). Opened
-          from a root's "Thread · N replies" pill or any card's Reply action. */}
-      <CommentThreadDrawer<IComment>
-        id={`${id}-thread-drawer`}
-        isOpen={Boolean(openThreadGroup)}
-        onClose={closeThread}
-        group={openThreadGroup}
-        getCommentId={(comment) => comment.comment_id}
-        renderComment={(comment) => (
-          <CommentItem
-            variant="compact"
-            accentBorderClassName={commentAccentClasses(comment) || undefined}
-            id={`${id}-drawer-comment-${comment.comment_id ?? 'unknown'}`}
-            conversation={comment}
-            currentUserId={currentUser?.id}
-            isEditing={isEditing && currentComment?.comment_id === comment.comment_id}
-            currentComment={currentComment}
-            ticketId={ticketId}
-            userMap={userMap}
-            contactMap={contactMap}
-            onContentChange={onContentChange}
-            onSave={onSaveComment}
-            onClose={onCloseEdit}
-            onEdit={() => onEditComment(comment)}
-            onDelete={onDeleteComment}
-            uploadFile={editUploadSession.uploadFile}
-            reactions={reactionsMap[comment.comment_id || ''] || []}
-            onToggleReaction={handleToggleReaction}
-            userNames={reactionUserNames}
-            canViewCommentMetadataDebug={canViewCommentMetadataDebug}
-          />
-        )}
-        replyParentCommentId={openThreadCommentId}
-        replyRoomName={(parentCommentId) => `ticket-${ticketId}-reply-${parentCommentId}`}
-        initialInternal={Boolean(openThreadComment?.is_internal)}
-        showInternalToggle={false}
-        isSubmitting={isSubmitting}
-        onSubmitReply={async ({ content, parentCommentId, isInternal }) => {
-          const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
-          if (success) {
-            closeThread();
-          }
-        }}
-      />
     </BentoTile>
   );
 }

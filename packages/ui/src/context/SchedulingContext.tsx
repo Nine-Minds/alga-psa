@@ -15,6 +15,15 @@ export type OpenDrawerFn = (
   width?: string
 ) => void;
 
+/** Context for launching the scheduler drawer pre-scoped to a work item (e.g. a ticket). */
+export interface ScheduleEntryLaunchContext {
+  workItemId: string;
+  workItemType: 'ticket';
+  /** Pre-fills the entry title and the selected work item label. */
+  title: string;
+  clientName?: string | null;
+}
+
 export interface SchedulingCallbacks {
   renderAgentSchedule: (agentId: string) => React.ReactNode;
   launchTimeEntry: (params: {
@@ -23,6 +32,13 @@ export interface SchedulingCallbacks {
     context: TimeEntryWorkItemContext;
     onComplete?: () => void;
     existingEntryId?: string;
+  }) => Promise<void>;
+  /** Opens the schedule-entry editor in the global drawer, pre-scoped to the given work item. */
+  launchScheduleEntry: (params: {
+    openDrawer: OpenDrawerFn;
+    closeDrawer: () => void;
+    context: ScheduleEntryLaunchContext;
+    onComplete?: () => void;
   }) => Promise<void>;
   fetchTimeEntriesForTicket: (ticketId: string) => Promise<TicketTimeEntriesSummary>;
   deleteTimeEntry: (entryId: string) => Promise<void>;
@@ -40,6 +56,9 @@ const defaultSchedulingCallbacks: SchedulingCallbacks = {
   ),
   launchTimeEntry: async () => {
     toast('Time entry is managed in Scheduling.');
+  },
+  launchScheduleEntry: async () => {
+    toast('Scheduling is managed in Scheduling.');
   },
   fetchTimeEntriesForTicket: async () => ({
     entries: [],
