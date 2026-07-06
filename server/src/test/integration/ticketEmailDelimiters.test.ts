@@ -134,6 +134,10 @@ let currentProject: ProjectRecord | null = null;
 let currentPortalDomain: PortalDomainRecord | null = null;
 
 const sendEmailMock = vi.hoisted(() => vi.fn(async () => ({ success: true })));
+const getTenantEmailSettingsMock = vi.hoisted(() => vi.fn(async () => null as any));
+const getDefaultFromAddressMock = vi.hoisted(() =>
+  vi.fn(() => ({ email: 'notifications@example.com', name: 'Alga PSA Notifications' })),
+);
 const eventHandlers = vi.hoisted(() => new Map<string, (event: any) => Promise<void> | void>());
 const publishMock = vi.hoisted(() =>
   vi.fn(async (event: any) => {
@@ -940,7 +944,8 @@ vi.mock('@alga-psa/email', () => ({
   __esModule: true,
   TenantEmailService: {
     getInstance: () => ({ sendEmail: sendEmailMock }),
-    getTenantEmailSettings: async () => null,
+    getTenantEmailSettings: getTenantEmailSettingsMock,
+    getDefaultFromAddress: getDefaultFromAddressMock,
   },
   StaticTemplateProcessor: class {
     constructor(
@@ -1011,6 +1016,13 @@ beforeEach(() => {
   currentPortalDomain = null;
   resetNotificationState();
   sendEmailMock.mockReset();
+  getTenantEmailSettingsMock.mockReset();
+  getTenantEmailSettingsMock.mockImplementation(async () => null as any);
+  getDefaultFromAddressMock.mockReset();
+  getDefaultFromAddressMock.mockImplementation(() => ({
+    email: 'notifications@example.com',
+    name: 'Alga PSA Notifications',
+  }));
   subscribeMock.mockClear();
   unsubscribeMock.mockClear();
   publishMock.mockClear();
@@ -1293,6 +1305,119 @@ describe('ticket email subscriber reply markers', () => {
     const processed = await processedCall(0);
     expect(processed.html).toContain('--- Please reply above this line ---');
     expect(processed.html).toContain(`data-alga-comment-id="${commentId}`);
+  });
+});
+
+describe('ticket email subscriber from-address (display-name decoupling)', () => {
+  beforeEach(async () => {
+    eventHandlers.clear();
+    await registerTicketEmailSubscriber();
+  });
+
+  it('applies the configured ticketing display name onto the default sender address even without a custom From address', async () => {
+    seedTemplate('ticket-comment-added', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+    const commentId = randomUUID();
+    const authorId = randomUUID();
+
+    // Case: a display name is configured but NO custom ticketing From address.
+    // The name must still be applied, layered onto the tenant's default sender
+    // address (regression for "from-NAME ignored when no From address is set").
+    getTenantEmailSettingsMock.mockResolvedValue({
+      tenantId,
+      defaultFromDomain: 'acme.com',
+      ticketingFromEmail: null,
+      ticketingFromName: 'Acme Helpdesk',
+      customDomains: [],
+      emailProvider: 'smtp',
+      providerConfigs: [],
+      trackingEnabled: false,
+    } as any);
+    getDefaultFromAddressMock.mockReturnValue({
+      email: 'notifications@acme.com',
+      name: 'Alga PSA Notifications',
+    });
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-0500',
+      title: 'Name Only Ticket',
+      board_name: 'Urgent Matters',
+      contact_email: 'contact@example.com',
+      email_metadata: { threadId: 'thread-name-only' },
+    } as any);
+    setUser({
+      user_id: authorId,
+      first_name: 'Agent',
+      last_name: 'User',
+      email: 'agent@example.com',
+      user_type: 'internal',
+    } as any);
+
+    await handlerFor('TICKET_COMMENT_ADDED')({
+      id: randomUUID(),
+      eventType: 'TICKET_COMMENT_ADDED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: authorId,
+        comment: { id: commentId, content: 'Follow up', author: 'agent@example.com', isInternal: false },
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalled();
+    expect(getDefaultFromAddressMock).toHaveBeenCalled();
+    const fromValues = sendEmailMock.mock.calls.map((call) => call[0].from);
+    // The display name wins over the board-name fallback and rides on the default address.
+    expect(fromValues).toContainEqual({ email: 'notifications@acme.com', name: 'Acme Helpdesk' });
+  });
+
+  it('defers entirely to default resolution when neither a ticketing From address nor a display name is configured', async () => {
+    seedTemplate('ticket-comment-added', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+    const commentId = randomUUID();
+    const authorId = randomUUID();
+
+    getTenantEmailSettingsMock.mockResolvedValue(null);
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-0501',
+      title: 'No Override Ticket',
+      board_name: 'Urgent Matters',
+      contact_email: 'contact@example.com',
+      email_metadata: { threadId: 'thread-no-override' },
+    } as any);
+    setUser({
+      user_id: authorId,
+      first_name: 'Agent',
+      last_name: 'User',
+      email: 'agent@example.com',
+      user_type: 'internal',
+    } as any);
+
+    await handlerFor('TICKET_COMMENT_ADDED')({
+      id: randomUUID(),
+      eventType: 'TICKET_COMMENT_ADDED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: authorId,
+        comment: { id: commentId, content: 'Follow up', author: 'agent@example.com', isInternal: false },
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalled();
+    // No override configured: the resolver returns undefined (no explicit From),
+    // leaving from-address resolution to the default sender path downstream.
+    const fromValues = sendEmailMock.mock.calls.map((call) => call[0].from);
+    expect(fromValues.every((value) => value === undefined)).toBe(true);
   });
 });
 

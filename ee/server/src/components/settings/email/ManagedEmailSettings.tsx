@@ -175,8 +175,11 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   };
 
   const validateTicketingFrom = (value: string, outboundDomain?: string | null): string | null => {
+    // The ticketing From address is optional: an empty value means "use the
+    // default sender address" and only the display name (if configured) is
+    // applied. Address-format checks below only run when a value is present.
     if (!value || !value.trim()) {
-      return t('managed.validation.enterFromAddress');
+      return null;
     }
 
     if (!outboundDomain) {
@@ -257,8 +260,12 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
 
   const handleSaveTicketingFrom = async () => {
     const outboundDomain = getOutboundDomain(emailSettings);
-    const candidate = ticketingFromOption === 'custom' ? ticketingFromCustom : ticketingFromOption;
-    const error = validateTicketingFrom(candidate, outboundDomain);
+    const rawCandidate = ticketingFromOption === 'custom' ? ticketingFromCustom : ticketingFromOption;
+    const candidate = (rawCandidate || '').trim();
+
+    // The From address is optional: a tenant may configure only a display name
+    // and keep the default sender address. Validate the address only when set.
+    const error = candidate ? validateTicketingFrom(candidate, outboundDomain) : null;
     setTicketingFromError(error);
 
     if (error) {
@@ -267,12 +274,15 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
 
     setSavingTicketingFrom(true);
     try {
-      const normalized = candidate.trim();
-      const updated = await updateEmailSettings({
-        ticketingFromEmail: normalized,
+      const updates: EmailSettingsUpdateInput = {
         ticketingFromName: ticketingFromName.trim() || null,
-        defaultFromDomain: outboundDomain || emailSettings?.defaultFromDomain
-      } satisfies EmailSettingsUpdateInput);
+      };
+      if (candidate) {
+        updates.ticketingFromEmail = candidate;
+        updates.defaultFromDomain = outboundDomain || emailSettings?.defaultFromDomain;
+      }
+
+      const updated = await updateEmailSettings(updates);
 
       setEmailSettings(updated);
       initializeTicketingFromSelection(updated, inboundProviders);
@@ -813,7 +823,11 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                       loadingOutbound ||
                       !!ticketingFromError ||
                       !outboundDomain ||
-                      !(ticketingFromOption === 'custom' ? ticketingFromCustom.trim() : ticketingFromOption)
+                      !(
+                        (ticketingFromOption === 'custom' ? ticketingFromCustom.trim() : ticketingFromOption) ||
+                        ticketingFromName.trim() ||
+                        (emailSettings?.ticketingFromName ?? '')
+                      )
                     }
                   >
                     {savingTicketingFrom ? t('managed.outbound.ticketingFrom.savingButton') : t('managed.outbound.ticketingFrom.saveButton')}

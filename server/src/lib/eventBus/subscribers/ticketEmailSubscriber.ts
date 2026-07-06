@@ -55,36 +55,46 @@ async function resolveTicketingFromAddress(
 ): Promise<{ email: string; name?: string } | undefined> {
   try {
     const settings = await TenantEmailService.getTenantEmailSettings(tenantId, knex);
-    const candidate = settings?.ticketingFromEmail;
 
-    if (!candidate) {
-      return undefined;
-    }
-
-    // Prefer the tenant-configured ticketing display name (set alongside the
-    // ticketing From address). When it is blank, fall back to the inbound
-    // provider row matching this mailbox to pick up the optional
-    // sender_display_name override. Falls back to undefined when neither is
-    // set; callers then use board-name fallback for backward compatibility.
+    const configuredEmail = typeof settings?.ticketingFromEmail === 'string'
+      ? settings.ticketingFromEmail.trim()
+      : '';
     const configuredName = typeof settings?.ticketingFromName === 'string'
       ? settings.ticketingFromName.trim()
       : '';
 
-    let providerName = '';
-    if (!configuredName) {
+    // Nothing ticketing-specific is configured: defer entirely to the default
+    // from-address resolution (and the caller's board-name fallback).
+    if (!configuredEmail && !configuredName) {
+      return undefined;
+    }
+
+    // Resolve the address. Prefer the explicit ticketing From address; when only
+    // a display name is configured, layer it onto the tenant's default sender
+    // address so the name is honored without forcing a custom From address.
+    const email = configuredEmail || TenantEmailService.getDefaultFromAddress(settings).email;
+    if (!email) {
+      return undefined;
+    }
+
+    // Resolve the display name. Prefer the tenant-configured ticketing display
+    // name. When it is blank and an explicit From address is set, fall back to
+    // the inbound provider row matching that mailbox to pick up its optional
+    // sender_display_name override. Falls back to undefined when neither is set;
+    // callers then use board-name fallback for backward compatibility.
+    let name = configuredName;
+    if (!name && configuredEmail) {
       const provider = await knex('email_providers')
-        .where({ tenant: tenantId, mailbox: candidate })
+        .where({ tenant: tenantId, mailbox: configuredEmail })
         .first(['sender_display_name']);
 
-      providerName = typeof provider?.sender_display_name === 'string'
+      name = typeof provider?.sender_display_name === 'string'
         ? provider.sender_display_name.trim()
         : '';
     }
 
-    const name = configuredName || providerName;
-
     return {
-      email: candidate,
+      email,
       name: name.length > 0 ? name : undefined
     };
   } catch (error) {
