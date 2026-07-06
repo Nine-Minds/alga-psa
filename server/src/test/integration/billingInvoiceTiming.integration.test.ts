@@ -3079,6 +3079,10 @@ it('T016/T018/T049/T076/T080/T087: recurring client-cadence preview, generation,
     page: 1,
     pageSize: 10,
     searchTerm: 'Client Happy Path Reader',
+    dateRange: {
+      from: currentPeriodStart,
+      to: nextPeriodStart,
+    },
   });
   const dueRows = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
   const dueRow = dueRows.find((row) =>
