@@ -10,7 +10,7 @@ The inline `Alert` control signals its tone with a 4px left accent bar, a style
 that's become cliché. Replace the accent bar with a full **1px tone-colored
 border** around the whole control plus a **very subtle drop shadow**. Tone stays
 signaled three ways (border color, tinted background, colored icon) — only the
-left bar goes away. Purely presentational; no API, token, or behavior changes.
+left bar goes away. Purely presentational; no API or behavior changes.
 
 ## Changes
 
@@ -32,8 +32,9 @@ In the `alertVariants` `cva`:
   | `warning` | `border-warning` | `bg-alert-warning-bg` |
   | `info` | `border-primary-500` | `bg-alert-info-bg` |
 
-- **`default` variant** keeps its neutral border and `bg-background`; it only
-  gains the shared `shadow-sm`.
+- **`default` variant** keeps its neutral border, moves to
+  `bg-alert-default-bg`, gets the shared `shadow-sm`, and renders a neutral
+  `Bell` icon when `showIcon` is true.
 - Tinted backgrounds, icon colors (`[&>svg]:text-<tone>`), and text color
   (`text-[rgb(var(--color-text-800))]`) are untouched.
 
@@ -50,6 +51,13 @@ Match the primary for consistency. In the inline `mergedStyle`:
   full `border: '1px solid ${toneBorder[tone]}'`.
 - Add `boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'`.
 - Keep `toneBg`, `toneFg`, icon, and radius as-is.
+
+### 3. `server/src/app/globals.css` and `server/tailwind.config.ts`
+
+- Add `--color-alert-default-bg` in light and dark themes, backed by
+  `--color-border-50` for the same neutral muted surface in both modes.
+- Expose the token as `bg-alert-default-bg` so the primary alert can use the same
+  theme path as the tone-specific alert backgrounds.
 
 ## Out of scope
 

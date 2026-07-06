@@ -166,6 +166,7 @@ const config: Config = {
         'alert-warning-bg': 'rgb(var(--color-alert-warning-bg))',
         'alert-success-bg': 'rgb(var(--color-alert-success-bg))',
         'alert-info-bg': 'rgb(var(--color-alert-info-bg))',
+        'alert-default-bg': 'rgb(var(--color-alert-default-bg))',
       },
       backgroundColor: { // Extend background colors specifically
         destructive: 'rgb(var(--color-destructive) / <alpha-value>)',

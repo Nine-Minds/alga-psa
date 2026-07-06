@@ -2,14 +2,14 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "../lib/utils"
 import { AutomationProps } from "../ui-reflection/types"
-import { AlertCircle, AlertTriangle, CheckCircle2, Info } from "lucide-react"
+import { AlertCircle, AlertTriangle, Bell, CheckCircle2, Info } from "lucide-react"
 
 const alertVariants = cva(
   "relative w-full rounded-lg border p-4 shadow-sm [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
   {
     variants: {
       variant: {
-        default: "bg-background text-foreground",
+        default: "bg-alert-default-bg text-foreground",
         destructive:
           "border-destructive text-[rgb(var(--color-text-800))] [&>svg]:text-destructive bg-alert-destructive-bg",
         success:
@@ -41,7 +41,7 @@ function Alert({
     : variant === 'success' ? CheckCircle2
     : variant === 'warning' ? AlertTriangle
     : variant === 'info' ? Info
-    : null;
+    : Bell;
 
   return (
     <div
