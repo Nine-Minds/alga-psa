@@ -57,27 +57,47 @@ async function resolveTicketingFromAddress(
 ): Promise<{ email: string; name?: string } | undefined> {
   try {
     const settings = await TenantEmailService.getTenantEmailSettings(tenantId, knex);
-    const candidate = settings?.ticketingFromEmail;
 
-    if (!candidate) {
+    const configuredEmail = typeof settings?.ticketingFromEmail === 'string'
+      ? settings.ticketingFromEmail.trim()
+      : '';
+    const configuredName = typeof settings?.ticketingFromName === 'string'
+      ? settings.ticketingFromName.trim()
+      : '';
+
+    // Nothing ticketing-specific is configured: defer entirely to the default
+    // from-address resolution (and the caller's board-name fallback).
+    if (!configuredEmail && !configuredName) {
       return undefined;
     }
 
-    // Look up the inbound provider row matching this mailbox to pick up the
-    // optional sender_display_name override. Falls back to undefined when no
-    // matching row or no display name is set; callers then use board-name
-    // fallback for backward compatibility.
-    const provider = await tenantDb(knex, tenantId).table('email_providers')
-      .where({ mailbox: candidate })
-      .first(['sender_display_name']);
+    // Resolve the address. Prefer the explicit ticketing From address; when only
+    // a display name is configured, layer it onto the tenant's default sender
+    // address so the name is honored without forcing a custom From address.
+    const email = configuredEmail || TenantEmailService.getDefaultFromAddress(settings).email;
+    if (!email) {
+      return undefined;
+    }
 
-    const senderDisplayName = typeof provider?.sender_display_name === 'string'
-      ? provider.sender_display_name.trim()
-      : '';
+    // Resolve the display name. Prefer the tenant-configured ticketing display
+    // name. When it is blank and an explicit From address is set, fall back to
+    // the inbound provider row matching that mailbox to pick up its optional
+    // sender_display_name override. Falls back to undefined when neither is set;
+    // callers then use board-name fallback for backward compatibility.
+    let name = configuredName;
+    if (!name && configuredEmail) {
+      const provider = await tenantDb(knex, tenantId).table('email_providers')
+        .where({ mailbox: configuredEmail })
+        .first(['sender_display_name']);
+
+      name = typeof provider?.sender_display_name === 'string'
+        ? provider.sender_display_name.trim()
+        : '';
+    }
 
     return {
-      email: candidate,
-      name: senderDisplayName.length > 0 ? senderDisplayName : undefined
+      email,
+      name: name.length > 0 ? name : undefined
     };
   } catch (error) {
     logger.warn('[TicketEmailSubscriber] Failed to resolve ticketing from address', {

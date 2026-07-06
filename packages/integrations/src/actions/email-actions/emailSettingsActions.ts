@@ -12,6 +12,7 @@ import { TenantEmailService } from '@alga-psa/email';
 type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
   defaultFromDomain?: string | null;
   ticketingFromEmail?: string | null;
+  ticketingFromName?: string | null;
 };
 
 // getEmailSettings masks stored secrets as this sentinel so they are never
@@ -58,6 +59,11 @@ function hasOwnUpdate<K extends keyof EmailSettingsUpdateInput>(
   return Object.prototype.hasOwnProperty.call(updates, key);
 }
 
+function normalizeOptionalString(value?: string | null): string | null {
+  const normalized = value?.trim();
+  return normalized || null;
+}
+
 export const getEmailSettings = withAuth(async (
   _user,
   { tenant }
@@ -74,6 +80,7 @@ export const getEmailSettings = withAuth(async (
         tenantId: tenant || '',
         defaultFromDomain: process.env.EMAIL_FROM ? extractDomain(process.env.EMAIL_FROM) || undefined : undefined,
         ticketingFromEmail: undefined,
+        ticketingFromName: null,
         customDomains: [],
         emailProvider: 'smtp',
         providerConfigs: [
@@ -136,11 +143,15 @@ export const updateEmailSettings = withAuth(async (
     const nextTicketingFromEmail = hasOwnUpdate(updates, 'ticketingFromEmail')
       ? updates.ticketingFromEmail?.trim() || null
       : existingSettings?.ticketingFromEmail ?? null;
+    const nextTicketingFromName = hasOwnUpdate(updates, 'ticketingFromName')
+      ? normalizeOptionalString(updates.ticketingFromName)
+      : existingSettings?.ticketingFromName ?? null;
 
     const mergedSettings: TenantEmailSettings = {
       tenantId: tenant || '',
       defaultFromDomain: nextDefaultFromDomain,
       ticketingFromEmail: nextTicketingFromEmail,
+      ticketingFromName: nextTicketingFromName,
       customDomains: updates.customDomains ?? existingSettings?.customDomains ?? [],
       emailProvider: updates.emailProvider ?? existingSettings?.emailProvider ?? 'smtp',
       providerConfigs: updates.providerConfigs
@@ -169,6 +180,7 @@ export const updateEmailSettings = withAuth(async (
       tenant: tenant,
       default_from_domain: mergedSettings.defaultFromDomain ?? null,
       ticketing_from_email: mergedSettings.ticketingFromEmail || null,
+      ticketing_from_name: mergedSettings.ticketingFromName || null,
       custom_domains: JSON.stringify(mergedSettings.customDomains || []),
       email_provider: mergedSettings.emailProvider,
       provider_configs: JSON.stringify(mergedSettings.providerConfigs || []),

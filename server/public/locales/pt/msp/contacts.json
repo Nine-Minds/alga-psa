@@ -266,6 +266,47 @@
       "message": "Os contatos {{count}} já existem. Deseja atualizá-los com os novos dados?"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "Emails",
+    "description": "Adicione um ou mais endereços de email e escolha exatamente um padrão.",
+    "actions": {
+      "addEmail": "Adicionar email"
+    },
+    "emailTypes": {
+      "work": "Trabalho",
+      "personal": "Pessoal",
+      "billing": "Cobrança",
+      "other": "Outro",
+      "custom": "Personalizado"
+    },
+    "primary": {
+      "title": "Email principal",
+      "description": "Este permanece o endereço padrão armazenado no registro do contato"
+    },
+    "row": {
+      "title": "Email adicional {{number}}",
+      "secondaryDescription": "Armazenado como um endereço de email não padrão",
+      "defaultLabel": "Padrão",
+      "noEmailYet": "Nenhum email informado ainda",
+      "editLabel": "Editar",
+      "edit": "Editar email adicional {{number}}",
+      "doneLabel": "Concluir",
+      "done": "Concluir edição do email adicional {{number}}",
+      "moveUp": "Mova o email adicional {{number}} para cima",
+      "moveDown": "Mova o email adicional {{number}} para baixo",
+      "remove": "Remover email adicional {{number}}"
+    },
+    "fields": {
+      "emailAddress": "Endereço de email",
+      "emailPlaceholder": "nome@exemplo.com",
+      "emailLabel": "Tipo de email",
+      "customEmailLabel": "Tipo de email personalizado",
+      "customTypePlaceholder": "Selecione ou insira um tipo de email personalizado",
+      "customTypeSearchPlaceholder": "Pesquise ou insira um tipo de email personalizado...",
+      "customTypeEmpty": "Nenhum tipo de email personalizado correspondente.",
+      "customTypeUseValue": "Usar \"{{value}}\""
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "Números de telefone",
     "description": "Editor de número de telefone com gerenciamento de tipos, validação, padrões e suporte a extensões",
@@ -274,8 +315,8 @@
     },
     "empty": "Ainda não há números de telefone.",
     "phoneTypes": {
-      "work": "Trabalhar",
-      "mobile": "Móvel",
+      "work": "Trabalho",
+      "mobile": "Celular",
       "home": "Residencial",
       "fax": "Fax",
       "other": "Outro",
@@ -523,8 +564,8 @@
       "unknownClient": "Cliente desconhecido"
     },
     "phoneTypes": {
-      "work": "Trabalhar",
-      "mobile": "Móvel",
+      "work": "Trabalho",
+      "mobile": "Celular",
       "home": "Residencial",
       "fax": "Fax",
       "other": "Outro"
@@ -651,6 +692,12 @@
         "openTicketFailed": "Falha ao abrir ticket",
         "userNotAuthenticated": "Usuário não autenticado"
       }
+    }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Contato atualizado",
+      "saveFailed": "Nao foi possivel atualizar o contato"
     }
   }
 }

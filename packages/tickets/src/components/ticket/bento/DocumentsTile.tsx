@@ -7,7 +7,7 @@ import type { IDocument } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { ContentCardVariantProvider } from '@alga-psa/ui/components';
-import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/BentoTile';
+import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
 import TicketDocumentsSection from './../TicketDocumentsSection';
 
 const MAX_ROWS = 5;

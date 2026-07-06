@@ -54,7 +54,7 @@
     "types": {
       "workstation": "Estações de trabalho",
       "server": "Servidores",
-      "mobile": "Móvel",
+      "mobile": "Dispositivos móveis",
       "printer": "Impressoras",
       "network": "Rede",
       "unknown": "Outro"
@@ -142,7 +142,7 @@
         "asset": "Manutenção de ativos: {{name}}",
         "project": "Projeto atualizado: {{name}}",
         "quote": {
-          "_default": "orçamento {{name}}",
+          "_default": "Cotação {{name}}",
           "sent": "Cotação {{name}} enviada para revisão",
           "accepted": "Cotação {{name}} aceita",
           "rejected": "Cotação {{name}} rejeitada",
@@ -569,7 +569,7 @@
       "mainOffice": "Escritório Central",
       "warehouse": "Armazém",
       "website": "Site",
-      "industry": "Indústria",
+      "industry": "Ramo de atividade",
       "companySize": "Tamanho da empresa",
       "company_size": "Tamanho da empresa",
       "annualRevenue": "Receita Anual",

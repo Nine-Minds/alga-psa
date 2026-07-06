@@ -45,6 +45,108 @@ export interface EmailSettingsValidation {
   settings?: TenantEmailSettings;
 }
 
+// Pure from-address helpers shared by the instance sender path and any caller
+// that needs the tenant's resolved default sender identity without re-deriving
+// this logic (e.g. the ticketing subscriber layering a configured display name
+// on top of the default address).
+function parseEmailAddress(value?: string | EmailAddress | null): EmailAddress | null {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === 'object') {
+    if (!value.email) {
+      return null;
+    }
+    return { email: value.email, name: value.name };
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const match = trimmed.match(/^(?:"?([^"]*)"?\s*)?<([^>]+)>$/);
+  if (match) {
+    const name = match[1]?.trim();
+    return {
+      email: match[2].trim(),
+      name: name || undefined
+    };
+  }
+
+  return { email: trimmed };
+}
+
+function extractEmailParts(email?: string | null): { localPart: string; domain?: string } | null {
+  if (!email) {
+    return null;
+  }
+
+  const [localPart, domain] = email.split('@');
+  if (!domain) {
+    return { localPart: localPart || email };
+  }
+
+  return { localPart, domain };
+}
+
+function sanitizeLocalPart(localPart?: string | null): string {
+  if (!localPart) {
+    return 'notifications';
+  }
+
+  const normalized = localPart
+    .toLowerCase()
+    .replace(/[^a-z0-9._+-]/g, '');
+
+  return normalized || 'notifications';
+}
+
+function sanitizeDomain(domain?: string | null): string | null {
+  if (!domain) {
+    return null;
+  }
+
+  const normalized = domain.trim().replace(/^@/, '').toLowerCase();
+  return normalized || null;
+}
+
+function extractDomainFromAddress(address?: string): string | null {
+  if (!address) {
+    return null;
+  }
+
+  const parsed = parseEmailAddress(address);
+  if (!parsed?.email) {
+    return null;
+  }
+
+  const parts = extractEmailParts(parsed.email);
+  return parts?.domain || null;
+}
+
+function getProviderConfiguredAddress(settings?: TenantEmailSettings | null): EmailAddress | null {
+  const configs = settings?.providerConfigs || [];
+  const enabledConfig = configs.find(config => config.isEnabled && config.config);
+
+  if (!enabledConfig) {
+    return null;
+  }
+
+  const configFrom = enabledConfig.config.from;
+  const configFromName = enabledConfig.config.fromName || enabledConfig.config.from_name;
+  if (typeof configFrom === 'string' && configFrom.trim().length > 0) {
+    const parsed = parseEmailAddress(configFrom.trim()) || { email: configFrom.trim() };
+    if (!parsed.name && typeof configFromName === 'string' && configFromName.trim().length > 0) {
+      parsed.name = configFromName.trim();
+    }
+    return parsed;
+  }
+
+  return null;
+}
+
 export class TenantEmailService extends BaseEmailService {
   private static instances: Map<string, TenantEmailService> = new Map();
   private tenantId: string;
@@ -425,6 +527,7 @@ export class TenantEmailService extends BaseEmailService {
       tenantId,
       defaultFromDomain: settings.default_from_domain || undefined,
       ticketingFromEmail: settings.ticketing_from_email || null,
+      ticketingFromName: settings.ticketing_from_name || null,
       customDomains: this.normalizeDomains(settings.custom_domains),
       emailProvider: settings.email_provider,
       providerConfigs: this.normalizeProviderConfigs(settings.provider_configs),
@@ -500,17 +603,29 @@ export class TenantEmailService extends BaseEmailService {
   }
 
   private buildTenantFromAddress(): EmailAddress {
-    const providerAddress = this.getProviderConfiguredAddress();
-    const envAddress = this.parseAddress(process.env.EMAIL_FROM);
+    return TenantEmailService.getDefaultFromAddress(this.tenantSettings);
+  }
+
+  /**
+   * Resolve the tenant's default sender identity (email + display name) purely
+   * from persisted settings and environment fallbacks, re-homed onto the
+   * configured outbound domain. Exposed as a static so callers that need the
+   * resolved address without a configured From override — notably the ticketing
+   * subscriber layering a tenant display name onto the default address — reuse
+   * this logic instead of re-deriving it.
+   */
+  static getDefaultFromAddress(settings?: TenantEmailSettings | null): EmailAddress {
+    const providerAddress = getProviderConfiguredAddress(settings);
+    const envAddress = parseEmailAddress(process.env.EMAIL_FROM);
     const fallbackName = providerAddress?.name || envAddress?.name || process.env.EMAIL_FROM_NAME || 'Alga PSA Notifications';
     const fallbackEmail = providerAddress?.email || envAddress?.email || 'notifications@example.com';
 
     const baseEmail = providerAddress?.email || envAddress?.email || fallbackEmail;
-    const emailParts = this.extractEmailParts(baseEmail);
-    const localPart = this.sanitizeLocalPart(emailParts?.localPart);
+    const emailParts = extractEmailParts(baseEmail);
+    const localPart = sanitizeLocalPart(emailParts?.localPart);
 
-    const configuredDomain = this.sanitizeDomain(this.tenantSettings?.defaultFromDomain);
-    const fallbackDomain = this.sanitizeDomain(emailParts?.domain) || this.sanitizeDomain(this.extractDomainFromAddress(fallbackEmail));
+    const configuredDomain = sanitizeDomain(settings?.defaultFromDomain);
+    const fallbackDomain = sanitizeDomain(emailParts?.domain) || sanitizeDomain(extractDomainFromAddress(fallbackEmail));
     const targetDomain = configuredDomain || fallbackDomain;
 
     const email = targetDomain ? `${localPart}@${targetDomain}` : baseEmail;
@@ -519,103 +634,5 @@ export class TenantEmailService extends BaseEmailService {
       email,
       name: fallbackName
     };
-  }
-
-  private getProviderConfiguredAddress(): EmailAddress | null {
-    const configs = this.tenantSettings?.providerConfigs || [];
-    const enabledConfig = configs.find(config => config.isEnabled && config.config);
-
-    if (!enabledConfig) {
-      return null;
-    }
-
-    const configFrom = enabledConfig.config.from;
-    const configFromName = enabledConfig.config.fromName || enabledConfig.config.from_name;
-    if (typeof configFrom === 'string' && configFrom.trim().length > 0) {
-      const parsed = this.parseAddress(configFrom.trim()) || { email: configFrom.trim() };
-      if (!parsed.name && typeof configFromName === 'string' && configFromName.trim().length > 0) {
-        parsed.name = configFromName.trim();
-      }
-      return parsed;
-    }
-
-    return null;
-  }
-
-  private parseAddress(value?: string | EmailAddress | null): EmailAddress | null {
-    if (!value) {
-      return null;
-    }
-
-    if (typeof value === 'object') {
-      if (!value.email) {
-        return null;
-      }
-      return { email: value.email, name: value.name };
-    }
-
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-
-    const match = trimmed.match(/^(?:"?([^"]*)"?\s*)?<([^>]+)>$/);
-    if (match) {
-      const name = match[1]?.trim();
-      return {
-        email: match[2].trim(),
-        name: name || undefined
-      };
-    }
-
-    return { email: trimmed };
-  }
-
-  private extractEmailParts(email?: string | null): { localPart: string; domain?: string } | null {
-    if (!email) {
-      return null;
-    }
-
-    const [localPart, domain] = email.split('@');
-    if (!domain) {
-      return { localPart: localPart || email };
-    }
-
-    return { localPart, domain };
-  }
-
-  private sanitizeLocalPart(localPart?: string | null): string {
-    if (!localPart) {
-      return 'notifications';
-    }
-
-    const normalized = localPart
-      .toLowerCase()
-      .replace(/[^a-z0-9._+-]/g, '');
-
-    return normalized || 'notifications';
-  }
-
-  private sanitizeDomain(domain?: string | null): string | null {
-    if (!domain) {
-      return null;
-    }
-
-    const normalized = domain.trim().replace(/^@/, '').toLowerCase();
-    return normalized || null;
-  }
-
-  private extractDomainFromAddress(address?: string): string | null {
-    if (!address) {
-      return null;
-    }
-
-    const parsed = this.parseAddress(address);
-    if (!parsed?.email) {
-      return null;
-    }
-
-    const parts = this.extractEmailParts(parsed.email);
-    return parts?.domain || null;
   }
 }

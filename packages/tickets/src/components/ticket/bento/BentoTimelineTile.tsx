@@ -25,7 +25,7 @@ import {
 } from '../../../actions/comment-actions/commentReactionActions';
 import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/commentAuthorResolution';
 import type { TicketReactionsBootstrap } from '../../../lib/ticketScreenBootstrap';
-import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/BentoTile';
+import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
 
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
   loading: () => <RichTextEditorSkeleton height="120px" />,

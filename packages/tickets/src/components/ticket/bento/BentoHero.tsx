@@ -15,7 +15,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { TagManager } from '@alga-psa/tags/components';
 import type { ITag, ITicket, ITeam, ITicketResource, IUserWithRoles } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { BentoTile } from '@alga-psa/ui/components/BentoTile';
+import { BentoTile } from '@alga-psa/ui/components/bento/BentoTile';
 import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
 import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
 import type { TicketLiveConflictState } from '../ticketLiveFields';

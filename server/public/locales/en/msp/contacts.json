@@ -266,6 +266,47 @@
       "message": "{{count}} contacts already exist. Do you want to update them with the new data?"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "Email Addresses",
+    "description": "Add one or more email addresses and choose exactly one default.",
+    "actions": {
+      "addEmail": "Add Email"
+    },
+    "emailTypes": {
+      "work": "Work",
+      "personal": "Personal",
+      "billing": "Billing",
+      "other": "Other",
+      "custom": "Custom"
+    },
+    "primary": {
+      "title": "Primary email",
+      "description": "This remains the default address stored on the contact record"
+    },
+    "row": {
+      "title": "Additional email {{number}}",
+      "secondaryDescription": "Stored as a non-default email address",
+      "defaultLabel": "Default",
+      "noEmailYet": "No email entered yet",
+      "editLabel": "Edit",
+      "edit": "Edit additional email {{number}}",
+      "doneLabel": "Done",
+      "done": "Done editing additional email {{number}}",
+      "moveUp": "Move additional email {{number}} up",
+      "moveDown": "Move additional email {{number}} down",
+      "remove": "Remove additional email {{number}}"
+    },
+    "fields": {
+      "emailAddress": "Email Address",
+      "emailPlaceholder": "name@example.com",
+      "emailLabel": "Email Label",
+      "customEmailLabel": "Custom Email Label",
+      "customTypePlaceholder": "Select or enter a custom email label",
+      "customTypeSearchPlaceholder": "Search or enter a custom email label...",
+      "customTypeEmpty": "No matching custom email labels.",
+      "customTypeUseValue": "Use \"{{value}}\""
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "Phone Numbers",
     "description": "Phone number editor with type management, validation, defaults, and extension support",
@@ -651,6 +692,12 @@
         "openTicketFailed": "Failed to open ticket",
         "userNotAuthenticated": "User not authenticated"
       }
+    }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Contact updated",
+      "saveFailed": "Could not update contact"
     }
   }
 }

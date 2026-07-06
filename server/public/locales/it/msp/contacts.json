@@ -266,6 +266,47 @@
       "message": "{{count}} contatti esistono già. Vuoi aggiornarli con i nuovi dati?"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "Indirizzi email",
+    "description": "Aggiungi uno o più indirizzi email e scegli esattamente un predefinito.",
+    "actions": {
+      "addEmail": "Aggiungi email"
+    },
+    "emailTypes": {
+      "work": "Lavoro",
+      "personal": "Personale",
+      "billing": "Fatturazione",
+      "other": "Altro",
+      "custom": "Personalizzato"
+    },
+    "primary": {
+      "title": "Email principale",
+      "description": "Questo rimane l'indirizzo predefinito memorizzato nella scheda del contatto"
+    },
+    "row": {
+      "title": "Email aggiuntiva {{number}}",
+      "secondaryDescription": "Memorizzato come indirizzo email non predefinito",
+      "defaultLabel": "Predefinito",
+      "noEmailYet": "Nessuna email inserita finora",
+      "editLabel": "Modifica",
+      "edit": "Modifica l'email aggiuntiva {{number}}",
+      "doneLabel": "Fine",
+      "done": "Termina la modifica dell'email aggiuntiva {{number}}",
+      "moveUp": "Sposta l'email aggiuntiva {{number}} verso l'alto",
+      "moveDown": "Sposta l'email aggiuntiva {{number}} verso il basso",
+      "remove": "Rimuovi l'email aggiuntiva {{number}}"
+    },
+    "fields": {
+      "emailAddress": "Indirizzo email",
+      "emailPlaceholder": "nome@esempio.com",
+      "emailLabel": "Tipo di email",
+      "customEmailLabel": "Tipo di email personalizzato",
+      "customTypePlaceholder": "Seleziona o inserisci un tipo di email personalizzato",
+      "customTypeSearchPlaceholder": "Cerca o inserisci un tipo di email personalizzato...",
+      "customTypeEmpty": "Nessun tipo di email personalizzato corrispondente.",
+      "customTypeUseValue": "Usa \"{{value}}\""
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "Numeri di telefono",
     "description": "Editor dei numeri di telefono con gestione dei tipi, convalida, valori predefiniti e supporto alle estensioni",
@@ -651,6 +692,12 @@
         "openTicketFailed": "Impossibile aprire il ticket",
         "userNotAuthenticated": "Utente non autenticato"
       }
+    }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Contatto aggiornato",
+      "saveFailed": "Impossibile aggiornare il contatto"
     }
   }
 }

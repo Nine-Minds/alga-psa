@@ -22,13 +22,13 @@
       "sections": {
         "contracts": "Contratos",
         "invoicing": "Faturamento",
-        "quotes": "Citações",
+        "quotes": "Cotações",
         "pricing": "Preços",
         "trackingReports": "Rastreamento e Relatórios"
       },
       "contractTemplates": "Modelos de contrato",
       "clientContracts": "Contratos de clientes",
-      "quotes": "Citações",
+      "quotes": "Cotações",
       "quoteBusinessTemplates": "Modelos de cotação",
       "quoteLayouts": "Layouts de cotação",
       "contractLinePresets": "Predefinições de linha de contrato",

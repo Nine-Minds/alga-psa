@@ -266,6 +266,47 @@
       "message": "{{count}} contacts existent déjà. Voulez-vous les mettre à jour avec les nouvelles données ?"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "Adresses e-mail",
+    "description": "Ajoutez une ou plusieurs adresses e-mail et choisissez exactement une adresse par défaut.",
+    "actions": {
+      "addEmail": "Ajouter un e-mail"
+    },
+    "emailTypes": {
+      "work": "Professionnel",
+      "personal": "Personnel",
+      "billing": "Facturation",
+      "other": "Autre",
+      "custom": "Personnalisé"
+    },
+    "primary": {
+      "title": "E-mail principal",
+      "description": "Cette adresse reste l'adresse par défaut enregistrée sur la fiche du contact"
+    },
+    "row": {
+      "title": "E-mail supplémentaire {{number}}",
+      "secondaryDescription": "Enregistré comme adresse e-mail non par défaut",
+      "defaultLabel": "Par défaut",
+      "noEmailYet": "Aucun e-mail saisi pour le moment",
+      "editLabel": "Modifier",
+      "edit": "Modifier l'e-mail supplémentaire {{number}}",
+      "doneLabel": "Terminé",
+      "done": "Terminer la modification de l'e-mail supplémentaire {{number}}",
+      "moveUp": "Monter l'e-mail supplémentaire {{number}}",
+      "moveDown": "Descendre l'e-mail supplémentaire {{number}}",
+      "remove": "Supprimer l'e-mail supplémentaire {{number}}"
+    },
+    "fields": {
+      "emailAddress": "Adresse e-mail",
+      "emailPlaceholder": "nom@exemple.com",
+      "emailLabel": "Type d'e-mail",
+      "customEmailLabel": "Type d'e-mail personnalisé",
+      "customTypePlaceholder": "Sélectionnez ou saisissez un type d'e-mail personnalisé",
+      "customTypeSearchPlaceholder": "Recherchez ou saisissez un type d'e-mail personnalisé...",
+      "customTypeEmpty": "Aucun type d'e-mail personnalisé correspondant.",
+      "customTypeUseValue": "Utiliser \"{{value}}\""
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "Numéros de téléphone",
     "description": "Éditeur de numéros de téléphone avec gestion des types, validation, valeurs par défaut et prise en charge des extensions",
@@ -651,6 +692,12 @@
         "openTicketFailed": "Échec de l'ouverture du ticket",
         "userNotAuthenticated": "Utilisateur non authentifié"
       }
+    }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Contact mis a jour",
+      "saveFailed": "Impossible de mettre a jour le contact"
     }
   }
 }

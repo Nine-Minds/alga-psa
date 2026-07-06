@@ -476,6 +476,7 @@ html.dark {
     --color-alert-warning-bg: 50 40 8;         /* golden amber */
     --color-alert-success-bg: 15 40 25;       /* deep dark green */
     --color-alert-info-bg: 20 30 60;          /* deep dark blue */
+    --color-alert-default-bg: var(--color-border-50);  /* neutral muted surface */
 
     /* SCHEDULE EVENT COLORS — tuned per-theme for calendar backgrounds */
     --color-event-non-billable: 160 90 30;    /* warm amber, visible on dark bg */
@@ -643,6 +644,7 @@ html.light {
     --color-alert-warning-bg: 255 251 235;      /* amber-50 */
     --color-alert-success-bg: 240 253 244;      /* green-50 */
     --color-alert-info-bg: 246 240 254;         /* primary-50 (light purple) */
+    --color-alert-default-bg: var(--color-border-50);  /* neutral muted surface */
 
     /* Sidebar Colors  */
     --color-sidebar-bg: #0C111D;

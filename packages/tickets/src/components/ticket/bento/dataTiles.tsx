@@ -6,7 +6,7 @@ import { fromZonedTime } from 'date-fns-tz';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
-import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/BentoTile';
+import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
 import {
   getTicketScheduleEntries,
   getTicketInteractions,

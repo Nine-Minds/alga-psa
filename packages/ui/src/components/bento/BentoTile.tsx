@@ -1,7 +1,10 @@
 'use client';
 
 import React from 'react';
-import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
+import Link from 'next/link';
+import { Plus } from 'lucide-react';
+import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { Button } from '../Button';
 
 interface BentoTileProps {
   id: string;
@@ -18,13 +21,6 @@ interface BentoTileProps {
   children: React.ReactNode;
 }
 
-/** Rounding, border, card background and padding shared by every bento surface (also used by ContentCard's `variant="bento"`). */
-export const BENTO_TILE_BASE =
-  'rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4';
-
-/** Full tile shell: the shared bento surface plus the tile's vertical flex layout. */
-export const BENTO_TILE_SHELL = `${BENTO_TILE_BASE} flex flex-col min-w-0`;
-
 /**
  * Shared surface for every cell in the ticket "Grid" layout. Mirrors the
  * ContentCard look (card token background, border, rounded corners) so Grid
@@ -32,10 +28,13 @@ export const BENTO_TILE_SHELL = `${BENTO_TILE_BASE} flex flex-col min-w-0`;
  */
 export function BentoTile({ id, title, icon, action, subtitle, error, className, children }: BentoTileProps) {
   return (
-    <ReflectionContainer id={id} label={title ?? id}>
+    // ReflectionContainer's div is the element the parent grid/flex actually
+    // lays out, so `className` (col-span etc.) must land there, not on the
+    // inner <section>.
+    <ReflectionContainer id={id} label={title ?? id} className={`min-w-0 ${className ?? ''}`}>
       <section
         id={id}
-        className={`${BENTO_TILE_SHELL} ${className ?? ''}`}
+        className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 flex flex-col min-w-0 h-full"
       >
         {title ? (
           <div className="flex items-center gap-2 mb-2">
@@ -68,6 +67,68 @@ export function BentoTileEmpty({ id, children }: { id: string; children: React.R
     <p id={id} className="text-sm text-[rgb(var(--color-text-400))] py-1">
       {children}
     </p>
+  );
+}
+
+/**
+ * The standard header add-affordance for a tile: a small ghost icon button.
+ * Give every tile-level "create/attach something here" entry point this shape
+ * so the grid reads as one system.
+ */
+export function BentoTileAddButton({
+  id,
+  label,
+  onClick,
+  href,
+}: {
+  id: string;
+  /** Accessible name, e.g. "Create ticket". Rendered as aria-label + tooltip title. */
+  label: string;
+  onClick?: () => void;
+  href?: string;
+}) {
+  const button = (
+    <Button id={id} size="sm" variant="ghost" onClick={onClick} aria-label={label} title={label} asChild={Boolean(href)}>
+      {href ? (
+        <Link href={href}>
+          <Plus className="h-4 w-4" />
+        </Link>
+      ) : (
+        <Plus className="h-4 w-4" />
+      )}
+    </Button>
+  );
+  return button;
+}
+
+/**
+ * Inline "+ Do the thing" action rendered under a tile's empty state, so an
+ * empty tile is an invitation rather than a dead end.
+ */
+export function BentoTileEmptyAction({
+  id,
+  onClick,
+  href,
+  children,
+}: {
+  id: string;
+  onClick?: () => void;
+  href?: string;
+  children: React.ReactNode;
+}) {
+  const className =
+    'inline-flex items-center gap-1 text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline mt-1';
+  if (href) {
+    return (
+      <Link id={id} href={href} className={className}>
+        <Plus className="h-3 w-3" /> {children}
+      </Link>
+    );
+  }
+  return (
+    <button id={id} type="button" onClick={onClick} className={className}>
+      <Plus className="h-3 w-3" /> {children}
+    </button>
   );
 }
 
