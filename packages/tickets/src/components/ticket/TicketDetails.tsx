@@ -3195,6 +3195,11 @@ const handleClose = () => {
                     taskActions={renderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
                     liveHighlightedFields={liveHighlightedFields}
                     liveFrozenFields={Object.keys(liveFieldConflicts)}
+                    liveFieldConflicts={liveFieldConflicts}
+                    onKeepLiveConflict={handleKeepLiveConflict}
+                    onTakeLiveConflict={handleTakeLiveConflict}
+                    liveEditingUsers={liveEditingUsers}
+                    onLiveEditingFieldChange={ticketLive.setEditingField}
                     onAgentClick={handleAgentClick}
                     locations={locations}
                     conversations={conversations}

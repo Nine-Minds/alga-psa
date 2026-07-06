@@ -16,7 +16,9 @@ import { TagManager } from '@alga-psa/tags/components';
 import type { ITag, ITicket, ITeam, ITicketResource, IUserWithRoles } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile } from '@alga-psa/ui/components/BentoTile';
+import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
 import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
+import type { TicketLiveConflictState } from '../ticketLiveFields';
 
 interface HeroSelectOption {
   value: string;
@@ -61,6 +63,16 @@ interface BentoHeroProps {
   // Live collaboration signals (subset of the full TicketInfo treatment).
   liveHighlightedFields?: string[];
   liveFrozenFields?: string[];
+  /** Per-field conflict state (someone else saved while this field was in play). */
+  liveFieldConflicts?: Partial<Record<string, TicketLiveConflictState>>;
+  /** Re-assert the local value for a conflicted field (dismisses the banner). */
+  onKeepLiveConflict?: (field: string) => void;
+  /** Accept the remote value for a conflicted field (dismisses the banner). */
+  onTakeLiveConflict?: (field: string) => void;
+  /** Display names of other users currently editing each field. */
+  liveEditingUsers?: Partial<Record<string, string[]>>;
+  /** Broadcasts which field this user is editing (null on blur). */
+  onLiveEditingFieldChange?: (field: string | null) => void;
 }
 
 function HeroField({ label, children }: { label: string; children: React.ReactNode }) {
@@ -103,10 +115,24 @@ export function BentoHero({
   taskActions,
   liveHighlightedFields = [],
   liveFrozenFields = [],
+  liveFieldConflicts,
+  onKeepLiveConflict,
+  onTakeLiveConflict,
+  liveEditingUsers,
+  onLiveEditingFieldChange,
 }: BentoHeroProps) {
   const { t } = useTranslation('features/tickets');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(ticket.title ?? '');
+
+  // The bento saves each field immediately, so there is no pending edit to
+  // revert on conflict — instead we remember the last value this user set per
+  // field so "Keep yours" can re-save it over the remote change.
+  const lastLocalEditRef = React.useRef<Record<string, string | null | undefined>>({});
+  const commitField = (field: keyof ITicket, value: string | null) => {
+    lastLocalEditRef.current[field as string] = value;
+    return onSelectChange(field, value);
+  };
 
   const responseStateOptions = useMemo<SelectOption[]>(
     () => [
@@ -185,7 +211,7 @@ export function BentoHero({
 
   const handleDueDateChange = (date: Date | undefined) => {
     if (!date) {
-      void onSelectChange('due_date', null);
+      void commitField('due_date', null);
       return;
     }
     // Preserve the existing time-of-day when only the date changes.
@@ -193,7 +219,7 @@ export function BentoHero({
     if (dueDate && !Number.isNaN(dueDate.getTime())) {
       next.setHours(dueDate.getHours(), dueDate.getMinutes(), 0, 0);
     }
-    void onSelectChange('due_date', next.toISOString());
+    void commitField('due_date', next.toISOString());
   };
 
   // Re-derive the SLA countdown once a minute so "2h left" doesn't go stale
@@ -216,7 +242,7 @@ export function BentoHero({
     const next = titleDraft.trim();
     try {
       if (next && next !== ticket.title) {
-        await onSelectChange('title', next);
+        await commitField('title', next);
       } else {
         setTitleDraft(ticket.title ?? '');
       }
@@ -225,42 +251,156 @@ export function BentoHero({
     }
   };
 
+  // --- Live edit presence + conflict helpers (ported from TicketInfo) ---
+  const editingUsersFor = (field: string) => liveEditingUsers?.[field] ?? [];
+  const isRemotelyEdited = (field: string) => editingUsersFor(field).length > 0;
+
+  const editingCaption = (field: string): string | null => {
+    const users = editingUsersFor(field);
+    if (users.length === 0) return null;
+    if (users.length === 1) {
+      return t('liveUpdates.editing.single', '{{name}} is editing').replace('{{name}}', users[0]);
+    }
+    return t(
+      users.length === 2 ? 'liveUpdates.editing.multiple_one' : 'liveUpdates.editing.multiple_other',
+      users.length === 2
+        ? '{{name}} and {{count}} other are editing'
+        : '{{name}} and {{count}} others are editing',
+    )
+      .replace('{{name}}', users[0])
+      .replace('{{count}}', String(users.length - 1));
+  };
+
+  // Report which field this user is editing (focus in / blur out of its cell).
+  const editHandlers = (field: string) => ({
+    onFocusCapture: () => onLiveEditingFieldChange?.(field),
+    onBlurCapture: (event: React.FocusEvent<HTMLElement>) => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+        onLiveEditingFieldChange?.(null);
+      }
+    },
+  });
+
+  // Resolve the human-readable remote value for the conflict banner, using the
+  // hero's already-present option lists. Only the hero fields are handled.
+  const getConflictRemoteValue = (field: string): React.ReactNode => {
+    switch (field) {
+      case 'title':
+        return ticket.title || t('properties.notAvailable', 'N/A');
+      case 'status_id':
+        return scopedStatusOptions.find((option) => option.value === ticket.status_id)?.label
+          ?? t('properties.notAvailable', 'N/A');
+      case 'priority_id':
+        return priorityOptions.find((option) => option.value === ticket.priority_id)?.label
+          ?? t('properties.notAvailable', 'N/A');
+      case 'board_id':
+        return boardOptions.find((option) => option.value === ticket.board_id)?.label
+          ?? t('properties.notAvailable', 'N/A');
+      case 'assigned_to': {
+        const agent = availableAgents.find((user) => user.user_id === ticket.assigned_to);
+        return agent
+          ? `${agent.first_name ?? ''} ${agent.last_name ?? ''}`.trim() || t('bento.hero.notAssigned', 'Not assigned')
+          : t('bento.hero.notAssigned', 'Not assigned');
+      }
+      case 'due_date':
+        return (ticket.due_date as unknown as string) ?? t('properties.notAvailable', 'N/A');
+      case 'response_state': {
+        const value = (ticket.response_state as string | null) ?? 'none';
+        return responseStateOptions.find((option) => option.value === value)?.label
+          ?? t('properties.notAvailable', 'N/A');
+      }
+      default:
+        return t('properties.notAvailable', 'N/A');
+    }
+  };
+
+  // "Keep yours": re-save the last value this user set for the field (the remote
+  // value is already applied to `ticket`), then dismiss the banner.
+  const keepMine = (field: string) => {
+    const mine = lastLocalEditRef.current[field];
+    if (mine !== undefined) void onSelectChange(field as keyof ITicket, mine);
+    onKeepLiveConflict?.(field);
+  };
+
+  // Wraps a hero control with edit-presence reporting, a remote-edit dim, an
+  // "N is editing" caption, and the Keep/Take conflict banner. A plain render
+  // helper (not a component) so the control isn't remounted each render.
+  const renderLiveField = (field: string, wrapClassName: string, control: React.ReactNode) => {
+    const conflict = liveFieldConflicts?.[field];
+    const caption = editingCaption(field);
+    return (
+      <div {...editHandlers(field)}>
+        <div
+          className={`transition-opacity ${isRemotelyEdited(field) ? 'opacity-60' : ''} ${fieldWrapClass(field)} ${wrapClassName}`.trim()}
+        >
+          {control}
+        </div>
+        {caption ? (
+          <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{caption}</p>
+        ) : null}
+        {conflict ? (
+          <FieldConflictBanner
+            remoteAuthor={conflict.updatedBy.displayName}
+            remoteAt={conflict.updatedAt}
+            remoteValue={getConflictRemoteValue(field)}
+            onKeepYours={() => keepMine(field)}
+            onTakeTheirs={() => onTakeLiveConflict?.(field)}
+          />
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <BentoTile id={id}>
       <div>
         <div className="flex items-start gap-3 flex-wrap">
-          <div className="min-w-0 flex-1">
-            {isEditingTitle ? (
-              <Input
-                id={`${id}-title-input`}
-                value={titleDraft}
-                onChange={(event) => setTitleDraft(event.target.value)}
-                onBlur={commitTitle}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') void commitTitle();
-                  if (event.key === 'Escape') {
-                    setTitleDraft(ticket.title ?? '');
-                    setIsEditingTitle(false);
-                  }
-                }}
-                autoFocus
-                className="text-lg font-bold"
-                containerClassName="mb-0"
+          <div className="min-w-0 flex-1" {...editHandlers('title')}>
+            <div className={`transition-opacity ${isRemotelyEdited('title') ? 'opacity-60' : ''}`.trim()}>
+              {isEditingTitle ? (
+                <Input
+                  id={`${id}-title-input`}
+                  value={titleDraft}
+                  onChange={(event) => setTitleDraft(event.target.value)}
+                  onBlur={commitTitle}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') void commitTitle();
+                    if (event.key === 'Escape') {
+                      setTitleDraft(ticket.title ?? '');
+                      setIsEditingTitle(false);
+                    }
+                  }}
+                  autoFocus
+                  className="text-lg font-bold"
+                  containerClassName="mb-0"
+                />
+              ) : (
+                <h2 className="text-lg font-bold text-[rgb(var(--color-text-900))] flex items-center gap-2 min-w-0">
+                  <span className="truncate">{ticket.title}</span>
+                  <button
+                    id={`${id}-title-edit`}
+                    type="button"
+                    aria-label={t('bento.hero.editTitle', 'Edit title')}
+                    className="text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))] flex-shrink-0"
+                    onClick={() => setIsEditingTitle(true)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                </h2>
+              )}
+            </div>
+            {editingCaption('title') ? (
+              <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{editingCaption('title')}</p>
+            ) : null}
+            {liveFieldConflicts?.['title'] ? (
+              <FieldConflictBanner
+                remoteAuthor={liveFieldConflicts['title']!.updatedBy.displayName}
+                remoteAt={liveFieldConflicts['title']!.updatedAt}
+                remoteValue={getConflictRemoteValue('title')}
+                onKeepYours={() => keepMine('title')}
+                onTakeTheirs={() => onTakeLiveConflict?.('title')}
               />
-            ) : (
-              <h2 className="text-lg font-bold text-[rgb(var(--color-text-900))] flex items-center gap-2 min-w-0">
-                <span className="truncate">{ticket.title}</span>
-                <button
-                  id={`${id}-title-edit`}
-                  type="button"
-                  aria-label={t('bento.hero.editTitle', 'Edit title')}
-                  className="text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))] flex-shrink-0"
-                  onClick={() => setIsEditingTitle(true)}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-              </h2>
-            )}
+            ) : null}
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -308,50 +448,51 @@ export function BentoHero({
 
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <HeroField label={t('bento.hero.status', 'Status')}>
-            <div className={fieldWrapClass('status_id')}>
+            {renderLiveField('status_id', '', (
               <CustomSelect
                 id={`${id}-status-select`}
                 placeholder={t('bento.hero.status', 'Status')}
                 value={ticket.status_id ?? ''}
                 options={scopedStatusOptions}
-                onValueChange={(value: string) => void onSelectChange('status_id', value)}
+                onValueChange={(value: string) => void commitField('status_id', value)}
                 disabled={workflowLocked || isFrozen('status_id')}
                 className="!w-full"
               />
-            </div>
+            ))}
           </HeroField>
           <HeroField label={t('bento.hero.priority', 'Priority')}>
-            <div className={fieldWrapClass('priority_id')}>
+            {renderLiveField('priority_id', '', (
               <CustomSelect
                 id={`${id}-priority-select`}
                 placeholder={t('bento.hero.priority', 'Priority')}
                 value={ticket.priority_id ?? ''}
                 options={priorityJsxOptions}
-                onValueChange={(value: string) => void onSelectChange('priority_id', value)}
+                onValueChange={(value: string) => void commitField('priority_id', value)}
                 disabled={workflowLocked || isFrozen('priority_id')}
                 className="!w-full"
               />
-            </div>
+            ))}
           </HeroField>
           <HeroField label={t('bento.hero.board', 'Board')}>
-            <div className={fieldWrapClass('board_id')}>
+            {renderLiveField('board_id', '', (
               <CustomSelect
                 id={`${id}-board-select`}
                 placeholder={t('bento.hero.board', 'Board')}
                 value={ticket.board_id ?? ''}
                 options={boardOptions}
-                onValueChange={(value: string) => void onSelectChange('board_id', value)}
+                onValueChange={(value: string) => void commitField('board_id', value)}
                 disabled={workflowLocked || isFrozen('board_id')}
                 className="!w-full"
               />
-            </div>
+            ))}
           </HeroField>
           <HeroField label={t('bento.hero.assignedTo', 'Assigned to')}>
-            <div className={`${fieldWrapClass('assigned_to')} flex items-center gap-1.5 flex-wrap`}>
+            {renderLiveField('assigned_to', 'flex items-center gap-1.5 flex-wrap', (
+              <>
               <UserAndTeamPicker
                 id={`${id}-assignee-picker`}
                 value={ticket.assigned_to ?? ''}
-                onValueChange={(value) => void onSelectChange('assigned_to', value)}
+                onValueChange={(value) => void commitField('assigned_to', value)}
                 onTeamSelect={async (teamId) => {
                   await onAssignTeam?.(teamId);
                 }}
@@ -406,10 +547,11 @@ export function BentoHero({
                   </Badge>
                 </Tooltip>
               ) : null}
-            </div>
+              </>
+            ))}
           </HeroField>
           <HeroField label={t('bento.hero.due', 'Due')}>
-            <div className={fieldWrapClass('due_date')}>
+            {renderLiveField('due_date', '', (
               <DatePicker
                 id={`${id}-due-date-picker`}
                 value={dueDate && !Number.isNaN(dueDate.getTime()) ? dueDate : undefined}
@@ -417,23 +559,23 @@ export function BentoHero({
                 placeholder={t('bento.hero.noDueDate', 'No due date')}
                 disabled={isFrozen('due_date')}
               />
-            </div>
+            ))}
           </HeroField>
           {responseStateTrackingEnabled ? (
             <HeroField label={t('bento.hero.replyStatus', 'Reply status')}>
-              <div className={fieldWrapClass('response_state')}>
+              {renderLiveField('response_state', '', (
                 <CustomSelect
                   id={`${id}-response-state-select`}
                   placeholder={t('bento.hero.replyStatus', 'Reply status')}
                   value={(ticket.response_state as string | null) ?? 'none'}
                   options={responseStateOptions}
                   onValueChange={(value: string) =>
-                    void onSelectChange('response_state', value === 'none' ? null : value)
+                    void commitField('response_state', value === 'none' ? null : value)
                   }
                   disabled={isFrozen('response_state')}
                   className="!w-full"
                 />
-              </div>
+              ))}
             </HeroField>
           ) : null}
         </div>

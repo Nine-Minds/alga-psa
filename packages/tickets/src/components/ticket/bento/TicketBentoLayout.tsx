@@ -44,6 +44,7 @@ import { SlaClocksTile } from './SlaClocksTile';
 import { NextVisitTile, AppointmentRequestsTile, CallsEmailsTile, BillingTile } from './dataTiles';
 import { TimeLoggedSummary } from './TimeLoggedSummary';
 import type { TicketSlaFields } from './slaClocks';
+import type { TicketLiveConflictState } from '../ticketLiveFields';
 
 function formatElapsed(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -77,6 +78,11 @@ export interface TicketBentoLayoutProps {
   taskActions?: React.ReactNode;
   liveHighlightedFields?: string[];
   liveFrozenFields?: string[];
+  liveFieldConflicts?: Partial<Record<string, TicketLiveConflictState>>;
+  onKeepLiveConflict?: (field: string) => void;
+  onTakeLiveConflict?: (field: string) => void;
+  liveEditingUsers?: Partial<Record<string, string[]>>;
+  onLiveEditingFieldChange?: (field: string | null) => void;
   /** Opens the agent schedule drawer (global drawer system). */
   onAgentClick?: (userId: string) => void;
   /** Client locations for resolving the ticket's location display line. */
@@ -866,6 +872,11 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           taskActions={props.taskActions}
           liveHighlightedFields={props.liveHighlightedFields}
           liveFrozenFields={props.liveFrozenFields}
+          liveFieldConflicts={props.liveFieldConflicts}
+          onKeepLiveConflict={props.onKeepLiveConflict}
+          onTakeLiveConflict={props.onTakeLiveConflict}
+          liveEditingUsers={props.liveEditingUsers}
+          onLiveEditingFieldChange={props.onLiveEditingFieldChange}
         />
       </div>
       {/* Mobile: timeline first, then state tiles (SLA/checklist lead the right
