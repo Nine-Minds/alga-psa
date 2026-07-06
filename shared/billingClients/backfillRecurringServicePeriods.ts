@@ -111,10 +111,11 @@ function buildRecordIdSet(records: IRecurringServicePeriodRecord[]) {
 export function backfillRecurringServicePeriods(
   input: BackfillRecurringServicePeriodsInput,
 ): IRecurringServicePeriodBackfillPlan {
+  const ledgerRecords = sortRecords(
+    (input.existingRecords ?? []).filter((record) => record.lifecycleState !== 'archived'),
+  );
   const existingRecords = sortRecords(
-    (input.existingRecords ?? []).filter(
-      (record) => record.lifecycleState !== 'archived' && record.lifecycleState !== 'superseded',
-    ),
+    ledgerRecords.filter((record) => record.lifecycleState !== 'superseded'),
   );
   const historicalBoundaryEnd = resolveHistoricalBoundaryEnd(
     existingRecords,
@@ -160,10 +161,10 @@ export function backfillRecurringServicePeriods(
       : [],
   );
   const futureScopeExistingRecords = historicalBoundaryEnd
-    ? existingRecords.filter(
+    ? ledgerRecords.filter(
         (record) => compareDateOnly(record.servicePeriod.end, historicalBoundaryEnd) > 0,
       )
-    : existingRecords;
+    : ledgerRecords;
 
   const regenerationPlan = regenerateRecurringServicePeriods({
     existingRecords: futureScopeExistingRecords,

@@ -237,6 +237,105 @@ describe('recurring service period backfill', () => {
     });
   });
 
+  it('allocates replacements above superseded revision history and reruns as a no-op', () => {
+    const sourceObligation = buildPersistedRecurringObligationRef({
+      obligationId: 'line-superseded-gap',
+      obligationType: 'contract_line',
+      chargeFamily: 'hourly',
+    });
+    const scheduleKey = 'schedule:tenant-1:contract_line:line-superseded-gap:client:arrears';
+    const billedRecord = buildRecurringServicePeriodRecord({
+      recordId: 'rsp_billed_may_r1',
+      scheduleKey,
+      periodKey: 'period:2026-04-01:2026-05-01',
+      sourceObligation,
+      lifecycleState: 'billed',
+      servicePeriod: {
+        start: '2026-04-01',
+        end: '2026-05-01',
+        semantics: 'half_open',
+      },
+      invoiceWindow: {
+        start: '2026-05-01',
+        end: '2026-06-01',
+        semantics: 'half_open',
+      },
+      invoiceLinkage: buildRecurringServicePeriodInvoiceLinkage({
+        invoiceChargeDetailId: 'detail-billed-may',
+      }),
+    });
+    const supersededJune = buildRecurringServicePeriodRecord({
+      recordId: 'rsp_june_r1_superseded',
+      scheduleKey,
+      periodKey: 'period:2026-05-01:2026-06-01',
+      sourceObligation,
+      lifecycleState: 'superseded',
+      revision: 1,
+      servicePeriod: {
+        start: '2026-05-01',
+        end: '2026-06-01',
+        semantics: 'half_open',
+      },
+      invoiceWindow: {
+        start: '2026-06-01',
+        end: '2026-07-01',
+        semantics: 'half_open',
+      },
+    });
+    const juneCandidate = buildRecurringServicePeriodRecord({
+      recordId: 'rsp_june_candidate_r1',
+      scheduleKey,
+      periodKey: supersededJune.periodKey,
+      sourceObligation,
+      revision: 1,
+      servicePeriod: supersededJune.servicePeriod,
+      invoiceWindow: supersededJune.invoiceWindow,
+    });
+
+    const firstBackfill = backfillRecurringServicePeriods({
+      candidateRecords: [juneCandidate],
+      existingRecords: [billedRecord, supersededJune],
+      candidateCoverageEnd: '2026-07-01',
+      backfilledAt: '2026-07-06T18:30:00.000Z',
+      sourceRuleVersion: 'client-schedule:v1',
+      sourceRunKey: 'fix-all-first',
+      legacyBilledThroughEnd: '2026-05-01',
+      recordIdFactory: ({ scheduleKey, periodKey, revision }) =>
+        `${scheduleKey}:${periodKey}:r${revision}`,
+    });
+
+    expect(firstBackfill.backfilledRecords).toMatchObject([
+      {
+        recordId: `${scheduleKey}:${supersededJune.periodKey}:r2`,
+        periodKey: supersededJune.periodKey,
+        revision: 2,
+        lifecycleState: 'generated',
+      },
+    ]);
+    expect(firstBackfill.realignedRecords).toEqual([]);
+    expect(firstBackfill.supersededRecords).toEqual([]);
+
+    const rerunBackfill = backfillRecurringServicePeriods({
+      candidateRecords: [juneCandidate],
+      existingRecords: [billedRecord, supersededJune, ...firstBackfill.backfilledRecords],
+      candidateCoverageEnd: '2026-07-01',
+      backfilledAt: '2026-07-06T18:35:00.000Z',
+      sourceRuleVersion: 'client-schedule:v1',
+      sourceRunKey: 'fix-all-rerun',
+      legacyBilledThroughEnd: '2026-05-01',
+      recordIdFactory: ({ scheduleKey, periodKey, revision }) =>
+        `${scheduleKey}:${periodKey}:r${revision}`,
+    });
+
+    expect(rerunBackfill.backfilledRecords).toEqual([]);
+    expect(rerunBackfill.realignedRecords).toEqual([]);
+    expect(rerunBackfill.supersededRecords).toEqual([]);
+    expect(rerunBackfill.activeRecords).toEqual([
+      billedRecord,
+      firstBackfill.backfilledRecords[0],
+    ]);
+  });
+
   it('rejects candidate periods that overlap the billed-history boundary', () => {
     const sourceObligation = buildPersistedRecurringObligationRef({
       obligationId: 'line-overlap',
