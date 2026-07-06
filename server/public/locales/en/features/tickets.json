@@ -273,6 +273,7 @@
     "saveCommentFailed": "Failed to save comment changes",
     "updateDescriptionFailed": "Failed to update description",
     "prepareTimeEntryFailed": "An error occurred while preparing the time entry. Please try again.",
+    "scheduleVisitFailed": "Failed to open the scheduler",
     "updateContactFailed": "Failed to update contact",
     "updateClientFailed": "Failed to update client",
     "updateLocationFailed": "Failed to update location",
@@ -1544,7 +1545,17 @@
       "changeClient": "Change client",
       "teamFallback": "Team",
       "teamSectionLabel": "Assign a team",
-      "addAgentsOrTeam": "Add agents or a team…"
+      "addAgentsOrTeam": "Add agents or a team…",
+      "appointmentRequests": "Appointment requests",
+      "noAppointmentRequests": "No appointment requests",
+      "appointment": "Appointment",
+      "appointmentTimeUnset": "Time not set",
+      "apptStatus": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "declined": "Declined",
+        "cancelled": "Cancelled"
+      }
     },
     "timeline": {
       "subtitle": "Replies, time, and system changes in one place",

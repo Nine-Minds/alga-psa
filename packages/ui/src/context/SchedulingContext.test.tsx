@@ -43,6 +43,7 @@ describe('SchedulingContext', () => {
     const callbacks = {
       renderAgentSchedule: (agentId: string) => <div data-testid={`custom-${agentId}`} />,
       launchTimeEntry: launchSpy,
+      launchScheduleEntry: vi.fn(),
       fetchTimeEntriesForTicket: vi.fn(),
       deleteTimeEntry: vi.fn(),
     };

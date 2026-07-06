@@ -41,7 +41,7 @@ import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from '@alga-psa/ui/compo
 import { BentoHero } from './BentoHero';
 import { BentoTimelineTile } from './BentoTimelineTile';
 import { SlaClocksTile } from './SlaClocksTile';
-import { NextVisitTile, CallsEmailsTile, BillingTile } from './dataTiles';
+import { NextVisitTile, AppointmentRequestsTile, CallsEmailsTile, BillingTile } from './dataTiles';
 import { TimeLoggedSummary } from './TimeLoggedSummary';
 import type { TicketSlaFields } from './slaClocks';
 
@@ -81,6 +81,10 @@ export interface TicketBentoLayoutProps {
   onAgentClick?: (userId: string) => void;
   /** Client locations for resolving the ticket's location display line. */
   locations?: { location_id: string; location_name?: string | null; address_line1?: string | null; city?: string | null }[];
+  /** Opens the scheduler drawer pre-scoped to this ticket (global drawer system). */
+  onScheduleVisit?: () => void;
+  /** Bumped by the parent after a visit is scheduled so the "Next visit" tile refetches. */
+  nextVisitRefreshKey?: number;
   // Timeline
   conversations: IComment[];
   userMap: Record<string, CommentUserAuthor>;
@@ -550,9 +554,16 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         <NextVisitTile
           id={`${id}-next-visit-tile`}
           ticketId={ticketId}
+          refreshKey={props.nextVisitRefreshKey}
           initialData={props.bentoStreams?.scheduleEntries}
+          onScheduleVisit={props.onScheduleVisit}
         />
       </Suspense>
+      <AppointmentRequestsTile
+        id={`${id}-appointment-requests-tile`}
+        ticketId={ticketId}
+        refreshKey={props.nextVisitRefreshKey}
+      />
       <Suspense fallback={<BentoTileSkeleton id={`${id}-calls-emails-tile-loading`} title={t('bento.tiles.callsAndEmails', 'Calls and emails')} />}>
         <CallsEmailsTile
           id={`${id}-calls-emails-tile`}

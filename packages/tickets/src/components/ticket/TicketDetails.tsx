@@ -977,6 +977,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isRunning, setIsRunning] = useState(false);
     const [timeDescription, setTimeDescription] = useState('');
     const [timeEntriesRefreshKey, setTimeEntriesRefreshKey] = useState(0);
+    const [nextVisitRefreshKey, setNextVisitRefreshKey] = useState(0);
     const [tags, setTags] = useState<ITag[]>(bootstrap?.tags ?? []);
     const { tags: allTags } = useTags();
     const [currentTimeSheet, setCurrentTimeSheet] = useState<ITimeSheet | null>(null);
@@ -1021,7 +1022,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // NOTE: ITIL categories are now managed through the unified category system
 
     const { openDrawer, closeDrawer, replaceDrawer } = useDrawer();
-    const { launchTimeEntry, deleteTimeEntry } = useSchedulingCallbacks();
+    const { launchTimeEntry, deleteTimeEntry, launchScheduleEntry } = useSchedulingCallbacks();
 
     const resetTicketDeleteState = useCallback(() => {
         if (isTicketDeleteProcessing) return;
@@ -2113,6 +2114,29 @@ const handleClose = () => {
             });
         } catch (error) {
             handleError(error, t('messages.prepareTimeEntryFailed'));
+        }
+    };
+
+    const handleScheduleVisit = async () => {
+        try {
+            if (!ticket.ticket_id) {
+                toast.error(t('messages.ticketIdMissing'));
+                return;
+            }
+
+            await launchScheduleEntry({
+                openDrawer,
+                closeDrawer,
+                context: {
+                    workItemId: ticket.ticket_id,
+                    workItemType: 'ticket',
+                    title: ticket.title || t('bento.tiles.scheduledWork', 'Scheduled work'),
+                    clientName: client?.client_name ?? null,
+                },
+                onComplete: () => setNextVisitRefreshKey((value) => value + 1),
+            });
+        } catch (error) {
+            handleError(error, t('messages.scheduleVisitFailed', { defaultValue: 'Failed to open the scheduler' }));
         }
     };
 
@@ -3227,6 +3251,8 @@ const handleClose = () => {
                     onPause={handlePauseClick}
                     onStop={handleStopClick}
                     onAddTimeEntry={handleAddTimeEntry}
+                    onScheduleVisit={handleScheduleVisit}
+                    nextVisitRefreshKey={nextVisitRefreshKey}
                     userId={userId || ''}
                     dateTimeFormat={dateTimeFormat}
                     timeEntriesRefreshKey={timeEntriesRefreshKey}

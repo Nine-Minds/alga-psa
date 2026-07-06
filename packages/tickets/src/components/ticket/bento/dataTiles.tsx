@@ -1,17 +1,21 @@
 'use client';
 
 import React, { use, useEffect, useRef, useState } from 'react';
-import { Calendar, Phone, CreditCard, Plus } from 'lucide-react';
+import { Calendar, CalendarCheck, Phone, CreditCard, Plus } from 'lucide-react';
+import { fromZonedTime } from 'date-fns-tz';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/BentoTile';
 import {
   getTicketScheduleEntries,
   getTicketInteractions,
   getTicketBillingRollup,
+  getTicketAppointmentRequests,
   type TicketScheduleEntrySummary,
   type TicketInteractionSummary,
   type TicketBillingRollup,
+  type TicketAppointmentRequestSummary,
 } from '../../../actions/ticketBentoActions';
 
 /**
@@ -95,11 +99,14 @@ export function NextVisitTile({
   ticketId,
   refreshKey = 0,
   initialData,
+  onScheduleVisit,
 }: {
   id: string;
   ticketId: string;
   refreshKey?: number;
   initialData?: Promise<TicketScheduleEntrySummary[]>;
+  /** Opens the scheduler drawer pre-scoped to this ticket. Falls back to a dispatch link when absent. */
+  onScheduleVisit?: () => void;
 }) {
   const { t } = useTranslation('features/tickets');
   const { data, error, loading } = useTileData(
@@ -113,19 +120,48 @@ export function NextVisitTile({
   const past = (data ?? []).filter((entry) => !entry.isUpcoming).slice(0, 1);
 
   return (
-    <BentoTile id={id} title={t('bento.tiles.nextVisit', 'Next visit')} icon={<Calendar className="h-4 w-4" />} error={error}>
+    <BentoTile
+      id={id}
+      title={t('bento.tiles.nextVisit', 'Next visit')}
+      icon={<Calendar className="h-4 w-4" />}
+      error={error}
+      action={
+        onScheduleVisit ? (
+          <button
+            id={`${id}-schedule`}
+            type="button"
+            aria-label={t('bento.tiles.scheduleVisit', 'Schedule a visit')}
+            className="text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))]"
+            onClick={onScheduleVisit}
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        ) : undefined
+      }
+    >
       {loading ? (
         <TileSkeleton id={`${id}-loading`} />
       ) : upcoming.length === 0 && past.length === 0 ? (
         <div>
           <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.nothingScheduled', 'Nothing scheduled')}</BentoTileEmpty>
-          <a
-            id={`${id}-schedule-link`}
-            href="/msp/technician-dispatch"
-            className="inline-flex items-center gap-1 text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline mt-1"
-          >
-            <Plus className="h-3 w-3" /> {t('bento.tiles.scheduleVisit', 'Schedule a visit')}
-          </a>
+          {onScheduleVisit ? (
+            <button
+              id={`${id}-schedule-link`}
+              type="button"
+              onClick={onScheduleVisit}
+              className="inline-flex items-center gap-1 text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline mt-1"
+            >
+              <Plus className="h-3 w-3" /> {t('bento.tiles.scheduleVisit', 'Schedule a visit')}
+            </button>
+          ) : (
+            <a
+              id={`${id}-schedule-link`}
+              href="/msp/technician-dispatch"
+              className="inline-flex items-center gap-1 text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline mt-1"
+            >
+              <Plus className="h-3 w-3" /> {t('bento.tiles.scheduleVisit', 'Schedule a visit')}
+            </a>
+          )}
         </div>
       ) : (
         <div className="space-y-2">
@@ -155,6 +191,110 @@ function ScheduleRow({ id, entry, t }: { id: string; entry: TicketScheduleEntryS
         </div>
       </div>
     </div>
+  );
+}
+
+function appointmentStatusVariant(status: string): BadgeVariant {
+  switch (status) {
+    case 'approved':
+      return 'success';
+    case 'pending':
+      return 'warning';
+    case 'declined':
+    case 'cancelled':
+      return 'error';
+    default:
+      return 'outline';
+  }
+}
+
+function formatAppointmentDateTime(date: string | null, time: string | null, tz: string | null): string | null {
+  if (!date || !time) return null;
+  try {
+    const dt = fromZonedTime(`${date}T${time}:00`, tz || 'UTC');
+    if (Number.isNaN(dt.getTime())) return null;
+    return dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  } catch {
+    return null;
+  }
+}
+
+function AppointmentRequestRow({
+  id,
+  request,
+  t,
+}: {
+  id: string;
+  request: TicketAppointmentRequestSummary;
+  t: (key: string, defaultValue: string) => string;
+}) {
+  const when = formatAppointmentDateTime(request.requestedDate, request.requestedTime, request.requesterTimezone);
+  const duration = request.requestedDurationMinutes ? formatMinutes(request.requestedDurationMinutes) : null;
+  return (
+    <li id={id} className="flex items-start justify-between gap-2 py-1.5 first:pt-0 last:pb-0 text-sm">
+      <div className="min-w-0">
+        <div className="truncate text-[rgb(var(--color-text-700))]">
+          {request.serviceName || t('bento.tiles.appointment', 'Appointment')}
+        </div>
+        <div className="text-xs text-[rgb(var(--color-text-500))]">
+          {when ?? t('bento.tiles.appointmentTimeUnset', 'Time not set')}
+          {duration ? ` · ${duration}` : ''}
+        </div>
+      </div>
+      <Badge variant={appointmentStatusVariant(request.status)} size="sm" className="flex-shrink-0">
+        {t(`bento.tiles.apptStatus.${request.status}`, request.status)}
+      </Badge>
+    </li>
+  );
+}
+
+/**
+ * "Appointment requests" tile — client-requested appointment slots linked to
+ * this ticket (pending/approved/declined). Distinct from booked visits in the
+ * "Next visit" tile. Read-only surface, matching the legacy Entry layout.
+ */
+export function AppointmentRequestsTile({
+  id,
+  ticketId,
+  refreshKey = 0,
+}: {
+  id: string;
+  ticketId: string;
+  refreshKey?: number;
+}) {
+  const { t } = useTranslation('features/tickets');
+  const { data, error, loading } = useTileData(
+    () => getTicketAppointmentRequests(ticketId),
+    [ticketId, refreshKey],
+    t,
+  );
+
+  const requests = data ?? [];
+
+  return (
+    <BentoTile
+      id={id}
+      title={t('bento.tiles.appointmentRequests', 'Appointment requests')}
+      icon={<CalendarCheck className="h-4 w-4" />}
+      error={error}
+    >
+      {loading ? (
+        <TileSkeleton id={`${id}-loading`} />
+      ) : requests.length === 0 ? (
+        <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.noAppointmentRequests', 'No appointment requests')}</BentoTileEmpty>
+      ) : (
+        <ul className="divide-y divide-[rgb(var(--color-border-100))]">
+          {requests.map((request) => (
+            <AppointmentRequestRow
+              key={request.appointmentRequestId}
+              id={`${id}-row-${request.appointmentRequestId}`}
+              request={request}
+              t={t}
+            />
+          ))}
+        </ul>
+      )}
+    </BentoTile>
   );
 }
 
