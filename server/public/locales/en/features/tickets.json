@@ -330,6 +330,7 @@
     "clientSuffix": " (Client)",
     "internalCommentTooltip": "Internal Comment",
     "resolutionCommentTooltip": "Resolution Comment",
+    "clientCommentTooltip": "Client-facing Comment",
     "unknownUser": "Unknown User",
     "editCommentAriaLabel": "Edit comment",
     "deleteCommentAriaLabel": "Delete comment",
