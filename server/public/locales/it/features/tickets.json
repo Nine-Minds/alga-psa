@@ -294,7 +294,8 @@
     "addCommentFailed": "Impossibile aggiungere il commento",
     "deleteTimeEntryFailed": "Impossibile eliminare la voce di tempo",
     "timeEntryDeleted": "Voce di tempo eliminata",
-    "closeFailed": "Impossibile chiudere il ticket"
+    "closeFailed": "Impossibile chiudere il ticket",
+    "scheduleVisitFailed": "Impossibile aprire il pianificatore"
   },
   "conversation": {
     "comments": "Commenti",
@@ -342,7 +343,8 @@
     "commentEditor": "Editor commenti",
     "deleteComment": "Elimina commento",
     "deleteCommentImages": "Elimina commento + immagini",
-    "deleteCommentOnly": "Elimina solo il commento"
+    "deleteCommentOnly": "Elimina solo il commento",
+    "clientCommentTooltip": "Commento visibile al cliente"
   },
   "responseState": {
     "awaitingYourResponse": "In attesa della tua risposta",
@@ -1451,7 +1453,9 @@
       "resolutionSla": "SLA di risoluzione:",
       "responseWaitingOnUs": "In attesa da parte nostra",
       "responseWaitingOnClient": "In attesa del cliente",
-      "responseNone": "Nessuna risposta necessaria"
+      "responseNone": "Nessuna risposta necessaria",
+      "additionalAgentsTooltip": "Agenti aggiuntivi:",
+      "unknownAgent": "Agente sconosciuto"
     },
     "layout": {
       "grid": "Griglia",
@@ -1524,7 +1528,34 @@
       "addDocument": "Aggiungi un documento",
       "timeLoggedPerDay": "Tempo registrato per giorno: {{details}}",
       "acrossEntries_one": "su {{count}} voce",
-      "acrossEntries_other": "su {{count}} voci"
+      "acrossEntries_other": "su {{count}} voci",
+      "team": "Team",
+      "startTimer": "Avvia timer",
+      "timerLockedHint": "Un altro timer è già in esecuzione",
+      "billable": "Fatturabile",
+      "nothingBillable": "Ancora nulla di fatturabile",
+      "editContact": "Modifica contatto",
+      "selectOrChangeContact": "Seleziona o cambia contatto",
+      "clearContact": "Rimuovi contatto",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "addContact": "Aggiungi contatto",
+      "setClientToAddContact": "Imposta prima un cliente per aggiungere un contatto",
+      "logInteraction": "Registra chiamata o email",
+      "changeClient": "Cambia cliente",
+      "teamFallback": "Team",
+      "teamSectionLabel": "Assegna un team",
+      "addAgentsOrTeam": "Aggiungi agenti o un team…",
+      "appointmentRequests": "Richieste di appuntamento",
+      "noAppointmentRequests": "Nessuna richiesta di appuntamento",
+      "appointment": "Appuntamento",
+      "appointmentTimeUnset": "Orario non impostato",
+      "apptStatus": {
+        "pending": "In attesa",
+        "approved": "Approvato",
+        "declined": "Rifiutato",
+        "cancelled": "Annullato"
+      }
     },
     "timeline": {
       "subtitle": "Risposte, tempo e modifiche di sistema in un unico posto",
@@ -1562,7 +1593,53 @@
       "logged": "registrato",
       "monitoringActor": "Monitoraggio",
       "occurrence": "(occorrenza {{count}})",
-      "loadError": "Impossibile caricare la cronologia"
+      "loadError": "Impossibile caricare la cronologia",
+      "fieldCleared": "rimosso {{field}}",
+      "field": {
+        "title": "titolo",
+        "status": "stato",
+        "priority": "priorità",
+        "assigned_to": "assegnatario",
+        "assigned_team": "team",
+        "board": "coda",
+        "category": "categoria",
+        "subcategory": "sottocategoria",
+        "client": "cliente",
+        "contact_name": "contatto",
+        "contact": "contatto",
+        "due_date": "scadenza",
+        "response_state": "stato risposta",
+        "closed_at": "data di chiusura",
+        "closed_by": "chiuso da",
+        "url": "URL"
+      },
+      "event": {
+        "created": "creato",
+        "updated": "aggiornato",
+        "status_changed": "stato modificato",
+        "closed": "chiuso",
+        "reopened": "riaperto",
+        "priority_changed": "priorità modificata",
+        "assigned": "assegnato",
+        "unassigned": "assegnazione rimossa",
+        "board_moved": "spostato di coda",
+        "response_state_changed": "stato risposta modificato",
+        "comment_added": "commento aggiunto",
+        "comment_updated": "commento aggiornato",
+        "internal_note_added": "nota interna aggiunta",
+        "customer_replied": "cliente ha risposto",
+        "message_added": "messaggio aggiunto",
+        "document_attached": "documento allegato",
+        "document_removed": "documento rimosso",
+        "inbound_email_received": "email in entrata ricevuta",
+        "bundle_reopened": "bundle riaperto",
+        "checklist_item_completed": "elemento della checklist completato",
+        "checklist_item_uncompleted": "elemento della checklist non completato",
+        "checklist_template_applied": "modello di checklist applicato",
+        "close_rules_overridden": "regole di chiusura sovrascritte",
+        "close_rules_bypassed": "regole di chiusura ignorate",
+        "auto_close_warning_sent": "avviso di chiusura automatica inviato"
+      }
     }
   }
 }

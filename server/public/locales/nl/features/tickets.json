@@ -294,7 +294,8 @@
     "addCommentFailed": "Kan opmerking niet toevoegen",
     "deleteTimeEntryFailed": "Kan tijdregistratie niet verwijderen",
     "timeEntryDeleted": "Tijdregistratie verwijderd",
-    "closeFailed": "Ticket sluiten is mislukt"
+    "closeFailed": "Ticket sluiten is mislukt",
+    "scheduleVisitFailed": "Kan de planner niet openen"
   },
   "conversation": {
     "comments": "Reacties",
@@ -342,7 +343,8 @@
     "commentEditor": "Reactie-editor",
     "deleteComment": "Reactie verwijderen",
     "deleteCommentImages": "Reactie + afbeeldingen verwijderen",
-    "deleteCommentOnly": "Alleen reactie verwijderen"
+    "deleteCommentOnly": "Alleen reactie verwijderen",
+    "clientCommentTooltip": "Opmerking voor de klant"
   },
   "responseState": {
     "awaitingYourResponse": "Wacht op uw reactie",
@@ -1451,7 +1453,9 @@
       "resolutionSla": "Oplossings-SLA:",
       "responseWaitingOnUs": "Wacht op ons",
       "responseWaitingOnClient": "Wacht op klant",
-      "responseNone": "Geen antwoord nodig"
+      "responseNone": "Geen antwoord nodig",
+      "additionalAgentsTooltip": "Extra medewerkers:",
+      "unknownAgent": "Onbekende medewerker"
     },
     "layout": {
       "grid": "Raster",
@@ -1524,7 +1528,34 @@
       "addDocument": "Document toevoegen",
       "timeLoggedPerDay": "Geregistreerde tijd per dag: {{details}}",
       "acrossEntries_one": "over {{count}} registratie",
-      "acrossEntries_other": "over {{count}} registraties"
+      "acrossEntries_other": "over {{count}} registraties",
+      "team": "Team",
+      "startTimer": "Timer starten",
+      "timerLockedHint": "Er loopt al een andere timer",
+      "billable": "Factureerbaar",
+      "nothingBillable": "Nog niets factureerbaar",
+      "editContact": "Contact bewerken",
+      "selectOrChangeContact": "Contact selecteren of wijzigen",
+      "clearContact": "Contact wissen",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "addContact": "Contact toevoegen",
+      "setClientToAddContact": "Stel eerst een klant in om een contact toe te voegen",
+      "logInteraction": "Gesprek of e-mail vastleggen",
+      "changeClient": "Klant wijzigen",
+      "teamFallback": "Team",
+      "teamSectionLabel": "Team toewijzen",
+      "addAgentsOrTeam": "Medewerkers of een team toevoegen…",
+      "appointmentRequests": "Afspraakverzoeken",
+      "noAppointmentRequests": "Geen afspraakverzoeken",
+      "appointment": "Afspraak",
+      "appointmentTimeUnset": "Tijd niet ingesteld",
+      "apptStatus": {
+        "pending": "In afwachting",
+        "approved": "Goedgekeurd",
+        "declined": "Afgewezen",
+        "cancelled": "Geannuleerd"
+      }
     },
     "timeline": {
       "subtitle": "Reacties, tijd en systeemwijzigingen op één plek",
@@ -1562,7 +1593,53 @@
       "logged": "geregistreerd",
       "monitoringActor": "Monitoring",
       "occurrence": "(gebeurtenis {{count}})",
-      "loadError": "Kan de tijdlijn niet laden"
+      "loadError": "Kan de tijdlijn niet laden",
+      "fieldCleared": "{{field}} gewist",
+      "field": {
+        "title": "titel",
+        "status": "status",
+        "priority": "prioriteit",
+        "assigned_to": "toegewezen medewerker",
+        "assigned_team": "team",
+        "board": "board",
+        "category": "categorie",
+        "subcategory": "subcategorie",
+        "client": "klant",
+        "contact_name": "contact",
+        "contact": "contact",
+        "due_date": "vervaldatum",
+        "response_state": "reactiestatus",
+        "closed_at": "afsluitdatum",
+        "closed_by": "afgesloten door",
+        "url": "URL"
+      },
+      "event": {
+        "created": "aangemaakt",
+        "updated": "bijgewerkt",
+        "status_changed": "status gewijzigd",
+        "closed": "afgesloten",
+        "reopened": "heropend",
+        "priority_changed": "prioriteit gewijzigd",
+        "assigned": "toegewezen",
+        "unassigned": "toewijzing verwijderd",
+        "board_moved": "board gewijzigd",
+        "response_state_changed": "reactiestatus gewijzigd",
+        "comment_added": "opmerking toegevoegd",
+        "comment_updated": "opmerking bijgewerkt",
+        "internal_note_added": "interne notitie toegevoegd",
+        "customer_replied": "klant heeft gereageerd",
+        "message_added": "bericht toegevoegd",
+        "document_attached": "document bijgevoegd",
+        "document_removed": "document verwijderd",
+        "inbound_email_received": "inkomende e-mail ontvangen",
+        "bundle_reopened": "bundel heropend",
+        "checklist_item_completed": "checklistitem voltooid",
+        "checklist_item_uncompleted": "checklistitem niet meer voltooid",
+        "checklist_template_applied": "checklistsjabloon toegepast",
+        "close_rules_overridden": "afsluitregels overschreven",
+        "close_rules_bypassed": "afsluitregels omzeild",
+        "auto_close_warning_sent": "waarschuwing voor automatisch afsluiten verzonden"
+      }
     }
   }
 }
