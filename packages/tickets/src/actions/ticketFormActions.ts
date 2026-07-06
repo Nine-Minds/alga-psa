@@ -5,11 +5,10 @@ import { getAllUsers } from '@alga-psa/user-composition/actions';
 import { getAllBoards } from './board-actions';
 import { getAllPriorities, getPrioritiesByBoardType } from '@alga-psa/reference-data/actions';
 import { getAllClients, getClientById, getContactsByClient } from './clientLookupActions';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
-import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility';
+import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 
 export interface TicketFormData {
   users: IUser[];
@@ -94,8 +93,11 @@ export const getClientTicketFormData = withAuth(async (_user, { tenant }): Promi
     const { knex: db } = await createTenantKnex();
 
     const boards = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const userRecord = await trx('users')
-        .where({ user_id: _user.user_id, tenant })
+      const tenantScopedTable = <Row extends object = Record<string, any>>(table: string) =>
+        tenantDb(trx, tenant).table<Row>(table);
+
+      const userRecord = await tenantScopedTable('users')
+        .where({ user_id: _user.user_id })
         .first();
 
       if (!userRecord?.contact_id) {
@@ -109,17 +111,13 @@ export const getClientTicketFormData = withAuth(async (_user, { tenant }): Promi
       );
 
       const allowedBoards = visibility.visibleBoardIds === null
-        ? await trx('boards')
-          .where({ tenant })
+        ? await tenantScopedTable<IBoard>('boards')
           .andWhere('is_inactive', false)
-          .select('board_id', 'board_name')
         : visibility.visibleBoardIds.length === 0
           ? []
-          : await trx('boards')
-            .where({ tenant })
+          : await tenantScopedTable<IBoard>('boards')
             .andWhere('is_inactive', false)
-            .whereIn('board_id', visibility.visibleBoardIds)
-            .select('board_id', 'board_name');
+            .whereIn('board_id', visibility.visibleBoardIds);
 
       return allowedBoards;
     });
@@ -135,9 +133,19 @@ export const getClientTicketFormData = withAuth(async (_user, { tenant }): Promi
     }
 
     const defaultBoard = boards[0];
+    const defaultBoardId = defaultBoard.board_id;
+    if (!defaultBoardId) {
+      return {
+        priorities: [],
+        users: [],
+        boards,
+        statuses: [],
+        clients: [],
+      };
+    }
 
     // Get priorities filtered by the default board's priority type
-      const priorities = await getPrioritiesByBoardType(defaultBoard.board_id, 'ticket').catch((error: unknown) => {
+    const priorities = await getPrioritiesByBoardType(defaultBoardId, 'ticket').catch((error: unknown) => {
       console.error('Error fetching priorities for default board:', error);
       return [];
     });

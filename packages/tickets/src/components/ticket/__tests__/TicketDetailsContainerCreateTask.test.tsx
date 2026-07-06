@@ -6,7 +6,6 @@ import { cleanup, render, screen } from '@testing-library/react';
 import TicketDetailsContainer from '../TicketDetailsContainer';
 
 let lastTicketDetailsProps: any = null;
-let liveTicketUpdatesEnabled = false;
 
 vi.mock('next/server', () => ({
   NextRequest: class NextRequest {},
@@ -44,10 +43,6 @@ vi.mock('@alga-psa/ui/context', () => ({
   UnsavedChangesProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: liveTicketUpdatesEnabled, loading: false, error: null }),
-}));
-
 vi.mock('../TicketLiveProvider', () => ({
   TicketLiveProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="ticket-live-provider">{children}</div>
@@ -68,7 +63,6 @@ describe('TicketDetailsContainer renderCreateProjectTask passthrough', () => {
   });
 
   beforeEach(() => {
-    liveTicketUpdatesEnabled = false;
     lastTicketDetailsProps = null;
   });
 
@@ -102,7 +96,7 @@ describe('TicketDetailsContainer renderCreateProjectTask passthrough', () => {
     expect(lastTicketDetailsProps.renderCreateProjectTask).toBe(renderCreateProjectTask);
   });
 
-  it('T045: does not mount the live provider when the feature flag is off', () => {
+  it('T045: mounts the live provider for a ticket with tenant + ticket id', () => {
     render(
       <TicketDetailsContainer
         ticketData={{
@@ -126,7 +120,7 @@ describe('TicketDetailsContainer renderCreateProjectTask passthrough', () => {
       />
     );
 
-    expect(screen.queryByTestId('ticket-live-provider')).toBeNull();
+    expect(screen.getByTestId('ticket-live-provider')).toBeTruthy();
     expect(screen.getByTestId('ticket-details')).toBeTruthy();
   });
 });

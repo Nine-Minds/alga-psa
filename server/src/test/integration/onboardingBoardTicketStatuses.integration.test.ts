@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 type IntegrationState = {
@@ -24,7 +25,8 @@ const mockedSaveTenantOnboardingProgress = vi.fn(async () => ({ success: true })
 const mockedUpdateTenantOnboardingStatus = vi.fn(async () => ({ success: true }));
 const mockedRevalidatePath = vi.fn();
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
   createTenantKnex: vi.fn(async () => {
     const state = (globalThis as any)[hoisted.stateKey] as IntegrationState;
     if (!state.db) {
@@ -85,14 +87,33 @@ function hasColumn(columns: Record<string, unknown>, columnName: string): boolea
   return Object.prototype.hasOwnProperty.call(columns, columnName);
 }
 
+function tenantTable(tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function tenantRows() {
+  return tenantDb(db, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+function schemaTable(table: string) {
+  return tenantDb(db, '__test_schema__')
+    .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+}
+
+function globalCatalogTable(table: string) {
+  return tenantDb(db, '__test_global_catalog__')
+    .unscoped(table, 'test seeds and reads global reference catalog rows');
+}
+
 async function cleanupTenant(tenantId: string) {
-  await db('next_number').where({ tenant: tenantId }).delete().catch(() => undefined);
-  await db('priorities').where({ tenant: tenantId, item_type: 'ticket' }).delete().catch(() => undefined);
-  await db('statuses').where({ tenant: tenantId }).delete().catch(() => undefined);
-  await db('categories').where({ tenant: tenantId }).delete().catch(() => undefined);
-  await db('boards').where({ tenant: tenantId }).delete().catch(() => undefined);
-  await db('users').where({ tenant: tenantId }).delete().catch(() => undefined);
-  await db('tenants').where({ tenant: tenantId }).delete().catch(() => undefined);
+  await tenantTable(tenantId, 'next_number').delete().catch(() => undefined);
+  await tenantTable(tenantId, 'priorities').where({ item_type: 'ticket' }).delete().catch(() => undefined);
+  await tenantTable(tenantId, 'statuses').delete().catch(() => undefined);
+  await tenantTable(tenantId, 'categories').delete().catch(() => undefined);
+  await tenantTable(tenantId, 'boards').delete().catch(() => undefined);
+  await tenantTable(tenantId, 'users').delete().catch(() => undefined);
+  await tenantRows().where({ tenant: tenantId }).delete().catch(() => undefined);
 }
 
 async function seedTenantAndUser() {
@@ -100,7 +121,7 @@ async function seedTenantAndUser() {
   const userId = uuidv4();
   tenantsToCleanup.add(tenantId);
 
-  await db('tenants').insert({
+  await tenantRows().insert({
     tenant: tenantId,
     ...(hasColumn(tenantColumns, 'company_name')
       ? { company_name: `Tenant ${tenantId.slice(0, 8)}` }
@@ -110,7 +131,7 @@ async function seedTenantAndUser() {
     ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('users').insert({
+  await tenantTable(tenantId, 'users').insert({
     tenant: tenantId,
     user_id: userId,
     username: `user-${tenantId.slice(0, 8)}`,
@@ -125,7 +146,7 @@ async function seedTenantAndUser() {
 }
 
 async function seedStandardTicketStatuses() {
-  await db('standard_statuses')
+  await globalCatalogTable('standard_statuses')
     .insert([
       {
         standard_status_id: uuidv4(),
@@ -152,10 +173,10 @@ describe('Onboarding board-specific ticket statuses', () => {
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
     (globalThis as any)[hoisted.stateKey].db = db;
-    tenantColumns = await db('tenants').columnInfo();
-    userColumns = await db('users').columnInfo();
-    boardColumns = await db('boards').columnInfo();
-    nextNumberColumns = await db('next_number').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
+    boardColumns = await schemaTable('boards').columnInfo();
+    nextNumberColumns = await schemaTable('next_number').columnInfo();
   }, 180_000);
 
   afterEach(async () => {
@@ -201,13 +222,13 @@ describe('Onboarding board-specific ticket statuses', () => {
 
     expect(result.success).toBe(true);
 
-    const createdBoard = await db('boards')
-      .where({ tenant: tenantId, board_name: 'Support' })
+    const createdBoard = await tenantTable(tenantId, 'boards')
+      .where({ board_name: 'Support' })
       .first<{ board_id: string }>('board_id');
     expect(createdBoard?.board_id).toBeTruthy();
 
-    const createdStatuses = await db('statuses')
-      .where({ tenant: tenantId, board_id: createdBoard?.board_id, status_type: 'ticket' })
+    const createdStatuses = await tenantTable(tenantId, 'statuses')
+      .where({ board_id: createdBoard?.board_id, status_type: 'ticket' })
       .orderBy('order_number', 'asc')
       .select('board_id', 'name', 'is_closed', 'is_default');
 
@@ -215,14 +236,14 @@ describe('Onboarding board-specific ticket statuses', () => {
     expect(createdStatuses.every((status) => status.board_id === createdBoard?.board_id)).toBe(true);
     expect(createdStatuses.filter((status) => status.is_default && !status.is_closed)).toHaveLength(1);
     expect(
-      await db('statuses')
-        .where({ tenant: tenantId, status_type: 'ticket' })
+      await tenantTable(tenantId, 'statuses')
+        .where({ status_type: 'ticket' })
         .whereNull('board_id')
         .first()
     ).toBeUndefined();
 
-    const numbering = await db('next_number')
-      .where({ tenant: tenantId, entity_type: 'TICKET' })
+    const numbering = await tenantTable(tenantId, 'next_number')
+      .where({ entity_type: 'TICKET' })
       .first<{ prefix: string; padding_length: number; initial_value: number }>('prefix', 'padding_length', 'initial_value');
     expect(numbering?.prefix).toBe('TCK');
     expect(numbering?.padding_length).toBe(6);
@@ -244,7 +265,7 @@ describe('Onboarding board-specific ticket statuses', () => {
     const boardA = uuidv4();
     const boardB = uuidv4();
 
-    await db('boards').insert([
+    await tenantTable(tenantId, 'boards').insert([
       {
         tenant: tenantId,
         board_id: boardA,
@@ -259,7 +280,7 @@ describe('Onboarding board-specific ticket statuses', () => {
       },
     ]);
 
-    const standardStatuses = await db('standard_statuses')
+    const standardStatuses = await globalCatalogTable('standard_statuses')
       .where({ item_type: 'ticket' })
       .orderBy('display_order', 'asc')
       .limit(2)
@@ -269,7 +290,7 @@ describe('Onboarding board-specific ticket statuses', () => {
       throw new Error('Expected seeded standard ticket statuses');
     }
 
-    await db('statuses').insert({
+    await tenantTable(tenantId, 'statuses').insert({
       tenant: tenantId,
       board_id: boardA,
       status_id: uuidv4(),
@@ -296,8 +317,8 @@ describe('Onboarding board-specific ticket statuses', () => {
     expect(result.imported).toHaveLength(2);
     expect(result.skipped).toHaveLength(0);
 
-    const boardBStatuses = await db('statuses')
-      .where({ tenant: tenantId, board_id: boardB, status_type: 'ticket' })
+    const boardBStatuses = await tenantTable(tenantId, 'statuses')
+      .where({ board_id: boardB, status_type: 'ticket' })
       .orderBy('order_number', 'asc')
       .select('board_id', 'name', 'is_default');
 
@@ -307,8 +328,8 @@ describe('Onboarding board-specific ticket statuses', () => {
     expect(boardBStatuses.every((status) => status.board_id === boardB)).toBe(true);
     expect(boardBStatuses.filter((status) => status.is_default)).toHaveLength(1);
 
-    const boardAStatusCount = await db('statuses')
-      .where({ tenant: tenantId, board_id: boardA, status_type: 'ticket' })
+    const boardAStatusCount = await tenantTable(tenantId, 'statuses')
+      .where({ board_id: boardA, status_type: 'ticket' })
       .count<{ count: string }>('status_id as count')
       .first();
     expect(Number(boardAStatusCount?.count ?? 0)).toBe(1);

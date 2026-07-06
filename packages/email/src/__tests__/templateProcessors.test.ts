@@ -120,20 +120,34 @@ describe('CustomTemplateProcessor', () => {
  */
 function createFakeKnex(rows: Array<Record<string, any>>) {
   const lookups: Array<{ table: string; filters: Record<string, any> }> = [];
-  const knex = (table: string) => ({
-    where(filters: Record<string, any>) {
+
+  const normalizeColumn = (column: string) => column.split('.').pop() ?? column;
+  const normalizeFilters = (args: unknown[]): Record<string, any> => {
+    const [first, second] = args;
+    if (typeof first === 'string') {
+      return { [normalizeColumn(first)]: second };
+    }
+
+    return Object.fromEntries(
+      Object.entries(first as Record<string, any>).map(([key, value]) => [normalizeColumn(key), value])
+    );
+  };
+
+  const createQuery = (table: string, filters: Record<string, any> = {}) => ({
+    where(...args: unknown[]) {
+      return createQuery(table, { ...filters, ...normalizeFilters(args) });
+    },
+    async first() {
       lookups.push({ table, filters });
-      return {
-        async first() {
-          return rows.find(
-            (row) =>
-              row.__table === table &&
-              Object.entries(filters).every(([key, value]) => row[key] === value)
-          );
-        }
-      };
+      return rows.find(
+        (row) =>
+          row.__table === table &&
+          Object.entries(filters).every(([key, value]) => row[key] === value)
+      );
     }
   });
+
+  const knex = (table: string) => createQuery(table);
   return { knex: knex as any, lookups };
 }
 

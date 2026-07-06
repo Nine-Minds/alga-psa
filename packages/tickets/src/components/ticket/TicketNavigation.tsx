@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useContext } from 'react';
+import React, { useEffect, useState, useCallback, useContext, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -10,11 +10,22 @@ import { useCatalogShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { getAdjacentTicketIds } from '../../actions/optimizedTicketActions';
 import { parseReturnFilters, DEFAULT_TICKET_LIST_FILTERS } from '../../lib/ticketFilterUtils';
 
-interface TicketNavigationProps {
-  currentTicketId: string;
+export interface AdjacentTicketData {
+  prevTicketId: string | null;
+  nextTicketId: string | null;
+  prevTicketNumber: string | null;
+  nextTicketNumber: string | null;
+  currentPosition: number;
+  totalCount: number;
 }
 
-export default function TicketNavigation({ currentTicketId }: TicketNavigationProps) {
+interface TicketNavigationProps {
+  currentTicketId: string;
+  /** Server-started adjacent-tickets promise (computed with the same returnFilters). */
+  initialAdjacent?: Promise<AdjacentTicketData | null>;
+}
+
+export default function TicketNavigation({ currentTicketId, initialAdjacent }: TicketNavigationProps) {
   const { t } = useTranslation('features/tickets');
   const searchParams = useSearchParams();
   const unsavedChangesContext = useContext(UnsavedChangesContext);
@@ -31,7 +42,23 @@ export default function TicketNavigation({ currentTicketId }: TicketNavigationPr
 
   const returnFilters = searchParams?.get('returnFilters') ?? null;
 
+  const skipFirstAdjacentFetch = useRef(Boolean(initialAdjacent));
   useEffect(() => {
+    if (!initialAdjacent) return;
+    let cancelled = false;
+    initialAdjacent.then((data) => {
+      if (cancelled) return;
+      setAdjacentData(data);
+      setIsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [initialAdjacent]);
+
+  useEffect(() => {
+    if (skipFirstAdjacentFetch.current) {
+      skipFirstAdjacentFetch.current = false;
+      return;
+    }
     let cancelled = false;
     setIsLoading(true);
 

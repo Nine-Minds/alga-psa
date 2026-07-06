@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 import { IContractLineMapping } from 'server/src/interfaces/contract.interfaces';
 import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
@@ -24,9 +25,13 @@ export type DetailedContractLine = IContractLineMapping & {
 
 type TenantScopedKnex = Knex | Knex.Transaction;
 
+function tenantScopedTable(knex: TenantScopedKnex, tenant: string, table: string): Knex.QueryBuilder {
+  return tenantDb(knex, tenant).table(table);
+}
+
 async function isTemplateContract(knex: TenantScopedKnex, tenant: string, contractId: string): Promise<boolean> {
-  const record = await knex('contract_templates')
-    .where({ tenant, template_id: contractId })
+  const record = await tenantScopedTable(knex, tenant, 'contract_templates')
+    .where('template_id', contractId)
     .first('template_id');
 
   return Boolean(record);
@@ -54,8 +59,8 @@ export async function fetchContractLineMappings(
   const template = await isTemplateContract(knex, tenant, contractId);
 
   if (template) {
-    const rows = await knex('contract_template_lines')
-      .where({ tenant, template_id: contractId })
+    const rows = await tenantScopedTable(knex, tenant, 'contract_template_lines')
+      .where('template_id', contractId)
       .orderBy('display_order', 'asc')
       .select([
         'tenant',
@@ -70,8 +75,8 @@ export async function fetchContractLineMappings(
     return rows.map(mapContractLineRow);
   }
 
-  const rows = await knex('contract_lines')
-    .where({ tenant, contract_id: contractId })
+  const rows = await tenantScopedTable(knex, tenant, 'contract_lines')
+    .where('contract_id', contractId)
     .orderBy('display_order', 'asc')
     .select([
       'tenant',
@@ -94,11 +99,14 @@ export async function fetchDetailedContractLines(
   const template = await isTemplateContract(knex, tenant, contractId);
 
   if (template) {
-    const rows = await knex('contract_template_lines as lines')
-      .leftJoin('contract_template_line_fixed_config as fixed', function joinTemplateFixed() {
-        this.on('fixed.template_line_id', '=', 'lines.template_line_id').andOn('fixed.tenant', '=', 'lines.tenant');
-      })
-      .where({ 'lines.template_id': contractId, 'lines.tenant': tenant })
+    const db = tenantDb(knex, tenant);
+    const query = db.table('contract_template_lines as lines');
+    db.tenantJoin(query, 'contract_template_line_fixed_config as fixed', 'fixed.template_line_id', 'lines.template_line_id', {
+      type: 'left',
+    });
+
+    const rows = await query
+      .where('lines.template_id', contractId)
       .select([
         'lines.tenant',
         'lines.template_id as contract_id',
@@ -142,8 +150,8 @@ export async function fetchDetailedContractLines(
     }));
   }
 
-  const rows = await knex('contract_lines as cl')
-    .where({ 'cl.contract_id': contractId, 'cl.tenant': tenant })
+  const rows = await tenantScopedTable(knex, tenant, 'contract_lines as cl')
+    .where('cl.contract_id', contractId)
     .select([
       'cl.tenant',
       'cl.contract_id',
@@ -189,14 +197,14 @@ export async function isContractLineAttached(
   const template = await isTemplateContract(knex, tenant, contractId);
 
   if (template) {
-    const record = await knex('contract_template_lines')
-      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+    const record = await tenantScopedTable(knex, tenant, 'contract_template_lines')
+      .where({ template_id: contractId, template_line_id: contractLineId })
       .first('template_line_id');
     return Boolean(record);
   }
 
-  const record = await knex('contract_lines')
-    .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
+  const record = await tenantScopedTable(knex, tenant, 'contract_lines')
+    .where({ contract_id: contractId, contract_line_id: contractLineId })
     .first('contract_line_id');
   return Boolean(record);
 }
@@ -208,13 +216,13 @@ export async function ensureTemplateLineSnapshot(
   contractLineId: string,
   customRate?: number
 ): Promise<string> {
-  const templateLine = await knex('contract_template_lines')
-    .where({ tenant, template_id: templateId, template_line_id: contractLineId })
+  const templateLine = await tenantScopedTable(knex, tenant, 'contract_template_lines')
+    .where({ template_id: templateId, template_line_id: contractLineId })
     .first();
 
   if (templateLine) {
-    await knex('contract_template_lines')
-      .where({ tenant, template_id: templateId, template_line_id: contractLineId })
+    await tenantScopedTable(knex, tenant, 'contract_template_lines')
+      .where({ template_id: templateId, template_line_id: contractLineId })
       .update({
         custom_rate: customRate ?? templateLine.custom_rate ?? null,
         updated_at: knex.fn.now(),
@@ -222,8 +230,8 @@ export async function ensureTemplateLineSnapshot(
     return contractLineId;
   }
 
-  const baseLine = await knex('contract_lines')
-    .where({ tenant, contract_line_id: contractLineId })
+  const baseLine = await tenantScopedTable(knex, tenant, 'contract_lines')
+    .where('contract_line_id', contractLineId)
     .first();
 
   if (!baseLine) {
@@ -231,14 +239,14 @@ export async function ensureTemplateLineSnapshot(
   }
 
   const now = knex.fn.now();
-  const existingTemplateLine = await knex('contract_template_lines')
-    .where({ tenant, template_line_id: contractLineId })
+  const existingTemplateLine = await tenantScopedTable(knex, tenant, 'contract_template_lines')
+    .where('template_line_id', contractLineId)
     .first();
 
   const targetTemplateLineId = existingTemplateLine ? uuidv4() : contractLineId;
   const baseRecurringStorage = normalizeLiveRecurringStorage(baseLine);
 
-  await knex('contract_template_lines').insert({
+  await tenantScopedTable(knex, tenant, 'contract_template_lines').insert({
     tenant,
     template_line_id: targetTemplateLineId,
     template_id: templateId,
@@ -273,16 +281,16 @@ async function cloneTemplateLineToContract(
   templateLineId: string,
   customRate?: number
 ): Promise<string> {
-  const templateLine = await trx('contract_template_lines')
-    .where({ tenant, template_line_id: templateLineId })
+  const templateLine = await tenantScopedTable(trx, tenant, 'contract_template_lines')
+    .where('template_line_id', templateLineId)
     .first();
 
   if (!templateLine) {
     throw new Error(`Template contract line ${templateLineId} not found`);
   }
 
-  const templateFixedConfig = await trx('contract_template_line_fixed_config')
-    .where({ tenant, template_line_id: templateLineId })
+  const templateFixedConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_fixed_config')
+    .where('template_line_id', templateLineId)
     .first();
 
   const now = trx.fn.now();
@@ -303,7 +311,7 @@ async function cloneTemplateLineToContract(
   // Template-derived live lines copy recurring timing at clone time.
   // Later template edits are provenance only and must not retroactively rewrite
   // cadence_owner or billing_timing on already-created contract lines.
-  await trx('contract_lines').insert({
+  await tenantScopedTable(trx, tenant, 'contract_lines').insert({
     tenant,
     contract_line_id: newContractLineId,
     contract_id: contractId,
@@ -332,11 +340,11 @@ async function cloneTemplateLineToContract(
     billing_cycle_alignment: templateBillingCycleAlignment,
   });
 
-  const templateServices = await trx('contract_template_line_services')
-    .where({ tenant, template_line_id: templateLineId });
+  const templateServices = await tenantScopedTable(trx, tenant, 'contract_template_line_services')
+    .where('template_line_id', templateLineId);
 
   for (const service of templateServices) {
-    await trx('contract_line_services')
+    await tenantScopedTable(trx, tenant, 'contract_line_services')
       .insert({
         tenant,
         contract_line_id: newContractLineId,
@@ -350,13 +358,13 @@ async function cloneTemplateLineToContract(
         custom_rate: service.custom_rate ?? null,
       });
 
-    const configurations = await trx('contract_template_line_service_configuration')
-      .where({ tenant, template_line_id: templateLineId, service_id: service.service_id });
+    const configurations = await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
+      .where({ template_line_id: templateLineId, service_id: service.service_id });
 
     for (const configuration of configurations) {
       const newConfigId = uuidv4();
 
-      await trx('contract_line_service_configuration').insert({
+      await tenantScopedTable(trx, tenant, 'contract_line_service_configuration').insert({
         tenant,
         config_id: newConfigId,
         contract_line_id: newContractLineId,
@@ -368,12 +376,12 @@ async function cloneTemplateLineToContract(
         updated_at: now,
       });
 
-      const bucketConfig = await trx('contract_template_line_service_bucket_config')
-        .where({ tenant, config_id: configuration.config_id })
+      const bucketConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
+        .where('config_id', configuration.config_id)
         .first();
 
       if (bucketConfig) {
-        await trx('contract_line_service_bucket_config').insert({
+        await tenantScopedTable(trx, tenant, 'contract_line_service_bucket_config').insert({
           tenant,
           config_id: newConfigId,
           total_minutes: bucketConfig.total_minutes,
@@ -385,12 +393,12 @@ async function cloneTemplateLineToContract(
         });
       }
 
-      const hourlyConfig = await trx('contract_template_line_service_hourly_config')
-        .where({ tenant, config_id: configuration.config_id })
+      const hourlyConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_hourly_config')
+        .where('config_id', configuration.config_id)
         .first();
 
       if (hourlyConfig) {
-        await trx('contract_line_service_hourly_config').insert({
+        await tenantScopedTable(trx, tenant, 'contract_line_service_hourly_config').insert({
           tenant,
           config_id: newConfigId,
           minimum_billable_time: hourlyConfig.minimum_billable_time,
@@ -405,12 +413,12 @@ async function cloneTemplateLineToContract(
         });
       }
 
-      const usageConfig = await trx('contract_template_line_service_usage_config')
-        .where({ tenant, config_id: configuration.config_id })
+      const usageConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_usage_config')
+        .where('config_id', configuration.config_id)
         .first();
 
       if (usageConfig) {
-        await trx('contract_line_service_usage_config').insert({
+        await tenantScopedTable(trx, tenant, 'contract_line_service_usage_config').insert({
           tenant,
           config_id: newConfigId,
           unit_of_measure: usageConfig.unit_of_measure,
@@ -422,11 +430,11 @@ async function cloneTemplateLineToContract(
     }
   }
 
-  const templateDefaults = await trx('contract_template_line_defaults')
-    .where({ tenant, template_line_id: templateLineId });
+  const templateDefaults = await tenantScopedTable(trx, tenant, 'contract_template_line_defaults')
+    .where('template_line_id', templateLineId);
 
   for (const def of templateDefaults) {
-    await trx('contract_line_service_defaults').insert({
+    await tenantScopedTable(trx, tenant, 'contract_line_service_defaults').insert({
       tenant,
       default_id: def.default_id,
       contract_line_id: newContractLineId,
@@ -454,8 +462,8 @@ export async function addContractLine(
   if (template) {
     const effectiveLineId = await ensureTemplateLineSnapshot(trx, tenant, contractId, contractLineId, customRate);
 
-    const row = await trx('contract_template_lines')
-      .where({ tenant, template_id: contractId, template_line_id: effectiveLineId })
+    const row = await tenantScopedTable(trx, tenant, 'contract_template_lines')
+      .where({ template_id: contractId, template_line_id: effectiveLineId })
       .first([
         'tenant',
         'template_id as contract_id',
@@ -472,8 +480,8 @@ export async function addContractLine(
 
   const newContractLineId = await cloneTemplateLineToContract(trx, tenant, contractId, contractLineId, customRate);
 
-  const row = await trx('contract_lines')
-    .where({ tenant, contract_id: contractId, contract_line_id: newContractLineId })
+  const row = await tenantScopedTable(trx, tenant, 'contract_lines')
+    .where({ contract_id: contractId, contract_line_id: newContractLineId })
     .first([
       'tenant',
       'contract_id',
@@ -497,14 +505,14 @@ export async function removeContractLine(
   const template = await isTemplateContract(knex, tenant, contractId);
 
   if (template) {
-    await knex('contract_template_lines')
-      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+    await tenantScopedTable(knex, tenant, 'contract_template_lines')
+      .where({ template_id: contractId, template_line_id: contractLineId })
       .delete();
     return;
   }
 
-  await knex('contract_lines')
-    .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
+  await tenantScopedTable(knex, tenant, 'contract_lines')
+    .where({ contract_id: contractId, contract_line_id: contractLineId })
     .delete();
 }
 
@@ -523,8 +531,8 @@ export async function updateContractLine(
   }
 
   if (template) {
-    const existingTemplateLine = await knex('contract_template_lines')
-      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+    const existingTemplateLine = await tenantScopedTable(knex, tenant, 'contract_template_lines')
+      .where({ template_id: contractId, template_line_id: contractLineId })
       .first(['cadence_owner', 'billing_timing']);
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
       cadenceOwner: payload.cadence_owner,
@@ -533,8 +541,8 @@ export async function updateContractLine(
       fallbackBillingTiming: existingTemplateLine?.billing_timing,
     });
 
-    await knex('contract_template_lines')
-      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+    await tenantScopedTable(knex, tenant, 'contract_template_lines')
+      .where({ template_id: contractId, template_line_id: contractLineId })
       .update({
         custom_rate: payload.custom_rate ?? null,
         display_order: payload.display_order ?? undefined,
@@ -543,8 +551,8 @@ export async function updateContractLine(
         updated_at: knex.fn.now(),
       });
 
-    const row = await knex('contract_template_lines')
-      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+    const row = await tenantScopedTable(knex, tenant, 'contract_template_lines')
+      .where({ template_id: contractId, template_line_id: contractLineId })
       .first([
         'tenant',
         'template_id as contract_id',
@@ -558,8 +566,8 @@ export async function updateContractLine(
     return mapContractLineRow(row);
   }
 
-  const existingLine = await knex('contract_lines')
-    .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
+  const existingLine = await tenantScopedTable(knex, tenant, 'contract_lines')
+    .where({ contract_id: contractId, contract_line_id: contractLineId })
     .first(['cadence_owner', 'billing_timing']);
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
     cadenceOwner: payload.cadence_owner,
@@ -568,8 +576,8 @@ export async function updateContractLine(
     fallbackBillingTiming: existingLine?.billing_timing,
   });
 
-  await knex('contract_lines')
-    .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
+  await tenantScopedTable(knex, tenant, 'contract_lines')
+    .where({ contract_id: contractId, contract_line_id: contractLineId })
     .update({
       custom_rate: payload.custom_rate ?? null,
       display_order: payload.display_order ?? undefined,
@@ -578,8 +586,8 @@ export async function updateContractLine(
       updated_at: knex.fn.now(),
     });
 
-  const row = await knex('contract_lines')
-    .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
+  const row = await tenantScopedTable(knex, tenant, 'contract_lines')
+    .where({ contract_id: contractId, contract_line_id: contractLineId })
     .first([
       'tenant',
       'contract_id',
@@ -598,7 +606,9 @@ export async function fetchContractLineById(
   tenant: string,
   contractLineId: string
 ): Promise<IContractLine | undefined> {
-  const row = await knex('contract_lines').where({ tenant, contract_line_id: contractLineId }).first();
+  const row = await tenantScopedTable(knex, tenant, 'contract_lines')
+    .where('contract_line_id', contractLineId)
+    .first();
   return row ? normalizeLiveRecurringStorage(row) : undefined;
 }
 
@@ -614,8 +624,8 @@ export async function updateContractLineRate(
   const template = await isTemplateContract(knex, tenant, contractId);
 
   if (template) {
-    const existingTemplateLine = await knex('contract_template_lines')
-      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+    const existingTemplateLine = await tenantScopedTable(knex, tenant, 'contract_template_lines')
+      .where({ template_id: contractId, template_line_id: contractLineId })
       .first(['billing_timing', 'cadence_owner']);
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
       fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
@@ -623,8 +633,8 @@ export async function updateContractLineRate(
       fallbackBillingTiming: existingTemplateLine?.billing_timing,
     });
 
-    await knex('contract_template_lines')
-      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+    await tenantScopedTable(knex, tenant, 'contract_template_lines')
+      .where({ template_id: contractId, template_line_id: contractLineId })
       .update({
         custom_rate: rate,
         billing_timing: recurringAuthoringPolicy.billingTiming,
@@ -633,8 +643,8 @@ export async function updateContractLineRate(
     return;
   }
 
-  const existingLine = await knex('contract_lines')
-    .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
+  const existingLine = await tenantScopedTable(knex, tenant, 'contract_lines')
+    .where({ contract_id: contractId, contract_line_id: contractLineId })
     .first(['billing_timing', 'cadence_owner']);
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
     fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
@@ -642,8 +652,8 @@ export async function updateContractLineRate(
     fallbackBillingTiming: existingLine?.billing_timing,
   });
 
-  await knex('contract_lines')
-    .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
+  await tenantScopedTable(knex, tenant, 'contract_lines')
+    .where({ contract_id: contractId, contract_line_id: contractLineId })
     .update({
       custom_rate: rate,
       billing_timing: recurringAuthoringPolicy.billingTiming,

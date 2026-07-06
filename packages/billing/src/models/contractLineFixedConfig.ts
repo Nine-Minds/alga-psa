@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import type { IContractLineFixedConfig } from '@alga-psa/types';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
@@ -12,6 +12,10 @@ export default class ContractLineFixedConfig {
   constructor(knex?: Knex, tenant?: string) {
     this.knex = knex as Knex;
     this.tenant = tenant as string;
+  }
+
+  private table(table: string): Knex.QueryBuilder {
+    return tenantDb(this.knex, this.tenant).table(table);
   }
 
   /**
@@ -38,10 +42,9 @@ export default class ContractLineFixedConfig {
   async getByPlanId(planId: string): Promise<IContractLineFixedConfig | null> {
     await this.initKnex();
 
-    const row = await this.knex(this.tableName)
+    const row = await this.table(this.tableName)
       .where({
-        contract_line_id: planId,
-        tenant: this.tenant
+        contract_line_id: planId
       })
       .first(['contract_line_id', 'custom_rate', 'enable_proration', 'billing_cycle_alignment', 'updated_at', 'created_at']);
 
@@ -76,10 +79,9 @@ export default class ContractLineFixedConfig {
   async update(planId: string, data: Partial<Omit<IContractLineFixedConfig, 'contract_line_id' | 'tenant' | 'created_at'>>): Promise<boolean> {
     await this.initKnex();
 
-    const existing = await this.knex(this.tableName)
+    const existing = await this.table(this.tableName)
       .where({
         contract_line_id: planId,
-        tenant: this.tenant,
       })
       .first(['enable_proration', 'billing_cycle_alignment']);
 
@@ -99,10 +101,9 @@ export default class ContractLineFixedConfig {
       fallbackAlignment: existing?.billing_cycle_alignment,
     });
 
-    const result = await this.knex(this.tableName)
+    const result = await this.table(this.tableName)
       .where({
         contract_line_id: planId,
-        tenant: this.tenant,
       })
       .update(updateData);
 
@@ -117,17 +118,15 @@ export default class ContractLineFixedConfig {
 
     const { contract_line_id, base_rate, enable_proration, billing_cycle_alignment } = data;
 
-    const existing = await this.knex(this.tableName)
+    const existing = await this.table(this.tableName)
       .where({
         contract_line_id,
-        tenant: this.tenant,
       })
       .first(['enable_proration', 'billing_cycle_alignment']);
 
-    const result = await this.knex(this.tableName)
+    const result = await this.table(this.tableName)
       .where({
         contract_line_id,
-        tenant: this.tenant,
       })
       .update({
         custom_rate: base_rate ?? null,
@@ -149,10 +148,9 @@ export default class ContractLineFixedConfig {
   async delete(planId: string): Promise<boolean> {
     await this.initKnex();
 
-    const result = await this.knex(this.tableName)
+    const result = await this.table(this.tableName)
       .where({
         contract_line_id: planId,
-        tenant: this.tenant,
       })
       .update({
         custom_rate: null,

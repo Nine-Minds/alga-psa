@@ -6,6 +6,7 @@
 
 import { createTenantKnex } from '@/lib/db';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { TIER_FEATURES, type DnsRecord, type DnsLookupResult } from '@alga-psa/types';
 import { enqueueManagedEmailDomainWorkflow } from '@ee/lib/email-domains/workflowClient';
 import { isValidDomain } from '@ee/lib/email-domains/domainValidation';
@@ -58,18 +59,19 @@ async function upsertManagedEmailDomainWithoutConflict(params: {
   const { knex, tenantId, domainName, record, mergeFields } = params;
 
   await knex.transaction(async (trx) => {
-    const existing = await trx('email_domains')
-      .where({ tenant: tenantId, domain_name: domainName })
+    const db = tenantDb(trx, tenantId);
+    const existing = await db.table('email_domains')
+      .where({ domain_name: domainName })
       .first();
 
     if (existing) {
-      await trx('email_domains')
-        .where({ tenant: tenantId, domain_name: domainName })
+      await db.table('email_domains')
+        .where({ domain_name: domainName })
         .update(mergeFields);
       return;
     }
 
-    await trx('email_domains').insert(record);
+    await db.table('email_domains').insert(record);
   });
 }
 
@@ -121,8 +123,7 @@ export const getManagedEmailDomains = withAuth(async (user, { tenant }): Promise
   const { knex } = await createTenantKnex();
   await checkEmailDomainPermission(user, 'read', knex);
 
-  const rows = await knex('email_domains')
-    .where({ tenant })
+  const rows = await tenantDb(knex, tenant).table('email_domains')
     .orderBy('created_at', 'desc');
 
   return rows.map((row: any) => {
@@ -178,7 +179,7 @@ export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domai
   };
 
   try {
-    await knex('email_domains')
+    await tenantDb(knex, tenant).table('email_domains')
       .insert(record)
       .onConflict(['tenant', 'domain_name'])
       .merge(mergeFields);
@@ -237,8 +238,8 @@ export const refreshManagedEmailDomain = withAuth(async (user, { tenant }, domai
   await checkEmailDomainPermission(user, 'update', knex);
   const normalizedDomain = domainName.trim().toLowerCase();
 
-  const existing = await knex('email_domains')
-    .where({ tenant, domain_name: normalizedDomain })
+  const existing = await tenantDb(knex, tenant).table('email_domains')
+    .where({ domain_name: normalizedDomain })
     .first();
 
   if (!existing) {
@@ -284,8 +285,9 @@ export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domain
   await checkEmailDomainPermission(user, 'delete', knex);
   const normalizedDomain = domainName.trim().toLowerCase();
 
-  const existing = await knex('email_domains')
-    .where({ tenant, domain_name: normalizedDomain })
+  const db = tenantDb(knex, tenant);
+  const existing = await db.table('email_domains')
+    .where({ domain_name: normalizedDomain })
     .first();
 
   if (!existing) {
@@ -293,8 +295,8 @@ export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domain
   }
 
   const now = new Date();
-  await knex('email_domains')
-    .where({ tenant, domain_name: normalizedDomain })
+  await db.table('email_domains')
+    .where({ domain_name: normalizedDomain })
     .update({
       status: 'deleting',
       updated_at: now,

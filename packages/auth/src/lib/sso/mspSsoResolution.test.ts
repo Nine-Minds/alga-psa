@@ -110,6 +110,13 @@ vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: async () => dbMock,
 }));
 
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    unscoped: (table: string) => conn(table),
+  }),
+}));
+
 import {
   createSignedMspSsoDiscoveryCookie,
   createSignedMspSsoResolutionCookie,

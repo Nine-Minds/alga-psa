@@ -9,14 +9,14 @@
   "download": "Download",
   "remove": "Remove",
   "preview": "Preview",
-  "linkDocuments": "Link Documents",
+  "linkDocuments": "Link existing",
   "editDocument": "Edit Document",
   "viewDocument": "View Document",
   "downloadToPlay": "Download to Play",
   "delete": "Delete",
   "previewUnavailable": "Preview unavailable",
-  "newDocument": "New Document",
-  "uploadFile": "Upload File",
+  "newDocument": "Add document",
+  "uploadFile": "Upload file",
   "deleteTitle": "Delete Document",
   "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
   "deleteVideoTitle": "Delete Video",
@@ -282,5 +282,6 @@
     "next": "Next",
     "pageOf": "Page {{current}} of {{total}}",
     "previous": "Previous"
-  }
+  },
+  "ticketDocuments": "Ticket Documents"
 }

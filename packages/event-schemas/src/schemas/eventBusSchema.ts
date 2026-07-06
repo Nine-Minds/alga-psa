@@ -38,6 +38,7 @@ import {
   contractRenewalUpcomingEventPayloadSchema,
   contractStatusChangedEventPayloadSchema,
   contractUpdatedEventPayloadSchema,
+  creditExpiringEventPayloadSchema,
   creditNoteAppliedEventPayloadSchema,
   creditNoteCreatedEventPayloadSchema,
   creditNoteVoidedEventPayloadSchema,
@@ -129,11 +130,13 @@ import {
   mediaProcessingFailedEventPayloadSchema,
   mediaProcessingSucceededEventPayloadSchema,
 } from './domain/assetMediaEventSchemas';
+import { maintenanceJobRequestedEventPayloadSchema } from './domain/maintenanceEventSchemas';
 import {
   ticketApprovalGrantedEventPayloadSchema,
   ticketApprovalRejectedEventPayloadSchema,
   ticketApprovalRequestedEventPayloadSchema,
   ticketAssignedEventPayloadSchema,
+  ticketAutoCloseWarningEventPayloadSchema,
   ticketClosedEventPayloadSchema,
   ticketCreatedEventPayloadSchema,
   ticketCustomerRepliedEventPayloadSchema,
@@ -156,6 +159,15 @@ import {
   ticketUnassignedEventPayloadSchema,
   ticketUpdatedEventPayloadSchema,
 } from './domain/ticketEventSchemas';
+import {
+  inventoryPoReceivedEventPayloadSchema,
+  inventoryPurchaseOrderSearchEventPayloadSchema,
+  inventoryRmaCreatedEventPayloadSchema,
+  inventorySalesOrderSearchEventPayloadSchema,
+  inventorySoFulfilledEventPayloadSchema,
+  inventoryStockLowEventPayloadSchema,
+  inventoryStockUnitSearchEventPayloadSchema,
+} from './domain/inventoryEventSchemas';
 
 // Define event types
 export const EVENT_TYPES = [
@@ -163,6 +175,9 @@ export const EVENT_TYPES = [
   'TICKET_CREATED',
   'TICKET_UPDATED',
   'TICKET_CLOSED',
+  'TICKET_AUTO_CLOSE_WARNING',
+  // Maintenance / system (worker emits; server subscriber runs the handler)
+  'MAINTENANCE_JOB_REQUESTED',
   'TICKET_ASSIGNED',
   'TICKET_ADDITIONAL_AGENT_ASSIGNED',
   'TICKET_COMMENT_ADDED',
@@ -283,6 +298,7 @@ export const EVENT_TYPES = [
   'CREDIT_NOTE_CREATED',
   'CREDIT_NOTE_APPLIED',
   'CREDIT_NOTE_VOIDED',
+  'CREDIT_EXPIRING',
   'CONTRACT_CREATED',
   'CONTRACT_UPDATED',
   'CONTRACT_DELETED',
@@ -439,6 +455,21 @@ export const EVENT_TYPES = [
   'RMM_SYNC_COMPLETED',
   'RMM_SYNC_FAILED',
   'RMM_WEBHOOK_RECEIVED',
+
+  // Inventory
+  'INVENTORY_STOCK_LOW',
+  'INVENTORY_PO_RECEIVED',
+  'INVENTORY_SO_FULFILLED',
+  'INVENTORY_RMA_CREATED',
+  'INVENTORY_SALES_ORDER_CREATED',
+  'INVENTORY_SALES_ORDER_UPDATED',
+  'INVENTORY_SALES_ORDER_DELETED',
+  'INVENTORY_PURCHASE_ORDER_CREATED',
+  'INVENTORY_PURCHASE_ORDER_UPDATED',
+  'INVENTORY_PURCHASE_ORDER_DELETED',
+  'INVENTORY_STOCK_UNIT_CREATED',
+  'INVENTORY_STOCK_UNIT_UPDATED',
+  'INVENTORY_STOCK_UNIT_DELETED',
 
   // Generic events
   'CUSTOM_EVENT',
@@ -1008,6 +1039,8 @@ export const RmmWebhookEventPayloadSchema = BasePayloadSchema.extend({
 const TicketCreatedPayloadSchema = z.union([TicketEventPayloadSchema, ticketCreatedEventPayloadSchema]);
 const TicketUpdatedPayloadSchema = z.union([TicketEventPayloadSchema, ticketUpdatedEventPayloadSchema]);
 const TicketClosedPayloadSchema = z.union([TicketEventPayloadSchema, ticketClosedEventPayloadSchema]);
+const TicketAutoCloseWarningPayloadSchema = z.union([TicketEventPayloadSchema, ticketAutoCloseWarningEventPayloadSchema]);
+const MaintenanceJobRequestedPayloadSchema = maintenanceJobRequestedEventPayloadSchema;
 const TicketAssignedPayloadSchema = z.union([TicketEventPayloadSchema, ticketAssignedEventPayloadSchema]);
 const TicketResponseStateChangedPayloadSchemaV2 = z.union([
   TicketResponseStateChangedPayloadSchema,
@@ -1035,6 +1068,8 @@ export const EventPayloadSchemas = {
   TICKET_CREATED: TicketCreatedPayloadSchema,
   TICKET_UPDATED: TicketUpdatedPayloadSchema,
   TICKET_CLOSED: TicketClosedPayloadSchema,
+  TICKET_AUTO_CLOSE_WARNING: TicketAutoCloseWarningPayloadSchema,
+  MAINTENANCE_JOB_REQUESTED: MaintenanceJobRequestedPayloadSchema,
   TICKET_DELETED: TicketEventPayloadSchema,
   TICKET_ASSIGNED: TicketAssignedPayloadSchema,
   TICKET_ADDITIONAL_AGENT_ASSIGNED: TicketAdditionalAgentPayloadSchema,
@@ -1155,6 +1190,7 @@ export const EventPayloadSchemas = {
   CREDIT_NOTE_CREATED: creditNoteCreatedEventPayloadSchema,
   CREDIT_NOTE_APPLIED: creditNoteAppliedEventPayloadSchema,
   CREDIT_NOTE_VOIDED: creditNoteVoidedEventPayloadSchema,
+  CREDIT_EXPIRING: creditExpiringEventPayloadSchema,
   CONTRACT_CREATED: ContractCreatedPayloadSchema,
   CONTRACT_UPDATED: ContractUpdatedPayloadSchema,
   CONTRACT_DELETED: ContractSearchEventPayloadSchema,
@@ -1313,6 +1349,21 @@ export const EventPayloadSchemas = {
   RMM_SYNC_FAILED: RmmSyncEventPayloadSchema,
   RMM_WEBHOOK_RECEIVED: RmmWebhookEventPayloadSchema,
 
+  // Inventory
+  INVENTORY_STOCK_LOW: inventoryStockLowEventPayloadSchema,
+  INVENTORY_PO_RECEIVED: inventoryPoReceivedEventPayloadSchema,
+  INVENTORY_SO_FULFILLED: inventorySoFulfilledEventPayloadSchema,
+  INVENTORY_RMA_CREATED: inventoryRmaCreatedEventPayloadSchema,
+  INVENTORY_SALES_ORDER_CREATED: inventorySalesOrderSearchEventPayloadSchema,
+  INVENTORY_SALES_ORDER_UPDATED: inventorySalesOrderSearchEventPayloadSchema,
+  INVENTORY_SALES_ORDER_DELETED: inventorySalesOrderSearchEventPayloadSchema,
+  INVENTORY_PURCHASE_ORDER_CREATED: inventoryPurchaseOrderSearchEventPayloadSchema,
+  INVENTORY_PURCHASE_ORDER_UPDATED: inventoryPurchaseOrderSearchEventPayloadSchema,
+  INVENTORY_PURCHASE_ORDER_DELETED: inventoryPurchaseOrderSearchEventPayloadSchema,
+  INVENTORY_STOCK_UNIT_CREATED: inventoryStockUnitSearchEventPayloadSchema,
+  INVENTORY_STOCK_UNIT_UPDATED: inventoryStockUnitSearchEventPayloadSchema,
+  INVENTORY_STOCK_UNIT_DELETED: inventoryStockUnitSearchEventPayloadSchema,
+
   // Generic unknown type for custom events
   UNKNOWN: CustomEventPayloadSchema,
 } as const;
@@ -1341,6 +1392,8 @@ export type BaseEvent = z.infer<typeof BaseEventSchema>;
 export type TicketCreatedEvent = z.infer<typeof EventSchemas.TICKET_CREATED>;
 export type TicketUpdatedEvent = z.infer<typeof EventSchemas.TICKET_UPDATED>;
 export type TicketClosedEvent = z.infer<typeof EventSchemas.TICKET_CLOSED>;
+export type TicketAutoCloseWarningEvent = z.infer<typeof EventSchemas.TICKET_AUTO_CLOSE_WARNING>;
+export type MaintenanceJobRequestedEvent = z.infer<typeof EventSchemas.MAINTENANCE_JOB_REQUESTED>;
 export type TicketDeletedEvent = z.infer<typeof EventSchemas.TICKET_DELETED>;
 export type TicketAssignedEvent = z.infer<typeof EventSchemas.TICKET_ASSIGNED>;
 export type TicketAdditionalAgentAssignedEvent = z.infer<typeof EventSchemas.TICKET_ADDITIONAL_AGENT_ASSIGNED>;
@@ -1366,6 +1419,7 @@ export type TimeEntryChangesRequestedEvent = z.infer<typeof EventSchemas.TIME_EN
 export type TagDefinitionDeletedEvent = z.infer<typeof EventSchemas.TAG_DEFINITION_DELETED>;
 export type InvoiceGeneratedEvent = z.infer<typeof EventSchemas.INVOICE_GENERATED>;
 export type InvoiceFinalizedEvent = z.infer<typeof EventSchemas.INVOICE_FINALIZED>;
+export type CreditExpiringEvent = z.infer<typeof EventSchemas.CREDIT_EXPIRING>;
 export type CustomEvent = z.infer<typeof EventSchemas.CUSTOM_EVENT>;
 export type InboundEmailReceivedEvent = z.infer<typeof EventSchemas.INBOUND_EMAIL_RECEIVED>;
 export type AccountingExportCompletedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_COMPLETED>;
@@ -1407,6 +1461,19 @@ export type RmmSyncStartedEvent = z.infer<typeof EventSchemas.RMM_SYNC_STARTED>;
 export type RmmSyncCompletedEvent = z.infer<typeof EventSchemas.RMM_SYNC_COMPLETED>;
 export type RmmSyncFailedEvent = z.infer<typeof EventSchemas.RMM_SYNC_FAILED>;
 export type RmmWebhookReceivedEvent = z.infer<typeof EventSchemas.RMM_WEBHOOK_RECEIVED>;
+export type InventoryStockLowEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK_LOW>;
+export type InventoryPoReceivedEvent = z.infer<typeof EventSchemas.INVENTORY_PO_RECEIVED>;
+export type InventorySoFulfilledEvent = z.infer<typeof EventSchemas.INVENTORY_SO_FULFILLED>;
+export type InventoryRmaCreatedEvent = z.infer<typeof EventSchemas.INVENTORY_RMA_CREATED>;
+export type InventorySalesOrderCreatedEvent = z.infer<typeof EventSchemas.INVENTORY_SALES_ORDER_CREATED>;
+export type InventorySalesOrderUpdatedEvent = z.infer<typeof EventSchemas.INVENTORY_SALES_ORDER_UPDATED>;
+export type InventorySalesOrderDeletedEvent = z.infer<typeof EventSchemas.INVENTORY_SALES_ORDER_DELETED>;
+export type InventoryPurchaseOrderCreatedEvent = z.infer<typeof EventSchemas.INVENTORY_PURCHASE_ORDER_CREATED>;
+export type InventoryPurchaseOrderUpdatedEvent = z.infer<typeof EventSchemas.INVENTORY_PURCHASE_ORDER_UPDATED>;
+export type InventoryPurchaseOrderDeletedEvent = z.infer<typeof EventSchemas.INVENTORY_PURCHASE_ORDER_DELETED>;
+export type InventoryStockUnitCreatedEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK_UNIT_CREATED>;
+export type InventoryStockUnitUpdatedEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK_UNIT_UPDATED>;
+export type InventoryStockUnitDeletedEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK_UNIT_DELETED>;
 
 export type Event =
   {
@@ -1432,7 +1499,7 @@ export function convertToWorkflowEvent(event: Event, hooks?: WorkflowPublishHook
     workflow_correlation_key: hooks?.correlationKey,
     event_name: hooks?.eventName ?? event.payload?.eventName ?? event.eventType,
     event_type: event.eventType,
-    tenant: event.payload?.tenantId || '',
+    tenant: event.payload?.tenantId ?? event.payload?.tenant ?? '',
     timestamp: event.timestamp,
     from_state: hooks?.fromState,
     to_state: hooks?.toState,

@@ -5,6 +5,10 @@ import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
 import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
+import {
+  createTenantKnex as createPackageTenantKnex,
+  getCurrentTenantId as getPackageCurrentTenantId
+} from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import {
   createWorkflowDefinitionAction,
@@ -30,6 +34,21 @@ vi.mock('server/src/lib/db', () => ({
   getCurrentTenantId: vi.fn()
 }));
 
+// The workflow actions resolve their connection through @alga-psa/db (the
+// legacy server/src/lib/db mock above no longer intercepts them). Bind that
+// seam to the test connection like the workflowRuntimeV2.* siblings do — the
+// real createTenantKnex opens its own pool against DB_NAME_SERVER from
+// .env.localtest ("server"), which does not exist in the test environment.
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(),
+    getCurrentTenantId: vi.fn(),
+    auditLog: vi.fn().mockResolvedValue(undefined)
+  };
+});
+
 vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn()
 }));
@@ -38,8 +57,24 @@ vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn().mockResolvedValue(true)
 }));
 
+// Execution moved to Temporal (June 2026 cutover); startWorkflowRunAction only
+// inserts the run row and signals Temporal. Mock the seam like the
+// workflowRuntimeV2.* siblings — no live Temporal server in the test environment.
+const startWorkflowRuntimeV2TemporalRunMock = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({ workflowId: 'temporal-wf-test', firstExecutionRunId: 'temporal-run-test' })
+);
+vi.mock('@alga-psa/workflows/lib/workflowRuntimeV2Temporal', () => ({
+  startWorkflowRuntimeV2TemporalRun: (...args: unknown[]) => startWorkflowRuntimeV2TemporalRunMock(...args),
+  cancelWorkflowRuntimeV2TemporalRun: vi.fn().mockResolvedValue(undefined),
+  signalWorkflowRuntimeV2Event: vi.fn().mockResolvedValue(undefined),
+  signalWorkflowRuntimeV2HumanTask: vi.fn().mockResolvedValue(undefined),
+  signalWorkflowRuntimeV2QuotaResume: vi.fn().mockResolvedValue(undefined)
+}));
+
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
 const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
+const mockedCreatePackageTenantKnex = vi.mocked(createPackageTenantKnex);
+const mockedGetPackageCurrentTenantId = vi.mocked(getPackageCurrentTenantId);
 const mockedGetCurrentUser = vi.mocked(getCurrentUser);
 
 let db: Knex;
@@ -57,7 +92,10 @@ beforeEach(async () => {
   userId = uuidv4();
   mockedCreateTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
   mockedGetCurrentTenantId.mockReturnValue(tenantId);
+  mockedCreatePackageTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId } as any);
+  mockedGetPackageCurrentTenantId.mockReturnValue(tenantId as any);
   mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
+  startWorkflowRuntimeV2TemporalRunMock.mockClear();
 });
 
 afterAll(async () => {
@@ -420,7 +458,7 @@ describe('Workflow Payload Contract Inference - Execution Tests', () => {
       version: 1
     });
 
-    // Start a run
+    // Start a run: post-cutover this inserts the run row and hands execution to Temporal
     const runResult = await startWorkflowRunAction({
       workflowId: createResult.workflowId,
       workflowVersion: 1,
@@ -428,6 +466,10 @@ describe('Workflow Payload Contract Inference - Execution Tests', () => {
     });
 
     expect(runResult.runId).toBeDefined();
+    const runRow = await db('workflow_runs').where({ run_id: runResult.runId }).first();
+    expect(runRow?.engine).toBe('temporal');
+    expect(runRow?.workflow_version).toBe(1);
+    expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledTimes(1);
   });
 
   it('T098: When trigger schema changes after publish, workflow still runs using published contract', async () => {
@@ -458,6 +500,9 @@ describe('Workflow Payload Contract Inference - Execution Tests', () => {
     });
 
     expect(runResult.runId).toBeDefined();
+    const runRow = await db('workflow_runs').where({ run_id: runResult.runId }).first();
+    expect(runRow?.engine).toBe('temporal');
+    expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -620,6 +665,9 @@ describe('Workflow Payload Contract Inference - Compatibility Tests', () => {
     });
 
     expect(runResult.runId).toBeDefined();
+    const runRow = await db('workflow_runs').where({ run_id: runResult.runId }).first();
+    expect(runRow?.engine).toBe('temporal');
+    expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledTimes(1);
   });
 });
 

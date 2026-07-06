@@ -1,7 +1,7 @@
 'use server'
 
 import type { ITicketListFilters, ITicketListItem, ITag } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { getTicketsForList } from './optimizedTicketActions';
 
@@ -147,6 +147,7 @@ function ticketToRow(
  */
 async function resolveNameLookups(tickets: ITicketListItem[], tenant: string): Promise<NameLookups> {
   const { knex: db } = await createTenantKnex();
+  const tenantScopedDb = tenantDb(db, tenant);
 
   // Collect unique IDs
   const contactIds = new Set<string>();
@@ -164,10 +165,12 @@ async function resolveNameLookups(tickets: ITicketListItem[], tenant: string): P
 
   // Resolve contacts
   if (contactIds.size > 0) {
-    const contacts = await db('contacts')
+    const contacts = await tenantScopedDb.table<{
+      contact_name_id: string;
+      full_name: string | null;
+    }>('contacts')
       .select('contact_name_id', 'full_name')
-      .whereIn('contact_name_id', Array.from(contactIds))
-      .andWhere('tenant', tenant);
+      .whereIn('contact_name_id', Array.from(contactIds));
     for (const c of contacts) {
       lookups.contacts[c.contact_name_id] = c.full_name || '';
     }
@@ -175,10 +178,12 @@ async function resolveNameLookups(tickets: ITicketListItem[], tenant: string): P
 
   // Resolve user names (for updated_by and closed_by)
   if (userIds.size > 0) {
-    const users = await db('users')
+    const users = (await tenantScopedDb.table('users')
       .select('user_id', db.raw("CONCAT(first_name, ' ', last_name) as full_name"))
-      .whereIn('user_id', Array.from(userIds))
-      .andWhere('tenant', tenant);
+      .whereIn('user_id', Array.from(userIds))) as unknown as Array<{
+        user_id: string;
+        full_name: string | null;
+      }>;
     for (const u of users) {
       lookups.users[u.user_id] = u.full_name || '';
     }
@@ -186,10 +191,12 @@ async function resolveNameLookups(tickets: ITicketListItem[], tenant: string): P
 
   // Resolve subcategory names
   if (subcategoryIds.size > 0) {
-    const categories = await db('categories')
+    const categories = await tenantScopedDb.table<{
+      category_id: string;
+      category_name: string | null;
+    }>('categories')
       .select('category_id', 'category_name')
-      .whereIn('category_id', Array.from(subcategoryIds))
-      .andWhere('tenant', tenant);
+      .whereIn('category_id', Array.from(subcategoryIds));
     for (const c of categories) {
       lookups.categories[c.category_id] = c.category_name || '';
     }

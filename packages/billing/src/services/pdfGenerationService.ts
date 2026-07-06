@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Page } from 'puppeteer';
 import type { Knex } from 'knex';
 
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 import type { TemplateAst } from '@alga-psa/types';
 import type { FileStore } from '@alga-psa/storage/types/storage';
 import { StorageProviderFactory, generateStoragePath, FileStoreModel } from '@alga-psa/storage';
@@ -10,11 +10,10 @@ import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildDocumentGeneratedPayload } from '@alga-psa/workflow-streams';
 
-import {
-  enrichInvoiceViewModelWithLocations,
-  mapDbInvoiceToWasmViewModel,
-} from '../lib/adapters/invoiceAdapters';
+import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
+import { enrichInvoiceViewModelWithLocations } from '../lib/adapters/invoiceAdapters.server';
 import { mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
+import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { resolvePdfPrintOptionsFromAst } from '../lib/invoice-template-ast/printSettings';
@@ -28,6 +27,8 @@ import {
 import Invoice from '../models/invoice';
 import { getStandardQuoteTemplateAstByCode } from '../lib/quote-template-ast/standardTemplates';
 import { resolveQuoteTemplateAst } from '../lib/quote-template-ast/templateSelection';
+import { getStandardSalesOrderTemplateAstByCode } from '../lib/sales-order-template-ast/standardTemplates';
+import { resolveSalesOrderTemplateAst } from '../lib/sales-order-template-ast/templateSelection';
 import { browserPoolService } from './browserPoolService';
 
 // ---------------------------------------------------------------------------
@@ -47,6 +48,14 @@ interface PDFGenerationOptions {
 
 export interface QuotePDFOptions {
   quoteId: string;
+  templateCode?: string;
+  templateAst?: TemplateAst;
+}
+
+export interface SalesOrderPDFOptions {
+  salesOrderId: string;
+  /** Which Sales Order document to render — confirmation (default), packing slip, or pick list. */
+  documentType?: 'sales-order' | 'packing-slip' | 'pick-list';
   templateCode?: string;
   templateAst?: TemplateAst;
 }
@@ -75,7 +84,7 @@ export class PDFGenerationService {
 
   // ---- Generic entry points ------------------------------------------------
 
-  async generatePDF(options: { invoiceId?: string; quoteId?: string; documentId?: string; userId: string; templateAst?: TemplateAst; templateId?: string }): Promise<Buffer> {
+  async generatePDF(options: { invoiceId?: string; quoteId?: string; salesOrderId?: string; salesOrderDocumentType?: 'sales-order' | 'packing-slip' | 'pick-list'; documentId?: string; userId: string; templateAst?: TemplateAst; templateId?: string }): Promise<Buffer> {
     let htmlContent: string;
     let templateAst: TemplateAst | null = null;
 
@@ -87,10 +96,14 @@ export class PDFGenerationService {
       const result = await this.getQuoteHtml({ quoteId: options.quoteId, templateAst: options.templateAst });
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
+    } else if (options.salesOrderId) {
+      const result = await this.getSalesOrderHtml({ salesOrderId: options.salesOrderId, documentType: options.salesOrderDocumentType, templateAst: options.templateAst });
+      htmlContent = result.htmlContent;
+      templateAst = result.templateAst;
     } else if (options.documentId) {
       htmlContent = await this.getDocumentHtml(options.documentId);
     } else {
-      throw new Error('One of invoiceId, quoteId, or documentId must be provided');
+      throw new Error('One of invoiceId, quoteId, salesOrderId, or documentId must be provided');
     }
 
     return this.generatePDFBuffer(htmlContent, templateAst);
@@ -257,8 +270,8 @@ export class PDFGenerationService {
     let templateId: string | null = null;
 
     try {
-      const client = await knex('clients')
-        .where({ client_id: dbInvoiceData.client_id, tenant: this.tenant })
+      const client = await tenantDb(knex, this.tenant).table('clients')
+        .where({ client_id: dbInvoiceData.client_id })
         .first();
       if (client?.invoice_template_id) {
         templateId = client.invoice_template_id;
@@ -421,6 +434,43 @@ export class PDFGenerationService {
     });
   }
 
+  // ---- Sales Order HTML ----------------------------------------------------
+
+  private async getSalesOrderHtml(
+    options: SalesOrderPDFOptions
+  ): Promise<{ htmlContent: string; templateAst: TemplateAst | null }> {
+    return runWithTenant(this.tenant, async () => {
+      const { knex } = await createTenantKnex();
+      const viewModel = await mapDbSalesOrderToViewModel(knex, this.tenant, options.salesOrderId);
+
+      if (!viewModel) {
+        throw new Error(`Sales order ${options.salesOrderId} not found`);
+      }
+
+      const documentType = options.documentType ?? 'sales-order';
+      const templateAst = options.templateAst
+        ?? (options.templateCode
+          ? getStandardSalesOrderTemplateAstByCode(options.templateCode)
+          : (await resolveSalesOrderTemplateAst(knex, this.tenant, documentType, { clientId: viewModel.client_id })).ast);
+
+      if (!templateAst) {
+        throw new Error('No sales order template AST available for PDF generation');
+      }
+
+      const evaluation = evaluateTemplateAst(
+        templateAst,
+        viewModel as unknown as Record<string, unknown>
+      );
+
+      const htmlContent = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
+        title: `Sales Order ${viewModel.so_number ?? ''}`.trim(),
+        knex,
+      });
+
+      return { htmlContent, templateAst };
+    });
+  }
+
   // ---- Document HTML -------------------------------------------------------
 
   private async getDocumentHtml(documentId: string): Promise<string> {
@@ -433,16 +483,17 @@ export class PDFGenerationService {
       }
 
       let htmlContent = '';
+      const db = tenantDb(knex, this.tenant);
 
-      const blockContent = await knex('document_block_content')
-        .where({ document_id: documentId, tenant: this.tenant })
+      const blockContent = await db.table('document_block_content')
+        .where({ document_id: documentId })
         .first();
 
       if (blockContent && blockContent.block_data) {
         htmlContent = convertBlockContentToHTML(blockContent.block_data);
       } else {
-        const textContent = await knex('document_content')
-          .where({ document_id: documentId, tenant: this.tenant })
+        const textContent = await db.table('document_content')
+          .where({ document_id: documentId })
           .first();
 
         if (textContent && textContent.content) {
@@ -499,10 +550,10 @@ export class PDFGenerationService {
 
   private async getDocumentRecord(documentId: string): Promise<{ document_id: string; document_name: string; mime_type?: string; tenant: string } | null> {
     const { knex } = await createTenantKnex();
-    return knex('documents')
-      .where({ document_id: documentId, tenant: this.tenant })
+    return (await tenantDb(knex, this.tenant).table('documents')
+      .where({ document_id: documentId })
       .select('document_id', 'document_name', 'mime_type', 'tenant')
-      .first() ?? null;
+      .first()) ?? null;
   }
 
   // ---- Puppeteer -----------------------------------------------------------

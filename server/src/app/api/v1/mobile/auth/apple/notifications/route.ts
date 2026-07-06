@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 import {
   decryptAppleRefreshToken,
@@ -25,8 +26,11 @@ import {
  *     idempotent so retries are safe)
  */
 
+const MOBILE_TENANT_DISCOVERY = 'tenant-discovery';
+
 async function handleEvent(event: AppleServerNotificationEvent): Promise<void> {
   const knex = await getConnection(null);
+  const identityLookup = tenantDb(knex, MOBILE_TENANT_DISCOVERY);
 
   switch (event.type) {
     case 'consent-revoked':
@@ -36,7 +40,8 @@ async function handleEvent(event: AppleServerNotificationEvent): Promise<void> {
       // We do NOT deactivate the Alga user — they may have other sign-in
       // methods (Google/Microsoft SSO). If Apple was their only login, they
       // can still reach the web to recover.
-      const rows = await knex('apple_user_identities')
+      const rows = await identityLookup
+        .unscoped('apple_user_identities', 'Apple server notification resolves identity by Apple user id')
         .where({ apple_user_id: event.sub })
         .select<{ apple_refresh_token_enc: string | null }[]>(['apple_refresh_token_enc']);
 
@@ -55,20 +60,25 @@ async function handleEvent(event: AppleServerNotificationEvent): Promise<void> {
       }
 
       if (rows.length > 0) {
-        await knex('apple_user_identities').where({ apple_user_id: event.sub }).del();
+        await identityLookup
+          .unscoped('apple_user_identities', 'Apple server notification deletes identity by Apple user id')
+          .where({ apple_user_id: event.sub })
+          .del();
       }
       return;
     }
 
     case 'email-disabled': {
-      await knex('apple_user_identities')
+      await identityLookup
+        .unscoped('apple_user_identities', 'Apple server notification updates relay status by Apple user id')
         .where({ apple_user_id: event.sub })
         .update({ email_forwarding_disabled: true });
       return;
     }
 
     case 'email-enabled': {
-      await knex('apple_user_identities')
+      await identityLookup
+        .unscoped('apple_user_identities', 'Apple server notification updates relay status by Apple user id')
         .where({ apple_user_id: event.sub })
         .update({ email_forwarding_disabled: false });
       return;

@@ -6,6 +6,7 @@ export * from './accountingExport.interfaces';
 export * from './accountingExportAdapter.interfaces';
 export * from './activity.interfaces';
 export * from './asset.interfaces';
+export * from './inventory.interfaces';
 export type {
   IUser,
   IRole,
@@ -51,6 +52,7 @@ export * from './ticketImport.interfaces';
 export * from './projectTaskComment.interface';
 export * from './projectTemplate.interfaces';
 export * from './quote.interfaces';
+export * from './salesOrderDocument.interfaces';
 export * from './recurringTiming.interfaces';
 export * from './schedule.interfaces';
 export * from './scheduling.interfaces';

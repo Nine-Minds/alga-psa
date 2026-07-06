@@ -3,10 +3,26 @@ import { randomUUID } from 'node:crypto';
 import { knex as createKnex, type Knex } from 'knex';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
+const runWithTenantMock = vi.hoisted(() =>
+  vi.fn(async (_tenant: string, fn: () => Promise<unknown>) => fn()),
+);
 
 vi.mock('@/lib/db', () => ({
   createTenantKnex: createTenantKnexMock,
+  runWithTenant: runWithTenantMock,
 }));
+
+// The EE chat/message models import ee/server/src/lib/db, which re-exports
+// @alga-psa/db/tenant (not @/lib/db) — mock it too so model queries hit the
+// test database instead of the env-configured shared connection.
+vi.mock('@alga-psa/db/tenant', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    createTenantKnex: createTenantKnexMock,
+    runWithTenant: runWithTenantMock,
+  };
+});
 
 const TEST_TENANT = 'chat-persistence-test-tenant';
 

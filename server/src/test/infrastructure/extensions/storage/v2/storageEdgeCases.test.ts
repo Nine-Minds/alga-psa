@@ -145,7 +145,9 @@ describe('StorageService revision semantics (committed connections)', () => {
   it('exposes latest revision across independent connections', async () => {
     const tenantId = randomUUID();
 
-    const writer = await createTestDbConnection();
+    // recreate: false — a full bootstrap would drop the DB (losing the storage
+    // tables ensured in beforeAll) and two of them overrun the test timeout.
+    const writer = await createTestDbConnection({ recreate: false });
     try {
       const writerService = new StorageService(writer, tenantId);
       const put1 = await writerService.put({ namespace, key: 'revision-visibility', value: { version: 1 } });
@@ -157,7 +159,7 @@ describe('StorageService revision semantics (committed connections)', () => {
       await writer.destroy();
     }
 
-    const reader = await createTestDbConnection();
+    const reader = await createTestDbConnection({ recreate: false });
     try {
       const readerService = new StorageService(reader, tenantId);
       const key = 'revision-visibility';

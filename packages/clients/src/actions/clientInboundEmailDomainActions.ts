@@ -1,9 +1,9 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import { hasPermissionAsync } from '../lib/authHelpers';
+import { assertMspPermission } from '../lib/authHelpers';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface ClientInboundEmailDomain {
@@ -35,12 +35,12 @@ async function findDomainOwner(
   tenant: string,
   domain: string
 ): Promise<{ client_id: string; client_name: string } | null> {
-  const row = await trx('client_inbound_email_domains as d')
-    .leftJoin('clients as c', function () {
-      this.on('d.client_id', '=', 'c.client_id').andOn('d.tenant', '=', 'c.tenant');
-    })
+  const scopedDb = tenantDb(trx, tenant);
+  const query = scopedDb.table('client_inbound_email_domains as d');
+  scopedDb.tenantJoin(query, 'clients as c', 'd.client_id', 'c.client_id', { type: 'left' });
+
+  const row = await query
     .select('d.client_id', 'c.client_name')
-    .where('d.tenant', tenant)
     .andWhereRaw('lower(d.domain) = ?', [domain.toLowerCase()])
     .first();
 
@@ -51,15 +51,13 @@ async function findDomainOwner(
 }
 
 export const listClientInboundEmailDomains = withAuth(async (user, { tenant }, clientId: string): Promise<ClientInboundEmailDomain[]> => {
-  if (!await hasPermissionAsync(user, 'client', 'read')) {
-    throw new Error('Permission denied: Cannot read clients');
-  }
+  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const rows = await trx('client_inbound_email_domains')
+    const rows = await tenantDb(trx, tenant).table('client_inbound_email_domains')
       .select('id', 'client_id', 'domain', 'created_at')
-      .where({ tenant, client_id: clientId })
+      .where({ client_id: clientId })
       .orderBy('domain', 'asc');
     return rows as any;
   });
@@ -71,9 +69,7 @@ export const addClientInboundEmailDomain = withAuth(async (
   clientId: string,
   rawDomain: string
 ): Promise<ClientInboundEmailDomain> => {
-  if (!await hasPermissionAsync(user, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot update clients');
-  }
+  await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
 
   const domain = normalizeDomain(rawDomain);
   const error = validateDomain(domain);
@@ -86,7 +82,7 @@ export const addClientInboundEmailDomain = withAuth(async (
     try {
       const id = uuidv4();
       const now = new Date().toISOString();
-      const [row] = await trx('client_inbound_email_domains')
+      const [row] = await tenantDb(trx, tenant).table('client_inbound_email_domains')
         .insert({
           tenant,
           id,
@@ -117,16 +113,13 @@ export const removeClientInboundEmailDomain = withAuth(async (
   clientId: string,
   domainId: string
 ): Promise<{ success: true }> => {
-  if (!await hasPermissionAsync(user, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot update clients');
-  }
+  await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    await trx('client_inbound_email_domains')
-      .where({ tenant, client_id: clientId, id: domainId })
+    await tenantDb(trx, tenant).table('client_inbound_email_domains')
+      .where({ client_id: clientId, id: domainId })
       .delete();
     return { success: true as const };
   });
 });
-

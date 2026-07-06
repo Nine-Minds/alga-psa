@@ -1,11 +1,17 @@
 import type { EntityDeletionConfig } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
+// Raw tenant scoping (not @alga-psa/db's tenantDb) so @alga-psa/core does not
+// depend on @alga-psa/db — that import direction creates a core<->db build cycle.
+// Every table referenced here is a standard `tenant`-column table, so qualifying
+// the predicate by table name matches tenantDb.table()'s behaviour exactly.
+const tenantScopedTable = (trx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder =>
+  trx(table).where(`${table}.tenant`, tenant);
+
 const countDocumentAssociations = (entityType: string) => {
   return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
-    const result = await trx('document_associations')
+    const result = await tenantScopedTable(trx, options.tenant, 'document_associations')
       .where({
-        tenant: options.tenant,
         entity_id: options.entityId,
         entity_type: entityType
       })
@@ -20,9 +26,8 @@ const countPortalUsers = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
 ): Promise<number> => {
-  const result = await trx('users')
+  const result = await tenantScopedTable(trx, options.tenant, 'users')
     .where({
-      tenant: options.tenant,
       contact_id: options.entityId,
       user_type: 'client'
     })
@@ -37,10 +42,12 @@ const countContractLineServiceDeps = async (
   options: { tenant: string; entityId: string }
 ): Promise<number> => {
   const result = await trx('contract_line_services as cls')
-    .innerJoin('contract_lines as cl', function () {
-      this.on('cl.tenant', '=', 'cls.tenant').andOn('cl.contract_line_id', '=', 'cls.contract_line_id');
+    .where('cls.tenant', options.tenant)
+    .join('contract_lines as cl', function () {
+      this.on('cl.contract_line_id', '=', 'cls.contract_line_id')
+        .andOn('cl.tenant', '=', 'cls.tenant');
     })
-    .where({ 'cls.tenant': options.tenant, 'cls.service_id': options.entityId })
+    .where({ 'cls.service_id': options.entityId })
     .count<{ count: string }>('* as count')
     .first();
 
@@ -51,9 +58,8 @@ const countTimeEntryBilling = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
 ): Promise<number> => {
-  const result = await trx('time_entries')
+  const result = await tenantScopedTable(trx, options.tenant, 'time_entries')
     .where({
-      tenant: options.tenant,
       entry_id: options.entityId,
       invoiced: true
     })
@@ -67,10 +73,9 @@ const getStatusType = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
 ): Promise<string | null> => {
-  const status = await trx('statuses')
+  const status = await tenantScopedTable(trx, options.tenant, 'statuses')
     .select('status_type')
     .where({
-      tenant: options.tenant,
       status_id: options.entityId
     })
     .first();
@@ -80,9 +85,8 @@ const getStatusType = async (
 
 const countAssetAssociations = (entityType: string) => {
   return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
-    const result = await trx('asset_associations')
+    const result = await tenantScopedTable(trx, options.tenant, 'asset_associations')
       .where({
-        tenant: options.tenant,
         entity_id: options.entityId,
         entity_type: entityType
       })
@@ -95,9 +99,8 @@ const countAssetAssociations = (entityType: string) => {
 
 const countTicketEntityLinks = (entityType: string) => {
   return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
-    const result = await trx('ticket_entity_links')
+    const result = await tenantScopedTable(trx, options.tenant, 'ticket_entity_links')
       .where({
-        tenant: options.tenant,
         entity_id: options.entityId,
         entity_type: entityType
       })
@@ -119,9 +122,8 @@ const countStatusUsage = (
       return 0;
     }
 
-    const result = await trx(table)
+    const result = await tenantScopedTable(trx, options.tenant, table)
       .where({
-        tenant: options.tenant,
         [foreignKey]: options.entityId
       })
       .count<{ count: string }>('* as count')
@@ -211,8 +213,8 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'time_entries',
         label: 'time entry',
         countQuery: async (trx, options) => {
-          const result = await trx('time_entries')
-            .where({ tenant: options.tenant, work_item_id: options.entityId, work_item_type: 'ticket' })
+          const result = await tenantScopedTable(trx, options.tenant, 'time_entries')
+            .where({ work_item_id: options.entityId, work_item_type: 'ticket' })
             .count<{ count: string }>('* as count')
             .first();
           return Number(result?.count ?? 0);
@@ -223,8 +225,8 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'schedule_entries',
         label: 'schedule entry',
         countQuery: async (trx, options) => {
-          const result = await trx('schedule_entries')
-            .where({ tenant: options.tenant, work_item_id: options.entityId, work_item_type: 'ticket' })
+          const result = await tenantScopedTable(trx, options.tenant, 'schedule_entries')
+            .where({ work_item_id: options.entityId, work_item_type: 'ticket' })
             .count<{ count: string }>('* as count')
             .first();
           return Number(result?.count ?? 0);
@@ -253,15 +255,16 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         label: 'schedule entry',
         countQuery: async (trx, options) => {
           const taskIds = await trx('project_tasks')
-            .join('project_phases', function() {
-              this.on('project_tasks.phase_id', 'project_phases.phase_id')
-                .andOn('project_tasks.tenant', 'project_phases.tenant');
+            .where('project_tasks.tenant', options.tenant)
+            .join('project_phases', function () {
+              this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+                .andOn('project_phases.tenant', '=', 'project_tasks.tenant');
             })
-            .where({ 'project_phases.project_id': options.entityId, 'project_phases.tenant': options.tenant })
+            .where({ 'project_phases.project_id': options.entityId })
             .pluck('project_tasks.task_id');
           if (taskIds.length === 0) return 0;
-          const result = await trx('schedule_entries')
-            .where({ tenant: options.tenant, work_item_type: 'project_task' })
+          const result = await tenantScopedTable(trx, options.tenant, 'schedule_entries')
+            .where({ work_item_type: 'project_task' })
             .whereIn('work_item_id', taskIds)
             .count<{ count: string }>('* as count')
             .first();
@@ -533,9 +536,9 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'quotes',
         label: 'business history',
         countQuery: async (trx, options) => {
-          const record = await trx('quotes')
+          const record = await tenantScopedTable(trx, options.tenant, 'quotes')
             .select('status')
-            .where({ tenant: options.tenant, quote_id: options.entityId })
+            .where({ quote_id: options.entityId })
             .first();
           return record?.status && record.status !== 'draft' ? 1 : 0;
         }
@@ -545,8 +548,8 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'quote_activities',
         label: 'quote activity',
         countQuery: async (trx, options) => {
-          const result = await trx('quote_activities')
-            .where({ tenant: options.tenant, quote_id: options.entityId })
+          const result = await tenantScopedTable(trx, options.tenant, 'quote_activities')
+            .where({ quote_id: options.entityId })
             .whereNot('activity_type', 'created')
             .count<{ count: string }>('* as count')
             .first();
@@ -558,8 +561,8 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'email_sending_logs',
         label: 'sent email',
         countQuery: async (trx, options) => {
-          const result = await trx('email_sending_logs')
-            .where({ tenant: options.tenant, entity_type: 'quote', entity_id: options.entityId })
+          const result = await tenantScopedTable(trx, options.tenant, 'email_sending_logs')
+            .where({ entity_type: 'quote', entity_id: options.entityId })
             .count<{ count: string }>('* as count')
             .first();
           return Number(result?.count ?? 0);
@@ -570,9 +573,9 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'quotes',
         label: 'converted billing record',
         countQuery: async (trx, options) => {
-          const record = await trx('quotes')
+          const record = await tenantScopedTable(trx, options.tenant, 'quotes')
             .select('converted_contract_id', 'converted_invoice_id')
-            .where({ tenant: options.tenant, quote_id: options.entityId })
+            .where({ quote_id: options.entityId })
             .first();
           return record?.converted_contract_id || record?.converted_invoice_id ? 1 : 0;
         }

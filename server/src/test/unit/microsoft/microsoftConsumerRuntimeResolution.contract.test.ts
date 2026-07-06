@@ -50,9 +50,11 @@ describe('microsoft consumer runtime resolution contracts', () => {
 
     expect(sharedResolverSource).toContain("from '../actions/integrations/microsoftShared'");
     expect(sharedResolverSource).toContain('ensureMicrosoftConsumerBindingMigration');
-    expect(sharedResolverSource).toContain("db('microsoft_profile_consumer_bindings')");
-    expect(sharedResolverSource).toContain("db('email_providers')");
-    expect(sharedResolverSource).toContain("db('calendar_providers')");
+    // Reads flow through the tenantDb facade (tenantScopedTable wraps tenantDb(...).table(...)).
+    expect(sharedResolverSource).toContain('return tenantDb(db, tenant).table(table);');
+    expect(sharedResolverSource).toContain("tenantScopedTable(db, 'microsoft_profile_consumer_bindings', tenant)");
+    expect(sharedResolverSource).toContain("tenantScopedTable(db, 'email_providers', tenant)");
+    expect(sharedResolverSource).toContain("tenantScopedTable(db, 'calendar_providers', tenant)");
     expect(sharedResolverSource).not.toContain("from '../actions/integrations/microsoftActions'");
 
     expect(emailOauthActionSource).toContain('resolveMicrosoftConsumerProfileConfig(tenant, \'email\')');

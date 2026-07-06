@@ -92,7 +92,7 @@ describe('AccountingMappingResolver integration', () => {
       metadata: { itemCode: 'SERV-123' }
     });
 
-    const resolver = new AccountingMappingResolver(ctx.db);
+    const resolver = new AccountingMappingResolver(ctx.db, undefined, ctx.tenantId);
     const resolution = await resolver.resolveServiceMapping({
       adapterType,
       serviceId,
@@ -119,7 +119,7 @@ describe('AccountingMappingResolver integration', () => {
       metadata: { itemCode: 'CAT-555' }
     });
 
-    const resolver = new AccountingMappingResolver(ctx.db);
+    const resolver = new AccountingMappingResolver(ctx.db, undefined, ctx.tenantId);
     const resolution = await resolver.resolveServiceMapping({
       adapterType,
       serviceId,
@@ -153,7 +153,7 @@ describe('AccountingMappingResolver integration', () => {
       metadata: { syncToken: '42' }
     });
 
-    const resolver = new AccountingMappingResolver(ctx.db);
+    const resolver = new AccountingMappingResolver(ctx.db, undefined, ctx.tenantId);
 
     const realmMatch = await resolver.resolveServiceMapping({
       adapterType,

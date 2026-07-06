@@ -5,7 +5,10 @@ import type { AccountingExportAdapterContext, AccountingExportDeliveryResult } f
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: createTenantKnexMock
+  createTenantKnex: createTenantKnexMock,
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+  })
 }));
 
 import { AccountingExportService } from '../../../../../packages/billing/src/services/accountingExportService';

@@ -8,17 +8,23 @@ function normalizeTableName(tableName: string) {
   return tableName.split(/\s+as\s+/i)[0].trim();
 }
 
+function normalizeColumnName(columnName: string) {
+  const [, unqualifiedName] = columnName.match(/^(?:[^.]+)\.(.+)$/) ?? [];
+  return unqualifiedName ?? columnName;
+}
+
 function buildPredicate(
   columnOrCriteria: Record<string, unknown> | string,
   value?: unknown,
 ) {
   if (typeof columnOrCriteria === "string") {
-    return (row: Row) => row[columnOrCriteria] === value;
+    const columnName = normalizeColumnName(columnOrCriteria);
+    return (row: Row) => row[columnName] === value;
   }
 
   return (row: Row) =>
     Object.entries(columnOrCriteria).every(
-      ([column, expected]) => row[column] === expected,
+      ([column, expected]) => row[normalizeColumnName(column)] === expected,
     );
 }
 

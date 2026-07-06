@@ -1,0 +1,110 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed: getClientPulse happy path \u2014 seeded client with open+overdue tickets, draft invoice, delivered stock unit, contacts, locations \u2192 correct counts, refs and attention flags",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F005",
+      "F006",
+      "F011",
+      "F013"
+    ],
+    "note": "green (clientPulse.test.ts)"
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed: aging math \u2014 finalized invoices with due dates across buckets, one invoice_payments row and one credit_applied \u2192 outstanding lands in correct buckets and sums",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ],
+    "note": "green \u2014 buckets verified vs completed payment + credit_applied"
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed: pulse RBAC \u2014 user without billing:read gets no money section and no money attention flags; user without inventory:read gets no installBase and no SO/RMA flags",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F011",
+      "F012",
+      "F015"
+    ],
+    "note": "green"
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed: client-waiting flag appears only when the latest comment on an open ticket has author_type='client'; internal-latest and closed tickets emit nothing",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ],
+    "note": "green after fixing seed (comments has is_system_generated, not is_initial_description)"
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed: listClientTimeline merges \u22654 source types (ticket, invoice, unit delivered, interaction, quote activity) in strict descending occurred_at order with correct refs",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F017",
+      "F018",
+      "F019",
+      "F020"
+    ],
+    "note": "green (clientTimeline.test.ts)"
+  },
+  {
+    "id": "T006",
+    "description": "DB-backed: timeline cursor pagination \u2014 page size limit respected, second page continues without overlap or gaps; type filter returns only requested types",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ],
+    "note": "green \u2014 pagination + type filter"
+  },
+  {
+    "id": "T007",
+    "description": "DB-backed: timeline RBAC \u2014 user without billing:read receives no invoice events; without inventory:read no unit/SO/RMA events",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ],
+    "note": "green"
+  },
+  {
+    "id": "T008",
+    "description": "Browser smoke (manual, EE dev stack): Emerald City renders live command center \u2014 attention flags real, cards match DB, timeline shows this week's real events, no placeholder content",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F025",
+      "F030",
+      "F034"
+    ],
+    "note": "verified live on Emerald City: flags ($15,753 drafts / #TIC1003 3d overdue / RMA 50d), aging bars match seeded 50/100/75, timeline all-real, honest empty states (record card, CSAT)"
+  },
+  {
+    "id": "T009",
+    "description": "Browser smoke (manual): ?tab=equipment deep link opens Equipment focus view; closing it cleans URL; quickView drawer from another screen still renders legacy compact layout",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F032",
+      "F033"
+    ],
+    "note": "deep link ?tab=equipment verified live (incl. async-registry race fix); close cleans URL; quickView legacy path verified by code branch (quickView||isInDrawer -> CustomTabs), not browser-exercised"
+  },
+  {
+    "id": "T010",
+    "description": "DB-backed: notes preview \u2014 no doc => hasNotes false; real BlockNote content => first 2 non-empty block texts + lastEditedAt; saved-but-blank doc => reads as no notes",
+    "implemented": true,
+    "featureIds": [
+      "F040",
+      "F041"
+    ],
+    "note": "clientPulse.test.ts T005; suite 5/5 green"
+  }
+]

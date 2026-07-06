@@ -1,637 +1,637 @@
 {
   "page": {
-    "title": "Schedule",
+    "title": "Agendar",
     "actions": {
-      "configureAvailability": "Configure Availability",
-      "appointmentRequests": "Appointment Requests"
+      "configureAvailability": "Configurar disponibilidade",
+      "appointmentRequests": "Solicitações de agendamento"
     }
   },
   "sidebar": {
     "actions": {
-      "compareAll": "Compare All",
-      "clearAll": "Clear All",
-      "viewWeek": "View Week",
-      "compare": "Compare",
-      "stopComparing": "Stop Comparing"
+      "compareAll": "Comparar tudo",
+      "clearAll": "Limpar tudo",
+      "viewWeek": "Ver semana",
+      "compare": "Comparar",
+      "stopComparing": "Pare de comparar"
     },
     "labels": {
-      "inactive": "(Inactive)"
+      "inactive": "(Inativo)"
     },
     "aria": {
-      "viewWeek": "View week for {{name}}",
-      "compare": "Compare {{name}}"
+      "viewWeek": "Ver semana para {{name}}",
+      "compare": "Comparar {{name}}"
     }
   },
   "agentView": {
-    "loading": "Loading...",
+    "loading": "Carregando...",
     "errors": {
-      "loadPermissions": "Failed to load user permissions",
-      "forbidden": "You do not have permission to view this schedule."
+      "loadPermissions": "Falha ao carregar as permissões do usuário",
+      "forbidden": "Você não tem permissão para visualizar esta programação."
     }
   },
   "calendar": {
     "legend": {
       "types": {
         "ticket": "Ticket",
-        "projectTask": "Project task",
-        "nonBillableCategory": "Non-billable category",
-        "adHoc": "Ad-Hoc Entry",
-        "interaction": "Interaction",
-        "appointmentRequest": "Appointment Request"
+        "projectTask": "Tarefa do projeto",
+        "nonBillableCategory": "Categoria não faturável",
+        "adHoc": "Entrada ad hoc",
+        "interaction": "Interação",
+        "appointmentRequest": "Solicitação de agendamento"
       },
-      "showInactiveUsers": "Show Inactive Users"
+      "showInactiveUsers": "Mostrar usuários inativos"
     },
     "loading": {
-      "initial": "Loading schedule...",
-      "overlay": "Loading..."
+      "initial": "Carregando programação...",
+      "overlay": "Carregando..."
     },
     "errors": {
-      "validateDeletion": "Failed to validate deletion. Please try again.",
-      "loadPermissions": "Failed to load permissions.",
-      "loadCurrentUser": "Failed to load current user.",
-      "unknown": "An unknown error occurred",
-      "deleteFailed": "Failed to delete schedule entry",
-      "deleteUnexpected": "An error occurred while deleting the schedule entry",
-      "updateFailed": "Failed to update schedule entry: {{error}}",
-      "createFailed": "Failed to add schedule entry: {{error}}",
-      "saveUnexpected": "An error occurred while saving the schedule entry"
+      "validateDeletion": "Falha ao validar a exclusão. Por favor, tente novamente.",
+      "loadPermissions": "Falha ao carregar permissões.",
+      "loadCurrentUser": "Falha ao carregar o usuário atual.",
+      "unknown": "Ocorreu um erro desconhecido",
+      "deleteFailed": "Falha ao excluir entrada de agendamento",
+      "deleteUnexpected": "Ocorreu um erro ao excluir a entrada de agendamento",
+      "updateFailed": "Falha ao atualizar a entrada da programação: {{error}}",
+      "createFailed": "Falha ao adicionar entrada de agendamento: {{error}}",
+      "saveUnexpected": "Ocorreu um erro ao salvar a entrada da programação"
     },
     "toolbar": {
-      "previousAria": "Previous {{view}}",
-      "previous": "< Prev",
-      "today": "Today",
-      "nextAria": "Next {{view}}",
-      "next": "Next >",
+      "previousAria": "Anterior {{view}}",
+      "previous": "< Anterior",
+      "today": "Hoje",
+      "nextAria": "Próximo {{view}}",
+      "next": "Próximo>",
       "views": {
-        "month": "Month",
-        "week": "Week",
-        "day": "Day"
+        "month": "Mês",
+        "week": "Semana",
+        "day": "Dia"
       }
     },
     "event": {
       "fallbacks": {
-        "unknownTechnician": "Unknown",
-        "unassigned": "Unassigned",
-        "untitled": "Untitled"
+        "unknownTechnician": "Desconhecido",
+        "unassigned": "Não atribuído",
+        "untitled": "Sem título"
       },
       "tooltip": {
-        "scheduledFor": "Scheduled for: {{technicians}}",
-        "start": "Start: {{dateTime}}",
-        "end": "End: {{dateTime}}",
-        "multiDay": "(Multi-day)"
+        "scheduledFor": "Programado para: {{technicians}}",
+        "start": "Início: {{dateTime}}",
+        "end": "Fim: {{dateTime}}",
+        "multiDay": "(Vários dias)"
       }
     },
     "deleteDialog": {
-      "title": "Delete Schedule Entry",
-      "messageRecurring": "Select which events to delete:",
-      "messageSingle": "Are you sure you want to delete this schedule entry? This action cannot be undone.",
-      "confirm": "Delete",
-      "entityFallback": "this schedule entry",
+      "title": "Excluir entrada de agendamento",
+      "messageRecurring": "Selecione quais eventos serão excluídos:",
+      "messageSingle": "Tem certeza de que deseja excluir esta entrada da programação? Esta ação não pode ser desfeita.",
+      "confirm": "Excluir",
+      "entityFallback": "esta entrada de programação",
       "options": {
-        "single": "Only this event",
-        "future": "This and future events",
-        "all": "All events"
+        "single": "Somente este evento",
+        "future": "Este e eventos futuros",
+        "all": "Todos os eventos"
       },
-      "messageWithTeamsWarning": "Tem certeza de que deseja excluir esta entrada da agenda? Esta ação não pode ser desfeita. Isto também excluirá a reunião do Microsoft Teams."
+      "messageWithTeamsWarning": "Tem certeza de que deseja excluir esta entrada da programação? Esta ação não pode ser desfeita. Isso também excluirá a reunião do Microsoft Teams."
     },
     "print": {
-      "title": "Agenda da programação",
-      "subtitle": "{{count}} entradas agendadas",
-      "noEntries": "Nenhuma entrada agendada para imprimir",
+      "title": "Agendar Agenda",
+      "subtitle": "Entradas agendadas {{count}}",
+      "noEntries": "Não há entradas programadas para imprimir",
       "emptyValue": "-",
       "columns": {
         "title": "Título",
         "type": "Tipo",
-        "start": "Início",
+        "start": "Começar",
         "end": "Fim",
         "assigned": "Atribuído",
         "status": "Status"
       },
       "optionsDialog": {
         "title": "Opções de impressão",
-        "description": "Escolha quais colunas incluir ao imprimir a agenda."
+        "description": "Escolha quais colunas incluir ao imprimir a programação."
       }
     }
   },
   "weeklyEvent": {
     "actions": {
-      "delete": "Delete Entry"
+      "delete": "Excluir entrada"
     },
     "continuation": {
-      "previousWeek": "Continues from previous week"
+      "previousWeek": "Continua da semana anterior"
     }
   },
   "requests": {
     "errors": {
-      "load": "Failed to load appointment requests",
-      "ticketNotFound": "Ticket not found",
-      "loadTicket": "Failed to load ticket",
-      "assignTechnicianRequired": "Please assign a technician",
-      "approve": "Failed to approve request",
-      "declineReasonRequired": "Please provide a reason for declining",
-      "decline": "Failed to decline request"
+      "load": "Falha ao carregar solicitações de agendamento",
+      "ticketNotFound": "Ticket não encontrado",
+      "loadTicket": "Falha ao carregar o ticket",
+      "assignTechnicianRequired": "Por favor atribua um técnico",
+      "approve": "Falha ao aprovar a solicitação",
+      "declineReasonRequired": "Forneça um motivo para recusar",
+      "decline": "Falha ao recusar a solicitação"
     },
     "feedback": {
-      "approved": "Appointment request approved",
-      "declined": "Appointment request declined"
+      "approved": "Solicitação de agendamento aprovada",
+      "declined": "Solicitação de agendamento recusada"
     },
     "filters": {
-      "statusLabel": "Filter by Status",
+      "statusLabel": "Filtrar por status",
       "statusOptions": {
-        "all": "All",
-        "pending": "Pending",
-        "approved": "Approved",
-        "declined": "Declined",
-        "cancelled": "Cancelled"
+        "all": "Todos",
+        "pending": "Pendente",
+        "approved": "Aprovado",
+        "declined": "Recusado",
+        "cancelled": "Cancelado"
       }
     },
     "fallbacks": {
-      "invalidDateTime": "Invalid date/time"
+      "invalidDateTime": "Data/hora inválida"
     },
     "list": {
-      "title": "Appointment Requests",
+      "title": "Solicitações de agendamento",
       "badgeTotal": "Total",
-      "loading": "Loading requests...",
-      "empty": "No {{status}} requests found",
-      "duration": "{{count}} minutes",
+      "loading": "Carregando solicitações...",
+      "empty": "Nenhuma solicitação {{status}} encontrada",
+      "duration": "{{count}} minutos",
       "ticketFallback": "Ticket #{{ticket}}",
       "fallbacks": {
-        "publicRequest": "Public Request"
+        "publicRequest": "Solicitação pública"
       }
     },
     "detail": {
-      "back": "← Back to List",
-      "title": "Request Details",
+      "back": "← Voltar à lista",
+      "title": "Detalhes da solicitação",
       "section": {
-        "requestInformation": "Request Information"
+        "requestInformation": "Solicitar informações"
       },
       "labels": {
-        "reference": "Reference",
+        "reference": "Referência",
         "client": "Cliente",
-        "requester": "Requerente",
+        "requester": "Solicitante",
         "contact": "Contato",
-        "email": "Email",
-        "phone": "Phone",
-        "service": "Service",
-        "requestedTime": "Requested Time",
-        "duration": "Duration",
+        "email": "E-mail",
+        "phone": "Telefone",
+        "service": "Serviço",
+        "requestedTime": "Hora solicitada",
+        "duration": "Duração",
+        "teamsMeeting": "Reunião de equipes",
         "status": "Status",
-        "linkedTicket": "Linked Ticket",
-        "description": "Description",
-        "teamsMeeting": "Reunião do Teams"
+        "linkedTicket": "Ticket vinculado",
+        "description": "Descrição"
       },
       "actions": {
-        "joinTeamsMeeting": "Participar na reunião do Teams"
+        "joinTeamsMeeting": "Participe da reunião de equipes"
       }
     },
     "approval": {
-      "title": "Approval Details",
+      "title": "Detalhes de aprovação",
       "fields": {
-        "assignedTechnician": "Assign Technician *",
-        "finalDateTime": "Final Date & Time",
-        "internalNotes": "Internal Notes (Optional)",
-        "linkedTicket": "Link to Ticket (Optional)",
-        "generateTeamsMeeting": "Gerar link de reunião do Microsoft Teams"
+        "assignedTechnician": "Atribuir Técnico *",
+        "finalDateTime": "Data e hora finais",
+        "generateTeamsMeeting": "Gerar link de reunião do Microsoft Teams",
+        "internalNotes": "Notas internas (opcional)",
+        "linkedTicket": "Link para ticket (opcional)"
       },
       "placeholders": {
-        "assignedTechnician": "Select technician",
-        "internalNotes": "Add any internal notes...",
-        "linkedTicket": "Enter ticket ID to link..."
+        "assignedTechnician": "Selecione o técnico",
+        "internalNotes": "Adicione quaisquer notas internas...",
+        "linkedTicket": "Insira o ID do ticket para vincular..."
       },
       "actions": {
-        "approve": "Approve",
-        "decline": "Decline"
+        "approve": "Aprovar",
+        "decline": "Declínio"
       }
     },
     "decline": {
-      "title": "Decline Request",
+      "title": "Recusar solicitação",
       "fields": {
-        "reason": "Reason for Declining *"
+        "reason": "Motivo da recusa *"
       },
       "placeholders": {
-        "reason": "Please provide a reason for declining this request..."
+        "reason": "Forneça um motivo para recusar esta solicitação..."
       },
       "actions": {
-        "confirm": "Confirm Decline",
-        "cancel": "Cancel"
+        "confirm": "Confirmar recusa",
+        "cancel": "Cancelar"
       }
     }
   },
   "availabilitySettings": {
     "dialog": {
-      "title": "Availability Settings"
+      "title": "Configurações de disponibilidade"
     },
-    "loading": "Loading settings...",
+    "loading": "Carregando configurações...",
     "tabs": {
-      "general": "General Settings",
-      "userHours": "User Hours",
-      "serviceRules": "Service Rules",
-      "exceptions": "Exceptions",
-      "teamsMeetings": "Reuniões do Teams"
+      "general": "Configurações Gerais",
+      "userHours": "Horário do usuário",
+      "serviceRules": "Regras de serviço",
+      "exceptions": "Exceções",
+      "teamsMeetings": "Reuniões de equipes"
     },
     "days": {
-      "sunday": "Sunday",
-      "monday": "Monday",
-      "tuesday": "Tuesday",
-      "wednesday": "Wednesday",
-      "thursday": "Thursday",
-      "friday": "Friday",
-      "saturday": "Saturday"
+      "sunday": "Domingo",
+      "monday": "Segunda-feira",
+      "tuesday": "Terça-feira",
+      "wednesday": "Quarta-feira",
+      "thursday": "Quinta-feira",
+      "friday": "Sexta-feira",
+      "saturday": "Sábado"
     },
     "common": {
-      "yes": "Yes",
-      "no": "No",
+      "yes": "Sim",
+      "no": "Não",
       "columns": {
-        "action": "Action"
+        "action": "Ação"
       },
       "actions": {
-        "edit": "Edit",
-        "delete": "Delete",
-        "deleting": "Deleting..."
+        "edit": "Editar",
+        "delete": "Excluir",
+        "deleting": "Excluindo..."
       },
       "defaultApprover": {
-        "placeholder": "Select approvers"
+        "placeholder": "Selecione aprovadores"
       },
       "teamSelect": {
-        "label": "Select Team",
-        "placeholder": "Select a team"
+        "label": "Selecione a equipe",
+        "placeholder": "Selecione uma equipe"
       }
     },
     "feedback": {
-      "loadError": "Failed to load settings"
+      "loadError": "Falha ao carregar as configurações"
     },
     "general": {
       "autoApproval": {
-        "title": "Enable Auto-Approval",
-        "description": "Automatically approve appointments that meet the criteria configured below",
-        "criteriaTitle": "Auto-Approval Criteria:",
+        "title": "Habilitar aprovação automática",
+        "description": "Aprovar automaticamente compromissos que atendam aos critérios configurados abaixo",
+        "criteriaTitle": "Critérios de aprovação automática:",
         "criteria": {
-          "requireAvailability": "Technician must have availability configured for requested time",
-          "requireContract": "Client must have active contract (if service requires it)",
-          "checkConflicts": "No scheduling conflicts with existing appointments",
-          "respectBuffers": "Respect buffer times before/after appointments"
+          "requireAvailability": "O técnico deve ter disponibilidade configurada para o horário solicitado",
+          "requireContract": "O cliente deve ter contrato ativo (se o serviço exigir)",
+          "checkConflicts": "Sem conflitos de agendamento com compromissos existentes",
+          "respectBuffers": "Respeite os tempos de buffer antes/depois dos compromissos"
         }
       },
       "defaultApprover": {
-        "label": "Approvers",
-        "help": "Company-wide approvers for appointment requests that require manual approval. Add multiple users and/or teams — everyone selected is notified and can approve. This can be overridden per technician in User Hours settings."
+        "label": "Aprovadores",
+        "help": "Aprovadores de toda a empresa para solicitações de compromisso que exigem aprovação manual. Adicione vários usuários e/ou equipes — todos os selecionados serão notificados e poderão aprovar. Isso pode ser substituído por técnico nas configurações de horário do usuário."
       },
       "advanceBookingDays": {
-        "label": "Default Advance Booking (Days)"
+        "label": "Reserva antecipada padrão (dias)"
       },
       "minimumNoticeHours": {
-        "label": "Minimum Notice (Hours)"
+        "label": "Aviso mínimo (horas)"
       },
       "actions": {
-        "save": "Save General Settings"
+        "save": "Salvar configurações gerais"
       },
       "feedback": {
-        "saveSuccess": "General settings saved",
-        "saveError": "Failed to save settings"
+        "saveSuccess": "Configurações gerais salvas",
+        "saveError": "Falha ao salvar as configurações"
       }
     },
     "userHours": {
       "roleManager": {
-        "label": "Team Manager:",
-        "description": "You can configure availability settings for members of your team(s). The \"Configured Users\" table below shows all users with availability settings across the system."
+        "label": "Gerente de equipe:",
+        "description": "Você pode definir configurações de disponibilidade para membros de sua(s) equipe(s). A tabela \"Usuários configurados\" abaixo mostra todos os usuários com configurações de disponibilidade no sistema."
       },
       "roleAdmin": {
-        "label": "Administrator:",
-        "description": "You can configure availability settings for any user in the system. The \"Configured Users\" table below shows all users with availability settings."
+        "label": "Administrador:",
+        "description": "Você pode definir configurações de disponibilidade para qualquer usuário no sistema. A tabela \"Usuários configurados\" abaixo mostra todos os usuários com configurações de disponibilidade."
       },
       "userSelect": {
-        "label": "Select User to Configure",
-        "placeholderSelectTeamFirst": "Select a team first",
-        "placeholder": "Select a user to configure"
+        "label": "Selecione o usuário para configurar",
+        "placeholderSelectTeamFirst": "Selecione uma equipe primeiro",
+        "placeholder": "Selecione um usuário para configurar"
       },
       "appointmentSettings": {
-        "title": "Appointment Settings",
+        "title": "Configurações de compromisso",
         "defaultDuration": {
-          "label": "Default Appointment Duration (Minutes)",
-          "help": "Technician-specific duration override. Leave empty to use the service-specific duration from Service Rules.",
-          "placeholder": "Leave empty to use service default"
+          "label": "Duração padrão do compromisso (minutos)",
+          "help": "Substituição de duração específica do técnico. Deixe em branco para usar a duração específica do serviço das Regras de Serviço.",
+          "placeholder": "Deixe em branco para usar o serviço padrão"
         },
         "bufferAfter": {
-          "label": "Buffer Time Between Appointments (Minutes)",
+          "label": "Tempo de buffer entre compromissos (minutos)",
           "placeholder": "15"
         },
         "defaultApprover": {
-          "label": "Approvers",
-          "help": "Who should review and approve appointment requests for this technician that require manual approval. Add multiple users and/or teams. Leave empty to use the company-wide approvers."
+          "label": "Aprovadores",
+          "help": "Quem deve revisar e aprovar solicitações de agendamento deste técnico que exigem aprovação manual. Adicione vários usuários e/ou equipes. Deixe em branco para usar os aprovadores de toda a empresa."
         },
         "allowClientPreference": {
-          "label": "Allow Client Preference",
-          "help": "Let clients request this technician specifically"
+          "label": "Permitir preferência do cliente",
+          "help": "Deixe os clientes solicitarem este técnico especificamente"
         }
       },
       "schedule": {
-        "timezoneNotice": "Times are in your local timezone ({{timeZone}})",
+        "timezoneNotice": "Os horários estão no seu fuso horário local ({{timeZone}})",
         "columns": {
-          "day": "Day",
-          "available": "Available",
-          "startTime": "Start Time",
-          "endTime": "End Time"
+          "day": "Dia",
+          "available": "Disponível",
+          "startTime": "Hora de início",
+          "endTime": "Hora de término"
         }
       },
       "configuredUsers": {
-        "title": "Configured Users",
-        "description": "Users with availability settings configured",
-        "empty": "No users configured yet",
+        "title": "Usuários configurados",
+        "description": "Usuários com configurações de disponibilidade definidas",
+        "empty": "Nenhum usuário configurado ainda",
         "columns": {
-          "userName": "User Name",
+          "userName": "Nome de usuário",
           "status": "Status"
         },
         "status": {
-          "configured": "Configured"
+          "configured": "Configurado"
         }
       },
       "actions": {
-        "save": "Save User Hours"
+        "save": "Economize horas do usuário"
       },
       "feedback": {
-        "selectUserError": "Please select a user",
-        "saveSuccess": "User hours saved",
-        "saveError": "Failed to save user hours",
-        "deleteSuccess": "User availability deleted",
-        "deleteError": "Failed to delete user availability"
+        "selectUserError": "Selecione um usuário",
+        "saveSuccess": "Horas do usuário economizadas",
+        "saveError": "Falha ao salvar horas do usuário",
+        "deleteSuccess": "Disponibilidade do usuário excluída",
+        "deleteError": "Falha ao excluir a disponibilidade do usuário"
       },
       "deleteDialog": {
-        "title": "Delete User Availability",
-        "message": "Are you sure you want to delete availability settings for {{userName}}? This will remove all their configured working hours. This action cannot be undone."
+        "title": "Excluir disponibilidade do usuário",
+        "message": "Tem certeza de que deseja excluir as configurações de disponibilidade de {{userName}}? Isso removerá todos os horários de trabalho configurados. Esta ação não pode ser desfeita."
       }
     },
     "serviceRules": {
       "serviceSelect": {
-        "label": "Select Service to Configure",
-        "placeholder": "Select a service to configure"
+        "label": "Selecione o serviço para configurar",
+        "placeholder": "Selecione um serviço para configurar"
       },
       "editor": {
-        "title": "Edit Rules: {{serviceName}}",
+        "title": "Editar regras: {{serviceName}}",
         "allowWithoutContract": {
-          "label": "Allow Booking Without Contract"
+          "label": "Permitir reserva sem contrato"
         },
         "maxAppointmentsPerDay": {
-          "label": "Max Appointments Per Day"
+          "label": "Máximo de compromissos por dia"
         },
         "defaultDuration": {
-          "label": "Default Appointment Duration (Minutes)",
-          "help": "Default duration for appointments of this service type. Can be overridden by technician-specific settings in User Hours.",
-          "placeholder": "e.g., 60 (minutes)"
+          "label": "Duração padrão do compromisso (minutos)",
+          "help": "Duração padrão para compromissos deste tipo de serviço. Pode ser substituído por configurações específicas do técnico no Horário do usuário.",
+          "placeholder": "por exemplo, 60 (minutos)"
         }
       },
       "configuredServices": {
-        "title": "Configured Services",
-        "description": "Services with appointment rules configured",
-        "empty": "No services configured yet",
+        "title": "Serviços configurados",
+        "description": "Serviços com regras de compromisso configuradas",
+        "empty": "Nenhum serviço configurado ainda",
         "columns": {
-          "serviceName": "Service Name",
-          "duration": "Duration (min)",
-          "withoutContract": "Without Contract",
-          "maxPerDay": "Max Per Day"
+          "serviceName": "Nome do serviço",
+          "duration": "Duração (min)",
+          "withoutContract": "Sem Contrato",
+          "maxPerDay": "Máximo por dia"
         }
       },
       "common": {
-        "noLimit": "No limit"
+        "noLimit": "Sem limite"
       },
       "actions": {
-        "save": "Save Service Rules"
+        "save": "Salvar regras de serviço"
       },
       "feedback": {
-        "selectServiceError": "Please select a service",
-        "saveSuccess": "Service rules saved",
-        "saveError": "Failed to save service rules",
-        "deleteSuccess": "Service rules deleted",
-        "deleteError": "Failed to delete service rules"
+        "selectServiceError": "Selecione um serviço",
+        "saveSuccess": "Regras de serviço salvas",
+        "saveError": "Falha ao salvar regras de serviço",
+        "deleteSuccess": "Regras de serviço excluídas",
+        "deleteError": "Falha ao excluir regras de serviço"
       },
       "deleteDialog": {
-        "title": "Delete Service Rules",
-        "message": "Are you sure you want to delete the rules for {{serviceName}}? This action cannot be undone."
+        "title": "Excluir regras de serviço",
+        "message": "Tem certeza de que deseja excluir as regras de {{serviceName}}? Esta ação não pode ser desfeita."
       }
     },
     "exceptions": {
       "form": {
-        "title": "Add Exception",
+        "title": "Adicionar exceção",
         "date": {
-          "label": "Select Date"
+          "label": "Selecione a data"
         },
         "user": {
-          "label": "User (Optional - leave empty for company-wide)",
-          "placeholder": "Select user"
+          "label": "Usuário (opcional – deixe em branco para toda a empresa)",
+          "placeholder": "Selecione o usuário"
         },
         "isAvailable": {
-          "label": "Available on this day"
+          "label": "Disponível neste dia"
         },
         "reason": {
-          "label": "Reason",
-          "placeholder": "Holiday, Time off, etc."
+          "label": "Razão",
+          "placeholder": "Feriado, folga, etc."
         }
       },
       "common": {
-        "companyWide": "Company-wide"
+        "companyWide": "Em toda a empresa"
       },
       "actions": {
-        "add": "Add Exception"
+        "add": "Adicionar exceção"
       },
       "list": {
-        "title": "Existing Exceptions",
-        "empty": "No exceptions configured",
+        "title": "Exceções Existentes",
+        "empty": "Nenhuma exceção configurada",
         "status": {
-          "available": "Available",
-          "unavailable": "Unavailable"
+          "available": "Disponível",
+          "unavailable": "Indisponível"
         }
       },
       "feedback": {
-        "selectDateError": "Please select a date",
-        "addSuccess": "Exception added",
-        "addError": "Failed to add exception",
-        "deleteSuccess": "Exception deleted",
-        "deleteError": "Failed to delete exception"
+        "selectDateError": "Selecione uma data",
+        "addSuccess": "Exceção adicionada",
+        "addError": "Falha ao adicionar exceção",
+        "deleteSuccess": "Exceção excluída",
+        "deleteError": "Falha ao excluir exceção"
       }
     },
     "teamsMeetings": {
       "prerequisites": {
         "title": "Pré-requisitos do Azure",
-        "description": "Antes de ativar isto, conceda à aplicação a permissão OnlineMeetings.ReadWrite.All e crie uma Application Access Policy para a conta do organizador.",
+        "description": "Antes de ativar isso, conceda ao aplicativo a permissão do aplicativo OnlineMeetings.ReadWrite.All e crie uma Política de Acesso ao Aplicativo para a conta do organizador.",
         "steps": {
-          "toggle": "Mostrar passos de configuração do Azure",
+          "toggle": "Mostrar etapas de configuração do Azure",
           "step1": {
-            "title": "1. Conceder permissão de aplicação do Graph",
-            "item1": "Abra o centro de administração Entra → Registos de aplicações.",
-            "item2": "Selecione a aplicação utilizada pela integração Teams deste inquilino.",
-            "item3": "Permissões de API → Adicionar → Microsoft Graph → Permissões de aplicação.",
-            "item4": "Adicione OnlineMeetings.ReadWrite.All e conceda o consentimento do administrador."
+            "title": "1. Conceda permissão ao aplicativo Graph",
+            "item1": "Abra o centro de administração Entra → Registros de aplicativos.",
+            "item2": "Selecione o aplicativo usado pela integração do Teams deste locatário.",
+            "item3": "Permissões de API → Adicionar → Microsoft Graph → Permissões de aplicativo.",
+            "item4": "Adicione OnlineMeetings.ReadWrite.All e conceda consentimento do administrador."
           },
           "step2": {
-            "title": "2. Criar uma Application Access Policy",
-            "intro": "A criação de reuniões apenas por aplicação deve ser explicitamente permitida para a conta do organizador.",
-            "note": "Aguarde até 30 minutos pela propagação da política antes de clicar em Verificar."
+            "title": "2. Crie uma política de acesso a aplicativos",
+            "intro": "A criação de reuniões somente no aplicativo deve ser explicitamente permitida para a conta do organizador.",
+            "note": "Aguarde até 30 minutos para a propagação da política antes de clicar em Verificar."
           }
         }
       },
       "organizer": {
         "title": "Organizador da reunião",
-        "label": "ID do objeto de utilizador Microsoft do organizador predefinido da reunião",
-        "help": "Os agendamentos aprovados criam reuniões do Teams como este utilizador Microsoft. Use o ID do objeto Entra; UPNs podem devolver 404 do Microsoft Graph onlineMeetings.",
+        "label": "ID de objeto de usuário Microsoft do organizador de reunião padrão",
+        "help": "Os compromissos aprovados criam reuniões do Teams como este usuário da Microsoft. Use o ID do objeto Entra; Os UPNs podem retornar 404 das reuniões online do Microsoft Graph.",
         "placeholder": "00000000-0000-0000-0000-000000000000"
       },
       "actions": {
-        "save": "Guardar",
-        "saving": "A guardar...",
+        "save": "Salvar",
+        "saving": "Salvando...",
         "verify": "Verificar",
-        "verifying": "A verificar...",
-        "openRunbook": "Abrir runbook de configuração"
+        "verifying": "Verificando...",
+        "openRunbook": "Abra o runbook de configuração"
       },
       "feedback": {
-        "saveSuccess": "Organizador de reunião do Teams guardado",
-        "saveError": "Falha ao guardar o organizador de reunião do Teams",
+        "saveSuccess": "O organizador da reunião do Teams foi salvo",
+        "saveError": "Falha ao salvar o organizador da reunião do Teams",
         "verifySuccess": "Organizador de reunião do Teams verificado",
-        "verifyError": "Falha ao verificar o organizador de reunião do Teams"
+        "verifyError": "Falha ao verificar o organizador da reunião do Teams"
       },
       "verify": {
-        "valid": "Organizador Microsoft verificado com sucesso.",
-        "validWithName": "Utilizador Microsoft verificado: {{displayName}}.",
+        "valid": "Organizador da Microsoft verificado com sucesso.",
+        "validWithName": "Usuário verificado da Microsoft: {{displayName}}.",
         "reasons": {
-          "eeDisabled": "A verificação de reuniões do Teams só está disponível na Enterprise Edition.",
-          "notConfigured": "A integração do Teams tem de estar ativa antes de poder verificar um organizador.",
-          "userNotFound": "A Microsoft não encontrou um utilizador para esse organizador.",
-          "policyMissing": "O utilizador Microsoft existe, mas a Application Access Policy ainda não permite a criação de reuniões.",
-          "graphError": "O Microsoft Graph não conseguiu verificar este organizador de momento."
+          "eeDisabled": "A verificação de reuniões do Teams está disponível apenas na Enterprise Edition.",
+          "notConfigured": "A integração das equipes deve estar ativa antes que um organizador possa ser verificado.",
+          "userNotFound": "A Microsoft não conseguiu encontrar um usuário para esse valor de organizador.",
+          "policyMissing": "O usuário Microsoft existe, mas a política de acesso ao aplicativo ainda não permite a criação de reuniões.",
+          "graphError": "O Microsoft Graph não conseguiu verificar este organizador no momento."
         }
       }
     }
   },
   "entryPopup": {
     "title": {
-      "appointmentRequest": "Appointment Request",
-      "view": "View Entry",
-      "edit": "Edit Entry",
-      "new": "New Entry"
+      "appointmentRequest": "Solicitação de agendamento",
+      "view": "Ver entrada",
+      "edit": "Editar entrada",
+      "new": "Nova entrada"
     },
     "alerts": {
-      "privateEntryOnlyCreator": "This is a private entry. Only the creator can view or edit details."
+      "privateEntryOnlyCreator": "Esta é uma entrada privada. Somente o criador pode visualizar ou editar detalhes."
     },
     "validation": {
-      "summaryTitle": "Please fill in the required fields:",
-      "titleRequiredForAdHoc": "Title is required for ad-hoc entries",
-      "startRequired": "Start date/time",
-      "endRequired": "End date/time",
-      "assigneeRequired": "At least one assigned user",
-      "startInvalid": "Start date is invalid",
-      "endInvalid": "End date is invalid",
-      "endAfterStart": "End date must be after start date",
-      "recurrenceIntervalPositive": "Recurrence interval must be a positive whole number",
-      "recurrenceCountPositive": "Number of occurrences must be a positive whole number",
-      "recurrenceEndInvalid": "Recurrence end date is invalid",
-      "recurrenceEndAfterStart": "Recurrence end date must be after start date"
+      "summaryTitle": "Por favor preencha os campos obrigatórios:",
+      "titleRequiredForAdHoc": "O título é obrigatório para entradas ad hoc",
+      "startRequired": "Data/hora de início",
+      "endRequired": "Data/hora de término",
+      "assigneeRequired": "Pelo menos um usuário atribuído",
+      "startInvalid": "A data de início é inválida",
+      "endInvalid": "A data de término é inválida",
+      "endAfterStart": "A data de término deve ser posterior à data de início",
+      "recurrenceIntervalPositive": "O intervalo de recorrência precisa ser um número inteiro positivo",
+      "recurrenceCountPositive": "O número de ocorrências deve ser um número inteiro positivo",
+      "recurrenceEndInvalid": "A data de término da recorrência é inválida",
+      "recurrenceEndAfterStart": "A data de término da recorrência deve ser posterior à data de início"
     },
     "fields": {
-      "title": "Title",
-      "assignedUsers": "Assigned Users *",
-      "privateEntry": "Private entry (not visible to other users)",
-      "start": "Start *",
-      "end": "End *",
-      "notes": "Notes"
+      "title": "Título",
+      "assignedUsers": "Usuários atribuídos *",
+      "privateEntry": "Entrada privada (não visível para outros usuários)",
+      "start": "Começar *",
+      "end": "Fim *",
+      "notes": "Notas"
     },
     "actions": {
-      "cancel": "Cancel",
-      "close": "Close",
-      "save": "Save",
-      "delete": "Delete Entry"
+      "cancel": "Cancelar",
+      "close": "Fechar",
+      "save": "Salvar",
+      "delete": "Excluir entrada"
     },
     "workItem": {
-      "adHocFallback": "Ad-hoc entry (no work item)",
-      "openDetails": "Details"
+      "adHocFallback": "Entrada ad hoc (sem item de trabalho)",
+      "openDetails": "Detalhes"
     },
     "appointmentRequest": {
       "approved": {
-        "title": "Approved Appointment",
-        "descriptionWithDate": "This appointment originated from a client request and was approved on {{date}}.",
-        "description": "This appointment originated from a client request.",
-        "joinTeamsMeeting": "Participar na reunião do Teams",
+        "title": "Compromisso aprovado",
+        "descriptionWithDate": "Esta consulta originou-se de uma solicitação do cliente e foi aprovada em {{date}}.",
+        "description": "Este compromisso originou-se de uma solicitação do cliente.",
+        "joinTeamsMeeting": "Participe da reunião de equipes",
         "downloadRecording": "Baixar gravação",
         "viewTranscript": "Ver transcrição"
       },
       "pending": {
-        "title": "Pending Appointment Request",
-        "description": "This is an appointment request from a client. You can approve or decline it below."
+        "title": "Solicitação de agendamento pendente",
+        "description": "Esta é uma solicitação de agendamento de um cliente. Você pode aprovar ou recusar abaixo."
       },
       "declined": {
-        "title": "Declined Appointment Request",
-        "descriptionWithReason": "This appointment request was declined: {{reason}}",
-        "description": "This appointment request was declined."
+        "title": "Solicitação de agendamento recusada",
+        "descriptionWithReason": "Esta solicitação de agendamento foi recusada: {{reason}}",
+        "description": "Este pedido de agendamento foi recusado."
       },
       "cancelled": {
-        "title": "Cancelled Appointment Request",
-        "description": "This appointment request was cancelled by the client."
+        "title": "Solicitação de agendamento cancelada",
+        "description": "Esta solicitação de agendamento foi cancelada pelo cliente."
       },
       "requesterInfo": {
-        "title": "Informações do requerente",
+        "title": "Informações do solicitante",
         "company": "Empresa",
         "name": "Nome",
         "email": "E-mail",
         "phone": "Telefone"
       },
-      "requestedDateTimeLabel": "Requested Date & Time",
-      "assignTechnicianLabel": "Assign Technician *",
-      "assignTechnicianPlaceholder": "Select technician",
-      "scheduledDateTimeLabel": "Scheduled Date & Time",
-      "noNotes": "No notes provided",
-      "declineReasonLabel": "Reason for Declining *",
-      "declineReasonPlaceholder": "Please provide a reason for declining this request...",
+      "requestedDateTimeLabel": "Data e hora solicitadas",
+      "assignTechnicianLabel": "Atribuir Técnico *",
+      "assignTechnicianPlaceholder": "Selecione o técnico",
+      "scheduledDateTimeLabel": "Data e hora agendadas",
+      "generateTeamsMeeting": "Gerar link de reunião do Microsoft Teams",
+      "noNotes": "Nenhuma nota fornecida",
+      "declineReasonLabel": "Motivo da recusa *",
+      "declineReasonPlaceholder": "Forneça um motivo para recusar esta solicitação...",
       "actions": {
-        "approve": "Approve",
-        "decline": "Decline",
-        "confirmDecline": "Confirm Decline"
+        "approve": "Aprovar",
+        "decline": "Declínio",
+        "confirmDecline": "Confirmar recusa"
       },
       "toasts": {
-        "assignTechnicianRequired": "Please assign a technician",
-        "approved": "Appointment request approved",
-        "approveFailed": "Failed to approve request",
-        "declineReasonRequired": "Please provide a reason for declining",
-        "declined": "Appointment request declined",
-        "declineFailed": "Failed to decline request"
-      },
-      "generateTeamsMeeting": "Gerar link de reunião do Microsoft Teams"
+        "assignTechnicianRequired": "Por favor atribua um técnico",
+        "approved": "Solicitação de agendamento aprovada",
+        "approveFailed": "Falha ao aprovar a solicitação",
+        "declineReasonRequired": "Forneça um motivo para recusar",
+        "declined": "Solicitação de agendamento recusada",
+        "declineFailed": "Falha ao recusar a solicitação"
+      }
     },
     "recurrence": {
-      "label": "Recurrence",
-      "intervalLabel": "Interval",
-      "endLabel": "End",
-      "endDateLabel": "End Date",
-      "occurrencesLabel": "Occurrences",
-      "workdaysOnly": "Workdays only (Mon-Fri, excluding holidays)",
+      "label": "Recorrência",
+      "intervalLabel": "Intervalo",
+      "endLabel": "Fim",
+      "endDateLabel": "Data de término",
+      "occurrencesLabel": "Ocorrências",
+      "workdaysOnly": "Somente dias úteis (segunda a sexta, exceto feriados)",
       "options": {
-        "none": "None",
-        "daily": "Daily",
-        "weekly": "Weekly",
-        "monthly": "Monthly",
-        "yearly": "Yearly"
+        "none": "Nenhum",
+        "daily": "Diário",
+        "weekly": "Semanalmente",
+        "monthly": "Mensal",
+        "yearly": "Anual"
       },
       "endOptions": {
-        "never": "Never",
-        "date": "On Date",
-        "count": "After"
+        "never": "Nunca",
+        "date": "Na data",
+        "count": "Depois"
       },
       "applyDialog": {
-        "title": "Apply Changes To",
-        "message": "Select which events to update:"
+        "title": "Aplicar alterações a",
+        "message": "Selecione quais eventos serão atualizados:"
       }
     },
     "delete": {
-      "validationFailed": "Failed to validate deletion. Please try again.",
-      "entityFallback": "this schedule entry",
+      "validationFailed": "Falha ao validar a exclusão. Por favor, tente novamente.",
+      "entityFallback": "esta entrada de programação",
+      "confirm": "Tem certeza de que deseja excluir esta entrada da programação? Esta ação não pode ser desfeita.",
+      "confirmWithTeamsWarning": "Tem certeza de que deseja excluir esta entrada da programação? Esta ação não pode ser desfeita. Isso também excluirá a reunião do Microsoft Teams.",
       "scopeDialog": {
-        "title": "Delete Schedule Entry",
-        "message": "Select which events to delete:",
-        "confirm": "Continue"
-      },
-      "confirm": "Tem a certeza de que pretende eliminar este registo do calendário? Esta ação não pode ser anulada.",
-      "confirmWithTeamsWarning": "Tem a certeza de que pretende eliminar este registo do calendário? Esta ação não pode ser anulada. A reunião associada do Microsoft Teams também será eliminada."
+        "title": "Excluir entrada de agendamento",
+        "message": "Selecione quais eventos serão excluídos:",
+        "confirm": "Continuar"
+      }
     },
     "scopeOptions": {
-      "single": "Only this event",
-      "future": "This and future events",
-      "all": "All events"
+      "single": "Somente este evento",
+      "future": "Este e eventos futuros",
+      "all": "Todos os eventos"
     }
   },
   "actions": {
@@ -641,19 +641,19 @@
   "interactionDetails": {
     "fields": {
       "client": "Cliente",
-      "contact": "Contacto",
+      "contact": "Contato",
       "duration": "Duração",
-      "endTime": "Hora de fim",
+      "endTime": "Hora de término",
       "notes": "Notas",
       "startTime": "Hora de início",
-      "status": "Estado",
+      "status": "Status",
       "title": "Título",
-      "user": "Utilizador"
+      "user": "Usuário"
     },
     "noClient": "Nenhum cliente associado",
-    "noContact": "Nenhum contacto associado",
+    "noContact": "Nenhum contato associado",
     "noTitle": "Sem título",
-    "notAvailable": "N/D",
+    "notAvailable": "N / D",
     "title": "Detalhes da interação",
     "unknownUser": "Desconhecido"
   }

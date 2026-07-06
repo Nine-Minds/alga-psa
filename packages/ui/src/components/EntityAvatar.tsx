@@ -13,6 +13,11 @@ export interface EntityAvatarProps {
   entityId: string | number;
   entityName: string;
   imageUrl: string | null;
+  /**
+   * Shape follows size automatically: `xs` renders as a rounded square,
+   * `sm` and larger render as a circle. There is no shape override — this is
+   * the single avatar shape rule across the app.
+   */
   size?: EntityAvatarSize;
   className?: string;
   getInitials?: (name: string) => string;
@@ -125,9 +130,19 @@ export const EntityAvatar = ({
     setImageStatus('loaded');
   };
 
-  // Combine classes: base + size + custom
+  // Shape is derived from size, never from entity type: the smallest avatars
+  // (xs, or any pixel size at/below the xs 24px footprint) render as rounded
+  // squares — a tight circle clips the corners of two-letter initials — and
+  // everything sm and larger renders as a circle. One rule for every entity.
+  const isSquare = size === 'xs' || (typeof size === 'number' && size <= 24);
+  const radiusClass = isSquare ? 'rounded-md' : 'rounded-full';
+
+  // Combine classes: base + size + custom. shrink-0 keeps the avatar a fixed
+  // square in flex rows (e.g. next to a long client name) instead of letting the
+  // layout compress it into a clipped, off-aspect-ratio oval.
   const combinedClassName = cn(
-    'inline-flex items-center justify-center rounded-full overflow-hidden',
+    'inline-flex shrink-0 items-center justify-center overflow-hidden',
+    radiusClass,
     sizeClassName,
     className
   );
@@ -162,7 +177,7 @@ export const EntityAvatar = ({
         <div className="relative h-full w-full">
           {/* Loading shimmer effect */}
           {showShimmer && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 animate-pulse rounded-full overflow-hidden">
+            <div className={cn('absolute inset-0 flex items-center justify-center bg-gray-100 animate-pulse overflow-hidden', radiusClass)}>
               <Spinner size="sm" className="opacity-70 scale-75" />
             </div>
           )}

@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { Temporal } from '@js-temporal/polyfill';
@@ -27,6 +27,14 @@ import { enqueueInvoiceAutoExport } from '../services/accountingSync/syncProduce
 import { withAuth } from '@alga-psa/auth';
 import { getSession } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableExpression: string
+) {
+  return tenantDb(conn, tenant).table<Row>(tableExpression);
+}
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
@@ -71,13 +79,11 @@ async function hasCanonicalRecurringDetailPeriodsForInvoice(
   tenant: string,
   invoiceId: string,
 ): Promise<boolean> {
-  const detailRow = await trx('invoice_charge_details as iid')
-    .join('invoice_charges as ic', function(this: Knex.JoinClause) {
-      this.on('iid.item_id', '=', 'ic.item_id')
-        .andOn('iid.tenant', '=', 'ic.tenant');
-    })
-    .where('iid.tenant', tenant)
-    .andWhere('ic.invoice_id', invoiceId)
+  const db = tenantDb(trx, tenant);
+  const detailQuery = db.table('invoice_charge_details as iid');
+  db.tenantJoin(detailQuery, 'invoice_charges as ic', 'iid.item_id', 'ic.item_id');
+  const detailRow = await detailQuery
+    .where('ic.invoice_id', invoiceId)
     .whereNotNull('iid.service_period_start')
     .whereNotNull('iid.service_period_end')
     .first('iid.item_detail_id');
@@ -90,7 +96,7 @@ async function hasLinkedRecurringServicePeriodsForInvoice(
   tenant: string,
   invoiceId: string,
 ): Promise<boolean> {
-  const linkedRow = await trx('recurring_service_periods')
+  const linkedRow = await tenantScopedTable(trx, tenant, 'recurring_service_periods')
     .where({
       tenant,
       invoice_id: invoiceId,
@@ -106,7 +112,7 @@ async function releaseRecurringServicePeriodInvoiceLinkageForInvoice(
   invoiceId: string,
   releasedAt: string,
 ) {
-  return trx('recurring_service_periods')
+  return tenantScopedTable(trx, tenant, 'recurring_service_periods')
     .where({
       tenant,
       invoice_id: invoiceId,
@@ -174,7 +180,7 @@ export const updateDraftInvoiceProperties = withAuth(async (
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const invoice = await trx('invoices')
+    const invoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({
         invoice_id: invoiceId,
         tenant,
@@ -189,7 +195,7 @@ export const updateDraftInvoiceProperties = withAuth(async (
       throw new Error('Only draft invoices can be edited');
     }
 
-    const duplicateInvoice = await trx('invoices')
+    const duplicateInvoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({
         tenant,
         invoice_number: trimmedInvoiceNumber,
@@ -202,7 +208,7 @@ export const updateDraftInvoiceProperties = withAuth(async (
     }
 
     try {
-      await trx('invoices')
+      await tenantScopedTable(trx, tenant, 'invoices')
         .where({
           invoice_id: invoiceId,
           tenant,
@@ -282,7 +288,7 @@ export async function finalizeInvoiceWithKnex(
   // First transaction to update invoice status
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if invoice exists and is not already finalized
-    invoice = await trx('invoices')
+    invoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({
         invoice_id: invoiceId,
         tenant
@@ -313,8 +319,8 @@ export async function finalizeInvoiceWithKnex(
       identityUpdates.invoice_type = 'prepayment';
     }
 
-    await trx('invoices')
-      .where({ invoice_id: invoiceId, tenant: tenant })
+    await tenantScopedTable(trx, tenant, 'invoices')
+      .where({ invoice_id: invoiceId })
       .update({
         status: 'sent',
         finalized_at: toISODate(Temporal.Now.plainDateISO()),
@@ -363,8 +369,8 @@ export async function finalizeInvoiceWithKnex(
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       const now = new Date().toISOString();
       // Get current credit balance
-      const client = await trx('clients')
-        .where({ client_id: invoice.client_id, tenant })
+      const client = await tenantScopedTable(trx, tenant, 'clients')
+        .where({ client_id: invoice.client_id })
         .select('credit_balance')
         .first();
 
@@ -373,15 +379,13 @@ export async function finalizeInvoiceWithKnex(
       }
 
       // Get client's credit expiration settings or default settings
-      const clientSettings = await trx('client_billing_settings')
+      const clientSettings = await tenantScopedTable(trx, tenant, 'client_billing_settings')
         .where({
-          client_id: invoice.client_id,
-          tenant
+          client_id: invoice.client_id
         })
         .first();
 
-      const defaultSettings = await trx('default_billing_settings')
-        .where({ tenant })
+      const defaultSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
         .first();
 
       // Determine expiration days - use client setting if available, otherwise use default
@@ -405,8 +409,8 @@ export async function finalizeInvoiceWithKnex(
       const newBalance = (client.credit_balance || 0) + creditAmount;
 
       // Update client credit balance within the transaction
-      await trx('clients')
-        .where({ client_id: invoice.client_id, tenant })
+      await tenantScopedTable(trx, tenant, 'clients')
+        .where({ client_id: invoice.client_id })
         .update({
           credit_balance: newBalance,
           updated_at: new Date().toISOString()
@@ -415,7 +419,7 @@ export async function finalizeInvoiceWithKnex(
       // Record transaction with the correct balance and expiration date
       // Skip validation for negative invoices since we're creating credit
       const transactionId = uuidv4();
-      await trx('transactions').insert({
+      await tenantScopedTable(trx, tenant, 'transactions').insert({
         transaction_id: transactionId,
         client_id: invoice.client_id,
         invoice_id: invoiceId,
@@ -431,7 +435,7 @@ export async function finalizeInvoiceWithKnex(
 
       // Create credit tracking entry
       const creditNoteId = uuidv4();
-      await trx('credit_tracking').insert({
+      await tenantScopedTable(trx, tenant, 'credit_tracking').insert({
         credit_id: creditNoteId,
         tenant,
         client_id: invoice.client_id,
@@ -492,8 +496,8 @@ export async function finalizeInvoiceWithKnex(
     if (availableCredit > 0) {
       // Get the current invoice with updated totals
       const updatedInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('invoices')
-          .where({ invoice_id: invoiceId, tenant })
+        return await tenantScopedTable(trx, tenant, 'invoices')
+          .where({ invoice_id: invoiceId })
           .first();
       });
 
@@ -580,7 +584,7 @@ export const unfinalizeInvoice = withAuth(async (
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if invoice exists and is finalized
-    const invoice = await trx('invoices')
+    const invoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({ invoice_id: invoiceId })
       .first();
 
@@ -606,10 +610,9 @@ export const unfinalizeInvoice = withAuth(async (
       updatedFields.status = 'draft';
     }
 
-    await trx('invoices')
+    await tenantScopedTable(trx, tenant, 'invoices')
       .where({
-        invoice_id: invoiceId,
-        tenant
+        invoice_id: invoiceId
       })
       .update(updatedFields);
 
@@ -653,7 +656,7 @@ export const updateInvoiceManualItems = withAuth(async (
 
   // Load and validate invoice
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('invoices')
+    return await tenantScopedTable(trx, tenant, 'invoices')
       .where({ invoice_id: invoiceId })
       .first();
   });
@@ -667,7 +670,7 @@ export const updateInvoiceManualItems = withAuth(async (
   }
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('clients')
+    return await tenantScopedTable(trx, tenant, 'clients')
       .where({ client_id: invoice.client_id })
       .first();
   });
@@ -694,8 +697,8 @@ async function updateManualInvoiceItemsInternal(
   const currentDate = Temporal.Now.plainDateISO().toString();
 
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('invoices')
-      .where({ invoice_id: invoiceId, tenant })
+    return await tenantScopedTable(trx, tenant, 'invoices')
+      .where({ invoice_id: invoiceId })
       .first();
   });
 
@@ -708,8 +711,8 @@ async function updateManualInvoiceItemsInternal(
   }
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('clients')
-      .where({ client_id: invoice.client_id, tenant })
+    return await tenantScopedTable(trx, tenant, 'clients')
+      .where({ client_id: invoice.client_id })
       .first();
   });
 
@@ -726,13 +729,11 @@ async function updateManualInvoiceItemsInternal(
     );
 
     if (targetedItemIds.length > 0) {
-      const nonManualTargets = await trx('invoice_charges as ic')
-        .leftJoin('invoice_charge_details as iid', function(this: Knex.JoinClause) {
-          this.on('iid.item_id', '=', 'ic.item_id')
-            .andOn('iid.tenant', '=', 'ic.tenant');
-        })
+      const db = tenantDb(trx, tenant);
+      const nonManualTargetsQuery = db.table('invoice_charges as ic');
+      db.tenantJoin(nonManualTargetsQuery, 'invoice_charge_details as iid', 'iid.item_id', 'ic.item_id', { type: 'left' });
+      const nonManualTargets = await nonManualTargetsQuery
         .where('ic.invoice_id', invoiceId)
-        .andWhere('ic.tenant', tenant)
         .whereIn('ic.item_id', targetedItemIds)
         .where(function(this: Knex.QueryBuilder) {
           this.where('ic.is_manual', false).orWhereNull('ic.is_manual');
@@ -755,9 +756,9 @@ async function updateManualInvoiceItemsInternal(
 
     // Process removals
     if (changes.removedItemIds && changes.removedItemIds.length > 0) {
-      await trx('invoice_charges')
+      await tenantScopedTable(trx, tenant, 'invoice_charges')
         .whereIn('item_id', changes.removedItemIds)
-        .andWhere({ tenant: tenant, is_manual: true }) // Ensure we only delete manual items intended for removal
+        .andWhere({ is_manual: true }) // Ensure we only delete manual items intended for removal
         .delete();
     }
 
@@ -782,8 +783,8 @@ async function updateManualInvoiceItemsInternal(
         const filteredUpdateData = Object.fromEntries(Object.entries(updateData).filter(([_, v]) => v !== undefined));
 
         if (Object.keys(filteredUpdateData).length > 0) {
-           await trx('invoice_charges')
-            .where({ item_id: item.item_id, tenant: tenant, is_manual: true }) // Ensure we only update manual items
+           await tenantScopedTable(trx, tenant, 'invoice_charges')
+            .where({ item_id: item.item_id, is_manual: true }) // Ensure we only update manual items
             .update(filteredUpdateData);
         }
       }
@@ -792,8 +793,8 @@ async function updateManualInvoiceItemsInternal(
       for (const item of changes.updatedItems) {
         if (item.is_discount) {
           // Get the updated item from the database
-          const updatedItem = await trx('invoice_charges')
-            .where({ item_id: item.item_id, tenant: tenant, is_manual: true })
+          const updatedItem = await tenantScopedTable(trx, tenant, 'invoice_charges')
+            .where({ item_id: item.item_id, is_manual: true })
             .first();
           
           if (updatedItem) {
@@ -802,8 +803,8 @@ async function updateManualInvoiceItemsInternal(
             
             // Calculate current subtotal of non-discount items for percentage discounts
             if (updatedItem.discount_type === 'percentage') {
-              const nonDiscountItems = await trx('invoice_charges')
-                .where({ invoice_id: invoiceId, tenant: tenant })
+              const nonDiscountItems = await tenantScopedTable(trx, tenant, 'invoice_charges')
+                .where({ invoice_id: invoiceId })
                 .whereNot('is_discount', true)
                 .select('*');
               
@@ -811,8 +812,8 @@ async function updateManualInvoiceItemsInternal(
               
               // If discount applies to a specific item, get that item's amount
               if (updatedItem.applies_to_item_id) {
-                const applicableItem = await trx('invoice_charges')
-                  .where({ item_id: updatedItem.applies_to_item_id, tenant: tenant })
+                const applicableItem = await tenantScopedTable(trx, tenant, 'invoice_charges')
+                  .where({ item_id: updatedItem.applies_to_item_id })
                   .first();
                 applicableAmount = applicableItem?.net_amount;
               }
@@ -831,8 +832,8 @@ async function updateManualInvoiceItemsInternal(
             }
             
             // Update the net_amount
-            await trx('invoice_charges')
-              .where({ item_id: item.item_id, tenant: tenant, is_manual: true })
+            await tenantScopedTable(trx, tenant, 'invoice_charges')
+              .where({ item_id: item.item_id, is_manual: true })
               .update({
                 net_amount: newNetAmount,
                 total_price: newNetAmount // Also update total_price since discounts have no tax
@@ -872,8 +873,8 @@ async function updateManualInvoiceItemsInternal(
     // Update invoice number if provided
     if (changes.invoice_number && changes.invoice_number !== invoice.invoice_number) {
       try {
-        await trx('invoices')
-          .where({ invoice_id: invoiceId, tenant })
+        await tenantScopedTable(trx, tenant, 'invoices')
+          .where({ invoice_id: invoiceId })
           .update({
             invoice_number: changes.invoice_number,
             updated_at: currentDate
@@ -890,8 +891,8 @@ async function updateManualInvoiceItemsInternal(
       }
     } else {
        // Touch updated_at even if only items changed
-       await trx('invoices')
-          .where({ invoice_id: invoiceId, tenant })
+       await tenantScopedTable(trx, tenant, 'invoices')
+          .where({ invoice_id: invoiceId })
           .update({ updated_at: currentDate });
     }
   });
@@ -921,7 +922,7 @@ export const addManualItemsToInvoice = withAuth(async (
 
   // Load and validate invoice
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('invoices')
+    return await tenantScopedTable(trx, tenant, 'invoices')
       .where({
         invoice_id: invoiceId,
         tenant
@@ -938,7 +939,7 @@ export const addManualItemsToInvoice = withAuth(async (
   }
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('clients')
+    return await tenantScopedTable(trx, tenant, 'clients')
       .where({
         client_id: invoice.client_id,
         tenant
@@ -964,8 +965,8 @@ async function addManualInvoiceItemsInternal(
   const { knex } = await createTenantKnex(tenant);
 
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('invoices')
-      .where({ invoice_id: invoiceId, tenant })
+    return await tenantScopedTable(trx, tenant, 'invoices')
+      .where({ invoice_id: invoiceId })
       .first();
   });
 
@@ -978,8 +979,8 @@ async function addManualInvoiceItemsInternal(
   }
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('clients')
-      .where({ client_id: invoice.client_id, tenant })
+    return await tenantScopedTable(trx, tenant, 'clients')
+      .where({ client_id: invoice.client_id })
       .first();
   });
 
@@ -1012,8 +1013,8 @@ async function addManualInvoiceItemsInternal(
       // No 'isManual' boolean needed for persistManualInvoiceCharges
     );
      // Touch updated_at when items are added
-     await trx('invoices')
-        .where({ invoice_id: invoiceId, tenant })
+     await tenantScopedTable(trx, tenant, 'invoices')
+        .where({ invoice_id: invoiceId })
         .update({ updated_at: Temporal.Now.plainDateISO().toString() });
   });
 
@@ -1033,7 +1034,7 @@ export const hardDeleteInvoice = withAuth(async (
   const { knex } = await createTenantKnex();
 
   // Guard: block deletion if invoice is already exported to an accounting system
-  const existingMapping = await knex('tenant_external_entity_mappings')
+  const existingMapping = await tenantScopedTable(knex, tenant, 'tenant_external_entity_mappings')
     .where({
       tenant: tenant,
       integration_type: 'quickbooks_online',
@@ -1059,7 +1060,7 @@ export const hardDeleteInvoice = withAuth(async (
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     const now = new Date().toISOString();
     // 1. Get invoice details
-    const invoice = await trx('invoices')
+    const invoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({
         invoice_id: invoiceId,
         tenant
@@ -1090,7 +1091,7 @@ export const hardDeleteInvoice = withAuth(async (
     }
 
     // 2. Handle payments
-    const payments = await trx('transactions')
+    const payments = await tenantScopedTable(trx, tenant, 'transactions')
       .where({
         invoice_id: invoiceId,
         type: 'payment',
@@ -1099,7 +1100,7 @@ export const hardDeleteInvoice = withAuth(async (
 
     if (payments.length > 0) {
       // Insert reversal transactions
-      await trx('transactions').insert(
+      await tenantScopedTable(trx, tenant, 'transactions').insert(
         payments.map((p): any => ({ // Use 'any' for flexibility, ensure required fields are present
           transaction_id: uuidv4(),
           client_id: p.client_id, // Ensure client_id is included
@@ -1120,7 +1121,7 @@ export const hardDeleteInvoice = withAuth(async (
     // 3. Handle credit applied to this invoice
     if (invoice.credit_applied > 0) {
         // Find the credit application transaction
-        const creditAppTransaction = await trx('transactions')
+        const creditAppTransaction = await tenantScopedTable(trx, tenant, 'transactions')
             .where({
                 invoice_id: invoiceId,
                 type: 'credit_application',
@@ -1129,25 +1130,25 @@ export const hardDeleteInvoice = withAuth(async (
             .first();
 
         // Find related credit tracking entries that were used
-        const creditTrackingUsed = await trx('credit_tracking_usage')
+        const creditTrackingUsed = await tenantScopedTable(trx, tenant, 'credit_tracking_usage')
             .where({ transaction_id: creditAppTransaction?.transaction_id })
             .select('credit_id', 'amount_used');
 
         // Restore the used amounts back to the original credit_tracking entries
         for (const usage of creditTrackingUsed) {
-            await trx('credit_tracking')
+            await tenantScopedTable(trx, tenant, 'credit_tracking')
                 .where({ credit_id: usage.credit_id })
                 .increment('remaining_amount', usage.amount_used)
                 .update({ updated_at: new Date().toISOString() }); // Update timestamp
         }
 
         // Delete the credit tracking usage records
-        await trx('credit_tracking_usage')
+        await tenantScopedTable(trx, tenant, 'credit_tracking_usage')
             .where({ transaction_id: creditAppTransaction?.transaction_id })
             .delete();
 
         // Delete the credit application transaction itself
-        await trx('transactions')
+        await tenantScopedTable(trx, tenant, 'transactions')
             .where({ transaction_id: creditAppTransaction?.transaction_id })
             .delete();
 
@@ -1159,7 +1160,7 @@ export const hardDeleteInvoice = withAuth(async (
     }
 
     // Handle credit issued *from* this invoice (if it was negative)
-    const creditIssuanceTransaction = await trx('transactions')
+    const creditIssuanceTransaction = await tenantScopedTable(trx, tenant, 'transactions')
         .where({
             invoice_id: invoiceId,
             type: 'credit_issuance_from_negative_invoice',
@@ -1169,7 +1170,7 @@ export const hardDeleteInvoice = withAuth(async (
 
     if (creditIssuanceTransaction) {
         // Find the corresponding credit_tracking entry
-        const creditTrackingEntry = await trx('credit_tracking')
+        const creditTrackingEntry = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({ transaction_id: creditIssuanceTransaction.transaction_id })
             .first();
 
@@ -1190,7 +1191,7 @@ export const hardDeleteInvoice = withAuth(async (
                   voidedByUserId: user.user_id,
                   reason: 'invoice_deleted',
                 });
-                await trx('credit_tracking')
+                await tenantScopedTable(trx, tenant, 'credit_tracking')
                     .where({ credit_id: creditTrackingEntry.credit_id })
                     .delete();
                 // Also update client balance back
@@ -1201,16 +1202,16 @@ export const hardDeleteInvoice = withAuth(async (
             }
         }
         // Delete the credit issuance transaction
-        await trx('transactions')
+        await tenantScopedTable(trx, tenant, 'transactions')
             .where({ transaction_id: creditIssuanceTransaction.transaction_id })
             .delete();
     }
 
 
     // 4. Unmark time entries
-    await trx('time_entries')
+    await tenantScopedTable(trx, tenant, 'time_entries')
       .whereIn('entry_id',
-        trx('invoice_time_entries')
+        tenantScopedTable(trx, tenant, 'invoice_time_entries')
           .select('entry_id')
           .where({
             invoice_id: invoiceId,
@@ -1220,9 +1221,9 @@ export const hardDeleteInvoice = withAuth(async (
       .update({ invoiced: false });
 
     // 5. Unmark usage records
-    await trx('usage_tracking')
+    await tenantScopedTable(trx, tenant, 'usage_tracking')
       .whereIn('usage_id',
-        trx('invoice_usage_records')
+        tenantScopedTable(trx, tenant, 'invoice_usage_records')
           .select('usage_id')
           .where({
             invoice_id: invoiceId,
@@ -1232,7 +1233,7 @@ export const hardDeleteInvoice = withAuth(async (
       .update({ invoiced: false });
 
     // 6. Delete other transactions related to the invoice (e.g., invoice_generated, price_adjustment)
-    await trx('transactions')
+    await tenantScopedTable(trx, tenant, 'transactions')
       .where({
         invoice_id: invoiceId,
         tenant
@@ -1242,14 +1243,14 @@ export const hardDeleteInvoice = withAuth(async (
       .delete();
 
     // 7. Delete join records
-    await trx('invoice_time_entries')
+    await tenantScopedTable(trx, tenant, 'invoice_time_entries')
       .where({
         invoice_id: invoiceId,
         tenant
       })
       .delete();
 
-    await trx('invoice_usage_records')
+    await tenantScopedTable(trx, tenant, 'invoice_usage_records')
       .where({
         invoice_id: invoiceId,
         tenant
@@ -1266,14 +1267,14 @@ export const hardDeleteInvoice = withAuth(async (
     }
 
     // 8. Delete invoice items
-    deletedItemIds = await trx('invoice_charges')
+    deletedItemIds = await tenantScopedTable(trx, tenant, 'invoice_charges')
       .where({
         invoice_id: invoiceId,
         tenant
       })
       .pluck('item_id');
 
-    await trx('invoice_charges')
+    await tenantScopedTable(trx, tenant, 'invoice_charges')
       .where({
         invoice_id: invoiceId,
         tenant
@@ -1281,14 +1282,14 @@ export const hardDeleteInvoice = withAuth(async (
       .delete();
 
     // 9. Delete invoice annotations (internal/external notes)
-    deletedAnnotationIds = await trx('invoice_annotations')
+    deletedAnnotationIds = await tenantScopedTable(trx, tenant, 'invoice_annotations')
       .where({
         invoice_id: invoiceId,
         tenant
       })
       .pluck('annotation_id');
 
-    await trx('invoice_annotations')
+    await tenantScopedTable(trx, tenant, 'invoice_annotations')
       .where({
         invoice_id: invoiceId,
         tenant
@@ -1298,13 +1299,13 @@ export const hardDeleteInvoice = withAuth(async (
     // 10. Nullify invoice_id in payment_webhook_events
     const hasPaymentWebhookEvents = await trx.schema.hasTable('payment_webhook_events');
     if (hasPaymentWebhookEvents) {
-      await trx('payment_webhook_events')
-        .where({ invoice_id: invoiceId, tenant })
+      await tenantScopedTable(trx, tenant, 'payment_webhook_events')
+        .where({ invoice_id: invoiceId })
         .update({ invoice_id: null });
     }
 
     // 11. Delete invoice record
-    await trx('invoices')
+    await tenantScopedTable(trx, tenant, 'invoices')
       .where({
         invoice_id: invoiceId,
         tenant

@@ -11,7 +11,7 @@ describe('multi-active recurring preview identity wiring', () => {
 
     expect(source).toContain('const getRecurringAssignmentContext =');
     expect(source).toContain("'Assigned contract line'");
-    expect(source).toContain('data-testid={`contract-assignment-context-${record.parentSummary.candidateKey}`}');
+    expect(source).toContain('data-testid={`contract-assignment-context-${group.parentSummary.candidateKey}`}');
     expect(source).toContain('assignmentLabels.map((contextValue) => (');
   });
 });

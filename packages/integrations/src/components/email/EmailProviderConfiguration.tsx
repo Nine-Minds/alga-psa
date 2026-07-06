@@ -25,7 +25,6 @@ import { Microsoft365DiagnosticsDialog } from './admin/Microsoft365DiagnosticsDi
 import { DrawerOutlet, DrawerProvider, useDrawer } from '@alga-psa/ui';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
   getEmailProviders,
   deleteEmailProvider,
@@ -55,10 +54,6 @@ function EmailProviderConfigurationContent({
 }: EmailProviderConfigurationProps) {
   const { t } = useTranslation('msp/email-providers');
   const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
-  // Dark-release gate for the inbound email rules UI. Off by default (PostHog
-  // returns false for an unknown flag); UI-only — rule evaluation and server
-  // actions stay live regardless.
-  const { enabled: inboundEmailRulesUiEnabled } = useFeatureFlag('inbound-email-rules');
   const [providers, setProviders] = useState<EmailProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -511,22 +506,20 @@ function EmailProviderConfigurationContent({
               defaultValue: 'Defaults',
             })}
           </Button>
-          {inboundEmailRulesUiEnabled && (
-            <Button
-              id="nav-inbound-rules"
-              variant="ghost"
-              className={`justify-start w-full px-2 py-2 rounded-md ${
-                activeSection === 'rules'
-                  ? 'text-[rgb(var(--color-primary-700))] font-semibold underline decoration-[rgb(var(--color-primary-600))] decoration-2 underline-offset-4 bg-primary-500/10'
-                  : 'text-[rgb(var(--color-text-700))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-50))]'
-              }`}
-              onClick={() => setActiveSection('rules')}
-            >
-              {t('configuration.nav.inboundRules', {
-                defaultValue: 'Inbound Rules',
-              })}
-            </Button>
-          )}
+          <Button
+            id="nav-inbound-rules"
+            variant="ghost"
+            className={`justify-start w-full px-2 py-2 rounded-md ${
+              activeSection === 'rules'
+                ? 'text-[rgb(var(--color-primary-700))] font-semibold underline decoration-[rgb(var(--color-primary-600))] decoration-2 underline-offset-4 bg-primary-500/10'
+                : 'text-[rgb(var(--color-text-700))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-50))]'
+            }`}
+            onClick={() => setActiveSection('rules')}
+          >
+            {t('configuration.nav.inboundRules', {
+              defaultValue: 'Inbound Rules',
+            })}
+          </Button>
         </nav>
       </div>
       <div className="flex-1 min-w-0">
@@ -553,11 +546,11 @@ function EmailProviderConfigurationContent({
               window.dispatchEvent(new CustomEvent('inbound-defaults-updated'));
             }} />
           </div>
-        ) : inboundEmailRulesUiEnabled ? (
+        ) : (
           <div className="space-y-4">
             <InboundEmailRulesManager />
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );

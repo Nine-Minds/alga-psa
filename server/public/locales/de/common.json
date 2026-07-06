@@ -1,4 +1,7 @@
 {
+  "clientNameCell": {
+    "noClient": "Kein Kunde"
+  },
   "reactions": {
     "ariaSummary_one": "{{emoji}} {{count}} Reaktion",
     "ariaSummary_other": "{{emoji}} {{count}} Reaktionen",
@@ -321,7 +324,9 @@
     "ariaLabel": "Seitennavigation",
     "totalItems": "{{count}} {{itemLabel}} insgesamt",
     "totalRecordsInline": "({{count}} Gesamteinträge)",
-    "pageOf": "Seite {{current}} von {{total}}"
+    "pageOf": "Seite {{current}} von {{total}}",
+    "itemsLabel_one": "Eintrag",
+    "itemsLabel_other": "Einträge"
   },
   "documents": {
     "title": "Dokumente",
@@ -1237,5 +1242,8 @@
     "showingAllColumns": "Alle Spalten werden angezeigt; horizontal scrollen, um sie zu sehen.",
     "showLess": "Weniger anzeigen",
     "columnsHidden": "{{count}} Spalten aufgrund von begrenztem Platz ausgeblendet."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Editor wird geladen…"
   }
 }

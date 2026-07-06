@@ -1,4 +1,8 @@
-import { parseExpression } from 'cron-parser';
+// cron-parser@4 is CJS with no statically-detectable named exports; a named ESM
+// import fails when this is consumed as a built ESM bundle (the Temporal worker).
+// Default-import and destructure for CJS-interop safety.
+import cronParser from 'cron-parser';
+const { parseExpression } = cronParser;
 
 /**
  * Compute the next fire time for a recurring cron schedule.

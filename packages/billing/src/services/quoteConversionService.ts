@@ -4,9 +4,12 @@ import type {
   IInvoice,
   IQuote,
   IQuoteItem,
+  ISalesOrder,
+  ISalesOrderLine,
   QuoteConversionPreview,
   QuoteConversionPreviewItem,
 } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import Contract from '../models/contract';
@@ -32,6 +35,7 @@ async function getTableColumns(
 
 async function insertRowsUsingExistingColumns(
   knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
   tableName: string,
   rows: Record<string, unknown>[]
 ): Promise<void> {
@@ -44,7 +48,7 @@ async function insertRowsUsingExistingColumns(
     Object.entries(row).filter(([key, value]) => columns.has(key) && value !== undefined)
   ));
 
-  await knexOrTrx(tableName).insert(filteredRows);
+  await tenantDb(knexOrTrx, tenant).table(tableName).insert(filteredRows);
 }
 
 export interface QuoteToContractConversionResult {
@@ -56,6 +60,11 @@ export interface QuoteToContractConversionResult {
 export interface QuoteToInvoiceConversionResult {
   quote: IQuote;
   invoice: IInvoice;
+}
+
+export interface QuoteToSalesOrderConversionResult {
+  quote: IQuote;
+  salesOrder: ISalesOrder & { lines: ISalesOrderLine[] };
 }
 
 export interface QuoteToBothConversionResult {
@@ -106,8 +115,7 @@ async function resolveLocationNames(
     return new Map();
   }
 
-  const rows = await knexOrTrx('client_locations')
-    .where({ tenant })
+  const rows = await tenantDb(knexOrTrx, tenant).table('client_locations')
     .whereIn('location_id', locationIds)
     .select('location_id', 'location_name', 'address_line1');
 
@@ -200,6 +208,150 @@ function getSelectedOneTimeItems(items: IQuoteItem[] = []): IQuoteItem[] {
 
     return false;
   });
+}
+
+function toIntegerCents(value: unknown): number | null {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) {
+    return null;
+  }
+
+  return Math.round(numberValue);
+}
+
+async function resolveProductServiceIds(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  items: IQuoteItem[]
+): Promise<Set<string>> {
+  const serviceIds = Array.from(
+    new Set(
+      items
+        .map((item) => item.service_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    )
+  );
+
+  if (serviceIds.length === 0) {
+    return new Set();
+  }
+
+  const rows = await knexOrTrx('service_catalog')
+    .where({ tenant, item_kind: 'product' })
+    .whereIn('service_id', serviceIds)
+    .select('service_id');
+
+  return new Set(rows.map((row) => row.service_id as string));
+}
+
+function isProductQuoteItem(item: IQuoteItem, productServiceIds: Set<string>): boolean {
+  return item.service_item_kind === 'product'
+    || (typeof item.service_id === 'string' && productServiceIds.has(item.service_id));
+}
+
+function getSelectedProductOneTimeItems(
+  items: IQuoteItem[],
+  productServiceIds: Set<string>
+): IQuoteItem[] {
+  return getSelectedOneTimeItems(items).filter((item) =>
+    !item.is_discount && isProductQuoteItem(item, productServiceIds)
+  );
+}
+
+function excludeSalesOrderProductItems(
+  oneTimeItems: IQuoteItem[],
+  productServiceIds: Set<string>
+): IQuoteItem[] {
+  const productItems = oneTimeItems.filter((item) =>
+    !item.is_discount && isProductQuoteItem(item, productServiceIds)
+  );
+  const productQuoteItemIds = new Set(productItems.map((item) => item.quote_item_id));
+  const productServiceIdsInQuote = new Set(
+    productItems
+      .map((item) => item.service_id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0)
+  );
+
+  if (productQuoteItemIds.size === 0 && productServiceIdsInQuote.size === 0) {
+    return oneTimeItems;
+  }
+
+  return oneTimeItems.filter((item) => {
+    if (!item.is_discount) {
+      return !productQuoteItemIds.has(item.quote_item_id);
+    }
+
+    if (item.applies_to_item_id && productQuoteItemIds.has(item.applies_to_item_id)) {
+      return false;
+    }
+
+    if (item.applies_to_service_id && productServiceIdsInQuote.has(item.applies_to_service_id)) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+async function getSalesOrderByQuoteId(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string
+): Promise<(ISalesOrder & { lines: ISalesOrderLine[] }) | null> {
+  const row = await knexOrTrx('sales_orders')
+    .where({ tenant, quote_id: quoteId })
+    .orderBy('created_at', 'desc')
+    .first();
+
+  if (!row) {
+    return null;
+  }
+
+  const lines = await knexOrTrx('sales_order_lines')
+    .where({ tenant, so_id: row.so_id })
+    .orderBy('created_at', 'asc');
+
+  return {
+    ...(row as ISalesOrder),
+    lines: lines as ISalesOrderLine[],
+  };
+}
+
+async function resolveProductCostFallbacks(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  serviceIds: string[]
+): Promise<Map<string, number | null>> {
+  if (serviceIds.length === 0) {
+    return new Map();
+  }
+
+  const rows = await knexOrTrx('service_catalog as sc')
+    .leftJoin('product_inventory_settings as pis', function () {
+      this.on('pis.service_id', '=', 'sc.service_id')
+        .andOn('pis.tenant', '=', 'sc.tenant');
+    })
+    .where('sc.tenant', tenant)
+    .whereIn('sc.service_id', serviceIds)
+    .select(
+      'sc.service_id',
+      'sc.cost as catalog_cost',
+      'pis.average_cost as average_cost'
+    );
+
+  const map = new Map<string, number | null>();
+  for (const row of rows) {
+    map.set(
+      row.service_id as string,
+      toIntegerCents(row.average_cost) ?? toIntegerCents(row.catalog_cost)
+    );
+  }
+
+  return map;
 }
 
 export async function buildQuoteConversionPreview(
@@ -332,7 +484,8 @@ export async function convertQuoteToDraftContract(
     contractLineType: mapQuoteItemToContractLineType(item),
   }));
 
-  await knexOrTrx('contract_lines').insert(
+  const db = tenantDb(knexOrTrx, tenant);
+  await db.table('contract_lines').insert(
     contractLineMappings.map(({ item, contractLineId, contractLineType }, index) => ({
       tenant,
       contract_line_id: contractLineId,
@@ -368,6 +521,7 @@ export async function convertQuoteToDraftContract(
 
   await insertRowsUsingExistingColumns(
     knexOrTrx,
+    tenant,
     'contract_line_services',
     configRows.map(({ contractLineId, serviceId, item }) => ({
       tenant,
@@ -381,7 +535,7 @@ export async function convertQuoteToDraftContract(
   );
 
   if (configRows.length > 0) {
-    await knexOrTrx('contract_line_service_configuration').insert(
+    await db.table('contract_line_service_configuration').insert(
       configRows.map(({ configId, contractLineId, contractLineType, serviceId, item }) => ({
         tenant,
         config_id: configId,
@@ -398,7 +552,7 @@ export async function convertQuoteToDraftContract(
 
   const fixedConfigRows = configRows.filter((row) => row.contractLineType === 'Fixed');
   if (fixedConfigRows.length > 0) {
-    await knexOrTrx('contract_line_service_fixed_config').insert(
+    await db.table('contract_line_service_fixed_config').insert(
       fixedConfigRows.map(({ configId, item }) => ({
         tenant,
         config_id: configId,
@@ -411,7 +565,7 @@ export async function convertQuoteToDraftContract(
 
   const hourlyConfigRows = configRows.filter((row) => row.contractLineType === 'Hourly');
   if (hourlyConfigRows.length > 0) {
-    await knexOrTrx('contract_line_service_hourly_config').insert(
+    await db.table('contract_line_service_hourly_config').insert(
       hourlyConfigRows.map(({ configId }) => ({
         tenant,
         config_id: configId,
@@ -427,7 +581,7 @@ export async function convertQuoteToDraftContract(
       }))
     );
 
-    await knexOrTrx('contract_line_service_hourly_configs').insert(
+    await db.table('contract_line_service_hourly_configs').insert(
       hourlyConfigRows.map(({ configId, item }) => ({
         tenant,
         config_id: configId,
@@ -442,7 +596,7 @@ export async function convertQuoteToDraftContract(
 
   const usageConfigRows = configRows.filter((row) => row.contractLineType === 'Usage');
   if (usageConfigRows.length > 0) {
-    await knexOrTrx('contract_line_service_usage_config').insert(
+    await db.table('contract_line_service_usage_config').insert(
       usageConfigRows.map(({ configId, item }) => ({
         tenant,
         config_id: configId,
@@ -457,7 +611,7 @@ export async function convertQuoteToDraftContract(
   }
 
   const clientContractId = uuidv4();
-  await knexOrTrx('client_contracts').insert({
+  await db.table('client_contracts').insert({
     tenant,
     client_contract_id: clientContractId,
     client_id: quote.client_id,
@@ -469,8 +623,8 @@ export async function convertQuoteToDraftContract(
     updated_at: nowIso,
   });
 
-  await knexOrTrx('quotes')
-    .where({ tenant, quote_id: quote.quote_id })
+  await db.table('quotes')
+    .where({ quote_id: quote.quote_id })
     .update({
       converted_contract_id: contract.contract_id,
       updated_by: performedBy ?? quote.updated_by ?? quote.created_by ?? null,
@@ -498,6 +652,148 @@ export async function convertQuoteToDraftContract(
   };
 }
 
+export async function convertQuoteToDraftSalesOrder(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null
+): Promise<QuoteToSalesOrderConversionResult> {
+  const quote = await Quote.getById(knexOrTrx, tenant, quoteId);
+
+  if (!quote) {
+    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+  }
+
+  if (quote.is_template) {
+    throw new Error('Quote templates cannot be converted to sales orders');
+  }
+
+  if (quote.status !== 'accepted') {
+    throw new Error('Only accepted quotes can be converted to sales orders');
+  }
+
+  await knexOrTrx('quotes')
+    .where({ tenant, quote_id: quote.quote_id })
+    .forUpdate()
+    .first();
+
+  const existingSalesOrder = await getSalesOrderByQuoteId(knexOrTrx, tenant, quote.quote_id);
+  if (existingSalesOrder) {
+    return {
+      quote: await Quote.getById(knexOrTrx, tenant, quote.quote_id) as IQuote,
+      salesOrder: existingSalesOrder,
+    };
+  }
+
+  if (quote.converted_invoice_id) {
+    throw new Error('Quote already has a converted invoice; convert product lines to a sales order before invoice conversion');
+  }
+
+  if (!quote.client_id) {
+    throw new Error('Quotes must be linked to a client before they can be converted to a sales order');
+  }
+
+  const quoteItems = quote.quote_items ?? [];
+  const productServiceIds = await resolveProductServiceIds(knexOrTrx, tenant, quoteItems);
+  const productItems = getSelectedProductOneTimeItems(quoteItems, productServiceIds);
+
+  if (productItems.length === 0) {
+    throw new Error('Quote does not contain any one-time product items selected for sales order conversion');
+  }
+
+  const missingServiceItem = productItems.find((item) => !item.service_id);
+  if (missingServiceItem) {
+    throw new Error(`Product quote item ${missingServiceItem.quote_item_id} must reference a catalog product before sales order conversion`);
+  }
+
+  const invalidQuantityItem = productItems.find((item) => !Number.isInteger(Number(item.quantity)) || Number(item.quantity) <= 0);
+  if (invalidQuantityItem) {
+    throw new Error(`Product quote item ${invalidQuantityItem.quote_item_id} must have a positive integer quantity`);
+  }
+
+  const invalidPriceItem = productItems.find((item) => !Number.isInteger(Number(item.unit_price)));
+  if (invalidPriceItem) {
+    throw new Error(`Product quote item ${invalidPriceItem.quote_item_id} must have an integer unit price in cents`);
+  }
+
+  const nowIso = new Date().toISOString();
+  const numberResult = await knexOrTrx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'SALES_ORDER']);
+  const soNumber: string = numberResult.rows[0].number;
+
+  const [salesOrder] = await knexOrTrx('sales_orders')
+    .insert({
+      tenant,
+      so_number: soNumber,
+      client_id: quote.client_id,
+      status: 'draft',
+      order_date: nowIso,
+      expected_ship_date: null,
+      ship_to: null,
+      currency_code: quote.currency_code,
+      client_po_number: quote.po_number ?? null,
+      invoice_mode: 'on_fulfillment',
+      allocation_mode: 'soft',
+      notes: null,
+      quote_id: quote.quote_id,
+      created_by: performedBy ?? quote.accepted_by ?? quote.updated_by ?? quote.created_by ?? null,
+      created_at: nowIso,
+      updated_at: nowIso,
+    })
+    .returning('*');
+
+  const soId = (salesOrder as ISalesOrder).so_id;
+  const serviceIds = Array.from(new Set(productItems.map((item) => item.service_id as string)));
+  const costFallbacks = await resolveProductCostFallbacks(knexOrTrx, tenant, serviceIds);
+
+  await knexOrTrx('sales_order_lines').insert(
+    productItems.map((item) => {
+      const serviceId = item.service_id as string;
+      return {
+        tenant,
+        so_id: soId,
+        service_id: serviceId,
+        quantity_ordered: Number(item.quantity),
+        quantity_fulfilled: 0,
+        quantity_invoiced: 0,
+        unit_price: Number(item.unit_price),
+        cost_snapshot: toIntegerCents(item.cost) ?? costFallbacks.get(serviceId) ?? null,
+        tax_rate_id: null,
+        fulfillment_type: 'from_stock',
+        parent_so_line_id: null,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+    })
+  );
+
+  await knexOrTrx('quotes')
+    .where({ tenant, quote_id: quote.quote_id })
+    .update({
+      updated_by: performedBy ?? quote.updated_by ?? quote.created_by ?? null,
+      updated_at: nowIso,
+    });
+
+  await QuoteActivity.create(knexOrTrx, tenant, {
+    quote_id: quote.quote_id,
+    activity_type: 'converted_to_sales_order',
+    description: `Quote converted to draft sales order ${soNumber}`,
+    performed_by: performedBy ?? null,
+    metadata: {
+      so_id: soId,
+      so_number: soNumber,
+      product_item_count: productItems.length,
+    },
+  });
+
+  const refreshedQuote = await Quote.getById(knexOrTrx, tenant, quote.quote_id);
+  const refreshedSalesOrder = await getSalesOrderByQuoteId(knexOrTrx, tenant, quote.quote_id);
+
+  return {
+    quote: refreshedQuote as IQuote,
+    salesOrder: refreshedSalesOrder as ISalesOrder & { lines: ISalesOrderLine[] },
+  };
+}
+
 export async function convertQuoteToDraftInvoice(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -519,8 +815,9 @@ export async function convertQuoteToDraftInvoice(
   }
 
   if (quote.converted_invoice_id) {
-    const existingInvoice = await knexOrTrx('invoices')
-      .where({ tenant, invoice_id: quote.converted_invoice_id })
+    const db = tenantDb(knexOrTrx, tenant);
+    const existingInvoice = await db.table('invoices')
+      .where({ invoice_id: quote.converted_invoice_id })
       .first();
 
     if (existingInvoice) {
@@ -528,7 +825,7 @@ export async function convertQuoteToDraftInvoice(
         quote: await Quote.getById(knexOrTrx, tenant, quote.quote_id) as IQuote,
         invoice: {
           ...existingInvoice,
-          invoice_charges: await knexOrTrx('invoice_charges').where({ tenant, invoice_id: existingInvoice.invoice_id }),
+          invoice_charges: await db.table('invoice_charges').where({ invoice_id: existingInvoice.invoice_id }),
         } as IInvoice,
       };
     }
@@ -538,9 +835,17 @@ export async function convertQuoteToDraftInvoice(
     throw new Error('Quotes must be linked to a client before they can be converted to an invoice');
   }
 
-  const oneTimeItems = getSelectedOneTimeItems(quote.quote_items ?? []);
+  let oneTimeItems = getSelectedOneTimeItems(quote.quote_items ?? []);
+  const salesOrderForQuote = await getSalesOrderByQuoteId(knexOrTrx, tenant, quote.quote_id);
+  if (salesOrderForQuote) {
+    const productServiceIds = await resolveProductServiceIds(knexOrTrx, tenant, oneTimeItems);
+    oneTimeItems = excludeSalesOrderProductItems(oneTimeItems, productServiceIds);
+  }
+
   if (oneTimeItems.length === 0) {
-    throw new Error('Quote does not contain any one-time items selected for invoice conversion');
+    throw new Error(salesOrderForQuote
+      ? 'Quote does not contain any invoiceable one-time items after excluding sales-order product lines'
+      : 'Quote does not contain any one-time items selected for invoice conversion');
   }
 
   const nowIso = new Date().toISOString();
@@ -550,7 +855,8 @@ export async function convertQuoteToDraftInvoice(
   });
 
   const invoiceId = uuidv4();
-  await knexOrTrx('invoices').insert({
+  const db = tenantDb(knexOrTrx, tenant);
+  await db.table('invoices').insert({
     tenant,
     invoice_id: invoiceId,
     client_id: quote.client_id,
@@ -614,25 +920,25 @@ export async function convertQuoteToDraftInvoice(
       : null,
   }));
 
-  await insertRowsUsingExistingColumns(knexOrTrx, 'invoice_charges', invoiceChargeRows);
+  await insertRowsUsingExistingColumns(knexOrTrx, tenant, 'invoice_charges', invoiceChargeRows);
 
   const invoiceSubtotal = invoiceChargeRows.reduce((sum, row) => sum + Number(row.net_amount), 0);
   const invoiceTax = invoiceChargeRows.reduce((sum, row) => sum + Number(row.tax_amount), 0);
 
-  await knexOrTrx('invoices')
-    .where({ tenant, invoice_id: invoiceId })
+  await db.table('invoices')
+    .where({ invoice_id: invoiceId })
     .update({
       subtotal: Math.round(invoiceSubtotal),
       tax: Math.round(invoiceTax),
       total_amount: Math.round(invoiceSubtotal + invoiceTax),
     });
 
-  const invoice = await knexOrTrx('invoices')
-    .where({ tenant, invoice_id: invoiceId })
+  const invoice = await db.table('invoices')
+    .where({ invoice_id: invoiceId })
     .first();
 
-  await knexOrTrx('quotes')
-    .where({ tenant, quote_id: quote.quote_id })
+  await db.table('quotes')
+    .where({ quote_id: quote.quote_id })
     .update({
       converted_invoice_id: invoiceId,
       updated_by: performedBy ?? quote.updated_by ?? quote.created_by ?? null,
@@ -693,8 +999,8 @@ export async function convertQuoteToDraftContractAndInvoice(
   const invoiceResult = await convertQuoteToDraftInvoice(knexOrTrx, tenant, quoteId, performedBy);
   const nowIso = new Date().toISOString();
 
-  await knexOrTrx('quotes')
-    .where({ tenant, quote_id: quoteId })
+  await tenantDb(knexOrTrx, tenant).table('quotes')
+    .where({ quote_id: quoteId })
     .update({
       status: 'converted',
       converted_at: nowIso,

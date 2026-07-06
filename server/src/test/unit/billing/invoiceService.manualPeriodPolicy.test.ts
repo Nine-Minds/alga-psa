@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { persistManualInvoiceCharges } from '../../../../../packages/billing/src/services/invoiceService';
 
+function normalizeColumnName(columnName: string) {
+  const [, unqualifiedName] = columnName.match(/^(?:[^.]+)\.(.+)$/) ?? [];
+  return unqualifiedName ?? columnName;
+}
+
 function createMockTx(existingInvoiceCharges: Array<Record<string, any>> = []) {
   const inserts: Record<string, any[]> = {
     invoice_charges: [],
@@ -9,26 +14,44 @@ function createMockTx(existingInvoiceCharges: Array<Record<string, any>> = []) {
     tax_rates: [],
   };
 
-  const tx: any = (tableName: string) => ({
-    where: (criteria: Record<string, any>) => ({
-      select: () => ({
-        first: async () => null,
-      }),
-      first: async () => {
-        if (tableName !== 'invoice_charges') {
-          return null;
-        }
+  const tables: Record<string, Array<Record<string, any>>> = {
+    invoice_charges: existingInvoiceCharges.map((row) => ({ ...row })),
+    service_catalog: [],
+    tax_rates: [],
+  };
 
-        return existingInvoiceCharges.find((row) =>
-          Object.entries(criteria).every(([key, expected]) => row[key] === expected),
-        ) ?? null;
+  const tx: any = (tableName: string) => {
+    let filteredRows = tables[tableName] ?? [];
+
+    const builder: any = {
+      where(criteria: Record<string, any> | string, value?: unknown) {
+        filteredRows = filteredRows.filter((row) => {
+          if (typeof criteria === 'string') {
+            return row[normalizeColumnName(criteria)] === value;
+          }
+
+          return Object.entries(criteria).every(
+            ([key, expected]) => row[normalizeColumnName(key)] === expected,
+          );
+        });
+        return builder;
       },
-    }),
-    insert: async (payload: any) => {
-      inserts[tableName].push(payload);
-      return [payload];
-    },
-  });
+      select() {
+        return builder;
+      },
+      async first() {
+        return filteredRows[0] ?? null;
+      },
+      async insert(payload: any) {
+        inserts[tableName].push(payload);
+        tables[tableName] ??= [];
+        tables[tableName].push(payload);
+        return [payload];
+      },
+    };
+
+    return builder;
+  };
 
   return { tx, inserts };
 }

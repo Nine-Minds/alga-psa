@@ -5,6 +5,7 @@ import { AssetDetailHeader } from './AssetDetailHeader';
 import { AssetMetricsBanner } from './AssetMetricsBanner';
 import { AssetDashboardGrid } from './AssetDashboardGrid';
 import { AssetDetailTabs } from './AssetDetailTabs';
+import { AssetInventoryProvenanceSection } from './AssetInventoryProvenance';
 import { useAssetDetail } from '@alga-psa/assets/hooks/useAssetDetail';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
@@ -109,6 +110,8 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
           onRefreshRmm={refreshRmmData}
           isRefreshingRmm={isRefreshing}
         />
+
+        <AssetInventoryProvenanceSection assetId={asset.asset_id} />
 
         <AssetDetailTabs asset={asset} />
       </div>

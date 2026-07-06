@@ -1,214 +1,214 @@
 {
-  "welcome": {
-    "title": "Welcome to Your MSP Command Center",
-    "description": "Track onboarding progress, configure critical services, and keep every client experience consistent.",
-    "titleCommunity": "Welcome back",
-    "descriptionCommunity": "Jump into tickets, scheduling, projects, and reporting from your dashboard."
-  },
-  "algadesk": {
-    "welcome": {
-      "title": "Bem-vindo ao AlgaDesk",
-      "description": "Acompanhe a carga de tickets, a saúde dos canais de e-mail e cada conversa."
-    },
-    "metrics": {
-      "openTickets": "Tickets abertos",
-      "awaitingCustomer": "Aguardando cliente",
-      "awaitingInternal": "Aguardando internamente",
-      "activeEmailChannels": "Canais de e-mail ativos"
-    },
-    "aging": {
-      "title": "Idade dos tickets",
-      "under2Days": "Menos de 2 dias",
-      "days2To7": "De 2 a 7 dias",
-      "over7Days": "Mais de 7 dias"
-    },
-    "emailHealth": {
-      "title": "Saúde dos canais de e-mail",
-      "summary": "{{healthy}} de {{active}} canais ativos estão conectados.",
-      "totalConfigured": "Canais configurados no total: {{total}}"
-    },
-    "recentTickets": {
-      "title": "Tickets atualizados recentemente",
-      "empty": "Sem atividade recente em tickets."
-    }
-  },
-  "features": {
-    "heading": "Platform Features",
-    "comingSoon": "Coming soon!",
-    "tickets": {
-      "title": "Ticket Management",
-      "description": "Streamline support with routing, SLA tracking, and guided workflows."
-    },
-    "monitoring": {
-      "title": "System Monitoring",
-      "description": "Watch critical signals across clients and trigger automation when needed."
-    },
-    "security": {
-      "title": "Security Management",
-      "description": "Manage policies, approvals, and audit responses in one place."
-    },
-    "projects": {
-      "title": "Project Management",
-      "description": "Organize delivery plans, tasks, and milestones for every engagement."
-    },
-    "reports": {
-      "title": "Reporting & Analytics",
-      "description": "Build rollups on utilization, SLA attainment, and profitability."
-    },
-    "schedule": {
-      "title": "Schedule Management",
-      "description": "Coordinate onsite visits and remote sessions with bi-directional sync."
-    }
-  },
-  "knowledgeBase": {
-    "title": "Need a deeper dive?",
-    "description": "Explore deployment runbooks and best practices in the knowledge base.",
-    "cta": "Visit resources"
-  },
-  "onboarding": {
-    "completeTitle": "Onboarding complete",
-    "incompleteTitle": "Complete your setup",
-    "completeDescription": "You're ready to use the full MSP dashboard experience.",
-    "incompleteDescription": "Work through each step to unlock the full MSP dashboard experience.",
-    "stepLabel": "STEP {{index}}",
-    "badges": {
-      "complete": "Complete",
-      "notStarted": "Not Started",
-      "inProgress": "In Progress",
-      "blocked": "Blocked"
-    },
-    "progress": {
-      "label": "PROGRESS",
-      "steps": "{{completed}} of {{total}} Steps",
-      "messageStart": "Just getting started!",
-      "messageComplete": "All set - great job!",
-      "messageInProgress": "Keep going - you've got this!"
-    },
-    "substeps": {
-      "dataImport": "Complete your first import OR create 5 contacts",
-      "identity": {
-        "addProvider": "Add an SSO provider",
-        "linkTeamMember": "Link the first team member"
-      },
-      "portal": {
-        "customDomain": "Portal custom domain",
-        "branding": "Portal color and logo customizations",
-        "inviteFirstContact": "Invite your first contact to the portal"
-      },
-      "createContacts": "Create your first 5 contacts",
-      "calendar": {
-        "addProvider": "Add a calendar provider",
-        "connectAuthorize": "Connect and authorize the provider"
-      },
-      "email": {
-        "configureInbound": "Configure inbound email",
-        "configureOutboundDomain": "Configure outbound custom email domain"
-      }
-    },
-    "cta": {
-      "completed": "Completed",
-      "hiding": "Hiding...",
-      "hide": "Hide",
-      "dismiss": "Dismiss {{title}}",
-      "restoring": "Restoring..."
-    },
-    "hidden": {
-      "title": "Hidden setup cards ({{count}})",
-      "subtitle": "Restore any card if you need it later.",
-      "titleCombined": "Hidden cards ({{count}})"
-    },
-    "checklist": {
-      "title": "Onboarding checklist",
-      "progress": "{{completed}} of {{total}} tasks complete",
-      "completeTitle": "Configuration complete",
-      "completeDescription": "Invite clients to experience your branded portal.",
-      "inviteCta": "Invite clients",
-      "viewButton": "View onboarding checklist"
-    },
-    "steps": {
-      "identity": {
-        "title": "Secure Identity & SSO",
-        "description": "Connect Google Workspace or Microsoft 365 so admins sign in with managed identities.",
-        "cta": "Connect SSO"
-      },
-      "portal": {
-        "title": "Set Up Customer Portal",
-        "description": "Configure your portal so customers can sign in on your domain with your branding.",
-        "cta": "Open Portal Settings"
-      },
-      "dataImport": {
-        "title": "Import Core Data",
-        "description": "Add contacts so you can start working for clients and keep workflows moving.",
-        "cta": "Create Contacts"
-      },
-      "calendar": {
-        "title": "Calendar Sync",
-        "description": "Connect Google or Outlook calendars to keep dispatch and client appointments aligned.",
-        "cta": "Configure Calendar"
-      },
-      "email": {
-        "title": "Configure Email",
-        "description": "Set up inbound ticket email and verify an outbound sending domain for reliable delivery.",
-        "cta": "Configure Email"
-      }
-    },
-    "blockers": {
-      "identity": {
-        "linkedAccountsUnavailable": "Unable to verify linked team members right now.",
-        "noLinkedUsers": "No users are linked to an identity provider yet. Ask an MSP admin to connect Google or Microsoft.",
-        "addProviderCredentials": "Add Google Workspace or Microsoft 365 credentials to enable SSO for your team.",
-        "configurationUnavailable": "SSO provider configuration is unavailable in this environment.",
-        "loadFailed": "Unable to load SSO configuration status."
-      },
-      "portal": {
-        "loadFailed": "Unable to load client portal domain status."
-      },
-      "import": {
-        "loadFailed": "Unable to load import history."
-      },
-      "calendar": {
-        "providerAttention": "{{provider}} requires attention before syncing can resume.",
-        "loadFailed": "Unable to load calendar integrations."
-      },
-      "email": {
-        "enterpriseOnly": "Managed email domains are only available in the Enterprise edition.",
-        "tenantRequired": "Tenant context is required to load email onboarding status.",
-        "loadFailed": "Unable to load managed email domains.",
-        "verificationFailed": "Verification for {{domain}} failed."
-      }
-    },
-    "errors": {
-      "dismissFailed": "Failed to dismiss onboarding step.",
-      "restoreFailed": "Failed to restore onboarding step."
-    }
-  },
   "greeting": {
     "morning": "Bom dia",
     "afternoon": "Boa tarde",
     "evening": "Boa noite"
   },
-  "mspDashboard": "Painel MSP",
-  "mobileApp": {
-    "title": "Download AlgaPSA Mobile app",
-    "description": "Scan a QR code with your phone to download the AlgaPSA mobile app.",
-    "selfHostDescription": "1. Scan a store QR code to install the app. 2. In the app, tap \"Change server\" → \"Scan QR code\" and scan the \"Connect this server\" code.",
-    "appStore": "App Store (iOS)",
-    "playStore": "Google Play (Android)",
-    "appStoreQrAlt": "QR code linking to the AlgaPSA app on the Apple App Store",
-    "playStoreQrAlt": "QR code linking to the AlgaPSA app on Google Play",
-    "connectServer": "Connect this server",
-    "connectServerQrAlt": "QR code that connects the AlgaPSA mobile app to this server",
-    "zoomAria": "Ampliar o código QR de {{label}}",
-    "hide": "Hide",
-    "hiding": "Hiding...",
-    "dismissAria": "Hide mobile app card",
-    "dismissError": "Failed to hide the card.",
-    "restore": "Get AlgaPSA Mobile app",
-    "restoring": "Restoring...",
-    "restoreError": "Failed to restore the card.",
-    "hidden": {
-      "title": "Hidden mobile app card",
-      "subtitle": "Restore it if you need it later."
+  "welcome": {
+    "title": "Bem-vindo ao seu centro de comando MSP",
+    "description": "Acompanhe o progresso do onboarding, configure serviços críticos e mantenha a consistência de cada experiência do cliente.",
+    "titleCommunity": "bem vindo de volta",
+    "descriptionCommunity": "Acesse tickets, agendamentos, projetos e relatórios no seu painel."
+  },
+  "algadesk": {
+    "welcome": {
+      "title": "Bem-vindo ao AlgaDesk",
+      "description": "Acompanhe a carga de trabalho dos tickets, monitore a integridade do canal de e-mail e fique por dentro de todas as conversas."
+    },
+    "metrics": {
+      "openTickets": "Abrir tickets",
+      "awaitingCustomer": "Aguardando cliente",
+      "awaitingInternal": "Aguardando interno",
+      "activeEmailChannels": "Canais de e-mail ativos"
+    },
+    "aging": {
+      "title": "Envelhecimento do ticket",
+      "under2Days": "Menos de 2 dias",
+      "days2To7": "2 a 7 dias",
+      "over7Days": "Mais de 7 dias"
+    },
+    "emailHealth": {
+      "title": "Integridade do canal de e-mail",
+      "summary": "{{healthy}} de canais ativos {{active}} estão conectados.",
+      "totalConfigured": "Total de canais configurados: {{total}}"
+    },
+    "recentTickets": {
+      "title": "Tickets atualizados recentemente",
+      "empty": "Nenhuma atividade recente de tickets."
     }
-  }
+  },
+  "features": {
+    "heading": "Recursos da plataforma",
+    "comingSoon": "Em breve!",
+    "tickets": {
+      "title": "Gerenciamento de tickets",
+      "description": "Simplifique o suporte com roteamento, rastreamento de SLA e fluxos de trabalho guiados."
+    },
+    "monitoring": {
+      "title": "Monitoramento do sistema",
+      "description": "Observe sinais críticos entre clientes e acione a automação quando necessário."
+    },
+    "security": {
+      "title": "Gestão de Segurança",
+      "description": "Gerencie políticas, aprovações e respostas de auditoria em um só lugar."
+    },
+    "projects": {
+      "title": "Gerenciamento de projetos",
+      "description": "Organize planos de entrega, tarefas e metas para cada compromisso."
+    },
+    "reports": {
+      "title": "Relatórios e análises",
+      "description": "Crie rollups sobre utilização, cumprimento de SLA e lucratividade."
+    },
+    "schedule": {
+      "title": "Gerenciamento de cronograma",
+      "description": "Coordene visitas no local e sessões remotas com sincronização bidirecional."
+    }
+  },
+  "knowledgeBase": {
+    "title": "Precisa de um mergulho mais profundo?",
+    "description": "Explore runbooks de implantação e práticas recomendadas na base de conhecimento.",
+    "cta": "Visite recursos"
+  },
+  "mobileApp": {
+    "title": "Baixe o aplicativo AlgaPSA Mobile",
+    "description": "Digitalize um código QR com seu telefone para baixar o aplicativo móvel AlgaPSA.",
+    "selfHostDescription": "1. Digitalize o código QR de uma loja para instalar o aplicativo. 2. No aplicativo, toque em \"Alterar servidor\" → \"Digitalizar código QR\" e digitalize o código \"Conectar este servidor\".",
+    "appStore": "Loja de aplicativos (iOS)",
+    "playStore": "Google Play (Android)",
+    "appStoreQrAlt": "Código QR vinculado ao aplicativo AlgaPSA na Apple App Store",
+    "playStoreQrAlt": "Código QR vinculado ao aplicativo AlgaPSA no Google Play",
+    "connectServer": "Conecte este servidor",
+    "connectServerQrAlt": "Código QR que conecta o aplicativo móvel AlgaPSA a este servidor",
+    "zoomAria": "Amplie o código QR {{label}}",
+    "hide": "Esconder",
+    "hiding": "Escondido...",
+    "dismissAria": "Ocultar cartão de aplicativo móvel",
+    "dismissError": "Falha ao ocultar o cartão.",
+    "restore": "Obtenha o aplicativo AlgaPSA Mobile",
+    "restoring": "Restaurando...",
+    "restoreError": "Falha ao restaurar o cartão.",
+    "hidden": {
+      "title": "Cartão de aplicativo móvel oculto",
+      "subtitle": "Restaure-o se precisar dele mais tarde."
+    }
+  },
+  "onboarding": {
+    "completeTitle": "Onboarding concluído",
+    "incompleteTitle": "Conclua sua configuração",
+    "completeDescription": "Você está pronto para usar a experiência completa do painel MSP.",
+    "incompleteDescription": "Trabalhe em cada etapa para desbloquear a experiência completa do painel MSP.",
+    "stepLabel": "ETAPA {{index}}",
+    "badges": {
+      "complete": "Completo",
+      "notStarted": "Não iniciado",
+      "inProgress": "Em andamento",
+      "blocked": "Bloqueado"
+    },
+    "progress": {
+      "label": "PROGRESS",
+      "steps": "{{completed}} de etapas {{total}}",
+      "messageStart": "Apenas começando!",
+      "messageComplete": "Tudo pronto - ótimo trabalho!",
+      "messageInProgress": "Continue - você consegue!"
+    },
+    "substeps": {
+      "dataImport": "Conclua sua primeira importação OU crie 5 contatos",
+      "identity": {
+        "addProvider": "Adicione um provedor de SSO",
+        "linkTeamMember": "Vincule o primeiro membro da equipe"
+      },
+      "portal": {
+        "customDomain": "Domínio personalizado do portal",
+        "branding": "Personalizações de cores e logotipo do portal",
+        "inviteFirstContact": "Convide seu primeiro contato para o portal"
+      },
+      "createContacts": "Crie seus primeiros 5 contatos",
+      "calendar": {
+        "addProvider": "Adicionar um provedor de calendário",
+        "connectAuthorize": "Conecte e autorize o provedor"
+      },
+      "email": {
+        "configureInbound": "Configurar email de entrada",
+        "configureOutboundDomain": "Configurar domínio de email personalizado de saída"
+      }
+    },
+    "cta": {
+      "completed": "Concluído",
+      "hiding": "Escondido...",
+      "hide": "Esconder",
+      "dismiss": "Dispensar {{title}}",
+      "restoring": "Restaurando..."
+    },
+    "hidden": {
+      "title": "Cartões de configuração ocultos ({{count}})",
+      "subtitle": "Restaure qualquer cartão se precisar dele mais tarde.",
+      "titleCombined": "Cartas ocultas ({{count}})"
+    },
+    "checklist": {
+      "title": "Lista de verificação de onboarding",
+      "progress": "{{completed}} de tarefas {{total}} concluídas",
+      "completeTitle": "Configuração concluída",
+      "completeDescription": "Convide clientes para experimentar o portal da sua marca.",
+      "inviteCta": "Convide clientes",
+      "viewButton": "Veja a lista de verificação de onboarding"
+    },
+    "steps": {
+      "identity": {
+        "title": "Identidade segura e SSO",
+        "description": "Conecte o Google Workspace ou o Microsoft 365 para que os administradores façam login com identidades gerenciadas.",
+        "cta": "Conectar SSO"
+      },
+      "portal": {
+        "title": "Configurar o Portal do Cliente",
+        "description": "Configure seu portal para que os clientes possam fazer login em seu domínio com sua marca.",
+        "cta": "Abra as configurações do portal"
+      },
+      "dataImport": {
+        "title": "Importar dados principais",
+        "description": "Adicione contatos para começar a trabalhar para clientes e manter os fluxos de trabalho em andamento.",
+        "cta": "Criar contatos"
+      },
+      "calendar": {
+        "title": "Sincronização de calendário",
+        "description": "Conecte os calendários do Google ou do Outlook para manter o envio e os compromissos do cliente alinhados.",
+        "cta": "Configurar calendário"
+      },
+      "email": {
+        "title": "Configurar e-mail",
+        "description": "Configure o e-mail de ticket de entrada e verifique um domínio de envio de saída para uma entrega confiável.",
+        "cta": "Configurar e-mail"
+      }
+    },
+    "blockers": {
+      "identity": {
+        "linkedAccountsUnavailable": "Não é possível verificar os membros da equipe vinculados no momento.",
+        "noLinkedUsers": "Nenhum usuário está vinculado a um provedor de identidade ainda. Peça a um administrador MSP para conectar o Google ou a Microsoft.",
+        "addProviderCredentials": "Adicione credenciais do Google Workspace ou Microsoft 365 para ativar o SSO para sua equipe.",
+        "configurationUnavailable": "A configuração do provedor SSO não está disponível neste ambiente.",
+        "loadFailed": "Não foi possível carregar o status de configuração do SSO."
+      },
+      "portal": {
+        "loadFailed": "Não foi possível carregar o status do domínio do portal do cliente."
+      },
+      "import": {
+        "loadFailed": "Não foi possível carregar o histórico de importação."
+      },
+      "calendar": {
+        "providerAttention": "{{provider}} requer atenção antes que a sincronização possa ser retomada.",
+        "loadFailed": "Não foi possível carregar integrações de calendário."
+      },
+      "email": {
+        "enterpriseOnly": "Os domínios de e-mail gerenciados estão disponíveis apenas na edição Enterprise.",
+        "tenantRequired": "O contexto do locatário é necessário para carregar o status de onboarding do email.",
+        "loadFailed": "Não foi possível carregar domínios de e-mail gerenciados.",
+        "verificationFailed": "A verificação para {{domain}} falhou."
+      }
+    },
+    "errors": {
+      "dismissFailed": "Falha ao dispensar a etapa de onboarding.",
+      "restoreFailed": "Falha ao restaurar a etapa de onboarding."
+    }
+  },
+  "mspDashboard": "Painel MSP"
 }

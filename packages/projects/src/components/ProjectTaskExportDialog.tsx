@@ -235,7 +235,6 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
                       checked={selectedPhaseIds.has(phase.phase_id)}
                       onChange={() => togglePhase(phase.phase_id)}
                       size="sm"
-                      containerClassName="mb-0"
                       skipRegistration
                     />
                   ))}
@@ -288,7 +287,6 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
                       checked={selectedFields.has(field.key)}
                       onChange={() => toggleField(field.key)}
                       size="sm"
-                      containerClassName="mb-0"
                       skipRegistration
                     />
                   ))}

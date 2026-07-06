@@ -39,7 +39,6 @@ describe('service request linked-service picker', () => {
       id: serviceTypeId,
       tenant,
       name: `Catalog Type ${serviceTypeId.slice(0, 8)}`,
-      billing_method: 'fixed',
       order_number: 1,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),

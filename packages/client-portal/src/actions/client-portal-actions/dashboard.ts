@@ -2,15 +2,15 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal dashboard actions intentionally compose ticket visibility helpers to keep dashboard counts and recent activity aligned with canonical client portal ticket visibility rules. */
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import {
   applyVisibilityBoardFilter,
-  getClientContactVisibilityContext
 } from '@alga-psa/tickets/lib';
+import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 
 export interface DashboardMetrics {
   openTickets: number;
@@ -62,6 +62,45 @@ type RecentInvoiceActivityRow = {
   timestamp: string;
   service_period_start?: string | Date | null;
   service_period_end?: string | Date | null;
+};
+
+type RecentTicketActivityRow = {
+  title: string;
+  timestamp: string;
+  description: string | null;
+};
+
+type RecentAssetActivityRow = {
+  asset_name: string;
+  timestamp: string;
+  description: string | null;
+};
+
+type RecentQuoteActivityRow = {
+  quote_number: string | null;
+  title: string | null;
+  status: string | null;
+  timestamp: string | Date;
+};
+
+type RecentProjectActivityRow = {
+  name: string;
+  description: string | null;
+  timestamp: string | Date;
+};
+
+type RecentServiceRequestActivityRow = {
+  name: string;
+  status: string;
+  execution_error_summary: string | null;
+  timestamp: string | Date;
+};
+
+type RecentAppointmentActivityRow = {
+  name: string | null;
+  status: string;
+  declined_reason: string | null;
+  timestamp: string | Date;
 };
 
 /**
@@ -144,11 +183,11 @@ export const getDashboardMetrics = withAuth(async (
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant);
       // Get client_id from contact
-      const contact = await trx('contacts')
+      const contact = await scopedDb.table('contacts')
         .where({
           'contact_name_id': userContactId,
-          'tenant': tenant
         })
         .select('client_id')
         .first();
@@ -169,51 +208,46 @@ export const getDashboardMetrics = withAuth(async (
         ] = await Promise.all([
         // Get open tickets count
         applyVisibilityBoardFilter(
-          trx('tickets')
+          scopedDb.table('tickets')
             .where({
-              'tickets.tenant': tenant,
               'tickets.client_id': clientId,
               'is_closed': false
             }),
           visibility.visibleBoardIds,
           'tickets.board_id'
-        ).count('ticket_id as count'),
+        ).count('ticket_id as count') as unknown as Promise<Array<{ count: string }>>,
 
         // Get active projects count
-        trx('projects')
+        scopedDb.table('projects')
           .where({
-            'projects.tenant': tenant,
             'projects.client_id': clientId,
             'is_inactive': false
           })
-          .count('project_id as count'),
+          .count('project_id as count') as unknown as Promise<Array<{ count: string }>>,
 
         // Pending invoice counts remain financial-document / invoice-state
         // metrics. They should not silently pivot to recurring coverage dates.
-        trx('invoices')
+        scopedDb.table('invoices')
           .where({
-            'invoices.tenant': tenant,
             'invoices.client_id': clientId
           })
           .whereNull('finalized_at')
-          .count('* as count'),
+          .count('* as count') as unknown as Promise<Array<{ count: string }>>,
 
         // Get active assets count
-        trx('assets')
+        scopedDb.table('assets')
           .where({
-            'assets.tenant': tenant,
             'assets.client_id': clientId
           })
           .andWhere('status', '!=', 'inactive')
-          .count('* as count'),
+          .count('* as count') as unknown as Promise<Array<{ count: string }>>,
 
         // Total service request submissions for this client (any status).
-        trx('service_request_submissions')
+        scopedDb.table('service_request_submissions')
           .where({
-            'tenant': tenant,
             'client_id': clientId,
           })
-          .count('* as count'),
+          .count('* as count') as unknown as Promise<Array<{ count: string }>>,
       ]);
 
       return {
@@ -252,11 +286,11 @@ export const getRecentActivity = withAuth(async (
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant);
       // Get client_id from contact
-      const contact = await trx('contacts')
+      const contact = await scopedDb.table('contacts')
         .where({
           'contact_name_id': userContactId,
-          'tenant': tenant
         })
         .select('client_id')
         .first();
@@ -269,18 +303,15 @@ export const getRecentActivity = withAuth(async (
       const visibility = await getClientContactVisibilityContext(trx, tenant, userContactId);
 
       // Get recent tickets with their initial descriptions
-      const tickets = await trx('tickets')
+      const ticketsQuery = scopedDb.table('tickets')
         .select([
           'tickets.title',
           'tickets.updated_at as timestamp',
           'comments.note as description'
-        ])
-        .leftJoin('comments', function() {
-          this.on('tickets.ticket_id', '=', 'comments.ticket_id')
-              .andOn('tickets.tenant', '=', 'comments.tenant');
-        })
+        ]);
+      scopedDb.tenantJoin(ticketsQuery, 'comments', 'tickets.ticket_id', 'comments.ticket_id', { type: 'left' });
+      const tickets = await ticketsQuery
         .where({
-          'tickets.tenant': tenant,
           'tickets.client_id': clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
@@ -293,25 +324,19 @@ export const getRecentActivity = withAuth(async (
       // Drafts (no finalized_at) are not visible to client portal users —
       // mirror the InvoicesTab/getClientInvoices contract here so the activity
       // feed never surfaces an invoice the client can't actually open.
-      const invoices = await trx('invoices as inv')
+      const invoicesQuery = scopedDb.table('invoices as inv')
         .select([
           'inv.invoice_number',
           'inv.total_amount as total',
           'inv.updated_at as timestamp',
           trx.raw('MIN(iid.service_period_start) as service_period_start'),
           trx.raw('MAX(iid.service_period_end) as service_period_end'),
-        ])
-        .leftJoin('invoice_charges as ic', function() {
-          this.on('inv.invoice_id', '=', 'ic.invoice_id')
-              .andOn('inv.tenant', '=', 'ic.tenant');
-        })
-        .leftJoin('invoice_charge_details as iid', function() {
-          this.on('ic.item_id', '=', 'iid.item_id')
-              .andOn('ic.tenant', '=', 'iid.tenant');
-        })
+        ]);
+      scopedDb.tenantJoin(invoicesQuery, 'invoice_charges as ic', 'inv.invoice_id', 'ic.invoice_id', { type: 'left' });
+      scopedDb.tenantJoin(invoicesQuery, 'invoice_charge_details as iid', 'ic.item_id', 'iid.item_id', { type: 'left' });
+      const invoices = await invoicesQuery
         .whereNotNull('inv.finalized_at')
         .where({
-          'inv.tenant': tenant,
           'inv.client_id': clientId
         })
         .groupBy('inv.invoice_id', 'inv.invoice_number', 'inv.total_amount', 'inv.updated_at')
@@ -319,18 +344,15 @@ export const getRecentActivity = withAuth(async (
         .limit(3);
 
       // Get recent asset maintenance activities
-      const assetActivities = await trx('asset_maintenance_history')
+      const assetActivitiesQuery = scopedDb.table('asset_maintenance_history')
         .select([
           'asset_maintenance_history.description',
           'asset_maintenance_history.performed_at as timestamp',
           'assets.name as asset_name'
-        ])
-        .join('assets', function() {
-          this.on('assets.asset_id', '=', 'asset_maintenance_history.asset_id')
-              .andOn('assets.tenant', '=', 'asset_maintenance_history.tenant');
-        })
+        ]);
+      scopedDb.tenantJoin(assetActivitiesQuery, 'assets', 'assets.asset_id', 'asset_maintenance_history.asset_id');
+      const assetActivities = await assetActivitiesQuery
         .where({
-          'asset_maintenance_history.tenant': tenant,
           'assets.client_id': clientId
         })
         .orderBy('asset_maintenance_history.performed_at', 'desc')
@@ -339,23 +361,23 @@ export const getRecentActivity = withAuth(async (
       // Recent quotes — only the client-meaningful state transitions
       // (sent/accepted/rejected/expired) so we don't flood the feed with
       // internal draft churn.
-      const quotes = await trx('quotes')
-        .where({ tenant, client_id: clientId })
+      const quotes = await scopedDb.table('quotes')
+        .where({ client_id: clientId })
         .whereIn('status', ['sent', 'accepted', 'rejected', 'expired'])
         .select(['quote_number', 'title', 'status', 'updated_at as timestamp'])
         .orderBy('updated_at', 'desc')
         .limit(3);
 
       // Recent project updates for this client.
-      const projects = await trx('projects')
-        .where({ tenant, client_id: clientId })
+      const projects = await scopedDb.table('projects')
+        .where({ client_id: clientId })
         .select(['project_name as name', 'description', 'updated_at as timestamp'])
         .orderBy('updated_at', 'desc')
         .limit(3);
 
       // Recent service request submissions.
-      const serviceRequests = await trx('service_request_submissions')
-        .where({ tenant, client_id: clientId })
+      const serviceRequests = await scopedDb.table('service_request_submissions')
+        .where({ client_id: clientId })
         .select([
           'request_name as name',
           'execution_status as status',
@@ -366,11 +388,10 @@ export const getRecentActivity = withAuth(async (
         .limit(3);
 
       // Recent appointment requests (status transitions).
-      const appointments = await trx('appointment_requests as ar')
-        .leftJoin('service_catalog as sc', function () {
-          this.on('ar.service_id', '=', 'sc.service_id').andOn('ar.tenant', '=', 'sc.tenant');
-        })
-        .where({ 'ar.tenant': tenant, 'ar.client_id': clientId })
+      const appointmentsQuery = scopedDb.table('appointment_requests as ar');
+      scopedDb.tenantJoin(appointmentsQuery, 'service_catalog as sc', 'ar.service_id', 'sc.service_id', { type: 'left' });
+      const appointments = await appointmentsQuery
+        .where({ 'ar.client_id': clientId })
         .select([
           'sc.service_name as name',
           'ar.status',
@@ -380,7 +401,15 @@ export const getRecentActivity = withAuth(async (
         .orderBy('ar.updated_at', 'desc')
         .limit(3);
 
-      return { tickets, invoices, assetActivities, quotes, projects, serviceRequests, appointments };
+      return {
+        tickets: tickets as RecentTicketActivityRow[],
+        invoices: invoices as unknown as RecentInvoiceActivityRow[],
+        assetActivities: assetActivities as RecentAssetActivityRow[],
+        quotes: quotes as RecentQuoteActivityRow[],
+        projects: projects as RecentProjectActivityRow[],
+        serviceRequests: serviceRequests as RecentServiceRequestActivityRow[],
+        appointments: appointments as RecentAppointmentActivityRow[],
+      };
     });
 
     // Combine and sort activities. Each branch returns the untranslated `name`
@@ -388,7 +417,7 @@ export const getRecentActivity = withAuth(async (
     // right translation key (`dashboard.activity.titles.<type>` or
     // `<type>.<status>`).
     const activities: RecentActivity[] = [
-      ...result.tickets.map((t: { title: string; timestamp: string; description: string }): RecentActivity => ({
+      ...result.tickets.map((t): RecentActivity => ({
         type: 'ticket',
         name: t.title,
         title: `New ticket: ${t.title}`,
@@ -397,21 +426,21 @@ export const getRecentActivity = withAuth(async (
         // the client can fall through to a localized placeholder if it wants one.
         description: summarizeForActivity(t.description),
       })),
-      ...result.invoices.map((i: RecentInvoiceActivityRow): RecentActivity => ({
+      ...result.invoices.map((i): RecentActivity => ({
         type: 'invoice',
         name: i.invoice_number,
         title: `Invoice ${i.invoice_number} generated`,
         timestamp: i.timestamp,
         description: formatRecentInvoiceDescription(i)
       })),
-      ...result.assetActivities.map((a: { asset_name: string; timestamp: string; description: string }): RecentActivity => ({
+      ...result.assetActivities.map((a): RecentActivity => ({
         type: 'asset',
         name: a.asset_name,
         title: `Asset maintenance: ${a.asset_name}`,
         timestamp: a.timestamp,
-        description: a.description
+        description: a.description ?? ''
       })),
-      ...result.quotes.map((q: { quote_number: string | null; title: string | null; status: string | null; timestamp: string | Date }): RecentActivity => ({
+      ...result.quotes.map((q): RecentActivity => ({
         type: 'quote',
         name: q.quote_number || q.title || '',
         title: `Quote ${q.quote_number ?? ''}`,
@@ -419,14 +448,14 @@ export const getRecentActivity = withAuth(async (
         timestamp: q.timestamp instanceof Date ? q.timestamp.toISOString() : q.timestamp,
         description: q.title ?? '',
       })),
-      ...result.projects.map((p: { name: string; description: string | null; timestamp: string | Date }): RecentActivity => ({
+      ...result.projects.map((p): RecentActivity => ({
         type: 'project',
         name: p.name,
         title: `Project updated: ${p.name}`,
         timestamp: p.timestamp instanceof Date ? p.timestamp.toISOString() : p.timestamp,
         description: p.description ?? '',
       })),
-      ...result.serviceRequests.map((s: { name: string; status: string; execution_error_summary: string | null; timestamp: string | Date }): RecentActivity => ({
+      ...result.serviceRequests.map((s): RecentActivity => ({
         type: 'service_request',
         name: s.name,
         title: `Service request: ${s.name}`,
@@ -434,7 +463,7 @@ export const getRecentActivity = withAuth(async (
         timestamp: s.timestamp instanceof Date ? s.timestamp.toISOString() : s.timestamp,
         description: s.execution_error_summary || '',
       })),
-      ...result.appointments.map((a: { name: string | null; status: string; declined_reason: string | null; timestamp: string | Date }): RecentActivity => ({
+      ...result.appointments.map((a): RecentActivity => ({
         type: 'appointment',
         name: a.name || '',
         title: `Appointment: ${a.name ?? ''}`,

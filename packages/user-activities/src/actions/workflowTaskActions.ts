@@ -4,7 +4,7 @@ import {
   WorkflowTaskActivity,
   ActivityFilters
 } from "@alga-psa/types";
-import { createTenantKnex } from "@alga-psa/db";
+import { createTenantKnex, tenantDb } from "@alga-psa/db";
 import { withAuth } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
 import { withTransaction } from '@alga-psa/db';
@@ -104,9 +104,8 @@ export const fetchTaskFormData = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     const task = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const task = await trx("workflow_tasks")
+      const task = await tenantDb(trx, tenant).table("workflow_tasks")
         .where("task_id", taskId)
-        .where("tenant", tenant)
         .first();
 
       if (!task) {
@@ -140,9 +139,8 @@ export const submitTaskForm = withAuth(async (
 
     // Update task completion details in a transaction
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const task = await trx("workflow_tasks")
+      const task = await tenantDb(trx, tenant).table("workflow_tasks")
         .where("task_id", taskId)
-        .where("tenant", tenant)
         .first();
 
       if (!task) {
@@ -150,9 +148,8 @@ export const submitTaskForm = withAuth(async (
       }
 
       // Update the task status to completed
-      await trx("workflow_tasks")
+      await tenantDb(trx, tenant).table("workflow_tasks")
         .where("task_id", taskId)
-        .where("tenant", tenant)
         .update({
           status: "completed",
           response_data: formData,
@@ -186,9 +183,8 @@ export const cancelWorkflowTask = withAuth(async (
 
     // Update the task status to cancelled
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      await trx("workflow_tasks")
+      await tenantDb(trx, tenant).table("workflow_tasks")
         .where("task_id", taskId)
-        .where("tenant", tenant)
         .update({
           status: "cancelled",
           updated_at: new Date()
@@ -224,9 +220,8 @@ export const reassignWorkflowTask = withAuth(async (
     // Update task assignment in a transaction
     await withTransaction(db, async (trx: Knex.Transaction) => {
       // Fetch the task to get the current assigned users
-      const task = await trx("workflow_tasks")
+      const task = await tenantDb(trx, tenant).table("workflow_tasks")
         .where("task_id", taskId)
-        .where("tenant", tenant)
         .first();
 
       if (!task) {
@@ -234,9 +229,8 @@ export const reassignWorkflowTask = withAuth(async (
       }
 
       // Replace the assigned users with the new assignee
-      await trx("workflow_tasks")
+      await tenantDb(trx, tenant).table("workflow_tasks")
         .where("task_id", taskId)
-        .where("tenant", tenant)
         .update({
           assigned_users: [newAssigneeId],
           updated_at: new Date()

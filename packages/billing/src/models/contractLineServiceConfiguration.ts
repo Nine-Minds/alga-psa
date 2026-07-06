@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import type { IContractLineServiceConfiguration } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,6 +11,10 @@ export default class ContractLineServiceConfiguration {
   constructor(knex?: Knex, tenant?: string) {
     this.knex = knex as Knex;
     this.tenant = tenant as string;
+  }
+
+  private table(table: string): Knex.QueryBuilder {
+    return tenantDb(this.knex, this.tenant).table(table);
   }
 
   /**
@@ -37,10 +41,9 @@ export default class ContractLineServiceConfiguration {
   async getById(configId: string): Promise<IContractLineServiceConfiguration | null> {
     await this.initKnex();
     
-    const config = await this.knex('contract_line_service_configuration')
+    const config = await this.table('contract_line_service_configuration')
       .where({
-        config_id: configId,
-        tenant: this.tenant
+        config_id: configId
       })
       .first();
     
@@ -53,10 +56,9 @@ export default class ContractLineServiceConfiguration {
   async getByContractLineId(contractLineId: string): Promise<IContractLineServiceConfiguration[]> {
     await this.initKnex();
 
-    const configs = await this.knex('contract_line_service_configuration')
+    const configs = await this.table('contract_line_service_configuration')
       .where({
-        contract_line_id: contractLineId,
-        tenant: this.tenant
+        contract_line_id: contractLineId
       })
       .select('*');
 
@@ -69,11 +71,10 @@ export default class ContractLineServiceConfiguration {
   async getByContractLineIdAndServiceId(contractLineId: string, serviceId: string): Promise<IContractLineServiceConfiguration | null> {
     await this.initKnex();
 
-    const config = await this.knex('contract_line_service_configuration')
+    const config = await this.table('contract_line_service_configuration')
       .where({
         contract_line_id: contractLineId,
-        service_id: serviceId,
-        tenant: this.tenant
+        service_id: serviceId
       })
       .first();
 
@@ -89,7 +90,7 @@ export default class ContractLineServiceConfiguration {
     const configId = uuidv4();
     const now = new Date();
     
-    await this.knex('contract_line_service_configuration').insert({
+    await this.table('contract_line_service_configuration').insert({
       config_id: configId,
       contract_line_id: data.contract_line_id,
       service_id: data.service_id,
@@ -125,10 +126,9 @@ export default class ContractLineServiceConfiguration {
       delete updateData.tenant;
     }
     
-    const result = await this.knex('contract_line_service_configuration')
+    const result = await this.table('contract_line_service_configuration')
       .where({
-        config_id: configId,
-        tenant: this.tenant
+        config_id: configId
       })
       .update(updateData);
     
@@ -143,20 +143,18 @@ export default class ContractLineServiceConfiguration {
     
     // Use a transaction to ensure both operations succeed or fail together
     return await this.knex.transaction(async (trx) => {
-      const updatedDetails = await trx('invoice_charge_details')
+      const updatedDetails = await tenantDb(trx, this.tenant).table('invoice_charge_details')
         .where({
-          config_id: configId,
-          tenant: this.tenant
+          config_id: configId
         })
         .update({
           config_id: null
         });
       
       // Then delete the configuration
-      const result = await trx('contract_line_service_configuration')
+      const result = await tenantDb(trx, this.tenant).table('contract_line_service_configuration')
         .where({
-          config_id: configId,
-          tenant: this.tenant
+          config_id: configId
         })
         .delete();
       

@@ -1,0 +1,338 @@
+[
+  {
+    "id": "F001",
+    "slice": "S1-quote-to-so",
+    "description": "convertQuoteToSalesOrder service path: accepted quote's product one-time lines become a draft sales_order with lines (qty, unit price, service_id) and sales_orders.quote_id set",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "slice": "S1-quote-to-so",
+    "description": "Quote conversion dialog offers 'Create sales order for product lines' when the quote has product one-time lines; when chosen, those lines are excluded from the draft-invoice conversion (no double-billing)",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "slice": "S1-quote-to-so",
+    "description": "Sales orders created from quotes default invoice_mode='on_fulfillment'",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "slice": "S1-quote-to-so",
+    "description": "Migration: sales_orders.quote_id uuid nullable, tenant-qualified FK to quotes, indexed",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "slice": "S1-quote-to-so",
+    "description": "getProductAvailability(serviceIds[]) read action: per product on-hand total, available (on-hand minus open allocations), reorder point, per-location breakdown for tracked products",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "slice": "S1-quote-to-so",
+    "description": "Quote form/detail product lines show advisory availability chip (on-hand/available) for tracked products via getProductAvailability",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "slice": "S1-quote-to-so",
+    "description": "Sales order creation UI uses the house ClientPicker (@alga-psa/ui) instead of a raw client UUID text input",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "slice": "S1-quote-to-so",
+    "description": "SO detail: client name renders as a link to /msp/clients/{client_id}",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "slice": "S1-quote-to-so",
+    "description": "SO detail: lists invoices generated from this SO (via invoice_charges.so_line_id backlink) with links to the invoice screen",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "slice": "S1-quote-to-so",
+    "description": "SO detail: shows source quote link when quote_id is set; quote detail shows converted-SO link",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "slice": "S2-stock-visibility",
+    "description": "Material picker search returns track_stock, on_hand_total, reorder_point per product (canonical picker search action extended)",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "slice": "S2-stock-visibility",
+    "description": "Ticket material picker rows show on-hand badge for tracked products: normal count, amber at/below reorder point, red at zero",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "slice": "S2-stock-visibility",
+    "description": "After product selection in the ticket materials card, per-location on-hand is shown (tech's default/van location first)",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "slice": "S2-stock-visibility",
+    "description": "recordStockConsumption blocks insufficient non-serialized tracked stock inside the existing row lock; error names the available quantity; exact-to-zero allowed",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "slice": "S2-stock-visibility",
+    "description": "Guard applies only to the consumption path: adjustments, cycle counts, receiving, and reversal paths remain unrestricted",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "slice": "S2-stock-visibility",
+    "description": "Project materials drawer shows the same on-hand badges/location display as the ticket picker",
+    "implemented": true
+  },
+  {
+    "id": "F017",
+    "slice": "S2-stock-visibility",
+    "description": "Ticket Materials card auto-expands when the ticket already has materials (stays collapsed only when empty)",
+    "implemented": true
+  },
+  {
+    "id": "F018",
+    "slice": "S2-stock-visibility",
+    "description": "Insufficient-stock block surfaces as a clear inline error in the add-material form (not a silent failure or generic toast)",
+    "implemented": true
+  },
+  {
+    "id": "F019",
+    "slice": "S3-client-360",
+    "description": "listClientSalesOrders(clientId) read action: SOs for the client with status, totals, dates",
+    "implemented": true
+  },
+  {
+    "id": "F020",
+    "slice": "S3-client-360",
+    "description": "listClientEquipment(clientId) read action: delivered/owned stock_units with product name, SKU, serial, MAC, delivery date, linked asset_id",
+    "implemented": true
+  },
+  {
+    "id": "F021",
+    "slice": "S3-client-360",
+    "description": "listClientRmas(clientId) read action: RMAs for the client with status and unit/product context",
+    "implemented": true
+  },
+  {
+    "id": "F022",
+    "slice": "S3-client-360",
+    "description": "Client detail gains an Equipment tab with three sections (Sales Orders / Equipment / RMAs), rows deep-linking to SO detail, asset detail, and RMA screens",
+    "implemented": true
+  },
+  {
+    "id": "F023",
+    "slice": "S3-client-360",
+    "description": "Equipment tab hidden without inventory:read permission",
+    "implemented": true
+  },
+  {
+    "id": "F024",
+    "slice": "S3-client-360",
+    "description": "getAssetInventoryProvenance(assetId) read action: product (service_id/name/SKU), stock unit serial, origin sales order (unit\u2192fulfillment\u2192SO walk), RMA history for the unit/asset",
+    "implemented": true
+  },
+  {
+    "id": "F025",
+    "slice": "S3-client-360",
+    "description": "Asset detail shows an inventory provenance section (product/SKU, origin SO link, RMA history) when the asset has stock_unit_id/service_id links; absent otherwise",
+    "implemented": true
+  },
+  {
+    "id": "F026",
+    "slice": "S3-client-360",
+    "description": "Migration: product_inventory_settings.default_asset_type text nullable; createAndLinkDeliveredAsset uses it for asset_type with fallback 'unknown'",
+    "implemented": true
+  },
+  {
+    "id": "F027",
+    "slice": "S3-client-360",
+    "description": "Product inventory settings UI exposes a default asset type select",
+    "implemented": true
+  },
+  {
+    "id": "F028",
+    "slice": "S4-domain-events",
+    "description": "Event schemas: INVENTORY_STOCK_LOW, INVENTORY_PO_RECEIVED, INVENTORY_SO_FULFILLED, INVENTORY_RMA_CREATED added to packages/event-schemas eventBusSchema with typed payloads (tenant, ids, names, quantities)",
+    "implemented": true
+  },
+  {
+    "id": "F029",
+    "slice": "S4-domain-events",
+    "description": "Migration: event_catalog seed rows for the 4 inventory event types so the workflow engine can trigger on them",
+    "implemented": true
+  },
+  {
+    "id": "F030",
+    "slice": "S4-domain-events",
+    "description": "INVENTORY_PO_RECEIVED emitted post-commit on PO receiving",
+    "implemented": true
+  },
+  {
+    "id": "F031",
+    "slice": "S4-domain-events",
+    "description": "INVENTORY_SO_FULFILLED emitted post-commit on fulfillment including drop-ship confirmation",
+    "implemented": true
+  },
+  {
+    "id": "F032",
+    "slice": "S4-domain-events",
+    "description": "INVENTORY_RMA_CREATED emitted post-commit on RMA creation",
+    "implemented": true
+  },
+  {
+    "id": "F033",
+    "slice": "S4-domain-events",
+    "description": "INVENTORY_STOCK_LOW emitted edge-triggered when consumption/fulfillment crosses the reorder point downward (not re-emitted while remaining below)",
+    "implemented": true
+  },
+  {
+    "id": "F034",
+    "slice": "S4-domain-events",
+    "description": "Migration: 'inventory-po-received' internal-notification subtype (+translations) under the EXISTING 'inventory' category \u2014 category, low-stock subtype, templates, and daily low-stock digest already shipped in 20260701091000",
+    "implemented": true
+  },
+  {
+    "id": "F035",
+    "slice": "S4-domain-events",
+    "description": "Internal notifications from INVENTORY_PO_RECEIVED via the eventBus subscriber idiom respecting per-user subtype preferences; low-stock notifications stay with the existing daily digest job (INVENTORY_STOCK_LOW feeds workflows only)",
+    "implemented": true
+  },
+  {
+    "id": "F036",
+    "slice": "S4-domain-events",
+    "description": "SEARCH_OBJECT_TYPES + indexers added for sales_order, purchase_order, stock_unit (serial and MAC searchable) following existing indexer patterns",
+    "implemented": true
+  },
+  {
+    "id": "F037",
+    "slice": "S4-domain-events",
+    "description": "searchIndexSubscriber OBJECT_ID_FIELDS wired for the 3 new types; SO/PO/stock-unit create/update/delete paths emit the events that drive (re)indexing",
+    "implemented": true
+  },
+  {
+    "id": "F038",
+    "slice": "S4-domain-events",
+    "description": "Global search results render and deep-link the 3 new types (SO detail, PO screen, stock unit's product/asset)",
+    "implemented": true
+  },
+  {
+    "id": "F039",
+    "slice": "S5-money-story",
+    "description": "getInvoiceLineCogs(invoiceId) read action: per-line COGS from stock_movements joined via so_line_id/material backlinks, with margin computed against the line amount",
+    "implemented": true
+  },
+  {
+    "id": "F040",
+    "slice": "S5-money-story",
+    "description": "Internal invoice line view shows a sales-order link on lines carrying so_line_id",
+    "implemented": true
+  },
+  {
+    "id": "F041",
+    "slice": "S5-money-story",
+    "description": "Internal invoice line view shows per-line COGS and margin where COGS data exists; never rendered on customer-facing PDF/portal output",
+    "implemented": true
+  },
+  {
+    "id": "F042",
+    "slice": "S5-money-story",
+    "description": "Existing marginReport action wired into a Margin report UI (per-service revenue, COGS, margin, filterable by period)",
+    "implemented": true
+  },
+  {
+    "id": "F043",
+    "slice": "S5-money-story",
+    "description": "Central Reports catalog gains an 'inventory' category listing the Margin report (and links to existing write-offs/ghost-usage screens)",
+    "implemented": true
+  },
+  {
+    "id": "F044",
+    "slice": "S5-money-story",
+    "description": "Contract profitability report includes hardware COGS (ticket/project materials + SO lines via stock_movements cogs_cost) alongside labor cost",
+    "implemented": true
+  },
+  {
+    "id": "F045",
+    "slice": "S5-money-story",
+    "description": "accountingExportService supports export_type 'vendor_bill' (generic engine plumbing: batch creation, status tracking, idempotency)",
+    "implemented": true
+  },
+  {
+    "id": "F046",
+    "slice": "S5-money-story",
+    "description": "QBO adapter exports vendor bills: vendor matched by name with create-if-missing, lines mapped to a default expense account, bill number/date/amounts carried",
+    "implemented": true
+  },
+  {
+    "id": "F047",
+    "slice": "S5-money-story",
+    "description": "Vendor bills screen: 'Export to accounting' action with per-bill exported status badge",
+    "implemented": true
+  },
+  {
+    "id": "F048",
+    "slice": "S6-correctness",
+    "description": "Canonical materials service in packages/inventory (add/list/delete for ticket and project materials) owning stock consumption, serialized unit handling, validation, and reversal",
+    "implemented": true
+  },
+  {
+    "id": "F049",
+    "slice": "S6-correctness",
+    "description": "Tickets UI actions, projects UI actions, and billing materialActions delegate to the canonical service (triplication removed; import sites unchanged via re-export)",
+    "implemented": true
+  },
+  {
+    "id": "F050",
+    "slice": "S6-correctness",
+    "description": "Permission gating enforced in the canonical path with billing-parity semantics; tickets/projects UI copies no longer bypass hasPermission",
+    "implemented": true
+  },
+  {
+    "id": "F051",
+    "slice": "S6-correctness",
+    "description": "REST API TicketService.addTicketMaterial delegates to the canonical service: stock consumed for tracked products, serialized products accept/require stock_unit_id, validation errors consistent with UI path",
+    "implemented": true
+  },
+  {
+    "id": "F052",
+    "slice": "S6-correctness",
+    "description": "REST API material delete parity \u2014 VERIFIED N/A: the public API exposes GET/POST materials only (no DELETE endpoint); adding one is out of scope (API-surface non-goal)",
+    "implemented": true
+  },
+  {
+    "id": "F053",
+    "slice": "S6-correctness",
+    "description": "Vendor actions enforce seeded vendor:* permissions",
+    "implemented": true
+  },
+  {
+    "id": "F054",
+    "slice": "S6-correctness",
+    "description": "Transfer actions enforce seeded stock_transfer:* permissions",
+    "implemented": true
+  },
+  {
+    "id": "F055",
+    "slice": "S6-correctness",
+    "description": "Location actions enforce seeded stock_location:* permissions (coexisting with the van-ownership checks in scope.ts)",
+    "implemented": true
+  },
+  {
+    "id": "F056",
+    "slice": "S6-correctness",
+    "description": "Materials-triplication LEVERAGE debt resolved: single implementation, no duplicated add/delete/consume wiring greppable across tickets/projects/billing",
+    "implemented": true
+  }
+]

@@ -1,11 +1,14 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 exports.seed = async function (knex) {
     // Get the tenant ID
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
 
-    return knex('custom_fields').insert([
+    const { tenantId, db } = context;
+    return db.table('custom_fields').insert([
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             field_id: knex.raw('gen_random_uuid()'),
             name: 'Payment Terms',
             type: 'text',
@@ -25,14 +28,14 @@ exports.seed = async function (knex) {
             ])
         },
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             field_id: knex.raw('gen_random_uuid()'),
             name: 'Customer PO',
             type: 'text',
             default_value: null
         },
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             field_id: knex.raw('gen_random_uuid()'),
             name: 'Discount',
             type: 'number',

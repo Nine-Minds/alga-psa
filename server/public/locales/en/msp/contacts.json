@@ -571,18 +571,20 @@
       "name": "Name",
       "email": "Email",
       "phoneNumber": "Phone Number",
-      "actions": "Actions"
+      "actions": "Actions",
+      "role": "Role"
     },
     "filter": {
       "show": "Show:",
       "active": "Active Contacts",
       "inactive": "Inactive Contacts",
-      "all": "All Contacts"
+      "all": "All Contacts",
+      "searchPlaceholder": "Search contacts..."
     },
     "actions": {
       "openMenu": "Open menu",
       "quickView": "Quick View",
-      "addNewContact": "Add New Contact"
+      "addNewContact": "Add contact"
     },
     "errors": {
       "loadFailed": "Failed to load contacts.",
@@ -603,7 +605,7 @@
     "description": "Avatar upload affordance for contact profile images"
   },
   "contactNotesPanel": {
-    "title": "Notes & Quick Info",
+    "title": "Notes",
     "description": "Rich text notes panel with legacy note display and save/retry actions",
     "legacy": {
       "initialNote": "Initial Note"

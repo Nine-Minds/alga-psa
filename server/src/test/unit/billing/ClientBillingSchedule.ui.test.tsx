@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ClientBillingSchedule } from '../../../../../packages/clients/src/components/clients/ClientBillingSchedule';
 
 vi.mock('react-hot-toast', () => ({
@@ -57,7 +57,7 @@ const mockGetClientBillingCycleAnchor = vi.fn(async () => ({
   cadenceContext: {
     cadenceOwner: 'client',
     changeScopeDescription: 'Client-schedule edits affect future client-cadence windows only.',
-    scheduleDescription: 'Client cadence drives these invoice windows. Contract-anniversary lines keep their own cadence.',
+    scheduleDescription: 'Recurring charges invoice on this schedule. Contract-anniversary charges bill on their own dates.',
     previewDescription: 'This preview is for client-cadence windows only. Contract cadence is previewed at the recurring line.',
     previewHeading: 'Upcoming client-owned invoice windows (preview)',
   }
@@ -67,7 +67,7 @@ const mockPreviewBillingPeriodsForSchedule = vi.fn(async () => ({
   cadenceContext: {
     cadenceOwner: 'client',
     changeScopeDescription: 'Client-schedule edits affect future client-cadence windows only.',
-    scheduleDescription: 'Client cadence drives these invoice windows. Contract-anniversary lines keep their own cadence.',
+    scheduleDescription: 'Recurring charges invoice on this schedule. Contract-anniversary charges bill on their own dates.',
     previewDescription: 'This preview is for client-cadence windows only. Contract cadence is previewed at the recurring line.',
     previewHeading: 'Upcoming client-owned invoice windows (preview)',
   },
@@ -79,6 +79,14 @@ const mockPreviewBillingPeriodsForSchedule = vi.fn(async () => ({
 }));
 
 const mockUpdateClientBillingSchedule = vi.fn(async () => ({ success: true }));
+const mockPreviewClientCadenceChange = vi.fn(async () => ({
+  billingCycle: 'monthly',
+  unbilledPeriodsToRegenerate: 2,
+  linesAffected: 1,
+  regenerationStart: '2026-02-01T00:00:00Z',
+  billedPeriodsInRange: false,
+  affectedScheduleKeys: [],
+}));
 const mockPreviewBillingHistoryBootstrap = vi.fn(async () => ({
   requestedHistoryStartDate: '2025-01-15T00:00:00Z',
   normalizedHistoryStartBoundary: '2025-01-01T00:00:00Z',
@@ -94,30 +102,37 @@ vi.mock('../../../../../packages/clients/src/lib/billingHelpers', () => ({
   getClientBillingCycleAnchorAsync: (...args: any[]) => mockGetClientBillingCycleAnchor(...args),
   previewBillingPeriodsForScheduleAsync: (...args: any[]) => mockPreviewBillingPeriodsForSchedule(...args),
   previewBillingHistoryBootstrapAsync: (...args: any[]) => mockPreviewBillingHistoryBootstrap(...args),
+  previewClientCadenceChangeAsync: (...args: any[]) => mockPreviewClientCadenceChange(...args),
   updateClientBillingScheduleAsync: (...args: any[]) => mockUpdateClientBillingSchedule(...args),
   createNextBillingCycleAsync: (...args: any[]) => mockCreateNextBillingCycle(...args),
 }));
 
 describe('ClientBillingSchedule', () => {
+  // RTL auto-cleanup only registers for the first test file in the shared fork,
+  // so clean up explicitly to avoid this file's render leaking into the next file.
+  afterEach(() => {
+    cleanup();
+  });
+
   it('saves a monthly day-of-month anchor via updateClientBillingSchedule', async () => {
     render(<ClientBillingSchedule clientId="client-1" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Edit Schedule')).toBeTruthy();
+      expect(screen.getByText('Edit schedule')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('Create Next Cycle'));
+    fireEvent.click(screen.getByText('Create next cycle'));
     await waitFor(() => {
       expect(mockCreateNextBillingCycle).toHaveBeenCalledWith('client-1');
     });
 
-    fireEvent.click(screen.getByText('Edit Schedule'));
+    fireEvent.click(screen.getByText('Edit schedule'));
     await waitFor(() => {
-      expect(screen.getByText('Save Schedule')).toBeTruthy();
+      expect(screen.getByText('Review changes')).toBeTruthy();
     });
 
     expect(screen.getByText(
-      'Client cadence drives these invoice windows. Contract-anniversary lines keep their own cadence.'
+      'Recurring charges invoice on this schedule. Contract-anniversary charges bill on their own dates.'
     )).toBeTruthy();
     expect(screen.getByText(
       'This preview is for client-cadence windows only. Contract cadence is previewed at the recurring line.'
@@ -143,7 +158,27 @@ describe('ClientBillingSchedule', () => {
       );
     });
 
-    fireEvent.click(screen.getByText('Save Schedule'));
+    // Saving is now a two-step flow: "Review changes" computes the cadence-change
+    // impact, then "Confirm & save" applies it (commit 9b88ef86c7).
+    fireEvent.click(screen.getByText('Review changes'));
+
+    await waitFor(() => {
+      expect(mockPreviewClientCadenceChange).toHaveBeenCalledWith({
+        clientId: 'client-1',
+        billingCycle: 'monthly',
+        anchor: {
+          dayOfMonth: 10,
+          monthOfYear: null,
+          dayOfWeek: null,
+          referenceDate: null
+        },
+      });
+      expect(screen.getByText('Confirm & save')).toBeTruthy();
+    });
+
+    expect(screen.getByText('Review before you apply')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Confirm & save'));
 
     await waitFor(() => {
       expect(mockUpdateClientBillingSchedule).toHaveBeenCalledWith({

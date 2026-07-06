@@ -1,4 +1,5 @@
 import type { TicketRichTextQaScenario } from "../qa/ticketRichTextQa";
+import type { ProjectTaskActivity } from "../api/activities";
 
 export type RootStackParamList = {
   SignIn: undefined;
@@ -26,6 +27,8 @@ export type RootStackParamList = {
   MutedUsers: undefined;
   ClientDetail: { clientId: string; clientName?: string };
   ContactDetail: { contactId: string; contactName?: string };
+  ProjectTaskDetail: { activity: ProjectTaskActivity };
+  WorkflowTaskDetail: { taskId: string };
 };
 
 export type TicketsStackParamList = {
@@ -34,6 +37,7 @@ export type TicketsStackParamList = {
 
 export type DrawerParamList = {
   TicketsTab: undefined;
+  UserActivitiesTab: undefined;
   ScheduleTab: undefined;
   TimeEntriesTab: undefined;
   ClientsTab: undefined;

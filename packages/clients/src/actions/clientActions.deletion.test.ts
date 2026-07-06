@@ -1,12 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
+const tenantDbMock = vi.hoisted(() => vi.fn((conn: any) => ({
+  table: (table: string) => conn(table),
+})));
 const withTransactionMock = vi.hoisted(() => vi.fn());
 const deleteEntityWithValidationMock = vi.hoisted(() => vi.fn());
 const preCheckDeletionMock = vi.hoisted(() => vi.fn());
 const hasPermissionAsyncMock = vi.hoisted(() => vi.fn());
 const deleteEntityTagsMock = vi.hoisted(() => vi.fn());
 const isEnterpriseRef = vi.hoisted(() => ({ value: false }));
+const authUserRef = vi.hoisted(() => ({
+  value: {
+    user_id: 'user-1',
+    user_type: 'internal' as 'internal' | 'client',
+    clientId: undefined as string | undefined,
+    contact_id: undefined as string | undefined,
+  },
+}));
 
 type ServerAction = (...args: unknown[]) => unknown;
 type LookupTransaction = (table: string) => {
@@ -17,7 +28,7 @@ type TransactionCallback = (trx: LookupTransaction) => Promise<unknown>;
 vi.mock('@alga-psa/auth', () => ({
   preCheckDeletion: preCheckDeletionMock,
   withAuth: (fn: ServerAction) => (...args: unknown[]) =>
-    fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
+    fn(authUserRef.value, { tenant: 'tenant-1' }, ...args),
 }));
 
 vi.mock('@alga-psa/core', () => ({
@@ -30,11 +41,29 @@ vi.mock('@alga-psa/core', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
+  tenantDb: tenantDbMock,
   withTransaction: withTransactionMock,
 }));
 
 vi.mock('../lib/authHelpers', () => ({
   hasPermissionAsync: hasPermissionAsyncMock,
+  isClientPortalUser: (user: any) => user?.user_type === 'client',
+  hasMspPermission: async (user: any, resource: string, action: string, db?: any) =>
+    user?.user_type === 'internal' && await hasPermissionAsyncMock(user, resource, action, db),
+  assertMspPermission: async (user: any, resource: string, action: string, message: string, db?: any) => {
+    if (!(user?.user_type === 'internal' && await hasPermissionAsyncMock(user, resource, action, db))) {
+      throw new Error(message);
+    }
+  },
+  hasMspOrClientPortalOwnClientPermission: async (user: any, _tenant: string, _clientId: string, resource: string, action: string, db?: any) =>
+    (user?.user_type === 'internal' || (user?.user_type === 'client' && user?.clientId === _clientId))
+      && await hasPermissionAsyncMock(user, resource, action, db),
+  assertMspOrClientPortalOwnClientPermission: async (user: any, _tenant: string, _clientId: string, resource: string, action: string, message: string, db?: any) => {
+    if (!((user?.user_type === 'internal' || (user?.user_type === 'client' && user?.clientId === _clientId))
+      && await hasPermissionAsyncMock(user, resource, action, db))) {
+      throw new Error(message);
+    }
+  },
 }));
 
 vi.mock('../lib/billingHelpers', () => ({
@@ -72,7 +101,7 @@ vi.mock('@alga-psa/workflow-streams', () => ({
   buildClientCreatedPayload: vi.fn(),
   buildClientOwnerAssignedPayload: vi.fn(),
   buildClientStatusChangedPayload: vi.fn(),
-  buildClientUpdatedPayload: vi.fn(),
+  buildClientUpdatedPayload: vi.fn(() => ({ updatedFields: [], changes: {} })),
   buildContactPrimarySetPayload: vi.fn(),
 }));
 
@@ -122,6 +151,12 @@ function primeClientLookup(input: {
 describe('client deletion actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authUserRef.value = {
+      user_id: 'user-1',
+      user_type: 'internal',
+      clientId: undefined,
+      contact_id: undefined,
+    };
     isEnterpriseRef.value = false;
     hasPermissionAsyncMock.mockResolvedValue(true);
     preCheckDeletionMock.mockResolvedValue({
@@ -134,6 +169,92 @@ describe('client deletion actions', () => {
       deleted: true,
       dependencies: [],
       alternatives: [],
+    });
+  });
+
+  describe('updateClient', () => {
+    it('limits client portal updates to self-service client fields', async () => {
+      authUserRef.value = {
+        user_id: 'client-user-1',
+        user_type: 'client',
+        clientId: 'client-1',
+        contact_id: 'contact-1',
+      };
+
+      const updateCalls: Record<string, unknown>[] = [];
+      const currentClient = {
+        client_id: 'client-1',
+        client_name: 'Original Client',
+        url: 'https://old.example',
+        tenant: 'tenant-1',
+        is_inactive: false,
+        billing_contact_id: 'billing-contact-1',
+        billing_email: 'billing@example.com',
+        properties: {
+          website: 'https://old.example',
+          industry: 'Original Industry',
+          status: 'active',
+          tax_id: 'server-tax-id',
+        },
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      };
+
+      createTenantKnexMock.mockResolvedValue({ knex: {} });
+      withTransactionMock.mockImplementation(async (_db: unknown, callback: TransactionCallback) => {
+        const trx = ((table: string) => {
+          if (table !== 'clients') {
+            throw new Error(`Unexpected table ${table}`);
+          }
+
+          return {
+            where: vi.fn(() => ({
+              first: vi.fn(async () => currentClient),
+              update: vi.fn((updateObject: Record<string, unknown>) => {
+                updateCalls.push(updateObject);
+                return {
+                  returning: vi.fn(async () => [{
+                    ...currentClient,
+                    ...updateObject,
+                  }]),
+                };
+              }),
+            })),
+          };
+        }) as LookupTransaction;
+
+        return callback(trx);
+      });
+
+      const { updateClient } = await import('./clientActions');
+      await updateClient('client-1', {
+        client_name: 'Portal Updated Client',
+        url: 'https://new.example',
+        is_inactive: true,
+        billing_contact_id: 'attacker-contact',
+        billing_email: 'attacker@example.com',
+        properties: {
+          website: 'https://new.example',
+          industry: 'New Industry',
+          status: 'inactive',
+          tax_id: 'attacker-tax-id',
+        },
+      } as any);
+
+      expect(updateCalls).toHaveLength(1);
+      expect(updateCalls[0]).toMatchObject({
+        client_name: 'Portal Updated Client',
+        url: 'https://new.example',
+        properties: {
+          website: 'https://new.example',
+          industry: 'New Industry',
+          status: 'active',
+          tax_id: 'server-tax-id',
+        },
+      });
+      expect(updateCalls[0]).not.toHaveProperty('is_inactive');
+      expect(updateCalls[0]).not.toHaveProperty('billing_contact_id');
+      expect(updateCalls[0]).not.toHaveProperty('billing_email');
     });
   });
 

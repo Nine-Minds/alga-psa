@@ -482,7 +482,7 @@ const MultiUserAndTeamPicker = ({
                 userId={user.user_id}
                 userName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
                 avatarUrl={avatarUrls[user.user_id] || null}
-                size={size === 'sm' ? 'sm' : 'md'}
+                size="xs"
               />
               <span>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}</span>
             </div>
@@ -509,14 +509,12 @@ const MultiUserAndTeamPicker = ({
             className="flex items-center gap-1 bg-gray-100 rounded-full pl-1 pr-2 py-1"
           >
             <div className="flex items-center gap-1">
-              <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
-                <TeamAvatar
-                  teamId={team.team_id}
-                  teamName={team.team_name || 'Unnamed Team'}
-                  avatarUrl={teamAvatarUrls[team.team_id] ?? null}
-                  size="xs"
-                />
-              </div>
+              <TeamAvatar
+                teamId={team.team_id}
+                teamName={team.team_name || 'Unnamed Team'}
+                avatarUrl={teamAvatarUrls[team.team_id] ?? null}
+                size="xs"
+              />
               <span>{team.team_name || 'Unnamed Team'}</span>
             </div>
             <div
@@ -578,7 +576,7 @@ const MultiUserAndTeamPicker = ({
         {/* Unassigned option (filter mode only) */}
         {filterMode && (
           <div
-            className="px-3 py-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]"
+            className="px-3 py-1.5 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]"
             onClick={handleUnassignedToggle}
           >
             <Checkbox
@@ -643,7 +641,7 @@ const MultiUserAndTeamPicker = ({
                       <div
                         key={user.user_id}
                         className={`
-                          relative flex items-center px-3 py-2 text-sm rounded cursor-pointer
+                          relative flex items-center px-3 py-1.5 text-sm rounded cursor-pointer
                           hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''}
                         `}
                         onClick={() => handleUserToggle(user.user_id)}
@@ -653,14 +651,14 @@ const MultiUserAndTeamPicker = ({
                             id={`user-${user.user_id}`}
                             checked={isSelected}
                             onChange={() => handleUserToggle(user.user_id)}
-                            className="mr-3"
+                            className="mr-2"
                           />
                         </div>
                         <UserAvatar
                           userId={user.user_id}
                           userName={userName}
                           avatarUrl={avatarUrls[user.user_id] || null}
-                          size="sm"
+                          size="xs"
                         />
                         <span className="ml-2">{userName}</span>
                       </div>
@@ -679,7 +677,7 @@ const MultiUserAndTeamPicker = ({
                       <div
                         key={team.team_id}
                         className={`
-                          relative flex items-center px-3 py-2 text-sm rounded cursor-pointer
+                          relative flex items-center px-3 py-1.5 text-sm rounded cursor-pointer
                           hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''}
                         `}
                         onClick={() => onTeamValuesChange?.(isSelected ? teamValues.filter(id => id !== team.team_id) : [...teamValues, team.team_id])}
@@ -689,17 +687,15 @@ const MultiUserAndTeamPicker = ({
                             id={`team-${team.team_id}`}
                             checked={isSelected}
                             onChange={() => onTeamValuesChange?.(isSelected ? teamValues.filter(id => id !== team.team_id) : [...teamValues, team.team_id])}
-                            className="mr-3"
+                            className="mr-2"
                           />
                         </div>
-                        <div className="h-7 w-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
-                          <TeamAvatar
-                            teamId={team.team_id}
-                            teamName={team.team_name || 'Unnamed Team'}
-                            avatarUrl={teamAvatarUrls[team.team_id] ?? null}
-                            size="xs"
-                          />
-                        </div>
+                        <TeamAvatar
+                          teamId={team.team_id}
+                          teamName={team.team_name || 'Unnamed Team'}
+                          avatarUrl={teamAvatarUrls[team.team_id] ?? null}
+                          size="sm"
+                        />
                         <div className="ml-2 flex flex-col">
                           <span>{team.team_name || 'Unnamed Team'}</span>
                           <span className="text-xs text-gray-500">{memberCount} members · Lead: {leadName}</span>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { headObject, getBucket } from '@ee/lib/storage/s3-client';
@@ -87,15 +88,15 @@ export async function GET(req: NextRequest) {
 
     // Verify target tenant exists
     const knex = await getAdminConnection();
-    const targetTenant = await knex('tenants').where({ tenant: tenantId }).first();
+    const auditLogs = tenantDb(knex, MASTER_BILLING_TENANT_ID).table('extension_audit_logs');
+    const targetTenant = await tenantDb(knex, tenantId).table('tenants').first();
     if (!targetTenant) {
       return NextResponse.json({ success: false, error: 'Tenant not found' }, { status: 404 });
     }
 
     // Find exports from audit logs
-    const exportLogs = await knex('extension_audit_logs')
+    const exportLogs = await auditLogs
       .where({
-        tenant: MASTER_BILLING_TENANT_ID,
         event_type: 'tenant.export_data',
         resource_id: tenantId,
         status: 'completed',

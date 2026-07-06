@@ -1,4 +1,4 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { ADD_ONS } from '@alga-psa/types';
 import { resolveTeamsMicrosoftProviderConfigImpl } from '../auth/teamsMicrosoftProviderResolution';
 
@@ -33,8 +33,8 @@ function normalizeString(value: unknown): string {
 }
 
 async function tenantHasTeamsAddOn(knex: any, tenantId: string): Promise<boolean> {
-  const row = await knex('tenant_addons')
-    .where({ tenant: tenantId, addon_key: ADD_ONS.TEAMS })
+  const row = await tenantDb(knex, tenantId).table('tenant_addons')
+    .where({ addon_key: ADD_ONS.TEAMS })
     .andWhere((builder: any) => {
       builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
     })
@@ -51,8 +51,7 @@ export async function resolveTeamsMeetingGraphConfig(
     return null;
   }
 
-  const integration = await knex<TeamsMeetingIntegrationRow>('teams_integrations')
-    .where({ tenant: tenantId })
+  const integration = await tenantDb(knex, tenantId).table<TeamsMeetingIntegrationRow>('teams_integrations')
     .first();
 
   if (!integration || integration.install_status !== 'active' || !integration.selected_profile_id) {

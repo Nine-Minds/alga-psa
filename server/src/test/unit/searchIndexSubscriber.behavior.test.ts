@@ -10,9 +10,26 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
+  tenantDb: (conn: (table: string) => any, tenant: string) => ({
+    table: (table: string) => {
+      const query = conn(table);
+      const alias = table.includes(' as ') ? table.split(' as ')[1] : null;
+      return query.where(alias ? `${alias}.tenant` : 'tenant', tenant);
+    },
+    tenantJoin: (query: any, table: string, left: string, right: string) => {
+      const joinAlias = table.includes(' as ') ? table.split(' as ')[1] : table;
+      const rootAlias = right.includes('.') ? right.split('.')[0] : null;
+      return query.join(table, function(this: any) {
+        this.on(left, '=', right);
+        if (rootAlias) {
+          this.andOn(`${joinAlias}.tenant`, `${rootAlias}.tenant`);
+        }
+      });
+    },
+  }),
 }));
 
-vi.mock('../../lib/search/upsert', () => ({
+vi.mock('@alga-psa/search/upsert', () => ({
   upsertSearchDoc: mocks.upsertSearchDoc,
   deleteSearchDoc: mocks.deleteSearchDoc,
 }));
@@ -21,19 +38,19 @@ vi.mock('../../lib/jobs', () => ({
   scheduleSearchVisibleUserReindexJob: mocks.scheduleSearchVisibleUserReindexJob,
 }));
 
-import { clientIndexer } from '../../lib/search/indexers/client';
-import { userIndexer } from '../../lib/search/indexers/user';
-import { ticketIndexer } from '../../lib/search/indexers/ticket';
-import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
-import { invoiceIndexer } from '../../lib/search/indexers/invoice';
-import { invoiceItemIndexer } from '../../lib/search/indexers/invoice_item';
-import { invoiceAnnotationIndexer } from '../../lib/search/indexers/invoice_annotation';
-import { projectIndexer } from '../../lib/search/indexers/project';
-import { projectPhaseIndexer } from '../../lib/search/indexers/project_phase';
-import { projectTaskIndexer } from '../../lib/search/indexers/project_task';
-import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_task_comment';
-import { documentIndexer } from '../../lib/search/indexers/document';
-import { statusIndexer } from '../../lib/search/indexers/status';
+import { clientIndexer } from '@alga-psa/search/indexers/client';
+import { userIndexer } from '@alga-psa/search/indexers/user';
+import { ticketIndexer } from '@alga-psa/search/indexers/ticket';
+import { ticketCommentIndexer } from '@alga-psa/search/indexers/ticket_comment';
+import { invoiceIndexer } from '@alga-psa/search/indexers/invoice';
+import { invoiceItemIndexer } from '@alga-psa/search/indexers/invoice_item';
+import { invoiceAnnotationIndexer } from '@alga-psa/search/indexers/invoice_annotation';
+import { projectIndexer } from '@alga-psa/search/indexers/project';
+import { projectPhaseIndexer } from '@alga-psa/search/indexers/project_phase';
+import { projectTaskIndexer } from '@alga-psa/search/indexers/project_task';
+import { projectTaskCommentIndexer } from '@alga-psa/search/indexers/project_task_comment';
+import { documentIndexer } from '@alga-psa/search/indexers/document';
+import { statusIndexer } from '@alga-psa/search/indexers/status';
 import { handleSearchIndexEventForTest } from '../../lib/eventBus/subscribers/searchIndexSubscriber';
 import { runSearchBackfill } from '../../scripts/search-backfill';
 import type { SearchDoc } from '@alga-psa/types';
@@ -249,7 +266,7 @@ describe('search index subscriber event handling', () => {
 
     expect(ticketIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'ticket-1');
     expect(commentQuery.where).toHaveBeenCalledWith('tenant', 'tenant-1');
-    expect(commentQuery.andWhere).toHaveBeenCalledWith('ticket_id', 'ticket-1');
+    expect(commentQuery.where).toHaveBeenCalledWith('ticket_id', 'ticket-1');
     expect(ticketCommentIndexer.loadOne).toHaveBeenNthCalledWith(1, knex, 'tenant-1', 'comment-1');
     expect(ticketCommentIndexer.loadOne).toHaveBeenNthCalledWith(2, knex, 'tenant-1', 'comment-2');
     expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(1, knex, ticketDoc);
@@ -334,9 +351,9 @@ describe('search index subscriber event handling', () => {
 
     expect(invoiceIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'invoice-1');
     expect(itemQuery.where).toHaveBeenCalledWith('tenant', 'tenant-1');
-    expect(itemQuery.andWhere).toHaveBeenCalledWith('invoice_id', 'invoice-1');
+    expect(itemQuery.where).toHaveBeenCalledWith('invoice_id', 'invoice-1');
     expect(annotationQuery.where).toHaveBeenCalledWith('tenant', 'tenant-1');
-    expect(annotationQuery.andWhere).toHaveBeenCalledWith('invoice_id', 'invoice-1');
+    expect(annotationQuery.where).toHaveBeenCalledWith('invoice_id', 'invoice-1');
     expect(invoiceItemIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'item-1');
     expect(invoiceAnnotationIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'annotation-1');
     expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(1, knex, invoiceDoc);
@@ -443,11 +460,11 @@ describe('search index subscriber event handling', () => {
 
     expect(projectIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'project-1');
     expect(phaseQuery.where).toHaveBeenCalledWith('tenant', 'tenant-1');
-    expect(phaseQuery.andWhere).toHaveBeenCalledWith('project_id', 'project-1');
+    expect(phaseQuery.where).toHaveBeenCalledWith('project_id', 'project-1');
     expect(taskQuery.where).toHaveBeenCalledWith('pt.tenant', 'tenant-1');
-    expect(taskQuery.andWhere).toHaveBeenCalledWith('pp.project_id', 'project-1');
+    expect(taskQuery.where).toHaveBeenCalledWith('pp.project_id', 'project-1');
     expect(taskCommentQuery.where).toHaveBeenCalledWith('ptc.tenant', 'tenant-1');
-    expect(taskCommentQuery.andWhere).toHaveBeenCalledWith('pp.project_id', 'project-1');
+    expect(taskCommentQuery.where).toHaveBeenCalledWith('pp.project_id', 'project-1');
     expect(projectPhaseIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'phase-1');
     expect(projectTaskIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'task-1');
     expect(projectTaskCommentIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'task-comment-1');
@@ -733,7 +750,7 @@ describe('search index subscriber event handling', () => {
 
     expect(projectTaskIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'task-1');
     expect(commentQuery.where).toHaveBeenCalledWith('tenant', 'tenant-1');
-    expect(commentQuery.andWhere).toHaveBeenCalledWith('task_id', 'task-1');
+    expect(commentQuery.where).toHaveBeenCalledWith('task_id', 'task-1');
     expect(projectTaskCommentIndexer.loadOne).toHaveBeenNthCalledWith(1, knex, 'tenant-1', 'task-comment-1');
     expect(projectTaskCommentIndexer.loadOne).toHaveBeenNthCalledWith(2, knex, 'tenant-1', 'task-comment-2');
     expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(1, knex, taskDoc);
@@ -834,7 +851,8 @@ describe('search index subscriber event handling', () => {
 
     expect(ticketIndexer.loadOne).toHaveBeenCalledTimes(100);
     expect(mocks.upsertSearchDoc).toHaveBeenCalledTimes(100);
-    expect(commentQuery.andWhere).toHaveBeenCalledTimes(100);
+    expect(commentQuery.where).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(commentQuery.where).toHaveBeenCalledWith('ticket_id', 'ticket-99');
     expect(elapsedMs).toBeLessThan(30_000);
   });
 

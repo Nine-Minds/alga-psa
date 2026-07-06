@@ -21,12 +21,13 @@ export * from './inboundTicketDestinationActions';
 export * from './countryActions';
 export * from './contact-actions';
 export * from './interactionActions';
-export * from './interactionCreateHelper';
 export * from './interactionTypeActions';
 export * from './onlineMeetingActions';
 export * from './contactAvatarActions';
 export * from './queryActions';
 export * from './entraClientSyncActions';
+export * from './clientPulseActions';
+export * from './clientTimelineActions';
 
 // TODO: Create client-specific action files with dual-write logic:
 // - clientActions.ts (replaces clientActions.ts)

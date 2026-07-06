@@ -3,6 +3,7 @@ import { IDocument } from '@/interfaces/document.interface';
 import { IDocumentAssociation } from '@/interfaces/document-association.interface';
 import { hasPermission } from '@/lib/auth/rbac';
 import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 
 /**
  * Entity type to required resource permission mapping
@@ -38,9 +39,14 @@ export async function canAccessDocument(
 
   // 2. Get all associations for this document
   const { knex: db, tenant } = await createTenantKnex();
-  const associations: IDocumentAssociation[] = await db('document_associations')
+  const effectiveTenant = tenant ?? document.tenant;
+  if (!effectiveTenant) {
+    throw new Error('Tenant context not found');
+  }
+
+  const associations: IDocumentAssociation[] = await tenantDb(db, effectiveTenant).table<IDocumentAssociation>('document_associations')
     .select('*')
-    .where({ document_id: document.document_id, tenant });
+    .where({ document_id: document.document_id });
 
   // 3. If no associations, allow access (tenant-level document)
   if (!associations || associations.length === 0) {
@@ -95,10 +101,13 @@ export async function filterAccessibleDocuments(
   // 3. Bulk load associations for all documents (single query!)
   const documentIds = documents.map(d => d.document_id);
   const { knex } = await createTenantKnex();
+  const tenant = documents[0].tenant;
+  if (!tenant) {
+    throw new Error('Tenant context not found');
+  }
 
-  const associations = await knex('document_associations')
+  const associations = await tenantDb(knex, tenant).table('document_associations')
     .whereIn('document_id', documentIds)
-    .andWhere('tenant', documents[0].tenant)
     .select('document_id', 'entity_type');
 
   // 4. Build map of document_id -> entity_types

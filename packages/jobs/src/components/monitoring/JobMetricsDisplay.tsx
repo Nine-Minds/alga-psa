@@ -11,125 +11,77 @@ interface JobMetricsDisplayProps {
 
 export default function JobMetricsDisplay({ metrics }: JobMetricsDisplayProps) {
   const { t } = useTranslation('msp/jobs');
-  const successRate = metrics.total > 0
-    ? Math.round((metrics.completed / metrics.total) * 100)
-    : 0;
+
+  // Success rate is outcomes over outcomes: completed of (completed + failed).
+  // Queued/pending jobs haven't had a chance to succeed, so they don't belong in
+  // the denominator. Null until at least one job has finished.
+  const finishedJobs = metrics.completed + metrics.failed;
+  const successRate = finishedJobs > 0
+    ? Math.round((metrics.completed / finishedJobs) * 100)
+    : null;
+
+  // Genuinely in-flight jobs = processing + active. Derived from the counts the
+  // action returns (queued is reported separately and is NOT running).
+  const runningJobs = Math.max(
+    0,
+    metrics.total - metrics.completed - metrics.failed - metrics.pending - metrics.queued
+  );
 
   const isMixedRunners = metrics.byRunner && metrics.byRunner.pgboss > 0 && metrics.byRunner.temporal > 0;
 
-  const metricsData = [
-    {
-      id: 'total-jobs-metric',
-      label: t('metrics.labels.totalJobs', { defaultValue: 'Total Jobs' }),
-      value: metrics.total,
-      icon: ListChecks,
-      color: 'text-[rgb(var(--color-text-700))]',
-      bgColor: 'bg-[rgb(var(--color-border-100))]',
-      iconColor: 'text-[rgb(var(--color-text-600))]'
-    },
-    {
-      id: 'completed-jobs-metric',
-      label: t('metrics.labels.completed', { defaultValue: 'Completed' }),
-      value: metrics.completed,
-      icon: CheckCircle2,
-      color: 'text-[rgb(var(--color-primary-600))]',
-      bgColor: 'bg-[rgb(var(--color-primary-50))]',
-      iconColor: 'text-[rgb(var(--color-primary-500))]',
-      subtext: t('metrics.successRate', {
-        defaultValue: '{{count}}% success rate',
-        count: successRate,
-      })
-    },
-    {
-      id: 'failed-jobs-metric',
-      label: t('metrics.labels.failed', { defaultValue: 'Failed' }),
-      value: metrics.failed,
-      icon: XCircle,
-      color: 'text-[rgb(var(--color-accent-600))]',
-      bgColor: 'bg-[rgb(var(--color-accent-50))]',
-      iconColor: 'text-[rgb(var(--color-accent-500))]'
-    },
-    {
-      id: 'pending-jobs-metric',
-      label: t('metrics.labels.pending', { defaultValue: 'Pending' }),
-      value: metrics.pending,
-      icon: Clock,
-      color: 'text-[rgb(var(--color-secondary-600))]',
-      bgColor: 'bg-[rgb(var(--color-secondary-50))]',
-      iconColor: 'text-[rgb(var(--color-secondary-500))]'
-    },
+  // Status counts over every job in the tenant (the table below is capped at the
+  // most recent runs). Rendered as one quiet strip so the job table stays primary.
+  const segments = [
+    { key: 'running', label: t('metrics.labels.running', { defaultValue: 'Running' }), value: runningJobs, icon: Activity },
+    { key: 'queued', label: t('metrics.labels.queued', { defaultValue: 'Queued' }), value: metrics.queued, icon: ListChecks },
+    { key: 'pending', label: t('metrics.labels.pending', { defaultValue: 'Pending' }), value: metrics.pending, icon: Clock },
+    { key: 'completed', label: t('metrics.labels.completed', { defaultValue: 'Completed' }), value: metrics.completed, icon: CheckCircle2 },
   ];
 
-  const processingJobs = metrics.total - metrics.completed - metrics.failed - metrics.pending;
-    if (processingJobs > 0) {
-      metricsData.push({
-        id: 'processing-jobs-metric',
-        label: t('metrics.labels.processing', { defaultValue: 'Processing' }),
-        value: processingJobs,
-        icon: Activity,
-        color: 'text-[rgb(var(--color-secondary-600))]',
-      bgColor: 'bg-[rgb(var(--color-secondary-50))]',
-      iconColor: 'text-[rgb(var(--color-secondary-500))]'
-    });
-  }
-
-  if (metrics.byRunner && isMixedRunners) {
-    if (metrics.byRunner.pgboss > 0) {
-      metricsData.push({
-        id: 'pgboss-metric',
-        label: t('metrics.labels.pgboss', { defaultValue: 'PG Boss' }),
-        value: metrics.byRunner.pgboss,
-        icon: ListChecks,
-        color: 'text-blue-600',
-        bgColor: 'bg-blue-50',
-        iconColor: 'text-blue-500'
-      });
-    }
-
-    if (metrics.byRunner.temporal > 0) {
-      metricsData.push({
-        id: 'temporal-metric',
-        label: t('metrics.labels.temporal', { defaultValue: 'Temporal' }),
-        value: metrics.byRunner.temporal,
-        icon: Activity,
-        color: 'text-purple-600',
-        bgColor: 'bg-purple-50',
-        iconColor: 'text-purple-500'
-      });
-    }
-  }
+  // Failure is the one count worth shouting — but only when there is one.
+  const hasFailures = metrics.failed > 0;
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-      {metricsData.map((metric) => {
-        const Icon = metric.icon;
-        return (
-          <Card
-            key={metric.id}
-            id={metric.id}
-            className="p-6 hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className={`p-2 rounded-lg ${metric.bgColor}`}>
-                <Icon className={`h-5 w-5 ${metric.iconColor}`} />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-[rgb(var(--color-text-500))]">
-                {metric.label}
-              </p>
-              <p className={`text-3xl font-bold ${metric.color}`}>
-                {metric.value}
-              </p>
-              {metric.subtext && (
-                <p className="text-xs text-[rgb(var(--color-text-400))] mt-1">
-                  {metric.subtext}
-                </p>
-              )}
-            </div>
-          </Card>
-        );
-      })}
-    </div>
+    <Card id="job-metrics-strip" className="px-5 py-3">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+        {segments.map(({ key, label, value, icon: Icon }) => (
+          <div key={key} id={`${key}-jobs-metric`} className="flex items-center gap-2">
+            <Icon className="h-4 w-4 text-[rgb(var(--color-text-400))]" />
+            <span className="font-semibold tabular-nums text-[rgb(var(--color-text-900))]">{value}</span>
+            <span className="text-[rgb(var(--color-text-500))]">{label}</span>
+          </div>
+        ))}
+
+        <div
+          id="failed-jobs-metric"
+          className={`flex items-center gap-2 rounded px-2 py-0.5 ${hasFailures ? 'bg-[rgb(var(--color-accent-50))]' : ''}`}
+        >
+          <XCircle className={`h-4 w-4 ${hasFailures ? 'text-[rgb(var(--color-accent-500))]' : 'text-[rgb(var(--color-text-400))]'}`} />
+          <span className={`font-semibold tabular-nums ${hasFailures ? 'text-[rgb(var(--color-accent-600))]' : 'text-[rgb(var(--color-text-900))]'}`}>
+            {metrics.failed}
+          </span>
+          <span className={hasFailures ? 'text-[rgb(var(--color-accent-600))]' : 'text-[rgb(var(--color-text-500))]'}>
+            {t('metrics.labels.failed', { defaultValue: 'Failed' })}
+          </span>
+        </div>
+
+        <div className="ml-auto flex items-center gap-4 text-[rgb(var(--color-text-600))]">
+          {isMixedRunners && (
+            <span className="text-[rgb(var(--color-text-500))]">
+              <span className="font-semibold tabular-nums text-[rgb(var(--color-text-700))]">{metrics.byRunner.pgboss}</span>
+              {' '}{t('metrics.labels.pgboss', { defaultValue: 'PG Boss' })}
+              <span className="mx-2 text-[rgb(var(--color-border-300))]">·</span>
+              <span className="font-semibold tabular-nums text-[rgb(var(--color-text-700))]">{metrics.byRunner.temporal}</span>
+              {' '}{t('metrics.labels.temporal', { defaultValue: 'Temporal' })}
+            </span>
+          )}
+          <span>
+            {successRate !== null
+              ? t('metrics.successRate', { defaultValue: '{{count}}% success rate', count: successRate })
+              : t('metrics.successRateNone', { defaultValue: 'No finished jobs yet' })}
+          </span>
+        </div>
+      </div>
+    </Card>
   );
 }

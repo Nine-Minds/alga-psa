@@ -5,6 +5,7 @@ import { throwActionError } from '../../../../../../shared/workflow/runtime/acti
 import type { ActionContext } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
 import { registerIntegrationWorkflowModule } from '../integrationModules';
 import type { TeamsActivityType, TeamsIntegrationContext } from './teamsWorkflowRuntimeSupport';
+import { workflowTenantTable } from '../../lib/workflowTenantDb';
 
 const loadTeamsRuntimeSupport = () => import('./teamsWorkflowRuntimeSupport');
 
@@ -38,8 +39,8 @@ const errorStatus = (error: unknown): number | undefined =>
   error instanceof Error ? (error as { status?: number }).status : undefined;
 
 export async function tenantHasActiveTeamsAddOn(knex: Knex, tenantId: string): Promise<boolean> {
-  const row = await knex('tenant_addons')
-    .where({ tenant: tenantId, addon_key: TEAMS_ADDON_KEY })
+  const row = await workflowTenantTable(knex, tenantId, 'tenant_addons')
+    .where({ addon_key: TEAMS_ADDON_KEY })
     .andWhere((builder: any) => {
       builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
     })
@@ -49,7 +50,7 @@ export async function tenantHasActiveTeamsAddOn(knex: Knex, tenantId: string): P
 
 export async function teamsIntegrationAvailability(knex: Knex, tenantId: string): Promise<boolean> {
   if (!(await tenantHasActiveTeamsAddOn(knex, tenantId))) return false;
-  const integration = await knex('teams_integrations').where({ tenant: tenantId }).first();
+  const integration = await workflowTenantTable(knex, tenantId, 'teams_integrations').first();
   return normalizeString(integration?.install_status) === 'active';
 }
 
@@ -75,7 +76,7 @@ async function requireTeamsIntegration(ctx: ActionContext): Promise<{
     });
   }
 
-  const integration = await knex('teams_integrations').where({ tenant: tenantId }).first();
+  const integration = await workflowTenantTable(knex, tenantId, 'teams_integrations').first();
   if (!integration || normalizeString(integration.install_status) !== 'active') {
     throwActionError(ctx, {
       category: 'ActionError',
@@ -96,8 +97,8 @@ async function requireTeamsIntegration(ctx: ActionContext): Promise<{
     });
   }
 
-  const profile = await knex('microsoft_profiles')
-    .where({ tenant: tenantId, profile_id: selectedProfileId })
+  const profile = await workflowTenantTable(knex, tenantId, 'microsoft_profiles')
+    .where({ profile_id: selectedProfileId })
     .first();
   if (!profile || profile.is_archived) {
     throwActionError(ctx, {
@@ -123,8 +124,8 @@ async function requireTeamsIntegration(ctx: ActionContext): Promise<{
 }
 
 async function resolveMicrosoftAccountId(knex: Knex, tenantId: string, userId: string): Promise<string | null> {
-  const row = await knex('user_auth_accounts')
-    .where({ tenant: tenantId, user_id: userId, provider: 'microsoft' })
+  const row = await workflowTenantTable(knex, tenantId, 'user_auth_accounts')
+    .where({ user_id: userId, provider: 'microsoft' })
     .orderBy('linked_at', 'desc')
     .first('provider_account_id');
   const accountId = normalizeString(row?.provider_account_id);
@@ -137,8 +138,8 @@ async function getLatestConversationReference(
   microsoftUserId: string,
   conversationType: 'personal' | 'groupChat' | 'channel'
 ): Promise<{ conversationId: string; serviceUrl: string } | null> {
-  const row = await knex('teams_conversation_references')
-    .where({ tenant: tenantId, microsoft_user_id: microsoftUserId, conversation_type: conversationType })
+  const row = await workflowTenantTable(knex, tenantId, 'teams_conversation_references')
+    .where({ microsoft_user_id: microsoftUserId, conversation_type: conversationType })
     .orderBy('last_activity_at', 'desc')
     .first(['conversation_id', 'service_url']);
   if (!row?.conversation_id || !row?.service_url) return null;
@@ -146,8 +147,7 @@ async function getLatestConversationReference(
 }
 
 async function getAnyTenantServiceUrl(knex: Knex, tenantId: string): Promise<string | null> {
-  const row = await knex('teams_conversation_references')
-    .where({ tenant: tenantId })
+  const row = await workflowTenantTable(knex, tenantId, 'teams_conversation_references')
     .orderBy('last_activity_at', 'desc')
     .first('service_url');
   const serviceUrl = normalizeString(row?.service_url);
@@ -186,7 +186,7 @@ export function registerTeamsWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       const { tenantId, knex, context } = await requireTeamsIntegration(ctx);
 
-      const integration = await knex('teams_integrations').where({ tenant: tenantId }).first('enabled_capabilities');
+      const integration = await workflowTenantTable(knex, tenantId, 'teams_integrations').first('enabled_capabilities');
       const capabilities = normalizeStringArray(parseJsonish(integration?.enabled_capabilities));
       if (!capabilities.includes('activity_notifications')) {
         throwActionError(ctx, {
@@ -295,8 +295,7 @@ export function registerTeamsWorkflowActionsV2(): void {
     idempotency: { mode: 'engineProvided' },
     inputSchema: z.object({
       channel_id: z.string().trim().min(1),
-      message: z.string().trim().min(1),
-      service_url: z.string().url().optional()
+      message: z.string().trim().min(1)
     }),
     outputSchema: z.object({
       posted: z.boolean(),
@@ -312,13 +311,13 @@ export function registerTeamsWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       const { tenantId, knex } = await requireTeamsIntegration(ctx);
 
-      const serviceUrl = input.service_url ?? (await getAnyTenantServiceUrl(knex, tenantId));
+      const serviceUrl = await getAnyTenantServiceUrl(knex, tenantId);
       if (!serviceUrl) {
         throwActionError(ctx, {
           category: 'ActionError',
           code: 'NO_SERVICE_URL',
           message:
-            'No Teams service URL is known for this tenant yet. Install the Alga app in a team (or have a user open the bot) so Teams sends one, or pass service_url explicitly.'
+            'No Teams service URL is known for this tenant yet. Install the Alga app in a team (or have a user open the bot) so Teams sends one.'
         });
       }
 

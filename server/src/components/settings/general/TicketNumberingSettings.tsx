@@ -8,7 +8,7 @@ import {
   updateInitialValue,
   updateLastNumber,
   updatePaddingLength
-} from '@alga-psa/tickets/actions';
+} from '@alga-psa/tickets/actions/ticket-number-actions/ticketNumberActions';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';

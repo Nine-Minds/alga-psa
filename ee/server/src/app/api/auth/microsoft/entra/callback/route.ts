@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { resolveMicrosoftCredentialsForTenant } from '@ee/lib/integrations/entra/auth/microsoftCredentialResolver';
 import { saveEntraDirectTokenSet } from '@ee/lib/integrations/entra/auth/tokenStore';
@@ -130,9 +131,10 @@ export async function GET(request: NextRequest) {
     await runWithTenant(state.tenant, async () => {
       const { knex } = await createTenantKnex();
       const now = knex.fn.now();
+      const db = tenantDb(knex, state.tenant);
 
-      await knex('entra_partner_connections')
-        .where({ tenant: state.tenant, is_active: true })
+      await db.table('entra_partner_connections')
+        .where({ is_active: true })
         .update({
           is_active: false,
           status: 'disconnected',
@@ -140,7 +142,7 @@ export async function GET(request: NextRequest) {
           updated_at: now,
         });
 
-      await knex('entra_partner_connections').insert({
+      await db.table('entra_partner_connections').insert({
         tenant: state.tenant,
         connection_type: 'direct',
         status: 'connected',

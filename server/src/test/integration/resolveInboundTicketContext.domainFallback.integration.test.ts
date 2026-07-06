@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
+import { tenantDb } from '@alga-psa/db';
 
 // @alga-psa/workflows/actions/emailWorkflowActions imports the event-bus publisher module at load time.
 // In unit/integration tests we don't need the real publisher implementation (and dist artifacts may not exist),
@@ -36,29 +37,33 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
   beforeAll(async () => {
     db = await createTestDbConnection();
 
-    const tenant = await db('tenants').first<{ tenant: string }>('tenant');
+    const tenant = await tenantDb(db, '__test_discovery__')
+      .unscoped('tenants', 'test discovery of seeded tenant for inbound context domain fallback')
+      .first<{ tenant: string }>('tenant');
     if (!tenant?.tenant) throw new Error('Expected seeded tenant');
     tenantId = tenant.tenant;
 
-    const client = await db('clients').where({ tenant: tenantId }).first<{ client_id: string }>('client_id');
+    const scopedDb = tenantDb(db, tenantId);
+
+    const client = await scopedDb.table('clients').first<{ client_id: string }>('client_id');
     if (!client?.client_id) throw new Error('Expected seeded client');
     defaultsClientId = client.client_id;
 
-    const board = await db('boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
+    const board = await scopedDb.table('boards').first<{ board_id: string }>('board_id');
     if (!board?.board_id) throw new Error('Expected seeded board');
     boardId = board.board_id;
 
-    const status = await db('statuses')
-      .where({ tenant: tenantId, status_type: 'ticket' })
+    const status = await scopedDb.table('statuses')
+      .where({ status_type: 'ticket' })
       .first<{ status_id: string }>('status_id');
     if (!status?.status_id) throw new Error('Expected seeded ticket status');
     statusId = status.status_id;
 
-    const priority = await db('priorities').where({ tenant: tenantId }).first<{ priority_id: string }>('priority_id');
+    const priority = await scopedDb.table('priorities').first<{ priority_id: string }>('priority_id');
     if (!priority?.priority_id) throw new Error('Expected seeded priority');
     priorityId = priority.priority_id;
 
-    const user = await db('users').where({ tenant: tenantId }).first<{ user_id: string }>('user_id');
+    const user = await scopedDb.table('users').first<{ user_id: string }>('user_id');
     if (!user?.user_id) throw new Error('Expected seeded user');
     enteredByUserId = user.user_id;
 
@@ -88,8 +93,9 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
     const providerId = uuidv4();
     const defaultsId = uuidv4();
     const defaultsLocationId = uuidv4();
+    const scopedDb = tenantDb(db, tenantId);
 
-    await db('client_locations').insert({
+    await scopedDb.table('client_locations').insert({
       tenant: tenantId,
       location_id: defaultsLocationId,
       client_id: defaultsClientId,
@@ -103,7 +109,7 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
       updated_at: db.fn.now(),
     });
 
-    await db('inbound_ticket_defaults').insert({
+    await scopedDb.table('inbound_ticket_defaults').insert({
       id: defaultsId,
       tenant: tenantId,
       short_name: `email-${defaultsId.slice(0, 6)}`,
@@ -120,7 +126,7 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });
-    await db('email_providers').insert({
+    await scopedDb.table('email_providers').insert({
       id: providerId,
       tenant: tenantId,
       provider_type: 'google',
@@ -128,23 +134,23 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
       mailbox: `support-${uuidv4().slice(0, 6)}@example.com`,
       is_active: true,
       status: 'connected',
-      vendor_config: JSON.stringify({}),
       inbound_ticket_defaults_id: defaultsId,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });
 
     cleanup.push(async () => {
-      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
-      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
-      await db('client_locations').where({ tenant: tenantId, location_id: defaultsLocationId }).delete();
+      const scopedDb = tenantDb(db, tenantId);
+      await scopedDb.table('email_providers').where({ id: providerId }).delete();
+      await scopedDb.table('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+      await scopedDb.table('client_locations').where({ location_id: defaultsLocationId }).delete();
     });
 
     const domainClientId = uuidv4();
     const domain = `acme-${uuidv4().slice(0, 6)}.com`;
     const defaultContactId = uuidv4();
 
-    await db('clients').insert({
+    await scopedDb.table('clients').insert({
       tenant: tenantId,
       client_id: domainClientId,
       client_name: `Domain Client ${uuidv4().slice(0, 6)}`,
@@ -157,7 +163,7 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
     });
 
     const domainMappingId = uuidv4();
-    await db('client_inbound_email_domains').insert({
+    await scopedDb.table('client_inbound_email_domains').insert({
       tenant: tenantId,
       id: domainMappingId,
       client_id: domainClientId,
@@ -165,7 +171,7 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });
-    await db('contacts').insert({
+    await scopedDb.table('contacts').insert({
       tenant: tenantId,
       contact_name_id: defaultContactId,
       full_name: 'Primary Contact',
@@ -177,9 +183,10 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
     });
 
     cleanup.push(async () => {
-      await db('contacts').where({ tenant: tenantId, contact_name_id: defaultContactId }).delete();
-      await db('client_inbound_email_domains').where({ tenant: tenantId, id: domainMappingId }).delete();
-      await db('clients').where({ tenant: tenantId, client_id: domainClientId }).delete();
+      const scopedDb = tenantDb(db, tenantId);
+      await scopedDb.table('contacts').where({ contact_name_id: defaultContactId }).delete();
+      await scopedDb.table('client_inbound_email_domains').where({ id: domainMappingId }).delete();
+      await scopedDb.table('clients').where({ client_id: domainClientId }).delete();
     });
 
     const action = actionRegistry.get('resolve_inbound_ticket_context', 1);

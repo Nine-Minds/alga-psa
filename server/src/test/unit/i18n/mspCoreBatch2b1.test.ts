@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
 const localeRoot = path.join(repoRoot, 'server/public/locales');
-const productionLocales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'] as const;
+const productionLocales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt'] as const;
 const pseudoLocales = ['xx', 'yy'] as const;
 
 const readJson = (relativePath: string): Record<string, unknown> =>

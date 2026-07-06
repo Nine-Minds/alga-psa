@@ -570,7 +570,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
               <div className="border rounded-md">
                 {/* Table Header */}
                 <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
-                  <div className="w-8 [&>div]:mb-0">
+                  <div className="w-8">
                     <Checkbox
                       id="select-all-priorities"
                       checked={availableReferencePriorities.length > 0 && selectedImportPriorities.length === availableReferencePriorities.length}
@@ -594,7 +594,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                       key={priority.priority_id}
                       className="flex items-center space-x-2 p-2 hover:bg-muted/50 border-b last:border-b-0 cursor-pointer"
                     >
-                      <div className="w-8 [&>div]:mb-0">
+                      <div className="w-8">
                         <Checkbox
                           id={`import-priority-${priority.priority_id}`}
                           checked={selectedImportPriorities.includes(priority.priority_id)}

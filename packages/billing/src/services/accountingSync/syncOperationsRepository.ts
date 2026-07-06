@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type {
   AccountingSyncOperation,
   EnqueueSyncOperationInput,
@@ -13,15 +14,18 @@ const TABLE = 'accounting_sync_operations';
 export class SyncOperationsRepository {
   constructor(private readonly knex: Knex) {}
 
+  private table<Row extends object = Record<string, unknown>>(tenant: string) {
+    return tenantDb(this.knex, tenant).table<Row>(TABLE);
+  }
+
   /**
    * Enqueue an operation. Deduplicates: while a pending op exists for the same
    * tenant + operation + entity, the existing op is returned instead of
    * inserting a duplicate.
    */
   async enqueue(input: EnqueueSyncOperationInput): Promise<AccountingSyncOperation> {
-    const existing = await this.knex<AccountingSyncOperation>(TABLE)
+    const existing = await this.table<AccountingSyncOperation>(input.tenant)
       .where({
-        tenant: input.tenant,
         adapter_type: input.adapterType,
         operation: input.operation,
         alga_entity_type: input.algaEntityType,
@@ -34,7 +38,7 @@ export class SyncOperationsRepository {
       return existing;
     }
 
-    const [row] = await this.knex<AccountingSyncOperation>(TABLE)
+    const [row] = await this.table<AccountingSyncOperation>(input.tenant)
       .insert({
         tenant: input.tenant,
         adapter_type: input.adapterType,
@@ -56,8 +60,8 @@ export class SyncOperationsRepository {
     adapterType: string,
     options: { operation?: SyncOperationType; targetRealm?: string | null; limit?: number } = {}
   ): Promise<AccountingSyncOperation[]> {
-    const query = this.knex<AccountingSyncOperation>(TABLE)
-      .where({ tenant, adapter_type: adapterType, status: 'pending' })
+    const query = this.table<AccountingSyncOperation>(tenant)
+      .where({ adapter_type: adapterType, status: 'pending' })
       .orderBy('created_at', 'asc');
 
     if (options.operation) {
@@ -76,14 +80,14 @@ export class SyncOperationsRepository {
   }
 
   async markInProgress(tenant: string, opId: string): Promise<void> {
-    await this.knex(TABLE)
-      .where({ tenant, op_id: opId })
+    await this.table(tenant)
+      .where({ op_id: opId })
       .update({ status: 'in_progress' });
   }
 
   async markDone(tenant: string, opId: string): Promise<void> {
-    await this.knex(TABLE)
-      .where({ tenant, op_id: opId })
+    await this.table(tenant)
+      .where({ op_id: opId })
       .update({ status: 'done', processed_at: this.knex.fn.now(), last_error: null });
   }
 
@@ -93,15 +97,15 @@ export class SyncOperationsRepository {
    * an exception. Returns the resulting status.
    */
   async markFailed(tenant: string, opId: string, error: string): Promise<'pending' | 'skipped'> {
-    const row = await this.knex<AccountingSyncOperation>(TABLE)
-      .where({ tenant, op_id: opId })
+    const row = await this.table<AccountingSyncOperation>(tenant)
+      .where({ op_id: opId })
       .first();
 
     const attempts = (row?.attempts ?? 0) + 1;
     const nextStatus = attempts >= MAX_OP_ATTEMPTS ? 'skipped' : 'pending';
 
-    await this.knex(TABLE)
-      .where({ tenant, op_id: opId })
+    await this.table(tenant)
+      .where({ op_id: opId })
       .update({
         status: nextStatus,
         attempts,
@@ -126,15 +130,15 @@ export class SyncOperationsRepository {
       return 0;
     }
 
-    return this.knex(TABLE)
-      .where({ tenant, adapter_type: adapterType, operation, status: 'pending' })
+    return this.table(tenant)
+      .where({ adapter_type: adapterType, operation, status: 'pending' })
       .whereIn('alga_entity_id', algaEntityIds)
       .update({ status: 'done', processed_at: this.knex.fn.now(), last_error: null });
   }
 
   async countByStatus(tenant: string, adapterType: string): Promise<Record<string, number>> {
-    const rows = await this.knex(TABLE)
-      .where({ tenant, adapter_type: adapterType })
+    const rows = await this.table(tenant)
+      .where({ adapter_type: adapterType })
       .select('status')
       .count<{ status: string; count: string }[]>('* as count')
       .groupBy('status');

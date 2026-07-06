@@ -1,16 +1,26 @@
+const MIGRATION_TENANT = 'migration:20250430170700_add_dispatcher_role';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for dispatcher role backfill';
+
+async function loadTenantDb() {
+  return require('./utils/tenantDb.cjs').tenantDb;
+}
+
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) return;
 
   // For each tenant, add the permissions and roles
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     // Get existing permissions to avoid duplicates
-    const existingPerms = await knex('permissions')
+    const existingPerms = await db.table('permissions')
       .where({ tenant })
       .whereIn('resource', ['technician_dispatch', 'user_schedule'])
       .select('resource', 'action');
@@ -35,16 +45,16 @@ exports.up = async function(knex) {
      }));
 
     if (permissionsToAdd.length > 0) {
-      await knex('permissions').insert(permissionsToAdd);
+      await db.table('permissions').insert(permissionsToAdd);
     }
 
     // Create Dispatcher role if it doesn't exist
-    let dispatcherRole = await knex('roles')
+    let dispatcherRole = await db.table('roles')
       .where({ tenant, role_name: 'Dispatcher' })
       .first();
 
     if (!dispatcherRole) {
-      const [newRole] = await knex('roles')
+      const [newRole] = await db.table('roles')
         .insert({
           tenant,
           role_id: knex.raw('gen_random_uuid()'),
@@ -57,15 +67,15 @@ exports.up = async function(knex) {
     }
 
     // Get Manager and Admin roles
-    const managerRole = await knex('roles')
+    const managerRole = await db.table('roles')
       .where({ tenant, role_name: 'Manager' })
       .first();
 
-    const adminRole = await knex('roles')
+    const adminRole = await db.table('roles')
       .where({ tenant, role_name: 'Admin' })
       .first();
 
-    const technicianRole = await knex('roles')
+    const technicianRole = await db.table('roles')
       .where({ tenant, role_name: 'Technician' })
       .first();
 
@@ -74,7 +84,7 @@ exports.up = async function(knex) {
       if (!role || !permissions || permissions.length === 0) return;
       const inserts = [];
       for (const permission of permissions) {
-        const existingRolePerm = await knex('role_permissions')
+        const existingRolePerm = await db.table('role_permissions')
           .where({
             tenant,
             role_id: role.role_id,
@@ -90,12 +100,12 @@ exports.up = async function(knex) {
         }
       }
       if (inserts.length > 0) {
-        await knex('role_permissions').insert(inserts);
+        await db.table('role_permissions').insert(inserts);
       }
     };
 
     // Get all created/existing permissions for the resources
-    const allPermissions = await knex('permissions')
+    const allPermissions = await db.table('permissions')
       .where({ tenant })
       .whereIn('resource', ['technician_dispatch', 'user_schedule']);
 
@@ -120,13 +130,16 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) return;
 
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     // Get permission IDs
-    const permissions = await knex('permissions')
+    const permissions = await db.table('permissions')
       .where({ tenant })
       .whereIn('resource', ['technician_dispatch', 'user_schedule']);
 
@@ -134,10 +147,10 @@ exports.down = async function(knex) {
       const permissionIds = permissions.map(p => p.permission_id);
 
       // Get roles modified in the 'up' function
-      const dispatcherRole = await knex('roles').where({ tenant, role_name: 'Dispatcher' }).first();
-      const managerRole = await knex('roles').where({ tenant, role_name: 'Manager' }).first();
-      const adminRole = await knex('roles').where({ tenant, role_name: 'Admin' }).first();
-      const technicianRole = await knex('roles').where({ tenant, role_name: 'Technician' }).first();
+      const dispatcherRole = await db.table('roles').where({ tenant, role_name: 'Dispatcher' }).first();
+      const managerRole = await db.table('roles').where({ tenant, role_name: 'Manager' }).first();
+      const adminRole = await db.table('roles').where({ tenant, role_name: 'Admin' }).first();
+      const technicianRole = await db.table('roles').where({ tenant, role_name: 'Technician' }).first();
 
       const roleIdsToClean = [
         dispatcherRole?.role_id,
@@ -148,7 +161,7 @@ exports.down = async function(knex) {
 
       // Remove specific role permissions added by this migration
       if (roleIdsToClean.length > 0) {
-        await knex('role_permissions')
+        await db.table('role_permissions')
           .where('tenant', tenant)
           .whereIn('role_id', roleIdsToClean)
           .whereIn('permission_id', permissionIds)
@@ -156,26 +169,26 @@ exports.down = async function(knex) {
       }
 
       // Remove the permissions themselves
-      await knex('permissions')
+      await db.table('permissions')
         .where('tenant', tenant)
         .whereIn('permission_id', permissionIds)
         .delete();
     }
 
     // Get dispatcher role (using correct case)
-    const dispatcherRoleToDelete = await knex('roles')
+    const dispatcherRoleToDelete = await db.table('roles')
       .where({ tenant, role_name: 'Dispatcher' })
       .first();
 
     if (dispatcherRoleToDelete) {
       // Check if the role has any *other* permissions remaining
-      const otherPermissions = await knex('role_permissions')
+      const otherPermissions = await db.table('role_permissions')
         .where({ tenant, role_id: dispatcherRoleToDelete.role_id })
         .first(); // Check if *any* link exists
 
       // Only delete the role if it has no other permissions linked
       if (!otherPermissions) {
-        await knex('roles')
+        await db.table('roles')
           .where({ tenant, role_id: dispatcherRoleToDelete.role_id })
           .delete();
       } else {

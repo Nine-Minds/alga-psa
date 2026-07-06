@@ -1,14 +1,22 @@
 import type { Knex } from 'knex';
 import type { IComment } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
+
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
 
 const Comment = {
   getAllbyTicketId: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, ticket_id: string): Promise<IComment[]> => {
     try {
-      const comments = await knexOrTrx<IComment>('comments')
+      const comments = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
         .select('comments.*')
         .where('comments.ticket_id', ticket_id)
-        .andWhere('comments.tenant', tenant)
         .orderBy('comments.created_at', 'asc');
       return comments;
     } catch (error) {
@@ -19,10 +27,9 @@ const Comment = {
 
   get: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string): Promise<IComment | undefined> => {
     try {
-      const comment = await knexOrTrx<IComment>('comments')
+      const comment = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
         .select('comments.*')
         .where('comments.comment_id', id)
-        .andWhere('comments.tenant', tenant)
         .first();
       return comment;
     } catch (error) {
@@ -47,7 +54,10 @@ const Comment = {
 
       // First verify user exists and get their type
       if (comment.user_id) {
-        const user = await knexOrTrx('users').select('user_type').where('user_id', comment.user_id).andWhere('tenant', tenant).first();
+        const user = await tenantScopedTable(knexOrTrx, 'users', tenant)
+          .select('user_type')
+          .where('user_id', comment.user_id)
+          .first();
 
         if (user) {
           // Ensure author_type matches user_type
@@ -66,11 +76,13 @@ const Comment = {
       let threadId = comment.thread_id;
 
       if (isReply) {
-        const parent = await knexOrTrx('comments as parent')
-          .join('comment_threads as thread', function() {
-            this.on('parent.tenant', 'thread.tenant')
-              .andOn('parent.thread_id', 'thread.thread_id');
-          })
+        const parent = await tenantDb(knexOrTrx, tenant)
+          .tenantJoin(
+            tenantScopedTable(knexOrTrx, 'comments as parent', tenant),
+            'comment_threads as thread',
+            'parent.thread_id',
+            'thread.thread_id'
+          )
           .select(
             'parent.comment_id',
             'parent.ticket_id',
@@ -78,7 +90,6 @@ const Comment = {
             'parent.deleted_at',
             'thread.is_internal as thread_is_internal'
           )
-          .where('parent.tenant', tenant)
           .where('parent.comment_id', parentCommentId)
           .first();
 
@@ -110,7 +121,7 @@ const Comment = {
         commentId = commentId || generatedIds?.comment_id;
         threadId = threadId || generatedIds?.thread_id;
 
-        await knexOrTrx('comment_threads').insert({
+        await tenantScopedTable(knexOrTrx, 'comment_threads', tenant).insert({
           tenant,
           thread_id: threadId,
           ticket_id: comment.ticket_id,
@@ -129,7 +140,7 @@ const Comment = {
       }
 
       // Explicitly include markdown_content in the insert operation
-      const result = await knexOrTrx<IComment>('comments')
+      const result = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
         .insert({
           ...comment,
           comment_id: commentId,
@@ -149,8 +160,8 @@ const Comment = {
       }
 
       if (isReply) {
-        await knexOrTrx('comment_threads')
-          .where({ tenant, thread_id: threadId })
+        await tenantScopedTable(knexOrTrx, 'comment_threads', tenant)
+          .where({ thread_id: threadId })
           .update({
             reply_count: knexOrTrx.raw('reply_count + 1'),
             last_activity_at: now,
@@ -167,7 +178,10 @@ const Comment = {
   update: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, comment: Partial<IComment>): Promise<void> => {
     try {
       // Get existing comment first
-      const existingComment = await knexOrTrx<IComment>('comments').select('*').where('comment_id', id).andWhere('tenant', tenant).first();
+      const existingComment = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
+        .select('*')
+        .where('comment_id', id)
+        .first();
 
       if (!existingComment) {
         throw new Error(`Comment with id ${id} not found`);
@@ -175,7 +189,10 @@ const Comment = {
 
       // If user_id is being updated, verify user exists and get their type
       if (comment.user_id) {
-        const user = await knexOrTrx('users').select('user_type').where('user_id', comment.user_id).andWhere('tenant', tenant).first();
+        const user = await tenantScopedTable(knexOrTrx, 'users', tenant)
+          .select('user_type')
+          .where('user_id', comment.user_id)
+          .first();
 
         if (user) {
           // Ensure author_type matches user_type
@@ -209,7 +226,9 @@ const Comment = {
         markdown_content_length: updateData.markdown_content ? updateData.markdown_content.length : 0,
       });
 
-      await knexOrTrx<IComment>('comments').where('comment_id', id).andWhere('tenant', tenant).update(updateData);
+      await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
+        .where('comment_id', id)
+        .update(updateData);
     } catch (error) {
       console.error(`Error updating comment with id ${id}:`, error);
       throw error;
@@ -218,27 +237,24 @@ const Comment = {
 
   delete: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string): Promise<void> => {
     try {
-      const existingComment = await knexOrTrx<IComment>('comments')
+      const existingComment = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
         .select('comment_id', 'parent_comment_id', 'thread_id')
         .where('comment_id', id)
-        .andWhere('tenant', tenant)
         .first();
 
       if (!existingComment) {
         return;
       }
 
-      const child = await knexOrTrx<IComment>('comments')
+      const child = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
         .select('comment_id')
         .where('parent_comment_id', id)
-        .andWhere('tenant', tenant)
         .first();
 
       if (child) {
         const now = new Date().toISOString();
-        await knexOrTrx<IComment>('comments')
+        await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
           .where('comment_id', id)
-          .andWhere('tenant', tenant)
           .update({
             note: '[deleted]',
             markdown_content: '[deleted]',
@@ -248,17 +264,19 @@ const Comment = {
         return;
       }
 
-      await knexOrTrx<IComment>('comments').where('comment_id', id).andWhere('tenant', tenant).del();
+      await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
+        .where('comment_id', id)
+        .del();
 
       if (existingComment.parent_comment_id) {
-        await knexOrTrx('comment_threads')
-          .where({ tenant, thread_id: existingComment.thread_id })
+        await tenantScopedTable(knexOrTrx, 'comment_threads', tenant)
+          .where({ thread_id: existingComment.thread_id })
           .update({
             reply_count: knexOrTrx.raw('GREATEST(reply_count - 1, 0)'),
           });
       } else {
-        await knexOrTrx('comment_threads')
-          .where({ tenant, thread_id: existingComment.thread_id })
+        await tenantScopedTable(knexOrTrx, 'comment_threads', tenant)
+          .where({ thread_id: existingComment.thread_id })
           .del();
       }
     } catch (error) {

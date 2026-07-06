@@ -195,6 +195,7 @@
     "clientOnly": "55555",
     "accountManager": "55555",
     "clientName": "55555",
+    "clientNameRequired": "55555",
     "clientType": "55555",
     "industry": "55555",
     "companySize": "55555",
@@ -228,9 +229,6 @@
     "entraSyncError": "55555",
     "entraSyncStarted": "55555 {{runId}} 55555",
     "entraSyncStatusUnknown": "55555",
-    "clientNameRequired": "55555",
-    "deactivateClientAndContacts": "55555",
-    "reactivateClientAndContacts": "55555",
     "inboundDomainAdded": "55555",
     "inboundDomainAddFailed": "55555",
     "inboundDomainRemoved": "55555",
@@ -256,6 +254,8 @@
     "syncEntraNow": "55555",
     "deactivateClient": "55555",
     "reactivateClient": "55555",
+    "deactivateClientAndContacts": "55555",
+    "reactivateClientAndContacts": "55555",
     "deactivatePrompt": "55555 {{count}} 55555",
     "reactivatePrompt": "55555 {{count}} 55555",
     "deactivatePortalWarning": "55555",
@@ -278,7 +278,12 @@
     "nameAliasRemoveFailed": "55555",
     "nameAliasRemoved": "55555",
     "nameAliases": "55555",
-    "noNameAliases": "55555"
+    "noNameAliases": "55555",
+    "equipment": "55555",
+    "parentClientSelf": "55555",
+    "parentClientPlaceholder": "55555",
+    "parentClientClear": "55555",
+    "parentClientLegacy": "55555 {{name}} 55555"
   },
   "quickAddClient": {
     "title": "55555",
@@ -522,6 +527,17 @@
       "5": "55555",
       "6": "55555",
       "7": "55555"
+    },
+    "reviewError": "55555",
+    "reviewing": "55555",
+    "confirmSave": "55555",
+    "reviewChanges": "55555",
+    "impact": {
+      "title": "55555",
+      "periods": "55555 {{count}} 55555 {{lines}} 55555",
+      "from": "55555 {{date}} 55555",
+      "billedPreserved": "55555",
+      "confirmHint": "55555"
     }
   },
   "clientContractAssignment": {
@@ -605,7 +621,10 @@
     "noActiveBucketPlans": "55555",
     "noHours": "55555",
     "noInvoices": "55555",
-    "noUsage": "55555"
+    "noUsage": "55555",
+    "retry": "55555",
+    "loadError": "55555",
+    "balanceDue": "55555"
   },
   "clientContractLineGuide": {
     "title": "55555",
@@ -997,7 +1016,6 @@
     "title": "55555",
     "description": "55555",
     "createDefault": "55555",
-    "goToBillingTaxSettings": "55555",
     "taxExemptStatus": "55555",
     "taxExempt": "55555",
     "taxExemptHelp": "55555",
@@ -1038,7 +1056,7 @@
   "clientNotesPanel": {
     "title": "55555",
     "initialNote": "55555",
-    "lastUpdated": "55555",
+    "lastUpdated": "55555 {{value}} 55555",
     "save": "55555",
     "retry": "55555",
     "loadError": "55555",
@@ -1301,7 +1319,9 @@
         "printer": "55555",
         "server": "55555",
         "workstation": "55555"
-      }
+      },
+      "loadError": "55555",
+      "retry": "55555"
     },
     "tickets": {
       "addTicket": "55555",
@@ -1325,5 +1345,28 @@
         "userNotAuthenticated": "55555"
       }
     }
+  },
+  "clientEquipmentTab": {
+    "retry": "55555",
+    "loadError": "55555",
+    "emptyValue": "55555",
+    "orderNumber": "55555",
+    "status": "55555",
+    "ordered": "55555",
+    "amount": "55555",
+    "product": "55555",
+    "sku": "55555",
+    "serialNumber": "55555",
+    "delivered": "55555",
+    "asset": "55555",
+    "viewAsset": "55555",
+    "rmaNumber": "55555",
+    "opened": "55555",
+    "salesOrders": "55555",
+    "noSalesOrders": "55555",
+    "deliveredUnits": "55555",
+    "noDeliveredEquipment": "55555",
+    "rmas": "55555",
+    "noRmas": "55555"
   }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EventType } from '@alga-psa/event-schemas';
 
-import { allIndexers } from '../../lib/search';
+import { allIndexers } from '@alga-psa/search';
 import {
   getSearchIndexSubscriberEventTypes,
   resolveSearchIndexersForEvent,

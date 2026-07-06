@@ -1,4 +1,7 @@
 {
+  "clientNameCell": {
+    "noClient": "Brak klienta"
+  },
   "reactions": {
     "ariaSummary_one": "{{emoji}} {{count}} reakcja",
     "ariaSummary_few": "{{emoji}} {{count}} reakcje",
@@ -381,7 +384,11 @@
     "ariaLabel": "Stronicowanie",
     "totalItems": "{{count}} {{itemLabel}} łącznie",
     "totalRecordsInline": "({{count}} łącznie rekordów)",
-    "pageOf": "Strona {{current}} z {{total}}"
+    "pageOf": "Strona {{current}} z {{total}}",
+    "itemsLabel_one": "element",
+    "itemsLabel_few": "elementy",
+    "itemsLabel_many": "elementów",
+    "itemsLabel_other": "elementów"
   },
   "documents": {
     "title": "Dokumenty",
@@ -1267,5 +1274,8 @@
     "columnsHidden": "Ukryto {{count}} kolumn z powodu ograniczonej przestrzeni.",
     "columnsHidden_few": "Ukryto {{count}} kolumny z powodu ograniczonego miejsca.",
     "columnsHidden_many": "Ukryto {{count}} kolumn z powodu ograniczonego miejsca."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Ładowanie edytora…"
   }
 }

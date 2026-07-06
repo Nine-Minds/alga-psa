@@ -3,7 +3,7 @@
 // @alga-psa/clients/actions.ts
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import ClientContract from '../models/clientContract';
 import type { IClientContract } from '@alga-psa/types';
@@ -28,6 +28,31 @@ import {
   buildClientContractUpdatedFieldsAndChanges,
   deriveClientContractWorkflowStatus,
 } from '../lib/clientContractWorkflowEvents';
+import { assertMspPermission } from '../lib/authHelpers';
+
+const assertCanReadClientContracts = (user: any) =>
+  assertMspPermission(
+    user,
+    'client',
+    'read',
+    'Permission denied: Cannot read client contract assignments'
+  );
+
+const assertCanCreateClientContracts = (user: any) =>
+  assertMspPermission(
+    user,
+    'client',
+    'create',
+    'Permission denied: Cannot create client contract assignments'
+  );
+
+const assertCanUpdateClientContracts = (user: any) =>
+  assertMspPermission(
+    user,
+    'client',
+    'update',
+    'Permission denied: Cannot update client contract assignments'
+  );
 
 function maybeUserActor(user: any) {
   const userId = user?.user_id;
@@ -74,12 +99,11 @@ async function getCanonicalRecurringDetailPeriodsForClientContract(
   clientContractId: string,
 ): Promise<Array<{ service_period_start: string; service_period_end: string }>> {
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    return trx('invoice_charge_details as iid')
-      .join('invoice_charges as ii', function(this: Knex.JoinClause) {
-        this.on('iid.item_id', '=', 'ii.item_id')
-          .andOn('iid.tenant', '=', 'ii.tenant');
-      })
-      .where('iid.tenant', tenant)
+    const scopedDb = tenantDb(trx, tenant);
+    const query = scopedDb.table('invoice_charge_details as iid');
+    scopedDb.tenantJoin(query, 'invoice_charges as ii', 'iid.item_id', 'ii.item_id');
+
+    return query
       .andWhere('ii.client_contract_id', clientContractId)
       .whereNotNull('iid.service_period_start')
       .whereNotNull('iid.service_period_end')
@@ -95,6 +119,8 @@ export const getClientContracts = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<IClientContract[]> => {
+  await assertCanReadClientContracts(_user);
+
   try {
     const clientContracts = await ClientContract.getByClientId(clientId, tenant);
     return clientContracts;
@@ -115,6 +141,8 @@ export const getActiveClientContractsByClientIds = withAuth(async (
   { tenant },
   clientIds: string[]
 ): Promise<IClientContract[]> => {
+  await assertCanReadClientContracts(_user);
+
   try {
     return await ClientContract.getActiveByClientIds(clientIds, tenant);
   } catch (error) {
@@ -134,6 +162,8 @@ export const getClientContractById = withAuth(async (
   { tenant },
   clientContractId: string
 ): Promise<IClientContract | null> => {
+  await assertCanReadClientContracts(_user);
+
   try {
     return await ClientContract.getById(clientContractId, tenant);
   } catch (error) {
@@ -153,6 +183,8 @@ export const getDetailedClientContract = withAuth(async (
   { tenant },
   clientContractId: string
 ): Promise<any | null> => {
+  await assertCanReadClientContracts(_user);
+
   try {
     return await ClientContract.getDetailedClientContract(clientContractId, tenant);
   } catch (error) {
@@ -179,6 +211,8 @@ export const assignContractToClient = withAuth(async (
     'renewal_mode' | 'notice_period_days' | 'renewal_term_months' | 'use_tenant_renewal_defaults'
   >
 ): Promise<IClientContract> => {
+  await assertCanCreateClientContracts(_user);
+
   try {
     const clientContract = await ClientContract.assignContractToClient(
       clientId,
@@ -284,17 +318,21 @@ export const createClientContract = withAuth(async (
     po_amount?: number | null;
   }
 ): Promise<IClientContract> => {
+  await assertCanCreateClientContracts(_user);
+
   const { knex } = await createTenantKnex();
 
   let createdForEvent: IClientContract | null = null;
   const created = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const clientExists = await trx('clients').where({ client_id: input.client_id, tenant }).first();
+    const db = tenantDb(trx, tenant);
+
+    const clientExists = await db.table('clients').where({ client_id: input.client_id }).first();
     if (!clientExists) {
       throw new Error(`Client ${input.client_id} not found`);
     }
 
-    const contractQuery = trx('contracts')
-      .where({ contract_id: input.contract_id, tenant });
+    const contractQuery = db.table('contracts')
+      .where({ contract_id: input.contract_id });
     if (input.is_active) {
       contractQuery.andWhere({ is_active: true });
     }
@@ -402,6 +440,8 @@ export const updateClientContract = withAuth(async (
   clientContractId: string,
   updateData: Partial<IClientContract>
 ): Promise<IClientContract> => {
+  await assertCanUpdateClientContracts(_user);
+
   try {
     const { knex: db } = await createTenantKnex(); // Get knex instance
 
@@ -457,13 +497,12 @@ export const updateClientContract = withAuth(async (
       } else {
         const clientId = beforeContract.client_id;
         const invoicedCycles = await withTransaction(db, async (trx: Knex.Transaction) => {
-          return await trx('client_billing_cycles as cbc')
-            .join('invoices as i', function() {
-              this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-                  .andOn('i.tenant', '=', 'cbc.tenant');
-            })
+          const scopedDb = tenantDb(trx, tenant);
+          const query = scopedDb.table('client_billing_cycles as cbc');
+          scopedDb.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id');
+
+          return await query
             .where('cbc.client_id', clientId)
-            .andWhere('cbc.tenant', tenant)
             .select(
               'cbc.period_start_date',
               'cbc.period_end_date'
@@ -632,6 +671,8 @@ export const deactivateClientContract = withAuth(async (
   { tenant },
   clientContractId: string
 ): Promise<IClientContract> => {
+  await assertCanUpdateClientContracts(_user);
+
   try {
     const beforeContract = await ClientContract.getById(clientContractId, tenant);
     if (!beforeContract) {
@@ -702,6 +743,8 @@ export const getClientContractLines = withAuth(async (
   { tenant },
   clientContractId: string
 ): Promise<any[]> => {
+  await assertCanReadClientContracts(_user);
+
   try {
     const contractLines = await ClientContract.getContractLines(clientContractId, tenant);
     return contractLines;
@@ -724,6 +767,8 @@ export const applyContractToClient = withAuth(async (
   { tenant },
   clientContractId: string
 ): Promise<void> => {
+  await assertCanUpdateClientContracts(_user);
+
   const { knex: db } = await createTenantKnex();
 
   try {

@@ -24,6 +24,7 @@ import {
 import Link from 'next/link';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import Spinner from '@alga-psa/ui/components/Spinner';
+import { Button } from '@alga-psa/ui/components/Button';
 import { QuickAddAsset } from '@alga-psa/assets/components/QuickAddAsset';
 import { AssetDetailDrawerClient } from '@alga-psa/assets/components/AssetDetailDrawerClient';
 import {
@@ -53,6 +54,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [assetTypeEntries, setAssetTypeEntries] = useState<AssetTypeRegistryEntry[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize, setPageSize] = useState(10);
@@ -185,6 +187,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
 
   const loadData = async () => {
     try {
+      setLoadError(false);
       const [summaryData, assetsData] = await Promise.all([
         getClientMaintenanceSummary(clientId),
         listAssets({
@@ -198,7 +201,9 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       setAssets(assetsData.assets);
       setTotalItems(assetsData.total);
     } catch (error) {
+      // A failed load must not render as zero assets / zeroed summary cards.
       console.error('Error loading asset data:', error);
+      setLoadError(true);
     } finally {
       setIsLoading(false);
     }
@@ -210,25 +215,6 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
 
   const handleAssetAdded = () => {
     loadData();
-  };
-
-  const renderAssetDetails = (asset: Asset): string => {
-    if (asset.workstation) {
-      return `${asset.workstation.os_type} - ${asset.workstation.cpu_model} - ${asset.workstation.ram_gb}GB RAM`;
-    }
-    if (asset.network_device) {
-      return `${asset.network_device.device_type} - ${asset.network_device.management_ip || t('clientTabs.assets.details.noIp', { defaultValue: 'No IP' })}`;
-    }
-    if (asset.server) {
-      return `${asset.server.os_type} - ${asset.server.cpu_model} - ${asset.server.ram_gb}GB RAM`;
-    }
-    if (asset.mobile_device) {
-      return `${asset.mobile_device.os_type} - ${asset.mobile_device.model}`;
-    }
-    if (asset.printer) {
-      return `${asset.printer.model} - ${asset.printer.is_network_printer ? t('clientTabs.assets.details.network', { defaultValue: 'Network' }) : t('clientTabs.assets.details.local', { defaultValue: 'Local' })}`;
-    }
-    return t('clientTabs.assets.details.none', { defaultValue: 'No details available' });
   };
 
   const columns = [
@@ -268,18 +254,11 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
         </div>
       )
     },
-    {
-      title: t('clientTabs.assets.columns.details', { defaultValue: 'Details' }),
-      dataIndex: 'details',
-      render: (_: unknown, record: Asset): string => renderAssetDetails(record)
-    },
-    {
-      title: t('clientTabs.assets.columns.serialNumber', { defaultValue: 'Serial Number' }),
-      dataIndex: 'serial_number',
-      render: (value: string | null) => (
-        <span className="font-mono text-sm text-gray-600 dark:text-[rgb(var(--color-text-600))]">{value || '—'}</span>
-      )
-    },
+    // Column order is admission priority at narrow widths (computeColumnFit):
+    // Status and Warranty End — what a tech or refresh pitch opens this view
+    // for — outrank Serial/Location/Purchase Date. The old "Details" column
+    // rendered "No details available" for most rows and is gone; specs live in
+    // the asset drawer.
     {
       title: t('clientTabs.assets.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
@@ -299,6 +278,28 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       )
     },
     {
+      title: t('clientTabs.assets.columns.warrantyEnd', { defaultValue: 'Warranty End' }),
+      dataIndex: 'warranty_end_date',
+      render: (value: string | null) => {
+        if (!value) return <span className="text-sm text-gray-400 dark:text-[rgb(var(--color-text-400))]">—</span>;
+        const date = new Date(value);
+        const isExpired = date < new Date();
+        return (
+          <span className={`text-sm font-medium ${isExpired ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-[rgb(var(--color-text-600))]'}`}>
+            {date.toLocaleDateString()}
+            {isExpired && <span className="ml-1 text-xs">{t('clientTabs.assets.expiredSuffix', { defaultValue: '(Expired)' })}</span>}
+          </span>
+        );
+      }
+    },
+    {
+      title: t('clientTabs.assets.columns.serialNumber', { defaultValue: 'Serial number' }),
+      dataIndex: 'serial_number',
+      render: (value: string | null) => (
+        <span className="font-mono text-sm text-gray-600 dark:text-[rgb(var(--color-text-600))]">{value || '—'}</span>
+      )
+    },
+    {
       title: t('clientTabs.assets.columns.location', { defaultValue: 'Location' }),
       dataIndex: 'location',
       render: (value: string | null) => (
@@ -313,21 +314,6 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
           {value ? new Date(value).toLocaleDateString() : '—'}
         </span>
       )
-    },
-    {
-      title: t('clientTabs.assets.columns.warrantyEnd', { defaultValue: 'Warranty End' }),
-      dataIndex: 'warranty_end_date',
-      render: (value: string | null) => {
-        if (!value) return <span className="text-sm text-gray-400 dark:text-[rgb(var(--color-text-400))]">—</span>;
-        const date = new Date(value);
-        const isExpired = date < new Date();
-        return (
-          <span className={`text-sm font-medium ${isExpired ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-[rgb(var(--color-text-600))]'}`}>
-            {date.toLocaleDateString()}
-            {isExpired && <span className="ml-1 text-xs">{t('clientTabs.assets.expiredSuffix', { defaultValue: '(Expired)' })}</span>}
-          </span>
-        );
-      }
     }
   ];
 
@@ -340,6 +326,26 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
             <p className="text-lg font-medium text-gray-900 dark:text-[rgb(var(--color-text-900))]">{t('clientTabs.assets.loading', { defaultValue: 'Loading assets...' })}</p>
             <p className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))]">{t('clientTabs.assets.loadingHint', { defaultValue: 'Please wait while we fetch your data' })}</p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto" />
+          <p className="text-sm text-gray-700 dark:text-[rgb(var(--color-text-700))]">
+            {t('clientTabs.assets.loadError', { defaultValue: 'Unable to load assets right now.' })}
+          </p>
+          <Button
+            id="client-assets-retry"
+            variant="outline"
+            onClick={() => { setIsLoading(true); void loadData(); }}
+          >
+            {t('clientTabs.assets.retry', { defaultValue: 'Retry' })}
+          </Button>
         </div>
       </div>
     );
@@ -450,8 +456,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       {/* Assets Table - Enhanced container */}
       <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-xl shadow-sm border border-gray-100 dark:border-[rgb(var(--color-border-200))] overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 dark:border-[rgb(var(--color-border-200))]">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-[rgb(var(--color-text-900))]">{t('clientTabs.assets.inventory.title', { defaultValue: 'Asset Inventory' })}</h2>
-          <p className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))] mt-1">{t('clientTabs.assets.inventory.subtitle', { defaultValue: 'Manage and track all client assets' })}</p>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-[rgb(var(--color-text-900))]">{t('clientTabs.assets.inventory.title', { defaultValue: 'Assets' })}</h2>
         </div>
         <DataTable
           id="client-assets-table"

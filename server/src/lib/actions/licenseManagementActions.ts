@@ -134,6 +134,58 @@ export async function startTrial(): Promise<{ success: boolean; error?: string; 
 }
 
 /**
+ * Immediately check in with the alga-license service and store any re-signed
+ * license. The daily check-in does this on its own schedule; this action backs
+ * the License page's "Refresh license now" button so a seat or tier change made
+ * in the customer portal takes effect right away (the service re-signs whenever
+ * the held token no longer matches the entitlement).
+ */
+export async function refreshLicenseNow(): Promise<{ success: boolean; error?: string; status?: LicenseStatus }> {
+  await assertAdminPermission();
+
+  const row = await getLicenseStateRow();
+  if (!row) return { success: false, error: 'Not a self-hosted install' };
+  if (!row.appliance_credential || !row.check_in_url) {
+    return { success: false, error: 'This appliance is not connected for automatic refresh. Activate a claim code first.' };
+  }
+
+  let currentLicenseSub: string | undefined;
+  if (row.license_token) {
+    const v = verifyLicense(row.license_token);
+    if (v.valid) currentLicenseSub = v.claims.sub;
+  }
+
+  try {
+    const res = await fetch(row.check_in_url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ appliance_credential: row.appliance_credential, current_license_sub: currentLicenseSub }),
+    });
+
+    if (!res.ok) {
+      return { success: false, error: `License service returned HTTP ${res.status}. Try again shortly.` };
+    }
+
+    const body = await res.json() as { status: 'ok' | 'no_change' | 'revoked'; jwt?: string };
+    if (body.status === 'revoked') {
+      // Soft revocation: keep the stored token (it grace-expires on its own exp).
+      await upsertLicenseState({ last_checkin_at: new Date() } as any);
+      return { success: false, error: 'This license has been revoked. Contact support if this is unexpected.' };
+    }
+
+    await upsertLicenseState({
+      ...(body.status === 'ok' && body.jwt ? { license_token: body.jwt } : {}),
+      last_checkin_at: new Date(),
+    } as any);
+
+    const status = await getLicenseStatus();
+    return { success: true, status };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'License refresh failed' };
+  }
+}
+
+/**
  * Redeems a one-time claim code against the alga-license service.
  * Stores the per-appliance credential and the first JWT in license_state.
  * Called by the in-app License page "Connect this appliance" flow (C5).

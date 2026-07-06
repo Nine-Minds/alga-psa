@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getSystemEmailService } from '@alga-psa/email';
 import { getPendingDeletionSummary } from '@enterprise/lib/billing/tenantReactivationDetection';
@@ -39,8 +40,8 @@ async function sessionAlreadyReactivated(
   stripeSubscriptionId: string,
 ): Promise<boolean> {
   const knex = await getAdminConnection();
-  const row = await knex('stripe_subscriptions')
-    .where({ tenant: tenantId, stripe_subscription_external_id: stripeSubscriptionId })
+  const row = await tenantDb(knex, tenantId).table('stripe_subscriptions')
+    .where({ stripe_subscription_external_id: stripeSubscriptionId })
     .whereIn('status', ['active', 'trialing'])
     .first('stripe_subscription_id');
   return !!row;
@@ -80,7 +81,7 @@ async function alertManualRefund(input: {
   reason: RefusalReason;
 }) {
   const knex = await getAdminConnection();
-  await knex('pending_reactivation_refunds').insert({
+  await tenantDb(knex, input.tenantId).table('pending_reactivation_refunds').insert({
     tenant: input.tenantId,
     stripe_checkout_session_id: input.checkoutSessionId ?? null,
     stripe_payment_intent_id: input.paymentIntentId ?? null,

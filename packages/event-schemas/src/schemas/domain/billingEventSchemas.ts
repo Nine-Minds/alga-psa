@@ -181,6 +181,22 @@ export const creditNoteVoidedEventPayloadSchema = BaseDomainEventPayloadSchema.e
 
 export type CreditNoteVoidedEventPayload = z.infer<typeof creditNoteVoidedEventPayloadSchema>;
 
+export const creditExpiringEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: z.string().describe('Client ID whose credits are expiring'),
+  daysBeforeExpiration: z.number().describe('Days remaining before the credits expire'),
+  credits: z
+    .array(
+      z.object({
+        creditId: z.string().describe('Credit tracking ID'),
+        amount: z.number().describe('Remaining credit amount'),
+        expirationDate: z.string().describe('Credit expiration date (ISO 8601)'),
+      })
+    )
+    .describe('Credits expiring on the target date'),
+}).describe('Payload for CREDIT_EXPIRING');
+
+export type CreditExpiringEventPayload = z.infer<typeof creditExpiringEventPayloadSchema>;
+
 export const contractCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   contractId: contractIdSchema,
   clientId: clientIdSchema,

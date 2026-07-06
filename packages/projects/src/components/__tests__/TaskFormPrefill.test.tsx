@@ -100,6 +100,7 @@ vi.mock('@alga-psa/tags/actions', () => ({
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: () => getCurrentUserMock(),
   getUserAvatarUrlsBatchAction: vi.fn(),
+  getCurrentUserAvatarUrl: vi.fn().mockResolvedValue(null),
   searchUsersForMentions: vi.fn().mockResolvedValue([])
 }));
 

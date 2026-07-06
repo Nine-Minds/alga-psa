@@ -122,6 +122,22 @@ const COPY = {
     textView: 'Sprawd\u017a wpis czasu na',
   },
 };
+SUBJECTS.pt = 'Lançamento de horas enviado para revisão';
+COPY.pt = {
+  headerLabel: 'Lançamento de horas enviado',
+  intro: 'Um lançamento de horas foi enviado para revisão.',
+  submittedBy: 'Enviado por',
+  date: 'Data',
+  duration: 'Duração',
+  project: 'Projeto',
+  task: 'Tarefa',
+  viewButton: 'Revisar lançamento de horas',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Lançamento de horas enviado',
+  textIntro: 'Um lançamento de horas foi enviado para revisão:',
+  textView: 'Revisar lançamento de horas em',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

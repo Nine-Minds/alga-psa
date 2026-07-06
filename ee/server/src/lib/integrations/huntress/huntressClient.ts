@@ -10,6 +10,7 @@
 import axios, { AxiosInstance } from 'axios';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex } from '@/lib/db';
 import type {
   HuntressAccount,
@@ -161,8 +162,8 @@ export async function createHuntressClient(tenantId: string): Promise<HuntressCl
   if (!apiKey || !apiSecret) return null;
 
   const { knex } = await createTenantKnex();
-  const row = await knex('rmm_integrations')
-    .where({ tenant: tenantId, provider: 'huntress' })
+  const row = await tenantDb(knex, tenantId).table('rmm_integrations')
+    .where({ provider: 'huntress' })
     .first('instance_url');
 
   return new HuntressClient({

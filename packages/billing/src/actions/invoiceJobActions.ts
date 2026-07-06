@@ -1,14 +1,13 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
-import { JobService, type JobData } from '@alga-psa/jobs';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getInvoiceForRendering } from './invoiceQueries';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { SystemEmailProviderFactory } from '@alga-psa/email';
 import { EmailMessage, EmailAddress } from '@alga-psa/types';
-import { formatCurrency, dateValueToDate, isValidEmail } from '@alga-psa/core';
+import { formatCurrency, dateValueToDate, isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import type { IContact } from '@alga-psa/types';
 import Handlebars from 'handlebars';
@@ -16,16 +15,20 @@ import fs from 'fs/promises';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getClientById } from '@alga-psa/shared/billingClients/clients';
+import type { Knex } from 'knex';
 
-interface InitialJobData extends JobData {
+interface InitialJobData {
   requesterId: string;
   user_id: string;
+  tenantId: string;
   invoiceIds: string[];
+  steps: Array<{ stepName: string; type: string; metadata: Record<string, unknown> }>;
   metadata: {
     user_id: string;
     invoice_count: number;
     tenantId: string;
   };
+  [key: string]: unknown;
 }
 
 export const scheduleInvoiceZipAction = withAuth(async (
@@ -37,8 +40,6 @@ export const scheduleInvoiceZipAction = withAuth(async (
     throw new Error('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
-
-  const jobService = await JobService.create();
 
   const steps = [
     ...invoiceIds.map((id, index) => ({
@@ -67,11 +68,11 @@ export const scheduleInvoiceZipAction = withAuth(async (
   };
 
   try {
-    const { jobRecord, scheduledJobId } = await jobService.createAndScheduleJob('invoice_zip', jobData, 'immediate');
+    const { jobId, scheduledJobId } = await enqueueImmediateJob('invoice_zip', jobData);
     if (!scheduledJobId) {
       throw new Error('Failed to schedule job - no job ID returned');
     }
-    return { jobId: jobRecord.id };
+    return { jobId };
   } catch (error) {
     logger.error('Failed to schedule invoice zip job', {
       error,
@@ -93,8 +94,6 @@ export const scheduleInvoiceEmailAction = withAuth(async (
     throw new Error('Permission denied: billing create required');
   }
   const { knex } = await createTenantKnex();
-
-  const jobService = await JobService.create();
 
   const invoiceDetails = await Promise.all(
     invoiceIds.map(async (invoiceId) => {
@@ -140,12 +139,12 @@ export const scheduleInvoiceEmailAction = withAuth(async (
   };
 
   try {
-    const { jobRecord, scheduledJobId } = await jobService.createAndScheduleJob('invoice_email', jobData, 'immediate');
+    const { jobId, scheduledJobId } = await enqueueImmediateJob('invoice_email', jobData);
     if (!scheduledJobId) {
       throw new Error('Failed to schedule job - no job ID returned');
     }
 
-    return { jobId: jobRecord.id };
+    return { jobId };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to schedule invoice email job', {
@@ -203,7 +202,7 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
 
   const fromEmail = process.env.EMAIL_FROM || 'noreply@example.com';
 
-  const tenantRecord = await knex('tenants').where({ tenant }).first();
+  const tenantRecord = await tenantDb(knex, tenant).table('tenants').first();
   const companyName = tenantRecord?.company_name || 'Your Company';
 
   for (const invoiceId of invoiceIds) {
@@ -225,8 +224,8 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
       let recipientSource: InvoiceEmailRecipientInfo['recipientSource'] = 'none';
 
       if (client.billing_contact_id) {
-        const contact = await knex<IContact>('contacts')
-          .where({ tenant, contact_name_id: client.billing_contact_id })
+        const contact = await tenantDb(knex, tenant).table<IContact>('contacts')
+          .where({ contact_name_id: client.billing_contact_id })
           .first();
         if (contact && contact.email) {
           recipientEmail = contact.email;
@@ -307,14 +306,14 @@ interface InvoiceEmailTemplate {
 }
 
 async function getInvoiceEmailTemplate(
-  knex: any,
+  knex: Knex | Knex.Transaction,
   tenant: string,
   locale: string = 'en'
 ): Promise<InvoiceEmailTemplate> {
+  const db = tenantDb(knex, tenant);
   // Try tenant template in requested locale
-  let template = await knex('tenant_email_templates')
+  let template = await db.table('tenant_email_templates')
     .where({
-      tenant,
       name: 'invoice-email',
       language_code: locale,
     })
@@ -322,9 +321,8 @@ async function getInvoiceEmailTemplate(
 
   // Fall back to tenant English template
   if (!template && locale !== 'en') {
-    template = await knex('tenant_email_templates')
+    template = await db.table('tenant_email_templates')
       .where({
-        tenant,
         name: 'invoice-email',
         language_code: 'en',
       })
@@ -333,7 +331,7 @@ async function getInvoiceEmailTemplate(
 
   // Fall back to system template in requested locale
   if (!template) {
-    template = await knex('system_email_templates')
+    template = await db.table('system_email_templates')
       .where({
         name: 'invoice-email',
         language_code: locale,
@@ -343,7 +341,7 @@ async function getInvoiceEmailTemplate(
 
   // Fall back to system English template
   if (!template && locale !== 'en') {
-    template = await knex('system_email_templates')
+    template = await db.table('system_email_templates')
       .where({
         name: 'invoice-email',
         language_code: 'en',
@@ -404,7 +402,7 @@ export const sendInvoiceEmailAction = withAuth(async (
   const pdfService = createPDFGenerationService(tenant);
   const results: SendInvoiceEmailResult[] = [];
 
-  const tenantRecord = await knex('tenants').where({ tenant }).first();
+  const tenantRecord = await tenantDb(knex, tenant).table('tenants').first();
   const companyName = tenantRecord?.company_name || 'Your Company';
   const fromEmail = process.env.EMAIL_FROM || 'noreply@example.com';
 
@@ -438,8 +436,8 @@ export const sendInvoiceEmailAction = withAuth(async (
       let recipientName = client.client_name;
 
       if (client.billing_contact_id) {
-        const contact = await knex<IContact>('contacts')
-          .where({ tenant, contact_name_id: client.billing_contact_id })
+        const contact = await tenantDb(knex, tenant).table<IContact>('contacts')
+          .where({ contact_name_id: client.billing_contact_id })
           .first();
         if (contact) {
           recipientEmail = contact.email;

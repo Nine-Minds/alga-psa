@@ -8,56 +8,56 @@ import { JobService } from '../../services/job.service';
 // Import all job handlers
 import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generateInvoiceHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
-import { expiredCreditsHandler, ExpiredCreditsJobData } from './handlers/expiredCreditsHandler';
+import { expiredCreditsHandler, ExpiredCreditsJobData } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import {
   expiringCreditsNotificationHandler,
   ExpiringCreditsNotificationJobData,
-} from './handlers/expiringCreditsNotificationHandler';
+} from '@alga-psa/jobs/handlers/expiringCreditsNotificationHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
 import {
   creditReconciliationHandler,
   CreditReconciliationJobData,
-} from './handlers/creditReconciliationHandler';
+} from '@alga-psa/jobs/handlers/creditReconciliationHandler';
 import { InvoiceZipJobHandler, InvoiceZipJobData } from './handlers/invoiceZipHandler';
 import { InvoiceEmailHandler, InvoiceEmailJobData } from './handlers/invoiceEmailHandler';
 import {
   handleReconcileBucketUsage,
   ReconcileBucketUsageJobData,
-} from './handlers/reconcileBucketUsageHandler';
+} from '@alga-psa/jobs/handlers/reconcileBucketUsageHandler';
 import {
   processRenewalQueueHandler,
   RenewalQueueProcessorJobData,
-} from './handlers/processRenewalQueueHandler';
-import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
+} from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
+import { cleanupTemporaryFormsJob } from '@alga-psa/jobs/handlers/cleanupTemporaryFormsJob';
 import {
   cleanupAiSessionKeysHandler,
   CleanupAiSessionKeysJobData,
-} from './handlers/cleanupAiSessionKeysHandler';
+} from '@alga-psa/jobs/handlers/cleanupAiSessionKeysHandler';
 import {
   renewMicrosoftCalendarWebhooks,
   verifyGoogleCalendarProvisioning,
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData,
-} from './handlers/calendarWebhookMaintenanceHandler';
+} from '@alga-psa/jobs/handlers/calendarWebhookMaintenanceHandler';
 import {
   renewTeamsMeetingArtifactSubscriptions,
   processTeamsMeetingArtifactNotification,
   TeamsMeetingArtifactSubscriptionRenewalJobData,
   TeamsMeetingArtifactNotificationJobData,
-} from './handlers/teamsMeetingArtifactWebhookHandler';
+} from '@alga-psa/jobs/handlers/teamsMeetingArtifactWebhookHandler';
 import {
   renewGoogleGmailWatchSubscriptions,
   GoogleGmailWatchRenewalJobData,
-} from './handlers/googleGmailWatchRenewalHandler';
+} from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
 import {
   extensionScheduledInvocationHandler,
   ExtensionScheduledInvocationJobData,
-} from './handlers/extensionScheduledInvocationHandler';
+} from '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler';
 import {
   workflowOneTimeScheduledRunHandler,
   workflowRecurringScheduledRunHandler,
   WorkflowScheduledRunJobData,
-} from './handlers/workflowScheduledRunHandlers';
+} from '@alga-psa/jobs/handlers/workflowScheduledRunHandlers';
 import {
   rmmAlertReconciliationHandler,
   huntressIncidentPollHandler,
@@ -65,17 +65,22 @@ import {
   HuntressIncidentPollJobData,
   RMM_ALERT_RECONCILIATION_JOB,
   HUNTRESS_INCIDENT_POLL_JOB,
-} from './handlers/rmmAlertPollingHandlers';
+} from '@alga-psa/jobs/handlers/rmmAlertPollingHandlers';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
-import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from './handlers/autoCloseTicketsHandler';
+import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
 import {
   workflowQuotaResumeScanHandler,
   WorkflowQuotaResumeScanJobData,
-} from './handlers/workflowQuotaResumeScanHandler';
+} from '@alga-psa/jobs/handlers/workflowQuotaResumeScanHandler';
 import {
   accountingSyncCycleHandler,
   AccountingSyncCycleJobData,
 } from './handlers/accountingSyncCycleHandler';
+import {
+  huduAutoSyncHandler,
+  HUDU_AUTO_SYNC_JOB,
+  HuduAutoSyncJobData,
+} from './handlers/huduAutoSyncHandler';
 import {
   SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
   searchVisibleUserReindexHandler,
@@ -85,7 +90,7 @@ import {
   SEARCH_RECONCILE_JOB_NAME,
   searchReconcileHandler,
   SearchReconcileJobData,
-} from './handlers/searchReconcileHandler';
+} from '@alga-psa/jobs/handlers/searchReconcileHandler';
 
 /**
  * Options for registering handlers
@@ -340,6 +345,20 @@ export async function registerAllJobHandlers(
           await accountingSyncCycleHandler(data);
         },
         retry: { maxAttempts: 1 }, // cycles are self-healing on the next tick
+        timeoutMs: 600000, // 10 minutes
+      },
+      registerOpts
+    );
+
+    // Hudu daily auto-sync (import unmatched + refresh; no-op unless connected &
+    // settings.autoSync.enabled). Converged per-tenant by scheduleHuduAutoSyncJob.
+    JobHandlerRegistry.register<HuduAutoSyncJobData & BaseJobData>(
+      {
+        name: HUDU_AUTO_SYNC_JOB,
+        handler: async (_jobId, data) => {
+          await huduAutoSyncHandler(data);
+        },
+        retry: { maxAttempts: 2 },
         timeoutMs: 600000, // 10 minutes
       },
       registerOpts

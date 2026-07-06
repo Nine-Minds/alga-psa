@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 
 import { getConnection } from '@/lib/db/db';
 
@@ -261,9 +262,8 @@ async function getStoredWebhook(
   tenant: string,
 ): Promise<StoredWebhookRow | null> {
   const knex = await getConnection(tenant);
-  const row = await knex(WEBHOOKS_TABLE)
+  const row = await tenantDb(knex, tenant).table(WEBHOOKS_TABLE)
     .where({
-      tenant,
       webhook_id: webhookId,
     })
     .first();
@@ -307,9 +307,8 @@ async function listForEventType(
   eventType: string,
 ): Promise<WebhookRecord[]> {
   const knex = await getConnection(tenant);
-  const rows = await knex(WEBHOOKS_TABLE)
+  const rows = await tenantDb(knex, tenant).table(WEBHOOKS_TABLE)
     .where({
-      tenant,
       is_active: true,
     })
     .whereRaw('? = ANY(event_types)', [eventType])
@@ -320,8 +319,7 @@ async function listForEventType(
 
 async function listByTenant(tenant: string): Promise<WebhookRecord[]> {
   const knex = await getConnection(tenant);
-  const rows = await knex(WEBHOOKS_TABLE)
-    .where({ tenant })
+  const rows = await tenantDb(knex, tenant).table(WEBHOOKS_TABLE)
     .orderBy('created_at', 'desc');
 
   return rows.map(mapWebhookRow);
@@ -341,7 +339,7 @@ async function insert(input: InsertWebhookInput): Promise<WebhookRecord> {
   const knex = await getConnection(input.tenant);
 
   try {
-    const [row] = await knex(WEBHOOKS_TABLE)
+    const [row] = await tenantDb(knex, input.tenant).table(WEBHOOKS_TABLE)
       .insert({
         tenant: input.tenant,
         webhook_id: webhookId,
@@ -408,9 +406,8 @@ async function update(
   const knex = await getConnection(tenant);
 
   try {
-    const [row] = await knex(WEBHOOKS_TABLE)
+    const [row] = await tenantDb(knex, tenant).table(WEBHOOKS_TABLE)
       .where({
-        tenant,
         webhook_id: webhookId,
       })
       .update(updatePayload)
@@ -456,9 +453,8 @@ async function deleteWebhook(
   }
 
   const knex = await getConnection(tenant);
-  await knex(WEBHOOKS_TABLE)
+  await tenantDb(knex, tenant).table(WEBHOOKS_TABLE)
     .where({
-      tenant,
       webhook_id: webhookId,
     })
     .del();
@@ -480,7 +476,7 @@ async function recordDelivery(
   input: RecordDeliveryInput,
 ): Promise<WebhookDeliveryRecord> {
   const knex = await getConnection(input.tenant);
-  const [row] = await knex(WEBHOOK_DELIVERIES_TABLE)
+  const [row] = await tenantDb(knex, input.tenant).table(WEBHOOK_DELIVERIES_TABLE)
     .insert({
       tenant: input.tenant,
       delivery_id: input.deliveryId ?? crypto.randomUUID(),
@@ -512,9 +508,8 @@ async function getDeliveryById(
   deliveryId: string,
 ): Promise<WebhookDeliveryRecord | null> {
   const knex = await getConnection(tenant);
-  const row = await knex(WEBHOOK_DELIVERIES_TABLE)
+  const row = await tenantDb(knex, tenant).table(WEBHOOK_DELIVERIES_TABLE)
     .where({
-      tenant,
       webhook_id: webhookId,
       delivery_id: deliveryId,
     })
@@ -537,19 +532,18 @@ async function listDeliveries(
   const limit = Math.max(1, Math.min(options.limit ?? 10, 100));
   const offset = (page - 1) * limit;
   const knex = await getConnection(tenant);
+  const db = tenantDb(knex, tenant);
 
   const [rows, totalRow] = await Promise.all([
-    knex(WEBHOOK_DELIVERIES_TABLE)
+    db.table(WEBHOOK_DELIVERIES_TABLE)
       .where({
-        tenant,
         webhook_id: webhookId,
       })
       .orderBy('attempted_at', 'desc')
       .limit(limit)
       .offset(offset),
-    knex(WEBHOOK_DELIVERIES_TABLE)
+    db.table(WEBHOOK_DELIVERIES_TABLE)
       .where({
-        tenant,
         webhook_id: webhookId,
       })
       .count<{ count: string }[]>({ count: '*' })
@@ -583,9 +577,8 @@ async function updateStats(
     payload.last_failure_at = deliveredAt;
   }
 
-  const [row] = await knex(WEBHOOKS_TABLE)
+  const [row] = await tenantDb(knex, input.tenant).table(WEBHOOKS_TABLE)
     .where({
-      tenant: input.tenant,
       webhook_id: input.webhookId,
     })
     .update(payload)
@@ -598,9 +591,8 @@ async function markAbandoned(
   input: MarkAbandonedInput,
 ): Promise<WebhookDeliveryRecord | null> {
   const knex = await getConnection(input.tenant);
-  const [row] = await knex(WEBHOOK_DELIVERIES_TABLE)
+  const [row] = await tenantDb(knex, input.tenant).table(WEBHOOK_DELIVERIES_TABLE)
     .where({
-      tenant: input.tenant,
       delivery_id: input.deliveryId,
     })
     .update({

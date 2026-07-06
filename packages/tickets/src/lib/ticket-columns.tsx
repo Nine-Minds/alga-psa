@@ -6,11 +6,18 @@ import type { TagSize } from '@alga-psa/ui/components/tags';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
+import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ResponseStateBadge } from '@alga-psa/ui/components/tickets/ResponseStateBadge';
-import { SlaIndicator } from '@alga-psa/ui/components/sla';
 import type { SlaTimerStatus } from '@alga-psa/types';
+import { resolveTicketColumnVisibility, type TicketListColumnKey } from './ticketColumnCatalog';
+import {
+  statusPillHue,
+  formatDuePrimary,
+  daysUntil,
+  formatCategoryLabel,
+} from './ticketListPresentation';
 
 /**
  * Calculate SLA status from ticket data
@@ -80,20 +87,27 @@ function calculateSlaStatus(ticket: ITicketListItem): {
   return null;
 }
 
-type TicketListColumnKey =
-  | 'ticket_number'
-  | 'title'
-  | 'status'
-  | 'priority'
-  | 'sla'
-  | 'board'
-  | 'category'
-  | 'client'
-  | 'assigned_to'
-  | 'due_date'
-  | 'created'
-  | 'created_by'
-  | 'tags';
+// Compact SLA status for the merged Due/SLA cell — the sole place SLA state is
+// shown in the list. Derived from calculateSlaStatus; tone drives urgency color.
+function slaMagnitude(minutes: number): string {
+  const abs = Math.abs(minutes);
+  if (abs >= 1440) return `${Math.round(abs / 1440)}d`;
+  if (abs >= 60) return `${Math.round(abs / 60)}h`;
+  return `${Math.max(1, abs)}m`;
+}
+
+function formatSlaCell(
+  sla: { status: SlaTimerStatus; remainingMinutes: number | undefined; isPaused: boolean } | null
+): { text: string; tone: 'over' | 'soon' | 'ok' } | null {
+  if (!sla) return null;
+  if (sla.status === 'response_breached' || sla.status === 'resolution_breached') {
+    return { text: 'SLA breached', tone: 'over' };
+  }
+  if (sla.status === 'paused') return { text: 'SLA paused', tone: 'ok' };
+  const mag = sla.remainingMinutes !== undefined ? slaMagnitude(sla.remainingMinutes) : null;
+  if (sla.status === 'at_risk') return { text: mag ? `${mag} left` : 'At risk', tone: 'soon' };
+  return { text: mag ? `${mag} left` : 'On track', tone: 'ok' };
+}
 
 type TicketListSettings = {
   columnVisibility?: Partial<Record<TicketListColumnKey, boolean>>;
@@ -117,6 +131,13 @@ interface CreateTicketColumnsOptions {
   showTags?: boolean;
   showClient?: boolean;
   onClientClick?: (clientId: string) => void;
+  /**
+   * Authoritative status_id → is_closed map. Used to color the status pill
+   * (closed = green) from the status definition instead of the per-ticket
+   * is_closed flag, which can drift so two tickets sharing a status render
+   * different colors. Falls back to the record flag when a status is absent.
+   */
+  statusIsClosedById?: Record<string, boolean>;
   /** Map of user IDs to avatar URLs for displaying in additional agents tooltip */
   additionalAgentAvatarUrls?: Record<string, string | null>;
   /** Map of team IDs to avatar URLs for displaying team badges */
@@ -124,24 +145,7 @@ interface CreateTicketColumnsOptions {
   isBundleExpanded?: (masterTicketId: string) => boolean;
   onToggleBundleExpanded?: (masterTicketId: string) => void;
   t?: (key: string, fallback: string) => string;
-  showAllAvailableColumns?: boolean;
 }
-
-const ALL_TICKET_LIST_COLUMN_VISIBILITY: Record<TicketListColumnKey, boolean> = {
-  ticket_number: true,
-  title: true,
-  status: true,
-  priority: true,
-  sla: true,
-  board: true,
-  category: true,
-  client: true,
-  assigned_to: true,
-  due_date: true,
-  created: true,
-  created_by: true,
-  tags: true,
-};
 
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
   const {
@@ -155,67 +159,72 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     showTags = true,
     showClient = true,
     onClientClick,
+    statusIsClosedById = {},
     additionalAgentAvatarUrls = {},
     teamAvatarUrls = {},
     isBundleExpanded,
     onToggleBundleExpanded,
     t: _t,
-    showAllAvailableColumns = false,
   } = options;
 
   const t = _t ?? ((_key: string, fallback: string) => fallback);
 
-  const columnVisibility = showAllAvailableColumns ? ALL_TICKET_LIST_COLUMN_VISIBILITY : (displaySettings?.list?.columnVisibility || {
-    ticket_number: true,
-    title: true,
-    status: true,
-    priority: true,
-    sla: false,
-    board: true,
-    category: true,
-    client: true,
-    assigned_to: true,
-    due_date: true,
-    created: true,
-    created_by: true,
-    tags: true,
-  });
+  // Visibility + defaults come from the shared ticket-column catalog. Optional
+  // columns honor the tenant's stored choice; folded columns (ticket number,
+  // category) are not standalone here — they always render inside the Title cell.
+  const columnVisibility = resolveTicketColumnVisibility(displaySettings?.list?.columnVisibility);
 
-  const tagsInlineUnderTitle = displaySettings?.list?.tagsInlineUnderTitle ?? true;
-  const showInlineTagsInTitle = columnVisibility.tags && showTags && !showAllAvailableColumns;
+  const showInlineTagsInTitle = columnVisibility.tags && showTags;
   const dateTimeFormat = displaySettings?.dateTimeFormat || 'MMM d, yyyy h:mm a';
+
+  // Internal (MSP) response-state wording for the status-cell badge.
+  const responseLabels = {
+    awaitingClient: t('responseState.awaitingClient', 'Awaiting Client'),
+    awaitingInternal: t('responseState.awaitingInternal', 'Awaiting Internal'),
+    awaitingClientTooltip: t('responseState.awaitingClientTooltip', 'Waiting for client to respond'),
+    awaitingInternalTooltip: t('responseState.awaitingInternalTooltip', 'Client has responded, waiting for internal action'),
+  };
+
+  // Ticket number and category always fold into the "Ticket" hero cell; the flat
+  // per-column layout lives only in the export path (see ticketColumnCatalog).
+  const showTicketNumberSubtitle = true;
+  const showCategorySubtitle = true;
 
   const columns: Array<{ key: string; col: ColumnDefinition<ITicketListItem> }> = [];
 
-  // Ticket Number
-  if (columnVisibility.ticket_number) {
-    columns.push({
-      key: 'ticket_number',
-      col: {
-        title: t('fields.ticketNumber', 'Ticket Number'),
-        dataIndex: 'ticket_number',
-        width: '7%',
-        render: (value: string, record: ITicketListItem) => (
-          <div className="flex flex-col gap-1">
-            <span className="flex items-center gap-2">
-              {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && onToggleBundleExpanded ? (
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-800 relative z-10"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onToggleBundleExpanded(record.ticket_id as string);
-                  }}
-                  aria-label="Toggle bundle children"
-                >
-                  {isBundleExpanded && isBundleExpanded(record.ticket_id as string) ? (
-                    <ChevronDown className="h-4 w-4 text-gray-600" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-gray-600" />
-                  )}
-                </button>
-              ) : null}
+  // Title — the "Ticket" hero cell: bold title with the mono ticket number and
+  // category folded underneath when those columns aren't shown separately.
+  columns.push({
+    key: 'title',
+    col: {
+      title: t('fields.title', 'Title'),
+      dataIndex: 'title',
+      width: showInlineTagsInTitle ? '26%' : '24%',
+      render: (value: string, record: ITicketListItem) => {
+        const isBundleMaster = !record.master_ticket_id && (record.bundle_child_count ?? 0) > 0;
+        const showBundleToggle = showTicketNumberSubtitle && isBundleMaster && !!onToggleBundleExpanded;
+        const categoryLabel = formatCategoryLabel(record, categories);
+        return (
+          <div className="flex items-start gap-2 overflow-hidden">
+            {showBundleToggle && (
+              <button
+                type="button"
+                className="mt-0.5 inline-flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-800 relative z-10"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleBundleExpanded!(record.ticket_id as string);
+                }}
+                aria-label="Toggle bundle children"
+              >
+                {isBundleExpanded && isBundleExpanded(record.ticket_id as string) ? (
+                  <ChevronDown className="h-4 w-4 text-gray-600" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-gray-600" />
+                )}
+              </button>
+            )}
+            <div className="flex flex-col gap-0.5 overflow-hidden">
               <Link
                 href={`/msp/tickets/${record.ticket_id}`}
                 prefetch={false}
@@ -225,78 +234,64 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                   e.stopPropagation();
                   onTicketClick(record.ticket_id as string);
                 }}
-                className="text-blue-600 hover:text-blue-800 whitespace-normal text-left"
+                className="block truncate font-semibold text-[rgb(var(--color-text-900))] hover:text-[rgb(var(--color-primary-700))]"
               >
                 {value}
               </Link>
-            </span>
-            {(record.master_ticket_id || (!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0)) && (
-              <div className="flex items-center gap-1">
-                {record.master_ticket_id ? (
-                  <span 
-                    className="rounded px-2 py-0.5 text-[11px] font-medium"
-                    style={{
-                      color: 'rgb(var(--color-primary-700))',
-                      backgroundColor: 'rgb(var(--color-primary-100))'
-                    }}
-                  >
-                    Bundled → {record.bundle_master_ticket_number || 'Master'}
-                  </span>
-                ) : null}
-                {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 ? (
-                  <span 
-                    className="rounded px-2 py-0.5 text-[11px] font-medium"
-                    style={{
-                      color: 'rgb(var(--color-secondary-700))',
-                      backgroundColor: 'rgb(var(--color-secondary-100))'
-                    }}
-                  >
-                    Bundle · {record.bundle_child_count}
-                  </span>
-                ) : null}
-              </div>
-            )}
-          </div>
-        ),
-      }
-    });
-  }
-
-  // Title (with optional inline tags)
-  columns.push({
-    key: 'title',
-    col: {
-      title: t('fields.title', 'Title'),
-      dataIndex: 'title',
-      width: showInlineTagsInTitle ? '20%' : '16%',
-      render: (value: string, record: ITicketListItem) => (
-        <div className="flex flex-col gap-1 overflow-hidden">
-          <Link
-            href={`/msp/tickets/${record.ticket_id}`}
-            prefetch={false}
-            onClick={(e) => {
-              if (e.metaKey || e.ctrlKey) return;
-              e.preventDefault();
-              e.stopPropagation();
-              onTicketClick(record.ticket_id as string);
-            }}
-            className="text-blue-600 hover:text-blue-800 block whitespace-normal break-words"
-          >
-            {value}
-          </Link>
-          {showInlineTagsInTitle && ticketTagsRef && onTagsChange && record.ticket_id && (ticketTagsRef.current[record.ticket_id]?.length ?? 0) > 0 && (
-            <div onClick={(e) => e.stopPropagation()}>
-              <TagManager
-                entityId={record.ticket_id}
-                entityType="ticket"
-                initialTags={ticketTagsRef.current[record.ticket_id] || []}
-                onTagsChange={(tags) => onTagsChange(record.ticket_id!, tags)}
-                size={tagSize}
-              />
+              {(showTicketNumberSubtitle || showCategorySubtitle) && (
+                <div className="flex items-center gap-1.5 overflow-hidden text-[11px] leading-tight text-[rgb(var(--color-text-500))]">
+                  {showTicketNumberSubtitle && (
+                    <Link
+                      href={`/msp/tickets/${record.ticket_id}`}
+                      prefetch={false}
+                      onClick={(e) => {
+                        if (e.metaKey || e.ctrlKey) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onTicketClick(record.ticket_id as string);
+                      }}
+                      className="shrink-0 font-mono text-[11px] text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-primary-600))]"
+                    >
+                      {record.ticket_number}
+                    </Link>
+                  )}
+                  {showTicketNumberSubtitle && showCategorySubtitle && (
+                    <span className="text-[rgb(var(--color-text-300))]">·</span>
+                  )}
+                  {showCategorySubtitle && <span className="truncate">{categoryLabel}</span>}
+                </div>
+              )}
+              {showTicketNumberSubtitle && record.master_ticket_id && (
+                <span
+                  className="w-fit rounded px-2 py-0.5 text-[11px] font-medium"
+                  style={{ color: 'rgb(var(--color-primary-700))', backgroundColor: 'rgb(var(--color-primary-100))' }}
+                >
+                  Bundled → {record.bundle_master_ticket_number || 'Master'}
+                </span>
+              )}
+              {showTicketNumberSubtitle && isBundleMaster && (
+                <span
+                  className="w-fit rounded px-2 py-0.5 text-[11px] font-medium"
+                  style={{ color: 'rgb(var(--color-secondary-700))', backgroundColor: 'rgb(var(--color-secondary-100))' }}
+                >
+                  Bundle · {record.bundle_child_count}
+                </span>
+              )}
+              {showInlineTagsInTitle && ticketTagsRef && onTagsChange && record.ticket_id && (ticketTagsRef.current[record.ticket_id]?.length ?? 0) > 0 && (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <TagManager
+                    entityId={record.ticket_id}
+                    entityType="ticket"
+                    initialTags={ticketTagsRef.current[record.ticket_id] || []}
+                    onTagsChange={(tags) => onTagsChange(record.ticket_id!, tags)}
+                    size={tagSize}
+                  />
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      ),
+          </div>
+        );
+      },
     }
   });
 
@@ -307,21 +302,46 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: t('fields.status', 'Status'),
         dataIndex: 'status_name',
-        width: '8%',
+        width: '12%',
         render: (value: string, record: ITicketListItem) => {
           // Get response_state from the record - it may be on the record if fetched
           const responseState = (record as any).response_state as TicketResponseState | undefined;
           const showResponseState = displaySettings?.responseStateTrackingEnabled !== false;
+          // Color from the status definition (consistent per status), not the
+          // per-ticket is_closed flag, which can drift across rows sharing a status.
+          const statusId = record.status_id ?? '';
+          const closed = statusId in statusIsClosedById
+            ? statusIsClosedById[statusId]
+            : !!(record as { is_closed?: boolean }).is_closed;
+          const hue = statusPillHue(value || '', closed);
           return (
-            <div className="flex items-center gap-1.5 overflow-hidden whitespace-nowrap">
-              <span className="overflow-hidden text-ellipsis">{value || 'No Status'}</span>
+            <div className="@container flex items-center gap-1.5 whitespace-nowrap">
+              <span
+                className="inline-flex min-w-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium text-[rgb(var(--color-text-700))]"
+                style={{ backgroundColor: `rgb(${hue} / 0.14)`, borderColor: `rgb(${hue} / 0.30)` }}
+              >
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: `rgb(${hue})` }} />
+                <span className="overflow-hidden text-ellipsis">{value || 'No Status'}</span>
+              </span>
+              {/* Response state degrades with the column width: full label → icon
+                  → hidden. Thresholds are container queries on the status cell. */}
               {showResponseState && responseState && (
-                <ResponseStateBadge
-                  responseState={responseState}
-                  variant="text"
-                  size="sm"
-                  className="h-5 w-5 shrink-0 justify-center overflow-hidden border-transparent !bg-transparent px-0 py-0 text-transparent opacity-75 [&_span]:hidden"
-                />
+                <span className="ml-auto flex shrink-0 items-center">
+                  <ResponseStateBadge
+                    responseState={responseState}
+                    variant="badge"
+                    size="sm"
+                    labels={responseLabels}
+                    className="hidden @[184px]:inline-flex"
+                  />
+                  <ResponseStateBadge
+                    responseState={responseState}
+                    variant="text"
+                    size="sm"
+                    labels={responseLabels}
+                    className="hidden @[112px]:inline-flex @[184px]:hidden"
+                  />
+                </span>
               )}
             </div>
           );
@@ -339,43 +359,16 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         dataIndex: 'priority_name',
         width: '7%',
         render: (value: string, record: ITicketListItem) => {
-          // All tickets now use the unified priority system with priority_name and priority_color
+          // All tickets now use the unified priority system with priority_name and priority_color.
+          // Candidate #1 renders priority as a colored bar + label for at-a-glance scanning.
           return (
             <div className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full border border-gray-300"
-                style={{ backgroundColor: record.priority_color || '#6B7280' }}
+              <span
+                className="h-3.5 w-[3px] shrink-0 rounded-full"
+                style={{ backgroundColor: record.priority_color || '#94a3b8' }}
               />
-              <span>{value || 'No Priority'}</span>
+              <span className="font-medium text-[rgb(var(--color-text-700))]">{value || 'No Priority'}</span>
             </div>
-          );
-        },
-      }
-    });
-  }
-
-  // SLA Status
-  if (columnVisibility.sla) {
-    columns.push({
-      key: 'sla',
-      col: {
-        title: t('fields.sla', 'SLA'),
-        dataIndex: 'sla_policy_id',
-        width: '5%',
-        sortable: false,
-        render: (_value: string | null, record: ITicketListItem) => {
-          const slaStatus = calculateSlaStatus(record);
-
-          if (!slaStatus) {
-            return <span className="text-gray-400 text-xs">-</span>;
-          }
-
-          return (
-            <SlaIndicator
-              status={slaStatus.status}
-              remainingMinutes={slaStatus.remainingMinutes!}
-              isPaused={slaStatus.isPaused}
-            />
           );
         },
       }
@@ -389,39 +382,12 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: t('fields.board', 'Board'),
         dataIndex: 'board_name',
-        width: '7%',
-      }
-    });
-  }
-
-  // Category
-  if (columnVisibility.category) {
-    columns.push({
-      key: 'category',
-      col: {
-        title: t('fields.category', 'Category'),
-        dataIndex: 'category_name',
-        width: '7%',
-        render: (_value: string, record: ITicketListItem) => {
-          const categoryId = record.category_id || null;
-
-          // Use unified category display for all boards (ITIL and custom)
-          if (!categoryId && !record.subcategory_id) return 'No Category';
-
-          // If there's a subcategory, use that for display
-          if (record.subcategory_id) {
-            const subcategory = categories.find(c => c.category_id === record.subcategory_id);
-            if (!subcategory) return 'Unknown Category';
-
-            const parent = categories.find(c => c.category_id === subcategory.parent_category);
-            return parent ? `${parent.category_name} → ${subcategory.category_name}` : subcategory.category_name;
-          }
-
-          // Otherwise use the main category
-          const category = categories.find(c => c.category_id === categoryId);
-          if (!category) return 'Unknown Category';
-          return category.category_name;
-        },
+        width: '8%',
+        render: (value: string) => value ? (
+          <span className="inline-block rounded-md bg-[rgb(var(--color-border-100))] px-2 py-0.5 text-[11px] font-medium text-[rgb(var(--color-text-600))]">
+            {value}
+          </span>
+        ) : <span className="text-[rgb(var(--color-text-400))]">-</span>,
       }
     });
   }
@@ -434,30 +400,51 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         title: t('fields.client', 'Client'),
         dataIndex: 'client_name',
         width: '9%',
-        render: onClientClick ? (value: string, record: ITicketListItem) => (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (record.client_id) onClientClick(record.client_id);
-            }}
-            className="text-blue-500 hover:underline text-left whitespace-normal break-words bg-transparent border-none p-0"
-          >
-            <div className="flex flex-col gap-1">
-              <span>{value || 'No Client'}</span>
-              {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && (record.bundle_distinct_client_count ?? 0) > 1 ? (
-                <span 
-                  className="rounded px-2 py-0.5 text-[11px] font-medium"
-                  style={{
-                    color: 'rgb(var(--color-accent-700))',
-                    backgroundColor: 'rgb(var(--color-accent-100))'
-                  }}
-                >
-                  Multiple clients
+        render: (value: string, record: ITicketListItem) => {
+          const hasClient = !!value;
+          const multiClient = !record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && (record.bundle_distinct_client_count ?? 0) > 1;
+          const body = (
+            <span className="flex items-center gap-2 overflow-hidden">
+              {hasClient ? (
+                <ClientAvatar
+                  clientId={record.client_id || value}
+                  clientName={value}
+                  logoUrl={record.client_logo_url ?? null}
+                  size="xs"
+                />
+              ) : (
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white bg-[#cbd5e1]">
+                  —
                 </span>
-              ) : null}
-            </div>
-          </button>
-        ) : undefined,
+              )}
+              <span className="flex flex-col gap-0.5 overflow-hidden">
+                <span className="truncate">{value || 'No Client'}</span>
+                {multiClient ? (
+                  <span
+                    className="w-fit rounded px-2 py-0.5 text-[11px] font-medium"
+                    style={{ color: 'rgb(var(--color-accent-700))', backgroundColor: 'rgb(var(--color-accent-100))' }}
+                  >
+                    Multiple clients
+                  </span>
+                ) : null}
+              </span>
+            </span>
+          );
+          if (!onClientClick) {
+            return <span className="text-[rgb(var(--color-text-700))]">{body}</span>;
+          }
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (record.client_id) onClientClick(record.client_id);
+              }}
+              className="bg-transparent border-none p-0 text-left text-[rgb(var(--color-text-700))] hover:[&_.truncate]:text-[rgb(var(--color-primary-700))]"
+            >
+              {body}
+            </button>
+          );
+        },
       }
     });
   }
@@ -474,8 +461,20 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
           const additionalCount = record.additional_agent_count || 0;
           const additionalAgents = record.additional_agents || [];
           return (
-            <span className="text-gray-700 flex items-center gap-1.5">
-              {value || 'Unassigned'}
+            <span className="text-gray-700 flex items-center gap-2">
+              {value ? (
+                <UserAvatar
+                  userId={record.assigned_to || value}
+                  userName={value}
+                  avatarUrl={additionalAgentAvatarUrls[record.assigned_to ?? ''] ?? null}
+                  size="xs"
+                />
+              ) : (
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-[rgb(var(--color-border-400))] text-xs text-[rgb(var(--color-text-400))]">
+                  +
+                </span>
+              )}
+              <span className="truncate">{value || 'Unassigned'}</span>
               {record.assigned_team_id && record.assigned_team_name && (
                 <Tooltip content={record.assigned_team_name}>
                   <span className="inline-flex items-center cursor-help">
@@ -530,40 +529,56 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'due_date',
       col: {
-        title: t('fields.dueDate', 'Due Date'),
+        title: `${t('fields.dueDate', 'Due Date')} / ${t('fields.sla', 'SLA')}`,
         dataIndex: 'due_date',
         width: '9%',
-        render: (value: string | null) => {
-          if (!value) {
-            return <div className="text-sm text-[rgb(var(--color-text-500))]">-</div>;
+        render: (value: string | null, record: ITicketListItem) => {
+          const now = new Date();
+          const sla = formatSlaCell(calculateSlaStatus(record));
+          const dueDate = value ? new Date(value) : null;
+
+          const toneClass = (tone: 'over' | 'soon' | 'ok' | 'muted'): string =>
+            tone === 'over' ? 'text-red-600 dark:text-red-400 font-medium'
+              : tone === 'soon' ? 'text-orange-600 dark:text-orange-400'
+                : 'text-[rgb(var(--color-text-400))]';
+
+          // Secondary line: live SLA state when the ticket has an SLA policy;
+          // otherwise a relative "in N days" hint for future dates (overdue / today /
+          // tomorrow are already explicit in the primary label — no redundant line).
+          let secondary: { text: string; tone: 'over' | 'soon' | 'ok' | 'muted' } | null = null;
+          if (sla) {
+            secondary = { text: sla.text, tone: sla.tone };
+          } else if (dueDate && dueDate.getTime() >= now.getTime()) {
+            const d = daysUntil(dueDate, now);
+            if (d >= 2) secondary = { text: `in ${d} days`, tone: 'muted' };
           }
 
-          const dueDate = new Date(value);
-          const now = new Date();
-          const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+          // Primary date colour: SLA urgency wins, then due-date urgency.
+          let primaryClass = 'text-[rgb(var(--color-text-700))]';
+          if (sla?.tone === 'over') primaryClass = 'text-red-600 dark:text-red-400';
+          else if (sla?.tone === 'soon') primaryClass = 'text-orange-600 dark:text-orange-400';
+          else if (dueDate) {
+            const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+            if (hoursUntilDue < 0) primaryClass = 'text-red-600 dark:text-red-400';
+            else if (hoursUntilDue <= 24) primaryClass = 'text-orange-600 dark:text-orange-400';
+          }
 
-          // Check if time is midnight (00:00) - show date only
-          const isMidnight = dueDate.getHours() === 0 && dueDate.getMinutes() === 0;
-          const displayFormat = isMidnight ? 'MMM d, yyyy' : dateTimeFormat;
-
-          // Determine styling based on due date status
-          let textColorClass = 'text-[rgb(var(--color-text-500))]';
-          let bgColorClass = '';
-
-          if (hoursUntilDue < 0) {
-            // Overdue - red/warning style
-            textColorClass = 'text-red-600 dark:text-red-400';
-            bgColorClass = 'bg-red-500/10';
-          } else if (hoursUntilDue <= 24) {
-            // Approaching due date (within 24 hours) - orange/caution style
-            textColorClass = 'text-orange-600 dark:text-orange-400';
-            bgColorClass = 'bg-orange-500/10';
+          let primaryText: string;
+          if (dueDate) {
+            primaryText = formatDuePrimary(dueDate, now);
+          } else {
+            // No due date — still surface SLA below it if present.
+            if (!secondary) {
+              return <div className="text-sm text-[rgb(var(--color-text-400))]">No due date</div>;
+            }
+            primaryText = 'No due date';
           }
 
           return (
-            <span className={`text-sm inline-block ${textColorClass} ${bgColorClass ? `${bgColorClass} px-2 py-0.5 rounded-full` : ''}`}>
-              {format(dueDate, displayFormat)}
-            </span>
+            <div className="flex flex-col leading-tight">
+              <span className={dueDate ? `text-sm font-medium ${primaryClass}` : 'text-sm text-[rgb(var(--color-text-400))]'}>{primaryText}</span>
+              {secondary && <span className={`text-[11px] ${toneClass(secondary.tone)}`}>{secondary.text}</span>}
+            </div>
           );
         },
       }
@@ -595,33 +610,6 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         title: t('fields.createdBy', 'Created By'),
         dataIndex: 'entered_by_name',
         width: '6%',
-      }
-    });
-  }
-
-  // Tags (as separate column; retained for print/export column selection, not the default ticket list)
-  if (showAllAvailableColumns && columnVisibility.tags && !tagsInlineUnderTitle && showTags && ticketTagsRef && onTagsChange) {
-    columns.push({
-      key: 'tags',
-      col: {
-        title: t('fields.tags', 'Tags'),
-        dataIndex: 'tags',
-        width: '8%',
-        sortable: false,
-        render: (_value: string, record: ITicketListItem) => {
-          if (!record.ticket_id) return null;
-          return (
-            <div onClick={(e) => e.stopPropagation()}>
-              <TagManager
-                entityId={record.ticket_id}
-                entityType="ticket"
-                initialTags={ticketTagsRef.current[record.ticket_id] || []}
-                onTagsChange={(tags) => onTagsChange(record.ticket_id!, tags)}
-                size={tagSize}
-              />
-            </div>
-          );
-        },
       }
     });
   }

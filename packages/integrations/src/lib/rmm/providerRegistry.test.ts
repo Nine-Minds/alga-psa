@@ -15,12 +15,11 @@ describe('RMM provider registry', () => {
     });
   });
 
-  it('exposes Level metadata gated by enterprise and feature flag', () => {
+  it('exposes Level metadata gated by enterprise', () => {
     const levelio = getRmmProviderMetadata('levelio');
     expect(levelio).toBeDefined();
     expect(levelio?.title).toBe('Level');
     expect(levelio?.requiresEnterprise).toBe(true);
-    expect(levelio?.featureFlagKey).toBe('levelio-rmm-integration');
     expect(levelio?.capabilities).toEqual({
       connection: true,
       scopeSync: true,
@@ -30,12 +29,11 @@ describe('RMM provider registry', () => {
     });
   });
 
-  it('exposes Huntress metadata gated by enterprise and feature flag', () => {
+  it('exposes Huntress metadata gated by enterprise', () => {
     const huntress = getRmmProviderMetadata('huntress');
     expect(huntress).toBeDefined();
     expect(huntress?.title).toBe('Huntress');
     expect(huntress?.requiresEnterprise).toBe(true);
-    expect(huntress?.featureFlagKey).toBe('huntress-rmm-integration');
     expect(huntress?.capabilities).toEqual({
       connection: true,
       scopeSync: true,

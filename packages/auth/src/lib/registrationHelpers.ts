@@ -4,12 +4,14 @@
 // This is a temporary duplication to break the auth <-> users cycle
 
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { withTransaction, withAdminTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction, withAdminTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import User from '@alga-psa/db/models/user';
 import logger from '@alga-psa/core/logger';
 import { checkRegistrationLimit, formatRateLimitError } from './security/rateLimiting';
+
+const REGISTRATION_TENANT_DISCOVERY = 'tenant-discovery';
 
 interface IRegistrationResult {
   success: boolean;
@@ -17,17 +19,21 @@ interface IRegistrationResult {
   registrationId?: string;
 }
 
+interface RegistrationRoleRow {
+  role_id: string;
+  role_name?: string | null;
+}
+
 export async function verifyContactEmail(email: string): Promise<{ exists: boolean; isActive: boolean; clientId?: string; tenant?: string }> {
   try {
     const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
-      return await trx('contacts')
-        .join('clients', function() {
-          this.on('clients.client_id', '=', 'contacts.client_id')
-              .andOn('clients.tenant', '=', 'contacts.tenant');
-        })
+      const db = tenantDb(trx, REGISTRATION_TENANT_DISCOVERY);
+      const contactQuery = db
+        .unscoped('contacts', 'tenant discovery for contact email verification')
         .where({ 'contacts.email': email.toLowerCase() })
-        .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.tenant')
-        .first();
+        .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.tenant');
+      db.tenantJoin(contactQuery, 'clients', 'clients.client_id', 'contacts.client_id');
+      return (await contactQuery.first()) as any;
     });
 
     if (!contact) {
@@ -69,14 +75,13 @@ export async function initiateRegistration(
     }
 
     if (contactVerification.exists) {
-      const contact = await adminDb('contacts')
-        .join('clients', function() {
-          this.on('contacts.client_id', '=', 'clients.client_id')
-              .andOn('contacts.tenant', '=', 'clients.tenant');
-        })
+      const db = tenantDb(adminDb, REGISTRATION_TENANT_DISCOVERY);
+      const contactQuery = db
+        .unscoped('contacts', 'tenant discovery for contact-based registration')
         .where('contacts.email', email)
-        .select('clients.client_id', 'clients.tenant')
-        .first();
+        .select('clients.client_id', 'clients.tenant');
+      db.tenantJoin(contactQuery, 'clients', 'contacts.client_id', 'clients.client_id');
+      const contact = (await contactQuery.first()) as any;
 
       if (!contact?.tenant) {
         return { success: false, error: "Contact client not found" };
@@ -111,14 +116,13 @@ async function registerContactUser(
 
   try {
     return await withTransaction(adminDb, async (trx: Knex.Transaction) => {
-      const contact = await trx('contacts')
-        .join('clients', function() {
-          this.on('contacts.client_id', '=', 'clients.client_id')
-              .andOn('contacts.tenant', '=', 'clients.tenant');
-        })
+      const db = tenantDb(trx, REGISTRATION_TENANT_DISCOVERY);
+      const contactQuery = db
+        .unscoped('contacts', 'tenant discovery for contact-based registration')
         .where({ 'contacts.email': email })
-        .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.full_name', 'clients.tenant')
-        .first();
+        .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.full_name', 'clients.tenant');
+      db.tenantJoin(contactQuery, 'clients', 'contacts.client_id', 'clients.client_id');
+      const contact = (await contactQuery.first()) as any;
 
       if (!contact) {
         return { success: false, error: 'Contact not found' };
@@ -128,7 +132,7 @@ async function registerContactUser(
         return { success: false, error: 'Contact is inactive' };
       }
 
-      const existingUser = await trx('users')
+      const existingUser = await tenantDb(trx, contact.tenant).table('users')
         .where({ email })
         .first();
 
@@ -141,7 +145,7 @@ async function registerContactUser(
       const lastName = nameParts.slice(1).join(' ') || '';
 
       const hashedPassword = await hashPassword(password);
-      const [user] = await trx('users')
+      const [user] = await tenantDb(trx, contact.tenant).table('users')
         .insert({
           email: email.toLowerCase(),
           username: email.toLowerCase(),
@@ -156,7 +160,7 @@ async function registerContactUser(
         })
         .returning('*');
 
-      const roles = await trx('roles').where({ tenant: contact.tenant });
+      const roles = await tenantDb(trx, contact.tenant).table<RegistrationRoleRow>('roles');
       const userRole = roles.find(r =>
         r.role_name && r.role_name.toLowerCase() === 'user'
       );
@@ -165,7 +169,7 @@ async function registerContactUser(
         throw new Error('User role not found');
       }
 
-      await trx('user_roles').insert({
+      await tenantDb(trx, contact.tenant).table('user_roles').insert({
         tenant: contact.tenant,
         user_id: user.user_id,
         role_id: userRole.role_id

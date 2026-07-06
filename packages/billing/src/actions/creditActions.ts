@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { auditLog } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { IInvoice, IInvoiceCharge } from '@alga-psa/types';
@@ -19,6 +19,62 @@ import {
     buildCreditNoteCreatedPayload,
 } from '@alga-psa/workflow-streams';
 import { enqueueCreditApplication } from '../services/accountingSync/syncProducers';
+
+type DbRow = Record<string, any>;
+
+type ClientCreditRow = DbRow & {
+    client_id: string;
+    credit_balance: number;
+    default_currency_code?: string | null;
+};
+
+type CreditBillingSettingsRow = DbRow & {
+    enable_credit_expiration?: boolean | null;
+    credit_expiration_days?: number | null;
+};
+
+type CreditInvoiceRow = IInvoice & DbRow;
+type CreditTransactionRow = Omit<ITransaction, 'expiration_date' | 'invoice_id' | 'metadata'> & DbRow & {
+    expiration_date?: string | null;
+    invoice_id?: string | null;
+    metadata?: Record<string, any> | null;
+};
+type CreditTrackingRow = Omit<ICreditTracking, 'expiration_date'> & DbRow & {
+    expiration_date?: string | null;
+    transaction_metadata?: Record<string, any> | null;
+};
+type CreditAllocationRow = DbRow & {
+    amount: number;
+    total_applied?: string | number | null;
+};
+
+type CreditActionTableRows = {
+    clients: ClientCreditRow;
+    client_billing_settings: CreditBillingSettingsRow;
+    default_billing_settings: CreditBillingSettingsRow;
+    invoices: CreditInvoiceRow;
+    transactions: CreditTransactionRow;
+    credit_tracking: CreditTrackingRow;
+    credit_allocations: CreditAllocationRow;
+};
+
+function tenantScopedTable<TableName extends keyof CreditActionTableRows>(
+    conn: Knex | Knex.Transaction,
+    tenant: string,
+    tableExpression: TableName
+): Knex.QueryBuilder<CreditActionTableRows[TableName], CreditActionTableRows[TableName][]>;
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+    conn: Knex | Knex.Transaction,
+    tenant: string,
+    tableExpression: string
+): Knex.QueryBuilder<Row, Row[]>;
+function tenantScopedTable(
+    conn: Knex | Knex.Transaction,
+    tenant: string,
+    tableExpression: string
+) {
+    return tenantDb(conn, tenant).table(tableExpression);
+}
 
 type CreditInvoicePeriodSummary = {
     service_period_start: string | null;
@@ -145,7 +201,7 @@ async function loadCreditLineageInvoice(
     if (metadataSourceCreditId && !visitedCreditIds.has(metadataSourceCreditId)) {
         visitedCreditIds.add(metadataSourceCreditId);
 
-        const sourceCredit = await trx('credit_tracking')
+        const sourceCredit = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 credit_id: metadataSourceCreditId,
                 tenant,
@@ -153,7 +209,7 @@ async function loadCreditLineageInvoice(
             .first();
 
         if (sourceCredit) {
-            const sourceTransaction = await trx('transactions')
+            const sourceTransaction = await tenantScopedTable(trx, tenant, 'transactions')
                 .where({
                     transaction_id: sourceCredit.transaction_id,
                     tenant,
@@ -165,7 +221,7 @@ async function loadCreditLineageInvoice(
                     trx,
                     tenant,
                     sourceTransaction.invoice_id,
-                    sourceTransaction.metadata,
+                    sourceTransaction.metadata ?? undefined,
                     visitedCreditIds
                 );
 
@@ -246,14 +302,14 @@ const calculateNewBalance = withAuth(async (
     const { knex } = await createTenantKnex();
 
     if (trx) {
-        const [client] = await trx('clients')
-            .where({ client_id: clientId, tenant })
+        const [client] = await tenantScopedTable(trx, tenant, 'clients')
+            .where({ client_id: clientId })
             .select('credit_balance');
         return client.credit_balance + changeAmount;
     } else {
         return await withTransaction(knex, async (transaction: Knex.Transaction) => {
-            const [client] = await transaction('clients')
-                .where({ client_id: clientId, tenant })
+            const [client] = await tenantScopedTable(transaction, tenant, 'clients')
+                .where({ client_id: clientId })
                 .select('credit_balance');
             return client.credit_balance + changeAmount;
         });
@@ -294,8 +350,8 @@ export const validateCreditBalance = withAuth(async (
             const now = new Date().toISOString();
 
             // Update the client's credit balance to match the calculated balance
-            await trx('clients')
-                .where({ client_id: clientId, tenant })
+            await tenantScopedTable(trx, tenant, 'clients')
+                .where({ client_id: clientId })
                 .update({
                     credit_balance: validationResult.expectedBalance,
                     updated_at: now
@@ -415,7 +471,7 @@ export const createPrepaymentInvoice = withAuth(async (
 
     // Verify client exists
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('clients')
+        return await tenantScopedTable(trx, tenant, 'clients')
             .where({
                 client_id: clientId,
                 tenant
@@ -439,31 +495,30 @@ export const createPrepaymentInvoice = withAuth(async (
 
     const createdInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Get client's credit expiration settings or default settings
-        const clientSettings = await trx('client_billing_settings')
+        const clientSettings = await tenantScopedTable(trx, tenant, 'client_billing_settings')
             .where({
                 client_id: clientId,
                 tenant
             })
             .first();
         
-        const defaultSettings = await trx('default_billing_settings')
-            .where({ tenant })
+        const defaultSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
             .first();
         
         // Determine if credit expiration is enabled
         // Client setting overrides default, if not specified use default
         let isCreditExpirationEnabled = true; // Default to true if no settings found
-        if (clientSettings?.enable_credit_expiration !== undefined) {
+        if (typeof clientSettings?.enable_credit_expiration === 'boolean') {
             isCreditExpirationEnabled = clientSettings.enable_credit_expiration;
-        } else if (defaultSettings?.enable_credit_expiration !== undefined) {
+        } else if (typeof defaultSettings?.enable_credit_expiration === 'boolean') {
             isCreditExpirationEnabled = defaultSettings.enable_credit_expiration;
         }
         
         // Determine expiration days - use client setting if available, otherwise use default
         let expirationDays: number | undefined;
-        if (clientSettings?.credit_expiration_days !== undefined) {
+        if (typeof clientSettings?.credit_expiration_days === 'number') {
             expirationDays = clientSettings.credit_expiration_days;
-        } else if (defaultSettings?.credit_expiration_days !== undefined) {
+        } else if (typeof defaultSettings?.credit_expiration_days === 'number') {
             expirationDays = defaultSettings.credit_expiration_days;
         }
         
@@ -489,7 +544,7 @@ export const createPrepaymentInvoice = withAuth(async (
         const clientCurrency = client.default_currency_code || 'USD';
 
         // Create the prepayment invoice
-        const [createdInvoice] = await trx('invoices')
+        const [createdInvoice] = await tenantScopedTable(trx, tenant, 'invoices')
             .insert({
                 client_id: clientId,
                 tenant,
@@ -512,7 +567,7 @@ export const createPrepaymentInvoice = withAuth(async (
             .returning('*');
 
         // Create credit issuance transaction
-        const currentBalance = await trx('transactions')
+        const currentBalance = await tenantScopedTable(trx, tenant, 'transactions')
             .where({
                 client_id: clientId,
                 tenant
@@ -543,7 +598,7 @@ export const createPrepaymentInvoice = withAuth(async (
         });
         
         // Log the SQL query that would be executed
-        const query = trx('transactions')
+        const query = tenantScopedTable(trx, tenant, 'transactions')
             .insert({
                 transaction_id: transactionId,
                 client_id: clientId,
@@ -562,7 +617,7 @@ export const createPrepaymentInvoice = withAuth(async (
         console.log('createPrepaymentInvoice: Transaction bindings:', query.bindings);
         
         try {
-            await trx('transactions').insert({
+            await tenantScopedTable(trx, tenant, 'transactions').insert({
                 transaction_id: transactionId,
                 client_id: clientId,
                 invoice_id: createdInvoice.invoice_id,
@@ -599,7 +654,7 @@ export const createPrepaymentInvoice = withAuth(async (
         });
         
         try {
-            await trx('credit_tracking').insert({
+            await tenantScopedTable(trx, tenant, 'credit_tracking').insert({
                 credit_id: creditId,
                 tenant,
                 client_id: clientId,
@@ -615,16 +670,16 @@ export const createPrepaymentInvoice = withAuth(async (
             console.log('createPrepaymentInvoice: Credit tracking entry created successfully');
             
             // Verify the transaction and credit tracking entries were created correctly
-            const createdTransaction = await trx('transactions')
-                .where({ transaction_id: transactionId, tenant })
+            const createdTransaction = await tenantScopedTable(trx, tenant, 'transactions')
+                .where({ transaction_id: transactionId })
                 .first();
             console.log('createPrepaymentInvoice: Verified transaction:', {
                 transaction_id: createdTransaction?.transaction_id,
                 expiration_date: createdTransaction?.expiration_date
             });
             
-            const createdCreditTracking = await trx('credit_tracking')
-                .where({ credit_id: creditId, tenant })
+            const createdCreditTracking = await tenantScopedTable(trx, tenant, 'credit_tracking')
+                .where({ credit_id: creditId })
                 .first();
             console.log('createPrepaymentInvoice: Verified credit tracking:', {
                 credit_id: createdCreditTracking?.credit_id,
@@ -732,7 +787,7 @@ export const applyCreditToInvoice = withAuth(async (
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Check if the invoice already has credit applied and get its currency
-        const invoice = await trx('invoices')
+        const invoice = await tenantScopedTable(trx, tenant, 'invoices')
             .where({
                 invoice_id: invoiceId,
                 tenant
@@ -747,7 +802,7 @@ export const applyCreditToInvoice = withAuth(async (
         const invoiceCurrency = invoice.currency_code || 'USD';
         
         // Check if credit has already been applied to this invoice
-        const existingCreditAllocations = await trx('credit_allocations')
+        const existingCreditAllocations = await tenantScopedTable(trx, tenant, 'credit_allocations')
             .where({
                 invoice_id: invoiceId,
                 tenant
@@ -762,13 +817,16 @@ export const applyCreditToInvoice = withAuth(async (
             console.log(`Invoice ${invoiceId} already has ${alreadyAppliedCredit} credit applied. Checking if additional credit can be applied.`);
             
             // Get the invoice total to ensure we don't apply more credit than the invoice amount
-            const invoiceTotal = await trx('invoices')
+            const invoiceTotal = await tenantScopedTable(trx, tenant, 'invoices')
                 .where({
                     invoice_id: invoiceId,
                     tenant
                 })
                 .select('total_amount', 'subtotal', 'tax')
                 .first();
+            if (!invoiceTotal) {
+                throw new Error(`Invoice ${invoiceId} not found`);
+            }
             
             // Calculate the maximum additional credit that can be applied
             const invoiceFullAmount = Number(invoiceTotal.subtotal) + Number(invoiceTotal.tax);
@@ -786,8 +844,8 @@ export const applyCreditToInvoice = withAuth(async (
         }
         
         // Get current credit balance
-        const [client] = await trx('clients')
-            .where({ client_id: clientId, tenant })
+        const [client] = await tenantScopedTable(trx, tenant, 'clients')
+            .where({ client_id: clientId })
             .select('credit_balance');
         
         // Calculate the maximum amount of credit we can apply
@@ -801,7 +859,7 @@ export const applyCreditToInvoice = withAuth(async (
         
         // Get all active credit tracking entries for this client in the same currency as the invoice
         const now = new Date().toISOString();
-        const creditEntries = await trx('credit_tracking')
+        const creditEntries = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 client_id: clientId,
                 tenant,
@@ -820,7 +878,7 @@ export const applyCreditToInvoice = withAuth(async (
 
         if (creditEntries.length === 0) {
             // Check if there are credits in other currencies
-            const otherCurrencyCredits = await trx('credit_tracking')
+            const otherCurrencyCredits = await tenantScopedTable(trx, tenant, 'credit_tracking')
                 .where({
                     client_id: clientId,
                     tenant,
@@ -855,8 +913,8 @@ export const applyCreditToInvoice = withAuth(async (
             
             // Update the credit tracking entry
             const newRemainingAmount = Number(credit.remaining_amount) - amountToApplyFromCredit;
-            await trx('credit_tracking')
-                .where({ credit_id: credit.credit_id, tenant })
+            await tenantScopedTable(trx, tenant, 'credit_tracking')
+                .where({ credit_id: credit.credit_id })
                 .update({
                     remaining_amount: newRemainingAmount,
                     updated_at: now
@@ -883,7 +941,7 @@ export const applyCreditToInvoice = withAuth(async (
         const newBalance = availableCredit - totalAppliedAmount;
         
         // Create the main credit application transaction
-        const [creditTransaction] = await trx('transactions').insert({
+        const [creditTransaction] = await tenantScopedTable(trx, tenant, 'transactions').insert({
             transaction_id: uuidv4(),
             client_id: clientId,
             invoice_id: invoiceId,
@@ -900,7 +958,7 @@ export const applyCreditToInvoice = withAuth(async (
 
         // Create credit allocation record
         const allocationId = uuidv4();
-        await trx('credit_allocations').insert({
+        await tenantScopedTable(trx, tenant, 'credit_allocations').insert({
             allocation_id: allocationId,
             transaction_id: creditTransaction.transaction_id,
             invoice_id: invoiceId,
@@ -913,7 +971,7 @@ export const applyCreditToInvoice = withAuth(async (
         // immutable after finalization — credit application only moves
         // credit_applied; balance due is derived (total − credit − payments).
         await Promise.all([
-            trx('invoices')
+            tenantScopedTable(trx, tenant, 'invoices')
                 .where({
                     invoice_id: invoiceId,
                     tenant
@@ -921,7 +979,7 @@ export const applyCreditToInvoice = withAuth(async (
                 .update({
                     credit_applied: trx.raw('COALESCE(credit_applied, 0) + ?', [totalAppliedAmount])
                 }),
-            trx('clients')
+            tenantScopedTable(trx, tenant, 'clients')
                 .where({
                     client_id: clientId,
                     tenant
@@ -934,8 +992,8 @@ export const applyCreditToInvoice = withAuth(async (
         
         // For each applied credit, create a related_transaction_id reference
         for (const appliedCredit of appliedCredits) {
-            await trx('transactions')
-                .where({ transaction_id: creditTransaction.transaction_id, tenant })
+            await tenantScopedTable(trx, tenant, 'transactions')
+                .where({ transaction_id: creditTransaction.transaction_id })
                 .update({
                     related_transaction_id: appliedCredit.transactionId
                 });
@@ -968,11 +1026,11 @@ export const applyCreditToInvoice = withAuth(async (
         // map one credit note per op so QBO knows which CreditMemo to link).
         // Lookups happen inside the transaction so we see committed data.
         for (const appliedCredit of appliedCredits) {
-            const creditTx = await trx('transactions')
-                .where({ transaction_id: appliedCredit.transactionId, tenant })
+            const creditTx = await tenantScopedTable(trx, tenant, 'transactions')
+                .where({ transaction_id: appliedCredit.transactionId })
                 .select('invoice_id')
                 .first();
-            const creditNoteInvoiceId: string | undefined = creditTx?.invoice_id;
+            const creditNoteInvoiceId: string | undefined = creditTx?.invoice_id ?? undefined;
             if (creditNoteInvoiceId) {
                 creditSyncOps.push({
                     // Key by the per-credit transaction id: one allocation row can
@@ -1035,7 +1093,7 @@ export const getCreditHistory = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const query = trx('transactions')
+        const query = tenantScopedTable(trx, tenant, 'transactions')
             .where({
                 client_id: clientId,
                 tenant
@@ -1050,7 +1108,7 @@ export const getCreditHistory = withAuth(async (
             query.where('created_at', '<=', endDate);
         }
 
-        return await query;
+        return await query as unknown as ITransaction[];
     });
 });
 
@@ -1088,7 +1146,7 @@ export const listClientCredits = withAuth(async (
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Build base query
-        const baseQuery = trx('credit_tracking')
+        const baseQuery = tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 'credit_tracking.client_id': clientId,
                 'credit_tracking.tenant': tenant
@@ -1105,12 +1163,15 @@ export const listClientCredits = withAuth(async (
         const totalPages = Math.ceil(total / pageSize);
 
         // Get paginated credits with transaction details
-        const credits = await baseQuery
-            .select('credit_tracking.*')
-            .leftJoin('transactions', function() {
-                this.on('credit_tracking.transaction_id', '=', 'transactions.transaction_id')
-                    .andOn('credit_tracking.tenant', '=', 'transactions.tenant');
-            })
+        const creditsQuery = baseQuery.select('credit_tracking.*');
+        tenantDb(trx, tenant).tenantJoin(
+            creditsQuery,
+            'transactions',
+            'credit_tracking.transaction_id',
+            'transactions.transaction_id',
+            { type: 'left' }
+        );
+        const credits = await creditsQuery
             .select(
                 'transactions.description as transaction_description',
                 'transactions.type as transaction_type',
@@ -1124,7 +1185,7 @@ export const listClientCredits = withAuth(async (
                 { column: 'created_at', order: 'desc' }
             ])
             .limit(pageSize)
-            .offset(offset);
+            .offset(offset) as unknown as CreditTrackingRow[];
 
         // Add direct or inherited source-invoice details if available.
         const invoiceCache = new Map<string, Promise<CreditLineageInvoiceContext>>();
@@ -1134,7 +1195,7 @@ export const listClientCredits = withAuth(async (
                     trx,
                     tenant,
                     credit.invoice_id,
-                    credit.transaction_metadata,
+                    credit.transaction_metadata ?? undefined,
                 );
 
                 return {
@@ -1153,7 +1214,7 @@ export const listClientCredits = withAuth(async (
         );
 
         return {
-            credits: creditsWithInvoices,
+            credits: creditsWithInvoices as unknown as ICreditTracking[],
             total,
             page,
             pageSize,
@@ -1189,7 +1250,7 @@ export const getCreditDetails = withAuth(async (
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Get credit details
-        const credit = await trx('credit_tracking')
+        const credit = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 credit_id: creditId,
                 tenant
@@ -1201,7 +1262,7 @@ export const getCreditDetails = withAuth(async (
         }
 
         // Get original transaction
-        const originalTransaction = await trx('transactions')
+        const originalTransaction = await tenantScopedTable(trx, tenant, 'transactions')
             .where({
                 transaction_id: credit.transaction_id,
                 tenant
@@ -1209,7 +1270,7 @@ export const getCreditDetails = withAuth(async (
             .first();
 
         // Get all related transactions (applications, adjustments, expirations)
-        const relatedTransactions = await trx('transactions')
+        const relatedTransactions = await tenantScopedTable(trx, tenant, 'transactions')
             .where({
                 related_transaction_id: credit.transaction_id,
                 tenant
@@ -1238,7 +1299,7 @@ export const getCreditDetails = withAuth(async (
                 trx,
                 tenant,
                 originalTransaction.invoice_id,
-                originalTransaction.metadata,
+                originalTransaction.metadata ?? undefined,
             );
             invoice = lineage.invoice;
             invoiceSummary = lineage.summary;
@@ -1257,7 +1318,7 @@ export const getCreditDetails = withAuth(async (
                 source_credit_id: sourceCreditId ?? undefined,
                 source_invoice_id: sourceInvoiceId ?? undefined,
                 lineage_origin: lineageOrigin ?? undefined,
-            },
+            } as unknown as ICreditTracking,
             transactions,
             invoice,
             invoice_date_basis: invoiceSummary?.invoice_date_basis,
@@ -1291,7 +1352,7 @@ export const updateCreditExpiration = withAuth(async (
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Get credit details
-        const credit = await trx('credit_tracking')
+        const credit = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 credit_id: creditId,
                 tenant
@@ -1308,7 +1369,7 @@ export const updateCreditExpiration = withAuth(async (
         }
 
         // Get original transaction
-        const originalTransaction = await trx('transactions')
+        const originalTransaction = await tenantScopedTable(trx, tenant, 'transactions')
             .where({
                 transaction_id: credit.transaction_id,
                 tenant
@@ -1322,7 +1383,7 @@ export const updateCreditExpiration = withAuth(async (
         const now = new Date().toISOString();
 
         // Update the credit tracking entry
-        const [updatedCredit] = await trx('credit_tracking')
+        const [updatedCredit] = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 credit_id: creditId,
                 tenant
@@ -1334,7 +1395,7 @@ export const updateCreditExpiration = withAuth(async (
             .returning('*');
 
         // Update the original transaction's expiration date
-        await trx('transactions')
+        await tenantScopedTable(trx, tenant, 'transactions')
             .where({
                 transaction_id: credit.transaction_id,
                 tenant
@@ -1363,7 +1424,7 @@ export const updateCreditExpiration = withAuth(async (
             }
         );
 
-        return updatedCredit;
+        return updatedCredit as unknown as ICreditTracking;
     });
 });
 
@@ -1390,7 +1451,7 @@ export const manuallyExpireCredit = withAuth(async (
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Get credit details
-        const credit = await trx('credit_tracking')
+        const credit = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 credit_id: creditId,
                 tenant
@@ -1415,7 +1476,7 @@ export const manuallyExpireCredit = withAuth(async (
         const expirationTxId = uuidv4();
 
         // Create credit_expiration transaction
-        await trx('transactions').insert({
+        await tenantScopedTable(trx, tenant, 'transactions').insert({
             transaction_id: expirationTxId,
             client_id: credit.client_id,
             amount: -Number(credit.remaining_amount), // Negative amount to reduce the balance
@@ -1428,7 +1489,7 @@ export const manuallyExpireCredit = withAuth(async (
         });
 
         // Update client credit balance
-        const [client] = await trx('clients')
+        const [client] = await tenantScopedTable(trx, tenant, 'clients')
             .where({
                 client_id: credit.client_id,
                 tenant
@@ -1437,7 +1498,7 @@ export const manuallyExpireCredit = withAuth(async (
 
         const newBalance = Number(client.credit_balance) - Number(credit.remaining_amount);
         
-        await trx('clients')
+        await tenantScopedTable(trx, tenant, 'clients')
             .where({
                 client_id: credit.client_id,
                 tenant
@@ -1448,7 +1509,7 @@ export const manuallyExpireCredit = withAuth(async (
             });
 
         // Update the credit tracking entry
-        const [updatedCredit] = await trx('credit_tracking')
+        const [updatedCredit] = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 credit_id: creditId,
                 tenant
@@ -1482,7 +1543,7 @@ export const manuallyExpireCredit = withAuth(async (
             }
         );
 
-        return updatedCredit;
+        return updatedCredit as unknown as ICreditTracking;
     });
 });
 
@@ -1517,7 +1578,7 @@ export const transferCredit = withAuth(async (
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Get source credit details
-        const sourceCredit = await trx('credit_tracking')
+        const sourceCredit = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 credit_id: sourceCreditId,
                 tenant
@@ -1538,7 +1599,7 @@ export const transferCredit = withAuth(async (
         }
 
         // Verify target client exists
-        const targetClient = await trx('clients')
+        const targetClient = await tenantScopedTable(trx, tenant, 'clients')
             .where({
                 client_id: targetClientId,
                 tenant
@@ -1550,7 +1611,7 @@ export const transferCredit = withAuth(async (
         }
 
         const now = new Date().toISOString();
-        const sourceCreditTransaction = await trx('transactions')
+        const sourceCreditTransaction = await tenantScopedTable(trx, tenant, 'transactions')
             .where({
                 transaction_id: sourceCredit.transaction_id,
                 tenant,
@@ -1560,12 +1621,12 @@ export const transferCredit = withAuth(async (
             trx,
             tenant,
             sourceCreditTransaction?.invoice_id,
-            sourceCreditTransaction?.metadata,
+            sourceCreditTransaction?.metadata ?? undefined,
         );
 
         // 1. Reduce source credit remaining amount
         const newSourceRemainingAmount = Number(sourceCredit.remaining_amount) - amount;
-        await trx('credit_tracking')
+        await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 credit_id: sourceCreditId,
                 tenant
@@ -1577,7 +1638,7 @@ export const transferCredit = withAuth(async (
 
         // 2. Create transfer-out transaction for source client
         const sourceTransactionId = uuidv4();
-        await trx('transactions').insert({
+        await tenantScopedTable(trx, tenant, 'transactions').insert({
             transaction_id: sourceTransactionId,
             client_id: sourceCredit.client_id,
             amount: -amount,
@@ -1599,7 +1660,7 @@ export const transferCredit = withAuth(async (
         });
 
         // 3. Update source client credit balance
-        const [sourceClient] = await trx('clients')
+        const [sourceClient] = await tenantScopedTable(trx, tenant, 'clients')
             .where({
                 client_id: sourceCredit.client_id,
                 tenant
@@ -1607,7 +1668,7 @@ export const transferCredit = withAuth(async (
             .select('credit_balance');
 
         const newSourceBalance = Number(sourceClient.credit_balance) - amount;
-        await trx('clients')
+        await tenantScopedTable(trx, tenant, 'clients')
             .where({
                 client_id: sourceCredit.client_id,
                 tenant
@@ -1619,7 +1680,7 @@ export const transferCredit = withAuth(async (
 
         // 4. Create transfer-in transaction for target client
         const targetTransactionId = uuidv4();
-        await trx('transactions').insert({
+        await tenantScopedTable(trx, tenant, 'transactions').insert({
             transaction_id: targetTransactionId,
             client_id: targetClientId,
             amount: amount,
@@ -1640,7 +1701,7 @@ export const transferCredit = withAuth(async (
         });
 
         // 5. Update target client credit balance
-        const [targetClientData] = await trx('clients')
+        const [targetClientData] = await tenantScopedTable(trx, tenant, 'clients')
             .where({
                 client_id: targetClientId,
                 tenant
@@ -1648,7 +1709,7 @@ export const transferCredit = withAuth(async (
             .select('credit_balance');
 
         const newTargetBalance = Number(targetClientData.credit_balance) + amount;
-        await trx('clients')
+        await tenantScopedTable(trx, tenant, 'clients')
             .where({
                 client_id: targetClientId,
                 tenant
@@ -1661,7 +1722,7 @@ export const transferCredit = withAuth(async (
         // 6. Create new credit tracking entry for target client
         // Inherit expiration date from source credit if it exists
         const newCreditId = uuidv4();
-        const [newCredit] = await trx('credit_tracking').insert({
+        const [newCredit] = await tenantScopedTable(trx, tenant, 'credit_tracking').insert({
             credit_id: newCreditId,
             tenant,
             client_id: targetClientId,
@@ -1704,6 +1765,6 @@ export const transferCredit = withAuth(async (
             }
         );
 
-        return newCredit;
+        return newCredit as unknown as ICreditTracking;
     });
 });

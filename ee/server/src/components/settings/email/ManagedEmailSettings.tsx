@@ -15,7 +15,8 @@ import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Ale
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Globe, Send, Inbox, Mail, Eye, EyeOff, Lock } from 'lucide-react';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { Globe, Send, Inbox, Mail, Eye, EyeOff, Lock, CheckCircle, XCircle } from 'lucide-react';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { useTier } from 'server/src/context/TierContext';
 import {
@@ -28,7 +29,7 @@ import {
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 import type { EmailProvider } from '@alga-psa/integrations/components';
 import type { TenantEmailSettings, EmailProviderConfig } from 'server/src/types/email.types';
-import { getEmailSettings, updateEmailSettings, getEmailProviders } from '@alga-psa/integrations/actions';
+import { getEmailSettings, updateEmailSettings, getEmailProviders, testOutboundEmail } from '@alga-psa/integrations/actions';
 import ManagedDomainList from './ManagedDomainList';
 
 type OutboundProvider = 'resend' | 'smtp';
@@ -108,6 +109,9 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const [outboundProvider, setOutboundProvider] = useState<OutboundProvider>('resend');
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
   const [savingSmtp, setSavingSmtp] = useState(false);
+  const [smtpTestRecipient, setSmtpTestRecipient] = useState('');
+  const [testingSmtp, setTestingSmtp] = useState(false);
+  const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
   const [pendingDomainRemoval, setPendingDomainRemoval] = useState<string | null>(null);
 
   useEffect(() => {
@@ -374,7 +378,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     return emailSettings?.providerConfigs.find(c => c.providerType === 'smtp');
   };
 
-  const updateSmtpField = (field: string, value: string | number) => {
+  const updateSmtpField = (field: string, value: string | number | boolean) => {
     if (!emailSettings) return;
     const smtpConfig = getSmtpConfig();
     if (!smtpConfig) return;
@@ -387,34 +391,62 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     setEmailSettings({ ...emailSettings, providerConfigs: updatedConfigs });
   };
 
-  const handleSaveSmtp = async () => {
+  const persistSmtpSettings = async (): Promise<TenantEmailSettings | null> => {
     const smtpConfig = getSmtpConfig();
-    if (!smtpConfig || !emailSettings) return;
+    if (!smtpConfig || !emailSettings) return null;
 
     const { host, from } = smtpConfig.config;
     if (!host?.trim()) {
       toast.error(t('managed.messages.smtpHostRequired'));
-      return;
+      return null;
     }
     if (!from?.trim()) {
       toast.error(t('managed.messages.fromAddressRequired'));
-      return;
+      return null;
     }
 
+    const updated = await updateEmailSettings({
+      emailProvider: 'smtp',
+      providerConfigs: emailSettings.providerConfigs,
+      defaultFromDomain: from.trim().split('@').pop() || emailSettings.defaultFromDomain
+    });
+    setEmailSettings(updated);
+    return updated;
+  };
+
+  const handleSaveSmtp = async () => {
     setSavingSmtp(true);
     try {
-      const updated = await updateEmailSettings({
-        emailProvider: 'smtp',
-        providerConfigs: emailSettings.providerConfigs,
-        defaultFromDomain: from.trim().split('@').pop() || emailSettings.defaultFromDomain
-      });
-      setEmailSettings(updated);
-      toast.success(t('managed.messages.smtpSaved'));
+      const updated = await persistSmtpSettings();
+      if (updated) {
+        toast.success(t('managed.messages.smtpSaved'));
+      }
     } catch (err: any) {
       console.error('[ManagedEmailSettings] Failed to save SMTP settings', err);
       toast.error(err.message || t('managed.messages.smtpSaveFailed'));
     } finally {
       setSavingSmtp(false);
+    }
+  };
+
+  const handleTestSmtp = async () => {
+    setTestingSmtp(true);
+    setSmtpTestResult(null);
+    try {
+      // Persist current edits first so the test reflects what's on screen.
+      // The masked password ('***') is resolved to the stored secret server-side.
+      const updated = await persistSmtpSettings();
+      if (!updated) return;
+      const result = await testOutboundEmail(smtpTestRecipient.trim() || undefined);
+      setSmtpTestResult(result);
+    } catch (err: any) {
+      console.error('[ManagedEmailSettings] Failed to test outbound email', err);
+      setSmtpTestResult({
+        success: false,
+        error: err?.message || t('managed.messages.testOutboundFailed')
+      });
+    } finally {
+      setTestingSmtp(false);
     }
   };
 
@@ -673,6 +705,10 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                       </div>
                     </div>
 
+                    <p className="text-sm text-muted-foreground">
+                      {t('managed.outbound.smtp.authHint')}
+                    </p>
+
                     <div>
                       <Label htmlFor="smtp-from">{t('managed.outbound.smtp.fromLabel')}</Label>
                       <Input
@@ -686,14 +722,98 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                       </p>
                     </div>
 
+                    <div className="border-t pt-4 space-y-4">
+                      <h4 className="text-sm font-medium">
+                        {t('managed.outbound.smtp.security.title')}
+                      </h4>
+
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="smtp-secure"
+                          checked={smtpConfig?.config.secure ?? (Number(smtpConfig?.config.port) === 465)}
+                          onCheckedChange={(checked: boolean) => updateSmtpField('secure', checked)}
+                        />
+                        <Label htmlFor="smtp-secure">
+                          {t('managed.outbound.smtp.security.secure')}
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="smtp-require-tls"
+                          checked={smtpConfig?.config.requireTLS ?? false}
+                          onCheckedChange={(checked: boolean) => updateSmtpField('requireTLS', checked)}
+                        />
+                        <Label htmlFor="smtp-require-tls">
+                          {t('managed.outbound.smtp.security.requireTls')}
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="smtp-reject-unauthorized"
+                          checked={smtpConfig?.config.rejectUnauthorized !== false}
+                          onCheckedChange={(checked: boolean) => updateSmtpField('rejectUnauthorized', checked)}
+                        />
+                        <Label htmlFor="smtp-reject-unauthorized">
+                          {t('managed.outbound.smtp.security.verifyCert')}
+                        </Label>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {t('managed.outbound.smtp.security.verifyCertHint')}
+                      </p>
+                    </div>
+
                     <div className="flex justify-end">
                       <Button
                         id="save-smtp-settings"
                         onClick={handleSaveSmtp}
-                        disabled={savingSmtp || loadingOutbound}
+                        disabled={savingSmtp || testingSmtp || loadingOutbound}
                       >
                         {savingSmtp ? t('managed.outbound.smtp.savingButton') : t('managed.outbound.smtp.saveButton')}
                       </Button>
+                    </div>
+
+                    <div className="border-t pt-4 space-y-4">
+                      <h4 className="text-sm font-medium flex items-center gap-2">
+                        <Send className="h-4 w-4" />
+                        {t('managed.outbound.smtp.test.title')}
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {t('managed.outbound.smtp.test.description')}
+                      </p>
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                          <Label htmlFor="test-recipient">
+                            {t('managed.outbound.smtp.test.recipientLabel')}
+                          </Label>
+                          <Input
+                            id="test-recipient"
+                            type="email"
+                            value={smtpTestRecipient}
+                            placeholder={t('managed.outbound.smtp.test.recipientPlaceholder')}
+                            onChange={(e) => setSmtpTestRecipient(e.target.value)}
+                          />
+                        </div>
+                        <Button
+                          id="test-outbound-email"
+                          variant="outline"
+                          onClick={handleTestSmtp}
+                          disabled={testingSmtp || savingSmtp || loadingOutbound}
+                        >
+                          {testingSmtp
+                            ? t('managed.outbound.smtp.test.testingButton')
+                            : t('managed.outbound.smtp.test.runButton')}
+                        </Button>
+                      </div>
+                      {smtpTestResult && (
+                        <div className={`flex items-start gap-2 text-sm ${smtpTestResult.success ? 'text-green-600' : 'text-red-600'}`}>
+                          {smtpTestResult.success
+                            ? <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                            : <XCircle className="h-4 w-4 mt-0.5 shrink-0" />}
+                          <span>{smtpTestResult.success ? smtpTestResult.message : smtpTestResult.error}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

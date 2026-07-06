@@ -4,6 +4,8 @@
  */
 
 import { faker } from '@faker-js/faker';
+import { tenantDb } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import { getConnection } from '../../../lib/db/db';
 import { runWithTenant } from '../../../lib/db';
 
@@ -11,6 +13,10 @@ interface TestSetup {
   tenantId: string;
   apiKey: string;
   userId: string;
+}
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
 }
 
 export async function withTestSetup(): Promise<TestSetup> {
@@ -29,7 +35,7 @@ export async function withTestSetup(): Promise<TestSetup> {
     const db = await getConnection();
     
     // Create tenant
-    await db('tenants').insert({
+    await tenantTable(db, tenantId, 'tenants').insert({
       tenant: tenantId,
       client_name: `Test Client ${faker.company.name()}`,
       phone_number: faker.phone.number(),
@@ -43,7 +49,7 @@ export async function withTestSetup(): Promise<TestSetup> {
     });
 
     // Create user
-    await db('users').insert({
+    await tenantTable(db, tenantId, 'users').insert({
       user_id: userId,
       tenant: tenantId,
       username: faker.internet.username(),
@@ -57,7 +63,7 @@ export async function withTestSetup(): Promise<TestSetup> {
     });
 
     // Create API key
-    await db('api_keys').insert({
+    await tenantTable(db, tenantId, 'api_keys').insert({
       api_key_id: apiKeyId,
       tenant: tenantId,
       user_id: userId,
@@ -70,7 +76,7 @@ export async function withTestSetup(): Promise<TestSetup> {
 
     // Create basic admin role and assign to user
     const adminRoleId = faker.string.uuid();
-    await db('roles').insert({
+    await tenantTable(db, tenantId, 'roles').insert({
       role_id: adminRoleId,
       tenant: tenantId,
       role_name: 'Admin',
@@ -80,14 +86,14 @@ export async function withTestSetup(): Promise<TestSetup> {
     });
 
     // Assign role to user
-    await db('user_roles').insert({
+    await tenantTable(db, tenantId, 'user_roles').insert({
       tenant: tenantId,
       user_id: userId,
       role_id: adminRoleId
     });
 
     const defaultBoardId = faker.string.uuid();
-    await db('boards').insert({
+    await tenantTable(db, tenantId, 'boards').insert({
       board_id: defaultBoardId,
       tenant: tenantId,
       board_name: 'Default',
@@ -108,7 +114,7 @@ export async function withTestSetup(): Promise<TestSetup> {
     ];
 
     for (const status of statusTypes) {
-      await db('statuses').insert({
+      await tenantTable(db, tenantId, 'statuses').insert({
         status_id: faker.string.uuid(),
         tenant: tenantId,
         name: status.name,
@@ -130,7 +136,7 @@ export async function withTestSetup(): Promise<TestSetup> {
     ];
     
     for (const priority of priorities) {
-      await db('priorities').insert({
+      await tenantTable(db, tenantId, 'priorities').insert({
         priority_id: faker.string.uuid(),
         tenant: tenantId,
         priority_name: priority.name,
@@ -186,7 +192,7 @@ export async function withTestSetup(): Promise<TestSetup> {
     // First create permissions in the permissions table
     for (const perm of permissions) {
       const permissionId = faker.string.uuid();
-      await db('permissions').insert({
+      await tenantTable(db, tenantId, 'permissions').insert({
         permission_id: permissionId,
         tenant: tenantId,
         resource: perm.resource,
@@ -195,7 +201,7 @@ export async function withTestSetup(): Promise<TestSetup> {
       });
       
       // Then assign to role
-      await db('role_permissions').insert({
+      await tenantTable(db, tenantId, 'role_permissions').insert({
         tenant: tenantId,
         role_id: adminRoleId,
         permission_id: permissionId

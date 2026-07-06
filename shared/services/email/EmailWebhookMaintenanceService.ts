@@ -1,7 +1,10 @@
 import { getAdminConnection } from '../../db/admin';
+import { tenantDb } from '@alga-psa/db';
 import { EmailProviderConfig } from '../../interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
 import logger from '../../core/logger';
+
+const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
 interface RenewalOptions {
   tenantId?: string;
@@ -68,8 +71,34 @@ export class EmailWebhookMaintenanceService {
     const now = new Date();
     const threshold = new Date(now.getTime() + lookAheadMinutes * 60000);
 
-    let query = knex('email_providers as ep')
-      .join('microsoft_email_provider_config as mpc', 'ep.id', 'mpc.email_provider_id')
+    const providerRoot = tenantId
+      ? tenantDb(knex, tenantId).table('email_providers as ep')
+      : tenantDb(knex, PROVIDER_TENANT_DISCOVERY).unscoped(
+          'email_providers as ep',
+          'cross-tenant Microsoft email webhook renewal candidate discovery'
+        );
+
+    let query = providerRoot;
+    if (tenantId) {
+      tenantDb(knex, tenantId).tenantJoin(
+        query,
+        'microsoft_email_provider_config as mpc',
+        'ep.id',
+        'mpc.email_provider_id',
+        {
+          rootTenantColumn: 'ep.tenant',
+        }
+      );
+    } else {
+      query = tenantDb(knex, PROVIDER_TENANT_DISCOVERY).tenantJoin(
+        query,
+        'microsoft_email_provider_config as mpc',
+        'ep.id',
+        'mpc.email_provider_id',
+        { rootTenantColumn: 'ep.tenant' }
+      );
+    }
+    query = query
       .where('ep.provider_type', 'microsoft')
       .andWhere('ep.is_active', true);
 
@@ -80,10 +109,6 @@ export class EmailWebhookMaintenanceService {
           .orWhere('mpc.webhook_expires_at', '<=', threshold.toISOString())
           .orWhereNull('mpc.webhook_subscription_id');
       });
-    }
-
-    if (tenantId) {
-      query = query.andWhere('ep.tenant', tenantId);
     }
 
     if (providerId) {
@@ -242,15 +267,16 @@ export class EmailWebhookMaintenanceService {
   }): Promise<void> {
     try {
       const knex = await getAdminConnection();
+      const scopedDb = tenantDb(knex, tenant);
       const now = new Date().toISOString();
       
       // Check if health row exists, if not create it
-      const existing = await knex('email_provider_health')
+      const existing = await scopedDb.table('email_provider_health')
         .where('provider_id', providerId)
         .first();
 
       if (existing) {
-        await knex('email_provider_health')
+        await scopedDb.table('email_provider_health')
           .where('provider_id', providerId)
           .update({
             ...status,
@@ -258,7 +284,7 @@ export class EmailWebhookMaintenanceService {
             updated_at: now
           });
       } else {
-        await knex('email_provider_health')
+        await scopedDb.table('email_provider_health')
           .insert({
             provider_id: providerId,
             tenant: tenant, // Fixed: column name is 'tenant', not 'tenant_id'

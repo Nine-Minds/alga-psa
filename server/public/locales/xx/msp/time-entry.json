@@ -29,7 +29,9 @@
       "viewDetails": "11111",
       "manageTimePeriods": "11111",
       "selectWorkItem": "11111",
-      "clearFilter": "11111"
+      "clearFilter": "11111",
+      "remove": "11111",
+      "clear": "11111"
     },
     "states": {
       "inProgress": "11111",
@@ -95,6 +97,24 @@
     },
     "lastEntry": {
       "none": "11111"
+    },
+    "bulk": {
+      "selectedCount": "11111 {{count}} 11111"
+    },
+    "delete": {
+      "success": "11111 {{count}} 11111",
+      "partialFailure": "11111 {{count}} 11111",
+      "error": "11111"
+    },
+    "removePeriod": {
+      "success": "11111 {{count}} 11111",
+      "partialFailure": "11111 {{count}} 11111",
+      "error": "11111"
+    },
+    "remove": {
+      "title": "11111",
+      "message": "11111 {{count}} 11111",
+      "timesheetMessage": "11111 {{count}} 11111"
     }
   },
   "timeEntryForm": {

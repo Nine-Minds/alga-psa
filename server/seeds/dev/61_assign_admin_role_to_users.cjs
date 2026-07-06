@@ -1,3 +1,5 @@
+const { getTenantDb } = require('./_tenant.cjs');
+
 exports.seed = async function(knex) {
   const tenants = await knex('tenants').select('tenant');
   if (!tenants.length) {
@@ -15,19 +17,20 @@ exports.seed = async function(knex) {
   };
 
   for (const { tenant } of tenants) {
-    const roles = await knex('roles')
-      .where({ tenant })
+    const db = await getTenantDb(knex, tenant);
+
+    const roles = await db.table('roles')
       .select('role_id', 'role_name', 'msp');
 
     const roleMap = new Map(
       roles.map((role) => [`${role.msp ? 'msp' : 'client'}:${role.role_name}`, role.role_id])
     );
 
-    const users = await knex('users')
-      .where({ tenant, user_type: 'internal' })
+    const users = await db.table('users')
+      .where({ user_type: 'internal' })
       .select('user_id', 'username');
 
-    await knex('user_roles').where({ tenant }).del();
+    await db.table('user_roles').del();
 
     const userRoles = users
       .map((user) => {
@@ -51,7 +54,7 @@ exports.seed = async function(knex) {
       .filter(Boolean);
 
     if (userRoles.length > 0) {
-      await knex('user_roles').insert(userRoles);
+      await db.table('user_roles').insert(userRoles);
     }
 
     console.log(`Assigned ${userRoles.length} baseline internal roles for tenant ${tenant}`);

@@ -1,41 +1,30 @@
-exports.seed = function(knex) {
-    return knex('tenants').select('tenant').first()
-        .then((tenant) => {
-            if (!tenant) return;
-            return knex('impacts').insert([
-                {
-                    tenant: tenant.tenant,
-                    impact_name: 'Individual Inconvenience',
-                    created_by: knex('users')
-                        .where({
-                            tenant: tenant.tenant,
-                            username: 'glinda'
-                        })
-                        .select('user_id')
-                        .first()
-                },
-                {
-                    tenant: tenant.tenant,
-                    impact_name: 'Local Disruption',
-                    created_by: knex('users')
-                        .where({
-                            tenant: tenant.tenant,
-                            username: 'glinda'
-                        })
-                        .select('user_id')
-                        .first()
-                },
-                {
-                    tenant: tenant.tenant,
-                    impact_name: 'Realm-Wide Repercussions',
-                    created_by: knex('users')
-                        .where({
-                            tenant: tenant.tenant,
-                            username: 'glinda'
-                        })
-                        .select('user_id')
-                        .first()
-                }
-            ]);
-        });
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
+exports.seed = async function(knex) {
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { tenantId, db } = context;
+    const glindaUserId = db.table('users')
+        .where({ username: 'glinda' })
+        .select('user_id')
+        .first();
+
+    return db.table('impacts').insert([
+        {
+            tenant: tenantId,
+            impact_name: 'Individual Inconvenience',
+            created_by: glindaUserId
+        },
+        {
+            tenant: tenantId,
+            impact_name: 'Local Disruption',
+            created_by: glindaUserId
+        },
+        {
+            tenant: tenantId,
+            impact_name: 'Realm-Wide Repercussions',
+            created_by: glindaUserId
+        }
+    ]);
 };

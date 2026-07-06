@@ -508,7 +508,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                           key={service.service_id}
                           className="flex items-center space-x-2 p-1 hover:bg-muted/50 rounded"
                         >
-                          <div className="[&>div]:mb-0">
+                          <div>
                             <Checkbox
                               id={`add-service-${service.service_id}`}
                               checked={selectedServicesToAdd.includes(service.service_id!)}

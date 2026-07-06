@@ -10,6 +10,7 @@
  */
 
 import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { TIER_FEATURES } from '@alga-psa/types';
 import {
   RmmCachedData,
@@ -36,11 +37,12 @@ export async function getAssetRmmData(assetId: string): Promise<RmmCachedData | 
   if (!tenant) {
     throw new Error('No tenant found');
   }
+  const db = tenantDb(knex, tenant);
 
   try {
     // Get base asset info
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where({ asset_id: assetId })
       .select(
         'asset_type',
         'rmm_provider',
@@ -63,8 +65,8 @@ export async function getAssetRmmData(assetId: string): Promise<RmmCachedData | 
       if (asset.asset_type === 'workstation') {
         // Try to select new RMM cached fields, fallback to basic fields if migration hasn't run
         try {
-          extensionData = await knex('workstation_assets')
-            .where({ tenant, asset_id: assetId })
+          extensionData = await db.table('workstation_assets')
+            .where({ asset_id: assetId })
             .select(
               'current_user',
               'uptime_seconds',
@@ -80,8 +82,8 @@ export async function getAssetRmmData(assetId: string): Promise<RmmCachedData | 
         } catch (columnError: any) {
           // If columns don't exist (migration not run), select only basic fields
           if (columnError?.code === '42703') {
-            extensionData = await knex('workstation_assets')
-              .where({ tenant, asset_id: assetId })
+            extensionData = await db.table('workstation_assets')
+              .where({ asset_id: assetId })
               .select('ram_gb')
               .first();
           } else {
@@ -92,8 +94,8 @@ export async function getAssetRmmData(assetId: string): Promise<RmmCachedData | 
       } else if (asset.asset_type === 'server') {
         // Try to select new RMM cached fields, fallback to basic fields if migration hasn't run
         try {
-          extensionData = await knex('server_assets')
-            .where({ tenant, asset_id: assetId })
+          extensionData = await db.table('server_assets')
+            .where({ asset_id: assetId })
             .select(
               'current_user',
               'uptime_seconds',
@@ -109,8 +111,8 @@ export async function getAssetRmmData(assetId: string): Promise<RmmCachedData | 
         } catch (columnError: any) {
           // If columns don't exist (migration not run), select only basic fields
           if (columnError?.code === '42703') {
-            extensionData = await knex('server_assets')
-              .where({ tenant, asset_id: assetId })
+            extensionData = await db.table('server_assets')
+              .where({ asset_id: assetId })
               .select('ram_gb')
               .first();
           } else {
@@ -197,11 +199,12 @@ export async function getAssetRemoteControlUrl(
   if (!tenant) {
     throw new Error('No tenant found');
   }
+  const db = tenantDb(knex, tenant);
 
   try {
     // Get asset info
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where({ asset_id: assetId })
       .select('rmm_provider', 'rmm_device_id')
       .first();
 
@@ -241,11 +244,12 @@ export async function triggerRmmReboot(assetId: string): Promise<{ success: bool
   if (!tenant) {
     throw new Error('No tenant found');
   }
+  const db = tenantDb(knex, tenant);
 
   try {
     // Get asset info
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where({ asset_id: assetId })
       .select('rmm_provider', 'rmm_device_id', 'name')
       .first();
 
@@ -289,11 +293,12 @@ export async function triggerRmmScript(
   if (!tenant) {
     throw new Error('No tenant found');
   }
+  const db = tenantDb(knex, tenant);
 
   try {
     // Get asset info
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where({ asset_id: assetId })
       .select('rmm_provider', 'rmm_device_id', 'name')
       .first();
 

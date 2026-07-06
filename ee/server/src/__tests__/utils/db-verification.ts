@@ -5,6 +5,7 @@
 
 import type { Knex } from 'knex';
 import { expect } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 
 export interface TenantVerificationData {
   tenantId: string;
@@ -12,6 +13,10 @@ export interface TenantVerificationData {
   email: string;
   clientId?: string;
   adminUserId: string;
+}
+
+function tenantTable(db: Knex, tenantId: string, table: string): Knex.QueryBuilder {
+  return tenantDb(db, tenantId).table(table);
 }
 
 /**
@@ -22,9 +27,7 @@ export async function verifyTenantCreation(
   tenantData: TenantVerificationData
 ): Promise<void> {
   // Verify tenant exists
-  const tenant = await db('tenants')
-    .where('tenant', tenantData.tenantId)
-    .first();
+  const tenant = await tenantTable(db, tenantData.tenantId, 'tenants').first();
 
   expect(tenant).toBeTruthy();
   expect(tenant.client_name).toBe(tenantData.tenantName);
@@ -46,9 +49,8 @@ export async function verifyAdminUserCreation(
   }
 ): Promise<void> {
   // Verify user exists
-  const user = await db('users')
+  const user = await tenantTable(db, tenantData.tenantId, 'users')
     .where('user_id', tenantData.adminUserId)
-    .where('tenant', tenantData.tenantId)
     .first();
 
   expect(user).toBeTruthy();
@@ -60,13 +62,11 @@ export async function verifyAdminUserCreation(
   expect(user.created_at).toBeTruthy();
 
   // Verify user has admin role
-  const userRole = await db('user_roles')
-    .join('roles', function() {
-      this.on('user_roles.role_id', '=', 'roles.role_id')
-          .andOn('user_roles.tenant', '=', 'roles.tenant');
-    })
+  const scopedDb = tenantDb(db, tenantData.tenantId);
+  const userRoleQuery = scopedDb.table('user_roles');
+  scopedDb.tenantJoin(userRoleQuery, 'roles', 'user_roles.role_id', 'roles.role_id');
+  const userRole = await userRoleQuery
     .where('user_roles.user_id', tenantData.adminUserId)
-    .where('user_roles.tenant', tenantData.tenantId)
     .where('roles.role_name', 'Admin')
     .first();
 
@@ -86,9 +86,8 @@ export async function verifyClientCreation(
   }
 
   // Verify client exists
-  const client = await db('clients')
+  const client = await tenantTable(db, tenantData.tenantId, 'clients')
     .where('client_id', tenantData.clientId)
-    .where('tenant', tenantData.tenantId)
     .first();
 
   expect(client).toBeTruthy();
@@ -96,8 +95,7 @@ export async function verifyClientCreation(
   expect(client.created_at).toBeTruthy();
 
   // Verify tenant-client association
-  const tenantClient = await db('tenant_companies')
-    .where('tenant', tenantData.tenantId)
+  const tenantClient = await tenantTable(db, tenantData.tenantId, 'tenant_companies')
     .where('client_id', tenantData.clientId)
     .first();
 
@@ -112,9 +110,7 @@ export async function verifyTenantEmailSettings(
   db: Knex,
   tenantId: string
 ): Promise<void> {
-  const emailSettings = await db('tenant_email_settings')
-    .where('tenant_id', tenantId)
-    .first();
+  const emailSettings = await tenantTable(db, tenantId, 'tenant_email_settings').first();
 
   expect(emailSettings).toBeTruthy();
   expect(emailSettings.email_provider).toBe('resend');
@@ -130,9 +126,8 @@ export async function verifyOnboardingCompletionState(
   adminUserId: string,
   tenantId: string
 ): Promise<void> {
-  const user = await db('users')
+  const user = await tenantTable(db, tenantId, 'users')
     .where('user_id', adminUserId)
-    .where('tenant', tenantId)
     .first();
 
   expect(user).toBeTruthy();
@@ -156,12 +151,13 @@ export async function verifyTenantIsolation(
   otherTenantIds: string[]
 ): Promise<void> {
   // Verify users are properly isolated
-  const users = await db('users').where('tenant', tenantId);
+  const users = await tenantTable(db, tenantId, 'users');
   expect(users.length).toBeGreaterThan(0);
 
   for (const userId of users.map(u => u.user_id)) {
     // Verify user roles are only for this tenant
-    const userRoles = await db('user_roles')
+    const userRoles = await tenantDb(db, tenantId)
+      .unscoped('user_roles', 'verifyTenantIsolation checks for cross-tenant leakage')
       .where('user_id', userId)
       .whereNotIn('tenant', [tenantId]);
     
@@ -169,10 +165,11 @@ export async function verifyTenantIsolation(
   }
 
   // Verify clients are properly isolated
-  const clients = await db('clients').where('tenant', tenantId);
+  const clients = await tenantTable(db, tenantId, 'clients');
   for (const clientId of clients.map(c => c.client_id)) {
     // Verify client doesn't appear in other tenants
-    const otherTenantClients = await db('clients')
+    const otherTenantClients = await tenantDb(db, tenantId)
+      .unscoped('clients', 'verifyTenantIsolation checks for cross-tenant leakage')
       .where('client_id', clientId)
       .whereNotIn('tenant', [tenantId]);
     
@@ -231,10 +228,10 @@ export async function getTenantStats(
   hasEmailSettings: boolean;
 }> {
   const [userCount, clientCount, roleCount, emailSettings] = await Promise.all([
-    db('users').where('tenant', tenantId).count('* as count').first(),
-    db('clients').where('tenant', tenantId).count('* as count').first(),
-    db('roles').where('tenant', tenantId).count('* as count').first(),
-    db('tenant_email_settings').where('tenant', tenantId).first(),
+    tenantTable(db, tenantId, 'users').count('* as count').first(),
+    tenantTable(db, tenantId, 'clients').count('* as count').first(),
+    tenantTable(db, tenantId, 'roles').count('* as count').first(),
+    tenantTable(db, tenantId, 'tenant_email_settings').first(),
   ]);
 
   return {
@@ -254,11 +251,11 @@ export async function verifyTenantDataConsistency(
 ): Promise<void> {
   // Get all tenant data
   const [tenant, users, clients, roles, userRoles] = await Promise.all([
-    db('tenants').where('tenant', tenantId).first(),
-    db('users').where('tenant', tenantId),
-    db('clients').where('tenant', tenantId),
-    db('roles').where('tenant', tenantId),
-    db('user_roles').where('tenant', tenantId),
+    tenantTable(db, tenantId, 'tenants').first(),
+    tenantTable(db, tenantId, 'users'),
+    tenantTable(db, tenantId, 'clients'),
+    tenantTable(db, tenantId, 'roles'),
+    tenantTable(db, tenantId, 'user_roles'),
   ]);
 
   expect(tenant).toBeTruthy();
@@ -301,9 +298,7 @@ export async function verifyTenantSettings(
     onboarding_data?: any;
   }
 ): Promise<void> {
-  const tenantSettings = await db('tenant_settings')
-    .where('tenant', tenantId)
-    .first();
+  const tenantSettings = await tenantTable(db, tenantId, 'tenant_settings').first();
 
   expect(tenantSettings).toBeTruthy();
   expect(tenantSettings.onboarding_completed).toBe(expectedSettings.onboarding_completed);
@@ -329,14 +324,14 @@ export async function verifyTenantCleanup(
   tenantId: string
 ): Promise<void> {
   const [tenants, users, clients, roles, userRoles, emailSettings, tenantClients, tenantSettings] = await Promise.all([
-    db('tenants').where('tenant', tenantId),
-    db('users').where('tenant', tenantId),
-    db('clients').where('tenant', tenantId),
-    db('roles').where('tenant', tenantId),
-    db('user_roles').where('tenant', tenantId),
-    db('tenant_email_settings').where('tenant', tenantId),
-    db('tenant_companies').where('tenant', tenantId),
-    db('tenant_settings').where('tenant', tenantId),
+    tenantTable(db, tenantId, 'tenants'),
+    tenantTable(db, tenantId, 'users'),
+    tenantTable(db, tenantId, 'clients'),
+    tenantTable(db, tenantId, 'roles'),
+    tenantTable(db, tenantId, 'user_roles'),
+    tenantTable(db, tenantId, 'tenant_email_settings'),
+    tenantTable(db, tenantId, 'tenant_companies'),
+    tenantTable(db, tenantId, 'tenant_settings'),
   ]);
 
   // All should be empty after cleanup

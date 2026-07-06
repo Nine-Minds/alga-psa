@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { IContact } from '@alga-psa/types';
 import { getContactsByClient } from '@alga-psa/clients/actions';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -9,6 +9,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Eye, ExternalLink, MoreVertical, Pen } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Input } from '@alga-psa/ui/components/Input';
 import { ColumnDefinition } from '@alga-psa/types';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useDrawer } from "@alga-psa/ui";
@@ -20,7 +21,6 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import QuickAddContact from './QuickAddContact';
-import { useRouter } from 'next/navigation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientContactsListProps {
@@ -53,8 +53,8 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [changesSavedInDrawer, setChangesSavedInDrawer] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
-  const { openDrawer } = useDrawer();
-  const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState('');
+  const { openDrawer, closeDrawer } = useDrawer();
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -183,10 +183,36 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   };
 
   const handleEditContact = (contact: IContact) => {
-    // Navigate directly to the contact page for editing
-    router.push(`/msp/contacts/${contact.contact_name_id}`);
+    // Edit in a drawer so the client context survives (the full contact page
+    // is still reachable from Quick View's "Go to contact").
+    openDrawer(
+      <ContactDetailsEdit
+        id="client-contact-edit"
+        initialContact={contact}
+        clients={clients}
+        isInDrawer={true}
+        onSave={(updatedContact) => {
+          setContacts(prev => addIdToContacts(
+            prev.map(existing => existing.contact_name_id === updatedContact.contact_name_id ? updatedContact : existing)
+          ));
+          closeDrawer();
+        }}
+        onCancel={() => closeDrawer()}
+      />
+    );
   };
 
+
+  // Client-side search: getContactsByClient returns the client's full contact
+  // set, so filtering here scales to the realistic per-client contact count.
+  const filteredContacts = useMemo(() => {
+    const needle = searchTerm.trim().toLowerCase();
+    if (!needle) return contacts;
+    return contacts.filter((contact) =>
+      [contact.full_name, contact.email, contact.role, contact.default_phone_number]
+        .some((field) => field && field.toLowerCase().includes(needle))
+    );
+  }, [contacts, searchTerm]);
 
   const columns: ColumnDefinition<IContact>[] = [
     {
@@ -220,25 +246,34 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       ),
     },
     {
+      // W7 (roast gap): role was already on every row but never shown —
+      // "who do I call for X" needs it.
+      title: t('clientContactsList.table.role', { defaultValue: 'Role' }),
+      dataIndex: 'role',
+      width: '15%',
+      render: (value, record): React.ReactNode =>
+        record.role || <span className="text-gray-400">—</span>,
+    },
+    {
       title: t('clientContactsList.table.email', { defaultValue: 'Email' }),
       dataIndex: 'email',
-      width: '30%',
+      width: '22%',
       render: (value, record): React.ReactNode =>
         record.email || t('common.states.na', { defaultValue: 'N/A' }),
     },
     {
       title: t('clientContactsList.table.phoneNumber', {
-        defaultValue: 'Phone Number'
+        defaultValue: 'Phone number'
       }),
       dataIndex: 'default_phone_number',
-      width: '30%',
+      width: '18%',
       render: (value, record): React.ReactNode =>
         record.default_phone_number
         || record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number
         || t('common.states.na', { defaultValue: 'N/A' }),
     },
     {
-      title: t('clientContactsList.table.actions', { defaultValue: 'Actions' }),
+      title: '',
       dataIndex: 'actions',
       width: '5%',
       render: (value, record): React.ReactNode => (
@@ -362,19 +397,28 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
               }
             ]}
           />
+          {/* W7 (roast gap): a client with dozens of contacts had no search. */}
+          <Input
+            id="client-contacts-search"
+            placeholder={t('clientContactsList.filter.searchPlaceholder', { defaultValue: 'Search contacts...' })}
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            className="h-[38px] text-sm"
+            containerClassName="w-[220px]"
+          />
         </div>
         <Button
           id="add-new-contact-btn"
           onClick={() => setIsQuickAddContactOpen(true)}
         >
           {t('clientContactsList.actions.addNewContact', {
-            defaultValue: 'Add New Contact'
+            defaultValue: 'Add contact'
           })}
         </Button>
       </div>
       <DataTable
         id="client-contacts-list"
-        data={contacts}
+        data={filteredContacts}
         columns={columns}
         pagination={true}
         currentPage={currentPage}

@@ -4,7 +4,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import { 
   CreateAssetData,
   CreateAssetWithExtensionData,
@@ -25,6 +25,14 @@ import {
 } from '../schemas/asset';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { NotFoundError, ConflictError } from '../middleware/apiMiddleware';
+
+function scopedTable<Row extends object = Record<string, any>>(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableExpression: string
+): Knex.QueryBuilder<any, any> {
+  return tenantDb(conn, tenant).table<Row>(tableExpression) as Knex.QueryBuilder<any, any>;
+}
 
 export class AssetService extends BaseService<any> {
   constructor() {
@@ -47,8 +55,7 @@ export class AssetService extends BaseService<any> {
 
   async list(options: ListOptions, context: ServiceContext, filters?: AssetFilterData): Promise<ListResult<any>> {
     const knex = await this.getDbForContext(context);
-    const query = knex(this.tableName)
-      .where(`${this.tableName}.tenant`, context.tenant);
+    const query = scopedTable(knex, context.tenant, this.tableName);
 
     // Apply filters
     if (filters) {
@@ -74,11 +81,8 @@ export class AssetService extends BaseService<any> {
         query.where(`${this.tableName}.location`, 'ilike', `%${filters.location}%`);
       }
       if (filters.client_name) {
-        query.join('clients', function joinClients(this: Knex.JoinClause) {
-          this.on('assets.client_id', '=', 'clients.client_id')
-            .andOn('assets.tenant', '=', 'clients.tenant');
-        })
-          .where('clients.client_name', 'ilike', `%${filters.client_name}%`);
+        tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id');
+        query.where('clients.client_name', 'ilike', `%${filters.client_name}%`);
       }
       if (filters.purchase_date_from) {
         query.where(`${this.tableName}.purchase_date`, '>=', filters.purchase_date_from);
@@ -113,10 +117,10 @@ export class AssetService extends BaseService<any> {
     }
 
     // Add joins for additional data
-    query.leftJoin('clients', function joinClients(this: Knex.JoinClause) {
-      this.on('assets.client_id', '=', 'clients.client_id')
-        .andOn('assets.tenant', '=', 'clients.tenant');
-    })
+    tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
+      type: 'left',
+    });
+    query
       .select(
         `${this.tableName}.*`,
         'clients.client_name',
@@ -131,8 +135,7 @@ export class AssetService extends BaseService<any> {
       );
 
     // Execute queries with pagination
-    const countQuery = knex(this.tableName)
-      .where(`${this.tableName}.tenant`, context.tenant);
+    const countQuery = scopedTable(knex, context.tenant, this.tableName);
 
     if (filters) {
       // Apply the same filters to count query
@@ -186,15 +189,13 @@ export class AssetService extends BaseService<any> {
 
   async getById(id: string, context: ServiceContext): Promise<any | null> {
     const knex = await this.getDbForContext(context);
-    const query = knex(this.tableName)
-      .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
-        this.on('assets.client_id', '=', 'clients.client_id')
-          .andOn('assets.tenant', '=', 'clients.tenant');
-      })
+    const query = scopedTable(knex, context.tenant, this.tableName)
       .where({
-        [`${this.tableName}.${this.primaryKey}`]: id,
-        [`${this.tableName}.tenant`]: context.tenant
+        [`${this.tableName}.${this.primaryKey}`]: id
       });
+    tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
+      type: 'left',
+    });
       
     const asset = await query.select(
         `${this.tableName}.*`,
@@ -250,7 +251,7 @@ export class AssetService extends BaseService<any> {
       updated_at: new Date()
     };
 
-    const [asset] = await knex(this.tableName)
+    const [asset] = await scopedTable(knex, context.tenant, this.tableName)
       .insert(assetRecord)
       .returning('*');
 
@@ -282,8 +283,8 @@ export class AssetService extends BaseService<any> {
       data.client_id !== undefined;
 
     const current = needsCurrent
-      ? await knex(this.tableName)
-          .where({ [this.primaryKey]: id, tenant: context.tenant })
+      ? await scopedTable(knex, context.tenant, this.tableName)
+          .where({ [this.primaryKey]: id })
           .first('client_id', 'location_id')
       : null;
 
@@ -311,8 +312,8 @@ export class AssetService extends BaseService<any> {
 
     updateData.updated_at = new Date();
 
-    await knex(this.tableName)
-      .where({ [this.primaryKey]: id, tenant: context.tenant })
+    await scopedTable(knex, context.tenant, this.tableName)
+      .where({ [this.primaryKey]: id })
       .update(updateData);
 
     // Publish event
@@ -336,9 +337,8 @@ export class AssetService extends BaseService<any> {
     clientId: string,
     locationId: string
   ): Promise<void> {
-    const location = await knex('client_locations')
+    const location = await scopedTable(knex, tenant, 'client_locations')
       .where({
-        tenant,
         client_id: clientId,
         location_id: locationId,
         is_active: true,
@@ -363,13 +363,13 @@ export class AssetService extends BaseService<any> {
     const knex = await this.getDbForContext(context);
 
     // Delete external entity mapping (e.g., NinjaOne device mapping)
-    await knex('tenant_external_entity_mappings')
-      .where({ tenant: context.tenant, alga_entity_type: 'asset', alga_entity_id: id })
+    await scopedTable(knex, context.tenant, 'tenant_external_entity_mappings')
+      .where({ alga_entity_type: 'asset', alga_entity_id: id })
       .del();
 
     // Delete main asset record (cascade will handle relationships, documents, etc.)
-    await knex(this.tableName)
-      .where({ [this.primaryKey]: id, tenant: context.tenant })
+    await scopedTable(knex, context.tenant, this.tableName)
+      .where({ [this.primaryKey]: id })
       .del();
 
     // Publish event
@@ -390,8 +390,8 @@ export class AssetService extends BaseService<any> {
     if (!tableName) return null;
 
     const knex = await this.getDbForContext(context);
-    return knex(tableName)
-      .where({ asset_id: assetId, tenant: context.tenant })
+    return scopedTable(knex, context.tenant, tableName)
+      .where({ asset_id: assetId })
       .first();
   }
 
@@ -408,17 +408,17 @@ export class AssetService extends BaseService<any> {
 
     // Check if record exists
     const knex = await this.getDbForContext(context);
-    const existing = await knex(tableName)
-      .where({ asset_id: assetId, tenant: context.tenant })
+    const existing = await scopedTable(knex, context.tenant, tableName)
+      .where({ asset_id: assetId })
       .first();
 
     if (existing) {
-      await knex(tableName)
-        .where({ asset_id: assetId, tenant: context.tenant })
+      await scopedTable(knex, context.tenant, tableName)
+        .where({ asset_id: assetId })
         .update(extensionData);
     } else {
       extensionData.created_at = new Date();
-      await knex(tableName).insert(extensionData);
+      await scopedTable(knex, context.tenant, tableName).insert(extensionData);
     }
   }
 
@@ -427,22 +427,20 @@ export class AssetService extends BaseService<any> {
     if (!tableName) return;
 
     const knex = await this.getDbForContext(context);
-    await knex(tableName)
-      .where({ asset_id: assetId, tenant: context.tenant })
+    await scopedTable(knex, context.tenant, tableName)
+      .where({ asset_id: assetId })
       .del();
   }
 
   // Asset relationships
   async getAssetRelationships(assetId: string, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
-    return knex('asset_relationships')
-      .join('assets as related_assets', function joinRelatedAssets(this: Knex.JoinClause) {
-        this.on('asset_relationships.related_asset_id', '=', 'related_assets.asset_id')
-          .andOn('asset_relationships.tenant', '=', 'related_assets.tenant');
-      })
+    const db = tenantDb(knex, context.tenant);
+    const query = db.table('asset_relationships');
+    db.tenantJoin(query, 'assets as related_assets', 'asset_relationships.related_asset_id', 'related_assets.asset_id');
+    return query
       .where({
-        'asset_relationships.asset_id': assetId,
-        'asset_relationships.tenant': context.tenant
+        'asset_relationships.asset_id': assetId
       })
       .select(
         'asset_relationships.*',
@@ -460,20 +458,17 @@ export class AssetService extends BaseService<any> {
    */
   async getAssetTickets(assetId: string, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
-    return knex('asset_associations as aa')
-      .innerJoin('tickets as t', function joinTickets(this: Knex.JoinClause) {
-        this.on('t.ticket_id', '=', 'aa.entity_id')
-          .andOn('t.tenant', '=', 'aa.tenant');
-      })
-      .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
-        this.on('t.status_id', '=', 's.status_id')
-          .andOn('t.tenant', '=', 's.tenant');
-      })
+    const db = tenantDb(knex, context.tenant);
+    const query = db.table('asset_associations as aa');
+    db.tenantJoin(query, 'tickets as t', 't.ticket_id', 'aa.entity_id');
+    db.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id', {
+      type: 'left',
+      rootTenantColumn: 't.tenant',
+    });
+    return query
       .where({
         'aa.asset_id': assetId,
-        'aa.entity_type': 'ticket',
-        'aa.tenant': context.tenant,
-        't.tenant': context.tenant
+        'aa.entity_type': 'ticket'
       })
       .select(
         't.ticket_id',
@@ -507,23 +502,22 @@ export class AssetService extends BaseService<any> {
   ): Promise<any> {
     const knex = await this.getDbForContext(context);
 
-    const asset = await knex('assets')
-      .where({ tenant: context.tenant, asset_id: assetId })
+    const asset = await scopedTable(knex, context.tenant, 'assets')
+      .where({ asset_id: assetId })
       .first();
     if (!asset) {
       throw new NotFoundError('Asset not found');
     }
 
-    const ticket = await knex('tickets')
-      .where({ tenant: context.tenant, ticket_id: data.ticket_id })
+    const ticket = await scopedTable(knex, context.tenant, 'tickets')
+      .where({ ticket_id: data.ticket_id })
       .first();
     if (!ticket) {
       throw new NotFoundError('Ticket not found');
     }
 
-    const existing = await knex('asset_associations')
+    const existing = await scopedTable(knex, context.tenant, 'asset_associations')
       .where({
-        tenant: context.tenant,
         asset_id: assetId,
         entity_id: data.ticket_id,
         entity_type: 'ticket'
@@ -533,7 +527,7 @@ export class AssetService extends BaseService<any> {
       throw new ConflictError('Ticket is already linked to this asset');
     }
 
-    const [created] = await knex('asset_associations')
+    const [created] = await tenantDb(knex, context.tenant).table('asset_associations')
       .insert({
         tenant: context.tenant,
         asset_id: assetId,
@@ -554,9 +548,8 @@ export class AssetService extends BaseService<any> {
    */
   async unlinkTicket(assetId: string, ticketId: string, context: ServiceContext): Promise<void> {
     const knex = await this.getDbForContext(context);
-    const deleted = await knex('asset_associations')
+    const deleted = await scopedTable(knex, context.tenant, 'asset_associations')
       .where({
-        tenant: context.tenant,
         asset_id: assetId,
         entity_id: ticketId,
         entity_type: 'ticket'
@@ -576,11 +569,10 @@ export class AssetService extends BaseService<any> {
 
     // Check for existing relationship
     const knex = await this.getDbForContext(context);
-    const existing = await knex('asset_relationships')
+    const existing = await scopedTable(knex, context.tenant, 'asset_relationships')
       .where({
         asset_id: assetId,
-        related_asset_id: data.related_asset_id,
-        tenant: context.tenant
+        related_asset_id: data.related_asset_id
       })
       .first();
 
@@ -595,7 +587,7 @@ export class AssetService extends BaseService<any> {
       created_at: new Date()
     };
 
-    const [relationship] = await knex('asset_relationships')
+    const [relationship] = await tenantDb(knex, context.tenant).table('asset_relationships')
       .insert(relationshipData)
       .returning('*');
 
@@ -604,23 +596,21 @@ export class AssetService extends BaseService<any> {
 
   async deleteRelationship(relationshipId: string, context: ServiceContext): Promise<void> {
     const knex = await this.getDbForContext(context);
-    await knex('asset_relationships')
-      .where({ relationship_id: relationshipId, tenant: context.tenant })
+    await scopedTable(knex, context.tenant, 'asset_relationships')
+      .where({ relationship_id: relationshipId })
       .del();
   }
 
   // Asset documents
   async getAssetDocuments(assetId: string, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
-    return knex('document_associations')
-      .join('documents', function joinDocuments(this: Knex.JoinClause) {
-        this.on('document_associations.document_id', '=', 'documents.document_id')
-          .andOn('document_associations.tenant', '=', 'documents.tenant');
-      })
+    const db = tenantDb(knex, context.tenant);
+    const query = db.table('document_associations');
+    db.tenantJoin(query, 'documents', 'document_associations.document_id', 'documents.document_id');
+    return query
       .where({
         'document_associations.entity_type': 'asset',
-        'document_associations.entity_id': assetId,
-        'document_associations.tenant': context.tenant
+        'document_associations.entity_id': assetId
       })
       .select(
         'document_associations.*',
@@ -642,7 +632,7 @@ export class AssetService extends BaseService<any> {
     };
 
     const knex = await this.getDbForContext(context);
-    const [association] = await knex('document_associations')
+    const [association] = await tenantDb(knex, context.tenant).table('document_associations')
       .insert(associationData)
       .returning('*');
 
@@ -651,27 +641,26 @@ export class AssetService extends BaseService<any> {
 
   async removeDocumentAssociation(associationId: string, context: ServiceContext): Promise<void> {
     const knex = await this.getDbForContext(context);
-    await knex('document_associations')
-      .where({ association_id: associationId, tenant: context.tenant })
+    await scopedTable(knex, context.tenant, 'document_associations')
+      .where({ association_id: associationId })
       .del();
   }
 
   // Maintenance management
   async getMaintenanceSchedules(assetId: string, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
-    return knex('asset_maintenance_schedules')
-      .leftJoin('users', function joinUsers(this: Knex.JoinClause) {
-        this.on('asset_maintenance_schedules.assigned_to', '=', 'users.user_id')
-          .andOn('asset_maintenance_schedules.tenant', '=', 'users.tenant');
-      })
+    const query = scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
       .where({
-        'asset_maintenance_schedules.asset_id': assetId,
-        'asset_maintenance_schedules.tenant': context.tenant
+        'asset_maintenance_schedules.asset_id': assetId
       })
       .select(
         'asset_maintenance_schedules.*',
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`)
       );
+    tenantDb(knex, context.tenant).tenantJoin(query, 'users', 'asset_maintenance_schedules.assigned_to', 'users.user_id', {
+      type: 'left',
+    });
+    return query;
   }
 
   async createMaintenanceSchedule(assetId: string, data: CreateMaintenanceScheduleData, context: ServiceContext): Promise<any> {
@@ -691,7 +680,7 @@ export class AssetService extends BaseService<any> {
     );
 
     const knex = await this.getDbForContext(context);
-    const [schedule] = await knex('asset_maintenance_schedules')
+    const [schedule] = await tenantDb(knex, context.tenant).table('asset_maintenance_schedules')
       .insert(scheduleData)
       .returning('*');
 
@@ -707,8 +696,8 @@ export class AssetService extends BaseService<any> {
     // Recalculate next maintenance if frequency changed
     if (data.frequency || data.frequency_interval || data.start_date) {
       const knex = await this.getDbForContext(context);
-      const existing = await knex('asset_maintenance_schedules')
-        .where({ schedule_id: scheduleId, tenant: context.tenant })
+      const existing = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+        .where({ schedule_id: scheduleId })
         .first();
       
       if (existing) {
@@ -720,19 +709,19 @@ export class AssetService extends BaseService<any> {
     }
 
     const knex = await this.getDbForContext(context);
-    await knex('asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId, tenant: context.tenant })
+    await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+      .where({ schedule_id: scheduleId })
       .update(updateData);
 
-    return knex('asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId, tenant: context.tenant })
+    return scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+      .where({ schedule_id: scheduleId })
       .first();
   }
 
   async deleteMaintenanceSchedule(scheduleId: string, context: ServiceContext): Promise<void> {
     const knex = await this.getDbForContext(context);
-    await knex('asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId, tenant: context.tenant })
+    await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+      .where({ schedule_id: scheduleId })
       .del();
   }
 
@@ -745,7 +734,7 @@ export class AssetService extends BaseService<any> {
     };
 
     const knex = await this.getDbForContext(context);
-    const [maintenance] = await knex('asset_maintenance_history')
+    const [maintenance] = await tenantDb(knex, context.tenant).table('asset_maintenance_history')
       .insert(maintenanceData)
       .returning('*');
 
@@ -759,27 +748,26 @@ export class AssetService extends BaseService<any> {
 
   async getMaintenanceHistory(assetId: string, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
-    return knex('asset_maintenance_history')
-      .leftJoin('users', function joinUsers(this: Knex.JoinClause) {
-        this.on('asset_maintenance_history.performed_by', '=', 'users.user_id')
-          .andOn('asset_maintenance_history.tenant', '=', 'users.tenant');
-      })
+    const query = scopedTable(knex, context.tenant, 'asset_maintenance_history')
       .where({
-        'asset_maintenance_history.asset_id': assetId,
-        'asset_maintenance_history.tenant': context.tenant
+        'asset_maintenance_history.asset_id': assetId
       })
       .select(
         'asset_maintenance_history.*',
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as performed_by_user_name`)
       )
       .orderBy('performed_at', 'desc');
+    tenantDb(knex, context.tenant).tenantJoin(query, 'users', 'asset_maintenance_history.performed_by', 'users.user_id', {
+      type: 'left',
+    });
+    return query;
   }
 
   // Search and export
   async search(searchData: AssetSearchData, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
-    const query = knex(this.tableName)
-      .where(`${this.tableName}.tenant`, context.tenant);
+    const db = tenantDb(knex, context.tenant);
+    const query = db.table(this.tableName);
 
     // Build search query
     const tableName = this.tableName;
@@ -815,10 +803,8 @@ export class AssetService extends BaseService<any> {
     }
 
     // Add joins for searching
-    query.leftJoin('clients', function joinClients(this: Knex.JoinClause) {
-      this.on('assets.client_id', '=', 'clients.client_id')
-        .andOn('assets.tenant', '=', 'clients.tenant');
-    })
+    db.tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', { type: 'left' });
+    query
       .select(`${this.tableName}.*`, 'clients.client_name')
       .limit(searchData.limit || 25);
 
@@ -896,8 +882,8 @@ export class AssetService extends BaseService<any> {
 
   private async updateScheduleAfterMaintenance(scheduleId: string, performedAt: string, context: ServiceContext): Promise<void> {
     const knex = await this.getDbForContext(context);
-    const schedule = await knex('asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId, tenant: context.tenant })
+    const schedule = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+      .where({ schedule_id: scheduleId })
       .first();
 
     if (schedule) {
@@ -907,8 +893,8 @@ export class AssetService extends BaseService<any> {
         schedule.frequency_interval
       );
 
-      await knex('asset_maintenance_schedules')
-        .where({ schedule_id: scheduleId, tenant: context.tenant })
+      await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+        .where({ schedule_id: scheduleId })
         .update({
           last_maintenance: performedAt,
           next_maintenance: nextMaintenance,
@@ -919,16 +905,15 @@ export class AssetService extends BaseService<any> {
 
   private async getAssetClient(clientId: string, context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
-    return knex('clients')
-      .where({ client_id: clientId, tenant: context.tenant })
+    return scopedTable(knex, context.tenant, 'clients')
+      .where({ client_id: clientId })
       .select('client_id', 'client_name', 'email', 'phone_no')
       .first();
   }
 
   private async getBasicStatistics(context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
-    const stats = await knex(this.tableName)
-      .where(`${this.tableName}.tenant`, context.tenant)
+    const stats = await scopedTable(knex, context.tenant, this.tableName)
       .select([
         knex.raw('COUNT(*) as total_assets'),
         knex.raw(`COUNT(CASE WHEN created_at >= date_trunc('month', NOW()) THEN 1 END) as assets_added_this_month`),
@@ -947,8 +932,7 @@ export class AssetService extends BaseService<any> {
 
   private async getAssetsByType(context: ServiceContext): Promise<Record<string, number>> {
     const knex = await this.getDbForContext(context);
-    const results = await knex(this.tableName)
-      .where(`${this.tableName}.tenant`, context.tenant)
+    const results = await scopedTable(knex, context.tenant, this.tableName)
       .groupBy('asset_type')
       .select('asset_type', knex.raw('COUNT(*) as count'));
 
@@ -960,8 +944,7 @@ export class AssetService extends BaseService<any> {
 
   private async getAssetsByStatus(context: ServiceContext): Promise<Record<string, number>> {
     const knex = await this.getDbForContext(context);
-    const results = await knex(this.tableName)
-        .where(`${this.tableName}.tenant`, context.tenant)
+    const results = await scopedTable(knex, context.tenant, this.tableName)
         .groupBy('status')
         .select('status', knex.raw('COUNT(*) as count'));
   
@@ -975,15 +958,13 @@ export class AssetService extends BaseService<any> {
 
   private async getAssetsByClient(context: ServiceContext): Promise<Record<string, number>> {
     const knex = await this.getDbForContext(context);
-    const results = await knex(this.tableName)
-      .join('clients', function joinClients(this: Knex.JoinClause) {
-        this.on('assets.client_id', '=', 'clients.client_id')
-          .andOn('assets.tenant', '=', 'clients.tenant');
-      })
-      .where(`${this.tableName}.tenant`, context.tenant)
+    const db = tenantDb(knex, context.tenant);
+    const query = db.table(this.tableName);
+    db.tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id');
+    const results = await query
       .groupBy('clients.client_name')
       .select('clients.client_name', knex.raw('COUNT(*) as count'))
-      .limit(10);
+      .limit(10) as unknown as Array<{ client_name: string; count: string }>;
 
     return results.reduce((acc, item) => {
       acc[item.client_name] = parseInt(item.count);
@@ -993,8 +974,7 @@ export class AssetService extends BaseService<any> {
 
   private async getWarrantyStatistics(context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
-    const stats = await knex(this.tableName)
-      .where(`${this.tableName}.tenant`, context.tenant)
+    const stats = await scopedTable(knex, context.tenant, this.tableName)
       .select([
         knex.raw(`COUNT(CASE WHEN warranty_end_date < NOW() + INTERVAL '30 days' AND warranty_end_date >= NOW() THEN 1 END) as warranty_expiring_soon`),
         knex.raw(`COUNT(CASE WHEN warranty_end_date < NOW() THEN 1 END) as warranty_expired`)
@@ -1009,8 +989,7 @@ export class AssetService extends BaseService<any> {
 
   private async getMaintenanceStatistics(context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
-    const stats = await knex('asset_maintenance_schedules')
-      .where('asset_maintenance_schedules.tenant', context.tenant)
+    const stats = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
       .select([
         knex.raw(`COUNT(CASE WHEN next_maintenance <= NOW() AND is_active = true THEN 1 END) as maintenance_due`),
         knex.raw(`COUNT(CASE WHEN next_maintenance < NOW() - INTERVAL '7 days' AND is_active = true THEN 1 END) as maintenance_overdue`)

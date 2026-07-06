@@ -462,7 +462,8 @@
       "correlationKeyPlaceholder": "corr-123",
       "statusLabel": "Estado",
       "fromLabel": "Desde",
-      "toLabel": "Hasta"
+      "toLabel": "Hasta",
+      "datePlaceholder": "Cualquier fecha"
     },
     "actions": {
       "applyFilters": "Aplicar filtros",

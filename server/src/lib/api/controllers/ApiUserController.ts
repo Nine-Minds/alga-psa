@@ -28,7 +28,7 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import { createSystemContext } from '@alga-psa/db';
+import { createSystemContext, tenantDb } from '@alga-psa/db';
 import {
   ApiRequest,
   UnauthorizedError,
@@ -614,20 +614,32 @@ export class ApiUserController extends ApiBaseController {
           // Replace roles - use removeRoles followed by assignRoles
           const knex = await getConnection(apiRequest.context!.tenant);
           await knex.transaction(async (trx) => {
+            const db = tenantDb(trx, apiRequest.context!.tenant);
             // First remove all existing roles
-            await trx('user_roles')
+            await db.table('user_roles')
               .where('user_id', targetUserId)
-              .where('tenant', apiRequest.context!.tenant)
               .delete();
             
             // Then assign new roles if any
             if (role_ids.length > 0) {
+              // Validate that every role_id belongs to the caller's tenant before
+              // inserting. Without this, the raw insert would attach any UUID the
+              // caller supplies (e.g. a privileged role) and bypass the tenant
+              // checks enforced by UserService.assignRoles().
+              const validRoleIds: string[] = await db.table('roles')
+                .whereIn('role_id', role_ids)
+                .pluck('role_id');
+              const invalidRoleIds = role_ids.filter((roleId: string) => !validRoleIds.includes(roleId));
+              if (invalidRoleIds.length > 0) {
+                throw new ValidationError(`Invalid role_ids for this tenant: ${invalidRoleIds.join(', ')}`);
+              }
+
               const userRoles = role_ids.map(roleId => ({
                 tenant: apiRequest.context!.tenant,
                 user_id: targetUserId,
                 role_id: roleId
               }));
-              await trx('user_roles').insert(userRoles);
+              await db.table('user_roles').insert(userRoles);
             }
           });
           
@@ -687,15 +699,13 @@ export class ApiUserController extends ApiBaseController {
           const knex = await getConnection(apiRequest.context!.tenant);
           const usersWithRoles = await Promise.all(
             result.data.map(async (user: any) => {
-              const roles = await knex('user_roles as ur')
-                .join('roles as r', function() {
-                  this.on('ur.role_id', '=', 'r.role_id')
-                      .andOn('ur.tenant', '=', 'r.tenant');
-                })
+              const db = tenantDb(knex, apiRequest.context!.tenant);
+              const rolesQuery = db.table('user_roles as ur')
                 .where('ur.user_id', user.user_id)
-                .where('ur.tenant', apiRequest.context!.tenant)
                 .select('r.role_id', 'r.role_name', 'r.description')
                 .orderBy('r.role_name');
+              db.tenantJoin(rolesQuery, 'roles as r', 'ur.role_id', 'r.role_id');
+              const roles = await rolesQuery;
               
               return {
                 ...user,

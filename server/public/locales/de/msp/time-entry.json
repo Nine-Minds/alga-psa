@@ -29,7 +29,9 @@
       "viewDetails": "Details anzeigen",
       "manageTimePeriods": "Zeiträume verwalten",
       "selectWorkItem": "Wählen Sie Arbeitselement aus",
-      "clearFilter": "Filter löschen"
+      "clearFilter": "Filter löschen",
+      "remove": "Entfernen",
+      "clear": "Leeren"
     },
     "states": {
       "inProgress": "In Arbeit",
@@ -95,6 +97,24 @@
     },
     "lastEntry": {
       "none": "Keine Einträge"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} ausgewählt"
+    },
+    "delete": {
+      "success": "{{count}} Stundenzettel entfernt",
+      "partialFailure": "{{count}} Stundenzettel konnten nicht entfernt werden",
+      "error": "Stundenzettel konnten nicht entfernt werden"
+    },
+    "removePeriod": {
+      "success": "{{count}} Zeiträume entfernt",
+      "partialFailure": "{{count}} Zeiträume konnten nicht entfernt werden",
+      "error": "Zeiträume konnten nicht entfernt werden"
+    },
+    "remove": {
+      "title": "Nicht verwendete Elemente entfernen",
+      "message": "{{count}} ausgewählte(n) Zeitraum/Zeiträume entfernen? Nicht verwendete Abrechnungszeiträume werden für die gesamte Organisation entfernt, zusammen mit allen darin erfassten leeren Entwürfen. Dies kann nicht rückgängig gemacht werden.",
+      "timesheetMessage": "{{count}} nicht verwendete(n) Stundenzettel entfernen? Es werden nur leere Stundenzettel-Entwürfe entfernt und dies kann nicht rückgängig gemacht werden."
     }
   },
   "timeEntryForm": {

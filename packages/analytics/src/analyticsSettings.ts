@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getTenantSettingsByTenantId } from '@alga-psa/tenancy/actions';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getTenantForCurrentRequest } from '@alga-psa/tenancy/server';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -93,9 +93,9 @@ async function saveAnalyticsSettings(tenant: string, analyticsSettings: Analytic
     
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Get existing settings to merge
-      const existingSettings = await trx('tenant_settings')
+      const tenantSettings = () => tenantDb(trx, tenant).table('tenant_settings');
+      const existingSettings = await tenantSettings()
         .select('settings')
-        .where({ tenant })
         .first();
 
       const currentSettings = existingSettings?.settings || {};
@@ -109,21 +109,19 @@ async function saveAnalyticsSettings(tenant: string, analyticsSettings: Analytic
       };
 
       // Check if tenant settings already exist
-      const existingRecord = await trx('tenant_settings')
-        .where({ tenant })
+      const existingRecord = await tenantSettings()
         .first();
 
       if (existingRecord) {
         // Update existing settings
-        await trx('tenant_settings')
-          .where({ tenant })
+        await tenantSettings()
           .update({
             settings: JSON.stringify(updatedSettings),
             updated_at: trx.fn.now()
           });
       } else {
         // Insert new settings
-        await trx('tenant_settings')
+        await tenantSettings()
           .insert({
             tenant,
             settings: JSON.stringify(updatedSettings),

@@ -4,6 +4,7 @@ import { getPostgresConnection } from '../../db/knexfile';
 import { JobService } from '../../../services/job.service';
 import { StorageService } from '../../storage/StorageService';
 import { JobStatus } from '../../../types/job';
+import { tenantDb } from '@alga-psa/db';
 import {
   IJobRunner,
   JobHandlerConfig,
@@ -433,8 +434,8 @@ export class PgBossJobRunner implements IJobRunner {
       // Get the external ID and job type from our database
       const { knex } = await createTenantKnex();
       const job = await runWithTenant(tenantId, async () => {
-        return knex('jobs')
-          .where({ job_id: jobId, tenant: tenantId })
+        return tenantDb(knex, tenantId).table('jobs')
+          .where({ job_id: jobId })
           .first('external_id', 'status', 'type', 'metadata');
       });
 
@@ -472,8 +473,8 @@ export class PgBossJobRunner implements IJobRunner {
           // Clear the schedule pointer so repeat cancels (and reconcilers
           // scanning for live schedules) see this record as already torn down.
           await runWithTenant(tenantId, async () => {
-            await knex('jobs')
-              .where({ job_id: jobId, tenant: tenantId })
+            await tenantDb(knex, tenantId).table('jobs')
+              .where({ job_id: jobId })
               .update({ external_id: null });
           });
         } catch (e) {
@@ -507,8 +508,8 @@ export class PgBossJobRunner implements IJobRunner {
     try {
       const { knex } = await createTenantKnex();
       const job = await runWithTenant(tenantId, async () => {
-        return knex('jobs')
-          .where({ job_id: jobId, tenant: tenantId })
+        return tenantDb(knex, tenantId).table('jobs')
+          .where({ job_id: jobId })
           .first();
       });
 
@@ -617,8 +618,7 @@ export class PgBossJobRunner implements IJobRunner {
 
       let userId: string | null = options?.userId ?? null;
       if (!userId) {
-        const row = await knex('users')
-          .where({ tenant: data.tenantId })
+        const row = await tenantDb(knex, data.tenantId).table('users')
           .orderBy([{ column: 'created_at', order: 'asc' }])
           .first(['user_id']);
         userId = row?.user_id ? String(row.user_id) : null;
@@ -627,7 +627,7 @@ export class PgBossJobRunner implements IJobRunner {
         throw new Error(`Unable to attribute job to a user for tenant ${data.tenantId}`);
       }
 
-      const [inserted] = await knex('jobs')
+      const [inserted] = await tenantDb(knex, data.tenantId).table('jobs')
         .insert({
           tenant: data.tenantId,
           type: jobName,
@@ -653,8 +653,8 @@ export class PgBossJobRunner implements IJobRunner {
   ): Promise<void> {
     await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
-      await knex('jobs')
-        .where({ job_id: jobId, tenant: tenantId })
+      await tenantDb(knex, tenantId).table('jobs')
+        .where({ job_id: jobId })
         .update({
           external_id: externalId,
           status: JobStatus.Queued,

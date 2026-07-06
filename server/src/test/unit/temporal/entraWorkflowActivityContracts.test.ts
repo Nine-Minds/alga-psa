@@ -65,7 +65,8 @@ describe('Entra Temporal workflow/activity contracts', () => {
     const activity = readRepoFile('ee/temporal-workflows/src/activities/entra-sync-activities.ts');
 
     expect(activity).toContain('export async function recordSyncTenantResultActivity');
-    expect(activity).toContain("knex('entra_sync_run_tenants')");
+    expect(activity).toContain('const db = tenantDb(knex, input.tenantId);');
+    expect(activity).toContain("db.table('entra_sync_run_tenants')");
     expect(activity).toContain('created_count: input.result.created');
     expect(activity).toContain('linked_count: input.result.linked');
     expect(activity).toContain('updated_count: input.result.updated');
@@ -77,7 +78,7 @@ describe('Entra Temporal workflow/activity contracts', () => {
     const activity = readRepoFile('ee/temporal-workflows/src/activities/entra-sync-activities.ts');
 
     expect(activity).toContain('export async function finalizeSyncRunActivity');
-    expect(activity).toContain("knex('entra_sync_runs')");
+    expect(activity).toContain("tenantDb(knex, input.tenantId).table('entra_sync_runs')");
     expect(activity).toContain('status: input.status');
     expect(activity).toContain('completed_at: now');
     expect(activity).toContain('total_tenants: input.summary.totalTenants');

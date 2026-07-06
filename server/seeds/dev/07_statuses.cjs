@@ -1,14 +1,15 @@
-exports.seed = async function (knex) {
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
 
-    const boards = await knex('boards')
-        .where({ tenant: tenant.tenant })
+exports.seed = async function (knex) {
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { tenantId, db } = context;
+    const boards = await db.table('boards')
         .select('board_id');
 
-    const createdBy = knex('users')
+    const createdBy = db.table('users')
         .where({
-            tenant: tenant.tenant,
             username: 'glinda'
         })
         .select('user_id');
@@ -44,52 +45,52 @@ exports.seed = async function (knex) {
 
     const ticketStatuses = boards.flatMap((board) =>
         ticketStatusTemplates.map((status) => ({
-            tenant: tenant.tenant,
+            tenant: tenantId,
             board_id: board.board_id,
             created_by: createdBy,
             ...status
         }))
     );
 
-    return knex('statuses').insert([
+    return db.table('statuses').insert([
                 ...ticketStatuses,
                 {
-                    tenant: tenant.tenant,
+                    tenant: tenantId,
                     order_number: 1,
                     name: 'Initiating Spell',
                     created_by: createdBy,
                     status_type: 'project'
                 },
                 {
-                    tenant: tenant.tenant,
+                    tenant: tenantId,
                     order_number: 2,
                     name: 'Casting in Progress',
                     created_by: createdBy,
                     status_type: 'project'
                 },
                 {
-                    tenant: tenant.tenant,
+                    tenant: tenantId,
                     order_number: 3,
                     name: 'Magical Review',
                     created_by: createdBy,
                     status_type: 'project'
                 },
                 {
-                    tenant: tenant.tenant,
+                    tenant: tenantId,
                     order_number: 4,
                     name: 'Enchantment Complete',
                     created_by: createdBy,
                     status_type: 'project'
                 },
                 {
-                    tenant: tenant.tenant,
+                    tenant: tenantId,
                     order_number: 5,
                     name: 'Spell Archived',
                     created_by: createdBy,
                     status_type: 'project'
                 },
                 {
-                    tenant: tenant.tenant,
+                    tenant: tenantId,
                     order_number: 1,
                     name: 'Incantation Pending',
                     created_by: createdBy,
@@ -98,7 +99,7 @@ exports.seed = async function (knex) {
                     icon: 'Clipboard'
                 },
                 {
-                    tenant: tenant.tenant,
+                    tenant: tenantId,
                     order_number: 2,
                     name: 'Brewing Potion',
                     created_by: createdBy,
@@ -107,7 +108,7 @@ exports.seed = async function (knex) {
                     icon: 'Hourglass'
                 },
                 {
-                    tenant: tenant.tenant,
+                    tenant: tenantId,
                     order_number: 3,
                     name: 'Wand-Waving',
                     created_by: createdBy,
@@ -116,7 +117,7 @@ exports.seed = async function (knex) {
                     icon: 'PlayCircle'
                 },
                 {
-                    tenant: tenant.tenant,
+                    tenant: tenantId,
                     order_number: 4,
                     name: 'Spell Testing',
                     created_by: createdBy,
@@ -125,7 +126,7 @@ exports.seed = async function (knex) {
                     icon: 'Activity'
                 },
                 {
-                    tenant: tenant.tenant,
+                    tenant: tenantId,
                     order_number: 5,
                     name: 'Magic Accomplished',
                     created_by: createdBy,
@@ -134,21 +135,21 @@ exports.seed = async function (knex) {
                     icon: 'CheckCircle'
                 },
                 {
-                    tenant: tenant.tenant,
+                    tenant: tenantId,
                     order_number: 1,
                     name: 'Crystal Ball Awaiting',
                     created_by: createdBy,
                     status_type: 'interaction'
                 },
                 {
-                    tenant: tenant.tenant,
+                    tenant: tenantId,
                     order_number: 2,
                     name: 'Yellow Brick Chat',
                     created_by: createdBy,
                     status_type: 'interaction'
                 },
                 {
-                    tenant: tenant.tenant,
+                    tenant: tenantId,
                     order_number: 3,
                     name: 'Emerald Communication',
                     created_by: createdBy,
@@ -157,7 +158,7 @@ exports.seed = async function (knex) {
                     is_default: true
                 },
                 {
-                    tenant: tenant.tenant,
+                    tenant: tenantId,
                     order_number: 4,
                     name: 'Tornado Interrupted',
                     created_by: createdBy,

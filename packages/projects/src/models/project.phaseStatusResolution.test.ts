@@ -5,6 +5,16 @@ import ProjectModel from './project';
 type Row = Record<string, any>;
 type Tables = Record<string, Row[]>;
 
+// The tenant facade (`tenantDb(...).table(...)`) emits alias-qualified column
+// references for the tenant predicate, e.g. `where('project_status_mappings.tenant', tenant)`.
+// Real knex resolves the `alias.` prefix against the underlying column; this
+// in-memory fake must do the same, otherwise the qualified tenant predicate
+// matches nothing and every query returns `[]`.
+const columnKey = (column: string): string => {
+  const dotIndex = column.lastIndexOf('.');
+  return dotIndex === -1 ? column : column.slice(dotIndex + 1);
+};
+
 class InMemoryQuery<T extends Row> implements PromiseLike<T[]> {
   private readonly predicates: Array<(row: T) => boolean> = [];
   private readonly sorts: Array<{ column: string; direction: 'asc' | 'desc' }> = [];
@@ -13,12 +23,13 @@ class InMemoryQuery<T extends Row> implements PromiseLike<T[]> {
 
   where(column: string | Record<string, any>, value?: any) {
     if (typeof column === 'string') {
-      this.predicates.push((row) => row[column] === value);
+      const key = columnKey(column);
+      this.predicates.push((row) => row[key] === value);
       return this;
     }
 
     this.predicates.push((row) =>
-      Object.entries(column).every(([key, expected]) => row[key] === expected)
+      Object.entries(column).every(([key, expected]) => row[columnKey(key)] === expected)
     );
     return this;
   }
@@ -28,17 +39,19 @@ class InMemoryQuery<T extends Row> implements PromiseLike<T[]> {
   }
 
   whereNull(column: string) {
-    this.predicates.push((row) => row[column] == null);
+    const key = columnKey(column);
+    this.predicates.push((row) => row[key] == null);
     return this;
   }
 
   whereIn(column: string, values: any[]) {
-    this.predicates.push((row) => values.includes(row[column]));
+    const key = columnKey(column);
+    this.predicates.push((row) => values.includes(row[key]));
     return this;
   }
 
   orderBy(column: string, direction: 'asc' | 'desc' = 'asc') {
-    this.sorts.push({ column, direction });
+    this.sorts.push({ column: columnKey(column), direction });
     return this;
   }
 

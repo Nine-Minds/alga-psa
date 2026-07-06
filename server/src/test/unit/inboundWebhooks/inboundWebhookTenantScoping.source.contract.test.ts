@@ -8,79 +8,38 @@ function readSource(relativePath: string): string {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 }
 
-function tableStatements(source: string, tableCall: string): string[] {
-  const statements: string[] = [];
-  let searchFrom = 0;
-
-  while (searchFrom < source.length) {
-    const start = source.indexOf(tableCall, searchFrom);
-    if (start === -1) {
-      break;
-    }
-
-    const end = source.indexOf(';\n', start);
-    statements.push(source.slice(start, end === -1 ? source.length : end + 1));
-    searchFrom = start + tableCall.length;
-  }
-
-  return statements;
-}
-
-function firstKnexOperation(statement: string): string | null {
-  return statement.match(/\.(where|insert|update|delete|first|returning)\b/)?.[1] ?? null;
-}
-
 describe('inbound webhook tenant scoping source contracts', () => {
-  it('T190: all inbound webhook config queries include tenant in WHERE clauses', () => {
+  it('T190: all inbound webhook config roots use tenantDb', () => {
     const actionSource = readSource('server/src/lib/actions/inboundWebhookActions.ts');
     const lookupSource = readSource('server/src/lib/inboundWebhooks/configLookup.ts');
-    const statements = [
-      ...tableStatements(actionSource, "knex<InboundWebhookRow>('inbound_webhooks')"),
-      ...tableStatements(lookupSource, "knex<InboundWebhookConfigLookupRow>('inbound_webhooks')"),
-    ];
 
-    expect(statements.length).toBeGreaterThan(10);
+    expect(actionSource).toContain("import { createTenantKnex, tenantDb } from '@alga-psa/db';");
+    expect(actionSource).toContain('const db = tenantDb(knex, tenant);');
+    expect(actionSource).toContain("db.table<InboundWebhookRow>('inbound_webhooks')");
+    expect(actionSource).toContain('db.tenantJoinSubquery(');
+    expect(actionSource).toContain('insert({\n            tenant,');
+    expect(lookupSource).toContain("import { tenantDb } from '@alga-psa/db';");
+    expect(lookupSource).toContain("tenantDb(knex, tenant).table<InboundWebhookConfigLookupRow>('inbound_webhooks')");
 
-    for (const statement of statements) {
-      const firstOperation = firstKnexOperation(statement);
-
-      if (firstOperation === 'insert') {
-        expect(statement).toMatch(/\.insert\(\{\s*tenant,/);
-        continue;
-      }
-
-      expect(statement).toMatch(/\.where\(\{\s*tenant(?:[\s,}])/);
-    }
+    expect(actionSource).not.toMatch(/\bknex(?:<[^>]+>)?\(['"]inbound_webhooks['"]\)/);
+    expect(actionSource).not.toContain('.leftJoin(publishedVersions');
+    expect(lookupSource).not.toMatch(/\bknex(?:<[^>]+>)?\(['"]inbound_webhooks['"]\)/);
   });
 
-  it('T191: all inbound delivery queries include tenant in WHERE clauses', () => {
+  it('T191: all inbound delivery roots use tenantDb', () => {
     const actionSource = readSource('server/src/lib/actions/inboundWebhookActions.ts');
     const persistenceSource = readSource('server/src/lib/inboundWebhooks/deliveryPersistence.ts');
     const idempotencySource = readSource('server/src/lib/inboundWebhooks/idempotency.ts');
-    const statements = [
-      ...tableStatements(actionSource, "knex<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')"),
-      ...tableStatements(actionSource, "knex('inbound_webhook_deliveries')"),
-      ...tableStatements(persistenceSource, "knex('inbound_webhook_deliveries')"),
-      ...tableStatements(idempotencySource, "args.knex('inbound_webhook_deliveries')"),
-    ];
 
-    expect(statements.length).toBeGreaterThan(5);
-    expect(actionSource).toContain("query.where('tenant', tenant);");
+    expect(actionSource).toContain("db.table<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')");
+    expect(actionSource).toContain("db.table('inbound_webhook_deliveries')");
+    expect(actionSource).toContain("tenantDb(knex, tenant).table<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')");
+    expect(persistenceSource).toContain("tenantDb(knex, input.tenant).table('inbound_webhook_deliveries')");
+    expect(persistenceSource).toContain('insert({\n      tenant: input.tenant,');
+    expect(idempotencySource).toContain("tenantDb(args.knex, args.tenant).table('inbound_webhook_deliveries')");
 
-    for (const statement of statements) {
-      const firstOperation = firstKnexOperation(statement);
-
-      if (firstOperation === 'insert') {
-        expect(statement).toMatch(/\.insert\(\{\s*tenant: input\.tenant,/);
-        continue;
-      }
-
-      if (!statement.includes('.where(')) {
-        expect(statement).toMatch(/\.(count|orderBy)(?:<[^>]+>)?\(/);
-        continue;
-      }
-
-      expect(statement).toMatch(/\.where\(\{\s*tenant(?::\s*(?:input|args)\.tenant|[\s,}])/);
+    for (const source of [actionSource, persistenceSource, idempotencySource]) {
+      expect(source).not.toMatch(/\b(?:args\.)?knex(?:<[^>]+>)?\(['"]inbound_webhook_deliveries['"]\)/);
     }
   });
 });

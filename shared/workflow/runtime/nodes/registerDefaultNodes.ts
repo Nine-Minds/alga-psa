@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { exprSchema, inputMappingSchema, eventWaitConfigSchema, timeWaitConfigSchema } from '../types';
 import { resolveExpressions } from '../utils/expressionResolver';
@@ -464,19 +466,20 @@ function ctxToExpr(env: Envelope) {
 }
 
 async function resolveTaskFormSchema(
-  knex: any,
+  knex: Knex | Knex.Transaction,
   tenantId: string | null,
   taskType: string
 ): Promise<{ formId: string; formType: string; schema: Record<string, unknown> | null } | null> {
   if (!taskType) return null;
-  const systemTask = await knex('system_workflow_task_definitions')
+  const systemCatalogDb = tenantDb(knex, tenantId || '__workflow_system_task_catalog__');
+  const systemTask = await systemCatalogDb.table('system_workflow_task_definitions')
     .where({ task_type: taskType })
     .first();
   if (systemTask) {
     const formId = systemTask.form_id as string;
     const formType = systemTask.form_type ?? 'system';
     if (formType === 'system') {
-      const form = await knex('system_workflow_form_definitions')
+      const form = await systemCatalogDb.table('system_workflow_form_definitions')
         .where({ name: formId })
         .first();
       return {
@@ -488,15 +491,16 @@ async function resolveTaskFormSchema(
   }
 
   if (tenantId) {
-    const tenantTask = await knex('workflow_task_definitions')
-      .where({ tenant: tenantId, name: taskType })
+    const db = tenantDb(knex, tenantId);
+    const tenantTask = await db.table('workflow_task_definitions')
+      .where({ name: taskType })
       .first();
     if (tenantTask) {
       const formId = tenantTask.form_id as string;
       const formType = tenantTask.form_type ?? 'tenant';
       if (formType === 'tenant') {
-        const formSchema = await knex('workflow_form_schemas')
-          .where({ tenant: tenantId, form_id: formId })
+        const formSchema = await db.table('workflow_form_schemas')
+          .where({ form_id: formId })
           .first();
         return {
           formId,

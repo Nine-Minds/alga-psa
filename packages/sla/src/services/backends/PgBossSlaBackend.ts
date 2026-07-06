@@ -1,4 +1,4 @@
-import { createTenantKnex, getConnection, getTenantContext } from '@alga-psa/db';
+import { createTenantKnex, getConnection, getTenantContext, tenantDb } from '@alga-psa/db';
 import type { ISlaBackend } from './ISlaBackend';
 import type {
   IBusinessHoursScheduleWithEntries,
@@ -7,6 +7,8 @@ import type {
   SlaPauseReason,
 } from '../../types';
 import { getSlaStatus } from '../slaService';
+
+const SLA_TENANT_DISCOVERY = 'tenant-discovery';
 
 /**
  * CE backend. The SLA columns are persisted by the caller before any backend
@@ -63,7 +65,8 @@ export class PgBossSlaBackend implements ISlaBackend {
     }
 
     const knex = await getConnection(null);
-    const ticket = await knex('tickets')
+    const ticket = await tenantDb(knex, SLA_TENANT_DISCOVERY)
+      .unscoped('tickets', 'tenant discovery for SLA status lookup by ticket id')
       .where('ticket_id', ticketId)
       .select('tenant')
       .first<{ tenant: string } | undefined>();

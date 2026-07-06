@@ -18,7 +18,7 @@ export default function ClientSurveySummaryCard({ summary }: ClientSurveySummary
     <Card className="bg-white shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base font-semibold text-gray-900">
-          {t('clientSummary.title', { defaultValue: 'CSAT Summary' })}
+          {t('clientSummary.title', { defaultValue: 'Satisfaction' })}
         </CardTitle>
         <TrendingUp className="h-4 w-4 text-primary-500" />
       </CardHeader>

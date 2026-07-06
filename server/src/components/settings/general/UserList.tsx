@@ -40,6 +40,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
   const [userClients, setUserClients] = useState<Record<string, { client_id: string; client_name: string } | null>>({});
   const { openDrawer } = useDrawer();
 
+  // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -360,6 +361,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
 
   return (
     <div>
+      {/* LEVERAGE: friction datatable-paging-remount — remounts the whole table via key to force paging to apply (works around DataTable's internal paging state) */}
       <DataTable
         key={`${currentPage}-${pageSize}`}
         id="users-table"

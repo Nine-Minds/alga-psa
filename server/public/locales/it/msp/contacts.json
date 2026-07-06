@@ -571,13 +571,15 @@
       "name": "Nome",
       "email": "E-mail",
       "phoneNumber": "Numero di telefono",
-      "actions": "Azioni"
+      "actions": "Azioni",
+      "role": "Ruolo"
     },
     "filter": {
       "show": "Mostra:",
       "active": "Contatti attivi",
       "inactive": "Contatti inattivi",
-      "all": "Tutti i contatti"
+      "all": "Tutti i contatti",
+      "searchPlaceholder": "Cerca contatti..."
     },
     "actions": {
       "openMenu": "Apri menu",

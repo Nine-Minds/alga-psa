@@ -28,12 +28,12 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
-vi.mock('../../lib/search/acl', () => ({
+vi.mock('@alga-psa/search/acl', () => ({
   resolveSearchAclPrincipal: mocks.resolveSearchAclPrincipal,
   verifyResultVisibility: mocks.verifyResultVisibility,
 }));
 
-vi.mock('../../lib/search/query', () => ({
+vi.mock('@alga-psa/search/query', () => ({
   runSearchQuery: mocks.runSearchQuery,
   runSearchTypeaheadQuery: mocks.runSearchTypeaheadQuery,
   countSearchMatches: mocks.countSearchMatches,
@@ -49,7 +49,7 @@ import {
   searchAppInputSchema,
   searchAppResultSchema,
   SearchRateLimitError,
-} from '../../lib/actions/searchActionShared';
+} from '@alga-psa/search/actions/searchActionShared';
 
 describe('search actions', () => {
   beforeEach(() => {

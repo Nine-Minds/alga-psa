@@ -1,7 +1,7 @@
 'use server'
 
 import type { IContact } from '@alga-psa/types';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { hasPermission } from '../lib/permissions';
@@ -34,13 +34,11 @@ export const getContactsForPicker = withAuth(async (
   const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
     const dbSortBy = safeSortBy === 'client_name' ? 'full_name' : `contacts.${safeSortBy}`;
 
-    return trx('contacts')
-      .select('contacts.*', 'clients.client_name')
-      .leftJoin('clients', function (this: Knex.JoinClause) {
-        this.on('contacts.client_id', 'clients.client_id')
-          .andOn('clients.tenant', 'contacts.tenant');
-      })
-      .where('contacts.tenant', tenant)
+    const scopedDb = tenantDb(trx, tenant);
+    const contactsQuery = scopedDb.table('contacts').select('contacts.*', 'clients.client_name');
+    scopedDb.tenantJoin(contactsQuery, 'clients', 'contacts.client_id', 'clients.client_id', { type: 'left' });
+
+    return contactsQuery
       .modify(function (queryBuilder: Knex.QueryBuilder) {
         if (status !== 'all') {
           queryBuilder.where('contacts.is_inactive', status === 'inactive');

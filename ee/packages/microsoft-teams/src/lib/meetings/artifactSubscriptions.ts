@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
 import { resolveTeamsMeetingGraphConfig } from './meetingConfig';
 
@@ -223,8 +223,8 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
   }
 
   const { knex } = await createTenantKnex(tenantId);
-  const row = await knex<TeamsIntegrationSubscriptionRow>('teams_integrations')
-    .where({ tenant: tenantId })
+  const db = tenantDb(knex, tenantId);
+  const row = await db.table<TeamsIntegrationSubscriptionRow>('teams_integrations')
     .first();
 
   if (!row || row.install_status !== 'active') {
@@ -236,8 +236,7 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
   let clientStateSecret = normalizeString(row.meeting_artifact_webhook_secret);
   if (!clientStateSecret) {
     clientStateSecret = generateArtifactWebhookSecret();
-    await knex('teams_integrations')
-      .where({ tenant: tenantId })
+    await db.table('teams_integrations')
       .update({ meeting_artifact_webhook_secret: clientStateSecret, updated_at: knex.fn.now() });
   }
 
@@ -270,8 +269,7 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
       }
     }
 
-    await knex('teams_integrations')
-      .where({ tenant: tenantId })
+    await db.table('teams_integrations')
       .update({
         [columns.idColumn]: result.subscriptionId,
         [columns.expiryColumn]: result.expiresAt,

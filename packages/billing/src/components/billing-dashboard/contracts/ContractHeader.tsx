@@ -8,6 +8,7 @@ import type { IContractSummary } from '@alga-psa/billing/actions/contractActions
 import { Calendar, CalendarClock, FileCheck, Layers3, Coins } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { toPlainDate } from '@alga-psa/core';
 
 interface ContractHeaderProps {
   contract: IContract;
@@ -32,6 +33,24 @@ const formatDate = (value?: string | Date | null, emptyLabel: string = '—'): s
   }
 
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date);
+};
+
+// start_date/end_date are calendar dates stored as UTC-midnight timestamps.
+// Format via toPlainDate + noon-UTC so the day matches the detail body and never
+// shifts in negative-offset timezones. (Use formatDate above for true instants
+// like updated_at, where local-time rendering is intended.)
+const formatCalendarDate = (value?: string | Date | null, emptyLabel: string = '—'): string => {
+  if (!value) {
+    return emptyLabel;
+  }
+
+  try {
+    const plainDate = toPlainDate(value);
+    const displayDate = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(displayDate);
+  } catch {
+    return emptyLabel;
+  }
 };
 
 const formatNumber = (value?: number, emptyLabel: string = '—'): string => {
@@ -68,7 +87,7 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary, live
     {
       label: t('contractHeader.labels.startDate', { defaultValue: 'Start Date' }),
       value: summary?.earliestStartDate
-        ? formatDate(summary.earliestStartDate, emptyLabel)
+        ? formatCalendarDate(summary.earliestStartDate, emptyLabel)
         : summary
           ? emptyLabel
           : emptyLabel,
@@ -78,7 +97,7 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary, live
       label: t('contractHeader.labels.endDate', { defaultValue: 'End Date' }),
       value: summary
         ? summary.latestEndDate
-          ? formatDate(summary.latestEndDate, emptyLabel)
+          ? formatCalendarDate(summary.latestEndDate, emptyLabel)
           : summary.totalClientAssignments > 0
             ? t('contractHeader.values.ongoing', { defaultValue: 'Ongoing' })
             : emptyLabel

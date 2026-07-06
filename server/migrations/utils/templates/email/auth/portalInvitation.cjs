@@ -354,6 +354,30 @@ const COPY = {
     footerCopyright: '\u00a9 {{currentYear}} {{clientName}}. Wszelkie prawa zastrze\u017cone.',
   },
 };
+COPY.pt = {
+  subject: 'Convite para o portal - {{clientName}}',
+  title: 'Convite de acesso ao portal',
+  headerTitle: 'Boas-vindas ao seu portal do cliente',
+  headerSubtitle: 'Você foi convidado(a) a acessar sua conta',
+  greeting: 'Olá {{contactName}},',
+  intro: 'Ótima notícia! Você foi convidado(a) a acessar o portal do cliente de <strong>{{clientName}}</strong>. Este portal seguro oferece acesso imediato a:',
+  infoBoxTitle: '🎯 O que você pode acessar',
+  feature1: '✓ Visualizar e acompanhar seus tickets de suporte',
+  feature2: '✓ Revisar atualizações e documentação de projetos',
+  feature3: '✓ Comunicar-se diretamente com sua equipe de suporte',
+  tagline: 'Tenha uma gestão de serviços simples e integrada com nosso portal intuitivo. Tudo o que você precisa para se manter informado e conectado em um local seguro.',
+  buttonLabel: 'Configurar acesso ao portal',
+  copyLinkHint: 'Ou copie e cole este link no navegador:',
+  warningTitle: '⏰ Convite com prazo limitado',
+  warningText: 'Este link de convite expirará em <strong>{{expirationTime}}</strong>. Conclua a configuração da sua conta antes desse prazo para garantir acesso sem interrupções.',
+  contactTitle: 'Precisa de ajuda?',
+  phoneLabel: 'Telefone',
+  contactHelp: 'Nossa equipe de suporte está pronta para ajudar você a começar.',
+  footerSent: 'Este email foi enviado para {{contactName}} como parte da configuração do seu acesso ao portal.',
+  footerUnexpected: 'Se você não esperava este convite, entre em contato conosco em {{clientLocationEmail}}.',
+  footerCopyright: '© {{currentYear}} {{clientName}}. Todos os direitos reservados.',
+};
+
 /* eslint-enable max-len */
 
 /* ------------------------------------------------------------------ */

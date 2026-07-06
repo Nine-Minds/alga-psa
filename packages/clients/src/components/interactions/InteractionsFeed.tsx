@@ -62,7 +62,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   const { automationIdProps: addButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: `${id}-add-button`,
     type: 'button',
-    label: 'Add Interaction',
+    label: 'Add interaction',
     helperText: 'Opens dialog to create a new interaction'
   });
 
@@ -215,9 +215,8 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               i.interaction_id === updatedInteraction.interaction_id ? updatedInteraction : i
             )
           );
-        } catch (error) {
+        } catch {
           // If interaction doesn't exist (was deleted), don't treat it as an error
-          console.log('Interaction no longer exists (likely deleted)');
         }
       }
     );
@@ -239,7 +238,9 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
 
   return (
     <ReflectionContainer id={id} label="Interactions Feed">
-      <Card className="w-full max-w-2xl">
+      {/* No width cap — the feed renders inside the 92vw focus drawer and
+          should spend the width on its rows, not a dead right margin. */}
+      <Card className="w-full">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 {...titleProps} className="text-2xl font-bold">
@@ -252,7 +253,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               variant="default"
             >
               <Plus className="mr-2 h-4 w-4" />
-              {t('interactions.feed.addInteraction', { defaultValue: 'Add Interaction' })}
+              {t('interactions.feed.addInteraction', { defaultValue: 'Add interaction' })}
             </Button>
           </div>
           <div className="flex flex-wrap gap-4 mb-4">
@@ -272,7 +273,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               className="flex items-center gap-2"
             >
               <Filter className="h-4 w-4" />
-              {t('interactions.feed.filter', { defaultValue: 'Filter' })}
+              {t('interactions.feed.filter', { defaultValue: 'Filters' })}
             </Button>
           </div>
         </div>

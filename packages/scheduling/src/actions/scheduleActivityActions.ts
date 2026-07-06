@@ -1,10 +1,9 @@
 'use server';
 
-import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import type { IScheduleEntry } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import type { Knex } from 'knex';
+import { createTenantKnex } from '@alga-psa/db';
+import { getScheduleActivityEntriesForUser } from './scheduleActivityCore';
 
 /**
  * Fetch schedule entries (with recurrence/virtual-occurrence expansion) for the
@@ -37,9 +36,8 @@ export const getScheduleActivityEntries = withAuth(async (
   start: Date,
   end: Date
 ): Promise<IScheduleEntry[]> => {
-  const { knex } = await createTenantKnex();
-
   if (targetUserId !== user.user_id) {
+    const { knex } = await createTenantKnex();
     const [canUpdate, canReadAll] = await Promise.all([
       hasPermission(user, 'user_schedule', 'update', knex),
       hasPermission(user, 'user_schedule', 'read_all', knex),
@@ -49,10 +47,6 @@ export const getScheduleActivityEntries = withAuth(async (
     }
   }
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const entries = await ScheduleEntry.getAll(trx, tenant, start, end);
-    return entries.filter((entry) =>
-      entry.assigned_user_ids.includes(targetUserId)
-    );
-  });
+  // Permission gate passed (or self) → delegate to the identity-explicit core.
+  return getScheduleActivityEntriesForUser(tenant, targetUserId, start, end);
 });

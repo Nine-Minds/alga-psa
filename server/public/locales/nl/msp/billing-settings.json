@@ -862,6 +862,19 @@
       },
       "description": {
         "label": "Beschrijving"
+      },
+      "inventory": {
+        "label": "Voorraad",
+        "track": "Voorraad bijhouden",
+        "serialized": "Geserialiseerd",
+        "kit": "Kit",
+        "createsAsset": "Maakt asset aan bij levering",
+        "defaultAssetType": "Standaard assettype",
+        "reorderPoint": "Bestelpunt",
+        "reorderQuantity": "Bestelhoeveelheid",
+        "kitPricingMode": "Kitprijsmodus",
+        "kitPricingSum": "Som van componenten",
+        "kitPricingFixed": "Vaste prijs"
       }
     },
     "options": {

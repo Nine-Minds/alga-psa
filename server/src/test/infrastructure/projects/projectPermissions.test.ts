@@ -25,11 +25,12 @@ import {
   expectPermissionDenied,
   expectError
 } from '../../../../test-utils/errorUtils';
+import { tenantDb } from '@alga-psa/db';
 
-vi.mock('@alga-psa/auth', () => ({
-  getCurrentUser: vi.fn(),
-  hasPermission: vi.fn(),
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../test-utils/testMocks');
+  return createAuthModuleMock();
+});
 
 describe('Project Permissions Infrastructure', () => {
   const context = new TestContext({
@@ -39,6 +40,14 @@ describe('Project Permissions Infrastructure', () => {
   let testProject: IProject;
   let regularUser: any;
   let adminUser: any;
+
+  function tenantScope(tenantId: string) {
+    return tenantDb(context.db, tenantId);
+  }
+
+  function tenantTable(tenantId: string, table: string) {
+    return tenantScope(tenantId).table(table);
+  }
 
   // Set up test context with database connection
   beforeAll(async () => {
@@ -76,19 +85,19 @@ describe('Project Permissions Infrastructure', () => {
     });
 
     // Get complete user objects from database
-    regularUser = await context.db('users')
+    const regularUserQuery = tenantTable(tenantId, 'users')
       .select('users.*')
-      .leftJoin('user_roles', 'users.user_id', 'user_roles.user_id')
-      .leftJoin('roles', 'user_roles.role_id', 'roles.role_id')
-      .where('users.user_id', regularUserId)
-      .first();
+      .where('users.user_id', regularUserId);
+    tenantScope(tenantId).tenantJoin(regularUserQuery, 'user_roles', 'users.user_id', 'user_roles.user_id', { type: 'left' });
+    tenantScope(tenantId).tenantJoin(regularUserQuery, 'roles', 'user_roles.role_id', 'roles.role_id', { type: 'left' });
+    regularUser = await regularUserQuery.first();
 
-    adminUser = await context.db('users')
+    const adminUserQuery = tenantTable(tenantId, 'users')
       .select('users.*')
-      .leftJoin('user_roles', 'users.user_id', 'user_roles.user_id')
-      .leftJoin('roles', 'user_roles.role_id', 'roles.role_id')
-      .where('users.user_id', adminUserId)
-      .first();
+      .where('users.user_id', adminUserId);
+    tenantScope(tenantId).tenantJoin(adminUserQuery, 'user_roles', 'users.user_id', 'user_roles.user_id', { type: 'left' });
+    tenantScope(tenantId).tenantJoin(adminUserQuery, 'roles', 'user_roles.role_id', 'roles.role_id', { type: 'left' });
+    adminUser = await adminUserQuery.first();
 
     // Set up mocks
     setupCommonMocks({
@@ -103,7 +112,7 @@ describe('Project Permissions Infrastructure', () => {
     });
 
     // Create test project
-    const initiatingSpellStatus = await context.db('statuses')
+    const initiatingSpellStatus = await tenantTable(tenantId, 'statuses')
       .where('name', 'Initiating Spell')
       .first();
 
@@ -126,7 +135,7 @@ describe('Project Permissions Infrastructure', () => {
       status: initiatingSpellStatus.status_id
     };
 
-    await context.db('projects').insert(testProject);
+    await tenantTable(tenantId, 'projects').insert(testProject);
   });
 
   // Use cleanup hook for test isolation
@@ -148,7 +157,7 @@ describe('Project Permissions Infrastructure', () => {
     const result = await projectActions.updateProject(testProject.project_id, updateData);
     expect(result.project_name).toBe('Updated Test Project');
 
-    const updatedProject = await context.db('projects').where('project_id', testProject.project_id).first();
+    const updatedProject = await tenantTable(testProject.tenant, 'projects').where('project_id', testProject.project_id).first();
     expect(updatedProject.project_name).toBe('Updated Test Project');
   });
 
@@ -162,7 +171,7 @@ describe('Project Permissions Infrastructure', () => {
       () => projectActions.updateProject(testProject.project_id, updateData)
     );
 
-    const unchangedProject = await context.db('projects').where('project_id', testProject.project_id).first();
+    const unchangedProject = await tenantTable(testProject.tenant, 'projects').where('project_id', testProject.project_id).first();
     expect(unchangedProject.project_name).toBe(testProject.project_name);
   });
 
@@ -186,7 +195,7 @@ describe('Project Permissions Infrastructure', () => {
     expect(newProject).toBeDefined();
     expect(newProject.project_name).toBe('New Test Project');
 
-    const retrievedProject = await context.db('projects').where('project_id', newProject.project_id).first();
+    const retrievedProject = await tenantTable(testProject.tenant, 'projects').where('project_id', newProject.project_id).first();
     expect(retrievedProject.project_id).toEqual(newProject.project_id);
   });
 
@@ -215,7 +224,7 @@ describe('Project Permissions Infrastructure', () => {
     vi.mocked(auth.getCurrentUser).mockResolvedValue(adminUser);
     await projectActions.deleteProject(testProject.project_id);
 
-    const deletedProject = await context.db('projects').where('project_id', testProject.project_id).first();
+    const deletedProject = await tenantTable(testProject.tenant, 'projects').where('project_id', testProject.project_id).first();
     expect(deletedProject).toBeUndefined();
   });
 
@@ -226,7 +235,7 @@ describe('Project Permissions Infrastructure', () => {
       () => projectActions.deleteProject(testProject.project_id)
     );
 
-    const unchangedProject = await context.db('projects').where('project_id', testProject.project_id).first();
+    const unchangedProject = await tenantTable(testProject.tenant, 'projects').where('project_id', testProject.project_id).first();
     expect(unchangedProject).toBeDefined();
   });
 });

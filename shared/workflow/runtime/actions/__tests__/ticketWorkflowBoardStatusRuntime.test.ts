@@ -114,6 +114,13 @@ class FakeQueryBuilder {
     return rows.length;
   }
 
+  async delete(): Promise<number> {
+    const rows = this.tables[this.tableName] ?? [];
+    const remaining = rows.filter((row) => !this.matches(row));
+    this.tables[this.tableName] = remaining;
+    return rows.length - remaining.length;
+  }
+
   async insert(data: Record<string, any> | Array<Record<string, any>>): Promise<any> {
     const rows = Array.isArray(data) ? data : [data];
     if (!this.tables[this.tableName]) {
@@ -123,15 +130,21 @@ class FakeQueryBuilder {
     return rows;
   }
 
+  private valueFor(row: TableRow, column: string): any {
+    return row[column] ?? row[column.split('.').pop() ?? column];
+  }
+
+  private matches(row: TableRow): boolean {
+    return Object.entries(this.conditions).every(([column, value]) => this.valueFor(row, column) === value);
+  }
+
   private execute(): TableRow[] {
-    const rows = [...(this.tables[this.tableName] ?? [])].filter((row) =>
-      Object.entries(this.conditions).every(([column, value]) => row[column] === value)
-    );
+    const rows = [...(this.tables[this.tableName] ?? [])].filter((row) => this.matches(row));
 
     return rows.sort((left, right) => {
       for (const ordering of this.orderings) {
-        const leftValue = left[ordering.column];
-        const rightValue = right[ordering.column];
+        const leftValue = this.valueFor(left, ordering.column);
+        const rightValue = this.valueFor(right, ordering.column);
 
         if (leftValue === rightValue) {
           continue;

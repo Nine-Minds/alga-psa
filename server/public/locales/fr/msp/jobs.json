@@ -21,7 +21,7 @@
       "status": "Statut",
       "duration": "Durée",
       "started": "Commencé",
-      "completed": "Complété"
+      "completed": "Terminé"
     },
     "time": {
       "justNow": "Tout à l' heure",
@@ -63,9 +63,12 @@
       "pending": "En attente",
       "processing": "Traitement",
       "pgboss": "Patron du PG",
-      "temporal": "Temporel"
+      "temporal": "Temporel",
+      "queued": "En file d'attente",
+      "running": "En cours"
     },
-    "successRate": "{{count}}% de taux de réussite"
+    "successRate": "{{count}}% de taux de réussite",
+    "successRateNone": "Aucun travail terminé pour le moment"
   },
   "historyTable": {
     "columns": {
@@ -102,5 +105,36 @@
   "actions": {
     "print": "Imprimer",
     "printOptions": "Options d'impression"
+  },
+  "clearHistory": {
+    "button": "Effacer l'historique",
+    "dialog": {
+      "title": "Effacer l'historique des travaux",
+      "warning": "Cette action supprime définitivement l'historique des travaux de cette liste et est irréversible. Elle n'arrête ni n'annule les travaux en cours d'exécution.",
+      "daysLabel": "Âge en jours",
+      "daysError": "Saisissez un nombre entier de jours (1 ou plus).",
+      "cancel": "Annuler",
+      "clearing": "Effacement…",
+      "confirm": "Effacer l'historique"
+    },
+    "scope": {
+      "finished": {
+        "label": "Terminés uniquement",
+        "description": "Travaux terminés et en échec. Les travaux en attente, en file d'attente et en cours sont conservés."
+      },
+      "all": {
+        "label": "Tous les statuts",
+        "description": "Tous les travaux, y compris ceux en attente, en file d'attente et encore en cours."
+      }
+    },
+    "age": {
+      "toggle": "Supprimer uniquement les travaux plus anciens qu'un âge défini"
+    },
+    "toast": {
+      "success_one": "{{count}} travail supprimé de l'historique.",
+      "success_other": "{{count}} travaux supprimés de l'historique.",
+      "none": "Aucun travail correspondant à supprimer.",
+      "error": "Échec de l'effacement de l'historique des travaux. Veuillez réessayer."
+    }
   }
 }

@@ -12,6 +12,7 @@ import { createTenantKnex } from '@/lib/db';
 import { withAuth } from '@alga-psa/auth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 import Stripe from 'stripe';
 import * as fs from 'fs';
 import {
@@ -109,9 +110,8 @@ interface PaymentProviderDisplay {
 export const getPaymentConfigAction = withAuth(async (user, { tenant }): Promise<PaymentActionResult<PaymentProviderDisplay | null>> => {
   try {
     const { knex } = await createTenantKnex();
-    const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
+    const config = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant,
         provider_type: 'stripe',
       })
       .first();
@@ -341,9 +341,8 @@ export const connectStripeAction = withAuth(async (
 
     // Create or update provider config
     const { knex } = await createTenantKnex();
-    const existingConfig = await knex<IPaymentProviderConfig>('payment_provider_configs')
+    const existingConfig = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant,
         provider_type: 'stripe',
       })
       .first();
@@ -364,11 +363,11 @@ export const connectStripeAction = withAuth(async (
     };
 
     if (existingConfig) {
-      await knex('payment_provider_configs')
-        .where({ config_id: existingConfig.config_id, tenant })
+      await tenantDb(knex, tenant).table('payment_provider_configs')
+        .where({ config_id: existingConfig.config_id })
         .update(configData);
     } else {
-      await knex('payment_provider_configs').insert({
+      await tenantDb(knex, tenant).table('payment_provider_configs').insert({
         tenant,
         provider_type: 'stripe',
         ...configData,
@@ -401,9 +400,8 @@ export const disconnectStripeAction = withAuth(async (user, { tenant }): Promise
     const secretProvider = await getSecretProviderInstance();
 
     // Get current config to find webhook endpoint ID
-    const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
+    const config = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant,
         provider_type: 'stripe',
       })
       .first();
@@ -443,9 +441,8 @@ export const disconnectStripeAction = withAuth(async (user, { tenant }): Promise
     }
 
     // Disable the provider config and clear webhook info
-    await knex('payment_provider_configs')
+    await tenantDb(knex, tenant).table('payment_provider_configs')
       .where({
-        tenant,
         provider_type: 'stripe',
       })
       .update({
@@ -486,9 +483,8 @@ export const updatePaymentSettingsAction = withAuth(async (
     const { knex } = await createTenantKnex();
 
     // Get current config
-    const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
+    const config = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant,
         provider_type: 'stripe',
       })
       .first();
@@ -506,8 +502,8 @@ export const updatePaymentSettingsAction = withAuth(async (
     };
 
     // Update config
-    await knex('payment_provider_configs')
-      .where({ config_id: config.config_id, tenant })
+    await tenantDb(knex, tenant).table('payment_provider_configs')
+      .where({ config_id: config.config_id })
       .update({
         settings: newSettings,
         updated_at: knex.fn.now(),
@@ -599,9 +595,8 @@ export const saveStripeWebhookSecretAction = withAuth(async (
     const secretProvider = await getSecretProviderInstance();
 
     // Check if Stripe is configured
-    const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
+    const config = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant,
         provider_type: 'stripe',
       })
       .first();
@@ -618,8 +613,8 @@ export const saveStripeWebhookSecretAction = withAuth(async (
     );
 
     // Update the config to point to the webhook secret
-    await knex('payment_provider_configs')
-      .where({ config_id: config.config_id, tenant })
+    await tenantDb(knex, tenant).table('payment_provider_configs')
+      .where({ config_id: config.config_id })
       .update({
         webhook_secret_vault_path: `tenant/${tenant}/stripe_payment_webhook_secret`,
         updated_at: knex.fn.now(),
@@ -647,9 +642,8 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
     const secretProvider = await getSecretProviderInstance();
 
     // Get existing config
-    const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
+    const config = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant,
         provider_type: 'stripe',
       })
       .first();
@@ -722,8 +716,8 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
 
     // Update the config with webhook info
     const configuration = config.configuration as any;
-    await knex('payment_provider_configs')
-      .where({ config_id: config.config_id, tenant })
+    await tenantDb(knex, tenant).table('payment_provider_configs')
+      .where({ config_id: config.config_id })
       .update({
         configuration: {
           ...configuration,
@@ -756,9 +750,8 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
 export const getStripePublishableKeyAction = withAuth(async (user, { tenant }): Promise<PaymentActionResult<{ publishableKey: string }>> => {
   try {
     const { knex } = await createTenantKnex();
-    const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
+    const config = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant,
         provider_type: 'stripe',
         is_enabled: true,
       })

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
@@ -16,6 +17,10 @@ applyPlaywrightAuthEnvDefaults();
 const TEST_CONFIG = {
   baseUrl: resolvePlaywrightBaseUrl(),
 };
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
 
 const ADMIN_PERMISSIONS = [
   {
@@ -70,10 +75,13 @@ async function setupDesigner(page: Page): Promise<{
   return { db, tenantData, workflowPage };
 }
 
-async function createWorkflowDefinition(db: Knex, name: string, steps: Record<string, unknown>[] = []): Promise<WorkflowSeed> {
+async function createWorkflowDefinition(
+  db: Knex,
+  tenantId: string,
+  name: string,
+  steps: Record<string, unknown>[] = []
+): Promise<WorkflowSeed> {
   const workflowId = uuidv4();
-  const tenantId = (await db('tenants').select('tenant').first())?.tenant;
-  if (!tenantId) throw new Error('tenant_id is required to seed workflow definition');
   const now = new Date().toISOString();
   const definition = {
     id: workflowId,
@@ -84,7 +92,7 @@ async function createWorkflowDefinition(db: Knex, name: string, steps: Record<st
     steps,
   };
 
-  await db('workflow_definitions').insert({
+  await tenantTable(db, tenantId, 'workflow_definitions').insert({
     workflow_id: workflowId,
     tenant: tenantId,
     name,
@@ -97,8 +105,9 @@ async function createWorkflowDefinition(db: Knex, name: string, steps: Record<st
     created_at: now,
     updated_at: now,
   });
-  await db('workflow_definition_versions').insert({
+  await tenantTable(db, tenantId, 'workflow_definition_versions').insert({
     version_id: uuidv4(),
+    tenant: tenantId,
     workflow_id: workflowId,
     version: 1,
     definition_json: definition,
@@ -113,7 +122,7 @@ async function createWorkflowDefinition(db: Knex, name: string, steps: Record<st
 }
 
 async function createWorkflowRun(db: Knex, run: RunSeed): Promise<void> {
-  await db('workflow_runs').insert({
+  await tenantTable(db, run.tenantId, 'workflow_runs').insert({
     run_id: run.runId,
     workflow_id: run.workflowId,
     workflow_version: run.version,
@@ -128,9 +137,10 @@ async function createWorkflowRun(db: Knex, run: RunSeed): Promise<void> {
   });
 }
 
-async function createWaitKey(db: Knex, runId: string, key: string, waitType = 'EVENT'): Promise<void> {
-  await db('workflow_run_waits').insert({
+async function createWaitKey(db: Knex, tenantId: string, runId: string, key: string, waitType = 'EVENT'): Promise<void> {
+  await tenantTable(db, tenantId, 'workflow_run_waits').insert({
     wait_id: uuidv4(),
+    tenant: tenantId,
     run_id: runId,
     step_path: 'root.steps[0]',
     wait_type: waitType,
@@ -191,7 +201,7 @@ test.describe('Workflow Designer UI - E2E flows', () => {
       await workflowPage.saveDraft();
       await expect(page.getByRole('button', { name: workflowName })).toBeVisible({ timeout: 10_000 });
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
     }
@@ -223,7 +233,7 @@ test.describe('Workflow Designer UI - E2E flows', () => {
       await workflowPage.publishButton.click();
       await expect(page.getByText('Workflow published')).toBeVisible();
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
     }
@@ -242,7 +252,7 @@ test.describe('Workflow Designer UI - E2E flows', () => {
     const workflowName = `E2E Run ${uuidv4().slice(0, 6)}`;
 
     try {
-      const workflow = await createWorkflowDefinition(db, workflowName);
+      const workflow = await createWorkflowDefinition(db, tenantData.tenant.tenantId, workflowName);
       const response = await page.request.post(`${TEST_CONFIG.baseUrl}/api/workflow-runs`, {
         data: {
           workflowId: workflow.workflowId,
@@ -259,7 +269,7 @@ test.describe('Workflow Designer UI - E2E flows', () => {
       const row = findRunRow(page, runId);
       await expect(row).toBeVisible();
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantId).catch(() => undefined);
       await db.destroy();
     }
@@ -278,7 +288,7 @@ test.describe('Workflow Designer UI - E2E flows', () => {
     const workflowName = `E2E Cancel ${uuidv4().slice(0, 6)}`;
 
     try {
-      const workflow = await createWorkflowDefinition(db, workflowName);
+      const workflow = await createWorkflowDefinition(db, tenantData.tenant.tenantId, workflowName);
       const runId = uuidv4();
       await createWorkflowRun(db, {
         runId,
@@ -303,7 +313,7 @@ test.describe('Workflow Designer UI - E2E flows', () => {
       const row = findRunRow(page, runId);
       await expect(row).toContainText('CANCELED');
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantId).catch(() => undefined);
       await db.destroy();
     }

@@ -2,6 +2,7 @@ import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 
@@ -18,6 +19,27 @@ type CreatedIds = {
   clientContractId?: string;
 };
 let createdIds: CreatedIds = {};
+
+function tenantTable<Row extends object = Record<string, unknown>>(
+  connection: Knex,
+  tenant: string,
+  tableExpression: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(connection, tenant).table<Row>(tableExpression);
+}
+
+function tenantRows(connection: Knex): Knex.QueryBuilder<Record<string, unknown>, Record<string, unknown>[]> {
+  return tenantDb(connection, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+async function hasSchemaTable(connection: Knex, tableName: string): Promise<boolean> {
+  const row = await tenantDb(connection, '__test_schema__')
+    .unscoped('information_schema.tables', 'test schema table existence assertion')
+    .where({ table_schema: 'public', table_name: tableName })
+    .first('table_name');
+  return Boolean(row);
+}
 
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
@@ -98,11 +120,10 @@ describe('createClientContractFromWizard', () => {
     createdIds = {};
     const serviceTypeId = uuidv4();
     const serviceTypeName = `Managed Services ${serviceTypeId.slice(0, 8)}`;
-    await db('service_types').insert({
+    await tenantTable(db, tenantId, 'service_types').insert({
       id: serviceTypeId,
       tenant: tenantId,
       name: serviceTypeName,
-      billing_method: 'fixed',
       order_number: Math.floor(Math.random() * 1000000),
       created_at: db.fn.now(),
       updated_at: db.fn.now()
@@ -110,7 +131,7 @@ describe('createClientContractFromWizard', () => {
     createdIds.serviceTypeId = serviceTypeId;
 
     const serviceId = uuidv4();
-    await db('service_catalog').insert({
+    await tenantTable(db, tenantId, 'service_catalog').insert({
       tenant: tenantId,
       service_id: serviceId,
       service_name: 'Emerald City Security',
@@ -126,7 +147,7 @@ describe('createClientContractFromWizard', () => {
 
     const clientId = uuidv4();
     const clientName = `Emerald City ${clientId.slice(0, 8)}`;
-    await db('clients').insert({
+    await tenantTable(db, tenantId, 'clients').insert({
       tenant: tenantId,
       client_id: clientId,
       client_name: clientName,
@@ -162,34 +183,34 @@ describe('createClientContractFromWizard', () => {
     createdIds.contractId = result.contract_id;
     createdIds.contractLineId = result.contract_line_id ?? undefined;
 
-    const clientContract = await db('client_contracts')
+    const clientContract = await tenantTable(db, tenantId, 'client_contracts')
       .where({ tenant: tenantId, client_id: clientId, contract_id: result.contract_id })
       .first();
     expect(clientContract).toBeTruthy();
     createdIds.clientContractId = clientContract?.client_contract_id;
 
-    expect(await db.schema.hasTable('client_contract_lines')).toBe(false);
-    expect(await db.schema.hasTable('client_contract_services')).toBe(false);
+    expect(await hasSchemaTable(db, 'client_contract_lines')).toBe(false);
+    expect(await hasSchemaTable(db, 'client_contract_services')).toBe(false);
 
-    const contractLine = await db('contract_lines')
+    const contractLine = await tenantTable(db, tenantId, 'contract_lines')
       .where({ tenant: tenantId, contract_line_id: result.contract_line_id })
       .first();
     expect(contractLine).toBeTruthy();
     expect(contractLine?.contract_id).toBe(result.contract_id);
     expect(contractLine?.enable_proration).toBe(true);
 
-    const contractLineService = await db('contract_line_services')
+    const contractLineService = await tenantTable(db, tenantId, 'contract_line_services')
       .where({ tenant: tenantId, contract_line_id: result.contract_line_id, service_id: serviceId })
       .first();
     expect(contractLineService).toBeTruthy();
 
-    const contractLineConfig = await db('contract_line_service_configuration')
+    const contractLineConfig = await tenantTable(db, tenantId, 'contract_line_service_configuration')
       .where({ tenant: tenantId, contract_line_id: result.contract_line_id, service_id: serviceId })
       .first();
     expect(contractLineConfig).toBeTruthy();
     expect(contractLineConfig?.configuration_type).toBe('Fixed');
 
-    const fixedConfig = await db('contract_line_service_fixed_config')
+    const fixedConfig = await tenantTable(db, tenantId, 'contract_line_service_fixed_config')
       .where({ tenant: tenantId, config_id: contractLineConfig?.config_id })
       .first();
     expect(fixedConfig).toBeTruthy();
@@ -460,12 +481,12 @@ describe('createClientContractFromWizard', () => {
     });
     createdIds.contractId = result.contract_id;
 
-    const fixedLine = await db('contract_lines')
+    const fixedLine = await tenantTable(db, tenantId, 'contract_lines')
       .where({ tenant: tenantId, contract_id: result.contract_id, contract_line_type: 'Fixed' })
       .first();
     expect(fixedLine).toBeTruthy();
 
-    const config = await db('contract_line_service_configuration')
+    const config = await tenantTable(db, tenantId, 'contract_line_service_configuration')
       .where({
         tenant: tenantId,
         contract_line_id: fixedLine!.contract_line_id,
@@ -475,7 +496,7 @@ describe('createClientContractFromWizard', () => {
       .first();
     expect(config).toBeTruthy();
 
-    const fixedConfig = await db('contract_line_service_fixed_config')
+    const fixedConfig = await tenantTable(db, tenantId, 'contract_line_service_fixed_config')
       .where({ tenant: tenantId, config_id: config!.config_id })
       .first();
     expect(Number(fixedConfig?.base_rate ?? 0)).toBe(9900);
@@ -524,19 +545,12 @@ describe('createClientContractFromWizard', () => {
     });
     createdIds.contractId = result.contract_id;
 
-    const hourlyLine = await db('contract_lines')
+    const hourlyLine = await tenantTable(db, tenantId, 'contract_lines')
       .where({ tenant: tenantId, contract_id: result.contract_id, contract_line_type: 'Hourly' })
       .first();
     expect(hourlyLine).toBeTruthy();
 
-    const lineService = await db('contract_line_services')
-      .where({
-        tenant: tenantId,
-        contract_line_id: hourlyLine!.contract_line_id,
-        service_id: serviceId,
-      })
-      .first();
-    expect(Number(lineService?.unit_price ?? 0)).toBe(8700);
+    expect(await readHourlyRate(db, tenantId, hourlyLine!.contract_line_id, serviceId)).toBe(8700);
   });
 
   it('T023: resolves usage-mode prefill from service+mode+currency defaults when no usage override is provided', async () => {
@@ -580,19 +594,12 @@ describe('createClientContractFromWizard', () => {
     });
     createdIds.contractId = result.contract_id;
 
-    const usageLine = await db('contract_lines')
+    const usageLine = await tenantTable(db, tenantId, 'contract_lines')
       .where({ tenant: tenantId, contract_id: result.contract_id, contract_line_type: 'Usage' })
       .first();
     expect(usageLine).toBeTruthy();
 
-    const lineService = await db('contract_line_services')
-      .where({
-        tenant: tenantId,
-        contract_line_id: usageLine!.contract_line_id,
-        service_id: serviceId,
-      })
-      .first();
-    expect(Number(lineService?.unit_price ?? 0)).toBe(6400);
+    expect(await readUsageRate(db, tenantId, usageLine!.contract_line_id, serviceId)).toBe(6400);
   });
 
   it('T024: explicit fixed/hourly/usage overrides supersede catalog mode defaults', async () => {
@@ -670,15 +677,18 @@ describe('createClientContractFromWizard', () => {
     });
     createdIds.contractId = result.contract_id;
 
-    const lines = await db('contract_lines')
+    const lines = await tenantTable(db, tenantId, 'contract_lines')
       .where({ tenant: tenantId, contract_id: result.contract_id })
       .select('contract_line_id', 'contract_line_type');
     const lineIdByType = new Map(lines.map((line) => [line.contract_line_type, line.contract_line_id]));
 
-    const fixedConfig = await db('contract_line_service_fixed_config')
-      .join('contract_line_service_configuration as cfg', function () {
-        this.on('contract_line_service_fixed_config.config_id', '=', 'cfg.config_id');
-      })
+    const fixedConfig = await tenantDb(db, tenantId)
+      .tenantJoin(
+        tenantTable(db, tenantId, 'contract_line_service_fixed_config'),
+        'contract_line_service_configuration as cfg',
+        'contract_line_service_fixed_config.config_id',
+        'cfg.config_id'
+      )
       .where({
         'contract_line_service_fixed_config.tenant': tenantId,
         'cfg.contract_line_id': lineIdByType.get('Fixed'),
@@ -687,33 +697,37 @@ describe('createClientContractFromWizard', () => {
       .first('contract_line_service_fixed_config.base_rate');
     expect(Number(fixedConfig?.base_rate ?? 0)).toBe(7777);
 
-    const hourlyLineService = await db('contract_line_services')
-      .where({
-        tenant: tenantId,
-        contract_line_id: lineIdByType.get('Hourly'),
-        service_id: hourlyServiceId,
-      })
-      .first('unit_price');
-    expect(Number(hourlyLineService?.unit_price ?? 0)).toBe(8888);
-
-    const usageLineService = await db('contract_line_services')
-      .where({
-        tenant: tenantId,
-        contract_line_id: lineIdByType.get('Usage'),
-        service_id: usageServiceId,
-      })
-      .first('unit_price');
-    expect(Number(usageLineService?.unit_price ?? 0)).toBe(9999);
+    expect(await readHourlyRate(db, tenantId, lineIdByType.get('Hourly')!, hourlyServiceId)).toBe(8888);
+    expect(await readUsageRate(db, tenantId, lineIdByType.get('Usage')!, usageServiceId)).toBe(9999);
   });
 });
 
+// The wizard persists resolved hourly rates on contract_line_service_hourly_configs
+// (keyed by the line+service configuration) and resolved usage unit rates on the
+// configuration row's custom_rate.
+async function readHourlyRate(connection: Knex, tenant: string, contractLineId: string, serviceId: string) {
+  const config = await tenantTable(connection, tenant, 'contract_line_service_configuration')
+    .where({ tenant, contract_line_id: contractLineId, service_id: serviceId })
+    .first('config_id');
+  const hourlyConfig = await tenantTable(connection, tenant, 'contract_line_service_hourly_configs')
+    .where({ tenant, config_id: config?.config_id })
+    .first('hourly_rate');
+  return Number(hourlyConfig?.hourly_rate ?? 0);
+}
+
+async function readUsageRate(connection: Knex, tenant: string, contractLineId: string, serviceId: string) {
+  const config = await tenantTable(connection, tenant, 'contract_line_service_configuration')
+    .where({ tenant, contract_line_id: contractLineId, service_id: serviceId })
+    .first('custom_rate');
+  return Number(config?.custom_rate ?? 0);
+}
+
 async function insertServiceType(connection: Knex, tenant: string, billingMethod: 'fixed' | 'hourly' | 'usage') {
   const serviceTypeId = uuidv4();
-  await connection('service_types').insert({
+  await tenantTable(connection, tenant, 'service_types').insert({
     id: serviceTypeId,
     tenant,
     name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-    billing_method: billingMethod,
     order_number: Math.floor(Math.random() * 1000000),
     created_at: connection.fn.now(),
     updated_at: connection.fn.now(),
@@ -734,7 +748,7 @@ async function insertCatalogItem(
   }
 ) {
   const serviceId = uuidv4();
-  await connection('service_catalog').insert({
+  await tenantTable(connection, tenant, 'service_catalog').insert({
     tenant,
     service_id: serviceId,
     service_name: options.serviceName,
@@ -752,7 +766,7 @@ async function insertCatalogItem(
 
 async function insertClient(connection: Knex, tenant: string, clientNamePrefix: string) {
   const clientId = uuidv4();
-  await connection('clients').insert({
+  await tenantTable(connection, tenant, 'clients').insert({
     tenant,
     client_id: clientId,
     client_name: `${clientNamePrefix} ${clientId.slice(0, 8)}`,
@@ -774,7 +788,7 @@ async function insertModeDefault(
     rate: number;
   }
 ) {
-  await connection('service_catalog_mode_defaults').insert({
+  await tenantTable(connection, params.tenant, 'service_catalog_mode_defaults').insert({
     tenant: params.tenant,
     service_id: params.serviceId,
     billing_mode: params.billingMode,
@@ -786,13 +800,13 @@ async function insertModeDefault(
 }
 
 async function ensureTenant(connection: Knex): Promise<string> {
-  const existing = await connection('tenants').first<{ tenant: string }>('tenant');
+  const existing = await tenantRows(connection).first<{ tenant: string }>('tenant');
   if (existing?.tenant) {
     return existing.tenant;
   }
 
   const newTenantId = uuidv4();
-  await connection('tenants').insert({
+  await tenantRows(connection).insert({
     tenant: newTenantId,
     client_name: 'Contract Wizard Integration Tenant',
     email: 'contract-wizard@test.co',
@@ -809,7 +823,7 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
 
   const safeDelete = async (table: string, where: Record<string, unknown>) => {
     try {
-      await db(table).where(where).del();
+      await tenantTable(db, tenantId, table).where(where).del();
     } catch {
       // ignore cleanup issues
     }
@@ -820,7 +834,7 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
       return;
     }
     try {
-      await db(table).whereIn(column, values).andWhere({ tenant: tenantId }).del();
+      await tenantTable(db, tenantId, table).whereIn(column, values).del();
     } catch {
       // ignore cleanup issues
     }

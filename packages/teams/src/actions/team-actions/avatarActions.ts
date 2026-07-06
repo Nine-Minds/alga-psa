@@ -1,7 +1,7 @@
 'use server';
 
 import Team from '../../models/team';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { getTeamAvatarUrl } from '@alga-psa/formatting/avatarUtils';
@@ -132,13 +132,14 @@ async function getTeamAvatarUrlsBatch(
   try {
     const { knex } = await createTenantKnex(tenant);
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const associations = await trx('document_associations')
+      const db = tenantDb(trx, tenant);
+
+      const associations = await db.table('document_associations')
         .select('entity_id', 'document_id')
         .whereIn('entity_id', teamIds)
         .andWhere({
           entity_type: 'team',
           is_entity_logo: true,
-          tenant,
         });
 
       if (associations.length === 0) {
@@ -146,10 +147,9 @@ async function getTeamAvatarUrlsBatch(
       }
 
       const documentIds = associations.map((a: any) => a.document_id);
-      const documents = await trx('documents')
+      const documents = await db.table('documents')
         .select('document_id', 'file_id', 'updated_at')
-        .whereIn('document_id', documentIds)
-        .andWhere({ tenant });
+        .whereIn('document_id', documentIds);
 
       const docToInfo = new Map(
         documents.map((d: any) => [
@@ -161,10 +161,9 @@ async function getTeamAvatarUrlsBatch(
       const fileIds = documents.map((d: any) => d.file_id).filter(Boolean);
       const imageFileIds = new Set<string>();
       if (fileIds.length > 0) {
-        const files = await trx('external_files')
+        const files = await db.table('external_files')
           .select('file_id', 'mime_type')
-          .whereIn('file_id', fileIds)
-          .andWhere({ tenant });
+          .whereIn('file_id', fileIds);
         for (const file of files) {
           if (file?.mime_type?.startsWith('image/')) {
             imageFileIds.add(file.file_id);

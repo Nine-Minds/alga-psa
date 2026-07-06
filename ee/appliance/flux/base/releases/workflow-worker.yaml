@@ -9,6 +9,9 @@ spec:
   dependsOn:
     - name: alga-core
     - name: pgbouncer
+    # The worker connects to Temporal on startup with no retry; gate the release
+    # on Temporal being Ready so it isn't installed into a race at the Flux layer.
+    - name: temporal
   releaseName: workflow-worker
   targetNamespace: msp
   install:

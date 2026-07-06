@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex';
 import { formatISO } from 'date-fns';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { validateArray } from '@alga-psa/validation';
 import { ITimeEntryChangeRequest } from '@alga-psa/types';
@@ -57,23 +57,22 @@ export async function fetchTimeEntryChangeRequestsForEntryIdsFromDb(
     return new Map();
   }
 
-  const rows = await db('time_entry_change_requests as change_requests')
-    .leftJoin('users as authors', function joinAuthors() {
-      this.on('change_requests.created_by', '=', 'authors.user_id')
-        .andOn('change_requests.tenant', '=', 'authors.tenant');
-    })
+  const scopedDb = tenantDb(db, tenant);
+  const query = scopedDb.table('time_entry_change_requests as change_requests');
+  scopedDb.tenantJoin(query, 'users as authors', 'change_requests.created_by', 'authors.user_id', { type: 'left' });
+
+  const rows = await query
     .whereIn('change_requests.time_entry_id', entryIds)
-    .andWhere('change_requests.tenant', tenant)
     .select(
-      'change_requests.change_request_id',
-      'change_requests.time_entry_id',
-      'change_requests.time_sheet_id',
-      'change_requests.comment',
-      'change_requests.created_at',
-      'change_requests.created_by',
-      'change_requests.handled_at',
-      'change_requests.handled_by',
-      'change_requests.tenant',
+      'change_requests.change_request_id as change_request_id',
+      'change_requests.time_entry_id as time_entry_id',
+      'change_requests.time_sheet_id as time_sheet_id',
+      'change_requests.comment as comment',
+      'change_requests.created_at as created_at',
+      'change_requests.created_by as created_by',
+      'change_requests.handled_at as handled_at',
+      'change_requests.handled_by as handled_by',
+      'change_requests.tenant as tenant',
       db.raw("TRIM(CONCAT(COALESCE(authors.first_name, ''), ' ', COALESCE(authors.last_name, ''))) as created_by_name"),
     )
     .orderBy('change_requests.created_at', 'desc');
@@ -81,7 +80,7 @@ export async function fetchTimeEntryChangeRequestsForEntryIdsFromDb(
   return groupTimeEntryChangeRequestsByEntryId(
     validateArray(
       timeEntryChangeRequestSchema,
-      rows.map((row) => mapDbTimeEntryChangeRequest(row as DbTimeEntryChangeRequestRow)),
+      rows.map((row) => mapDbTimeEntryChangeRequest(row as unknown as DbTimeEntryChangeRequestRow)),
     ) as ITimeEntryChangeRequest[],
   );
 }
@@ -96,7 +95,7 @@ export async function createTimeEntryChangeRequestRecord(
     createdBy: string;
   },
 ): Promise<void> {
-  await db('time_entry_change_requests').insert({
+  await tenantDb(db, params.tenant).table('time_entry_change_requests').insert({
     change_request_id: db.raw('gen_random_uuid()'),
     time_entry_id: params.timeEntryId,
     time_sheet_id: params.timeSheetId,
@@ -115,9 +114,8 @@ export async function markTimeEntryChangeRequestsHandled(
     handledBy: string;
   },
 ): Promise<void> {
-  await db('time_entry_change_requests')
+  await tenantDb(db, params.tenant).table('time_entry_change_requests')
     .where({
-      tenant: params.tenant,
       time_entry_id: params.timeEntryId,
     })
     .whereNull('handled_at')
@@ -138,8 +136,8 @@ export const fetchTimeEntryChangeRequestsForTimeSheet = withAuth(async (
     throw new Error('Permission denied: Cannot read time entry change requests');
   }
 
-  const timeSheet = await db('time_sheets')
-    .where({ id: timeSheetId, tenant })
+  const timeSheet = await tenantDb(db, tenant).table('time_sheets')
+    .where({ id: timeSheetId })
     .select('user_id')
     .first();
 
@@ -149,31 +147,28 @@ export const fetchTimeEntryChangeRequestsForTimeSheet = withAuth(async (
 
   await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
 
-  const rows = await db('time_entry_change_requests as change_requests')
-    .leftJoin('users as authors', function joinAuthors() {
-      this.on('change_requests.created_by', '=', 'authors.user_id')
-        .andOn('change_requests.tenant', '=', 'authors.tenant');
-    })
-    .where({
-      'change_requests.time_sheet_id': timeSheetId,
-      'change_requests.tenant': tenant,
-    })
+  const scopedDb = tenantDb(db, tenant);
+  const query = scopedDb.table('time_entry_change_requests as change_requests');
+  scopedDb.tenantJoin(query, 'users as authors', 'change_requests.created_by', 'authors.user_id', { type: 'left' });
+
+  const rows = await query
+    .where({ 'change_requests.time_sheet_id': timeSheetId })
     .select(
-      'change_requests.change_request_id',
-      'change_requests.time_entry_id',
-      'change_requests.time_sheet_id',
-      'change_requests.comment',
-      'change_requests.created_at',
-      'change_requests.created_by',
-      'change_requests.handled_at',
-      'change_requests.handled_by',
-      'change_requests.tenant',
+      'change_requests.change_request_id as change_request_id',
+      'change_requests.time_entry_id as time_entry_id',
+      'change_requests.time_sheet_id as time_sheet_id',
+      'change_requests.comment as comment',
+      'change_requests.created_at as created_at',
+      'change_requests.created_by as created_by',
+      'change_requests.handled_at as handled_at',
+      'change_requests.handled_by as handled_by',
+      'change_requests.tenant as tenant',
       db.raw("TRIM(CONCAT(COALESCE(authors.first_name, ''), ' ', COALESCE(authors.last_name, ''))) as created_by_name"),
     )
     .orderBy('change_requests.created_at', 'desc');
 
   return validateArray(
     timeEntryChangeRequestSchema,
-    rows.map((row) => mapDbTimeEntryChangeRequest(row as DbTimeEntryChangeRequestRow)),
+    rows.map((row) => mapDbTimeEntryChangeRequest(row as unknown as DbTimeEntryChangeRequestRow)),
   ) as ITimeEntryChangeRequest[];
 });

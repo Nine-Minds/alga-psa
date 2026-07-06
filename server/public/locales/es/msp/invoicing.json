@@ -28,8 +28,12 @@
         "group": "Grupo",
         "servicePeriod": "Período de servicio",
         "invoiceWindow": "Ventana de factura",
-        "included": "Incluido"
-      }
+        "included": "Incluido",
+        "charge": "Cargo",
+        "status": "Estado",
+        "amount": "Importe"
+      },
+      "pageScopeNote": "{{count}} grupo(s) en esta página"
     },
     "groups": {
       "item": "Artículo {{count}}",
@@ -41,9 +45,6 @@
       "line": "Línea {{count}}",
       "line_one": "Línea {{count}}",
       "line_other": "Líneas {{count}}",
-      "obligationCount": "Obligación {{count}}",
-      "obligationCount_one": "Obligación {{count}}",
-      "obligationCount_other": "Obligaciones de {{count}}",
       "includedCount": "Artículo {{count}} incluido",
       "includedCount_one": "Artículo {{count}} incluido",
       "includedCount_other": "Artículos {{count}} incluidos",
@@ -58,7 +59,10 @@
       "canCombine": "Se puede combinar en 1 factura",
       "separate": "Debe facturar por separado",
       "blocked": "Contiene elementos bloqueados",
-      "notReady": "No listo para facturar"
+      "notReady": "No listo para facturar",
+      "upcoming": "Aún no vence",
+      "upcomingDetail": "Este período se factura por vencido, por lo que queda disponible para facturar una vez finalizado el período de servicio.",
+      "upcomingDetailWithDate": "Este período se factura por vencido, por lo que queda disponible para facturar el {{date}}, una vez finalizado el período de servicio."
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "La ventana de factura es diferente",
@@ -75,6 +79,7 @@
         "servicePeriod": "Período de servicio"
       },
       "pendingAmount": "Monto pendiente",
+      "billableOn": "Facturable el {{date}}",
       "attributionWarning": "Faltan metadatos de atribución de tareas",
       "blockedUntilApproval": "Bloqueado hasta aprobación: {{count}} entrada no aprobada.",
       "blockedUntilApproval_one": "Bloqueado hasta aprobación: {{count}} entrada no aprobada.",
@@ -204,7 +209,12 @@
         "scheduleKey": "Tecla de programación"
       },
       "reviewLink": "Revisar los períodos de servicio",
-      "helpText": "Repare los registros canónicos del período de servicio en lugar de generar una fila de factura de compatibilidad."
+      "helpText": "Repare los registros canónicos del período de servicio en lugar de generar una fila de factura de compatibilidad.",
+      "fixAll": "Reparar todo",
+      "fixAllBusy": "Reconstruyendo…",
+      "fixAllResult": "Se reconstruyeron {{schedules}} programación(es) en {{clients}} cliente(s).",
+      "fixAllError": "No se pudieron reconstruir los períodos de servicio. Inténtelo de nuevo.",
+      "fixAllDenied": "No tiene permiso para reconstruir los períodos de servicio."
     },
     "errors": {
       "title": "Se produjeron errores al finalizar las facturas:",
@@ -213,6 +223,61 @@
     },
     "loading": {
       "billingData": "Cargando datos de facturación"
+    },
+    "views": {
+      "all": "Todos",
+      "ready": "Listo",
+      "combinable": "Combinable",
+      "attention": "Requiere atención",
+      "notYetDue": "Aún no vence"
+    },
+    "status": {
+      "ready": "Listo",
+      "combine": "Combinar",
+      "separate": "Separar",
+      "notYetDue": "Aún no vence",
+      "approval": "Aprobación",
+      "blocked": "Bloqueado"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} seleccionado(s)",
+      "breakdown": "{{invoices}} factura(s) · {{combine}} combinadas · {{separate}} separadas",
+      "knownNow": "conocido ahora",
+      "knownPlusAtGeneration": "conocido ahora · {{count}} calculado al generar",
+      "atGenerationLines": "{{count}} cargo(s)",
+      "empty": "Seleccione grupos o cargos para previsualizar o generar facturas.",
+      "pageScope": "{{groups}} grupo(s) · {{obligations}} cargo(s)"
+    },
+    "amount": {
+      "atGeneration": "Calculado al generar",
+      "plusAtGeneration": "+ {{count}} al generar"
+    },
+    "window": {
+      "open": "Abierta",
+      "opensOn": "Abre el {{date}}",
+      "notOpen": "Aún no abierta"
+    },
+    "legend": {
+      "confirmed": "Importe conocido ahora",
+      "atGeneration": "Calculado al generar",
+      "combine": "Combinar en una factura",
+      "separate": "Debe facturarse por separado",
+      "notYetDue": "Aún no vence"
+    },
+    "filters": {
+      "title": "Filtros",
+      "windowOpen": "Ventana abierta",
+      "charge": "Cargo",
+      "currency": "Moneda",
+      "any": "cualquiera",
+      "clear": "Limpiar",
+      "countSummary": "{{groups}} grupo(s) · {{obligations}} cargo(s)"
     }
   },
   "manualInvoices": {
@@ -916,7 +981,9 @@
       "description": "Descripción",
       "quantity": "Cantidad",
       "rate": "Tarifa",
-      "amount": "Importe"
+      "amount": "Importe",
+      "salesOrder": "Orden de venta",
+      "cogsMargin": "Costo / Margen"
     },
     "labels": {
       "contractSubtotal": "Subtotal del contrato:",

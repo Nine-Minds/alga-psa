@@ -9,7 +9,7 @@
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { IClientLocation } from '@alga-psa/types';
 
 /**
@@ -39,6 +39,14 @@ export type BillingLocationSummary = Pick<
   | 'email'
 >;
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 /**
  * Fetch active client locations for a given client, ordered so the
  * default/billing address comes first.
@@ -60,7 +68,7 @@ export const getActiveClientLocationsForBilling = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    return trx('client_locations')
+    return tenantScopedTable(trx, tenant, 'client_locations')
       .select<BillingLocationSummary[]>(
         'location_id',
         'client_id',
@@ -83,7 +91,6 @@ export const getActiveClientLocationsForBilling = withAuth(async (
         'email',
       )
       .where({
-        tenant,
         client_id: clientId,
         is_active: true,
       })

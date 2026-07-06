@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import { getSecret } from '@alga-psa/core/secrets';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 dotenv.config();
 
@@ -13,6 +14,22 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '../../../../..');
 const TEST_DB_NAME = 'test_database';
 const PRODUCTION_DB_NAMES = new Set(['sebastian_prod', 'production', 'prod', 'server']);
+const GLOBAL_FIXTURE_TENANT = '__workflow_contacts_db_test_global__';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function unscopedTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, GLOBAL_FIXTURE_TENANT).unscoped(table, reason);
+}
+
+function tagMappingsWithDefinitions(db: Knex, tenantId: string) {
+  const scopedDb = tenantDb(db, tenantId);
+  const query = scopedDb.table('tag_mappings as tm');
+  scopedDb.tenantJoin(query, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+  return query;
+}
 
 function verifyTestDatabase(dbName: string): void {
   if (PRODUCTION_DB_NAMES.has(dbName.toLowerCase())) {
@@ -119,7 +136,7 @@ async function createTenant(db: Knex, name = 'Test Tenant'): Promise<string> {
   const tenantId = uuidv4();
   const now = new Date().toISOString();
 
-  await db('tenants').insert({
+  await tenantTable(db, tenantId, 'tenants').insert({
     tenant: tenantId,
     client_name: name,
     phone_number: '555-0100',
@@ -150,7 +167,7 @@ async function createUser(
 ): Promise<string> {
   const userId = uuidv4();
 
-  await db('users').insert({
+  await tenantTable(db, tenantId, 'users').insert({
     user_id: userId,
     tenant: tenantId,
     username: options.username || `test.user.${userId}`,
@@ -173,7 +190,7 @@ async function createClient(db: Knex, tenantId: string, name = 'Test Client'): P
   const clientId = uuidv4();
   const now = new Date().toISOString();
 
-  await db('clients').insert({
+  await tenantTable(db, tenantId, 'clients').insert({
     client_id: clientId,
     client_name: name,
     tenant: tenantId,
@@ -203,7 +220,7 @@ async function createContactRaw(
   const contactId = uuidv4();
   const now = new Date().toISOString();
 
-  await db('contacts').insert({
+  await tenantTable(db, tenantId, 'contacts').insert({
     tenant: tenantId,
     contact_name_id: contactId,
     full_name: options.full_name ?? `Contact ${contactId.slice(0, 6)}`,
@@ -220,13 +237,13 @@ async function createContactRaw(
 }
 
 async function createTicketStatusId(db: Knex, tenantId: string, actorUserId: string): Promise<string> {
-  const existing = await db('statuses')
+  const existing = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, status_type: 'ticket' })
     .orderBy('order_number', 'asc')
     .first();
   if (existing?.status_id) return existing.status_id;
 
-  const [inserted] = await db('statuses')
+  const [inserted] = await tenantTable(db, tenantId, 'statuses')
     .insert({
       tenant: tenantId,
       name: 'Open',
@@ -254,7 +271,7 @@ async function createTicket(
   const ticketId = uuidv4();
   const statusId = await createTicketStatusId(db, params.tenantId, params.actorUserId);
 
-  await db('tickets').insert({
+  await tenantTable(db, params.tenantId, 'tickets').insert({
     ticket_id: ticketId,
     tenant: params.tenantId,
     ticket_number: `WF-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
@@ -269,10 +286,12 @@ async function createTicket(
 }
 
 async function getDefaultInteractionStatusId(db: Knex, tenantId: string, actorUserId: string): Promise<string> {
-  const existing = await db('statuses').where({ tenant: tenantId, status_type: 'interaction', is_default: true }).first();
+  const existing = await tenantTable(db, tenantId, 'statuses')
+    .where({ tenant: tenantId, status_type: 'interaction', is_default: true })
+    .first();
   if (existing?.status_id) return existing.status_id;
 
-  const [created] = await db('statuses')
+  const [created] = await tenantTable(db, tenantId, 'statuses')
     .insert({
       tenant: tenantId,
       name: 'Logged',
@@ -288,10 +307,11 @@ async function getDefaultInteractionStatusId(db: Knex, tenantId: string, actorUs
 }
 
 async function getAnyInteractionTypeId(db: Knex, tenantId: string): Promise<string> {
-  const tenantType = await db('interaction_types').where({ tenant: tenantId }).first();
+  const tenantType = await tenantTable(db, tenantId, 'interaction_types').where({ tenant: tenantId }).first();
   if (tenantType?.type_id) return tenantType.type_id;
 
-  const systemType = await db('system_interaction_types').first();
+  const systemType = await unscopedTable(db, 'system_interaction_types', 'global interaction type fallback for contacts workflow DB fixture')
+    .first();
   if (!systemType?.type_id) {
     throw new Error('Expected at least one system_interaction_types row in seeded DB');
   }
@@ -430,16 +450,16 @@ describe('contact workflow runtime DB-backed action handlers', () => {
     expect(created.contact.email).toBe('created.contact@example.com');
     expect(created.contact.client_id).toBe(clientId);
 
-    const dbContact = await db('contacts')
+    const dbContact = await tenantTable(db, runtimeState.tenantId, 'contacts')
       .where({ tenant: runtimeState.tenantId, contact_name_id: created.contact.contact_name_id })
       .first();
     expect(dbContact).toBeTruthy();
 
-    const phones = await db('contact_phone_numbers')
+    const phones = await tenantTable(db, runtimeState.tenantId, 'contact_phone_numbers')
       .where({ tenant: runtimeState.tenantId, contact_name_id: created.contact.contact_name_id });
     expect(phones.length).toBe(1);
 
-    const additionalEmails = await db('contact_additional_email_addresses')
+    const additionalEmails = await tenantTable(db, runtimeState.tenantId, 'contact_additional_email_addresses')
       .where({ tenant: runtimeState.tenantId, contact_name_id: created.contact.contact_name_id });
     expect(additionalEmails.length).toBe(1);
 
@@ -475,7 +495,9 @@ describe('contact workflow runtime DB-backed action handlers', () => {
     expect(updated.contact_after.full_name).toBe('Updated Name');
     expect(updated.changed_fields).toEqual(expect.arrayContaining(['full_name', 'role']));
 
-    const stored = await db('contacts').where({ tenant: runtimeState.tenantId, contact_name_id: contactId }).first();
+    const stored = await tenantTable(db, runtimeState.tenantId, 'contacts')
+      .where({ tenant: runtimeState.tenantId, contact_name_id: contactId })
+      .first();
     expect(stored.email).toBe('update.target@example.com');
     expect(stored.notes).toBe('Initial Notes');
 
@@ -488,7 +510,9 @@ describe('contact workflow runtime DB-backed action handlers', () => {
     });
     expect(cleared.changed_fields).toEqual(expect.arrayContaining(['role', 'notes']));
 
-    const clearedStored = await db('contacts').where({ tenant: runtimeState.tenantId, contact_name_id: contactId }).first();
+    const clearedStored = await tenantTable(db, runtimeState.tenantId, 'contacts')
+      .where({ tenant: runtimeState.tenantId, contact_name_id: contactId })
+      .first();
     expect(clearedStored.role).toBeNull();
     expect(clearedStored.notes).toBeNull();
 
@@ -596,7 +620,9 @@ describe('contact workflow runtime DB-backed action handlers', () => {
       })
     ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
 
-    const ticketAfter = await db('tickets').where({ tenant: runtimeState.tenantId, ticket_id: ticketWithClient }).first();
+    const ticketAfter = await tenantTable(db, runtimeState.tenantId, 'tickets')
+      .where({ tenant: runtimeState.tenantId, ticket_id: ticketWithClient })
+      .first();
     expect(ticketAfter.contact_name_id).toBe(contactA);
     expect(ticketAfter.client_id).toBe(clientA);
   });
@@ -618,10 +644,7 @@ describe('contact workflow runtime DB-backed action handlers', () => {
     expect(second.added_count).toBe(0);
     expect(second.existing_count).toBe(1);
 
-    const mappings = await db('tag_mappings as tm')
-      .join('tag_definitions as td', function joinTagDefs() {
-        this.on('tm.tenant', 'td.tenant').andOn('tm.tag_id', 'td.tag_id');
-      })
+    const mappings = await tagMappingsWithDefinitions(db, runtimeState.tenantId)
       .where({
         'tm.tenant': runtimeState.tenantId,
         'tm.tagged_type': 'contact',
@@ -629,7 +652,7 @@ describe('contact workflow runtime DB-backed action handlers', () => {
       })
       .select('td.tag_text');
 
-    expect(mappings.map((row: { tag_text: string }) => row.tag_text).sort()).toEqual(['managed', 'priority']);
+    expect(mappings.map((row) => (row as unknown as { tag_text: string }).tag_text).sort()).toEqual(['managed', 'priority']);
     expect(mappings.length).toBe(2);
   });
 
@@ -658,7 +681,7 @@ describe('contact workflow runtime DB-backed action handlers', () => {
       contactId: sourceContact,
     });
 
-    await db('interactions').insert({
+    await tenantTable(db, runtimeState.tenantId, 'interactions').insert({
       tenant: runtimeState.tenantId,
       interaction_id: uuidv4(),
       type_id: await getAnyInteractionTypeId(db, runtimeState.tenantId),
@@ -689,8 +712,10 @@ describe('contact workflow runtime DB-backed action handlers', () => {
     expect(duplicate.copied_tags).toBeGreaterThanOrEqual(2);
 
     const duplicatedId = duplicate.duplicate_contact.contact_name_id;
-    const duplicatedTickets = await db('tickets').where({ tenant: runtimeState.tenantId, contact_name_id: duplicatedId });
-    const duplicatedInteractions = await db('interactions').where({ tenant: runtimeState.tenantId, contact_name_id: duplicatedId });
+    const duplicatedTickets = await tenantTable(db, runtimeState.tenantId, 'tickets')
+      .where({ tenant: runtimeState.tenantId, contact_name_id: duplicatedId });
+    const duplicatedInteractions = await tenantTable(db, runtimeState.tenantId, 'interactions')
+      .where({ tenant: runtimeState.tenantId, contact_name_id: duplicatedId });
     expect(duplicatedTickets.length).toBe(0);
     expect(duplicatedInteractions.length).toBe(0);
 
@@ -718,14 +743,14 @@ describe('contact workflow runtime DB-backed action handlers', () => {
     expect(second.created_document).toBe(false);
     expect(second.document_id).toBe(first.document_id);
 
-    const contentRow = await db('document_block_content')
+    const contentRow = await tenantTable(db, runtimeState.tenantId, 'document_block_content')
       .where({ tenant: runtimeState.tenantId, document_id: first.document_id })
       .first();
     const blocks = typeof contentRow?.block_data === 'string' ? JSON.parse(contentRow.block_data) : contentRow?.block_data;
     expect(Array.isArray(blocks)).toBe(true);
     expect(blocks.length).toBeGreaterThanOrEqual(2);
 
-    const interactions = await db('interactions')
+    const interactions = await tenantTable(db, runtimeState.tenantId, 'interactions')
       .where({ tenant: runtimeState.tenantId, contact_name_id: contactId })
       .select('interaction_id');
     expect(interactions.length).toBe(0);
@@ -791,7 +816,9 @@ describe('contact workflow runtime DB-backed action handlers', () => {
     });
     expect(deleted).toEqual({ deleted: true, contact_id: deletableContact });
 
-    const deletedRow = await db('contacts').where({ tenant: runtimeState.tenantId, contact_name_id: deletableContact }).first();
+    const deletedRow = await tenantTable(db, runtimeState.tenantId, 'contacts')
+      .where({ tenant: runtimeState.tenantId, contact_name_id: deletableContact })
+      .first();
     expect(deletedRow).toBeFalsy();
 
     const missingResult = await invokeAction('contacts.delete', {
@@ -918,7 +945,7 @@ describe('contact workflow runtime DB-backed action handlers', () => {
 
     await invokeAction('contacts.deactivate', { contact_id: contactId });
 
-    const auditRows = await db('audit_logs')
+    const auditRows = await tenantTable(db, runtimeState.tenantId, 'audit_logs')
       .where({ tenant: runtimeState.tenantId, table_name: 'workflow_runs', user_id: runtimeState.actorUserId })
       .whereIn('operation', [
         'workflow_action:contacts.create',

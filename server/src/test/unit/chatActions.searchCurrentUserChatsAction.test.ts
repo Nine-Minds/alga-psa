@@ -50,13 +50,13 @@ describe('searchCurrentUserChatsAction', () => {
         },
       },
     });
-    getCurrentUserMock.mockResolvedValue({ user_id: 'user-1' });
+    getCurrentUserMock.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1' });
     searchByUserMock.mockRejectedValue({ code: '42703' });
 
     const { searchCurrentUserChatsAction } = await import('@ee/lib/chat-actions/chatActions');
     const rows = await searchCurrentUserChatsAction('printer');
 
     expect(rows).toEqual([]);
-    expect(searchByUserMock).toHaveBeenCalledWith('user-1', 'printer', 20);
+    expect(searchByUserMock).toHaveBeenCalledWith('user-1', 'printer', 20, 'tenant-1');
   });
 });

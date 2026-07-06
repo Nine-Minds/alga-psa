@@ -10,14 +10,21 @@ import { Info } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import type { BillingCycleType } from '@alga-psa/types';
-import { CLIENT_CADENCE_SCHEDULE_CONTEXT } from '@alga-psa/shared/billingClients';
+// Import the constant from its specific client-safe module, not the
+// '@alga-psa/shared/billingClients' barrel: the barrel `export *`s server-only
+// data-access modules (which import @alga-psa/db -> knex/secrets), which would
+// pull the server chain into this client component's browser bundle.
+import { CLIENT_CADENCE_SCHEDULE_CONTEXT } from '@alga-psa/shared/billingClients/clientCadenceScheduleContext';
 import {
   createNextBillingCycleAsync,
   getClientBillingCycleAnchorAsync,
   previewBillingHistoryBootstrapAsync,
   previewBillingPeriodsForScheduleAsync,
+  previewClientCadenceChangeAsync,
   updateClientBillingScheduleAsync
 } from '../../lib/billingHelpers';
+
+type CadenceChangeImpact = Awaited<ReturnType<typeof previewClientCadenceChangeAsync>>;
 
 // Local type definition to avoid circular dependency
 interface BillingCyclePeriodPreview {
@@ -70,6 +77,9 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Cadence-change impact preview: shown before the change is applied.
+  const [cadenceImpact, setCadenceImpact] = useState<CadenceChangeImpact | null>(null);
+  const [loadingImpact, setLoadingImpact] = useState(false);
   const [creatingCycle, setCreatingCycle] = useState(false);
   const [preview, setPreview] = useState<BillingCyclePeriodPreview[] | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -281,10 +291,17 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
     dialogOpen,
   ]);
 
+  // Any edit to the proposed cadence invalidates a previously computed impact,
+  // so the user must re-review before applying.
+  useEffect(() => {
+    setCadenceImpact(null);
+  }, [billingCycle, anchorDraft, billingHistoryStartDate]);
+
   const openDialog = async (): Promise<void> => {
     setPreviewReferenceDate((new Date().toISOString().split('T')[0] + 'T00:00:00Z') as ISO8601String);
     setBillingHistoryStartDate(null);
     setBootstrapPreview(null);
+    setCadenceImpact(null);
     setDialogOpen(true);
     if (loading) {
       await loadFromServer();
@@ -297,22 +314,44 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
     setPreview(null);
   };
 
+  const buildAnchorInput = () => ({
+    dayOfMonth: anchorDraft.dayOfMonth,
+    monthOfYear: anchorDraft.monthOfYear,
+    dayOfWeek: anchorDraft.dayOfWeek,
+    referenceDate: anchorDraft.referenceDate ? `${anchorDraft.referenceDate}T00:00:00Z` : null,
+  });
+
+  // First click on Save computes the impact so the user can see what the change
+  // will do (how many unbilled periods regenerate, whether billed periods are in
+  // range) before committing.
+  const reviewChange = async (): Promise<void> => {
+    setLoadingImpact(true);
+    try {
+      const impact = await previewClientCadenceChangeAsync({
+        clientId,
+        billingCycle,
+        anchor: buildAnchorInput(),
+      });
+      setCadenceImpact(impact);
+    } catch (e) {
+      handleError(e, t('clientBillingSchedule.reviewError', { defaultValue: 'Failed to check the impact of this change' }));
+    } finally {
+      setLoadingImpact(false);
+    }
+  };
+
   const saveSchedule = async (): Promise<void> => {
     setSaving(true);
     try {
       await updateClientBillingScheduleAsync({
         clientId,
         billingCycle,
-        anchor: {
-          dayOfMonth: anchorDraft.dayOfMonth,
-          monthOfYear: anchorDraft.monthOfYear,
-          dayOfWeek: anchorDraft.dayOfWeek,
-          referenceDate: anchorDraft.referenceDate ? `${anchorDraft.referenceDate}T00:00:00Z` : null
-        },
+        anchor: buildAnchorInput(),
         billingHistoryStartDate: billingHistoryStartDate ? `${billingHistoryStartDate}T00:00:00Z` : null,
       });
 
       await loadFromServer();
+      setCadenceImpact(null);
       toast.success(t('clientBillingSchedule.saveSuccess', { defaultValue: 'Billing schedule saved' }));
     } catch (e) {
       handleError(e, t('clientBillingSchedule.saveError', { defaultValue: 'Failed to save billing schedule' }));
@@ -341,7 +380,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
     <div className="mt-8 border-t pt-6" data-automation-id="client-billing-schedule-section">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">{t('clientBillingSchedule.title', { defaultValue: 'Billing Schedule' })}</h3>
+          <h3 className="text-lg font-semibold">{t('clientBillingSchedule.title', { defaultValue: 'Billing schedule' })}</h3>
           <Tooltip content={cadenceContext.changeScopeDescription}>
             <Info className="h-4 w-4 text-gray-500" />
           </Tooltip>
@@ -357,7 +396,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
           >
             {creatingCycle
               ? t('clientBillingSchedule.createInProgress', { defaultValue: 'Creating...' })
-              : t('clientBillingSchedule.createNextCycle', { defaultValue: 'Create Next Cycle' })}
+              : t('clientBillingSchedule.createNextCycle', { defaultValue: 'Create next cycle' })}
 	          </Button>
 	          <Button
 	            id="client-billing-edit-schedule"
@@ -369,7 +408,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
           >
             {loading
               ? t('common.states.loading', { defaultValue: 'Loading...' })
-              : t('clientBillingSchedule.edit', { defaultValue: 'Edit Schedule' })}
+              : t('clientBillingSchedule.edit', { defaultValue: 'Edit schedule' })}
 	          </Button>
 	        </div>
 	      </div>
@@ -384,7 +423,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
       <Dialog
         isOpen={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title={t('clientBillingSchedule.title', { defaultValue: 'Billing Schedule' })}
+        title={t('clientBillingSchedule.title', { defaultValue: 'Billing schedule' })}
         id="client-billing-schedule-dialog"
         disableFocusTrap
         footer={
@@ -401,13 +440,17 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
             <Button
               id="client-billing-save-schedule"
               type="button"
-              onClick={saveSchedule}
-              disabled={saving || bootstrapPreview?.status === 'blocked_invoiced_history'}
+              onClick={cadenceImpact ? saveSchedule : reviewChange}
+              disabled={saving || loadingImpact || bootstrapPreview?.status === 'blocked_invoiced_history'}
               data-automation-id="client-billing-save-schedule"
             >
               {saving
                 ? t('common.actions.saving', { defaultValue: 'Saving...' })
-                : t('clientBillingSchedule.save', { defaultValue: 'Save Schedule' })}
+                : loadingImpact
+                ? t('clientBillingSchedule.reviewing', { defaultValue: 'Checking impact...' })
+                : cadenceImpact
+                ? t('clientBillingSchedule.confirmSave', { defaultValue: 'Confirm & save' })
+                : t('clientBillingSchedule.reviewChanges', { defaultValue: 'Review changes' })}
             </Button>
           </div>
         }
@@ -418,6 +461,47 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
               defaultValue: 'Billing periods use [start, end) semantics. The end date is the start of the next period.'
             })}
           </div>
+
+          {cadenceImpact ? (
+            <div
+              className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm"
+              data-automation-id="client-billing-cadence-impact"
+            >
+              <div className="font-medium">
+                {t('clientBillingSchedule.impact.title', { defaultValue: 'Review before you apply' })}
+              </div>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-gray-700">
+                <li>
+                  {t('clientBillingSchedule.impact.periods', {
+                    count: cadenceImpact.unbilledPeriodsToRegenerate,
+                    lines: cadenceImpact.linesAffected,
+                    defaultValue:
+                      '{{count}} upcoming charge period(s) across {{lines}} contract line(s) will be rebuilt to match the new schedule.',
+                  })}
+                </li>
+                {cadenceImpact.regenerationStart ? (
+                  <li>
+                    {t('clientBillingSchedule.impact.from', {
+                      date: cadenceImpact.regenerationStart.slice(0, 10),
+                      defaultValue: 'Rebuilt from {{date}} onward.',
+                    })}
+                  </li>
+                ) : null}
+                {cadenceImpact.billedPeriodsInRange ? (
+                  <li>
+                    {t('clientBillingSchedule.impact.billedPreserved', {
+                      defaultValue: 'Charges that were already invoiced are preserved and will not change.',
+                    })}
+                  </li>
+                ) : null}
+              </ul>
+              <div className="mt-1 text-gray-600">
+                {t('clientBillingSchedule.impact.confirmHint', {
+                  defaultValue: 'Choose "Confirm & save" to apply.',
+                })}
+              </div>
+            </div>
+          ) : null}
           <div className="text-sm text-gray-600">
             {cadenceContext.previewDescription}
           </div>

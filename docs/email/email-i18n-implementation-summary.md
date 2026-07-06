@@ -99,6 +99,7 @@ Added language support to ticket/invoice/payment notifications.
 - ✅ Spanish (es)
 - ✅ German (de)
 - ✅ Dutch (nl)
+- ✅ Brazilian Portuguese (pt)
 - ⚠️ Italian (it) — partial (18/36 templates; missing: projects, SLA, time entry, billing misc)
 - ⚠️ Polish (pl) — partial (17/36 templates; missing: emailVerification, projects, SLA, time entry, billing misc)
 
@@ -204,7 +205,9 @@ npm run migrate
 
 **Key migrations:**
 1. `20251027120000_add_system_auth_email_templates.cjs` - Adds auth templates
-2. `20251201090000_add_email_template_translations.cjs` - Adds all translations
+2. `20251201090000_add_email_template_translations.cjs` - Adds en/fr/es/de/nl/it/pl translations
+3. `20260625120000_add_portuguese_email_templates.cjs` - Adds Brazilian Portuguese (pt) email templates
+4. `20260625121000_add_portuguese_internal_notification_templates.cjs` - Adds Brazilian Portuguese (pt) internal notification templates
 
 ---
 
@@ -324,7 +327,7 @@ npm run migrate
 ## Future Enhancements
 
 **Potential additions:**
-- [ ] Add more languages (Portuguese, etc.)
+- [ ] Add more languages (e.g., Arabic)
 - [ ] Support for conditional template logic (handlebars/mustache)
 - [ ] Template versioning (track changes over time)
 - [ ] A/B testing for email content
@@ -340,7 +343,7 @@ The email system now fully supports internationalization! 🎉
 
 **Key achievements:**
 - 36 email templates (across auth, tickets, invoices, projects, SLA, time, surveys, appointments)
-- 5 fully translated languages (en, fr, es, de, nl), 2 partially translated (it, pl)
+- 6 fully translated languages (en, fr, es, de, nl, pt), 2 partially translated (it, pl)
 - Automatic language detection for client portal users
 - Database-driven (no code changes for updates)
 - Emergency fallbacks for reliability

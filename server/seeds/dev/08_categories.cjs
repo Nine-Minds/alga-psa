@@ -1,368 +1,54 @@
-exports.seed = function (knex) {
-    return knex('tenants').select('tenant').first()
-        .then((tenant) => {
-            if (!tenant) return;
-            
-            // Delete existing categories first
-            return knex('categories').where({ tenant: tenant.tenant }).del()
-                .then(() => {
-                    // Insert parent categories
-                    return knex('categories').insert([
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Magical Artifacts',
-                            display_order: 1,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'Urgent Matters'
-                                })
-                                .select('board_id'),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        },
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Creature Encounters',
-                            display_order: 2,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'Urgent Matters'
-                                })
-                                .select('board_id'),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        },
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Landscape Anomalies',
-                            display_order: 3,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'Technical Issues'
-                                })
-                                .select('board_id'),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        },
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Character Assistance',
-                            display_order: 4,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'General Support'
-                                })
-                                .select('board_id'),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        },
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Realm Maintenance',
-                            display_order: 5,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'Projects'
-                                })
-                                .select('board_id'),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        }
-                    ]);
-                })
-                .then(() => {
-                    // Insert subcategories
-                    return knex('categories').insert([
-                        // Magical Artifacts subcategories
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Enchanted Accessories',
-                            display_order: 1,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'Urgent Matters'
-                                })
-                                .select('board_id'),
-                            parent_category: knex('categories')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    category_name: 'Magical Artifacts'
-                                })
-                                .select('category_id')
-                                .first(),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        },
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Potions and Elixirs',
-                            display_order: 2,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'Urgent Matters'
-                                })
-                                .select('board_id'),
-                            parent_category: knex('categories')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    category_name: 'Magical Artifacts'
-                                })
-                                .select('category_id')
-                                .first(),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        },
-                        
-                        // Creature Encounters subcategories
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Talking Animals',
-                            display_order: 1,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'Urgent Matters'
-                                })
-                                .select('board_id'),
-                            parent_category: knex('categories')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    category_name: 'Creature Encounters'
-                                })
-                                .select('category_id')
-                                .first(),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        },
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Mythical Beings',
-                            display_order: 2,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'Urgent Matters'
-                                })
-                                .select('board_id'),
-                            parent_category: knex('categories')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    category_name: 'Creature Encounters'
-                                })
-                                .select('category_id')
-                                .first(),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        },
-                        
-                        // Landscape Anomalies subcategories
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Impossible Geography',
-                            display_order: 1,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'Technical Issues'
-                                })
-                                .select('board_id'),
-                            parent_category: knex('categories')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    category_name: 'Landscape Anomalies'
-                                })
-                                .select('category_id')
-                                .first(),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        },
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Weather Oddities',
-                            display_order: 2,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'Technical Issues'
-                                })
-                                .select('board_id'),
-                            parent_category: knex('categories')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    category_name: 'Landscape Anomalies'
-                                })
-                                .select('category_id')
-                                .first(),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        },
-                        
-                        // Character Assistance subcategories
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Quest Guidance',
-                            display_order: 1,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'General Support'
-                                })
-                                .select('board_id'),
-                            parent_category: knex('categories')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    category_name: 'Character Assistance'
-                                })
-                                .select('category_id')
-                                .first(),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        },
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Magical Transformations',
-                            display_order: 2,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'General Support'
-                                })
-                                .select('board_id'),
-                            parent_category: knex('categories')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    category_name: 'Character Assistance'
-                                })
-                                .select('category_id')
-                                .first(),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        },
-                        
-                        // Realm Maintenance subcategories
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Portal Management',
-                            display_order: 1,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'Projects'
-                                })
-                                .select('board_id'),
-                            parent_category: knex('categories')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    category_name: 'Realm Maintenance'
-                                })
-                                .select('category_id')
-                                .first(),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        },
-                        {
-                            tenant: tenant.tenant,
-                            category_name: 'Magical Infrastructure',
-                            display_order: 2,
-                            board_id: knex('boards')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    board_name: 'Projects'
-                                })
-                                .select('board_id'),
-                            parent_category: knex('categories')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    category_name: 'Realm Maintenance'
-                                })
-                                .select('category_id')
-                                .first(),
-                            created_by: knex('users')
-                                .where({
-                                    tenant: tenant.tenant,
-                                    username: 'glinda'
-                                })
-                                .select('user_id')
-                                .first()
-                        }
-                    ]);
-                });
-        });
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
+exports.seed = async function (knex) {
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { tenantId, db } = context;
+    const boardId = (boardName) => db.table('boards')
+        .where({ board_name: boardName })
+        .select('board_id')
+        .first();
+    const categoryId = (categoryName) => db.table('categories')
+        .where({ category_name: categoryName })
+        .select('category_id')
+        .first();
+    const glindaUserId = db.table('users')
+        .where({ username: 'glinda' })
+        .select('user_id')
+        .first();
+
+    const categoryRow = ({ categoryName, displayOrder, boardName, parentCategory }) => ({
+        tenant: tenantId,
+        category_name: categoryName,
+        display_order: displayOrder,
+        board_id: boardId(boardName),
+        ...(parentCategory ? { parent_category: categoryId(parentCategory) } : {}),
+        created_by: glindaUserId
+    });
+
+    const parentCategories = [
+        { categoryName: 'Magical Artifacts', displayOrder: 1, boardName: 'Urgent Matters' },
+        { categoryName: 'Creature Encounters', displayOrder: 2, boardName: 'Urgent Matters' },
+        { categoryName: 'Landscape Anomalies', displayOrder: 3, boardName: 'Technical Issues' },
+        { categoryName: 'Character Assistance', displayOrder: 4, boardName: 'General Support' },
+        { categoryName: 'Realm Maintenance', displayOrder: 5, boardName: 'Projects' }
+    ];
+
+    const subCategories = [
+        { categoryName: 'Enchanted Accessories', displayOrder: 1, boardName: 'Urgent Matters', parentCategory: 'Magical Artifacts' },
+        { categoryName: 'Potions and Elixirs', displayOrder: 2, boardName: 'Urgent Matters', parentCategory: 'Magical Artifacts' },
+        { categoryName: 'Talking Animals', displayOrder: 1, boardName: 'Urgent Matters', parentCategory: 'Creature Encounters' },
+        { categoryName: 'Mythical Beings', displayOrder: 2, boardName: 'Urgent Matters', parentCategory: 'Creature Encounters' },
+        { categoryName: 'Impossible Geography', displayOrder: 1, boardName: 'Technical Issues', parentCategory: 'Landscape Anomalies' },
+        { categoryName: 'Weather Oddities', displayOrder: 2, boardName: 'Technical Issues', parentCategory: 'Landscape Anomalies' },
+        { categoryName: 'Quest Guidance', displayOrder: 1, boardName: 'General Support', parentCategory: 'Character Assistance' },
+        { categoryName: 'Magical Transformations', displayOrder: 2, boardName: 'General Support', parentCategory: 'Character Assistance' },
+        { categoryName: 'Portal Management', displayOrder: 1, boardName: 'Projects', parentCategory: 'Realm Maintenance' },
+        { categoryName: 'Magical Infrastructure', displayOrder: 2, boardName: 'Projects', parentCategory: 'Realm Maintenance' }
+    ];
+
+    await db.table('categories').del();
+    await db.table('categories').insert(parentCategories.map(categoryRow));
+    return db.table('categories').insert(subCategories.map(categoryRow));
 };

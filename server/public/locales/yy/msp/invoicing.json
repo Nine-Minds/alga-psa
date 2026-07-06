@@ -28,8 +28,12 @@
         "group": "55555",
         "servicePeriod": "55555",
         "invoiceWindow": "55555",
-        "included": "55555"
-      }
+        "included": "55555",
+        "charge": "55555",
+        "status": "55555",
+        "amount": "55555"
+      },
+      "pageScopeNote": "55555 {{count}} 55555"
     },
     "groups": {
       "item": "55555 {{count}} 55555",
@@ -41,9 +45,6 @@
       "line": "55555 {{count}} 55555",
       "line_one": "55555 {{count}} 55555",
       "line_other": "55555 {{count}} 55555",
-      "obligationCount": "55555 {{count}} 55555",
-      "obligationCount_one": "55555 {{count}} 55555",
-      "obligationCount_other": "55555 {{count}} 55555",
       "includedCount": "55555 {{count}} 55555",
       "includedCount_one": "55555 {{count}} 55555",
       "includedCount_other": "55555 {{count}} 55555",
@@ -58,7 +59,10 @@
       "canCombine": "55555",
       "separate": "55555",
       "blocked": "55555",
-      "notReady": "55555"
+      "notReady": "55555",
+      "upcoming": "55555",
+      "upcomingDetail": "55555",
+      "upcomingDetailWithDate": "55555 {{date}} 55555"
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "55555",
@@ -75,6 +79,7 @@
         "servicePeriod": "55555"
       },
       "pendingAmount": "55555",
+      "billableOn": "55555 {{date}} 55555",
       "attributionWarning": "55555",
       "blockedUntilApproval": "55555 {{count}} 55555",
       "blockedUntilApproval_one": "55555 {{count}} 55555",
@@ -204,7 +209,12 @@
         "scheduleKey": "55555"
       },
       "reviewLink": "55555",
-      "helpText": "55555"
+      "helpText": "55555",
+      "fixAll": "55555",
+      "fixAllBusy": "55555",
+      "fixAllResult": "55555 {{schedules}} 55555 {{clients}} 55555",
+      "fixAllError": "55555",
+      "fixAllDenied": "55555"
     },
     "errors": {
       "title": "55555",
@@ -213,6 +223,61 @@
     },
     "loading": {
       "billingData": "55555"
+    },
+    "views": {
+      "all": "55555",
+      "ready": "55555",
+      "combinable": "55555",
+      "attention": "55555",
+      "notYetDue": "55555"
+    },
+    "status": {
+      "ready": "55555",
+      "combine": "55555",
+      "separate": "55555",
+      "notYetDue": "55555",
+      "approval": "55555",
+      "blocked": "55555"
+    },
+    "chargeTags": {
+      "fixed": "55555",
+      "hourly": "55555",
+      "usage": "55555",
+      "bucket": "55555"
+    },
+    "summary": {
+      "selected": "55555 {{count}} 55555",
+      "breakdown": "55555 {{invoices}} 55555 {{combine}} 55555 {{separate}} 55555",
+      "knownNow": "55555",
+      "knownPlusAtGeneration": "55555 {{count}} 55555",
+      "atGenerationLines": "55555 {{count}} 55555",
+      "empty": "55555",
+      "pageScope": "55555 {{groups}} 55555 {{obligations}} 55555"
+    },
+    "amount": {
+      "atGeneration": "55555",
+      "plusAtGeneration": "55555 {{count}} 55555"
+    },
+    "window": {
+      "open": "55555",
+      "opensOn": "55555 {{date}} 55555",
+      "notOpen": "55555"
+    },
+    "legend": {
+      "confirmed": "55555",
+      "atGeneration": "55555",
+      "combine": "55555",
+      "separate": "55555",
+      "notYetDue": "55555"
+    },
+    "filters": {
+      "title": "55555",
+      "windowOpen": "55555",
+      "charge": "55555",
+      "currency": "55555",
+      "any": "55555",
+      "clear": "55555",
+      "countSummary": "55555 {{groups}} 55555 {{obligations}} 55555"
     }
   },
   "manualInvoices": {
@@ -916,7 +981,9 @@
       "description": "55555",
       "quantity": "55555",
       "rate": "55555",
-      "amount": "55555"
+      "amount": "55555",
+      "salesOrder": "55555",
+      "cogsMargin": "55555"
     },
     "labels": {
       "contractSubtotal": "55555",

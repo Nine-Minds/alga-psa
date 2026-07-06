@@ -232,9 +232,9 @@
     "providerDefault": "Domyślny dostawca",
     "inboundEmailDomains": "Domeny poczty przychodzącej",
     "inboundEmailDomainsHelp": "Tylko te domeny będą używane do dopasowywania domen poczty przychodzącej (np. acme.com). Domeny muszą być unikalne dla wszystkich klientów.",
-    "noInboundDomains": "Nie skonfigurowano żadnych domen poczty przychodzącej. Dopasowanie domeny nie będzie używane.",
+    "noInboundDomains": "Dodaj domenę, aby dopasować przychodzące wiadomości e-mail do tego klienta.",
     "inboundTicketDestination": "Miejsce docelowe zgłoszenia przychodzącego",
-    "inboundDestinationPrecedence": "Pierwszeństwo: Zastąpienie kontaktu -> Miejsce docelowe klienta -> Domyślny dostawca.",
+    "inboundDestinationPrecedence": "Najpierw używa zastąpienia kontaktu, potem klienta, a następnie domyślnego ustawienia dostawcy.",
     "manageLocations": "Zarządzaj lokalizacjami",
     "loadingUsers": "Ładowanie użytkowników...",
     "loadingPolicies": "Ładowanie zasad...",
@@ -308,7 +308,12 @@
     "nameAliasRemoveFailed": "Nie udało się usunąć aliasu",
     "nameAliasRemoved": "Usunięto alias",
     "nameAliases": "Aliasy dopasowania",
-    "noNameAliases": "Nie skonfigurowano aliasów. Nazwa klienta zawsze jest dopasowywana."
+    "noNameAliases": "Nie skonfigurowano aliasów. Nazwa klienta zawsze jest dopasowywana.",
+    "equipment": "Sprzęt",
+    "parentClientSelf": "Klient nie może być swoim własnym klientem nadrzędnym",
+    "parentClientPlaceholder": "Brak klienta nadrzędnego",
+    "parentClientClear": "Wyczyść",
+    "parentClientLegacy": "Wcześniej wprowadzono jako tekst: {{name}}"
   },
   "quickAddClient": {
     "title": "Dodaj nowego klienta",
@@ -552,6 +557,17 @@
       "5": "Piątek",
       "6": "Sobota",
       "7": "Niedziela"
+    },
+    "reviewError": "Nie można sprawdzić skutków tej zmiany",
+    "reviewing": "Sprawdzanie skutków…",
+    "confirmSave": "Potwierdź i zapisz",
+    "reviewChanges": "Przejrzyj zmiany",
+    "impact": {
+      "title": "Sprawdź przed zastosowaniem",
+      "periods": "{{count}} nadchodzących okresów rozliczeniowych w {{lines}} pozycjach umowy zostanie przebudowanych zgodnie z nowym harmonogramem.",
+      "from": "Przebudowano od {{date}}.",
+      "billedPreserved": "Już zafakturowane opłaty są zachowane i nie ulegną zmianie.",
+      "confirmHint": "Wybierz „Potwierdź i zapisz”, aby zastosować."
     }
   },
   "clientContractAssignment": {
@@ -635,7 +651,10 @@
     "noActiveBucketPlans": "Nie znaleziono aktywnych planów zasobników.",
     "noHours": "Brak godzin zarejestrowanych w wybranym okresie.",
     "noInvoices": "Nie znaleziono żadnych ostatnich faktur.",
-    "noUsage": "Nie znaleziono danych o użytkowaniu w wybranym okresie."
+    "noUsage": "Nie znaleziono danych o użytkowaniu w wybranym okresie.",
+    "retry": "Ponów",
+    "loadError": "Nie udało się załadować tej sekcji.",
+    "balanceDue": "Do zapłaty"
   },
   "clientContractLineGuide": {
     "title": "Przewodnik ujednoznaczniania linii kontraktu",
@@ -1027,7 +1046,6 @@
     "title": "Ustawienia obliczania podatku",
     "description": "Skonfiguruj sposób obliczania podatków dla tego klienta.",
     "createDefault": "Utwórz domyślne ustawienia podatkowe",
-    "goToBillingTaxSettings": "Przejdź do Ustawień podatku rozliczeniowego",
     "taxExemptStatus": "Status zwolnienia z podatku",
     "taxExempt": "Zwolnione z podatku",
     "taxExemptHelp": "Jeśli ta opcja jest włączona, podatki nie będą doliczane do faktur wystawionych dla tego klienta.",
@@ -1062,13 +1080,13 @@
     "taxExemptUpdatedSuccess": "Status zwolnienia z podatku został pomyślnie zaktualizowany",
     "taxExemptUpdateError": "Nie udało się zaktualizować statusu zwolnienia z podatku",
     "taxSourceExternal": "Zewnętrzny",
-    "taxSourceHelp": "Zarządzaj domyślnymi stawkami podatkowymi klienta w Ustawieniach Klienta → Stawki podatkowe i zarządzaj stawkami globalnymi w Rozliczenia → Ustawienia podatkowe.",
+    "taxSourceHelp": "Ustaw stawki tego klienta w Rozliczenia → Stawki podatkowe. Ustaw stawki globalne w Ustawienia rozliczeń → Podatek.",
     "taxSourceInternal": "Wewnętrzny"
   },
   "clientNotesPanel": {
-    "title": "Notatki i krótkie informacje",
+    "title": "Notatki",
     "initialNote": "Uwaga wstępna",
-    "lastUpdated": "Ostatnia aktualizacja:",
+    "lastUpdated": "Ostatnia aktualizacja: {{value}}",
     "save": "Zapisz",
     "retry": "Ponów",
     "loadError": "Nie udało się wczytać notatek",
@@ -1331,7 +1349,9 @@
         "printer": "Drukarka",
         "server": "Serwer",
         "workstation": "Stacja robocza"
-      }
+      },
+      "loadError": "Nie można teraz załadować zasobów.",
+      "retry": "Ponów"
     },
     "tickets": {
       "addTicket": "Dodaj zgłoszenie",
@@ -1355,5 +1375,28 @@
         "userNotAuthenticated": "Użytkownik nieuwierzytelniony"
       }
     }
+  },
+  "clientEquipmentTab": {
+    "retry": "Ponów",
+    "loadError": "Nie udało się załadować tej sekcji.",
+    "emptyValue": "—",
+    "orderNumber": "Numer zamówienia",
+    "status": "Status",
+    "ordered": "Zamówiono",
+    "amount": "Kwota",
+    "product": "Produkt",
+    "sku": "SKU",
+    "serialNumber": "Numer seryjny",
+    "delivered": "Dostarczono",
+    "asset": "Zasób",
+    "viewAsset": "Zobacz zasób",
+    "rmaNumber": "Numer RMA",
+    "opened": "Otwarto",
+    "salesOrders": "Zamówienia sprzedaży",
+    "noSalesOrders": "Brak zamówień sprzedaży dla tego klienta.",
+    "deliveredUnits": "Dostarczone jednostki",
+    "noDeliveredEquipment": "Brak zarejestrowanego dostarczonego sprzętu.",
+    "rmas": "RMA",
+    "noRmas": "Brak RMA dla tego klienta."
   }
 }

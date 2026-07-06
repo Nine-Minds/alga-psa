@@ -6,10 +6,11 @@ import {
   Boxes,
   ScrollText,
   Server,
-  SlidersHorizontal,
+  Settings2,
 } from "lucide-react";
 import { AlgaLogo } from "./AlgaLogo";
 import { LogoutButton } from "./auth/LogoutButton";
+import { ManageView } from "./manage/ManageView";
 import styles from "./status.module.css";
 
 type RawTierMap = Record<
@@ -33,6 +34,19 @@ type EventItem = {
   timestamp?: string | null;
 };
 type SetupConfigResponse = { mode?: string };
+// Slice of /api/manage/status the status page needs to surface "update
+// available" outside the Manage view (Overview banner + sidebar badge).
+type ManageSummary = {
+  app?: {
+    version?: string | null;
+    channel?: string;
+    updateAvailable?: boolean;
+    availableVersion?: string | null;
+  };
+  controlPlane?: {
+    upgradeAvailable?: boolean;
+  };
+};
 type StatusResponse = {
   status?: string;
   // True when setup is blocked on a correctable install code; the UI offers a
@@ -140,6 +154,7 @@ type Pod = {
 };
 
 type Tab = "overview" | "deployments" | "pods" | "logs";
+type TopView = "status" | "manage";
 type LogLoadOptions = { preserveScroll?: boolean; scrollToEnd?: boolean };
 
 function apiPath(
@@ -310,8 +325,12 @@ function SkeletonBlock({ lines = 6 }: { lines?: number }) {
 }
 
 export default function StatusPage() {
+  const [topView, setTopView] = useState<TopView>("status");
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [status, setStatus] = useState<StatusResponse | null>(null);
+  const [manageSummary, setManageSummary] = useState<ManageSummary | null>(
+    null,
+  );
   const [setupMode, setSetupMode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [recovering, setRecovering] = useState(false);
@@ -374,6 +393,23 @@ export default function StatusPage() {
         statusAbortController.current = null;
         setLoadingStatus(false);
       }
+    }
+  }, []);
+
+  // Best-effort update-availability check so the Overview can surface "update
+  // available" without the operator opening Manage. Polled on its own slow
+  // cadence: the endpoint resolves the release channel from the registry
+  // (60s-cached server-side), and availability changes rarely.
+  const loadManageSummary = useCallback(async () => {
+    try {
+      const response = await fetch(apiPath("/api/manage/status"), {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (!response.ok) return; // keep the last snapshot; banner is best-effort
+      setManageSummary((await response.json()) as ManageSummary);
+    } catch {
+      /* keep the last snapshot across transient failures */
     }
   }, []);
 
@@ -555,6 +591,12 @@ export default function StatusPage() {
   }, [loadNamespaces, loadStatus]);
 
   useEffect(() => {
+    loadManageSummary();
+    const timer = setInterval(loadManageSummary, 60000);
+    return () => clearInterval(timer);
+  }, [loadManageSummary]);
+
+  useEffect(() => {
     if (activeTab === "deployments") loadDeployments();
     if (activeTab === "pods" || activeTab === "logs") loadPods();
   }, [activeTab, loadDeployments, loadPods]);
@@ -609,6 +651,11 @@ export default function StatusPage() {
     status?.rollup?.nextAction ||
     status?.installState?.lastAction ||
     "Waiting for the next appliance update";
+  const appUpdateAvailable = Boolean(manageSummary?.app?.updateAvailable);
+  const cpUpgradeAvailable = Boolean(
+    manageSummary?.controlPlane?.upgradeAvailable,
+  );
+  const anyUpdateAvailable = appUpdateAvailable || cpUpgradeAvailable;
 
   useEffect(() => {
     setActiveMatch(0);
@@ -654,24 +701,53 @@ export default function StatusPage() {
               type="button"
               role="tab"
               id={`appliance-tab-${value}`}
-              aria-selected={activeTab === value}
+              aria-selected={topView === "status" && activeTab === value}
               aria-controls={`appliance-panel-${value}`}
-              className={activeTab === value ? styles.activeTab : ""}
-              onClick={() => setActiveTab(value)}
+              className={topView === "status" && activeTab === value ? styles.activeTab : ""}
+              onClick={() => {
+                setTopView("status");
+                setActiveTab(value);
+              }}
             >
               <Icon className={styles.navIcon} aria-hidden="true" />
               <span>{label}</span>
             </button>
           ))}
         </nav>
-        <a className={styles.setupLink} href="/setup/">
-          <SlidersHorizontal className={styles.navIcon} aria-hidden="true" />
-          <span>Setup</span>
-        </a>
+        <button
+          type="button"
+          className={`${styles.setupLink} ${topView === "manage" ? styles.activeTab : ""}`}
+          onClick={() => setTopView("manage")}
+          aria-pressed={topView === "manage"}
+        >
+          <Settings2 className={styles.navIcon} aria-hidden="true" />
+          <span>Manage</span>
+          {anyUpdateAvailable ? (
+            <span
+              className={`${styles.updateDot} ${styles.updateDotEnd}`}
+              title="Update available"
+              aria-label="Update available"
+            />
+          ) : null}
+        </button>
         <LogoutButton />
       </aside>
 
       <section className={styles.workspace}>
+        {topView === "manage" ? (
+          <>
+            <header className={styles.commandBar}>
+              <div>
+                <div className={styles.eyebrow}>Alga PSA appliance</div>
+                <h1>Manage</h1>
+              </div>
+            </header>
+            <ManageView />
+          </>
+        ) : null}
+
+        {topView === "status" ? (
+        <>
         <header className={styles.commandBar}>
           <div>
             <div className={styles.eyebrow}>Alga PSA appliance</div>
@@ -714,6 +790,39 @@ export default function StatusPage() {
             <a className={styles.primaryButton} href="/setup/">
               Re-enter install code
             </a>
+          </div>
+        ) : null}
+
+        {anyUpdateAvailable && setupMode !== "setup" ? (
+          <div className={styles.setupCta} role="status">
+            <div>
+              <strong>
+                {appUpdateAvailable
+                  ? "Update available"
+                  : "Control-plane update available"}
+              </strong>
+              <p>
+                {appUpdateAvailable
+                  ? `A newer Alga PSA version${
+                      manageSummary?.app?.availableVersion
+                        ? ` (${manageSummary.app.availableVersion})`
+                        : ""
+                    } is available on the ${
+                      manageSummary?.app?.channel || "stable"
+                    } channel. The appliance does not update itself — apply it from Manage → Updates.`
+                  : "A newer appliance setup & manage UI (control plane) is available. Apply it from Manage → Control-plane, or reboot the appliance to pick it up at boot."}
+                {appUpdateAvailable && cpUpgradeAvailable
+                  ? " A control-plane (setup & manage UI) update is also available."
+                  : ""}
+              </p>
+            </div>
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={() => setTopView("manage")}
+            >
+              Open Manage
+            </button>
           </div>
         ) : null}
 
@@ -1256,6 +1365,8 @@ export default function StatusPage() {
               </pre>
             )}
           </section>
+        ) : null}
+        </> /* end topView === "status" */
         ) : null}
       </section>
     </main>

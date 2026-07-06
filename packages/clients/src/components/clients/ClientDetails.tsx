@@ -48,6 +48,8 @@ import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { getAllClients } from '../../actions/queryActions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import ClientLocations from './ClientLocations';
@@ -77,10 +79,13 @@ import {
   shouldShowEntraSyncAction,
 } from './clientDetailsEntraSyncAction';
 import { ClientDetailsTabContent } from './ClientDetailsTabContent';
+import ClientCommandCenter from './command-center/ClientCommandCenter';
 import HuduClientTab from './HuduClientTab';
 import HuduClientPasswordsTab from './HuduClientPasswordsTab';
 import HuduClientDocumentsSection from './HuduClientDocumentsSection';
 import { useHuduClientTab } from './useHuduClientTab';
+import { useClientEquipmentTab } from './useClientEquipmentTab';
+import { ClientEquipmentTab } from './ClientEquipmentTab';
 
 const EMPTY_CONTACTS: IContact[] = [];
 const EMPTY_DOCUMENTS: IDocument[] = [];
@@ -227,6 +232,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isDocumentSelectorOpen, setIsDocumentSelectorOpen] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  // Options for the parent-client picker (Additional Info).
+  const [allClients, setAllClients] = useState<IClient[]>([]);
+  const [parentFilterState, setParentFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [parentTypeFilter, setParentTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isDeletingLogo, setIsDeletingLogo] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
@@ -274,8 +283,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     editedClient
   );
   const shouldRenderPsaOnlyClientSurfaces = !isAlgaDeskMode;
-  // F070: EE + hudu-integration flag + Hudu connected + this client mapped.
+  // F070: EE + Hudu connected + this client mapped.
   const huduClientTab = useHuduClientTab(client.client_id);
+  // F023: shown only when the current user has inventory:read.
+  const clientEquipmentTab = useClientEquipmentTab();
 
   const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {
     const response = await fetch(`/api/integrations/entra/sync/runs/${encodeURIComponent(runId)}`, {
@@ -726,6 +737,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     fetchUser();
   }, []);
 
+  // Options for the parent-client picker; an empty list just leaves the
+  // picker's dropdown empty, so a failed load is visible rather than silent.
+  useEffect(() => {
+    getAllClients(false)
+      .then(setAllClients)
+      .catch((error) => console.error('Error fetching clients for parent picker:', error));
+  }, []);
+
   // Fetch MSP users once or when needed
   useEffect(() => {
     const fetchAllUsers = async () => {
@@ -1042,6 +1061,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     memoizedRouter.push(`${pathname}?${params.toString()}`);
   }, [pathname, memoizedRouter, searchParams]);
 
+  // Command-center focus views sync ?tab= with replace (no history spam), and
+  // clear it when the focus view closes (D3).
+  const handleFocusTabUrlChange = useCallback((tabId: string | null) => {
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    if (tabId) {
+      params.set('tab', tabId);
+    } else {
+      params.delete('tab');
+    }
+    const queryString = params.toString();
+    memoizedRouter.replace(queryString ? `${pathname}?${queryString}` : pathname);
+  }, [pathname, memoizedRouter, searchParams]);
+
   const clientActiveContacts = useMemo(() => {
     return (defaultContactOptions ?? []).filter((c) => !c?.is_inactive);
   }, [defaultContactOptions]);
@@ -1302,6 +1334,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       label: t('clientDetails.assets', { defaultValue: 'Assets' }),
       content: shouldRenderPsaOnlyClientSurfaces ? renderClientAssets({ clientId: client.client_id }) : null,
     },
+    // F022/F023: inventory Equipment tab — PSA-only, and only when inventory:read.
+    ...((shouldRenderPsaOnlyClientSurfaces && clientEquipmentTab.visible) ? [{
+      id: 'equipment',
+      label: t('clientDetails.equipment', { defaultValue: 'Equipment' }),
+      content: <ClientEquipmentTab clientId={client.client_id} />,
+    }] : []),
     {
       id: 'billing',
       label: t('clientDetails.billing', { defaultValue: 'Billing' }),
@@ -1391,12 +1429,52 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               onEdit={(value) => handleFieldChange('properties.payment_terms', value)}
               automationId="payment-terms-field"
             />
-            <TextDetailItem
-              label={t('clientDetails.parentClient', { defaultValue: 'Parent Client' })}
-              value={editedClient.properties?.parent_client_name ?? ""}
-              onEdit={(value) => handleFieldChange('properties.parent_client_name', value)}
-              automationId="parent-client-field"
-            />
+            <div className="space-y-2" data-automation-id="parent-client-field">
+              <Text as="label" size="2" className="text-gray-700 font-medium">
+                {t('clientDetails.parentClient', { defaultValue: 'Parent Client' })}
+              </Text>
+              <div className="flex items-center gap-2">
+                <ClientPicker
+                  id="parent-client-picker"
+                  clients={allClients}
+                  selectedClientId={editedClient.properties?.parent_client_id ?? null}
+                  onSelect={(parentId) => {
+                    const parent = allClients.find((candidate) => candidate.client_id === parentId);
+                    handleFieldChange('properties.parent_client_id', parentId ?? '');
+                    handleFieldChange('properties.parent_client_name', parent?.client_name ?? '');
+                  }}
+                  filterState={parentFilterState}
+                  onFilterStateChange={setParentFilterState}
+                  clientTypeFilter={parentTypeFilter}
+                  onClientTypeFilterChange={setParentTypeFilter}
+                  disabledClientIds={new Set([client.client_id])}
+                  disabledTooltip={t('clientDetails.parentClientSelf', { defaultValue: 'A client cannot be its own parent' })}
+                  placeholder={t('clientDetails.parentClientPlaceholder', { defaultValue: 'No parent client' })}
+                />
+                {editedClient.properties?.parent_client_id && (
+                  <Button
+                    id="parent-client-clear"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      handleFieldChange('properties.parent_client_id', '');
+                      handleFieldChange('properties.parent_client_name', '');
+                    }}
+                  >
+                    {t('clientDetails.parentClientClear', { defaultValue: 'Clear' })}
+                  </Button>
+                )}
+              </div>
+              {/* Legacy free-text value (pre-picker) — shown until a real parent is linked. */}
+              {!editedClient.properties?.parent_client_id && editedClient.properties?.parent_client_name && (
+                <Text size="1" className="text-gray-500">
+                  {t('clientDetails.parentClientLegacy', {
+                    defaultValue: 'Previously entered as text: {{name}}',
+                    name: editedClient.properties.parent_client_name,
+                  })}
+                </Text>
+              )}
+            </div>
             <FieldContainer
               label={t('clientDetails.timezone', { defaultValue: 'Timezone' })}
               fieldType="select"
@@ -1414,12 +1492,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 onValueChange={(value) => handleFieldChange('timezone', value)}
               />
             </FieldContainer>
-            <TextDetailItem
-              label={t('clientDetails.lastContactDate', { defaultValue: 'Last Contact Date' })}
-              value={editedClient.properties?.last_contact_date ?? ""}
-              onEdit={(value) => handleFieldChange('properties.last_contact_date', value)}
-              automationId="last-contact-date-field"
-            />
           </div>
           
           <Flex gap="4" justify="end" align="center">
@@ -1432,11 +1504,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               id="save-additional-info-btn"
               onClick={handleSave}
               disabled={isSaving}
-              className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving
                 ? t('common.actions.saving', { defaultValue: 'Saving...' })
-                : t('clientDetails.saveChanges', { defaultValue: 'Save Changes' })}
+                : t('clientDetails.saveChanges', { defaultValue: 'Save' })}
             </Button>
           </Flex>
         </div>
@@ -1533,7 +1604,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     documents,
     memoizedRouter,
     interactions,
-    huduClientTab.visible
+    huduClientTab.visible,
+    clientEquipmentTab.visible
   ]);
 
   const tabContent = useMemo(() => {
@@ -1689,13 +1761,35 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             ] satisfies PrintableDetailField[]}
           />
         </div>
-        <CustomTabs
-          tabs={quickView ? [tabContent[0]] : tabContent}
-          // In quick view we only render the Details tab. Force default to details
-          // to avoid a mismatch with the current page's ?tab= query (e.g. "Tickets").
-          defaultTab={quickView ? 'details' : searchParams?.get('tab')?.toLowerCase() || 'details'}
-          onTabChange={handleTabChange}
-        />
+        {(quickView || isInDrawer) ? (
+          <CustomTabs
+            tabs={quickView ? [tabContent[0]] : tabContent}
+            // In quick view we only render the Details tab. Force default to details
+            // to avoid a mismatch with the current page's ?tab= query (e.g. "Tickets").
+            defaultTab={quickView ? 'details' : searchParams?.get('tab')?.toLowerCase() || 'details'}
+            onTabChange={handleTabChange}
+          />
+        ) : (
+          // Full-page client screen: command center replaces the tab bar (D1);
+          // legacy tab contents stay reachable as focus views via the registry (D2).
+          <ClientCommandCenter
+            idPrefix={`${id}-cc`}
+            clientId={client.client_id}
+            tabs={tabContent}
+            initialTabId={searchParams?.get('tab')?.toLowerCase() || null}
+            onTabUrlChange={handleFocusTabUrlChange}
+            hasUnsavedRecordChanges={hasUnsavedChanges}
+            onDiscardRecordChanges={() => {
+              setEditedClient(client);
+              setHasUnsavedChanges(false);
+            }}
+            onNewTicket={() => setIsQuickAddTicketOpen(true)}
+            onManageLocations={() => setIsLocationsDialogOpen(true)}
+            surveySummary={surveySummary}
+            renderSurveySummaryCard={renderSurveySummaryCard}
+            t={t}
+          />
+        )}
 
         {renderQuickAddTicket({
           id: `${id}-quick-add-ticket`,

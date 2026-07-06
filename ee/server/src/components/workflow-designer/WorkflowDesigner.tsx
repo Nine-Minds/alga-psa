@@ -58,7 +58,7 @@ import EventsCatalogV2 from '@alga-psa/workflows/components/automation-hub/Event
 import type { WorkflowPickerActions } from '@alga-psa/workflows/components/automation-hub/WorkflowActionInputFixedPicker';
 import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
 import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrations/actions';
-import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions';
+import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions/ticketActions';
 import { getProjectsWithPhases } from '@alga-psa/projects/actions/projectActions';
 import { getProjectTaskData } from '@alga-psa/projects/actions/projectTaskActions';
 import WorkflowSchedules from './WorkflowSchedules';
@@ -346,7 +346,7 @@ const workflowPickerActions: WorkflowPickerActions = {
   getTicketsForList: async ({ boardFilterState, searchQuery }) => {
     const result = await getTicketsForList({ boardFilterState, searchQuery });
     return {
-      tickets: (result?.tickets ?? [])
+      tickets: (result ?? [])
         .filter((ticket): ticket is typeof ticket & { ticket_id: string } => Boolean(ticket.ticket_id))
         .map((ticket) => ({
           ticket_id: ticket.ticket_id,

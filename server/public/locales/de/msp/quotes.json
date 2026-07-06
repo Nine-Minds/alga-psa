@@ -26,7 +26,8 @@
       "sendReminder": "Erinnerung senden",
       "sendToClient": "An den Kunden senden",
       "setAsDefault": "Als Standard festlegen",
-      "submitForApproval": "Zur Genehmigung einreichen"
+      "submitForApproval": "Zur Genehmigung einreichen",
+      "done": "Fertig"
     },
     "badges": {
       "standard": "Standard"
@@ -151,7 +152,8 @@
       "cancel": "Abbrechen",
       "previewPdf": "PDF-Vorschau",
       "backToQuotes": "Zurück zu den Angeboten",
-      "backToTemplates": "Zurück zu den Angebotsvorlagen"
+      "backToTemplates": "Zurück zu den Angebotsvorlagen",
+      "convertToSalesOrder": "In Kundenauftrag umwandeln"
     },
     "headings": {
       "editQuote": "Angebot bearbeiten",
@@ -351,7 +353,8 @@
       "openConvertedInvoice": "Öffnen Sie die umgewandelte Rechnung",
       "preview": "Vorschau",
       "saveAsTemplate": "Als Vorlage speichern",
-      "back": "Zurück"
+      "back": "Zurück",
+      "openConvertedSalesOrder": "Umgewandelt in {{number}}"
     },
     "sections": {
       "activityLog": "Aktivitätsprotokoll",
@@ -431,7 +434,8 @@
       "sent": "Angebot an den Kunden gesendet.",
       "submittedForApproval": "Angebot zur internen Genehmigung eingereicht.",
       "templateAssigned": "Dokumentvorlage zugewiesen.",
-      "templateCleared": "Dokumentvorlage gelöscht (Standardeinstellung)."
+      "templateCleared": "Dokumentvorlage gelöscht (Standardeinstellung).",
+      "createdSalesOrder": "Kundenauftragsentwurf {{number}} erstellt. Produktpositionen werden bei Erfüllung abgerechnet."
     },
     "preview": {
       "loading": "Vorschau wird geladen..."
@@ -447,6 +451,9 @@
       "groupHeading": "Standort",
       "unassigned": "Positionen ohne Standort",
       "subtotal": "Standort-Zwischensumme"
+    },
+    "availability": {
+      "onHand": "Bestand: {{count}}"
     }
   },
   "quoteLineItems": {
@@ -567,6 +574,10 @@
       "both": {
         "label": "Vertrag + Rechnung",
         "description": "Erstellt sowohl einen Vertragsentwurf (für wiederkehrende Artikel) als auch einen Rechnungsentwurf (für einmalige Artikel)."
+      },
+      "salesOrder": {
+        "label": "Kundenauftrag (Produktpositionen)",
+        "description": "Verschiebt einmalige Produktpositionen in einen Kundenauftragsentwurf, der bei Erfüllung abgerechnet wird. Diese Positionen werden aus dem Rechnungsentwurf ausgeschlossen, sodass nichts doppelt berechnet wird."
       }
     },
     "sections": {
@@ -604,12 +615,19 @@
       "convertQuote": "Angebot konvertieren",
       "invoice": "Rechnungsentwurf erstellen",
       "both": "Erstellen Sie beide Datensätze",
-      "converting": "Konvertieren..."
+      "converting": "Konvertieren...",
+      "salesOrder": "Kundenauftrag erstellen"
     },
     "errors": {
       "convert": "Das Angebot konnte nicht konvertiert werden",
       "load": "Konvertierungsvorschau konnte nicht geladen werden",
       "title": "Fehler"
+    },
+    "salesOrder": {
+      "successTitle": "Kundenauftrag {{number}} erstellt",
+      "successBody": "Produktpositionen werden bei Erfüllung abgerechnet.",
+      "openSalesOrders": "Kundenaufträge öffnen",
+      "note": "Einmalige Produktpositionen werden in einen Kundenauftragsentwurf verschoben (Abrechnung bei Erfüllung) und von jeder Rechnungsentwurf-Konvertierung ausgeschlossen, sodass nichts doppelt berechnet wird."
     }
   },
   "quoteApproval": {

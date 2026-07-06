@@ -19,6 +19,12 @@ const STANDARD_STATUSES = [
   { name: 'Blocked', color: '#EF4444', is_closed: false },
   { name: 'Done', color: '#10B981', is_closed: true }
 ];
+const MIGRATION_TENANT = 'migration:20251211100001_seed_ad_to_m365_project_template';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for AD to M365 project template seed';
+
+async function loadTenantDb() {
+  return require('./utils/tenantDb.cjs').tenantDb;
+}
 
 /**
  * Convert hours to minutes for database storage
@@ -401,7 +407,7 @@ function buildTemplateData(tenant, statusMappingsByName) {
  * Uses: To Do, In Progress, Blocked, Done
  * @returns {Promise<{mappings: Array, mappingsByName: Map<string, string>}>}
  */
-async function getOrCreateStandardStatusMappings(knex, tenant, templateId) {
+async function getOrCreateStandardStatusMappings(knex, db, tenant, templateId) {
   const statusMappings = [];
   const statusMappingsByName = new Map();
 
@@ -409,20 +415,20 @@ async function getOrCreateStandardStatusMappings(knex, tenant, templateId) {
     const standardStatus = STANDARD_STATUSES[i];
 
     // Look up existing status by name (case-insensitive)
-    let status = await knex('statuses')
+    let status = await db.table('statuses')
       .where({ tenant, status_type: 'project_task' })
       .whereRaw('LOWER(name) = LOWER(?)', [standardStatus.name])
       .first();
 
     // Create only if not found (fallback for missing statuses like "Blocked")
     if (!status) {
-      const maxOrder = await knex('statuses')
+      const maxOrder = await db.table('statuses')
         .where({ tenant, status_type: 'project_task' })
         .max('order_number as max')
         .first();
 
       const newStatusId = uuidv4();
-      await knex('statuses').insert({
+      await db.table('statuses').insert({
         tenant,
         status_id: newStatusId,
         name: standardStatus.name,
@@ -454,13 +460,16 @@ async function getOrCreateStandardStatusMappings(knex, tenant, templateId) {
 }
 
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   console.log('Seeding AD to M365 Migration project template for all tenants...');
 
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
 
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     // Check if this template already exists for the tenant
-    const existing = await knex('project_templates')
+    const existing = await db.table('project_templates')
       .where({
         tenant,
         template_name: TEMPLATE_NAME
@@ -476,7 +485,7 @@ exports.up = async function(knex) {
 
     // Get or create standard status mappings (To Do, In Progress, Blocked, Done)
     const { mappings: statusMappings, mappingsByName: statusMappingsByName } =
-      await getOrCreateStandardStatusMappings(knex, tenant, templateId);
+      await getOrCreateStandardStatusMappings(knex, db, tenant, templateId);
 
     // Build template data with status mapping reference
     const data = buildTemplateData(tenant, statusMappingsByName);
@@ -486,12 +495,12 @@ exports.up = async function(knex) {
     data.phases.forEach(p => p.template_id = templateId);
 
     // Insert in correct order: template first, then status mappings, then phases, then tasks, then checklists
-    await knex('project_templates').insert(data.template);
-    await knex('project_template_status_mappings').insert(statusMappings);
-    await knex('project_template_phases').insert(data.phases);
-    await knex('project_template_tasks').insert(data.tasks);
+    await db.table('project_templates').insert(data.template);
+    await db.table('project_template_status_mappings').insert(statusMappings);
+    await db.table('project_template_phases').insert(data.phases);
+    await db.table('project_template_tasks').insert(data.tasks);
     if (data.checklistItems && data.checklistItems.length > 0) {
-      await knex('project_template_checklist_items').insert(data.checklistItems);
+      await db.table('project_template_checklist_items').insert(data.checklistItems);
     }
 
     console.log(`  Created template for tenant ${tenant}`);
@@ -501,14 +510,17 @@ exports.up = async function(knex) {
 };
 
 exports.down = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   console.log('Removing AD to M365 Migration project template from all tenants...');
 
   // Get all tenants and delete per-tenant to ensure proper Citus routing
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
 
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     // Delete will cascade to phases, tasks, status mappings due to foreign keys
-    await knex('project_templates')
+    await db.table('project_templates')
       .where({
         tenant,
         template_name: TEMPLATE_NAME

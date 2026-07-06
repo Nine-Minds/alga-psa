@@ -40,7 +40,7 @@ describe('template phase status contracts', () => {
     expect(templateActionsSource).toContain("const getScopeKey = (templatePhaseId?: string | null) => templatePhaseId ?? '__template_defaults__';");
     expect(templateActionsSource).toContain("const getFallbackStatusMappingIdForPhase = (templatePhaseId?: string | null) => {");
     expect(templateActionsSource).toContain("if (options.copyStatuses && templateStatuses.length > 0) {");
-    expect(templateActionsSource).toContain("await trx('project_status_mappings')");
+    expect(templateActionsSource).toContain("await tenantScopedTable(trx, 'project_status_mappings', tenant)");
     expect(templateActionsSource).toContain('phase_id: templateStatus.template_phase_id');
     expect(templateActionsSource).toContain('phaseMap.get(templateStatus.template_phase_id) ?? null');
     expect(templateActionsSource).toContain('const scopeKey = getScopeKey(templateStatus.template_phase_id);');

@@ -14,7 +14,10 @@ const InputSchema = z.object({
 });
 
 // Define the type for the returned invoice data, selecting only necessary fields
-export type RecentInvoice = Pick<IInvoice, 'invoice_id' | 'invoice_number' | 'invoice_date' | 'due_date' | 'total_amount' | 'status'>;
+export type RecentInvoice = Pick<IInvoice, 'invoice_id' | 'invoice_number' | 'invoice_date' | 'due_date' | 'total_amount' | 'status' | 'currency_code'> & {
+  /** total − credit applied − completed payments; null for drafts (not yet owed). */
+  balance_due: number | null;
+};
 
 /**
  * Server action to fetch recent invoices for a specific client.
@@ -42,22 +45,50 @@ export const getRecentClientInvoices = withAuth(async (
 
   try {
     const invoices: RecentInvoice[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoices')
+      // Same money math as the pulse's aging (D6): completed payments only.
+      const completedPayments = trx('invoice_payments')
+        .where({ tenant, status: 'completed' })
+        .groupBy('invoice_id')
+        .select('invoice_id')
+        .sum({ paid_amount: 'amount' })
+        .as('ip');
+
+      const rows = await trx('invoices as i')
+        .leftJoin(completedPayments, 'ip.invoice_id', 'i.invoice_id')
         .select(
-          'invoice_id',
-          'invoice_number',
-          'invoice_date',
-          'due_date',
-          'total_amount',
-          'status'
-          // 'currency_code' // Not included as it's not in IInvoice interface
+          'i.invoice_id',
+          'i.invoice_number',
+          'i.invoice_date',
+          'i.due_date',
+          'i.total_amount',
+          'i.status',
+          'i.currency_code',
+          'i.credit_applied',
+          'i.finalized_at',
+          'ip.paid_amount'
         )
         .where({
-          client_id: clientId,
-          tenant: tenant,
+          'i.client_id': clientId,
+          'i.tenant': tenant,
         })
-        .orderBy('invoice_date', 'desc')
+        .orderBy('i.invoice_date', 'desc')
         .limit(limit);
+
+      return rows.map((row: any): RecentInvoice => {
+        const isDraft = row.finalized_at == null && row.status === 'draft';
+        return {
+          invoice_id: row.invoice_id,
+          invoice_number: row.invoice_number,
+          invoice_date: row.invoice_date,
+          due_date: row.due_date,
+          total_amount: row.total_amount,
+          status: row.status,
+          currency_code: row.currency_code,
+          balance_due: isDraft
+            ? null
+            : Math.max(0, Number(row.total_amount ?? 0) - Number(row.credit_applied ?? 0) - Number(row.paid_amount ?? 0)),
+        };
+      });
     });
 
     console.log(`Found ${invoices.length} recent invoices for client ${clientId}`);

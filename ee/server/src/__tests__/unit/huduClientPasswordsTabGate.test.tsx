@@ -2,8 +2,8 @@
 /**
  * T080 — registration gating for the client "Passwords" tab
  * (client-passwords-tab group). Same gate as the Hudu tab: useHuduClientTab
- * (packages/clients) resolves visible ONLY when EE edition + the
- * `hudu-integration` flag AND the edition-swapped probe reports Hudu
+ * (packages/clients) resolves visible ONLY when EE edition AND the
+ * edition-swapped probe reports Hudu
  * connected + this client mapped. ClientDetails registers BOTH Hudu tabs in
  * the same `visible`-gated spread, so hidden here = both tabs absent. A
  * registration probe mirrors that spread, and a source-wiring check
@@ -17,14 +17,9 @@ import { useHuduClientTab } from '@alga-psa/clients/components/clients/useHuduCl
 // @ts-expect-error Vite raw import (source-wiring assertion).
 import clientDetailsSource from '@alga-psa/clients/components/clients/ClientDetails.tsx?raw';
 
-const { useFeatureFlagMock, isEnterpriseRef, getHuduClientContextMock } = vi.hoisted(() => ({
-  useFeatureFlagMock: vi.fn(),
+const { isEnterpriseRef, getHuduClientContextMock } = vi.hoisted(() => ({
   isEnterpriseRef: { value: true },
   getHuduClientContextMock: vi.fn(),
-}));
-
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: useFeatureFlagMock,
 }));
 
 vi.mock('@alga-psa/core', () => ({
@@ -76,25 +71,13 @@ function passwordsTab() {
 }
 
 beforeEach(() => {
-  useFeatureFlagMock.mockReset();
   getHuduClientContextMock.mockReset();
   isEnterpriseRef.value = true;
-  useFeatureFlagMock.mockReturnValue({ enabled: true, loading: false, error: null });
   getHuduClientContextMock.mockResolvedValue({ connected: true, mapped: true });
 });
 
 describe('T080: client "Passwords" tab registration gate', () => {
-  it('is absent when the feature flag is off (and never probes)', async () => {
-    useFeatureFlagMock.mockReturnValue({ enabled: false, loading: false, error: null });
-
-    await renderTabs();
-
-    expect(passwordsTab()).toBeNull();
-    expect(screen.queryByTestId('tab-hudu')).toBeNull();
-    expect(getHuduClientContextMock).not.toHaveBeenCalled();
-  });
-
-  it('is absent in Community Edition even with the flag on', async () => {
+  it('is absent in Community Edition', async () => {
     isEnterpriseRef.value = false;
 
     await renderTabs();
@@ -128,7 +111,7 @@ describe('T080: client "Passwords" tab registration gate', () => {
     expect(passwordsTab()).toBeNull();
   });
 
-  it('appears directly after the Hudu tab when EE + flag + connected + mapped', async () => {
+  it('appears directly after the Hudu tab when EE + connected + mapped', async () => {
     const tabs = await renderTabs();
 
     await waitFor(() => {

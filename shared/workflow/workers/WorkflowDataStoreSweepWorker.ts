@@ -1,4 +1,5 @@
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { env } from 'process';
 import WorkflowDataStoreModel from '../persistence/workflowDataStoreModel';
@@ -59,7 +60,11 @@ export class WorkflowDataStoreSweepWorker {
     const knex = await getAdminConnection();
 
     try {
-      const tenants = await knex('workflow_data_store')
+      const tenants = await tenantDb(knex, '__workflow_data_store_expiry_sweep__')
+        .unscoped<{ tenant: string }>(
+          'workflow_data_store',
+          'workflow data-store expiry sweep intentionally discovers tenants with expired rows'
+        )
         .whereNotNull('expires_at')
         .andWhere('expires_at', '<=', new Date().toISOString())
         .distinct<{ tenant: string }[]>('tenant')

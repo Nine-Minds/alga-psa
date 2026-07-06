@@ -858,7 +858,6 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                           label="24/7 (ignore business hours)"
                           checked={target.is_24x7}
                           onChange={(e) => handleTargetChange(target.priority_id, 'is_24x7', e.target.checked)}
-                          containerClassName="mb-0"
                         />
                       </div>
 
@@ -1129,7 +1128,6 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                                 'notify_assignee',
                                 e.target.checked
                               )}
-                              containerClassName="mb-0"
                             />
                             <Checkbox
                               id={`sla-threshold-notify-board-manager-${index}`}
@@ -1140,7 +1138,6 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                                 'notify_board_manager',
                                 e.target.checked
                               )}
-                              containerClassName="mb-0"
                             />
                             <Checkbox
                               id={`sla-threshold-notify-escalation-manager-${index}`}
@@ -1151,7 +1148,6 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                                 'notify_escalation_manager',
                                 e.target.checked
                               )}
-                              containerClassName="mb-0"
                             />
                           </div>
                         </div>
@@ -1169,14 +1165,12 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                               label="In-App"
                               checked={threshold.channels.includes('in_app')}
                               onChange={() => toggleThresholdChannel(threshold.id, 'in_app')}
-                              containerClassName="mb-0"
                             />
                             <Checkbox
                               id={`sla-threshold-channel-email-${index}`}
                               label="Email"
                               checked={threshold.channels.includes('email')}
                               onChange={() => toggleThresholdChannel(threshold.id, 'email')}
-                              containerClassName="mb-0"
                             />
                           </div>
                         </div>

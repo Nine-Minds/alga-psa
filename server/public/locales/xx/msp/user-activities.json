@@ -209,12 +209,14 @@
           "priorityPlaceholder": "11111",
           "allPriorities": "11111",
           "dueDateRange": "11111",
+          "createdDateRange": "11111",
           "showClosedTasks": "11111"
         },
         "actions": {
           "reset": "11111",
           "cancel": "11111",
-          "apply": "11111"
+          "apply": "11111",
+          "clearDates": "11111"
         }
       }
     },
@@ -252,12 +254,14 @@
           "priorityPlaceholder": "11111",
           "allPriorities": "11111",
           "dueDateRange": "11111",
+          "createdDateRange": "11111",
           "showClosedTickets": "11111"
         },
         "actions": {
           "reset": "11111",
           "cancel": "11111",
-          "apply": "11111"
+          "apply": "11111",
+          "clearDates": "11111"
         }
       }
     },
@@ -297,13 +301,15 @@
           "priorityMedium": "11111",
           "priorityLow": "11111",
           "dueDateRange": "11111",
+          "createdDateRange": "11111",
           "showClosedTasks": "11111",
           "includeHiddenTasks": "11111"
         },
         "actions": {
           "reset": "11111",
           "cancel": "11111",
-          "apply": "11111"
+          "apply": "11111",
+          "clearDates": "11111"
         }
       },
       "listDrawer": {
@@ -441,6 +447,7 @@
       "showClosed": "11111",
       "client": "11111",
       "dueDateShort": "11111",
+      "createdShort": "11111",
       "tags": "11111",
       "tagsSelected": "11111 {{count}} 11111",
       "tasksCompact": "11111",
@@ -470,7 +477,9 @@
     },
     "actions": {
       "reset": "11111",
-      "clearClient": "11111"
+      "clearClient": "11111",
+      "clearDueDate": "11111",
+      "clearCreatedDate": "11111"
     },
     "statusClosedSuffix": "11111",
     "summary": {

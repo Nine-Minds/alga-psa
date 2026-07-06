@@ -206,9 +206,9 @@
     "providerDefault": "Proveedor predeterminado",
     "inboundEmailDomains": "Dominios de correo electrónico entrante",
     "inboundEmailDomainsHelp": "Sólo estos dominios se utilizarán para la coincidencia de dominios de correo electrónico entrante (por ejemplo, acme.com). Los dominios deben ser únicos entre los clientes.",
-    "noInboundDomains": "No hay dominios de correo electrónico entrante configurados. No se utilizará la coincidencia de dominio.",
+    "noInboundDomains": "Agregue un dominio para asociar el correo electrónico entrante a este cliente.",
     "inboundTicketDestination": "Destino del ticket entrante",
-    "inboundDestinationPrecedence": "Prioridad: Anulación de contacto -> Destino del cliente -> Valor predeterminado del proveedor.",
+    "inboundDestinationPrecedence": "Usa primero la anulación del contacto, luego la del cliente y después el valor predeterminado del proveedor.",
     "manageLocations": "Administrar ubicaciones",
     "loadingUsers": "Cargando usuarios...",
     "loadingPolicies": "Cargando políticas...",
@@ -278,7 +278,12 @@
     "nameAliasRemoveFailed": "Error al eliminar el alias",
     "nameAliasRemoved": "Alias eliminado",
     "nameAliases": "Alias de coincidencia",
-    "noNameAliases": "No hay alias configurados. El propio nombre del cliente siempre coincide."
+    "noNameAliases": "No hay alias configurados. El propio nombre del cliente siempre coincide.",
+    "equipment": "Equipos",
+    "parentClientSelf": "Un cliente no puede ser su propio cliente principal",
+    "parentClientPlaceholder": "Sin cliente principal",
+    "parentClientClear": "Borrar",
+    "parentClientLegacy": "Introducido anteriormente como texto: {{name}}"
   },
   "quickAddClient": {
     "title": "Agregar nuevo cliente",
@@ -522,6 +527,17 @@
       "5": "Viernes",
       "6": "Sábado",
       "7": "Domingo"
+    },
+    "reviewError": "No se pudo comprobar el impacto de este cambio",
+    "reviewing": "Comprobando impacto…",
+    "confirmSave": "Confirmar y guardar",
+    "reviewChanges": "Revisar cambios",
+    "impact": {
+      "title": "Revisar antes de aplicar",
+      "periods": "Se reconstruirán {{count}} período(s) de cargo próximos en {{lines}} línea(s) de contrato para ajustarse al nuevo calendario.",
+      "from": "Reconstruido a partir del {{date}}.",
+      "billedPreserved": "Los cargos ya facturados se conservan y no cambiarán.",
+      "confirmHint": "Elija «Confirmar y guardar» para aplicar."
     }
   },
   "clientContractAssignment": {
@@ -605,7 +621,10 @@
     "noActiveBucketPlans": "No se encontraron planes de bucket activos.",
     "noHours": "No se registraron horas en el período seleccionado.",
     "noInvoices": "No se encontraron facturas recientes.",
-    "noUsage": "No se encontraron datos de uso en el período seleccionado."
+    "noUsage": "No se encontraron datos de uso en el período seleccionado.",
+    "retry": "Reintentar",
+    "loadError": "No se pudo cargar esta sección.",
+    "balanceDue": "Saldo pendiente"
   },
   "clientContractLineGuide": {
     "title": "Guía de desambiguación de líneas de contrato",
@@ -997,7 +1016,6 @@
     "title": "Configuración de cálculo de impuestos",
     "description": "Configure cómo se calculan los impuestos para este cliente.",
     "createDefault": "Crear configuración de impuestos predeterminada",
-    "goToBillingTaxSettings": "Vaya a Configuración de impuestos de facturación",
     "taxExemptStatus": "Estado de exención de impuestos",
     "taxExempt": "Exento de impuestos",
     "taxExemptHelp": "Cuando esté habilitado, los impuestos no se aplicarán a las facturas de este cliente.",
@@ -1032,13 +1050,13 @@
     "taxExemptUpdatedSuccess": "Estado de exención de impuestos actualizado correctamente",
     "taxExemptUpdateError": "No se pudo actualizar el estado de exención de impuestos",
     "taxSourceExternal": "Externo",
-    "taxSourceHelp": "Administre las tasas impositivas predeterminadas del cliente en Configuración del cliente → Tasas impositivas y administre las tasas globales en Facturación → Configuración de impuestos.",
+    "taxSourceHelp": "Configure las tasas de este cliente en Facturación → Tasas impositivas. Configure las tasas globales en Configuración de facturación → Impuestos.",
     "taxSourceInternal": "Interno"
   },
   "clientNotesPanel": {
-    "title": "Notas e información rápida",
+    "title": "Notas",
     "initialNote": "Nota inicial",
-    "lastUpdated": "Última actualización:",
+    "lastUpdated": "Última actualización: {{value}}",
     "save": "Guardar",
     "retry": "Reintentar",
     "loadError": "No se pudieron cargar las notas",
@@ -1301,7 +1319,9 @@
         "printer": "Impresora",
         "server": "Servidor",
         "workstation": "Estación de trabajo"
-      }
+      },
+      "loadError": "No se pueden cargar los activos en este momento.",
+      "retry": "Reintentar"
     },
     "tickets": {
       "addTicket": "Agregar ticket",
@@ -1325,5 +1345,28 @@
         "userNotAuthenticated": "Usuario no autenticado"
       }
     }
+  },
+  "clientEquipmentTab": {
+    "retry": "Reintentar",
+    "loadError": "No se pudo cargar esta sección.",
+    "emptyValue": "—",
+    "orderNumber": "Número de pedido",
+    "status": "Estado",
+    "ordered": "Pedido",
+    "amount": "Importe",
+    "product": "Producto",
+    "sku": "SKU",
+    "serialNumber": "Número de serie",
+    "delivered": "Entregado",
+    "asset": "Activo",
+    "viewAsset": "Ver activo",
+    "rmaNumber": "Número de RMA",
+    "opened": "Abierto",
+    "salesOrders": "Órdenes de venta",
+    "noSalesOrders": "No hay órdenes de venta para este cliente.",
+    "deliveredUnits": "Unidades entregadas",
+    "noDeliveredEquipment": "No hay equipos entregados registrados.",
+    "rmas": "RMAs",
+    "noRmas": "No hay RMAs para este cliente."
   }
 }

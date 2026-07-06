@@ -1,54 +1,88 @@
 /**
  * Integration test for email provider creation functionality
- * This is a valid test that should pass but currently fails due to column name mismatches
+ *
+ * Exercises the live createEmailProvider/upsertEmailProvider action contract:
+ * per-vendor snake_case config payloads (googleConfig/microsoftConfig), rows in
+ * email_providers plus the per-vendor config tables, and Google OAuth client
+ * credentials owned by tenant secrets rather than the database.
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { createEmailProvider } from '@alga-psa/integrations/actions';
-import { getCurrentTenant } from '../../lib/actions/tenantActions';
+import { createEmailProvider } from '@alga-psa/integrations/actions/email-actions/emailProviderActions';
 
 let testDb: Knex;
 let testTenant: string;
 
-// Mock the tenant functions to return our test tenant
-vi.mock('../../lib/actions/tenantActions', () => ({
-  getCurrentTenant: vi.fn()
-}));
+function tenantTable<Row extends object = Record<string, unknown>>(table: string) {
+  return tenantDb(testDb, testTenant).table<Row>(table);
+}
 
-// Mock createTenantKnex to use our test database
+function tenantFixtureTable() {
+  return tenantDb(testDb, testTenant).unscoped(
+    'tenants',
+    'Email provider creation test fixture creates and removes tenant rows'
+  );
+}
+
+// Route the action's tenant resolution (global withAuth mock) and any
+// createTenantKnex callers at our test database/tenant.
 vi.mock('../../lib/db', () => ({
+  getCurrentTenantId: () => testTenant,
   createTenantKnex: vi.fn().mockImplementation(async () => ({
     knex: testDb,
     tenant: testTenant
   }))
 }));
 
+// The action gets its connection from @alga-psa/db; keep the real facade but
+// point the connection at the test database.
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: testDb, tenant: testTenant })),
+  };
+});
+
+function googleConfig(overrides: Record<string, unknown> = {}) {
+  return {
+    client_id: 'test-client-id.apps.googleusercontent.com',
+    client_secret: 'test-client-secret',
+    project_id: 'test-project-id',
+    redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+    label_filters: ['INBOX', 'UNREAD'],
+    auto_process_emails: true,
+    max_emails_per_sync: 50,
+    ...overrides
+  } as any;
+}
+
 describe('Email Provider Creation', () => {
-  
+
   beforeAll(async () => {
     testDb = await createTestDbConnection();
     testTenant = uuidv4();
-    
+
     // Create test tenant
-    await testDb('tenants').insert({
+    await tenantFixtureTable().insert({
       tenant: testTenant,
       client_name: 'Test Client',
       email: 'test@client.com',
       created_at: new Date(),
       updated_at: new Date()
     });
-    
-    // Mock getCurrentTenant to return our test tenant
-    vi.mocked(getCurrentTenant).mockResolvedValue(testTenant);
   });
 
   afterAll(async () => {
     // Cleanup
-    await testDb('email_provider_configs').where('tenant', testTenant).delete();
-    await testDb('tenants').where('tenant', testTenant).delete();
+    await tenantTable('google_email_provider_config').delete();
+    await tenantTable('microsoft_email_provider_config').delete();
+    await tenantTable('email_providers').delete();
+    await tenantFixtureTable().where('tenant', testTenant).delete();
     await testDb.destroy();
   });
 
@@ -56,76 +90,80 @@ describe('Email Provider Creation', () => {
     it('should create a new Google email provider with all required fields', async () => {
       // Arrange
       const providerData = {
+        tenant: testTenant,
         providerType: 'google' as const,
         providerName: 'Client Gmail Support',
         mailbox: 'support@client.com',
-        vendorConfig: {
-          clientId: 'test-client-id.apps.googleusercontent.com',
-          clientSecret: 'test-client-secret',
-          projectId: 'test-project-id',
-          pubSubTopic: 'gmail-notifications',
-          pubSubSubscription: 'gmail-webhook-subscription',
-          labelFilters: ['INBOX', 'UNREAD'],
-          autoProcessEmails: true,
-          maxEmailsPerSync: 50
-        }
+        isActive: true,
+        googleConfig: googleConfig()
       };
 
-      // Act
-      const result = await createEmailProvider(providerData);
+      // Act (skipAutomation: no live Pub/Sub or Gmail watch setup in tests)
+      const result = await createEmailProvider(providerData, true);
 
       // Assert
       expect(result).toBeDefined();
-      expect(result.id).toBeDefined();
-      expect(result.providerName).toBe('Client Gmail Support');
-      expect(result.mailbox).toBe('support@client.com');
-      expect(result.providerType).toBe('google');
-      expect(result.isActive).toBe(true);
-      expect(result.status).toBe('disconnected');
-      expect(result.vendorConfig).toMatchObject({
-        clientId: 'test-client-id.apps.googleusercontent.com',
-        clientSecret: 'test-client-secret',
-        projectId: 'test-project-id',
-        pubSubTopic: 'gmail-notifications',
-        pubSubSubscription: 'gmail-webhook-subscription'
-      });
+      expect(result.provider).toBeDefined();
+      expect(result.provider.id).toBeDefined();
+      expect(result.provider.providerName).toBe('Client Gmail Support');
+      expect(result.provider.mailbox).toBe('support@client.com');
+      expect(result.provider.providerType).toBe('google');
+      expect(result.provider.isActive).toBe(true);
+      expect(result.provider.status).toBe('configuring');
 
       // Verify it was saved to the database
-      const dbRecord = await testDb('email_provider_configs')
-        .where('id', result.id)
+      const dbRecord = await tenantTable<any>('email_providers')
+        .where('id', result.provider.id)
         .first();
 
       expect(dbRecord).toBeDefined();
       expect(dbRecord.tenant).toBe(testTenant);
       expect(dbRecord.mailbox).toBe('support@client.com');
+
+      // Vendor config row: pubsub names are derived per tenant, and OAuth
+      // client credentials live in tenant secrets, not the database.
+      const configRecord = await tenantTable<any>('google_email_provider_config')
+        .where('email_provider_id', result.provider.id)
+        .first();
+
+      expect(configRecord).toBeDefined();
+      expect(configRecord.project_id).toBe('test-project-id');
+      expect(configRecord.pubsub_topic_name).toBe(`gmail-notifications-${testTenant}`);
+      expect(configRecord.pubsub_subscription_name).toBe(`gmail-webhook-${testTenant}`);
+      expect(configRecord.label_filters).toEqual(['INBOX', 'UNREAD']);
+      expect(configRecord.client_id).toBeNull();
+      expect(configRecord.client_secret).toBeNull();
     });
 
     it('should create a Google provider with OAuth tokens', async () => {
       // Arrange
+      const tokenExpiry = new Date(Date.now() + 3600000);
       const providerData = {
+        tenant: testTenant,
         providerType: 'google' as const,
         providerName: 'Authenticated Gmail',
         mailbox: 'authenticated@gmail.com',
-        vendorConfig: {
-          clientId: 'oauth-client-id.apps.googleusercontent.com',
-          clientSecret: 'oauth-client-secret',
-          projectId: 'oauth-project-id',
-          pubSubTopic: 'oauth-notifications',
-          pubSubSubscription: 'oauth-webhook-subscription',
-          refreshToken: 'refresh-token-abc123',
-          accessToken: 'access-token-xyz789',
-          tokenExpiry: new Date(Date.now() + 3600000).toISOString()
-        }
+        isActive: true,
+        googleConfig: googleConfig({
+          refresh_token: 'refresh-token-abc123',
+          access_token: 'access-token-xyz789',
+          token_expires_at: tokenExpiry.toISOString()
+        })
       };
 
       // Act
-      const result = await createEmailProvider(providerData);
+      const result = await createEmailProvider(providerData, true);
 
       // Assert
-      expect(result).toBeDefined();
-      expect(result.vendorConfig.refreshToken).toBe('refresh-token-abc123');
-      expect(result.vendorConfig.accessToken).toBe('access-token-xyz789');
-      expect(result.vendorConfig.tokenExpiry).toBeDefined();
+      expect(result.provider).toBeDefined();
+
+      const configRecord = await tenantTable<any>('google_email_provider_config')
+        .where('email_provider_id', result.provider.id)
+        .first();
+
+      expect(configRecord.refresh_token).toBe('refresh-token-abc123');
+      expect(configRecord.access_token).toBe('access-token-xyz789');
+      expect(configRecord.token_expires_at).toBeDefined();
     });
   });
 
@@ -133,30 +171,39 @@ describe('Email Provider Creation', () => {
     it('should create a new Microsoft email provider with all required fields', async () => {
       // Arrange
       const providerData = {
+        tenant: testTenant,
         providerType: 'microsoft' as const,
         providerName: 'Client Outlook',
-        mailbox: 'support@client.com',
-        vendorConfig: {
-          clientId: 'microsoft-client-id',
-          clientSecret: 'microsoft-client-secret',
-          tenantId: 'common',
-          maxEmailsPerSync: 100
-        }
+        mailbox: 'outlook-support@client.com',
+        isActive: true,
+        microsoftConfig: {
+          client_id: 'microsoft-client-id',
+          client_secret: 'microsoft-client-secret',
+          tenant_id: 'common',
+          redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
+          max_emails_per_sync: 100
+        } as any
       };
 
       // Act
-      const result = await createEmailProvider(providerData);
+      const result = await createEmailProvider(providerData, true);
 
       // Assert
-      expect(result).toBeDefined();
-      expect(result.providerName).toBe('Client Outlook');
-      expect(result.mailbox).toBe('support@client.com');
-      expect(result.providerType).toBe('microsoft');
-      expect(result.isActive).toBe(true);
-      expect(result.vendorConfig).toMatchObject({
-        clientId: 'microsoft-client-id',
-        clientSecret: 'microsoft-client-secret',
-        tenantId: 'common'
+      expect(result.provider).toBeDefined();
+      expect(result.provider.providerName).toBe('Client Outlook');
+      expect(result.provider.mailbox).toBe('outlook-support@client.com');
+      expect(result.provider.providerType).toBe('microsoft');
+      expect(result.provider.isActive).toBe(true);
+
+      const configRecord = await tenantTable<any>('microsoft_email_provider_config')
+        .where('email_provider_id', result.provider.id)
+        .first();
+
+      expect(configRecord).toMatchObject({
+        client_id: 'microsoft-client-id',
+        client_secret: 'microsoft-client-secret',
+        tenant_id: 'common',
+        max_emails_per_sync: 100
       });
     });
   });
@@ -165,32 +212,32 @@ describe('Email Provider Creation', () => {
     it('should list all providers for a tenant', async () => {
       // Arrange - Create multiple providers
       await createEmailProvider({
+        tenant: testTenant,
         providerType: 'google',
         providerName: 'Gmail Provider 1',
         mailbox: 'gmail1@client.com',
-        vendorConfig: {
-          clientId: 'client1.apps.googleusercontent.com',
-          clientSecret: 'secret1',
-          projectId: 'project1',
-          pubSubTopic: 'topic1',
-          pubSubSubscription: 'sub1'
-        }
-      });
+        isActive: true,
+        googleConfig: googleConfig({ client_id: 'client1.apps.googleusercontent.com' })
+      }, true);
 
+      // Microsoft client credentials are tenant-level secrets (first write
+      // wins for the tenant), so reuse the same credentials file-wide.
       await createEmailProvider({
+        tenant: testTenant,
         providerType: 'microsoft',
         providerName: 'Outlook Provider',
         mailbox: 'outlook@client.com',
-        vendorConfig: {
-          clientId: 'ms-client',
-          clientSecret: 'ms-secret'
-        }
-      });
+        isActive: true,
+        microsoftConfig: {
+          client_id: 'microsoft-client-id',
+          client_secret: 'microsoft-client-secret',
+          tenant_id: 'common',
+          redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback'
+        } as any
+      }, true);
 
       // Act - Query the database directly to verify
-      const providers = await testDb('email_provider_configs')
-        .where('tenant', testTenant)
-        .select('*');
+      const providers = await tenantTable<any>('email_providers').select('*');
 
       // Assert
       expect(providers.length).toBeGreaterThanOrEqual(2);
@@ -201,26 +248,22 @@ describe('Email Provider Creation', () => {
     it('should set default values correctly', async () => {
       // Arrange
       const minimalProviderData = {
+        tenant: testTenant,
         providerType: 'google' as const,
         providerName: 'Minimal Gmail',
         mailbox: 'minimal@gmail.com',
-        vendorConfig: {
-          clientId: 'minimal.apps.googleusercontent.com',
-          clientSecret: 'minimal-secret',
-          projectId: 'minimal-project',
-          pubSubTopic: 'minimal-topic',
-          pubSubSubscription: 'minimal-sub'
-        }
+        isActive: true,
+        googleConfig: googleConfig({ client_id: 'minimal.apps.googleusercontent.com' })
       };
 
       // Act
-      const result = await createEmailProvider(minimalProviderData);
+      const result = await createEmailProvider(minimalProviderData, true);
 
       // Assert - Check default values
-      expect(result.isActive).toBe(true); // Should default to true
-      expect(result.status).toBe('disconnected'); // Should default to 'configuring'
-      expect(result.createdAt).toBeDefined();
-      expect(result.updatedAt).toBeDefined();
+      expect(result.provider.isActive).toBe(true);
+      expect(result.provider.status).toBe('configuring'); // Default before webhook automation runs
+      expect(result.provider.createdAt).toBeDefined();
+      expect(result.provider.updatedAt).toBeDefined();
     });
   });
 });

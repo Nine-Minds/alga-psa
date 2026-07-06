@@ -278,7 +278,12 @@
     "nameAliasRemoveFailed": "Impossibile rimuovere l'alias",
     "nameAliasRemoved": "Alias rimosso",
     "nameAliases": "Alias corrispondenti",
-    "noNameAliases": "Nessun alias configurato. Il nome del cliente corrisponde sempre."
+    "noNameAliases": "Nessun alias configurato. Il nome del cliente corrisponde sempre.",
+    "equipment": "Attrezzatura",
+    "parentClientSelf": "Un cliente non può essere il proprio cliente principale",
+    "parentClientPlaceholder": "Nessun cliente principale",
+    "parentClientClear": "Cancella",
+    "parentClientLegacy": "Inserito in precedenza come testo: {{name}}"
   },
   "quickAddClient": {
     "title": "Aggiungi nuovo cliente",
@@ -522,6 +527,17 @@
       "5": "Venerdì",
       "6": "Sabato",
       "7": "Domenica"
+    },
+    "reviewError": "Impossibile verificare l’impatto di questa modifica",
+    "reviewing": "Verifica dell’impatto…",
+    "confirmSave": "Conferma e salva",
+    "reviewChanges": "Esamina le modifiche",
+    "impact": {
+      "title": "Verifica prima di applicare",
+      "periods": "{{count}} periodo/i di addebito imminenti su {{lines}} riga/righe di contratto verranno ricostruiti in base al nuovo programma.",
+      "from": "Ricostruito a partire dal {{date}}.",
+      "billedPreserved": "Gli addebiti già fatturati vengono conservati e non cambieranno.",
+      "confirmHint": "Scegli «Conferma e salva» per applicare."
     }
   },
   "clientContractAssignment": {
@@ -605,7 +621,10 @@
     "noActiveBucketPlans": "Nessun piano bucket attivo trovato.",
     "noHours": "Nessuna ora registrata nel periodo selezionato.",
     "noInvoices": "Nessuna fattura recente trovata.",
-    "noUsage": "Nessun dato di utilizzo trovato nel periodo selezionato."
+    "noUsage": "Nessun dato di utilizzo trovato nel periodo selezionato.",
+    "retry": "Riprova",
+    "loadError": "Impossibile caricare questa sezione.",
+    "balanceDue": "Saldo dovuto"
   },
   "clientContractLineGuide": {
     "title": "Guida alla disambiguazione delle linee contrattuali",
@@ -997,7 +1016,6 @@
     "title": "Impostazioni per il calcolo delle imposte",
     "description": "Configura il modo in cui vengono calcolate le tasse per questo cliente.",
     "createDefault": "Crea impostazioni fiscali predefinite",
-    "goToBillingTaxSettings": "Vai a Impostazioni fiscali di fatturazione",
     "taxExemptStatus": "Stato di esenzione fiscale",
     "taxExempt": "Esente da tasse",
     "taxExemptHelp": "Se abilitato, le tasse non verranno applicate alle fatture per questo cliente.",
@@ -1038,7 +1056,7 @@
   "clientNotesPanel": {
     "title": "Note e informazioni rapide",
     "initialNote": "Nota iniziale",
-    "lastUpdated": "Ultimo aggiornamento:",
+    "lastUpdated": "Ultimo aggiornamento: {{value}}",
     "save": "Salva",
     "retry": "Riprova",
     "loadError": "Impossibile caricare le note",
@@ -1301,7 +1319,9 @@
         "printer": "Stampante",
         "server": "Server",
         "workstation": "Stazione di lavoro"
-      }
+      },
+      "loadError": "Impossibile caricare gli asset in questo momento.",
+      "retry": "Riprova"
     },
     "tickets": {
       "addTicket": "Aggiungi ticket",
@@ -1325,5 +1345,28 @@
         "userNotAuthenticated": "Utente non autenticato"
       }
     }
+  },
+  "clientEquipmentTab": {
+    "retry": "Riprova",
+    "loadError": "Impossibile caricare questa sezione.",
+    "emptyValue": "—",
+    "orderNumber": "Numero d'ordine",
+    "status": "Stato",
+    "ordered": "Ordinato",
+    "amount": "Importo",
+    "product": "Prodotto",
+    "sku": "SKU",
+    "serialNumber": "Numero di serie",
+    "delivered": "Consegnato",
+    "asset": "Asset",
+    "viewAsset": "Visualizza asset",
+    "rmaNumber": "Numero RMA",
+    "opened": "Aperto",
+    "salesOrders": "Ordini di vendita",
+    "noSalesOrders": "Nessun ordine di vendita per questo cliente.",
+    "deliveredUnits": "Unità consegnate",
+    "noDeliveredEquipment": "Nessuna attrezzatura consegnata registrata.",
+    "rmas": "RMA",
+    "noRmas": "Nessun RMA per questo cliente."
   }
 }

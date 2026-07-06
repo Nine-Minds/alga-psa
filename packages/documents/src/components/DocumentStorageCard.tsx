@@ -33,6 +33,22 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import VisibilityToggle from './VisibilityToggle';
 
+// Browsers (notably Chrome) report `video/quicktime` as unplayable via
+// HTMLMediaElement.canPlayType() even when the .mov actually contains an H.264/AAC
+// stream they can decode — .mov and .mp4 share the same ISO-BMFF container. With a
+// typed <source type="video/quicktime"> the browser skips the source entirely and
+// the player falls straight through to a "download to play" fallback. Advertising an
+// equivalent container the browser recognises lets it probe and play the file; the
+// server still streams the real bytes, so the browser sniffs the actual codec and
+// genuinely unplayable codecs (ProRes/HEVC) still fall back to download gracefully.
+const BROWSER_PLAYBACK_TYPE_OVERRIDES: Record<string, string> = {
+    'video/quicktime': 'video/mp4',
+};
+
+function getBrowserPlaybackType(mimeType: string): string {
+    return BROWSER_PLAYBACK_TYPE_OVERRIDES[mimeType] || mimeType;
+}
+
 // Helper component for video previews with browser compatibility checking
 interface VideoPreviewProps {
     fileId: string;
@@ -46,9 +62,10 @@ function VideoPreviewComponent({ fileId, mimeType, fileName, onClick }: VideoPre
     const [canPlay, setCanPlay] = useState<boolean | null>(null);
 
     useEffect(() => {
-        // Check if browser can play this video format
+        // Check if browser can play this video format. Use the browser-recognised
+        // container override so .mov (video/quicktime) is probed rather than rejected.
         const video = document.createElement('video');
-        const canPlayResult = video.canPlayType(mimeType);
+        const canPlayResult = video.canPlayType(getBrowserPlaybackType(mimeType));
         setCanPlay(canPlayResult === 'probably' || canPlayResult === 'maybe');
     }, [mimeType]);
 
@@ -96,7 +113,7 @@ function VideoPreviewComponent({ fileId, mimeType, fileName, onClick }: VideoPre
                 muted
                 preload="metadata"
             >
-                <source src={`/api/documents/view/${fileId}`} type={mimeType} />
+                <source src={`/api/documents/view/${fileId}`} type={getBrowserPlaybackType(mimeType)} />
                 {t('documents.videoTagUnsupported', 'Your browser does not support the video tag.')}
             </video>
             <div 
@@ -127,7 +144,7 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
     // Handle source error - check if video element can play this format
     const handleSourceError = () => {
         if (videoRef.current) {
-            const canPlayType = videoRef.current.canPlayType(mimeType);
+            const canPlayType = videoRef.current.canPlayType(getBrowserPlaybackType(mimeType));
             if (canPlayType === '') {
                 setVideoError(true);
             } else {
@@ -196,7 +213,7 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
             >
                 <source
                     src={`/api/documents/view/${fileId}`}
-                    type={mimeType}
+                    type={getBrowserPlaybackType(mimeType)}
                     onError={handleSourceError}
                 />
                 {t('documents.videoTagUnsupported', 'Your browser does not support the video tag.')}

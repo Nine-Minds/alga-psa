@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { RmmProvider } from '@alga-psa/types';
 
 export interface RmmIntegrationStatus {
@@ -25,12 +25,11 @@ export const getRmmIntegrationStatuses = withAuth(async (user, { tenant }): Prom
 
   try {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
     const [integrations, deviceCounts] = await Promise.all([
-      knex('rmm_integrations')
-        .where({ tenant })
+      db.table('rmm_integrations')
         .select(['provider', 'is_active', 'sync_status', 'sync_error', 'connected_at', 'last_sync_at']),
-      knex('assets')
-        .where({ tenant })
+      db.table('assets')
         .whereNotNull('rmm_provider')
         .select('rmm_provider')
         .count({ count: 'asset_id' })

@@ -1016,7 +1016,7 @@
     }
   },
   "assetNotesPanel": {
-    "title": "Notatki i krótkie informacje",
+    "title": "Notatki",
     "description": "Panel notatek z bogatym tekstem, zawierający notatki dotyczące konkretnych zasobów i szybki kontekst operacyjny",
     "errors": {
       "loadTitle": "Nie udało się wczytać notatek",

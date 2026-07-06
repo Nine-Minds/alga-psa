@@ -11,7 +11,7 @@ const config: Config = {
 
     // Monorepo UI sources consumed by the Next.js app. Keep this list explicit to avoid
     // accidentally scanning `node_modules` and to reduce Tailwind's file-watching workload.
-    "../packages/{ui,ui-kit,client-portal,clients,tickets,projects,scheduling,surveys,assets,documents,integrations,billing,auth,workflows,onboarding,tags,jobs,notifications,reference-data,tenancy,users,ee,sla}/src/**/*.{jsx,tsx,mdx}",
+    "../packages/{ui,ui-kit,client-portal,clients,tickets,projects,scheduling,surveys,assets,documents,integrations,billing,inventory,auth,workflows,onboarding,tags,jobs,notifications,reference-data,tenancy,users,ee,sla}/src/**/*.{jsx,tsx,mdx}",
 
     // A small number of `.ts` files contain Tailwind class strings (not JSX). Include them
     // explicitly rather than enabling a broad `**/*.ts` glob.
@@ -20,6 +20,35 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: [
+          'var(--font-inter)',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica',
+          'Arial',
+          'sans-serif',
+        ],
+        mono: [
+          'var(--font-mono)',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Consolas',
+          'monospace',
+        ],
+      },
+      fontSize: {
+        // One deliberate caption tier below text-xs (12px): used for uppercase
+        // column headers, micro tags/badges, and small captions. Replaces the
+        // ad-hoc text-[10px]/text-[11px] magic numbers so "small" has a single
+        // defined rung instead of three indistinguishable ones.
+        '2xs': ['0.6875rem', { lineHeight: '0.875rem' }], // 11px / 14px
+      },
       gridTemplateColumns: {
         '24': 'repeat(24, minmax(0, 1fr))',
         '96': 'repeat(96, minmax(0, 1fr))',

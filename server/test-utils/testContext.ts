@@ -1,10 +1,12 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from './dbConfig';
-import { resetDatabase } from './dbReset';
 import { createTenant, createClient, createUser } from './testDataFactory';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IUserWithRoles } from '../src/interfaces/auth.interfaces';
+
+const TEST_TENANT_DISCOVERY_FACADE_TENANT = '00000000-0000-0000-0000-000000000000';
 
 /**
  * Options for initializing test context
@@ -138,16 +140,11 @@ export class TestContext {
    */
   async initialize(): Promise<void> {
     try {
-      const setupDb = await createTestDbConnection();
-
-      await resetDatabase(setupDb, {
-        runSeeds: this.options.runSeeds,
-        cleanupTables: this.options.cleanupTables,
-        preSetupCommands: this.options.setupCommands
-      });
-
-      await setupDb.destroy();
-
+      // Single bootstrap per file: createTestDbConnection drops, recreates,
+      // migrates and seeds test_database. The old setupDb + resetDatabase pair
+      // rebuilt the same schema two more times and rootDb's rebuild discarded
+      // both; cleanupTables/setupCommands are still applied in
+      // prepareTransactionalState() below.
       this.rootDb = await createTestDbConnection();
 
       await this.ensureTenantInitialized();
@@ -164,7 +161,9 @@ export class TestContext {
       throw new Error('Test database connection not initialized');
     }
 
-    const tenantRecord = await this.rootDb('tenants').first();
+    const tenantRecord = await tenantDb(this.rootDb, TEST_TENANT_DISCOVERY_FACADE_TENANT)
+      .unscoped('tenants', 'test context base tenant discovery')
+      .first();
 
     if (tenantRecord?.tenant) {
       this.baseTenantId = tenantRecord.tenant as string;
@@ -279,7 +278,9 @@ export class TestContext {
 
   private async ensureBaseEntities(): Promise<void> {
     if (!this.tenantId) {
-      const tenant = await this.db('tenants').first();
+      const tenant = await tenantDb(this.db, TEST_TENANT_DISCOVERY_FACADE_TENANT)
+        .unscoped('tenants', 'test context transactional tenant discovery')
+        .first();
       this.tenantId = tenant?.tenant;
       TestContext.currentTenantId = this.tenantId;
     }
@@ -288,16 +289,18 @@ export class TestContext {
       throw new Error('Tenant not initialized in ensureBaseEntities');
     }
 
+    const db = tenantDb(this.db, this.tenantId);
+
     let clientRecord = this.clientId
-      ? await this.db('clients')
-          .where({ client_id: this.clientId, tenant: this.tenantId })
+      ? await db.table('clients')
+          .where({ client_id: this.clientId })
           .first()
       : null;
 
     if (!clientRecord) {
       this.clientId = await createClient(this.db, this.tenantId, this.options.clientName);
-      clientRecord = await this.db('clients')
-        .where({ client_id: this.clientId, tenant: this.tenantId })
+      clientRecord = await db.table('clients')
+        .where({ client_id: this.clientId })
         .first();
     }
 
@@ -308,8 +311,8 @@ export class TestContext {
     this.client = clientRecord as IClient;
 
     let userRecord = this.userId
-      ? await this.db('users')
-          .where({ user_id: this.userId, tenant: this.tenantId })
+      ? await db.table('users')
+          .where({ user_id: this.userId })
           .first()
       : null;
 
@@ -319,17 +322,19 @@ export class TestContext {
         user_type: this.options.userType
       });
 
-      userRecord = await this.db('users')
-        .where({ user_id: this.userId, tenant: this.tenantId })
+      userRecord = await db.table('users')
+        .where({ user_id: this.userId })
         .first();
     }
 
-    this.user = await this.db('users')
-      .select('users.*')
-      .leftJoin('user_roles', 'users.user_id', 'user_roles.user_id')
-      .leftJoin('roles', 'user_roles.role_id', 'roles.role_id')
-      .where('users.user_id', this.userId)
-      .first() as IUserWithRoles;
+    const userWithRolesQuery = db.table('users as u')
+      .select('u.*')
+      .where('u.user_id', this.userId);
+
+    db.tenantJoin(userWithRolesQuery, 'user_roles as ur', 'u.user_id', 'ur.user_id', { type: 'left' });
+    db.tenantJoin(userWithRolesQuery, 'roles as r', 'ur.role_id', 'r.role_id', { type: 'left' });
+
+    this.user = await userWithRolesQuery.first() as IUserWithRoles;
   }
 
   /**
@@ -379,7 +384,7 @@ export class TestContext {
       entityData[idField] = uuidv4();
     }
 
-    await this.db(table).insert(entityData);
+    await tenantDb(this.db, this.tenantId).table(table).insert(entityData);
     return entityData[idField] as string;
   }
 
@@ -390,13 +395,13 @@ export class TestContext {
    * @param idField Name of the ID column
    * @returns Entity data or undefined if not found
    */
-  async getEntity<T>(
+  async getEntity<T extends object>(
     table: string, 
     id: string, 
     idField: string = 'id'
   ): Promise<T | undefined> {
-    return this.db(table)
-      .where({ [idField]: id, tenant: this.tenantId })
+    return tenantDb(this.db, this.tenantId).table<T>(table)
+      .where({ [idField]: id })
       .first();
   }
 

@@ -707,7 +707,8 @@
       "refreshStatusFailed": "Échec de l'actualisation du statut du domaine",
       "domainRemovalScheduled": "Suppression du domaine planifiée",
       "domainRemovalScheduledWithClear": "Suppression du domaine planifiée et adresse d'expéditeur de ticket effacée",
-      "removeDomainFailed": "Échec de la suppression du domaine"
+      "removeDomainFailed": "Échec de la suppression du domaine",
+      "testOutboundFailed": "Échec du test de l'e-mail sortant"
     },
     "tabs": {
       "inboundEmail": "E-mail entrant",
@@ -741,11 +742,27 @@
         "usernamePlaceholder": "votre-email@exemple.com",
         "passwordLabel": "Mot de passe",
         "passwordPlaceholder": "Saisissez le mot de passe",
+        "authHint": "Laissez le nom d'utilisateur et le mot de passe vides si votre relais accepte les e-mails sans authentification.",
         "fromLabel": "Adresse d'expéditeur",
         "fromPlaceholder": "noreply@exemple.com",
         "fromHelp": "Adresse d'expéditeur par défaut pour les e-mails sortants.",
+        "security": {
+          "title": "Sécurité de la connexion",
+          "secure": "Utiliser le TLS implicite (SSL à la connexion, généralement le port 465)",
+          "requireTls": "Exiger la mise à niveau STARTTLS (ports 587 / 25)",
+          "verifyCert": "Vérifier le certificat du serveur",
+          "verifyCertHint": "Ne désactivez cette option que pour un relais de confiance sur votre propre réseau utilisant un certificat auto-signé."
+        },
         "savingButton": "Enregistrement…",
-        "saveButton": "Enregistrer les paramètres SMTP"
+        "saveButton": "Enregistrer les paramètres SMTP",
+        "test": {
+          "title": "Tester l'e-mail sortant",
+          "description": "Enregistre les paramètres actuels, puis vérifie la connexion au fournisseur. Saisissez une adresse pour envoyer aussi un message de test.",
+          "recipientLabel": "Envoyer le test à (facultatif)",
+          "recipientPlaceholder": "vous@exemple.com",
+          "testingButton": "Test en cours...",
+          "runButton": "Tester la connexion"
+        }
       },
       "ticketingFrom": {
         "title": "Adresse d'expéditeur de ticket",
@@ -837,7 +854,13 @@
       "missingHelp": "Nous n'avons pas encore détecté cet enregistrement dans le DNS. Vérifiez qu'il existe dans votre fournisseur DNS avec la valeur exacte indiquée ci-dessus.",
       "mismatchHelp": "L'enregistrement DNS existe, mais la valeur ne correspond pas à celle attendue par Resend.",
       "matchedHelp": "La valeur détectée correspond à celle attendue.",
-      "unknownHelp": "Nous n'avons pas encore vérifié le DNS. Revérifiez le DNS pour lancer la vérification."
+      "unknownHelp": "Nous n'avons pas encore vérifié le DNS. Revérifiez le DNS pour lancer la vérification.",
+      "hostLabel": "Hôte",
+      "fqdnLabel": "Nom complet",
+      "valueLabel": "Valeur",
+      "copyHostAriaLabel": "Copier l'hôte",
+      "copyFqdnAriaLabel": "Copier le nom complet",
+      "hostHint": "Astuce : chez votre fournisseur DNS, saisissez uniquement l'hôte indiqué ci-dessus. La plupart des fournisseurs (Namecheap, GoDaddy, Cloudflare, etc.) ajoutent « {{domain}} » automatiquement. Si vous collez le nom complet, le domaine est répété (…{{domain}}.{{domain}}) et l'enregistrement ne sera jamais vérifié."
     }
   },
   "inboundRules": {

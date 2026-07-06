@@ -29,7 +29,9 @@
       "viewDetails": "Zobacz szczegóły",
       "manageTimePeriods": "Zarządzaj okresami czasu",
       "selectWorkItem": "Wybierz element pracy",
-      "clearFilter": "Wyczyść filtr"
+      "clearFilter": "Wyczyść filtr",
+      "remove": "Usuń",
+      "clear": "Wyczyść"
     },
     "states": {
       "inProgress": "W toku",
@@ -95,6 +97,24 @@
     },
     "lastEntry": {
       "none": "Brak wpisów"
+    },
+    "bulk": {
+      "selectedCount": "Wybrano: {{count}}"
+    },
+    "delete": {
+      "success": "Usunięto karty czasu pracy: {{count}}",
+      "partialFailure": "Nie można usunąć kart czasu pracy: {{count}}",
+      "error": "Nie udało się usunąć kart czasu pracy"
+    },
+    "removePeriod": {
+      "success": "Usunięto okresy: {{count}}",
+      "partialFailure": "Nie można usunąć okresów: {{count}}",
+      "error": "Nie udało się usunąć okresów"
+    },
+    "remove": {
+      "title": "Usuń nieużywane elementy",
+      "message": "Usunąć {{count}} wybrany(ch) okres(ów)? Nieużywane okresy rozliczeniowe zostaną usunięte dla całej organizacji wraz z wszelkimi pustymi wersjami roboczymi w nich zapisanymi. Tej operacji nie można cofnąć.",
+      "timesheetMessage": "Usunąć {{count}} nieużywaną(ych) kartę(kart) czasu pracy? Usuwane są tylko puste robocze karty czasu pracy, a tej operacji nie można cofnąć."
     }
   },
   "timeEntryForm": {

@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -16,6 +16,13 @@ export type BucketOverlayInput = {
   overage_rate?: number;
   allow_rollover?: boolean;
   billing_period?: 'weekly' | 'monthly';
+};
+
+type BucketOverlayConfigRow = {
+  total_minutes: number;
+  overage_rate: number;
+  allow_rollover: boolean | null;
+  billing_period: 'weekly' | 'monthly';
 };
 
 /**
@@ -78,7 +85,8 @@ export async function upsertBucketOverlayInTransaction(
   const normalizedOverage = Math.max(0, Math.round(overlay.overage_rate));
   const billingPeriod = overlay.billing_period ?? 'monthly';
 
-  const existing = await trx('contract_line_service_configuration')
+  const db = tenantDb(trx, tenant);
+  const existing = await db.table('contract_line_service_configuration')
     .where({
       tenant,
       contract_line_id: contractLineId,
@@ -90,7 +98,7 @@ export async function upsertBucketOverlayInTransaction(
   const configId = existing?.config_id ?? uuidv4();
 
   // Update or insert the service record
-  await trx('contract_line_services')
+  await db.table('contract_line_services')
     .insert({
       tenant,
       contract_line_id: contractLineId,
@@ -105,7 +113,7 @@ export async function upsertBucketOverlayInTransaction(
     });
 
   // Upsert the bucket configuration record
-  await trx('contract_line_service_configuration')
+  await db.table('contract_line_service_configuration')
     .insert({
       tenant,
       config_id: configId,
@@ -123,7 +131,7 @@ export async function upsertBucketOverlayInTransaction(
     });
 
   // Upsert the bucket-specific config
-  await trx('contract_line_service_bucket_config')
+  await db.table('contract_line_service_bucket_config')
     .insert({
       tenant,
       config_id: configId,
@@ -176,7 +184,8 @@ export async function deleteBucketOverlayInTransaction(
   serviceId: string
 ): Promise<void> {
   // Find the bucket configuration
-  const bucketConfig = await trx('contract_line_service_configuration')
+  const db = tenantDb(trx, tenant);
+  const bucketConfig = await db.table('contract_line_service_configuration')
     .where({
       tenant,
       contract_line_id: contractLineId,
@@ -190,7 +199,7 @@ export async function deleteBucketOverlayInTransaction(
   }
 
   // Delete bucket-specific config
-  await trx('contract_line_service_bucket_config')
+  await db.table('contract_line_service_bucket_config')
     .where({
       tenant,
       config_id: bucketConfig.config_id,
@@ -198,7 +207,7 @@ export async function deleteBucketOverlayInTransaction(
     .delete();
 
   // Delete configuration record
-  await trx('contract_line_service_configuration')
+  await db.table('contract_line_service_configuration')
     .where({
       tenant,
       config_id: bucketConfig.config_id,
@@ -227,24 +236,29 @@ export const getBucketOverlay = withAuth(async (
       throw new Error('Permission denied: Cannot read bucket overlays');
     }
 
-    const result = await trx('contract_line_service_configuration')
-      .join(
-        'contract_line_service_bucket_config',
-        'contract_line_service_configuration.config_id',
-        'contract_line_service_bucket_config.config_id'
-      )
+    const db = tenantDb(trx, tenant);
+    const query = db.table('contract_line_service_configuration');
+    db.tenantJoin(
+      query,
+      'contract_line_service_bucket_config',
+      'contract_line_service_configuration.config_id',
+      'contract_line_service_bucket_config.config_id'
+    );
+
+    const result = await query
       .where({
         'contract_line_service_configuration.tenant': tenant,
         'contract_line_service_configuration.contract_line_id': contractLineId,
         'contract_line_service_configuration.service_id': serviceId,
         'contract_line_service_configuration.configuration_type': 'Bucket',
       })
-      .first(
-        'contract_line_service_bucket_config.total_minutes',
-        'contract_line_service_bucket_config.overage_rate',
-        'contract_line_service_bucket_config.allow_rollover',
-        'contract_line_service_bucket_config.billing_period'
-      );
+      .select({
+        total_minutes: 'contract_line_service_bucket_config.total_minutes',
+        overage_rate: 'contract_line_service_bucket_config.overage_rate',
+        allow_rollover: 'contract_line_service_bucket_config.allow_rollover',
+        billing_period: 'contract_line_service_bucket_config.billing_period',
+      })
+      .first() as BucketOverlayConfigRow | undefined;
 
     if (!result) {
       return null;

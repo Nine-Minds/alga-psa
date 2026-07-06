@@ -19,8 +19,10 @@ const exportSelectorSource = readFileSync(
 
 describe('authoritative recurring readers service-period wiring', () => {
   it('T272: authoritative recurring readers prefer canonical detail periods over invoice header periods whenever detail rows exist', () => {
-    expect(invoiceQueriesSource).toContain('SELECT MIN(iid.service_period_start)');
-    expect(invoiceQueriesSource).toContain('SELECT MAX(iid.service_period_end)');
+    expect(invoiceQueriesSource).toContain("buildInvoiceDetailServicePeriodSubquery(db, 'min', 'invoices')");
+    expect(invoiceQueriesSource).toContain("buildInvoiceDetailServicePeriodSubquery(db, 'max', 'invoices')");
+    expect(invoiceQueriesSource).toContain("db.tenantJoin(subquery, 'invoice_charge_details as iid'");
+    expect(invoiceQueriesSource).toContain("db.tenantWhereColumn(subquery, 'ic.tenant', `${outerInvoiceAlias}.tenant`)");
 
     expect(invoiceModelSource).toContain('if (!chargeDetailRows || chargeDetailRows.length === 0) {');
     expect(invoiceModelSource).toContain('Historical flat invoices stay parent-only when canonical detail rows do not exist.');

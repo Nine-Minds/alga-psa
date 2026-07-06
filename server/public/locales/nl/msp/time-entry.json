@@ -29,7 +29,9 @@
       "viewDetails": "Bekijk details",
       "manageTimePeriods": "Beheer tijdsperioden",
       "selectWorkItem": "Selecteer Werkitem",
-      "clearFilter": "Filter wissen"
+      "clearFilter": "Filter wissen",
+      "remove": "Verwijderen",
+      "clear": "Wissen"
     },
     "states": {
       "inProgress": "Bezig",
@@ -95,6 +97,24 @@
     },
     "lastEntry": {
       "none": "Geen vermeldingen"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} geselecteerd"
+    },
+    "delete": {
+      "success": "{{count}} urenstaat/-staten verwijderd",
+      "partialFailure": "{{count}} urenstaat/-staten konden niet worden verwijderd",
+      "error": "Verwijderen van urenstaten mislukt"
+    },
+    "removePeriod": {
+      "success": "{{count}} periode(n) verwijderd",
+      "partialFailure": "{{count}} periode(n) konden niet worden verwijderd",
+      "error": "Verwijderen van perioden mislukt"
+    },
+    "remove": {
+      "title": "Ongebruikte items verwijderen",
+      "message": "{{count}} geselecteerde periode(n) verwijderen? Ongebruikte loonperioden worden voor de hele organisatie verwijderd, samen met eventuele lege concepten die erin zijn vastgelegd. Dit kan niet ongedaan worden gemaakt.",
+      "timesheetMessage": "{{count}} ongebruikte urenstaat/-staten verwijderen? Alleen lege concept-urenstaten worden verwijderd en dit kan niet ongedaan worden gemaakt."
     }
   },
   "timeEntryForm": {

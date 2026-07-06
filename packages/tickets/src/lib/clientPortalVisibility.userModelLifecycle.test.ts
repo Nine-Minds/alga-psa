@@ -8,8 +8,15 @@ vi.mock('uuid', () => ({
   v4: () => 'user-uuid-1',
 }));
 
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any) => ({
+    table: (table: string) => conn(table),
+    tenantJoin: (query: any) => query.join?.() ?? query,
+  }),
+}));
+
 import { createPortalUserInDBWithTrx } from '../../../../shared/models/userModel';
-import { getClientContactVisibilityContext } from './clientPortalVisibility';
+import { getClientContactVisibilityContext } from './clientPortalVisibility.server';
 
 type UserModelState = {
   contacts: Array<{
@@ -141,9 +148,9 @@ function createUserModelTrx(state: UserModelState) {
                 .filter((row) => {
                   const board = state.boards.find((candidate) => candidate.board_id === row.board_id);
                   return (
-                    row.tenant === filters['cvgb.tenant'] &&
+                    (!filters['cvgb.tenant'] || row.tenant === filters['cvgb.tenant']) &&
                     row.group_id === filters['cvgb.group_id'] &&
-                    board?.tenant === filters['cvgb.tenant']
+                    (!filters['cvgb.tenant'] || board?.tenant === filters['cvgb.tenant'])
                   );
                 })
                 .map((row) => ({ board_id: row.board_id })),

@@ -26,7 +26,8 @@
       "sendReminder": "Enviar recordatorio",
       "sendToClient": "Enviar al cliente",
       "setAsDefault": "Establecer como predeterminado",
-      "submitForApproval": "Enviar para aprobación"
+      "submitForApproval": "Enviar para aprobación",
+      "done": "Listo"
     },
     "badges": {
       "standard": "Estándar"
@@ -151,7 +152,8 @@
       "cancel": "Cancelar",
       "previewPdf": "Vista previa del PDF",
       "backToQuotes": "Volver a cotizaciones",
-      "backToTemplates": "Volver a plantillas de cotización"
+      "backToTemplates": "Volver a plantillas de cotización",
+      "convertToSalesOrder": "Convertir a orden de venta"
     },
     "headings": {
       "editQuote": "Editar cotización",
@@ -351,7 +353,8 @@
       "openConvertedInvoice": "Abrir factura convertida",
       "preview": "Avance",
       "saveAsTemplate": "Guardar como plantilla",
-      "back": "Atrás"
+      "back": "Atrás",
+      "openConvertedSalesOrder": "Convertido a {{number}}"
     },
     "sections": {
       "activityLog": "Registro de actividad",
@@ -431,7 +434,8 @@
       "sent": "Cotización enviada al cliente.",
       "submittedForApproval": "Cotización enviada para aprobación interna.",
       "templateAssigned": "Plantilla de documento asignada.",
-      "templateCleared": "Plantilla de documento borrada (usando la predeterminada)."
+      "templateCleared": "Plantilla de documento borrada (usando la predeterminada).",
+      "createdSalesOrder": "Se creó el borrador de orden de venta {{number}}. Las líneas de producto se facturarán al cumplirse."
     },
     "preview": {
       "loading": "Cargando vista previa..."
@@ -447,6 +451,9 @@
       "groupHeading": "Ubicación",
       "unassigned": "Elementos sin ubicación",
       "subtotal": "Subtotal de ubicación"
+    },
+    "availability": {
+      "onHand": "Disponible: {{count}}"
     }
   },
   "quoteLineItems": {
@@ -567,6 +574,10 @@
       "both": {
         "label": "Contrato + Factura",
         "description": "Crea un borrador de contrato (para artículos recurrentes) y un borrador de factura (para artículos únicos)."
+      },
+      "salesOrder": {
+        "label": "Orden de venta (líneas de producto)",
+        "description": "Mueve las líneas únicas de producto a un borrador de orden de venta que se factura al cumplirse. Estas líneas se excluyen de la factura borrador, por lo que nada se factura dos veces."
       }
     },
     "sections": {
@@ -604,12 +615,19 @@
       "convertQuote": "Convertir cotización",
       "invoice": "Crear borrador de factura",
       "both": "Crear ambos registros",
-      "converting": "Mudado..."
+      "converting": "Mudado...",
+      "salesOrder": "Crear orden de venta"
     },
     "errors": {
       "convert": "No se pudo convertir la cotización",
       "load": "No se pudo cargar la vista previa de conversión",
       "title": "Error"
+    },
+    "salesOrder": {
+      "successTitle": "Orden de venta {{number}} creada",
+      "successBody": "Las líneas de producto se facturarán al cumplirse.",
+      "openSalesOrders": "Abrir órdenes de venta",
+      "note": "Las líneas únicas de producto pasan a un borrador de orden de venta (facturado al cumplirse) y se excluyen de cualquier conversión a factura borrador, por lo que nada se factura dos veces."
     }
   },
   "quoteApproval": {

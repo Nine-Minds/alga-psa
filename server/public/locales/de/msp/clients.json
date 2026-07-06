@@ -206,9 +206,9 @@
     "providerDefault": "Anbietervorgabe",
     "inboundEmailDomains": "Eingehende E-Mail-Domänen",
     "inboundEmailDomainsHelp": "Nur diese Domänen werden für den Domänenabgleich eingehender E-Mails verwendet (z. B. acme.com). Domänen müssen für alle Clients eindeutig sein.",
-    "noInboundDomains": "Keine eingehenden E-Mail-Domänen konfiguriert. Der Domänenabgleich wird nicht verwendet.",
+    "noInboundDomains": "Fügen Sie eine Domain hinzu, um eingehende E-Mails diesem Client zuzuordnen.",
     "inboundTicketDestination": "Eingehendes Ticketziel",
-    "inboundDestinationPrecedence": "Vorrang: Kontaktüberschreibung -> Clientziel -> Anbieterstandard.",
+    "inboundDestinationPrecedence": "Verwendet zuerst die Überschreibung des Kontakts, dann die des Clients und dann den Anbieterstandard.",
     "manageLocations": "Standorte verwalten",
     "loadingUsers": "Benutzer werden geladen...",
     "loadingPolicies": "Richtlinien werden geladen...",
@@ -278,7 +278,12 @@
     "nameAliasRemoveFailed": "Alias konnte nicht entfernt werden",
     "nameAliasRemoved": "Alias entfernt",
     "nameAliases": "Aliasse für den Abgleich",
-    "noNameAliases": "Keine Aliasse konfiguriert. Der Kundenname selbst wird immer abgeglichen."
+    "noNameAliases": "Keine Aliasse konfiguriert. Der Kundenname selbst wird immer abgeglichen.",
+    "equipment": "Ausrüstung",
+    "parentClientSelf": "Ein Kunde kann nicht sein eigener übergeordneter Kunde sein",
+    "parentClientPlaceholder": "Kein übergeordneter Kunde",
+    "parentClientClear": "Löschen",
+    "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}"
   },
   "quickAddClient": {
     "title": "Neuen Kunden hinzufügen",
@@ -522,6 +527,17 @@
       "5": "Freitag",
       "6": "Samstag",
       "7": "Sonntag"
+    },
+    "reviewError": "Auswirkung dieser Änderung konnte nicht geprüft werden",
+    "reviewing": "Auswirkung wird geprüft …",
+    "confirmSave": "Bestätigen und speichern",
+    "reviewChanges": "Änderungen prüfen",
+    "impact": {
+      "title": "Vor dem Anwenden prüfen",
+      "periods": "{{count}} bevorstehende(r) Abrechnungszeitraum/-räume über {{lines}} Vertragsposition(en) werden an den neuen Zeitplan angepasst.",
+      "from": "Neu aufgebaut ab {{date}}.",
+      "billedPreserved": "Bereits in Rechnung gestellte Posten bleiben erhalten und ändern sich nicht.",
+      "confirmHint": "Wählen Sie „Bestätigen und speichern“, um anzuwenden."
     }
   },
   "clientContractAssignment": {
@@ -605,7 +621,10 @@
     "noActiveBucketPlans": "Keine aktiven Bucket-Pläne gefunden.",
     "noHours": "Im ausgewählten Zeitraum wurden keine Stunden erfasst.",
     "noInvoices": "Keine aktuellen Rechnungen gefunden.",
-    "noUsage": "Im ausgewählten Zeitraum wurden keine Nutzungsdaten gefunden."
+    "noUsage": "Im ausgewählten Zeitraum wurden keine Nutzungsdaten gefunden.",
+    "retry": "Wiederholen",
+    "loadError": "Dieser Abschnitt konnte nicht geladen werden.",
+    "balanceDue": "Offener Betrag"
   },
   "clientContractLineGuide": {
     "title": "Leitfaden zur Begriffsklärung von Vertragszeilen",
@@ -997,7 +1016,6 @@
     "title": "Einstellungen zur Steuerberechnung",
     "description": "Konfigurieren Sie, wie Steuern für diesen Kunden berechnet werden.",
     "createDefault": "Standardsteuereinstellungen erstellen",
-    "goToBillingTaxSettings": "Zu den Abrechnungssteuereinstellungen gehen",
     "taxExemptStatus": "Steuerbefreiungsstatus",
     "taxExempt": "Steuerbefreit",
     "taxExemptHelp": "Wenn diese Option aktiviert ist, werden auf Rechnungen für diesen Kunden keine Steuern erhoben.",
@@ -1032,13 +1050,13 @@
     "taxExemptUpdatedSuccess": "Der Steuerbefreiungsstatus wurde erfolgreich aktualisiert",
     "taxExemptUpdateError": "Der Steuerbefreiungsstatus konnte nicht aktualisiert werden",
     "taxSourceExternal": "Extern",
-    "taxSourceHelp": "Verwalten Sie die Standardsteuersätze für Kunden unter „Kundeneinstellungen“ → „Steuersätze“ und verwalten Sie globale Steuersätze unter „Abrechnung“ → „Steuereinstellungen“.",
+    "taxSourceHelp": "Legen Sie die Sätze dieses Clients unter Abrechnung → Steuersätze fest. Legen Sie globale Sätze unter Abrechnungseinstellungen → Steuer fest.",
     "taxSourceInternal": "Intern"
   },
   "clientNotesPanel": {
-    "title": "Notizen und Kurzinformationen",
+    "title": "Notizen",
     "initialNote": "Erste Anmerkung",
-    "lastUpdated": "Letzte Aktualisierung:",
+    "lastUpdated": "Letzte Aktualisierung: {{value}}",
     "save": "Speichern",
     "retry": "Wiederholen",
     "loadError": "Notizen konnten nicht geladen werden",
@@ -1301,7 +1319,9 @@
         "printer": "Drucker",
         "server": "Server",
         "workstation": "Arbeitsplatz"
-      }
+      },
+      "loadError": "Assets können derzeit nicht geladen werden.",
+      "retry": "Wiederholen"
     },
     "tickets": {
       "addTicket": "Ticket hinzufügen",
@@ -1325,5 +1345,28 @@
         "userNotAuthenticated": "Benutzer nicht authentifiziert"
       }
     }
+  },
+  "clientEquipmentTab": {
+    "retry": "Wiederholen",
+    "loadError": "Dieser Abschnitt konnte nicht geladen werden.",
+    "emptyValue": "—",
+    "orderNumber": "Bestellnummer",
+    "status": "Status",
+    "ordered": "Bestellt",
+    "amount": "Betrag",
+    "product": "Produkt",
+    "sku": "SKU",
+    "serialNumber": "Seriennummer",
+    "delivered": "Geliefert",
+    "asset": "Asset",
+    "viewAsset": "Asset anzeigen",
+    "rmaNumber": "RMA-Nummer",
+    "opened": "Geöffnet",
+    "salesOrders": "Kundenaufträge",
+    "noSalesOrders": "Keine Kundenaufträge für diesen Kunden.",
+    "deliveredUnits": "Gelieferte Einheiten",
+    "noDeliveredEquipment": "Keine gelieferte Ausrüstung erfasst.",
+    "rmas": "RMAs",
+    "noRmas": "Keine RMAs für diesen Kunden."
   }
 }

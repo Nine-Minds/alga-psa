@@ -1,6 +1,7 @@
 'use server'
 
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { IChat } from '../../interfaces/chat.interface';
 import { IMessage } from '../../interfaces/message.interface';
@@ -113,7 +114,7 @@ export async function addMessageToChatAction(data: Omit<IMessage, 'tenant'>) {
       if (data.chat_id) {
         try {
           const { knex } = await createTenantKnex();
-          await knex<IChat>('chats')
+          await tenantDb(knex, tenant).table<IChat>('chats')
             .where({ id: data.chat_id })
             .update({ updated_at: knex.fn.now() });
         } catch (touchError) {
@@ -187,7 +188,7 @@ export async function listCurrentUserChatsAction(limit = 20): Promise<ChatHistor
   }
 
   try {
-    return await Chat.getRecentByUser(user.user_id, limit);
+    return await Chat.getRecentByUser(user.user_id, limit, user.tenant);
   } catch (error) {
     if (isMissingRelationError(error)) {
       markPersistenceStatus(false);
@@ -220,7 +221,7 @@ export async function searchCurrentUserChatsAction(
   }
 
   try {
-    return await Chat.searchByUser(user.user_id, trimmedQuery, limit);
+    return await Chat.searchByUser(user.user_id, trimmedQuery, limit, user.tenant);
   } catch (error) {
     if (isMissingRelationError(error) || isMissingColumnError(error)) {
       if (isMissingRelationError(error)) {

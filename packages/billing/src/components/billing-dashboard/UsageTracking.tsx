@@ -21,6 +21,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { ColumnDefinition } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import {
@@ -87,6 +88,12 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
           value: service.service_id,
         })),
     [initialServices],
+  );
+
+  // Reuse the loaded clients array (already enriched with logoUrl) to key logos by client_id.
+  const clientLogoById = useMemo(
+    () => new Map(clients.map((client) => [client.client_id, client.logoUrl ?? null])),
+    [clients],
   );
 
   // Handle page size change - reset to page 1
@@ -308,6 +315,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     {
       title: t('usage.table.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
+      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={clientLogoById.get(record.client_id) ?? null} />,
     },
     {
       title: t('usage.table.service', { defaultValue: 'Service' }),

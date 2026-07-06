@@ -1,7 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { format, type Locale } from 'date-fns';
 import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
 
@@ -33,32 +32,16 @@ export async function getScheduleApprovers(
   const { knex: db } = await createTenantKnex(tenant);
 
   return await withTransaction(db, async (trx) => {
+    const scopedDb = tenantDb(trx, tenant) as any;
     // Get users with schedule update permission
     // This queries users who have roles with the schedule:update permission
-    const approvers = await trx('users as u')
-      .join('user_roles as ur', function() {
-        this.on('u.user_id', 'ur.user_id')
-          .andOn('u.tenant', 'ur.tenant');
-      })
-      .join('roles as r', function() {
-        this.on('ur.role_id', 'r.role_id')
-          .andOn('ur.tenant', 'r.tenant');
-      })
-      .join('role_permissions as rp', function() {
-        this.on('r.role_id', 'rp.role_id')
-          .andOn('r.tenant', 'rp.tenant');
-      })
-      .join('permissions as p', function() {
-        this.on('rp.permission_id', 'p.permission_id')
-          .andOn('rp.tenant', 'p.tenant');
-      })
+    const approversQuery = scopedDb.table('users as u')
       .where({
-        'u.tenant': tenant,
         'u.user_type': 'internal',
         'p.resource': 'user_schedule',
         'p.action': 'update'
       })
-      .where(function() {
+      .where(function(this: any) {
         this.where('u.is_inactive', false)
           .orWhereNull('u.is_inactive');
       })
@@ -69,6 +52,11 @@ export async function getScheduleApprovers(
         'u.last_name'
       )
       .distinct();
+    scopedDb.tenantJoin(approversQuery, 'user_roles as ur', 'u.user_id', 'ur.user_id');
+    scopedDb.tenantJoin(approversQuery, 'roles as r', 'ur.role_id', 'r.role_id');
+    scopedDb.tenantJoin(approversQuery, 'role_permissions as rp', 'r.role_id', 'rp.role_id');
+    scopedDb.tenantJoin(approversQuery, 'permissions as p', 'rp.permission_id', 'p.permission_id');
+    const approvers = await approversQuery;
 
     return approvers;
   });
@@ -83,9 +71,9 @@ export async function getTenantSettings(
   const { knex: db } = await createTenantKnex(tenant);
 
   return await withTransaction(db, async (trx) => {
+    const scopedDb = tenantDb(trx, tenant) as any;
     // Get tenant settings from tenant_settings table
-    const settings = await trx('tenant_settings')
-      .where({ tenant })
+    const settings = await scopedDb.table('tenant_settings')
       .first();
 
     // Extract settings from JSONB column or use defaults
@@ -99,8 +87,7 @@ export async function getTenantSettings(
 
     if (!tenantName) {
       // Try to get tenant name from tenants table
-      const tenantRecord = await trx('tenants')
-        .where({ tenant })
+      const tenantRecord = await scopedDb.table('tenants')
         .select('client_name')
         .first();
       tenantName = tenantRecord?.client_name;
@@ -131,13 +118,12 @@ export async function getClientUserIdFromContact(
   const { knex: db } = await createTenantKnex(tenant);
 
   return await withTransaction(db, async (trx) => {
-    const user = await trx('users')
+    const user = await (tenantDb(trx, tenant) as any).table('users')
       .where({
-        tenant,
         contact_id: contactId,
         user_type: 'client'
       })
-      .where(function() {
+      .where(function(this: any) {
         this.where('is_inactive', false)
           .orWhereNull('is_inactive');
       })
@@ -261,10 +247,9 @@ export async function getClientCompanyName(
   const { knex: db } = await createTenantKnex(tenant);
 
   return await withTransaction(db, async (trx) => {
-    const client = await trx('clients')
+    const client = await (tenantDb(trx, tenant) as any).table('clients')
       .where({
-        client_id: clientId,
-        tenant
+        client_id: clientId
       })
       .select('client_name')
       .first();

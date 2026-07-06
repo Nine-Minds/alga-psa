@@ -407,6 +407,8 @@ function systemTemplateBuilder() {
 
 function tokenTableBuilder() {
   const builder: any = {
+    // tenantDb().table() scopes the root builder with .where(tenant) before insert
+    where: () => builder,
     insert: (data: any) => {
       const rows = Array.isArray(data) ? data : [data];
       for (const row of rows) {
@@ -893,6 +895,7 @@ function createMockKnex() {
         return systemTemplateBuilder();
       case 'email_reply_tokens':
         return tokenTableBuilder();
+      case 'comments':
       case 'comments as cm':
         return createQuery(() => null);
       case 'tickets as t':
@@ -1197,6 +1200,8 @@ describe('ticket email subscriber reply markers', () => {
 
   it('processes ticket created events with delimiters', async () => {
     seedTemplate('ticket-created', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+    // External recipients (the primary contact) get the client-facing template.
+    seedTemplate('ticket-created-client', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1228,6 +1233,7 @@ describe('ticket email subscriber reply markers', () => {
 
   it('processes ticket updated events with delimiters', async () => {
     seedTemplate('ticket-updated', 'Ticket Updated: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+    seedTemplate('ticket-updated-client', 'Ticket Updated: {{ticket.title}}', '<p>{{ticket.title}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1295,7 +1301,9 @@ describe('ticket email subscriber reply markers', () => {
         comment: {
           id: commentId,
           content: 'Follow up',
-          author: 'contact@example.com',
+          // The comment author is excluded from the fanout, so the author must
+          // differ from the contact recipient for the email to be sent.
+          author: 'agent@example.com',
           isInternal: false,
         },
       },
@@ -1429,6 +1437,7 @@ describe('ticket email subscriber event publishing', () => {
 
   it('publishes ticket created events and emails the primary contact', async () => {
     seedTemplate('ticket-created', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+    seedTemplate('ticket-created-client', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1477,6 +1486,7 @@ describe('ticket email subscriber deduplication', () => {
 
   it('sends only one ticket created email when primary and assigned recipients share address', async () => {
     seedTemplate('ticket-created', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+    seedTemplate('ticket-created-client', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1545,6 +1555,8 @@ describe('ticket email subscriber deduplication', () => {
 
   it('sends one ticket assigned email when contact and location share address', async () => {
     seedTemplate('ticket-assigned', 'Ticket Assigned: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+    // First individual assignments notify the client with the client-facing template.
+    seedTemplate('ticket-agent-assigned-client', 'Working On: {{ticket.title}}', '<p>{{ticket.title}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1556,6 +1568,7 @@ describe('ticket email subscriber deduplication', () => {
       title: 'Location Shared Ticket',
       contact_email: sharedEmail,
       client_email: sharedEmail,
+      assigned_to: randomUUID(),
       email_metadata: { threadId: 'thread-location-dedup' },
     });
 
@@ -1576,6 +1589,7 @@ describe('ticket email subscriber deduplication', () => {
 
   it('sends one ticket assigned email when additional resource shares email with assignee', async () => {
     seedTemplate('ticket-assigned', 'Ticket Assigned: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+    seedTemplate('ticket-agent-assigned-client', 'Working On: {{ticket.title}}', '<p>{{ticket.title}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1732,9 +1746,15 @@ describe('ticket email subscriber notification gating (known gap)', () => {
     seedTemplate('ticket-created', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>', {
       subtypeName: 'Ticket Created',
     });
+    // The primary contact is external and routes through the client-facing
+    // template/subtype, so that is the subtype the gate consults here.
+    seedTemplate('ticket-created-client', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>', {
+      subtypeName: 'Ticket Created Client',
+    });
 
     setNotificationSettings(tenantId, { is_enabled: true });
     setTenantSubtypeEnabled(tenantId, 'Ticket Created', false);
+    setTenantSubtypeEnabled(tenantId, 'Ticket Created Client', false);
 
     setTicket({
       ticket_id: ticketId,
@@ -1827,6 +1847,11 @@ describe('ticket email subscriber link routing', () => {
       'Ticket Created: {{ticket.title}}',
       '<a href="{{ticket.url}}">{{ticket.url}}</a>',
     );
+    seedTemplate(
+      'ticket-created-client',
+      'Ticket Created: {{ticket.title}}',
+      '<a href="{{ticket.url}}">{{ticket.url}}</a>',
+    );
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1873,6 +1898,11 @@ describe('ticket email subscriber link routing', () => {
   it('falls back to the client portal path when no custom domain exists', async () => {
     seedTemplate(
       'ticket-created',
+      'Ticket Created: {{ticket.title}}',
+      '<a href="{{ticket.url}}">{{ticket.url}}</a>',
+    );
+    seedTemplate(
+      'ticket-created-client',
       'Ticket Created: {{ticket.title}}',
       '<a href="{{ticket.url}}">{{ticket.url}}</a>',
     );
@@ -2005,6 +2035,11 @@ describe('ticket email subscriber rich text formatting', () => {
   it('renders ticket description rich text without leaking JSON', async () => {
     seedTemplate(
       'ticket-created',
+      'Ticket Created: {{ticket.title}}',
+      '<p><strong>Description:</strong> {{ticket.description}}</p>',
+    );
+    seedTemplate(
+      'ticket-created-client',
       'Ticket Created: {{ticket.title}}',
       '<p><strong>Description:</strong> {{ticket.description}}</p>',
     );

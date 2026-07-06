@@ -1,13 +1,13 @@
 import { format, toZonedTime } from 'date-fns-tz';
 import type { Knex } from 'knex';
 import type { ISO8601String, ITimePeriodSettings } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 
 export class TimePeriodSettings {
   static async getActiveSettings(knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<ITimePeriodSettings[]> {
     try {
-      const settings = await knexOrTrx<ITimePeriodSettings>('time_period_settings')
+      const settings = await tenantDb(knexOrTrx, tenant).table<ITimePeriodSettings>('time_period_settings')
         .where('is_active', true)
-        .andWhere('tenant', tenant)
         .orderBy('effective_from', 'desc');
 
       if (!settings.length) {
@@ -35,4 +35,3 @@ export class TimePeriodSettings {
     return format(toZonedTime(date, 'UTC'), "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") as ISO8601String;
   }
 }
-

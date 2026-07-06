@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/db', () => ({
-  requireTenantId: vi.fn(async () => 'tenant-1')
+  requireTenantId: vi.fn(async () => 'tenant-1'),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    unscoped: (table: string) => conn(table)
+  })
 }));
 
 import ContractLine from '../src/models/contractLine';

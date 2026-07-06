@@ -571,13 +571,15 @@
       "name": "Naam",
       "email": "E-mail",
       "phoneNumber": "Telefoonnummer",
-      "actions": "Acties"
+      "actions": "Acties",
+      "role": "Rol"
     },
     "filter": {
       "show": "Toon:",
       "active": "Actieve contacten",
       "inactive": "Inactieve contacten",
-      "all": "Alle contacten"
+      "all": "Alle contacten",
+      "searchPlaceholder": "Contacten zoeken..."
     },
     "actions": {
       "openMenu": "Menu openen",
@@ -603,7 +605,7 @@
     "description": "Uploadmogelijkheid voor profielfoto's van contacten"
   },
   "contactNotesPanel": {
-    "title": "Notities en snelle info",
+    "title": "Notities",
     "description": "Rich-text notitiepaneel met weergave van oude notitie en opslaan/opnieuw proberen-acties",
     "legacy": {
       "initialNote": "Initiële notitie"

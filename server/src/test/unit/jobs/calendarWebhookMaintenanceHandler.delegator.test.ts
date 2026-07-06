@@ -39,7 +39,7 @@ describe('calendarWebhookMaintenanceHandler delegator', () => {
       verifyGoogleCalendarProvisioning: eeVerify,
     }));
 
-    const handlerModule = await import('@/lib/jobs/handlers/calendarWebhookMaintenanceHandler');
+    const handlerModule = await import('@alga-psa/jobs/handlers/calendarWebhookMaintenanceHandler');
 
     await handlerModule.renewMicrosoftCalendarWebhooks({ tenantId: 'tenant-ce' });
     await handlerModule.verifyGoogleCalendarProvisioning({ tenantId: 'tenant-ce' });
@@ -60,7 +60,7 @@ describe('calendarWebhookMaintenanceHandler delegator', () => {
       verifyGoogleCalendarProvisioning: eeVerify,
     }));
 
-    const handlerModule = await import('@/lib/jobs/handlers/calendarWebhookMaintenanceHandler');
+    const handlerModule = await import('@alga-psa/jobs/handlers/calendarWebhookMaintenanceHandler');
 
     const renewalInput = { tenantId: 'tenant-ee', lookAheadMinutes: 90 };
     const verifyInput = { tenantId: 'tenant-ee' };
@@ -75,7 +75,7 @@ describe('calendarWebhookMaintenanceHandler delegator', () => {
   it('keeps live maintenance imports out of the shared handler wrapper', () => {
     const serverRoot = process.cwd();
     const sharedSource = fs.readFileSync(
-      path.join(serverRoot, 'src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts'),
+      path.join(serverRoot, '../packages/jobs/src/lib/handlers/calendarWebhookMaintenanceHandler.ts'),
       'utf8'
     );
     const eeSource = fs.readFileSync(

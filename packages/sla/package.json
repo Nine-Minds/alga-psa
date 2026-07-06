@@ -31,6 +31,11 @@
       "import": "./dist/services/index.js",
       "require": "./dist/services/index.js"
     },
+    "./services/escalationService": {
+      "types": "./dist/services/escalationService.d.ts",
+      "import": "./dist/services/escalationService.js",
+      "require": "./dist/services/escalationService.js"
+    },
     "./services/slaNotificationService": {
       "types": "./dist/services/slaNotificationService.d.ts",
       "import": "./dist/services/slaNotificationService.js",

@@ -5,12 +5,15 @@ import { headers } from 'next/headers.js';
 import { getTenantForCurrentRequest, getTenantFromHeaders } from '@/lib/tenant';
 import { getConnection } from '@/lib/db/db'; // Use the tenant-scoped connection function
 import logger from '@alga-psa/core/logger';
-import { getTenantContext as getTenantContextFromDb, runWithTenant as runWithTenantFromDb, setTenantContext } from '@alga-psa/db';
+import { getTenantContext as getTenantContextFromDb, runWithTenant as runWithTenantFromDb, setTenantContext, tenantDb } from '@alga-psa/db';
 
 // Interface simplified as tenant identification is separate now
 interface DbConnection {
     knex: KnexType;
 }
+
+const DEV_FALLBACK_TENANT_DISCOVERY = '__dev_fallback_tenant_discovery__';
+const DEV_FALLBACK_TENANT_DISCOVERY_REASON = 'Development-only fallback discovers the first tenant when request context is unavailable';
 
 /**
  * Retrieves the shared Knex instance.
@@ -55,7 +58,10 @@ export async function getCurrentTenantId(): Promise<string | null> {
     if (!tenant && process.env.NODE_ENV !== 'production') {
         try {
             const knex = await getConnection(null);
-            const row = await knex<{ tenant: string }>('tenants').select('tenant').first();
+            const row = await tenantDb(knex, DEV_FALLBACK_TENANT_DISCOVERY)
+                .unscoped<{ tenant: string }>('tenants', DEV_FALLBACK_TENANT_DISCOVERY_REASON)
+                .select('tenant')
+                .first();
             tenant = row?.tenant ?? null;
         } catch (e) {
             // ignore

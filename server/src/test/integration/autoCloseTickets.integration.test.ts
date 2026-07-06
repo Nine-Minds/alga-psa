@@ -17,6 +17,14 @@ const publishEventMock = vi.hoisted(() => vi.fn(async () => undefined));
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn(async () => undefined));
 const sendNotificationMock = vi.hoisted(() => vi.fn(async () => undefined));
 
+// The auto-close handler no longer sends the warning email itself — it emits a
+// TICKET_AUTO_CLOSE_WARNING event and the server-side subscriber resolves the
+// contact and sends. Capture the subscriber's handler so the mocked publisher
+// can deliver events to it synchronously (no Redis in this test).
+const busHandlersRef = vi.hoisted(() => ({
+  handlers: new Map<string, (event: unknown) => Promise<void>>(),
+}));
+
 vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
   createTenantKnex: vi.fn(async () => ({ knex: dbRef.knex, tenant: dbRef.tenant })),
@@ -53,6 +61,17 @@ vi.mock('@alga-psa/event-bus', () => ({
   ServerEventPublisher: class {},
 }));
 
+// The warning subscriber registers itself on the server-local event bus.
+vi.mock('@/lib/eventBus', () => ({
+  getEventBus: () => ({
+    subscribe: async (eventType: string, handler: (event: unknown) => Promise<void>) => {
+      busHandlersRef.handlers.set(eventType, handler);
+    },
+    unsubscribe: async () => undefined,
+    publish: vi.fn(),
+  }),
+}));
+
 vi.mock('@alga-psa/analytics', () => ({
   captureAnalytics: vi.fn(),
   ServerAnalyticsTracker: class {},
@@ -72,7 +91,8 @@ vi.mock('../../../../packages/tickets/src/lib/liveUpdates', async (importOrigina
   publishTicketUpdate: vi.fn(),
 }));
 
-import { autoCloseTicketsHandler } from '../../lib/jobs/handlers/autoCloseTicketsHandler';
+import { autoCloseTicketsHandler } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
+import { tenantDb } from '@alga-psa/db';
 import {
   createCloseRulesFixture,
   createSecondaryTenant,
@@ -87,6 +107,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 let db: Knex;
 let fixture: CloseRulesFixture;
 
+function scopedDbFor(tenantId: string) {
+  return tenantDb(db, tenantId);
+}
+
 function daysAgo(days: number): string {
   return new Date(Date.now() - days * DAY_MS).toISOString();
 }
@@ -96,7 +120,7 @@ async function insertAutoCloseRule(
   overrides: Partial<Record<string, unknown>> = {}
 ): Promise<string> {
   const ruleId = uuidv4();
-  await db('board_auto_close_rules').insert({
+  await scopedDbFor(targetFixture.tenantId).table('board_auto_close_rules').insert({
     tenant: targetFixture.tenantId,
     rule_id: ruleId,
     board_id: targetFixture.boardId,
@@ -124,8 +148,8 @@ async function insertStaleTicket(
 }
 
 function getState(targetFixture: CloseRulesFixture, ticketId: string) {
-  return db('ticket_auto_close_state')
-    .where({ tenant: targetFixture.tenantId, ticket_id: ticketId })
+  return scopedDbFor(targetFixture.tenantId).table('ticket_auto_close_state')
+    .where({ ticket_id: ticketId })
     .first();
 }
 
@@ -134,7 +158,10 @@ describe('auto-close engine', () => {
     db = await createTestDbConnection();
     dbRef.knex = db;
 
-    const seededUser = await db('users').where({ user_type: 'internal' }).first();
+    const seededUser = await tenantDb(db, '__test_discovery__')
+      .unscoped('users', 'test discovery of seeded internal user for auto-close integration')
+      .where({ user_type: 'internal' })
+      .first();
     expect(seededUser).toBeTruthy();
     dbRef.tenant = seededUser.tenant;
     userRef.user = {
@@ -146,6 +173,20 @@ describe('auto-close engine', () => {
     };
 
     fixture = await createCloseRulesFixture(db, seededUser.tenant, seededUser.user_id);
+
+    // Run the real server-side warning subscriber against the mocked bus so the
+    // handler's TICKET_AUTO_CLOSE_WARNING event still produces the actual email
+    // send (through the mocked notification service).
+    const { registerTicketAutoCloseWarningSubscriber } = await import(
+      '@/lib/eventBus/subscribers/ticketAutoCloseWarningSubscriber'
+    );
+    await registerTicketAutoCloseWarningSubscriber();
+    publishEventMock.mockImplementation(async (params: any) => {
+      const handler = busHandlersRef.handlers.get(params?.eventType);
+      if (handler) {
+        await handler({ id: uuidv4(), timestamp: new Date().toISOString(), ...params });
+      }
+    });
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -155,15 +196,16 @@ describe('auto-close engine', () => {
   beforeEach(async () => {
     sendNotificationMock.mockClear();
     publishWorkflowEventMock.mockClear();
+    const scopedDb = scopedDbFor(fixture.tenantId);
     // Each test installs its own rules/tickets on the shared board.
-    await db('ticket_auto_close_state').where({ tenant: fixture.tenantId }).del();
+    await scopedDb.table('ticket_auto_close_state').del();
     // Park tickets left in the trigger status by earlier tests (suite order is
     // shuffled) so each test's match set is exactly its own.
-    await db('tickets')
-      .where({ tenant: fixture.tenantId, board_id: fixture.boardId, status_id: fixture.waitingStatusId })
+    await scopedDb.table('tickets')
+      .where({ board_id: fixture.boardId, status_id: fixture.waitingStatusId })
       .update({ status_id: fixture.openStatusId });
-    await db('board_auto_close_rules').where({ tenant: fixture.tenantId, board_id: fixture.boardId }).del();
-    await db('board_close_rules').where({ tenant: fixture.tenantId, board_id: fixture.boardId }).del();
+    await scopedDb.table('board_auto_close_rules').where({ board_id: fixture.boardId }).del();
+    await scopedDb.table('board_close_rules').where({ board_id: fixture.boardId }).del();
   });
 
   it('T030: the scan tracks, recomputes, and clears pending closes from current state', async () => {
@@ -180,7 +222,7 @@ describe('auto-close engine', () => {
     expect(initialScheduled).toBeLessThan(Date.now() + 3 * DAY_MS);
 
     // New activity (a fresh audit row) pushes the schedule back
-    await db('ticket_audit_logs').insert({
+    await scopedDbFor(fixture.tenantId).table('ticket_audit_logs').insert({
       tenant: fixture.tenantId,
       ticket_id: ticketId,
       event_type: 'TICKET_COMMENT_ADDED',
@@ -196,18 +238,18 @@ describe('auto-close engine', () => {
     expect(new Date(state.scheduled_close_at).getTime()).toBeGreaterThan(initialScheduled);
 
     // Moving out of the trigger status clears the pending close
-    await db('tickets')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId })
+    await scopedDbFor(fixture.tenantId).table('tickets')
+      .where({ ticket_id: ticketId })
       .update({ status_id: fixture.openStatusId });
     await autoCloseTicketsHandler({ tenantId: fixture.tenantId });
     expect(await getState(fixture, ticketId)).toBeUndefined();
 
     // Back in the trigger status but with the rule disabled: still clear
-    await db('tickets')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId })
+    await scopedDbFor(fixture.tenantId).table('tickets')
+      .where({ ticket_id: ticketId })
       .update({ status_id: fixture.waitingStatusId });
-    await db('board_auto_close_rules')
-      .where({ tenant: fixture.tenantId, rule_id: ruleId })
+    await scopedDbFor(fixture.tenantId).table('board_auto_close_rules')
+      .where({ rule_id: ruleId })
       .update({ is_enabled: false });
     await autoCloseTicketsHandler({ tenantId: fixture.tenantId });
     expect(await getState(fixture, ticketId)).toBeUndefined();
@@ -231,8 +273,8 @@ describe('auto-close engine', () => {
     const earlyState = await getState(fixture, earlyTicket);
     expect(earlyState.warning_sent_at).toBeNull();
 
-    const audit = await db('ticket_audit_logs')
-      .where({ tenant: fixture.tenantId, ticket_id: warnTicket, event_type: 'TICKET_AUTO_CLOSE_WARNING_SENT' })
+    const audit = await scopedDbFor(fixture.tenantId).table('ticket_audit_logs')
+      .where({ ticket_id: warnTicket, event_type: 'TICKET_AUTO_CLOSE_WARNING_SENT' })
       .first();
     expect(audit).toBeTruthy();
 
@@ -257,7 +299,7 @@ describe('auto-close engine', () => {
 
     await autoCloseTicketsHandler({ tenantId: fixture.tenantId });
 
-    const ticket = await db('tickets').where({ tenant: fixture.tenantId, ticket_id: ticketId }).first();
+    const ticket = await scopedDbFor(fixture.tenantId).table('tickets').where({ ticket_id: ticketId }).first();
     expect(ticket.status_id).toBe(fixture.closedStatusId);
     expect(ticket.is_closed).toBe(true);
     expect(ticket.closed_at).not.toBeNull();
@@ -265,8 +307,8 @@ describe('auto-close engine', () => {
 
     // TicketModel maps the system author onto the 'internal' enum value; the
     // auto-close provenance lives in the comment metadata.
-    const comment = await db('comments')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId })
+    const comment = await scopedDbFor(fixture.tenantId).table('comments')
+      .where({ ticket_id: ticketId })
       .whereRaw("metadata->>'source' = 'auto_close'")
       .first();
     expect(comment).toBeTruthy();
@@ -280,14 +322,14 @@ describe('auto-close engine', () => {
     expect(closedEvents[0][0].ctx.actor.actorType).toBe('SYSTEM');
     expect(closedEvents[0][0].payload.closedByUserId).toBeUndefined();
 
-    const bypassAudit = await db('ticket_audit_logs')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId, event_type: 'TICKET_CLOSE_RULES_BYPASSED' })
+    const bypassAudit = await scopedDbFor(fixture.tenantId).table('ticket_audit_logs')
+      .where({ ticket_id: ticketId, event_type: 'TICKET_CLOSE_RULES_BYPASSED' })
       .first();
     expect(bypassAudit).toBeTruthy();
     expect(bypassAudit.details.bypass_source).toBe('auto_close');
 
-    const closedAudit = await db('ticket_audit_logs')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId, event_type: 'TICKET_CLOSED' })
+    const closedAudit = await scopedDbFor(fixture.tenantId).table('ticket_audit_logs')
+      .where({ ticket_id: ticketId, event_type: 'TICKET_CLOSED' })
       .first();
     expect(closedAudit.actor_type).toBe('system');
     expect(closedAudit.source).toBe('system');
@@ -301,7 +343,7 @@ describe('auto-close engine', () => {
 
     // Simulate a stale snapshot: a state row that claims the close is overdue
     // even though the ticket has fresh activity.
-    await db('ticket_auto_close_state').insert({
+    await scopedDbFor(fixture.tenantId).table('ticket_auto_close_state').insert({
       tenant: fixture.tenantId,
       ticket_id: ticketId,
       rule_id: ruleId,
@@ -310,7 +352,7 @@ describe('auto-close engine', () => {
 
     await autoCloseTicketsHandler({ tenantId: fixture.tenantId });
 
-    const ticket = await db('tickets').where({ tenant: fixture.tenantId, ticket_id: ticketId }).first();
+    const ticket = await scopedDbFor(fixture.tenantId).table('tickets').where({ ticket_id: ticketId }).first();
     expect(ticket.is_closed).toBe(false);
     const state = await getState(fixture, ticketId);
     expect(new Date(state.scheduled_close_at).getTime()).toBeGreaterThan(Date.now());
@@ -319,8 +361,8 @@ describe('auto-close engine', () => {
     const dueTicket = await insertStaleTicket(fixture, 10);
     await autoCloseTicketsHandler({ tenantId: fixture.tenantId });
     await autoCloseTicketsHandler({ tenantId: fixture.tenantId });
-    const comments = await db('comments')
-      .where({ tenant: fixture.tenantId, ticket_id: dueTicket })
+    const comments = await scopedDbFor(fixture.tenantId).table('comments')
+      .where({ ticket_id: dueTicket })
       .whereRaw("metadata->>'source' = 'auto_close'")
       .select('comment_id');
     expect(comments.length).toBe(1);
@@ -331,8 +373,8 @@ describe('auto-close engine', () => {
     const boardA = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
     await insertAutoCloseRule(boardA);
     const failingTicket = await insertStaleTicket(boardA, 10);
-    await db('statuses')
-      .where({ tenant: boardA.tenantId, status_id: boardA.closedStatusId })
+    await scopedDbFor(boardA.tenantId).table('statuses')
+      .where({ status_id: boardA.closedStatusId })
       .update({ is_closed: false });
 
     // Board B: healthy rule
@@ -342,10 +384,10 @@ describe('auto-close engine', () => {
 
     await autoCloseTicketsHandler({ tenantId: fixture.tenantId });
 
-    const failing = await db('tickets').where({ tenant: boardA.tenantId, ticket_id: failingTicket }).first();
+    const failing = await scopedDbFor(boardA.tenantId).table('tickets').where({ ticket_id: failingTicket }).first();
     expect(failing.is_closed).toBe(false);
 
-    const healthy = await db('tickets').where({ tenant: boardB.tenantId, ticket_id: healthyTicket }).first();
+    const healthy = await scopedDbFor(boardB.tenantId).table('tickets').where({ ticket_id: healthyTicket }).first();
     expect(healthy.is_closed).toBe(true);
   });
 
@@ -360,16 +402,16 @@ describe('auto-close engine', () => {
 
     await autoCloseTicketsHandler({ tenantId: fixture.tenantId });
 
-    const primary = await db('tickets').where({ tenant: fixture.tenantId, ticket_id: primaryTicket }).first();
+    const primary = await scopedDbFor(fixture.tenantId).table('tickets').where({ ticket_id: primaryTicket }).first();
     expect(primary.is_closed).toBe(true);
 
-    const other = await db('tickets').where({ tenant: secondary.tenantId, ticket_id: secondaryTicket }).first();
+    const other = await scopedDbFor(secondary.tenantId).table('tickets').where({ ticket_id: secondaryTicket }).first();
     expect(other.is_closed).toBe(false);
-    expect(await db('ticket_auto_close_state').where({ tenant: secondary.tenantId }).first()).toBeUndefined();
+    expect(await scopedDbFor(secondary.tenantId).table('ticket_auto_close_state').first()).toBeUndefined();
 
     // Running for the secondary tenant (no rules) changes nothing.
     await autoCloseTicketsHandler({ tenantId: secondary.tenantId });
-    const otherAfter = await db('tickets').where({ tenant: secondary.tenantId, ticket_id: secondaryTicket }).first();
+    const otherAfter = await scopedDbFor(secondary.tenantId).table('tickets').where({ ticket_id: secondaryTicket }).first();
     expect(otherAfter.is_closed).toBe(false);
   });
 });

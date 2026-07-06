@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 /** A reference to a named QBO entity (account, class, department, etc.). */
 export interface QboRef {
@@ -19,6 +20,8 @@ export interface AccountingSyncSettings {
   defaultClassRef: QboRef | null;
   /** Default QBO department applied at the invoice header. */
   defaultDepartmentRef: QboRef | null;
+  /** Default QBO expense account applied to vendor bill lines. */
+  defaultExpenseAccountRef?: QboRef | null;
   /** The realm that sync operations target when no explicit realm is specified. */
   defaultRealm: string | null;
 }
@@ -29,6 +32,7 @@ const DEFAULT_SETTINGS: AccountingSyncSettings = {
   depositAccountRef: null,
   defaultClassRef: null,
   defaultDepartmentRef: null,
+  defaultExpenseAccountRef: null,
   defaultRealm: null
 };
 
@@ -57,13 +61,13 @@ function normalize(raw: unknown): AccountingSyncSettings {
     depositAccountRef: normalizeQboRef(record.depositAccountRef),
     defaultClassRef: normalizeQboRef(record.defaultClassRef),
     defaultDepartmentRef: normalizeQboRef(record.defaultDepartmentRef),
+    defaultExpenseAccountRef: normalizeQboRef(record.defaultExpenseAccountRef),
     defaultRealm: typeof record.defaultRealm === 'string' ? record.defaultRealm : null
   };
 }
 
 export async function getAccountingSyncSettings(knex: Knex, tenantId: string): Promise<AccountingSyncSettings> {
-  const row = await knex('tenant_settings')
-    .where({ tenant: tenantId })
+  const row = await tenantDb(knex, tenantId).table('tenant_settings')
     .select('settings')
     .first();
 
@@ -75,8 +79,8 @@ export async function updateAccountingSyncSettings(
   tenantId: string,
   patch: Partial<AccountingSyncSettings>
 ): Promise<AccountingSyncSettings> {
-  const row = await knex('tenant_settings')
-    .where({ tenant: tenantId })
+  const db = tenantDb(knex, tenantId);
+  const row = await db.table('tenant_settings')
     .select('settings')
     .first();
 
@@ -84,14 +88,13 @@ export async function updateAccountingSyncSettings(
   const next: AccountingSyncSettings = { ...current, ...patch };
 
   if (row) {
-    await knex('tenant_settings')
-      .where({ tenant: tenantId })
+    await db.table('tenant_settings')
       .update({
         settings: { ...(row.settings ?? {}), accountingSync: next },
         updated_at: knex.fn.now()
       });
   } else {
-    await knex('tenant_settings').insert({
+    await db.table('tenant_settings').insert({
       tenant: tenantId,
       settings: { accountingSync: next }
     });

@@ -21,7 +21,8 @@ describe('online meeting calendar description mapping contract', () => {
       const source = read(relativePath);
 
       expect(source).toContain('buildScheduleEntryDescription(entry)');
-      expect(source).toContain("knex('online_meetings')");
+      expect(source).toContain("tenantDb(knex, entry.tenant).table('online_meetings')");
+      expect(source).not.toContain("knex('online_meetings')");
       expect(source).toContain('schedule_entry_id: entry.entry_id');
       expect(source).toContain('Join Teams Meeting: ${joinUrl}');
       expect(source).toContain('description,');

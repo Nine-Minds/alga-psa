@@ -14,13 +14,15 @@ describe('contract runtime loader template provenance boundaries', () => {
       'utf8',
     );
 
-    expect(contractModelSource).toContain("this.on('co.contract_id', '=', 'cc.contract_id').andOn('co.tenant', '=', 'cc.tenant');");
-    expect(contractModelSource).toContain("this.on('cc.template_contract_id', '=', 'template.template_id')");
+    // Tenant scoping on the contracts join now lives in the facade: tenantJoin
+    // adds the andOn tenant predicate automatically.
+    expect(contractModelSource).toContain("db.tenantJoin(query, 'contracts as co', 'co.contract_id', 'cc.contract_id');");
+    expect(contractModelSource).toContain("db.tenantJoin(query, 'contract_templates as template', 'cc.template_contract_id', 'template.template_id', { type: 'left' });");
     expect(contractModelSource).not.toMatch(/cc\.template_contract_id'\s*,\s*'='\s*,\s*'co\.contract_id'/);
     expect(contractModelSource).not.toMatch(/where\([^)]*template_contract_id[^)]*contract_id[^)]*\)/i);
 
-    expect(contractActionsSource).toContain("this.on('co.contract_id', '=', 'cc.contract_id').andOn('co.tenant', '=', 'cc.tenant');");
-    expect(contractActionsSource).toContain("this.on('cc.template_contract_id', '=', 'template.template_id')");
+    expect(contractActionsSource).toContain("facade.tenantJoin(query, 'client_contracts as cc', 'co.contract_id', 'cc.contract_id', { type: 'left' });");
+    expect(contractActionsSource).toContain("facade.tenantJoin(query, 'contract_templates as template', 'cc.template_contract_id', 'template.template_id', { type: 'left' });");
     expect(contractActionsSource).not.toMatch(/coalesce\s*\(\s*cc\.template_contract_id\s*,\s*cc\.contract_id\s*\)/i);
   });
 });

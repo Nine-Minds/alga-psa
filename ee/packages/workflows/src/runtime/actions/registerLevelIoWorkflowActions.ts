@@ -3,6 +3,7 @@ import { getActionRegistryV2 } from '../../../../../../shared/workflow/runtime/r
 import { throwActionError } from '../../../../../../shared/workflow/runtime/actions/businessOperations/shared';
 import type { ActionContext } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
 import { registerIntegrationWorkflowModule, rmmIntegrationAvailability } from '../integrationModules';
+import { workflowTenantTable } from '../../lib/workflowTenantDb';
 
 const loadLevelRuntimeSupport = () => import('./levelIoWorkflowRuntimeSupport');
 
@@ -86,8 +87,8 @@ async function requireLevelIntegration(ctx: ActionContext): Promise<{
     throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Database connection unavailable' });
   }
 
-  const integration = await knex('rmm_integrations')
-    .where({ tenant: tenantId, provider: PROVIDER, is_active: true })
+  const integration = await workflowTenantTable(knex, tenantId, 'rmm_integrations')
+    .where({ provider: PROVIDER, is_active: true })
     .whereNotNull('connected_at')
     .first();
   if (!integration) {
@@ -197,8 +198,8 @@ export function registerLevelIoWorkflowActionsV2(): void {
     },
     handler: async (input, ctx) => {
       const { tenantId, knex } = await requireLevelIntegration(ctx);
-      const rows = await knex('assets')
-        .where({ tenant: tenantId, rmm_provider: PROVIDER })
+      const rows = await workflowTenantTable(knex, tenantId, 'assets')
+        .where({ rmm_provider: PROVIDER })
         .whereNotNull('rmm_device_id')
         .modify((qb: any) => {
           if (input.asset_id) qb.andWhere('asset_id', input.asset_id);
@@ -283,8 +284,8 @@ export function registerLevelIoWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       const { tenantId, knex, integrationId } = await requireLevelIntegration(ctx);
       if (!input.live) {
-        const rows = await knex('rmm_alerts')
-          .where({ tenant: tenantId, integration_id: integrationId, status: 'active' })
+        const rows = await workflowTenantTable(knex, tenantId, 'rmm_alerts')
+          .where({ integration_id: integrationId, status: 'active' })
           .modify((qb: any) => {
             if (input.device_id) qb.andWhere('external_device_id', input.device_id);
           })
@@ -326,8 +327,8 @@ export function registerLevelIoWorkflowActionsV2(): void {
       const { createLevelWorkflowClient } = await loadLevelRuntimeSupport();
       const client = await createLevelWorkflowClient(tenantId);
       await client.resolveAlert(input.alert_id);
-      await knex('rmm_alerts')
-        .where({ tenant: tenantId, integration_id: integrationId, external_alert_id: input.alert_id })
+      await workflowTenantTable(knex, tenantId, 'rmm_alerts')
+        .where({ integration_id: integrationId, external_alert_id: input.alert_id })
         .update({ status: 'resolved', updated_at: new Date().toISOString() });
       return { resolved: true, alert_id: input.alert_id };
     }

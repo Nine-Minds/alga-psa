@@ -95,6 +95,18 @@ vi.mock('@alga-psa/core/secrets', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    scoped: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    parentScopedTable: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantWhereColumn: (q: any) => q,
+  }),
   createTenantKnex: vi.fn(async () => ({ knex: knexMock })),
 }));
 
@@ -121,7 +133,7 @@ vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/tacticalApiClient', async ()
 
   class TacticalRmmClientMock {
     async request(args: { method: string; path: string }) {
-      const m = String(args.path).match(/\/api\/beta\/v1\/agent\/([^/]+)\//);
+      const m = String(args.path).match(/\/(?:api\/)?beta\/v1\/agent\/([^/]+)\//);
       if (!m) throw new Error(`Unexpected request path: ${args.path}`);
       const agentId = decodeURIComponent(m[1]!);
       const agent = tacticalAgentById[agentId];

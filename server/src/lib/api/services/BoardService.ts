@@ -85,11 +85,9 @@ export class BoardService extends BaseService<IBoard> {
     } = options;
 
     // Build base query
-    let dataQuery = knex('boards')
-      .where('tenant', context.tenant);
+    let dataQuery = this.buildTenantScopedQuery(knex, context);
 
-    let countQuery = knex('boards')
-      .where('tenant', context.tenant);
+    let countQuery = this.buildTenantScopedQuery(knex, context);
 
     // Apply include_inactive filter (default: exclude inactive)
     if (!filters.include_inactive) {
@@ -153,11 +151,8 @@ export class BoardService extends BaseService<IBoard> {
   async getById(id: string, context: ServiceContext): Promise<IBoard | null> {
     const { knex } = await this.getKnex();
 
-    const board = await knex('boards')
-      .where({
-        board_id: id,
-        tenant: context.tenant
-      })
+    const board = await this.buildTenantScopedQuery(knex, context)
+      .where('board_id', id)
       .first();
 
     return board as IBoard | null;

@@ -1,0 +1,76 @@
+{
+  "name": "@alga-psa/search",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./acl": {
+      "types": "./src/acl.ts",
+      "import": "./dist/acl.mjs",
+      "require": "./dist/acl.js"
+    },
+    "./normalize": {
+      "types": "./src/normalize.ts",
+      "import": "./dist/normalize.mjs",
+      "require": "./dist/normalize.js"
+    },
+    "./query": {
+      "types": "./src/query.ts",
+      "import": "./dist/query.mjs",
+      "require": "./dist/query.js"
+    },
+    "./runAppSearch": {
+      "types": "./src/runAppSearch.ts",
+      "import": "./dist/runAppSearch.mjs",
+      "require": "./dist/runAppSearch.js"
+    },
+    "./sql": {
+      "types": "./src/sql.ts",
+      "import": "./dist/sql.mjs",
+      "require": "./dist/sql.js"
+    },
+    "./upsert": {
+      "types": "./src/upsert.ts",
+      "import": "./dist/upsert.mjs",
+      "require": "./dist/upsert.js"
+    },
+    "./indexers": {
+      "types": "./src/indexers/index.ts",
+      "import": "./dist/indexers/index.mjs",
+      "require": "./dist/indexers/index.js"
+    },
+    "./indexers/*": {
+      "types": "./src/indexers/*.ts",
+      "import": "./dist/indexers/*.mjs",
+      "require": "./dist/indexers/*.js"
+    },
+    "./actions/searchActionShared": {
+      "types": "./src/actions/searchActionShared.ts",
+      "import": "./dist/actions/searchActionShared.mjs",
+      "require": "./dist/actions/searchActionShared.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@alga-psa/core": "*",
+    "@alga-psa/db": "*",
+    "@alga-psa/types": "*",
+    "knex": "^3.1.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0"
+  }
+}

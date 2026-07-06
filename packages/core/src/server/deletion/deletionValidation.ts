@@ -74,8 +74,10 @@ async function countDependency(
     return 0;
   }
 
+  // Raw tenant scoping (not @alga-psa/db's tenantDb) to avoid a core->db build
+  // cycle. config.table is always a standard `tenant`-column table here.
   const result = await trx(config.table)
-    .where({ tenant })
+    .where(`${config.table}.tenant`, tenant)
     .andWhere(config.foreignKey, entityId)
     .count<{ count: string }>('* as count')
     .first();

@@ -42,6 +42,7 @@ describe('Invoicing locale smoke', () => {
       'prepayment',
       'contractItems',
       'hub',
+      'invoiceSyncBadge',
       'templateManager',
       'taxBadge',
       'annotations',

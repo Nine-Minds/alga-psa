@@ -20,6 +20,7 @@ import {
 import { AppError } from '@alga-psa/core';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { runWithTenant, createTenantKnex } from '../../db';
+import { tenantDb } from '@alga-psa/db';
 import {
   AuthenticatedApiRequest,
   ForbiddenError,
@@ -288,11 +289,12 @@ export class ApiAccountingExportController extends ApiBaseController {
             { status: 400 }
           );
         }
+        const db = tenantDb(knex, tenant);
 
         if (batchId) {
-          const batch = await knex('accounting_export_batches')
+          const batch = await db.table('accounting_export_batches')
             .select('batch_id', 'adapter_type', 'target_realm', 'status')
-            .where({ tenant, batch_id: batchId })
+            .where({ batch_id: batchId })
             .first();
 
           if (!batch) {
@@ -309,9 +311,9 @@ export class ApiAccountingExportController extends ApiBaseController {
             );
           }
 
-          const lineInvoiceIds = await knex('accounting_export_lines')
+          const lineInvoiceIds = await db.table('accounting_export_lines')
             .distinct('invoice_id')
-            .where({ tenant, batch_id: batchId })
+            .where({ batch_id: batchId })
             .whereNotNull('invoice_id');
 
           const invoiceIds = lineInvoiceIds.map((row: any) => row.invoice_id).filter(Boolean);
@@ -326,9 +328,8 @@ export class ApiAccountingExportController extends ApiBaseController {
             });
           }
 
-          const deletedCount = await knex('tenant_external_entity_mappings')
+          const deletedCount = await db.table('tenant_external_entity_mappings')
             .where({
-              tenant,
               integration_type: adapterType,
               alga_entity_type: 'invoice'
             })
@@ -362,9 +363,9 @@ export class ApiAccountingExportController extends ApiBaseController {
             );
           }
 
-          const invoice = await knex('invoices')
+          const invoice = await db.table('invoices')
             .select('invoice_id')
-            .where({ tenant, invoice_number: invoiceNumber })
+            .where({ invoice_number: invoiceNumber })
             .first();
 
           if (!invoice?.invoice_id) {
@@ -377,9 +378,8 @@ export class ApiAccountingExportController extends ApiBaseController {
           invoiceId = invoice.invoice_id;
         }
 
-        const deletedCount = await knex('tenant_external_entity_mappings')
+        const deletedCount = await db.table('tenant_external_entity_mappings')
           .where({
-            tenant,
             integration_type: adapterType,
             alga_entity_type: 'invoice',
             alga_entity_id: invoiceId

@@ -160,7 +160,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
               onClick={() => handleEdit(record)}
               disabled={isReadOnly}
             >
-              {t('pricingSchedules.list.actions.editSchedule', { defaultValue: 'Edit Schedule' })}
+              {t('pricingSchedules.list.actions.editSchedule', { defaultValue: 'Edit schedule' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-pricing-schedule-${value}`}

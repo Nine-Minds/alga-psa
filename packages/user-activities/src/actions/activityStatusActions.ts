@@ -4,7 +4,7 @@ import {
   ActivityType,
   Activity
 } from "@alga-psa/types";
-import { createTenantKnex } from "@alga-psa/db";
+import { createTenantKnex, tenantDb } from "@alga-psa/db";
 import { withAuth } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
 import { withTransaction } from '@alga-psa/db';
@@ -35,23 +35,28 @@ export const updateActivityStatus = withAuth(async (
 
     // Update the status based on the activity type
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant);
+      const tenantScopedTable = (table: string) => scopedDb.table(table);
+
       switch (activityType) {
         case ActivityType.SCHEDULE:
-          await trx("schedule_entries")
+          await tenantScopedTable("schedule_entries")
             .where("entry_id", activityId)
-            .where("tenant", tenant)
             .update({ status: newStatus, updated_at: new Date() });
           break;
           
         case ActivityType.PROJECT_TASK:
           // For project tasks, we need to get the status mapping ID
-          const statusMapping = await trx("project_status_mappings")
-            .join("statuses", function() {
-              this.on("project_status_mappings.status_id", "statuses.status_id")
-                  .andOn("project_status_mappings.tenant", "statuses.tenant");
+          const statusMapping = await tenantScopedTable("project_status_mappings")
+            .modify((queryBuilder) => {
+              scopedDb.tenantJoin(
+                queryBuilder,
+                "statuses",
+                "project_status_mappings.status_id",
+                "statuses.status_id"
+              );
             })
             .where("statuses.name", newStatus)
-            .where("project_status_mappings.tenant", tenant)
             .select("project_status_mappings.project_status_mapping_id")
             .first();
             
@@ -59,9 +64,8 @@ export const updateActivityStatus = withAuth(async (
             throw new Error(`Status '${newStatus}' not found for project tasks`);
           }
           
-          await trx("project_tasks")
+          await tenantScopedTable("project_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .update({ 
               project_status_mapping_id: statusMapping.project_status_mapping_id,
               updated_at: new Date()
@@ -70,9 +74,8 @@ export const updateActivityStatus = withAuth(async (
           
         case ActivityType.TICKET:
           // For tickets, we need to get the status ID
-          const status = await trx("statuses")
+          const status = await tenantScopedTable("statuses")
             .where("name", newStatus)
-            .where("tenant", tenant)
             .select("status_id")
             .first();
             
@@ -80,9 +83,8 @@ export const updateActivityStatus = withAuth(async (
             throw new Error(`Status '${newStatus}' not found for tickets`);
           }
           
-          await trx("tickets")
+          await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
-            .where("tenant", tenant)
             .update({
               status_id: status.status_id,
               updated_at: new Date()
@@ -90,9 +92,8 @@ export const updateActivityStatus = withAuth(async (
           break;
           
         case ActivityType.TIME_ENTRY:
-          await trx("time_entries")
+          await tenantScopedTable("time_entries")
             .where("entry_id", activityId)
-            .where("tenant", tenant)
             .update({ 
               approval_status: newStatus,
               updated_at: new Date()
@@ -100,9 +101,8 @@ export const updateActivityStatus = withAuth(async (
           break;
           
         case ActivityType.WORKFLOW_TASK:
-          await trx("workflow_tasks")
+          await tenantScopedTable("workflow_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .update({ 
               status: newStatus,
               updated_at: new Date()
@@ -160,35 +160,33 @@ export const updateActivityStatusById = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
       switch (activityType) {
         case ActivityType.TICKET:
-          return await trx("tickets")
+          return await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
-            .where("tenant", tenant)
             .update({
               status_id: statusId,
               updated_at: new Date(),
             });
 
         case ActivityType.PROJECT_TASK:
-          return await trx("project_tasks")
+          return await tenantScopedTable("project_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .update({
               project_status_mapping_id: statusId,
               updated_at: new Date(),
             });
 
         case ActivityType.SCHEDULE:
-          return await trx("schedule_entries")
+          return await tenantScopedTable("schedule_entries")
             .where("entry_id", activityId)
-            .where("tenant", tenant)
             .update({ status: statusId, updated_at: new Date() });
 
         case ActivityType.WORKFLOW_TASK:
-          return await trx("workflow_tasks")
+          return await tenantScopedTable("workflow_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .update({ status: statusId, updated_at: new Date() });
 
         default:
@@ -240,17 +238,18 @@ export const getActivityStatusOptions = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
+    const tenantScopedTable = (table: string) => scopedDb.table(table);
+
     if (activityType === ActivityType.TICKET) {
-      const ticket = await trx("tickets")
+      const ticket = await tenantScopedTable("tickets")
         .where("ticket_id", activityId)
-        .where("tenant", tenant)
         .select("board_id")
         .first();
 
       if (!ticket) return [];
 
-      const statuses = await trx("statuses")
-        .where("tenant", tenant)
+      const statuses = await tenantScopedTable("statuses")
         .where("status_type", "ticket")
         .modify((qb) => {
           if (ticket.board_id) qb.andWhere("board_id", ticket.board_id);
@@ -268,15 +267,17 @@ export const getActivityStatusOptions = withAuth(async (
 
     if (activityType === ActivityType.PROJECT_TASK) {
       // Need the task's project and phase to scope mappings correctly
-      const task = await trx("project_tasks")
-        .leftJoin("project_phases", function () {
-          this.on("project_tasks.phase_id", "project_phases.phase_id").andOn(
-            "project_tasks.tenant",
-            "project_phases.tenant"
+      const task = await tenantScopedTable("project_tasks")
+        .modify((queryBuilder) => {
+          scopedDb.tenantJoin(
+            queryBuilder,
+            "project_phases",
+            "project_tasks.phase_id",
+            "project_phases.phase_id",
+            { type: "left" }
           );
         })
         .where("project_tasks.task_id", activityId)
-        .where("project_tasks.tenant", tenant)
         .select(
           "project_phases.project_id as project_id",
           "project_tasks.phase_id as phase_id"
@@ -286,14 +287,23 @@ export const getActivityStatusOptions = withAuth(async (
       if (!task) return [];
 
       // First, check for phase-specific mappings
-      const phaseMappings = await trx("project_status_mappings as psm")
-        .leftJoin("statuses as s", function () {
-          this.on("psm.status_id", "=", "s.status_id").andOn("psm.tenant", "=", "s.tenant");
+      const phaseMappings = await scopedDb.table("project_status_mappings as psm")
+        .modify((queryBuilder) => {
+          scopedDb.tenantJoin(
+            queryBuilder,
+            "statuses as s",
+            "psm.status_id",
+            "s.status_id",
+            { type: "left" }
+          );
+          scopedDb.tenantJoin(
+            queryBuilder,
+            "standard_statuses as ss",
+            "psm.standard_status_id",
+            "ss.standard_status_id",
+            { type: "left" }
+          );
         })
-        .leftJoin("standard_statuses as ss", function () {
-          this.on("psm.standard_status_id", "=", "ss.standard_status_id");
-        })
-        .where("psm.tenant", tenant)
         .where("psm.project_id", task.project_id)
         .where("psm.phase_id", task.phase_id)
         .select(
@@ -316,14 +326,23 @@ export const getActivityStatusOptions = withAuth(async (
       }
 
       // Fall back to project-default mappings (phase_id IS NULL)
-      const projectMappings = await trx("project_status_mappings as psm")
-        .leftJoin("statuses as s", function () {
-          this.on("psm.status_id", "=", "s.status_id").andOn("psm.tenant", "=", "s.tenant");
+      const projectMappings = await scopedDb.table("project_status_mappings as psm")
+        .modify((queryBuilder) => {
+          scopedDb.tenantJoin(
+            queryBuilder,
+            "statuses as s",
+            "psm.status_id",
+            "s.status_id",
+            { type: "left" }
+          );
+          scopedDb.tenantJoin(
+            queryBuilder,
+            "standard_statuses as ss",
+            "psm.standard_status_id",
+            "ss.standard_status_id",
+            { type: "left" }
+          );
         })
-        .leftJoin("standard_statuses as ss", function () {
-          this.on("psm.standard_status_id", "=", "ss.standard_status_id");
-        })
-        .where("psm.tenant", tenant)
         .where("psm.project_id", task.project_id)
         .whereNull("psm.phase_id")
         .select(
@@ -369,12 +388,13 @@ export const updateActivityPriority = withAuth(async (
 
     // Update the priority based on the activity type
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
       switch (activityType) {
         case ActivityType.TICKET:
           // For tickets, we need to get the priority ID
-          const ticketPriority = await trx("priorities")
+          const ticketPriority = await tenantScopedTable("priorities")
             .where("priority_name", newPriority)
-            .where("tenant", tenant)
             .where("item_type", "ticket")
             .select("priority_id")
             .first();
@@ -383,9 +403,8 @@ export const updateActivityPriority = withAuth(async (
             throw new Error(`Priority '${newPriority}' not found for tickets`);
           }
 
-          await trx("tickets")
+          await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
-            .where("tenant", tenant)
             .update({
               priority_id: ticketPriority.priority_id,
               updated_at: new Date()
@@ -394,9 +413,8 @@ export const updateActivityPriority = withAuth(async (
 
         case ActivityType.PROJECT_TASK:
           // For project tasks, we need to get the priority ID
-          const projectTaskPriority = await trx("priorities")
+          const projectTaskPriority = await tenantScopedTable("priorities")
             .where("priority_name", newPriority)
-            .where("tenant", tenant)
             .where("item_type", "project_task")
             .select("priority_id")
             .first();
@@ -405,9 +423,8 @@ export const updateActivityPriority = withAuth(async (
             throw new Error(`Priority '${newPriority}' not found for project tasks`);
           }
 
-          await trx("project_tasks")
+          await tenantScopedTable("project_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .update({
               priority_id: projectTaskPriority.priority_id,
               updated_at: new Date()
@@ -415,9 +432,8 @@ export const updateActivityPriority = withAuth(async (
           break;
 
         case ActivityType.WORKFLOW_TASK:
-          await trx("workflow_tasks")
+          await tenantScopedTable("workflow_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .update({
               priority: newPriority,
               updated_at: new Date()
@@ -472,11 +488,12 @@ export const updateActivityPriorityById = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
       switch (activityType) {
         case ActivityType.TICKET:
-          await trx("tickets")
+          await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
-            .where("tenant", tenant)
             .update({
               priority_id: priorityId,
               updated_at: new Date()
@@ -484,9 +501,8 @@ export const updateActivityPriorityById = withAuth(async (
           break;
 
         case ActivityType.PROJECT_TASK:
-          await trx("project_tasks")
+          await tenantScopedTable("project_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .update({
               priority_id: priorityId,
               updated_at: new Date()
@@ -539,12 +555,13 @@ export const reassignActivity = withAuth(async (
 
     // Update the assignee based on the activity type
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
       switch (activityType) {
         case ActivityType.SCHEDULE:
           // For schedule entries, we need to update the assigned_user_ids array
-          const scheduleEntry = await trx("schedule_entries")
+          const scheduleEntry = await tenantScopedTable("schedule_entries")
             .where("entry_id", activityId)
-            .where("tenant", tenant)
             .first();
             
           if (!scheduleEntry) {
@@ -552,9 +569,8 @@ export const reassignActivity = withAuth(async (
           }
           
           // Replace the assigned users with the new assignee
-          await trx("schedule_entries")
+          await tenantScopedTable("schedule_entries")
             .where("entry_id", activityId)
-            .where("tenant", tenant)
             .update({ 
               assigned_user_ids: [newAssigneeId],
               updated_at: new Date()
@@ -562,9 +578,8 @@ export const reassignActivity = withAuth(async (
           break;
           
         case ActivityType.PROJECT_TASK:
-          await trx("project_tasks")
+          await tenantScopedTable("project_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .update({ 
               assigned_to: newAssigneeId,
               updated_at: new Date()
@@ -572,9 +587,8 @@ export const reassignActivity = withAuth(async (
           break;
           
         case ActivityType.TICKET:
-          await trx("tickets")
+          await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
-            .where("tenant", tenant)
             .update({ 
               assigned_to: newAssigneeId,
               updated_at: new Date()
@@ -583,9 +597,8 @@ export const reassignActivity = withAuth(async (
           
         case ActivityType.WORKFLOW_TASK:
           // For workflow tasks, we need to update the assigned_users array
-          const workflowTask = await trx("workflow_tasks")
+          const workflowTask = await tenantScopedTable("workflow_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .first();
             
           if (!workflowTask) {
@@ -593,9 +606,8 @@ export const reassignActivity = withAuth(async (
           }
           
           // Replace the assigned users with the new assignee
-          await trx("workflow_tasks")
+          await tenantScopedTable("workflow_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .update({ 
               assigned_users: [newAssigneeId],
               updated_at: new Date()

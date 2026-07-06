@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { knex as createKnex } from 'knex';
 import { PLAYWRIGHT_DB_CONFIG } from './utils/playwrightDatabaseConfig';
@@ -21,6 +22,8 @@ function adminDb() {
   });
 }
 
+const TEST_DISCOVERY_TENANT = '__test_discovery__';
+
 test.describe('Tenant Project Task Status Library Management', () => {
   test.setTimeout(180_000); // Allow time for migrations/server start
 
@@ -33,6 +36,14 @@ test.describe('Tenant Project Task Status Library Management', () => {
     { resource: 'security_settings', action: 'read' },
     { resource: 'security_settings', action: 'update' },
   ];
+
+  function tenantTable(tenantId: string, table: string) {
+    return tenantDb(db, tenantId).table(table);
+  }
+
+  function unscopedTestTable(table: string, reason: string) {
+    return tenantDb(db, TEST_DISCOVERY_TENANT).unscoped(table, reason);
+  }
 
   test.beforeEach(async ({ page }) => {
     // Pages load slowly in CI; bump defaults to reduce flaky navigation timeouts
@@ -136,7 +147,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
     await expect(page.locator('text=Code Review')).toBeVisible();
 
     // Verify the status is in the database
-    const status = await db('statuses')
+    const status = await tenantTable(tenantData.tenant.tenantId, 'statuses')
       .where({
         tenant: tenantData.tenant.tenantId,
         item_type: 'project_task',
@@ -161,7 +172,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
     });
 
     // Create a status first
-    const [status] = await db('statuses')
+    const [status] = await tenantTable(tenantData.tenant.tenantId, 'statuses')
       .insert({
         tenant: tenantData.tenant.tenantId,
         item_type: 'project_task',
@@ -206,7 +217,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
     await expect(page.locator('text=QA Testing')).toBeVisible();
 
     // Verify in database
-    const updatedStatus = await db('statuses')
+    const updatedStatus = await tenantTable(tenantData.tenant.tenantId, 'statuses')
       .where({ status_id: status.status_id, tenant: tenantData.tenant.tenantId })
       .first();
 
@@ -229,7 +240,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
     });
 
     // Create a status
-    const [status] = await db('statuses')
+    const [status] = await tenantTable(tenantData.tenant.tenantId, 'statuses')
       .insert({
         tenant: tenantData.tenant.tenantId,
         item_type: 'project_task',
@@ -255,7 +266,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
     await expect(page.locator('text=Temporary Status')).not.toBeVisible();
 
     // Verify deleted from database
-    const deletedStatus = await db('statuses')
+    const deletedStatus = await tenantTable(tenantData.tenant.tenantId, 'statuses')
       .where({ status_id: status.status_id, tenant: tenantData.tenant.tenantId })
       .first();
 
@@ -274,7 +285,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
     });
 
     // Create a status
-    const [status] = await db('statuses')
+    const [status] = await tenantTable(tenantData.tenant.tenantId, 'statuses')
       .insert({
         tenant: tenantData.tenant.tenantId,
         item_type: 'project_task',
@@ -288,7 +299,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
       .returning('*');
 
     // Create a company for the project
-    const [company] = await db('companies')
+    const [company] = await tenantTable(tenantData.tenant.tenantId, 'companies')
       .insert({
         tenant: tenantData.tenant.tenantId,
         company_name: 'Test Company',
@@ -296,7 +307,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
       .returning('*');
 
     // Create a project that uses this status
-    const [project] = await db('projects')
+    const [project] = await tenantTable(tenantData.tenant.tenantId, 'projects')
       .insert({
         tenant: tenantData.tenant.tenantId,
         company_id: company.company_id,
@@ -305,7 +316,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
       .returning('*');
 
     // Add the status to the project
-    await db('project_status_mappings').insert({
+    await tenantTable(tenantData.tenant.tenantId, 'project_status_mappings').insert({
       tenant: tenantData.tenant.tenantId,
       project_id: project.project_id,
       status_id: status.status_id,
@@ -330,7 +341,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
     await expect(page.locator('text=In Use Status')).toBeVisible();
 
     // Verify status still exists in database
-    const stillExists = await db('statuses')
+    const stillExists = await tenantTable(tenantData.tenant.tenantId, 'statuses')
       .where({ status_id: status.status_id, tenant: tenantData.tenant.tenantId })
       .first();
 
@@ -349,7 +360,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
     });
 
     // Create multiple statuses
-    const [status1] = await db('statuses')
+    const [status1] = await tenantTable(tenantData.tenant.tenantId, 'statuses')
       .insert({
         tenant: tenantData.tenant.tenantId,
         item_type: 'project_task',
@@ -362,7 +373,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
       })
       .returning('*');
 
-    const [status2] = await db('statuses')
+    const [status2] = await tenantTable(tenantData.tenant.tenantId, 'statuses')
       .insert({
         tenant: tenantData.tenant.tenantId,
         item_type: 'project_task',
@@ -405,10 +416,10 @@ test.describe('Tenant Project Task Status Library Management', () => {
     expect(reloadFirstBox!.y).toBeLessThan(reloadSecondBox!.y);
 
     // Verify in database
-    const status1Updated = await db('statuses')
+    const status1Updated = await tenantTable(tenantData.tenant.tenantId, 'statuses')
       .where({ status_id: status1.status_id, tenant: tenantData.tenant.tenantId })
       .first();
-    const status2Updated = await db('statuses')
+    const status2Updated = await tenantTable(tenantData.tenant.tenantId, 'statuses')
       .where({ status_id: status2.status_id, tenant: tenantData.tenant.tenantId })
       .first();
 
@@ -428,7 +439,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
     });
 
     // Seed existing statuses to create an order conflict (orders 1 and 2 already used)
-    await db('statuses').insert([
+    await tenantTable(tenantData.tenant.tenantId, 'statuses').insert([
       {
         status_id: uuidv4(),
         tenant: tenantData.tenant.tenantId,
@@ -458,7 +469,10 @@ test.describe('Tenant Project Task Status Library Management', () => {
     const noConflictStandardId = uuidv4();
 
     try {
-      await db('standard_statuses').insert([
+      await unscopedTestTable(
+        'standard_statuses',
+        'Playwright task status import test seeds global standard status catalog'
+      ).insert([
         {
           standard_status_id: orderConflictStandardId,
           name: 'Standard Conflict',
@@ -514,14 +528,14 @@ test.describe('Tenant Project Task Status Library Management', () => {
       await expect(page.locator('text=Standard Unique')).toBeVisible();
 
       // Verify database inserts with resolved order numbers
-      const conflictStatus = await db('statuses')
+      const conflictStatus = await tenantTable(tenantData.tenant.tenantId, 'statuses')
         .where({
           tenant: tenantData.tenant.tenantId,
           name: 'Standard Conflict',
           item_type: 'project_task',
         })
         .first();
-      const uniqueStatus = await db('statuses')
+      const uniqueStatus = await tenantTable(tenantData.tenant.tenantId, 'statuses')
         .where({
           tenant: tenantData.tenant.tenantId,
           name: 'Standard Unique',
@@ -534,7 +548,10 @@ test.describe('Tenant Project Task Status Library Management', () => {
       expect(uniqueStatus).toBeTruthy();
       expect(uniqueStatus.order_number).toBe(5);
     } finally {
-      await db('standard_statuses')
+      await unscopedTestTable(
+        'standard_statuses',
+        'Playwright task status import test cleans up global standard status catalog'
+      )
         .whereIn('standard_status_id', [orderConflictStandardId, noConflictStandardId])
         .del()
         .catch(() => undefined);
@@ -630,7 +647,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
     });
 
     // Create a closed status
-    const [closedStatus] = await db('statuses')
+    const [closedStatus] = await tenantTable(tenantData.tenant.tenantId, 'statuses')
       .insert({
         tenant: tenantData.tenant.tenantId,
         item_type: 'project_task',
@@ -644,7 +661,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
       .returning('*');
 
     // Create an open status
-    const [openStatus] = await db('statuses')
+    const [openStatus] = await tenantTable(tenantData.tenant.tenantId, 'statuses')
       .insert({
         tenant: tenantData.tenant.tenantId,
         item_type: 'project_task',
@@ -695,7 +712,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
     });
 
     // Create multiple statuses
-    await db('statuses').insert([
+    await tenantTable(tenantData.tenant.tenantId, 'statuses').insert([
       {
         tenant: tenantData.tenant.tenantId,
         item_type: 'project_task',

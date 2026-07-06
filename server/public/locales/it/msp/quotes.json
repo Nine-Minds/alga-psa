@@ -26,7 +26,8 @@
       "sendReminder": "Invia promemoria",
       "sendToClient": "Invia al cliente",
       "setAsDefault": "Imposta come predefinito",
-      "submitForApproval": "Invia per l'approvazione"
+      "submitForApproval": "Invia per l'approvazione",
+      "done": "Fatto"
     },
     "badges": {
       "standard": "Standard"
@@ -151,7 +152,8 @@
       "cancel": "Annulla",
       "previewPdf": "Anteprima PDF",
       "backToQuotes": "Torna ai preventivi",
-      "backToTemplates": "Torna ai modelli di preventivo"
+      "backToTemplates": "Torna ai modelli di preventivo",
+      "convertToSalesOrder": "Converti in ordine di vendita"
     },
     "headings": {
       "editQuote": "Modifica preventivo",
@@ -351,7 +353,8 @@
       "openConvertedInvoice": "Apri fattura convertita",
       "preview": "Anteprima",
       "saveAsTemplate": "Salva come modello",
-      "back": "Indietro"
+      "back": "Indietro",
+      "openConvertedSalesOrder": "Convertito in {{number}}"
     },
     "sections": {
       "activityLog": "Registro delle attività",
@@ -431,7 +434,8 @@
       "sent": "Preventivo inviato al cliente.",
       "submittedForApproval": "Preventivo inviato per l'approvazione interna.",
       "templateAssigned": "Modello di documento assegnato.",
-      "templateCleared": "Modello di documento deselezionato (utilizzando l'impostazione predefinita)."
+      "templateCleared": "Modello di documento deselezionato (utilizzando l'impostazione predefinita).",
+      "createdSalesOrder": "Creato l'ordine di vendita in bozza {{number}}. Le righe di prodotto verranno fatturate all'evasione."
     },
     "preview": {
       "loading": "Caricamento anteprima..."
@@ -447,6 +451,9 @@
       "groupHeading": "Sede",
       "unassigned": "Voci senza sede",
       "subtotal": "Subtotale sede"
+    },
+    "availability": {
+      "onHand": "Disponibili: {{count}}"
     }
   },
   "quoteLineItems": {
@@ -567,6 +574,10 @@
       "both": {
         "label": "Contratto + Fattura",
         "description": "Crea sia una bozza di contratto (per articoli ricorrenti) che una bozza di fattura (per articoli una tantum)."
+      },
+      "salesOrder": {
+        "label": "Ordine di vendita (righe prodotto)",
+        "description": "Sposta le righe di prodotto una tantum in un ordine di vendita in bozza che viene fatturato all'evasione. Queste righe sono escluse dalla fattura in bozza, così nulla viene fatturato due volte."
       }
     },
     "sections": {
@@ -604,12 +615,19 @@
       "convertQuote": "Converti preventivo",
       "invoice": "Crea bozza di fattura",
       "both": "Crea entrambi i record",
-      "converting": "Conversione..."
+      "converting": "Conversione...",
+      "salesOrder": "Crea ordine di vendita"
     },
     "errors": {
       "convert": "Impossibile convertire il preventivo",
       "load": "Impossibile caricare l'anteprima della conversione",
       "title": "Errore"
+    },
+    "salesOrder": {
+      "successTitle": "Ordine di vendita {{number}} creato",
+      "successBody": "Le righe di prodotto verranno fatturate all'evasione.",
+      "openSalesOrders": "Apri ordini di vendita",
+      "note": "Le righe di prodotto una tantum passano a un ordine di vendita in bozza (fatturato all'evasione) e sono escluse da qualsiasi conversione in fattura bozza, così nulla viene fatturato due volte."
     }
   },
   "quoteApproval": {

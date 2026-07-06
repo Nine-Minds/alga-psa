@@ -76,6 +76,7 @@
     "openMenu": "Open menu",
     "searchPlaceholder": "Search projects, tasks, and comments",
     "statusPlaceholder": "Select status",
+    "projectStatusPlaceholder": "Filter by status",
     "contactPlaceholder": "Filter by contact",
     "managerPlaceholder": "All managers",
     "deadlinePlaceholder": "Filter by deadline",
@@ -92,6 +93,11 @@
       "all": "All projects",
       "active": "Active projects",
       "inactive": "Inactive projects"
+    },
+    "projectStatusOptions": {
+      "open": "All open statuses",
+      "all": "All statuses",
+      "closedSuffix": "{{name}} (closed)"
     },
     "columns": {
       "number": "Number",

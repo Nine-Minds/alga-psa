@@ -17,6 +17,7 @@ const { TEMPLATES: projectTemplates } = require('../../migrations/utils/template
 const { TEMPLATES: invoiceTemplates } = require('../../migrations/utils/templates/internal/invoices.cjs');
 const { TEMPLATES: systemTemplates } = require('../../migrations/utils/templates/internal/system.cjs');
 const { TEMPLATES: appointmentTemplates } = require('../../migrations/utils/templates/internal/appointments.cjs');
+const { TEMPLATES: slaTemplates } = require('../../migrations/utils/templates/internal/sla.cjs');
 
 const ALL_TEMPLATES = [
   ...ticketTemplates,
@@ -24,7 +25,10 @@ const ALL_TEMPLATES = [
   ...invoiceTemplates,
   ...systemTemplates,
   ...appointmentTemplates,
+  ...slaTemplates,
 ];
+
+exports.ALL_TEMPLATES = ALL_TEMPLATES;
 
 exports.seed = async function (knex) {
   console.log('Seed 87: Upserting internal notification templates from source-of-truth files...');

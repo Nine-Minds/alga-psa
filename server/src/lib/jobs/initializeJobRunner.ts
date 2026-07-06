@@ -1,10 +1,15 @@
 import logger from '@alga-psa/core/logger';
+import { registerJobRunnerAccessor } from '@alga-psa/jobs/runner';
 import { JobRunnerFactory, getJobRunner } from './JobRunnerFactory';
 import { IJobRunner } from './interfaces';
 import { StorageService } from '../storage/StorageService';
 import { JobService } from '../../services/job.service';
 import { registerAllJobHandlers } from './registerAllHandlers';
 import { isEnterprise } from '../features';
+
+// Let shared handlers (e.g. workflowScheduledRunHandlers) reach the runner
+// without importing the server-bound factory.
+registerJobRunnerAccessor(() => getJobRunner());
 
 /**
  * Initialize the job runner and register all job handlers

@@ -16,7 +16,13 @@ export interface LicenseClaims {
   cust: string;
   /** Tier unlocked by this license */
   tier: LicenseTier;
-  /** Optional seat count (informational in v1; not enforced) */
+  /**
+   * Optional seat count. ENFORCED on EE self-host at paid tiers: user creation
+   * is blocked at this many active internal users (see
+   * ee/server/src/lib/license/userSeatGuard.ts). Absent = unlimited. Customers
+   * change it in the licensing portal; the new count arrives via check-in
+   * re-sign (or the License page's "Refresh license now").
+   */
   seats?: number;
   /** Issued-at (seconds since epoch) */
   iat: number;

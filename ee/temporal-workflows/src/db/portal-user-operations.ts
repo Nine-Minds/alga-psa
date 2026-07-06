@@ -1,4 +1,5 @@
 import { Context } from '@temporalio/activity';
+import { tenantDb } from '@alga-psa/db';
 import {
   getAdminConnection,
   retryOnAdminReadOnly,
@@ -92,13 +93,14 @@ export async function rollbackPortalUserInDB(userId: string, tenantId: string): 
 
   try {
     await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenantId);
       // Delete user associations in reverse order
-      await trx('user_roles')
-        .where({ user_id: userId, tenant: tenantId })
+      await db.table('user_roles')
+        .where({ user_id: userId })
         .delete();
 
-      await trx('users')
-        .where({ user_id: userId, tenant: tenantId })
+      await db.table('users')
+        .where({ user_id: userId })
         .delete();
     });
 

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { enqueueUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueue';
+
+const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
 interface MicrosoftNotification {
   changeType: string;
@@ -23,7 +25,7 @@ interface MicrosoftWebhookPayload {
 }
 
 async function assertTenantEmailProductAccess(trx: any, tenantId: string): Promise<void> {
-  const tenant = await trx('tenants').where({ tenant: tenantId }).first('product_code');
+  const tenant = await tenantDb(trx, tenantId).table('tenants').first('product_code');
   const productCode = typeof tenant?.product_code === 'string' ? tenant.product_code : 'psa';
   if (productCode !== 'psa' && productCode !== 'algadesk') {
     throw new Error(`Product access denied for tenant ${tenantId}`);
@@ -123,27 +125,32 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
         console.log(`🔍 Processing notification for subscription: ${providerId}`);
 
         await withTransaction(knex, async (trx) => {
-        // Look up provider by subscription ID via microsoft vendor config (consistent with Google design)
-        const row = await trx('microsoft_email_provider_config as mc')
-          .join('email_providers as ep', function() {
-            this.on('mc.email_provider_id', '=', 'ep.id')
-                .andOn('mc.tenant', '=', 'ep.tenant');
-          })
-          .where('mc.webhook_subscription_id', providerId)
-          .andWhere('ep.provider_type', 'microsoft')
-          .first(
-            'ep.*',
-            trx.raw('mc.client_id as mc_client_id'),
-            trx.raw('mc.client_secret as mc_client_secret'),
-            trx.raw('mc.tenant_id as mc_tenant_id'),
-            trx.raw('mc.access_token as mc_access_token'),
-            trx.raw('mc.refresh_token as mc_refresh_token'),
-            trx.raw('mc.token_expires_at as mc_token_expires_at'),
-            trx.raw('mc.webhook_subscription_id as mc_webhook_subscription_id'),
-            trx.raw('mc.webhook_expires_at as mc_webhook_expires_at'),
-            trx.raw('mc.webhook_verification_token as mc_webhook_verification_token'),
-            trx.raw('mc.folder_filters as mc_folder_filters')
+          // Look up provider by subscription ID via microsoft vendor config (consistent with Google design)
+          const discoveryDb = tenantDb(trx, PROVIDER_TENANT_DISCOVERY);
+          const providerQuery = discoveryDb.unscoped(
+            'microsoft_email_provider_config as mc',
+            'tenant discovery from Microsoft email webhook subscription'
           );
+          discoveryDb.tenantJoin(providerQuery, 'email_providers as ep', 'mc.email_provider_id', 'ep.id', {
+            rootTenantColumn: 'mc.tenant',
+          });
+
+          const row: any = await providerQuery
+            .where('mc.webhook_subscription_id', providerId)
+            .andWhere('ep.provider_type', 'microsoft')
+            .first(
+              'ep.*',
+              trx.raw('mc.client_id as mc_client_id'),
+              trx.raw('mc.client_secret as mc_client_secret'),
+              trx.raw('mc.tenant_id as mc_tenant_id'),
+              trx.raw('mc.access_token as mc_access_token'),
+              trx.raw('mc.refresh_token as mc_refresh_token'),
+              trx.raw('mc.token_expires_at as mc_token_expires_at'),
+              trx.raw('mc.webhook_subscription_id as mc_webhook_subscription_id'),
+              trx.raw('mc.webhook_expires_at as mc_webhook_expires_at'),
+              trx.raw('mc.webhook_verification_token as mc_webhook_verification_token'),
+              trx.raw('mc.folder_filters as mc_folder_filters')
+            );
 
         if (!row) {
           console.error(`❌ Provider not found for subscription: ${providerId}`);

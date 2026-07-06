@@ -571,13 +571,15 @@
       "name": "Nombre",
       "email": "Correo electrónico",
       "phoneNumber": "Número de teléfono",
-      "actions": "Acciones"
+      "actions": "Acciones",
+      "role": "Rol"
     },
     "filter": {
       "show": "Mostrar:",
       "active": "Contactos activos",
       "inactive": "Contactos inactivos",
-      "all": "Todos los contactos"
+      "all": "Todos los contactos",
+      "searchPlaceholder": "Buscar contactos..."
     },
     "actions": {
       "openMenu": "Abrir menú",
@@ -603,7 +605,7 @@
     "description": "Área de carga para imágenes de perfil de contactos"
   },
   "contactNotesPanel": {
-    "title": "Notas e información rápida",
+    "title": "Notas",
     "description": "Panel de notas enriquecidas con visualización de la nota heredada y acciones de guardar/reintentar",
     "legacy": {
       "initialNote": "Nota inicial"

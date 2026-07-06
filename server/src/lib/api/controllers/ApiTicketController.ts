@@ -7,18 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { TicketService } from '../services/TicketService';
 import { 
-  createTicketSchema,
-  updateTicketSchema,
-  ticketListQuerySchema,
-  ticketSearchSchema,
-  ticketStatsResponseSchema,
-  createTicketMaterialSchema,
-  createTicketCommentSchema,
-  updateTicketCommentSchema,
-  updateTicketStatusSchema,
-  updateTicketAssignmentSchema,
-  createTicketFromAssetSchema,
-  linkTicketAssetSchema
+  createTicketSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema
 } from '../schemas/ticket';
 import { 
   ApiKeyServiceForApi 
@@ -35,12 +24,10 @@ import {
 } from '../../auth/rbac';
 import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
-import { compileResourceReadAuthorizationSql } from '@alga-psa/authorization/kernel';
+import { compileTenantScopedResourceReadAuthorizationSql } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import {
-  createTicketRelationshipSqlAdapter,
-  fetchTicketAdditionalUserIds,
-} from '@alga-psa/tickets/lib/ticketAuthorizationSql';
+import { createTicketRelationshipSqlAdapter } from '@alga-psa/tickets/lib/ticketAuthorizationSql';
+import { type TenantScopedQuery, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { fetchTimeEntriesForTicketCore } from '@alga-psa/scheduling/actions/timeEntryTicketActions';
 import {
@@ -69,7 +56,7 @@ import { ZodError } from 'zod';
 async function resolveTicketReadAuthorizationApplier(
   apiRequest: AuthenticatedApiRequest,
   knex: Knex
-): Promise<((query: Knex.QueryBuilder) => void) | null> {
+): Promise<((query: TenantScopedQuery) => void) | null> {
   const subject = buildAuthorizationPrincipalSubject(
     apiRequest.context.user,
     apiRequest.context.apiKeyId
@@ -82,8 +69,8 @@ async function resolveTicketReadAuthorizationApplier(
     knex,
   });
   const adapter = createTicketRelationshipSqlAdapter(knex, subject.tenant);
-  const compile = (query: Knex.QueryBuilder) =>
-    compileResourceReadAuthorizationSql(query, {
+  const compile = (query: TenantScopedQuery) =>
+    compileTenantScopedResourceReadAuthorizationSql(query, {
       resourceType: 'ticket',
       action: 'read',
       builtinRules: [],
@@ -92,10 +79,11 @@ async function resolveTicketReadAuthorizationApplier(
     });
 
   // Probe representability on a throwaway builder before committing to SQL.
-  if (!compile(knex('tickets as t').where('t.tenant', subject.tenant)).supported) {
+  const probe = tenantDb(knex, subject.tenant).scoped('tickets as t');
+  if (!compile(probe).supported) {
     return null;
   }
-  return (query: Knex.QueryBuilder) => {
+  return (query: TenantScopedQuery) => {
     compile(query);
   };
 }
@@ -123,16 +111,12 @@ export class ApiTicketController extends ApiBaseController {
     this.ticketService = ticketService;
   }
 
-  // A ticket is "assigned" to its primary `assigned_to` OR any
-  // `ticket_resources` co-assignee — matching the web server-action and the SQL
-  // adapter (createTicketRelationshipSqlAdapter). Callers batch-fetch the
-  // co-assignees via fetchTicketAdditionalUserIds and pass them in.
-  private buildTicketRecordContext(ticket: Record<string, any>, additionalUserIds: string[] = []) {
+  // A ticket is "assigned" only to its primary `assigned_to` for read authorization.
+  // Do not trust `ticket_resources.additional_user_id` as a read grant because
+  // time-entry workflows can create those rows without ticket row-level authorization.
+  private buildTicketRecordContext(ticket: Record<string, any>) {
     const assignedUserIds = new Set<string>();
     if (typeof ticket.assigned_to === 'string') assignedUserIds.add(ticket.assigned_to);
-    for (const id of additionalUserIds) {
-      if (typeof id === 'string' && id.length > 0) assignedUserIds.add(id);
-    }
     return {
       id: ticket.ticket_id,
       ownerUserId: typeof ticket.entered_by === 'string' ? ticket.entered_by : undefined,
@@ -156,21 +140,13 @@ export class ApiTicketController extends ApiBaseController {
     }
 
     const ticketRow = ticket as Record<string, any>;
-    const additionalByTicket = await fetchTicketAdditionalUserIds(
-      resolvedKnex,
-      apiRequest.context.tenant,
-      typeof ticketRow.ticket_id === 'string' ? [ticketRow.ticket_id] : []
-    );
     const allowed = await authorizeApiResourceRead({
       knex: resolvedKnex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
       apiKeyId: apiRequest.context.apiKeyId,
       resource: 'ticket',
-      recordContext: this.buildTicketRecordContext(
-        ticketRow,
-        additionalByTicket.get(ticketRow.ticket_id) ?? []
-      ),
+      recordContext: this.buildTicketRecordContext(ticketRow),
     });
 
     if (!allowed) {
@@ -190,14 +166,6 @@ export class ApiTicketController extends ApiBaseController {
     }
 
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const ticketIds = tickets
-      .map((ticket) => ticket.ticket_id)
-      .filter((id): id is string => typeof id === 'string' && id.length > 0);
-    const additionalByTicket = await fetchTicketAdditionalUserIds(
-      resolvedKnex,
-      apiRequest.context.tenant,
-      ticketIds
-    );
     const allowedByRow = await Promise.all(
       tickets.map((ticket) =>
         authorizeApiResourceRead({
@@ -206,7 +174,7 @@ export class ApiTicketController extends ApiBaseController {
           user: apiRequest.context.user,
           apiKeyId: apiRequest.context.apiKeyId,
           resource: 'ticket',
-          recordContext: this.buildTicketRecordContext(ticket, additionalByTicket.get(ticket.ticket_id) ?? []),
+          recordContext: this.buildTicketRecordContext(ticket),
         })
       )
     );
@@ -368,21 +336,13 @@ export class ApiTicketController extends ApiBaseController {
                 apiRequest.context
               ),
             authorizeRecord: async (ticket) => {
-              const additionalByTicket = await fetchTicketAdditionalUserIds(
-                knex,
-                apiRequest.context.tenant,
-                typeof ticket.ticket_id === 'string' ? [ticket.ticket_id] : []
-              );
               return authorizeApiResourceRead({
                 knex,
                 tenant: apiRequest.context.tenant,
                 user: apiRequest.context.user,
                 apiKeyId: apiRequest.context.apiKeyId,
                 resource: 'ticket',
-                recordContext: this.buildTicketRecordContext(
-                  ticket,
-                  additionalByTicket.get(ticket.ticket_id) ?? []
-                ),
+                recordContext: this.buildTicketRecordContext(ticket),
               });
             },
             scanLimit: 100,

@@ -3,7 +3,7 @@
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getTeamsAvailability, resolveTeamsAvailability } from '../../lib/teamsAvailability';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import {
@@ -196,7 +196,7 @@ function mapTeamsIntegrationRow(
 }
 
 async function getTeamsIntegrationRow(knex: any, tenant: string): Promise<TeamsIntegrationRow | undefined> {
-  const row = await knex('teams_integrations').where({ tenant }).first();
+  const row = await tenantDb(knex, tenant).table<TeamsIntegrationRow>('teams_integrations').first();
   return row || undefined;
 }
 
@@ -205,7 +205,7 @@ async function getMicrosoftProfileRow(
   tenant: string,
   profileId: string
 ): Promise<MicrosoftProfileRow | undefined> {
-  const row = await knex('microsoft_profiles').where({ tenant, profile_id: profileId }).first();
+  const row = await tenantDb(knex, tenant).table<MicrosoftProfileRow>('microsoft_profiles').where({ profile_id: profileId }).first();
   return row || undefined;
 }
 
@@ -357,6 +357,7 @@ async function saveTeamsIntegrationSettingsImpl(
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     const existing = await getTeamsIntegrationRow(knex, tenant);
     const next = {
@@ -457,9 +458,9 @@ async function saveTeamsIntegrationSettingsImpl(
       // Citus distributes teams_integrations by `tenant`; the distribution column
       // must never appear in an UPDATE SET clause, even when the value is unchanged.
       const { tenant: _tenant, created_at: _createdAt, created_by: _createdBy, ...updatePayload } = row;
-      await knex('teams_integrations').where({ tenant }).update(updatePayload);
+      await db.table('teams_integrations').update(updatePayload);
     } else {
-      await knex('teams_integrations').insert(row);
+      await db.table('teams_integrations').insert(row);
     }
 
     return {

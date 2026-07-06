@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
 import { observabilityLogger } from '@/lib/observability/logging';
@@ -101,14 +102,15 @@ export async function POST(req: NextRequest) {
 
     // Verify target tenant exists
     const knex = await getAdminConnection();
-    const targetTenant = await knex('tenants').where({ tenant: tenantId }).first();
+    const targetTenantDb = tenantDb(knex, tenantId);
+    const auditLogs = tenantDb(knex, MASTER_BILLING_TENANT_ID).table('extension_audit_logs');
+    const targetTenant = await targetTenantDb.table('tenants').first();
     if (!targetTenant) {
       return NextResponse.json({ success: false, error: 'Tenant not found' }, { status: 404 });
     }
 
     // Check for existing pending deletion
-    const existingDeletion = await knex('pending_tenant_deletions')
-      .where({ tenant: tenantId })
+    const existingDeletion = await targetTenantDb.table('pending_tenant_deletions')
       .whereNotIn('status', ['deleted', 'rolled_back', 'failed'])
       .first();
 
@@ -132,7 +134,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Log to unified extension audit table (pending status)
-    const [auditRecord] = await knex('extension_audit_logs')
+    const [auditRecord] = await auditLogs
       .insert({
         tenant: MASTER_BILLING_TENANT_ID,
         event_type: 'tenant.start_deletion',
@@ -156,8 +158,8 @@ export async function POST(req: NextRequest) {
 
     if (!clientResult.available) {
       // Update audit record with failure
-      await knex('extension_audit_logs')
-        .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
+      await auditLogs
+        .where({ log_id: auditRecord.log_id })
         .update({
           status: 'failed',
           error_message: clientResult.error || 'Temporal workflow client not available',
@@ -172,8 +174,8 @@ export async function POST(req: NextRequest) {
     const { workflowId, runId } = clientResult;
 
     // Update audit record with workflow ID
-    await knex('extension_audit_logs')
-      .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
+    await auditLogs
+      .where({ log_id: auditRecord.log_id })
       .update({
         workflow_id: workflowId,
         status: 'completed',

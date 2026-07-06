@@ -4,7 +4,7 @@
 
 import Comment from '../../models/comment';
 import { IComment } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
@@ -25,6 +25,14 @@ import {
 
 function formatLiveUpdateDisplayName(user: any): string {
   return `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'Unknown User';
+}
+
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
 }
 
 async function assertClientCanCreateComment(
@@ -51,13 +59,16 @@ async function assertClientCanCreateComment(
 
   let clientId = user.clientId || user.client_id || null;
   if (!clientId) {
-    const clientRow = await trx('users as u')
-      .leftJoin('contacts as c', function() {
-        this.on('u.contact_id', 'c.contact_name_id')
-          .andOn('u.tenant', 'c.tenant');
-      })
+    const clientRow = await tenantDb(trx, tenant)
+      .tenantJoin(
+        tenantScopedTable(trx, 'users as u', tenant),
+        'contacts as c',
+        'u.contact_id',
+        'c.contact_name_id',
+        { type: 'left' }
+      )
       .select('c.client_id')
-      .where({ 'u.tenant': tenant, 'u.user_id': user.user_id })
+      .where({ 'u.user_id': user.user_id })
       .first();
     clientId = clientRow?.client_id ?? null;
   }
@@ -66,9 +77,9 @@ async function assertClientCanCreateComment(
     throw new Error('Client user is not associated with a client');
   }
 
-  const ticket = await trx('tickets')
+  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .select('client_id')
-    .where({ tenant, ticket_id: comment.ticket_id })
+    .where({ ticket_id: comment.ticket_id })
     .first();
 
   if (!ticket || ticket.client_id !== clientId) {
@@ -100,9 +111,9 @@ async function updateTicketResponseState(
   }
 
   // Get current ticket response state
-  const ticket = await trx('tickets')
+  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .select('response_state')
-    .where({ ticket_id: ticketId, tenant })
+    .where({ ticket_id: ticketId })
     .first();
 
   const previousState = (ticket?.response_state || null) as TicketResponseState;
@@ -124,8 +135,8 @@ async function updateTicketResponseState(
 
   // Only update if state actually changed
   if (newState !== previousState) {
-    await trx('tickets')
-      .where({ ticket_id: ticketId, tenant })
+    await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: ticketId })
       .update({ response_state: newState });
 
     // Publish response state change event
@@ -190,10 +201,9 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
     if (comment.user_id) {
       const { knex: db } = await createTenantKnex();
       const user = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('users')
+        return await tenantScopedTable(trx, 'users', tenant!)
           .select('user_type')
           .where('user_id', comment.user_id)
-          .andWhere('tenant', tenant!)
           .first();
       });
 
@@ -280,9 +290,9 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
 
       // Get user details for event
       if (comment.user_id && commentTenant) {
-        const user = await trx('users')
+        const user = await tenantScopedTable(trx, 'users', commentTenant)
           .select('first_name', 'last_name', 'user_type', 'contact_id')
-          .where({ user_id: comment.user_id, tenant: commentTenant })
+          .where({ user_id: comment.user_id })
           .first();
 
         const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
@@ -480,19 +490,18 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
       };
 
       // Get the original author name for old comment
-      const oldAuthor = await trx('users')
+      const oldAuthor = await tenantScopedTable(trx, 'users', commentTenant)
         .select('first_name', 'last_name')
-        .where({ user_id: existingComment.user_id, tenant: commentTenant! })
+        .where({ user_id: existingComment.user_id })
         .first();
       const oldAuthorName = oldAuthor ? `${oldAuthor.first_name} ${oldAuthor.last_name}` : 'Unknown User';
 
       // Verify user permissions - only allow users to edit their own comments
       // or  MSP (internal) users to edit any comment
       if (comment.user_id && comment.user_id !== existingComment.user_id) {
-        const user = await trx('users')
+        const user = await tenantScopedTable(trx, 'users', commentTenant)
           .select('user_type')
           .where('user_id', comment.user_id)
-          .andWhere('tenant', commentTenant!)
           .first();
 
       // Only MSP (internal) users can edit other users' comments
@@ -574,9 +583,9 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
 
       // Publish TICKET_COMMENT_UPDATED event if the comment was updated and we have user info
       if (updatedComment && comment.user_id && commentTenant) {
-        const newAuthor = await trx('users')
+        const newAuthor = await tenantScopedTable(trx, 'users', commentTenant)
           .select('first_name', 'last_name')
-          .where({ user_id: comment.user_id, tenant: commentTenant })
+          .where({ user_id: comment.user_id })
           .first();
         const newAuthorName = newAuthor ? `${newAuthor.first_name} ${newAuthor.last_name}` : 'Unknown User';
 
@@ -669,12 +678,12 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
       }
 
       // Delete comment reactions before comment (CitusDB doesn't support ON DELETE CASCADE)
-      await trx('comment_reactions')
-        .where({ tenant, comment_id: id })
+      await tenantScopedTable(trx, 'comment_reactions', tenant)
+        .where({ comment_id: id })
         .delete();
 
-      await trx('email_reply_tokens')
-        .where({ tenant, comment_id: id })
+      await tenantScopedTable(trx, 'email_reply_tokens', tenant)
+        .where({ comment_id: id })
         .update({ comment_id: null });
 
       await Comment.delete(trx, tenant, id);

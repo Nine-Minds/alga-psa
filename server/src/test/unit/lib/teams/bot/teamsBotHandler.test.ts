@@ -39,6 +39,12 @@ vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/resolveTeamsLinkedUser', () => (
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   getUserWithRoles: getUserWithRolesMock,
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({
@@ -319,6 +325,7 @@ describe('teamsBotHandler', () => {
     createTenantKnexMock.mockResolvedValue({
       knex: vi.fn(() => ({
         where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
         select: vi.fn().mockResolvedValue([
           {
             user_id: 'user-2',

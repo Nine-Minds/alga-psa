@@ -4,13 +4,21 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { IStatus } from '@alga-psa/types';
 
 import Status from '../../models/status';
 
 type StatusSearchEventType = 'STATUS_CREATED' | 'STATUS_UPDATED' | 'STATUS_DELETED';
+
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
 
 // Keeps the app-wide search index in sync when ticket statuses change.
 // Failures are swallowed: the daily search reconcile job is the backstop.
@@ -66,8 +74,8 @@ async function ensureBoardExists(
   tenant: string,
   boardId: string
 ): Promise<void> {
-  const board = await trx('boards')
-    .where({ tenant, board_id: boardId })
+  const board = await tenantScopedTable(trx, 'boards', tenant)
+    .where({ board_id: boardId })
     .first('board_id');
 
   if (!board) {
@@ -131,8 +139,7 @@ async function getTicketUsageByStatus(
     return [];
   }
 
-  const rows = await trx('tickets')
-    .where({ tenant })
+  const rows = await tenantScopedTable(trx, 'tickets', tenant)
     .whereIn('status_id', statusIds)
     .select('status_id')
     .count('ticket_id as count')
@@ -168,8 +175,10 @@ function buildTicketStatusInUseMessage(
   return `Cannot delete ticket statuses because they are still used: ${details}. Move those tickets to another status before deleting them.`;
 }
 
-async function getStatusColumns(trx: Knex.Transaction): Promise<Record<string, unknown>> {
-  return trx('statuses').columnInfo();
+async function getStatusColumns(trx: Knex.Transaction, tenant: string): Promise<Record<string, unknown>> {
+  return tenantDb(trx, tenant)
+    .unscoped('statuses', 'columnInfo reads schema metadata, not tenant rows')
+    .columnInfo();
 }
 
 function hasStatusColumn(columns: Record<string, unknown>, columnName: string): boolean {
@@ -222,7 +231,7 @@ async function persistBoardTicketStatuses(
     }
   });
 
-  const columns = await getStatusColumns(trx);
+  const columns = await getStatusColumns(trx, tenant);
   const now = new Date().toISOString();
   const keptStatusIds = normalizedStatuses
     .map((status) => status.status_id)
@@ -243,9 +252,8 @@ async function persistBoardTicketStatuses(
       continue;
     }
 
-    await trx('statuses')
+    await tenantScopedTable(trx, 'statuses', tenant)
       .where({
-        tenant,
         board_id: boardId,
         status_id: existingStatus.status_id,
         status_type: 'ticket',
@@ -259,9 +267,8 @@ async function persistBoardTicketStatuses(
   }
 
   if (deletedStatusIds.length > 0) {
-    await trx('statuses')
+    await tenantScopedTable(trx, 'statuses', tenant)
       .where({
-        tenant,
         board_id: boardId,
         status_type: 'ticket',
       })
@@ -270,9 +277,8 @@ async function persistBoardTicketStatuses(
   }
 
   for (const status of normalizedStatuses.filter((candidate) => candidate.status_id)) {
-    await trx('statuses')
+    await tenantScopedTable(trx, 'statuses', tenant)
       .where({
-        tenant,
         board_id: boardId,
         status_id: status.status_id,
         status_type: 'ticket',
@@ -290,7 +296,7 @@ async function persistBoardTicketStatuses(
 
   const insertedStatuses = normalizedStatuses.filter((candidate) => !candidate.status_id);
   if (insertedStatuses.length > 0) {
-    await trx('statuses').insert(
+    await tenantScopedTable(trx, 'statuses', tenant).insert(
       insertedStatuses.map((status) => buildStatusInsertRow(columns, tenant, boardId, userId, now, status))
     );
   }

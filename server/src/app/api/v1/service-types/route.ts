@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { hasPermission } from '@/lib/auth/rbac';
 import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { withApiKeyAuth } from '@/lib/api/middleware/apiAuthMiddleware';
 import {
   createPaginatedResponse,
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
     const search = url.searchParams.get('search')?.trim() || '';
     const isActive = parseBooleanParam(url.searchParams.get('is_active'));
 
-    const baseQuery = knex('service_types as st').where({ 'st.tenant': tenant });
+    const baseQuery = tenantDb(knex, tenant).table('service_types as st');
 
     const applyFilters = (query: any) => {
       if (search) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ClipboardList, ExternalLink, Loader2, Lock } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Popover, PopoverTrigger, PopoverContent } from '@alga-psa/ui/components/Popover';
@@ -15,10 +15,13 @@ import TaskEdit from './TaskEdit';
 
 interface TicketLinkedTasksBadgeProps {
   ticketId: string;
+  /** Server-started linked-tasks promise; skips the mount fetch when provided. */
+  initialTasks?: Promise<ITicketLinkedTask[]>;
 }
 
 export default function TicketLinkedTasksBadge({
   ticketId,
+  initialTasks,
 }: TicketLinkedTasksBadgeProps): React.JSX.Element | null {
   const { t } = useTranslation(['features/projects', 'common']);
   const [linkedTasks, setLinkedTasks] = useState<ITicketLinkedTask[]>([]);
@@ -26,7 +29,23 @@ export default function TicketLinkedTasksBadge({
   const [openingTaskId, setOpeningTaskId] = useState<string | null>(null);
   const { openDrawer, closeDrawer } = useDrawer();
 
+  const skipFirstTasksFetch = useRef(Boolean(initialTasks));
   useEffect(() => {
+    if (!initialTasks) return;
+    let mounted = true;
+    initialTasks.then((tasks) => {
+      if (!mounted) return;
+      setLinkedTasks(tasks || []);
+      setLoading(false);
+    });
+    return () => { mounted = false; };
+  }, [initialTasks]);
+
+  useEffect(() => {
+    if (skipFirstTasksFetch.current) {
+      skipFirstTasksFetch.current = false;
+      return;
+    }
     let mounted = true;
     const fetchLinkedTasks = async () => {
       try {

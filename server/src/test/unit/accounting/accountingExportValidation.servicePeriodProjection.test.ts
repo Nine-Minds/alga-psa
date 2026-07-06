@@ -65,11 +65,10 @@ describe('AccountingExportValidation service-period projection', () => {
 
     const knex: any = vi.fn((table: string) => {
       if (table === 'accounting_export_errors') {
-        return {
-          where: vi.fn(() => ({
-            update: clearOpenErrors,
-          })),
-        };
+        const errorsBuilder: any = {};
+        errorsBuilder.where = vi.fn(() => errorsBuilder);
+        errorsBuilder.update = clearOpenErrors;
+        return errorsBuilder;
       }
       if (table === 'invoice_charges') {
         return buildThenableQuery([

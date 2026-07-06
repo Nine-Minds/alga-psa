@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { auth } from './app/api/auth/[...nextauth]/edge-auth';
 import { getSessionCookieName } from './lib/auth/sessionCookies';
 import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
+import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
+import { resolveRequestHost, detectForwardedHostRewrite } from './lib/deployment/requestHost';
 
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
@@ -130,7 +132,10 @@ const apiKeySkipPaths = [
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
     (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
-    (pathname.startsWith('/api/documents/') && (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview')));
+    (pathname.startsWith('/api/documents/') && (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview'))) ||
+    // Session-authenticated inventory SO document endpoints (auth enforced in-handler via withAuth).
+    (pathname.startsWith('/api/inventory/sales-orders/') &&
+      (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation')));
 }
 
 export function getVanityClientPortalInternalRedirectTarget(args: {
@@ -166,10 +171,37 @@ export function getVanityClientPortalInternalRedirectTarget(args: {
   return null;
 }
 
+// Best-effort, per-isolate throttle for the X-Forwarded-Host rewrite tell-tale.
+const forwardedHostWarnAt = new Map<string, number>();
+const FORWARDED_HOST_WARN_INTERVAL_MS = 5 * 60 * 1000;
+
+function maybeWarnForwardedHostRewrite(
+  request: { headers: { get(name: string): string | null } },
+  caps: DeploymentCapabilities
+): void {
+  const canonical = getCanonicalUrl();
+  const tellTale = detectForwardedHostRewrite(request, caps, canonical?.hostname ?? null);
+  if (!tellTale) {
+    return;
+  }
+  const now = Date.now();
+  const last = forwardedHostWarnAt.get(tellTale.forwardedHost) ?? 0;
+  if (now - last < FORWARDED_HOST_WARN_INTERVAL_MS) {
+    return;
+  }
+  forwardedHostWarnAt.set(tellTale.forwardedHost, now);
+  console.warn('[middleware] reverse proxy is rewriting the Host header', {
+    forwardedHost: tellTale.forwardedHost,
+    rewrittenTo: canonical?.hostname,
+    hint: 'Custom portal domain is relying on X-Forwarded-Host; also forward the original Host header for resilience.',
+  });
+}
+
 const _middleware = auth((request) => {
   const pathname = request.nextUrl.pathname;
-  const requestHost = request.headers.get('host') || '';
-  const requestHostname = requestHost.split(':')[0];
+  const deploymentCaps = resolveDeploymentCapabilities();
+  const { hostname: requestHostname, hostHeader: requestHostHeader } = resolveRequestHost(request, deploymentCaps);
+  maybeWarnForwardedHostRewrite(request, deploymentCaps);
   const origin = request.headers.get('origin');
   const nextAction = request.headers.get('next-action');
 
@@ -264,7 +296,7 @@ const _middleware = auth((request) => {
       }
 
       const canonicalLogin = new URL('/auth/client-portal/signin', canonicalUrlEnv.origin);
-      const hostHeader = request.headers.get('host') || requestHostname;
+      const hostHeader = requestHostHeader || requestHostname;
 
       // Preserve existing query params (like callbackUrl)
       request.nextUrl.searchParams.forEach((value, key) => {
@@ -361,7 +393,7 @@ const _middleware = auth((request) => {
 
       if (canonicalUrlEnv && requestHostname !== canonicalUrlEnv.hostname) {
         const canonicalLogin = new URL('/auth/client-portal/signin', canonicalUrlEnv.origin);
-        const hostHeader = request.headers.get('host') || requestHostname;
+        const hostHeader = requestHostHeader || requestHostname;
         const protocol = request.nextUrl.protocol.replace(/:$/, '');
         const callbackUrl = `${protocol}://${hostHeader}${request.nextUrl.pathname}${request.nextUrl.search}`;
         canonicalLogin.searchParams.set('callbackUrl', callbackUrl);

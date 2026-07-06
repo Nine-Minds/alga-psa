@@ -11,8 +11,16 @@ const mocks = vi.hoisted(() => ({
   createTicketWithRetry: vi.fn(),
 }));
 
-vi.mock('server/src/lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
+  // The facade scopes each table by tenant; the fake builder's where() merges
+  // object criteria, so the recorded update where still carries { tenant, ... }.
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -38,7 +46,7 @@ vi.mock('@shared/models/ticketModel', () => ({
   },
 }));
 
-import { processRenewalQueueHandler } from 'server/src/lib/jobs/handlers/processRenewalQueueHandler';
+import { processRenewalQueueHandler } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
 
 const TENANT = 'b7e7a1f2-0000-4000-8000-000000000001';
 const CLIENT_ID = 'b7e7a1f2-0000-4000-8000-0000000000c1';
@@ -94,6 +102,13 @@ function buildFakeKnex(config: FakeKnexConfig) {
       update: async (payload: Record<string, unknown>) => {
         updates.push({ table, where: { ...whereFilters }, payload });
       },
+      // The contract scan now builds the query (where().select()) and then awaits
+      // the builder directly, so it must be thenable and resolve to the candidate
+      // rows rather than relying on select()'s return value.
+      then: (resolve: any, reject: any) =>
+        Promise.resolve(table === 'client_contracts as cc' ? (config.candidateRows ?? []) : []).then(resolve, reject),
+      catch: (reject: any) =>
+        Promise.resolve(table === 'client_contracts as cc' ? (config.candidateRows ?? []) : []).catch(reject),
     };
     return builder;
   };

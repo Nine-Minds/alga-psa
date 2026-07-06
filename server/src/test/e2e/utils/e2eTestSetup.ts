@@ -1,4 +1,5 @@
 import { Knex, knex as createKnex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { createTestEnvironment } from '../../../../test-utils/testDataFactory';
 import { createTestApiKey, ApiTestClient } from './apiTestHelpers';
@@ -75,139 +76,90 @@ export async function setupE2ETestEnvironment(options: {
     // Create cleanup function
     const cleanup = async () => {
       try {
+        const tenantTable = (table: string) => tenantDb(db, tenantId).table(table);
+
         // Clean up test data in reverse order of creation
-        await db('comments')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('comments').delete();
 
         // Delete tickets after dependent comments
-        await db('tickets')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('tickets').delete();
           
         await cleanupTestContacts(db, tenantId);
         
         // Clean up role permissions first
-        await db('role_permissions')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('role_permissions').delete();
           
         // Clean up user roles
-        await db('user_roles')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('user_roles').delete();
         
         // Clean up API keys
-        await db('api_keys')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('api_keys').delete();
         
         // Clean up time entries first
-        await db('time_entries')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('time_entries').delete();
           
         // Clean up time sheets before time periods
-        await db('time_sheets')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('time_sheets').delete();
           
         // Clean up time periods and types
-        await db('time_periods')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('time_periods').delete();
           
           
         // Clean up service catalog
-        await db('service_catalog')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('service_catalog').delete();
           
         // Clean up service types
-        await db('service_types')
-          .where('tenant', tenantId)
+        await tenantTable('service_types')
           .delete()
           .catch(() => {}); // Ignore if table doesn't exist
           
         // Clean up tickets first (they reference many other tables)
-        await db('tickets')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('tickets').delete();
           
         // Clean up priorities (they reference users via created_by)
-        await db('priorities')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('priorities').delete();
           
         // Clean up tag_mappings first (they reference users via created_by)
-        await db('tag_mappings')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('tag_mappings').delete();
           
         // Clean up tag_definitions (they reference users via created_by)
-        await db('tag_definitions')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('tag_definitions').delete();
           
         // Clean up statuses (they reference users via created_by)
-        await db('statuses')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('statuses').delete();
 
         // Clean up boards after board-owned ticket statuses are removed
-        await db('boards')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('boards').delete();
           
         // Clean up team members first (they reference teams and users)
-        await db('team_members')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('team_members').delete();
           
         // Clean up teams (they reference users via manager_id)
-        await db('teams')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('teams').delete();
           
         // Clean up user preferences (they reference users)
-        await db('user_preferences')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('user_preferences').delete();
           
         // Clean up users
-        await db('users')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('users').delete();
           
         // Clean up permissions
-        await db('permissions')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('permissions').delete();
           
         // Clean up roles
-        await db('roles')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('roles').delete();
         
         // Clean up client locations
-        await db('client_locations')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('client_locations').delete();
 
         // Clean up clients
-        await db('clients')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('clients').delete();
         
         // Clean up next_number entries first
-        await db('next_number')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('next_number').delete();
           
         // Clean up tenant
-        await db('tenants')
-          .where('tenant', tenantId)
-          .delete();
+        await tenantTable('tenants').delete();
       } catch (error) {
         console.error('Error during cleanup:', error);
         throw error;
@@ -313,7 +265,7 @@ export async function createTestUserWithPermissions(
   const userId = require('uuid').v4();
   const now = new Date();
 
-  await db('users').insert({
+  await tenantDb(db, tenant).table('users').insert({
     user_id: userId,
     tenant,
     username: `test.user.${userId}`,
@@ -386,27 +338,30 @@ export async function withDatabaseTransaction<T>(
  */
 async function createDefaultStatuses(db: Knex, tenantId: string, userId: string): Promise<void> {
   let defaultBoardId: string | null = null;
-  const existingDefaultBoard = await db('boards')
-    .where({ tenant: tenantId, is_default: true })
+  const boards = () => tenantDb(db, tenantId).table('boards');
+  const statuses = () => tenantDb(db, tenantId).table('statuses');
+  const priorityRows = () => tenantDb(db, tenantId).table('priorities');
+
+  const existingDefaultBoard = await boards()
+    .where({ is_default: true })
     .first<{ board_id: string }>('board_id');
 
   if (existingDefaultBoard?.board_id) {
     defaultBoardId = existingDefaultBoard.board_id;
   } else {
-    const existingBoard = await db('boards')
-      .where({ tenant: tenantId })
+    const existingBoard = await boards()
       .orderBy('display_order', 'asc')
       .orderBy('board_name', 'asc')
       .first<{ board_id: string }>('board_id');
 
     if (existingBoard?.board_id) {
       defaultBoardId = existingBoard.board_id;
-      await db('boards')
-        .where({ tenant: tenantId, board_id: defaultBoardId })
+      await boards()
+        .where({ board_id: defaultBoardId })
         .update({ is_default: true });
     } else {
       defaultBoardId = uuidv4();
-      await db('boards').insert({
+      await boards().insert({
         board_id: defaultBoardId,
         tenant: tenantId,
         board_name: 'Default',
@@ -417,7 +372,7 @@ async function createDefaultStatuses(db: Knex, tenantId: string, userId: string)
   }
 
   // Check if statuses already exist for this tenant
-  const existingStatuses = await db('statuses').where({ tenant: tenantId }).count('* as count');
+  const existingStatuses = await statuses().count('* as count');
   if (parseInt(existingStatuses[0].count) > 0) {
     return; // Statuses already exist
   }
@@ -435,7 +390,7 @@ async function createDefaultStatuses(db: Knex, tenantId: string, userId: string)
   ];
 
   for (const status of statusTypes) {
-    await db('statuses').insert({
+    await statuses().insert({
       status_id: uuidv4(),
       tenant: tenantId,
       name: status.name,
@@ -451,7 +406,7 @@ async function createDefaultStatuses(db: Knex, tenantId: string, userId: string)
   }
 
   // Create default priorities for tickets
-  const existingPriorities = await db('priorities').where({ tenant: tenantId }).count('* as count');
+  const existingPriorities = await priorityRows().count('* as count');
   if (parseInt(existingPriorities[0].count) === 0) {
     const priorities = [
       { name: 'Low', order: 1, color: '#10B981' },
@@ -460,7 +415,7 @@ async function createDefaultStatuses(db: Knex, tenantId: string, userId: string)
     ];
     
     for (const priority of priorities) {
-      await db('priorities').insert({
+      await priorityRows().insert({
         priority_id: uuidv4(),
         tenant: tenantId,
         priority_name: priority.name,

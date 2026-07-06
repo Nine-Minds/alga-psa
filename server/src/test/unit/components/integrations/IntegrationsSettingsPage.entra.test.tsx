@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 const useSearchParamsMock = vi.hoisted(() => vi.fn());
@@ -133,6 +133,10 @@ describe('IntegrationsSettingsPage Entra placement', () => {
   const originalEdition = process.env.NEXT_PUBLIC_EDITION;
 
   beforeEach(() => {
+    // RTL auto-cleanup only registers for the first test file in the shared
+    // fork (externalized @testing-library/react is cached process-wide), so
+    // clean up explicitly to keep renders from leaking across tests.
+    cleanup();
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
 
     useSearchParamsMock.mockReturnValue({
@@ -148,6 +152,7 @@ describe('IntegrationsSettingsPage Entra placement', () => {
   });
 
   afterEach(() => {
+    cleanup();
     if (originalEdition === undefined) {
       delete process.env.NEXT_PUBLIC_EDITION;
     } else {

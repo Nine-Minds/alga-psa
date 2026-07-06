@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 import { E2ETestContext } from '../utils/test-context-e2e';
@@ -17,6 +18,10 @@ const TEST_CONFIG = {
 
 test.describe('Project Task Move and Duplicate with Full Path Display', () => {
   let context: E2ETestContext;
+
+  function tenantTable(tenantId: string, table: string) {
+    return tenantDb(context.db, tenantId).table(table);
+  }
 
   test.beforeAll(async () => {
     context = new E2ETestContext({
@@ -72,7 +77,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     const projectId = uuidv4();
     const companyId = tenantData.client!.clientId;
 
-    await context.db('projects').insert({
+    await tenantTable(tenantId, 'projects').insert({
       project_id: projectId,
       tenant: tenantId,
       company_id: companyId,
@@ -86,7 +91,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     const phase1Id = uuidv4();
     const phase2Id = uuidv4();
 
-    await context.db('project_phases').insert([
+    await tenantTable(tenantId, 'project_phases').insert([
       {
         phase_id: phase1Id,
         tenant: tenantId,
@@ -112,7 +117,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     const statusMapping2 = uuidv4();
     const statusMapping3 = uuidv4();
 
-    await context.db('project_status_mappings').insert([
+    await tenantTable(tenantId, 'project_status_mappings').insert([
       {
         project_status_mapping_id: statusMapping1,
         tenant: tenantId,
@@ -147,7 +152,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create a task in Phase Alpha
     const taskId = uuidv4();
-    await context.db('project_tasks').insert({
+    await tenantTable(tenantId, 'project_tasks').insert({
       task_id: taskId,
       tenant: tenantId,
       project_id: projectId,
@@ -233,7 +238,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     const projectId = uuidv4();
     const companyId = tenantData.client!.clientId;
 
-    await context.db('projects').insert({
+    await tenantTable(tenantId, 'projects').insert({
       project_id: projectId,
       tenant: tenantId,
       company_id: companyId,
@@ -245,7 +250,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create phase
     const phaseId = uuidv4();
-    await context.db('project_phases').insert({
+    await tenantTable(tenantId, 'project_phases').insert({
       phase_id: phaseId,
       tenant: tenantId,
       project_id: projectId,
@@ -259,7 +264,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     const statusMapping1 = uuidv4();
     const statusMapping2 = uuidv4();
 
-    await context.db('project_status_mappings').insert([
+    await tenantTable(tenantId, 'project_status_mappings').insert([
       {
         project_status_mapping_id: statusMapping1,
         tenant: tenantId,
@@ -284,7 +289,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create a task with checklist and assignees
     const taskId = uuidv4();
-    await context.db('project_tasks').insert({
+    await tenantTable(tenantId, 'project_tasks').insert({
       task_id: taskId,
       tenant: tenantId,
       project_id: projectId,
@@ -298,7 +303,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Add checklist items
     const checklistItem1 = uuidv4();
-    await context.db('task_checklist_items').insert({
+    await tenantTable(tenantId, 'task_checklist_items').insert({
       item_id: checklistItem1,
       tenant: tenantId,
       task_id: taskId,
@@ -372,7 +377,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create project
     const projectId = uuidv4();
-    await context.db('projects').insert({
+    await tenantTable(tenantId, 'projects').insert({
       project_id: projectId,
       tenant: tenantId,
       company_id: tenantData.client!.clientId,
@@ -384,7 +389,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create phase
     const phaseId = uuidv4();
-    await context.db('project_phases').insert({
+    await tenantTable(tenantId, 'project_phases').insert({
       phase_id: phaseId,
       tenant: tenantId,
       project_id: projectId,
@@ -398,7 +403,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     const statusA = uuidv4();
     const statusB = uuidv4();
 
-    await context.db('project_status_mappings').insert([
+    await tenantTable(tenantId, 'project_status_mappings').insert([
       {
         project_status_mapping_id: statusA,
         tenant: tenantId,
@@ -423,7 +428,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create task in Status A
     const taskId = uuidv4();
-    await context.db('project_tasks').insert({
+    await tenantTable(tenantId, 'project_tasks').insert({
       task_id: taskId,
       tenant: tenantId,
       project_id: projectId,
@@ -477,7 +482,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     await page.waitForTimeout(2000);
 
     // Verify task moved in database
-    const movedTask = await context.db('project_tasks')
+    const movedTask = await tenantTable(tenantId, 'project_tasks')
       .where({ task_id: taskId, tenant: tenantId })
       .first();
 
@@ -506,7 +511,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create project
     const projectId = uuidv4();
-    await context.db('projects').insert({
+    await tenantTable(tenantId, 'projects').insert({
       project_id: projectId,
       tenant: tenantId,
       company_id: tenantData.client!.clientId,
@@ -520,7 +525,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     const phase1Id = uuidv4();
     const phase2Id = uuidv4();
 
-    await context.db('project_phases').insert([
+    await tenantTable(tenantId, 'project_phases').insert([
       {
         phase_id: phase1Id,
         tenant: tenantId,
@@ -545,7 +550,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     const statusPhase1 = uuidv4();
     const statusPhase2 = uuidv4();
 
-    await context.db('project_status_mappings').insert([
+    await tenantTable(tenantId, 'project_status_mappings').insert([
       {
         project_status_mapping_id: statusPhase1,
         tenant: tenantId,
@@ -570,7 +575,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create task in Phase 1
     const taskId = uuidv4();
-    await context.db('project_tasks').insert({
+    await tenantTable(tenantId, 'project_tasks').insert({
       task_id: taskId,
       tenant: tenantId,
       project_id: projectId,
@@ -624,7 +629,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     await page.waitForTimeout(2000);
 
     // Verify task moved to Phase 2 and Status B
-    const movedTask = await context.db('project_tasks')
+    const movedTask = await tenantTable(tenantId, 'project_tasks')
       .where({ task_id: taskId, tenant: tenantId })
       .first();
 
@@ -644,7 +649,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create project
     const projectId = uuidv4();
-    await context.db('projects').insert({
+    await tenantTable(tenantId, 'projects').insert({
       project_id: projectId,
       tenant: tenantId,
       company_id: tenantData.client!.clientId,
@@ -656,7 +661,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create phase
     const phaseId = uuidv4();
-    await context.db('project_phases').insert({
+    await tenantTable(tenantId, 'project_phases').insert({
       phase_id: phaseId,
       tenant: tenantId,
       project_id: projectId,
@@ -670,7 +675,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     const statusA = uuidv4();
     const statusB = uuidv4();
 
-    await context.db('project_status_mappings').insert([
+    await tenantTable(tenantId, 'project_status_mappings').insert([
       {
         project_status_mapping_id: statusA,
         tenant: tenantId,
@@ -695,7 +700,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create task with checklist and assignee
     const taskId = uuidv4();
-    await context.db('project_tasks').insert({
+    await tenantTable(tenantId, 'project_tasks').insert({
       task_id: taskId,
       tenant: tenantId,
       project_id: projectId,
@@ -709,7 +714,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Add checklist
     const checklistId = uuidv4();
-    await context.db('task_checklist_items').insert({
+    await tenantTable(tenantId, 'task_checklist_items').insert({
       item_id: checklistId,
       tenant: tenantId,
       task_id: taskId,
@@ -768,14 +773,14 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     await page.waitForTimeout(2000);
 
     // Verify original task still exists in Status A
-    const originalTask = await context.db('project_tasks')
+    const originalTask = await tenantTable(tenantId, 'project_tasks')
       .where({ task_id: taskId, tenant: tenantId })
       .first();
 
     expect(originalTask.project_status_mapping_id).toBe(statusA);
 
     // Verify duplicated task exists in Status B
-    const duplicatedTasks = await context.db('project_tasks')
+    const duplicatedTasks = await tenantTable(tenantId, 'project_tasks')
       .where({
         tenant: tenantId,
         project_id: projectId,
@@ -790,7 +795,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     expect(duplicatedTask.task_name).toContain('Duplicate Me');
 
     // Verify checklist was duplicated
-    const duplicatedChecklist = await context.db('task_checklist_items')
+    const duplicatedChecklist = await tenantTable(tenantId, 'task_checklist_items')
       .where({
         tenant: tenantId,
         task_id: duplicatedTask.task_id,
@@ -811,7 +816,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create project
     const projectId = uuidv4();
-    await context.db('projects').insert({
+    await tenantTable(tenantId, 'projects').insert({
       project_id: projectId,
       tenant: tenantId,
       company_id: tenantData.client!.clientId,
@@ -823,7 +828,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create phase
     const phaseId = uuidv4();
-    await context.db('project_phases').insert({
+    await tenantTable(tenantId, 'project_phases').insert({
       phase_id: phaseId,
       tenant: tenantId,
       project_id: projectId,
@@ -835,7 +840,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create status
     const statusId = uuidv4();
-    await context.db('project_status_mappings').insert({
+    await tenantTable(tenantId, 'project_status_mappings').insert({
       project_status_mapping_id: statusId,
       tenant: tenantId,
       phase_id: phaseId,
@@ -848,7 +853,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create task
     const taskId = uuidv4();
-    await context.db('project_tasks').insert({
+    await tenantTable(tenantId, 'project_tasks').insert({
       task_id: taskId,
       tenant: tenantId,
       project_id: projectId,
@@ -926,7 +931,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create project with multiple phases and statuses
     const projectId = uuidv4();
-    await context.db('projects').insert({
+    await tenantTable(tenantId, 'projects').insert({
       project_id: projectId,
       tenant: tenantId,
       company_id: tenantData.client!.clientId,
@@ -940,7 +945,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     const phase1Id = uuidv4();
     const phase2Id = uuidv4();
 
-    await context.db('project_phases').insert([
+    await tenantTable(tenantId, 'project_phases').insert([
       {
         phase_id: phase1Id,
         tenant: tenantId,
@@ -966,7 +971,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     const status2 = uuidv4();
     const status3 = uuidv4();
 
-    await context.db('project_status_mappings').insert([
+    await tenantTable(tenantId, 'project_status_mappings').insert([
       {
         project_status_mapping_id: status1,
         tenant: tenantId,
@@ -1001,7 +1006,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create task
     const taskId = uuidv4();
-    await context.db('project_tasks').insert({
+    await tenantTable(tenantId, 'project_tasks').insert({
       task_id: taskId,
       tenant: tenantId,
       project_id: projectId,
