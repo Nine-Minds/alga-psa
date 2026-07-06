@@ -1368,5 +1368,12 @@
     "noDeliveredEquipment": "11111",
     "rmas": "11111",
     "noRmas": "11111"
+  },
+  "contacts": {
+    "quickView": {
+      "loading": "11111",
+      "notFound": "11111",
+      "loadFailed": "11111"
+    }
   }
 }

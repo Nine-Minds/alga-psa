@@ -1398,5 +1398,12 @@
     "noDeliveredEquipment": "Brak zarejestrowanego dostarczonego sprzętu.",
     "rmas": "RMA",
     "noRmas": "Brak RMA dla tego klienta."
+  },
+  "contacts": {
+    "quickView": {
+      "loading": "Ładowanie kontaktu...",
+      "notFound": "Nie znaleziono kontaktu.",
+      "loadFailed": "Nie udało się załadować kontaktu."
+    }
   }
 }

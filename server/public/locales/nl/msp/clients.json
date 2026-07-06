@@ -1368,5 +1368,12 @@
     "noDeliveredEquipment": "Geen geleverde apparatuur geregistreerd.",
     "rmas": "RMA's",
     "noRmas": "Geen RMA's voor deze klant."
+  },
+  "contacts": {
+    "quickView": {
+      "loading": "Contactpersoon laden...",
+      "notFound": "Contactpersoon niet gevonden.",
+      "loadFailed": "Kan contactpersoon niet laden."
+    }
   }
 }
