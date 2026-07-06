@@ -9,7 +9,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TagManager } from '@alga-psa/tags/components';
 import type { ITag, ITicket } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { BentoTile } from './BentoTile';
+import { BentoTile } from '@alga-psa/ui/components/bento/BentoTile';
 import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
 
 interface HeroSelectOption {

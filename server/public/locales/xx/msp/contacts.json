@@ -693,5 +693,11 @@
         "userNotAuthenticated": "11111"
       }
     }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "11111",
+      "saveFailed": "11111"
+    }
   }
 }

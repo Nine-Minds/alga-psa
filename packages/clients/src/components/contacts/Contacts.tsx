@@ -29,8 +29,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import QuickAddContact from './QuickAddContact';
 import { useDrawer, useClientDrawer } from "@alga-psa/ui";
-import ContactDetails from './ContactDetails';
-import ContactDetailsEdit from './ContactDetailsEdit';
+import ContactQuickView from './bento/ContactQuickView';
 import ContactsImportDialog from './ContactsImportDialog';
 import ClientQuickView from '../clients/ClientQuickView';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -347,13 +346,11 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         }
 
         openDrawer(
-          <ContactDetails
+          <ContactQuickView
             contact={contact}
             clients={clients}
             documents={documents[contact.contact_name_id] || []}
             userId={currentUser}
-            isInDrawer={true}
-            quickView={true}
             onDocumentCreated={async () => {
               try {
                 const updatedResponse = await getDocumentsByEntity(contact.contact_name_id, 'contact');
@@ -411,13 +408,11 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         }
 
         openDrawer(
-          <ContactDetails
+          <ContactQuickView
             contact={contact}
             clients={clients}
             documents={documents[contact.contact_name_id] || []}
             userId={currentUser}
-            isInDrawer={true}
-            quickView={true}
             onDocumentCreated={async () => {
               try {
                 const updatedResponse = await getDocumentsByEntity(contact.contact_name_id, 'contact');

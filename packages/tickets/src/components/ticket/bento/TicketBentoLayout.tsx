@@ -33,7 +33,7 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from './BentoTile';
+import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from '@alga-psa/ui/components/bento/BentoTile';
 import { BentoHero } from './BentoHero';
 import { BentoTimelineTile } from './BentoTimelineTile';
 import { SlaClocksTile } from './SlaClocksTile';
