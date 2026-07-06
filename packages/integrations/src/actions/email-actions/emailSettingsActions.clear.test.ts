@@ -74,4 +74,56 @@ describe('updateEmailSettings clear behavior', () => {
     }));
     expect(updated.ticketingFromEmail).toBeNull();
   });
+
+  it('persists the normalized ticketing sender display name', async () => {
+    const updateMock = vi.fn(async () => 1);
+    const firstMock = vi.fn(async () => ({ tenant: 'tenant-123' }));
+    const whereMock = vi.fn(() => ({
+      first: firstMock,
+      update: updateMock,
+    }));
+
+    const knexMock = vi.fn((_table: string) => ({
+      where: whereMock,
+      insert: vi.fn(async () => 1),
+    })) as any;
+
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock, tenant: 'tenant-123' });
+    getTenantEmailSettingsMock
+      .mockResolvedValueOnce({
+        tenantId: 'tenant-123',
+        defaultFromDomain: 'acme.com',
+        ticketingFromEmail: 'support@acme.com',
+        ticketingFromName: null,
+        customDomains: [],
+        emailProvider: 'resend',
+        providerConfigs: [],
+        trackingEnabled: false,
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-01T00:00:00.000Z'),
+      })
+      .mockResolvedValueOnce({
+        tenantId: 'tenant-123',
+        defaultFromDomain: 'acme.com',
+        ticketingFromEmail: 'support@acme.com',
+        ticketingFromName: 'Support Team',
+        customDomains: [],
+        emailProvider: 'resend',
+        providerConfigs: [],
+        trackingEnabled: false,
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-02T00:00:00.000Z'),
+      });
+
+    const { updateEmailSettings } = await import('./emailSettingsActions');
+    const updated = await updateEmailSettings({
+      ticketingFromName: ' Support Team ',
+    });
+
+    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({
+      ticketing_from_email: 'support@acme.com',
+      ticketing_from_name: 'Support Team',
+    }));
+    expect(updated.ticketingFromName).toBe('Support Team');
+  });
 });
