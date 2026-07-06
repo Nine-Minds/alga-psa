@@ -1,13 +1,20 @@
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
-import { ContactDetails } from '@alga-psa/clients';
+import { ContactBentoLayout } from '@alga-psa/clients';
 import type { IDocument } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { getContactByContactNameId } from '@alga-psa/clients/actions';
+import {
+  getContactByContactNameId,
+  getContactRelatedWork,
+  getContactStats,
+  getContactTicketsSummary,
+  getInteractionsForEntity,
+} from '@alga-psa/clients/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getContactPortalPermissions } from '@alga-psa/auth/actions';
+import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AIChatContextBoundary } from '@product/chat/context';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
@@ -31,12 +38,19 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 interface ContactDetailPageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProps) => {
-  const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams]);
-  const tab = typeof resolvedSearchParams.tab === 'string' ? resolvedSearchParams.tab.toLowerCase() : null;
+async function settledValue<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await promise;
+  } catch (error) {
+    console.error('[contact-bento] Optional data fetch failed:', error);
+    return fallback;
+  }
+}
+
+const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
+  const { id } = await params;
   const { t } = await getServerTranslation(undefined, 'common');
   const isAlgaDesk = (await getCurrentTenantProduct()) === 'algadesk';
 
@@ -62,22 +76,22 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
       return notFound();
     }
 
-    // Fetch additional data in parallel
-    // Only fetch documents when viewing the documents tab
-    const [clients, permissions] = await Promise.all([
+    const [clients, permissions, documentsResponse, interactions, tags, stats, ticketsSummary, relatedWork] = await Promise.all([
       getAllClients(),
-      getContactPortalPermissions()
+      getContactPortalPermissions(),
+      isAlgaDesk ? Promise.resolve([]) : settledValue(getDocumentsByEntity(id, 'contact'), [] as any),
+      settledValue(getInteractionsForEntity(id, 'contact'), []),
+      settledValue(findTagsByEntityIds([id], 'contact'), []),
+      settledValue(getContactStats(id), null),
+      settledValue(getContactTicketsSummary(id), null),
+      settledValue(getContactRelatedWork(id), null),
     ]);
 
-    // Conditionally fetch documents only when on documents tab
     let documents: IDocument[] = [];
-    if (!isAlgaDesk && tab === 'documents') {
-      const documentsResponse = await getDocumentsByEntity(id, 'contact');
-      if (!isActionPermissionError(documentsResponse)) {
-        documents = Array.isArray(documentsResponse)
-          ? documentsResponse
-          : documentsResponse.documents || [];
-      }
+    if (!isActionPermissionError(documentsResponse)) {
+      documents = Array.isArray(documentsResponse)
+        ? documentsResponse
+        : documentsResponse.documents || [];
     }
 
     return (
@@ -95,13 +109,17 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
         }}
       >
         <div className="p-6">
-          <ContactDetails
+          <ContactBentoLayout
             contact={contact}
             clients={clients}
             documents={documents}
+            interactions={interactions}
+            tags={tags}
+            stats={stats}
+            ticketsSummary={ticketsSummary}
+            relatedWork={relatedWork}
             userId={currentUser.user_id}
             userPermissions={permissions}
-            isAlgaDeskMode={isAlgaDesk}
           />
         </div>
       </AIChatContextBoundary>

@@ -9,6 +9,8 @@ export { default as ClientDetails } from './clients/ClientDetails';
 
 export { default as ContactsLayout } from './contacts/ContactsLayout';
 export { default as ContactDetails } from './contacts/ContactDetails';
+export { default as ContactBentoLayout } from './contacts/bento/ContactBentoLayout';
+export { default as ContactQuickView } from './contacts/bento/ContactQuickView';
 export { default as QuickAddContact } from './contacts/QuickAddContact';
 
 export { default as InteractionsFeed } from './interactions/InteractionsFeed';

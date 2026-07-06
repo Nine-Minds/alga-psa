@@ -4,7 +4,7 @@ import React, { use, useEffect, useRef, useState } from 'react';
 import { Calendar, Phone, CreditCard, Plus } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
-import { BentoTile, BentoTileEmpty } from './BentoTile';
+import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
 import {
   getTicketScheduleEntries,
   getTicketInteractions,

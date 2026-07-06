@@ -13,8 +13,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { ColumnDefinition } from '@alga-psa/types';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useDrawer } from "@alga-psa/ui";
-import ContactDetails from './ContactDetails';
-import ContactDetailsEdit from './ContactDetailsEdit';
+import ContactQuickView from './bento/ContactQuickView';
 import type { IClient } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
@@ -143,13 +142,11 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       }
 
       openDrawer(
-        <ContactDetails
+        <ContactQuickView
           contact={contact}
           clients={clients}
           documents={documents[contact.contact_name_id] || []}
           userId={currentUser}
-          isInDrawer={true}
-          quickView={true}
           onDocumentCreated={async () => {
             try {
               const updatedResponse = await getDocumentsByEntity(contact.contact_name_id, 'contact');
