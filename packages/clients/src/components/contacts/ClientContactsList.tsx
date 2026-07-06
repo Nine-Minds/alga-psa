@@ -14,6 +14,7 @@ import { ColumnDefinition } from '@alga-psa/types';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useDrawer } from "@alga-psa/ui";
 import ContactQuickView from './bento/ContactQuickView';
+import ContactDetailsEdit from './ContactDetailsEdit';
 import type { IClient } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
