@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { BentoTile } from '@alga-psa/ui/components/bento/BentoTile';
 import type { ClientAttentionFlag } from '../../../lib/commandCenterTypes';
 
 interface ConcernsCardProps {
@@ -104,35 +105,35 @@ export default function ConcernsCard({ id, flags, formatMoney, onFlagClick, clas
   };
 
   return (
-    <div
-      id={id}
-      data-print-hide
-      className={`border border-amber-200 bg-amber-50/50 rounded-xl p-4 min-w-0 ${className}`}
-    >
-      <div className="flex items-center mb-2.5">
-        <h3 className="text-xs font-bold uppercase tracking-wide text-amber-800">
-          {t('clientCommandCenter.cards.concerns', { defaultValue: 'Concerns' })}
-        </h3>
-        <span className="ml-2 rounded-full bg-amber-200/70 text-amber-900 px-1.5 text-[10.5px] font-bold leading-4">
-          {flags.length}
-        </span>
-      </div>
-      <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-        {flags.map((flag, index) => (
-          <li key={`${flag.kind}-${flag.refId ?? index}`} className="min-w-0">
-            <button
-              id={`${id}-flag-${flag.kind}-${index}`}
-              type="button"
-              onClick={() => onFlagClick(flag)}
-              className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[13px] text-gray-800 hover:bg-white/80 transition-colors"
-            >
-              <span className={`w-2 h-2 rounded-full shrink-0 ${severityDot[flag.severity]}`} aria-hidden="true" />
-              <span className="min-w-0 truncate">{labelFor(flag)}</span>
-              <span className="ml-auto text-gray-400 shrink-0">→</span>
-            </button>
-          </li>
-        ))}
-      </ul>
+    <div data-print-hide className={`min-w-0 ${className}`}>
+      <BentoTile
+        id={id}
+        title={t('clientCommandCenter.cards.concerns', { defaultValue: 'Concerns' })}
+        action={
+          <span className="rounded-full bg-amber-200/70 text-amber-900 px-1.5 text-[10.5px] font-bold leading-4">
+            {flags.length}
+          </span>
+        }
+        className="h-full"
+        surfaceClassName="border-amber-200 bg-amber-50/50"
+      >
+        <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+          {flags.map((flag, index) => (
+            <li key={`${flag.kind}-${flag.refId ?? index}`} className="min-w-0">
+              <button
+                id={`${id}-flag-${flag.kind}-${index}`}
+                type="button"
+                onClick={() => onFlagClick(flag)}
+                className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[13px] text-gray-800 hover:bg-white/80 transition-colors"
+              >
+                <span className={`w-2 h-2 rounded-full shrink-0 ${severityDot[flag.severity]}`} aria-hidden="true" />
+                <span className="min-w-0 truncate">{labelFor(flag)}</span>
+                <span className="ml-auto text-gray-400 shrink-0">→</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </BentoTile>
     </div>
   );
 }

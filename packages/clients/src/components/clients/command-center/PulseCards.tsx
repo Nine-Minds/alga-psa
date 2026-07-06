@@ -3,6 +3,7 @@
 import React from 'react';
 import { MapPin } from 'lucide-react';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import { BentoTile } from '@alga-psa/ui/components/bento/BentoTile';
 import type {
   ClientPulseService,
   ClientPulseMoney,
@@ -36,39 +37,44 @@ interface CardShellProps {
 export function CardShell({ id, title, action, footerLinks, className = '', children }: CardShellProps) {
   const liveFooterLinks = (footerLinks ?? []).filter((link): link is CardFooterLink => link != null);
   return (
-    <div id={id} className={`bg-white border border-gray-200 rounded-xl p-4 min-w-0 ${className}`}>
-      <div className="flex items-center mb-3">
-        <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500">{title}</h3>
-        {action && (
-          <button
-            id={`${id}-open`}
-            type="button"
-            onClick={action.onClick}
-            className="ml-auto text-xs font-semibold text-primary-600 hover:text-primary-800"
-          >
-            {action.label}
-          </button>
-        )}
-      </div>
+    <BentoTile
+      id={id}
+      title={title}
+      className={className}
+      action={action ? (
+        <button
+          id={`${id}-open`}
+          type="button"
+          onClick={action.onClick}
+          className="text-xs font-semibold text-primary-600 hover:text-primary-800 whitespace-nowrap"
+        >
+          {action.label}
+        </button>
+      ) : undefined}
+    >
       {children}
       {liveFooterLinks.length > 0 && (
-        <div className="mt-3 pt-2 border-t border-gray-100 text-xs">
-          {liveFooterLinks.map((link, index) => (
-            <React.Fragment key={link.id}>
-              {index > 0 && <span className="text-gray-300 mx-1.5">·</span>}
-              <button
-                id={`${id}-link-${link.id}`}
-                type="button"
-                onClick={link.onClick}
-                className="font-semibold text-primary-600 hover:text-primary-800"
-              >
-                {link.label}
-              </button>
-            </React.Fragment>
-          ))}
+        // mt-auto pins the entry links to the tile's bottom edge, so footers
+        // align across a bento row of equal-height tiles.
+        <div className="mt-auto">
+          <div className="mt-3 pt-2 border-t border-[rgb(var(--color-border-100))] text-xs">
+            {liveFooterLinks.map((link, index) => (
+              <React.Fragment key={link.id}>
+                {index > 0 && <span className="text-gray-300 mx-1.5">·</span>}
+                <button
+                  id={`${id}-link-${link.id}`}
+                  type="button"
+                  onClick={link.onClick}
+                  className="font-semibold text-primary-600 hover:text-primary-800"
+                >
+                  {link.label}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       )}
-    </div>
+    </BentoTile>
   );
 }
 
@@ -463,10 +469,13 @@ export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset
 
 // ── People ───────────────────────────────────────────────────────────────────
 
-export function PeopleCard({ id, data, onOpen, className, t }: {
+export function PeopleCard({ id, data, onOpen, onOpenContact, onAddContact, className, t }: {
   id: string;
   data: ClientPulsePeople;
   onOpen: (() => void) | null;
+  /** Open one contact's quick view directly (drawer), skipping the contacts list. */
+  onOpenContact?: ((contactId: string) => void) | null;
+  onAddContact?: (() => void) | null;
   className?: string;
   t: TFn;
 }) {
@@ -490,16 +499,31 @@ export function PeopleCard({ id, data, onOpen, className, t }: {
                 size="sm"
                 className="shrink-0"
               />
-              <span className="min-w-0">
-                <span className="block font-semibold text-gray-900 truncate">
-                  {contact.full_name}
-                  {(contact.is_default || contact.role) && (
-                    <span className="ml-1.5 font-normal text-[11px] text-gray-400">
-                      {[contact.is_default ? t('clientCommandCenter.people.primary', { defaultValue: 'Primary' }) : null, contact.role]
-                        .filter(Boolean).join(' · ')}
-                    </span>
-                  )}
-                </span>
+              <span className="min-w-0 flex-1">
+                {(() => {
+                  const nameLine = (
+                    <>
+                      {contact.full_name}
+                      {(contact.is_default || contact.role) && (
+                        <span className="ml-1.5 font-normal text-[11px] text-gray-400">
+                          {[contact.is_default ? t('clientCommandCenter.people.primary', { defaultValue: 'Primary' }) : null, contact.role]
+                            .filter(Boolean).join(' · ')}
+                        </span>
+                      )}
+                    </>
+                  );
+                  return onOpenContact ? (
+                    <button
+                      type="button"
+                      onClick={() => onOpenContact(contact.contact_name_id)}
+                      className="block w-full text-left font-semibold text-gray-900 truncate hover:text-primary-700 hover:underline"
+                    >
+                      {nameLine}
+                    </button>
+                  ) : (
+                    <span className="block font-semibold text-gray-900 truncate">{nameLine}</span>
+                  );
+                })()}
                 <span className="block text-[12px] text-gray-600 truncate">
                   {contact.phone && (
                     <a href={`tel:${contact.phone}`} className="hover:text-primary-700 hover:underline">☎ {contact.phone}</a>
@@ -523,6 +547,16 @@ export function PeopleCard({ id, data, onOpen, className, t }: {
         <p className="mt-1.5 text-[11px] text-gray-400">
           {t('clientCommandCenter.people.more', { defaultValue: '+{{count}} more', count: data.totalCount - data.top.length })}
         </p>
+      )}
+      {onAddContact && (
+        <button
+          id={`${id}-add-contact`}
+          type="button"
+          onClick={onAddContact}
+          className="mt-3 text-xs font-semibold text-primary-600 hover:text-primary-800 text-left"
+        >
+          {t('clientCommandCenter.people.addContact', { defaultValue: '＋ Add contact' })}
+        </button>
       )}
     </CardShell>
   );

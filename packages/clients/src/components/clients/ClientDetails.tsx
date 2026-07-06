@@ -12,6 +12,7 @@ import { BillingCycleType } from '@alga-psa/types';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { validateClientName } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
+import QuickAddContact from '../contacts/QuickAddContact';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import BillingConfiguration from './BillingConfiguration';
@@ -226,6 +227,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
+  const [isAddContactOpen, setIsAddContactOpen] = useState(false);
+  // Bumped after quick-adds so the command center refetches the pulse cards.
+  const [pulseRefreshNonce, setPulseRefreshNonce] = useState(0);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
   const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
@@ -1040,6 +1044,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const handleTicketAdded = (ticket: ITicket) => {
     setIsQuickAddTicketOpen(false);
+    setPulseRefreshNonce((nonce) => nonce + 1);
   };
 
   const handleInteractionAdded = (newInteraction: IInteraction) => {
@@ -1785,7 +1790,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             }}
             onNewTicket={() => setIsQuickAddTicketOpen(true)}
             onManageLocations={() => setIsLocationsDialogOpen(true)}
+            onAddContact={() => setIsAddContactOpen(true)}
             onOpenTicketDetails={openTicketDetails ?? null}
+            refreshNonce={pulseRefreshNonce}
             surveySummary={surveySummary}
             renderSurveySummaryCard={renderSurveySummaryCard}
             t={t}
@@ -1802,6 +1809,17 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             name: editedClient.client_name,
           },
         })}
+
+        <QuickAddContact
+          isOpen={isAddContactOpen}
+          onClose={() => setIsAddContactOpen(false)}
+          onContactAdded={() => {
+            setIsAddContactOpen(false);
+            setPulseRefreshNonce((nonce) => nonce + 1);
+          }}
+          clients={allClients.length ? allClients : [client]}
+          selectedClientId={client.client_id}
+        />
 
         <Dialog
           isOpen={isLocationsDialogOpen}

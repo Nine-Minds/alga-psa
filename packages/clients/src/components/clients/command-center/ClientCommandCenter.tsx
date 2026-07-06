@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation';
 import { MapPin } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from '@alga-psa/ui/components/bento/BentoTile';
 import type { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
 import { getClientPulse } from '../../../actions/clientPulseActions';
@@ -12,6 +13,7 @@ import type {
   ClientPulse,
   ClientTimelineEvent,
 } from '../../../lib/commandCenterTypes';
+import { useContactQuickViewDrawer } from '../../contacts/bento/useContactQuickViewDrawer';
 import ConcernsCard from './ConcernsCard';
 import ClientTimelinePanel from './ClientTimelinePanel';
 import FocusViewHost from './FocusViewHost';
@@ -42,22 +44,14 @@ interface ClientCommandCenterProps {
   onDiscardRecordChanges: () => void;
   onNewTicket: () => void;
   onManageLocations: () => void;
+  onAddContact?: (() => void) | null;
   /** Open a ticket in the shared drawer (composition-provided); falls back to navigation. */
   onOpenTicketDetails?: ((ticketId: string) => void | Promise<void>) | null;
+  /** Bump when the host mutated pulse-visible data (quick-add ticket/contact) to refetch in place. */
+  refreshNonce?: number;
   surveySummary: SurveyClientSatisfactionSummary | null;
   renderSurveySummaryCard: (props: { summary: SurveyClientSatisfactionSummary | null }) => React.ReactNode;
   t: TFn;
-}
-
-function SkeletonCard({ className = '' }: { className?: string }) {
-  return (
-    <div className={`bg-white border border-gray-200 rounded-xl p-4 animate-pulse ${className}`}>
-      <div className="h-3 w-24 bg-gray-200 rounded mb-4" />
-      <div className="h-6 w-16 bg-gray-100 rounded mb-2" />
-      <div className="h-3 w-full bg-gray-100 rounded mb-1.5" />
-      <div className="h-3 w-2/3 bg-gray-100 rounded" />
-    </div>
-  );
 }
 
 // Focus views editing the shared client-record buffer — closing these while
@@ -74,7 +68,9 @@ export default function ClientCommandCenter({
   onDiscardRecordChanges,
   onNewTicket,
   onManageLocations,
+  onAddContact,
   onOpenTicketDetails,
+  refreshNonce = 0,
   surveySummary,
   renderSurveySummaryCard,
   t,
@@ -102,6 +98,9 @@ export default function ClientCommandCenter({
     }
   }, [initialTabId, tabIds]);
 
+  // Bumped when a drawer edit changed data the cards summarize (e.g. a contact
+  // saved from the quick view) — refetches in place, keeping the current cards.
+  const [pulseRefreshKey, setPulseRefreshKey] = useState(0);
   useEffect(() => {
     let cancelled = false;
     getClientPulse(clientId)
@@ -112,7 +111,14 @@ export default function ClientCommandCenter({
         }
       });
     return () => { cancelled = true; };
-  }, [clientId, t]);
+  }, [clientId, t, pulseRefreshKey, refreshNonce]);
+
+  const openContactQuickView = useContactQuickViewDrawer();
+  const handleOpenContact = useCallback((contactId: string) => {
+    void openContactQuickView(contactId, {
+      onChangesSaved: () => setPulseRefreshKey((key) => key + 1),
+    });
+  }, [openContactQuickView]);
 
   const openFocus = useCallback((tabId: string) => {
     if (!tabIds.has(tabId)) return;
@@ -268,10 +274,10 @@ export default function ClientCommandCenter({
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-6 gap-4">
           {!pulse && !pulseError && (
             <>
-              <SkeletonCard className="sm:col-span-4" />
-              <SkeletonCard className="sm:col-span-2" />
-              <SkeletonCard className="sm:col-span-3" />
-              <SkeletonCard className="sm:col-span-3" />
+              <BentoTileSkeleton id={`${idPrefix}-skeleton-hero`} lines={2} className="sm:col-span-4" />
+              <BentoTileSkeleton id={`${idPrefix}-skeleton-side`} lines={2} className="sm:col-span-2" />
+              <BentoTileSkeleton id={`${idPrefix}-skeleton-left`} className="sm:col-span-3" />
+              <BentoTileSkeleton id={`${idPrefix}-skeleton-right`} className="sm:col-span-3" />
             </>
           )}
 
@@ -337,6 +343,8 @@ export default function ClientCommandCenter({
               id={`${idPrefix}-card-people`}
               data={pulse.people}
               onOpen={focusOpener('contacts')}
+              onOpenContact={handleOpenContact}
+              onAddContact={onAddContact}
               className="sm:col-span-3"
               t={t}
             />
@@ -376,12 +384,11 @@ export default function ClientCommandCenter({
                 {renderSurveySummaryCard({ summary: surveySummary })}
               </div>
             ) : (
-              <div
-                id={`${idPrefix}-card-csat`}
-                className="bg-white border border-gray-200 rounded-xl px-4 py-3 min-w-0 sm:col-span-2 text-[13px] text-gray-400 italic self-start"
-              >
-                {t('clientCommandCenter.csatEmpty', { defaultValue: 'No survey responses yet.' })}
-              </div>
+              <BentoTile id={`${idPrefix}-card-csat`} className="sm:col-span-2 self-start">
+                <BentoTileEmpty id={`${idPrefix}-card-csat-empty`}>
+                  {t('clientCommandCenter.csatEmpty', { defaultValue: 'No survey responses yet.' })}
+                </BentoTileEmpty>
+              </BentoTile>
             )
           )}
         </div>
