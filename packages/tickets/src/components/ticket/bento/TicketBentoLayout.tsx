@@ -37,7 +37,6 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useQuickAddClient } from '@alga-psa/ui/context';
-import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from '@alga-psa/ui/components/bento/BentoTile';
 import { BentoHero } from './BentoHero';
@@ -47,15 +46,6 @@ import { NextVisitTile, AppointmentRequestsTile, CallsEmailsTile, BillingTile } 
 import { TimeLoggedSummary } from './TimeLoggedSummary';
 import type { TicketSlaFields } from './slaClocks';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
-
-// Lazy-load the log-interaction modal. It statically pulls in the clients
-// server actions (and their server-only storage deps), so keeping it out of
-// the static import graph avoids bundling server code into the client — and,
-// paired with mounting it only when open, keeps it out of unit-test bundles.
-const QuickAddInteraction = dynamic(
-  () => import('@alga-psa/clients/components/interactions/QuickAddInteraction').then((m) => m.QuickAddInteraction),
-  { ssr: false },
-);
 
 function formatElapsed(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -235,7 +225,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   // the all-fields drawer uses, and quick-add attaches a brand-new one. Editing
   // is only offered when TicketDetails wired a change handler and the ticket has
   // a client to scope the picker/quick-add to.
-  const { renderQuickAddContact } = useQuickAddClient();
+  const { renderQuickAddContact, renderQuickAddInteraction } = useQuickAddClient();
   const effectiveClientId = props.client?.client_id ?? ticket.client_id ?? undefined;
   const canEditContact = Boolean(props.onChangeContact) && Boolean(effectiveClientId);
   const [contactEditOpen, setContactEditOpen] = React.useState(false);
@@ -607,21 +597,21 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           initialData={props.bentoStreams?.interactions}
         />
       </Suspense>
-      {isLogInteractionOpen && effectiveClientId ? (
-        <QuickAddInteraction
-          id={`${id}-log-interaction`}
-          isOpen={isLogInteractionOpen}
-          onClose={() => setIsLogInteractionOpen(false)}
-          entityId={logInteractionContactId ?? effectiveClientId}
-          entityType={logInteractionContactId ? 'contact' : 'client'}
-          clientId={effectiveClientId}
-          ticketId={ticketId || undefined}
-          onInteractionAdded={() => {
-            setIsLogInteractionOpen(false);
-            setInteractionRefreshKey((key) => key + 1);
-          }}
-        />
-      ) : null}
+      {isLogInteractionOpen && effectiveClientId
+        ? renderQuickAddInteraction({
+            id: `${id}-log-interaction`,
+            isOpen: isLogInteractionOpen,
+            onClose: () => setIsLogInteractionOpen(false),
+            entityId: logInteractionContactId ?? effectiveClientId,
+            entityType: logInteractionContactId ? 'contact' : 'client',
+            clientId: effectiveClientId,
+            ticketId: ticketId || undefined,
+            onInteractionAdded: () => {
+              setIsLogInteractionOpen(false);
+              setInteractionRefreshKey((key) => key + 1);
+            },
+          })
+        : null}
     </div>
   );
 

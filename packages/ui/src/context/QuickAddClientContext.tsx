@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, type ReactNode } from 'react';
-import type { IClient, IContact } from '@alga-psa/types';
+import type { IClient, IContact, IInteraction } from '@alga-psa/types';
 
 export interface QuickAddClientRenderProps {
   open: boolean;
@@ -19,14 +19,27 @@ export interface QuickAddContactRenderProps {
   selectedClientId?: string | null;
 }
 
+export interface QuickAddInteractionRenderProps {
+  id?: string;
+  isOpen: boolean;
+  onClose: () => void;
+  entityId: string;
+  entityType: 'contact' | 'client';
+  clientId?: string;
+  ticketId?: string;
+  onInteractionAdded: (interaction: IInteraction) => void;
+}
+
 export interface QuickAddClientCallbacks {
   renderQuickAddClient: (props: QuickAddClientRenderProps) => ReactNode;
   renderQuickAddContact: (props: QuickAddContactRenderProps) => ReactNode;
+  renderQuickAddInteraction: (props: QuickAddInteractionRenderProps) => ReactNode;
 }
 
 const defaultCallbacks: QuickAddClientCallbacks = {
   renderQuickAddClient: () => null,
   renderQuickAddContact: () => null,
+  renderQuickAddInteraction: () => null,
 };
 
 const QuickAddClientContext = createContext<QuickAddClientCallbacks>(defaultCallbacks);
