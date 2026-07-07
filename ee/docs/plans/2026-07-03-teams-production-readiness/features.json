@@ -333,35 +333,35 @@
     "epic": "E5",
     "phase": "P2",
     "description": "LLM intent parsing maps free-text bot messages to existing registry actions; deterministic parser remains default/fallback",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F049",
     "epic": "E5",
     "phase": "P2",
     "description": "Every NL-parsed mutation shows a confirmation card before executing",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F050",
     "epic": "E5",
     "phase": "P2",
     "description": "NL execution goes exclusively through executeTeamsAction (RBAC, audit, idempotency preserved; no scope widening via prompt injection)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F051",
     "epic": "E5",
     "phase": "P2",
     "description": "NL disambiguation dialog when the target entity is ambiguous",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F052",
     "epic": "E5",
     "phase": "P2",
     "description": "NL layer gated behind AI Assistant add-on, a tenant toggle, and its own PostHog flag",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F053",
@@ -438,7 +438,7 @@
     "epic": "E7",
     "phase": "P1",
     "description": "Centralized tenantHasTeamsAddOn/assertTeamsAddOn helper exported from one module; all duplicated copies migrated to it",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F064",
