@@ -35398,8 +35398,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "currency_code": {
           "type": "string",
           "minLength": 3,
-          "maxLength": 3,
-          "default": "USD"
+          "maxLength": 3
         },
         "unit_of_measure": {
           "type": "string",
@@ -35489,8 +35488,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "null"
             }
-          ],
-          "default": "USD"
+          ]
         },
         "vendor": {
           "anyOf": [
@@ -35707,8 +35705,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "currency_code": {
           "type": "string",
           "minLength": 3,
-          "maxLength": 3,
-          "default": "USD"
+          "maxLength": 3
         },
         "unit_of_measure": {
           "type": "string",
@@ -35798,8 +35795,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "null"
             }
-          ],
-          "default": "USD"
+          ]
         },
         "vendor": {
           "anyOf": [
@@ -38276,14 +38272,195 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_workflows_tasks",
     "method": "get",
     "path": "/api/v1/workflows/tasks",
-    "displayName": "List workflow tasks (route inventory only)",
-    "summary": "List workflow tasks (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+    "displayName": "List workflow tasks",
+    "summary": "List workflow tasks",
+    "description": "Returns the authenticated caller's workflow task inbox (tasks assigned to them directly or via a role), paginated. Items are summary rows without `formSchema`; fetch a single task to obtain its form schema. EE-only — on the Community build this returns an empty page.",
     "tags": [
-      "Workflows v1"
+      "Workflow Tasks v1"
     ],
     "approvalRequired": false,
-    "parameters": []
+    "parameters": [
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated WorkflowTaskStatus values (pending, claimed, completed, canceled, expired). Omit for the open inbox (pending + claimed).",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated WorkflowTaskStatus values (pending, claimed, completed, canceled, expired). Omit for the open inbox (pending + claimed)."
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "1-based page number (default 1).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-based page number (default 1)."
+        }
+      },
+      {
+        "name": "pageSize",
+        "in": "query",
+        "required": false,
+        "description": "Items per page, max 100 (default 25).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Items per page, max 100 (default 25)."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string"
+              },
+              "executionId": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "claimed",
+                  "completed",
+                  "canceled",
+                  "expired"
+                ]
+              },
+              "priority": {
+                "type": "string"
+              },
+              "dueDate": {
+                "type": "string"
+              },
+              "assignedRoles": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "assignedUsers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "contextData": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "formId": {
+                "type": "string"
+              },
+              "formSchema": {
+                "type": "object",
+                "properties": {
+                  "jsonSchema": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "uiSchema": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "defaultValues": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  }
+                },
+                "required": [
+                  "jsonSchema"
+                ]
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "createdBy": {
+                "type": "string"
+              },
+              "claimedAt": {
+                "type": "string"
+              },
+              "claimedBy": {
+                "type": "string"
+              },
+              "completedAt": {
+                "type": "string"
+              },
+              "completedBy": {
+                "type": "string"
+              },
+              "responseData": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            },
+            "required": [
+              "taskId",
+              "executionId",
+              "title",
+              "status",
+              "priority",
+              "formId",
+              "createdAt"
+            ]
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "number"
+            },
+            "limit": {
+              "type": "number"
+            },
+            "total": {
+              "type": "number"
+            },
+            "totalPages": {
+              "type": "number"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    }
   },
   {
     "id": "post-_api_v1_workflows_tasks",
@@ -38315,11 +38492,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_workflows_tasks_id",
     "method": "get",
     "path": "/api/v1/workflows/tasks/{id}",
-    "displayName": "Get workflow task by id (route inventory only)",
-    "summary": "Get workflow task by id (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+    "displayName": "Get workflow task",
+    "summary": "Get workflow task",
+    "description": "Returns full detail for a single workflow task, including `formSchema` ({ jsonSchema, uiSchema?, defaultValues? }) so a client can classify the form as simple (native completion) vs complex (web deep-link). EE-only — on the Community build this returns 404.",
     "tags": [
-      "Workflows v1"
+      "Workflow Tasks v1"
     ],
     "approvalRequired": false,
     "parameters": [
@@ -38327,13 +38504,125 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "Resource identifier.",
+        "description": "Workflow task identifier (taskId).",
         "schema": {
           "type": "string",
-          "format": "uuid"
+          "description": "Workflow task identifier (taskId)."
         }
       }
-    ]
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "taskId": {
+              "type": "string"
+            },
+            "executionId": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "claimed",
+                "completed",
+                "canceled",
+                "expired"
+              ]
+            },
+            "priority": {
+              "type": "string"
+            },
+            "dueDate": {
+              "type": "string"
+            },
+            "assignedRoles": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "assignedUsers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "contextData": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "formId": {
+              "type": "string"
+            },
+            "formSchema": {
+              "type": "object",
+              "properties": {
+                "jsonSchema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "uiSchema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "defaultValues": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "jsonSchema"
+              ]
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "createdBy": {
+              "type": "string"
+            },
+            "claimedAt": {
+              "type": "string"
+            },
+            "claimedBy": {
+              "type": "string"
+            },
+            "completedAt": {
+              "type": "string"
+            },
+            "completedBy": {
+              "type": "string"
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "taskId",
+            "executionId",
+            "title",
+            "status",
+            "priority",
+            "formId",
+            "createdAt"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    }
   },
   {
     "id": "put-_api_v1_workflows_tasks_id",
@@ -38341,54 +38630,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/workflows/tasks/{id}",
     "displayName": "Update workflow task (route inventory only)",
     "summary": "Update workflow task (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ]
-  },
-  {
-    "id": "post-_api_v1_workflows_tasks_id_claim",
-    "method": "post",
-    "path": "/api/v1/workflows/tasks/{id}/claim",
-    "displayName": "Claim workflow task (route inventory only)",
-    "summary": "Claim workflow task (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ]
-  },
-  {
-    "id": "post-_api_v1_workflows_tasks_id_complete",
-    "method": "post",
-    "path": "/api/v1/workflows/tasks/{id}/complete",
-    "displayName": "Complete workflow task (route inventory only)",
-    "summary": "Complete workflow task (route inventory only)",
     "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
     "tags": [
       "Workflows v1"
@@ -38576,6 +38817,1351 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ]
+  },
+  {
+    "id": "post-_api_v1_workflows_tasks_id_claim",
+    "method": "post",
+    "path": "/api/v1/workflows/tasks/{id}/claim",
+    "displayName": "Claim workflow task",
+    "summary": "Claim workflow task",
+    "description": "Claims a pending task for the caller. No request body. EE-only — on the Community build this returns 404.",
+    "tags": [
+      "Workflow Tasks v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Workflow task identifier (taskId).",
+        "schema": {
+          "type": "string",
+          "description": "Workflow task identifier (taskId)."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_workflows_tasks_id_unclaim",
+    "method": "post",
+    "path": "/api/v1/workflows/tasks/{id}/unclaim",
+    "displayName": "Unclaim workflow task",
+    "summary": "Unclaim workflow task",
+    "description": "Releases a task the caller has claimed, returning it to the pending pool. No request body. EE-only — on the Community build this returns 404.",
+    "tags": [
+      "Workflow Tasks v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Workflow task identifier (taskId).",
+        "schema": {
+          "type": "string",
+          "description": "Workflow task identifier (taskId)."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_workflows_tasks_id_complete",
+    "method": "post",
+    "path": "/api/v1/workflows/tasks/{id}/complete",
+    "displayName": "Complete workflow task",
+    "summary": "Complete workflow task",
+    "description": "Submits the task's form payload and completes it. The form data is validated server-side against the task's JSON Schema; validation failures return 400 with the schema errors in `error.details`. EE-only — on the Community build this returns 404.",
+    "tags": [
+      "Workflow Tasks v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Workflow task identifier (taskId).",
+        "schema": {
+          "type": "string",
+          "description": "Workflow task identifier (taskId)."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "formData": {
+          "type": "object",
+          "additionalProperties": {},
+          "default": {}
+        },
+        "comments": {
+          "type": "string"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_activities",
+    "method": "get",
+    "path": "/api/v1/activities",
+    "displayName": "List My Activities",
+    "summary": "Fetch the authenticated user's unified activity list (the User Activities screen)",
+    "description": "Returns the caller's own work items exactly as the User Activities screen shows them: a unified, paginated fan-out across tickets, project tasks, schedule entries, ad-hoc to-dos, workflow tasks, time entries and notifications. Each activity carries id, type, title, status and priority. Filter with type (comma-separated: ticket, projectTask, schedule, workflowTask, timeEntry, notification, document; ad-hoc to-dos surface as schedule), status (open/closed/all), search, due-date and created-date windows; sort with sortBy/sortDirection. This endpoint is always scoped to the authenticated caller — use it for questions like \"what is on my plate\" or \"my open tickets on my activities screen\". For tenant-wide ticket queries use GET /api/v1/tickets instead.",
+    "tags": [
+      "Activities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "type",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated ActivityType values (e.g. \"ticket,schedule\"). Omit for all types.",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated ActivityType values (e.g. \"ticket,schedule\"). Omit for all types."
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Open/closed filter. `open`→active only, `closed`→closed, `all`→no filter (default).",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "open",
+            "closed",
+            "all"
+          ],
+          "description": "Open/closed filter. `open`→active only, `closed`→closed, `all`→no filter (default)."
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Free-text search across activity titles/descriptions.",
+        "schema": {
+          "type": "string",
+          "description": "Free-text search across activity titles/descriptions."
+        }
+      },
+      {
+        "name": "dateStart",
+        "in": "query",
+        "required": false,
+        "description": "ISO 8601 lower bound of the schedule/time-entry/notification window.",
+        "schema": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 lower bound of the schedule/time-entry/notification window."
+        }
+      },
+      {
+        "name": "dateEnd",
+        "in": "query",
+        "required": false,
+        "description": "ISO 8601 upper bound of the window.",
+        "schema": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 upper bound of the window."
+        }
+      },
+      {
+        "name": "priority",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated normalized ActivityPriority buckets (e.g. \"high,medium\"). Lossy for custom schemes; prefer `priorityIds`.",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated normalized ActivityPriority buckets (e.g. \"high,medium\"). Lossy for custom schemes; prefer `priorityIds`."
+        }
+      },
+      {
+        "name": "priorityIds",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated exact priority IDs (the tenant's real per-type priorities). Applies to ticket/project-task activities.",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated exact priority IDs (the tenant's real per-type priorities). Applies to ticket/project-task activities."
+        }
+      },
+      {
+        "name": "dueDateStart",
+        "in": "query",
+        "required": false,
+        "description": "ISO 8601 lower bound of the due-date filter (independent of the schedule window).",
+        "schema": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 lower bound of the due-date filter (independent of the schedule window)."
+        }
+      },
+      {
+        "name": "dueDateEnd",
+        "in": "query",
+        "required": false,
+        "description": "ISO 8601 upper bound of the due-date filter.",
+        "schema": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 upper bound of the due-date filter."
+        }
+      },
+      {
+        "name": "createdAtStart",
+        "in": "query",
+        "required": false,
+        "description": "ISO 8601 lower bound of the created-date (\"date entered\") filter. Applies to every activity type.",
+        "schema": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 lower bound of the created-date (\"date entered\") filter. Applies to every activity type."
+        }
+      },
+      {
+        "name": "createdAtEnd",
+        "in": "query",
+        "required": false,
+        "description": "ISO 8601 upper bound of the created-date (\"date entered\") filter.",
+        "schema": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 upper bound of the created-date (\"date entered\") filter."
+        }
+      },
+      {
+        "name": "sortBy",
+        "in": "query",
+        "required": false,
+        "description": "Sort column. Omit for the default sort (priority high→low, then due date ascending).",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "type",
+            "title",
+            "status",
+            "priority",
+            "dueDate"
+          ],
+          "description": "Sort column. Omit for the default sort (priority high→low, then due date ascending)."
+        }
+      },
+      {
+        "name": "sortDirection",
+        "in": "query",
+        "required": false,
+        "description": "Sort direction for `sortBy` (default asc). Ignored when `sortBy` is omitted.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Sort direction for `sortBy` (default asc). Ignored when `sortBy` is omitted."
+        }
+      },
+      {
+        "name": "groupBy",
+        "in": "query",
+        "required": false,
+        "description": "When set, the response is grouped by this dimension (ActivityGroupedResponseV1) instead of the paginated list; `page`/`pageSize` are ignored. `priority` groups by the real per-tenant priority name (not the normalized bucket), so it is only meaningful when scoped to a single prioritized type.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "type",
+            "priority",
+            "status",
+            "dueDate"
+          ],
+          "description": "When set, the response is grouped by this dimension (ActivityGroupedResponseV1) instead of the paginated list; `page`/`pageSize` are ignored. `priority` groups by the real per-tenant priority name (not the normalized bucket), so it is only meaningful when scoped to a single prioritized type."
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "1-based page number (default 1). Ignored when `groupBy` is set.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-based page number (default 1). Ignored when `groupBy` is set."
+        }
+      },
+      {
+        "name": "pageSize",
+        "in": "query",
+        "required": false,
+        "description": "Items per page, max 100 (default 25). Ignored when `groupBy` is set.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Items per page, max 100 (default 25). Ignored when `groupBy` is set."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "schedule",
+                  "projectTask",
+                  "ticket",
+                  "timeEntry",
+                  "workflowTask",
+                  "notification",
+                  "document"
+                ]
+              },
+              "status": {
+                "type": "string"
+              },
+              "statusColor": {
+                "type": "string"
+              },
+              "priority": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "priorityName": {
+                "type": "string"
+              },
+              "priorityColor": {
+                "type": "string"
+              },
+              "dueDate": {
+                "type": "string"
+              },
+              "startDate": {
+                "type": "string"
+              },
+              "endDate": {
+                "type": "string"
+              },
+              "assignedTo": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "assignedToNames": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "sourceType": {
+                "type": "string",
+                "enum": [
+                  "schedule",
+                  "projectTask",
+                  "ticket",
+                  "timeEntry",
+                  "workflowTask",
+                  "notification",
+                  "document"
+                ]
+              },
+              "actions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "icon": {
+                      "type": "string"
+                    },
+                    "disabled": {
+                      "type": "boolean"
+                    },
+                    "disabledReason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label"
+                  ]
+                }
+              },
+              "isClosed": {
+                "type": "boolean"
+              },
+              "tenant": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "type",
+              "status",
+              "priority",
+              "sourceId",
+              "sourceType",
+              "actions",
+              "tenant",
+              "createdAt",
+              "updatedAt"
+            ]
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "number"
+            },
+            "limit": {
+              "type": "number"
+            },
+            "total": {
+              "type": "number"
+            },
+            "totalPages": {
+              "type": "number"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    },
+    "examples": [
+      {
+        "name": "My open ticket activities",
+        "request": {
+          "query": {
+            "type": "ticket",
+            "status": "open",
+            "pageSize": 50
+          }
+        },
+        "notes": "Returns the ticket activities the caller sees on their User Activities screen. Each activity's id is the ticket UUID, usable with GET /api/v1/tickets/{id}."
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_activities_adhoc",
+    "method": "post",
+    "path": "/api/v1/activities/ad-hoc",
+    "displayName": "Create ad-hoc activity",
+    "summary": "Create ad-hoc activity",
+    "description": "Creates a personal, self-assigned ad-hoc to-do rendered as a schedule activity. Times are optional; when both are supplied the end must be after the start. Gated by `user_schedule:read`.",
+    "tags": [
+      "Activities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notes": {
+          "type": "string"
+        },
+        "scheduledStart": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "scheduledEnd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "title"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "schedule",
+                "projectTask",
+                "ticket",
+                "timeEntry",
+                "workflowTask",
+                "notification",
+                "document"
+              ]
+            },
+            "status": {
+              "type": "string"
+            },
+            "statusColor": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "priorityName": {
+              "type": "string"
+            },
+            "priorityColor": {
+              "type": "string"
+            },
+            "dueDate": {
+              "type": "string"
+            },
+            "startDate": {
+              "type": "string"
+            },
+            "endDate": {
+              "type": "string"
+            },
+            "assignedTo": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "assignedToNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "sourceId": {
+              "type": "string"
+            },
+            "sourceType": {
+              "type": "string",
+              "enum": [
+                "schedule",
+                "projectTask",
+                "ticket",
+                "timeEntry",
+                "workflowTask",
+                "notification",
+                "document"
+              ]
+            },
+            "actions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "icon": {
+                    "type": "string"
+                  },
+                  "disabled": {
+                    "type": "boolean"
+                  },
+                  "disabledReason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label"
+                ]
+              }
+            },
+            "isClosed": {
+              "type": "boolean"
+            },
+            "tenant": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "type",
+            "status",
+            "priority",
+            "sourceId",
+            "sourceType",
+            "actions",
+            "tenant",
+            "createdAt",
+            "updatedAt"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_v1_activities_adhoc_id",
+    "method": "patch",
+    "path": "/api/v1/activities/ad-hoc/{id}",
+    "displayName": "Update ad-hoc activity",
+    "summary": "Update ad-hoc activity",
+    "description": "Updates an ad-hoc item's title, notes or optional times. Omitted fields are left unchanged; `notes: null` clears the field. Requires the caller to be an assignee, or hold `user_schedule:update` / `user_schedule:read_all`.",
+    "tags": [
+      "Activities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ad-hoc activity identifier (the backing schedule entry id).",
+        "schema": {
+          "type": "string",
+          "description": "Ad-hoc activity identifier (the backing schedule entry id)."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scheduledStart": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "scheduledEnd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "schedule",
+                "projectTask",
+                "ticket",
+                "timeEntry",
+                "workflowTask",
+                "notification",
+                "document"
+              ]
+            },
+            "status": {
+              "type": "string"
+            },
+            "statusColor": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "priorityName": {
+              "type": "string"
+            },
+            "priorityColor": {
+              "type": "string"
+            },
+            "dueDate": {
+              "type": "string"
+            },
+            "startDate": {
+              "type": "string"
+            },
+            "endDate": {
+              "type": "string"
+            },
+            "assignedTo": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "assignedToNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "sourceId": {
+              "type": "string"
+            },
+            "sourceType": {
+              "type": "string",
+              "enum": [
+                "schedule",
+                "projectTask",
+                "ticket",
+                "timeEntry",
+                "workflowTask",
+                "notification",
+                "document"
+              ]
+            },
+            "actions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "icon": {
+                    "type": "string"
+                  },
+                  "disabled": {
+                    "type": "boolean"
+                  },
+                  "disabledReason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label"
+                ]
+              }
+            },
+            "isClosed": {
+              "type": "boolean"
+            },
+            "tenant": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "type",
+            "status",
+            "priority",
+            "sourceId",
+            "sourceType",
+            "actions",
+            "tenant",
+            "createdAt",
+            "updatedAt"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_activities_adhoc_id",
+    "method": "delete",
+    "path": "/api/v1/activities/ad-hoc/{id}",
+    "displayName": "Delete ad-hoc activity",
+    "summary": "Delete ad-hoc activity",
+    "description": "Permanently deletes an ad-hoc item. Requires the caller to be an assignee, or hold `user_schedule:update` / `user_schedule:read_all`.",
+    "tags": [
+      "Activities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ad-hoc activity identifier (the backing schedule entry id).",
+        "schema": {
+          "type": "string",
+          "description": "Ad-hoc activity identifier (the backing schedule entry id)."
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_activities_adhoc_id_done",
+    "method": "post",
+    "path": "/api/v1/activities/ad-hoc/{id}/done",
+    "displayName": "Toggle ad-hoc activity done",
+    "summary": "Toggle ad-hoc activity done",
+    "description": "Marks an ad-hoc item done/undone. `done: true` sets status to closed; `done: false` reopens it (status scheduled). Requires the caller to be an assignee, or hold `user_schedule:update` / `user_schedule:read_all`.",
+    "tags": [
+      "Activities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ad-hoc activity identifier (the backing schedule entry id).",
+        "schema": {
+          "type": "string",
+          "description": "Ad-hoc activity identifier (the backing schedule entry id)."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "done": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "done"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "schedule",
+                "projectTask",
+                "ticket",
+                "timeEntry",
+                "workflowTask",
+                "notification",
+                "document"
+              ]
+            },
+            "status": {
+              "type": "string"
+            },
+            "statusColor": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "priorityName": {
+              "type": "string"
+            },
+            "priorityColor": {
+              "type": "string"
+            },
+            "dueDate": {
+              "type": "string"
+            },
+            "startDate": {
+              "type": "string"
+            },
+            "endDate": {
+              "type": "string"
+            },
+            "assignedTo": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "assignedToNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "sourceId": {
+              "type": "string"
+            },
+            "sourceType": {
+              "type": "string",
+              "enum": [
+                "schedule",
+                "projectTask",
+                "ticket",
+                "timeEntry",
+                "workflowTask",
+                "notification",
+                "document"
+              ]
+            },
+            "actions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "icon": {
+                    "type": "string"
+                  },
+                  "disabled": {
+                    "type": "boolean"
+                  },
+                  "disabledReason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label"
+                ]
+              }
+            },
+            "isClosed": {
+              "type": "boolean"
+            },
+            "tenant": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "type",
+            "status",
+            "priority",
+            "sourceId",
+            "sourceType",
+            "actions",
+            "tenant",
+            "createdAt",
+            "updatedAt"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_activities_groups",
+    "method": "get",
+    "path": "/api/v1/activities/groups",
+    "displayName": "List My Activity Groups",
+    "summary": "Fetch the caller's named custom groups from the User Activities screen",
+    "description": "Returns the personal, user-defined groups the caller created on the User Activities screen (for example a group named \"Basics\"), each with its ordered items. Items are references: { activityId, activityType, sortOrder } — for activityType \"ticket\" the activityId is the ticket UUID. To answer \"what tickets are in my <name> group\": call this endpoint, find the group by groupName (case-insensitive match on what the user said), then resolve each item, e.g. ticket items via GET /api/v1/tickets/{id} or by matching ids against GET /api/v1/activities. Groups are per-user; pass targetUserId only to read another internal user's groups (requires user_schedule:update or user_schedule:read_all).",
+    "tags": [
+      "Activities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "targetUserId",
+        "in": "query",
+        "required": false,
+        "description": "Another internal user whose groups to read (requires elevated schedule permission). Omit for self.",
+        "schema": {
+          "type": "string",
+          "description": "Another internal user whose groups to read (requires elevated schedule permission). Omit for self."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "groupId": {
+                "type": "string"
+              },
+              "groupName": {
+                "type": "string"
+              },
+              "sortOrder": {
+                "type": "number"
+              },
+              "isCollapsed": {
+                "type": "boolean"
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "itemId": {
+                      "type": "string"
+                    },
+                    "activityId": {
+                      "type": "string"
+                    },
+                    "activityType": {
+                      "type": "string"
+                    },
+                    "sortOrder": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "itemId",
+                    "activityId",
+                    "activityType",
+                    "sortOrder"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "groupId",
+              "groupName",
+              "sortOrder",
+              "isCollapsed",
+              "items"
+            ]
+          }
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "What is in my \"Basics\" group?",
+        "request": {},
+        "notes": "Find the entry whose groupName is \"Basics\" in the response, then look up each item: for activityType \"ticket\" call GET /api/v1/tickets/{activityId} (or filter a GET /api/v1/activities?type=ticket result by the collected ids) to get titles and statuses."
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_activities_groups_items",
+    "method": "post",
+    "path": "/api/v1/activities/groups/items",
+    "displayName": "Move Activity Into My Group",
+    "summary": "Put one of the caller's activities into one of their custom groups",
+    "description": "Moves an activity into one of the caller's own User Activities groups at the given sortOrder position, removing it from any other of their groups first (an activity lives in at most one group). Get groupId values from GET /api/v1/activities/groups. Only organizes the caller's own view — it never changes the underlying ticket/task.",
+    "tags": [
+      "Activities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "activityId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "activityType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "groupId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sortOrder": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "activityId",
+        "activityType",
+        "groupId",
+        "sortOrder"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_activities_groups_items",
+    "method": "delete",
+    "path": "/api/v1/activities/groups/items",
+    "displayName": "Remove Activity From My Groups",
+    "summary": "Make one of the caller's activities ungrouped",
+    "description": "Removes an activity from all of the caller's User Activities groups so it shows as ungrouped. No-op when the activity is not in any group. Only affects the caller's own view.",
+    "tags": [
+      "Activities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "activityId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "activityType": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "activityId",
+        "activityType"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_v1_activities_groups_groupid_items",
+    "method": "patch",
+    "path": "/api/v1/activities/groups/{groupId}/items",
+    "displayName": "Reorder My Group's Activities",
+    "summary": "Persist a new ordering of the activities inside one of the caller's groups",
+    "description": "Replaces the ordering of a group's members: pass every item with its new sortOrder (position). Scoped to the caller's own groups from GET /api/v1/activities/groups.",
+    "tags": [
+      "Activities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "groupId",
+        "in": "path",
+        "required": true,
+        "description": "Custom activity group identifier.",
+        "schema": {
+          "type": "string",
+          "description": "Custom activity group identifier."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "activityId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "activityType": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sortOrder": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "activityId",
+              "activityType",
+              "sortOrder"
+            ]
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "items"
+      ]
+    }
   },
   {
     "id": "get-_api_v1_projects_id_taskstatusmappings",
@@ -52808,6 +54394,23 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_auth_captchaconfig",
+    "method": "get",
+    "path": "/api/auth/captcha-config",
+    "displayName": "GET auth",
+    "summary": "GET auth",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "auth"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
     "id": "get-_api_auth_e2e_google_authorize",
     "method": "get",
     "path": "/api/auth/e2e/google/authorize",
@@ -53083,6 +54686,111 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "approvalRequired": false,
     "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_billing_completereactivation",
+    "method": "post",
+    "path": "/api/billing/complete-reactivation",
+    "displayName": "POST billing",
+    "summary": "POST billing",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "billing"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_billing_reactivationpasswordreset",
+    "method": "post",
+    "path": "/api/billing/reactivation-password-reset",
+    "displayName": "POST billing",
+    "summary": "POST billing",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "billing"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_billing_reactivationtoken",
+    "method": "post",
+    "path": "/api/billing/reactivation-token",
+    "displayName": "POST billing",
+    "summary": "POST billing",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "billing"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_billing_reactivationtoken_session",
+    "method": "post",
+    "path": "/api/billing/reactivation-token/session",
+    "displayName": "POST billing",
+    "summary": "POST billing",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "billing"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_billing_requestreactivation",
+    "method": "post",
+    "path": "/api/billing/request-reactivation",
+    "displayName": "POST billing",
+    "summary": "POST billing",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "billing"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -54099,6 +55807,23 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_integrations_hudu",
+    "method": "get",
+    "path": "/api/integrations/hudu",
+    "displayName": "GET integrations",
+    "summary": "GET integrations",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "integrations"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
     "id": "get-_api_integrations_ninjaone_callback",
     "method": "get",
     "path": "/api/integrations/ninjaone/callback",
@@ -54358,6 +56083,124 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_mcp",
+    "method": "get",
+    "path": "/api/mcp",
+    "displayName": "GET mcp",
+    "summary": "GET mcp",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_mcp",
+    "method": "post",
+    "path": "/api/mcp",
+    "displayName": "POST mcp",
+    "summary": "POST mcp",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_mcp_oauth_authorize",
+    "method": "get",
+    "path": "/api/mcp/oauth/authorize",
+    "displayName": "GET mcp",
+    "summary": "GET mcp",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_mcp_oauth_authorize",
+    "method": "post",
+    "path": "/api/mcp/oauth/authorize",
+    "displayName": "POST mcp",
+    "summary": "POST mcp",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_mcp_oauth_revoke",
+    "method": "post",
+    "path": "/api/mcp/oauth/revoke",
+    "displayName": "POST mcp",
+    "summary": "POST mcp",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_mcp_oauth_token",
+    "method": "post",
+    "path": "/api/mcp/oauth/token",
+    "displayName": "POST mcp",
+    "summary": "POST mcp",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -54866,6 +56709,341 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_v1_applianceinstalls",
+    "method": "get",
+    "path": "/api/v1/appliance-installs",
+    "displayName": "GET v1",
+    "summary": "GET v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "appliance-installs"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_v1_applianceinstalls_access",
+    "method": "post",
+    "path": "/api/v1/appliance-installs/access",
+    "displayName": "POST v1",
+    "summary": "POST v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "appliance-installs"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_v1_applianceinstalls_tenantid",
+    "method": "get",
+    "path": "/api/v1/appliance-installs/{tenantId}",
+    "displayName": "GET v1",
+    "summary": "GET v1",
+    "tags": [
+      "appliance-installs"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "tenantId",
+        "in": "path",
+        "required": true,
+        "description": "TenantId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_v1_mcp_agents",
+    "method": "get",
+    "path": "/api/v1/mcp/agents",
+    "displayName": "GET v1",
+    "summary": "GET v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_v1_mcp_agents",
+    "method": "post",
+    "path": "/api/v1/mcp/agents",
+    "displayName": "POST v1",
+    "summary": "POST v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "patch-_api_v1_mcp_agents",
+    "method": "patch",
+    "path": "/api/v1/mcp/agents",
+    "displayName": "PATCH v1",
+    "summary": "PATCH v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "delete-_api_v1_mcp_agents",
+    "method": "delete",
+    "path": "/api/v1/mcp/agents",
+    "displayName": "DELETE v1",
+    "summary": "DELETE v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_v1_mcp_audit",
+    "method": "get",
+    "path": "/api/v1/mcp/audit",
+    "displayName": "GET v1",
+    "summary": "GET v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_v1_mcp_connect_callback",
+    "method": "get",
+    "path": "/api/v1/mcp/connect/callback",
+    "displayName": "GET v1",
+    "summary": "GET v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_v1_mcp_connect_start",
+    "method": "post",
+    "path": "/api/v1/mcp/connect/start",
+    "displayName": "POST v1",
+    "summary": "POST v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_v1_mcp_connections",
+    "method": "get",
+    "path": "/api/v1/mcp/connections",
+    "displayName": "GET v1",
+    "summary": "GET v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "delete-_api_v1_mcp_connections",
+    "method": "delete",
+    "path": "/api/v1/mcp/connections",
+    "displayName": "DELETE v1",
+    "summary": "DELETE v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_v1_mcp_idpproviders",
+    "method": "get",
+    "path": "/api/v1/mcp/idp-providers",
+    "displayName": "GET v1",
+    "summary": "GET v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_v1_mcp_idpproviders",
+    "method": "post",
+    "path": "/api/v1/mcp/idp-providers",
+    "displayName": "POST v1",
+    "summary": "POST v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_v1_mcp_idpsuggestions",
+    "method": "get",
+    "path": "/api/v1/mcp/idp-suggestions",
+    "displayName": "GET v1",
+    "summary": "GET v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_v1_mcp_platformproviders",
+    "method": "get",
+    "path": "/api/v1/mcp/platform-providers",
+    "displayName": "GET v1",
+    "summary": "GET v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_v1_mcp_roles",
+    "method": "get",
+    "path": "/api/v1/mcp/roles",
+    "displayName": "GET v1",
+    "summary": "GET v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "mcp"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_v1_meta_mcpregistry",
+    "method": "get",
+    "path": "/api/v1/meta/mcp-registry",
+    "displayName": "GET v1",
+    "summary": "GET v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "meta"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -56443,6 +58621,65 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_webhooks_alternativepayments",
+    "method": "get",
+    "path": "/api/webhooks/alternative-payments",
+    "displayName": "GET webhooks",
+    "summary": "GET webhooks",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "webhooks"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_webhooks_alternativepayments",
+    "method": "post",
+    "path": "/api/webhooks/alternative-payments",
+    "displayName": "POST webhooks",
+    "summary": "POST webhooks",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "webhooks"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "post-_api_webhooks_levelio",
+    "method": "post",
+    "path": "/api/webhooks/levelio",
+    "displayName": "POST webhooks",
+    "summary": "POST webhooks",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "webhooks"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
