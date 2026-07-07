@@ -2606,6 +2606,91 @@ describe('Appointment Request Integration Tests', () => {
       expect(interaction.duration).toBe(90);
     });
 
+    it('reschedules the linked Teams meeting when the schedule entry is moved directly on the calendar (drag/edit)', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+      });
+      expect(approveResult.success).toBe(true);
+
+      // The calendar-drag path (updateScheduleEntry) — not the appointment
+      // reschedule action — must also re-PATCH the Teams meeting so attendees
+      // get an updated invite.
+      updateTeamsMeetingWithResultMock.mockClear();
+      const { updateScheduleEntry } = await import('@alga-psa/scheduling/actions');
+
+      const newStart = new Date('2026-05-02T09:15:00.000Z');
+      const newEnd = new Date('2026-05-02T10:15:00.000Z');
+      const dragResult = await updateScheduleEntry(fixture.scheduleEntryId!, {
+        scheduled_start: newStart,
+        scheduled_end: newEnd,
+      });
+
+      expect(dragResult.success).toBe(true);
+      expect(updateTeamsMeetingWithResultMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId,
+          appointmentRequestId: fixture.appointmentRequestId,
+          meetingId: 'meeting-123',
+          startDateTime: '2026-05-02T09:15:00.000Z',
+          endDateTime: '2026-05-02T10:15:00.000Z',
+          subject: 'Appointment: Test Service',
+          attendees: expect.arrayContaining([
+            expect.objectContaining({
+              emailAddress: expect.objectContaining({
+                address: `contact-${fixture.contactId.slice(0, 8)}@test.com`,
+              }),
+            }),
+            expect.objectContaining({
+              emailAddress: expect.objectContaining({
+                address: `tech-${fixture.technicianUserId.slice(0, 8)}@test.com`,
+              }),
+            }),
+          ]),
+          bodyHtml: expect.stringContaining(`/msp/schedule?requestId=${fixture.appointmentRequestId}`),
+        })
+      );
+
+      const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
+        .where({ tenant: tenantId, appointment_request_id: fixture.appointmentRequestId })
+        .first();
+      expect(new Date(onlineMeeting.start_time).toISOString()).toBe('2026-05-02T09:15:00.000Z');
+      expect(new Date(onlineMeeting.end_time).toISOString()).toBe('2026-05-02T10:15:00.000Z');
+    });
+
+    it('surfaces a warning when the calendar-drag Teams PATCH fails, without rolling back the move', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+      });
+      expect(approveResult.success).toBe(true);
+
+      updateTeamsMeetingWithResultMock.mockClear();
+      updateTeamsMeetingWithResultMock.mockResolvedValue({
+        status: 'failed',
+        errorCode: 'graph_server_error',
+        errorMessage: 'boom',
+      });
+
+      const { updateScheduleEntry } = await import('@alga-psa/scheduling/actions');
+      const dragResult = await updateScheduleEntry(fixture.scheduleEntryId!, {
+        scheduled_start: new Date('2026-05-03T13:00:00.000Z'),
+        scheduled_end: new Date('2026-05-03T14:00:00.000Z'),
+      });
+
+      // The calendar move still succeeds; the warning surfaces the Graph failure.
+      expect(dragResult.success).toBe(true);
+      expect((dragResult as { teamsMeetingWarning?: string }).teamsMeetingWarning).toMatch(/could not be rescheduled/i);
+    });
+
     it('returns a warning when the Teams reschedule PATCH fails', async () => {
       const fixture = await createPendingAppointmentFixture(db, tenantId);
       setStaffSchedulingContext(tenantId);
