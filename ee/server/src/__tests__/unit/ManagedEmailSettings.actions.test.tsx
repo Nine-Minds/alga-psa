@@ -17,6 +17,7 @@ const {
   testOutboundEmailMock,
   toastSuccessMock,
   toastErrorMock,
+  tierContextState,
 } = vi.hoisted(() => ({
   getManagedEmailDomainsMock: vi.fn(),
   requestManagedEmailDomainMock: vi.fn(),
@@ -28,6 +29,7 @@ const {
   testOutboundEmailMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
+  tierContextState: { isHosted: true },
 }));
 
 vi.mock('@ee/lib/actions/email-actions/managedDomainActions', () => ({
@@ -45,7 +47,7 @@ vi.mock('@alga-psa/integrations/actions', () => ({
 }));
 
 vi.mock('server/src/context/TierContext', () => ({
-  useTier: () => ({ hasFeature: () => true }),
+  useTier: () => ({ hasFeature: () => true, isHosted: tierContextState.isHosted }),
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -230,6 +232,7 @@ describe('ManagedEmailSettings removal actions', () => {
     testOutboundEmailMock.mockReset();
     toastSuccessMock.mockReset();
     toastErrorMock.mockReset();
+    tierContextState.isHosted = true;
 
     getManagedEmailDomainsMock.mockResolvedValue([
       {
@@ -318,6 +321,7 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     testOutboundEmailMock.mockReset();
     toastSuccessMock.mockReset();
     toastErrorMock.mockReset();
+    tierContextState.isHosted = true;
 
     getManagedEmailDomainsMock.mockResolvedValue([]);
     getEmailSettingsMock.mockResolvedValue(smtpSettings);
@@ -407,5 +411,25 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
         })
       );
     });
+  });
+
+  it('shows only SMTP on self-host without loading managed domains', async () => {
+    tierContextState.isHosted = false;
+    getManagedEmailDomainsMock.mockRejectedValue(new Error('managed domains should not load'));
+    getEmailSettingsMock.mockResolvedValue(baseSettings);
+    getEmailProvidersMock.mockResolvedValue({ providers: [] });
+
+    render(<ManagedEmailSettings />);
+
+    expect(await screen.findByText('SMTP Configuration')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(getEmailSettingsMock).toHaveBeenCalled();
+    });
+    expect(getManagedEmailDomainsMock).not.toHaveBeenCalled();
+    expect(document.getElementById('outbound-provider-select')).toBeNull();
+    expect(
+      screen.queryByText(/Managed email domains are not available on your current plan/i)
+    ).not.toBeInTheDocument();
   });
 });

@@ -63,7 +63,6 @@
   "features": {
     "integrations": "Integrationen – verbinden Sie Kalender, Teams, Entra und andere externe Dienste",
     "extensions": "Erweiterungen – installieren und verwalten Sie Marketplace-Erweiterungen für Ihren Arbeitsbereich",
-    "managedEmail": "Verwaltete E-Mail – konfigurieren Sie die gehostete E-Mail-Zustellung von Alga PSA",
     "sso": "Single Sign-On – konfigurieren Sie SSO- und OAuth-Identitätsanbieter für Ihr Team",
     "advancedAssets": "Erweiterte Assets – schalten Sie RMM-verknüpfte Asset-Erkennung und umfangreichere Asset-Steuerungen frei",
     "clientPortalAdmin": "Client-Portal-Administration – verwalten Sie erweitertes Branding und Administration des Client-Portals",

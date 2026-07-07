@@ -156,7 +156,7 @@ export function MspLayoutClient({
   ) : (
     <AppSessionProvider session={session}>
       <ProductProvider>
-        <TierProvider>
+        <TierProvider selfHostLicensing={selfHostLicensing}>
           {canShowLicenseBanner && <LicenseBanner />}
           <PostHogUserIdentifier />
           <TagProvider>

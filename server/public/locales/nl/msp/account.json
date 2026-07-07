@@ -63,7 +63,6 @@
   "features": {
     "integrations": "Integraties — verbind agenda, Teams, Entra en andere externe diensten",
     "extensions": "Uitbreidingen — installeer en beheer marketplace-uitbreidingen voor uw werkruimte",
-    "managedEmail": "Beheerde e-mail — configureer gehoste e-mailbezorging vanuit Alga PSA",
     "sso": "Single Sign-On — configureer SSO en OAuth-identiteitsproviders voor uw team",
     "advancedAssets": "Geavanceerde activa — ontgrendel RMM-gekoppelde activa-ontdekking en uitgebreide activa-bedieningselementen",
     "clientPortalAdmin": "Klantportaalbeheer — beheer geavanceerde klantportaal-branding en -administratie",

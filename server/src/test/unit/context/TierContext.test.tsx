@@ -55,6 +55,22 @@ describe('TierContext', () => {
     expect(result.current.tier).toBe('pro');
   });
 
+  it('defaults to hosted when no self-host licensing prop is supplied', () => {
+    const { result } = renderHook(() => useTier(), { wrapper });
+
+    expect(result.current.isHosted).toBe(true);
+  });
+
+  it('reports not hosted when self-host licensing is supplied', () => {
+    const selfHostWrapper = ({ children }: { children: React.ReactNode }) => (
+      <TierProvider selfHostLicensing>{children}</TierProvider>
+    );
+
+    const { result } = renderHook(() => useTier(), { wrapper: selfHostWrapper });
+
+    expect(result.current.isHosted).toBe(false);
+  });
+
   it('grants solo tenants access to WORKFLOW_DESIGNER (now unlocked at solo)', () => {
     useSession.mockReturnValue({
       status: 'authenticated',

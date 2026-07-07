@@ -16,7 +16,7 @@ vi.mock('@/lib/email-domains/workflowClient', () => ({
   enqueueManagedEmailDomainWorkflow: vi.fn((args) => enqueueWorkflowMock(args)),
 }));
 
-vi.mock('@/lib/observability/logging', () => ({
+vi.mock('server/src/lib/observability/logging', () => ({
   observabilityLogger: {
     warn: vi.fn(),
     error: vi.fn(),

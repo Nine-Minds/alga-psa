@@ -11,7 +11,6 @@ describe('tierFeatures', () => {
     it('contains all tier-gated feature keys', () => {
       expect(TIER_FEATURES.INTEGRATIONS).toBe('INTEGRATIONS');
       expect(TIER_FEATURES.EXTENSIONS).toBe('EXTENSIONS');
-      expect(TIER_FEATURES.MANAGED_EMAIL).toBe('MANAGED_EMAIL');
       expect(TIER_FEATURES.SSO).toBe('SSO');
       expect(TIER_FEATURES.ADVANCED_ASSETS).toBe('ADVANCED_ASSETS');
       expect(TIER_FEATURES.CLIENT_PORTAL_ADMIN).toBe('CLIENT_PORTAL_ADMIN');
@@ -29,7 +28,6 @@ describe('tierFeatures', () => {
       expect(TIER_FEATURE_MAP.solo).toEqual([
         TIER_FEATURES.INTEGRATIONS,
         TIER_FEATURES.EXTENSIONS,
-        TIER_FEATURES.MANAGED_EMAIL,
         TIER_FEATURES.SSO,
         TIER_FEATURES.ADVANCED_ASSETS,
         TIER_FEATURES.CLIENT_PORTAL_ADMIN,
@@ -42,7 +40,6 @@ describe('tierFeatures', () => {
       expect(TIER_FEATURE_MAP.pro).toEqual([
         TIER_FEATURES.INTEGRATIONS,
         TIER_FEATURES.EXTENSIONS,
-        TIER_FEATURES.MANAGED_EMAIL,
         TIER_FEATURES.SSO,
         TIER_FEATURES.ADVANCED_ASSETS,
         TIER_FEATURES.CLIENT_PORTAL_ADMIN,
@@ -55,7 +52,6 @@ describe('tierFeatures', () => {
       expect(TIER_FEATURE_MAP.premium).toEqual([
         TIER_FEATURES.INTEGRATIONS,
         TIER_FEATURES.EXTENSIONS,
-        TIER_FEATURES.MANAGED_EMAIL,
         TIER_FEATURES.SSO,
         TIER_FEATURES.ADVANCED_ASSETS,
         TIER_FEATURES.CLIENT_PORTAL_ADMIN,
@@ -71,7 +67,6 @@ describe('tierFeatures', () => {
     it('solo has access to the newly unlocked features', () => {
       expect(tierHasFeature('solo', TIER_FEATURES.INTEGRATIONS)).toBe(true);
       expect(tierHasFeature('solo', TIER_FEATURES.EXTENSIONS)).toBe(true);
-      expect(tierHasFeature('solo', TIER_FEATURES.MANAGED_EMAIL)).toBe(true);
       expect(tierHasFeature('solo', TIER_FEATURES.SSO)).toBe(true);
       expect(tierHasFeature('solo', TIER_FEATURES.ADVANCED_ASSETS)).toBe(true);
       expect(tierHasFeature('solo', TIER_FEATURES.CLIENT_PORTAL_ADMIN)).toBe(true);
@@ -107,7 +102,6 @@ describe('tierFeatures', () => {
     it('maps previously-Pro-only features to solo', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.INTEGRATIONS]).toBe('solo');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.EXTENSIONS]).toBe('solo');
-      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.MANAGED_EMAIL]).toBe('solo');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.SSO]).toBe('solo');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ADVANCED_ASSETS]).toBe('solo');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.CLIENT_PORTAL_ADMIN]).toBe('solo');
