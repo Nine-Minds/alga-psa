@@ -2,7 +2,6 @@ import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getSSORegistry } from '@alga-psa/auth';
-import { ADD_ONS } from '@alga-psa/types';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildNotificationDeliveredPayload,
@@ -10,6 +9,7 @@ import {
   buildNotificationSentPayload,
 } from '@alga-psa/workflow-streams';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
+import { tenantHasTeamsAddOn } from '../teams/teamsAddOnGate';
 import { buildTeamsNotificationDeepLinkFromPsaUrl } from '../teams/teamsDeepLinks';
 import { sendBotActivity, type SendBotActivityInput } from '../teams/bot/teamsBotConnector';
 import { getLatestTeamsConversationReferenceImpl } from '../teams/bot/teamsConversationReferences';
@@ -338,16 +338,6 @@ async function recordSkippedTeamsNotification(params: {
 async function getTeamsIntegrationRow(knex: any, tenant: string): Promise<TeamsIntegrationRow | undefined> {
   const row = await tenantDb(knex, tenant).table<TeamsIntegrationRow>('teams_integrations').first();
   return row || undefined;
-}
-
-async function tenantHasTeamsAddOn(knex: any, tenant: string): Promise<boolean> {
-  const row = await tenantDb(knex, tenant).table('tenant_addons')
-    .where({ addon_key: ADD_ONS.TEAMS })
-    .andWhere((builder: any) => {
-      builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
-    })
-    .first('addon_key');
-  return Boolean(row);
 }
 
 async function getMicrosoftProfileRow(

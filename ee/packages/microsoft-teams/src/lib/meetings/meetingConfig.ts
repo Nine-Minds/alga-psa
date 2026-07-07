@@ -1,5 +1,5 @@
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { ADD_ONS } from '@alga-psa/types';
+import { tenantHasTeamsAddOn } from '../teams/teamsAddOnGate';
 import { resolveTeamsMicrosoftProviderConfigImpl } from '../auth/teamsMicrosoftProviderResolution';
 
 type TeamsInstallStatus = 'not_configured' | 'install_pending' | 'active' | 'error';
@@ -39,17 +39,6 @@ export type TeamsMeetingConfigState =
 
 function normalizeString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
-}
-
-async function tenantHasTeamsAddOn(knex: any, tenantId: string): Promise<boolean> {
-  const row = await tenantDb(knex, tenantId).table('tenant_addons')
-    .where({ addon_key: ADD_ONS.TEAMS })
-    .andWhere((builder: any) => {
-      builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
-    })
-    .first('addon_key');
-
-  return Boolean(row);
 }
 
 type GraphConfigResolution =
