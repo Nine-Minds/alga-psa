@@ -138,7 +138,7 @@
       },
       "contractReports": {
         "title": "Raporty kontraktów",
-        "description": "Przychody z kontraktów, odnowienia, użycie pakietów i prosta rentowność."
+        "description": "Przychody z kontraktów, odnowienia, wykorzystanie puli godzin i rentowność."
       }
     },
     "table": {
@@ -220,8 +220,8 @@
         "empty": "Nie znaleziono kontraktów opartych na puli godzin"
       },
       "profitability": {
-        "title": "Prosty raport rentowności",
-        "description": "Podstawowe marże zysku oraz analiza przychodu względem kosztów według kontraktu",
+        "title": "Raport rentowności",
+        "description": "Marża według klienta, umowy i zgłoszenia na podstawie skonfigurowanych wewnętrznych stawek kosztów.",
         "empty": "Brak danych o rentowności"
       }
     },
@@ -250,6 +250,97 @@
       "upcoming": "Nadchodzący",
       "yes": "Tak",
       "no": "Nie"
+    },
+    "profitability": {
+      "formats": {
+        "percent": "{{value}}%",
+        "hours": "{{value}} godz.",
+        "hourlyRate": "{{value}}/godz.",
+        "ticketWithNumber": "#{{number}} {{title}}",
+        "billableHours": "{{value}} godz. rozliczalnych",
+        "listSeparator": ", "
+      },
+      "errors": {
+        "load": "Nie udało się załadować danych o rentowności",
+        "title": "Błąd podczas ładowania rentowności"
+      },
+      "table": {
+        "revenue": "Przychód",
+        "laborCost": "Koszt pracy",
+        "materialCost": "Koszt materiałów",
+        "margin": "Marża",
+        "marginPct": "Marża %",
+        "hours": "Godziny",
+        "ehr": "Ef. stawka godz.",
+        "client": "Klient",
+        "agreement": "Umowa",
+        "ticket": "Zgłoszenie",
+        "attribution": "Przypisanie",
+        "contractLine": "Pozycja",
+        "cost": "Koszt"
+      },
+      "actions": {
+        "toggleLines": "Pokaż/ukryj pozycje",
+        "apply": "Zastosuj",
+        "configureCostRates": "Skonfiguruj stawki kosztów",
+        "clearClient": "Wszyscy klienci",
+        "clearAgreement": "Wszystkie umowy"
+      },
+      "rowTypes": {
+        "adHoc": "Ad hoc",
+        "unattributed": "Nieprzypisane",
+        "unassigned": "Nieprzydzielone"
+      },
+      "attribution": {
+        "exact": "Dokładne",
+        "allocated": "Alokowane",
+        "none": "Brak"
+      },
+      "status": {
+        "uncosted": "Bez wyceny"
+      },
+      "filters": {
+        "startDate": "Data rozpoczęcia",
+        "endDate": "Data zakończenia"
+      },
+      "timingTooltip": "Przychód jest filtrowany według daty faktury. Koszt pracy jest filtrowany według daty wykonania pracy. Koszt zafakturowanych materiałów podąża za datą faktury, a niezafakturowanych — za datą utworzenia.",
+      "empty": {
+        "costRates": "Stawki kosztów nie są skonfigurowane. Godziny pracy są wykazywane jako bez wyceny, dopóki nie istnieje stawka domyślna tenanta lub stawka użytkownika.",
+        "clients": "Brak danych o rentowności klientów dla tego zakresu.",
+        "lines": "Brak szczegółów na poziomie pozycji dla tego wiersza.",
+        "tickets": "Brak danych o rentowności zgłoszeń dla tego wyboru."
+      },
+      "warnings": {
+        "title": "Ostrzeżenia raportu",
+        "uncostedMinutes": "Godziny bez wyceny: {{hours}}",
+        "unattributedMinutes": "{{hours}} godz. nieprzypisanych",
+        "unapprovedMinutes": "Uwzględnione godziny niezatwierdzone: {{hours}}",
+        "zeroDuration": "Wpisy o zerowym czasie trwania: {{count}}",
+        "uncostedMaterials": "Materiały bez wyceny: {{count}}",
+        "unconvertedRevenue": "Nieprzeliczone wiersze przychodu: {{count}}",
+        "materialCurrencyMismatch": "Niezgodności walut materiałów: {{count}}"
+      },
+      "summary": {
+        "revenue": "Przychód",
+        "laborCost": "Koszt pracy",
+        "materialCost": "Koszt materiałów",
+        "margin": "Marża",
+        "marginPct": "Marża %",
+        "ehr": "Efektywna stawka godzinowa"
+      },
+      "sections": {
+        "clients": "Klienci",
+        "clientsDescription": "Wybierz klienta, aby przejść do umów i zgłoszeń.",
+        "agreements": "Umowy dla {{client}}",
+        "agreementsDescription": "Wiersze ad hoc i nieprzypisane są uwzględnione, aby sumy się zgadzały.",
+        "linesForAgreement": "Pozycje umowy {{agreement}}",
+        "tickets": "Zgłoszenia",
+        "ticketsForAgreement": "Koszty i przychody zgłoszeń dla umowy {{agreement}}.",
+        "ticketsDescription": "Koszty pracy i materiałów, przypisany przychód oraz marża na poziomie zgłoszeń."
+      },
+      "fallbacks": {
+        "untitledTicket": "Zgłoszenie bez tytułu"
+      }
     }
   },
   "contractPerformance": {

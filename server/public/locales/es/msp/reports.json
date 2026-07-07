@@ -138,7 +138,7 @@
       },
       "contractReports": {
         "title": "Informes de contratos",
-        "description": "Ingresos de contratos, renovaciones, uso de bolsas y rentabilidad simple."
+        "description": "Ingresos de contratos, renovaciones, uso de bolsas y rentabilidad."
       }
     },
     "table": {
@@ -220,8 +220,8 @@
         "empty": "No se encontraron contratos basados en paquetes"
       },
       "profitability": {
-        "title": "Informe de rentabilidad simple",
-        "description": "Análisis básico de márgenes de beneficio e ingresos frente a costos por contrato",
+        "title": "Informe de rentabilidad",
+        "description": "Margen por cliente, acuerdo y ticket según las tarifas de costo internas configuradas.",
         "empty": "No hay datos de rentabilidad disponibles"
       }
     },
@@ -250,6 +250,97 @@
       "upcoming": "Próximo",
       "yes": "Sí",
       "no": "No"
+    },
+    "profitability": {
+      "formats": {
+        "percent": "{{value}}%",
+        "hours": "{{value}} h",
+        "hourlyRate": "{{value}}/h",
+        "ticketWithNumber": "#{{number}} {{title}}",
+        "billableHours": "{{value}} h facturables",
+        "listSeparator": ", "
+      },
+      "errors": {
+        "load": "No se pudieron cargar los datos de rentabilidad",
+        "title": "Error al cargar la rentabilidad"
+      },
+      "table": {
+        "revenue": "Ingresos",
+        "laborCost": "Costo de mano de obra",
+        "materialCost": "Costo de materiales",
+        "margin": "Margen",
+        "marginPct": "% de margen",
+        "hours": "Horas",
+        "ehr": "Tarifa efectiva",
+        "client": "Cliente",
+        "agreement": "Acuerdo",
+        "ticket": "Ticket",
+        "attribution": "Atribución",
+        "contractLine": "Línea",
+        "cost": "Costo"
+      },
+      "actions": {
+        "toggleLines": "Mostrar u ocultar líneas",
+        "apply": "Aplicar",
+        "configureCostRates": "Configurar tarifas de costo",
+        "clearClient": "Todos los clientes",
+        "clearAgreement": "Todos los acuerdos"
+      },
+      "rowTypes": {
+        "adHoc": "Ad hoc",
+        "unattributed": "Sin atribuir",
+        "unassigned": "Sin asignar"
+      },
+      "attribution": {
+        "exact": "Exacta",
+        "allocated": "Distribuida",
+        "none": "Ninguna"
+      },
+      "status": {
+        "uncosted": "Sin costear"
+      },
+      "filters": {
+        "startDate": "Fecha de inicio",
+        "endDate": "Fecha de fin"
+      },
+      "timingTooltip": "Los ingresos se filtran por fecha de factura. El costo de mano de obra se filtra por fecha de trabajo. El costo de materiales facturados sigue la fecha de factura; el de materiales sin facturar sigue la fecha de creación.",
+      "empty": {
+        "costRates": "Las tarifas de costo no están configuradas. Las horas de mano de obra se muestran sin costear hasta que exista una tarifa predeterminada del tenant o una tarifa por usuario.",
+        "clients": "No hay datos de rentabilidad por cliente disponibles para este intervalo.",
+        "lines": "No hay detalle por línea para esta fila.",
+        "tickets": "No hay datos de rentabilidad por ticket disponibles para esta selección."
+      },
+      "warnings": {
+        "title": "Advertencias del informe",
+        "uncostedMinutes": "{{hours}} horas sin costear",
+        "unattributedMinutes": "{{hours}} horas sin atribuir",
+        "unapprovedMinutes": "{{hours}} horas sin aprobar incluidas",
+        "zeroDuration": "{{count}} entradas de duración cero",
+        "uncostedMaterials": "{{count}} materiales sin costear",
+        "unconvertedRevenue": "{{count}} filas de ingresos sin convertir",
+        "materialCurrencyMismatch": "{{count}} discrepancias de moneda en materiales"
+      },
+      "summary": {
+        "revenue": "Ingresos",
+        "laborCost": "Costo de mano de obra",
+        "materialCost": "Costo de materiales",
+        "margin": "Margen",
+        "marginPct": "% de margen",
+        "ehr": "Tarifa efectiva por hora"
+      },
+      "sections": {
+        "clients": "Clientes",
+        "clientsDescription": "Seleccione un cliente para ver el detalle de acuerdos y tickets.",
+        "agreements": "Acuerdos de {{client}}",
+        "agreementsDescription": "Se incluyen las filas ad hoc y sin atribuir para que los totales cuadren.",
+        "linesForAgreement": "Líneas de contrato de {{agreement}}",
+        "tickets": "Tickets",
+        "ticketsForAgreement": "Costo e ingresos de tickets para {{agreement}}.",
+        "ticketsDescription": "Mano de obra, costo de materiales, ingresos atribuidos y margen a nivel de ticket."
+      },
+      "fallbacks": {
+        "untitledTicket": "Ticket sin título"
+      }
     }
   },
   "contractPerformance": {

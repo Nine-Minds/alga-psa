@@ -20,16 +20,15 @@ import {
   getContractRevenueReport,
   getContractExpirationReport,
   getBucketUsageReport,
-  getProfitabilityReport,
   getContractReportSummary,
   ContractRevenue,
   ContractExpiration,
   BucketUsage,
-  Profitability,
   ContractReportSummary
 } from '@alga-psa/billing/actions/contractReportActions';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import ProfitabilityReport from './ProfitabilityReport';
 
 const ContractReports: React.FC = () => {
   const { t } = useTranslation('msp/reports');
@@ -38,7 +37,6 @@ const ContractReports: React.FC = () => {
   const [revenueData, setRevenueData] = useState<ContractRevenue[]>([]);
   const [expirationData, setExpirationData] = useState<ContractExpiration[]>([]);
   const [bucketUsageData, setBucketUsageData] = useState<BucketUsage[]>([]);
-  const [profitabilityData, setProfitabilityData] = useState<Profitability[]>([]);
   const [summary, setSummary] = useState<ContractReportSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,18 +58,16 @@ const ContractReports: React.FC = () => {
         setIsLoading(true);
         setError(null);
 
-        const [revenue, expiration, bucketUsage, profitability, summaryData] = await Promise.all([
+        const [revenue, expiration, bucketUsage, summaryData] = await Promise.all([
           getContractRevenueReport(),
           getContractExpirationReport(),
           getBucketUsageReport(),
-          getProfitabilityReport(),
           getContractReportSummary()
         ]);
 
         setRevenueData(revenue);
         setExpirationData(expiration);
         setBucketUsageData(bucketUsage);
-        setProfitabilityData(profitability);
         setSummary(summaryData);
       } catch (err) {
         console.error('Error loading report data:', err);
@@ -237,48 +233,6 @@ const ContractReports: React.FC = () => {
             ? `+${value} ${t('units.hoursShort', { defaultValue: 'hrs' })}`
             : t('units.dash', { defaultValue: '—' })}
         </span>
-      )
-    }
-  ];
-
-  // Profitability Columns
-  const profitabilityColumns: ColumnDefinition<Profitability>[] = [
-    {
-      title: t('contractReports.table.contract', { defaultValue: 'Contract' }),
-      dataIndex: 'contract_name',
-      render: (value: string) => <span className="font-medium">{value}</span>
-    },
-    {
-      title: t('contractReports.table.client', { defaultValue: 'Client' }),
-      dataIndex: 'client_name',
-      render: (value) => <ClientNameCell clientName={value as string | null | undefined} />
-    },
-    {
-      title: t('contractReports.table.revenueYtd', { defaultValue: 'Revenue (YTD)' }),
-      dataIndex: 'revenue',
-      render: (value: number) => formatCents(value)
-    },
-    {
-      title: t('contractReports.table.costYtd', { defaultValue: 'Cost (YTD)' }),
-      dataIndex: 'cost',
-      render: (value: number) => formatCents(value)
-    },
-    {
-      title: t('contractReports.table.profit', { defaultValue: 'Profit' }),
-      dataIndex: 'profit',
-      render: (value: number) => (
-        <span className="font-semibold text-green-600">{formatCents(value)}</span>
-      )
-    },
-    {
-      title: t('contractReports.table.margin', { defaultValue: 'Margin' }),
-      dataIndex: 'margin_percentage',
-      render: (value: number) => (
-        <Badge
-          variant={value >= 40 ? 'success' : 'warning'}
-        >
-          {value}{t('units.percent', { defaultValue: '%' })}
-        </Badge>
       )
     }
   ];
@@ -535,35 +489,7 @@ const ContractReports: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="profitability" className="mt-4">
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-              <h3 className="text-lg font-semibold">
-                {t('contractReports.sections.profitability.title', { defaultValue: 'Simple Profitability Report' })}
-              </h3>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              {t('contractReports.sections.profitability.description', {
-                defaultValue: 'Basic profit margins and revenue vs. cost analysis by contract',
-              })}
-            </p>
-            {profitabilityData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                {t('contractReports.sections.profitability.empty', { defaultValue: 'No profitability data available' })}
-              </p>
-            ) : (
-              <DataTable
-                id="profitability-table"
-                data={profitabilityData}
-                columns={profitabilityColumns}
-                pagination={true}
-                currentPage={currentPage}
-                onPageChange={setCurrentPage}
-                pageSize={pageSize}
-                onItemsPerPageChange={handlePageSizeChange}
-              />
-            )}
-          </Card>
+          <ProfitabilityReport />
         </TabsContent>
       </Tabs>
     </div>

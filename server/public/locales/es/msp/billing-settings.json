@@ -3,7 +3,8 @@
     "general": "General",
     "quoting": "Citando",
     "tax": "Impuesto",
-    "payments": "Pagos"
+    "payments": "Pagos",
+    "costRates": "Tarifas de costo"
   },
   "general": {
     "currency": {
@@ -1204,6 +1205,91 @@
         "title": "Configuración de pagos",
         "description": "Configure cómo funcionan los enlaces de pago con sus facturas"
       }
+    }
+  },
+  "costRates": {
+    "title": "Tarifas de costo",
+    "description": "Administre las tarifas internas de costo de mano de obra, con todas las cargas incluidas, que usan los informes de rentabilidad.",
+    "loading": "Cargando tarifas de costo...",
+    "default": {
+      "title": "Tarifa de costo predeterminada del tenant",
+      "current": "Predeterminada actual: {{rate}} desde {{date}}",
+      "missing": "No hay una tarifa predeterminada del tenant configurada. Los usuarios sin tarifa propia quedarán sin costear.",
+      "history": "Historial de la tarifa predeterminada",
+      "empty": "Aún no hay tarifas predeterminadas."
+    },
+    "empty": {
+      "title": "Las tarifas de costo no están configuradas",
+      "description": "Establezca primero la tarifa predeterminada del tenant para que los informes puedan costear la mano de obra de los usuarios sin tarifa propia."
+    },
+    "table": {
+      "currentRate": "Tarifa actual",
+      "actions": "Acciones",
+      "usesDefault": "Usa la predeterminada",
+      "uncosted": "Sin costear",
+      "status": "Estado",
+      "user": "Usuario"
+    },
+    "history": {
+      "empty": "No hay tarifas específicas por usuario."
+    },
+    "dialog": {
+      "title": "Tarifa de costo",
+      "description": "Introduzca el costo de mano de obra por hora, con todas las cargas incluidas, en la moneda predeterminada del tenant."
+    },
+    "fields": {
+      "user": {
+        "label": "Usuario",
+        "default": "Predeterminada del tenant"
+      },
+      "rate": {
+        "label": "Costo por hora"
+      },
+      "effectiveFrom": {
+        "label": "En vigor desde"
+      },
+      "effectiveTo": {
+        "label": "En vigor hasta"
+      }
+    },
+    "actions": {
+      "setDefault": "Establecer predeterminada",
+      "addRate": "Añadir tarifa",
+      "addUserRate": "Agregar tarifa de usuario",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "saving": "Guardando...",
+      "continue": "Continuar"
+    },
+    "warning": {
+      "title": "Existe tiempo trabajado en este intervalo",
+      "description": "Cambiar esta tarifa modificará la rentabilidad histórica de las entradas de tiempo dentro de su rango de vigencia.",
+      "body": "Continúe solo si se trata de una corrección intencionada."
+    },
+    "toast": {
+      "saved": "Tarifa de costo guardada.",
+      "deleted": "Tarifa de costo eliminada."
+    },
+    "errors": {
+      "load": "No se pudieron cargar las tarifas de costo",
+      "save": "No se pudo guardar la tarifa de costo",
+      "delete": "No se pudo eliminar la tarifa de costo"
+    },
+    "formats": {
+      "noRate": "—",
+      "hourlyRate": "{{amount}}/h",
+      "dateRange": "{{start}} - {{end}}",
+      "openDateRange": "{{start}} en adelante"
+    },
+    "status": {
+      "current": "Actual",
+      "scheduled": "Programada",
+      "ended": "Finalizada"
+    },
+    "sections": {
+      "userRates": "Tarifas por usuario"
     }
   }
 }

@@ -451,6 +451,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   user_auth_accounts: { scope: 'tenant' },
   user_type_rates: { scope: 'tenant' },
   usage_tracking: { scope: 'tenant' },
+  user_cost_rates: { scope: 'tenant' },
   user_preferences: { scope: 'tenant' },
   user_internal_notification_preferences: { scope: 'tenant' },
   user_notification_preferences: { scope: 'tenant' },

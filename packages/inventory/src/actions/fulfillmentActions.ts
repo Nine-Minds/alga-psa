@@ -364,7 +364,8 @@ export const fulfillSalesOrderLine = withAuth(
           service_id: serviceId,
           quantity: qty,
           from_location_id: fromLocation,
-          cogs_cost: settings.average_cost ?? null,
+          // cogs_cost is the movement's extended cost (readers sum it without ×quantity)
+          cogs_cost: settings.average_cost == null ? null : Math.round(Number(settings.average_cost) * qty),
           cost_currency: settings.cost_currency,
           source_doc_type: 'sales_order',
           source_doc_id: so.so_id,

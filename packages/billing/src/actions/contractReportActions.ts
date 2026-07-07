@@ -47,15 +47,6 @@ export interface BucketUsage {
   overage_hours: number;
 }
 
-export interface Profitability {
-  contract_name: string;
-  client_name: string;
-  revenue: number;
-  cost: number;
-  profit: number;
-  margin_percentage: number;
-}
-
 export interface ContractReportSummary {
   totalMRR: number;
   totalYTD: number;
@@ -524,75 +515,6 @@ export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<B
       throw error;
     }
     throw new Error(`Failed to fetch bucket usage report: ${error}`);
-  }
-});
-
-/**
- * Get profitability report data
- * Basic profit margins and revenue vs. cost analysis by contract
- */
-export const getProfitabilityReport = withAuth(async (user, { tenant }): Promise<Profitability[]> => {
-  if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
-  }
-  try {
-    const { knex } = await createTenantKnex();
-    const db = tenantDb(knex, tenant);
-
-    const today = new Date();
-    const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0));
-    const excludedInvoiceStatuses = ['draft', 'Draft', 'cancelled', 'Cancelled', 'canceled', 'Canceled'];
-
-    // Get total revenue for the year using SQL aggregation to avoid duplication
-    const revenueResult = await db.table('invoices')
-      .whereNotIn('status', excludedInvoiceStatuses)
-      .whereRaw('invoice_date >= ?', [yearStart.toISOString()])
-      .select(knex.raw('SUM(total_amount) as total_revenue')) as Array<{ total_revenue: string | number | null }>;
-
-    // SUM(bigint) comes back as a string from pg; coerce to number for consistent math/formatting.
-    const totalRevenue = Number(revenueResult[0]?.total_revenue ?? 0) || 0;
-
-    // Get time entries and cost data for the year - simplified approach
-    const timeEntries = await db.table('time_entries as te')
-      .whereRaw('te.start_time >= ?', [yearStart.toISOString()])
-      .select(knex.raw('SUM(billable_duration) as total_minutes')) as { total_minutes: number }[];
-
-    const totalMinutes = (timeEntries[0]?.total_minutes as number) || 0;
-    const totalHours = totalMinutes / 60;
-    const totalCost = totalHours * 5000; // $50/hr = 5000 cents/hr
-
-    const totalProfit = totalRevenue - totalCost;
-    const marginPercentage = totalRevenue > 0 ? Math.round((totalProfit / totalRevenue) * 100) : 0;
-
-    console.log('[Profitability Report Debug] Calculation:', {
-      totalRevenue,
-      totalMinutes,
-      totalHours,
-      totalCost,
-      totalProfit,
-      marginPercentage
-    });
-
-    // For now, return a single aggregated profitability record
-    const profitabilities: Profitability[] = [
-      {
-        contract_name: 'All Contracts',
-        client_name: 'Aggregate',
-        revenue: totalRevenue,
-        cost: totalCost,
-        profit: totalProfit,
-        margin_percentage: marginPercentage
-      }
-    ];
-
-    // For now, we'll just return the aggregated view
-    return profitabilities;
-  } catch (error) {
-    console.error('Error fetching profitability report:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error(`Failed to fetch profitability report: ${error}`);
   }
 });
 

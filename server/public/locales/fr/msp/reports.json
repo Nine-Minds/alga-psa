@@ -138,7 +138,7 @@
       },
       "contractReports": {
         "title": "Rapports de contrats",
-        "description": "Revenus de contrat, renouvellements, utilisation des forfaits et rentabilité simple."
+        "description": "Revenus de contrat, renouvellements, utilisation des forfaits et rentabilité."
       }
     },
     "table": {
@@ -220,8 +220,8 @@
         "empty": "Aucun contrat basé sur un forfait trouvé"
       },
       "profitability": {
-        "title": "Rapport de rentabilité simplifié",
-        "description": "Analyse de base des marges bénéficiaires et du chiffre d'affaires par rapport aux coûts par contrat",
+        "title": "Rapport de rentabilité",
+        "description": "Marge par client, contrat et ticket selon les taux de coût internes configurés.",
         "empty": "Aucune donnée de rentabilité disponible"
       }
     },
@@ -250,6 +250,97 @@
       "upcoming": "À venir",
       "yes": "Oui",
       "no": "Non"
+    },
+    "profitability": {
+      "formats": {
+        "percent": "{{value}}%",
+        "hours": "{{value}} h",
+        "hourlyRate": "{{value}}/h",
+        "ticketWithNumber": "#{{number}} {{title}}",
+        "billableHours": "{{value}} h facturables",
+        "listSeparator": ", "
+      },
+      "errors": {
+        "load": "Impossible de charger les données de rentabilité",
+        "title": "Erreur lors du chargement de la rentabilité"
+      },
+      "table": {
+        "revenue": "Chiffre d'affaires",
+        "laborCost": "Coût de main-d'œuvre",
+        "materialCost": "Coût des matériaux",
+        "margin": "Marge",
+        "marginPct": "% de marge",
+        "hours": "Heures",
+        "ehr": "TH effectif",
+        "client": "Client",
+        "agreement": "Contrat",
+        "ticket": "Ticket",
+        "attribution": "Attribution",
+        "contractLine": "Ligne",
+        "cost": "Coût"
+      },
+      "actions": {
+        "toggleLines": "Afficher/masquer les lignes",
+        "apply": "Appliquer",
+        "configureCostRates": "Configurer les taux de coût",
+        "clearClient": "Tous les clients",
+        "clearAgreement": "Tous les contrats"
+      },
+      "rowTypes": {
+        "adHoc": "Ad hoc",
+        "unattributed": "Non attribué",
+        "unassigned": "Non assigné"
+      },
+      "attribution": {
+        "exact": "Exacte",
+        "allocated": "Répartie",
+        "none": "Aucune"
+      },
+      "status": {
+        "uncosted": "Non valorisé"
+      },
+      "filters": {
+        "startDate": "Date de début",
+        "endDate": "Date de fin"
+      },
+      "timingTooltip": "Le chiffre d'affaires est filtré par date de facture. Le coût de main-d'œuvre est filtré par date de travail. Le coût des matériaux facturés suit la date de facture ; celui des matériaux non facturés suit la date de création.",
+      "empty": {
+        "costRates": "Les taux de coût ne sont pas configurés. Les heures de main-d'œuvre apparaissent comme non valorisées tant qu'aucun taux par défaut du locataire ou taux utilisateur n'existe.",
+        "clients": "Aucune donnée de rentabilité client disponible pour cette période.",
+        "lines": "Aucun détail par ligne de contrat pour cette entrée.",
+        "tickets": "Aucune donnée de rentabilité des tickets disponible pour cette sélection."
+      },
+      "warnings": {
+        "title": "Avertissements du rapport",
+        "uncostedMinutes": "{{hours}} heures non valorisées",
+        "unattributedMinutes": "{{hours}} heures non attribuées",
+        "unapprovedMinutes": "{{hours}} heures non approuvées incluses",
+        "zeroDuration": "{{count}} saisies à durée nulle",
+        "uncostedMaterials": "{{count}} matériaux non valorisés",
+        "unconvertedRevenue": "{{count}} lignes de chiffre d'affaires non converties",
+        "materialCurrencyMismatch": "{{count}} incohérences de devise sur les matériaux"
+      },
+      "summary": {
+        "revenue": "Chiffre d'affaires",
+        "laborCost": "Coût de main-d'œuvre",
+        "materialCost": "Coût des matériaux",
+        "margin": "Marge",
+        "marginPct": "% de marge",
+        "ehr": "Taux horaire effectif"
+      },
+      "sections": {
+        "clients": "Clients",
+        "clientsDescription": "Sélectionnez un client pour explorer ses contrats et ses tickets.",
+        "agreements": "Contrats de {{client}}",
+        "agreementsDescription": "Les lignes ad hoc et non attribuées sont incluses afin que les totaux concordent.",
+        "linesForAgreement": "Lignes de contrat pour {{agreement}}",
+        "tickets": "Tickets",
+        "ticketsForAgreement": "Coût et chiffre d'affaires des tickets pour {{agreement}}.",
+        "ticketsDescription": "Main-d'œuvre, coût des matériaux, chiffre d'affaires attribué et marge au niveau des tickets."
+      },
+      "fallbacks": {
+        "untitledTicket": "Ticket sans titre"
+      }
     }
   },
   "contractPerformance": {

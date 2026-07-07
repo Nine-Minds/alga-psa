@@ -7,8 +7,7 @@ import { billingOverviewReport } from '../definitions/billing/overview';
 import {
   contractRevenueReport,
   contractExpirationReport,
-  contractBucketUsageReport,
-  contractProfitabilityReport
+  contractBucketUsageReport
 } from '../definitions/contracts';
 
 export class ReportRegistry {
@@ -30,7 +29,6 @@ export class ReportRegistry {
     this.register(contractRevenueReport);
     this.register(contractExpirationReport);
     this.register(contractBucketUsageReport);
-    this.register(contractProfitabilityReport);
 
     // TODO: Register other report categories as they're implemented
     // this.register(operationsReports);

@@ -3,7 +3,8 @@
     "general": "Algemeen",
     "quoting": "Citeren",
     "tax": "Belasting",
-    "payments": "Betalingen"
+    "payments": "Betalingen",
+    "costRates": "Kostentarieven"
   },
   "general": {
     "currency": {
@@ -1204,6 +1205,91 @@
         "title": "Betalingsinstellingen",
         "description": "Configureer hoe betaallinks werken met uw facturen"
       }
+    }
+  },
+  "costRates": {
+    "title": "Kostentarieven",
+    "description": "Beheer integrale interne arbeidskostentarieven die worden gebruikt voor winstgevendheidsrapportage.",
+    "loading": "Kostentarieven laden...",
+    "default": {
+      "title": "Standaardkostentarief van de tenant",
+      "current": "Huidige standaard: {{rate}} vanaf {{date}}",
+      "missing": "Er is geen tenantstandaard geconfigureerd. Gebruikers zonder eigen tarief blijven zonder kostentarief.",
+      "history": "Geschiedenis van het standaardtarief",
+      "empty": "Nog geen standaardtarieven."
+    },
+    "empty": {
+      "title": "Kostentarieven zijn niet geconfigureerd",
+      "description": "Stel eerst de tenantstandaard in, zodat rapporten arbeidskosten kunnen berekenen voor gebruikers zonder eigen tarief."
+    },
+    "table": {
+      "currentRate": "Huidig tarief",
+      "actions": "Acties",
+      "usesDefault": "Gebruikt standaard",
+      "uncosted": "Zonder kostentarief",
+      "status": "Status",
+      "user": "Gebruiker"
+    },
+    "history": {
+      "empty": "Geen gebruikersspecifieke tarieven."
+    },
+    "dialog": {
+      "title": "Kostentarief",
+      "description": "Voer de integrale arbeidskosten per uur in, in de standaardvaluta van de tenant."
+    },
+    "fields": {
+      "user": {
+        "label": "Gebruiker",
+        "default": "Tenantstandaard"
+      },
+      "rate": {
+        "label": "Kosten per uur"
+      },
+      "effectiveFrom": {
+        "label": "Geldig vanaf"
+      },
+      "effectiveTo": {
+        "label": "Geldig tot"
+      }
+    },
+    "actions": {
+      "setDefault": "Standaard instellen",
+      "addRate": "Tarief toevoegen",
+      "addUserRate": "Gebruikerstarief toevoegen",
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "saving": "Bezig met opslaan...",
+      "continue": "Doorgaan"
+    },
+    "warning": {
+      "title": "Er bestaat gewerkte tijd in deze periode",
+      "description": "Het wijzigen van dit tarief verandert de historische winstgevendheid van tijdregistraties binnen de geldigheidsperiode.",
+      "body": "Ga alleen door als dit een bewuste correctie is."
+    },
+    "toast": {
+      "saved": "Kostentarief opgeslagen.",
+      "deleted": "Kostentarief verwijderd."
+    },
+    "errors": {
+      "load": "Kan kostentarieven niet laden",
+      "save": "Kan kostentarief niet opslaan",
+      "delete": "Kan kostentarief niet verwijderen"
+    },
+    "formats": {
+      "noRate": "—",
+      "hourlyRate": "{{amount}}/u",
+      "dateRange": "{{start}} - {{end}}",
+      "openDateRange": "{{start}} - heden"
+    },
+    "status": {
+      "current": "Huidig",
+      "scheduled": "Gepland",
+      "ended": "Beëindigd"
+    },
+    "sections": {
+      "userRates": "Gebruikerstarieven"
     }
   }
 }

@@ -1,0 +1,492 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration: create user_cost_rates table (tenant, rate_id PK; nullable user_id; cost_rate bigint cents/hr; effective_from date; effective_to nullable date; audit columns) with index on (tenant, user_id, effective_from)",
+    "implemented": true,
+    "prdRefs": [
+      "7.1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Migration: NO foreign keys on user_cost_rates (users is Citus-distributed; convention migrations create no FKs to it — user_id/created_by are plain uuids, referential integrity in the model layer); DB CHECKs: cost_rate >= 0 and effective_to >= effective_from; exports.config = { transaction: false }",
+    "implemented": true,
+    "prdRefs": [
+      "7.1",
+      "6.D12"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Guarded inline Citus distribution DDL for user_cost_rates in the F001 migration (create_distributed_table when Citus is present, no-op on vanilla PG), following the 20251110223310_create_appointment_requests.cjs convention",
+    "implemented": true,
+    "prdRefs": [
+      "6.D12",
+      "7.1"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Migration: add nullable item_id uuid to invoice_time_entries with index (tenant, item_id)",
+    "implemented": true,
+    "prdRefs": [
+      "7.1",
+      "6.D7"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "TypeScript interface IUserCostRate in packages/types (rate_id, user_id nullable, cost_rate cents, effective_from, effective_to)",
+    "implemented": true,
+    "prdRefs": [
+      "7.2"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "UserCostRate model in packages/billing: list by tenant, list by user, insert, update, delete — all tenant-scoped",
+    "implemented": true,
+    "prdRefs": [
+      "7.2"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Model-layer overlap validation: writers take pg_advisory_xact_lock(hashtext(tenant || coalesce(user_id::text,'default'))) then run the overlap check and write in the same transaction (serializes concurrent writers per scope; plain check-then-insert races at READ COMMITTED)",
+    "implemented": true,
+    "prdRefs": [
+      "7.1",
+      "7.2"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Rate resolution SQL fragment (reusable knex subquery/CTE): for a (user_id, work_date) pick exactly one row via LATERAL ORDER BY user_id IS NULL, effective_from DESC, rate_id LIMIT 1 (user-specific wins over tenant default; deterministic single row even if overlapping rows exist), else NULL; joins on work_date only (NOT NULL by schema, no fallback)",
+    "implemented": true,
+    "prdRefs": [
+      "6.D2",
+      "6.D1",
+      "7.4"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Server action listCostRates (withAuth, billing.read): returns default rate history and per-user rate history for internal users",
+    "implemented": true,
+    "prdRefs": [
+      "7.2",
+      "8"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Server action upsertCostRate (withAuth, billing.update): create or update a rate row with overlap and range validation, returning typed errors",
+    "implemented": true,
+    "prdRefs": [
+      "7.2",
+      "8"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Server action deleteCostRate (withAuth, billing.update)",
+    "implemented": true,
+    "prdRefs": [
+      "7.2",
+      "8"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "upsertCostRate/deleteCostRate return a covers-worked-time indicator when the affected date range intersects existing time entries for that user (drives UI warning)",
+    "implemented": true,
+    "prdRefs": [
+      "6.D1",
+      "7.2"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Cost Rates settings screen: route/section under billing settings listing internal users with current effective rate and tenant default banner",
+    "implemented": true,
+    "prdRefs": [
+      "7.3"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Cost Rates settings: add/edit rate dialog with user picker (or 'tenant default'), cents-aware currency input, effective_from/effective_to date pickers",
+    "implemented": true,
+    "prdRefs": [
+      "7.3"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Cost Rates settings: per-user effective-dated history view (expandable row or drawer) with edit/delete per row",
+    "implemented": true,
+    "prdRefs": [
+      "7.3"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Cost Rates settings: warning dialog when editing/deleting a rate row that covers already-worked time (uses F012 indicator)",
+    "implemented": true,
+    "prdRefs": [
+      "6.D1",
+      "7.3"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Cost Rates settings: empty state prompting to set the tenant default first",
+    "implemented": true,
+    "prdRefs": [
+      "7.3"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Cost Rates settings: all interactive elements have kebab-case ids; all strings via i18n",
+    "implemented": true,
+    "prdRefs": [
+      "7.3",
+      "10.9"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Invoice generation persists item_id into invoice_time_entries for each linked time entry (invoiceService.linkAndMarkSourceBillingRecord and caller pass the persisted invoice_charges item id)",
+    "implemented": true,
+    "prdRefs": [
+      "7.6",
+      "6.D7"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Time-charge generation is verified 1:1 (one invoice_charges row per time entry); report queries defensively tolerate N link rows sharing an item_id without double counting",
+    "implemented": true,
+    "prdRefs": [
+      "7.6",
+      "6.D7"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Invoice generation unchanged for manual invoices and non-time charges (item_id remains NULL, no regression)",
+    "implemented": true,
+    "prdRefs": [
+      "7.6"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Revenue CTE: per invoice_charge net revenue using invoice_charge_fixed_details.allocated_amount when detail rows exist else net_amount, restricted to countable invoice statuses (sent, paid, partially_applied, overdue, plus legacy open, completed, and Unpaid)",
+    "implemented": true,
+    "prdRefs": [
+      "7.4",
+      "6.D11"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Revenue CTE: currency normalization to tenant default via invoices.exchange_rate_basis_points; foreign-currency invoices with NULL basis points are excluded from converted totals and reported in an unconverted-revenue warning count",
+    "implemented": true,
+    "prdRefs": [
+      "6.D10",
+      "7.4"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Labor cost CTE: time entries in range by work_date joined to resolved cost rate (F008); cost_cents = round(greatest(0, actual_minutes) * rate / 60); zero/negative-duration entries clamped and counted in zeroDurationEntryCount; all approval statuses included, with unapprovedMinutes counted (approval_status != 'APPROVED')",
+    "implemented": true,
+    "prdRefs": [
+      "6.D4",
+      "7.4",
+      "9"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Labor cost CTE: uncosted entries (no rate resolvable) contribute minutes but not cost, and are counted per grouping row",
+    "implemented": true,
+    "prdRefs": [
+      "6.D6",
+      "7.4"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Material CTE: revenue only for rows whose billed_invoice_id is in a countable-status invoice, dated by invoice_date; cost quantity*service_catalog.cost dated by invoice_date when billed else (created_at AT TIME ZONE 'UTC')::date; NULL-cost billed materials flagged as uncosted materials; currency_code != tenant currency flagged not converted; agreement grain: material revenue in the Ad-hoc row, material cost in the Unattributed row (engine emits material charges without client_contract_id)",
+    "implemented": true,
+    "prdRefs": [
+      "6.D13",
+      "6.D10",
+      "7.4"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "getProfitabilitySummary action: tenant-wide totals for a date range — revenue, laborCost, materialCost, margin, marginPct, totalMinutes, effectiveHourlyRate, uncostedMinutes, unattributedMinutes, unapprovedMinutes, zeroDurationEntryCount, uncostedMaterialCount, unconvertedRevenueCount",
+    "implemented": true,
+    "prdRefs": [
+      "7.4"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "getClientProfitability action: per-client rows with all summary fields; time-entry cost attributed to clients by the normative work_item_type chain (ticket -> tickets.client_id; project_task -> projects.client_id; interaction and appointment_request -> their client_id; ad_hoc/non_billable_category/NULL -> 'No client' row)",
+    "implemented": true,
+    "prdRefs": [
+      "7.4",
+      "6.D6"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "getAgreementProfitability action: per-client_contract rows via invoice_charges.client_contract_id (revenue) and time_entries.contract_line_id -> contract_lines -> contracts -> client_contracts on contract_id (cost/hours; canonical replacement for the DROPPED client_contract_lines table — billingEngine fetchDiscounts pattern), de-duplicated: single client_contracts row per entry chosen by date range covering work_date, tiebreak latest start_date then client_contract_id; contract lines whose contract has no covering client_contracts row fold cost into the client's Unattributed row",
+    "implemented": true,
+    "prdRefs": [
+      "7.4",
+      "6.D6"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "getAgreementProfitability: 'Ad-hoc / manual' row per client (revenue with NULL client_contract_id, incl. material revenue) and 'Unattributed' row (time with NULL contract_line_id, time on contract lines with no covering client_contracts row, and material cost)",
+    "implemented": true,
+    "prdRefs": [
+      "6.D6",
+      "6.D13",
+      "7.4"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "getAgreementProfitability: per-contract_line breakdown via invoice_charge_details.config_id -> contract_line_service_configuration.contract_line_id (detail-bearing charges) and item_id -> time_entries.contract_line_id (hourly); charges resolvable to neither shown as an unassigned-to-line residual so lines sum to the agreement",
+    "implemented": true,
+    "prdRefs": [
+      "7.4",
+      "10.3"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Effective hourly rate computed as revenue / actual hours (billable + non-billable) at every grouping level; null-safe when hours = 0",
+    "implemented": true,
+    "prdRefs": [
+      "6.D4",
+      "7.4"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "getTicketProfitability action: per-ticket rows (work_item_type='ticket') with minutes, billable minutes, labor cost, material cost, revenue, margin, attribution tag, uncosted flag; filterable by client and client_contract; usage/product/license charges stay at agreement level (ticket revenue knowingly partial for usage-heavy agreements)",
+    "implemented": true,
+    "prdRefs": [
+      "7.4",
+      "6.D8"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Ticket revenue (hourly, exact): via invoice_time_entries.item_id, 1:1 entry-to-item; defensive by-billable_duration apportionment only if multiple link rows ever share an item",
+    "implemented": true,
+    "prdRefs": [
+      "6.D8",
+      "6.D7"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Ticket revenue (hourly, legacy invoices with NULL item_id): stays at agreement level as a tagged residual — no per-ticket apportionment (production audit 2026-07-02: 2 legacy invoices in 1 tenant; the pool-identification heuristic was cut as all-risk-no-payoff)",
+    "implemented": true,
+    "prdRefs": [
+      "6.D8"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Ticket revenue (fixed lines): allocate each fixed charge's revenue across tickets proportionally by actual hours on the charge's contract line (via detail config_id) within the allocation window resolved by fallback chain (invoice_charge_details.service_period_start/end -> invoices.billing_period_start/end tagged approximate); largest-remainder rounding; charges with no detail rows OR no resolvable window (both period sources NULL) stay at agreement level as a residual",
+    "implemented": true,
+    "prdRefs": [
+      "6.D8",
+      "10.5"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Ticket revenue (bucket lines): proportional-by-hours allocation of bucket OVERAGE charges (the engine's bucket calculator emits overage only; the base fee arrives as a fixed charge and is allocated under F036) across tickets in the allocation window, tagged 'allocated'",
+    "implemented": true,
+    "prdRefs": [
+      "6.D8"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "All new report/cost queries include tenant in every WHERE clause and JOIN condition (Citus rules)",
+    "implemented": true,
+    "prdRefs": [
+      "7.4",
+      "10.7"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Typed result interfaces for all four report actions; money integer cents, durations minutes",
+    "implemented": true,
+    "prdRefs": [
+      "7.4"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "ProfitabilityReport component replacing the Profitability tab content in ContractReports.tsx",
+    "implemented": true,
+    "prdRefs": [
+      "7.5",
+      "7.7"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Report UI: date-range picker defaulting to the last complete month (current month + invoice-date basis would show cost with no revenue yet), driving all four actions",
+    "implemented": true,
+    "prdRefs": [
+      "7.5",
+      "6.D5"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Report UI: summary cards (revenue, labor cost, material cost, margin $, margin %, effective hourly rate)",
+    "implemented": true,
+    "prdRefs": [
+      "7.5"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Report UI: per-client DataTable sortable by margin and margin % with drill-down into agreements",
+    "implemented": true,
+    "prdRefs": [
+      "7.5"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Report UI: per-agreement DataTable (within client drill-down) with Ad-hoc and Unattributed rows and contract-line expansion via custom row rendering or nested fetch/table (shared DataTable has onRowClick but no built-in expandable sub-rows)",
+    "implemented": true,
+    "prdRefs": [
+      "7.5"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Report UI: per-ticket DataTable (within agreement or client drill-down) with attribution-quality tag and uncosted indicator",
+    "implemented": true,
+    "prdRefs": [
+      "7.5"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Report UI: timing-basis info tooltip (revenue by invoice date, cost by work date)",
+    "implemented": true,
+    "prdRefs": [
+      "6.D5",
+      "7.5"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Report UI: 'cost rates not configured' empty state linking to Cost Rates settings",
+    "implemented": true,
+    "prdRefs": [
+      "7.5",
+      "10.1"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Report UI: uncosted-minutes, unapproved-minutes, zero-duration-entries, uncosted-materials, and unconverted-revenue warnings surfaced when present, so totals are never presented as complete when they are not",
+    "implemented": true,
+    "prdRefs": [
+      "6.D4",
+      "6.D6",
+      "6.D10",
+      "6.D13",
+      "7.5"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Report UI: loading and error states consistent with sibling ContractReports tabs",
+    "implemented": true,
+    "prdRefs": [
+      "7.5"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Report UI: kebab-case ids on all interactive elements; all strings via i18n; both language packs updated and validating",
+    "implemented": true,
+    "prdRefs": [
+      "7.5",
+      "10.9"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Remove getProfitabilityReport stub and Profitability interface from contractReportActions.ts; adjust the shared Promise.all fetch in ContractReports.tsx; update the stale 'simple profitability' card description in msp-composition Reports.tsx",
+    "implemented": true,
+    "prdRefs": [
+      "7.7"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Remove contracts.profitability definition file and its ReportRegistry registration from packages/reporting",
+    "implemented": true,
+    "prdRefs": [
+      "7.7",
+      "6.D9"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Permission checks: all four report actions require billing.read; cost-rate write actions require billing.update",
+    "implemented": true,
+    "prdRefs": [
+      "8"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Reconciliation invariant in query design: sum of agreement rows + ad-hoc + unattributed equals client row, for both revenue and cost",
+    "implemented": true,
+    "prdRefs": [
+      "10.3"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Zero/degenerate-range handling: empty date range, range with no invoices, range with time but no revenue all render sensible zero rows (no NaN/Infinity)",
+    "implemented": true,
+    "prdRefs": [
+      "7.4",
+      "7.5"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "SCRATCHPAD and PRD kept current with decisions made during implementation; features/tests flipped as shipped",
+    "implemented": true,
+    "prdRefs": [
+      "all"
+    ]
+  }
+]
