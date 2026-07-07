@@ -686,8 +686,10 @@
       "hard": "55555",
       "soft": "55555"
     },
+    "allocationModeHelp": "Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.",
     "availabilityOk": "55555",
     "backorderBadge": "55555 {{shortfall}} 55555",
+    "billingAllocation": "Billing & allocation",
     "billsOnFulfillment": "55555",
     "cancelDialog": {
       "confirm": "55555",
@@ -716,6 +718,7 @@
       "vendorPlaceholder": "55555"
     },
     "created": "55555",
+    "currencyFromClient": "Set from client",
     "currencyRequired": "55555",
     "detailTitle": "55555 {{number}} 55555",
     "detailTitleFallback": "55555",
@@ -747,12 +750,22 @@
     "enterSerial": "55555",
     "fields": {
       "allocationMode": "55555",
+      "clientPoNumber": "Client PO number",
       "currencyCode": "55555",
+      "expectedShipDate": "Expected ship date",
+      "fulfillment": "Fulfillment",
       "invoiceMode": "55555",
+      "items": "Items",
       "lines": "55555",
+      "noService": "No service found.",
+      "notes": "Notes",
       "qty": "55555",
+      "searchService": "Search services…",
+      "selectService": "Select a service…",
+      "service": "Service",
       "serviceId": "55555",
-      "unitPrice": "55555"
+      "unitPrice": "55555",
+      "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "55555",
     "fulfillDialog": {
@@ -771,6 +784,10 @@
       "title": "55555 {{name}} 55555"
     },
     "fulfilledUnits": "55555 {{count}} 55555",
+    "fulfillment": {
+      "dropShip": "Drop-ship",
+      "fromStock": "From stock"
+    },
     "fulfillmentFailed": "55555",
     "invoiceColumns": {
       "amount": "55555",
@@ -782,6 +799,7 @@
       "manual": "55555",
       "onFulfillment": "55555"
     },
+    "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
     "invoicedItems": "55555 {{count}} 55555",
     "invoices": "55555",
     "invoicingFailed": "55555 {{error}} 55555",
@@ -802,8 +820,10 @@
     "nothingBackordered": "55555",
     "nothingToInvoice": "55555",
     "onlyRemaining": "55555 {{remaining}} 55555",
+    "pickServiceForLine": "Pick a service for this line.",
     "pickVendor": "55555",
     "productDefaultLocation": "55555",
+    "qtyPositive": "Must be > 0.",
     "qtyPositiveInteger": "55555",
     "reopenError": "55555",
     "reopened": "55555",
@@ -819,7 +839,9 @@
       "partiallyFulfilled": "55555"
     },
     "title": "55555",
-    "unassignedBackorder": "55555 {{count}} 55555"
+    "total": "Total",
+    "unassignedBackorder": "55555 {{count}} 55555",
+    "unnamedService": "Unnamed"
   },
   "stock": {
     "actions": {

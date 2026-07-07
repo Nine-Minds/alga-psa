@@ -686,8 +686,10 @@
       "hard": "Hard",
       "soft": "Soft"
     },
+    "allocationModeHelp": "Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.",
     "availabilityOk": "OK",
     "backorderBadge": "Backorder {{shortfall}}",
+    "billingAllocation": "Billing & allocation",
     "billsOnFulfillment": "Bills on fulfillment",
     "cancelDialog": {
       "confirm": "Cancel sales order",
@@ -716,6 +718,7 @@
       "vendorPlaceholder": "Select a vendor…"
     },
     "created": "Sales order created",
+    "currencyFromClient": "Set from client",
     "currencyRequired": "Currency code is required",
     "detailTitle": "Sales Order {{number}}",
     "detailTitleFallback": "Sales Order",
@@ -746,13 +749,23 @@
     "emailSuccess": "Confirmation emailed to {{recipients}}",
     "enterSerial": "Enter at least one serial number.",
     "fields": {
-      "allocationMode": "Allocation mode",
+      "allocationMode": "How to allocate stock",
+      "clientPoNumber": "Client PO number",
       "currencyCode": "Currency code",
-      "invoiceMode": "Invoice mode",
+      "expectedShipDate": "Expected ship date",
+      "fulfillment": "Fulfillment",
+      "invoiceMode": "When to invoice",
+      "items": "Items",
       "lines": "Lines",
+      "noService": "No service found.",
+      "notes": "Notes",
       "qty": "Qty",
+      "searchService": "Search services…",
+      "selectService": "Select a service…",
+      "service": "Service",
       "serviceId": "Service ID",
-      "unitPrice": "Unit Price ($)"
+      "unitPrice": "Unit Price ($)",
+      "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "From quote",
     "fulfillDialog": {
@@ -771,6 +784,10 @@
       "title": "Fulfill — {{name}}"
     },
     "fulfilledUnits": "Fulfilled {{count}} unit(s).",
+    "fulfillment": {
+      "dropShip": "Drop-ship",
+      "fromStock": "From stock"
+    },
     "fulfillmentFailed": "Fulfillment failed.",
     "invoiceColumns": {
       "amount": "Amount",
@@ -782,6 +799,7 @@
       "manual": "Manual",
       "onFulfillment": "On fulfillment"
     },
+    "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
     "invoicedItems": "Invoiced {{count}} item(s).",
     "invoices": "Invoices",
     "invoicingFailed": "Invoicing failed: {{error}}. Use \"Generate invoice\" to retry.",
@@ -802,8 +820,10 @@
     "nothingBackordered": "Nothing is backordered.",
     "nothingToInvoice": "Nothing left to invoice.",
     "onlyRemaining": "Only {{remaining}} remaining on this line.",
+    "pickServiceForLine": "Pick a service for this line.",
     "pickVendor": "Pick the vendor that will ship this line.",
     "productDefaultLocation": "Product default location",
+    "qtyPositive": "Must be > 0.",
     "qtyPositiveInteger": "Quantity must be a positive whole number.",
     "reopenError": "Couldn't reopen the sales order.",
     "reopened": "Sales order reopened — it is a draft again.",
@@ -819,7 +839,9 @@
       "partiallyFulfilled": "Partially fulfilled"
     },
     "title": "Sales Orders",
-    "unassignedBackorder": "{{count}} backordered line(s) have no preferred vendor — create those POs manually."
+    "total": "Total",
+    "unassignedBackorder": "{{count}} backordered line(s) have no preferred vendor — create those POs manually.",
+    "unnamedService": "Unnamed"
   },
   "stock": {
     "actions": {

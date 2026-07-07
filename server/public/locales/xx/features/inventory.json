@@ -686,8 +686,10 @@
       "hard": "11111",
       "soft": "11111"
     },
+    "allocationModeHelp": "Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.",
     "availabilityOk": "11111",
     "backorderBadge": "11111 {{shortfall}} 11111",
+    "billingAllocation": "Billing & allocation",
     "billsOnFulfillment": "11111",
     "cancelDialog": {
       "confirm": "11111",
@@ -716,6 +718,7 @@
       "vendorPlaceholder": "11111"
     },
     "created": "11111",
+    "currencyFromClient": "Set from client",
     "currencyRequired": "11111",
     "detailTitle": "11111 {{number}} 11111",
     "detailTitleFallback": "11111",
@@ -747,12 +750,22 @@
     "enterSerial": "11111",
     "fields": {
       "allocationMode": "11111",
+      "clientPoNumber": "Client PO number",
       "currencyCode": "11111",
+      "expectedShipDate": "Expected ship date",
+      "fulfillment": "Fulfillment",
       "invoiceMode": "11111",
+      "items": "Items",
       "lines": "11111",
+      "noService": "No service found.",
+      "notes": "Notes",
       "qty": "11111",
+      "searchService": "Search services…",
+      "selectService": "Select a service…",
+      "service": "Service",
       "serviceId": "11111",
-      "unitPrice": "11111"
+      "unitPrice": "11111",
+      "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "11111",
     "fulfillDialog": {
@@ -771,6 +784,10 @@
       "title": "11111 {{name}} 11111"
     },
     "fulfilledUnits": "11111 {{count}} 11111",
+    "fulfillment": {
+      "dropShip": "Drop-ship",
+      "fromStock": "From stock"
+    },
     "fulfillmentFailed": "11111",
     "invoiceColumns": {
       "amount": "11111",
@@ -782,6 +799,7 @@
       "manual": "11111",
       "onFulfillment": "11111"
     },
+    "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
     "invoicedItems": "11111 {{count}} 11111",
     "invoices": "11111",
     "invoicingFailed": "11111 {{error}} 11111",
@@ -802,8 +820,10 @@
     "nothingBackordered": "11111",
     "nothingToInvoice": "11111",
     "onlyRemaining": "11111 {{remaining}} 11111",
+    "pickServiceForLine": "Pick a service for this line.",
     "pickVendor": "11111",
     "productDefaultLocation": "11111",
+    "qtyPositive": "Must be > 0.",
     "qtyPositiveInteger": "11111",
     "reopenError": "11111",
     "reopened": "11111",
@@ -819,7 +839,9 @@
       "partiallyFulfilled": "11111"
     },
     "title": "11111",
-    "unassignedBackorder": "11111 {{count}} 11111"
+    "total": "Total",
+    "unassignedBackorder": "11111 {{count}} 11111",
+    "unnamedService": "Unnamed"
   },
   "stock": {
     "actions": {

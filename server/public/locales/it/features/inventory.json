@@ -686,8 +686,10 @@
       "hard": "Rigida",
       "soft": "Flessibile"
     },
+    "allocationModeHelp": "Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.",
     "availabilityOk": "OK",
     "backorderBadge": "Arretrato {{shortfall}}",
+    "billingAllocation": "Billing & allocation",
     "billsOnFulfillment": "Fattura all'evasione",
     "cancelDialog": {
       "confirm": "Annulla ordine di vendita",
@@ -716,6 +718,7 @@
       "vendorPlaceholder": "Seleziona un fornitore…"
     },
     "created": "Ordine di vendita creato",
+    "currencyFromClient": "Set from client",
     "currencyRequired": "Il codice valuta è obbligatorio",
     "detailTitle": "Ordine di vendita {{number}}",
     "detailTitleFallback": "Ordine di vendita",
@@ -747,12 +750,22 @@
     "enterSerial": "Inserisci almeno un numero di serie.",
     "fields": {
       "allocationMode": "Modalità di allocazione",
+      "clientPoNumber": "Client PO number",
       "currencyCode": "Codice valuta",
+      "expectedShipDate": "Expected ship date",
+      "fulfillment": "Fulfillment",
       "invoiceMode": "Modalità fattura",
+      "items": "Items",
       "lines": "Righe",
+      "noService": "No service found.",
+      "notes": "Notes",
       "qty": "Qtà",
+      "searchService": "Search services…",
+      "selectService": "Select a service…",
+      "service": "Service",
       "serviceId": "ID servizio",
-      "unitPrice": "Prezzo unitario ($)"
+      "unitPrice": "Prezzo unitario ($)",
+      "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "Da preventivo",
     "fulfillDialog": {
@@ -771,6 +784,10 @@
       "title": "Evadi — {{name}}"
     },
     "fulfilledUnits": "Evase {{count}} unità.",
+    "fulfillment": {
+      "dropShip": "Drop-ship",
+      "fromStock": "From stock"
+    },
     "fulfillmentFailed": "Evasione non riuscita.",
     "invoiceColumns": {
       "amount": "Importo",
@@ -782,6 +799,7 @@
       "manual": "Manuale",
       "onFulfillment": "All'evasione"
     },
+    "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
     "invoicedItems": "Fatturati {{count}} articoli.",
     "invoices": "Fatture",
     "invoicingFailed": "Fatturazione non riuscita: {{error}}. Usa \"Genera fattura\" per riprovare.",
@@ -802,8 +820,10 @@
     "nothingBackordered": "Non c'è nulla in arretrato.",
     "nothingToInvoice": "Non c'è più nulla da fatturare.",
     "onlyRemaining": "Rimangono solo {{remaining}} su questa riga.",
+    "pickServiceForLine": "Pick a service for this line.",
     "pickVendor": "Scegli il fornitore che spedirà questa riga.",
     "productDefaultLocation": "Ubicazione predefinita del prodotto",
+    "qtyPositive": "Must be > 0.",
     "qtyPositiveInteger": "La quantità deve essere un numero intero positivo.",
     "reopenError": "Impossibile riaprire l'ordine di vendita.",
     "reopened": "Ordine di vendita riaperto — è di nuovo una bozza.",
@@ -819,7 +839,9 @@
       "partiallyFulfilled": "Evaso parzialmente"
     },
     "title": "Ordini di vendita",
-    "unassignedBackorder": "{{count}} riga/righe in arretrato non hanno un fornitore preferito — crea quei PO manualmente."
+    "total": "Total",
+    "unassignedBackorder": "{{count}} riga/righe in arretrato non hanno un fornitore preferito — crea quei PO manualmente.",
+    "unnamedService": "Unnamed"
   },
   "stock": {
     "actions": {
