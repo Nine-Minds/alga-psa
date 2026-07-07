@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 };
 
 const EMPTY: InventoryDashboardData = {
+  currency_code: 'USD',
   header: {
     branch_count: 0,
     van_count: 0,

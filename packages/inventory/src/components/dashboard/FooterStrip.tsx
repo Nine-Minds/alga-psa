@@ -4,7 +4,7 @@ import React from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { InventoryDashboardData } from '../../actions/inventoryDashboardActions';
-import { TileLink, count, money } from './shared';
+import { TileLink, count, useCurrencyFormat } from './shared';
 
 interface FooterStripProps {
   footer: InventoryDashboardData['footer'];
@@ -34,6 +34,7 @@ function Stat({
 
 export function FooterStrip({ footer }: FooterStripProps) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   const deltaPositive = footer.wow_delta >= 0;
   return (
     <section

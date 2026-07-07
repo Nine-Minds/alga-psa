@@ -4,7 +4,7 @@ import React from 'react';
 import { Percent, ReceiptText, RotateCcw } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { InventoryDashboardData } from '../../actions/inventoryDashboardActions';
-import { AgePill, Dot, Eyebrow, HeroTile, IconChip, TileLink, clientHref, money, pct } from './shared';
+import { AgePill, Dot, Eyebrow, HeroTile, IconChip, TileLink, clientHref, pct, useCurrencyFormat } from './shared';
 
 interface MoneyBandProps {
   data: InventoryDashboardData;
@@ -46,6 +46,7 @@ function BreakdownRow({
 
 function UnbilledTile({ data }: { data: InventoryDashboardData['unbilled'] }) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   const top = data.top_so;
   return (
     <HeroTile id="inventory-dashboard-unbilled-tile" accent="red">
@@ -117,6 +118,7 @@ function UnbilledTile({ data }: { data: InventoryDashboardData['unbilled'] }) {
 
 function MarginTile({ data }: { data: InventoryDashboardData['margin_mtd'] }) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   const delta = data.prev_month_pct == null ? null : data.margin_pct - data.prev_month_pct;
   return (
     <HeroTile id="inventory-dashboard-margin-tile">
@@ -169,6 +171,7 @@ function MarginTile({ data }: { data: InventoryDashboardData['margin_mtd'] }) {
 
 function RmaTile({ data }: { data: InventoryDashboardData['rma_receivables'] }) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   return (
     <HeroTile id="inventory-dashboard-rma-receivables-tile">
       <div className="flex items-start justify-between gap-3">

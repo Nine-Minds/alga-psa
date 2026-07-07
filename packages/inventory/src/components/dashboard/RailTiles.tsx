@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { CalendarClock, PackageOpen, Route, Siren } from 'lucide-react';
+import { CalendarClock, Ghost, PackageOpen, Route } from 'lucide-react';
 import { BentoTile } from '@alga-psa/ui/components/bento/BentoTile';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { InventoryDashboardData } from '../../actions/inventoryDashboardActions';
-import { SectionEmpty, TileLink, clientHref, count, money, pct, shortDate, weekdayDate } from './shared';
+import { SectionEmpty, TileLink, clientHref, count, pct, shortDate, useCurrencyFormat, weekdayDate } from './shared';
 
 type Deployment = InventoryDashboardData['deployments'][number];
 type Pipeline = InventoryDashboardData['pipeline'];
@@ -62,7 +62,9 @@ function DeploymentRow({ deployment }: { deployment: Deployment }) {
         </a>
         <span className="font-mono text-[11px] text-[rgb(var(--color-text-500))]">{shortDate(deployment.ship_date)}</span>
         <span className="rounded bg-[rgb(var(--color-border-100))] px-1.5 py-0.5 font-mono text-[10px] text-[rgb(var(--color-text-500))]">
-          {deployment.days_out >= 0 ? `T-${deployment.days_out}` : `T+${Math.abs(deployment.days_out)}`}
+          {deployment.days_out >= 0
+            ? t('dashboard.deployments.countdownBefore', 'T-{{days}}', { days: deployment.days_out })
+            : t('dashboard.deployments.countdownAfter', 'T+{{days}}', { days: Math.abs(deployment.days_out) })}
         </span>
         <span className={cn('rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide', statusClasses(deployment.status))}>
           {statusLabel(deployment.status, t)}
@@ -150,6 +152,7 @@ function FunnelRow({
   max: number;
   tone: 'primary' | 'amber' | 'green';
 }) {
+  const { money } = useCurrencyFormat();
   const toneClass = {
     primary: 'bg-[rgb(var(--color-primary-500))]',
     amber: 'bg-amber-500',
@@ -171,6 +174,7 @@ function FunnelRow({
 
 export function PipelineTile({ pipeline }: { pipeline: Pipeline }) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   const max = Math.max(pipeline.quotes.amount, pipeline.booked.amount, pipeline.fulfilling.amount, pipeline.invoiced_week, 1);
   return (
     <BentoTile id="inventory-dashboard-pipeline" title={t('dashboard.pipeline.title', 'Sales-order pipeline')} icon={<Route className="h-4 w-4" />}>
@@ -235,6 +239,7 @@ export function PipelineTile({ pipeline }: { pipeline: Pipeline }) {
 
 export function ReceivingTile({ receiving }: { receiving: Receiving }) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   return (
     <BentoTile id="inventory-dashboard-receiving-today" title={t('dashboard.receivingToday.title', 'Receiving today')} icon={<PackageOpen className="h-4 w-4" />}>
       <div>
@@ -285,8 +290,9 @@ export function ReceivingTile({ receiving }: { receiving: Receiving }) {
 
 export function GhostUsageTile({ ghost }: { ghost: Ghost }) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   return (
-    <BentoTile id="inventory-dashboard-ghost-week" title={t('dashboard.ghostWeek.title', 'Ghost usage this week')} icon={<Siren className="h-4 w-4" />}>
+    <BentoTile id="inventory-dashboard-ghost-week" title={t('dashboard.ghostWeek.title', 'Ghost usage this week')} icon={<Ghost className="h-4 w-4" />}>
       <div>
         <div className="flex flex-wrap items-baseline gap-2">
           <span className="text-3xl font-bold leading-none text-[rgb(var(--color-text-900))]">{count(ghost.count)}</span>

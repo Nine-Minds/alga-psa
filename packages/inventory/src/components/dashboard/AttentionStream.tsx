@@ -12,7 +12,7 @@ import type {
   AttentionItem,
   AttentionKind,
 } from '../../actions/inventoryDashboardActions';
-import { AgePill, Dot, count, money, moneySigned, shortDate } from './shared';
+import { AgePill, Dot, count, shortDate, useCurrencyFormat, type CurrencyFormat } from './shared';
 
 type Filter = 'all' | AttentionCategory;
 
@@ -263,11 +263,11 @@ function rowMeta(item: AttentionItem, t: ReturnType<typeof useTranslation>['t'])
   }
 }
 
-function metric(item: AttentionItem, t: ReturnType<typeof useTranslation>['t']) {
+function metric(item: AttentionItem, t: ReturnType<typeof useTranslation>['t'], fmt: CurrencyFormat) {
   if (item.amount_cents != null) {
     const signed = item.kind === 'count_approval' || item.kind === 'price_creep_bill';
     return {
-      main: signed ? moneySigned(item.amount_cents) : money(item.amount_cents),
+      main: signed ? fmt.moneySigned(item.amount_cents) : fmt.money(item.amount_cents),
       sub: item.age_days != null ? t('dashboard.attention.metric.ageDays', '{{days}}d', { days: item.age_days }) : null,
       hot: item.band === 'red',
     };
@@ -330,7 +330,8 @@ function RowIcon({ item }: { item: AttentionItem }) {
 
 function AttentionRow({ item }: { item: AttentionItem }) {
   const { t } = useTranslation('features/inventory');
-  const rowMetric = metric(item, t);
+  const fmt = useCurrencyFormat();
+  const rowMetric = metric(item, t, fmt);
   const chipTone = {
     money: 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300',
     fulfillment: 'bg-primary-50 text-[rgb(var(--color-primary-700))] dark:bg-[rgb(var(--color-primary-400)/0.15)] dark:text-primary-300',

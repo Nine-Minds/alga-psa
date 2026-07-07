@@ -9,13 +9,14 @@ import { AttentionStream } from './dashboard/AttentionStream';
 import { FooterStrip } from './dashboard/FooterStrip';
 import { MoneyBand } from './dashboard/MoneyBand';
 import { DeploymentsTile, GhostUsageTile, PipelineTile, ReceivingTile } from './dashboard/RailTiles';
-import { money } from './dashboard/shared';
+import { CurrencyFormatProvider, useCurrencyFormat } from './dashboard/shared';
 
 interface InventoryDashboardProps {
   data: InventoryDashboardData;
 }
 
 const EMPTY: InventoryDashboardData = {
+  currency_code: 'USD',
   header: {
     branch_count: 0,
     van_count: 0,
@@ -65,8 +66,18 @@ function pluralUnit(count: number, singular: string, plural: string): string {
 }
 
 export function InventoryDashboard({ data }: InventoryDashboardProps) {
-  const { t } = useTranslation('features/inventory');
+  const { i18n } = useTranslation('features/inventory');
   const d = data ?? EMPTY;
+  return (
+    <CurrencyFormatProvider currencyCode={d.currency_code ?? 'USD'} locale={i18n.language || 'en'}>
+      <InventoryDashboardBody data={d} />
+    </CurrencyFormatProvider>
+  );
+}
+
+function InventoryDashboardBody({ data: d }: InventoryDashboardProps) {
+  const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   const header = d.header ?? EMPTY.header;
 
   const subtitle = t(

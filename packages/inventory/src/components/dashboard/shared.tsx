@@ -9,13 +9,6 @@ import { cn } from '@alga-psa/ui/lib/utils';
  * (docs/ui/design_guidelines.md). Tokens only — no raw hex.
  */
 
-export function money(cents: number, dp = 0): string {
-  return `$${(Number(cents || 0) / 100).toLocaleString(undefined, {
-    minimumFractionDigits: dp,
-    maximumFractionDigits: dp,
-  })}`;
-}
-
 export function count(value: number): string {
   return Number(value || 0).toLocaleString();
 }
@@ -28,12 +21,63 @@ export function clientHref(clientId: string | null | undefined): string {
   return clientId ? `/msp/clients/${clientId}` : '/msp/inventory/sales-orders';
 }
 
-/** Signed variant for variances: −$340 / +$40. */
-export function moneySigned(cents: number): string {
-  const abs = money(Math.abs(cents));
-  if (cents < 0) return `−${abs}`;
-  if (cents > 0) return `+${abs}`;
-  return abs;
+/**
+ * Locale/currency-aware money formatting for the dashboard. The provider is
+ * seeded once at the root from the tenant's default billing currency and the
+ * active i18n locale; tiles read the formatters through the hook so every
+ * amount renders with the correct symbol and grouping instead of a hardcoded $.
+ */
+const DEFAULT_LOCALE = 'en';
+const DEFAULT_CURRENCY = 'USD';
+
+export interface CurrencyFormat {
+  /** Whole-number by default (dp=0), preserving the prior display. */
+  money: (cents: number, dp?: number) => string;
+  /** Explicit +/− prefix on the absolute value (−$340 / +$40). */
+  moneySigned: (cents: number) => string;
+}
+
+function buildCurrencyFormat(locale: string, currencyCode: string): CurrencyFormat {
+  const format = (cents: number, dp = 0) =>
+    new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: currencyCode,
+      minimumFractionDigits: dp,
+      maximumFractionDigits: dp,
+    }).format(Number(cents || 0) / 100);
+  return {
+    money: format,
+    moneySigned: (cents: number) => {
+      const abs = format(Math.abs(cents));
+      if (cents < 0) return `−${abs}`;
+      if (cents > 0) return `+${abs}`;
+      return abs;
+    },
+  };
+}
+
+const CurrencyFormatContext = React.createContext<CurrencyFormat>(
+  buildCurrencyFormat(DEFAULT_LOCALE, DEFAULT_CURRENCY),
+);
+
+export function CurrencyFormatProvider({
+  currencyCode,
+  locale,
+  children,
+}: {
+  currencyCode: string;
+  locale: string;
+  children: React.ReactNode;
+}) {
+  const value = React.useMemo(
+    () => buildCurrencyFormat(locale || DEFAULT_LOCALE, currencyCode || DEFAULT_CURRENCY),
+    [locale, currencyCode],
+  );
+  return <CurrencyFormatContext.Provider value={value}>{children}</CurrencyFormatContext.Provider>;
+}
+
+export function useCurrencyFormat(): CurrencyFormat {
+  return React.useContext(CurrencyFormatContext);
 }
 
 export function shortDate(iso: string): string {

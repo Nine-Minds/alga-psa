@@ -351,6 +351,8 @@
       "vendorFallback": "vendor",
       "noEta": "no ETA",
       "allServiceOrders": "All service orders",
+      "countdownBefore": "T-{{days}}",
+      "countdownAfter": "T+{{days}}",
       "status": {
         "atRisk": "At risk",
         "ready": "Ready",

@@ -105,6 +105,8 @@ export interface ReceivingPo {
 }
 
 export interface InventoryDashboardData {
+  /** Tenant default billing currency (ISO 4217) for money formatting. */
+  currency_code: string;
   header: {
     branch_count: number;
     van_count: number;
@@ -201,6 +203,13 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
       .count<{ c: string }>('* as c')
       .first();
     const tech_count = Number(techRow?.c ?? 0);
+
+    /* ---- tenant default billing currency (money formatting) ---- */
+    const billingSettingsRow = await trx('default_billing_settings')
+      .where({ tenant })
+      .select<{ default_currency_code: string | null }>('default_currency_code')
+      .first();
+    const currency_code = billingSettingsRow?.default_currency_code || 'USD';
 
     /* ---- on-hand value + units (footer) ---- */
     const nonSerValueRow = await trx('stock_levels as sl')
@@ -762,6 +771,7 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
     );
 
     return {
+      currency_code,
       header: {
         branch_count,
         van_count: vans.length,
