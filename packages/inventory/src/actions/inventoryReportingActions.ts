@@ -1,7 +1,7 @@
 'use server';
 
 import { Knex } from 'knex';
-import { withTransaction, createTenantKnex } from '@alga-psa/db';
+import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IPurchaseOrder, ISalesOrder } from '@alga-psa/types';
@@ -28,11 +28,11 @@ export const getAccountingInventoryAlignment = withAuth(
     await requireInvRead(user);
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      return trx('product_inventory_settings as pis')
-        .join('service_catalog as sc', function () {
-          this.on('pis.service_id', '=', 'sc.service_id').andOn('pis.tenant', '=', 'sc.tenant');
-        })
-        .where({ 'pis.tenant': tenant, 'pis.track_stock': true })
+      const scopedDb = tenantDb(trx, tenant);
+      const query = scopedDb.table('product_inventory_settings as pis');
+      scopedDb.tenantJoin(query, 'service_catalog as sc', 'pis.service_id', 'sc.service_id');
+      return query
+        .where({ 'pis.track_stock': true })
         .select('pis.service_id', 'sc.service_name', 'sc.sku', 'pis.track_stock', 'pis.is_serialized', 'pis.average_cost')
         .orderBy('sc.service_name', 'asc');
     });
@@ -59,14 +59,14 @@ export const inventoryValueReport = withAuth(async (user, { tenant }): Promise<I
   await requireInvRead(user);
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
     const valueByLocation = new Map<string, number>();
 
     // Non-serialized: on-hand × average_cost from stock_levels joined to settings.
-    const nonSerialized = await trx('stock_levels as sl')
-      .join('product_inventory_settings as pis', function () {
-        this.on('sl.service_id', '=', 'pis.service_id').andOn('sl.tenant', '=', 'pis.tenant');
-      })
-      .where({ 'sl.tenant': tenant, 'pis.is_serialized': false })
+    const nonSerializedQuery = scopedDb.table('stock_levels as sl');
+    scopedDb.tenantJoin(nonSerializedQuery, 'product_inventory_settings as pis', 'sl.service_id', 'pis.service_id');
+    const nonSerialized = await nonSerializedQuery
+      .where('pis.is_serialized', false)
       .andWhere('sl.quantity_on_hand', '>', 0)
       .select<{ location_id: string; value: string }[]>(
         'sl.location_id as location_id',
@@ -78,8 +78,8 @@ export const inventoryValueReport = withAuth(async (user, { tenant }): Promise<I
     }
 
     // Serialized: sum of in_stock units' unit_cost at each location.
-    const serialized = await trx('stock_units')
-      .where({ tenant, status: 'in_stock' })
+    const serialized = await scopedDb.table('stock_units')
+      .where({ status: 'in_stock' })
       .whereNotNull('location_id')
       .select<{ location_id: string; value: string }[]>(
         'location_id',
@@ -90,8 +90,7 @@ export const inventoryValueReport = withAuth(async (user, { tenant }): Promise<I
       valueByLocation.set(r.location_id, (valueByLocation.get(r.location_id) ?? 0) + Number(r.value ?? 0));
     }
 
-    const locations = await trx('stock_locations')
-      .where({ tenant })
+    const locations = await scopedDb.table('stock_locations')
       .select<{ location_id: string; name: string }[]>('location_id', 'name');
     const nameById = new Map(locations.map((l) => [l.location_id, l.name]));
 
@@ -151,9 +150,12 @@ export const marginReport = withAuth(
     await requireInvRead(user);
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant);
       const from = normalizeReportBoundary(filter?.from, false);
       const toExclusive = normalizeReportBoundary(filter?.to, true);
-      const q = trx('stock_movements as sm')
+      // LATERAL joins are inexpressible through tenantJoin's column-pair API; the raw
+      // SQL already carries the tenant distribution-key equality (sol.tenant = sm.tenant).
+      const q = scopedDb.table('stock_movements as sm')
         .joinRaw(
           `LEFT JOIN LATERAL (
             SELECT sol.unit_price
@@ -164,11 +166,9 @@ export const marginReport = withAuth(
             ORDER BY sol.created_at ASC, sol.so_line_id ASC
             LIMIT 1
           ) sol ON true`,
-        )
-        .leftJoin('service_catalog as sc', function () {
-          this.on('sm.service_id', '=', 'sc.service_id').andOn('sm.tenant', '=', 'sc.tenant');
-        })
-        .where({ 'sm.tenant': tenant, 'sm.movement_type': 'consume', 'sm.source_doc_type': 'sales_order' });
+        );
+      scopedDb.tenantJoin(q, 'service_catalog as sc', 'sm.service_id', 'sc.service_id', { type: 'left' });
+      q.where({ 'sm.movement_type': 'consume', 'sm.source_doc_type': 'sales_order' });
       if (from) q.andWhere('sm.created_at', '>=', from);
       if (toExclusive) q.andWhere('sm.created_at', '<', toExclusive);
 
@@ -238,11 +238,10 @@ export const expiringWarrantyReport = withAuth(
     const days = Number.isFinite(withinDays) ? Math.max(0, Math.floor(withinDays)) : 0;
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const rows = await trx('stock_units as su')
-        .leftJoin('service_catalog as sc', function () {
-          this.on('su.service_id', '=', 'sc.service_id').andOn('su.tenant', '=', 'sc.tenant');
-        })
-        .where({ 'su.tenant': tenant })
+      const scopedDb = tenantDb(trx, tenant);
+      const query = scopedDb.table('stock_units as su');
+      scopedDb.tenantJoin(query, 'service_catalog as sc', 'su.service_id', 'sc.service_id', { type: 'left' });
+      const rows = await query
         .whereNotNull('su.warranty_expires_at')
         .whereNot('su.status', 'retired')
         .andWhereRaw("su.warranty_expires_at <= (now() + (? || ' days')::interval)", [days])
@@ -278,8 +277,8 @@ export const openPosWidget = withAuth(async (user, { tenant }): Promise<OpenPosW
   await requireInvRead(user);
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const purchase_orders = (await trx('purchase_orders')
-      .where({ tenant })
+    const scopedDb = tenantDb(trx, tenant);
+    const purchase_orders = (await scopedDb.table('purchase_orders')
       .whereIn('status', OPEN_PO_STATUSES as unknown as string[])
       .orderBy('order_date', 'desc')) as IPurchaseOrder[];
     return { count: purchase_orders.length, purchase_orders };
@@ -296,8 +295,8 @@ export const openSosWidget = withAuth(async (user, { tenant }): Promise<OpenSosW
   await requireInvRead(user);
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const sales_orders = (await trx('sales_orders')
-      .where({ tenant })
+    const scopedDb = tenantDb(trx, tenant);
+    const sales_orders = (await scopedDb.table('sales_orders')
       .whereIn('status', OPEN_SO_STATUSES as unknown as string[])
       .orderBy('order_date', 'desc')) as ISalesOrder[];
     return { count: sales_orders.length, sales_orders };
@@ -359,11 +358,10 @@ export const writeOffReport = withAuth(
     { tenant },
     opts?: { from?: string | null; to?: string | null },
   ): Promise<WriteOffReportData> => {
-    if (!(await hasPermission(user, 'inventory', 'read'))) {
-      throw new Error('Permission denied: inventory read required');
-    }
+    await requireInvRead(user);
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant);
       const to = opts?.to ? new Date(opts.to) : new Date();
       const from = opts?.from ? new Date(opts.from) : new Date(to.getTime() - 90 * 86_400_000);
       // End of the 'to' day, so a date-only input includes that whole day.
@@ -377,30 +375,23 @@ export const writeOffReport = withAuth(
       END`;
       const costExpr = 'COALESCE(sm.unit_cost, su.unit_cost, pis.average_cost, 0)';
 
-      const base = () =>
-        trx('stock_movements as sm')
-          .leftJoin('stock_units as su', function () {
-            this.on('su.unit_id', '=', 'sm.unit_id').andOn('su.tenant', '=', 'sm.tenant');
-          })
-          .leftJoin('product_inventory_settings as pis', function () {
-            this.on('pis.service_id', '=', 'sm.service_id').andOn('pis.tenant', '=', 'sm.tenant');
-          })
-          .where('sm.tenant', tenant)
+      const base = () => {
+        const q = scopedDb.table('stock_movements as sm');
+        scopedDb.tenantJoin(q, 'stock_units as su', 'su.unit_id', 'sm.unit_id', { type: 'left' });
+        scopedDb.tenantJoin(q, 'product_inventory_settings as pis', 'pis.service_id', 'sm.service_id', { type: 'left' });
+        return q
           .whereIn('sm.movement_type', ['adjust', 'retire'])
           .whereBetween('sm.created_at', [from.toISOString(), toEnd.toISOString()]);
+      };
 
-      const rowsRaw = await base()
-        .leftJoin('service_catalog as sc', function () {
-          this.on('sc.service_id', '=', 'sm.service_id').andOn('sc.tenant', '=', 'sm.tenant');
-        })
-        .leftJoin('stock_locations as loc', function () {
-          this.on('loc.location_id', '=', trx.raw('COALESCE(sm.from_location_id, sm.to_location_id)')).andOn(
-            'loc.tenant',
-            '=',
-            'sm.tenant',
-          );
-        })
-        .leftJoin('users as u', 'u.user_id', 'sm.performed_by')
+      const rowsQuery = base();
+      scopedDb.tenantJoin(rowsQuery, 'service_catalog as sc', 'sc.service_id', 'sm.service_id', { type: 'left' });
+      // A movement references at most one of from/to location; two joins + COALESCE
+      // replace a single join on COALESCE(from, to), which tenantJoin cannot express.
+      scopedDb.tenantJoin(rowsQuery, 'stock_locations as floc', 'floc.location_id', 'sm.from_location_id', { type: 'left' });
+      scopedDb.tenantJoin(rowsQuery, 'stock_locations as tloc', 'tloc.location_id', 'sm.to_location_id', { type: 'left' });
+      scopedDb.tenantJoin(rowsQuery, 'users as u', 'u.user_id', 'sm.performed_by', { type: 'left' });
+      const rowsRaw = await rowsQuery
         .orderBy('sm.created_at', 'desc')
         .limit(WRITE_OFF_ROW_CAP + 1)
         .select<any[]>(
@@ -410,7 +401,7 @@ export const writeOffReport = withAuth(
           'sm.reason',
           'sm.performed_by',
           'sc.service_name',
-          'loc.name as location_name',
+          trx.raw('COALESCE(floc.name, tloc.name) as location_name'),
           'su.serial_number',
           trx.raw(`${deltaExpr} as quantity_delta`),
           trx.raw(`(${deltaExpr}) * ${costExpr} as value_cents`),
@@ -439,8 +430,9 @@ export const writeOffReport = withAuth(
 
       // Totals aggregate over the FULL range (not the display cap) — a capped list must
       // never quietly understate the money.
-      const agg = await base()
-        .leftJoin('users as u', 'u.user_id', 'sm.performed_by')
+      const aggQuery = base();
+      scopedDb.tenantJoin(aggQuery, 'users as u', 'u.user_id', 'sm.performed_by', { type: 'left' });
+      const agg = await aggQuery
         .groupBy('sm.performed_by', 'u.first_name', 'u.last_name', 'u.username')
         .select<any[]>(
           'sm.performed_by',
