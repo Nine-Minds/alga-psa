@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { ISO8601String } from '@alga-psa/types';
+import { toPlainDate, toISODate } from '@alga-psa/core';
 
 export type RecurringApprovalBlockerRow = {
   executionIdentityKey: string;
