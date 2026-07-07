@@ -903,6 +903,10 @@
     "email": "Correo electrónico",
     "clientName": "Nombre del cliente",
     "importCompleteMessage": "Clientes {{count}} importados correctamente",
+    "importCompleteWithErrors": "Importación completada con errores",
+    "importResultSummary": "{{created}} creados, {{updated}} actualizados, {{skipped}} omitidos, {{failed}} fallidos",
+    "skippedExistingMessage": "Se omitieron {{count}} clientes porque ya existen. Activa \"Actualizar clientes existentes\" para sobrescribirlos.",
+    "error": "Error",
     "updateExistingTitle": "Actualizar clientes existentes",
     "updateExistingMessage": "{{count}} clientes ya existen. ¿Quieres actualizarlos con los nuevos datos?"
   },

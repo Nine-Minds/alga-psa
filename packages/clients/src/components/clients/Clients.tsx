@@ -23,7 +23,6 @@ import {
   getAllClientsPaginated,
   deleteClient,
   validateClientDeletion,
-  importClientsFromCSV,
   exportClientsToCSV,
   markClientInactiveWithContacts,
   markClientActiveWithContacts,
@@ -1315,14 +1314,10 @@ const Clients: React.FC = () => {
     onAfterPrint: () => setPrintClients([]),
   });
 
-  const handleImportComplete = async (clients: IClient[], updateExisting: boolean) => {
-    try {
-      await importClientsFromCSV(clients, updateExisting);
-      setIsImportDialogOpen(false);
-      router.refresh();
-    } catch (error) {
-      console.error('Error importing clients:', error);
-    }
+  const handleImportComplete = () => {
+    // The dialog already ran the import and shows per-row results;
+    // just refresh the list behind it.
+    void refreshClients();
   };
 
   if (viewMode === null || areClientPreferencesLoading) {
@@ -1775,7 +1770,7 @@ const Clients: React.FC = () => {
       <ClientsImportDialog
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
-        onImportComplete={(clients, updateExisting) => void handleImportComplete(clients, updateExisting)}
+        onImportComplete={handleImportComplete}
       />
       
       {/* Quick View Drawer */}
