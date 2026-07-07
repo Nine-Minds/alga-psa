@@ -219,6 +219,9 @@
     },
     "errors": {
       "title": "Si sono verificati errori durante la finalizzazione delle fatture:",
+      "titleFinalize": "Si sono verificati errori durante la finalizzazione delle fatture:",
+      "titleDelete": "Si sono verificati errori durante l'eliminazione delle fatture:",
+      "titleReverse": "Si sono verificati errori durante lo storno delle fatture:",
       "loadReady": "Impossibile caricare i periodi di fatturazione. Per favore riprova.",
       "loadHistory": "Impossibile caricare la cronologia delle fatture ricorrenti. Per favore riprova."
     },

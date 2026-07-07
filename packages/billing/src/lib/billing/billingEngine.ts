@@ -79,6 +79,7 @@ type DiscountQueryRow = IDiscount & {
 };
 
 type ResolvedRecurringChargeTiming = {
+  servicePeriodRecordId: string | null;
   duePosition: "arrears" | "advance";
   servicePeriodStart: ISO8601String;
   servicePeriodEnd: ISO8601String;
@@ -104,7 +105,7 @@ type CalculateBillingOptions = {
 
 type PersistedRecurringTimingSelectionRecord = Pick<
   IRecurringServicePeriodRecord,
-  "sourceObligation" | "cadenceOwner" | "duePosition" | "servicePeriod" | "activityWindow"
+  "recordId" | "sourceObligation" | "cadenceOwner" | "duePosition" | "servicePeriod" | "activityWindow"
 >;
 
 type ContractCadenceGenerator = typeof generateMonthlyContractCadenceServicePeriods;
@@ -454,6 +455,7 @@ export class BillingEngine {
       .orderBy("service_period_start", "asc")
       .orderBy("revision", "asc")
       .select(
+        "record_id",
         "obligation_id",
         "obligation_type",
         "charge_family",
@@ -477,6 +479,7 @@ export class BillingEngine {
 
     return this.buildRecurringTimingSelectionsFromPersistedRecords(
       dueRows.map((row) => ({
+        recordId: row.record_id,
         sourceObligation: {
           tenant: this.tenant!,
           obligationId: row.obligation_id,
@@ -2491,6 +2494,7 @@ export class BillingEngine {
 
     const chargesWithMeta = chargesAfterSettlement.map((charge) => ({
       ...charge,
+      servicePeriodRecordId: recurringTimingSelection?.servicePeriodRecordId ?? null,
       servicePeriodStart,
       servicePeriodEnd,
       billingTiming: lineBillingTiming,
@@ -2659,6 +2663,7 @@ export class BillingEngine {
       );
 
       recurringTimingSelections[lineId] = {
+        servicePeriodRecordId: record.recordId,
         duePosition: record.duePosition,
         servicePeriodStart: toISODate(toPlainDate(coverage.coveredPeriod.start)),
         servicePeriodEnd: toISODate(
@@ -2854,6 +2859,7 @@ export class BillingEngine {
     }
 
     return {
+      servicePeriodRecordId: null,
       duePosition,
       servicePeriodStart: toISODate(
         toPlainDate(settlement.coveredServicePeriod.start),
@@ -3939,6 +3945,7 @@ export class BillingEngine {
           is_taxable: isTaxable,
           servicePeriodStart,
           servicePeriodEnd,
+          servicePeriodRecordId: recurringTimingSelection?.servicePeriodRecordId ?? null,
           billingTiming: (clientContractLine.billing_timing ?? "arrears") as
             | "arrears"
             | "advance",

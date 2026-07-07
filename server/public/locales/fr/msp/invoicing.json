@@ -219,6 +219,9 @@
     },
     "errors": {
       "title": "Des erreurs se sont produites lors de la finalisation des factures :",
+      "titleFinalize": "Des erreurs se sont produites lors de la finalisation des factures :",
+      "titleDelete": "Des erreurs se sont produites lors de la suppression des factures :",
+      "titleReverse": "Des erreurs se sont produites lors de l'annulation des factures :",
       "loadReady": "Échec du chargement des périodes de facturation. Veuillez réessayer.",
       "loadHistory": "Échec du chargement de l'historique des factures récurrentes. Veuillez réessayer."
     },

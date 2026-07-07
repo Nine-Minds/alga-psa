@@ -237,6 +237,9 @@
     },
     "errors": {
       "title": "Wystąpiły błędy podczas finalizowania faktur:",
+      "titleFinalize": "Wystąpiły błędy podczas finalizowania faktur:",
+      "titleDelete": "Wystąpiły błędy podczas usuwania faktur:",
+      "titleReverse": "Wystąpiły błędy podczas cofania faktur:",
       "loadReady": "Nie udało się wczytać okresów rozliczeniowych. Spróbuj ponownie.",
       "loadHistory": "Nie udało się wczytać historii faktur cyklicznych. Spróbuj ponownie."
     },

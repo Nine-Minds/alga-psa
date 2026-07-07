@@ -219,6 +219,9 @@
     },
     "errors": {
       "title": "Se produjeron errores al finalizar las facturas:",
+      "titleFinalize": "Se produjeron errores al finalizar las facturas:",
+      "titleDelete": "Se produjeron errores al eliminar las facturas:",
+      "titleReverse": "Se produjeron errores al revertir las facturas:",
       "loadReady": "No se pudieron cargar los períodos de facturación. Por favor inténtalo de nuevo.",
       "loadHistory": "No se pudo cargar el historial de facturas recurrentes. Por favor inténtalo de nuevo."
     },

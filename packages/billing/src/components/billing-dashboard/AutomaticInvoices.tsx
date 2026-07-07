@@ -92,6 +92,7 @@ function BillingTableSkeleton({ rows = 5, columns = 5 }: { rows?: number; column
 }
 
 type AutomaticInvoiceGroupLabelKey = 'ready' | 'canCombine' | 'separate' | 'blocked' | 'notReady' | 'upcoming';
+type AutomaticInvoiceErrorOperation = 'finalize' | 'delete' | 'reverse';
 type AutomaticInvoiceIncompatibilityReasonKey =
   | 'invoiceWindowDiffers'
   | 'clientDiffers'
@@ -139,6 +140,12 @@ const AUTOMATIC_INVOICE_GROUP_LABELS: Record<AutomaticInvoiceGroupLabelKey, stri
   blocked: 'Contains blocked items',
   notReady: 'Not ready to invoice',
   upcoming: 'Not yet due',
+};
+
+const AUTOMATIC_INVOICE_ERROR_TITLE_KEYS: Record<AutomaticInvoiceErrorOperation, string> = {
+  finalize: 'automaticInvoices.errors.titleFinalize',
+  delete: 'automaticInvoices.errors.titleDelete',
+  reverse: 'automaticInvoices.errors.titleReverse',
 };
 
 const getParentGroupSummary = ({
@@ -646,6 +653,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReversing, setIsReversing] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errorOperation, setErrorOperation] = useState<AutomaticInvoiceErrorOperation>('finalize');
   const [clientFilter, setClientFilter] = useState<string>(() => readAutomaticInvoicesClientFilterFromLocation());
   const [debouncedClientFilter, setDebouncedClientFilter] = useState<string>(() => readAutomaticInvoicesClientFilterFromLocation());
 
@@ -1448,6 +1456,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
     const primarySelection = groups[0]?.selectorInputs[0] ?? null;
     setIsPreviewLoading(true);
+    setErrorOperation('finalize');
     setErrors({}); // Clear previous errors
     const response = await previewGroupedInvoicesForSelectionInputs(
       groups.map((group) => ({
@@ -1490,6 +1499,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     }
 
     setIsGenerating(true);
+    setErrorOperation('finalize');
     setErrors({});
 
     try {
@@ -1633,6 +1643,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         billingCycleId: selectedCycleToReverse.billingCycleId,
       });
       if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setErrorOperation('reverse');
         setErrors({ [selectedCycleToReverse.client]: getErrorMessage(result) });
         setIsReversing(false);
         return;
@@ -1642,6 +1653,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       // Let onGenerateSuccess trigger refresh via refreshTrigger
       onGenerateSuccess();
     } catch (error) {
+      setErrorOperation('reverse');
       setErrors({
         [selectedCycleToReverse.client]: error instanceof Error
           ? error.message
@@ -1657,6 +1669,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     if (!selectedCycleToDelete) return;
 
     setIsDeleting(true);
+    setErrorOperation('delete');
     setErrors({});
     try {
       const result = await hardDeleteRecurringInvoice({
@@ -2106,8 +2119,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   <X className="h-5 w-5" />
                 </button>
                 <h4 className="font-semibold mb-2">
-                  {t('automaticInvoices.errors.title', {
-                    defaultValue: 'Errors occurred while finalizing invoices:',
+                  {t(AUTOMATIC_INVOICE_ERROR_TITLE_KEYS[errorOperation], {
+                    defaultValue:
+                      errorOperation === 'delete'
+                        ? 'Errors occurred while deleting invoices:'
+                        : errorOperation === 'reverse'
+                          ? 'Errors occurred while reversing invoices:'
+                          : 'Errors occurred while finalizing invoices:',
                   })}
                 </h4>
                 <ul className="list-disc pl-5">

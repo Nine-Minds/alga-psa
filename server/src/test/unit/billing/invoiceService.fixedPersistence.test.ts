@@ -308,7 +308,18 @@ describe("invoiceService fixed recurring persistence", () => {
   });
 
   it("T069: recurring product invoice detail rows persist canonical service-period metadata correctly", async () => {
-    const { tx, inserts } = createMockTx();
+    const { tx, inserts } = createMockTx({
+      recurring_service_periods: [
+        {
+          record_id: "rsp-product-1",
+          tenant: "tenant-1",
+          charge_family: "product",
+          due_position: "arrears",
+          lifecycle_state: "generated",
+          invoice_charge_detail_id: null,
+        },
+      ],
+    });
 
     const subtotal = await persistInvoiceCharges(
       tx,
@@ -328,6 +339,7 @@ describe("invoiceService fixed recurring persistence", () => {
           is_taxable: false,
           servicePeriodStart: "2025-01-10",
           servicePeriodEnd: "2025-01-31",
+          servicePeriodRecordId: "rsp-product-1",
           billingTiming: "arrears",
           tenant: "tenant-1",
         },
@@ -360,7 +372,18 @@ describe("invoiceService fixed recurring persistence", () => {
   });
 
   it("T070: recurring license invoice detail rows persist canonical service-period metadata correctly", async () => {
-    const { tx, inserts } = createMockTx();
+    const { tx, inserts } = createMockTx({
+      recurring_service_periods: [
+        {
+          record_id: "rsp-license-1",
+          tenant: "tenant-1",
+          charge_family: "license",
+          due_position: "advance",
+          lifecycle_state: "generated",
+          invoice_charge_detail_id: null,
+        },
+      ],
+    });
 
     const subtotal = await persistInvoiceCharges(
       tx,
@@ -380,6 +403,7 @@ describe("invoiceService fixed recurring persistence", () => {
           is_taxable: false,
           servicePeriodStart: "2025-02-01",
           servicePeriodEnd: "2025-02-28",
+          servicePeriodRecordId: "rsp-license-1",
           billingTiming: "advance",
           tenant: "tenant-1",
         },
@@ -412,7 +436,18 @@ describe("invoiceService fixed recurring persistence", () => {
   });
 
   it("T053: fixed recurring parent invoice lines preserve client contract linkage for PO-scoped invoice association", async () => {
-    const { tx, inserts } = createMockTx();
+    const { tx, inserts } = createMockTx({
+      recurring_service_periods: [
+        {
+          record_id: "rsp-fixed-po-1",
+          tenant: "tenant-1",
+          charge_family: "fixed",
+          due_position: "arrears",
+          lifecycle_state: "generated",
+          invoice_charge_detail_id: null,
+        },
+      ],
+    });
 
     await persistInvoiceCharges(
       tx,
@@ -440,6 +475,7 @@ describe("invoiceService fixed recurring persistence", () => {
           allocated_amount: 10000,
           servicePeriodStart: "2024-12-01",
           servicePeriodEnd: "2024-12-31",
+          servicePeriodRecordId: "rsp-fixed-po-1",
           billingTiming: "arrears",
           tenant: "tenant-1",
         },
@@ -473,7 +509,18 @@ describe("invoiceService fixed recurring persistence", () => {
   });
 
   it("T050: fixed recurring invoice detail rows persist canonical service-period metadata without subtotal drift", async () => {
-    const { tx, inserts } = createMockTx();
+    const { tx, inserts } = createMockTx({
+      recurring_service_periods: [
+        {
+          record_id: "rsp-fixed-t050",
+          tenant: "tenant-1",
+          charge_family: "fixed",
+          due_position: "arrears",
+          lifecycle_state: "generated",
+          invoice_charge_detail_id: null,
+        },
+      ],
+    });
 
     const subtotal = await persistInvoiceCharges(
       tx,
@@ -501,6 +548,7 @@ describe("invoiceService fixed recurring persistence", () => {
           allocated_amount: 6000,
           servicePeriodStart: "2024-12-01",
           servicePeriodEnd: "2024-12-31",
+          servicePeriodRecordId: "rsp-fixed-t050",
           billingTiming: "arrears",
           tenant: "tenant-1",
         },
@@ -526,6 +574,7 @@ describe("invoiceService fixed recurring persistence", () => {
           allocated_amount: 4000,
           servicePeriodStart: "2024-12-01",
           servicePeriodEnd: "2024-12-31",
+          servicePeriodRecordId: "rsp-fixed-t050",
           billingTiming: "arrears",
           tenant: "tenant-1",
         },
@@ -636,6 +685,7 @@ describe("invoiceService fixed recurring persistence", () => {
           config_id: "config-1",
           servicePeriodStart: "2025-01-01",
           servicePeriodEnd: "2025-02-01",
+          servicePeriodRecordId: "rsp-client-1",
           billingTiming: "arrears",
           tenant: "tenant-1",
         },
@@ -728,6 +778,7 @@ describe("invoiceService fixed recurring persistence", () => {
           allocated_amount: 12000,
           servicePeriodStart: "2025-03-01",
           servicePeriodEnd: "2025-03-31",
+          servicePeriodRecordId: "rsp-contract-1",
           billingTiming: "advance",
           tenant: "tenant-1",
         },
@@ -822,6 +873,7 @@ describe("invoiceService fixed recurring persistence", () => {
           client_contract_line_id: "contract-line-1",
           servicePeriodStart: "2025-02-01",
           servicePeriodEnd: "2025-03-01",
+          servicePeriodRecordId: "rsp-hourly-1",
           billingTiming: "arrears",
           tenant: "tenant-1",
         },
@@ -840,6 +892,7 @@ describe("invoiceService fixed recurring persistence", () => {
           client_contract_line_id: "contract-line-2",
           servicePeriodStart: "2025-02-01",
           servicePeriodEnd: "2025-03-01",
+          servicePeriodRecordId: "rsp-usage-1",
           billingTiming: "arrears",
           tenant: "tenant-1",
         },
@@ -931,6 +984,7 @@ describe("invoiceService fixed recurring persistence", () => {
           allocated_amount: 12000,
           servicePeriodStart: "2025-04-01",
           servicePeriodEnd: "2025-04-30",
+          servicePeriodRecordId: "rsp-fixed-1",
           billingTiming: "advance",
           tenant: "tenant-1",
         },
@@ -979,6 +1033,24 @@ describe("invoiceService fixed recurring persistence", () => {
           contract_line_id: "contract-line-shared",
         },
       ],
+      recurring_service_periods: [
+        {
+          record_id: "rsp-fixed-assignment-1",
+          tenant: "tenant-1",
+          charge_family: "fixed",
+          due_position: "advance",
+          lifecycle_state: "generated",
+          invoice_charge_detail_id: null,
+        },
+        {
+          record_id: "rsp-fixed-assignment-2",
+          tenant: "tenant-1",
+          charge_family: "fixed",
+          due_position: "advance",
+          lifecycle_state: "generated",
+          invoice_charge_detail_id: null,
+        },
+      ],
     });
 
     await persistInvoiceCharges(
@@ -1007,6 +1079,7 @@ describe("invoiceService fixed recurring persistence", () => {
           allocated_amount: 6000,
           servicePeriodStart: "2025-03-01",
           servicePeriodEnd: "2025-03-31",
+          servicePeriodRecordId: "rsp-fixed-assignment-1",
           billingTiming: "advance",
           tenant: "tenant-1",
         },
@@ -1032,6 +1105,7 @@ describe("invoiceService fixed recurring persistence", () => {
           allocated_amount: 4000,
           servicePeriodStart: "2025-03-01",
           servicePeriodEnd: "2025-03-31",
+          servicePeriodRecordId: "rsp-fixed-assignment-2",
           billingTiming: "advance",
           tenant: "tenant-1",
         },
