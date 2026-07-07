@@ -711,6 +711,9 @@ describe('Teams meeting helpers', () => {
       });
       createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
 
+      // Real Graph list responses: callRecording exposes `recordingContentUrl`
+      // (an AMS URL, not bearer-token-friendly) and NO `contentUrl`; the code
+      // must ignore it and address the /content endpoint instead.
       fetchMock
         .mockResolvedValueOnce({
           ok: true,
@@ -718,7 +721,7 @@ describe('Teams meeting helpers', () => {
           json: async () => ({
             value: [{
               id: 'recording-1',
-              contentUrl: 'https://graph.example/recording-content',
+              recordingContentUrl: 'https://ams.example/recording-ams-url',
               createdDateTime: '2026-04-24T15:35:00.000Z',
             }],
           }),
@@ -729,7 +732,7 @@ describe('Teams meeting helpers', () => {
           json: async () => ({
             value: [{
               id: 'transcript-1',
-              contentUrl: 'https://graph.example/transcript-content',
+              transcriptContentUrl: 'https://ams.example/transcript-ams-url',
               createdDateTime: '2026-04-24T15:36:00.000Z',
             }],
           }),
@@ -748,13 +751,14 @@ describe('Teams meeting helpers', () => {
         {
           artifactType: 'recording',
           providerArtifactId: 'recording-1',
-          contentUrl: 'https://graph.example/recording-content',
+          // The bearer-token content endpoint, NOT the AMS recordingContentUrl.
+          contentUrl: 'https://graph.microsoft.com/v1.0/users/organizer-object-1/onlineMeetings/meeting-123/recordings/recording-1/content',
           createdDateTime: '2026-04-24T15:35:00.000Z',
         },
         {
           artifactType: 'transcript',
           providerArtifactId: 'transcript-1',
-          contentUrl: 'https://graph.example/transcript-content',
+          contentUrl: 'https://graph.microsoft.com/v1.0/users/organizer-object-1/onlineMeetings/meeting-123/transcripts/transcript-1/content',
           createdDateTime: '2026-04-24T15:36:00.000Z',
           transcriptContent: 'WEBVTT\n\n00:00.000 --> 00:01.000\nHello',
         },
