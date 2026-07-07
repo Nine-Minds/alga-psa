@@ -25,8 +25,13 @@ const runRg = (pattern: string, targets: string[]): string => {
 
 describe('multi-active contracts docs and static guards', () => {
   it('T052/T063/T064: static guard checks prevent singleton UI/action helper patterns from reappearing in live product paths', () => {
+    // disabledClientIds is not banned: it's a generic ClientPicker prop
+    // (packages/ui) used for non-contract concerns like preventing a client
+    // from being its own parent. The contract-singleton helpers below are the
+    // signatures that matter; a reintroduction has to fetch active-contract
+    // client ids through one of them to feed the picker.
     const singletonUiActionMatches = runRg(
-      'disabledClientIds|checkClientHasActiveContract|fetchClientIdsWithActiveContracts|terminate their current contract',
+      'checkClientHasActiveContract|fetchClientIdsWithActiveContracts|terminate their current contract',
       [
         'packages/billing/src/components/billing-dashboard/contracts',
         'packages/billing/src/actions',

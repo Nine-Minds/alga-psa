@@ -27,7 +27,41 @@ function createQueryBuilder(
   const builder: any = {
     where: vi.fn((columnOrCriteria: string | Record<string, any> | ((builder: any) => unknown), operatorOrValue?: any, value?: any) => {
       if (typeof columnOrCriteria === 'function') {
-        columnOrCriteria(builder);
+        const clauses: Array<{ type: 'and' | 'or'; predicate: (row: Row) => boolean }> = [];
+        const equalityClause = (type: 'and' | 'or', column: string, operatorOrValue2?: any, value2?: any) => {
+          const expected = value2 === undefined ? operatorOrValue2 : value2;
+          clauses.push({ type, predicate: (row) => row[normalizeColumn(column)] === expected });
+          return nestedBuilder;
+        };
+        const nullClause = (type: 'and' | 'or', column: string, isNull: boolean) => {
+          clauses.push({
+            type,
+            predicate: (row) => (isNull ? row[normalizeColumn(column)] == null : row[normalizeColumn(column)] != null),
+          });
+          return nestedBuilder;
+        };
+        const nestedBuilder: any = {
+          where: (column: string, op?: any, val?: any) => equalityClause('and', column, op, val),
+          andWhere: (column: string, op?: any, val?: any) => equalityClause('and', column, op, val),
+          orWhere: (column: string, op?: any, val?: any) => equalityClause('or', column, op, val),
+          whereNull: (column: string) => nullClause('and', column, true),
+          whereNotNull: (column: string) => nullClause('and', column, false),
+          orWhereNull: (column: string) => nullClause('or', column, true),
+          orWhereNotNull: (column: string) => nullClause('or', column, false),
+        };
+        columnOrCriteria(nestedBuilder);
+        resultRows = resultRows.filter((row) => {
+          if (clauses.length === 0) {
+            return true;
+          }
+          return clauses.reduce((matches, clause, index) => {
+            const clauseResult = clause.predicate(row);
+            if (index === 0) {
+              return clauseResult;
+            }
+            return clause.type === 'or' ? matches || clauseResult : matches && clauseResult;
+          }, false);
+        });
         return builder;
       }
 

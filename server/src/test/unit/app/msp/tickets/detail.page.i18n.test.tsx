@@ -147,6 +147,7 @@ vi.mock('@/context/TierContext', () => ({
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: (...args: unknown[]) => getCurrentUserMock(...args),
+  getCurrentUserPermissions: async () => null,
 }));
 
 vi.mock('@/lib/productAccess', () => ({
@@ -181,6 +182,7 @@ vi.mock('@/hooks/useKeyboardShortcutPreferenceStorage', () => ({
 
 vi.mock('@alga-psa/tickets/actions/optimizedTicketActions', () => ({
   getConsolidatedTicketData: (...args: unknown[]) => getConsolidatedTicketDataMock(...args),
+  getAdjacentTicketIds: async () => null,
 }));
 
 vi.mock('@alga-psa/surveys/actions/survey-actions/surveyDashboardActions', () => ({
