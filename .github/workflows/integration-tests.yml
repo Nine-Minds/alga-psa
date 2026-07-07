@@ -117,6 +117,14 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Cache Nx computation cache
+        uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-cache-${{ runner.os }}-${{ hashFiles('package-lock.json', 'nx.json', 'tsconfig.base.json', '**/project.json') }}
+          restore-keys: |
+            nx-cache-${{ runner.os }}-
+
       - name: Upgrade npm to version 11
         run: npm install -g npm@11
 
@@ -126,6 +134,17 @@ jobs:
       # loudly instead.
       - name: Install dependencies
         run: npm ci
+
+      # Same step as unit-tests.yml: vitest aliases @alga-psa/* to src for test
+      # files, but code loaded natively at runtime resolves package "exports" ->
+      # dist. The onboarding seeds (ee/server/seeds/onboarding/psa/*.cjs) do
+      # `await import('@alga-psa/db')` when tests invoke them, which dies with
+      # "Cannot find module .../dist/index.js" unless the dists are built.
+      - name: Build shared libraries
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
 
       - name: Wait for Postgres to be ready
         run: |
