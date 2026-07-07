@@ -116,6 +116,7 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
             contact={contact}
             clients={clients}
             documents={documents}
+            showDocuments={!isAlgaDesk}
             interactions={interactions}
             tags={tags}
             stats={stats}

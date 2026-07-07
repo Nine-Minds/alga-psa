@@ -48,6 +48,8 @@ interface ContactBentoLayoutProps {
   contact: IContact;
   clients: IClient[];
   documents?: IDocument[];
+  /** AlgaDesk composes contact details without the PSA documents surface. */
+  showDocuments?: boolean;
   interactions?: IInteraction[];
   tags?: ITag[];
   stats?: ContactStatsSummary | null;
@@ -196,6 +198,7 @@ export function ContactBentoLayout({
   contact: initialContact,
   clients,
   documents = [],
+  showDocuments = true,
   interactions: initialInteractions,
   tags = [],
   stats,
@@ -784,7 +787,7 @@ export function ContactBentoLayout({
       <div className="col-span-12 lg:col-span-4 min-w-0 flex flex-col gap-3">
         {reachTile}
         {portalTile}
-        {documentsTile}
+        {showDocuments ? documentsTile : null}
         {relatedWorkTile}
         {notesTile}
       </div>

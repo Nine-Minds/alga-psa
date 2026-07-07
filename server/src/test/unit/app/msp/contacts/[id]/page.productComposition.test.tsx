@@ -9,8 +9,14 @@ const getContactByContactNameIdMock = vi.fn();
 const getAllClientsMock = vi.fn();
 const getContactPortalPermissionsMock = vi.fn();
 const getDocumentsByEntityMock = vi.fn();
+const getInteractionsForEntityMock = vi.fn();
+const getContactStatsMock = vi.fn();
+const getContactTicketsSummaryMock = vi.fn();
+const getContactRelatedWorkMock = vi.fn();
+const getContactPortalSummaryMock = vi.fn();
+const findTagsByEntityIdsMock = vi.fn();
 
-function ContactDetailsMock() {
+function ContactBentoLayoutMock() {
   return null;
 }
 
@@ -25,6 +31,11 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
 vi.mock('@alga-psa/clients/actions', () => ({
   getContactByContactNameId: getContactByContactNameIdMock,
   getAllClients: getAllClientsMock,
+  getContactPortalSummary: getContactPortalSummaryMock,
+  getContactRelatedWork: getContactRelatedWorkMock,
+  getContactStats: getContactStatsMock,
+  getContactTicketsSummary: getContactTicketsSummaryMock,
+  getInteractionsForEntity: getInteractionsForEntityMock,
 }));
 
 vi.mock('@alga-psa/auth/actions', () => ({
@@ -35,8 +46,20 @@ vi.mock('@alga-psa/documents/actions/documentActions', () => ({
   getDocumentsByEntity: getDocumentsByEntityMock,
 }));
 
+vi.mock('@alga-psa/tags/actions', () => ({
+  findTagsByEntityIds: findTagsByEntityIdsMock,
+}));
+
+vi.mock('@alga-psa/tickets/lib/createTicketRoute', () => ({
+  buildCreateTicketHref: vi.fn(() => '/msp/tickets/new'),
+}));
+
 vi.mock('@alga-psa/clients', () => ({
-  ContactDetails: ContactDetailsMock,
+  ContactBentoLayout: ContactBentoLayoutMock,
+}));
+
+vi.mock('@product/chat/context', () => ({
+  AIChatContextBoundary: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
@@ -64,16 +87,15 @@ describe('MSP contact detail page product composition', () => {
     return findElementByType(children, targetType);
   };
 
-  const getRenderedContactDetailProps = async (tab?: string) => {
+  const getRenderedBentoLayoutProps = async () => {
     const result = await ContactPage({
       params: Promise.resolve({ id: 'contact-1' }),
-      searchParams: Promise.resolve(tab ? { tab } : {}),
     });
-    const details = findElementByType(result, ContactDetailsMock);
-    if (!details) {
-      throw new Error('Expected contact details element in render tree');
+    const layout = findElementByType(result, ContactBentoLayoutMock);
+    if (!layout) {
+      throw new Error('Expected contact bento layout element in render tree');
     }
-    return details.props as Record<string, unknown>;
+    return layout.props as Record<string, unknown>;
   };
 
   beforeEach(() => {
@@ -83,14 +105,20 @@ describe('MSP contact detail page product composition', () => {
     getAllClientsMock.mockResolvedValue([{ client_id: 'client-1' }]);
     getContactPortalPermissionsMock.mockResolvedValue({ canInvite: true, canUpdateRoles: true, canRead: true });
     getDocumentsByEntityMock.mockResolvedValue([{ document_id: 'doc-1' }]);
+    getInteractionsForEntityMock.mockResolvedValue([]);
+    getContactStatsMock.mockResolvedValue(null);
+    getContactTicketsSummaryMock.mockResolvedValue(null);
+    getContactRelatedWorkMock.mockResolvedValue(null);
+    getContactPortalSummaryMock.mockResolvedValue(null);
+    findTagsByEntityIdsMock.mockResolvedValue([]);
   });
 
   it('routes AlgaDesk tenants through AlgaDesk-safe contact detail mode', async () => {
     getCurrentTenantProductMock.mockResolvedValue('algadesk');
 
-    const props = await getRenderedContactDetailProps('documents');
+    const props = await getRenderedBentoLayoutProps();
 
-    expect(props.isAlgaDeskMode).toBe(true);
+    expect(props.showDocuments).toBe(false);
     expect(props.documents).toEqual([]);
     expect(getDocumentsByEntityMock).not.toHaveBeenCalled();
   });
@@ -98,9 +126,9 @@ describe('MSP contact detail page product composition', () => {
   it('keeps PSA contact detail composition for PSA tenants', async () => {
     getCurrentTenantProductMock.mockResolvedValue('psa');
 
-    const props = await getRenderedContactDetailProps('documents');
+    const props = await getRenderedBentoLayoutProps();
 
-    expect(props.isAlgaDeskMode).toBe(false);
+    expect(props.showDocuments).toBe(true);
     expect(props.documents).toEqual([{ document_id: 'doc-1' }]);
     expect(getDocumentsByEntityMock).toHaveBeenCalledWith('contact-1', 'contact');
   });
