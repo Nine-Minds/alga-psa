@@ -1,4 +1,4 @@
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
+import { createLocalJWKSet, jwtVerify, type JWTPayload } from 'jose';
 import { readBotCredentialsFromEnv } from './teamsBotConnector';
 
 const BOT_FRAMEWORK_OPENID_URL =
@@ -11,7 +11,7 @@ interface OpenIdConfig {
 }
 
 interface CachedJwksContext {
-  jwks: ReturnType<typeof createRemoteJWKSet>;
+  jwks: ReturnType<typeof createLocalJWKSet>;
   issuer: string;
   refreshedAt: number;
 }
@@ -20,6 +20,11 @@ const JWKS_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 
 let cachedContext: CachedJwksContext | null = null;
 let inFlightConfigFetch: Promise<CachedJwksContext> | null = null;
+
+export function resetTeamsBotJwksCacheForTests(): void {
+  cachedContext = null;
+  inFlightConfigFetch = null;
+}
 
 async function loadJwksContext(): Promise<CachedJwksContext> {
   if (cachedContext && Date.now() - cachedContext.refreshedAt < JWKS_CACHE_TTL_MS) {
@@ -41,7 +46,13 @@ async function loadJwksContext(): Promise<CachedJwksContext> {
     if (!config.jwks_uri) {
       throw new Error('Bot Framework OpenID config did not include jwks_uri.');
     }
-    const jwks = createRemoteJWKSet(new URL(config.jwks_uri));
+    const jwksResponse = await fetch(config.jwks_uri);
+    if (!jwksResponse.ok) {
+      throw new Error(
+        `Failed to fetch Bot Framework JWKS (${jwksResponse.status} ${jwksResponse.statusText})`
+      );
+    }
+    const jwks = createLocalJWKSet(await jwksResponse.json());
     const next: CachedJwksContext = {
       jwks,
       issuer: config.issuer || BOT_FRAMEWORK_ISSUER,
@@ -72,10 +83,9 @@ export async function verifyTeamsBotRequest(
 ): Promise<TeamsBotVerificationResult> {
   const credentials = readBotCredentialsFromEnv();
   if (!credentials) {
-    // Without bot credentials configured, outbound replies can't be sent
-    // either, so strict inbound verification would only serve to block the
-    // handler from logging/parsing the activity. Degrade to "unconfigured"
-    // and let the caller decide what to do.
+    // Without bot credentials there is no audience to validate against, so no
+    // inbound request can ever be verified. Callers must fail closed on this
+    // status; processing unauthenticated activities is never acceptable.
     return { status: 'unconfigured' };
   }
 

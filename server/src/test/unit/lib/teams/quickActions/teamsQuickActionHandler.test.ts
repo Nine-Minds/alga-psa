@@ -13,6 +13,7 @@ const {
   createTenantKnexMock,
   hasPermissionMock,
   getTeamsRuntimeAvailabilityMock,
+  verifyTeamsBotRequestMock,
 } = vi.hoisted(() => ({
   resolveTeamsTenantContextMock: vi.fn(),
   resolveTeamsLinkedUserMock: vi.fn(),
@@ -22,6 +23,12 @@ const {
   createTenantKnexMock: vi.fn(),
   hasPermissionMock: vi.fn(),
   getTeamsRuntimeAvailabilityMock: vi.fn(),
+  verifyTeamsBotRequestMock: vi.fn(),
+}));
+
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/bot/teamsBotJwtVerifier', () => ({
+  verifyTeamsBotRequest: verifyTeamsBotRequestMock,
+  resetTeamsBotJwksCacheForTests: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => {
@@ -125,6 +132,7 @@ describe('teamsQuickActionHandler', () => {
     getUserWithRolesMock.mockResolvedValue(buildUser());
     hasPermissionMock.mockResolvedValue(true);
     getTeamsRuntimeAvailabilityMock.mockResolvedValue(null);
+    verifyTeamsBotRequestMock.mockResolvedValue({ status: 'verified', payload: {} });
     listAvailableTeamsActionsMock.mockResolvedValue([
       {
         actionId: 'assign_ticket',
@@ -525,7 +533,7 @@ describe('teamsQuickActionHandler', () => {
     expect(response.status).toBe(400);
     expect(payload).toEqual({
       error: 'invalid_json',
-      message: 'The Teams quick-action request body must be valid JSON.',
+      message: 'The Teams request body must be valid JSON.',
     });
   });
 

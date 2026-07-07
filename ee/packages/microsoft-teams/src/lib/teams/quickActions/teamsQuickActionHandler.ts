@@ -13,6 +13,10 @@ import {
 } from '../actions/teamsActionRegistry';
 import { resolveTeamsLinkedUser } from '../resolveTeamsLinkedUser';
 import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';
+import {
+  authenticateTeamsInboundRequest,
+  type TeamsVerifiedInboundIdentity,
+} from '../bot/teamsInboundAuth';
 
 const QUICK_ACTION_IDS = ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response'] as const;
 type QuickActionId = typeof QUICK_ACTION_IDS[number];
@@ -85,6 +89,7 @@ type TeamsQuickActionResponse = TeamsTaskModuleResponse;
 
 interface HandleTeamsQuickActionActivityOptions {
   tenantIdHint?: string | null;
+  verifiedIdentity?: TeamsVerifiedInboundIdentity | null;
 }
 
 function normalizeOptionalString(value: unknown): string | null {
@@ -326,13 +331,14 @@ function describeTarget(target: TeamsActionEntityReference | null): string {
 async function resolveInvokingUser(params: {
   activity: TeamsQuickActionActivity;
   tenantId: string;
+  microsoftAccountId?: string | null;
 }): Promise<
   | { success: true; user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>; message?: undefined }
   | { success: false; message: string }
 > {
   const linkedUser = await resolveTeamsLinkedUser({
     tenantId: params.tenantId,
-    microsoftAccountId: getMicrosoftAccountId(params.activity),
+    microsoftAccountId: params.microsoftAccountId || getMicrosoftAccountId(params.activity),
   });
 
   if (linkedUser.status !== 'linked') {
@@ -746,7 +752,8 @@ export async function handleTeamsQuickActionActivity(
 ): Promise<TeamsQuickActionResponse> {
   const tenantContext = await resolveTeamsTenantContext({
     explicitTenantId: options.tenantIdHint || undefined,
-    microsoftTenantId: getTeamsTenantId(activity) || undefined,
+    microsoftTenantId:
+      options.verifiedIdentity?.microsoftTenantId || getTeamsTenantId(activity) || undefined,
   });
 
   if (tenantContext.status !== 'resolved') {
@@ -756,6 +763,7 @@ export async function handleTeamsQuickActionActivity(
   const invokingUser = await resolveInvokingUser({
     activity,
     tenantId: tenantContext.tenantId,
+    microsoftAccountId: options.verifiedIdentity?.microsoftUserId,
   });
   if (invokingUser.success === false) {
     return buildTaskMessageResponse(invokingUser.message);
@@ -786,38 +794,37 @@ export async function handleTeamsQuickActionActivity(
     activity,
     tenantId: tenantContext.tenantId,
     user: invokingUser.user,
-    microsoftUserId: getMicrosoftAccountId(activity),
+    microsoftUserId: options.verifiedIdentity?.microsoftUserId || getMicrosoftAccountId(activity),
     actionId,
     target,
   });
 }
 
 export async function handleTeamsQuickActionRequest(request: Request): Promise<NextResponse> {
-  let activity: TeamsQuickActionActivity;
-  try {
-    activity = (await request.json()) as TeamsQuickActionActivity;
-  } catch {
-    return NextResponse.json(
-      {
-        error: 'invalid_json',
-        message: 'The Teams quick-action request body must be valid JSON.',
-      },
-      { status: 400 }
-    );
+  const auth = await authenticateTeamsInboundRequest<TeamsQuickActionActivity>(
+    request,
+    'quick_actions'
+  );
+  if (!auth.ok) {
+    return auth.response;
   }
+  const { activity, identity } = auth;
 
   const url = new URL(request.url);
   const tenantIdHint = url.searchParams.get('tenantId') || url.searchParams.get('tenant');
   const availability = await getTeamsRuntimeAvailability({
     explicitTenantId: tenantIdHint,
-    microsoftTenantId: getTeamsTenantId(activity),
+    microsoftTenantId: identity.microsoftTenantId || getTeamsTenantId(activity),
     requiredCapability: 'message_extension',
   });
   if (availability && availability.enabled === false) {
     return buildTeamsAvailabilityJsonResponse(availability);
   }
 
-  const response = await handleTeamsQuickActionActivity(activity, { tenantIdHint });
+  const response = await handleTeamsQuickActionActivity(activity, {
+    tenantIdHint,
+    verifiedIdentity: identity,
+  });
 
   return NextResponse.json(response, {
     status: 200,
