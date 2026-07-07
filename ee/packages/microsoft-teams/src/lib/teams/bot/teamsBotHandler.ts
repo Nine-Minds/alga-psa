@@ -47,6 +47,19 @@ import {
 } from '../teamsPsaData';
 import { resolveTeamsLinkedUser } from '../resolveTeamsLinkedUser';
 import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';
+import {
+  buildDefaultTeamsNlGateDeps,
+  buildTeamsNlConfirmationCard,
+  buildTeamsNlDisambiguationCard,
+  createTeamsNlParseIntent,
+  evaluateTeamsNlGate,
+  resolveTeamsNlIntent,
+  TEAMS_NL_CARD_COMMAND,
+  type TeamsNlAvailableAction,
+  type TeamsNlParseIntent,
+  type TeamsNlResolvedAction,
+  type TeamsNlTargetCandidate,
+} from './teamsNlIntent';
 
 export interface TeamsBotActivity {
   type?: string;
@@ -1722,6 +1735,261 @@ async function handleBotCardAction(params: {
   );
 }
 
+// --- Natural-language pre-parser (Epic E5) ---------------------------------
+
+type TeamsNlOutcome =
+  | { type: 'handled'; response: TeamsBotResponseActivity }
+  | { type: 'defer'; notice?: string };
+
+function toTeamsNlAvailableAction(entry: TeamsActionAvailability): TeamsNlAvailableAction {
+  return {
+    actionId: entry.actionId,
+    operation: entry.operation,
+    targetEntityTypes: entry.targetEntityTypes,
+  };
+}
+
+function getTeamsNlParseIntent(): TeamsNlParseIntent {
+  return createTeamsNlParseIntent();
+}
+
+async function executeNlResolvedAction(params: {
+  command: TeamsNlResolvedAction;
+  tenantId: string;
+  user: BotUser;
+  metadata: TeamsBotResponseActivity['metadata'];
+  microsoftUserId: string | null;
+  conversationId: string | null;
+  idempotencyKey?: string;
+  replyToId?: string | null;
+}): Promise<TeamsBotResponseActivity> {
+  const isListAction = params.command.actionId === 'my_tickets' || params.command.actionId === 'my_approvals';
+  const result = await executeTeamsAction({
+    actionId: params.command.actionId,
+    surface: BOT_SURFACE,
+    tenantId: params.tenantId,
+    user: params.user,
+    microsoftUserId: params.microsoftUserId,
+    ...(params.command.target ? { target: params.command.target } : {}),
+    ...(params.idempotencyKey ? { idempotencyKey: params.idempotencyKey } : {}),
+    input: params.command.input,
+  });
+
+  if (isListAction) {
+    await saveActionResultListContext({
+      tenantId: params.tenantId,
+      conversationId: params.conversationId,
+      result,
+    });
+  }
+
+  const response = await renderActionResult(
+    result,
+    { tenantId: params.tenantId, user: params.user, metadata: params.metadata },
+    { numbered: isListAction }
+  );
+  if (result.success === true && params.replyToId) {
+    response.replaceActivityId = params.replyToId;
+  }
+  return response;
+}
+
+async function maybeResolveTeamsNlOutcome(params: {
+  tenantId: string;
+  user: BotUser;
+  metadata: TeamsBotResponseActivity['metadata'];
+  microsoftUserId: string | null;
+  conversationId: string | null;
+  text: string;
+}): Promise<TeamsNlOutcome | null> {
+  const gate = await evaluateTeamsNlGate(
+    buildDefaultTeamsNlGateDeps({
+      tenantId: params.tenantId,
+      user: params.user,
+      createTenantKnex,
+    })
+  );
+  if (!gate.enabled) {
+    return null;
+  }
+
+  let availableActions: TeamsNlAvailableAction[] = [];
+  try {
+    const availability = await listAvailableTeamsActions({
+      surface: BOT_SURFACE,
+      tenantId: params.tenantId,
+      user: params.user,
+    });
+    availableActions = availability.filter((entry) => entry.available).map(toTeamsNlAvailableAction);
+  } catch {
+    availableActions = [];
+  }
+
+  const resolution = await resolveTeamsNlIntent({
+    text: params.text,
+    tenantId: params.tenantId,
+    user: params.user,
+    availableActions,
+    parseIntent: getTeamsNlParseIntent(),
+    resolveTargets: async ({ entityType, query }) => {
+      if (entityType !== 'ticket') {
+        return [];
+      }
+      const matches = await searchTeamsTickets({ tenantId: params.tenantId, query, limit: 5 });
+      return matches.map((ticket): TeamsNlTargetCandidate => ({
+        entityType: 'ticket',
+        id: ticket.ticket_id,
+        ...(normalizeOptionalString(ticket.ticket_number) ? { displayId: ticket.ticket_number!.trim() } : {}),
+        label:
+          normalizeOptionalString(ticket.title) ||
+          normalizeOptionalString(ticket.ticket_number) ||
+          ticket.ticket_id,
+      }));
+    },
+  });
+
+  switch (resolution.kind) {
+    case 'defer':
+      return { type: 'defer', ...(resolution.notice ? { notice: resolution.notice } : {}) };
+    case 'disambiguation': {
+      const card = buildTeamsNlDisambiguationCard({
+        actionId: resolution.actionId,
+        candidates: resolution.candidates,
+        input: resolution.input,
+        nonce: randomUUID(),
+      });
+      return {
+        type: 'handled',
+        response: buildMessageResponse(card.text, {
+          attachments: [buildCard(card.title, card.body)],
+          adaptiveAttachments: [card.adaptive],
+          metadata: { ...params.metadata, commandId: 'nl_disambiguation' },
+        }),
+      };
+    }
+    case 'action': {
+      if (resolution.command.confirmationRequired) {
+        const card = buildTeamsNlConfirmationCard({ command: resolution.command, nonce: randomUUID() });
+        return {
+          type: 'handled',
+          response: buildMessageResponse(card.text, {
+            attachments: [buildCard(card.title, card.body)],
+            adaptiveAttachments: [card.adaptive],
+            metadata: { ...params.metadata, commandId: 'nl_confirm' },
+          }),
+        };
+      }
+      const response = await executeNlResolvedAction({
+        command: resolution.command,
+        tenantId: params.tenantId,
+        user: params.user,
+        metadata: params.metadata,
+        microsoftUserId: params.microsoftUserId,
+        conversationId: params.conversationId,
+      });
+      return { type: 'handled', response };
+    }
+  }
+}
+
+function extractTeamsNlCardActionValue(activity: TeamsBotActivity): Record<string, unknown> | null {
+  const value = activity.value;
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  return (value as Record<string, unknown>).command === TEAMS_NL_CARD_COMMAND
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+async function handleTeamsNlCardAction(params: {
+  tenantId: string;
+  user: BotUser;
+  metadata: TeamsBotResponseActivity['metadata'];
+  microsoftUserId: string | null;
+  value: Record<string, unknown>;
+  replyToId: string | null;
+}): Promise<TeamsBotResponseActivity> {
+  const decision = normalizeOptionalString(
+    typeof params.value.decision === 'string' ? params.value.decision : null
+  );
+  const metadata: TeamsBotResponseActivity['metadata'] = { ...params.metadata, commandId: 'nl_confirm' };
+
+  if (decision !== 'confirm') {
+    return buildMessageResponse('Cancelled — nothing was changed.', {
+      attachments: [
+        buildCard('Action cancelled', 'No changes were made. Send the request again if you want to proceed.'),
+      ],
+      metadata,
+    });
+  }
+
+  const actionId = normalizeOptionalString(
+    typeof params.value.actionId === 'string' ? params.value.actionId : null
+  );
+  if (!actionId) {
+    return buildMessageResponse('That confirmation is no longer valid.', {
+      attachments: [buildCard('Confirmation expired', 'Send the request again to try once more.')],
+      metadata,
+    });
+  }
+
+  const target =
+    params.value.target && typeof params.value.target === 'object'
+      ? (params.value.target as TeamsActionEntityReference)
+      : undefined;
+  const input =
+    params.value.input && typeof params.value.input === 'object'
+      ? (params.value.input as Record<string, unknown>)
+      : {};
+  const idempotencyKey =
+    normalizeOptionalString(typeof params.value.nonce === 'string' ? params.value.nonce : null) || randomUUID();
+
+  // The card value is user-supplied. Re-validate against the RBAC-filtered
+  // available actions before executing so a tampered/off-list actionId is
+  // refused here (executeTeamsAction re-authorizes regardless).
+  let availability: TeamsActionAvailability[] = [];
+  try {
+    availability = await listAvailableTeamsActions({
+      surface: BOT_SURFACE,
+      tenantId: params.tenantId,
+      user: params.user,
+      ...(target ? { target } : {}),
+    });
+  } catch {
+    availability = [];
+  }
+  const entry = availability.find((candidate) => candidate.actionId === actionId && candidate.available);
+  if (!entry) {
+    return buildMessageResponse('That action is not available to you.', {
+      attachments: [
+        buildCard(
+          'Action unavailable',
+          'You do not have permission to run this action from Teams, or it is disabled for this tenant.'
+        ),
+      ],
+      metadata,
+    });
+  }
+
+  return executeNlResolvedAction({
+    command: {
+      actionId: entry.actionId,
+      operation: entry.operation,
+      ...(target ? { target } : {}),
+      input,
+      confirmationRequired: true,
+    },
+    tenantId: params.tenantId,
+    user: params.user,
+    metadata: params.metadata,
+    microsoftUserId: params.microsoftUserId,
+    conversationId: null,
+    idempotencyKey,
+    replyToId: params.replyToId,
+  });
+}
+
 export async function handleTeamsBotActivity(
   activity: TeamsBotActivity,
   options: HandleTeamsBotActivityOptions = {}
@@ -1838,23 +2106,79 @@ export async function handleTeamsBotActivity(
     });
   }
 
+  // NL card actions (Confirm/Cancel on a natural-language confirmation card, or a
+  // disambiguation pick) route back through executeTeamsAction, exactly like any
+  // other card action — the registry re-checks RBAC/allowed_actions/audit/idempotency.
+  const nlCardValue = extractTeamsNlCardActionValue(activity);
+  if (nlCardValue) {
+    return handleTeamsNlCardAction({
+      tenantId: tenantContext.tenantId,
+      user,
+      metadata,
+      microsoftUserId,
+      value: nlCardValue,
+      replyToId: normalizeOptionalString(activity.replyToId),
+    });
+  }
+
   const parsed = parseCommand(activity.text || '');
+
+  // Optional NL pre-parser: active ONLY behind all three gates. When it maps the
+  // free text to an available action it handles the reply; otherwise the
+  // deterministic dispatch below runs byte-identically. A provider outage adds a
+  // one-line notice to the deterministic reply — never an error.
+  const nlOutcome = await maybeResolveTeamsNlOutcome({
+    tenantId: tenantContext.tenantId,
+    user,
+    metadata,
+    microsoftUserId,
+    conversationId,
+    text: activity.text || '',
+  });
+  if (nlOutcome?.type === 'handled') {
+    return nlOutcome.response;
+  }
+
+  const deterministic = await dispatchParsedTeamsCommand({
+    parsed,
+    tenantId: tenantContext.tenantId,
+    user,
+    metadata,
+    conversationId,
+    microsoftUserId,
+  });
+
+  if (nlOutcome?.type === 'defer' && nlOutcome.notice) {
+    return { ...deterministic, text: `${nlOutcome.notice}\n${deterministic.text}` };
+  }
+  return deterministic;
+}
+
+async function dispatchParsedTeamsCommand(params: {
+  parsed: ParsedCommand;
+  tenantId: string;
+  user: BotUser;
+  metadata: TeamsBotResponseActivity['metadata'];
+  conversationId: string | null;
+  microsoftUserId: string | null;
+}): Promise<TeamsBotResponseActivity> {
+  const { parsed, tenantId, user, metadata, conversationId, microsoftUserId } = params;
 
   switch (parsed.kind) {
     case 'help':
-      return buildHelpResponse(tenantContext.tenantId, user, metadata);
+      return buildHelpResponse(tenantId, user, metadata);
     case 'unsupported': {
       const suggestion = suggestTeamsBotCommand(parsed.text);
       if (suggestion) {
         return buildHelpResponse(
-          tenantContext.tenantId,
+          tenantId,
           user,
           metadata,
           `Did you mean “${suggestion.example}”?`
         );
       }
       return buildHelpResponse(
-        tenantContext.tenantId,
+        tenantId,
         user,
         metadata,
         `The command “${parsed.text}” is not supported by the Alga PSA Teams bot yet.`
@@ -1864,21 +2188,21 @@ export async function handleTeamsBotActivity(
       const result = await executeTeamsAction({
         actionId: 'my_tickets',
         surface: BOT_SURFACE,
-        tenantId: tenantContext.tenantId,
+        tenantId,
         user,
         input: {
           limit: 5,
         },
       });
       await saveActionResultListContext({
-        tenantId: tenantContext.tenantId,
+        tenantId,
         conversationId,
         result,
       });
       return renderActionResult(
         result,
         {
-          tenantId: tenantContext.tenantId,
+          tenantId,
           user,
           metadata,
         },
@@ -1889,21 +2213,21 @@ export async function handleTeamsBotActivity(
       const result = await executeTeamsAction({
         actionId: 'my_approvals',
         surface: BOT_SURFACE,
-        tenantId: tenantContext.tenantId,
+        tenantId,
         user,
         input: {
           limit: 5,
         },
       });
       await saveActionResultListContext({
-        tenantId: tenantContext.tenantId,
+        tenantId,
         conversationId,
         result,
       });
       return renderActionResult(
         result,
         {
-          tenantId: tenantContext.tenantId,
+          tenantId,
           user,
           metadata,
         },
@@ -1912,7 +2236,7 @@ export async function handleTeamsBotActivity(
     }
     case 'ticket':
       return handleTicketCommand({
-        tenantId: tenantContext.tenantId,
+        tenantId,
         user,
         metadata,
         microsoftUserId,
@@ -1921,7 +2245,7 @@ export async function handleTeamsBotActivity(
       });
     case 'new_ticket':
       return handleNewTicketCommand({
-        tenantId: tenantContext.tenantId,
+        tenantId,
         user,
         metadata,
         microsoftUserId,
@@ -1930,7 +2254,7 @@ export async function handleTeamsBotActivity(
       });
     case 'assign_ticket': {
       const ordinal = await applyTicketOrdinal({
-        tenantId: tenantContext.tenantId,
+        tenantId,
         conversationId,
         reference: parsed.ticketId,
         ordinalOnly: parsed.ordinalOnly,
@@ -1941,7 +2265,7 @@ export async function handleTeamsBotActivity(
         return ordinal.response;
       }
       return handleAssignTicketCommand({
-        tenantId: tenantContext.tenantId,
+        tenantId,
         user,
         metadata,
         microsoftUserId,
@@ -1951,7 +2275,7 @@ export async function handleTeamsBotActivity(
     }
     case 'add_note': {
       const ordinal = await applyTicketOrdinal({
-        tenantId: tenantContext.tenantId,
+        tenantId,
         conversationId,
         reference: parsed.ticketId,
         metadata,
@@ -1961,7 +2285,7 @@ export async function handleTeamsBotActivity(
         return ordinal.response;
       }
       return handleAddNoteCommand({
-        tenantId: tenantContext.tenantId,
+        tenantId,
         user,
         metadata,
         microsoftUserId,
@@ -1971,7 +2295,7 @@ export async function handleTeamsBotActivity(
     }
     case 'reply_to_contact': {
       const ordinal = await applyTicketOrdinal({
-        tenantId: tenantContext.tenantId,
+        tenantId,
         conversationId,
         reference: parsed.ticketId,
         metadata,
@@ -1981,7 +2305,7 @@ export async function handleTeamsBotActivity(
         return ordinal.response;
       }
       return handleReplyToContactCommand({
-        tenantId: tenantContext.tenantId,
+        tenantId,
         user,
         metadata,
         microsoftUserId,
@@ -1991,7 +2315,7 @@ export async function handleTeamsBotActivity(
     }
     case 'approval_response': {
       const ordinal = await applyApprovalOrdinal({
-        tenantId: tenantContext.tenantId,
+        tenantId,
         conversationId,
         reference: parsed.approvalId,
         metadata,
@@ -2000,7 +2324,7 @@ export async function handleTeamsBotActivity(
         return ordinal.response;
       }
       return handleApprovalResponseCommand({
-        tenantId: tenantContext.tenantId,
+        tenantId,
         user,
         metadata,
         microsoftUserId,
@@ -2011,7 +2335,7 @@ export async function handleTeamsBotActivity(
     }
     case 'log_time': {
       return handleLogTimeCommand({
-        tenantId: tenantContext.tenantId,
+        tenantId,
         user,
         metadata,
         microsoftUserId,

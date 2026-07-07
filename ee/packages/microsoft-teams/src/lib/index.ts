@@ -19,6 +19,7 @@ export * from './teams/actions/teamsActionRegistry';
 export * from './teams/actions/teamsAuditRecorder';
 export * from './teams/bot/teamsBotHandler';
 export * from './teams/bot/teamsConversationReferences';
+export * from './teams/bot/teamsNlIntent';
 export * from './teams/buildTeamsFullPsaUrl';
 export * from './teams/buildTeamsReauthUrl';
 export * from './teams/getTeamsRuntimeAvailability';
