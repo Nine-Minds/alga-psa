@@ -25,6 +25,7 @@ import {
 } from '../../../actions/comment-actions/commentReactionActions';
 import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/commentAuthorResolution';
 import type { TicketReactionsBootstrap } from '../../../lib/ticketScreenBootstrap';
+import { filterHiddenNoiseComments } from '../../../lib/commentNoise';
 import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
 
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
@@ -460,10 +461,12 @@ export function BentoTimelineTile({
   }, [ticketId, refreshKey]);
 
   // ---- Threading: nested threads anchored at their root on the spine ----
+  // Same noise suppression as the conversation view: empty / reply-token-only
+  // inbound-email comments stay out of the timeline.
   const threadGroups = useMemo(
     () =>
       buildCommentThreadGroups<IComment>({
-        comments: conversations,
+        comments: filterHiddenNoiseComments(conversations),
         getCommentId: (comment) => comment.comment_id,
         getThreadId: (comment) => comment.thread_id || comment.comment_id,
         getParentCommentId: (comment) => comment.parent_comment_id,

@@ -130,9 +130,9 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
           ? getCommentsReactionsBatch(commentIds)
           : Promise.resolve({ reactions: {}, userNames: {} })
         ).catch(() => ({ reactions: {}, userNames: {} })),
-        scheduleEntries: getTicketScheduleEntries(id).catch(() => []),
+        scheduleEntries: (isAlgaDesk ? Promise.resolve([]) : getTicketScheduleEntries(id)).catch(() => []),
         interactions: getTicketInteractions(id, { limit: 5 }).catch(() => []),
-        billingRollup: getTicketBillingRollup(id).catch(() => null),
+        billingRollup: (isAlgaDesk ? Promise.resolve(null) : getTicketBillingRollup(id)).catch(() => null),
         slaPolicyName: (ticketData.ticket?.sla_policy_id
           ? getTicketSlaPolicyName(id).then((result) => result.policyName ?? null)
           : Promise.resolve(null)

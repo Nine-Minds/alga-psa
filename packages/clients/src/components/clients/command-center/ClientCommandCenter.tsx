@@ -51,6 +51,8 @@ interface ClientCommandCenterProps {
   refreshNonce?: number;
   surveySummary: SurveyClientSatisfactionSummary | null;
   renderSurveySummaryCard: (props: { summary: SurveyClientSatisfactionSummary | null }) => React.ReactNode;
+  /** AlgaDesk composes the command center without billing/inventory surfaces. */
+  isAlgaDeskMode?: boolean;
   t: TFn;
 }
 
@@ -73,6 +75,7 @@ export default function ClientCommandCenter({
   refreshNonce = 0,
   surveySummary,
   renderSurveySummaryCard,
+  isAlgaDeskMode = false,
   t,
 }: ClientCommandCenterProps) {
   const router = useRouter();
@@ -312,7 +315,7 @@ export default function ClientCommandCenter({
               t={t}
             />
           )}
-          {pulse?.money && (
+          {!isAlgaDeskMode && pulse?.money && (
             <MoneyCard
               id={`${idPrefix}-card-money`}
               data={pulse.money}
@@ -325,7 +328,7 @@ export default function ClientCommandCenter({
               t={t}
             />
           )}
-          {pulse?.installBase && (
+          {!isAlgaDeskMode && pulse?.installBase && (
             <InstallBaseCard
               id={`${idPrefix}-card-install-base`}
               data={pulse.installBase}
@@ -399,6 +402,7 @@ export default function ClientCommandCenter({
             clientId={clientId}
             formatMoney={formatMoney}
             onEventClick={handleTimelineEventClick}
+            isAlgaDeskMode={isAlgaDeskMode}
             t={t}
           />
         </div>
