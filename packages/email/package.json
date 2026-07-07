@@ -23,7 +23,7 @@
     "@alga-psa/event-bus": "*",
     "@alga-psa/types": "*",
     "axios": "^1.16.0",
-    "nodemailer": "^8.0.0"
+    "nodemailer": "^9.0.3"
   },
   "devDependencies": {
     "tsup": "^8.0.0",
