@@ -129,11 +129,16 @@
       "assignTechnicianRequired": "11111",
       "approve": "11111",
       "declineReasonRequired": "11111",
-      "decline": "11111"
+      "decline": "11111",
+      "reschedule": "11111",
+      "rescheduleDateRequired": "11111",
+      "generateTeamsMeeting": "11111"
     },
     "feedback": {
       "approved": "11111",
-      "declined": "11111"
+      "declined": "11111",
+      "rescheduled": "11111",
+      "teamsMeetingGenerated": "11111"
     },
     "filters": {
       "statusLabel": "11111",
@@ -181,8 +186,10 @@
         "description": "11111"
       },
       "actions": {
-        "joinTeamsMeeting": "11111"
-      }
+        "joinTeamsMeeting": "11111",
+        "generateTeamsMeeting": "11111"
+      },
+      "teamsMeetingMissing": "11111"
     },
     "approval": {
       "title": "11111",
@@ -201,6 +208,12 @@
       "actions": {
         "approve": "11111",
         "decline": "11111"
+      },
+      "teamsMeetingFailure": {
+        "title": "11111",
+        "description": "11111",
+        "retry": "11111",
+        "approveWithout": "11111"
       }
     },
     "decline": {
@@ -212,6 +225,18 @@
         "reason": "11111"
       },
       "actions": {
+        "confirm": "11111",
+        "cancel": "11111"
+      }
+    },
+    "reschedule": {
+      "title": "11111",
+      "teamsNote": "11111",
+      "fields": {
+        "newDateTime": "11111"
+      },
+      "actions": {
+        "open": "11111",
         "confirm": "11111",
         "cancel": "11111"
       }

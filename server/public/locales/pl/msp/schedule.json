@@ -129,11 +129,16 @@
       "assignTechnicianRequired": "Proszę przypisać technika",
       "approve": "Nie udało się zatwierdzić prośby",
       "declineReasonRequired": "Podaj powód odrzucenia",
-      "decline": "Nie udało się odrzucić prośby"
+      "decline": "Nie udało się odrzucić prośby",
+      "reschedule": "Nie udało się zmienić terminu",
+      "rescheduleDateRequired": "Wybierz nową datę i godzinę",
+      "generateTeamsMeeting": "Nie udało się utworzyć spotkania Microsoft Teams"
     },
     "feedback": {
       "approved": "Prośba o spotkanie została zatwierdzona",
-      "declined": "Prośba o spotkanie została odrzucona"
+      "declined": "Prośba o spotkanie została odrzucona",
+      "rescheduled": "Termin zmieniony",
+      "teamsMeetingGenerated": "Utworzono spotkanie Microsoft Teams"
     },
     "filters": {
       "statusLabel": "Filtruj według stanu",
@@ -181,8 +186,10 @@
         "teamsMeeting": "Spotkanie Teams"
       },
       "actions": {
-        "joinTeamsMeeting": "Dołącz do spotkania Teams"
-      }
+        "joinTeamsMeeting": "Dołącz do spotkania Teams",
+        "generateTeamsMeeting": "Utwórz spotkanie Teams"
+      },
+      "teamsMeetingMissing": "Ten zatwierdzony termin nie ma jeszcze linku do spotkania Teams."
     },
     "approval": {
       "title": "Szczegóły zatwierdzenia",
@@ -201,6 +208,12 @@
       "actions": {
         "approve": "Zatwierdź",
         "decline": "Odrzuć"
+      },
+      "teamsMeetingFailure": {
+        "title": "Nie udało się utworzyć spotkania Microsoft Teams",
+        "description": "Termin nie został zatwierdzony. Spróbuj ponownie utworzyć spotkanie lub zatwierdź bez spotkania i utwórz je później.",
+        "retry": "Ponów",
+        "approveWithout": "Zatwierdź bez spotkania"
       }
     },
     "decline": {
@@ -213,6 +226,18 @@
       },
       "actions": {
         "confirm": "Potwierdź odrzucenie",
+        "cancel": "Anuluj"
+      }
+    },
+    "reschedule": {
+      "title": "Zmień termin",
+      "teamsNote": "Uczestnicy otrzymają zaktualizowane zaproszenie na spotkanie Microsoft Teams.",
+      "fields": {
+        "newDateTime": "Nowa data i godzina"
+      },
+      "actions": {
+        "open": "Zmień termin spotkania",
+        "confirm": "Potwierdź zmianę terminu",
         "cancel": "Anuluj"
       }
     }

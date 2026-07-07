@@ -129,11 +129,16 @@
       "assignTechnicianRequired": "Por favor atribua um técnico",
       "approve": "Falha ao aprovar a solicitação",
       "declineReasonRequired": "Forneça um motivo para recusar",
-      "decline": "Falha ao recusar a solicitação"
+      "decline": "Falha ao recusar a solicitação",
+      "reschedule": "Falha ao reagendar o compromisso",
+      "rescheduleDateRequired": "Escolha uma nova data e hora",
+      "generateTeamsMeeting": "Falha ao criar a reunião do Microsoft Teams"
     },
     "feedback": {
       "approved": "Solicitação de agendamento aprovada",
-      "declined": "Solicitação de agendamento recusada"
+      "declined": "Solicitação de agendamento recusada",
+      "rescheduled": "Compromisso reagendado",
+      "teamsMeetingGenerated": "Reunião do Microsoft Teams criada"
     },
     "filters": {
       "statusLabel": "Filtrar por status",
@@ -181,8 +186,10 @@
         "description": "Descrição"
       },
       "actions": {
-        "joinTeamsMeeting": "Participe da reunião de equipes"
-      }
+        "joinTeamsMeeting": "Participe da reunião de equipes",
+        "generateTeamsMeeting": "Criar reunião do Teams"
+      },
+      "teamsMeetingMissing": "Este compromisso aprovado ainda não tem um link de reunião do Teams."
     },
     "approval": {
       "title": "Detalhes de aprovação",
@@ -201,6 +208,12 @@
       "actions": {
         "approve": "Aprovar",
         "decline": "Declínio"
+      },
+      "teamsMeetingFailure": {
+        "title": "Não foi possível criar a reunião do Microsoft Teams",
+        "description": "O compromisso não foi aprovado. Tente criar a reunião novamente ou aprove sem reunião e crie uma mais tarde.",
+        "retry": "Tentar novamente",
+        "approveWithout": "Aprovar sem reunião"
       }
     },
     "decline": {
@@ -213,6 +226,18 @@
       },
       "actions": {
         "confirm": "Confirmar recusa",
+        "cancel": "Cancelar"
+      }
+    },
+    "reschedule": {
+      "title": "Reagendar",
+      "teamsNote": "Os participantes receberão um convite atualizado da reunião do Microsoft Teams.",
+      "fields": {
+        "newDateTime": "Nova data e hora"
+      },
+      "actions": {
+        "open": "Reagendar compromisso",
+        "confirm": "Confirmar reagendamento",
         "cancel": "Cancelar"
       }
     }

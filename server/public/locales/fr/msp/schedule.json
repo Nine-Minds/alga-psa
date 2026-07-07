@@ -129,11 +129,16 @@
       "assignTechnicianRequired": "Veuillez affecter un technicien",
       "approve": "Échec de l'approbation de la demande",
       "declineReasonRequired": "Veuillez fournir une raison pour votre refus",
-      "decline": "Échec du refus de la demande"
+      "decline": "Échec du refus de la demande",
+      "reschedule": "Échec de la reprogrammation du rendez-vous",
+      "rescheduleDateRequired": "Veuillez choisir une nouvelle date et une nouvelle heure",
+      "generateTeamsMeeting": "Échec de la création de la réunion Microsoft Teams"
     },
     "feedback": {
       "approved": "Demande de rendez-vous approuvée",
-      "declined": "Demande de rendez-vous refusée"
+      "declined": "Demande de rendez-vous refusée",
+      "rescheduled": "Rendez-vous reprogrammé",
+      "teamsMeetingGenerated": "Réunion Microsoft Teams créée"
     },
     "filters": {
       "statusLabel": "Filtrer par statut",
@@ -181,8 +186,10 @@
         "teamsMeeting": "Réunion Teams"
       },
       "actions": {
-        "joinTeamsMeeting": "Rejoindre la réunion Teams"
-      }
+        "joinTeamsMeeting": "Rejoindre la réunion Teams",
+        "generateTeamsMeeting": "Créer une réunion Teams"
+      },
+      "teamsMeetingMissing": "Ce rendez-vous approuvé n'a pas encore de lien de réunion Teams."
     },
     "approval": {
       "title": "Détails de l'approbation",
@@ -201,6 +208,12 @@
       "actions": {
         "approve": "Approuver",
         "decline": "Déclin"
+      },
+      "teamsMeetingFailure": {
+        "title": "La réunion Microsoft Teams n'a pas pu être créée",
+        "description": "Le rendez-vous n'a pas été approuvé. Réessayez la création de la réunion ou approuvez sans réunion et créez-en une plus tard.",
+        "retry": "Réessayer",
+        "approveWithout": "Approuver sans réunion"
       }
     },
     "decline": {
@@ -213,6 +226,18 @@
       },
       "actions": {
         "confirm": "Confirmer le refus",
+        "cancel": "Annuler"
+      }
+    },
+    "reschedule": {
+      "title": "Reprogrammer",
+      "teamsNote": "Les participants recevront une invitation de réunion Microsoft Teams mise à jour.",
+      "fields": {
+        "newDateTime": "Nouvelle date et heure"
+      },
+      "actions": {
+        "open": "Reprogrammer le rendez-vous",
+        "confirm": "Confirmer la reprogrammation",
         "cancel": "Annuler"
       }
     }
