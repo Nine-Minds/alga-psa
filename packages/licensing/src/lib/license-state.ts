@@ -223,6 +223,22 @@ export async function isSelfHostLicensing(): Promise<boolean> {
   }
 }
 
+export class HostingRequiredError extends Error {
+  public readonly statusCode = 403;
+  public readonly code = 'HOSTING_REQUIRED';
+
+  constructor(featureLabel = 'This feature') {
+    super(`${featureLabel} is only available on hosted installs.`);
+    this.name = 'HostingRequiredError';
+  }
+}
+
+export async function assertHostedInstall(featureLabel?: string): Promise<void> {
+  if (await isSelfHostLicensing()) {
+    throw new HostingRequiredError(featureLabel);
+  }
+}
+
 /**
  * True only for the Nine Minds appliance-license distribution tenant WHEN in-app
  * distribution is switched on. Gated by two env vars:

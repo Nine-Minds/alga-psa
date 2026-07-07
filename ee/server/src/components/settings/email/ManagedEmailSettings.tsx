@@ -16,15 +16,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/component
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { Globe, Send, Inbox, Mail, Eye, EyeOff, Lock, CheckCircle, XCircle } from 'lucide-react';
-import { TIER_FEATURES } from '@alga-psa/types';
+import { Globe, Send, Inbox, Mail, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
 import { useTier } from 'server/src/context/TierContext';
 import {
   getManagedEmailDomains,
   requestManagedEmailDomain,
   refreshManagedEmailDomain,
   deleteManagedEmailDomain,
-  ManagedDomainStatus,
+  type ManagedDomainStatus,
 } from '@ee/lib/actions/email-actions/managedDomainActions';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 import type { EmailProvider } from '@alga-psa/integrations/components';
@@ -88,10 +87,10 @@ function extractEmailDomain(value?: string | null): string | null {
 
 export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const { t } = useTranslation('msp/email-providers');
-  const { hasFeature } = useTier();
-  const canUseManagedEmail = hasFeature(TIER_FEATURES.MANAGED_EMAIL);
+  const { isHosted } = useTier();
+  const canUseManagedEmail = isHosted;
   const [domains, setDomains] = useState<ManagedDomainStatus[]>([]);
-  const [loadingDomains, setLoadingDomains] = useState(true);
+  const [loadingDomains, setLoadingDomains] = useState(canUseManagedEmail);
   const [activeTab, setActiveTab] = useState<'inbound' | 'outbound'>('outbound');
   const [newDomain, setNewDomain] = useState('');
   const [busyDomain, setBusyDomain] = useState<string | null>(null);
@@ -106,7 +105,9 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const [savingTicketingFrom, setSavingTicketingFrom] = useState(false);
   const [showClearTicketingFromDialog, setShowClearTicketingFromDialog] = useState(false);
   const [loadingOutbound, setLoadingOutbound] = useState(true);
-  const [outboundProvider, setOutboundProvider] = useState<OutboundProvider>('resend');
+  const [outboundProvider, setOutboundProvider] = useState<OutboundProvider>(
+    canUseManagedEmail ? 'resend' : 'smtp'
+  );
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
   const [savingSmtp, setSavingSmtp] = useState(false);
   const [smtpTestRecipient, setSmtpTestRecipient] = useState('');
@@ -115,14 +116,26 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const [pendingDomainRemoval, setPendingDomainRemoval] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!canUseManagedEmail) {
+      setDomains([]);
+      setLoadingDomains(false);
+      return;
+    }
+
     loadDomains();
-  }, []);
+  }, [canUseManagedEmail]);
 
   useEffect(() => {
     loadOutboundState();
   }, []);
 
   const loadDomains = async () => {
+    if (!canUseManagedEmail) {
+      setDomains([]);
+      setLoadingDomains(false);
+      return;
+    }
+
     setLoadingDomains(true);
     try {
       const fetcher = overrides?.getManagedEmailDomains ?? getManagedEmailDomains;
@@ -581,12 +594,9 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm font-medium">{t('managed.outbound.smtpLabel')}</span>
                 </div>
-                <div className="rounded-lg border border-border bg-muted/30 p-3 flex items-start gap-3">
-                  <Lock className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <p className="text-sm text-muted-foreground">
-                    {t('managed.outbound.upgradeNotice')}
-                  </p>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  {t('managed.outbound.smtpDescription')}
+                </p>
               </>
             )}
           </CardContent>

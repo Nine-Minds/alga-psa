@@ -62,21 +62,26 @@ interface TierContextValue {
   subscriptionStatus: string | null;
   /** True if payment has failed (past_due or unpaid) */
   isPaymentFailed: boolean;
+  /** True when this tenant is running on hosted/SaaS infrastructure */
+  isHosted: boolean;
 }
 
 const TierContext = createContext<TierContextValue | undefined>(undefined);
 
 interface TierProviderProps {
   children: React.ReactNode;
+  /** Self-host install (license_state row present). Hosted/SaaS = false. */
+  selfHostLicensing?: boolean;
 }
 
 /**
  * Provides tier information derived from the session.
  * Must be wrapped inside AppSessionProvider.
  */
-export function TierProvider({ children }: TierProviderProps) {
+export function TierProvider({ children, selfHostLicensing = false }: TierProviderProps) {
   const { data: session, status, update } = useSession();
   const isLoading = status === 'loading';
+  const isHosted = !selfHostLicensing;
 
   // Resolve tier from the server-resolved effectiveTier when present (this
   // includes self-host licensing and the 'essentials' floor), falling back to
@@ -188,8 +193,9 @@ export function TierProvider({ children }: TierProviderProps) {
       premiumTrialEffectiveDate,
       subscriptionStatus,
       isPaymentFailed,
+      isHosted,
     }),
-    [tier, isMisconfigured, isSolo, isPro, isPremium, addOns, hasFeature, hasAddOn, refreshTier, isLoading, isTrialing, trialDaysLeft, trialEndDate, isSoloProTrial, soloProTrialEndDate, soloProTrialDaysLeft, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate, subscriptionStatus, isPaymentFailed]
+    [tier, isMisconfigured, isSolo, isPro, isPremium, addOns, hasFeature, hasAddOn, refreshTier, isLoading, isTrialing, trialDaysLeft, trialEndDate, isSoloProTrial, soloProTrialEndDate, soloProTrialDaysLeft, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate, subscriptionStatus, isPaymentFailed, isHosted]
   );
 
   return <TierContext.Provider value={value}>{children}</TierContext.Provider>;

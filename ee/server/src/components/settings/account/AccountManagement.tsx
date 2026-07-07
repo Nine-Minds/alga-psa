@@ -55,7 +55,6 @@ import { useFormatAddOnDescription } from '@alga-psa/ui/hooks/useAddOnEnumOption
 const FEATURE_TRANSLATION_KEYS: Record<TIER_FEATURES, string> = {
   [TIER_FEATURES.INTEGRATIONS]: 'features.integrations',
   [TIER_FEATURES.EXTENSIONS]: 'features.extensions',
-  [TIER_FEATURES.MANAGED_EMAIL]: 'features.managedEmail',
   [TIER_FEATURES.SSO]: 'features.sso',
   [TIER_FEATURES.ADVANCED_ASSETS]: 'features.advancedAssets',
   [TIER_FEATURES.CLIENT_PORTAL_ADMIN]: 'features.clientPortalAdmin',
