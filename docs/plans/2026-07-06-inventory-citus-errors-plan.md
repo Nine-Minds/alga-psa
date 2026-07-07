@@ -22,6 +22,20 @@ joins `users` without the tenant distribution key — `.leftJoin('users as u', '
 with `and u.tenant = sm.tenant` plans cleanly; without it, it throws the exact production
 error. These are the only two tenant-less joins in the file.
 
+This one bug surfaces through **two entry points** (both confirmed in blue logs,
+2026-07-07 00:05–00:06 UTC session):
+
+1. **SSR page load** — `server/src/app/msp/inventory/write-offs/page.tsx` calls
+   `writeOffReport({})` in a try/catch → logs `Failed to load write-off report: …`.
+2. **Interactive "Run" with a date range** — the "Write-offs & adjustments" page
+   (`packages/inventory/src/components/WriteOffsReport.tsx:37`) calls the same
+   `writeOffReport` server action directly → the rejection logs as an unhandled
+   `⨯ error: select "sm"."movement_id", …` with the identical SQL.
+
+Same action, same SQL, same fix. **There is no third inventory defect** — the
+apparent "adjustment report" error is entry point 2. Do not hunt for another bug if
+both log signatures disappear after the fix.
+
 ### Error 2 — Ghost-usage report (`/msp/inventory/ghost-usage`)
 
 ```
@@ -211,14 +225,18 @@ Local (dev server on port 3002, wired to `alga-psa-local-test` infra):
 2. Run the new contract test + SQL-shape test + existing inventory package tests.
 3. Smoke `/msp/inventory/write-offs` and `/msp/inventory/ghost-usage` — pages render
    (local DB is plain Postgres, so this validates behavior, not Citus pushdown).
+   On write-offs, also exercise the **interactive path**: set a from/to date range and
+   click **Run** (`#write-offs-run`) — this hits `writeOffReport` through the second
+   entry point (see Background, Error 1).
 4. Run the new citus migration against a non-Citus DB to confirm it no-ops cleanly.
 
 Production, post-deploy:
 
 1. Migration ran: `select * from citus_tables where table_name::text in
    ('ticket_materials','project_materials')` → both `distributed`, colocation 41.
-2. Reload both pages in sebastian-blue as the triggering user; confirm no
-   `Failed to load write-off report` / ghost-usage errors in blue pod logs.
+2. Reload both pages in sebastian-blue as the triggering user, and run the write-offs
+   report with a date range; confirm neither log signature recurs
+   (`Failed to load write-off report` nor the unhandled `⨯ error: select "sm".…`).
 3. Optional belt-and-braces: prod `EXPLAIN` of the converted write-off SQL shape.
 
 ## Out of scope / follow-ups
