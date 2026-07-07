@@ -135,6 +135,18 @@ export type AuthenticatedTeamsInboundRequest<TActivity> =
   | { ok: false; response: NextResponse };
 
 /**
+ * Type guard for the rejection branch. Callers use this instead of a bare
+ * `if (!auth.ok)` because the EE server app typechecks these files with
+ * `strict: false`, where boolean-discriminant narrowing does not apply; a type
+ * predicate narrows correctly under both strict and non-strict settings.
+ */
+export function isTeamsInboundRejected<TActivity>(
+  result: AuthenticatedTeamsInboundRequest<TActivity>,
+): result is { ok: false; response: NextResponse } {
+  return !result.ok;
+}
+
+/**
  * Route-level guard used by all Teams inbound POST handlers. Verifies the
  * Bot Framework JWT before touching the body, then parses the activity and
  * checks it against the verified claims. Callers receive either the parsed

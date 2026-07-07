@@ -15,6 +15,7 @@ import { resolveTeamsLinkedUser } from '../resolveTeamsLinkedUser';
 import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';
 import {
   authenticateTeamsInboundRequest,
+  isTeamsInboundRejected,
   type TeamsVerifiedInboundIdentity,
 } from '../bot/teamsInboundAuth';
 
@@ -805,7 +806,7 @@ export async function handleTeamsQuickActionRequest(request: Request): Promise<N
     request,
     'quick_actions'
   );
-  if (!auth.ok) {
+  if (isTeamsInboundRejected(auth)) {
     return auth.response;
   }
   const { activity, identity } = auth;

@@ -18,6 +18,7 @@ import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';
 import { buildTeamsAvailabilityJsonResponse } from '../teamsAvailabilityResponses';
 import {
   authenticateTeamsInboundRequest,
+  isTeamsInboundRejected,
   type TeamsVerifiedInboundIdentity,
 } from '../bot/teamsInboundAuth';
 import {
@@ -1377,7 +1378,7 @@ export async function handleTeamsMessageExtensionRequest(request: Request): Prom
     request,
     'message_extension'
   );
-  if (!auth.ok) {
+  if (isTeamsInboundRejected(auth)) {
     return auth.response;
   }
   const { activity, identity } = auth;

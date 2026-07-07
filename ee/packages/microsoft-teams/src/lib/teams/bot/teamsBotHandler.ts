@@ -13,6 +13,7 @@ import {
 } from './teamsBotConnector';
 import {
   authenticateTeamsInboundRequest,
+  isTeamsInboundRejected,
   type TeamsVerifiedInboundIdentity,
 } from './teamsInboundAuth';
 import {
@@ -2384,7 +2385,7 @@ export async function handleTeamsBotActivityRequest(
   // credentials are unconfigured — unauthenticated activities are never
   // processed.
   const auth = await authenticateTeamsInboundRequest<TeamsBotActivity>(request, 'bot');
-  if (!auth.ok) {
+  if (isTeamsInboundRejected(auth)) {
     return auth.response;
   }
   const { activity, identity } = auth;

@@ -186,10 +186,13 @@ function decodeGraphTokenRoles(accessToken: string): string[] | null {
   }
 }
 
+// `message` is always present (empty when enabled) so callers need no
+// discriminated-union narrowing — the EE server app typechecks this file with
+// `strict: false`, where narrowing on the `enabled` boolean does not apply.
 async function checkTeamsAddOn(
   user: unknown,
   tenant: string
-): Promise<{ enabled: true } | { enabled: false; message: string }> {
+): Promise<{ enabled: boolean; message: string }> {
   const availability = await getTeamsAvailability({
     tenantId: tenant,
     userId: normalizeString((user as any)?.user_id),
@@ -197,7 +200,7 @@ async function checkTeamsAddOn(
   if (availability.enabled === false) {
     return { enabled: false, message: availability.message };
   }
-  return { enabled: true };
+  return { enabled: true, message: '' };
 }
 
 export async function validateTeamsGraphCredentialsImpl(
@@ -271,6 +274,13 @@ export async function probeTeamsGraphPermissionsImpl(
 type BotTokenRequestResult =
   | { ok: true }
   | { ok: false; reason: Exclude<TeamsBotConnectorFailureReason, 'addon_inactive' | 'not_configured'>; message: string };
+
+// Type predicate so the failure branch narrows under `strict: false` (see checkTeamsAddOn).
+function isBotTokenFailure(
+  result: BotTokenRequestResult,
+): result is Extract<BotTokenRequestResult, { ok: false }> {
+  return !result.ok;
+}
 
 async function requestBotFrameworkToken(credentials: {
   appId: string;
@@ -364,7 +374,7 @@ export async function validateTeamsBotConnectorImpl(
   }
 
   const tokenResult = await requestBotFrameworkToken(credentials);
-  if (!tokenResult.ok) {
+  if (isBotTokenFailure(tokenResult)) {
     return { status: 'failed', reason: tokenResult.reason, message: tokenResult.message };
   }
 
