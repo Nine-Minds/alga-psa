@@ -275,12 +275,14 @@ describe('Appointment Availability Integration Tests', () => {
   describe('2. Advance Booking Windows', () => {
     it('should respect advance_booking_days setting', async () => {
       const { serviceId, userId } = await setupTestData(db, tenantId, {
-        advanceBookingDays: 7
+        advanceBookingDays: 14
       });
 
-      // Try to get slots 30 days in the future (should be empty)
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + 30);
+      // A Monday 3+ weeks out is past the 14-day window whatever weekday the
+      // suite runs on (the old "today + 30" check could land on a day with no
+      // availability, passing for the wrong reason).
+      const futureDate = getNextWeekday(1);
+      futureDate.setDate(futureDate.getDate() + 21);
       const futureDateStr = futureDate.toISOString().split('T')[0];
 
       const slots = await getAvailableTimeSlots(
@@ -293,13 +295,10 @@ describe('Appointment Availability Integration Tests', () => {
 
       expect(slots.length).toBe(0);
 
-      // Try to get slots 3 days in the future (should have slots)
-      const nearDate = new Date();
-      nearDate.setDate(nearDate.getDate() + 3);
-      // Make sure it's the correct day of week (Monday)
-      while (nearDate.getDay() !== 1) {
-        nearDate.setDate(nearDate.getDate() + 1);
-      }
+      // Next Monday is at most 7 days out, always inside the 14-day window.
+      // (Walking "today + 3" forward to a Monday overshot the old 7-day window
+      // to +8/+9 when the nightly ran on a weekend.)
+      const nearDate = getNextWeekday(1);
       const nearDateStr = nearDate.toISOString().split('T')[0];
 
       const nearSlots = await getAvailableTimeSlots(
@@ -1475,7 +1474,12 @@ async function setupTestData(
     is_available: true,
     allow_without_contract: options.allowWithoutContract ?? false,
     advance_booking_days: options.advanceBookingDays ?? 30,
-    minimum_notice_hours: options.minimumNoticeHours ?? 24
+    // Notice-hours default is 0, not a realistic 24: most tests assert on
+    // next-Monday slots, and when the suite runs on a Sunday a 24h notice
+    // window reaches into Monday and silently trims the very slots under
+    // test (the nightly's "first slot is 06:00, not midnight" flake). Tests
+    // that exercise notice behavior pass minimumNoticeHours explicitly.
+    minimum_notice_hours: options.minimumNoticeHours ?? 0
   });
   createdIds.availabilitySettingIds.push(serviceSettingId);
 
@@ -1545,7 +1549,8 @@ async function setupTestDataMultipleUsers(
     is_available: true,
     allow_without_contract: false,
     advance_booking_days: 30,
-    minimum_notice_hours: 24
+    // 0 for the same Sunday-run reason as setupTestData above.
+    minimum_notice_hours: 0
   });
   createdIds.availabilitySettingIds.push(serviceSettingId);
 
