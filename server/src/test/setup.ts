@@ -14,6 +14,27 @@ afterEach(async () => {
   cleanup();
 });
 
+// Same reused-jsdom hazard for window.location: several suites replace it with
+// a plain stub (to swallow jsdom's not-implemented navigation), and an
+// unrestored stub has no .search/.pathname and detaches from
+// history.replaceState — whichever URL-reading test the shuffle seats behind
+// it fails (roving per-seed failures: AutomaticInvoices client filter,
+// DefaultLayout interrupt guard). Put the real Location back after every test.
+const realLocation = typeof window === 'undefined' ? undefined : window.location;
+afterEach(() => {
+  if (!realLocation || window.location === realLocation) return;
+  try {
+    Object.defineProperty(window, 'location', {
+      value: realLocation,
+      writable: true,
+      configurable: true,
+    });
+  } catch {
+    // Property left non-configurable by a stub: a value swap is still allowed.
+    Object.defineProperty(window, 'location', { value: realLocation });
+  }
+});
+
 process.env.NEXTAUTH_SECRET ??= 'localtest-nextauth-secret';
 
 // Vitest coverage (v8) uses a temp directory under the reports directory.
