@@ -12,10 +12,13 @@ import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import MspClientTickets from './MspClientTickets';
 import MspContactTickets from './MspContactTickets';
+import { useTicketDetailsDrawer } from './useTicketDetailsDrawer';
 
 const renderNothing = () => null;
 
 export function AlgaDeskClientCrossFeatureProvider({ children }: { children: ReactNode }) {
+  const openTicketDetails = useTicketDetailsDrawer();
+
   const renderQuickAddTicket = useCallback(
     (props: QuickAddTicketRenderProps) => (
       <QuickAddTicket
@@ -76,9 +79,10 @@ export function AlgaDeskClientCrossFeatureProvider({ children }: { children: Rea
       renderContactTickets,
       renderContractWizard: () => renderNothing(),
       renderContractQuickAdd: () => renderNothing(),
+      openTicketDetails,
       getSlaPolicies: async () => [],
     }),
-    [renderQuickAddTicket, renderClientTickets, renderContactTickets]
+    [renderQuickAddTicket, renderClientTickets, renderContactTickets, openTicketDetails]
   );
 
   return (

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   BriefcaseBusiness,
@@ -24,8 +24,10 @@ import { TagManager } from '@alga-psa/tags/components';
 import { useToast, useDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { updateContact } from '@alga-psa/clients/actions';
+import { updateContact, getInteractionsForEntity } from '@alga-psa/clients/actions';
+import { useOptionalClientCrossFeature } from '../../../context/ClientCrossFeatureContext';
 import { QuickAddInteraction } from '../../interactions/QuickAddInteraction';
+import InteractionDetails from '../../interactions/InteractionDetails';
 import { ContactPortalTab } from '../ContactPortalTab';
 import ContactDetailsEdit from '../ContactDetailsEdit';
 import type {
@@ -140,12 +142,14 @@ function TileRows({ children }: { children: React.ReactNode }) {
 
 function TileRow({
   href,
+  onClick,
   leading,
   primary,
   meta,
   emphasize = true,
 }: {
   href?: string;
+  onClick?: () => void;
   leading?: React.ReactNode;
   primary: React.ReactNode;
   meta?: React.ReactNode;
@@ -160,14 +164,20 @@ function TileRow({
       {meta != null ? <span className="ml-auto shrink-0 pl-3 text-xs text-[rgb(var(--color-text-500))]">{meta}</span> : null}
     </>
   );
+  const interactiveClassName =
+    'flex min-w-0 items-center gap-2 py-2 hover:bg-[rgb(var(--color-border-50))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-400))]';
   if (href) {
     return (
-      <Link
-        href={href}
-        className="flex min-w-0 items-center gap-2 py-2 hover:bg-[rgb(var(--color-border-50))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-400))]"
-      >
+      <Link href={href} className={interactiveClassName}>
         {body}
       </Link>
+    );
+  }
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={`w-full text-left ${interactiveClassName}`}>
+        {body}
+      </button>
     );
   }
   return <div className="flex min-w-0 items-center gap-2 py-2">{body}</div>;
@@ -186,7 +196,7 @@ export function ContactBentoLayout({
   contact: initialContact,
   clients,
   documents = [],
-  interactions = [],
+  interactions: initialInteractions,
   tags = [],
   stats,
   ticketsSummary,
@@ -203,6 +213,9 @@ export function ContactBentoLayout({
   const { toast } = useToast();
   const { renderDocuments } = useDocumentsCrossFeature();
   const { openDrawer, closeDrawer } = useDrawer();
+  // Composition-provided ticket drawer (MSP + AlgaDesk); rows fall back to
+  // navigation when no provider is mounted.
+  const openTicketDetails = useOptionalClientCrossFeature()?.openTicketDetails ?? null;
   const [contact, setContact] = useState(initialContact);
   const [roleDraft, setRoleDraft] = useState(contact.role ?? '');
   const [isEditingRole, setIsEditingRole] = useState(false);
@@ -212,6 +225,37 @@ export function ContactBentoLayout({
   const [isPortalOpen, setIsPortalOpen] = useState(false);
   const [isDocumentsOpen, setIsDocumentsOpen] = useState(false);
   const [isInteractionOpen, setIsInteractionOpen] = useState(false);
+
+  // The interactions list is owned here: server pages can't pass refresh
+  // callbacks across the RSC boundary, and quick-view callers don't pass
+  // interactions at all — so the tile refetches its own rows.
+  const [interactions, setInteractions] = useState<IInteraction[]>(initialInteractions ?? []);
+  const refreshInteractions = useCallback(async () => {
+    try {
+      setInteractions(await getInteractionsForEntity(contact.contact_name_id, 'contact'));
+    } catch {
+      // Keep the current rows; the drawer/dialog that changed data already surfaced its own errors.
+    }
+  }, [contact.contact_name_id]);
+  useEffect(() => {
+    if (initialInteractions === undefined) {
+      void refreshInteractions();
+    }
+    // Seed-once semantics (same as the contact buffer above): only an absent
+    // prop triggers a fetch, so server-provided lists are never double-loaded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshInteractions]);
+
+  const openInteractionDetails = (interaction: IInteraction) => {
+    openDrawer(
+      <InteractionDetails
+        interaction={interaction}
+        isInDrawer
+        onInteractionDeleted={() => void refreshInteractions()}
+        onInteractionUpdated={() => void refreshInteractions()}
+      />,
+    );
+  };
 
   const clientName = useMemo(
     () => clients.find((client) => client.client_id === contact.client_id)?.client_name ?? null,
@@ -517,7 +561,9 @@ export function ContactBentoLayout({
               return (
                 <TileRow
                   key={ticket.ticket_id}
-                  href={`/msp/tickets/${ticket.ticket_id}`}
+                  {...(openTicketDetails
+                    ? { onClick: () => void openTicketDetails(ticket.ticket_id) }
+                    : { href: `/msp/tickets/${ticket.ticket_id}` })}
                   leading={<span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${pill.className}`}>{pill.label}</span>}
                   primary={ticket.title || `Ticket ${ticket.ticket_number ?? ''}`}
                   meta={`#${ticket.ticket_number ?? '—'} · ${formatDate(ticket.entered_at)}`}
@@ -553,6 +599,7 @@ export function ContactBentoLayout({
             {interactions.slice(0, 5).map((interaction) => (
               <TileRow
                 key={interaction.interaction_id}
+                onClick={() => openInteractionDetails(interaction)}
                 leading={<InteractionIcon icon={interaction.icon} typeName={interaction.type_name} size="sm" className="shrink-0" />}
                 primary={interaction.title || interaction.type_name || 'Interaction'}
                 meta={[
@@ -767,6 +814,7 @@ export function ContactBentoLayout({
         onClose={() => setIsInteractionOpen(false)}
         onInteractionAdded={() => {
           setIsInteractionOpen(false);
+          void refreshInteractions();
           void onContactUpdated?.();
         }}
       />

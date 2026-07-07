@@ -68,7 +68,7 @@ export default function FocusViewHost({ idPrefix, tabs, activeTabId, onSelectTab
       id={`${idPrefix}-focus-drawer`}
       isOpen={!!activeTab}
       onClose={onClose}
-      width="92vw"
+      width="min(1200px, 88vw)"
       hideCloseButton
     >
       {activeTab && (

@@ -1,6 +1,9 @@
 'use client';
 
 import React from 'react';
+import { MapPin } from 'lucide-react';
+import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import { BentoTile } from '@alga-psa/ui/components/bento/BentoTile';
 import type {
   ClientPulseService,
   ClientPulseMoney,
@@ -34,39 +37,44 @@ interface CardShellProps {
 export function CardShell({ id, title, action, footerLinks, className = '', children }: CardShellProps) {
   const liveFooterLinks = (footerLinks ?? []).filter((link): link is CardFooterLink => link != null);
   return (
-    <div id={id} className={`bg-white border border-gray-200 rounded-xl p-4 min-w-0 ${className}`}>
-      <div className="flex items-center mb-3">
-        <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500">{title}</h3>
-        {action && (
-          <button
-            id={`${id}-open`}
-            type="button"
-            onClick={action.onClick}
-            className="ml-auto text-xs font-semibold text-primary-600 hover:text-primary-800"
-          >
-            {action.label}
-          </button>
-        )}
-      </div>
+    <BentoTile
+      id={id}
+      title={title}
+      className={className}
+      action={action ? (
+        <button
+          id={`${id}-open`}
+          type="button"
+          onClick={action.onClick}
+          className="text-xs font-semibold text-primary-600 hover:text-primary-800 whitespace-nowrap"
+        >
+          {action.label}
+        </button>
+      ) : undefined}
+    >
       {children}
       {liveFooterLinks.length > 0 && (
-        <div className="mt-3 pt-2 border-t border-gray-100 text-xs">
-          {liveFooterLinks.map((link, index) => (
-            <React.Fragment key={link.id}>
-              {index > 0 && <span className="text-gray-300 mx-1.5">·</span>}
-              <button
-                id={`${id}-link-${link.id}`}
-                type="button"
-                onClick={link.onClick}
-                className="font-semibold text-primary-600 hover:text-primary-800"
-              >
-                {link.label}
-              </button>
-            </React.Fragment>
-          ))}
+        // mt-auto pins the entry links to the tile's bottom edge, so footers
+        // align across a bento row of equal-height tiles.
+        <div className="mt-auto">
+          <div className="mt-3 pt-2 border-t border-[rgb(var(--color-border-100))] text-xs">
+            {liveFooterLinks.map((link, index) => (
+              <React.Fragment key={link.id}>
+                {index > 0 && <span className="text-gray-300 mx-1.5">·</span>}
+                <button
+                  id={`${id}-link-${link.id}`}
+                  type="button"
+                  onClick={link.onClick}
+                  className="font-semibold text-primary-600 hover:text-primary-800"
+                >
+                  {link.label}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       )}
-    </div>
+    </BentoTile>
   );
 }
 
@@ -141,12 +149,13 @@ function SlaChip({ sla, t }: { sla: ClientPulseTicketSla; t: TFn }) {
 
 // ── Service ──────────────────────────────────────────────────────────────────
 
-export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, t }: {
+export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, className, t }: {
   id: string;
   data: ClientPulseService;
   onOpen: (() => void) | null;
   onOpenTicket: (ticketId: string) => void;
   onNewTicket: () => void;
+  className?: string;
   t: TFn;
 }) {
   return (
@@ -154,6 +163,7 @@ export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, t }: 
       id={id}
       title={t('clientCommandCenter.cards.service', { defaultValue: 'Service' })}
       action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      className={className}
     >
       <div className="flex gap-6 mb-3">
         <Stat value={data.openCount} label={t('clientCommandCenter.service.open', { defaultValue: 'open tickets' })} />
@@ -227,7 +237,7 @@ export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, t }: 
 
 // ── Money ────────────────────────────────────────────────────────────────────
 
-export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpenBillingSetup, onOpenTaxSettings, t }: {
+export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpenBillingSetup, onOpenTaxSettings, className, t }: {
   id: string;
   data: ClientPulseMoney;
   formatMoney: (cents: number) => string;
@@ -235,6 +245,7 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
   onOpenInvoice: (invoiceId: string) => void;
   onOpenBillingSetup: (() => void) | null;
   onOpenTaxSettings: (() => void) | null;
+  className?: string;
   t: TFn;
 }) {
   const buckets = [
@@ -251,6 +262,7 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
       id={id}
       title={t('clientCommandCenter.cards.money', { defaultValue: 'Money' })}
       action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      className={className}
       footerLinks={[
         onOpenBillingSetup
           ? { id: 'billing-setup', label: t('clientCommandCenter.money.billingSetup', { defaultValue: '⚙ Billing setup' }), onClick: onOpenBillingSetup }
@@ -363,13 +375,14 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
 
 // ── Install base ─────────────────────────────────────────────────────────────
 
-export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset, t }: {
+export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset, className, t }: {
   id: string;
   data: ClientPulseInstallBase;
   onOpen: (() => void) | null;
   /** Assets focus view, when Equipment holds the header action (both tabs exist). */
   onOpenAssetList: (() => void) | null;
   onOpenAsset: (assetId: string) => void;
+  className?: string;
   t: TFn;
 }) {
   return (
@@ -377,6 +390,7 @@ export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset
       id={id}
       title={t('clientCommandCenter.cards.installBase', { defaultValue: 'Install base' })}
       action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      className={className}
       footerLinks={[
         onOpenAssetList
           ? { id: 'assets', label: t('clientCommandCenter.installBase.assetsLink', { defaultValue: 'Managed assets ↗' }), onClick: onOpenAssetList }
@@ -455,10 +469,14 @@ export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset
 
 // ── People ───────────────────────────────────────────────────────────────────
 
-export function PeopleCard({ id, data, onOpen, t }: {
+export function PeopleCard({ id, data, onOpen, onOpenContact, onAddContact, className, t }: {
   id: string;
   data: ClientPulsePeople;
   onOpen: (() => void) | null;
+  /** Open one contact's quick view directly (drawer), skipping the contacts list. */
+  onOpenContact?: ((contactId: string) => void) | null;
+  onAddContact?: (() => void) | null;
+  className?: string;
   t: TFn;
 }) {
   return (
@@ -466,6 +484,7 @@ export function PeopleCard({ id, data, onOpen, t }: {
       id={id}
       title={t('clientCommandCenter.cards.people', { defaultValue: 'People' })}
       action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      className={className}
     >
       {data.top.length === 0 ? (
         <EmptyLine text={t('clientCommandCenter.people.none', { defaultValue: 'No contacts yet.' })} />
@@ -473,19 +492,38 @@ export function PeopleCard({ id, data, onOpen, t }: {
         <ul className="divide-y divide-gray-100">
           {data.top.map((contact) => (
             <li key={contact.contact_name_id} className="py-2 flex items-center gap-2.5 text-[13px]">
-              <span className="w-7 h-7 rounded-full bg-primary-50 text-primary-700 flex items-center justify-center text-[10.5px] font-bold shrink-0">
-                {contact.full_name.split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()}
-              </span>
-              <span className="min-w-0">
-                <span className="block font-semibold text-gray-900 truncate">
-                  {contact.full_name}
-                  {(contact.is_default || contact.role) && (
-                    <span className="ml-1.5 font-normal text-[11px] text-gray-400">
-                      {[contact.is_default ? t('clientCommandCenter.people.primary', { defaultValue: 'Primary' }) : null, contact.role]
-                        .filter(Boolean).join(' · ')}
-                    </span>
-                  )}
-                </span>
+              <ContactAvatar
+                contactId={contact.contact_name_id}
+                contactName={contact.full_name}
+                avatarUrl={contact.avatarUrl}
+                size="sm"
+                className="shrink-0"
+              />
+              <span className="min-w-0 flex-1">
+                {(() => {
+                  const nameLine = (
+                    <>
+                      {contact.full_name}
+                      {(contact.is_default || contact.role) && (
+                        <span className="ml-1.5 font-normal text-[11px] text-gray-400">
+                          {[contact.is_default ? t('clientCommandCenter.people.primary', { defaultValue: 'Primary' }) : null, contact.role]
+                            .filter(Boolean).join(' · ')}
+                        </span>
+                      )}
+                    </>
+                  );
+                  return onOpenContact ? (
+                    <button
+                      type="button"
+                      onClick={() => onOpenContact(contact.contact_name_id)}
+                      className="block w-full text-left font-semibold text-gray-900 truncate hover:text-primary-700 hover:underline"
+                    >
+                      {nameLine}
+                    </button>
+                  ) : (
+                    <span className="block font-semibold text-gray-900 truncate">{nameLine}</span>
+                  );
+                })()}
                 <span className="block text-[12px] text-gray-600 truncate">
                   {contact.phone && (
                     <a href={`tel:${contact.phone}`} className="hover:text-primary-700 hover:underline">☎ {contact.phone}</a>
@@ -510,16 +548,27 @@ export function PeopleCard({ id, data, onOpen, t }: {
           {t('clientCommandCenter.people.more', { defaultValue: '+{{count}} more', count: data.totalCount - data.top.length })}
         </p>
       )}
+      {onAddContact && (
+        <button
+          id={`${id}-add-contact`}
+          type="button"
+          onClick={onAddContact}
+          className="mt-3 text-xs font-semibold text-primary-600 hover:text-primary-800 text-left"
+        >
+          {t('clientCommandCenter.people.addContact', { defaultValue: '＋ Add contact' })}
+        </button>
+      )}
     </CardShell>
   );
 }
 
 // ── Locations ────────────────────────────────────────────────────────────────
 
-export function LocationsCard({ id, locations, onManage, t }: {
+export function LocationsCard({ id, locations, onManage, className, t }: {
   id: string;
   locations: ClientPulseLocation[];
   onManage: (() => void) | null;
+  className?: string;
   t: TFn;
 }) {
   return (
@@ -527,6 +576,7 @@ export function LocationsCard({ id, locations, onManage, t }: {
       id={id}
       title={t('clientCommandCenter.cards.locations', { defaultValue: 'Locations' })}
       action={onManage ? { label: t('clientCommandCenter.locations.manage', { defaultValue: 'Manage ↗' }), onClick: onManage } : null}
+      className={className}
     >
       {locations.length === 0 ? (
         <EmptyLine text={t('clientCommandCenter.locations.none', { defaultValue: 'No locations yet.' })} />
@@ -534,9 +584,12 @@ export function LocationsCard({ id, locations, onManage, t }: {
         <ul className="divide-y divide-gray-100">
           {locations.slice(0, 3).map((location) => (
             <li key={location.location_id} className="py-2 text-[13px]">
-              <div className="font-semibold text-gray-900">
-                📍 {location.location_name || location.address_line1}
-                {location.is_default ? ' ★' : ''}
+              <div className="font-semibold text-gray-900 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-gray-500 shrink-0" aria-hidden="true" />
+                <span className="truncate">
+                  {location.location_name || location.address_line1}
+                  {location.is_default ? ' ★' : ''}
+                </span>
               </div>
               <div className="text-[12px] text-gray-500 truncate">
                 {[location.address_line1, location.city].filter(Boolean).join(', ')}
@@ -579,10 +632,11 @@ export function LocationsCard({ id, locations, onManage, t }: {
 
 // ── Documents ────────────────────────────────────────────────────────────────
 
-export function DocumentsCard({ id, data, onOpen, t }: {
+export function DocumentsCard({ id, data, onOpen, className, t }: {
   id: string;
   data: ClientPulseDocuments;
   onOpen: (() => void) | null;
+  className?: string;
   t: TFn;
 }) {
   return (
@@ -590,6 +644,7 @@ export function DocumentsCard({ id, data, onOpen, t }: {
       id={id}
       title={t('clientCommandCenter.cards.documents', { defaultValue: 'Documents' })}
       action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      className={className}
     >
       {data.recent.length === 0 ? (
         <EmptyLine text={t('clientCommandCenter.documents.none', { defaultValue: 'No documents yet.' })} />
@@ -614,15 +669,17 @@ export function DocumentsCard({ id, data, onOpen, t }: {
 
 // ── Notes ────────────────────────────────────────────────────────────────────
 
-export function NotesCard({ id, data, onOpen, t }: {
+export function NotesCard({ id, data, onOpen, className, t }: {
   id: string;
   data: ClientPulseNotes;
   onOpen: (() => void) | null;
+  className?: string;
   t: TFn;
 }) {
   return (
     <CardShell
       id={id}
+      className={className}
       title={t('clientCommandCenter.cards.notes', { defaultValue: 'Notes' })}
       action={onOpen
         ? {
@@ -658,11 +715,12 @@ export function NotesCard({ id, data, onOpen, t }: {
 
 // ── Client record ────────────────────────────────────────────────────────────
 
-export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, t }: {
+export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, className, t }: {
   id: string;
   data: ClientPulseRecord;
   onOpen: (() => void) | null;
   onOpenAdditionalInfo: (() => void) | null;
+  className?: string;
   t: TFn;
 }) {
   // W5: tax region + inbound domains were plumbing on the overview (they live
@@ -687,6 +745,7 @@ export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, t }: {
       id={id}
       title={t('clientCommandCenter.cards.record', { defaultValue: 'Client record' })}
       action={onOpen ? { label: t('clientCommandCenter.record.edit', { defaultValue: 'Edit ↗' }), onClick: onOpen } : null}
+      className={className}
       footerLinks={[
         onOpenAdditionalInfo
           ? { id: 'additional-info', label: t('clientCommandCenter.record.additionalInfo', { defaultValue: 'Additional info' }), onClick: onOpenAdditionalInfo }

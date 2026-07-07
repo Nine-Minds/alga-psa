@@ -1368,5 +1368,12 @@
     "noDeliveredEquipment": "Nessuna attrezzatura consegnata registrata.",
     "rmas": "RMA",
     "noRmas": "Nessun RMA per questo cliente."
+  },
+  "contacts": {
+    "quickView": {
+      "loading": "Caricamento contatto...",
+      "notFound": "Contatto non trovato.",
+      "loadFailed": "Impossibile caricare il contatto."
+    }
   }
 }
