@@ -97,11 +97,120 @@
   "dashboard": {
     "actions": {
       "newPurchaseOrder": "Nueva orden de compra",
-      "receiveStock": "Recibir existencias"
+      "receiveStock": "Recibir existencias",
+      "stockLedger": "Open stock ledger"
     },
     "attention": {
       "allClear": "Todo en orden — nada requiere atención por ahora.",
-      "title": "Requiere atención"
+      "title": "Requiere atención",
+      "urgent": "{{count}} urgent",
+      "footer": "Ranked by dollar + customer impact · refreshed just now",
+      "itemFallback": "unit",
+      "refFallback": "RMA",
+      "noneFallback": "none",
+      "personFallback": "someone",
+      "vendorFallback": "vendor",
+      "filters": {
+        "all": "All",
+        "money": "Money",
+        "fulfillment": "Fulfillment",
+        "field": "Field",
+        "ops": "Ops"
+      },
+      "bands": {
+        "red": "Costs money or a customer today",
+        "amber": "Worth chasing this week",
+        "info": "Keep an eye on"
+      },
+      "actions": {
+        "invoice": "Invoice",
+        "viewSo": "View SO",
+        "trackTransfer": "Track transfer",
+        "recall": "Recall",
+        "review": "Review",
+        "chase": "Chase",
+        "openStaging": "Open staging",
+        "requote": "Re-quote",
+        "reviewBill": "Review bill",
+        "approve": "Approve",
+        "reorder": "Reorder",
+        "createPo": "Create PO",
+        "receive": "Receive",
+        "shipReplacement": "Ship replacement",
+        "view": "View"
+      },
+      "kind": {
+        "unbilled": "unbilled",
+        "dropship": "drop-ship",
+        "cutoverRisk": "at-risk cutover",
+        "cutover": "cutover",
+        "vanShortage": "van shortage",
+        "loaner": "overdue loaner",
+        "ghost": "ghost usage",
+        "rmaAging": "rma aging",
+        "rmaClient": "replacement",
+        "priceCreep": "price creep",
+        "billCreep": "bill creep",
+        "billsOverdue": "overdue bills",
+        "countApproval": "count approval",
+        "stockLow": "stock low",
+        "stockOut": "stock out",
+        "poPartial": "partial PO",
+        "warranty": "warranty",
+        "deadStock": "dead stock"
+      },
+      "fact": {
+        "unbilledSo": "shipped, still not invoiced",
+        "unbilledDropship": "drop-ships not invoiced across {{count}} SOs",
+        "cutoverRisk": "cutover {{date}} — {{backordered}} of {{ordered}} backordered",
+        "cutoverStaging": "cutover {{date}} — {{staged}} of {{ordered}} staged",
+        "vanShortage": "{{service}} shortage with {{jobs}} installs today",
+        "overdueLoaner": "{{service}} loaner {{days}}d overdue",
+        "ghostTech": "closed {{count}} hardware tickets, no parts billed",
+        "rmaVendor": "owes credit — no response {{days}} days",
+        "rmaClient": "replacement unit still owed",
+        "priceCreepSo": "still priced at old cost",
+        "priceCreepQuotes": "{{count}} open quote(s) now below current cost",
+        "priceCreepBill": "bill exceeds matching PO",
+        "billsOverdue": "{{count}} vendor bill(s) overdue",
+        "countApproval": "count variance needs approver",
+        "stockOut": "{{service}} is out of stock",
+        "stockLow": "{{service}} below reorder point",
+        "poPartial": "partially received PO still open",
+        "warranty": "{{count}} units warranty-expiring <30d",
+        "deadStock": "no movement in 90 days"
+      },
+      "meta": {
+        "unbilledSo": "{{so}} · {{lines}} lines · shipped {{days}}d ago",
+        "unbilledDropship": "confirmed drop-ship lines ready for invoice",
+        "cutoverFeeder": "ETA {{po}} {{eta}} · {{slack}}d slack · readiness {{pct}}%",
+        "cutover": "{{so}} · {{pct}}% readiness · {{days}}d out",
+        "vanShortageTransit": "available {{available}} · transfer {{from}} dispatched",
+        "vanShortage": "available {{available}} · reorder point {{reorder}}",
+        "overdueLoaner": "due {{date}}{{serial}}",
+        "ghostTech": "est. materials exposure from closed hardware tickets",
+        "rmaVendor": "{{ref}} · oldest open receivable",
+        "rmaClient": "{{ref}} · {{service}} · due in {{days}}d",
+        "priceCreepSo": "{{so}} · margin exposure if fulfilled as-is",
+        "priceCreepQuotes": "quote(s): {{numbers}}",
+        "priceCreepBill": "{{bill}} · flagged vs matching PO",
+        "billsOverdue": "oldest overdue {{days}}d",
+        "countApproval": "counted by {{name}} · four-eyes hold",
+        "stockLevel": "available {{available}} · reorder point {{reorder}}",
+        "poPartial": "{{po}} · {{received}} of {{ordered}} received · {{vendor}}",
+        "warranty": "{{count}} clients",
+        "deadStock": "{{locations}} location(s) tie up working capital"
+      },
+      "metric": {
+        "ageDays": "{{days}}d",
+        "percent": "{{pct}}%",
+        "daysOut": "{{days}}d out",
+        "jobs": "{{count}} jobs",
+        "today": "today",
+        "units": "{{count}} units",
+        "ltThirty": "<30d",
+        "available": "available"
+      }
     },
     "bills": {
       "acrossBill": "{{total}} en {{count}} factura",
@@ -192,6 +301,105 @@
       "loanOut": "Prestado",
       "loanIn": "Préstamo devuelto",
       "retire": "Retirado"
+    },
+    "header": {
+      "branch": "branch",
+      "branches": "branches",
+      "van": "van",
+      "vans": "vans",
+      "tech": "tech",
+      "techs": "techs",
+      "subtitle": "{{branches}} · {{vans}} · {{techs}} — {{attention}} need attention, {{inPlay}} in play today."
+    },
+    "money": {
+      "estUnavailable": "count only",
+      "unbilled": {
+        "title": "Unbilled but shipped",
+        "noShippedSos": "No shipped SOs waiting",
+        "otherSos": "{{count}} more shipped SOs",
+        "dropship": "Drop-ships not invoiced",
+        "soCount": "{{count}} SOs",
+        "ghost": "Ghost usage",
+        "ticketCount": "{{count}} tickets",
+        "ledgerLink": "View revenue ledger"
+      },
+      "margin": {
+        "title": "Margin MTD",
+        "vsLastMonth": "vs last mo",
+        "meta": "{{margin}} margin · {{revenue}} rev · {{cogs}} COGS",
+        "priceCreep": "{{count}} quote(s) and {{sos}} still at old cost — {{amount}} margin at risk.",
+        "noSos": "no open SOs"
+      },
+      "rma": {
+        "title": "Vendor-owed (RMA credits)",
+        "oldest": "{{days}}d oldest",
+        "empty": "No vendor RMAs are aging.",
+        "vendorFallback": "Vendor",
+        "creditRef": "credit · {{ref}}",
+        "credit": "credit",
+        "link": "Chase all RMAs"
+      }
+    },
+    "deployments": {
+      "title": "This week's deployments",
+      "subtitle": "{{count}} dated cutover(s)",
+      "eyebrow": "This week",
+      "scope": "{{qty}}× {{name}} — {{staged}} staged · {{backordered}} backordered",
+      "itemFallback": "item",
+      "scopeFallback": "{{staged}} staged · {{backordered}} backordered",
+      "feeder": "Fed by {{po}} {{vendor}}, ETA {{eta}} — {{slack}}d slack.",
+      "vendorFallback": "vendor",
+      "noEta": "no ETA",
+      "allServiceOrders": "All service orders",
+      "status": {
+        "atRisk": "At risk",
+        "ready": "Ready",
+        "staging": "Staging"
+      }
+    },
+    "pipeline": {
+      "title": "Sales-order pipeline",
+      "openSos": "{{count}} open SOs",
+      "quotes": "Quote",
+      "quotesValue": "{{count}} open",
+      "booked": "SO booked",
+      "bookedValue": "{{count}} · {{draft}} draft",
+      "fulfilling": "Fulfilling",
+      "fulfillingValue": "{{count}} backorder",
+      "invoiced": "Invoiced",
+      "invoicedValue": "this wk",
+      "blocked": "{{count}} SOs blocked on backorder",
+      "allSos": "All SOs"
+    },
+    "receivingToday": {
+      "title": "Receiving today",
+      "meta": "POs · {{amount}} · {{more}} more this wk",
+      "empty": "No purchase orders land today.",
+      "vendorFallback": "Vendor",
+      "flag": "Flag: {{po}} lands with {{slack}}d slack before {{client}} cutover.",
+      "clientFallback": "client",
+      "receiveStock": "Receive stock"
+    },
+    "ghostWeek": {
+      "title": "Ghost usage this week",
+      "countOnly": "tickets closed, 0 parts",
+      "est": "tickets closed, 0 parts · est. {{amount}}",
+      "explainer": "Hardware tickets closed with no material posted — unbilled labor-only closes by tech.",
+      "empty": "No ghost usage candidates this week.",
+      "techChip": "{{name}} · {{count}}{{amount}}",
+      "review": "Review ghost usage"
+    },
+    "footer": {
+      "title": "Inventory health",
+      "weekAbbrev": "wk",
+      "onHand": "On-hand units",
+      "serialized": "{{count}} serialized",
+      "deadStock": "Dead stock",
+      "deadStockDetail": "{{location}} · 90d",
+      "locationFallback": "Location",
+      "thisWeek": "This week",
+      "weekActivity": "{{received}} received · {{deployed}} deployed · {{transfers}} transfers · {{rmas}} RMAs",
+      "valuationReport": "Valuation report"
     }
   },
   "ghostUsage": {

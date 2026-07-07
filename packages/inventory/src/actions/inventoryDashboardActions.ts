@@ -4,24 +4,92 @@ import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  queryBillCreep,
+  queryCountApprovals,
+  queryDeadStock,
+  queryDeployments,
+  queryGhostWeek,
+  queryOverdueLoaners,
+  queryPipeline,
+  queryPriceCreep,
+  queryRmaReceivables,
+  queryUnbilled,
+  queryValueWowDelta,
+  queryVanContext,
+  queryWarrantyExpiring,
+  type DeadStock,
+  type DeploymentRow,
+  type Pipeline,
+  type RmaReceivables,
+  type UnbilledSoRow,
+} from '../lib/dashboardQueries';
 
 /**
- * Consolidated data feed for the Inventory dashboard ("Command Center").
+ * Consolidated data feed for the Inventory dashboard ("money before lunch").
  * One permission check, one transaction. All monetary values are integer cents.
- * See docs/plans/2026-06-26-inventory-module-design.md §10/§11.
+ * Composition + derivations: docs/plans/2026-07-06-inventory-dashboard-ui-plan.md
+ * (widget catalogue in design §8 / PRD §9).
+ *
+ * Attention rows are STRUCTURED (kind + params), never pre-rendered English —
+ * the client composes the copy through i18n. Adding a row source means adding
+ * a kind here and its templates in features/inventory locales.
  */
 
-export type AttentionSeverity = 'red' | 'amber' | 'info';
-export type AttentionIcon = 'package' | 'rma' | 'po' | 'warranty' | 'so';
+export type AttentionBand = 'red' | 'amber' | 'info';
+export type AttentionCategory = 'money' | 'fulfillment' | 'field' | 'ops';
+
+export type AttentionKind =
+  | 'unbilled_so'
+  | 'unbilled_dropship'
+  | 'cutover'
+  | 'van_shortage'
+  | 'overdue_loaner'
+  | 'ghost_tech'
+  | 'rma_vendor'
+  | 'rma_client'
+  | 'price_creep_so'
+  | 'price_creep_quotes'
+  | 'price_creep_bill'
+  | 'bills_overdue'
+  | 'count_approval'
+  | 'stock_low'
+  | 'stock_out'
+  | 'po_partial'
+  | 'warranty'
+  | 'dead_stock';
+
+export type AttentionActionKey =
+  | 'invoice'
+  | 'viewSo'
+  | 'trackTransfer'
+  | 'recall'
+  | 'review'
+  | 'chase'
+  | 'openStaging'
+  | 'requote'
+  | 'reviewBill'
+  | 'approve'
+  | 'reorder'
+  | 'createPo'
+  | 'receive'
+  | 'shipReplacement'
+  | 'view';
 
 export interface AttentionItem {
   id: string;
-  severity: AttentionSeverity;
-  icon: AttentionIcon;
-  title: string;
-  subtitle: string;
-  badge: { label: string; tone: 'err' | 'warn' | 'info' };
-  action: { label: string; href: string; primary?: boolean };
+  kind: AttentionKind;
+  band: AttentionBand;
+  category: AttentionCategory;
+  /** Linked entity leading the row (client / vendor / tech / van / SO# / location). */
+  name: string | null;
+  /** Where the name links to; null renders the name as plain text. */
+  href: string | null;
+  /** Kind-specific interpolation values for the title/meta templates. */
+  params: Record<string, string | number>;
+  amount_cents: number | null;
+  age_days: number | null;
+  action: { key: AttentionActionKey; href: string; primary?: boolean };
 }
 
 export interface ReceivingPo {
@@ -33,56 +101,81 @@ export interface ReceivingPo {
   received: number;
   total_value: number;
   outstanding_value: number;
-  eta_label: string | null;
-}
-
-export interface DashboardMovement {
-  movement_id: string;
-  movement_type: string;
-  service_name: string | null;
-  serial_number: string | null;
-  quantity: number;
-  from_location_name: string | null;
-  to_location_name: string | null;
-  source_doc_type: string | null;
-  performed_by_name: string | null;
-  created_at: string | Date;
-}
-
-export interface DashboardLocationValue {
-  location_id: string;
-  location_name: string;
-  location_type: string;
-  total_value: number;
+  expected_date: string | null;
 }
 
 export interface InventoryDashboardData {
-  location_count: number;
-  van_count: number;
-  inventory_value: { by_location: DashboardLocationValue[]; grand_total: number };
-  on_hand: { total_units: number; serialized_units: number };
-  on_order: { open_po_count: number; on_order_value: number; arriving_today: number };
-  margin_mtd: { revenue: number; cogs: number; margin: number; margin_pct: number };
-  this_week: { received: number; deployed: number; transfers: number; rmas_opened: number };
-  /** Open vendor bills with aging buckets (F082). */
-  vendor_bills: { open_count: number; open_total: number; overdue_count: number; overdue_total: number };
+  header: {
+    branch_count: number;
+    van_count: number;
+    tech_count: number;
+    attention_count: number;
+    urgent_count: number;
+    /** D5 — Σ red-band row dollars + unbilled total (unbilled rows counted once). */
+    in_play_cents: number;
+  };
+  unbilled: {
+    total: number;
+    top_so: UnbilledSoRow | null;
+    other_so: { count: number; amount: number };
+    dropship: { so_count: number; amount: number };
+    ghost: { count: number; amount: number | null };
+  };
+  margin_mtd: {
+    revenue: number;
+    cogs: number;
+    margin: number;
+    margin_pct: number;
+    /** Same MTD window shifted one month back; null when last month had no revenue. */
+    prev_month_pct: number | null;
+    price_creep: { at_risk: number; quote_count: number; so_numbers: string[] } | null;
+  };
+  rma_receivables: RmaReceivables;
   attention: AttentionItem[];
-  receiving_queue: ReceivingPo[];
-  recent_movements: DashboardMovement[];
+  deployments: DeploymentRow[];
+  pipeline: Pipeline;
+  receiving_today: {
+    count: number;
+    amount: number;
+    more_week: number;
+    pos: Array<{ po_id: string; po_number: string; vendor_name: string | null; amount: number; hot: boolean }>;
+    /** Feeder PO landing with ≤1 day of slack before a cutover. */
+    flag: { po_number: string; client_name: string | null; client_id: string | null; slack_days: number } | null;
+  };
+  ghost_week: {
+    count: number;
+    est_total: number | null;
+    techs: Array<{ name: string; count: number; est: number | null }>;
+  };
+  footer: {
+    value: number;
+    wow_delta: number;
+    on_hand_units: number;
+    serialized_units: number;
+    dead_stock: DeadStock | null;
+    week: { received: number; deployed: number; transfers: number; rmas: number };
+  };
 }
 
 const OPEN_PO_STATUSES = ['draft', 'open', 'partially_received'];
 
-function etaLabel(expected: Date | string | null | undefined): string | null {
-  if (!expected) return null;
-  const d = new Date(expected);
-  if (Number.isNaN(d.getTime())) return null;
-  const today = new Date();
-  const days = Math.round((d.getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 86_400_000);
-  if (days < 0) return `${Math.abs(days)}d overdue`;
-  if (days === 0) return 'ETA today';
-  if (days === 1) return 'ETA tomorrow';
-  return `ETA ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+const ROUTES = {
+  salesOrders: '/msp/inventory/sales-orders',
+  purchaseOrders: '/msp/inventory/purchase-orders',
+  rma: '/msp/inventory/rma',
+  loaners: '/msp/inventory/loaners',
+  transfers: '/msp/inventory/transfers',
+  ghostUsage: '/msp/inventory/ghost-usage',
+  vendorBills: '/msp/inventory/vendor-bills',
+  counts: '/msp/inventory/counts',
+  units: '/msp/inventory/units',
+  stock: '/msp/inventory/stock',
+  quotes: '/msp/billing?tab=quotes',
+  client: (id: string) => `/msp/clients/${id}`,
+} as const;
+
+function sameLocalDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
 export const getInventoryDashboardData = withAuth(async (user, { tenant }): Promise<InventoryDashboardData> => {
@@ -91,52 +184,44 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
   }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    /* ---- locations / header counts ---- */
     const locations = await trx('stock_locations')
       .where({ tenant, is_active: true })
-      .select<{ location_id: string; name: string; location_type: string }[]>('location_id', 'name', 'location_type');
-    const nameById = new Map(locations.map((l) => [l.location_id, l.name]));
-    const typeById = new Map(locations.map((l) => [l.location_id, l.location_type]));
-    const van_count = locations.filter((l) => l.location_type === 'van').length;
+      .select<{ location_id: string; name: string; location_type: string; assigned_user_id: string | null }[]>(
+        'location_id',
+        'name',
+        'location_type',
+        'assigned_user_id',
+      );
+    const vans = locations.filter((l) => l.location_type === 'van');
+    const branch_count = locations.length - vans.length;
 
-    // ---- Inventory value by location (non-serialized avg_cost + serialized unit_cost) ----
-    const valueByLocation = new Map<string, number>();
-    const nonSer = await trx('stock_levels as sl')
+    const techRow = await trx('users')
+      .where({ tenant, user_type: 'internal', is_inactive: false })
+      .count<{ c: string }>('* as c')
+      .first();
+    const tech_count = Number(techRow?.c ?? 0);
+
+    /* ---- on-hand value + units (footer) ---- */
+    const nonSerValueRow = await trx('stock_levels as sl')
       .join('product_inventory_settings as pis', function () {
         this.on('sl.service_id', '=', 'pis.service_id').andOn('sl.tenant', '=', 'pis.tenant');
       })
       .where({ 'sl.tenant': tenant, 'pis.is_serialized': false })
       .andWhere('sl.quantity_on_hand', '>', 0)
-      .groupBy('sl.location_id')
-      .select<{ location_id: string; value: string }[]>(
-        'sl.location_id as location_id',
-        trx.raw('SUM(sl.quantity_on_hand * COALESCE(pis.average_cost, 0)) as value'),
-      );
-    for (const r of nonSer) valueByLocation.set(r.location_id, (valueByLocation.get(r.location_id) ?? 0) + Number(r.value ?? 0));
-
-    const ser = await trx('stock_units')
+      .select<{ value: string }[]>(trx.raw('COALESCE(SUM(sl.quantity_on_hand * COALESCE(pis.average_cost, 0)),0) as value'))
+      .first();
+    const serValueRow = await trx('stock_units')
       .where({ tenant, status: 'in_stock' })
       .whereNotNull('location_id')
-      .groupBy('location_id')
-      .select<{ location_id: string; value: string }[]>('location_id', trx.raw('SUM(COALESCE(unit_cost,0)) as value'));
-    for (const r of ser) valueByLocation.set(r.location_id, (valueByLocation.get(r.location_id) ?? 0) + Number(r.value ?? 0));
+      .select<{ value: string }[]>(trx.raw('COALESCE(SUM(COALESCE(unit_cost,0)),0) as value'))
+      .first();
+    const footerValue = Math.round(Number(nonSerValueRow?.value ?? 0)) + Math.round(Number(serValueRow?.value ?? 0));
 
-    const by_location: DashboardLocationValue[] = [...valueByLocation.entries()]
-      .map(([location_id, total_value]) => ({
-        location_id,
-        location_name: nameById.get(location_id) ?? location_id,
-        location_type: typeById.get(location_id) ?? 'other',
-        total_value: Math.round(total_value),
-      }))
-      .sort((a, b) => b.total_value - a.total_value);
-    const grand_total = by_location.reduce((s, r) => s + r.total_value, 0);
-
-    // ---- On-hand units ----
     const onHandRow = await trx('stock_levels').where({ tenant }).sum<{ s: string }>('quantity_on_hand as s').first();
-    const serRow = await trx('stock_units').where({ tenant, status: 'in_stock' }).count<{ c: string }>('* as c').first();
-    const total_units = Number(onHandRow?.s ?? 0);
-    const serialized_units = Number(serRow?.c ?? 0);
+    const serCountRow = await trx('stock_units').where({ tenant, status: 'in_stock' }).count<{ c: string }>('* as c').first();
 
-    // ---- Open POs + receiving queue ----
+    /* ---- open POs (receiving) ---- */
     const poRows = await trx('purchase_orders as po')
       .leftJoin('vendors as v', function () {
         this.on('po.vendor_id', '=', 'v.vendor_id').andOn('po.tenant', '=', 'v.tenant');
@@ -159,7 +244,7 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
         trx.raw('COALESCE(SUM(l.quantity_ordered * l.unit_cost),0) as total_value'),
         trx.raw('COALESCE(SUM((l.quantity_ordered - l.quantity_received) * l.unit_cost),0) as outstanding_value'),
       );
-    const receiving_queue: ReceivingPo[] = poRows.map((r) => ({
+    const openPos: ReceivingPo[] = poRows.map((r) => ({
       po_id: r.po_id,
       po_number: r.po_number,
       vendor_name: r.vendor_name ?? null,
@@ -168,36 +253,43 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
       received: Number(r.received),
       total_value: Number(r.total_value),
       outstanding_value: Number(r.outstanding_value),
-      eta_label: etaLabel(r.expected_date),
+      expected_date: r.expected_date ? new Date(r.expected_date).toISOString() : null,
     }));
-    const on_order_value = receiving_queue.reduce((s, r) => s + r.outstanding_value, 0);
-    const arriving_today = receiving_queue.filter((r) => r.eta_label === 'ETA today').length;
 
-    // ---- Margin (month to date) ----
+    /* ---- margin MTD + previous MTD ---- */
     // Consume movements carry the SO id (not the line id) in source_doc_id, so the line
     // price is resolved by (so_id, service_id). LATERAL … LIMIT 1 prevents fan-out when
     // an SO repeats a service across lines (the movement can't tell them apart anyway).
-    const marginRow = await trx('stock_movements as sm')
-      .joinRaw(
-        `LEFT JOIN LATERAL (
-          SELECT l.unit_price FROM sales_order_lines l
-          WHERE l.tenant = sm.tenant AND l.so_id = sm.source_doc_id AND l.service_id = sm.service_id
-          ORDER BY l.created_at ASC LIMIT 1
-        ) sol ON true`,
-      )
-      .where({ 'sm.tenant': tenant, 'sm.movement_type': 'consume', 'sm.source_doc_type': 'sales_order' })
-      .andWhereRaw("sm.created_at >= date_trunc('month', now())")
-      .select<{ revenue: string; cogs: string }[]>(
-        trx.raw('COALESCE(SUM(sm.quantity * COALESCE(sol.unit_price,0)),0) as revenue'),
-        trx.raw('COALESCE(SUM(COALESCE(sm.cogs_cost,0)),0) as cogs'),
-      )
-      .first();
+    const marginQuery = (fromExpr: string, toExpr: string | null) => {
+      let q = trx('stock_movements as sm')
+        .joinRaw(
+          `LEFT JOIN LATERAL (
+            SELECT l.unit_price FROM sales_order_lines l
+            WHERE l.tenant = sm.tenant AND l.so_id = sm.source_doc_id AND l.service_id = sm.service_id
+            ORDER BY l.created_at ASC LIMIT 1
+          ) sol ON true`,
+        )
+        .where({ 'sm.tenant': tenant, 'sm.movement_type': 'consume', 'sm.source_doc_type': 'sales_order' })
+        .andWhereRaw(`sm.created_at >= ${fromExpr}`);
+      if (toExpr) q = q.andWhereRaw(`sm.created_at < ${toExpr}`);
+      return q
+        .select<{ revenue: string; cogs: string }[]>(
+          trx.raw('COALESCE(SUM(sm.quantity * COALESCE(sol.unit_price,0)),0) as revenue'),
+          trx.raw('COALESCE(SUM(COALESCE(sm.cogs_cost,0)),0) as cogs'),
+        )
+        .first();
+    };
+    const marginRow = await marginQuery("date_trunc('month', now())", null);
+    // "vs last mo" compares like-for-like: the same month-to-date window, one month back.
+    const prevMarginRow = await marginQuery("date_trunc('month', now()) - interval '1 month'", "now() - interval '1 month'");
     const revenue = Math.round(Number(marginRow?.revenue ?? 0));
     const cogs = Math.round(Number(marginRow?.cogs ?? 0));
     const margin = revenue - cogs;
     const margin_pct = revenue > 0 ? (margin / revenue) * 100 : 0;
+    const prevRevenue = Math.round(Number(prevMarginRow?.revenue ?? 0));
+    const prev_month_pct = prevRevenue > 0 ? ((prevRevenue - Math.round(Number(prevMarginRow?.cogs ?? 0))) / prevRevenue) * 100 : null;
 
-    // ---- This week (trailing 7 days) ----
+    /* ---- week activity (footer) ---- */
     const wk = await trx('stock_movements')
       .where({ tenant })
       .andWhereRaw("created_at >= now() - interval '7 days'")
@@ -212,17 +304,22 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
       .andWhereRaw("opened_at >= now() - interval '7 days'")
       .count<{ c: string }>('* as c')
       .first();
-    const this_week = {
-      received: Number(wk?.received ?? 0),
-      deployed: Number(wk?.deployed ?? 0),
-      transfers: Number(wk?.transfers ?? 0),
-      rmas_opened: Number(rmaWkRow?.c ?? 0),
-    };
 
-    // ---- Attention worklist ----
-    const attention: AttentionItem[] = [];
+    /* ---- D1–D9 derivations ---- */
+    const ghost_week = await queryGhostWeek(trx, tenant);
+    const unbilled = await queryUnbilled(trx, tenant, ghost_week);
+    const priceCreep = await queryPriceCreep(trx, tenant);
+    const rma_receivables = await queryRmaReceivables(trx, tenant);
+    const deployments = await queryDeployments(trx, tenant);
+    const pipeline = await queryPipeline(trx, tenant);
+    const deadStock = await queryDeadStock(trx, tenant);
+    const wowDelta = await queryValueWowDelta(trx, tenant);
+    const overdueLoaners = await queryOverdueLoaners(trx, tenant);
+    const countApprovals = await queryCountApprovals(trx, tenant);
+    const billCreep = await queryBillCreep(trx, tenant);
+    const warranty = await queryWarrantyExpiring(trx, tenant);
 
-    // Low / out of stock
+    /* ---- low / out of stock (existing signal, now split van vs branch) ---- */
     const lowRows = await trx('stock_levels as sl')
       .join('product_inventory_settings as pis', function () {
         this.on('sl.service_id', '=', 'pis.service_id').andOn('sl.tenant', '=', 'pis.tenant');
@@ -239,28 +336,23 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
       .select<any[]>(
         'sc.service_name as service_name',
         'loc.name as location_name',
+        'loc.location_type as location_type',
         trx.raw('(sl.quantity_on_hand - sl.reserved_quantity - sl.held_quantity) as available'),
         trx.raw('COALESCE(sl.reorder_point, pis.reorder_point) as reorder_point'),
         'sl.service_id as service_id',
         'sl.location_id as location_id',
       )
       .orderByRaw('(sl.quantity_on_hand - sl.reserved_quantity - sl.held_quantity) asc');
-    for (const r of lowRows) {
-      const avail = Number(r.available);
-      const out = avail <= 0;
-      attention.push({
-        id: `low-${r.service_id}-${r.location_id}`,
-        severity: out ? 'red' : 'amber',
-        icon: 'package',
-        title: out ? `${r.service_name} — out of stock` : `${r.service_name} — below reorder point`,
-        subtitle: `${avail} on hand of ${r.reorder_point} · ${r.location_name ?? 'Unassigned'}`,
-        badge: out ? { label: 'Out of stock', tone: 'err' } : { label: `Low: ${avail} / ${r.reorder_point}`, tone: 'warn' },
-        action: { label: out ? 'Create PO' : 'Reorder', href: '/msp/inventory/purchase-orders', primary: out },
-      });
-    }
+    const vanShortages = lowRows.filter((r) => r.location_type === 'van');
+    const branchShortages = lowRows.filter((r) => r.location_type !== 'van');
+    const vanCtx = await queryVanContext(
+      trx,
+      tenant,
+      vans.filter((v) => vanShortages.some((s) => s.location_id === v.location_id)),
+    );
 
-    // Dead units owed
-    const deadRows = await trx('rma_cases as r')
+    /* ---- dead units owed to clients (advance replacement) ---- */
+    const deadOwedRows = await trx('rma_cases as r')
       .leftJoin('clients as c', function () {
         this.on('r.client_id', '=', 'c.client_id').andOn('r.tenant', '=', 'c.tenant');
       })
@@ -272,229 +364,468 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
         'r.rma_id as rma_id',
         'r.rma_reference as rma_reference',
         'r.dead_unit_due_date as due',
+        'r.client_id as client_id',
         'c.client_name as client_name',
         'sc.service_name as service_name',
       )
       .orderBy('r.dead_unit_due_date', 'asc');
-    for (const r of deadRows) {
-      let daysRemaining: number | null = null;
-      if (r.due) daysRemaining = Math.ceil((new Date(r.due).getTime() - Date.now()) / 86_400_000);
-      const overdue = daysRemaining != null && daysRemaining < 0;
-      const urgent = daysRemaining != null && daysRemaining <= 2;
-      attention.push({
-        id: `rma-${r.rma_id}`,
-        severity: overdue || urgent ? 'red' : 'amber',
-        icon: 'rma',
-        title: `${r.rma_reference ?? 'RMA'} · ${r.service_name ?? 'unit'} owed to ${r.client_name ?? 'client'}`,
-        subtitle: 'Advance-replaced · dead unit return outstanding',
-        badge: overdue
-          ? { label: `${Math.abs(daysRemaining!)}d overdue`, tone: 'err' }
-          : { label: daysRemaining == null ? 'No due date' : `${daysRemaining} days`, tone: urgent ? 'err' : 'warn' },
-        action: { label: 'Ship replacement', href: '/msp/inventory/rma' },
-      });
-    }
 
-    // Vendor-owed RMAs — units sitting at the vendor age like receivables ("nothing
-    // owed sits quiet"): the shelf-of-dead-drives failure is forgetting to chase the
-    // credit/replacement the vendor already agreed to.
-    const vendorOwedRows = await trx('rma_cases as r')
-      .leftJoin('vendors as v', function () {
-        this.on('r.vendor_id', '=', 'v.vendor_id').andOn('r.tenant', '=', 'v.tenant');
-      })
-      .leftJoin('service_catalog as sc', function () {
-        this.on('r.service_id', '=', 'sc.service_id').andOn('r.tenant', '=', 'sc.tenant');
-      })
-      .leftJoin('stock_units as u', function () {
-        this.on('r.returned_unit_id', '=', 'u.unit_id').andOn('r.tenant', '=', 'u.tenant');
-      })
-      .joinRaw(
-        `LEFT JOIN LATERAL (
-          SELECT sm.created_at FROM stock_movements sm
-          WHERE sm.tenant = r.tenant AND sm.unit_id = r.returned_unit_id AND sm.movement_type = 'rma_out'
-          ORDER BY sm.created_at DESC LIMIT 1
-        ) sent ON true`,
-      )
-      .where({ 'r.tenant': tenant, 'r.status': 'sent_to_vendor' })
-      .select<any[]>(
-        'r.rma_id as rma_id',
-        'r.rma_reference as rma_reference',
-        'v.vendor_name as vendor_name',
-        'sc.service_name as service_name',
-        'u.unit_cost as unit_cost',
-        trx.raw('COALESCE(sent.created_at, r.opened_at) as sent_at'),
-      )
-      .orderByRaw('COALESCE(sent.created_at, r.opened_at) asc');
-    for (const r of vendorOwedRows) {
-      const days = r.sent_at ? Math.floor((Date.now() - new Date(r.sent_at).getTime()) / 86_400_000) : null;
-      const cost = r.unit_cost != null ? Number(r.unit_cost) : null;
-      const stake = cost != null ? `$${(cost / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : 'credit/replacement';
-      attention.push({
-        id: `rma-vendor-${r.rma_id}`,
-        severity: days != null && days >= 30 ? 'red' : 'amber',
-        icon: 'rma',
-        title: `${r.rma_reference ?? 'RMA'} · ${r.vendor_name ?? 'vendor'} owes you ${stake}`,
-        subtitle: `${r.service_name ?? 'Unit'} at vendor ${days != null ? `${days} day${days === 1 ? '' : 's'}` : ''} · chase the credit or replacement`,
-        badge: { label: days != null ? `${days}d at vendor` : 'At vendor', tone: days != null && days >= 30 ? 'err' : 'warn' },
-        action: { label: 'View RMA', href: '/msp/inventory/rma' },
-      });
-    }
-
-    // Partially-received POs
-    for (const po of receiving_queue.filter((p) => p.status === 'partially_received')) {
-      attention.push({
-        id: `po-${po.po_id}`,
-        severity: 'amber',
-        icon: 'po',
-        title: `${po.po_number} · ${po.vendor_name ?? 'vendor'} — partial delivery`,
-        subtitle: `${po.received} of ${po.ordered} received · ${po.ordered - po.received} outstanding`,
-        badge: { label: 'Partially received', tone: 'warn' },
-        action: { label: 'Receive', href: '/msp/inventory/purchase-orders' },
-      });
-    }
-
-    // Expiring warranties (30d)
-    const warrRow = await trx('stock_units')
-      .where({ tenant })
-      .whereNotNull('warranty_expires_at')
-      .whereNot('status', 'retired')
-      .andWhereRaw("warranty_expires_at <= now() + interval '30 days'")
-      .count<{ c: string }>('* as c')
-      .first();
-    const warrCount = Number(warrRow?.c ?? 0);
-    if (warrCount > 0) {
-      attention.push({
-        id: 'warranties',
-        severity: 'amber',
-        icon: 'warranty',
-        title: `${warrCount} warrant${warrCount === 1 ? 'y expires' : 'ies expire'} within 30 days`,
-        subtitle: 'Review deployed and in-stock units before coverage lapses',
-        badge: { label: 'Review', tone: 'warn' },
-        action: { label: 'View units', href: '/msp/inventory/units' },
-      });
-    }
-
-    // Unbilled shipped quantity — fires on ANY line where goods went out ahead of the
-    // invoice, not just fully-fulfilled orders. A half-shipped order that sits quiet is
-    // exactly how drop-ship and partial-fulfillment money walks.
-    const soRows = await trx('sales_orders as so')
-      .leftJoin('clients as c', function () {
-        this.on('so.client_id', '=', 'c.client_id').andOn('so.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('sales_order_lines as l', function () {
-        this.on('so.so_id', '=', 'l.so_id').andOn('so.tenant', '=', 'l.tenant');
-      })
-      .where({ 'so.tenant': tenant })
-      .whereNot('so.status', 'cancelled')
-      .groupBy('so.so_id', 'so.so_number', 'so.status', 'so.order_date', 'c.client_name')
-      .havingRaw('COALESCE(SUM(GREATEST(l.quantity_fulfilled - l.quantity_invoiced, 0)),0) > 0')
-      .select<any[]>(
-        'so.so_id as so_id',
-        'so.so_number as so_number',
-        'so.status as so_status',
-        'c.client_name as client_name',
-        trx.raw(
-          'COALESCE(SUM(GREATEST(l.quantity_fulfilled - l.quantity_invoiced, 0) * l.unit_price),0) as uninvoiced_value',
-        ),
-      )
-      .orderBy('so.order_date', 'desc');
-    for (const so of soRows) {
-      const val = Number(so.uninvoiced_value);
-      const fully = so.so_status === 'fulfilled';
-      attention.push({
-        id: `so-${so.so_id}`,
-        severity: 'amber',
-        icon: 'so',
-        title: `${so.so_number} · ${so.client_name ?? 'client'} — shipped, not billed`,
-        subtitle: `${fully ? 'All lines shipped' : 'Partially shipped'} · $${(val / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} unbilled`,
-        badge: { label: 'Unbilled shipment', tone: 'warn' },
-        action: { label: 'Invoice', href: '/msp/inventory/sales-orders', primary: true },
-      });
-    }
-
-    const sevRank: Record<AttentionSeverity, number> = { red: 0, amber: 1, info: 2 };
-    attention.sort((a, b) => sevRank[a.severity] - sevRank[b.severity]);
-
-    // ---- Recent movements ----
-    const fromLoc = trx.ref('from_loc.name');
-    const movements = await trx('stock_movements as sm')
-      .leftJoin('service_catalog as sc', function () {
-        this.on('sm.service_id', '=', 'sc.service_id').andOn('sm.tenant', '=', 'sc.tenant');
-      })
-      .leftJoin('stock_units as su', function () {
-        this.on('sm.unit_id', '=', 'su.unit_id').andOn('sm.tenant', '=', 'su.tenant');
-      })
-      .leftJoin('stock_locations as from_loc', function () {
-        this.on('sm.from_location_id', '=', 'from_loc.location_id').andOn('sm.tenant', '=', 'from_loc.tenant');
-      })
-      .leftJoin('stock_locations as to_loc', function () {
-        this.on('sm.to_location_id', '=', 'to_loc.location_id').andOn('sm.tenant', '=', 'to_loc.tenant');
-      })
-      .leftJoin('users as u', function () {
-        this.on('sm.performed_by', '=', 'u.user_id').andOn('sm.tenant', '=', 'u.tenant');
-      })
-      .where({ 'sm.tenant': tenant })
-      .orderBy('sm.created_at', 'desc')
-      .limit(6)
-      .select<any[]>(
-        'sm.movement_id as movement_id',
-        'sm.movement_type as movement_type',
-        'sm.quantity as quantity',
-        'sm.source_doc_type as source_doc_type',
-        'sm.created_at as created_at',
-        'sc.service_name as service_name',
-        'su.serial_number as serial_number',
-        fromLoc.as('from_location_name'),
-        'to_loc.name as to_location_name',
-        trx.raw("NULLIF(TRIM(COALESCE(u.first_name,'') || ' ' || COALESCE(u.last_name,'')), '') as performed_by_name"),
-      );
-    const recent_movements: DashboardMovement[] = movements.map((m) => ({
-      movement_id: m.movement_id,
-      movement_type: m.movement_type,
-      service_name: m.service_name ?? null,
-      serial_number: m.serial_number ?? null,
-      quantity: Number(m.quantity),
-      from_location_name: m.from_location_name ?? null,
-      to_location_name: m.to_location_name ?? null,
-      source_doc_type: m.source_doc_type ?? null,
-      performed_by_name: m.performed_by_name ?? null,
-      created_at: m.created_at,
-    }));
-
-    // Open vendor bills + aging (F082). draft/open both count as "owed".
+    /* ---- open vendor bills aging (widget demoted to a stream row) ---- */
     const billRows = await trx('vendor_bills')
       .where({ tenant })
       .whereIn('status', ['draft', 'open'])
-      .select('total_amount', 'due_date');
+      .select<{ total_amount: string; due_date: string | null }[]>('total_amount', 'due_date');
     const nowMs = Date.now();
-    let openTotal = 0;
-    let overdueCount = 0;
-    let overdueTotal = 0;
-    for (const b of billRows as any[]) {
-      const amount = Number(b.total_amount ?? 0);
-      openTotal += amount;
+    let overdueBillCount = 0;
+    let overdueBillTotal = 0;
+    let oldestOverdueDays = 0;
+    for (const b of billRows) {
       if (b.due_date && new Date(b.due_date).getTime() < nowMs) {
-        overdueCount += 1;
-        overdueTotal += amount;
+        overdueBillCount += 1;
+        overdueBillTotal += Number(b.total_amount ?? 0);
+        oldestOverdueDays = Math.max(oldestOverdueDays, Math.floor((nowMs - new Date(b.due_date).getTime()) / 86_400_000));
       }
     }
 
+    /* ---- attention stream assembly ---- */
+    const attention: AttentionItem[] = [];
+
+    // Unbilled shipments — every from-stock SO with goods out ahead of the invoice.
+    for (const so of unbilled.from_stock.rows) {
+      attention.push({
+        id: `so-${so.so_id}`,
+        kind: 'unbilled_so',
+        band: 'red',
+        category: 'money',
+        name: so.client_name ?? so.so_number,
+        href: so.client_id ? ROUTES.client(so.client_id) : ROUTES.salesOrders,
+        params: {
+          so_number: so.so_number,
+          line_count: so.line_count,
+          fully_shipped: so.fully_shipped ? 1 : 0,
+          ...(so.shipped_days_ago != null ? { shipped_days_ago: so.shipped_days_ago } : {}),
+        },
+        amount_cents: so.amount,
+        age_days: so.shipped_days_ago,
+        action: { key: 'invoice', href: ROUTES.salesOrders, primary: true },
+      });
+    }
+    if (unbilled.dropship.so_count > 0) {
+      attention.push({
+        id: 'unbilled-dropship',
+        kind: 'unbilled_dropship',
+        band: 'red',
+        category: 'money',
+        name: null,
+        href: null,
+        params: { so_count: unbilled.dropship.so_count },
+        amount_cents: unbilled.dropship.amount,
+        age_days: null,
+        action: { key: 'invoice', href: ROUTES.salesOrders, primary: true },
+      });
+    }
+
+    // Cutovers (D1) — at-risk are red, staging amber; ready stays out of the stream.
+    for (const dep of deployments) {
+      if (dep.status === 'ready') continue;
+      attention.push({
+        id: `cutover-${dep.so_id}`,
+        kind: 'cutover',
+        band: dep.status === 'at_risk' ? 'red' : 'amber',
+        category: 'fulfillment',
+        name: dep.client_name ?? dep.so_number,
+        href: dep.client_id ? ROUTES.client(dep.client_id) : ROUTES.salesOrders,
+        params: {
+          so_number: dep.so_number,
+          ship_date: dep.ship_date,
+          days_out: dep.days_out,
+          ordered: dep.ordered,
+          staged: dep.staged,
+          done: dep.done,
+          backordered: dep.backordered,
+          readiness_pct: dep.readiness_pct,
+          at_risk: dep.status === 'at_risk' ? 1 : 0,
+          ...(dep.feeder
+            ? {
+                po_number: dep.feeder.po_number,
+                ...(dep.feeder.eta ? { feeder_eta: dep.feeder.eta } : {}),
+                ...(dep.feeder.slack_days != null ? { slack_days: dep.feeder.slack_days } : {}),
+              }
+            : {}),
+        },
+        amount_cents: null,
+        age_days: dep.days_out,
+        action:
+          dep.status === 'at_risk'
+            ? { key: 'viewSo', href: ROUTES.salesOrders }
+            : { key: 'openStaging', href: ROUTES.salesOrders },
+      });
+    }
+
+    // Van shortages (D8) — red when the van is dry and the tech has jobs today.
+    for (const s of vanShortages) {
+      const avail = Number(s.available);
+      const jobs = vanCtx.jobs_today.get(s.location_id) ?? 0;
+      const inbound = vanCtx.inbound.get(s.location_id) ?? null;
+      const tech = vanCtx.tech_names.get(s.location_id) ?? null;
+      attention.push({
+        id: `van-${s.service_id}-${s.location_id}`,
+        kind: 'van_shortage',
+        band: avail <= 0 && jobs > 0 ? 'red' : 'amber',
+        category: 'field',
+        name: tech ? `${s.location_name} · ${tech}` : (s.location_name ?? null),
+        href: ROUTES.stock,
+        params: {
+          service_name: s.service_name,
+          available: avail,
+          reorder_point: Number(s.reorder_point),
+          jobs_today: jobs,
+          in_transit: inbound ? 1 : 0,
+          ...(inbound?.from_name ? { transfer_from: inbound.from_name } : {}),
+          ...(inbound ? { dispatched_at: inbound.dispatched_at } : {}),
+        },
+        amount_cents: null,
+        age_days: null,
+        action: inbound ? { key: 'trackTransfer', href: ROUTES.transfers } : { key: 'reorder', href: ROUTES.purchaseOrders },
+      });
+    }
+
+    // Overdue loaners (D6) — chargeable metal sitting at a client past its date.
+    for (const l of overdueLoaners) {
+      attention.push({
+        id: `loaner-${l.unit_id}`,
+        kind: 'overdue_loaner',
+        band: 'red',
+        category: 'money',
+        name: l.client_name,
+        href: l.client_id ? ROUTES.client(l.client_id) : ROUTES.loaners,
+        params: {
+          service_name: l.service_name ?? '',
+          due_at: l.due_at,
+          overdue_days: l.overdue_days,
+          ...(l.serial_number ? { serial_number: l.serial_number } : {}),
+        },
+        amount_cents: l.unit_cost,
+        age_days: l.overdue_days,
+        action: { key: 'recall', href: ROUTES.loaners },
+      });
+    }
+
+    // Ghost usage (D3) — the top tech this week gets a row; the tile has the rest.
+    const topGhostTech = ghost_week.techs[0];
+    if (topGhostTech) {
+      attention.push({
+        id: 'ghost-top-tech',
+        kind: 'ghost_tech',
+        band: 'amber',
+        category: 'money',
+        name: topGhostTech.name,
+        href: ROUTES.ghostUsage,
+        params: { count: topGhostTech.count },
+        amount_cents: topGhostTech.est,
+        age_days: null,
+        action: { key: 'review', href: ROUTES.ghostUsage },
+      });
+    }
+
+    // Vendor-owed RMAs — nothing owed sits quiet; oldest first.
+    for (const r of [...rma_receivables.rows]) {
+      attention.push({
+        id: `rma-vendor-${r.rma_id}`,
+        kind: 'rma_vendor',
+        band: 'amber',
+        category: 'money',
+        name: r.vendor_name,
+        href: ROUTES.rma,
+        params: {
+          ...(r.rma_reference ? { rma_reference: r.rma_reference } : {}),
+          ...(r.service_name ? { service_name: r.service_name } : {}),
+          ...(r.age_days != null ? { age_days: r.age_days } : {}),
+        },
+        amount_cents: r.amount,
+        age_days: r.age_days,
+        action: { key: 'chase', href: ROUTES.rma },
+      });
+    }
+
+    // Dead units owed to clients (advance replacement clock).
+    for (const r of deadOwedRows) {
+      const daysRemaining = r.due ? Math.ceil((new Date(r.due).getTime() - nowMs) / 86_400_000) : null;
+      const urgent = daysRemaining != null && daysRemaining <= 2;
+      attention.push({
+        id: `rma-client-${r.rma_id}`,
+        kind: 'rma_client',
+        band: urgent ? 'red' : 'amber',
+        category: 'fulfillment',
+        name: r.client_name,
+        href: r.client_id ? ROUTES.client(r.client_id) : ROUTES.rma,
+        params: {
+          ...(r.rma_reference ? { rma_reference: r.rma_reference } : {}),
+          ...(r.service_name ? { service_name: r.service_name } : {}),
+          ...(daysRemaining != null ? { days_remaining: daysRemaining } : {}),
+        },
+        amount_cents: null,
+        age_days: daysRemaining != null && daysRemaining < 0 ? Math.abs(daysRemaining) : null,
+        action: { key: 'shipReplacement', href: ROUTES.rma },
+      });
+    }
+
+    // Price creep (D2) — signed SOs first (cap 3), then one rolled-up quotes row.
+    if (priceCreep) {
+      for (const so of priceCreep.so.slice(0, 3)) {
+        attention.push({
+          id: `creep-so-${so.so_id}`,
+          kind: 'price_creep_so',
+          band: 'amber',
+          category: 'money',
+          name: so.so_number,
+          href: ROUTES.salesOrders,
+          params: { so_number: so.so_number },
+          amount_cents: so.at_risk,
+          age_days: null,
+          action: { key: 'requote', href: ROUTES.salesOrders },
+        });
+      }
+      if (priceCreep.quotes.count > 0) {
+        attention.push({
+          id: 'creep-quotes',
+          kind: 'price_creep_quotes',
+          band: 'amber',
+          category: 'money',
+          name: null,
+          href: null,
+          params: { count: priceCreep.quotes.count, numbers: priceCreep.quotes.numbers.join(' · ') },
+          amount_cents: priceCreep.quotes.at_risk,
+          age_days: null,
+          action: { key: 'requote', href: ROUTES.quotes },
+        });
+      }
+    }
+
+    // Vendor-bill price creep (F090 rollup) + overdue bills (widget demoted here).
+    for (const b of billCreep.slice(0, 3)) {
+      attention.push({
+        id: `creep-bill-${b.bill_id}`,
+        kind: 'price_creep_bill',
+        band: 'amber',
+        category: 'money',
+        name: b.vendor_name,
+        href: ROUTES.vendorBills,
+        params: { ...(b.bill_number ? { bill_number: b.bill_number } : {}) },
+        amount_cents: b.variance,
+        age_days: null,
+        action: { key: 'reviewBill', href: ROUTES.vendorBills },
+      });
+    }
+    if (overdueBillCount > 0) {
+      attention.push({
+        id: 'bills-overdue',
+        kind: 'bills_overdue',
+        band: 'amber',
+        category: 'money',
+        name: null,
+        href: null,
+        params: { count: overdueBillCount },
+        amount_cents: overdueBillTotal,
+        age_days: oldestOverdueDays,
+        action: { key: 'reviewBill', href: ROUTES.vendorBills },
+      });
+    }
+
+    // Count sessions waiting on the four-eyes approver.
+    for (const c of countApprovals) {
+      attention.push({
+        id: `count-${c.session_id}`,
+        kind: 'count_approval',
+        band: 'amber',
+        category: 'ops',
+        name: c.location_name,
+        href: ROUTES.counts,
+        params: { ...(c.counted_by_name ? { counted_by: c.counted_by_name } : {}) },
+        amount_cents: c.variance,
+        age_days: null,
+        action: { key: 'approve', href: ROUTES.counts },
+      });
+    }
+
+    // Branch low/out of stock (vans handled above).
+    for (const s of branchShortages) {
+      const avail = Number(s.available);
+      const out = avail <= 0;
+      attention.push({
+        id: `low-${s.service_id}-${s.location_id}`,
+        kind: out ? 'stock_out' : 'stock_low',
+        band: out ? 'red' : 'amber',
+        category: 'ops',
+        name: s.location_name ?? null,
+        href: ROUTES.stock,
+        params: { service_name: s.service_name, available: avail, reorder_point: Number(s.reorder_point) },
+        amount_cents: null,
+        age_days: null,
+        action: out ? { key: 'createPo', href: ROUTES.purchaseOrders, primary: true } : { key: 'reorder', href: ROUTES.purchaseOrders },
+      });
+    }
+
+    // Partially received POs.
+    for (const po of openPos.filter((p) => p.status === 'partially_received')) {
+      attention.push({
+        id: `po-${po.po_id}`,
+        kind: 'po_partial',
+        band: 'amber',
+        category: 'ops',
+        name: po.po_number,
+        href: ROUTES.purchaseOrders,
+        params: {
+          po_number: po.po_number,
+          vendor_name: po.vendor_name ?? '',
+          received: po.received,
+          ordered: po.ordered,
+        },
+        amount_cents: null,
+        age_days: null,
+        action: { key: 'receive', href: ROUTES.purchaseOrders },
+      });
+    }
+
+    // Warranty horizon (aggregate) + dead stock — the "keep an eye on" tier.
+    if (warranty.count > 0) {
+      attention.push({
+        id: 'warranties',
+        kind: 'warranty',
+        band: 'info',
+        category: 'field',
+        name: null,
+        href: null,
+        params: {
+          count: warranty.count,
+          client_count: warranty.clients.length,
+          clients: warranty.clients.map((c) => `${c.client_name} ${c.count}`).join(' · '),
+        },
+        amount_cents: null,
+        age_days: null,
+        action: { key: 'view', href: ROUTES.units },
+      });
+    }
+    if (deadStock) {
+      attention.push({
+        id: `dead-stock-${deadStock.location_id}`,
+        kind: 'dead_stock',
+        band: 'info',
+        category: 'ops',
+        name: deadStock.location_name,
+        href: ROUTES.stock,
+        params: { location_count: deadStock.location_count },
+        amount_cents: deadStock.amount,
+        age_days: 90,
+        action: { key: 'review', href: ROUTES.stock },
+      });
+    }
+
+    // Rank: red → amber → info, then by dollar impact (rows without dollars last).
+    const bandRank: Record<AttentionBand, number> = { red: 0, amber: 1, info: 2 };
+    attention.sort(
+      (a, b) => bandRank[a.band] - bandRank[b.band] || (b.amount_cents ?? -1) - (a.amount_cents ?? -1),
+    );
+
+    /* ---- header stats (D5) ---- */
+    // in_play = unbilled total + red-band dollars; unbilled rows are already inside
+    // the unbilled total, so they're excluded from the row sum (no double count).
+    const redRowDollars = attention
+      .filter((a) => a.band === 'red' && a.kind !== 'unbilled_so' && a.kind !== 'unbilled_dropship')
+      .reduce((s, a) => s + (a.amount_cents ?? 0), 0);
+    const urgent_count = attention.filter((a) => a.band === 'red').length;
+
+    /* ---- receiving today (rail) ---- */
+    const now = new Date();
+    const withEta = openPos.filter((p) => p.expected_date != null);
+    const todayPos = withEta.filter((p) => sameLocalDay(new Date(p.expected_date!), now));
+    const weekAhead = withEta.filter((p) => {
+      const d = new Date(p.expected_date!);
+      return !sameLocalDay(d, now) && d.getTime() > now.getTime() && d.getTime() <= now.getTime() + 7 * 86_400_000;
+    });
+    const hotFeeders = new Set(
+      deployments
+        .filter((d) => d.feeder && d.feeder.slack_days != null && d.feeder.slack_days <= 1)
+        .map((d) => d.feeder!.po_id),
+    );
+    const receivingList = [...todayPos, ...weekAhead]
+      .slice(0, 3)
+      .map((p) => ({
+        po_id: p.po_id,
+        po_number: p.po_number,
+        vendor_name: p.vendor_name,
+        amount: p.outstanding_value,
+        hot: hotFeeders.has(p.po_id),
+      }));
+    const flagDep = deployments.find(
+      (d) => d.feeder && d.feeder.slack_days != null && d.feeder.slack_days <= 1 && d.feeder.eta != null,
+    );
+
     return {
-      location_count: locations.length,
-      van_count,
-      inventory_value: { by_location, grand_total },
-      on_hand: { total_units, serialized_units },
-      on_order: { open_po_count: receiving_queue.length, on_order_value, arriving_today },
-      margin_mtd: { revenue, cogs, margin, margin_pct },
-      this_week,
-      vendor_bills: {
-        open_count: billRows.length,
-        open_total: openTotal,
-        overdue_count: overdueCount,
-        overdue_total: overdueTotal,
+      header: {
+        branch_count,
+        van_count: vans.length,
+        tech_count,
+        attention_count: attention.length,
+        urgent_count,
+        in_play_cents: unbilled.total + redRowDollars,
       },
+      unbilled: {
+        total: unbilled.total,
+        top_so: unbilled.from_stock.rows[0] ?? null,
+        other_so: {
+          count: Math.max(0, unbilled.from_stock.rows.length - 1),
+          amount: unbilled.from_stock.rows.slice(1).reduce((s, r) => s + r.amount, 0),
+        },
+        dropship: unbilled.dropship,
+        ghost: unbilled.ghost,
+      },
+      margin_mtd: {
+        revenue,
+        cogs,
+        margin,
+        margin_pct,
+        prev_month_pct,
+        price_creep: priceCreep
+          ? {
+              at_risk: priceCreep.total_at_risk,
+              quote_count: priceCreep.quotes.count,
+              so_numbers: priceCreep.so.slice(0, 2).map((s) => s.so_number),
+            }
+          : null,
+      },
+      rma_receivables,
       attention,
-      receiving_queue,
-      recent_movements,
+      deployments,
+      pipeline,
+      receiving_today: {
+        count: todayPos.length,
+        amount: todayPos.reduce((s, p) => s + p.outstanding_value, 0),
+        more_week: weekAhead.length,
+        pos: receivingList,
+        flag: flagDep
+          ? {
+              po_number: flagDep.feeder!.po_number,
+              client_name: flagDep.client_name,
+              client_id: flagDep.client_id,
+              slack_days: flagDep.feeder!.slack_days!,
+            }
+          : null,
+      },
+      ghost_week: { count: ghost_week.count, est_total: ghost_week.est_total, techs: ghost_week.techs },
+      footer: {
+        value: footerValue,
+        wow_delta: wowDelta,
+        on_hand_units: Number(onHandRow?.s ?? 0),
+        serialized_units: Number(serCountRow?.c ?? 0),
+        dead_stock: deadStock,
+        week: {
+          received: Number(wk?.received ?? 0),
+          deployed: Number(wk?.deployed ?? 0),
+          transfers: Number(wk?.transfers ?? 0),
+          rmas: Number(rmaWkRow?.c ?? 0),
+        },
+      },
     };
   });
 });
