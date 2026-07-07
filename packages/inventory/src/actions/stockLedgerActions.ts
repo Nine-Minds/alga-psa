@@ -1,5 +1,8 @@
 'use server';
 
+// LEVERAGE: friction tenant-facade — rest of inventory package still on raw knex joins
+// (inventoryReportingActions.ts is converted; the other ~26 action files are a follow-up wave)
+
 import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
