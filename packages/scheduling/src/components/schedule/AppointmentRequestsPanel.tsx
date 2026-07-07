@@ -14,7 +14,7 @@ import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { fromZonedTime } from 'date-fns-tz';
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { Check, X, Calendar, Clock, User, FileText, Briefcase, Ticket, ExternalLink } from 'lucide-react';
 import { getAllUsersBasic, getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -24,6 +24,7 @@ import {
   approveAppointmentRequest as approveRequest,
   declineAppointmentRequest as declineRequest,
   generateTeamsMeetingForApprovedRequest,
+  updateAppointmentRequestDateTime,
   IAppointmentRequest
 } from '@alga-psa/scheduling/actions';
 import { getSchedulingTicketById, type SchedulingTicketDetailsRecord } from '../../actions/ticketLookupActions';
@@ -63,6 +64,12 @@ export default function AppointmentRequestsPanel({
   const [meetingCreationFailed, setMeetingCreationFailed] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [isGeneratingMeeting, setIsGeneratingMeeting] = useState(false);
+
+  // Reschedule form state (for approved requests) — moves the appointment and
+  // re-sends the linked Teams meeting invite via updateAppointmentRequestDateTime.
+  const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+  const [rescheduleDateTime, setRescheduleDateTime] = useState<Date | null>(null);
+  const [isRescheduling, setIsRescheduling] = useState(false);
 
   // Decline form state
   const [declineReason, setDeclineReason] = useState('');
@@ -198,6 +205,8 @@ export default function AppointmentRequestsPanel({
     setDeclineReason('');
     setGenerateTeamsMeeting(true);
     setMeetingCreationFailed(false);
+    setShowRescheduleForm(false);
+    setRescheduleDateTime(null);
   };
 
   // Auto-select highlighted request when requests are loaded
@@ -319,6 +328,61 @@ export default function AppointmentRequestsPanel({
       }));
     } finally {
       setIsGeneratingMeeting(false);
+    }
+  };
+
+  const handleOpenReschedule = () => {
+    // Prefill with the appointment's current date/time (already computed as a
+    // UTC instant from requested_date/time on selection).
+    setRescheduleDateTime(finalDateTime);
+    setShowRescheduleForm(true);
+  };
+
+  const handleReschedule = async () => {
+    if (!selectedRequest) return;
+
+    if (!rescheduleDateTime || isNaN(rescheduleDateTime.getTime())) {
+      toast.error(t('requests.errors.rescheduleDateRequired', {
+        defaultValue: 'Please choose a new date and time',
+      }));
+      return;
+    }
+
+    setIsRescheduling(true);
+    try {
+      // new_date/new_time are wall-clock in the request's timezone; format the
+      // picked instant into that timezone and send the timezone explicitly so
+      // the server re-interprets the same moment.
+      const tz = selectedRequest.requester_timezone || 'UTC';
+      const result = await updateAppointmentRequestDateTime({
+        appointment_request_id: selectedRequest.appointment_request_id,
+        new_date: formatInTimeZone(rescheduleDateTime, tz, 'yyyy-MM-dd'),
+        new_time: formatInTimeZone(rescheduleDateTime, tz, 'HH:mm'),
+        new_timezone: tz,
+      });
+
+      if (result.success) {
+        toast.success(t('requests.feedback.rescheduled', {
+          defaultValue: 'Appointment rescheduled',
+        }));
+        if (result.teamsMeetingWarning) {
+          toast(result.teamsMeetingWarning, { icon: '⚠️' });
+        }
+        setShowRescheduleForm(false);
+        setSelectedRequest(result.data ?? null);
+        loadRequests();
+        onRequestProcessed?.();
+      } else {
+        toast.error(result.error || t('requests.errors.reschedule', {
+          defaultValue: 'Failed to reschedule appointment',
+        }));
+      }
+    } catch (error) {
+      handleError(error, t('requests.errors.reschedule', {
+        defaultValue: 'Failed to reschedule appointment',
+      }));
+    } finally {
+      setIsRescheduling(false);
     }
   };
 
@@ -698,6 +762,65 @@ export default function AppointmentRequestsPanel({
                 <div>
                   <div className="font-semibold text-gray-700 mb-1">{t('requests.detail.labels.description', { defaultValue: 'Description' })}</div>
                   <div className="text-sm bg-gray-50 p-3 rounded border">{selectedRequest.description}</div>
+                </div>
+              )}
+
+              {/* Reschedule — only for approved requests. Moves the appointment
+                  and re-sends the linked Teams meeting invite. */}
+              {selectedRequest.status === 'approved' && (
+                <div className="space-y-4 border-t pt-4">
+                  <h3 className="font-semibold text-lg">{t('requests.reschedule.title', { defaultValue: 'Reschedule' })}</h3>
+                  {!showRescheduleForm ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button
+                        id="reschedule-request"
+                        type="button"
+                        variant="outline"
+                        onClick={handleOpenReschedule}
+                      >
+                        <Clock className="h-4 w-4 mr-2" />
+                        {t('requests.reschedule.actions.open', { defaultValue: 'Reschedule appointment' })}
+                      </Button>
+                      {selectedRequest.online_meeting_url && (
+                        <span className="text-sm text-gray-500">
+                          {t('requests.reschedule.teamsNote', {
+                            defaultValue: 'Attendees will receive an updated Microsoft Teams meeting invite.',
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <Label>{t('requests.reschedule.fields.newDateTime', { defaultValue: 'New Date & Time' })}</Label>
+                        <DateTimePicker
+                          id="reschedule-datetime"
+                          value={rescheduleDateTime || undefined}
+                          onChange={(date) => setRescheduleDateTime(date || null)}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          id="confirm-reschedule"
+                          onClick={handleReschedule}
+                          disabled={isRescheduling}
+                          className="flex-1"
+                        >
+                          <Check className="h-4 w-4 mr-2" />
+                          {t('requests.reschedule.actions.confirm', { defaultValue: 'Confirm reschedule' })}
+                        </Button>
+                        <Button
+                          id="cancel-reschedule"
+                          variant="outline"
+                          onClick={() => setShowRescheduleForm(false)}
+                          disabled={isRescheduling}
+                          className="flex-1"
+                        >
+                          {t('requests.reschedule.actions.cancel', { defaultValue: 'Cancel' })}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
