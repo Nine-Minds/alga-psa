@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 (globalThis as unknown as { React?: typeof React }).React = React;
 
 const getCurrentUserMock = vi.fn();
+const getCurrentUserPermissionsMock = vi.fn();
 const getCurrentTenantProductMock = vi.fn();
 const getConsolidatedTicketDataMock = vi.fn();
 const getSurveyTicketSummaryMock = vi.fn();
@@ -15,6 +16,7 @@ function MspTicketDetailsContainerClientMock() {
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: getCurrentUserMock,
+  getCurrentUserPermissions: getCurrentUserPermissionsMock,
 }));
 
 vi.mock('@/lib/productAccess', () => ({
@@ -23,6 +25,7 @@ vi.mock('@/lib/productAccess', () => ({
 
 vi.mock('@alga-psa/tickets/actions/optimizedTicketActions', () => ({
   getConsolidatedTicketData: getConsolidatedTicketDataMock,
+  getAdjacentTicketIds: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({
@@ -72,6 +75,7 @@ describe('MSP ticket details page product composition', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getCurrentUserMock.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1' });
+    getCurrentUserPermissionsMock.mockResolvedValue(null);
     getConsolidatedTicketDataMock.mockResolvedValue({
       ticket: {
         ticket_id: 'ticket-1',
