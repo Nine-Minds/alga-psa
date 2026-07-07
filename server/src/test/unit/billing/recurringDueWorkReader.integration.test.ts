@@ -156,6 +156,11 @@ function createQueryBuilder(rows: Row[]) {
       resultRows = resultRows.filter((row) => values.includes(row[normalized]));
       return builder;
     }),
+    whereNotIn: vi.fn((column: string, values: any[]) => {
+      const normalized = normalizeColumn(column);
+      resultRows = resultRows.filter((row) => !values.includes(row[normalized]));
+      return builder;
+    }),
     whereNull: vi.fn((column: string) => {
       const normalized = normalizeColumn(column);
       resultRows = resultRows.filter((row) => row[normalized] == null);

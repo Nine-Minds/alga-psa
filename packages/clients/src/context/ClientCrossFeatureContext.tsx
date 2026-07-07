@@ -104,6 +104,8 @@ export interface ClientCrossFeatureCallbacks {
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;
   renderContractQuickAdd?: (props: ContractQuickAddRenderProps) => ReactNode;
+  /** Open a ticket in the shared drawer, keeping the current page underneath. */
+  openTicketDetails?: (ticketId: string) => Promise<void>;
   getTeamsMeetingCapability?: () => Promise<TeamsMeetingCapability>;
   scheduleTeamsMeeting?: (input: ScheduleTeamsMeetingFromClientInput) => Promise<ScheduleTeamsMeetingFromClientResult>;
   refreshMeetingRecordings?: (meetingId: string) => Promise<IOnlineMeeting>;

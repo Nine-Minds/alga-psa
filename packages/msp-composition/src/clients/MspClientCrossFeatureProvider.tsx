@@ -5,6 +5,7 @@ import { ClientCrossFeatureProvider } from '@alga-psa/clients/context/ClientCros
 import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { useTicketDetailsDrawer } from './useTicketDetailsDrawer';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
 import { getSlaPolicies } from '@alga-psa/sla/actions';
 import { ContractWizard, ContractDialog } from '@alga-psa/billing/components';
@@ -14,6 +15,8 @@ import MspClientTickets from './MspClientTickets';
 import MspContactTickets from './MspContactTickets';
 
 export function MspClientCrossFeatureProvider({ children }: { children: ReactNode }) {
+  const openTicketDetails = useTicketDetailsDrawer();
+
   const renderQuickAddTicket = useCallback(
     (props: QuickAddTicketRenderProps) => (
       <QuickAddTicket
@@ -125,12 +128,13 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       renderContactTickets,
       renderContractWizard,
       renderContractQuickAdd,
+      openTicketDetails,
       getTeamsMeetingCapability,
       scheduleTeamsMeeting,
       refreshMeetingRecordings,
       getSlaPolicies,
     }),
-    [renderQuickAddTicket, renderSurveySummaryCard, renderClientAssets, renderClientTickets, renderContactTickets, renderContractWizard, renderContractQuickAdd]
+    [renderQuickAddTicket, renderSurveySummaryCard, renderClientAssets, renderClientTickets, renderContactTickets, renderContractWizard, renderContractQuickAdd, openTicketDetails]
   );
 
   return (

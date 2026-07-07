@@ -1,0 +1,838 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration up creates user_cost_rates with expected columns, PK (tenant, rate_id), and index (tenant, user_id, effective_from); down drops it",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "user_cost_rates rejects negative cost_rate and effective_to < effective_from at the DB layer (CHECK constraints)",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Model-layer referential integrity (no DB FK on Citus): upsertCostRate rejects a rate for a nonexistent or cross-tenant user_id; NULL user_id (tenant default) succeeds",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F006",
+      "F010"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "invoice_time_entries.item_id migration adds nullable column; existing rows unaffected",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Model insert/list/update/delete round-trip for user cost rates, tenant-scoped (rows from another tenant invisible)",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Overlap validation rejects a new row overlapping an existing closed range for the same user",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Overlap validation rejects a new row overlapping an existing open-ended (effective_to NULL) range",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Overlap validation allows adjacent ranges (prev effective_to = 2026-03-31, next effective_from = 2026-04-01)",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Overlap validation scopes by user: same range for a different user (or the tenant default) is allowed",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Rate resolution picks user-specific rate over tenant default when both cover the work date",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Rate resolution falls back to tenant default when no user row covers the date",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Rate resolution returns NULL (uncosted) when neither user nor default covers the date",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Rate resolution respects effective boundaries: work on effective_from date uses the new rate; the day before uses the old rate",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Rate resolution joins on work_date exclusively (NOT NULL by schema): an entry whose start_time falls on a different calendar day than its work_date costs per the work_date rate",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F024"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "listCostRates requires billing.read: user without it gets permission error",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F053"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "upsertCostRate/deleteCostRate require billing.update: read-only billing user is rejected",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F053"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "upsertCostRate surfaces overlap error as a typed, user-displayable validation failure (not a 500)",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "covers-worked-time indicator true when the edited range intersects existing time entries for that user, false otherwise",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "listCostRates returns only internal users and is tenant-scoped",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Cost Rates screen renders user list with current rates and default banner (component test)",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Add-rate dialog: currency input stores cents (e.g. entering 62.50 persists 6250)",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Editing a rate whose range covers worked time shows the warning dialog before saving",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Empty state shown when tenant has zero cost-rate rows; links to add default",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Cost Rates screen has kebab-case ids on buttons/dialogs/inputs and no hardcoded strings",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F050"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Invoice generation from ticket time entries writes invoice_time_entries rows with the correct item_id for a 1-entry:1-item invoice",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Invoice generation from 3 time entries produces 3 invoice_charges rows (1:1) with 3 distinct item_ids on their link rows",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F020"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Manual invoice generation unaffected: no invoice_time_entries rows, no errors",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Regression: existing invoice generation integration tests still pass with the item_id change",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F021"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Revenue CTE counts sent/paid/partially_applied/overdue plus legacy open/completed/Unpaid invoices, and excludes draft/cancelled/pending/prepayment",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Revenue CTE uses allocated_amount from fixed details when present and net_amount otherwise, without double counting",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Discount line items (negative net_amount) reduce revenue in all groupings",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Tax is excluded from revenue (net_amount, not total with tax)",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Foreign-currency invoice amounts convert via exchange_rate_basis_points into tenant currency",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Labor cost = round(actual minutes x rate / 60) per entry; verified against hand-computed fixture including odd minutes rounding",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Non-billable time (billable_duration = 0) still accrues labor cost and hours",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F032"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Zero/negative-duration entries (end_time <= start_time) are clamped to 0 cost minutes and reported in zeroDurationEntryCount",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F048"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Uncosted entries contribute minutes but zero cost, and uncostedMinutes is reported at summary, client, and agreement levels",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Material revenue and cost computed from ticket_materials quantity x rate and quantity x service_catalog.cost",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "project_materials included in client totals; at agreement grain material revenue lands in the Ad-hoc row and material cost in the Unattributed row (no contract mapping exists for material charges)",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F030"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Material rows with currency_code different from tenant currency are flagged and excluded from converted totals",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "getProfitabilitySummary returns correct totals for a seeded fixture with known revenue/cost",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Summary EHR = revenue / actual hours; matches hand-computed fixture",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F032"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "getClientProfitability groups by client and matches per-client fixture expectations",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "'No client' row appears when ad_hoc / non_billable_category time exists in range (tickets.client_id is NOT NULL on cleanly migrated DBs, so the row is driven by clientless work-item types) and disappears otherwise",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "getAgreementProfitability revenue attribution uses invoice_charges.client_contract_id",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Agreement cost/hours attribution: time entries route via contract_line_id -> contract_lines -> contracts -> client_contracts (contract_id join; client_contract_lines is dropped)",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Ad-hoc/manual row aggregates revenue with NULL client_contract_id per client",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Unattributed row aggregates time with NULL contract_line_id per client",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "Reconciliation: agreement rows + ad-hoc + unattributed sum to the client row for revenue, cost, and minutes",
+    "implemented": true,
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Per-contract-line breakdown sums to its agreement row",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F054"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "EHR at client and agreement level null-safe when hours are zero (no division by zero, renders as em dash)",
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F055"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "getTicketProfitability returns one row per ticket with minutes, billable minutes, labor cost, material cost, revenue, margin",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "Ticket filter by clientId and clientContractId narrows rows correctly",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "Hourly ticket revenue exact path: item_id-linked entries produce revenue equal to invoice line amounts, tagged exact",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "Defensive N:1 handling: if multiple link rows share an item_id, by-billable_duration apportionment sums exactly to the item amount with no double counting",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F034"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "Legacy invoices (item_id NULL): revenue stays at agreement level as a tagged residual; no per-ticket revenue fabricated; agreement and client totals still reconcile",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "Fixed-line allocation: single fixed charge (with detail service period) spread across 3 tickets proportional to actual hours on the detail's contract line; allocations sum exactly to the charge (largest-remainder)",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "Fixed-line allocation with zero ticket hours in the period: charge revenue lands in an agreement-level residual, not lost or NaN",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F055"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "Bucket-line allocation: overage charges spread proportionally by hours, tagged allocated; fixture seeds the bucket base fee as a fixed charge (matching the engine, which emits overage-only bucket charges) and verifies it allocates under the fixed rule",
+    "implemented": true,
+    "featureIds": [
+      "F037",
+      "F036"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "Ticket materials revenue/cost included per ticket via billed_invoice_id and quantity x cost",
+    "implemented": true,
+    "featureIds": [
+      "F033",
+      "F026"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "Ticket view excludes project_task time entries",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "Multi-tenant isolation: identical fixtures in two tenants; each tenant's report contains only its own data (all four actions)",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "Code review check: every new query includes tenant in WHERE and JOIN conditions (manual checklist item on PR)",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "All four report actions reject users lacking billing.read",
+    "implemented": true,
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "Date-range boundaries: invoice on end date included, day after excluded; work_date on start date included, day before excluded",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F024"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "Timing split: work in month 1, invoice in month 2 — month-1 report shows cost only, month-2 shows revenue only",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F024"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "Empty range returns zero-valued summary and empty tables without errors",
+    "implemented": true,
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "Effective-date boundary within range: user rate changes mid-range; cost uses old rate before and new rate after the boundary (acceptance criterion 2)",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F024"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "ProfitabilityReport renders summary cards from getProfitabilitySummary (component test with mocked actions)",
+    "implemented": true,
+    "featureIds": [
+      "F040",
+      "F042"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "Date-range picker defaults to the last complete month and refetches on change",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "Client table sorts by margin and margin %; clicking a client drills into agreements",
+    "implemented": true,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "Agreement table shows Ad-hoc and Unattributed rows and expands to contract lines",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T073",
+    "description": "Ticket table shows attribution tag (exact/allocated) and uncosted indicator",
+    "implemented": true,
+    "featureIds": [
+      "F045"
+    ]
+  },
+  {
+    "id": "T074",
+    "description": "Timing-basis tooltip present on the summary header",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T075",
+    "description": "'Cost rates not configured' empty state shown when tenant has no rates; links to settings",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T076",
+    "description": "Uncosted-minutes, unapproved-minutes, zero-duration, uncosted-materials, and unconverted-revenue warnings each render when the actions report nonzero counts",
+    "implemented": true,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T077",
+    "description": "Error state renders on action failure consistent with sibling tabs",
+    "implemented": true,
+    "featureIds": [
+      "F049"
+    ]
+  },
+  {
+    "id": "T078",
+    "description": "getProfitabilityReport removed: no remaining references compile; Profitability tab uses new component only",
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T079",
+    "description": "contracts.profitability absent from ReportRegistry; build/typecheck passes and no references to the removed definition remain",
+    "implemented": true,
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T080",
+    "description": "i18n validation script passes with new keys in all language packs (generate-pseudo-locales + validate-translations run)",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T081",
+    "description": "npm run build passes for server and affected packages",
+    "implemented": true,
+    "featureIds": [
+      "F051",
+      "F052",
+      "F040"
+    ]
+  },
+  {
+    "id": "T082",
+    "description": "Fixture-based end-to-end scenario: seed client with hourly agreement + fixed agreement + materials + mixed rates; verify every acceptance criterion 1-6 number matches hand-computed spreadsheet",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F028",
+      "F029",
+      "F033",
+      "F036",
+      "F034"
+    ]
+  },
+  {
+    "id": "T083",
+    "description": "Report with cost rates configured but zero time entries: margin equals revenue, EHR shown as em dash",
+    "implemented": true,
+    "featureIds": [
+      "F055",
+      "F032"
+    ]
+  },
+  {
+    "id": "T084",
+    "description": "Large-fixture smoke: 10k time entries / 1k invoices in range completes within acceptable latency (baseline measurement recorded in scratchpad)",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T085",
+    "description": "Fixed-charge allocation window fallback: charge without detail service period uses invoices.billing_period_start/end and its ticket rows are tagged 'allocated (approximate)'",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T086",
+    "description": "Fixed charge without any detail rows stays at agreement level (unassigned-to-line residual); agreement totals still reconcile",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F031",
+      "F054"
+    ]
+  },
+  {
+    "id": "T087",
+    "description": "Foreign-currency invoice with NULL exchange_rate_basis_points excluded from converted totals and counted in the unconverted-revenue warning",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T088",
+    "description": "Unbilled material contributes cost only, never revenue; billed material revenue dated by invoice_date and filtered by countable status",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T089",
+    "description": "Billed material whose service has NULL service_catalog.cost is flagged as uncosted material, not treated as zero cost",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T090",
+    "description": "Multiple client_contracts rows for the same contract_id (junction-table possibility; zero in production today): entry cost lands in exactly one agreement (date range covering work_date wins, deterministic tiebreak); no double counting",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F054"
+    ]
+  },
+  {
+    "id": "T091",
+    "description": "Per-line revenue attribution via invoice_charge_details.config_id -> contract_line_service_configuration.contract_line_id matches fixture expectations",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T092",
+    "description": "Legacy invoice mixing time-based and fixed charges (NULL item_id): the entire invoice's revenue remains at agreement level; its tickets show labor cost with zero attributed revenue and the agreement residual carries the revenue",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T093",
+    "description": "Fixed charge with no detail period and NULL invoices.billing_period_start/end lands in the agreement-level residual (terminal rule); reconciliation holds",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F054"
+    ]
+  },
+  {
+    "id": "T094",
+    "description": "Time entry on a contract line whose contract has no covering client_contracts row: cost folds into the client's Unattributed row; agreement rows still reconcile to the client row",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F030",
+      "F054"
+    ]
+  },
+  {
+    "id": "T095",
+    "description": "Interaction time entries attribute cost to the interaction's client; appointment_request time to its client (client-attribution chain, not just ticket+project)",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T096",
+    "description": "Concurrent upsertCostRate calls for the same (tenant, user) with overlapping ranges: advisory lock serializes them and exactly one succeeds",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F010"
+    ]
+  },
+  {
+    "id": "T097",
+    "description": "With a seeded overlapping rate pair (validation bypassed), resolution still returns exactly one rate per entry and labor cost is not double-counted",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T098",
+    "description": "Unapproved (DRAFT/submitted) time accrues cost and is counted in unapprovedMinutes; approved time is not counted there",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F027"
+    ]
+  },
+  {
+    "id": "T099",
+    "description": "Migration on a Citus cluster: user_cost_rates creates and distributes successfully (bare table, guarded distribute, transaction:false, no FK failures)",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003"
+    ]
+  }
+]

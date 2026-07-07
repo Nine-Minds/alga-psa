@@ -13,6 +13,7 @@ import DefaultCurrencySettings from './DefaultCurrencySettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
 import RenewalAutomationSettings from './RenewalAutomationSettings';
+import CostRatesSettings from './CostRatesSettings';
 import { TaxSourceSettings } from '../tax/TaxSourceSettings';
 import { TaxRegionsManager } from '../tax/TaxRegionsManager';
 import TaxDelegationBanner from '../../tax/TaxDelegationBanner';
@@ -88,7 +89,7 @@ const BillingSettings: React.FC = () => {
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
 
-  const billingSectionIds: readonly string[] = ['general', 'quoting', 'tax', 'payments'];
+  const billingSectionIds: readonly string[] = ['general', 'cost-rates', 'quoting', 'tax', 'payments'];
 
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -203,6 +204,25 @@ const BillingSettings: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+      ),
+    },
+    {
+      id: 'cost-rates',
+      label: t('tabs.costRates', { defaultValue: 'Cost Rates' }),
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('costRates.title', { defaultValue: 'Cost Rates' })}</CardTitle>
+            <CardDescription>
+              {t('costRates.description', {
+                defaultValue: 'Manage fully burdened internal labor cost rates used by profitability reporting.'
+              })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CostRatesSettings />
+          </CardContent>
+        </Card>
       ),
     },
     {

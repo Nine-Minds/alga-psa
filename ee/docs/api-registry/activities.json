@@ -1,0 +1,79 @@
+{
+  "entries": [
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/activities"
+      },
+      "metadata": {
+        "displayName": "List My Activities",
+        "summary": "Fetch the authenticated user's unified activity list (the User Activities screen)",
+        "description": "Returns the caller's own work items exactly as the User Activities screen shows them: a unified, paginated fan-out across tickets, project tasks, schedule entries, ad-hoc to-dos, workflow tasks, time entries and notifications. Each activity carries id, type, title, status and priority. Filter with type (comma-separated: ticket, projectTask, schedule, workflowTask, timeEntry, notification, document; ad-hoc to-dos surface as schedule), status (open/closed/all), search, due-date and created-date windows; sort with sortBy/sortDirection. This endpoint is always scoped to the authenticated caller — use it for questions like \"what is on my plate\" or \"my open tickets on my activities screen\". For tenant-wide ticket queries use GET /api/v1/tickets instead.",
+        "examples": [
+          {
+            "name": "My open ticket activities",
+            "request": {
+              "query": {
+                "type": "ticket",
+                "status": "open",
+                "pageSize": 50
+              }
+            },
+            "notes": "Returns the ticket activities the caller sees on their User Activities screen. Each activity's id is the ticket UUID, usable with GET /api/v1/tickets/{id}."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/activities/groups"
+      },
+      "metadata": {
+        "displayName": "List My Activity Groups",
+        "summary": "Fetch the caller's named custom groups from the User Activities screen",
+        "description": "Returns the personal, user-defined groups the caller created on the User Activities screen (for example a group named \"Basics\"), each with its ordered items. Items are references: { activityId, activityType, sortOrder } — for activityType \"ticket\" the activityId is the ticket UUID. To answer \"what tickets are in my <name> group\": call this endpoint, find the group by groupName (case-insensitive match on what the user said), then resolve each item, e.g. ticket items via GET /api/v1/tickets/{id} or by matching ids against GET /api/v1/activities. Groups are per-user; pass targetUserId only to read another internal user's groups (requires user_schedule:update or user_schedule:read_all).",
+        "examples": [
+          {
+            "name": "What is in my \"Basics\" group?",
+            "request": {},
+            "notes": "Find the entry whose groupName is \"Basics\" in the response, then look up each item: for activityType \"ticket\" call GET /api/v1/tickets/{activityId} (or filter a GET /api/v1/activities?type=ticket result by the collected ids) to get titles and statuses."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/activities/groups/items"
+      },
+      "metadata": {
+        "displayName": "Move Activity Into My Group",
+        "summary": "Put one of the caller's activities into one of their custom groups",
+        "description": "Moves an activity into one of the caller's own User Activities groups at the given sortOrder position, removing it from any other of their groups first (an activity lives in at most one group). Get groupId values from GET /api/v1/activities/groups. Only organizes the caller's own view — it never changes the underlying ticket/task."
+      }
+    },
+    {
+      "match": {
+        "method": "delete",
+        "path": "/api/v1/activities/groups/items"
+      },
+      "metadata": {
+        "displayName": "Remove Activity From My Groups",
+        "summary": "Make one of the caller's activities ungrouped",
+        "description": "Removes an activity from all of the caller's User Activities groups so it shows as ungrouped. No-op when the activity is not in any group. Only affects the caller's own view."
+      }
+    },
+    {
+      "match": {
+        "method": "patch",
+        "path": "/api/v1/activities/groups/{groupId}/items"
+      },
+      "metadata": {
+        "displayName": "Reorder My Group's Activities",
+        "summary": "Persist a new ordering of the activities inside one of the caller's groups",
+        "description": "Replaces the ordering of a group's members: pass every item with its new sortOrder (position). Scoped to the caller's own groups from GET /api/v1/activities/groups."
+      }
+    }
+  ]
+}

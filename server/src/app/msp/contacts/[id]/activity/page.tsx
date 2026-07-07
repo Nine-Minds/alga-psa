@@ -1,8 +1,8 @@
 import { cache } from 'react';
-import { InteractionsFeed } from '@alga-psa/clients';
 import { getContactByContactNameId, getInteractionsForEntity } from '@alga-psa/clients/actions';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
+import ContactActivityFeed from './ContactActivityFeed';
 
 const getCachedContact = cache((id: string) => getContactByContactNameId(id));
 
@@ -32,11 +32,9 @@ export default async function ContactActivityPage({ params }: { params: Promise<
   return (
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-4">Activity Feed for {contact.full_name}</h1>
-        <InteractionsFeed
+        <ContactActivityFeed
           entityId={contact.contact_name_id}
-          entityType="contact"
-          interactions={interactions}
-          setInteractions={() => {}}
+          initialInteractions={interactions}
         />
       </div>
   );

@@ -192,10 +192,11 @@ async function linkAndMarkSourceBillingRecord(params: {
   tx: Knex.Transaction;
   tenant: string;
   invoiceId: string;
+  invoiceItemId: string;
   charge: IBillingCharge;
   linkedAt: string;
 }) {
-  const { tx, tenant, invoiceId, charge, linkedAt } = params;
+  const { tx, tenant, invoiceId, invoiceItemId, charge, linkedAt } = params;
 
   if (charge.type === 'time') {
     const entryId = (charge as { entryId?: string | null }).entryId;
@@ -214,6 +215,7 @@ async function linkAndMarkSourceBillingRecord(params: {
     await tenantScopedTable(tx, tenant, 'invoice_time_entries').insert({
       invoice_time_entry_id: uuidv4(),
       invoice_id: invoiceId,
+      item_id: invoiceItemId,
       entry_id: entryId,
       tenant,
       created_at: linkedAt,
@@ -1067,6 +1069,7 @@ export async function persistInvoiceCharges(
       tx,
       tenant,
       invoiceId,
+      invoiceItemId: invoiceItem.item_id,
       charge,
       linkedAt: now,
     });

@@ -106,12 +106,18 @@ describe('TicketService materials', () => {
         return createFirstRowBuilder({ service_id: 'service-1' });
       }
 
+      // Untracked product: the materials service skips stock consumption.
+      if (table === 'product_inventory_settings') {
+        return createFirstRowBuilder(undefined);
+      }
+
       if (table === 'ticket_materials') {
         return createInsertBuilder(insertSpy);
       }
 
       throw new Error(`Unexpected table ${table}`);
     }) as any;
+    knex.transaction = (fn: any) => fn(knex);
 
     vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex });
     vi.spyOn(service as any, 'getTicketMaterialById').mockResolvedValue({
@@ -135,7 +141,7 @@ describe('TicketService materials', () => {
       description: 'Replacement drive',
     }, context);
 
-    expect(ticketBuilder.where).toHaveBeenCalledWith('tickets.tenant', 'tenant-1');
+    expect(ticketBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-1', ticket_id: ticketId });
     expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({
       ticket_id: ticketId,
       client_id: 'client-1',
@@ -190,6 +196,7 @@ describe('TicketService materials', () => {
 
       throw new Error(`Unexpected table ${table}`);
     }) as any;
+    knex.transaction = (fn: any) => fn(knex);
 
     vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex });
 

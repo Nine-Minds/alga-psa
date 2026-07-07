@@ -231,6 +231,7 @@
       "fixAll": "Napraw wszystko",
       "fixAllBusy": "Przebudowywanie…",
       "fixAllResult": "Przebudowano {{schedules}} harmonogram(y) dla {{clients}} klient(ów).",
+      "fixAllNoop": "Wszystkie harmonogramy rozliczeń są już aktualne. Wszystko, co nadal znajduje się poniżej, wymaga indywidualnego sprawdzenia.",
       "fixAllError": "Nie udało się przebudować okresów usług. Spróbuj ponownie.",
       "fixAllDenied": "Nie masz uprawnień do przebudowy okresów usług."
     },

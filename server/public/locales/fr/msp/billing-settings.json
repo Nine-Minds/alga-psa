@@ -3,7 +3,8 @@
     "general": "Général",
     "quoting": "Citation",
     "tax": "Impôt",
-    "payments": "Paiements"
+    "payments": "Paiements",
+    "costRates": "Taux de coût"
   },
   "general": {
     "currency": {
@@ -112,7 +113,7 @@
       },
       "actions": {
         "save": "Sauvegarder",
-        "saving": "Économie..."
+        "saving": "Enregistrement..."
       },
       "toast": {
         "updated": "Les paramètres d'automatisation du renouvellement ont été mis à jour."
@@ -168,7 +169,7 @@
       "actions": {
         "cancel": "Annuler",
         "save": "Enregistrer les paramètres",
-        "saving": "Économie..."
+        "saving": "Enregistrement..."
       },
       "toast": {
         "saved": "Paramètres de source de taxe enregistrés avec succès."
@@ -205,7 +206,7 @@
         "deactivate": "Désactiver",
         "cancel": "Annuler",
         "save": "Enregistrer les modifications",
-        "saving": "Économie..."
+        "saving": "Enregistrement..."
       },
       "toast": {
         "created": "Région fiscale créée avec succès.",
@@ -270,7 +271,7 @@
         "delete": "Supprimer",
         "cancel": "Annuler",
         "save": "Sauvegarder",
-        "saving": "Économie...",
+        "saving": "Enregistrement...",
         "deleting": "Suppression..."
       },
       "delete": {
@@ -340,7 +341,7 @@
         "delete": "Supprimer",
         "cancel": "Annuler",
         "save": "Sauvegarder",
-        "saving": "Économie...",
+        "saving": "Enregistrement...",
         "deleting": "Suppression..."
       },
       "delete": {
@@ -392,7 +393,7 @@
         "delete": "Supprimer",
         "cancel": "Annuler",
         "save": "Sauvegarder",
-        "saving": "Économie...",
+        "saving": "Enregistrement...",
         "deleting": "Suppression..."
       },
       "delete": {
@@ -945,7 +946,7 @@
       "actions": {
         "cancel": "Annuler",
         "save": "Enregistrer le statut d'exonération fiscale",
-        "saving": "Économie..."
+        "saving": "Enregistrement..."
       }
     },
     "advanced": {
@@ -1204,6 +1205,91 @@
         "title": "Paramètres de paiement",
         "description": "Configurez le fonctionnement des liens de paiement avec vos factures"
       }
+    }
+  },
+  "costRates": {
+    "title": "Taux de coût",
+    "description": "Gérez les taux de coût de main-d'œuvre internes, charges comprises, utilisés par les rapports de rentabilité.",
+    "loading": "Chargement des taux de coût...",
+    "default": {
+      "title": "Taux de coût par défaut du locataire",
+      "current": "Valeur par défaut actuelle : {{rate}} depuis le {{date}}",
+      "missing": "Aucune valeur par défaut du locataire n'est configurée. Les utilisateurs sans taux spécifique ne seront pas valorisés.",
+      "history": "Historique du taux par défaut",
+      "empty": "Aucun taux par défaut pour le moment."
+    },
+    "empty": {
+      "title": "Les taux de coût ne sont pas configurés",
+      "description": "Définissez d'abord la valeur par défaut du locataire afin que les rapports puissent valoriser la main-d'œuvre des utilisateurs sans taux spécifique."
+    },
+    "table": {
+      "currentRate": "Taux actuel",
+      "actions": "Actions",
+      "usesDefault": "Utilise la valeur par défaut",
+      "uncosted": "Non valorisé",
+      "status": "Statut",
+      "user": "Utilisateur"
+    },
+    "history": {
+      "empty": "Aucun taux spécifique à un utilisateur."
+    },
+    "dialog": {
+      "title": "Taux de coût",
+      "description": "Saisissez le coût horaire de main-d'œuvre, charges comprises, dans la devise par défaut du locataire."
+    },
+    "fields": {
+      "user": {
+        "label": "Utilisateur",
+        "default": "Valeur par défaut du locataire"
+      },
+      "rate": {
+        "label": "Coût horaire"
+      },
+      "effectiveFrom": {
+        "label": "Début d'effet"
+      },
+      "effectiveTo": {
+        "label": "Fin d'effet"
+      }
+    },
+    "actions": {
+      "setDefault": "Définir la valeur par défaut",
+      "addRate": "Ajouter un taux",
+      "addUserRate": "Ajouter un taux utilisateur",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "saving": "Enregistrement...",
+      "continue": "Continuer"
+    },
+    "warning": {
+      "title": "Du temps travaillé existe sur cette période",
+      "description": "La modification de ce taux changera la rentabilité historique des saisies de temps comprises dans sa période d'effet.",
+      "body": "Ne continuez que s'il s'agit d'une correction intentionnelle."
+    },
+    "toast": {
+      "saved": "Taux de coût enregistré.",
+      "deleted": "Taux de coût supprimé."
+    },
+    "errors": {
+      "load": "Échec du chargement des taux de coût",
+      "save": "Échec de l'enregistrement du taux de coût",
+      "delete": "Échec de la suppression du taux de coût"
+    },
+    "formats": {
+      "noRate": "—",
+      "hourlyRate": "{{amount}}/h",
+      "dateRange": "{{start}} - {{end}}",
+      "openDateRange": "{{start}} - en cours"
+    },
+    "status": {
+      "current": "Actuel",
+      "scheduled": "Planifié",
+      "ended": "Terminé"
+    },
+    "sections": {
+      "userRates": "Taux par utilisateur"
     }
   }
 }

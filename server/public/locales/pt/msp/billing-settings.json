@@ -3,7 +3,8 @@
     "general": "Em geral",
     "quoting": "Citando",
     "tax": "Imposto",
-    "payments": "Pagamentos"
+    "payments": "Pagamentos",
+    "costRates": "Taxas de custo"
   },
   "general": {
     "currency": {
@@ -1204,6 +1205,91 @@
         "title": "Configurações de pagamento",
         "description": "Configure como os links de pagamento funcionam com suas faturas"
       }
+    }
+  },
+  "costRates": {
+    "title": "Taxas de custo",
+    "description": "Gerencie as taxas de custo de mão de obra interna com encargos totais usadas nos relatórios de rentabilidade.",
+    "loading": "Carregando taxas de custo...",
+    "default": {
+      "title": "Taxa de custo padrão do locatário",
+      "current": "Padrão atual: {{rate}} a partir de {{date}}",
+      "missing": "Nenhum padrão do locatário está configurado. Usuários sem substituições ficarão sem custo definido.",
+      "history": "Histórico da taxa padrão",
+      "empty": "Ainda não há taxas padrão."
+    },
+    "empty": {
+      "title": "As taxas de custo não estão configuradas",
+      "description": "Defina primeiro o padrão do locatário para que os relatórios possam custear a mão de obra de usuários sem substituições."
+    },
+    "table": {
+      "currentRate": "Taxa atual",
+      "actions": "Ações",
+      "usesDefault": "Usa o padrão",
+      "uncosted": "Sem custo definido",
+      "status": "Status",
+      "user": "Usuário"
+    },
+    "history": {
+      "empty": "Nenhuma taxa específica por usuário."
+    },
+    "dialog": {
+      "title": "Taxa de custo",
+      "description": "Insira o custo horário de mão de obra com encargos totais na moeda padrão do locatário."
+    },
+    "fields": {
+      "user": {
+        "label": "Usuário",
+        "default": "Padrão do locatário"
+      },
+      "rate": {
+        "label": "Custo por hora"
+      },
+      "effectiveFrom": {
+        "label": "Início da vigência"
+      },
+      "effectiveTo": {
+        "label": "Fim da vigência"
+      }
+    },
+    "actions": {
+      "setDefault": "Definir padrão",
+      "addRate": "Adicionar taxa",
+      "addUserRate": "Adicionar taxa por usuário",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "saving": "Salvando...",
+      "continue": "Continuar"
+    },
+    "warning": {
+      "title": "Existe tempo trabalhado neste período",
+      "description": "Alterar esta taxa mudará a rentabilidade histórica das entradas de tempo dentro do seu período de vigência.",
+      "body": "Continue apenas se esta for uma correção intencional."
+    },
+    "toast": {
+      "saved": "Taxa de custo salva.",
+      "deleted": "Taxa de custo excluída."
+    },
+    "errors": {
+      "load": "Falha ao carregar as taxas de custo",
+      "save": "Falha ao salvar a taxa de custo",
+      "delete": "Falha ao excluir a taxa de custo"
+    },
+    "formats": {
+      "noRate": "—",
+      "hourlyRate": "{{amount}}/h",
+      "dateRange": "{{start}} - {{end}}",
+      "openDateRange": "{{start}} - em aberto"
+    },
+    "status": {
+      "current": "Atual",
+      "scheduled": "Agendada",
+      "ended": "Encerrada"
+    },
+    "sections": {
+      "userRates": "Taxas por usuário"
     }
   }
 }

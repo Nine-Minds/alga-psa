@@ -137,7 +137,7 @@ const REPORTS: ReportDefinition[] = [
     titleKey: 'reportsPage.reportCatalog.contractReports.title',
     titleDefault: 'Contract Reports',
     descriptionKey: 'reportsPage.reportCatalog.contractReports.description',
-    descriptionDefault: 'Contract revenue, renewals, bucket utilization, and simple profitability.',
+    descriptionDefault: 'Contract revenue, renewals, bucket utilization, and profitability.',
     category: 'billing',
     products: ['psa'],
     minimumTier: 'pro',

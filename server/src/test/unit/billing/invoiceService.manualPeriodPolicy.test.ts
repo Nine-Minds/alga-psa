@@ -10,12 +10,14 @@ function normalizeColumnName(columnName: string) {
 function createMockTx(existingInvoiceCharges: Array<Record<string, any>> = []) {
   const inserts: Record<string, any[]> = {
     invoice_charges: [],
+    invoice_time_entries: [],
     service_catalog: [],
     tax_rates: [],
   };
 
   const tables: Record<string, Array<Record<string, any>>> = {
     invoice_charges: existingInvoiceCharges.map((row) => ({ ...row })),
+    invoice_time_entries: [],
     service_catalog: [],
     tax_rates: [],
   };
@@ -57,6 +59,36 @@ function createMockTx(existingInvoiceCharges: Array<Record<string, any>> = []) {
 }
 
 describe('manual invoice service-period policy', () => {
+  it('manual invoice charges do not create time-entry source links', async () => {
+    const { tx, inserts } = createMockTx();
+
+    await persistManualInvoiceCharges(
+      tx,
+      'invoice-1',
+      [
+        {
+          description: 'Manual adjustment',
+          quantity: 1,
+          rate: 2500,
+          is_discount: false,
+        },
+      ] as any,
+      {
+        client_id: 'client-1',
+        region_code: 'US-WA',
+      },
+      {
+        user: {
+          id: 'user-1',
+        },
+      } as any,
+      'tenant-1',
+    );
+
+    expect(inserts.invoice_charges).toHaveLength(1);
+    expect(inserts.invoice_time_entries).toHaveLength(0);
+  });
+
   it('T211: manually entered invoice lines remain intentionally periodless instead of creating canonical recurring service-period records', async () => {
     const { tx, inserts } = createMockTx();
 

@@ -3,7 +3,8 @@
     "general": "55555",
     "quoting": "55555",
     "tax": "55555",
-    "payments": "55555"
+    "payments": "55555",
+    "costRates": "55555"
   },
   "general": {
     "currency": {
@@ -1204,6 +1205,91 @@
         "title": "55555",
         "description": "55555"
       }
+    }
+  },
+  "costRates": {
+    "title": "55555",
+    "description": "55555",
+    "loading": "55555",
+    "default": {
+      "title": "55555",
+      "current": "55555 {{rate}} 55555 {{date}} 55555",
+      "missing": "55555",
+      "history": "55555",
+      "empty": "55555"
+    },
+    "empty": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "table": {
+      "currentRate": "55555",
+      "actions": "55555",
+      "usesDefault": "55555",
+      "uncosted": "55555",
+      "status": "55555",
+      "user": "55555"
+    },
+    "history": {
+      "empty": "55555"
+    },
+    "dialog": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "fields": {
+      "user": {
+        "label": "55555",
+        "default": "55555"
+      },
+      "rate": {
+        "label": "55555"
+      },
+      "effectiveFrom": {
+        "label": "55555"
+      },
+      "effectiveTo": {
+        "label": "55555"
+      }
+    },
+    "actions": {
+      "setDefault": "55555",
+      "addRate": "55555",
+      "addUserRate": "55555",
+      "edit": "55555",
+      "delete": "55555",
+      "cancel": "55555",
+      "save": "55555",
+      "saving": "55555",
+      "continue": "55555"
+    },
+    "warning": {
+      "title": "55555",
+      "description": "55555",
+      "body": "55555"
+    },
+    "toast": {
+      "saved": "55555",
+      "deleted": "55555"
+    },
+    "errors": {
+      "load": "55555",
+      "save": "55555",
+      "delete": "55555"
+    },
+    "formats": {
+      "noRate": "55555",
+      "hourlyRate": "55555 {{amount}} 55555",
+      "dateRange": "55555 {{start}} 55555 {{end}} 55555",
+      "openDateRange": "55555 {{start}} 55555"
+    },
+    "status": {
+      "current": "55555",
+      "scheduled": "55555",
+      "ended": "55555"
+    },
+    "sections": {
+      "userRates": "55555"
     }
   }
 }

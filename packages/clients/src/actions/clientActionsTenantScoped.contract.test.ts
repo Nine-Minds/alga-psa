@@ -3,15 +3,20 @@ import path from 'path';
 import { readFileSync } from 'node:fs';
 
 const source = readFileSync(path.resolve(__dirname, 'clientActions.ts'), 'utf8');
+const searchSqlSource = readFileSync(path.resolve(__dirname, '../lib/listSearchSql.ts'), 'utf8');
 
-function sectionBetween(startMarker: string, endMarker: string): string {
-  const start = source.indexOf(startMarker);
-  const end = source.indexOf(endMarker, start);
+function sectionOf(content: string, startMarker: string, endMarker: string): string {
+  const start = content.indexOf(startMarker);
+  const end = content.indexOf(endMarker, start);
 
   expect(start).toBeGreaterThanOrEqual(0);
   expect(end).toBeGreaterThan(start);
 
-  return source.slice(start, end);
+  return content.slice(start, end);
+}
+
+function sectionBetween(startMarker: string, endMarker: string): string {
+  return sectionOf(source, startMarker, endMarker);
 }
 
 describe('clientActions tenant-scoped query contract', () => {
@@ -108,7 +113,9 @@ describe('clientActions tenant-scoped query contract', () => {
   });
 
   it('uses facade-derived tables for paginated client indexed search joins', () => {
-    const searchSection = sectionBetween('function applyClientListIndexedSearchFilter', 'function buildDefaultClientLocationSubquery');
+    expect(source).toContain("import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';");
+
+    const searchSection = sectionOf(searchSqlSource, 'export function applyClientListIndexedSearchFilter', 'export function buildContactListSearchQuery');
 
     expect(searchSection).toContain('const scopedDb = tenantDb(trx, tenant);');
     expect(searchSection).toContain("const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');");

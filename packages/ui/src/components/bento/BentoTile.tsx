@@ -18,6 +18,12 @@ interface BentoTileProps {
   /** When set, the tile body is replaced by a visible error state (fail fast, no blank cards). */
   error?: string | null;
   className?: string;
+  /**
+   * Replaces the default border/background tokens (e.g. an amber alert tile).
+   * A replacement, not an addition — appending would leave two competing
+   * background/border classes with stylesheet-order-dependent results.
+   */
+  surfaceClassName?: string;
   children: React.ReactNode;
 }
 
@@ -26,7 +32,7 @@ interface BentoTileProps {
  * ContentCard look (card token background, border, rounded corners) so Grid
  * and Entry read as the same product.
  */
-export function BentoTile({ id, title, icon, action, subtitle, error, className, children }: BentoTileProps) {
+export function BentoTile({ id, title, icon, action, subtitle, error, className, surfaceClassName, children }: BentoTileProps) {
   return (
     // ReflectionContainer's div is the element the parent grid/flex actually
     // lays out, so `className` (col-span etc.) must land there, not on the
@@ -34,7 +40,7 @@ export function BentoTile({ id, title, icon, action, subtitle, error, className,
     <ReflectionContainer id={id} label={title ?? id} className={`min-w-0 ${className ?? ''}`}>
       <section
         id={id}
-        className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 flex flex-col min-w-0 h-full"
+        className={`rounded-lg border p-4 flex flex-col min-w-0 h-full ${surfaceClassName ?? 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]'}`}
       >
         {title ? (
           <div className="flex items-center gap-2 mb-2">

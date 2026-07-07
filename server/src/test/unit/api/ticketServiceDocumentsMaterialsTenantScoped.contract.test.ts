@@ -44,10 +44,19 @@ describe('ticket service documents and materials tenant-scoped query contract', 
     expect(materialsSection).toContain("tenantScopedTable(knex, 'ticket_materials as tm', context.tenant)");
     expect(materialsSection).not.toContain("'tm.tenant': context.tenant");
 
-    expect(addMaterialSection).toContain("tenantScopedTable(knex, 'tickets', context.tenant)");
-    expect(addMaterialSection).toContain("tenantScopedTable(knex, 'service_catalog', context.tenant)");
+    // addTicketMaterial delegates to the canonical materials service (F048);
+    // tenant scoping is asserted on that root below.
+    expect(addMaterialSection).toContain('await addMaterial(');
+    expect(addMaterialSection).toContain('context.tenant');
     expect(addMaterialSection).not.toContain('.where({ ticket_id: ticketId, tenant: context.tenant })');
     expect(addMaterialSection).not.toMatch(/\.where\(\{\s*tenant:\s*context\.tenant,\s*service_id:\s*data\.service_id/s);
+
+    const materialsLibSource = readFileSync(
+      resolve(__dirname, '../../../../../packages/inventory/src/lib/materials.ts'),
+      'utf8',
+    );
+    expect(materialsLibSource).toContain('.where({ tenant, [cfg.parentPk]: input.parent_id })');
+    expect(materialsLibSource).toMatch(/\.where\(\{\s*tenant,\s*service_id:\s*input\.service_id,\s*item_kind:\s*'product'\s*\}\)/);
 
     expect(getDocumentSection).toContain("tenantScopedTable(knex, 'documents as d', context.tenant)");
     expect(getDocumentSection).not.toContain("'d.tenant': context.tenant");

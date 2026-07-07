@@ -4,6 +4,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import { getContactAvatarUrlsBatchAsync } from '../lib/documentsHelpers';
 import type {
   ClientAttentionFlag,
   ClientAttentionSeverity,
@@ -199,16 +200,21 @@ async function fetchPeople(
   // Phones live in contact_phone_numbers; pick each contact's default
   // (falling back to the first by display order).
   const contactIds = rows.map((row: any) => row.contact_name_id);
-  const phoneRows = contactIds.length
-    ? await trx('contact_phone_numbers')
-      .where({ tenant })
-      .whereIn('contact_name_id', contactIds)
-      .select('contact_name_id', 'phone_number', 'is_default', 'display_order')
-      .orderBy([
-        { column: 'is_default', order: 'desc' },
-        { column: 'display_order', order: 'asc' },
-      ])
-    : [];
+  const [phoneRows, avatarUrls] = await Promise.all([
+    contactIds.length
+      ? trx('contact_phone_numbers')
+        .where({ tenant })
+        .whereIn('contact_name_id', contactIds)
+        .select('contact_name_id', 'phone_number', 'is_default', 'display_order')
+        .orderBy([
+          { column: 'is_default', order: 'desc' },
+          { column: 'display_order', order: 'asc' },
+        ])
+      : Promise.resolve([]),
+    contactIds.length
+      ? getContactAvatarUrlsBatchAsync(contactIds, tenant)
+      : Promise.resolve(new Map<string, string | null>()),
+  ]);
   const phoneByContact = new Map<string, string>();
   for (const phoneRow of phoneRows as any[]) {
     if (!phoneByContact.has(phoneRow.contact_name_id)) {
@@ -225,6 +231,7 @@ async function fetchPeople(
       email: row.email ?? null,
       phone: phoneByContact.get(row.contact_name_id) ?? null,
       is_default: Boolean(defaultContactId && row.contact_name_id === defaultContactId),
+      avatarUrl: avatarUrls.get(row.contact_name_id) ?? null,
     })),
   };
 }

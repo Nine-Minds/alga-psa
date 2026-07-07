@@ -184,7 +184,7 @@ describe('AccountingExportService partial delivery handling', () => {
       });
 
       expect(batch.status).toBe('needs_attention');
-      expect(batch.notes).toContain('1 of 2 invoice(s) failed to deliver');
+      expect(batch.notes).toContain('1 of 2 document(s) failed to deliver');
       expect(batch.delivered_at).toBeTruthy();
 
       expect(publishSpy).not.toHaveBeenCalledWith(

@@ -161,6 +161,7 @@ export interface ClientPulseContact {
   /** Default number from contact_phone_numbers, when one exists. */
   phone: string | null;
   is_default: boolean;
+  avatarUrl: string | null;
 }
 
 export interface ClientPulsePeople {

@@ -136,8 +136,14 @@ export const getContactByContactNameId = withAuth(async (
 
     // Fetch contact with client information
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => ContactModel.getContactById(contactNameId, tenant, trx));
+    if (!contact) {
+      return null;
+    }
 
-    return contact || null;
+    // The model doesn't resolve avatars (they live in document associations),
+    // but single-contact reads feed avatar-bearing surfaces (bento hero, quick view).
+    const avatarUrlsMap = await getContactAvatarUrlsBatchAsync([contact.contact_name_id], tenant);
+    return { ...contact, avatarUrl: avatarUrlsMap.get(contact.contact_name_id) ?? null };
   } catch (err) {
     console.error('Error getting contact by contact_name_id:', err);
 

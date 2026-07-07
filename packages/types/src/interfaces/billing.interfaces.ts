@@ -7,6 +7,17 @@ export interface IBillingPeriod extends TenantEntity {
   endDate: ISO8601String;
 }
 
+export interface IUserCostRate extends TenantEntity {
+  rate_id: string;
+  user_id: string | null;
+  cost_rate: number;
+  effective_from: ISO8601String;
+  effective_to: ISO8601String | null;
+  created_at?: ISO8601String | Date;
+  updated_at?: ISO8601String | Date;
+  created_by?: string | null;
+}
+
 export interface IFixedPriceCharge extends IBillingCharge, TenantEntity {
   serviceId?: string;
   serviceName: string;

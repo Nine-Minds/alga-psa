@@ -1395,7 +1395,7 @@ it('T001/T004: recurring due-work marks a contract-hourly window as approval-blo
   expect(blockedCandidate?.members[0]?.approvalBlockedEntryCount).toBe(1);
 }, HOOK_TIMEOUT);
 
-it('parity: recurring due-work blocks uniquely assignable unassigned hourly time on the persisted service-period end date and treats null approval status as non-approved', async () => {
+it('parity: recurring due-work blocks uniquely assignable unassigned hourly time inside the half-open service period and ignores the exclusive end date', async () => {
   setupCommonMocks({ tenantId, userId: 'approval-unique-unassigned-user', permissionCheck: () => true });
 
   const { contextLike } = await createClientWithRecurringCycles({
@@ -1442,6 +1442,14 @@ it('parity: recurring due-work blocks uniquely assignable unassigned hourly time
     startTime: '2025-03-07T10:00:00.000Z',
     endTime: '2025-03-07T11:00:00.000Z',
     approvalStatus: null,
+  });
+  await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId,
+    serviceId: hourlyLine.serviceId,
+    contractLineId: null,
+    startTime: '2025-03-08T10:00:00.000Z',
+    endTime: '2025-03-08T11:00:00.000Z',
+    approvalStatus: 'SUBMITTED',
   });
 
   const dueWork = await getAvailableRecurringDueWorkAction({
@@ -3079,6 +3087,10 @@ it('T016/T018/T049/T076/T080/T087: recurring client-cadence preview, generation,
     page: 1,
     pageSize: 10,
     searchTerm: 'Client Happy Path Reader',
+    dateRange: {
+      from: currentPeriodStart,
+      to: nextPeriodStart,
+    },
   });
   const dueRows = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
   const dueRow = dueRows.find((row) =>

@@ -342,7 +342,7 @@ describe('Contract PO UI flows', () => {
       expect(getAvailableRecurringDueWorkMock).toHaveBeenCalled();
     });
 
-    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!
+    const readyTable = (await screen.findAllByTestId('automatic-invoices-table')).at(-1)!
     const checkboxes = within(readyTable).getAllByRole('checkbox');
     expect(checkboxes.length).toBeGreaterThanOrEqual(2);
     fireEvent.click(checkboxes[0]!);
@@ -400,7 +400,7 @@ describe('Contract PO UI flows', () => {
       expect(getAvailableRecurringDueWorkMock).toHaveBeenCalled();
     });
 
-    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!
+    const readyTable = (await screen.findAllByTestId('automatic-invoices-table')).at(-1)!
     const checkboxes = within(readyTable).getAllByRole('checkbox');
     expect(checkboxes.length).toBeGreaterThanOrEqual(2);
     fireEvent.click(checkboxes[0]!);
@@ -485,7 +485,7 @@ describe('Contract PO UI flows', () => {
       expect(getAvailableRecurringDueWorkMock).toHaveBeenCalled();
     });
 
-    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!
+    const readyTable = (await screen.findAllByTestId('automatic-invoices-table')).at(-1)!
     const checkbox = within(readyTable).getAllByRole('checkbox')[0];
     fireEvent.click(checkbox!);
 
@@ -552,7 +552,7 @@ describe('Contract PO UI flows', () => {
       expect(screen.getByText('Zenith Health')).toBeInTheDocument();
     });
 
-    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    const readyTable = (await screen.findAllByTestId('automatic-invoices-table')).at(-1)!;
     const checkbox = within(readyTable).getAllByRole('checkbox')[0];
     fireEvent.click(checkbox!);
     fireEvent.click(
@@ -587,7 +587,7 @@ describe('Contract PO UI flows', () => {
       expect(screen.getByText('Alpha Co')).toBeInTheDocument();
     });
 
-    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    const readyTable = (await screen.findAllByTestId('automatic-invoices-table')).at(-1)!;
     fireEvent.click(within(readyTable).getAllByRole('checkbox')[0]!);
     fireEvent.click(
       screen.getByRole('button', { name: /Generate Invoices \(1\)/i }),
@@ -664,7 +664,7 @@ describe('Contract PO UI flows', () => {
       expect(screen.getByText('Zenith Health')).toBeInTheDocument();
     });
 
-    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    const readyTable = (await screen.findAllByTestId('automatic-invoices-table')).at(-1)!;
     const checkbox = within(readyTable).getAllByRole('checkbox')[0];
     fireEvent.click(checkbox!);
     fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));

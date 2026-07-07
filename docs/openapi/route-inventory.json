@@ -146,6 +146,17 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/auth/captcha-config",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/auth/captcha-config/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/auth/e2e/google/authorize",
     "methods": [
       "GET"
@@ -368,12 +379,67 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/billing/complete-reactivation",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/billing/complete-reactivation/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/billing/licence-count",
     "methods": [
       "GET",
       "POST"
     ],
     "route_file": "server/src/app/api/billing/licence-count/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/billing/reactivation-password-reset",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/billing/reactivation-password-reset/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/billing/reactivation-token",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/billing/reactivation-token/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/billing/reactivation-token/session",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/billing/reactivation-token/session/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/billing/request-reactivation",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/billing/request-reactivation/route.ts",
     "controller": "",
     "controller_import": "",
     "controller_file": ""
@@ -1184,6 +1250,18 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/integrations/hudu",
+    "methods": [
+      "GET",
+      "OPTIONS"
+    ],
+    "route_file": "server/src/app/api/integrations/hudu/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/integrations/ninjaone/callback",
     "methods": [
       "GET"
@@ -1321,6 +1399,52 @@
       "POST"
     ],
     "route_file": "server/src/app/api/internal/ext-storage/install/[installId]/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/mcp",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/mcp/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/mcp/oauth/authorize",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/mcp/oauth/authorize/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/mcp/oauth/revoke",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/mcp/oauth/revoke/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/mcp/oauth/token",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/mcp/oauth/token/route.ts",
     "controller": "",
     "controller_import": "",
     "controller_file": ""
@@ -1675,6 +1799,85 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/v1/activities",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/activities/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/activities/ad-hoc",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/activities/ad-hoc/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/activities/ad-hoc/{id}",
+    "methods": [
+      "DELETE",
+      "PATCH"
+    ],
+    "route_file": "server/src/app/api/v1/activities/ad-hoc/[id]/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/activities/ad-hoc/{id}/done",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/activities/ad-hoc/[id]/done/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/activities/groups",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/activities/groups/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/activities/groups/items",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/activities/groups/items/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/activities/groups/{groupId}/items",
+    "methods": [
+      "PATCH"
+    ],
+    "route_file": "server/src/app/api/v1/activities/groups/[groupId]/items/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/v1/admin/telemetry-settings",
     "methods": [
       "GET",
@@ -1692,6 +1895,42 @@
       "POST"
     ],
     "route_file": "server/src/app/api/v1/ai/document-assist/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/appliance-installs",
+    "methods": [
+      "GET",
+      "OPTIONS"
+    ],
+    "route_file": "server/src/app/api/v1/appliance-installs/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/appliance-installs/access",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/appliance-installs/access/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/appliance-installs/{tenantId}",
+    "methods": [
+      "GET",
+      "OPTIONS"
+    ],
+    "route_file": "server/src/app/api/v1/appliance-installs/[tenantId]/route.ts",
     "controller": "",
     "controller_import": "",
     "controller_file": ""
@@ -3878,6 +4117,110 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/v1/mcp/agents",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PATCH",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/mcp/agents/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/mcp/audit",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/mcp/audit/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/mcp/connect/callback",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/mcp/connect/callback/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/mcp/connect/start",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/mcp/connect/start/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/mcp/connections",
+    "methods": [
+      "DELETE",
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/mcp/connections/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/mcp/idp-providers",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/mcp/idp-providers/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/mcp/idp-suggestions",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/mcp/idp-suggestions/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/mcp/platform-providers",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/mcp/platform-providers/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/mcp/roles",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/mcp/roles/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/v1/meta/docs",
     "methods": [
       "GET"
@@ -3905,6 +4248,17 @@
       "GET"
     ],
     "route_file": "server/src/app/api/v1/meta/health/route.ts",
+    "controller": "ApiMetadataController",
+    "controller_import": "@/lib/api/controllers/ApiMetadataController",
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/meta/mcp-registry",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/meta/mcp-registry/route.ts",
     "controller": "ApiMetadataController",
     "controller_import": "@/lib/api/controllers/ApiMetadataController",
     "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts"
@@ -6927,6 +7281,85 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/v1/workflows/tasks",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/tasks/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/tasks/{id}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/tasks/[id]/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/tasks/{id}/claim",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/tasks/[id]/claim/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/tasks/{id}/complete",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/tasks/[id]/complete/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/tasks/{id}/unclaim",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/tasks/[id]/unclaim/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/webhooks/alternative-payments",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/webhooks/alternative-payments/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/webhooks/levelio",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/webhooks/levelio/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/webhooks/ninjaone",
     "methods": [
       "GET",
@@ -7197,39 +7630,6 @@
   },
   {
     "edition": "CE",
-    "route_path": "/api/workflow-runs/{runId}/requeue",
-    "methods": [
-      "POST"
-    ],
-    "route_file": "server/src/app/api/workflow-runs/[runId]/requeue/route.ts",
-    "controller": "",
-    "controller_import": "",
-    "controller_file": ""
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/workflow-runs/{runId}/resume",
-    "methods": [
-      "POST"
-    ],
-    "route_file": "server/src/app/api/workflow-runs/[runId]/resume/route.ts",
-    "controller": "",
-    "controller_import": "",
-    "controller_file": ""
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/workflow-runs/{runId}/retry",
-    "methods": [
-      "POST"
-    ],
-    "route_file": "server/src/app/api/workflow-runs/[runId]/retry/route.ts",
-    "controller": "",
-    "controller_import": "",
-    "controller_file": ""
-  },
-  {
-    "edition": "CE",
     "route_path": "/api/workflow-runs/{runId}/steps",
     "methods": [
       "GET"
@@ -7379,6 +7779,72 @@
       "GET"
     ],
     "route_file": "ee/server/src/app/api/auth/microsoft/entra/callback/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/billing/check-tenant",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "ee/server/src/app/api/billing/check-tenant/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/billing/complete-reactivation",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "ee/server/src/app/api/billing/complete-reactivation/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/billing/reactivation-password-reset",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "ee/server/src/app/api/billing/reactivation-password-reset/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/billing/reactivation-token",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "ee/server/src/app/api/billing/reactivation-token/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/billing/reactivation-token/session",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "ee/server/src/app/api/billing/reactivation-token/session/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/billing/request-reactivation",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "ee/server/src/app/api/billing/request-reactivation/route.ts",
     "controller": "",
     "controller_import": "",
     "controller_file": ""
@@ -7758,6 +8224,17 @@
   },
   {
     "edition": "EE",
+    "route_path": "/api/integrations/hudu",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "ee/server/src/app/api/integrations/hudu/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
     "route_path": "/api/integrations/ninjaone/callback",
     "methods": [
       "GET"
@@ -7931,6 +8408,39 @@
       "POST"
     ],
     "route_file": "ee/server/src/app/api/teams/quick-actions/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/v1/appliance-installs",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "ee/server/src/app/api/v1/appliance-installs/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/v1/appliance-installs/access",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "ee/server/src/app/api/v1/appliance-installs/access/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/v1/appliance-installs/{tenantId}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "ee/server/src/app/api/v1/appliance-installs/[tenantId]/route.ts",
     "controller": "",
     "controller_import": "",
     "controller_file": ""
@@ -8309,6 +8819,18 @@
       "POST"
     ],
     "route_file": "ee/server/src/app/api/v1/tenant-management/tenants/[tenantId]/addons/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/webhooks/levelio",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "route_file": "ee/server/src/app/api/webhooks/levelio/route.ts",
     "controller": "",
     "controller_import": "",
     "controller_file": ""

@@ -3,7 +3,8 @@
     "general": "Allgemein",
     "quoting": "Zitieren",
     "tax": "Steuer",
-    "payments": "Zahlungen"
+    "payments": "Zahlungen",
+    "costRates": "Kostensätze"
   },
   "general": {
     "currency": {
@@ -1204,6 +1205,91 @@
         "title": "Zahlungseinstellungen",
         "description": "Konfigurieren Sie, wie Zahlungslinks mit Ihren Rechnungen funktionieren"
       }
+    }
+  },
+  "costRates": {
+    "title": "Kostensätze",
+    "description": "Verwalten Sie interne Arbeitskostensätze auf Vollkostenbasis, die für die Rentabilitätsberichte verwendet werden.",
+    "loading": "Kostensätze werden geladen...",
+    "default": {
+      "title": "Standardkostensatz des Mandanten",
+      "current": "Aktueller Standard: {{rate}} ab {{date}}",
+      "missing": "Es ist kein Mandantenstandard konfiguriert. Benutzer ohne individuelle Sätze bleiben ohne Kostensatz.",
+      "history": "Verlauf des Standardsatzes",
+      "empty": "Noch keine Standardsätze."
+    },
+    "empty": {
+      "title": "Es sind keine Kostensätze konfiguriert",
+      "description": "Legen Sie zuerst den Mandantenstandard fest, damit Berichte die Arbeitszeit von Benutzern ohne individuelle Sätze bewerten können."
+    },
+    "table": {
+      "currentRate": "Aktueller Satz",
+      "actions": "Aktionen",
+      "usesDefault": "Verwendet Standard",
+      "uncosted": "Ohne Kostensatz",
+      "status": "Status",
+      "user": "Benutzer"
+    },
+    "history": {
+      "empty": "Keine benutzerspezifischen Sätze."
+    },
+    "dialog": {
+      "title": "Kostensatz",
+      "description": "Geben Sie die Arbeitskosten pro Stunde auf Vollkostenbasis in der Standardwährung des Mandanten ein."
+    },
+    "fields": {
+      "user": {
+        "label": "Benutzer",
+        "default": "Mandantenstandard"
+      },
+      "rate": {
+        "label": "Kosten pro Stunde"
+      },
+      "effectiveFrom": {
+        "label": "Gültig ab"
+      },
+      "effectiveTo": {
+        "label": "Gültig bis"
+      }
+    },
+    "actions": {
+      "setDefault": "Standard festlegen",
+      "addRate": "Satz hinzufügen",
+      "addUserRate": "Benutzersatz hinzufügen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saving": "Speichern...",
+      "continue": "Fortfahren"
+    },
+    "warning": {
+      "title": "In diesem Zeitraum ist erfasste Arbeitszeit vorhanden",
+      "description": "Eine Änderung dieses Satzes verändert die historische Rentabilität für Zeiteinträge in seinem Gültigkeitszeitraum.",
+      "body": "Fahren Sie nur fort, wenn es sich um eine beabsichtigte Korrektur handelt."
+    },
+    "toast": {
+      "saved": "Kostensatz gespeichert.",
+      "deleted": "Kostensatz gelöscht."
+    },
+    "errors": {
+      "load": "Kostensätze konnten nicht geladen werden",
+      "save": "Kostensatz konnte nicht gespeichert werden",
+      "delete": "Kostensatz konnte nicht gelöscht werden"
+    },
+    "formats": {
+      "noRate": "—",
+      "hourlyRate": "{{amount}}/Std.",
+      "dateRange": "{{start}} - {{end}}",
+      "openDateRange": "{{start}} - offen"
+    },
+    "status": {
+      "current": "Aktuell",
+      "scheduled": "Geplant",
+      "ended": "Beendet"
+    },
+    "sections": {
+      "userRates": "Benutzersätze"
     }
   }
 }

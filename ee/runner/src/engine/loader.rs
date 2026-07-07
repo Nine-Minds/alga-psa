@@ -23,7 +23,10 @@ use wasmtime::{
     Config, Engine, InstanceAllocationStrategy, PoolingAllocationConfig, ResourceLimiter, Store,
 };
 use wasmtime_wasi::{WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView};
-use wasmtime_wasi_http::{WasiHttpCtx, WasiHttpView};
+use wasmtime_wasi_http::{
+    p2::{WasiHttpCtxView, WasiHttpView},
+    WasiHttpCtx,
+};
 use zstd::stream::read::Decoder as ZstdDecoder;
 
 use super::component;
@@ -110,12 +113,12 @@ impl WasiView for HostState {
 }
 
 impl WasiHttpView for HostState {
-    fn ctx(&mut self) -> &mut WasiHttpCtx {
-        &mut self.http
-    }
-
-    fn table(&mut self) -> &mut ResourceTable {
-        &mut self.table
+    fn http(&mut self) -> WasiHttpCtxView<'_> {
+        WasiHttpCtxView {
+            ctx: &mut self.http,
+            table: &mut self.table,
+            hooks: Default::default(),
+        }
     }
 }
 
@@ -276,7 +279,7 @@ impl ModuleLoader {
         tracing::info!("  - Adding WASI (preview2) APIs to linker");
         wasmtime_wasi::p2::add_to_linker_async(&mut linker)?;
         tracing::info!("  - Adding WASI HTTP APIs to linker");
-        wasmtime_wasi_http::add_only_http_to_linker_async(&mut linker)?;
+        wasmtime_wasi_http::p2::add_only_http_to_linker_async(&mut linker)?;
         tracing::info!("  - Adding component-specific host APIs to linker");
         add_component_host(&mut linker)?;
         tracing::info!("✓ Component linker fully configured with all host APIs");

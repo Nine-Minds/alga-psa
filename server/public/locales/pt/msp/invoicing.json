@@ -213,6 +213,7 @@
       "fixAll": "Corrigir tudo",
       "fixAllBusy": "Reconstruindo…",
       "fixAllResult": "Programações {{schedules}} reconstruídas em clientes {{clients}}.",
+      "fixAllNoop": "Todas as programações de faturamento já estão atualizadas. Qualquer item ainda listado abaixo precisa de revisão individual.",
       "fixAllError": "Não foi possível reconstruir os períodos de serviço. Por favor, tente novamente.",
       "fixAllDenied": "Você não tem permissão para reconstruir períodos de serviço."
     },
