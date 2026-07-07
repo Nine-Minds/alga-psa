@@ -100,6 +100,10 @@
       "receiveStock": "Receber estoque",
       "stockLedger": "Abrir razão de estoque"
     },
+    "loadError": {
+      "title": "Não foi possível carregar os dados de inventário em tempo real",
+      "body": "O painel mostra valores vazios até que o feed de dados seja concluído."
+    },
     "attention": {
       "allClear": "Tudo certo — nada precisa de atenção no momento.",
       "title": "Precisa de atenção",

@@ -100,6 +100,10 @@
       "receiveStock": "Ricevi giacenza",
       "stockLedger": "Apri registro giacenze"
     },
+    "loadError": {
+      "title": "Impossibile caricare i dati inventario in tempo reale",
+      "body": "La dashboard mostra valori vuoti finché il feed dati non riesce."
+    },
     "attention": {
       "allClear": "Tutto in ordine — al momento non c'è nulla che richieda attenzione.",
       "title": "Richiede attenzione",

@@ -100,6 +100,10 @@
       "receiveStock": "Recibir existencias",
       "stockLedger": "Abrir libro mayor de existencias"
     },
+    "loadError": {
+      "title": "No se pudieron cargar los datos de inventario en vivo",
+      "body": "El panel muestra valores vacíos hasta que la carga de datos se complete correctamente."
+    },
     "attention": {
       "allClear": "Todo en orden — nada requiere atención por ahora.",
       "title": "Requiere atención",

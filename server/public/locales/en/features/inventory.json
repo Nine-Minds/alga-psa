@@ -100,6 +100,10 @@
       "receiveStock": "Receive stock",
       "stockLedger": "Open stock ledger"
     },
+    "loadError": {
+      "title": "Could not load live inventory data",
+      "body": "The dashboard is showing empty values until the data feed succeeds."
+    },
     "attention": {
       "allClear": "All clear — nothing needs attention right now.",
       "title": "Needs attention",

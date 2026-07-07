@@ -100,6 +100,10 @@
       "receiveStock": "Voorraad ontvangen",
       "stockLedger": "Voorraadgrootboek openen"
     },
+    "loadError": {
+      "title": "Live voorraadgegevens konden niet worden geladen",
+      "body": "Het dashboard toont lege waarden totdat de gegevensfeed slaagt."
+    },
     "attention": {
       "allClear": "Alles in orde — er is momenteel niets dat aandacht vereist.",
       "title": "Vereist aandacht",

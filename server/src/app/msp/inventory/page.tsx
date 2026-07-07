@@ -68,13 +68,15 @@ export default async function InventoryDashboardPage() {
   }
 
   let data: InventoryDashboardData = EMPTY;
+  let loadError = false;
   try {
     data = await getInventoryDashboardData();
   } catch (err) {
+    loadError = true;
     console.error('inventory dashboard: getInventoryDashboardData failed', err);
   }
 
-  return <InventoryDashboard data={data} />;
+  return <InventoryDashboard data={data} loadError={loadError} />;
 }
 
 export const dynamic = 'force-dynamic';

@@ -13,6 +13,7 @@ import { CurrencyFormatProvider, useCurrencyFormat } from './dashboard/shared';
 
 interface InventoryDashboardProps {
   data: InventoryDashboardData;
+  loadError?: boolean;
 }
 
 const EMPTY: InventoryDashboardData = {
@@ -65,17 +66,17 @@ function pluralUnit(count: number, singular: string, plural: string): string {
   return `${count.toLocaleString()} ${count === 1 ? singular : plural}`;
 }
 
-export function InventoryDashboard({ data }: InventoryDashboardProps) {
+export function InventoryDashboard({ data, loadError }: InventoryDashboardProps) {
   const { i18n } = useTranslation('features/inventory');
   const d = data ?? EMPTY;
   return (
     <CurrencyFormatProvider currencyCode={d.currency_code ?? 'USD'} locale={i18n.language || 'en'}>
-      <InventoryDashboardBody data={d} />
+      <InventoryDashboardBody data={d} loadError={loadError} />
     </CurrencyFormatProvider>
   );
 }
 
-function InventoryDashboardBody({ data: d }: InventoryDashboardProps) {
+function InventoryDashboardBody({ data: d, loadError }: InventoryDashboardProps) {
   const { t } = useTranslation('features/inventory');
   const { money } = useCurrencyFormat();
   const header = d.header ?? EMPTY.header;
@@ -127,6 +128,19 @@ function InventoryDashboardBody({ data: d }: InventoryDashboardProps) {
           </Button>
         </div>
       </div>
+
+      {loadError ? (
+        <div
+          id="inventory-dashboard-load-error"
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300"
+        >
+          <div className="font-semibold">{t('dashboard.loadError.title', 'Could not load live inventory data')}</div>
+          <div className="mt-1 text-red-700 dark:text-red-300">
+            {t('dashboard.loadError.body', 'The dashboard is showing empty values until the data feed succeeds.')}
+          </div>
+        </div>
+      ) : null}
 
       <MoneyBand data={d} />
 

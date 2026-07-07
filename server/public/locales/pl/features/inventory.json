@@ -100,6 +100,10 @@
       "receiveStock": "Przyjmij zapas",
       "stockLedger": "Otwórz rejestr magazynowy"
     },
+    "loadError": {
+      "title": "Nie można załadować bieżących danych magazynowych",
+      "body": "Pulpit pokazuje puste wartości, dopóki pobieranie danych się nie powiedzie."
+    },
     "attention": {
       "allClear": "Wszystko w porządku — nic nie wymaga teraz uwagi.",
       "title": "Wymaga uwagi",

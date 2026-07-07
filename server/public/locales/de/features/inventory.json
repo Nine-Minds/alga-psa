@@ -100,6 +100,10 @@
       "receiveStock": "Bestand erfassen",
       "stockLedger": "Bestandsjournal öffnen"
     },
+    "loadError": {
+      "title": "Live-Inventardaten konnten nicht geladen werden",
+      "body": "Das Dashboard zeigt leere Werte, bis der Datenabruf erfolgreich ist."
+    },
     "attention": {
       "allClear": "Alles in Ordnung — derzeit ist nichts zu beachten.",
       "title": "Erfordert Aufmerksamkeit",

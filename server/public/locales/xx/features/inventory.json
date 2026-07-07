@@ -100,6 +100,10 @@
       "receiveStock": "11111",
       "stockLedger": "11111"
     },
+    "loadError": {
+      "title": "11111",
+      "body": "11111"
+    },
     "attention": {
       "allClear": "11111",
       "title": "11111",

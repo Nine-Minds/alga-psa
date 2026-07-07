@@ -100,6 +100,10 @@
       "receiveStock": "Réceptionner du stock",
       "stockLedger": "Ouvrir le registre de stock"
     },
+    "loadError": {
+      "title": "Impossible de charger les données d’inventaire en direct",
+      "body": "Le tableau de bord affiche des valeurs vides jusqu’à ce que le flux de données réussisse."
+    },
     "attention": {
       "allClear": "Tout est en ordre — rien ne nécessite d'attention pour le moment.",
       "title": "Nécessite une attention",
