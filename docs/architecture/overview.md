@@ -55,7 +55,7 @@ This document provides a high-level architectural overview of the open-source MS
     - `server/migrations/20241224184511_create_document_block_content.cjs`: Block-based content table
   * Features:
     - 1-to-1 relationship between documents and content
-    - Tenant isolation through RLS policies
+    - Tenant isolation through application-level tenant scoping (see [tenant-isolation.md](tenant-isolation.md))
     - Efficient metadata querying
     - Large text content separation
     - Rich text editing with BlockNote:
@@ -97,7 +97,7 @@ This document provides a high-level architectural overview of the open-source MS
 * **Email Notifications:** Comprehensive notification system with template management and tenant customization, integrated with the event bus system. Core components:
   * Database-driven templates:
     - `system_email_templates`: System-wide default templates (read-only)
-    - `tenant_email_templates`: Tenant-specific customizations with RLS
+    - `tenant_email_templates`: Tenant-specific customizations (tenant-scoped)
     - Template inheritance: Tenant templates can be cloned from system templates
   * Configuration and preferences:
     - Global settings per tenant (enable/disable, rate limits)
@@ -436,7 +436,7 @@ No code has been merged yet – this section serves as an architectural note so 
 
 **III. Key Design Considerations:**
 
-* **Multi-Tenancy:** Enforced through database schema and row-level security.
+* **Multi-Tenancy:** Enforced in the application layer: explicit `tenant` columns, Citus distribution, per-request tenant context, and the `tenantDb` query facade. There is no row-level security. See [tenant-isolation.md](tenant-isolation.md).
 
 * **Modularity:**
   * Achieved through the organization of modules in the `server/src/components` and `server/src/lib` directories.

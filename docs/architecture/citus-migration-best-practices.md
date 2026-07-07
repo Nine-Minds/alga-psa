@@ -129,6 +129,8 @@ if (isCitusDistributed) {
 }
 ```
 
+For new tenant tables, the shared helper `server/migrations/utils/citusDistribution.cjs` wraps this check: `ensureTenantDistribution(knex, 'my_table')` distributes on `tenant` colocated with `tenants`, and is a no-op on plain PostgreSQL or when the table is already distributed. Migrations that distribute must set `exports.config = { transaction: false }`. A new tenant table also needs registration in the query metadata registry — follow the checklist in [tenant-isolation.md](tenant-isolation.md).
+
 ### 2. Use Raw SQL for DDL
 
 Knex's schema builder may not handle Citus correctly. Use raw SQL:
