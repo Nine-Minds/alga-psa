@@ -284,6 +284,7 @@ describe('Teams integration actions', () => {
     expect(result).toEqual({
       success: false,
       error: 'Microsoft Teams integration requires the Teams add-on.',
+      addOnState: 'absent',
     });
   });
 
@@ -320,6 +321,7 @@ describe('Teams integration actions', () => {
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
 	        botConnectorConfigured: false,
+	        addOnState: 'active',
 	      },
 	    });
 
@@ -359,6 +361,7 @@ describe('Teams integration actions', () => {
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
 	        botConnectorConfigured: false,
+	        addOnState: 'active',
 	      },
 	    });
 
@@ -579,6 +582,7 @@ describe('Teams integration actions', () => {
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
 	        botConnectorConfigured: false,
+	        addOnState: 'active',
 	      },
 	    });
   });
@@ -729,6 +733,7 @@ describe('Teams integration actions', () => {
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
 	        botConnectorConfigured: false,
+	        addOnState: 'active',
 	      },
 	    });
     expect(microsoftConsumerBindings).toEqual([

@@ -2163,6 +2163,214 @@
         "botCredentialsBanner": {
           "hint": "Run diagnostics below for details.",
           "message": "The Teams bot cannot reply: bot connector credentials (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) are not configured on the server."
+        },
+        "wizard": {
+          "title": "Guided Teams setup",
+          "description": "Complete each step to get Microsoft Teams working for this tenant.",
+          "status": {
+            "complete": "Complete",
+            "current": "Current",
+            "incomplete": "Incomplete"
+          },
+          "validate": {
+            "error": "Validation failed",
+            "validating": "Validating...",
+            "profile": "Validate Microsoft profile",
+            "profileOk": "Microsoft profile credentials are valid.",
+            "permissions": "Probe Graph permissions",
+            "permissionsOk": "All required Graph permissions are granted.",
+            "permissionGranted": "Granted",
+            "permissionMissing": "Missing",
+            "bot": "Validate Bot Framework connector",
+            "botOk": "Bot Framework credentials are valid ({{appId}})."
+          },
+          "activationBlocked": "Validate the Microsoft profile above before activating Teams.",
+          "step": {
+            "microsoftProfile": {
+              "title": "Microsoft profile",
+              "description": "Select the Microsoft profile for Teams and validate its Graph credentials."
+            },
+            "graphPermissions": {
+              "title": "Graph permissions",
+              "description": "Confirm the required Microsoft Graph application permissions are granted and consented."
+            },
+            "botFramework": {
+              "title": "Bot Framework registration",
+              "description": "Register the Azure Bot and validate the deployment bot connector credentials."
+            },
+            "activate": {
+              "title": "Activate Teams",
+              "description": "Activate the Teams integration once the Microsoft profile is validated."
+            },
+            "package": {
+              "title": "Generate and download the package",
+              "description": "Build the Teams app package for the selected profile and deployment base URL.",
+              "hint": "Use the Teams Package card below to generate and download the app package."
+            },
+            "sideload": {
+              "title": "Sideload the app",
+              "description": "Upload the app package to Teams so users can install it.",
+              "body": "Upload the downloaded package to the Teams admin center (Manage apps then Upload new app) or sideload it from the Teams client."
+            },
+            "verify": {
+              "title": "Verify",
+              "description": "Run diagnostics and send a test message to confirm the integration works end to end.",
+              "hint": "Use the Diagnostics & Test Message card below to verify the setup end to end."
+            }
+          }
+        },
+        "runbook": {
+          "viewGuide": "View setup guide"
+        },
+        "deliveryLog": {
+          "title": "Teams delivery log",
+          "description": "Every Teams notification delivery attempt recorded for this tenant.",
+          "error": "Failed to load Teams delivery log",
+          "forbidden": "You do not have permission to view the Teams delivery log.",
+          "empty": "No Teams deliveries recorded yet.",
+          "refresh": "Refresh",
+          "loadMore": "Load more",
+          "loading": "Loading...",
+          "filter": {
+            "statusLabel": "Status",
+            "statusAll": "All statuses",
+            "categoryLabel": "Category",
+            "categoryAll": "All categories"
+          },
+          "columns": {
+            "createdAt": "Time",
+            "category": "Category",
+            "destination": "Destination",
+            "status": "Status",
+            "errorCode": "Error code",
+            "errorMessage": "Error message"
+          },
+          "status": {
+            "delivered": "Delivered",
+            "sent": "Sent",
+            "failed": "Failed",
+            "skipped": "Skipped"
+          },
+          "category": {
+            "assignment": "Assignment",
+            "customer_reply": "Customer reply",
+            "approval_request": "Approval request",
+            "escalation": "Escalation",
+            "sla_risk": "SLA risk"
+          }
+        },
+        "auditLog": {
+          "title": "Teams audit log",
+          "description": "Mutations executed from Teams bot, message extension, and quick-action surfaces.",
+          "error": "Failed to load Teams audit log",
+          "forbidden": "You do not have permission to view the Teams audit log.",
+          "empty": "No Teams audit events recorded yet.",
+          "refresh": "Refresh",
+          "loadMore": "Load more",
+          "loading": "Loading...",
+          "filter": {
+            "surfaceLabel": "Surface",
+            "surfaceAll": "All surfaces",
+            "actionLabel": "Action id",
+            "actionPlaceholder": "e.g. assign_ticket"
+          },
+          "surface": {
+            "bot": "Bot",
+            "message_extension": "Message extension",
+            "quick_action": "Quick action",
+            "tab": "Tab"
+          },
+          "columns": {
+            "createdAt": "Time",
+            "surface": "Surface",
+            "action": "Action",
+            "target": "Target",
+            "result": "Result",
+            "errorCode": "Error code"
+          },
+          "result": {
+            "success": "Success",
+            "failure": "Failure"
+          }
+        },
+        "troubleshooting": {
+          "title": "Delivery error reference",
+          "description": "What each Teams delivery error code means and how to resolve it.",
+          "show": "Show error reference",
+          "hide": "Hide error reference",
+          "columns": {
+            "code": "Error code",
+            "cause": "Cause",
+            "remedy": "Remedy"
+          },
+          "codes": {
+            "graph_unauthorized": {
+              "cause": "Microsoft Graph rejected the application token (401/403); a required Graph application permission is not consented.",
+              "remedy": "Grant admin consent for the required Graph permissions (for example TeamsActivity.Send) in the Azure app registration."
+            },
+            "user_not_mapped": {
+              "cause": "The recipient has not signed in to Alga PSA with Microsoft, so no account mapping exists.",
+              "remedy": "Have the user sign in with Microsoft (MSP portal SSO or the Teams tab) so their account is mapped."
+            },
+            "addon_inactive": {
+              "cause": "The Teams add-on is expired or absent, so sends are skipped while configuration is preserved.",
+              "remedy": "Renew the Teams add-on for this tenant."
+            },
+            "integration_inactive": {
+              "cause": "The Teams integration is not active for this tenant.",
+              "remedy": "Activate the Teams integration in settings."
+            },
+            "package_misconfigured": {
+              "cause": "The app package was never generated, or delivery prerequisites (app ID, base URL) are missing.",
+              "remedy": "Generate the Teams app package in settings, then retry."
+            },
+            "graph_not_found": {
+              "cause": "The Teams app is not installed for the recipient, so Microsoft Graph cannot target them (404).",
+              "remedy": "Install or org-allow the Alga PSA app for that user."
+            },
+            "graph_throttled": {
+              "cause": "Microsoft Graph throttled the request (429).",
+              "remedy": "Transient; Alga PSA retries with backoff. Investigate only if it persists."
+            },
+            "graph_server_error": {
+              "cause": "Microsoft Graph returned a server error (5xx).",
+              "remedy": "Transient Graph outage; Alga PSA retries. Wait and check Microsoft service health if it persists."
+            },
+            "transient": {
+              "cause": "A temporary failure (network or timeout) interrupted delivery.",
+              "remedy": "Retried automatically; no action needed unless failures persist."
+            },
+            "unknown": {
+              "cause": "The failure did not map to a known cause.",
+              "remedy": "Check the server logs for the delivery error detail and re-run diagnostics."
+            }
+          }
+        },
+        "paywall": {
+          "title": "Microsoft Teams add-on",
+          "description": "The Microsoft Teams integration requires the Teams add-on for this tenant.",
+          "includedTitle": "What's included",
+          "feature": {
+            "tab": "Personal tab: open Alga PSA inside Microsoft Teams.",
+            "bot": "Personal and group-chat bot for tickets, approvals, time, and notes.",
+            "messageExtension": "Message extension and quick actions to act on PSA records from any message.",
+            "meetings": "Teams meetings on appointment approvals with real Outlook/Teams calendar invites.",
+            "recordings": "Automatic capture of meeting recordings and transcripts onto interactions.",
+            "notifications": "Activity-feed and bot-DM notifications for assignments, replies, approvals, and SLA risk."
+          },
+          "cta": "Purchase Teams add-on",
+          "nonBilling": "Contact a billing administrator to purchase the Teams add-on for this tenant."
+        },
+        "addonExpiredBanner": {
+          "title": "Microsoft Teams add-on expired",
+          "message": "The Microsoft Teams add-on has expired. Your configuration and delivery history are preserved, but Teams notifications are being skipped until the add-on is renewed.",
+          "cta": "Renew Teams add-on"
+        },
+        "staleManifest": {
+          "title": "Teams app package is out of date",
+          "warning": "Your Teams app package is out of date — regenerate and re-upload.",
+          "regenerate": "Regenerate package",
+          "regenerating": "Regenerating..."
         }
       }
     },

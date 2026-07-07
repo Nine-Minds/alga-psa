@@ -2163,6 +2163,214 @@
         "botCredentialsBanner": {
           "hint": "Esegui la diagnostica qui sotto per i dettagli.",
           "message": "Il bot di Teams non può rispondere: le credenziali del connettore bot (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) non sono configurate sul server."
+        },
+        "wizard": {
+          "title": "Configurazione guidata di Teams",
+          "description": "Completa ogni passaggio per far funzionare Microsoft Teams per questo tenant.",
+          "status": {
+            "complete": "Completato",
+            "current": "Corrente",
+            "incomplete": "Incompleto"
+          },
+          "validate": {
+            "error": "Convalida non riuscita",
+            "validating": "Convalida in corso...",
+            "profile": "Convalida il profilo Microsoft",
+            "profileOk": "Le credenziali del profilo Microsoft sono valide.",
+            "permissions": "Verifica le autorizzazioni di Graph",
+            "permissionsOk": "Tutte le autorizzazioni di Graph richieste sono state concesse.",
+            "permissionGranted": "Concessa",
+            "permissionMissing": "Mancante",
+            "bot": "Convalida il connettore Bot Framework",
+            "botOk": "Le credenziali Bot Framework sono valide ({{appId}})."
+          },
+          "activationBlocked": "Convalida il profilo Microsoft qui sopra prima di attivare Teams.",
+          "step": {
+            "microsoftProfile": {
+              "title": "Profilo Microsoft",
+              "description": "Seleziona il profilo Microsoft per Teams e convalida le sue credenziali di Graph."
+            },
+            "graphPermissions": {
+              "title": "Autorizzazioni di Graph",
+              "description": "Conferma che le autorizzazioni dell'applicazione Microsoft Graph richieste siano state concesse e approvate."
+            },
+            "botFramework": {
+              "title": "Registrazione di Bot Framework",
+              "description": "Registra l'Azure Bot e convalida le credenziali del connettore bot di distribuzione."
+            },
+            "activate": {
+              "title": "Attiva Teams",
+              "description": "Attiva l'integrazione di Teams una volta convalidato il profilo Microsoft."
+            },
+            "package": {
+              "title": "Genera e scarica il pacchetto",
+              "description": "Crea il pacchetto dell'app Teams per il profilo selezionato e la base URL di distribuzione.",
+              "hint": "Usa la scheda Pacchetto Teams qui sotto per generare e scaricare il pacchetto dell'app."
+            },
+            "sideload": {
+              "title": "Carica l'app tramite sideload",
+              "description": "Carica il pacchetto dell'app su Teams affinché gli utenti possano installarla.",
+              "body": "Carica il pacchetto scaricato nell'interfaccia di amministrazione di Teams (Gestisci app, quindi Carica nuova app) oppure caricalo tramite sideload dal client Teams."
+            },
+            "verify": {
+              "title": "Verifica",
+              "description": "Esegui la diagnostica e invia un messaggio di prova per confermare che l'integrazione funzioni end-to-end.",
+              "hint": "Usa la scheda Diagnostica e messaggio di prova qui sotto per verificare la configurazione end-to-end."
+            }
+          }
+        },
+        "runbook": {
+          "viewGuide": "Visualizza la guida alla configurazione"
+        },
+        "deliveryLog": {
+          "title": "Registro di consegna di Teams",
+          "description": "Ogni tentativo di consegna delle notifiche di Teams registrato per questo tenant.",
+          "error": "Impossibile caricare il registro di consegna di Teams",
+          "forbidden": "Non disponi dell'autorizzazione per visualizzare il registro di consegna di Teams.",
+          "empty": "Nessuna consegna di Teams ancora registrata.",
+          "refresh": "Aggiorna",
+          "loadMore": "Carica altro",
+          "loading": "Caricamento...",
+          "filter": {
+            "statusLabel": "Stato",
+            "statusAll": "Tutti gli stati",
+            "categoryLabel": "Categoria",
+            "categoryAll": "Tutte le categorie"
+          },
+          "columns": {
+            "createdAt": "Ora",
+            "category": "Categoria",
+            "destination": "Destinazione",
+            "status": "Stato",
+            "errorCode": "Codice di errore",
+            "errorMessage": "Messaggio di errore"
+          },
+          "status": {
+            "delivered": "Consegnato",
+            "sent": "Inviato",
+            "failed": "Non riuscito",
+            "skipped": "Ignorato"
+          },
+          "category": {
+            "assignment": "Assegnazione",
+            "customer_reply": "Risposta del cliente",
+            "approval_request": "Richiesta di approvazione",
+            "escalation": "Escalation",
+            "sla_risk": "Rischio SLA"
+          }
+        },
+        "auditLog": {
+          "title": "Registro di controllo di Teams",
+          "description": "Modifiche eseguite dal bot di Teams, dall'estensione di messaggistica e dalle superfici di azioni rapide.",
+          "error": "Impossibile caricare il registro di controllo di Teams",
+          "forbidden": "Non disponi dell'autorizzazione per visualizzare il registro di controllo di Teams.",
+          "empty": "Nessun evento di controllo di Teams ancora registrato.",
+          "refresh": "Aggiorna",
+          "loadMore": "Carica altro",
+          "loading": "Caricamento...",
+          "filter": {
+            "surfaceLabel": "Superficie",
+            "surfaceAll": "Tutte le superfici",
+            "actionLabel": "ID azione",
+            "actionPlaceholder": "ad es. assign_ticket"
+          },
+          "surface": {
+            "bot": "Bot",
+            "message_extension": "Estensione di messaggistica",
+            "quick_action": "Azione rapida",
+            "tab": "Scheda"
+          },
+          "columns": {
+            "createdAt": "Ora",
+            "surface": "Superficie",
+            "action": "Azione",
+            "target": "Destinazione",
+            "result": "Risultato",
+            "errorCode": "Codice di errore"
+          },
+          "result": {
+            "success": "Riuscito",
+            "failure": "Errore"
+          }
+        },
+        "troubleshooting": {
+          "title": "Riferimento agli errori di consegna",
+          "description": "Cosa significa ogni codice di errore di consegna di Teams e come risolverlo.",
+          "show": "Mostra il riferimento agli errori",
+          "hide": "Nascondi il riferimento agli errori",
+          "columns": {
+            "code": "Codice di errore",
+            "cause": "Causa",
+            "remedy": "Soluzione"
+          },
+          "codes": {
+            "graph_unauthorized": {
+              "cause": "Microsoft Graph ha rifiutato il token dell'applicazione (401/403); un'autorizzazione dell'applicazione Graph richiesta non è stata approvata.",
+              "remedy": "Concedi il consenso amministratore per le autorizzazioni di Graph richieste (ad esempio TeamsActivity.Send) nella registrazione dell'app di Azure."
+            },
+            "user_not_mapped": {
+              "cause": "Il destinatario non ha effettuato l'accesso ad Alga PSA con Microsoft, pertanto non esiste alcuna associazione dell'account.",
+              "remedy": "Fai in modo che l'utente acceda con Microsoft (SSO del portale MSP o la scheda Teams) affinché il suo account venga associato."
+            },
+            "addon_inactive": {
+              "cause": "Il componente aggiuntivo Teams è scaduto o assente, pertanto gli invii vengono ignorati mentre la configurazione viene conservata.",
+              "remedy": "Rinnova il componente aggiuntivo Teams per questo tenant."
+            },
+            "integration_inactive": {
+              "cause": "L'integrazione di Teams non è attiva per questo tenant.",
+              "remedy": "Attiva l'integrazione di Teams nelle impostazioni."
+            },
+            "package_misconfigured": {
+              "cause": "Il pacchetto dell'app non è mai stato generato oppure mancano i prerequisiti di consegna (app ID, base URL).",
+              "remedy": "Genera il pacchetto dell'app Teams nelle impostazioni, quindi riprova."
+            },
+            "graph_not_found": {
+              "cause": "L'app Teams non è installata per il destinatario, pertanto Microsoft Graph non può raggiungerlo (404).",
+              "remedy": "Installa o consenti a livello di organizzazione l'app Alga PSA per quell'utente."
+            },
+            "graph_throttled": {
+              "cause": "Microsoft Graph ha limitato la richiesta (429).",
+              "remedy": "Transitorio; Alga PSA riprova con backoff. Esamina il problema solo se persiste."
+            },
+            "graph_server_error": {
+              "cause": "Microsoft Graph ha restituito un errore del server (5xx).",
+              "remedy": "Interruzione transitoria di Graph; Alga PSA riprova. Attendi e controlla lo stato del servizio Microsoft se persiste."
+            },
+            "transient": {
+              "cause": "Un errore temporaneo (rete o timeout) ha interrotto la consegna.",
+              "remedy": "Ritentato automaticamente; nessuna azione necessaria a meno che gli errori non persistano."
+            },
+            "unknown": {
+              "cause": "L'errore non corrisponde a nessuna causa nota.",
+              "remedy": "Controlla i log del server per i dettagli dell'errore di consegna ed esegui di nuovo la diagnostica."
+            }
+          }
+        },
+        "paywall": {
+          "title": "Componente aggiuntivo Microsoft Teams",
+          "description": "L'integrazione di Microsoft Teams richiede il componente aggiuntivo Teams per questo tenant.",
+          "includedTitle": "Cosa è incluso",
+          "feature": {
+            "tab": "Scheda personale: apri Alga PSA all'interno di Microsoft Teams.",
+            "bot": "Bot personale e per chat di gruppo per ticket, approvazioni, tempi e note.",
+            "messageExtension": "Estensione di messaggistica e azioni rapide per agire sui record PSA da qualsiasi messaggio.",
+            "meetings": "Riunioni di Teams sulle approvazioni degli appuntamenti con inviti di calendario reali di Outlook/Teams.",
+            "recordings": "Acquisizione automatica di registrazioni e trascrizioni delle riunioni nelle interazioni.",
+            "notifications": "Notifiche del feed attività e dei messaggi diretti del bot per assegnazioni, risposte, approvazioni e rischio SLA."
+          },
+          "cta": "Acquista il componente aggiuntivo Teams",
+          "nonBilling": "Contatta un amministratore della fatturazione per acquistare il componente aggiuntivo Teams per questo tenant."
+        },
+        "addonExpiredBanner": {
+          "title": "Componente aggiuntivo Microsoft Teams scaduto",
+          "message": "Il componente aggiuntivo Microsoft Teams è scaduto. La configurazione e la cronologia delle consegne vengono conservate, ma le notifiche di Teams vengono ignorate fino al rinnovo del componente aggiuntivo.",
+          "cta": "Rinnova il componente aggiuntivo Teams"
+        },
+        "staleManifest": {
+          "title": "Il pacchetto dell'app Teams non è aggiornato",
+          "warning": "Il pacchetto dell'app Teams non è aggiornato — rigeneralo e ricaricalo.",
+          "regenerate": "Rigenera pacchetto",
+          "regenerating": "Rigenerazione..."
         }
       }
     },

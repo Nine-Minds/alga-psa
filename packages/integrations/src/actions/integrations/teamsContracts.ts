@@ -10,9 +10,22 @@ export type TeamsNotificationChannelMode = 'activity_feed' | 'bot_dm' | 'both';
 /** Per-category delivery channel preference; absent categories default to 'activity_feed'. */
 export type TeamsNotificationChannels = Partial<Record<TeamsNotificationCategory, TeamsNotificationChannelMode>>;
 
+/**
+ * Lifecycle state of the tenant's Teams add-on entitlement.
+ * - `active`: entitlement present and not expired.
+ * - `expired`: entitlement lapsed (soft-disabled; config preserved, admin banner explains).
+ * - `absent`: never purchased.
+ */
+export type TeamsAddOnState = 'active' | 'expired' | 'absent';
+
 export interface TeamsIntegrationStatusResponse {
   success: boolean;
   error?: string;
+  /**
+   * Present even on the `success: false` add-on-required path so the settings UI can
+   * distinguish an absent add-on (render the paywall) from an ordinary failure.
+   */
+  addOnState?: TeamsAddOnState;
   integration?: {
     selectedProfileId: string | null;
     installStatus: TeamsInstallStatus;
@@ -30,6 +43,7 @@ export interface TeamsIntegrationStatusResponse {
     downloadRecordings: boolean;
     exposeRecordingsInPortal: boolean;
     botConnectorConfigured: boolean;
+    addOnState: TeamsAddOnState;
   };
 }
 

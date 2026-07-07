@@ -9,6 +9,7 @@ import {
   type TeamsNotificationChannelMode,
 } from '../../notifications/teamsNotificationDelivery';
 import { isBotConnectorConfigured } from '../../teams/bot/teamsBotConnector';
+import { getTeamsAddOnState, type TeamsAddOnState } from '../../teams/teamsAddOnGate';
 import { getTeamsAvailability } from '../../teams/teamsAvailability';
 import {
   TEAMS_ALLOWED_ACTIONS,
@@ -65,6 +66,7 @@ type TeamsNotificationChannels = Partial<Record<TeamsNotificationCategory, Teams
 type TeamsIntegrationPayload = NonNullable<TeamsIntegrationStatusResponse['integration']> & {
   notificationChannels: TeamsNotificationChannels;
   botConnectorConfigured: boolean;
+  addOnState: TeamsAddOnState;
 };
 
 type TeamsIntegrationStatusResponseWithChannels = Omit<TeamsIntegrationStatusResponse, 'integration'> & {
@@ -182,6 +184,9 @@ function defaultTeamsIntegrationState() {
     downloadRecordings: false,
     exposeRecordingsInPortal: false,
     botConnectorConfigured: isBotConnectorConfigured(),
+    // Overridden with the live add-on state in the status path; a configured row
+    // implies the add-on was active at save time.
+    addOnState: 'active' as TeamsAddOnState,
   };
 }
 
@@ -209,6 +214,7 @@ function mapTeamsIntegrationRow(row?: TeamsIntegrationRow | null): TeamsIntegrat
     downloadRecordings: Boolean(row.download_recordings),
     exposeRecordingsInPortal: Boolean(row.expose_recordings_in_portal),
     botConnectorConfigured: isBotConnectorConfigured(),
+    addOnState: 'active',
   };
 }
 
@@ -309,15 +315,20 @@ export async function getTeamsIntegrationStatusImpl(
       tenantId: tenant,
       userId: (user as any)?.user_id,
     });
-    if (availability.enabled === false) {
+
+    const { knex } = await createTenantKnex();
+    const addOnState = await getTeamsAddOnState(knex, tenant);
+
+    // Soft-disable: an expired add-on keeps its preserved configuration visible so
+    // the admin banner can explain the lapse. A truly absent add-on stays gated.
+    if (availability.enabled === false && addOnState !== 'expired') {
       return { success: false, error: availability.message };
     }
 
-    const { knex } = await createTenantKnex();
     const row = await getTeamsIntegrationRow(knex, tenant);
     return {
       success: true,
-      integration: mapTeamsIntegrationRow(row),
+      integration: { ...mapTeamsIntegrationRow(row), addOnState },
     };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to load Teams integration settings' };

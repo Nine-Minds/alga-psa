@@ -36,6 +36,8 @@ interface TeamsIntegrationStatusResponse {
     sendMeetingInvites: boolean;
     downloadRecordings: boolean;
     exposeRecordingsInPortal: boolean;
+    // Defaults to 'active' in EE; the CE stub never returns an integration payload.
+    addOnState: 'active' | 'expired' | 'absent';
   };
 }
 
