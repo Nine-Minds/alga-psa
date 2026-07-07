@@ -46,6 +46,16 @@ import {
   TeamsMeetingArtifactNotificationJobData,
 } from '@alga-psa/jobs/handlers/teamsMeetingArtifactWebhookHandler';
 import {
+  teamsMeetingCleanupHandler,
+  TeamsMeetingCleanupJobData,
+  TEAMS_MEETING_CLEANUP_JOB,
+} from '@alga-psa/jobs/handlers/teamsMeetingCleanupHandler';
+import {
+  teamsMeetingSweepHandler,
+  TeamsMeetingSweepJobData,
+  TEAMS_MEETING_SWEEP_JOB,
+} from '@alga-psa/jobs/handlers/teamsMeetingSweepHandler';
+import {
   renewGoogleGmailWatchSubscriptions,
   GoogleGmailWatchRenewalJobData,
 } from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
@@ -448,6 +458,33 @@ export async function registerAllJobHandlers(
           await processTeamsMeetingArtifactNotification(data);
         },
         retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<TeamsMeetingCleanupJobData & BaseJobData>(
+      {
+        name: TEAMS_MEETING_CLEANUP_JOB,
+        handler: async (_jobId, data) => {
+          await teamsMeetingCleanupHandler(data);
+        },
+        retry: {
+          maxAttempts: 5,
+          backoffCoefficient: 2,
+          initialIntervalMs: 5_000,
+          maxIntervalMs: 300_000,
+        },
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<TeamsMeetingSweepJobData & BaseJobData>(
+      {
+        name: TEAMS_MEETING_SWEEP_JOB,
+        handler: async (_jobId, data) => {
+          await teamsMeetingSweepHandler(data);
+        },
+        retry: { maxAttempts: 2 },
       },
       registerOpts
     );

@@ -144,7 +144,8 @@
     "title": "Cancel Appointment",
     "message": "Are you sure you want to cancel this appointment request? This action cannot be undone.",
     "messageWithTeamsWarning": "Are you sure you want to cancel this appointment request? This action cannot be undone. This will also delete the Microsoft Teams meeting.",
-    "confirm": "Yes, Cancel"
+    "confirm": "Yes, Cancel",
+    "teamsMeetingCleanupNotice": "The linked Microsoft Teams meeting is being cancelled; attendees will see it removed from their calendars shortly."
   },
   "ticketSection": {
     "title": "Appointment Requests",

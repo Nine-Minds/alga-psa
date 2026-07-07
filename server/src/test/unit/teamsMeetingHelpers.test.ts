@@ -5,6 +5,7 @@ const resolveProviderConfigMock = vi.hoisted(() => vi.fn());
 const fetchMicrosoftGraphAppTokenMock = vi.hoisted(() => vi.fn());
 const loggerWarnMock = vi.hoisted(() => vi.fn());
 const loggerInfoMock = vi.hoisted(() => vi.fn());
+const renewTeamsMeetingArtifactSubscriptionsMock = vi.hoisted(() => vi.fn(async () => []));
 const enterpriseState = vi.hoisted(() => ({ value: true }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -35,9 +36,17 @@ vi.mock('@alga-psa/ee-microsoft-teams/lib/graphAuth', () => ({
   fetchMicrosoftGraphAppToken: fetchMicrosoftGraphAppTokenMock,
 }));
 
-import { createTeamsMeeting } from '@alga-psa/ee-microsoft-teams/lib/meetings/createTeamsMeeting';
-import { updateTeamsMeeting } from '@alga-psa/ee-microsoft-teams/lib/meetings/updateTeamsMeeting';
-import { deleteTeamsMeeting } from '@alga-psa/ee-microsoft-teams/lib/meetings/deleteTeamsMeeting';
+vi.mock('@alga-psa/ee-microsoft-teams/lib/meetings/artifactSubscriptions', () => ({
+  renewTeamsMeetingArtifactSubscriptions: renewTeamsMeetingArtifactSubscriptionsMock,
+}));
+
+import {
+  createTeamsMeeting,
+  createTeamsMeetingWithResult,
+  type TeamsMeetingAttendee,
+} from '@alga-psa/ee-microsoft-teams/lib/meetings/createTeamsMeeting';
+import { updateTeamsMeeting, updateTeamsMeetingWithResult } from '@alga-psa/ee-microsoft-teams/lib/meetings/updateTeamsMeeting';
+import { deleteTeamsMeeting, deleteTeamsMeetingWithResult } from '@alga-psa/ee-microsoft-teams/lib/meetings/deleteTeamsMeeting';
 import { fetchMeetingArtifacts } from '@alga-psa/ee-microsoft-teams/lib/meetings/fetchMeetingArtifacts';
 import { getTeamsMeetingCapability } from '@alga-psa/ee-microsoft-teams/lib/actions/meetings/meetingCapabilityActions';
 import { resolveTeamsMeetingService } from '@alga-psa/scheduling/lib/teamsMeetingService';
@@ -82,6 +91,8 @@ describe('Teams meeting helpers', () => {
     fetchMicrosoftGraphAppTokenMock.mockReset();
     loggerWarnMock.mockReset();
     loggerInfoMock.mockReset();
+    renewTeamsMeetingArtifactSubscriptionsMock.mockReset();
+    renewTeamsMeetingArtifactSubscriptionsMock.mockResolvedValue([]);
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
 
@@ -949,6 +960,243 @@ describe('Teams meeting helpers', () => {
         meetingId: 'meeting-123',
         organizerUserId: 'organizer-object-1',
       })).resolves.toEqual([]);
+    });
+  });
+
+  describe('WithResult outcome helpers', () => {
+    const readyIntegrationRow = {
+      tenant: 'tenant-1',
+      install_status: 'active',
+      selected_profile_id: 'profile-1',
+      default_meeting_organizer_upn: 'organizer@example.com',
+      default_meeting_organizer_object_id: 'organizer-object-1',
+    };
+
+    const attendees: TeamsMeetingAttendee[] = [{
+      emailAddress: {
+        address: 'client@example.com',
+        name: 'Client Contact',
+      },
+      type: 'required',
+    }];
+
+    const successfulCreateResponses = () => {
+      fetchMock
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 201,
+          json: async () => ({
+            id: 'event-123',
+            onlineMeeting: { joinUrl: 'https://teams.example.com/meeting/123' },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ value: [{ id: 'm-1' }] }),
+        });
+    };
+
+    it('T040: create distinguishes graph_server_error failures from not_configured skips', async () => {
+      const db = buildTeamsIntegrationKnex(readyIntegrationRow);
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        text: async () => 'Graph exploded',
+      });
+
+      await expect(createTeamsMeetingWithResult({
+        tenantId: 'tenant-1',
+        subject: 'Virtual consultation',
+        startDateTime: '2026-04-24T14:00:00.000Z',
+        endDateTime: '2026-04-24T14:30:00.000Z',
+      })).resolves.toEqual({
+        status: 'failed',
+        errorCode: 'graph_server_error',
+        errorMessage: expect.stringContaining('500'),
+      });
+
+      const emptyDb = buildTeamsIntegrationKnex(undefined);
+      createTenantKnexMock.mockResolvedValue({ knex: emptyDb.knex, tenant: 'tenant-1' });
+
+      await expect(createTeamsMeetingWithResult({
+        tenantId: 'tenant-1',
+        subject: 'Virtual consultation',
+        startDateTime: '2026-04-24T14:00:00.000Z',
+        endDateTime: '2026-04-24T14:30:00.000Z',
+      })).resolves.toEqual({ status: 'skipped', reason: 'not_configured' });
+    });
+
+    it('T041: create returns skipped/addon_inactive when the Teams add-on is inactive', async () => {
+      const db = buildTeamsIntegrationKnex(readyIntegrationRow, { hasTeamsAddOn: false });
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+
+      await expect(createTeamsMeetingWithResult({
+        tenantId: 'tenant-1',
+        subject: 'Virtual consultation',
+        startDateTime: '2026-04-24T14:00:00.000Z',
+        endDateTime: '2026-04-24T14:30:00.000Z',
+      })).resolves.toEqual({ status: 'skipped', reason: 'addon_inactive' });
+
+      expect(fetchMicrosoftGraphAppTokenMock).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('T027: strips attendees when send_meeting_invites is false and includes them when the column is absent', async () => {
+      const invitesOffDb = buildTeamsIntegrationKnex({
+        ...readyIntegrationRow,
+        send_meeting_invites: false,
+      });
+      createTenantKnexMock.mockResolvedValue({ knex: invitesOffDb.knex, tenant: 'tenant-1' });
+      successfulCreateResponses();
+      fetchMock.mockResolvedValueOnce({ ok: true, status: 200, text: async () => '' });
+
+      const created = await createTeamsMeetingWithResult({
+        tenantId: 'tenant-1',
+        subject: 'Virtual consultation',
+        startDateTime: '2026-04-24T14:00:00.000Z',
+        endDateTime: '2026-04-24T14:30:00.000Z',
+        attendees,
+      });
+      expect(created.status).toBe('created');
+      const invitesOffCreateBody = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body);
+      expect(invitesOffCreateBody).not.toHaveProperty('attendees');
+
+      await expect(updateTeamsMeetingWithResult({
+        tenantId: 'tenant-1',
+        meetingId: 'meeting-123',
+        eventId: 'event-123',
+        startDateTime: '2026-04-24T15:00:00.000Z',
+        endDateTime: '2026-04-24T15:30:00.000Z',
+        attendees,
+      })).resolves.toEqual({ status: 'updated' });
+      const invitesOffPatchBody = JSON.parse(fetchMock.mock.calls[2]?.[1]?.body);
+      expect(invitesOffPatchBody).not.toHaveProperty('attendees');
+
+      // No send_meeting_invites column at all (pre-migration row) => default on.
+      fetchMock.mockReset();
+      const legacyRowDb = buildTeamsIntegrationKnex(readyIntegrationRow);
+      createTenantKnexMock.mockResolvedValue({ knex: legacyRowDb.knex, tenant: 'tenant-1' });
+      successfulCreateResponses();
+      fetchMock.mockResolvedValueOnce({ ok: true, status: 200, text: async () => '' });
+
+      const createdWithInvites = await createTeamsMeetingWithResult({
+        tenantId: 'tenant-1',
+        subject: 'Virtual consultation',
+        startDateTime: '2026-04-24T14:00:00.000Z',
+        endDateTime: '2026-04-24T14:30:00.000Z',
+        attendees,
+      });
+      expect(createdWithInvites.status).toBe('created');
+      const defaultOnCreateBody = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body);
+      expect(defaultOnCreateBody.attendees).toEqual(attendees);
+
+      await expect(updateTeamsMeetingWithResult({
+        tenantId: 'tenant-1',
+        meetingId: 'meeting-123',
+        eventId: 'event-123',
+        startDateTime: '2026-04-24T15:00:00.000Z',
+        endDateTime: '2026-04-24T15:30:00.000Z',
+        attendees,
+      })).resolves.toEqual({ status: 'updated' });
+      const defaultOnPatchBody = JSON.parse(fetchMock.mock.calls[2]?.[1]?.body);
+      expect(defaultOnPatchBody.attendees).toEqual(attendees);
+    });
+
+    it('T030: update PATCH body includes subject, attendees, start, and end when all provided', async () => {
+      const db = buildTeamsIntegrationKnex(readyIntegrationRow);
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+      fetchMock.mockResolvedValueOnce({ ok: true, status: 200, text: async () => '' });
+
+      await expect(updateTeamsMeetingWithResult({
+        tenantId: 'tenant-1',
+        meetingId: 'meeting-123',
+        eventId: 'event-123',
+        startDateTime: '2026-04-24T15:00:00.000Z',
+        endDateTime: '2026-04-24T15:30:00.000Z',
+        subject: 'Rescheduled consultation',
+        attendees,
+      })).resolves.toEqual({ status: 'updated' });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://graph.microsoft.com/v1.0/users/organizer%40example.com/events/event-123',
+        expect.objectContaining({ method: 'PATCH' })
+      );
+      const patchBody = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body);
+      expect(patchBody.start).toEqual({ dateTime: '2026-04-24T15:00:00.000Z', timeZone: 'UTC' });
+      expect(patchBody.end).toEqual({ dateTime: '2026-04-24T15:30:00.000Z', timeZone: 'UTC' });
+      expect(patchBody.subject).toBe('Rescheduled consultation');
+      expect(patchBody.attendees).toEqual(attendees);
+    });
+
+    it('T036: delete is idempotent on Graph 404 and fails with graph_server_error on 503', async () => {
+      const db = buildTeamsIntegrationKnex(readyIntegrationRow);
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        text: async () => 'Event already gone',
+      });
+
+      await expect(deleteTeamsMeetingWithResult({
+        tenantId: 'tenant-1',
+        meetingId: 'meeting-123',
+        eventId: 'event-123',
+      })).resolves.toEqual({ status: 'deleted', alreadyDeleted: true });
+
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        statusText: 'Service Unavailable',
+        text: async () => 'Graph unavailable',
+      });
+
+      await expect(deleteTeamsMeetingWithResult({
+        tenantId: 'tenant-1',
+        meetingId: 'meeting-123',
+        eventId: 'event-123',
+      })).resolves.toEqual({
+        status: 'failed',
+        errorCode: 'graph_server_error',
+        errorMessage: expect.stringContaining('503'),
+      });
+    });
+
+    it('T048: successful creation ensures artifact subscriptions; failed creation does not', async () => {
+      const db = buildTeamsIntegrationKnex(readyIntegrationRow);
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+      successfulCreateResponses();
+
+      const created = await createTeamsMeetingWithResult({
+        tenantId: 'tenant-1',
+        subject: 'Virtual consultation',
+        startDateTime: '2026-04-24T14:00:00.000Z',
+        endDateTime: '2026-04-24T14:30:00.000Z',
+      });
+      expect(created.status).toBe('created');
+      expect(renewTeamsMeetingArtifactSubscriptionsMock).toHaveBeenCalledTimes(1);
+      expect(renewTeamsMeetingArtifactSubscriptionsMock).toHaveBeenCalledWith({ tenantId: 'tenant-1' });
+
+      renewTeamsMeetingArtifactSubscriptionsMock.mockClear();
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        text: async () => 'Graph exploded',
+      });
+
+      const failed = await createTeamsMeetingWithResult({
+        tenantId: 'tenant-1',
+        subject: 'Virtual consultation',
+        startDateTime: '2026-04-24T14:00:00.000Z',
+        endDateTime: '2026-04-24T14:30:00.000Z',
+      });
+      expect(failed.status).toBe('failed');
+      expect(renewTeamsMeetingArtifactSubscriptionsMock).not.toHaveBeenCalled();
     });
   });
 });

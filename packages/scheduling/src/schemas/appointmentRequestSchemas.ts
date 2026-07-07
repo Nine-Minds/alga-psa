@@ -37,6 +37,9 @@ export const approveAppointmentRequestSchema = z.object({
   final_time: timeStringSchema.optional().nullable(),
   assigned_user_id: z.string().uuid('Assigned user ID must be a valid UUID'),
   generate_teams_meeting: z.boolean().default(false),
+  // When Teams meeting creation fails the approval is aborted so the approver
+  // can retry; setting this completes the approval without a meeting instead.
+  approve_without_meeting: z.boolean().default(false),
   internal_notes: z.string().max(2000, 'Notes cannot exceed 2000 characters').optional().nullable(),
   ticket_id: z.string().uuid('Ticket ID must be a valid UUID').optional().nullable(),
 });

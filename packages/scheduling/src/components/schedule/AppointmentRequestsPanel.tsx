@@ -23,6 +23,7 @@ import {
   getTeamsMeetingCapability,
   approveAppointmentRequest as approveRequest,
   declineAppointmentRequest as declineRequest,
+  generateTeamsMeetingForApprovedRequest,
   IAppointmentRequest
 } from '@alga-psa/scheduling/actions';
 import { getSchedulingTicketById, type SchedulingTicketDetailsRecord } from '../../actions/ticketLookupActions';
@@ -57,6 +58,11 @@ export default function AppointmentRequestsPanel({
   const [linkedTicketId, setLinkedTicketId] = useState('');
   const [generateTeamsMeeting, setGenerateTeamsMeeting] = useState(true);
   const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string } | null>(null);
+  // Set when approval was aborted because Teams meeting creation failed (F022):
+  // the approver chooses between retrying and approving without a meeting.
+  const [meetingCreationFailed, setMeetingCreationFailed] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const [isGeneratingMeeting, setIsGeneratingMeeting] = useState(false);
 
   // Decline form state
   const [declineReason, setDeclineReason] = useState('');
@@ -191,6 +197,7 @@ export default function AppointmentRequestsPanel({
     setLinkedTicketId(request.ticket_id || '');
     setDeclineReason('');
     setGenerateTeamsMeeting(true);
+    setMeetingCreationFailed(false);
   };
 
   // Auto-select highlighted request when requests are loaded
@@ -226,7 +233,7 @@ export default function AppointmentRequestsPanel({
     }
   };
 
-  const handleApprove = async () => {
+  const handleApprove = async (options: { approveWithoutMeeting?: boolean } = {}) => {
     if (!selectedRequest) return;
 
     if (!assignedTechnicianId) {
@@ -236,6 +243,7 @@ export default function AppointmentRequestsPanel({
       return;
     }
 
+    setIsApproving(true);
     try {
       // Use finalDateTime if set, otherwise fall back to original requested date/time
       let approvalDate: string | undefined;
@@ -256,6 +264,7 @@ export default function AppointmentRequestsPanel({
         final_date: approvalDate,
         final_time: approvalTime,
         generate_teams_meeting: Boolean(teamsMeetingCapability?.available && generateTeamsMeeting),
+        approve_without_meeting: Boolean(options.approveWithoutMeeting),
         ticket_id: linkedTicketId || undefined
       });
 
@@ -263,9 +272,16 @@ export default function AppointmentRequestsPanel({
         toast.success(t('requests.feedback.approved', {
           defaultValue: 'Appointment request approved',
         }));
+        if (result.teamsMeetingWarning) {
+          toast(result.teamsMeetingWarning, { icon: '⚠️' });
+        }
+        setMeetingCreationFailed(false);
         setSelectedRequest(null);
         loadRequests();
         onRequestProcessed?.();
+      } else if (result.meetingCreationFailed) {
+        // Inline alert (not a toast) offers retry / approve-without-meeting.
+        setMeetingCreationFailed(true);
       } else {
         toast.error(result.error || t('requests.errors.approve', {
           defaultValue: 'Failed to approve request',
@@ -275,6 +291,34 @@ export default function AppointmentRequestsPanel({
       handleError(error, t('requests.errors.approve', {
         defaultValue: 'Failed to approve request',
       }));
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const handleGenerateTeamsMeeting = async () => {
+    if (!selectedRequest) return;
+
+    setIsGeneratingMeeting(true);
+    try {
+      const result = await generateTeamsMeetingForApprovedRequest(selectedRequest.appointment_request_id);
+      if (result.success) {
+        toast.success(t('requests.feedback.teamsMeetingGenerated', {
+          defaultValue: 'Microsoft Teams meeting created',
+        }));
+        setSelectedRequest(result.data ?? null);
+        loadRequests();
+      } else {
+        toast.error(result.error || t('requests.errors.generateTeamsMeeting', {
+          defaultValue: 'Failed to create the Microsoft Teams meeting',
+        }));
+      }
+    } catch (error) {
+      handleError(error, t('requests.errors.generateTeamsMeeting', {
+        defaultValue: 'Failed to create the Microsoft Teams meeting',
+      }));
+    } finally {
+      setIsGeneratingMeeting(false);
     }
   };
 
@@ -623,6 +667,31 @@ export default function AppointmentRequestsPanel({
                     </div>
                   </div>
                 )}
+                {selectedRequest.status === 'approved' &&
+                  !selectedRequest.online_meeting_url &&
+                  teamsMeetingCapability?.available && (
+                  <div className="col-span-2">
+                    <div className="font-semibold text-gray-700 mb-2">
+                      {t('requests.detail.labels.teamsMeeting', { defaultValue: 'Teams Meeting' })}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button
+                        id="generate-teams-meeting-request-details"
+                        type="button"
+                        variant="outline"
+                        onClick={handleGenerateTeamsMeeting}
+                        disabled={isGeneratingMeeting}
+                      >
+                        {t('requests.detail.actions.generateTeamsMeeting', { defaultValue: 'Generate Teams meeting' })}
+                      </Button>
+                      <span className="text-sm text-gray-500">
+                        {t('requests.detail.teamsMeetingMissing', {
+                          defaultValue: 'This approved appointment has no Teams meeting link yet.',
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {selectedRequest.description && (
@@ -698,10 +767,51 @@ export default function AppointmentRequestsPanel({
                         </div>
                       )}
 
+                      {meetingCreationFailed && (
+                        <div
+                          id="teams-meeting-failure-alert"
+                          className="rounded-md border border-red-300 bg-red-50 p-3 space-y-2"
+                          role="alert"
+                        >
+                          <div className="text-sm font-medium text-red-800">
+                            {t('requests.approval.teamsMeetingFailure.title', {
+                              defaultValue: 'The Microsoft Teams meeting could not be created',
+                            })}
+                          </div>
+                          <div className="text-sm text-red-700">
+                            {t('requests.approval.teamsMeetingFailure.description', {
+                              defaultValue: 'The appointment was not approved. Retry meeting creation, or approve without a meeting and generate one later.',
+                            })}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              id="retry-teams-meeting"
+                              size="sm"
+                              onClick={() => handleApprove()}
+                              disabled={isApproving}
+                            >
+                              {t('requests.approval.teamsMeetingFailure.retry', { defaultValue: 'Retry' })}
+                            </Button>
+                            <Button
+                              id="approve-without-meeting"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleApprove({ approveWithoutMeeting: true })}
+                              disabled={isApproving}
+                            >
+                              {t('requests.approval.teamsMeetingFailure.approveWithout', {
+                                defaultValue: 'Approve without meeting',
+                              })}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex gap-2">
                         <Button
                           id="approve-request"
-                          onClick={handleApprove}
+                          onClick={() => handleApprove()}
+                          disabled={isApproving}
                           className="flex-1"
                         >
                           <Check className="h-4 w-4 mr-2" />

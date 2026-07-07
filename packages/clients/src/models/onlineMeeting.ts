@@ -174,6 +174,18 @@ class OnlineMeetingModel {
     return Promise.all(rows.map(async (row) => withArtifacts(row, await this.listArtifacts(row.meeting_id, tenantId))));
   }
 
+  static async listPendingCleanup(tenantId: string, limit = 100): Promise<IOnlineMeeting[]> {
+    const { knex: db, tenant: contextTenant } = await createTenantKnex(tenantId);
+    const tenant = requireTenant(contextTenant);
+
+    const rows = await tenantScopedTable<OnlineMeetingRow>(db, 'online_meetings', tenant)
+      .where({ status: 'cancel_pending' })
+      .orderBy('updated_at', 'asc')
+      .limit(limit);
+
+    return Promise.all(rows.map(async (row) => withArtifacts(row, await this.listArtifacts(row.meeting_id, tenantId))));
+  }
+
   static async upsertArtifact(
     meetingId: string,
     input: UpsertOnlineMeetingArtifactInput,

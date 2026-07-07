@@ -10,6 +10,7 @@ interface TeamsMeetingIntegrationRow {
   install_status: TeamsInstallStatus;
   default_meeting_organizer_upn: string | null;
   default_meeting_organizer_object_id?: string | null;
+  send_meeting_invites?: boolean | null;
 }
 
 export interface TeamsMeetingExecutionConfig {
@@ -18,6 +19,7 @@ export interface TeamsMeetingExecutionConfig {
   clientId: string;
   clientSecret: string;
   microsoftTenantId: string;
+  sendMeetingInvites: boolean;
 }
 
 export interface TeamsMeetingGraphConfig {
@@ -26,7 +28,14 @@ export interface TeamsMeetingGraphConfig {
   clientId: string;
   clientSecret: string;
   microsoftTenantId: string;
+  sendMeetingInvites: boolean;
 }
+
+export type TeamsMeetingConfigSkipReason = 'addon_inactive' | 'not_configured' | 'no_organizer';
+
+export type TeamsMeetingConfigState =
+  | { status: 'ready'; config: TeamsMeetingExecutionConfig }
+  | { status: 'skipped'; reason: TeamsMeetingConfigSkipReason };
 
 function normalizeString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
@@ -43,19 +52,21 @@ async function tenantHasTeamsAddOn(knex: any, tenantId: string): Promise<boolean
   return Boolean(row);
 }
 
-export async function resolveTeamsMeetingGraphConfig(
-  tenantId: string
-): Promise<TeamsMeetingGraphConfig | null> {
+type GraphConfigResolution =
+  | { status: 'ready'; config: TeamsMeetingGraphConfig }
+  | { status: 'skipped'; reason: 'addon_inactive' | 'not_configured' };
+
+async function resolveGraphConfigState(tenantId: string): Promise<GraphConfigResolution> {
   const { knex } = await createTenantKnex(tenantId);
   if (!(await tenantHasTeamsAddOn(knex, tenantId))) {
-    return null;
+    return { status: 'skipped', reason: 'addon_inactive' };
   }
 
   const integration = await tenantDb(knex, tenantId).table<TeamsMeetingIntegrationRow>('teams_integrations')
     .first();
 
   if (!integration || integration.install_status !== 'active' || !integration.selected_profile_id) {
-    return null;
+    return { status: 'skipped', reason: 'not_configured' };
   }
 
   const providerConfig = await resolveTeamsMicrosoftProviderConfigImpl(tenantId);
@@ -65,31 +76,59 @@ export async function resolveTeamsMeetingGraphConfig(
     !providerConfig.clientSecret ||
     !providerConfig.microsoftTenantId
   ) {
-    return null;
+    return { status: 'skipped', reason: 'not_configured' };
   }
 
   return {
-    organizerUpn: normalizeString(integration.default_meeting_organizer_upn) || null,
-    organizerUserId: normalizeString(integration.default_meeting_organizer_object_id) || null,
-    clientId: providerConfig.clientId,
-    clientSecret: providerConfig.clientSecret,
-    microsoftTenantId: providerConfig.microsoftTenantId,
+    status: 'ready',
+    config: {
+      organizerUpn: normalizeString(integration.default_meeting_organizer_upn) || null,
+      organizerUserId: normalizeString(integration.default_meeting_organizer_object_id) || null,
+      clientId: providerConfig.clientId,
+      clientSecret: providerConfig.clientSecret,
+      microsoftTenantId: providerConfig.microsoftTenantId,
+      // Default on when the column is absent/null (pre-migration rows).
+      sendMeetingInvites: integration.send_meeting_invites !== false,
+    },
+  };
+}
+
+export async function resolveTeamsMeetingGraphConfig(
+  tenantId: string
+): Promise<TeamsMeetingGraphConfig | null> {
+  const resolution = await resolveGraphConfigState(tenantId);
+  return resolution.status === 'ready' ? resolution.config : null;
+}
+
+export async function resolveTeamsMeetingConfigState(
+  tenantId: string
+): Promise<TeamsMeetingConfigState> {
+  const resolution = await resolveGraphConfigState(tenantId);
+  if (resolution.status !== 'ready') {
+    return resolution;
+  }
+
+  const config = resolution.config;
+  if (!config.organizerUpn) {
+    return { status: 'skipped', reason: 'no_organizer' };
+  }
+
+  return {
+    status: 'ready',
+    config: {
+      organizerUpn: config.organizerUpn,
+      organizerUserId: config.organizerUserId || config.organizerUpn,
+      clientId: config.clientId,
+      clientSecret: config.clientSecret,
+      microsoftTenantId: config.microsoftTenantId,
+      sendMeetingInvites: config.sendMeetingInvites,
+    },
   };
 }
 
 export async function resolveTeamsMeetingExecutionConfig(
   tenantId: string
 ): Promise<TeamsMeetingExecutionConfig | null> {
-  const config = await resolveTeamsMeetingGraphConfig(tenantId);
-  if (!config?.organizerUpn) {
-    return null;
-  }
-
-  return {
-    organizerUpn: config.organizerUpn,
-    organizerUserId: config.organizerUserId || config.organizerUpn,
-    clientId: config.clientId,
-    clientSecret: config.clientSecret,
-    microsoftTenantId: config.microsoftTenantId,
-  };
+  const state = await resolveTeamsMeetingConfigState(tenantId);
+  return state.status === 'ready' ? state.config : null;
 }

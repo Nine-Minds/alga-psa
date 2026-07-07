@@ -20,6 +20,10 @@ const teamsMeetingCapabilityMock = vi.hoisted(() => vi.fn());
 const createTeamsMeetingMock = vi.hoisted(() => vi.fn());
 const updateTeamsMeetingMock = vi.hoisted(() => vi.fn());
 const deleteTeamsMeetingMock = vi.hoisted(() => vi.fn());
+const createTeamsMeetingWithResultMock = vi.hoisted(() => vi.fn());
+const updateTeamsMeetingWithResultMock = vi.hoisted(() => vi.fn());
+const deleteTeamsMeetingWithResultMock = vi.hoisted(() => vi.fn());
+const scheduleJobMock = vi.hoisted(() => vi.fn());
 
 const STAFF_USER_ID = '00000000-0000-0000-0000-000000000101';
 const STAFF_USER_2_ID = '00000000-0000-0000-0000-000000000102';
@@ -174,11 +178,24 @@ vi.mock('@alga-psa/scheduling/lib/teamsMeetingService', () => ({
     createTeamsMeeting: createTeamsMeetingMock,
     updateTeamsMeeting: updateTeamsMeetingMock,
     deleteTeamsMeeting: deleteTeamsMeetingMock,
+    createTeamsMeetingWithResult: createTeamsMeetingWithResultMock,
+    updateTeamsMeetingWithResult: updateTeamsMeetingWithResultMock,
+    deleteTeamsMeetingWithResult: deleteTeamsMeetingWithResultMock,
   })),
 }));
 
 vi.mock('@alga-psa/ee-microsoft-teams/lib', () => ({
   deleteTeamsMeeting: deleteTeamsMeetingMock,
+  deleteTeamsMeetingWithResult: deleteTeamsMeetingWithResultMock,
+}));
+
+// Decline/cancel no longer delete the Graph event inline: they flip the
+// online_meetings row to cancel_pending and enqueue 'teams-meeting-cleanup'.
+// Mock the runner accessor so enqueues are observable and never hit the real
+// (unregistered) accessor.
+vi.mock('@alga-psa/jobs/runner', () => ({
+  registerJobRunnerAccessor: vi.fn(),
+  getJobRunner: vi.fn(async () => ({ scheduleJob: scheduleJobMock })),
 }));
 
 // Mock appointment helpers
@@ -216,6 +233,19 @@ describe('Appointment Request Integration Tests', () => {
     });
     updateTeamsMeetingMock.mockResolvedValue(true);
     deleteTeamsMeetingMock.mockResolvedValue(true);
+    createTeamsMeetingWithResultMock.mockResolvedValue({
+      status: 'created',
+      meeting: {
+        joinWebUrl: 'https://teams.example.com/meeting/123',
+        meetingId: 'meeting-123',
+        organizerUpn: 'organizer@example.com',
+        organizerUserId: 'organizer-object-1',
+        eventId: 'event-123',
+      },
+    });
+    updateTeamsMeetingWithResultMock.mockResolvedValue({ status: 'updated' });
+    deleteTeamsMeetingWithResultMock.mockResolvedValue({ status: 'deleted', alreadyDeleted: false });
+    scheduleJobMock.mockResolvedValue({ jobId: 'job-1', externalId: 'x' });
   };
 
   beforeAll(async () => {
@@ -228,6 +258,9 @@ describe('Appointment Request Integration Tests', () => {
     process.env.DB_USER_SERVER = process.env.DB_USER_SERVER || 'app_user';
     process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'postpass123';
     process.env.NEXT_PUBLIC_APP_URL = 'https://test.example.com';
+    // teamsMeetingCleanupHandler gates its EE Graph module load on the raw
+    // EDITION env (read at module load), not the mocked isEnterprise flag.
+    process.env.EDITION = 'ee';
 
     db = await createTestDbConnection();
     tenantId = await ensureTenant(db);
@@ -824,10 +857,26 @@ describe('Appointment Request Integration Tests', () => {
       });
 
       expect(approveResult.success).toBe(true);
-      expect(createTeamsMeetingMock).toHaveBeenCalledWith(
+      expect(createTeamsMeetingWithResultMock).toHaveBeenCalledWith(
         expect.objectContaining({
           tenantId,
           appointmentRequestId: fixture.appointmentRequestId,
+          subject: 'Appointment: Test Service',
+          attendees: expect.arrayContaining([
+            expect.objectContaining({
+              emailAddress: expect.objectContaining({
+                address: `contact-${fixture.contactId.slice(0, 8)}@test.com`,
+              }),
+              type: 'required',
+            }),
+            expect.objectContaining({
+              emailAddress: expect.objectContaining({
+                address: `tech-${fixture.technicianUserId.slice(0, 8)}@test.com`,
+              }),
+              type: 'required',
+            }),
+          ]),
+          bodyHtml: expect.stringContaining(`/msp/schedule?requestId=${fixture.appointmentRequestId}`),
         })
       );
 
@@ -922,7 +971,7 @@ describe('Appointment Request Integration Tests', () => {
 
         expect(approveResult.success).toBe(false);
         expect(approveResult.error).toContain('Online Meeting interaction type is not configured');
-        expect(createTeamsMeetingMock).toHaveBeenCalledWith(
+        expect(createTeamsMeetingWithResultMock).toHaveBeenCalledWith(
           expect.objectContaining({
             tenantId,
             appointmentRequestId: fixture.appointmentRequestId,
@@ -1022,6 +1071,7 @@ describe('Appointment Request Integration Tests', () => {
 
       expect(approveResult.success).toBe(true);
       expect(createTeamsMeetingMock).not.toHaveBeenCalled();
+      expect(createTeamsMeetingWithResultMock).not.toHaveBeenCalled();
 
       const updatedRequest = await tenantTableFor(db, tenantId, 'appointment_requests')
         .where({
@@ -1037,7 +1087,10 @@ describe('Appointment Request Integration Tests', () => {
 
     it('returns a warning and skips Graph create when Teams capability is unavailable', async () => {
       const fixture = await createPendingAppointmentFixture(db, tenantId);
+      // Capability gating now lives inside the EE service: the WithResult call
+      // reports 'skipped' instead of the action pre-checking capability.
       teamsMeetingCapabilityMock.mockResolvedValue({ available: false, reason: 'no_organizer' });
+      createTeamsMeetingWithResultMock.mockResolvedValue({ status: 'skipped', reason: 'no_organizer' });
       setStaffSchedulingContext(tenantId);
 
       const approveResult = await approveAppointmentRequest({
@@ -1070,9 +1123,15 @@ describe('Appointment Request Integration Tests', () => {
       expect(onlineMeeting).toBeUndefined();
     });
 
-    it('keeps approval successful when Teams meeting creation fails', async () => {
+    // T046: Graph failure surfaces at approval time — the approval ABORTS so
+    // the approver can retry; a silent link-less approval is never produced.
+    it('aborts the approval when Teams meeting creation fails (T046)', async () => {
       const fixture = await createPendingAppointmentFixture(db, tenantId);
-      createTeamsMeetingMock.mockResolvedValue(null);
+      createTeamsMeetingWithResultMock.mockResolvedValue({
+        status: 'failed',
+        errorCode: 'graph_server_error',
+        errorMessage: 'Graph create failed',
+      });
       setStaffSchedulingContext(tenantId);
 
       const approveResult = await approveAppointmentRequest({
@@ -1081,8 +1140,53 @@ describe('Appointment Request Integration Tests', () => {
         generate_teams_meeting: true,
       });
 
+      expect(approveResult.success).toBe(false);
+      expect(approveResult.meetingCreationFailed).toBe(true);
+      expect(approveResult.error).toContain('could not be created');
+      expect(createTeamsMeetingWithResultMock).toHaveBeenCalled();
+      expect(mockEmailInstance.sendAppointmentRequestApproved).not.toHaveBeenCalled();
+
+      const updatedRequest = await tenantTableFor(db, tenantId, 'appointment_requests')
+        .where({
+          appointment_request_id: fixture.appointmentRequestId,
+          tenant: tenantId,
+        })
+        .first();
+
+      expect(updatedRequest.status).toBe('pending');
+      expect(updatedRequest.online_meeting_provider).toBeNull();
+      expect(updatedRequest.online_meeting_url).toBeNull();
+      expect(updatedRequest.online_meeting_id).toBeNull();
+
+      const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(onlineMeeting).toBeUndefined();
+    });
+
+    // T046: approve_without_meeting overrides the abort — the approval goes
+    // through and the failed creation is persisted (never silent absence).
+    it('approves without a meeting and records the failed creation when approve_without_meeting is set (T046)', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      createTeamsMeetingWithResultMock.mockResolvedValue({
+        status: 'failed',
+        errorCode: 'graph_server_error',
+        errorMessage: 'Graph create failed',
+      });
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+        approve_without_meeting: true,
+      });
+
       expect(approveResult.success).toBe(true);
-      expect(approveResult.teamsMeetingWarning).toContain('could not be created');
+      expect(approveResult.teamsMeetingWarning).toContain('meeting creation failed');
       expect(mockEmailInstance.sendAppointmentRequestApproved).toHaveBeenCalledWith(
         expect.not.objectContaining({
           onlineMeetingUrl: expect.anything(),
@@ -1097,6 +1201,7 @@ describe('Appointment Request Integration Tests', () => {
         })
         .first();
 
+      expect(updatedRequest.status).toBe('approved');
       expect(updatedRequest.online_meeting_provider).toBeNull();
       expect(updatedRequest.online_meeting_url).toBeNull();
       expect(updatedRequest.online_meeting_id).toBeNull();
@@ -1107,7 +1212,15 @@ describe('Appointment Request Integration Tests', () => {
           appointment_request_id: fixture.appointmentRequestId,
         })
         .first();
-      expect(onlineMeeting).toBeUndefined();
+      expect(onlineMeeting).toMatchObject({
+        provider: 'teams',
+        status: 'failed',
+        error_code: 'graph_server_error',
+        provider_meeting_id: null,
+        provider_event_id: null,
+        join_url: null,
+        schedule_entry_id: approveResult.data?.schedule_entry_id,
+      });
     });
 
     it('converts requester-local approval times to UTC before creating the Teams meeting', async () => {
@@ -1135,14 +1248,14 @@ describe('Appointment Request Integration Tests', () => {
       });
 
       expect(approveResult.success).toBe(true);
-      expect(createTeamsMeetingMock).toHaveBeenCalledWith(
+      expect(createTeamsMeetingWithResultMock).toHaveBeenCalledWith(
         expect.objectContaining({
           startDateTime: '2026-08-25T21:30:00.000Z',
           endDateTime: '2026-08-25T22:30:00.000Z',
         })
       );
 
-      const createArgs = createTeamsMeetingMock.mock.calls.at(-1)?.[0];
+      const createArgs = createTeamsMeetingWithResultMock.mock.calls.at(-1)?.[0];
       expect(formatInTimeZone(createArgs.startDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-08-25 14:30');
       expect(formatInTimeZone(createArgs.endDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-08-25 15:30');
     });
@@ -1544,13 +1657,40 @@ describe('Appointment Request Integration Tests', () => {
       expect(updatedRequest.approved_by_user_id).toBe(STAFF_USER_ID);
       expect(updatedRequest.schedule_entry_id).toBeNull();
 
+      // The live Teams meeting is no longer deleted inline: it moves to
+      // cancel_pending and the idempotent cleanup job is enqueued.
       const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
         .where({
           tenant: tenantId,
           meeting_id: meetingId,
         })
         .first();
-      expect(onlineMeeting.status).toBe('cancelled');
+      expect(onlineMeeting.status).toBe('cancel_pending');
+      expect(scheduleJobMock).toHaveBeenCalledWith(
+        'teams-meeting-cleanup',
+        { tenantId, meetingId },
+        { singletonKey: `teams-meeting-cleanup:${tenantId}:${meetingId}` },
+      );
+
+      // Run the real cleanup handler to close the loop: Graph delete is
+      // confirmed and the row reaches its terminal cancelled state.
+      const { teamsMeetingCleanupHandler } = await import('@alga-psa/jobs/handlers/teamsMeetingCleanupHandler');
+      await teamsMeetingCleanupHandler({ tenantId, meetingId });
+
+      expect(deleteTeamsMeetingWithResultMock).toHaveBeenCalledWith({
+        tenantId,
+        meetingId: `pending-meeting-${meetingId}`,
+        eventId: null,
+        appointmentRequestId: createResult.data!.appointment_request_id,
+      });
+
+      const cleanedMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
+        .where({
+          tenant: tenantId,
+          meeting_id: meetingId,
+        })
+        .first();
+      expect(cleanedMeeting.status).toBe('cancelled');
 
       // Verify schedule entry was deleted
       const scheduleEntry = await tenantTableFor(db, tenantId, 'schedule_entries')
@@ -2420,7 +2560,8 @@ describe('Appointment Request Integration Tests', () => {
       });
 
       expect(updateResult.success).toBe(true);
-      expect(updateTeamsMeetingMock).toHaveBeenCalledWith(
+      // Reschedules PATCH subject + attendees in addition to times (F016).
+      expect(updateTeamsMeetingWithResultMock).toHaveBeenCalledWith(
         expect.objectContaining({
           tenantId,
           appointmentRequestId: fixture.appointmentRequestId,
@@ -2428,6 +2569,20 @@ describe('Appointment Request Integration Tests', () => {
           eventId: 'event-123',
           startDateTime: '2026-04-30T16:45:00.000Z',
           endDateTime: '2026-04-30T18:15:00.000Z',
+          subject: 'Appointment: Test Service',
+          attendees: expect.arrayContaining([
+            expect.objectContaining({
+              emailAddress: expect.objectContaining({
+                address: `contact-${fixture.contactId.slice(0, 8)}@test.com`,
+              }),
+            }),
+            expect.objectContaining({
+              emailAddress: expect.objectContaining({
+                address: `tech-${fixture.technicianUserId.slice(0, 8)}@test.com`,
+              }),
+            }),
+          ]),
+          bodyHtml: expect.stringContaining(`/msp/schedule?requestId=${fixture.appointmentRequestId}`),
         })
       );
 
@@ -2462,7 +2617,11 @@ describe('Appointment Request Integration Tests', () => {
       });
 
       expect(approveResult.success).toBe(true);
-      updateTeamsMeetingMock.mockResolvedValue(false);
+      updateTeamsMeetingWithResultMock.mockResolvedValue({
+        status: 'failed',
+        errorCode: 'graph_server_error',
+        errorMessage: 'x',
+      });
 
       const { updateAppointmentRequestDateTime } = await import('@alga-psa/scheduling/actions');
       const updateResult = await updateAppointmentRequestDateTime({
@@ -2498,6 +2657,7 @@ describe('Appointment Request Integration Tests', () => {
 
       expect(updateResult.success).toBe(true);
       expect(updateTeamsMeetingMock).not.toHaveBeenCalled();
+      expect(updateTeamsMeetingWithResultMock).not.toHaveBeenCalled();
     });
 
     it('reschedules a legacy Teams meeting without a provider event id using the standalone fallback', async () => {
@@ -2518,6 +2678,7 @@ describe('Appointment Request Integration Tests', () => {
         })
         .delete();
       updateTeamsMeetingMock.mockClear();
+      updateTeamsMeetingWithResultMock.mockClear();
 
       const { updateAppointmentRequestDateTime } = await import('@alga-psa/scheduling/actions');
       const updateResult = await updateAppointmentRequestDateTime({
@@ -2528,7 +2689,7 @@ describe('Appointment Request Integration Tests', () => {
       });
 
       expect(updateResult.success).toBe(true);
-      expect(updateTeamsMeetingMock).toHaveBeenCalledWith(
+      expect(updateTeamsMeetingWithResultMock).toHaveBeenCalledWith(
         expect.objectContaining({
           tenantId,
           appointmentRequestId: fixture.appointmentRequestId,
@@ -2552,14 +2713,45 @@ describe('Appointment Request Integration Tests', () => {
 
       expect(approveResult.success).toBe(true);
 
+      const scheduledMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(scheduledMeeting.status).toBe('scheduled');
+
       setClientContext(tenantId, fixture.clientUserId, fixture.contactId);
       const { cancelAppointmentRequest } = await import('@alga-psa/client-portal/actions');
       const cancelResult = await cancelAppointmentRequest({
         appointment_request_id: fixture.appointmentRequestId,
       });
 
+      // Cancellation no longer deletes the Graph event inline: the row moves
+      // to cancel_pending and the idempotent cleanup job is enqueued.
       expect(cancelResult.success).toBe(true);
-      expect(deleteTeamsMeetingMock).toHaveBeenCalledWith({
+      expect(cancelResult.teamsMeetingWarning).toContain('is being cancelled');
+      expect(deleteTeamsMeetingMock).not.toHaveBeenCalled();
+      expect(scheduleJobMock).toHaveBeenCalledWith(
+        'teams-meeting-cleanup',
+        { tenantId, meetingId: scheduledMeeting.meeting_id },
+        { singletonKey: `teams-meeting-cleanup:${tenantId}:${scheduledMeeting.meeting_id}` },
+      );
+
+      const pendingMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(pendingMeeting.status).toBe('cancel_pending');
+
+      // Full loop: the cleanup job deletes the Graph event and confirms the
+      // local cancellation.
+      const { teamsMeetingCleanupHandler } = await import('@alga-psa/jobs/handlers/teamsMeetingCleanupHandler');
+      await teamsMeetingCleanupHandler({ tenantId, meetingId: scheduledMeeting.meeting_id });
+
+      expect(deleteTeamsMeetingWithResultMock).toHaveBeenCalledWith({
         tenantId,
         meetingId: 'meeting-123',
         eventId: 'event-123',
@@ -2606,7 +2798,10 @@ describe('Appointment Request Integration Tests', () => {
       expect(onlineMeeting.status).toBe('cancelled');
     });
 
-    it('surfaces a warning when Teams meeting deletion fails during cancellation', async () => {
+    // Graph deletion is now async (cancel_pending + cleanup job); the failure
+    // mode surfaced to the client is the enqueue failing — the row stays
+    // cancel_pending and the recurring sweep retries it.
+    it('surfaces a warning when the Teams meeting cleanup cannot be scheduled during cancellation', async () => {
       const fixture = await createPendingAppointmentFixture(db, tenantId);
       setStaffSchedulingContext(tenantId);
 
@@ -2617,7 +2812,7 @@ describe('Appointment Request Integration Tests', () => {
       });
 
       expect(approveResult.success).toBe(true);
-      deleteTeamsMeetingMock.mockResolvedValue(false);
+      scheduleJobMock.mockRejectedValue(new Error('job runner unavailable'));
 
       setClientContext(tenantId, fixture.clientUserId, fixture.contactId);
       const { cancelAppointmentRequest } = await import('@alga-psa/client-portal/actions');
@@ -2626,7 +2821,175 @@ describe('Appointment Request Integration Tests', () => {
       });
 
       expect(cancelResult.success).toBe(true);
-      expect(cancelResult.teamsMeetingWarning).toContain('could not be removed');
+      expect(cancelResult.teamsMeetingWarning).toContain('could not be scheduled');
+
+      const onlineMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(onlineMeeting.status).toBe('cancel_pending');
+    });
+  });
+
+  describe('T110 Teams meeting end-to-end lifecycle', () => {
+    it('T110: request → approve with meeting → decline → cleanup job → polling artifact capture', async () => {
+      // 1. Client creates the request via the client portal action.
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      // 2. Approve with generate_teams_meeting: both parties are invited and
+      //    the Graph body carries the PSA deep link.
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+      });
+
+      expect(approveResult.success).toBe(true);
+
+      const createArgs = createTeamsMeetingWithResultMock.mock.calls.at(-1)?.[0];
+      expect(createArgs).toBeDefined();
+      const attendeeEmails = (createArgs.attendees ?? []).map(
+        (attendee: { emailAddress: { address: string } }) => attendee.emailAddress.address,
+      );
+      expect(attendeeEmails).toContain(`contact-${fixture.contactId.slice(0, 8)}@test.com`);
+      expect(attendeeEmails).toContain(`tech-${fixture.technicianUserId.slice(0, 8)}@test.com`);
+      expect(createArgs.bodyHtml).toContain(`/msp/schedule?requestId=${fixture.appointmentRequestId}`);
+
+      const approvedRequest = await tenantTableFor(db, tenantId, 'appointment_requests')
+        .where({
+          appointment_request_id: fixture.appointmentRequestId,
+          tenant: tenantId,
+        })
+        .first();
+      expect(approvedRequest.status).toBe('approved');
+      expect(approvedRequest.online_meeting_url).toBe('https://teams.example.com/meeting/123');
+
+      const scheduledMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(scheduledMeeting).toMatchObject({
+        provider: 'teams',
+        provider_meeting_id: 'meeting-123',
+        status: 'scheduled',
+      });
+
+      // 3. Decline the APPROVED request: the meeting moves to cancel_pending
+      //    and the cleanup job is enqueued (no inline Graph delete).
+      const declineResult = await declineAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        decline_reason: 'Technician no longer available',
+      });
+
+      expect(declineResult.success).toBe(true);
+      expect(deleteTeamsMeetingMock).not.toHaveBeenCalled();
+      expect(scheduleJobMock).toHaveBeenCalledWith(
+        'teams-meeting-cleanup',
+        { tenantId, meetingId: scheduledMeeting.meeting_id },
+        { singletonKey: `teams-meeting-cleanup:${tenantId}:${scheduledMeeting.meeting_id}` },
+      );
+
+      const pendingMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
+        .where({
+          tenant: tenantId,
+          meeting_id: scheduledMeeting.meeting_id,
+        })
+        .first();
+      expect(pendingMeeting.status).toBe('cancel_pending');
+
+      // 4. Run the real cleanup handler: Graph delete is confirmed and the
+      //    row reaches its terminal cancelled state.
+      const { teamsMeetingCleanupHandler } = await import('@alga-psa/jobs/handlers/teamsMeetingCleanupHandler');
+      await teamsMeetingCleanupHandler({ tenantId, meetingId: scheduledMeeting.meeting_id });
+
+      expect(deleteTeamsMeetingWithResultMock).toHaveBeenCalledWith({
+        tenantId,
+        meetingId: 'meeting-123',
+        eventId: 'event-123',
+        appointmentRequestId: fixture.appointmentRequestId,
+      });
+
+      const cancelledMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
+        .where({
+          tenant: tenantId,
+          meeting_id: scheduledMeeting.meeting_id,
+        })
+        .first();
+      expect(cancelledMeeting.status).toBe('cancelled');
+      expect(cancelledMeeting.error_code).toBeNull();
+
+      // 5. Polling fallback for artifact capture (webhook-less): a meeting
+      //    that ended while recording_pending gets its artifacts fetched and
+      //    persisted by the real capture orchestrator against the real DB.
+      const pastStart = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      const pastEnd = new Date(Date.now() - 60 * 60 * 1000);
+      await tenantTableFor(db, tenantId, 'online_meetings')
+        .where({
+          tenant: tenantId,
+          meeting_id: scheduledMeeting.meeting_id,
+        })
+        .update({
+          status: 'recording_pending',
+          start_time: pastStart,
+          end_time: pastEnd,
+          recording_fetch_attempts: 0,
+          last_fetch_at: null,
+          error_code: null,
+        });
+
+      const fetchArtifactsMock = vi.fn(async () => [
+        {
+          artifactType: 'recording' as const,
+          providerArtifactId: 'rec-1',
+          contentUrl: 'https://graph/rec',
+          createdDateTime: new Date().toISOString(),
+        },
+      ]);
+
+      const { fetchAndPersistMeetingArtifacts } = await import('@alga-psa/clients/lib/onlineMeetingArtifactCapture');
+      const captured = await fetchAndPersistMeetingArtifacts(
+        { tenantId, meetingId: scheduledMeeting.meeting_id, actorUserId: STAFF_USER_ID },
+        {
+          isEnterpriseEdition: () => true,
+          fetchArtifacts: fetchArtifactsMock,
+          loadSettings: async () => ({ downloadRecordings: false, exposeRecordingsInPortal: false }),
+          revalidate: () => {},
+        },
+      );
+
+      expect(fetchArtifactsMock).toHaveBeenCalledWith({
+        tenantId,
+        meetingId: 'meeting-123',
+        organizerUserId: 'organizer-object-1',
+      });
+      expect(captured.status).toBe('recording_ready');
+
+      const meetingAfterCapture = await tenantTableFor(db, tenantId, 'online_meetings')
+        .where({
+          tenant: tenantId,
+          meeting_id: scheduledMeeting.meeting_id,
+        })
+        .first();
+      expect(meetingAfterCapture.status).toBe('recording_ready');
+      expect(meetingAfterCapture.recording_fetch_attempts).toBe(1);
+      expect(meetingAfterCapture.last_fetch_at).not.toBeNull();
+
+      const artifacts = await tenantTableFor(db, tenantId, 'online_meeting_artifacts')
+        .where({
+          tenant: tenantId,
+          meeting_id: scheduledMeeting.meeting_id,
+        });
+      expect(artifacts).toHaveLength(1);
+      expect(artifacts[0]).toMatchObject({
+        artifact_type: 'recording',
+        provider_artifact_id: 'rec-1',
+        content_url: 'https://graph/rec',
+      });
     });
   });
 });
@@ -3000,8 +3363,30 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
     }
   };
 
+  // Artifacts reference online_meetings rows, so remove them first.
+  const safeDeleteArtifactsForMeetings = async (where: Record<string, unknown>) => {
+    try {
+      const meetings = await tenantTableFor(db, tenantId, 'online_meetings')
+        .where(where)
+        .select('meeting_id');
+      const meetingIds = meetings.map((row: { meeting_id: string }) => row.meeting_id);
+      if (meetingIds.length > 0) {
+        await tenantTableFor(db, tenantId, 'online_meeting_artifacts')
+          .whereIn('meeting_id', meetingIds)
+          .andWhere({ tenant: tenantId })
+          .del();
+      }
+    } catch {
+      // Ignore cleanup issues
+    }
+  };
+
   // Delete appointment request and related data
   if (ids.onlineMeetingId) {
+    await safeDeleteArtifactsForMeetings({
+      tenant: tenantId,
+      meeting_id: ids.onlineMeetingId
+    });
     await safeDelete('online_meetings', {
       tenant: tenantId,
       meeting_id: ids.onlineMeetingId
@@ -3027,6 +3412,10 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
   }
 
   if (ids.appointmentRequestId) {
+    await safeDeleteArtifactsForMeetings({
+      tenant: tenantId,
+      appointment_request_id: ids.appointmentRequestId
+    });
     await safeDelete('online_meetings', {
       tenant: tenantId,
       appointment_request_id: ids.appointmentRequestId

@@ -399,6 +399,7 @@ export async function setupSchedules() {
       { jobName: 'verify-google-calendar-pubsub', cron: '15 * * * *' },
       { jobName: 'renew-google-gmail-watch', cron: '*/30 * * * *' },
       { jobName: 'renew-teams-meeting-artifact-subscriptions', cron: '*/30 * * * *' },
+      { jobName: 'sweep-teams-online-meetings', cron: '*/10 * * * *' },
       { jobName: 'cleanup-ai-session-keys', cron: '*/10 * * * *' },
       { jobName: 'workflow-quota-resume-scan', cron: '*/5 * * * *' },
     ];
