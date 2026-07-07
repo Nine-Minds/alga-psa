@@ -14,7 +14,16 @@
     "documentsAll": "Tous les documents",
     "knowledgeBase": "Base de connaissances",
     "assets": "Actifs",
-    "inventory": "Inventaire",
+    "inventory": {
+      "label": "Inventaire",
+      "sections": {
+        "overview": "Vue d’ensemble",
+        "stock": "Stock",
+        "purchasing": "Achats",
+        "salesFulfillment": "Ventes et exécution",
+        "analytics": "Analyses"
+      }
+    },
     "inventoryDashboard": "Tableau de bord",
     "inventoryStock": "Stock",
     "inventoryLocations": "Emplacements de stock",

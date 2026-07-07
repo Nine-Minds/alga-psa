@@ -14,6 +14,7 @@ import {
   settingsNavigationSections,
   billingNavigationSections,
   extensionsNavigationSections,
+  inventoryNavigationSections,
   type NavigationSection,
   type NavMode,
 } from '@/config/menuConfig';
@@ -93,7 +94,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isSettingsMode = mode === 'settings';
   const isBillingMode = mode === 'billing';
   const isExtensionsMode = mode === 'extensions';
-  const isSubMode = isSettingsMode || isBillingMode || isExtensionsMode;
+  const isInventoryMode = mode === 'inventory';
+  const isSubMode = isSettingsMode || isBillingMode || isExtensionsMode || isInventoryMode;
 
   const isActive = (path: string) => {
     if (!path) {
@@ -240,7 +242,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       ? billingSections
       : isExtensionsMode
         ? extensionsNavigationSections
-        : (menuSections ?? defaultNavigationSections);
+        : isInventoryMode
+          ? inventoryNavigationSections
+          : (menuSections ?? defaultNavigationSections);
 
   const sectionsToRender = rawSectionsToRender.map(translateSection);
   const translatedBottomMenuItems = bottomMenuItems.map(translateMenuItem);
@@ -253,7 +257,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       ? 'billing-sidebar'
       : isExtensionsMode
         ? 'extensions-sidebar'
-        : 'main-sidebar';
+        : isInventoryMode
+          ? 'inventory-sidebar'
+          : 'main-sidebar';
 
   return (
     <aside

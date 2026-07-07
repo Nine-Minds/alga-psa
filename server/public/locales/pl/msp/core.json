@@ -14,7 +14,16 @@
     "documentsAll": "Wszystkie dokumenty",
     "knowledgeBase": "Baza wiedzy",
     "assets": "Zasoby",
-    "inventory": "Zapasy",
+    "inventory": {
+      "label": "Zapasy",
+      "sections": {
+        "overview": "Przegląd",
+        "stock": "Zapas",
+        "purchasing": "Zakupy",
+        "salesFulfillment": "Sprzedaż i realizacja",
+        "analytics": "Analityka"
+      }
+    },
     "inventoryDashboard": "Pulpit",
     "inventoryStock": "Zapas",
     "inventoryLocations": "Lokalizacje magazynowe",

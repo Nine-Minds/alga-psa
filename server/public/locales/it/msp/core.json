@@ -14,7 +14,16 @@
     "documentsAll": "Tutti i documenti",
     "knowledgeBase": "Base di conoscenza",
     "assets": "Asset",
-    "inventory": "Inventario",
+    "inventory": {
+      "label": "Inventario",
+      "sections": {
+        "overview": "Panoramica",
+        "stock": "Giacenza",
+        "purchasing": "Acquisti",
+        "salesFulfillment": "Vendite ed evasione",
+        "analytics": "Analisi"
+      }
+    },
     "inventoryDashboard": "Dashboard",
     "inventoryStock": "Giacenza",
     "inventoryLocations": "Ubicazioni di giacenza",
