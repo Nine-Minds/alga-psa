@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -144,6 +145,7 @@ export function SalesOrdersManager({
   generateInvoice,
   confirmDropShip,
 }: SalesOrdersManagerProps) {
+  const router = useRouter();
   const { t } = useTranslation('features/inventory');
   const INVOICE_MODE_OPTIONS: { value: SalesOrderInvoiceMode; label: string }[] = [
     { value: 'on_fulfillment', label: t('salesOrders.invoiceMode.onFulfillment', 'On fulfillment') },
@@ -399,6 +401,13 @@ export function SalesOrdersManager({
                 onClick={() => setEmailTarget(rec)}
               >
                 {t('salesOrders.actions.emailConfirmation', 'Email confirmation to client…')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                id={`manage-layouts-so-${rec.so_id}`}
+                onClick={() => router.push('/msp/document-templates/sales-order')}
+              >
+                {t('salesOrders.actions.manageLayouts', 'Manage layouts')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
