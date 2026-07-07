@@ -121,7 +121,11 @@ export class CsvImporter extends AbstractImporter {
 
   private async parseXlsx(buffer: Buffer): Promise<ParsedRecord[]> {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    const workbookBuffer = buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength
+    ) as Parameters<typeof workbook.xlsx.load>[0];
+    await workbook.xlsx.load(workbookBuffer);
     const worksheet = workbook.worksheets[0];
 
     if (!worksheet) {
@@ -206,7 +210,7 @@ export class CsvImporter extends AbstractImporter {
       if ('text' in value) {
         return this.formatCellValue(value.text as ExcelJS.CellValue);
       }
-      if ('hyperlink' in value) {
+      if ('hyperlink' in value && typeof value.hyperlink === 'string') {
         return value.hyperlink;
       }
     }
