@@ -97,11 +97,124 @@
   "dashboard": {
     "actions": {
       "newPurchaseOrder": "Neue Bestellung",
-      "receiveStock": "Bestand erfassen"
+      "receiveStock": "Bestand erfassen",
+      "stockLedger": "Bestandsjournal öffnen"
+    },
+    "loadError": {
+      "title": "Live-Inventardaten konnten nicht geladen werden",
+      "body": "Das Dashboard zeigt leere Werte, bis der Datenabruf erfolgreich ist."
     },
     "attention": {
       "allClear": "Alles in Ordnung — derzeit ist nichts zu beachten.",
-      "title": "Erfordert Aufmerksamkeit"
+      "title": "Erfordert Aufmerksamkeit",
+      "urgent": "{{count}} dringend",
+      "footer": "Sortiert nach Geldbetrag + Kundenauswirkung · gerade aktualisiert",
+      "itemFallback": "Einheit",
+      "refFallback": "RMA",
+      "noneFallback": "keine",
+      "personFallback": "jemand",
+      "vendorFallback": "Lieferant",
+      "filters": {
+        "all": "Alle",
+        "money": "Geld",
+        "fulfillment": "Auslieferung",
+        "field": "Außendienst",
+        "ops": "Betrieb"
+      },
+      "bands": {
+        "red": "Kostet heute Geld oder einen Kunden",
+        "amber": "Diese Woche nachzugehen",
+        "info": "Im Blick behalten"
+      },
+      "actions": {
+        "invoice": "Abrechnen",
+        "viewSo": "SO anzeigen",
+        "trackTransfer": "Umlagerung verfolgen",
+        "recall": "Zurückrufen",
+        "review": "Prüfen",
+        "chase": "Nachfassen",
+        "openStaging": "Staging öffnen",
+        "requote": "Neu kalkulieren",
+        "reviewBill": "Rechnung prüfen",
+        "approve": "Genehmigen",
+        "reorder": "Nachbestellen",
+        "createPo": "PO erstellen",
+        "receive": "Erfassen",
+        "shipReplacement": "Ersatz versenden",
+        "view": "Anzeigen"
+      },
+      "kind": {
+        "unbilled": "nicht abgerechnet",
+        "dropship": "Direktversand",
+        "cutoverRisk": "gefährdete Umstellung",
+        "cutover": "Umstellung",
+        "vanShortage": "Fahrzeugmangel",
+        "loaner": "überfälliges Leihgerät",
+        "ghost": "Ghost-Verbrauch",
+        "rmaAging": "RMA überfällig",
+        "rmaClient": "Ersatz",
+        "priceCreep": "Preisdrift",
+        "billCreep": "Rechnungsdrift",
+        "billsOverdue": "überfällige Rechnungen",
+        "countApproval": "Zählungsgenehmigung",
+        "stockLow": "Bestand niedrig",
+        "stockOut": "Bestand leer",
+        "poPartial": "Teil-PO",
+        "warranty": "Garantie",
+        "deadStock": "Ladenhüter"
+      },
+      "fact": {
+        "unbilledSo": "versendet, noch nicht abgerechnet",
+        "unbilledDropship": "Direktversände über {{count}} SOs nicht abgerechnet",
+        "cutoverRisk": "Umstellung {{date}} — {{backordered}} von {{ordered}} im Rückstand",
+        "cutoverStaging": "Umstellung {{date}} — {{staged}} von {{ordered}} bereitgestellt",
+        "vanShortage": "{{service}}-Mangel bei {{jobs}} Installationen heute",
+        "overdueLoaner": "{{service}}-Leihgerät {{days}} T überfällig",
+        "ghostTech": "{{count}} Hardware-Tickets geschlossen, keine Teile abgerechnet",
+        "rmaVendor": "Gutschrift ausstehend — keine Antwort seit {{days}} Tagen",
+        "rmaClient": "Ersatzgerät noch ausstehend",
+        "priceCreepSo": "noch zum alten Kostenpreis kalkuliert",
+        "priceCreepQuotes": "{{count}} offene(s) Angebot(e) jetzt unter aktuellem Kostenpreis",
+        "priceCreepBill": "Rechnung übersteigt zugehörige PO",
+        "billsOverdue": "{{count}} Lieferantenrechnung(en) überfällig",
+        "countApproval": "Zählabweichung benötigt Genehmiger",
+        "stockOut": "{{service}} ist nicht auf Lager",
+        "stockLow": "{{service}} unter Meldebestand",
+        "poPartial": "teilweise erfasste PO noch offen",
+        "warranty": "{{count}} Einheiten mit Garantieablauf <30 T",
+        "deadStock": "keine Bewegung seit 90 Tagen"
+      },
+      "meta": {
+        "unbilledSo": "{{so}} · {{lines}} Positionen · vor {{days}} T versendet",
+        "unbilledDropship": "bestätigte Direktversand-Positionen bereit zur Abrechnung",
+        "cutoverFeeder": "ETA {{po}} {{eta}} · {{slack}} T Puffer · Bereitschaft {{pct}}%",
+        "cutover": "{{so}} · {{pct}}% Bereitschaft · in {{days}} T",
+        "vanShortageTransit": "verfügbar {{available}} · Umlagerung {{from}} versandt",
+        "vanShortage": "verfügbar {{available}} · Meldebestand {{reorder}}",
+        "overdueLoaner": "fällig {{date}}{{serial}}",
+        "ghostTech": "geschätztes Materialrisiko aus geschlossenen Hardware-Tickets",
+        "rmaVendor": "{{ref}} · älteste offene Forderung",
+        "rmaClient": "{{ref}} · {{service}} · fällig in {{days}} T",
+        "priceCreepSo": "{{so}} · Margenrisiko bei unveränderter Auslieferung",
+        "priceCreepQuotes": "Angebot(e): {{numbers}}",
+        "priceCreepBill": "{{bill}} · markiert vs. zugehörige PO",
+        "billsOverdue": "älteste überfällig {{days}} T",
+        "countApproval": "gezählt von {{name}} · Vier-Augen-Prüfung",
+        "stockLevel": "verfügbar {{available}} · Meldebestand {{reorder}}",
+        "poPartial": "{{po}} · {{received}} von {{ordered}} erfasst · {{vendor}}",
+        "warranty": "{{count}} Kunden",
+        "deadStock": "{{locations}} Standort(e) binden Betriebskapital"
+      },
+      "metric": {
+        "ageDays": "{{days}} T",
+        "percent": "{{pct}}%",
+        "daysOut": "in {{days}} T",
+        "jobs": "{{count}} Aufträge",
+        "today": "heute",
+        "units": "{{count}} Einheiten",
+        "ltThirty": "<30 T",
+        "available": "verfügbar"
+      }
     },
     "bills": {
       "acrossBill": "{{total}} auf {{count}} Rechnung",
@@ -192,6 +305,107 @@
       "loanOut": "Verliehen",
       "loanIn": "Leihe zurückgegeben",
       "retire": "Ausgemustert"
+    },
+    "header": {
+      "branch": "Niederlassung",
+      "branches": "Niederlassungen",
+      "van": "Fahrzeug",
+      "vans": "Fahrzeuge",
+      "tech": "Techniker",
+      "techs": "Techniker",
+      "subtitle": "{{branches}} · {{vans}} · {{techs}} — {{attention}} erfordern Aufmerksamkeit, {{inPlay}} heute im Einsatz."
+    },
+    "money": {
+      "estUnavailable": "nur Anzahl",
+      "unbilled": {
+        "title": "Versendet, nicht abgerechnet",
+        "noShippedSos": "Keine versendeten SOs ausstehend",
+        "otherSos": "{{count}} weitere versendete SOs",
+        "dropship": "Direktversände nicht abgerechnet",
+        "soCount": "{{count}} SOs",
+        "ghost": "Ghost-Verbrauch",
+        "ticketCount": "{{count}} Tickets",
+        "ledgerLink": "Umsatzjournal anzeigen"
+      },
+      "margin": {
+        "title": "Marge lfd. Monat",
+        "vsLastMonth": "vs. Vormonat",
+        "meta": "{{margin}} Marge · {{revenue}} Umsatz · {{cogs}} COGS",
+        "priceCreep": "{{count}} Angebot(e) und {{sos}} noch zum alten Kostenpreis — {{amount}} Marge gefährdet.",
+        "noSos": "keine offenen SOs"
+      },
+      "rma": {
+        "title": "Lieferant schuldet (RMA-Gutschriften)",
+        "oldest": "ältester {{days}} T",
+        "empty": "Keine überfälligen Lieferanten-RMAs.",
+        "vendorFallback": "Lieferant",
+        "creditRef": "Gutschrift · {{ref}}",
+        "credit": "Gutschrift",
+        "link": "Allen RMAs nachgehen"
+      }
+    },
+    "deployments": {
+      "title": "Einsätze dieser Woche",
+      "subtitle": "{{count}} terminierte Umstellung(en)",
+      "eyebrow": "Diese Woche",
+      "scope": "{{qty}}× {{name}} — {{staged}} bereitgestellt · {{backordered}} im Rückstand",
+      "itemFallback": "Artikel",
+      "scopeFallback": "{{staged}} bereitgestellt · {{backordered}} im Rückstand",
+      "feeder": "Beliefert durch {{po}} {{vendor}}, ETA {{eta}} — {{slack}} T Puffer.",
+      "vendorFallback": "Lieferant",
+      "noEta": "keine ETA",
+      "allServiceOrders": "Alle Serviceaufträge",
+      "countdownBefore": "T-{{days}}",
+      "countdownAfter": "T+{{days}}",
+      "status": {
+        "atRisk": "Gefährdet",
+        "ready": "Bereit",
+        "staging": "Bereitstellung"
+      }
+    },
+    "pipeline": {
+      "title": "Kundenauftrags-Pipeline",
+      "openSos": "{{count}} offene SOs",
+      "quotes": "Angebot",
+      "quotesValue": "{{count}} offen",
+      "booked": "SO gebucht",
+      "bookedValue": "{{count}} · {{draft}} Entwurf",
+      "fulfilling": "In Auslieferung",
+      "fulfillingValue": "{{count}} Rückstand",
+      "invoiced": "Abgerechnet",
+      "invoicedValue": "diese Wo.",
+      "blocked": "{{count}} SOs durch Rückstand blockiert",
+      "allSos": "Alle SOs"
+    },
+    "receivingToday": {
+      "title": "Heutiger Wareneingang",
+      "meta": "POs · {{amount}} · {{more}} weitere diese Wo.",
+      "empty": "Heute treffen keine Bestellungen ein.",
+      "vendorFallback": "Lieferant",
+      "flag": "Hinweis: {{po}} trifft mit {{slack}} T Puffer vor der Umstellung bei {{client}} ein.",
+      "clientFallback": "Kunde",
+      "receiveStock": "Bestand erfassen"
+    },
+    "ghostWeek": {
+      "title": "Ghost-Verbrauch diese Woche",
+      "countOnly": "Tickets geschlossen, 0 Teile",
+      "est": "Tickets geschlossen, 0 Teile · geschätzt {{amount}}",
+      "explainer": "Hardware-Tickets ohne erfasstes Material geschlossen — nicht abgerechnete reine Arbeitsabschlüsse nach Techniker.",
+      "empty": "Diese Woche keine Ghost-Verbrauchskandidaten.",
+      "techChip": "{{name}} · {{count}}{{amount}}",
+      "review": "Ghost-Verbrauch prüfen"
+    },
+    "footer": {
+      "title": "Bestandsstatus",
+      "weekAbbrev": "Wo.",
+      "onHand": "Vorrätige Einheiten",
+      "serialized": "{{count}} serialisiert",
+      "deadStock": "Ladenhüter",
+      "deadStockDetail": "{{location}} · 90 T",
+      "locationFallback": "Standort",
+      "thisWeek": "Diese Woche",
+      "weekActivity": "{{received}} erfasst · {{deployed}} eingesetzt · {{transfers}} Umlagerungen · {{rmas}} RMAs",
+      "valuationReport": "Bewertungsbericht"
     }
   },
   "ghostUsage": {

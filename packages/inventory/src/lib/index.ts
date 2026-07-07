@@ -15,3 +15,4 @@ export * from './materials';
 export * from './availability';
 export * from './inventoryEvents';
 export * from './stockLowSignal';
+export * from './dashboardQueries';

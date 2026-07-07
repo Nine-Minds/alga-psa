@@ -11,17 +11,49 @@ export const metadata: Metadata = {
 };
 
 const EMPTY: InventoryDashboardData = {
-  location_count: 0,
-  van_count: 0,
-  inventory_value: { by_location: [], grand_total: 0 },
-  on_hand: { total_units: 0, serialized_units: 0 },
-  on_order: { open_po_count: 0, on_order_value: 0, arriving_today: 0 },
-  margin_mtd: { revenue: 0, cogs: 0, margin: 0, margin_pct: 0 },
-  vendor_bills: { open_count: 0, open_total: 0, overdue_count: 0, overdue_total: 0 },
-  this_week: { received: 0, deployed: 0, transfers: 0, rmas_opened: 0 },
+  currency_code: 'USD',
+  header: {
+    branch_count: 0,
+    van_count: 0,
+    tech_count: 0,
+    attention_count: 0,
+    urgent_count: 0,
+    in_play_cents: 0,
+  },
+  unbilled: {
+    total: 0,
+    top_so: null,
+    other_so: { count: 0, amount: 0 },
+    dropship: { so_count: 0, amount: 0 },
+    ghost: { count: 0, amount: null },
+  },
+  margin_mtd: {
+    revenue: 0,
+    cogs: 0,
+    margin: 0,
+    margin_pct: 0,
+    prev_month_pct: null,
+    price_creep: null,
+  },
+  rma_receivables: { total: 0, oldest_days: null, rows: [], more_count: 0 },
   attention: [],
-  receiving_queue: [],
-  recent_movements: [],
+  deployments: [],
+  pipeline: {
+    quotes: { count: 0, amount: 0 },
+    booked: { count: 0, draft_count: 0, amount: 0 },
+    fulfilling: { count: 0, amount: 0, blocked_count: 0 },
+    invoiced_week: 0,
+  },
+  receiving_today: { count: 0, amount: 0, more_week: 0, pos: [], flag: null },
+  ghost_week: { count: 0, est_total: null, techs: [] },
+  footer: {
+    value: 0,
+    wow_delta: 0,
+    on_hand_units: 0,
+    serialized_units: 0,
+    dead_stock: null,
+    week: { received: 0, deployed: 0, transfers: 0, rmas: 0 },
+  },
 };
 
 export default async function InventoryDashboardPage() {
@@ -36,13 +68,15 @@ export default async function InventoryDashboardPage() {
   }
 
   let data: InventoryDashboardData = EMPTY;
+  let loadError = false;
   try {
     data = await getInventoryDashboardData();
   } catch (err) {
+    loadError = true;
     console.error('inventory dashboard: getInventoryDashboardData failed', err);
   }
 
-  return <InventoryDashboard data={data} />;
+  return <InventoryDashboard data={data} loadError={loadError} />;
 }
 
 export const dynamic = 'force-dynamic';

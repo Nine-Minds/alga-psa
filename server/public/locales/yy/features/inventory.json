@@ -97,43 +97,156 @@
   "dashboard": {
     "actions": {
       "newPurchaseOrder": "55555",
-      "receiveStock": "55555"
+      "receiveStock": "55555",
+      "stockLedger": "55555"
+    },
+    "loadError": {
+      "title": "55555",
+      "body": "55555"
     },
     "attention": {
       "allClear": "55555",
-      "title": "55555"
+      "title": "55555",
+      "urgent": "{{count}} 55555",
+      "footer": "55555",
+      "itemFallback": "55555",
+      "refFallback": "55555",
+      "noneFallback": "55555",
+      "personFallback": "55555",
+      "vendorFallback": "55555",
+      "filters": {
+        "all": "55555",
+        "money": "55555",
+        "fulfillment": "55555",
+        "field": "55555",
+        "ops": "55555"
+      },
+      "bands": {
+        "red": "55555",
+        "amber": "55555",
+        "info": "55555"
+      },
+      "actions": {
+        "invoice": "55555",
+        "viewSo": "55555",
+        "trackTransfer": "55555",
+        "recall": "55555",
+        "review": "55555",
+        "chase": "55555",
+        "openStaging": "55555",
+        "requote": "55555",
+        "reviewBill": "55555",
+        "approve": "55555",
+        "reorder": "55555",
+        "createPo": "55555",
+        "receive": "55555",
+        "shipReplacement": "55555",
+        "view": "55555"
+      },
+      "kind": {
+        "unbilled": "55555",
+        "dropship": "55555",
+        "cutoverRisk": "55555",
+        "cutover": "55555",
+        "vanShortage": "55555",
+        "loaner": "55555",
+        "ghost": "55555",
+        "rmaAging": "55555",
+        "rmaClient": "55555",
+        "priceCreep": "55555",
+        "billCreep": "55555",
+        "billsOverdue": "55555",
+        "countApproval": "55555",
+        "stockLow": "55555",
+        "stockOut": "55555",
+        "poPartial": "55555",
+        "warranty": "55555",
+        "deadStock": "55555"
+      },
+      "fact": {
+        "unbilledSo": "55555",
+        "unbilledDropship": "55555 {{count}} 55555",
+        "cutoverRisk": "55555 {{date}} 55555 {{backordered}} 55555 {{ordered}} 55555",
+        "cutoverStaging": "55555 {{date}} 55555 {{staged}} 55555 {{ordered}} 55555",
+        "vanShortage": "{{service}} 55555 {{jobs}} 55555",
+        "overdueLoaner": "{{service}} 55555 {{days}}55555",
+        "ghostTech": "55555 {{count}} 55555",
+        "rmaVendor": "55555 {{days}} 55555",
+        "rmaClient": "55555",
+        "priceCreepSo": "55555",
+        "priceCreepQuotes": "{{count}} 55555",
+        "priceCreepBill": "55555",
+        "billsOverdue": "{{count}} 55555",
+        "countApproval": "55555",
+        "stockOut": "{{service}} 55555",
+        "stockLow": "{{service}} 55555",
+        "poPartial": "55555",
+        "warranty": "{{count}} 55555",
+        "deadStock": "55555"
+      },
+      "meta": {
+        "unbilledSo": "{{so}} 55555 {{lines}} 55555 {{days}}55555",
+        "unbilledDropship": "55555",
+        "cutoverFeeder": "55555 {{po}} {{eta}} 55555 {{slack}}55555 {{pct}}55555",
+        "cutover": "{{so}} 55555 {{pct}}55555 {{days}}55555",
+        "vanShortageTransit": "55555 {{available}} 55555 {{from}} 55555",
+        "vanShortage": "55555 {{available}} 55555 {{reorder}}",
+        "overdueLoaner": "55555 {{date}}{{serial}}",
+        "ghostTech": "55555",
+        "rmaVendor": "{{ref}} 55555",
+        "rmaClient": "{{ref}} 55555 {{service}} 55555 {{days}}55555",
+        "priceCreepSo": "{{so}} 55555",
+        "priceCreepQuotes": "55555 {{numbers}}",
+        "priceCreepBill": "{{bill}} 55555",
+        "billsOverdue": "55555 {{days}}55555",
+        "countApproval": "55555 {{name}} 55555",
+        "stockLevel": "55555 {{available}} 55555 {{reorder}}",
+        "poPartial": "{{po}} 55555 {{received}} 55555 {{ordered}} 55555 {{vendor}}",
+        "warranty": "{{count}} 55555",
+        "deadStock": "{{locations}} 55555"
+      },
+      "metric": {
+        "ageDays": "{{days}}55555",
+        "percent": "{{pct}}55555",
+        "daysOut": "{{days}}55555",
+        "jobs": "{{count}} 55555",
+        "today": "55555",
+        "units": "{{count}} 55555",
+        "ltThirty": "55555",
+        "available": "55555"
+      }
     },
     "bills": {
-      "acrossBill": "55555 {{total}} 55555 {{count}} 55555",
-      "acrossBills": "55555 {{total}} 55555 {{count}} 55555",
+      "acrossBill": "{{total}} 55555 {{count}} 55555",
+      "acrossBills": "{{total}} 55555 {{count}} 55555",
       "nothingOverdue": "55555",
-      "overdue": "55555 {{count}} 55555 {{total}} 55555",
+      "overdue": "{{count}} 55555 {{total}}",
       "title": "55555",
       "viewBills": "55555"
     },
     "kpi": {
-      "arrivingToday": "55555 {{count}} 55555",
-      "marginFoot": "55555 {{margin}} 55555 {{revenue}} 55555",
+      "arrivingToday": " 55555 {{count}} 55555",
+      "marginFoot": "{{margin}} 55555 {{revenue}}",
       "marginMtd": "55555",
       "onHandUnits": "55555",
       "onOrder": "55555",
-      "poCount": "55555 {{count}} 55555",
-      "poCountPlural": "55555 {{count}} 55555",
-      "serialized": "55555 {{count}} 55555",
-      "stockedLocation": "55555 {{count}} 55555",
-      "stockedLocations": "55555 {{count}} 55555",
+      "poCount": "{{count}} 55555",
+      "poCountPlural": "{{count}} 55555",
+      "serialized": "{{count}} 55555",
+      "stockedLocation": "{{count}} 55555",
+      "stockedLocations": "{{count}} 55555",
       "totalValue": "55555"
     },
     "movements": {
-      "bySuffix": "55555 {{name}} 55555",
+      "bySuffix": " 55555 {{name}}",
       "consumed": "55555",
       "empty": "55555",
       "fullLedger": "55555",
-      "generic": "55555 {{type}} 55555 {{qty}} 55555 {{name}} 55555",
+      "generic": "{{type}} {{qty}} 55555 {{name}}",
       "itemFallback": "55555",
       "received": "55555",
       "rma": "55555",
-      "serialSuffix": "55555 {{sn}} 55555",
+      "serialSuffix": " 55555 {{sn}}55555",
       "title": "55555",
       "transferred": "55555"
     },
@@ -143,24 +256,24 @@
       "empty": "55555",
       "open": "55555",
       "partial": "55555",
-      "receivedOf": "55555 {{received}} 55555 {{ordered}} 55555",
+      "receivedOf": "{{received}} 55555 {{ordered}} 55555",
       "title": "55555",
-      "unit": "55555 {{count}} 55555",
-      "units": "55555 {{count}} 55555",
+      "unit": "{{count}} 55555",
+      "units": "{{count}} 55555",
       "vendorFallback": "55555"
     },
     "relTime": {
-      "dayAgo": "55555 {{count}} 55555",
-      "hrAgo": "55555 {{count}} 55555",
+      "dayAgo": "{{count}}55555",
+      "hrAgo": "{{count}} 55555",
       "justNow": "55555",
-      "minAgo": "55555 {{count}} 55555"
+      "minAgo": "{{count}} 55555"
     },
-    "stockHealthAcross": "55555 {{subtitle}} 55555",
+    "stockHealthAcross": "55555 {{subtitle}}",
     "subtitle": {
-      "location": "55555 {{count}} 55555",
-      "locations": "55555 {{count}} 55555",
-      "van": "55555 {{count}} 55555",
-      "vans": "55555 {{count}} 55555"
+      "location": "{{count}} 55555",
+      "locations": "{{count}} 55555",
+      "van": " 55555 {{count}} 55555",
+      "vans": " 55555 {{count}} 55555"
     },
     "thisWeek": {
       "rmasOpened": "55555",
@@ -172,7 +285,7 @@
     "title": "55555",
     "valueByLocation": {
       "empty": "55555",
-      "grandTotal": "55555 {{total}} 55555",
+      "grandTotal": "55555 {{total}}",
       "title": "55555"
     },
     "sourceDocType": {
@@ -192,6 +305,107 @@
       "loanOut": "55555",
       "loanIn": "55555",
       "retire": "55555"
+    },
+    "header": {
+      "branch": "55555",
+      "branches": "55555",
+      "van": "55555",
+      "vans": "55555",
+      "tech": "55555",
+      "techs": "55555",
+      "subtitle": "{{branches}} 55555 {{vans}} 55555 {{techs}} 55555 {{attention}} 55555 {{inPlay}} 55555"
+    },
+    "money": {
+      "estUnavailable": "55555",
+      "unbilled": {
+        "title": "55555",
+        "noShippedSos": "55555",
+        "otherSos": "{{count}} 55555",
+        "dropship": "55555",
+        "soCount": "{{count}} 55555",
+        "ghost": "55555",
+        "ticketCount": "{{count}} 55555",
+        "ledgerLink": "55555"
+      },
+      "margin": {
+        "title": "55555",
+        "vsLastMonth": "55555",
+        "meta": "{{margin}} 55555 {{revenue}} 55555 {{cogs}} 55555",
+        "priceCreep": "{{count}} 55555 {{sos}} 55555 {{amount}} 55555",
+        "noSos": "55555"
+      },
+      "rma": {
+        "title": "55555",
+        "oldest": "{{days}}55555",
+        "empty": "55555",
+        "vendorFallback": "55555",
+        "creditRef": "55555 {{ref}}",
+        "credit": "55555",
+        "link": "55555"
+      }
+    },
+    "deployments": {
+      "title": "55555",
+      "subtitle": "{{count}} 55555",
+      "eyebrow": "55555",
+      "scope": "{{qty}}55555 {{name}} 55555 {{staged}} 55555 {{backordered}} 55555",
+      "itemFallback": "55555",
+      "scopeFallback": "{{staged}} 55555 {{backordered}} 55555",
+      "feeder": "55555 {{po}} {{vendor}}55555 {{eta}} 55555 {{slack}}55555",
+      "vendorFallback": "55555",
+      "noEta": "55555",
+      "allServiceOrders": "55555",
+      "status": {
+        "atRisk": "55555",
+        "ready": "55555",
+        "staging": "55555"
+      },
+      "countdownBefore": "55555{{days}}",
+      "countdownAfter": "55555{{days}}"
+    },
+    "pipeline": {
+      "title": "55555",
+      "openSos": "{{count}} 55555",
+      "quotes": "55555",
+      "quotesValue": "{{count}} 55555",
+      "booked": "55555",
+      "bookedValue": "{{count}} 55555 {{draft}} 55555",
+      "fulfilling": "55555",
+      "fulfillingValue": "{{count}} 55555",
+      "invoiced": "55555",
+      "invoicedValue": "55555",
+      "blocked": "{{count}} 55555",
+      "allSos": "55555"
+    },
+    "receivingToday": {
+      "title": "55555",
+      "meta": "55555 {{amount}} 55555 {{more}} 55555",
+      "empty": "55555",
+      "vendorFallback": "55555",
+      "flag": "55555 {{po}} 55555 {{slack}}55555 {{client}} 55555",
+      "clientFallback": "55555",
+      "receiveStock": "55555"
+    },
+    "ghostWeek": {
+      "title": "55555",
+      "countOnly": "55555",
+      "est": "55555 {{amount}}",
+      "explainer": "55555",
+      "empty": "55555",
+      "techChip": "{{name}} 55555 {{count}}{{amount}}",
+      "review": "55555"
+    },
+    "footer": {
+      "title": "55555",
+      "weekAbbrev": "55555",
+      "onHand": "55555",
+      "serialized": "{{count}} 55555",
+      "deadStock": "55555",
+      "deadStockDetail": "{{location}} 55555",
+      "locationFallback": "55555",
+      "thisWeek": "55555",
+      "weekActivity": "{{received}} 55555 {{deployed}} 55555 {{transfers}} 55555 {{rmas}} 55555",
+      "valuationReport": "55555"
     }
   },
   "ghostUsage": {
