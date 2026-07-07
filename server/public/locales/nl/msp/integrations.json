@@ -2013,6 +2013,12 @@
             "description": "Breng technici op de hoogte wanneer werk wordt toegewezen.",
             "label": "Toewijzingsgebeurtenissen"
           },
+          "channel": {
+            "activityFeed": "Activiteitenfeed",
+            "botDm": "Direct bericht van de bot",
+            "both": "Beide",
+            "label": "Bezorgkanaal"
+          },
           "customerReply": {
             "description": "Breng technici op de hoogte wanneer klanten reageren.",
             "label": "Klantreacties"
@@ -2141,6 +2147,10 @@
             "help": "Bij het opslaan wordt de Microsoft Entra-object-ID die voor Graph-vergaderaanroepen wordt gebruikt, omgezet en opgeslagen.",
             "resolved": "Omgezette object-ID: {{objectId}}"
           },
+          "sendMeetingInvites": {
+            "label": "Agenda-uitnodigingen naar deelnemers verzenden",
+            "description": "Deelnemers ontvangen native Outlook/Teams-agenda-uitnodigingen voor gegenereerde vergaderingen."
+          },
           "downloadRecordings": {
             "label": "Opnamen downloaden naar interne opslag",
             "description": "Indien ingeschakeld worden opname-blobs naar de tenantopslag gekopieerd, naast de geverifieerde Graph-proxy."
@@ -2149,6 +2159,10 @@
             "label": "Opnamen en transcripties in het klantportaal weergeven",
             "description": "Standaard uitgeschakeld; MSP-gebruikers kunnen artefacten nog steeds bekijken via de interactie- en afspraakdetails."
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "Voer hieronder de diagnostiek uit voor details.",
+          "message": "De Teams-bot kan niet antwoorden: de bot-connectorreferenties (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) zijn niet geconfigureerd op de server."
         }
       }
     },

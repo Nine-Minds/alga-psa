@@ -2013,6 +2013,12 @@
             "description": "Techniker benachrichtigen, wenn ihnen Arbeit zugewiesen wird.",
             "label": "Zuweisungsereignisse"
           },
+          "channel": {
+            "activityFeed": "Aktivitäts-Feed",
+            "botDm": "Bot-Direktnachricht",
+            "both": "Beide",
+            "label": "Zustellungskanal"
+          },
           "customerReply": {
             "description": "Techniker benachrichtigen, wenn Kunden antworten.",
             "label": "Kundenantworten"
@@ -2141,6 +2147,10 @@
             "help": "Beim Speichern wird die für Graph-Besprechungsaufrufe verwendete Microsoft Entra-Objekt-ID aufgelöst und gespeichert.",
             "resolved": "Aufgelöste Objekt-ID: {{objectId}}"
           },
+          "sendMeetingInvites": {
+            "label": "Kalendereinladungen an Teilnehmer senden",
+            "description": "Teilnehmer erhalten native Outlook-/Teams-Kalendereinladungen für erstellte Besprechungen."
+          },
           "downloadRecordings": {
             "label": "Aufzeichnungen in den internen Speicher herunterladen",
             "description": "Wenn aktiviert, werden Aufzeichnungs-Blobs zusätzlich zum authentifizierten Graph-Proxy in den Mandantenspeicher kopiert."
@@ -2149,6 +2159,10 @@
             "label": "Aufzeichnungen und Transkripte im Kundenportal anzeigen",
             "description": "Standardmäßig deaktiviert; MSP-Benutzer können Artefakte weiterhin über die Interaktions- und Termindetails anzeigen."
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "Führen Sie unten die Diagnose aus, um Details zu erhalten.",
+          "message": "Der Teams-Bot kann nicht antworten: Die Bot-Connector-Anmeldedaten (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) sind auf dem Server nicht konfiguriert."
         }
       }
     },

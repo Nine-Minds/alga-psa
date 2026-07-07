@@ -4,15 +4,16 @@ import type { InternalNotification } from '@alga-psa/notifications';
 const SHARED_TEAMS_NOTIFICATION_MODULE =
   '../../../../../packages/notifications/src/realtime/teamsNotificationDelivery';
 
-// Teams notification delivery was consolidated into the shared notifications
-// package; deliverTeamsNotification now performs the availability gating, DB
-// lookups, and Microsoft Graph call directly (no EE wrapper/loadEe* delegation).
-// These tests cover the self-contained early-return branches with the server-only
-// boundaries mocked, plus the source-ownership contract.
+// Teams notification delivery is consolidated into the EE implementation that
+// records teams_notification_deliveries rows. The shared notifications module
+// is a thin CE-safe delegator across the @alga-psa/ee-stubs edition seam and
+// holds no delivery or classification logic of its own (F007/F008).
 
 const hoisted = vi.hoisted(() => ({
   isEnterprise: { value: true },
-  createTenantKnexMock: vi.fn(),
+  seamFactoryCalls: { count: 0 },
+  deliverTeamsNotificationImplMock: vi.fn(),
+  seamHasImpl: { value: true },
 }));
 
 vi.mock('@alga-psa/core/features', () => ({
@@ -25,24 +26,14 @@ vi.mock('@alga-psa/core/logger', () => ({
   default: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-vi.mock('@alga-psa/core/secrets', () => ({
-  getSecretProviderInstance: vi.fn(async () => ({
-    getAppSecret: vi.fn(async () => undefined),
-    getTenantSecret: vi.fn(async () => undefined),
-  })),
-}));
-
-vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: hoisted.createTenantKnexMock,
-}));
-
-vi.mock('@alga-psa/auth', () => ({
-  getSSORegistry: vi.fn(async () => ({})),
-}));
-
-vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishWorkflowEvent: vi.fn(async () => undefined),
-}));
+vi.mock('@alga-psa/ee-stubs/lib/notifications/teamsNotificationDelivery', () => {
+  hoisted.seamFactoryCalls.count += 1;
+  return {
+    get deliverTeamsNotificationImpl() {
+      return hoisted.seamHasImpl.value ? hoisted.deliverTeamsNotificationImplMock : undefined;
+    },
+  };
+});
 
 function makeNotification(overrides: Partial<InternalNotification> = {}): InternalNotification {
   return {
@@ -70,46 +61,55 @@ function makeNotification(overrides: Partial<InternalNotification> = {}): Intern
   } as InternalNotification;
 }
 
-describe('teamsNotificationDelivery shared delivery', () => {
+describe('teamsNotificationDelivery shared delegator (T018/T019)', () => {
   beforeEach(() => {
     vi.resetModules();
     hoisted.isEnterprise.value = true;
-    hoisted.createTenantKnexMock.mockReset();
+    hoisted.seamHasImpl.value = true;
+    hoisted.seamFactoryCalls.count = 0;
+    hoisted.deliverTeamsNotificationImplMock.mockReset();
   });
 
-  it('skips notifications whose template does not map to a supported Teams category', async () => {
+  it('T018: delegates to the recording EE implementation and passes the result through', async () => {
+    hoisted.deliverTeamsNotificationImplMock.mockResolvedValue({
+      status: 'delivered',
+      category: 'assignment',
+      providerMessageId: 'graph-request-1',
+    });
+
     const { deliverTeamsNotification } = await import(SHARED_TEAMS_NOTIFICATION_MODULE);
+    const notification = makeNotification();
+    const result = await deliverTeamsNotification(notification);
 
-    const result = await deliverTeamsNotification(
-      makeNotification({ template_name: 'totally-unrelated-template', link: '/msp/foo' })
-    );
-
-    expect(result).toEqual({ status: 'skipped', reason: 'unsupported_category' });
-    // Should short-circuit before touching the database.
-    expect(hoisted.createTenantKnexMock).not.toHaveBeenCalled();
+    expect(hoisted.deliverTeamsNotificationImplMock).toHaveBeenCalledWith(notification);
+    expect(result).toEqual({
+      status: 'delivered',
+      category: 'assignment',
+      providerMessageId: 'graph-request-1',
+    });
   });
 
-  it('skips notifications without a deep-linkable target', async () => {
-    const { deliverTeamsNotification } = await import(SHARED_TEAMS_NOTIFICATION_MODULE);
-
-    const result = await deliverTeamsNotification(makeNotification({ link: null }));
-
-    expect(result).toEqual({ status: 'skipped', reason: 'missing_link' });
-    expect(hoisted.createTenantKnexMock).not.toHaveBeenCalled();
-  });
-
-  it('skips Teams delivery entirely in community edition', async () => {
+  it('T019: skips with ce_unavailable in community edition without importing the delivery implementation', async () => {
     hoisted.isEnterprise.value = false;
 
     const { deliverTeamsNotification } = await import(SHARED_TEAMS_NOTIFICATION_MODULE);
-
     const result = await deliverTeamsNotification(makeNotification());
 
     expect(result).toEqual({ status: 'skipped', reason: 'ce_unavailable' });
-    expect(hoisted.createTenantKnexMock).not.toHaveBeenCalled();
+    expect(hoisted.seamFactoryCalls.count).toBe(0);
+    expect(hoisted.deliverTeamsNotificationImplMock).not.toHaveBeenCalled();
   });
 
-  it('keeps the shared delivery implementation self-contained (no EE delegation wrapper)', async () => {
+  it('skips with delivery_unavailable when the seam module lacks an implementation', async () => {
+    hoisted.seamHasImpl.value = false;
+
+    const { deliverTeamsNotification } = await import(SHARED_TEAMS_NOTIFICATION_MODULE);
+    const result = await deliverTeamsNotification(makeNotification());
+
+    expect(result).toEqual({ status: 'skipped', reason: 'delivery_unavailable' });
+  });
+
+  it('T018: module shape — no delivery or classification logic remains in the shared module', async () => {
     const fs = await import('node:fs');
     const path = await import('node:path');
     const source = fs.readFileSync(
@@ -117,11 +117,16 @@ describe('teamsNotificationDelivery shared delivery', () => {
       'utf8'
     );
 
-    // The implementation performs the Graph call directly and is edition-gated in
-    // place; it no longer routes through an EE wrapper module.
-    expect(source).toContain('teamwork/sendActivityNotification');
+    // Delegation seam is the only integration point.
+    expect(source).toContain("import('@alga-psa/ee-stubs/lib/notifications/teamsNotificationDelivery')");
     expect(source).toContain('export async function deliverTeamsNotification');
-    expect(source).not.toContain('loadEeTeamsNotificationDelivery');
-    expect(source).not.toContain('ee/server/src/lib/notifications/teamsNotificationDelivery');
+
+    // No duplicated delivery/classification logic.
+    expect(source).not.toContain('teamwork/sendActivityNotification');
+    expect(source).not.toContain('graph.microsoft.com');
+    expect(source).not.toContain('classifyTeamsNotificationCategory');
+    expect(source).not.toContain('tenant_addons');
+    expect(source).not.toContain('teams_integrations');
+    expect(source).not.toContain('login.microsoftonline.com');
   });
 });

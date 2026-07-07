@@ -3,7 +3,7 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 export type TeamsDeliveryStatus = 'skipped' | 'sent' | 'delivered' | 'failed';
-export type TeamsDeliveryDestinationType = 'user_activity' | 'chat' | 'channel' | 'bot_test';
+export type TeamsDeliveryDestinationType = 'user_activity' | 'bot_dm' | 'chat' | 'channel' | 'bot_test';
 export type TeamsDeliveryErrorCode =
   | 'graph_throttled'
   | 'graph_unauthorized'

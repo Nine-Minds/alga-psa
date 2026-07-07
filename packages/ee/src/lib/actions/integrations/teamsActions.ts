@@ -33,6 +33,7 @@ interface TeamsIntegrationStatusResponse {
     lastError: string | null;
     defaultMeetingOrganizerUpn: string | null;
     defaultMeetingOrganizerObjectId: string | null;
+    sendMeetingInvites: boolean;
     downloadRecordings: boolean;
     exposeRecordingsInPortal: boolean;
   };
@@ -47,6 +48,7 @@ interface TeamsIntegrationExecutionState {
   packageMetadata: Record<string, unknown> | null;
   defaultMeetingOrganizerUpn: string | null;
   defaultMeetingOrganizerObjectId: string | null;
+  sendMeetingInvites: boolean;
   downloadRecordings: boolean;
   exposeRecordingsInPortal: boolean;
 }
@@ -59,6 +61,7 @@ interface TeamsIntegrationSettingsInput {
   allowedActions?: TeamsAllowedAction[];
   lastError?: string | null;
   defaultMeetingOrganizerUpn?: string | null;
+  sendMeetingInvites?: boolean;
   downloadRecordings?: boolean;
   exposeRecordingsInPortal?: boolean;
 }
@@ -72,6 +75,7 @@ const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
   packageMetadata: null,
   defaultMeetingOrganizerUpn: null,
   defaultMeetingOrganizerObjectId: null,
+  sendMeetingInvites: true,
   downloadRecordings: false,
   exposeRecordingsInPortal: false,
 };

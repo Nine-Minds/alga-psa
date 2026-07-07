@@ -26,6 +26,7 @@ const hoisted = vi.hoisted(() => {
 	    last_error: string | null;
 	    default_meeting_organizer_upn?: string | null;
 	    default_meeting_organizer_object_id?: string | null;
+	    send_meeting_invites?: boolean | null;
 	    download_recordings?: boolean | null;
 	    expose_recordings_in_portal?: boolean | null;
 	    created_by: string | null;
@@ -135,8 +136,10 @@ const { hasPermissionMock, isFeatureFlagEnabledMock, fetchMock, knexMock } = hoi
 const DEFAULT_MEETING_SETTINGS = {
   defaultMeetingOrganizerUpn: null,
   defaultMeetingOrganizerObjectId: null,
+  sendMeetingInvites: true,
   downloadRecordings: false,
   exposeRecordingsInPortal: false,
+  notificationChannels: {},
 };
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
@@ -227,6 +230,9 @@ describe('Teams integration actions', () => {
     hoisted.state.mockUser = { user_id: 'user-1', user_type: 'internal' };
     hoisted.state.mockCtx = { tenant: 'tenant-1' };
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+    delete process.env.TEAMS_BOT_APP_ID;
+    delete process.env.TEAMS_BOT_APP_TENANT_ID;
+    delete process.env.TEAMS_BOT_APP_PASSWORD;
     microsoftProfiles.length = 0;
     teamsIntegrations.length = 0;
     tenantAddOns.length = 0;
@@ -313,6 +319,7 @@ describe('Teams integration actions', () => {
 	        packageMetadata: null,
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
+	        botConnectorConfigured: false,
 	      },
 	    });
 
@@ -351,6 +358,7 @@ describe('Teams integration actions', () => {
 	        packageMetadata: null,
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
+	        botConnectorConfigured: false,
 	      },
 	    });
 
@@ -381,6 +389,7 @@ describe('Teams integration actions', () => {
       selectedProfileId: 'profile-1',
       installStatus: 'install_pending',
       defaultMeetingOrganizerUpn: 'scheduler@acme.com',
+      sendMeetingInvites: false,
       downloadRecordings: true,
       exposeRecordingsInPortal: true,
     });
@@ -390,6 +399,7 @@ describe('Teams integration actions', () => {
       integration: expect.objectContaining({
         defaultMeetingOrganizerUpn: 'scheduler@acme.com',
         defaultMeetingOrganizerObjectId: 'organizer-object-1',
+        sendMeetingInvites: false,
         downloadRecordings: true,
         exposeRecordingsInPortal: true,
       }),
@@ -406,9 +416,57 @@ describe('Teams integration actions', () => {
     expect(teamsIntegrations[0]).toMatchObject({
       default_meeting_organizer_upn: 'scheduler@acme.com',
       default_meeting_organizer_object_id: 'organizer-object-1',
+      send_meeting_invites: false,
       download_recordings: true,
       expose_recordings_in_portal: true,
     });
+  });
+
+  it('defaults sendMeetingInvites to true for rows created before the column existed and keeps the stored value when the input omits it', async () => {
+    addMicrosoftProfile({
+      tenant: 'tenant-1',
+      profileId: 'profile-1',
+      clientId: 'tenant-one-client',
+      tenantId: 'tenant-one-guid',
+      secretRef: 'tenant-one-secret-ref',
+    });
+    tenantSecrets.set('tenant-1:tenant-one-secret-ref', 'tenant-one-secret');
+
+    teamsIntegrations.push({
+      tenant: 'tenant-1',
+      selected_profile_id: 'profile-1',
+      install_status: 'active',
+      enabled_capabilities: ['personal_tab'],
+      notification_categories: ['assignment'],
+      allowed_actions: ['assign_ticket'],
+      app_id: null,
+      bot_id: null,
+      package_metadata: null,
+      last_error: null,
+      created_by: 'user-1',
+      updated_by: 'user-1',
+      created_at: '2026-03-08T00:00:00.000Z',
+      updated_at: '2026-03-08T00:00:00.000Z',
+    });
+
+    await expect(getTeamsIntegrationStatus()).resolves.toEqual({
+      success: true,
+      integration: expect.objectContaining({ sendMeetingInvites: true }),
+    });
+
+    const disabled = await saveTeamsIntegrationSettings({ sendMeetingInvites: false });
+    expect(disabled).toEqual({
+      success: true,
+      integration: expect.objectContaining({ sendMeetingInvites: false }),
+    });
+    expect(teamsIntegrations[0]).toMatchObject({ send_meeting_invites: false });
+
+    const resaved = await saveTeamsIntegrationSettings({});
+    expect(resaved).toEqual({
+      success: true,
+      integration: expect.objectContaining({ sendMeetingInvites: false }),
+    });
+    expect(teamsIntegrations[0]).toMatchObject({ send_meeting_invites: false });
   });
 
   it('T086/T088/T090/T092/T094/T228/T254/T256: rejects missing, archived, or unready profiles and unsupported install states', async () => {
@@ -520,6 +578,7 @@ describe('Teams integration actions', () => {
 	        packageMetadata: null,
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
+	        botConnectorConfigured: false,
 	      },
 	    });
   });
@@ -669,6 +728,7 @@ describe('Teams integration actions', () => {
 	        packageMetadata: null,
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
+	        botConnectorConfigured: false,
 	      },
 	    });
     expect(microsoftConsumerBindings).toEqual([
@@ -676,6 +736,113 @@ describe('Teams integration actions', () => {
       expect.objectContaining({ consumer_type: 'calendar', profile_id: 'profile-1' }),
       expect.objectContaining({ consumer_type: 'msp_sso', profile_id: 'profile-1' }),
     ]);
+  });
+
+  it('F045: round-trips per-category notification channels, dropping unknown categories and invalid modes', async () => {
+    addMicrosoftProfile({
+      tenant: 'tenant-1',
+      profileId: 'profile-1',
+      clientId: 'tenant-one-client',
+      tenantId: 'tenant-one-guid',
+      secretRef: 'tenant-one-secret-ref',
+    });
+    tenantSecrets.set('tenant-1:tenant-one-secret-ref', 'tenant-one-secret');
+
+    const saved = await saveTeamsIntegrationSettings({
+      selectedProfileId: 'profile-1',
+      installStatus: 'install_pending',
+      notificationChannels: {
+        assignment: 'bot_dm',
+        customer_reply: 'both',
+        escalation: 'not_a_mode',
+        made_up_category: 'bot_dm',
+      } as any,
+    });
+
+    expect(saved).toEqual({
+      success: true,
+      integration: expect.objectContaining({
+        notificationChannels: {
+          assignment: 'bot_dm',
+          customer_reply: 'both',
+        },
+      }),
+    });
+    expect(teamsIntegrations[0]).toMatchObject({
+      notification_channels: JSON.stringify({ assignment: 'bot_dm', customer_reply: 'both' }),
+    });
+
+    const reloaded = await getTeamsIntegrationStatus();
+    expect(reloaded).toEqual(saved);
+
+    // Omitting notificationChannels on a subsequent save preserves the stored value.
+    const resaved = await saveTeamsIntegrationSettings({});
+    expect(resaved).toEqual({
+      success: true,
+      integration: expect.objectContaining({
+        notificationChannels: {
+          assignment: 'bot_dm',
+          customer_reply: 'both',
+        },
+      }),
+    });
+
+    await expect(getTeamsIntegrationExecutionState('tenant-1')).resolves.toEqual(
+      expect.objectContaining({
+        notificationChannels: {
+          assignment: 'bot_dm',
+          customer_reply: 'both',
+        },
+      })
+    );
+  });
+
+  it('F045: rows without notification_channels default every category to the activity feed (empty map)', async () => {
+    teamsIntegrations.push({
+      tenant: 'tenant-1',
+      selected_profile_id: 'profile-1',
+      install_status: 'active',
+      enabled_capabilities: ['personal_tab'],
+      notification_categories: ['assignment'],
+      allowed_actions: ['assign_ticket'],
+      app_id: null,
+      bot_id: null,
+      package_metadata: null,
+      last_error: null,
+      created_by: 'user-1',
+      updated_by: 'user-1',
+      created_at: '2026-03-08T00:00:00.000Z',
+      updated_at: '2026-03-08T00:00:00.000Z',
+    });
+
+    await expect(getTeamsIntegrationStatus()).resolves.toEqual({
+      success: true,
+      integration: expect.objectContaining({ notificationChannels: {} }),
+    });
+    await expect(getTeamsIntegrationExecutionState('tenant-1')).resolves.toEqual(
+      expect.objectContaining({ notificationChannels: {} })
+    );
+  });
+
+  it('T081: botConnectorConfigured reflects the presence of the bot connector environment credentials', async () => {
+    await expect(getTeamsIntegrationStatus()).resolves.toEqual({
+      success: true,
+      integration: expect.objectContaining({ botConnectorConfigured: false }),
+    });
+
+    process.env.TEAMS_BOT_APP_ID = 'bot-app-id';
+    process.env.TEAMS_BOT_APP_TENANT_ID = 'bot-tenant-id';
+    process.env.TEAMS_BOT_APP_PASSWORD = 'bot-password';
+    try {
+      await expect(getTeamsIntegrationStatus()).resolves.toEqual({
+        success: true,
+        integration: expect.objectContaining({ botConnectorConfigured: true }),
+      });
+    } finally {
+      delete process.env.TEAMS_BOT_APP_ID;
+      delete process.env.TEAMS_BOT_APP_TENANT_ID;
+      delete process.env.TEAMS_BOT_APP_PASSWORD;
+    }
   });
 
   it('T042: exports Teams diagnostics actions through the integrations action boundary', () => {

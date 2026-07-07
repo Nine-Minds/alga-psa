@@ -2013,6 +2013,12 @@
             "description": "Notifier les techniciens lorsqu'une tâche leur est affectée.",
             "label": "Événements d'affectation"
           },
+          "channel": {
+            "activityFeed": "Fil d'activité",
+            "botDm": "Message direct du bot",
+            "both": "Les deux",
+            "label": "Canal de distribution"
+          },
           "customerReply": {
             "description": "Notifier les techniciens lorsque les clients répondent.",
             "label": "Réponses des clients"
@@ -2141,6 +2147,10 @@
             "help": "L'enregistrement résout et stocke l'ID d'objet Microsoft Entra utilisé pour les appels de réunion Graph.",
             "resolved": "ID d'objet résolu : {{objectId}}"
           },
+          "sendMeetingInvites": {
+            "label": "Envoyer des invitations de calendrier aux participants",
+            "description": "Les participants reçoivent des invitations de calendrier natives Outlook/Teams pour les réunions générées."
+          },
           "downloadRecordings": {
             "label": "Télécharger les enregistrements vers le stockage interne",
             "description": "Lorsque cette option est activée, les blobs d'enregistrement sont copiés dans le stockage du locataire, en plus du proxy Graph authentifié."
@@ -2149,6 +2159,10 @@
             "label": "Afficher les enregistrements et les transcriptions dans le portail client",
             "description": "Désactivé par défaut ; les utilisateurs MSP peuvent toujours consulter les artefacts depuis les détails des interactions et des rendez-vous."
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "Exécutez les diagnostics ci-dessous pour plus de détails.",
+          "message": "Le bot Teams ne peut pas répondre : les identifiants du connecteur de bot (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) ne sont pas configurés sur le serveur."
         }
       }
     },

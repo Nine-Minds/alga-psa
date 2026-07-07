@@ -6,8 +6,10 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import {
   getMicrosoftIntegrationStatus,
   getTeamsAppPackageStatus,
@@ -39,12 +41,16 @@ type TeamsDiagnosticsReport = Awaited<ReturnType<typeof runTeamsDiagnostics>>;
 type TeamsDiagnosticsStep = TeamsDiagnosticsReport['steps'][number];
 type TeamsTestMessageResult = Awaited<ReturnType<typeof sendTeamsTestMessage>>;
 
+type TeamsNotificationChannelValue = 'activity_feed' | 'bot_dm' | 'both';
+
 type TeamsFormState = {
   selectedProfileId: string;
   enabledCapabilities: string[];
   notificationCategories: string[];
+  notificationChannels: Record<string, TeamsNotificationChannelValue>;
   allowedActions: string[];
   defaultMeetingOrganizerUpn: string;
+  sendMeetingInvites: boolean;
   downloadRecordings: boolean;
   exposeRecordingsInPortal: boolean;
 };
@@ -77,6 +83,14 @@ function getTeamsNotificationOptions(t: TranslateFn) {
   ];
 }
 
+function getTeamsNotificationChannelOptions(t: TranslateFn): Array<{ value: TeamsNotificationChannelValue; label: string }> {
+  return [
+    { value: 'activity_feed', label: t('integrations.teams.settings.notifications.channel.activityFeed', { defaultValue: 'Activity feed' }) },
+    { value: 'bot_dm', label: t('integrations.teams.settings.notifications.channel.botDm', { defaultValue: 'Bot DM' }) },
+    { value: 'both', label: t('integrations.teams.settings.notifications.channel.both', { defaultValue: 'Both' }) },
+  ];
+}
+
 function getTeamsAllowedActionOptions(t: TranslateFn) {
   return [
     { value: 'assign_ticket', label: t('integrations.teams.settings.actions.assignTicket.label', { defaultValue: 'Assign ticket' }), description: t('integrations.teams.settings.actions.assignTicket.description', { defaultValue: 'Allow ticket assignment quick actions.' }) },
@@ -91,8 +105,10 @@ const EMPTY_FORM_STATE: TeamsFormState = {
   selectedProfileId: '',
   enabledCapabilities: [],
   notificationCategories: [],
+  notificationChannels: {},
   allowedActions: [],
   defaultMeetingOrganizerUpn: '',
+  sendMeetingInvites: true,
   downloadRecordings: false,
   exposeRecordingsInPortal: false,
 };
@@ -288,8 +304,10 @@ function mapIntegrationToForm(integration?: TeamsIntegration | null): TeamsFormS
     selectedProfileId: integration?.selectedProfileId ?? '',
     enabledCapabilities: integration?.enabledCapabilities ?? [...TEAMS_CAPABILITY_VALUES],
     notificationCategories: integration?.notificationCategories ?? [...TEAMS_NOTIFICATION_VALUES],
+    notificationChannels: (integration?.notificationChannels ?? {}) as Record<string, TeamsNotificationChannelValue>,
     allowedActions: integration?.allowedActions ?? [...TEAMS_ALLOWED_ACTION_VALUES],
     defaultMeetingOrganizerUpn: integration?.defaultMeetingOrganizerUpn ?? '',
+    sendMeetingInvites: integration?.sendMeetingInvites !== false,
     downloadRecordings: Boolean(integration?.downloadRecordings),
     exposeRecordingsInPortal: Boolean(integration?.exposeRecordingsInPortal),
   };
@@ -323,6 +341,7 @@ export function TeamsIntegrationSettings() {
   const { t } = useTranslation('msp/integrations');
   const TEAMS_CAPABILITY_OPTIONS = React.useMemo(() => getTeamsCapabilityOptions(t), [t]);
   const TEAMS_NOTIFICATION_OPTIONS = React.useMemo(() => getTeamsNotificationOptions(t), [t]);
+  const TEAMS_NOTIFICATION_CHANNEL_OPTIONS = React.useMemo(() => getTeamsNotificationChannelOptions(t), [t]);
   const TEAMS_ALLOWED_ACTION_OPTIONS = React.useMemo(() => getTeamsAllowedActionOptions(t), [t]);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -438,6 +457,16 @@ export function TeamsIntegrationSettings() {
     }));
   }, []);
 
+  const updateNotificationChannel = React.useCallback((category: string, channel: TeamsNotificationChannelValue) => {
+    setFormState((current) => ({
+      ...current,
+      notificationChannels: {
+        ...current.notificationChannels,
+        [category]: channel,
+      },
+    }));
+  }, []);
+
   const handleSave = React.useCallback(async (nextInstallStatus?: TeamsIntegration['installStatus']) => {
     setSaving(true);
     setError(null);
@@ -454,8 +483,10 @@ export function TeamsIntegrationSettings() {
         installStatus: resolvedStatus,
         enabledCapabilities: formState.enabledCapabilities as any,
         notificationCategories: formState.notificationCategories as any,
+        notificationChannels: formState.notificationChannels as any,
         allowedActions: formState.allowedActions as any,
         defaultMeetingOrganizerUpn: formState.defaultMeetingOrganizerUpn.trim() || null,
+        sendMeetingInvites: formState.sendMeetingInvites,
         downloadRecordings: formState.downloadRecordings,
         exposeRecordingsInPortal: formState.exposeRecordingsInPortal,
         lastError: null,
@@ -584,6 +615,20 @@ export function TeamsIntegrationSettings() {
 
   return (
     <div className="space-y-6">
+      {isActive && currentIntegration?.botConnectorConfigured === false ? (
+        <Alert id="teams-bot-credentials-banner" variant="warning">
+          <AlertDescription>
+            {t('integrations.teams.settings.botCredentialsBanner.message', {
+              defaultValue:
+                'The Teams bot cannot reply: bot connector credentials (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) are not configured on the server.',
+            })}{' '}
+            {t('integrations.teams.settings.botCredentialsBanner.hint', {
+              defaultValue: 'Run diagnostics below for details.',
+            })}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       {error ? (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
@@ -714,6 +759,27 @@ export function TeamsIntegrationSettings() {
                 </div>
 
                 <label className="flex items-start gap-3 rounded-md border p-3">
+                  <Switch
+                    id="send-meeting-invites-switch"
+                    checked={formState.sendMeetingInvites}
+                    onCheckedChange={(checked) => {
+                      setFormState((current) => ({
+                        ...current,
+                        sendMeetingInvites: Boolean(checked),
+                      }));
+                    }}
+                  />
+                  <div>
+                    <div className="text-sm font-medium">
+                      {t('integrations.teams.settings.meetings.sendMeetingInvites.label', { defaultValue: 'Send calendar invites to participants' })}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {t('integrations.teams.settings.meetings.sendMeetingInvites.description', { defaultValue: 'Attendees receive native Outlook/Teams calendar invites for generated meetings.' })}
+                    </div>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 rounded-md border p-3">
                   <Checkbox
                     id="teams-download-recordings"
                     checked={formState.downloadRecordings}
@@ -780,19 +846,37 @@ export function TeamsIntegrationSettings() {
               <div className="space-y-3">
                 <div className="text-sm font-medium">{t('integrations.teams.settings.section.notifications', { defaultValue: 'Notifications' })}</div>
                 {TEAMS_NOTIFICATION_OPTIONS.map((option) => (
-                  <label key={option.value} className="flex items-start gap-3 rounded-md border p-3">
-                    <Checkbox
-                      id={`teams-notification-${option.value}`}
-                      checked={formState.notificationCategories.includes(option.value)}
-                      onChange={(event) =>
-                        updateCheckboxGroup('notificationCategories', option.value, event.target.checked)
-                      }
-                    />
-                    <div>
-                      <div className="text-sm font-medium">{option.label}</div>
-                      <div className="text-xs text-muted-foreground">{option.description}</div>
-                    </div>
-                  </label>
+                  <div key={option.value} className="space-y-2 rounded-md border p-3">
+                    <label className="flex items-start gap-3">
+                      <Checkbox
+                        id={`teams-notification-${option.value}`}
+                        checked={formState.notificationCategories.includes(option.value)}
+                        onChange={(event) =>
+                          updateCheckboxGroup('notificationCategories', option.value, event.target.checked)
+                        }
+                      />
+                      <div>
+                        <div className="text-sm font-medium">{option.label}</div>
+                        <div className="text-xs text-muted-foreground">{option.description}</div>
+                      </div>
+                    </label>
+                    {formState.notificationCategories.includes(option.value) ? (
+                      <div className="pl-7">
+                        <div className="mb-1 text-xs text-muted-foreground">
+                          {t('integrations.teams.settings.notifications.channel.label', { defaultValue: 'Delivery channel' })}
+                        </div>
+                        <CustomSelect
+                          id={`notification-channel-select-${option.value.replace(/_/g, '-')}`}
+                          options={TEAMS_NOTIFICATION_CHANNEL_OPTIONS}
+                          value={formState.notificationChannels[option.value] ?? 'activity_feed'}
+                          onValueChange={(value) =>
+                            updateNotificationChannel(option.value, value as TeamsNotificationChannelValue)
+                          }
+                          size="sm"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                 ))}
               </div>
 

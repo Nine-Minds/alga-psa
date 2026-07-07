@@ -5,6 +5,11 @@ import type {
   TeamsNotificationCategory,
 } from './teamsShared';
 
+export type TeamsNotificationChannelMode = 'activity_feed' | 'bot_dm' | 'both';
+
+/** Per-category delivery channel preference; absent categories default to 'activity_feed'. */
+export type TeamsNotificationChannels = Partial<Record<TeamsNotificationCategory, TeamsNotificationChannelMode>>;
+
 export interface TeamsIntegrationStatusResponse {
   success: boolean;
   error?: string;
@@ -13,6 +18,7 @@ export interface TeamsIntegrationStatusResponse {
     installStatus: TeamsInstallStatus;
     enabledCapabilities: TeamsCapability[];
     notificationCategories: TeamsNotificationCategory[];
+    notificationChannels: TeamsNotificationChannels;
     allowedActions: TeamsAllowedAction[];
     appId: string | null;
     botId: string | null;
@@ -20,8 +26,10 @@ export interface TeamsIntegrationStatusResponse {
     lastError: string | null;
     defaultMeetingOrganizerUpn: string | null;
     defaultMeetingOrganizerObjectId: string | null;
+    sendMeetingInvites: boolean;
     downloadRecordings: boolean;
     exposeRecordingsInPortal: boolean;
+    botConnectorConfigured: boolean;
   };
 }
 
@@ -34,8 +42,10 @@ export interface TeamsIntegrationExecutionState {
   packageMetadata: Record<string, unknown> | null;
   defaultMeetingOrganizerUpn: string | null;
   defaultMeetingOrganizerObjectId: string | null;
+  sendMeetingInvites: boolean;
   downloadRecordings: boolean;
   exposeRecordingsInPortal: boolean;
+  notificationChannels: TeamsNotificationChannels;
 }
 
 export interface TeamsIntegrationSettingsInput {
@@ -43,9 +53,11 @@ export interface TeamsIntegrationSettingsInput {
   installStatus?: TeamsInstallStatus;
   enabledCapabilities?: TeamsCapability[];
   notificationCategories?: TeamsNotificationCategory[];
+  notificationChannels?: TeamsNotificationChannels;
   allowedActions?: TeamsAllowedAction[];
   lastError?: string | null;
   defaultMeetingOrganizerUpn?: string | null;
+  sendMeetingInvites?: boolean;
   downloadRecordings?: boolean;
   exposeRecordingsInPortal?: boolean;
 }

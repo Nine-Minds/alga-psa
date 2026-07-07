@@ -133,6 +133,15 @@ export function buildTeamsPersonalTabDeepLinkFromPsaUrl(baseUrl: string, appId: 
   return buildTeamsPersonalTabDeepLink(baseUrl, appId, resolveTeamsDeepLinkDestinationFromPsaUrl(psaUrl));
 }
 
+export function buildTeamsNotificationDeepLinkFromPsaUrl(baseUrl: string, appId: string, psaUrl: string): string {
+  return buildTeamsPersonalTabDeepLinkForSurface(
+    baseUrl,
+    appId,
+    resolveTeamsDeepLinkDestinationFromPsaUrl(psaUrl),
+    'notification'
+  );
+}
+
 export function buildTeamsBotResultDeepLinkFromPsaUrl(baseUrl: string, appId: string, psaUrl: string): string {
   return buildTeamsPersonalTabDeepLinkForSurface(baseUrl, appId, resolveTeamsDeepLinkDestinationFromPsaUrl(psaUrl), 'bot');
 }

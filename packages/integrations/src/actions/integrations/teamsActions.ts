@@ -20,6 +20,8 @@ import type {
   TeamsIntegrationExecutionState,
   TeamsIntegrationSettingsInput,
   TeamsIntegrationStatusResponse,
+  TeamsNotificationChannelMode,
+  TeamsNotificationChannels,
 } from './teamsContracts';
 
 type EeTeamsDiagnosticsActions = typeof import('@alga-psa/ee-microsoft-teams/actions');
@@ -32,6 +34,7 @@ interface TeamsIntegrationRow {
   install_status: TeamsInstallStatus;
   enabled_capabilities: unknown;
   notification_categories: unknown;
+  notification_channels?: unknown;
   allowed_actions: unknown;
   app_id?: string | null;
   bot_id?: string | null;
@@ -39,6 +42,7 @@ interface TeamsIntegrationRow {
   last_error: string | null;
   default_meeting_organizer_upn?: string | null;
   default_meeting_organizer_object_id?: string | null;
+  send_meeting_invites?: boolean | null;
   download_recordings?: boolean | null;
   expose_recordings_in_portal?: boolean | null;
   created_by: string | null;
@@ -56,6 +60,8 @@ interface MicrosoftProfileRow {
   is_archived: boolean;
 }
 
+const TEAMS_NOTIFICATION_CHANNEL_MODES: readonly TeamsNotificationChannelMode[] = ['activity_feed', 'bot_dm', 'both'];
+
 const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
   selectedProfileId: null,
   installStatus: 'not_configured',
@@ -65,9 +71,21 @@ const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
   packageMetadata: null,
   defaultMeetingOrganizerUpn: null,
   defaultMeetingOrganizerObjectId: null,
+  sendMeetingInvites: true,
   downloadRecordings: false,
   exposeRecordingsInPortal: false,
+  notificationChannels: {},
 };
+
+// Mirrors readBotCredentialsFromEnv() in the EE bot connector; kept env-only so
+// the shared (CE-safe) actions never import the EE package statically.
+function isBotConnectorConfiguredFromEnv(): boolean {
+  return Boolean(
+    process.env.TEAMS_BOT_APP_ID?.trim()
+    && process.env.TEAMS_BOT_APP_TENANT_ID?.trim()
+    && process.env.TEAMS_BOT_APP_PASSWORD?.trim()
+  );
+}
 
 function isClientPortalUser(user: any): boolean {
   return user?.user_type === 'client';
@@ -99,6 +117,30 @@ function normalizeEnumArray<T extends string>(values: unknown, supported: readon
     normalizedValues.filter((value): value is T => typeof value === 'string' && supported.includes(value as T))
   );
   return supported.filter((value) => requested.has(value));
+}
+
+function normalizeNotificationChannels(value: unknown): TeamsNotificationChannels {
+  let parsed = value;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return {};
+    }
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {};
+  }
+
+  const channels: TeamsNotificationChannels = {};
+  for (const category of TEAMS_NOTIFICATION_CATEGORIES) {
+    const mode = (parsed as Record<string, unknown>)[category];
+    if (typeof mode === 'string' && (TEAMS_NOTIFICATION_CHANNEL_MODES as readonly string[]).includes(mode)) {
+      channels[category] = mode as TeamsNotificationChannelMode;
+    }
+  }
+  return channels;
 }
 
 function toJsonbValue<T>(value: T): string {
@@ -153,6 +195,7 @@ function defaultTeamsIntegrationState() {
       (capability) => !TEAMS_CAPABILITIES_OPT_IN.includes(capability)
     ) as TeamsCapability[],
     notificationCategories: [...TEAMS_NOTIFICATION_CATEGORIES] as TeamsNotificationCategory[],
+    notificationChannels: {} as TeamsNotificationChannels,
     allowedActions: [...TEAMS_ALLOWED_ACTIONS] as TeamsAllowedAction[],
     appId: null as string | null,
     botId: null as string | null,
@@ -160,8 +203,10 @@ function defaultTeamsIntegrationState() {
     lastError: null as string | null,
     defaultMeetingOrganizerUpn: null as string | null,
     defaultMeetingOrganizerObjectId: null as string | null,
+    sendMeetingInvites: true,
     downloadRecordings: false,
     exposeRecordingsInPortal: false,
+    botConnectorConfigured: isBotConnectorConfiguredFromEnv(),
   };
 }
 
@@ -180,6 +225,7 @@ function mapTeamsIntegrationRow(
       row.notification_categories,
       TEAMS_NOTIFICATION_CATEGORIES
     ),
+    notificationChannels: normalizeNotificationChannels(row.notification_channels),
     allowedActions: normalizeEnumArray(row.allowed_actions, TEAMS_ALLOWED_ACTIONS),
     appId: row.app_id || null,
     botId: row.bot_id || null,
@@ -190,8 +236,10 @@ function mapTeamsIntegrationRow(
     lastError: row.last_error || null,
     defaultMeetingOrganizerUpn: normalizeNullableString(row.default_meeting_organizer_upn),
     defaultMeetingOrganizerObjectId: normalizeNullableString(row.default_meeting_organizer_object_id),
+    sendMeetingInvites: row.send_meeting_invites !== false,
     downloadRecordings: Boolean(row.download_recordings),
     exposeRecordingsInPortal: Boolean(row.expose_recordings_in_portal),
+    botConnectorConfigured: isBotConnectorConfiguredFromEnv(),
   };
 }
 
@@ -334,8 +382,10 @@ async function getTeamsIntegrationExecutionStateImpl(
     packageMetadata: integration.packageMetadata,
     defaultMeetingOrganizerUpn: integration.defaultMeetingOrganizerUpn,
     defaultMeetingOrganizerObjectId: integration.defaultMeetingOrganizerObjectId,
+    sendMeetingInvites: integration.sendMeetingInvites,
     downloadRecordings: integration.downloadRecordings,
     exposeRecordingsInPortal: integration.exposeRecordingsInPortal,
+    notificationChannels: integration.notificationChannels,
   };
 }
 
@@ -397,6 +447,9 @@ async function saveTeamsIntegrationSettingsImpl(
     const notificationCategories = input.notificationCategories
       ? normalizeEnumArray(input.notificationCategories, TEAMS_NOTIFICATION_CATEGORIES)
       : next.notificationCategories;
+    const notificationChannels = input.notificationChannels === undefined
+      ? next.notificationChannels
+      : normalizeNotificationChannels(input.notificationChannels);
     const allowedActions = input.allowedActions
       ? normalizeEnumArray(input.allowedActions, TEAMS_ALLOWED_ACTIONS)
       : next.allowedActions;
@@ -424,6 +477,9 @@ async function saveTeamsIntegrationSettingsImpl(
       defaultMeetingOrganizerObjectId = organizerLookup.objectId || null;
     }
 
+    const sendMeetingInvites = input.sendMeetingInvites === undefined
+      ? next.sendMeetingInvites
+      : Boolean(input.sendMeetingInvites);
     const downloadRecordings = input.downloadRecordings === undefined
       ? next.downloadRecordings
       : Boolean(input.downloadRecordings);
@@ -438,6 +494,7 @@ async function saveTeamsIntegrationSettingsImpl(
       install_status: installStatus,
       enabled_capabilities: toJsonbValue(enabledCapabilities),
       notification_categories: toJsonbValue(notificationCategories),
+      notification_channels: toJsonbValue(notificationChannels),
       allowed_actions: toJsonbValue(allowedActions),
       app_id: selectedProfileChanged ? null : next.appId,
       bot_id: selectedProfileChanged ? null : next.botId,
@@ -446,6 +503,7 @@ async function saveTeamsIntegrationSettingsImpl(
       last_error: lastError || null,
       default_meeting_organizer_upn: defaultMeetingOrganizerUpn,
       default_meeting_organizer_object_id: defaultMeetingOrganizerObjectId,
+      send_meeting_invites: sendMeetingInvites,
       download_recordings: downloadRecordings,
       expose_recordings_in_portal: exposeRecordingsInPortal,
       created_by: existing?.created_by || (user as any)?.user_id || null,

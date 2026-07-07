@@ -2013,6 +2013,12 @@
             "description": "55555",
             "label": "55555"
           },
+          "channel": {
+            "activityFeed": "55555",
+            "botDm": "55555",
+            "both": "55555",
+            "label": "55555"
+          },
           "customerReply": {
             "description": "55555",
             "label": "55555"
@@ -2141,6 +2147,10 @@
             "help": "55555",
             "resolved": "55555 {{objectId}} 55555"
           },
+          "sendMeetingInvites": {
+            "label": "55555",
+            "description": "55555"
+          },
           "downloadRecordings": {
             "label": "55555",
             "description": "55555"
@@ -2149,6 +2159,10 @@
             "label": "55555",
             "description": "55555"
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "55555",
+          "message": "55555"
         }
       }
     },

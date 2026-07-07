@@ -2013,6 +2013,12 @@
             "description": "Notifique os técnicos quando o trabalho for atribuído.",
             "label": "Eventos de atribuição"
           },
+          "channel": {
+            "activityFeed": "Feed de atividades",
+            "botDm": "Mensagem direta do bot",
+            "both": "Ambos",
+            "label": "Canal de entrega"
+          },
           "customerReply": {
             "description": "Notifique os técnicos quando os clientes responderem.",
             "label": "Respostas do cliente"
@@ -2141,6 +2147,10 @@
             "help": "Salvar resolve e armazena o ID do objeto Microsoft Entra usado para chamadas de reunião do Graph.",
             "resolved": "ID do objeto resolvido: {{objectId}}"
           },
+          "sendMeetingInvites": {
+            "label": "Enviar convites de calendário aos participantes",
+            "description": "Os participantes recebem convites de calendário nativos do Outlook/Teams para as reuniões geradas."
+          },
           "downloadRecordings": {
             "label": "Baixe gravações para armazenamento interno",
             "description": "Quando ativados, os blobs de gravação são copiados para o armazenamento do locatário, além do proxy Graph autenticado."
@@ -2149,6 +2159,10 @@
             "label": "Mostrar gravações e transcrições no portal do cliente",
             "description": "Desativado por padrão; Os usuários MSP ainda podem visualizar artefatos de interação e detalhes de compromissos."
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "Execute o diagnóstico abaixo para obter detalhes.",
+          "message": "O bot do Teams não consegue responder: as credenciais do conector do bot (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) não estão configuradas no servidor."
         }
       }
     },

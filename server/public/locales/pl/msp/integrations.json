@@ -2013,6 +2013,12 @@
             "description": "Powiadamiaj techników, gdy przypisywana jest praca.",
             "label": "Zdarzenia przypisania"
           },
+          "channel": {
+            "activityFeed": "Kanał aktywności",
+            "botDm": "Wiadomość bezpośrednia bota",
+            "both": "Oba",
+            "label": "Kanał dostarczania"
+          },
           "customerReply": {
             "description": "Powiadamiaj techników, gdy klienci odpowiadają.",
             "label": "Odpowiedzi klientów"
@@ -2141,6 +2147,10 @@
             "help": "Zapisanie rozwiązuje i przechowuje identyfikator obiektu Microsoft Entra używany do wywołań spotkań Graph.",
             "resolved": "Rozwiązany identyfikator obiektu: {{objectId}}"
           },
+          "sendMeetingInvites": {
+            "label": "Wysyłaj zaproszenia kalendarza do uczestników",
+            "description": "Uczestnicy otrzymują natywne zaproszenia kalendarza Outlook/Teams do wygenerowanych spotkań."
+          },
           "downloadRecordings": {
             "label": "Pobieraj nagrania do magazynu wewnętrznego",
             "description": "Gdy włączone, obiekty blob nagrań są kopiowane do magazynu dzierżawcy oprócz uwierzytelnionego serwera proxy Graph."
@@ -2149,6 +2159,10 @@
             "label": "Pokaż nagrania i transkrypcje w portalu klienta",
             "description": "Domyślnie wyłączone; użytkownicy MSP nadal mogą przeglądać artefakty ze szczegółów interakcji i spotkań."
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "Uruchom poniżej diagnostykę, aby poznać szczegóły.",
+          "message": "Bot Teams nie może odpowiadać: dane uwierzytelniające łącznika bota (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) nie są skonfigurowane na serwerze."
         }
       }
     },

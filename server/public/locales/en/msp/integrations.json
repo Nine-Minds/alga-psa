@@ -2013,6 +2013,12 @@
             "description": "Notify technicians when work is assigned.",
             "label": "Assignment events"
           },
+          "channel": {
+            "activityFeed": "Activity feed",
+            "botDm": "Bot DM",
+            "both": "Both",
+            "label": "Delivery channel"
+          },
           "customerReply": {
             "description": "Notify technicians when customers respond.",
             "label": "Customer replies"
@@ -2141,6 +2147,10 @@
             "help": "Saving resolves and stores the Microsoft Entra object ID used for Graph meeting calls.",
             "resolved": "Resolved object ID: {{objectId}}"
           },
+          "sendMeetingInvites": {
+            "label": "Send calendar invites to participants",
+            "description": "Attendees receive native Outlook/Teams calendar invites for generated meetings."
+          },
           "downloadRecordings": {
             "label": "Download recordings to internal storage",
             "description": "When enabled, recording blobs are copied into tenant storage in addition to the authenticated Graph proxy."
@@ -2149,6 +2159,10 @@
             "label": "Show recordings and transcripts in the client portal",
             "description": "Off by default; MSP users can still view artifacts from interaction and appointment details."
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "Run diagnostics below for details.",
+          "message": "The Teams bot cannot reply: bot connector credentials (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) are not configured on the server."
         }
       }
     },
