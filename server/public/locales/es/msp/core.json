@@ -14,7 +14,16 @@
     "documentsAll": "Todos los documentos",
     "knowledgeBase": "Base de conocimientos",
     "assets": "Activos",
-    "inventory": "Inventario",
+    "inventory": {
+      "label": "Inventario",
+      "sections": {
+        "overview": "Resumen",
+        "stock": "Existencias",
+        "purchasing": "Compras",
+        "salesFulfillment": "Ventas y cumplimiento",
+        "analytics": "Análisis"
+      }
+    },
     "inventoryDashboard": "Panel",
     "inventoryStock": "Existencias",
     "inventoryLocations": "Ubicaciones de existencias",

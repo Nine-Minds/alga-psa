@@ -55,7 +55,7 @@ import {
 } from 'lucide-react';
 
 // Navigation modes for the unified sidebar
-export type NavMode = 'main' | 'settings' | 'billing' | 'extensions';
+export type NavMode = 'main' | 'settings' | 'billing' | 'extensions' | 'inventory';
 
 export interface MenuItem {
   name: string;
@@ -145,26 +145,9 @@ export const navigationSections: NavigationSection[] = [
       },
       {
         name: 'Inventory',
-        translationKey: 'nav.inventory',
+        translationKey: 'nav.inventory.label',
         icon: Package,
-        subItems: [
-          { name: 'Dashboard', translationKey: 'nav.inventoryDashboard', icon: Gauge, href: '/msp/inventory' },
-          { name: 'Stock', translationKey: 'nav.inventoryStock', icon: Package, href: '/msp/inventory/stock' },
-          { name: 'Stock Locations', translationKey: 'nav.inventoryLocations', icon: MapPin, href: '/msp/inventory/locations' },
-          { name: 'Stock Units', translationKey: 'nav.inventoryUnits', icon: Layers3, href: '/msp/inventory/units' },
-          { name: 'Vendors', translationKey: 'nav.inventoryVendors', icon: Handshake, href: '/msp/inventory/vendors' },
-          { name: 'Purchase Orders', translationKey: 'nav.inventoryPurchaseOrders', icon: Receipt, href: '/msp/inventory/purchase-orders' },
-          { name: 'Vendor Bills', translationKey: 'nav.inventoryVendorBills', icon: Receipt, href: '/msp/inventory/vendor-bills' },
-          { name: 'Sales Orders', translationKey: 'nav.inventorySalesOrders', icon: ReceiptText, href: '/msp/inventory/sales-orders' },
-          { name: 'Transfers', translationKey: 'nav.inventoryTransfers', icon: FileOutput, href: '/msp/inventory/transfers' },
-          { name: 'Cycle Counts', translationKey: 'nav.inventoryCounts', icon: ListChecks, href: '/msp/inventory/counts' },
-          { name: 'Write-offs', translationKey: 'nav.inventoryWriteOffs', icon: FileOutput, href: '/msp/inventory/write-offs' },
-          { name: 'Margin', translationKey: 'nav.inventoryMargin', icon: Percent, href: '/msp/inventory/margin' },
-          { name: 'Ghost Usage', translationKey: 'nav.inventoryGhostUsage', icon: Ghost, href: '/msp/inventory/ghost-usage' },
-          { name: 'RMA', translationKey: 'nav.inventoryRma', icon: ListTree, href: '/msp/inventory/rma' },
-          { name: 'Loaners', translationKey: 'nav.inventoryLoaners', icon: Timer, href: '/msp/inventory/loaners' },
-          { name: 'Kits', translationKey: 'nav.inventoryKits', icon: Package, href: '/msp/inventory/kits' }
-        ]
+        href: '/msp/inventory'
       },
       {
         name: 'Reports',
@@ -305,6 +288,56 @@ export const settingsNavigationSections: NavigationSection[] = [
     translationKey: 'settings.sections.experimental',
     items: [
       { name: 'Experimental Features', translationKey: 'settings.tabs.experimentalFeatures', icon: FlaskConical, href: '/msp/settings?tab=experimental-features' },
+    ]
+  },
+];
+
+// Inventory navigation sections - used when sidebar is in 'inventory' mode
+export const inventoryNavigationSections: NavigationSection[] = [
+  {
+    title: 'Overview',
+    translationKey: 'nav.inventory.sections.overview',
+    items: [
+      { name: 'Dashboard', translationKey: 'nav.inventoryDashboard', icon: Gauge, href: '/msp/inventory' },
+    ]
+  },
+  {
+    title: 'Stock',
+    translationKey: 'nav.inventory.sections.stock',
+    items: [
+      { name: 'Stock', translationKey: 'nav.inventoryStock', icon: Package, href: '/msp/inventory/stock' },
+      { name: 'Stock Locations', translationKey: 'nav.inventoryLocations', icon: MapPin, href: '/msp/inventory/locations' },
+      { name: 'Stock Units', translationKey: 'nav.inventoryUnits', icon: Layers3, href: '/msp/inventory/units' },
+      { name: 'Transfers', translationKey: 'nav.inventoryTransfers', icon: FileOutput, href: '/msp/inventory/transfers' },
+      { name: 'Cycle Counts', translationKey: 'nav.inventoryCounts', icon: ListChecks, href: '/msp/inventory/counts' },
+      { name: 'Write-offs', translationKey: 'nav.inventoryWriteOffs', icon: FileOutput, href: '/msp/inventory/write-offs' },
+    ]
+  },
+  {
+    title: 'Purchasing',
+    translationKey: 'nav.inventory.sections.purchasing',
+    items: [
+      { name: 'Vendors', translationKey: 'nav.inventoryVendors', icon: Handshake, href: '/msp/inventory/vendors' },
+      { name: 'Purchase Orders', translationKey: 'nav.inventoryPurchaseOrders', icon: Receipt, href: '/msp/inventory/purchase-orders' },
+      { name: 'Vendor Bills', translationKey: 'nav.inventoryVendorBills', icon: Receipt, href: '/msp/inventory/vendor-bills' },
+    ]
+  },
+  {
+    title: 'Sales & Fulfillment',
+    translationKey: 'nav.inventory.sections.salesFulfillment',
+    items: [
+      { name: 'Sales Orders', translationKey: 'nav.inventorySalesOrders', icon: ReceiptText, href: '/msp/inventory/sales-orders' },
+      { name: 'RMA', translationKey: 'nav.inventoryRma', icon: ListTree, href: '/msp/inventory/rma' },
+      { name: 'Loaners', translationKey: 'nav.inventoryLoaners', icon: Timer, href: '/msp/inventory/loaners' },
+      { name: 'Kits', translationKey: 'nav.inventoryKits', icon: Package, href: '/msp/inventory/kits' },
+    ]
+  },
+  {
+    title: 'Analytics',
+    translationKey: 'nav.inventory.sections.analytics',
+    items: [
+      { name: 'Margin', translationKey: 'nav.inventoryMargin', icon: Percent, href: '/msp/inventory/margin' },
+      { name: 'Ghost Usage', translationKey: 'nav.inventoryGhostUsage', icon: Ghost, href: '/msp/inventory/ghost-usage' },
     ]
   },
 ];

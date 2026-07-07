@@ -14,7 +14,16 @@
     "documentsAll": "Alle documenten",
     "knowledgeBase": "Kennisbank",
     "assets": "Assets",
-    "inventory": "Inventaris",
+    "inventory": {
+      "label": "Inventaris",
+      "sections": {
+        "overview": "Overzicht",
+        "stock": "Voorraad",
+        "purchasing": "Inkoop",
+        "salesFulfillment": "Verkoop en uitvoering",
+        "analytics": "Analyse"
+      }
+    },
     "inventoryDashboard": "Dashboard",
     "inventoryStock": "Voorraad",
     "inventoryLocations": "Voorraadlocaties",

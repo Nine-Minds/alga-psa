@@ -14,7 +14,16 @@
     "documentsAll": "Alle Dokumente",
     "knowledgeBase": "Wissensdatenbank",
     "assets": "Assets",
-    "inventory": "Lagerbestand",
+    "inventory": {
+      "label": "Lagerbestand",
+      "sections": {
+        "overview": "Übersicht",
+        "stock": "Bestand",
+        "purchasing": "Einkauf",
+        "salesFulfillment": "Vertrieb und Abwicklung",
+        "analytics": "Analysen"
+      }
+    },
     "inventoryDashboard": "Dashboard",
     "inventoryStock": "Bestand",
     "inventoryLocations": "Bestandsstandorte",
