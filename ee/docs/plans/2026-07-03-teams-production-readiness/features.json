@@ -368,7 +368,7 @@
     "epic": "E6",
     "phase": "P1",
     "description": "Guided setup wizard stepper: profile → Graph permissions → bot registration → activate → package → sideload instructions → verify",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F054",
@@ -403,35 +403,35 @@
     "epic": "E6",
     "phase": "P1",
     "description": "In-app links from wizard/settings steps to the corresponding runbook sections",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F059",
     "epic": "E6",
     "phase": "P1",
     "description": "Stale-manifest detection: warning when deployment base URL or selected profile changed after the last package generation",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F060",
     "epic": "E6",
     "phase": "P1",
     "description": "Delivery log viewer in Teams settings consuming listTeamsDeliveries with status/category filters and pagination",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F061",
     "epic": "E6",
     "phase": "P1",
     "description": "Audit log viewer in Teams settings consuming listTeamsAuditEvents with surface/action filters and pagination",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F062",
     "epic": "E6",
     "phase": "P1",
     "description": "Troubleshooting panel mapping delivery error codes (graph_unauthorized, user_not_mapped, addon_inactive, package_misconfigured, …) to concrete remedies",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F063",
@@ -445,14 +445,14 @@
     "epic": "E7",
     "phase": "P1",
     "description": "Teams settings paywall card shows included capabilities and a purchase CTA deep-linking billing admins to Account Management add-on purchase",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F065",
     "epic": "E7",
     "phase": "P1",
     "description": "Expired Teams add-on soft-disables: sends skipped with addon_inactive, configuration and history preserved, admin banner explains state",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F066",

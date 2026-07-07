@@ -715,7 +715,7 @@
       "F053"
     ],
     "description": "Wizard renders all steps with correct initial state for a fresh tenant and resumes at the first incomplete step",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T090",
@@ -723,7 +723,7 @@
       "F053"
     ],
     "description": "Wizard blocks activation until profile validation passes; each interactive element has a kebab-case id",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T091",
@@ -763,7 +763,7 @@
       "F058"
     ],
     "description": "Wizard/settings steps link to the correct runbook anchors",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T096",
@@ -771,7 +771,7 @@
       "F059"
     ],
     "description": "Changing base URL or selected profile after package generation shows the stale-manifest warning; regeneration clears it",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T097",
@@ -779,7 +779,7 @@
       "F060"
     ],
     "description": "Delivery log viewer lists rows with status/category filters and cursor pagination; permission-gated to admins",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T098",
@@ -787,7 +787,7 @@
       "F060"
     ],
     "description": "Delivery log viewer empty state and cross-tenant isolation (only current tenant rows)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T099",
@@ -795,7 +795,7 @@
       "F061"
     ],
     "description": "Audit log viewer lists mutation events with surface/action filters and pagination; permission-gated",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T100",
@@ -803,7 +803,7 @@
       "F062"
     ],
     "description": "Troubleshooting panel maps each delivery error code to its remedy text (snapshot over the full code enum)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T101",
@@ -843,7 +843,7 @@
       "F064"
     ],
     "description": "Paywall card renders included capabilities and purchase CTA for billing admins; CTA hidden for non-billing users",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T106",
