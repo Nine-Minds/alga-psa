@@ -18,6 +18,7 @@ import {
   type AssociateRequestToTicketInput
 } from '../schemas/appointmentRequestSchemas';
 import { SystemEmailService } from '@alga-psa/email';
+import { enqueueImmediateJob } from '@alga-psa/core';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -159,13 +160,12 @@ export const getTeamsMeetingCapability = withAuth(async (
  */
 async function enqueueTeamsMeetingCleanupJob(tenantId: string, meetingId: string): Promise<boolean> {
   try {
-    const { getJobRunner } = await import('@alga-psa/jobs/runner');
-    const runner = await getJobRunner();
-    await runner.scheduleJob(
-      'teams-meeting-cleanup',
-      { tenantId, meetingId },
-      { singletonKey: `teams-meeting-cleanup:${tenantId}:${meetingId}` },
-    );
+    // Enqueue via the core DI seam rather than importing @alga-psa/jobs, which
+    // would close a scheduling <-> jobs cycle (jobs already imports scheduling's
+    // buildTeamsArtifactCaptureDeps). The handler is idempotent (404=success) and
+    // the recurring Teams meeting sweep re-enqueues any cancel_pending row, so we
+    // do not need the runner's singletonKey de-duplication.
+    await enqueueImmediateJob('teams-meeting-cleanup', { tenantId, meetingId });
     return true;
   } catch (error) {
     console.warn('[TeamsMeetingCleanup] Failed to enqueue cleanup job; the Teams meeting sweep will retry', {

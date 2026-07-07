@@ -121,7 +121,7 @@ describe('Teams meeting job wiring', () => {
     expect(fnBody).not.toMatch(/isEnterpriseWorkflowEdition\(\)\)\s*\{\s*\n?\s*return null;/);
   });
 
-  it('T047: appointment request actions are typechecked (no @ts-nocheck) and enqueue cleanup via the job runner abstraction', () => {
+  it('T047: appointment request actions are typechecked (no @ts-nocheck) and enqueue cleanup via the core DI seam, not a direct jobs import', () => {
     const actionSources = [
       schedulingAppointmentActionsSource,
       clientPortalAppointmentActionsSource,
@@ -129,13 +129,14 @@ describe('Teams meeting job wiring', () => {
 
     for (const source of actionSources) {
       expect(source).not.toContain('@ts-nocheck');
+      // Enqueue must go through @alga-psa/core (enqueueImmediateJob) so a
+      // feature package never imports @alga-psa/jobs and closes a
+      // scheduling/client-portal <-> jobs cycle.
       expect(source).toContain(
-        "const { getJobRunner } = await import('@alga-psa/jobs/runner');"
+        "enqueueImmediateJob('teams-meeting-cleanup', { tenantId, meetingId })"
       );
-      expect(source).toContain("'teams-meeting-cleanup',");
-      expect(source).toContain(
-        'singletonKey: `teams-meeting-cleanup:${tenantId}:${meetingId}`'
-      );
+      expect(source).not.toContain("await import('@alga-psa/jobs/runner')");
+      expect(source).not.toContain('@alga-psa/jobs/runner');
       // The enqueue path must go through the runner abstraction, never pg-boss.
       expect(source).not.toMatch(/['"]pg-boss['"]/);
       expect(source).not.toContain('PgBoss');

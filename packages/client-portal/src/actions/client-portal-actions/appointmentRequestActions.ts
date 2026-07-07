@@ -32,7 +32,7 @@ import {
 } from '../../services/availabilityService';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import { resolveAppointmentApproverUserIds } from '@alga-psa/msp-composition/scheduling/appointmentApprovers';
-import { isValidEmail } from '@alga-psa/core';
+import { isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
 import { isEnterprise } from '@alga-psa/core/features';
 import { format, type Locale } from 'date-fns';
 import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
@@ -281,13 +281,11 @@ async function enqueueTeamsMeetingCleanupJob(tenantId: string, meetingId: string
   }
 
   try {
-    const { getJobRunner } = await import('@alga-psa/jobs/runner');
-    const runner = await getJobRunner();
-    await runner.scheduleJob(
-      'teams-meeting-cleanup',
-      { tenantId, meetingId },
-      { singletonKey: `teams-meeting-cleanup:${tenantId}:${meetingId}` },
-    );
+    // Enqueue via the core DI seam rather than importing @alga-psa/jobs, which
+    // would create a client-portal -> jobs cycle. The handler is idempotent
+    // (404=success) and the recurring Teams meeting sweep re-enqueues any
+    // cancel_pending row, so runner-level singletonKey de-duplication is not needed.
+    await enqueueImmediateJob('teams-meeting-cleanup', { tenantId, meetingId });
     return true;
   } catch (error) {
     console.warn('[ClientPortalAppointmentRequests] Failed to enqueue Teams meeting cleanup job; the Teams meeting sweep will retry', {

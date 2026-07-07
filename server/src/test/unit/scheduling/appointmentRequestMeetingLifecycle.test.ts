@@ -216,10 +216,12 @@ vi.mock('@alga-psa/scheduling/lib/teamsMeetingService', () => ({
   })),
 }));
 
-vi.mock('@alga-psa/jobs/runner', () => ({
-  getJobRunner: vi.fn(async () => ({
-    scheduleJob: hoisted.scheduleJobMock,
-  })),
+// The cleanup job is enqueued through the @alga-psa/core DI seam (not a direct
+// @alga-psa/jobs import, which would create a scheduling <-> jobs cycle). Mock
+// just that seam so the enqueue is observable.
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/core')>()),
+  enqueueImmediateJob: hoisted.scheduleJobMock,
 }));
 
 vi.mock('@alga-psa/clients/actions/interactionCreateHelper', () => ({
@@ -494,7 +496,6 @@ describe('appointment request meeting lifecycle (E3)', () => {
     expect(hoisted.scheduleJobMock).toHaveBeenCalledWith(
       'teams-meeting-cleanup',
       { tenantId: TENANT, meetingId: MEETING_ROW_ID },
-      { singletonKey: `teams-meeting-cleanup:tenant-1:${MEETING_ROW_ID}` },
     );
     expect(hoisted.fakeDb.rows('appointment_requests')[0].status).toBe('declined');
   });

@@ -198,6 +198,13 @@ vi.mock('@alga-psa/jobs/runner', () => ({
   getJobRunner: vi.fn(async () => ({ scheduleJob: scheduleJobMock })),
 }));
 
+// The cleanup job is enqueued through the @alga-psa/core DI seam (not a direct
+// @alga-psa/jobs import, which would create a scheduling <-> jobs cycle).
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/core')>()),
+  enqueueImmediateJob: scheduleJobMock,
+}));
+
 // Mock appointment helpers
 vi.mock('@alga-psa/scheduling/actions', async () => {
   const actual = await vi.importActual<typeof import('@alga-psa/scheduling/actions')>('@alga-psa/scheduling/actions');
@@ -1669,7 +1676,6 @@ describe('Appointment Request Integration Tests', () => {
       expect(scheduleJobMock).toHaveBeenCalledWith(
         'teams-meeting-cleanup',
         { tenantId, meetingId },
-        { singletonKey: `teams-meeting-cleanup:${tenantId}:${meetingId}` },
       );
 
       // Run the real cleanup handler to close the loop: Graph delete is
@@ -2820,7 +2826,6 @@ describe('Appointment Request Integration Tests', () => {
       expect(scheduleJobMock).toHaveBeenCalledWith(
         'teams-meeting-cleanup',
         { tenantId, meetingId: scheduledMeeting.meeting_id },
-        { singletonKey: `teams-meeting-cleanup:${tenantId}:${scheduledMeeting.meeting_id}` },
       );
 
       const pendingMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
@@ -2976,7 +2981,6 @@ describe('Appointment Request Integration Tests', () => {
       expect(scheduleJobMock).toHaveBeenCalledWith(
         'teams-meeting-cleanup',
         { tenantId, meetingId: scheduledMeeting.meeting_id },
-        { singletonKey: `teams-meeting-cleanup:${tenantId}:${scheduledMeeting.meeting_id}` },
       );
 
       const pendingMeeting = await tenantTableFor(db, tenantId, 'online_meetings')
