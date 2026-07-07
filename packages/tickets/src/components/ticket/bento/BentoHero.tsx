@@ -18,6 +18,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile } from '@alga-psa/ui/components/bento/BentoTile';
 import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
 import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
+import { useTeamAvatarUrl } from './useTeamAvatarUrl';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
 
 interface HeroSelectOption {
@@ -30,6 +31,8 @@ interface HeroSelectOption {
 
 interface BentoHeroProps {
   id: string;
+  /** Observed by TicketDetails' sticky header to float the title on scroll. */
+  titleRef?: React.Ref<HTMLHeadingElement>;
   ticket: ITicket & TicketSlaFields & { escalated?: boolean; escalation_level?: number | null };
   statusOptions: HeroSelectOption[];
   priorityOptions: HeroSelectOption[];
@@ -99,6 +102,7 @@ function HeroField({ label, children }: { label: string; children: React.ReactNo
  */
 export function BentoHero({
   id,
+  titleRef,
   ticket,
   statusOptions,
   priorityOptions,
@@ -313,6 +317,7 @@ export function BentoHero({
     () => (ticket.assigned_team_id ? teams?.find((team) => team.team_id === ticket.assigned_team_id) ?? null : null),
     [teams, ticket.assigned_team_id],
   );
+  const assignedTeamAvatarUrl = useTeamAvatarUrl(assignedTeam?.team_id, assignedTeam?.tenant, getTeamAvatarUrlsBatch);
 
   // Extra assigned agents are surfaced as a "+N" indicator; resolve each name
   // from the full agent pool (the resource rows only carry the user id).
@@ -499,7 +504,7 @@ export function BentoHero({
                   containerClassName="mb-0"
                 />
               ) : (
-                <h2 className="text-lg font-bold text-[rgb(var(--color-text-900))] flex items-center gap-2 min-w-0">
+                <h2 ref={titleRef} className="text-lg font-bold text-[rgb(var(--color-text-900))] flex items-center gap-2 min-w-0">
                   <span className="truncate">{displayedTitle}</span>
                   <button
                     id={`${id}-title-edit`}
@@ -636,7 +641,7 @@ export function BentoHero({
                     <TeamAvatar
                       teamId={assignedTeam.team_id}
                       teamName={assignedTeam.team_name}
-                      avatarUrl={null}
+                      avatarUrl={assignedTeamAvatarUrl}
                       size="xs"
                     />
                   </Badge>

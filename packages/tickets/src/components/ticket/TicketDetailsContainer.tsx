@@ -71,6 +71,8 @@ interface TicketDetailsContainerProps {
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
   renderIntervalManagement?: React.ComponentProps<typeof TicketDetails>['renderIntervalManagement'];
   hideSlaStatus?: boolean;
+  hideBilling?: boolean;
+  hideScheduling?: boolean;
   hideTimeEntry?: boolean;
   hideMaterials?: boolean;
   uploadTicketAttachmentAction?: (
@@ -98,6 +100,8 @@ export default function TicketDetailsContainer({
   renderClientDetails,
   renderIntervalManagement,
   hideSlaStatus = false,
+  hideBilling = false,
+  hideScheduling = false,
   hideTimeEntry = false,
   hideMaterials = false,
   uploadTicketAttachmentAction,
@@ -300,6 +304,8 @@ export default function TicketDetailsContainer({
       renderClientDetails={renderClientDetails}
       renderIntervalManagement={renderIntervalManagement}
       hideSlaStatus={hideSlaStatus}
+      hideBilling={hideBilling}
+      hideScheduling={hideScheduling}
       hideTimeEntry={hideTimeEntry}
       hideMaterials={hideMaterials}
       uploadTicketAttachmentAction={uploadTicketAttachmentAction}
