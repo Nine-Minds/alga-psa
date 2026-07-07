@@ -18,7 +18,7 @@ import {
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { Knex } from 'knex';
-import { createTag } from '@alga-psa/tags/actions';
+import { createTag, findTagsByEntityId } from '@alga-psa/tags/actions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -1398,6 +1398,7 @@ export interface ImportClientResult {
   message: string;
   client?: IClient;
   originalData: Record<string, any>;
+  skipped?: boolean;
 }
 
 export const importClientsFromCSV = withAuth(async (
@@ -1422,52 +1423,114 @@ export const importClientsFromCSV = withAuth(async (
     .first();
   const tenantDefaultCurrencyCode = tenantDefaultBillingSettings?.default_currency_code || 'USD';
 
-  // Start a transaction to ensure all operations succeed or fail together
-  await withTransaction(db, async (trx: Knex.Transaction) => {
-    for (const clientData of clientsData) {
-      try {
-        if (!clientData.client_name) {
-          throw new Error('Client name is required');
-        }
+  const parseCsvBoolean = (value: unknown): boolean =>
+    value === true || value === 'true' || value === 'Yes';
 
+  const hasLocationData = (row: Record<string, any>): boolean =>
+    Boolean(row.email || row.phone_number || row.address_line1 || row.city || row.location_name);
+
+  const locationFieldsFromRow = (row: Record<string, any>) => ({
+    location_name: row.location_name || 'Main Office',
+    address_line1: row.address_line1 || '',
+    address_line2: row.address_line2 || '',
+    city: row.city || '',
+    state_province: row.state_province || '',
+    postal_code: row.postal_code || '',
+    country_code: 'US',
+    country_name: row.country || 'United States',
+    phone: row.phone_number || '',
+    email: row.email || ''
+  });
+
+  // Each row gets its own transaction: a failed row rolls back alone instead of
+  // aborting a shared transaction and taking every later row down with it.
+  // LEVERAGE: pattern csv-import-row-isolation — tickets importer solves the same problem with savepoints (ticketImportActions safeInsert); contacts/phase-tasks/xero importers still share one abortable transaction
+  for (const clientData of clientsData) {
+    try {
+      if (!clientData.client_name) {
+        throw new Error('Client name is required');
+      }
+
+      let savedClient: IClient | undefined;
+      let created = false;
+      let skipped = false;
+
+      await withTransaction(db, async (trx: Knex.Transaction) => {
         const existingClient = await tenantScopedTable(trx, 'clients', tenant)
           .where({ client_name: clientData.client_name })
           .first();
 
         if (existingClient && !updateExisting) {
-          results.push({
-            success: false,
-            message: `Client with name ${clientData.client_name} already exists`,
-            originalData: clientData
-          });
-          continue;
+          skipped = true;
+          return;
         }
 
-        let savedClient: IClient;
-
-        if (existingClient && updateExisting) {
-          // Keep the existing tenant when updating
-          const { tenant: _, ...safeClientData } = clientData; // Remove tenant from spread to prevent override
-          const { account_manager_id, ...restOfSafeData } = safeClientData;
-          const updateData = {
-            ...restOfSafeData,
-            account_manager_id: account_manager_id === '' ? null : account_manager_id,
-            tenant: existingClient.tenant, // Explicitly set correct tenant
+        if (existingClient) {
+          // Map CSV fields onto real clients columns only — location data lives
+          // in client_locations, and tenant must never be part of the SET list.
+          const updateData: Record<string, any> = {
             updated_at: new Date().toISOString()
           };
+          if (clientData.website !== undefined || clientData.url !== undefined) {
+            updateData.url = clientData.website || clientData.url || '';
+          }
+          if (clientData.client_type !== undefined) {
+            updateData.client_type = clientData.client_type || 'company';
+          }
+          if (clientData.is_inactive !== undefined) {
+            updateData.is_inactive = parseCsvBoolean(clientData.is_inactive);
+          }
+          if (clientData.is_tax_exempt !== undefined) {
+            updateData.is_tax_exempt = parseCsvBoolean(clientData.is_tax_exempt);
+          }
+          if (clientData.auto_invoice !== undefined) {
+            updateData.auto_invoice = parseCsvBoolean(clientData.auto_invoice);
+          }
+          if (clientData.notes !== undefined) {
+            updateData.notes = clientData.notes || '';
+          }
+          if (clientData.credit_limit !== undefined && clientData.credit_limit !== null && clientData.credit_limit !== '') {
+            updateData.credit_limit = Number(clientData.credit_limit);
+          }
+          if (clientData.account_manager_id !== undefined) {
+            updateData.account_manager_id = clientData.account_manager_id === '' ? null : clientData.account_manager_id;
+          }
 
           [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
             .where({ client_id: existingClient.client_id })
             .update(updateData)
             .returning('*');
 
-          results.push({
-            success: true,
-            message: 'Client updated',
-            client: savedClient,
-            originalData: clientData
-          });
+          if (hasLocationData(clientData)) {
+            const defaultLocation = await tenantScopedTable(trx, 'client_locations', tenant)
+              .where({ client_id: existingClient.client_id, is_default: true })
+              .first();
+
+            if (defaultLocation) {
+              await tenantScopedTable(trx, 'client_locations', tenant)
+                .where({ location_id: defaultLocation.location_id })
+                .update({
+                  ...locationFieldsFromRow(clientData),
+                  updated_at: new Date().toISOString()
+                });
+            } else {
+              await tenantScopedTable(trx, 'client_locations', tenant).insert({
+                location_id: trx.raw('gen_random_uuid()'),
+                client_id: existingClient.client_id,
+                tenant: tenant,
+                ...locationFieldsFromRow(clientData),
+                is_default: true,
+                is_billing_address: true,
+                is_shipping_address: true,
+                is_active: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+            }
+          }
         } else {
+          created = true;
+
           // Create new client with synchronized website fields
           const properties = clientData.properties ? { ...clientData.properties } : {};
           const url = clientData.url || '';
@@ -1482,9 +1545,9 @@ export const importClientsFromCSV = withAuth(async (
           }
 
           const clientToCreate = {
-            client_name: clientData.client_name || clientData.client_name,
+            client_name: clientData.client_name,
             url: clientData.website || clientData.url || '',
-            is_inactive: clientData.is_inactive === 'Yes' || clientData.is_inactive === true || false,
+            is_inactive: parseCsvBoolean(clientData.is_inactive),
             is_tax_exempt: clientData.is_tax_exempt || false,
             client_type: clientData.client_type || 'company',
             tenant: tenant,
@@ -1509,72 +1572,72 @@ export const importClientsFromCSV = withAuth(async (
             .insert(clientToCreate)
             .returning('*');
 
-          // Create default location if any location data exists in CSV
-          if (clientData.email || clientData.phone_number || clientData.address_line1 ||
-              clientData.city || clientData.location_name) {
-            try {
-              await tenantScopedTable(trx, 'client_locations', tenant).insert({
-                location_id: trx.raw('gen_random_uuid()'),
-                client_id: savedClient.client_id,
-                tenant: tenant,
-                location_name: clientData.location_name || 'Main Office',
-                address_line1: clientData.address_line1 || '',
-                address_line2: clientData.address_line2 || '',
-                city: clientData.city || '',
-                state_province: clientData.state_province || '',
-                postal_code: clientData.postal_code || '',
-                country_code: 'US',
-                country_name: clientData.country || 'United States',
-                phone: clientData.phone_number || '',
-                email: clientData.email || '',
-                is_default: true,
-                is_billing_address: true,
-                is_shipping_address: true,
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              });
-            } catch (locationError) {
-              console.error('Failed to create location during CSV import:', locationError);
-              // Don't fail the client import if location creation fails
-            }
+          if (hasLocationData(clientData)) {
+            await tenantScopedTable(trx, 'client_locations', tenant).insert({
+              location_id: trx.raw('gen_random_uuid()'),
+              client_id: savedClient!.client_id,
+              tenant: tenant,
+              ...locationFieldsFromRow(clientData),
+              is_default: true,
+              is_billing_address: true,
+              is_shipping_address: true,
+              is_active: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
           }
-
-          // Handle tags if provided
-          if (clientData.tags) {
-            try {
-              const tagTexts = clientData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
-              for (const tagText of tagTexts) {
-                await createTag({
-                  tag_text: tagText,
-                  tagged_id: savedClient.client_id,
-                  tagged_type: 'client',
-                  created_by: user.user_id
-                });
-              }
-            } catch (tagError) {
-              console.error('Failed to create tags during CSV import:', tagError);
-              // Don't fail the client import if tag creation fails
-            }
-          }
-
-          results.push({
-            success: true,
-            message: 'Client created',
-            client: savedClient,
-            originalData: clientData
-          });
         }
-      } catch (error) {
-        console.error('Error processing client:', clientData, error);
+      });
+
+      if (skipped) {
         results.push({
           success: false,
-          message: error instanceof Error ? error.message : 'Unknown error occurred',
+          skipped: true,
+          message: `Client with name ${clientData.client_name} already exists`,
           originalData: clientData
         });
+        continue;
       }
+
+      // Tags run after the row commits: createTag opens its own connection, so
+      // creating them inside the transaction would leak tags for rolled-back rows.
+      if (savedClient && clientData.tags) {
+        try {
+          const tagTexts = clientData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
+          const existingTags = created ? [] : await findTagsByEntityId(savedClient.client_id, 'client');
+          const existingTagTexts = new Set(existingTags.map((tag): string => tag.tag_text.toLowerCase()));
+          for (const tagText of tagTexts) {
+            if (existingTagTexts.has(tagText.toLowerCase())) {
+              continue;
+            }
+            await createTag({
+              tag_text: tagText,
+              tagged_id: savedClient.client_id,
+              tagged_type: 'client',
+              created_by: user.user_id
+            });
+          }
+        } catch (tagError) {
+          console.error('Failed to create tags during CSV import:', tagError);
+          // Don't fail the client import if tag creation fails
+        }
+      }
+
+      results.push({
+        success: true,
+        message: created ? 'Client created' : 'Client updated',
+        client: savedClient,
+        originalData: clientData
+      });
+    } catch (error) {
+      console.error('Error processing client:', clientData, error);
+      results.push({
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error occurred',
+        originalData: clientData
+      });
     }
-  });
+  }
 
   return results;
 });

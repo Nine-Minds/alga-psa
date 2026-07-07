@@ -13,6 +13,7 @@ import type { IClient } from '@alga-psa/types';
 import { Upload, AlertTriangle, Check } from 'lucide-react';
 import { parseCSV } from '@alga-psa/core';
 import { checkExistingClients, importClientsFromCSV, generateClientCSVTemplate } from '@alga-psa/clients/actions';
+import type { ImportClientResult } from '@alga-psa/clients/actions';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -20,7 +21,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 interface ClientsImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onImportComplete: (clients: IClient[], updateExisting: boolean) => void;
+  onImportComplete: (results: ImportClientResult[]) => void;
 }
 
 type MappableClientField = 
@@ -102,6 +103,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
   const [existingClientsCount, setExistingClientsCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showOptionalFields, setShowOptionalFields] = useState(false);
+  const [importResults, setImportResults] = useState<ImportClientResult[]>([]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -131,6 +133,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       setExistingClientsCount(0);
       setIsProcessing(false);
       setShowOptionalFields(false);
+      setImportResults([]);
       setCurrentPage(1);
       setPageSize(10);
     }
@@ -188,7 +191,6 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       data: {
         ...mappedData,
         client_name: mappedData.client_name,
-        tenant: 'default',
         is_inactive: mappedData.is_inactive ? mappedData.is_inactive.toLowerCase() === 'true' : false,
         is_tax_exempt: mappedData.is_tax_exempt ? mappedData.is_tax_exempt.toLowerCase() === 'true' : false,
         auto_invoice: mappedData.auto_invoice ? mappedData.auto_invoice.toLowerCase() === 'true' : false,
@@ -336,8 +338,9 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
         .filter(result => result.isValid || importOptions.skipInvalid)
         .map((result): IClient => result.data as IClient);
 
-      await importClientsFromCSV(validClients, importOptions.updateExisting);
-      await onImportComplete(validClients, importOptions.updateExisting);
+      const results = await importClientsFromCSV(validClients, importOptions.updateExisting);
+      setImportResults(results);
+      onImportComplete(results);
       setStep('complete');
     } catch (error) {
       setErrors([error instanceof Error ? error.message : 'Error importing clients']);
@@ -362,6 +365,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       setShowUpdateConfirmation(false);
       setExistingClientsCount(0);
       setShowOptionalFields(false);
+      setImportResults([]);
       onClose();
     }
   }, [isProcessing, onClose]);
@@ -708,20 +712,74 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
             </div>
           )}
 
-          {step === 'complete' && (
-            <div className="text-center">
-              <Check className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">
-                {t('clientsImportDialog.importComplete', { defaultValue: 'Import Complete' })}
-              </h3>
-              <p className="text-gray-600 mb-4">
-                {t('clientsImportDialog.importCompleteMessage', {
-                  defaultValue: 'Successfully imported {{count}} clients',
-                  count: validationResults.filter(r => r.isValid).length,
-                })}
-              </p>
-            </div>
-          )}
+          {step === 'complete' && (() => {
+            const createdCount = importResults.filter(r => r.success && r.message === 'Client created').length;
+            const updatedCount = importResults.filter(r => r.success && r.message === 'Client updated').length;
+            const skippedCount = importResults.filter(r => r.skipped).length;
+            const failedResults = importResults.filter(r => !r.success && !r.skipped);
+
+            return (
+              <div>
+                <div className="text-center">
+                  {failedResults.length === 0 ? (
+                    <Check className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                  ) : (
+                    <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                  )}
+                  <h3 className="text-lg font-medium mb-2">
+                    {failedResults.length === 0
+                      ? t('clientsImportDialog.importComplete', { defaultValue: 'Import Complete' })
+                      : t('clientsImportDialog.importCompleteWithErrors', { defaultValue: 'Import Completed with Errors' })}
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    {t('clientsImportDialog.importResultSummary', {
+                      defaultValue: '{{created}} created, {{updated}} updated, {{skipped}} skipped, {{failed}} failed',
+                      created: createdCount,
+                      updated: updatedCount,
+                      skipped: skippedCount,
+                      failed: failedResults.length,
+                    })}
+                  </p>
+                </div>
+                {skippedCount > 0 && (
+                  <Alert variant="info" className="mb-4">
+                    <AlertDescription>
+                      {t('clientsImportDialog.skippedExistingMessage', {
+                        defaultValue: '{{count}} clients were skipped because they already exist. Enable "Update existing clients" to overwrite them.',
+                        count: skippedCount,
+                      })}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {failedResults.length > 0 && (
+                  <div className="max-h-64 overflow-y-auto">
+                    <DataTable
+                      id="clients-import-failures-table"
+                      pagination={false}
+                      data={failedResults.map((result): Record<string, any> => ({
+                        client_name: result.originalData.client_name || '-',
+                        message: result.message,
+                      }))}
+                      columns={[
+                        {
+                          title: t('clientsImportDialog.clientName', { defaultValue: 'Client Name' }),
+                          dataIndex: 'client_name',
+                          width: '30%',
+                        },
+                        {
+                          title: t('clientsImportDialog.error', { defaultValue: 'Error' }),
+                          dataIndex: 'message',
+                          render: (value: string) => (
+                            <span className="text-red-600 text-sm whitespace-normal break-words">{value}</span>
+                          ),
+                        },
+                      ] as ColumnDefinition<any>[]}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

@@ -903,6 +903,10 @@
     "email": "E-mail",
     "clientName": "Klantnaam",
     "importCompleteMessage": "{{count}}-clients zijn geïmporteerd",
+    "importCompleteWithErrors": "Import voltooid met fouten",
+    "importResultSummary": "{{created}} aangemaakt, {{updated}} bijgewerkt, {{skipped}} overgeslagen, {{failed}} mislukt",
+    "skippedExistingMessage": "{{count}} klanten zijn overgeslagen omdat ze al bestaan. Schakel \"Update bestaande klanten\" in om ze te overschrijven.",
+    "error": "Fout",
     "updateExistingTitle": "Update bestaande klanten",
     "updateExistingMessage": "{{count}}-clients bestaan ​​al. Wilt u ze updaten met de nieuwe gegevens?"
   },
