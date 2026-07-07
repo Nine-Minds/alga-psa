@@ -129,11 +129,16 @@
       "assignTechnicianRequired": "Please assign a technician",
       "approve": "Failed to approve request",
       "declineReasonRequired": "Please provide a reason for declining",
-      "decline": "Failed to decline request"
+      "decline": "Failed to decline request",
+      "reschedule": "Failed to reschedule appointment",
+      "rescheduleDateRequired": "Please choose a new date and time",
+      "generateTeamsMeeting": "Failed to create the Microsoft Teams meeting"
     },
     "feedback": {
       "approved": "Appointment request approved",
-      "declined": "Appointment request declined"
+      "declined": "Appointment request declined",
+      "rescheduled": "Appointment rescheduled",
+      "teamsMeetingGenerated": "Microsoft Teams meeting created"
     },
     "filters": {
       "statusLabel": "Filter by Status",
@@ -181,8 +186,10 @@
         "description": "Description"
       },
       "actions": {
-        "joinTeamsMeeting": "Join Teams Meeting"
-      }
+        "joinTeamsMeeting": "Join Teams Meeting",
+        "generateTeamsMeeting": "Generate Teams meeting"
+      },
+      "teamsMeetingMissing": "This approved appointment has no Teams meeting link yet."
     },
     "approval": {
       "title": "Approval Details",
@@ -201,6 +208,12 @@
       "actions": {
         "approve": "Approve",
         "decline": "Decline"
+      },
+      "teamsMeetingFailure": {
+        "title": "The Microsoft Teams meeting could not be created",
+        "description": "The appointment was not approved. Retry meeting creation, or approve without a meeting and generate one later.",
+        "retry": "Retry",
+        "approveWithout": "Approve without meeting"
       }
     },
     "decline": {
@@ -213,6 +226,18 @@
       },
       "actions": {
         "confirm": "Confirm Decline",
+        "cancel": "Cancel"
+      }
+    },
+    "reschedule": {
+      "title": "Reschedule",
+      "teamsNote": "Attendees will receive an updated Microsoft Teams meeting invite.",
+      "fields": {
+        "newDateTime": "New Date & Time"
+      },
+      "actions": {
+        "open": "Reschedule appointment",
+        "confirm": "Confirm reschedule",
         "cancel": "Cancel"
       }
     }

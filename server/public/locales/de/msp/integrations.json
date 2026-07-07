@@ -2013,6 +2013,12 @@
             "description": "Techniker benachrichtigen, wenn ihnen Arbeit zugewiesen wird.",
             "label": "Zuweisungsereignisse"
           },
+          "channel": {
+            "activityFeed": "Aktivitäts-Feed",
+            "botDm": "Bot-Direktnachricht",
+            "both": "Beide",
+            "label": "Zustellungskanal"
+          },
           "customerReply": {
             "description": "Techniker benachrichtigen, wenn Kunden antworten.",
             "label": "Kundenantworten"
@@ -2141,6 +2147,10 @@
             "help": "Beim Speichern wird die für Graph-Besprechungsaufrufe verwendete Microsoft Entra-Objekt-ID aufgelöst und gespeichert.",
             "resolved": "Aufgelöste Objekt-ID: {{objectId}}"
           },
+          "sendMeetingInvites": {
+            "label": "Kalendereinladungen an Teilnehmer senden",
+            "description": "Teilnehmer erhalten native Outlook-/Teams-Kalendereinladungen für erstellte Besprechungen."
+          },
           "downloadRecordings": {
             "label": "Aufzeichnungen in den internen Speicher herunterladen",
             "description": "Wenn aktiviert, werden Aufzeichnungs-Blobs zusätzlich zum authentifizierten Graph-Proxy in den Mandantenspeicher kopiert."
@@ -2149,6 +2159,218 @@
             "label": "Aufzeichnungen und Transkripte im Kundenportal anzeigen",
             "description": "Standardmäßig deaktiviert; MSP-Benutzer können Artefakte weiterhin über die Interaktions- und Termindetails anzeigen."
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "Führen Sie unten die Diagnose aus, um Details zu erhalten.",
+          "message": "Der Teams-Bot kann nicht antworten: Die Bot-Connector-Anmeldedaten (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) sind auf dem Server nicht konfiguriert."
+        },
+        "wizard": {
+          "title": "Geführte Teams-Einrichtung",
+          "description": "Schließen Sie jeden Schritt ab, damit Microsoft Teams für diesen Mandanten funktioniert.",
+          "status": {
+            "complete": "Abgeschlossen",
+            "current": "Aktuell",
+            "incomplete": "Unvollständig"
+          },
+          "validate": {
+            "error": "Validierung fehlgeschlagen",
+            "validating": "Wird validiert...",
+            "profile": "Microsoft-Profil validieren",
+            "profileOk": "Die Anmeldedaten des Microsoft-Profils sind gültig.",
+            "permissions": "Graph-Berechtigungen prüfen",
+            "permissionsOk": "Alle erforderlichen Graph-Berechtigungen sind erteilt.",
+            "permissionGranted": "Erteilt",
+            "permissionMissing": "Fehlt",
+            "bot": "Bot Framework-Connector validieren",
+            "botOk": "Die Bot Framework-Anmeldedaten sind gültig ({{appId}})."
+          },
+          "activationBlocked": "Validieren Sie das obige Microsoft-Profil, bevor Sie Teams aktivieren.",
+          "step": {
+            "microsoftProfile": {
+              "title": "Microsoft-Profil",
+              "description": "Wählen Sie das Microsoft-Profil für Teams aus und validieren Sie dessen Graph-Anmeldedaten."
+            },
+            "graphPermissions": {
+              "title": "Graph-Berechtigungen",
+              "description": "Bestätigen Sie, dass die erforderlichen Microsoft Graph-Anwendungsberechtigungen erteilt und genehmigt wurden."
+            },
+            "botFramework": {
+              "title": "Bot Framework-Registrierung",
+              "description": "Registrieren Sie den Azure Bot und validieren Sie die Bot-Connector-Anmeldedaten der Bereitstellung."
+            },
+            "activate": {
+              "title": "Teams aktivieren",
+              "description": "Aktivieren Sie die Teams-Integration, sobald das Microsoft-Profil validiert ist."
+            },
+            "package": {
+              "title": "Paket erstellen und herunterladen",
+              "description": "Erstellen Sie das Teams-App-Paket für das ausgewählte Profil und die base URL der Bereitstellung.",
+              "hint": "Verwenden Sie die Karte „Teams-Paket“ unten, um das App-Paket zu erstellen und herunterzuladen."
+            },
+            "sideload": {
+              "title": "App per Sideload laden",
+              "description": "Laden Sie das App-Paket in Teams hoch, damit Benutzer es installieren können.",
+              "body": "Laden Sie das heruntergeladene Paket in das Teams Admin Center hoch (Apps verwalten, dann Neue App hochladen) oder laden Sie es per Sideload über den Teams-Client."
+            },
+            "verify": {
+              "title": "Überprüfen",
+              "description": "Führen Sie eine Diagnose durch und senden Sie eine Testnachricht, um zu bestätigen, dass die Integration durchgängig funktioniert.",
+              "hint": "Verwenden Sie die Karte „Diagnose & Testnachricht“ unten, um die Einrichtung durchgängig zu überprüfen."
+            }
+          }
+        },
+        "runbook": {
+          "viewGuide": "Einrichtungsanleitung anzeigen"
+        },
+        "deliveryLog": {
+          "title": "Teams-Zustellungsprotokoll",
+          "description": "Jeder für diesen Mandanten erfasste Zustellversuch einer Teams-Benachrichtigung.",
+          "error": "Teams-Zustellungsprotokoll konnte nicht geladen werden",
+          "forbidden": "Sie haben keine Berechtigung, das Teams-Zustellungsprotokoll anzuzeigen.",
+          "empty": "Noch keine Teams-Zustellungen erfasst.",
+          "refresh": "Aktualisieren",
+          "loadMore": "Mehr laden",
+          "loading": "Wird geladen...",
+          "filter": {
+            "statusLabel": "Status",
+            "statusAll": "Alle Status",
+            "categoryLabel": "Kategorie",
+            "categoryAll": "Alle Kategorien"
+          },
+          "columns": {
+            "createdAt": "Zeit",
+            "category": "Kategorie",
+            "destination": "Ziel",
+            "status": "Status",
+            "errorCode": "Fehlercode",
+            "errorMessage": "Fehlermeldung"
+          },
+          "status": {
+            "delivered": "Zugestellt",
+            "sent": "Gesendet",
+            "failed": "Fehlgeschlagen",
+            "skipped": "Übersprungen"
+          },
+          "category": {
+            "assignment": "Zuweisung",
+            "customer_reply": "Kundenantwort",
+            "approval_request": "Genehmigungsanfrage",
+            "escalation": "Eskalation",
+            "sla_risk": "SLA-Risiko"
+          }
+        },
+        "auditLog": {
+          "title": "Teams-Audit-Protokoll",
+          "description": "Änderungen, die über den Teams-Bot, die Nachrichtenerweiterung und Schnellaktionsoberflächen ausgeführt wurden.",
+          "error": "Teams-Audit-Protokoll konnte nicht geladen werden",
+          "forbidden": "Sie haben keine Berechtigung, das Teams-Audit-Protokoll anzuzeigen.",
+          "empty": "Noch keine Teams-Audit-Ereignisse erfasst.",
+          "refresh": "Aktualisieren",
+          "loadMore": "Mehr laden",
+          "loading": "Wird geladen...",
+          "filter": {
+            "surfaceLabel": "Oberfläche",
+            "surfaceAll": "Alle Oberflächen",
+            "actionLabel": "Aktions-ID",
+            "actionPlaceholder": "z. B. assign_ticket"
+          },
+          "surface": {
+            "bot": "Bot",
+            "message_extension": "Nachrichtenerweiterung",
+            "quick_action": "Schnellaktion",
+            "tab": "Registerkarte"
+          },
+          "columns": {
+            "createdAt": "Zeit",
+            "surface": "Oberfläche",
+            "action": "Aktion",
+            "target": "Ziel",
+            "result": "Ergebnis",
+            "errorCode": "Fehlercode"
+          },
+          "result": {
+            "success": "Erfolg",
+            "failure": "Fehler"
+          }
+        },
+        "troubleshooting": {
+          "title": "Referenz zu Zustellungsfehlern",
+          "description": "Was jeder Teams-Zustellungsfehlercode bedeutet und wie er behoben wird.",
+          "show": "Fehlerreferenz anzeigen",
+          "hide": "Fehlerreferenz ausblenden",
+          "columns": {
+            "code": "Fehlercode",
+            "cause": "Ursache",
+            "remedy": "Abhilfe"
+          },
+          "codes": {
+            "graph_unauthorized": {
+              "cause": "Microsoft Graph hat das Anwendungstoken abgelehnt (401/403); eine erforderliche Graph-Anwendungsberechtigung wurde nicht genehmigt.",
+              "remedy": "Erteilen Sie in der Azure-App-Registrierung die Administratorzustimmung für die erforderlichen Graph-Berechtigungen (zum Beispiel TeamsActivity.Send)."
+            },
+            "user_not_mapped": {
+              "cause": "Der Empfänger hat sich nicht mit Microsoft bei Alga PSA angemeldet, daher besteht keine Kontozuordnung.",
+              "remedy": "Lassen Sie den Benutzer sich mit Microsoft anmelden (MSP-Portal-SSO oder die Teams-Registerkarte), damit sein Konto zugeordnet wird."
+            },
+            "addon_inactive": {
+              "cause": "Das Teams-Add-on ist abgelaufen oder nicht vorhanden, daher werden Sendungen übersprungen, während die Konfiguration erhalten bleibt.",
+              "remedy": "Erneuern Sie das Teams-Add-on für diesen Mandanten."
+            },
+            "integration_inactive": {
+              "cause": "Die Teams-Integration ist für diesen Mandanten nicht aktiv.",
+              "remedy": "Aktivieren Sie die Teams-Integration in den Einstellungen."
+            },
+            "package_misconfigured": {
+              "cause": "Das App-Paket wurde nie erstellt oder Zustellungsvoraussetzungen (app ID, base URL) fehlen.",
+              "remedy": "Erstellen Sie das Teams-App-Paket in den Einstellungen und versuchen Sie es erneut."
+            },
+            "graph_not_found": {
+              "cause": "Die Teams-App ist für den Empfänger nicht installiert, daher kann Microsoft Graph ihn nicht adressieren (404).",
+              "remedy": "Installieren Sie die Alga PSA-App für diesen Benutzer oder geben Sie sie organisationsweit frei."
+            },
+            "graph_throttled": {
+              "cause": "Microsoft Graph hat die Anfrage gedrosselt (429).",
+              "remedy": "Vorübergehend; Alga PSA wiederholt den Vorgang mit Backoff. Untersuchen Sie das Problem nur, wenn es weiterhin besteht."
+            },
+            "graph_server_error": {
+              "cause": "Microsoft Graph hat einen Serverfehler zurückgegeben (5xx).",
+              "remedy": "Vorübergehende Graph-Störung; Alga PSA wiederholt den Vorgang. Warten Sie und prüfen Sie den Microsoft-Dienststatus, wenn das Problem weiterhin besteht."
+            },
+            "transient": {
+              "cause": "Ein vorübergehender Fehler (Netzwerk oder Timeout) hat die Zustellung unterbrochen.",
+              "remedy": "Wird automatisch wiederholt; keine Maßnahme erforderlich, sofern die Fehler nicht weiterhin bestehen."
+            },
+            "unknown": {
+              "cause": "Der Fehler konnte keiner bekannten Ursache zugeordnet werden.",
+              "remedy": "Prüfen Sie die Serverprotokolle auf die Details des Zustellungsfehlers und führen Sie die Diagnose erneut aus."
+            }
+          }
+        },
+        "paywall": {
+          "title": "Microsoft Teams-Add-on",
+          "description": "Die Microsoft Teams-Integration erfordert das Teams-Add-on für diesen Mandanten.",
+          "includedTitle": "Was enthalten ist",
+          "feature": {
+            "tab": "Persönliche Registerkarte: Öffnen Sie Alga PSA in Microsoft Teams.",
+            "bot": "Persönlicher und Gruppenchat-Bot für Tickets, Genehmigungen, Zeiten und Notizen.",
+            "messageExtension": "Nachrichtenerweiterung und Schnellaktionen, um aus jeder Nachricht heraus auf PSA-Datensätze zu reagieren.",
+            "meetings": "Teams-Besprechungen bei Terminbestätigungen mit echten Outlook/Teams-Kalendereinladungen.",
+            "recordings": "Automatische Erfassung von Besprechungsaufzeichnungen und Transkripten in Interaktionen.",
+            "notifications": "Activity-Feed- und Bot-DM-Benachrichtigungen für Zuweisungen, Antworten, Genehmigungen und SLA-Risiko."
+          },
+          "cta": "Teams-Add-on kaufen",
+          "nonBilling": "Wenden Sie sich an einen Abrechnungsadministrator, um das Teams-Add-on für diesen Mandanten zu kaufen."
+        },
+        "addonExpiredBanner": {
+          "title": "Microsoft Teams-Add-on abgelaufen",
+          "message": "Das Microsoft Teams-Add-on ist abgelaufen. Ihre Konfiguration und Ihr Zustellungsverlauf bleiben erhalten, aber Teams-Benachrichtigungen werden übersprungen, bis das Add-on erneuert wird.",
+          "cta": "Teams-Add-on erneuern"
+        },
+        "staleManifest": {
+          "title": "Teams-App-Paket ist veraltet",
+          "warning": "Ihr Teams-App-Paket ist veraltet — neu erstellen und erneut hochladen.",
+          "regenerate": "Paket neu erstellen",
+          "regenerating": "Wird neu erstellt..."
         }
       }
     },

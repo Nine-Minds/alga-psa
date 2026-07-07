@@ -400,17 +400,19 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  id="online-meeting-join-button"
-                  asChild
-                  variant="outline"
-                  size="sm"
-                >
-                  <a href={onlineMeeting.join_url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    {t('interactions.onlineMeeting.join', { defaultValue: 'Join' })}
-                  </a>
-                </Button>
+                {onlineMeeting.join_url && (
+                  <Button
+                    id="online-meeting-join-button"
+                    asChild
+                    variant="outline"
+                    size="sm"
+                  >
+                    <a href={onlineMeeting.join_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      {t('interactions.onlineMeeting.join', { defaultValue: 'Join' })}
+                    </a>
+                  </Button>
+                )}
                 {showOnlineMeetingRecordingControls && (
                   <Button
                     id="online-meeting-refresh-recordings-button"

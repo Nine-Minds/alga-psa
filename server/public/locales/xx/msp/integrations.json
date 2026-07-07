@@ -2013,6 +2013,12 @@
             "description": "11111",
             "label": "11111"
           },
+          "channel": {
+            "activityFeed": "11111",
+            "botDm": "11111",
+            "both": "11111",
+            "label": "11111"
+          },
           "customerReply": {
             "description": "11111",
             "label": "11111"
@@ -2141,6 +2147,10 @@
             "help": "11111",
             "resolved": "11111 {{objectId}} 11111"
           },
+          "sendMeetingInvites": {
+            "label": "11111",
+            "description": "11111"
+          },
           "downloadRecordings": {
             "label": "11111",
             "description": "11111"
@@ -2149,6 +2159,218 @@
             "label": "11111",
             "description": "11111"
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "11111",
+          "message": "11111"
+        },
+        "wizard": {
+          "title": "11111",
+          "description": "11111",
+          "status": {
+            "complete": "11111",
+            "current": "11111",
+            "incomplete": "11111"
+          },
+          "validate": {
+            "error": "11111",
+            "validating": "11111",
+            "profile": "11111",
+            "profileOk": "11111",
+            "permissions": "11111",
+            "permissionsOk": "11111",
+            "permissionGranted": "11111",
+            "permissionMissing": "11111",
+            "bot": "11111",
+            "botOk": "11111"
+          },
+          "activationBlocked": "11111",
+          "step": {
+            "microsoftProfile": {
+              "title": "11111",
+              "description": "11111"
+            },
+            "graphPermissions": {
+              "title": "11111",
+              "description": "11111"
+            },
+            "botFramework": {
+              "title": "11111",
+              "description": "11111"
+            },
+            "activate": {
+              "title": "11111",
+              "description": "11111"
+            },
+            "package": {
+              "title": "11111",
+              "description": "11111",
+              "hint": "11111"
+            },
+            "sideload": {
+              "title": "11111",
+              "description": "11111",
+              "body": "11111"
+            },
+            "verify": {
+              "title": "11111",
+              "description": "11111",
+              "hint": "11111"
+            }
+          }
+        },
+        "runbook": {
+          "viewGuide": "11111"
+        },
+        "deliveryLog": {
+          "title": "11111",
+          "description": "11111",
+          "error": "11111",
+          "forbidden": "11111",
+          "empty": "11111",
+          "refresh": "11111",
+          "loadMore": "11111",
+          "loading": "11111",
+          "filter": {
+            "statusLabel": "11111",
+            "statusAll": "11111",
+            "categoryLabel": "11111",
+            "categoryAll": "11111"
+          },
+          "columns": {
+            "createdAt": "11111",
+            "category": "11111",
+            "destination": "11111",
+            "status": "11111",
+            "errorCode": "11111",
+            "errorMessage": "11111"
+          },
+          "status": {
+            "delivered": "11111",
+            "sent": "11111",
+            "failed": "11111",
+            "skipped": "11111"
+          },
+          "category": {
+            "assignment": "11111",
+            "customer_reply": "11111",
+            "approval_request": "11111",
+            "escalation": "11111",
+            "sla_risk": "11111"
+          }
+        },
+        "auditLog": {
+          "title": "11111",
+          "description": "11111",
+          "error": "11111",
+          "forbidden": "11111",
+          "empty": "11111",
+          "refresh": "11111",
+          "loadMore": "11111",
+          "loading": "11111",
+          "filter": {
+            "surfaceLabel": "11111",
+            "surfaceAll": "11111",
+            "actionLabel": "11111",
+            "actionPlaceholder": "11111"
+          },
+          "surface": {
+            "bot": "11111",
+            "message_extension": "11111",
+            "quick_action": "11111",
+            "tab": "11111"
+          },
+          "columns": {
+            "createdAt": "11111",
+            "surface": "11111",
+            "action": "11111",
+            "target": "11111",
+            "result": "11111",
+            "errorCode": "11111"
+          },
+          "result": {
+            "success": "11111",
+            "failure": "11111"
+          }
+        },
+        "troubleshooting": {
+          "title": "11111",
+          "description": "11111",
+          "show": "11111",
+          "hide": "11111",
+          "columns": {
+            "code": "11111",
+            "cause": "11111",
+            "remedy": "11111"
+          },
+          "codes": {
+            "graph_unauthorized": {
+              "cause": "11111",
+              "remedy": "11111"
+            },
+            "user_not_mapped": {
+              "cause": "11111",
+              "remedy": "11111"
+            },
+            "addon_inactive": {
+              "cause": "11111",
+              "remedy": "11111"
+            },
+            "integration_inactive": {
+              "cause": "11111",
+              "remedy": "11111"
+            },
+            "package_misconfigured": {
+              "cause": "11111",
+              "remedy": "11111"
+            },
+            "graph_not_found": {
+              "cause": "11111",
+              "remedy": "11111"
+            },
+            "graph_throttled": {
+              "cause": "11111",
+              "remedy": "11111"
+            },
+            "graph_server_error": {
+              "cause": "11111",
+              "remedy": "11111"
+            },
+            "transient": {
+              "cause": "11111",
+              "remedy": "11111"
+            },
+            "unknown": {
+              "cause": "11111",
+              "remedy": "11111"
+            }
+          }
+        },
+        "paywall": {
+          "title": "11111",
+          "description": "11111",
+          "includedTitle": "11111",
+          "feature": {
+            "tab": "11111",
+            "bot": "11111",
+            "messageExtension": "11111",
+            "meetings": "11111",
+            "recordings": "11111",
+            "notifications": "11111"
+          },
+          "cta": "11111",
+          "nonBilling": "11111"
+        },
+        "addonExpiredBanner": {
+          "title": "11111",
+          "message": "11111",
+          "cta": "11111"
+        },
+        "staleManifest": {
+          "title": "11111",
+          "warning": "11111",
+          "regenerate": "11111",
+          "regenerating": "11111"
         }
       }
     },

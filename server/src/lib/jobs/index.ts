@@ -32,6 +32,16 @@ import {
   TeamsMeetingArtifactSubscriptionRenewalJobData,
   TeamsMeetingArtifactNotificationJobData,
 } from '@alga-psa/jobs/handlers/teamsMeetingArtifactWebhookHandler';
+import {
+  teamsMeetingCleanupHandler,
+  TeamsMeetingCleanupJobData,
+  TEAMS_MEETING_CLEANUP_JOB,
+} from '@alga-psa/jobs/handlers/teamsMeetingCleanupHandler';
+import {
+  teamsMeetingSweepHandler,
+  TeamsMeetingSweepJobData,
+  TEAMS_MEETING_SWEEP_JOB,
+} from '@alga-psa/jobs/handlers/teamsMeetingSweepHandler';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 import {
   workflowQuotaResumeScanHandler,
@@ -68,6 +78,7 @@ const isEnterpriseWorkflowEdition = (): boolean =>
 
 export * from './interfaces';
 export { JobRunnerFactory, getJobRunner } from './JobRunnerFactory';
+import { getJobRunner as getJobRunnerInstance } from './JobRunnerFactory';
 export { PgBossJobRunner } from './runners/PgBossJobRunner';
 export {
   initializeJobRunner,
@@ -222,6 +233,20 @@ export const initializeScheduler = async (storageService?: StorageService) => {
         'process-teams-meeting-artifact-notification',
         async (job: Job<TeamsMeetingArtifactNotificationJobData>) => {
           await processTeamsMeetingArtifactNotification(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TeamsMeetingCleanupJobData>(
+        TEAMS_MEETING_CLEANUP_JOB,
+        async (job: Job<TeamsMeetingCleanupJobData>) => {
+          await teamsMeetingCleanupHandler(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TeamsMeetingSweepJobData>(
+        TEAMS_MEETING_SWEEP_JOB,
+        async (job: Job<TeamsMeetingSweepJobData>) => {
+          await teamsMeetingSweepHandler(job.data);
         }
       );
     }
@@ -517,16 +542,58 @@ export const scheduleTeamsMeetingArtifactSubscriptionRenewalJob = async (
   tenantId: string,
   cronExpression: string = '*/30 * * * *'
 ): Promise<string | null> => {
-  // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow).
-  if (isEnterpriseWorkflowEdition()) {
+  // Runner-agnostic (F027): on a Temporal-backed runner the global maintenance
+  // fan-out schedule covers renewal, so no per-tenant schedule is needed. On a
+  // pg-boss-backed runner — including EE deployments configured without
+  // Temporal — the per-tenant schedule is registered through the IJobRunner
+  // abstraction so the renewal cron is never silently absent.
+  try {
+    const runner = await getJobRunnerInstance();
+    if (runner.getRunnerType() === 'temporal') {
+      return null;
+    }
+    const result = await runner.scheduleRecurringJob<TeamsMeetingArtifactSubscriptionRenewalJobData & { tenantId: string }>(
+      'renew-teams-meeting-artifact-subscriptions',
+      { tenantId },
+      cronExpression,
+      { singletonKey: `renew-teams-meeting-artifact-subscriptions:${tenantId}` }
+    );
+    return result.jobId;
+  } catch (error) {
+    logger.error('Failed to schedule Teams meeting artifact subscription renewal job', {
+      tenantId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
-  const scheduler = await initializeScheduler();
-  return await scheduler.scheduleRecurringJob<TeamsMeetingArtifactSubscriptionRenewalJobData>(
-    'renew-teams-meeting-artifact-subscriptions',
-    cronExpression,
-    { tenantId }
-  );
+};
+
+export const scheduleTeamsMeetingSweepJob = async (
+  tenantId: string,
+  cronExpression: string = '*/10 * * * *'
+): Promise<string | null> => {
+  // Runner-agnostic like the renewal schedule above: Temporal deployments get
+  // the sweep from the global maintenance fan-out; pg-boss-backed runners get
+  // a per-tenant recurring schedule via IJobRunner.
+  try {
+    const runner = await getJobRunnerInstance();
+    if (runner.getRunnerType() === 'temporal') {
+      return null;
+    }
+    const result = await runner.scheduleRecurringJob<TeamsMeetingSweepJobData & { tenantId: string }>(
+      TEAMS_MEETING_SWEEP_JOB,
+      { tenantId },
+      cronExpression,
+      { singletonKey: `${TEAMS_MEETING_SWEEP_JOB}:${tenantId}` }
+    );
+    return result.jobId;
+  } catch (error) {
+    logger.error('Failed to schedule Teams meeting sweep job', {
+      tenantId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
 };
 
 export const scheduleGoogleGmailWatchRenewalJob = async (

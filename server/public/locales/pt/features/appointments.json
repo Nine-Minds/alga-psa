@@ -144,7 +144,8 @@
     "title": "Cancelar compromisso",
     "message": "Tem certeza de que deseja cancelar esta solicitação de agendamento? Esta ação não pode ser desfeita.",
     "messageWithTeamsWarning": "Tem certeza de que deseja cancelar esta solicitação de agendamento? Esta ação não pode ser desfeita. Isso também excluirá a reunião do Microsoft Teams.",
-    "confirm": "Sim, cancelar"
+    "confirm": "Sim, cancelar",
+    "teamsMeetingCleanupNotice": "A reunião do Microsoft Teams vinculada está sendo cancelada; os participantes verão a remoção dela dos calendários em breve."
   },
   "ticketSection": {
     "title": "Solicitações de agendamento",

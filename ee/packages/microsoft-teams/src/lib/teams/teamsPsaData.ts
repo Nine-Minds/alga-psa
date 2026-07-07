@@ -114,7 +114,8 @@ export async function resolveTeamsTicketByReference(
   reference: string,
   context: ServiceContext
 ): Promise<TeamsTicketRecord | null> {
-  const trimmed = reference.trim();
+  // Accept human forms with a leading '#' ("ticket #1234").
+  const trimmed = reference.trim().replace(/^#/, '');
   if (!trimmed) return null;
 
   const { knex } = await createTenantKnex(context.tenant);
@@ -126,6 +127,16 @@ export async function resolveTeamsTicketByReference(
     .first();
   if (byNumber) return byNumber as TeamsTicketRecord;
 
+  // Purely numeric references also match prefixed/zero-padded ticket numbers
+  // (e.g. "1833" resolves alga0001833). Tenant scoping comes from the base
+  // query, so identical numbers in other tenants never leak.
+  if (/^\d+$/.test(trimmed)) {
+    const byNumericSuffix = await buildTeamsTicketBaseQuery(knex, context.tenant)
+      .whereRaw('"t"."ticket_number" ~* ?', [`^[^0-9]*0*${trimmed}$`])
+      .first();
+    if (byNumericSuffix) return byNumericSuffix as TeamsTicketRecord;
+  }
+
   // Fall back to ticket_id lookup only when the reference looks like a UUID.
   if (UUID_PATTERN.test(trimmed)) {
     const byId = await buildTeamsTicketBaseQuery(knex, context.tenant)
@@ -135,6 +146,89 @@ export async function resolveTeamsTicketByReference(
   }
 
   return null;
+}
+
+export interface TeamsClientRecord {
+  client_id: string;
+  client_name: string | null;
+}
+
+export async function searchTeamsClientsByName(params: {
+  tenantId: string;
+  name: string;
+  limit: number;
+}): Promise<TeamsClientRecord[]> {
+  const trimmed = params.name.trim();
+  if (!trimmed) return [];
+
+  const { knex } = await createTenantKnex(params.tenantId);
+  const rows = await tenantDb(knex, params.tenantId).table('clients')
+    .where('is_inactive', false)
+    .whereILike('client_name', `%${trimmed}%`)
+    .select('client_id', 'client_name')
+    .orderBy('client_name', 'asc')
+    .limit(params.limit);
+
+  return rows as TeamsClientRecord[];
+}
+
+export async function listTeamsActiveClients(params: {
+  tenantId: string;
+  limit: number;
+}): Promise<TeamsClientRecord[]> {
+  const { knex } = await createTenantKnex(params.tenantId);
+  const rows = await tenantDb(knex, params.tenantId).table('clients')
+    .where('is_inactive', false)
+    .select('client_id', 'client_name')
+    .orderBy('client_name', 'asc')
+    .limit(params.limit);
+
+  return rows as TeamsClientRecord[];
+}
+
+export interface TeamsTicketCreationDefaults {
+  boardId: string | null;
+  statusId: string | null;
+}
+
+/**
+ * Default board + open status used when a ticket is created from a bot chat
+ * command (no picker UI). Prefers the tenant default board, then that
+ * board's default open status.
+ */
+export async function getTeamsTicketCreationDefaults(params: {
+  tenantId: string;
+}): Promise<TeamsTicketCreationDefaults> {
+  const { knex } = await createTenantKnex(params.tenantId);
+  const db = tenantDb(knex, params.tenantId);
+
+  const board = (await db.table('boards')
+    .where('is_inactive', false)
+    .select('board_id')
+    .orderBy([
+      { column: 'is_default', order: 'desc' },
+      { column: 'board_name', order: 'asc' },
+    ])
+    .first()) as { board_id?: string | null } | undefined;
+
+  const boardId = board?.board_id ?? null;
+  if (!boardId) {
+    return { boardId: null, statusId: null };
+  }
+
+  const status = (await db.table('statuses')
+    .where({ status_type: 'ticket', is_closed: false })
+    .where((builder: any) => {
+      builder.where('board_id', boardId).orWhereNull('board_id');
+    })
+    .select('status_id')
+    .orderBy([
+      { column: 'is_default', order: 'desc' },
+      { column: 'order_number', order: 'asc' },
+    ])
+    .first()) as { status_id?: string | null } | undefined;
+
+  return { boardId, statusId: status?.status_id ?? null };
 }
 
 export async function listAssignedOpenTeamsTickets(params: {

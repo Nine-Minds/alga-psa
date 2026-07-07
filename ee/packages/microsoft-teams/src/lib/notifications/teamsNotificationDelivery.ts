@@ -2,7 +2,6 @@ import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getSSORegistry } from '@alga-psa/auth';
-import { ADD_ONS } from '@alga-psa/types';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildNotificationDeliveredPayload,
@@ -10,9 +9,13 @@ import {
   buildNotificationSentPayload,
 } from '@alga-psa/workflow-streams';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
-import { buildTeamsPersonalTabDeepLinkFromPsaUrl } from '../teams/teamsDeepLinks';
+import { tenantHasTeamsAddOn } from '../teams/teamsAddOnGate';
+import { buildTeamsNotificationDeepLinkFromPsaUrl } from '../teams/teamsDeepLinks';
+import { sendBotActivity, type SendBotActivityInput } from '../teams/bot/teamsBotConnector';
+import { getLatestTeamsConversationReferenceImpl } from '../teams/bot/teamsConversationReferences';
 import {
   writeTeamsDeliveryRow,
+  type TeamsDeliveryDestinationType,
   type TeamsDeliveryErrorCode,
 } from './teamsDeliveryRecorder';
 
@@ -30,12 +33,16 @@ type TeamsActivityType =
   | 'workEscalated'
   | 'slaRiskDetected';
 
+export const TEAMS_NOTIFICATION_CHANNEL_MODES = ['activity_feed', 'bot_dm', 'both'] as const;
+export type TeamsNotificationChannelMode = typeof TEAMS_NOTIFICATION_CHANNEL_MODES[number];
+
 interface TeamsIntegrationRow {
   tenant: string;
   selected_profile_id: string | null;
   install_status: string | null;
   enabled_capabilities: unknown;
   notification_categories: unknown;
+  notification_channels: unknown;
   app_id: string | null;
   package_metadata: unknown;
 }
@@ -73,6 +80,19 @@ export type TeamsNotificationDeliveryResult =
   | { status: 'delivered'; category: TeamsNotificationCategory; providerMessageId: string | null }
   | { status: 'failed'; category?: TeamsNotificationCategory; errorCode: string; errorMessage: string; retryable: boolean };
 
+export interface TeamsGraphRetryOptions {
+  /** Total send attempts including the first one. Default 3. */
+  maxAttempts?: number;
+  /** Base delay for exponential backoff when Retry-After is absent. Default 1000ms. */
+  baseDelayMs?: number;
+  /** Upper bound applied to any single wait, including Retry-After. Default 10000ms. */
+  maxDelayMs?: number;
+}
+
+export interface DeliverTeamsNotificationOptions {
+  retry?: TeamsGraphRetryOptions;
+}
+
 const ASSIGNMENT_TEMPLATE_NAMES = new Set([
   'ticket-assigned',
   'task-assigned',
@@ -105,6 +125,29 @@ function normalizeStringArray(values: unknown): string[] {
     .filter((value): value is string => typeof value === 'string')
     .map((value) => value.trim())
     .filter(Boolean);
+}
+
+export function resolveTeamsNotificationChannelMode(
+  channels: unknown,
+  category: TeamsNotificationCategory
+): TeamsNotificationChannelMode {
+  let parsed = channels;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return 'activity_feed';
+    }
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return 'activity_feed';
+  }
+
+  const value = (parsed as Record<string, unknown>)[category];
+  return typeof value === 'string' && (TEAMS_NOTIFICATION_CHANNEL_MODES as readonly string[]).includes(value)
+    ? (value as TeamsNotificationChannelMode)
+    : 'activity_feed';
 }
 
 function getPackageBaseUrl(metadata: unknown): string {
@@ -244,6 +287,7 @@ export function mapGraphStatusToTeamsDeliveryErrorCode(status: number): TeamsDel
 async function recordTeamsNotificationDelivery(params: {
   notification: TeamsNotificationInput;
   category?: TeamsNotificationCategory | null;
+  destinationType?: TeamsDeliveryDestinationType;
   destinationId: string;
   status: 'skipped' | 'delivered' | 'failed';
   errorCode?: TeamsDeliveryErrorCode | null;
@@ -258,7 +302,7 @@ async function recordTeamsNotificationDelivery(params: {
     tenant: params.notification.tenant,
     internalNotificationId: params.notification.internal_notification_id,
     category: params.category ?? null,
-    destinationType: 'user_activity',
+    destinationType: params.destinationType ?? 'user_activity',
     destinationId: params.destinationId || params.notification.user_id,
     attemptNumber: getNotificationAttemptNumber(params.notification),
     status: params.status,
@@ -296,16 +340,6 @@ async function getTeamsIntegrationRow(knex: any, tenant: string): Promise<TeamsI
   return row || undefined;
 }
 
-async function tenantHasTeamsAddOn(knex: any, tenant: string): Promise<boolean> {
-  const row = await tenantDb(knex, tenant).table('tenant_addons')
-    .where({ addon_key: ADD_ONS.TEAMS })
-    .andWhere((builder: any) => {
-      builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
-    })
-    .first('addon_key');
-  return Boolean(row);
-}
-
 async function getMicrosoftProfileRow(
   knex: any,
   tenant: string,
@@ -332,6 +366,55 @@ export async function resolveTeamsRecipientLink(
   return providerAccountId ? { providerAccountId } : null;
 }
 
+function isRetryableGraphStatus(status: number): boolean {
+  return status === 429 || (status >= 500 && status <= 599);
+}
+
+function resolveGraphRetryDelayMs(
+  response: Response,
+  attempt: number,
+  retry: Required<TeamsGraphRetryOptions>
+): number {
+  const retryAfterSeconds = Number.parseFloat(response.headers.get('retry-after') || '');
+  if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0) {
+    return Math.min(retryAfterSeconds * 1000, retry.maxDelayMs);
+  }
+  return Math.min(retry.baseDelayMs * 2 ** (attempt - 1), retry.maxDelayMs);
+}
+
+function sleep(ms: number): Promise<void> {
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Sends the Graph activity notification, retrying 429 (honouring Retry-After)
+ * and 5xx responses with bounded exponential backoff. Non-retryable statuses
+ * and successes return immediately; only the final response reaches the
+ * delivery recorder.
+ */
+async function sendGraphActivityNotificationWithRetry(params: {
+  url: string;
+  init: RequestInit;
+  retry?: TeamsGraphRetryOptions;
+}): Promise<Response> {
+  const retry: Required<TeamsGraphRetryOptions> = {
+    maxAttempts: params.retry?.maxAttempts ?? 3,
+    baseDelayMs: params.retry?.baseDelayMs ?? 1000,
+    maxDelayMs: params.retry?.maxDelayMs ?? 10_000,
+  };
+
+  let attempt = 0;
+  for (;;) {
+    attempt += 1;
+    const response = await fetch(params.url, params.init);
+    if (response.ok || !isRetryableGraphStatus(response.status) || attempt >= retry.maxAttempts) {
+      return response;
+    }
+    await sleep(resolveGraphRetryDelayMs(response, attempt, retry));
+  }
+}
+
 async function fetchMicrosoftGraphAppTokenForProfile(params: {
   tenant: string;
   tenantAuthority: string;
@@ -353,7 +436,8 @@ async function fetchMicrosoftGraphAppTokenForProfile(params: {
 }
 
 export async function deliverTeamsNotificationImpl(
-  notification: TeamsNotificationInput
+  notification: TeamsNotificationInput,
+  options: DeliverTeamsNotificationOptions = {}
 ): Promise<TeamsNotificationDeliveryResult> {
   const category = classifyTeamsNotificationCategory(notification);
   if (!category) {
@@ -439,9 +523,12 @@ export async function deliverTeamsNotificationImpl(
     });
   }
 
-  const teamsDeepLink = buildTeamsPersonalTabDeepLinkFromPsaUrl(baseUrl, appId, link);
+  const channelMode = resolveTeamsNotificationChannelMode(integration.notification_channels, category);
+  const teamsDeepLink = buildTeamsNotificationDeepLinkFromPsaUrl(baseUrl, appId, link);
+  const psaUrl = /^https?:\/\//i.test(link)
+    ? link
+    : `${baseUrl.replace(/\/+$/, '')}${link.startsWith('/') ? '' : '/'}${link}`;
   const now = new Date().toISOString();
-  const activityType = mapCategoryToActivityType(category);
 
   safePublishNotificationWorkflowEvent({
     eventType: 'NOTIFICATION_SENT',
@@ -462,6 +549,57 @@ export async function deliverTeamsNotificationImpl(
     idempotencyKey: `notification:${notification.internal_notification_id}:teams:sent`,
   });
 
+  if (channelMode === 'bot_dm') {
+    return deliverTeamsBotDmNotification({
+      notification,
+      category,
+      recipientLink,
+      teamsDeepLink,
+      psaUrl,
+      now,
+      publishEvents: true,
+    });
+  }
+
+  const activityFeedResult = await deliverTeamsActivityFeedNotification({
+    notification,
+    category,
+    profile,
+    recipientLink,
+    teamsDeepLink,
+    now,
+    retry: options.retry,
+  });
+
+  if (channelMode === 'both') {
+    // The bot DM is best-effort in 'both' mode: its own delivery row is always
+    // written, but the activity-feed result governs the overall outcome.
+    await deliverTeamsBotDmNotification({
+      notification,
+      category,
+      recipientLink,
+      teamsDeepLink,
+      psaUrl,
+      now,
+      publishEvents: false,
+    });
+  }
+
+  return activityFeedResult;
+}
+
+async function deliverTeamsActivityFeedNotification(params: {
+  notification: TeamsNotificationInput;
+  category: TeamsNotificationCategory;
+  profile: MicrosoftProfileRow;
+  recipientLink: TeamsRecipientLink;
+  teamsDeepLink: string;
+  now: string;
+  retry?: TeamsGraphRetryOptions;
+}): Promise<TeamsNotificationDeliveryResult> {
+  const { notification, category, profile, recipientLink, teamsDeepLink, now } = params;
+  const activityType = mapCategoryToActivityType(category);
+
   try {
     const accessToken = await fetchMicrosoftGraphAppTokenForProfile({
       tenant: notification.tenant,
@@ -470,9 +608,9 @@ export async function deliverTeamsNotificationImpl(
       clientSecretRef: profile.client_secret_ref,
     });
 
-    const response = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(recipientLink.providerAccountId)}/teamwork/sendActivityNotification`,
-      {
+    const response = await sendGraphActivityNotificationWithRetry({
+      url: `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(recipientLink.providerAccountId)}/teamwork/sendActivityNotification`,
+      init: {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -494,8 +632,9 @@ export async function deliverTeamsNotificationImpl(
           },
           templateParameters: buildTemplateParameters(notification),
         }),
-      }
-    );
+      },
+      retry: params.retry,
+    });
 
     if (!response.ok) {
       const providerRequestId = normalizeString(response.headers.get('request-id')) || null;
@@ -629,6 +768,199 @@ export async function deliverTeamsNotificationImpl(
       status: 'failed',
       category,
       errorCode: 'teams_delivery_exception',
+      errorMessage,
+      retryable: true,
+    };
+  }
+}
+
+// Minimal activity shape compatible with the bot connector's response
+// activity contract (kept local so this module does not depend on the bot
+// handler module).
+interface TeamsBotDmCardAttachment {
+  contentType: 'application/vnd.microsoft.card.adaptive';
+  content: Record<string, unknown>;
+}
+
+interface TeamsBotDmActivity {
+  type: 'message';
+  text: string;
+  attachments: TeamsBotDmCardAttachment[];
+}
+
+function buildTeamsBotDmNotificationActivity(params: {
+  notification: TeamsNotificationInput;
+  teamsDeepLink: string;
+  psaUrl: string;
+}): TeamsBotDmActivity {
+  const title = normalizeString(params.notification.title) || 'Alga PSA notification';
+  const message = normalizeString(params.notification.message) || title;
+
+  return {
+    type: 'message',
+    text: title,
+    attachments: [
+      {
+        contentType: 'application/vnd.microsoft.card.adaptive',
+        content: {
+          $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+          type: 'AdaptiveCard',
+          version: '1.4',
+          body: [
+            { type: 'TextBlock', text: title, weight: 'Bolder', size: 'Medium', wrap: true },
+            { type: 'TextBlock', text: message, wrap: true },
+          ],
+          actions: [
+            { type: 'Action.OpenUrl', title: 'Open in Alga PSA', url: params.teamsDeepLink },
+            { type: 'Action.OpenUrl', title: 'Open in browser', url: params.psaUrl },
+          ],
+        },
+      },
+    ],
+  };
+}
+
+async function deliverTeamsBotDmNotification(params: {
+  notification: TeamsNotificationInput;
+  category: TeamsNotificationCategory;
+  recipientLink: TeamsRecipientLink;
+  teamsDeepLink: string;
+  psaUrl: string;
+  now: string;
+  /** Publish workflow notification events. False when the activity-feed leg already reports them. */
+  publishEvents: boolean;
+}): Promise<TeamsNotificationDeliveryResult> {
+  const { notification, category, recipientLink, now } = params;
+
+  const conversationReference = await getLatestTeamsConversationReferenceImpl({
+    tenant: notification.tenant,
+    microsoftUserId: recipientLink.providerAccountId,
+  });
+
+  if (!conversationReference) {
+    await recordTeamsNotificationDelivery({
+      notification,
+      category,
+      destinationType: 'bot_dm',
+      destinationId: recipientLink.providerAccountId,
+      status: 'skipped',
+      errorCode: 'user_not_mapped',
+      errorMessage: 'missing_conversation_reference',
+      retryable: false,
+    });
+    return { status: 'skipped', reason: 'missing_conversation_reference' };
+  }
+
+  try {
+    const activity = buildTeamsBotDmNotificationActivity({
+      notification,
+      teamsDeepLink: params.teamsDeepLink,
+      psaUrl: params.psaUrl,
+    });
+
+    const sendResult = await sendBotActivity({
+      serviceUrl: conversationReference.serviceUrl,
+      conversationId: conversationReference.conversationId,
+      activity: activity as unknown as SendBotActivityInput['activity'],
+    });
+
+    if (sendResult.status === 'skipped') {
+      const reason = sendResult.reason || 'bot_activity_skipped';
+      await recordTeamsNotificationDelivery({
+        notification,
+        category,
+        destinationType: 'bot_dm',
+        destinationId: recipientLink.providerAccountId,
+        status: 'skipped',
+        errorCode: 'package_misconfigured',
+        errorMessage: reason,
+        retryable: false,
+      });
+      return { status: 'skipped', reason };
+    }
+
+    const deliveredAt = new Date().toISOString();
+
+    if (params.publishEvents) {
+      safePublishNotificationWorkflowEvent({
+        eventType: 'NOTIFICATION_DELIVERED',
+        payload: buildNotificationDeliveredPayload({
+          notificationId: notification.internal_notification_id,
+          channel: 'teams',
+          recipientId: notification.user_id,
+          deliveredAt,
+        }),
+        ctx: {
+          tenantId: notification.tenant,
+          occurredAt: now,
+          actor: { actorType: 'SYSTEM' },
+          correlationId: notification.internal_notification_id,
+        },
+        idempotencyKey: `notification:${notification.internal_notification_id}:teams:delivered`,
+      });
+    }
+
+    await recordTeamsNotificationDelivery({
+      notification,
+      category,
+      destinationType: 'bot_dm',
+      destinationId: recipientLink.providerAccountId,
+      status: 'delivered',
+      providerMessageId: null,
+      sentAt: now,
+      deliveredAt,
+    });
+
+    return { status: 'delivered', category, providerMessageId: null };
+  } catch (error) {
+    const errorMessage = normalizeErrorMessage(error);
+
+    if (params.publishEvents) {
+      safePublishNotificationWorkflowEvent({
+        eventType: 'NOTIFICATION_FAILED',
+        payload: buildNotificationFailedPayload({
+          notificationId: notification.internal_notification_id,
+          channel: 'teams',
+          recipientId: notification.user_id,
+          failedAt: new Date().toISOString(),
+          errorCode: 'teams_bot_delivery_failed',
+          errorMessage,
+          retryable: true,
+        }),
+        ctx: {
+          tenantId: notification.tenant,
+          occurredAt: now,
+          actor: { actorType: 'SYSTEM' },
+          correlationId: notification.internal_notification_id,
+        },
+        idempotencyKey: `notification:${notification.internal_notification_id}:teams:failed`,
+      });
+    }
+
+    logger.warn('[TeamsNotificationDelivery] Failed to deliver Teams bot DM notification', {
+      notificationId: notification.internal_notification_id,
+      tenant: notification.tenant,
+      userId: notification.user_id,
+      category,
+      error: errorMessage,
+    });
+
+    await recordTeamsNotificationDelivery({
+      notification,
+      category,
+      destinationType: 'bot_dm',
+      destinationId: recipientLink.providerAccountId,
+      status: 'failed',
+      errorCode: 'transient',
+      errorMessage,
+      retryable: true,
+      sentAt: now,
+    });
+
+    return {
+      status: 'failed',
+      category,
+      errorCode: 'teams_bot_delivery_failed',
       errorMessage,
       retryable: true,
     };

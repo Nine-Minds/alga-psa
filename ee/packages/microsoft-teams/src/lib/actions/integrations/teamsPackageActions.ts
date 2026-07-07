@@ -10,6 +10,7 @@ import {
 } from '../../teams/teamsDeepLinks';
 import type { TeamsAppPackageStatusResponse } from '../../teams/teamsContracts';
 import type { TeamsInstallStatus } from '../../teams/teamsShared';
+import { getTeamsManifestBotCommands } from '../../teams/bot/teamsBotCommands';
 
 interface TeamsIntegrationRow {
   tenant: string;
@@ -130,7 +131,7 @@ interface PersistedTeamsPackageMetadata {
 }
 
 const TEAMS_MANIFEST_VERSION = '1.24';
-const TEAMS_PACKAGE_VERSION = '1.0.1';
+const TEAMS_PACKAGE_VERSION = '1.1.0';
 
 function isClientPortalUser(user: any): boolean {
   return user?.user_type === 'client';
@@ -217,14 +218,9 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
         commandLists: [
           {
             scopes: ['personal', 'groupChat'],
-            commands: [
-              { title: 'my tickets', description: 'Show the technician work queue.' },
-              { title: 'ticket <id>', description: 'Open a specific ticket summary.' },
-              { title: 'assign ticket', description: 'Assign a ticket from Teams.' },
-              { title: 'add note', description: 'Append an internal note.' },
-              { title: 'reply to contact', description: 'Send a customer-facing reply.' },
-              { title: 'log time', description: 'Create a time entry.' },
-            ],
+            // Single source of truth: the same definitions the bot handler
+            // recognizes (Teams caps this list at 10 commands).
+            commands: getTeamsManifestBotCommands(),
           },
         ],
       },

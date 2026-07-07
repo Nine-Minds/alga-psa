@@ -10,6 +10,7 @@ const hoisted = vi.hoisted(() => {
     accountLinks: [] as Array<{ provider: string; provider_account_id: string | null }>,
     deliveries: [] as Array<Record<string, unknown>>,
     isBotConfigured: true,
+    botCredentials: { appId: 'client-1', tenantId: 'bot-tenant-1', password: 'bot-secret' },
   };
 
   const fn = {
@@ -160,7 +161,9 @@ const hoisted = vi.hoisted(() => {
     hasPermissionMock: vi.fn(async () => state.hasPermission),
     listOAuthAccountLinksForUserMock: vi.fn(async () => state.accountLinks),
     isBotConnectorConfiguredMock: vi.fn(() => state.isBotConfigured),
+    readBotCredentialsFromEnvMock: vi.fn(() => (state.isBotConfigured ? state.botCredentials : null)),
     sendBotActivityMock: vi.fn(async () => ({ status: 'sent' as const })),
+    resolveTeamsRecordingsWebhookUrlMock: vi.fn(() => 'https://psa.example.com/api/teams/webhooks/recordings'),
   };
 });
 
@@ -217,7 +220,12 @@ vi.mock('@alga-psa/core/logger', () => ({
 
 vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/bot/teamsBotConnector', () => ({
   isBotConnectorConfigured: hoisted.isBotConnectorConfiguredMock,
+  readBotCredentialsFromEnv: hoisted.readBotCredentialsFromEnvMock,
   sendBotActivity: hoisted.sendBotActivityMock,
+}));
+
+vi.mock('@alga-psa/ee-microsoft-teams/lib/meetings/artifactSubscriptions', () => ({
+  resolveTeamsRecordingsWebhookUrl: hoisted.resolveTeamsRecordingsWebhookUrlMock,
 }));
 
 import {
@@ -231,6 +239,8 @@ const USER = {
   user_type: 'internal',
 };
 
+const fetchMock = vi.fn();
+
 function activeIntegration(capabilities: string[] = ['personal_bot', 'activity_notifications']) {
   hoisted.state.integrations.push({
     tenant: TENANT,
@@ -238,9 +248,17 @@ function activeIntegration(capabilities: string[] = ['personal_bot', 'activity_n
     install_status: 'active',
     enabled_capabilities: capabilities,
     app_id: 'teams-app-1',
-    package_metadata: { baseUrl: 'https://psa.example.com' },
+    bot_id: 'client-1',
+    package_metadata: {
+      baseUrl: 'https://psa.example.com',
+      webApplicationInfo: { id: 'client-1', resource: 'api://psa.example.com/teams/client-1' },
+    },
     default_meeting_organizer_upn: 'scheduler@example.com',
     default_meeting_organizer_object_id: 'organizer-object-1',
+    recordings_subscription_id: 'recordings-subscription-1',
+    recordings_subscription_expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+    transcripts_subscription_id: 'transcripts-subscription-1',
+    transcripts_subscription_expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
   });
 }
 
@@ -318,11 +336,20 @@ function resetTeamsState() {
     hoisted.state.accountLinks.length = 0;
     hoisted.state.deliveries.length = 0;
     hoisted.state.isBotConfigured = true;
+    hoisted.state.botCredentials = { appId: 'client-1', tenantId: 'bot-tenant-1', password: 'bot-secret' };
     hoisted.createTenantKnexMock.mockClear();
     hoisted.hasPermissionMock.mockClear();
     hoisted.listOAuthAccountLinksForUserMock.mockClear();
     hoisted.isBotConnectorConfiguredMock.mockClear();
+    hoisted.readBotCredentialsFromEnvMock.mockClear();
     hoisted.sendBotActivityMock.mockClear();
+    hoisted.resolveTeamsRecordingsWebhookUrlMock.mockClear();
+    hoisted.resolveTeamsRecordingsWebhookUrlMock.mockImplementation(
+      () => 'https://psa.example.com/api/teams/webhooks/recordings'
+    );
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue(new Response(null, { status: 405 }));
+    vi.stubGlobal('fetch', fetchMock);
 }
 
 describe('Teams diagnostics test message action', () => {
@@ -535,6 +562,9 @@ describe('Teams diagnostics report action', () => {
       'recording_permissions',
       'package_metadata',
       'bot_connector',
+      'bot_id_consistency',
+      'artifact_subscriptions',
+      'webhook_reachability',
       'user_linkage',
       'conversation_reference',
       'recent_delivery_health',
@@ -671,6 +701,105 @@ describe('Teams diagnostics report action', () => {
     });
     expect(report.recommendations).toContain(
       'Configure TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, and TEAMS_BOT_APP_PASSWORD.'
+    );
+  });
+
+  it('T013: fails the bot id consistency check with guidance when manifest bot id differs from TEAMS_BOT_APP_ID', async () => {
+    healthyTenant();
+    hoisted.state.botCredentials = { appId: 'platform-bot-app', tenantId: 'bot-tenant-1', password: 'bot-secret' };
+
+    const report = await diagnose();
+    const step = report.steps.find((entry) => entry.id === 'bot_id_consistency');
+    expect(step).toMatchObject({
+      status: 'fail',
+      data: { manifestBotId: 'client-1', runtimeBotAppId: 'platform-bot-app' },
+    });
+    expect(step?.detail).toContain('TEAMS_BOT_APP_ID');
+    expect(step?.detail).toContain('never reply');
+    expect(report.recommendations).toContain(
+      'Align the Bot Framework registration, TEAMS_BOT_APP_ID, and the generated manifest bot id (see the Teams setup runbook).'
+    );
+  });
+
+  it('T014: passes bot id consistency when manifest and runtime ids match and skips without a generated package', async () => {
+    healthyTenant();
+
+    let report = await diagnose();
+    expect(report.steps.find((entry) => entry.id === 'bot_id_consistency')).toMatchObject({
+      status: 'pass',
+      data: { manifestBotId: 'client-1' },
+    });
+
+    resetTeamsState();
+    activeIntegration();
+    readyProfile();
+    hoisted.state.integrations[0].package_metadata = null;
+    report = await diagnose();
+    expect(report.steps.find((entry) => entry.id === 'bot_id_consistency')).toMatchObject({
+      status: 'skip',
+    });
+  });
+
+  it('T054: flags subscriptions expiring/expired and unreachable webhook base URL with remedies', async () => {
+    healthyTenant();
+    hoisted.state.integrations[0].recordings_subscription_expires_at = new Date(
+      Date.now() - 60 * 60 * 1000
+    ).toISOString();
+    hoisted.state.integrations[0].transcripts_subscription_expires_at = new Date(
+      Date.now() + 60 * 60 * 1000
+    ).toISOString();
+    fetchMock.mockRejectedValue(new Error('connect ECONNREFUSED'));
+
+    let report = await diagnose();
+    const subscriptionStep = report.steps.find((step) => step.id === 'artifact_subscriptions');
+    expect(subscriptionStep).toMatchObject({ status: 'warn' });
+    expect(subscriptionStep?.detail).toContain('recordings subscription expired');
+    expect(subscriptionStep?.detail).toContain('transcripts subscription is expiring');
+    expect(report.recommendations).toContain(
+      'Verify the renew-teams-meeting-artifact-subscriptions job is running.'
+    );
+
+    const webhookStep = report.steps.find((step) => step.id === 'webhook_reachability');
+    expect(webhookStep).toMatchObject({
+      status: 'warn',
+      data: { webhookUrl: 'https://psa.example.com/api/teams/webhooks/recordings' },
+    });
+    expect(webhookStep?.detail).toContain('did not respond');
+    expect(report.recommendations).toContain(
+      'Confirm the recording webhook base URL is publicly reachable (DNS, TLS, and firewall) so Microsoft Graph can validate subscriptions.'
+    );
+
+    resetTeamsState();
+    healthyTenant();
+    hoisted.state.integrations[0].recordings_subscription_id = null;
+    report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'artifact_subscriptions')).toMatchObject({
+      status: 'fail',
+      detail: 'Recording/transcript change-notification subscriptions have not been created.',
+    });
+  });
+
+  it('T055: passes subscription checks when subscriptions are active and webhook URL is HTTPS-reachable', async () => {
+    healthyTenant();
+
+    const report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'artifact_subscriptions')).toMatchObject({
+      status: 'pass',
+      data: {
+        recordingsExpiresAt: hoisted.state.integrations[0].recordings_subscription_expires_at,
+        transcriptsExpiresAt: hoisted.state.integrations[0].transcripts_subscription_expires_at,
+      },
+    });
+    expect(report.steps.find((step) => step.id === 'webhook_reachability')).toMatchObject({
+      status: 'pass',
+      data: {
+        webhookUrl: 'https://psa.example.com/api/teams/webhooks/recordings',
+        status: 405,
+      },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://psa.example.com/api/teams/webhooks/recordings',
+      expect.objectContaining({ method: 'GET' })
     );
   });
 

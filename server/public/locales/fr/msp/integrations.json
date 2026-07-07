@@ -2013,6 +2013,12 @@
             "description": "Notifier les techniciens lorsqu'une tâche leur est affectée.",
             "label": "Événements d'affectation"
           },
+          "channel": {
+            "activityFeed": "Fil d'activité",
+            "botDm": "Message direct du bot",
+            "both": "Les deux",
+            "label": "Canal de distribution"
+          },
           "customerReply": {
             "description": "Notifier les techniciens lorsque les clients répondent.",
             "label": "Réponses des clients"
@@ -2141,6 +2147,10 @@
             "help": "L'enregistrement résout et stocke l'ID d'objet Microsoft Entra utilisé pour les appels de réunion Graph.",
             "resolved": "ID d'objet résolu : {{objectId}}"
           },
+          "sendMeetingInvites": {
+            "label": "Envoyer des invitations de calendrier aux participants",
+            "description": "Les participants reçoivent des invitations de calendrier natives Outlook/Teams pour les réunions générées."
+          },
           "downloadRecordings": {
             "label": "Télécharger les enregistrements vers le stockage interne",
             "description": "Lorsque cette option est activée, les blobs d'enregistrement sont copiés dans le stockage du locataire, en plus du proxy Graph authentifié."
@@ -2149,6 +2159,218 @@
             "label": "Afficher les enregistrements et les transcriptions dans le portail client",
             "description": "Désactivé par défaut ; les utilisateurs MSP peuvent toujours consulter les artefacts depuis les détails des interactions et des rendez-vous."
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "Exécutez les diagnostics ci-dessous pour plus de détails.",
+          "message": "Le bot Teams ne peut pas répondre : les identifiants du connecteur de bot (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) ne sont pas configurés sur le serveur."
+        },
+        "wizard": {
+          "title": "Configuration guidée de Teams",
+          "description": "Effectuez chaque étape pour faire fonctionner Microsoft Teams pour ce locataire.",
+          "status": {
+            "complete": "Terminé",
+            "current": "En cours",
+            "incomplete": "Incomplet"
+          },
+          "validate": {
+            "error": "Échec de la validation",
+            "validating": "Validation...",
+            "profile": "Valider le profil Microsoft",
+            "profileOk": "Les identifiants du profil Microsoft sont valides.",
+            "permissions": "Vérifier les autorisations Graph",
+            "permissionsOk": "Toutes les autorisations Graph requises sont accordées.",
+            "permissionGranted": "Accordée",
+            "permissionMissing": "Manquante",
+            "bot": "Valider le connecteur Bot Framework",
+            "botOk": "Les identifiants Bot Framework sont valides ({{appId}})."
+          },
+          "activationBlocked": "Validez le profil Microsoft ci-dessus avant d'activer Teams.",
+          "step": {
+            "microsoftProfile": {
+              "title": "Profil Microsoft",
+              "description": "Sélectionnez le profil Microsoft pour Teams et validez ses identifiants Graph."
+            },
+            "graphPermissions": {
+              "title": "Autorisations Graph",
+              "description": "Confirmez que les autorisations d'application Microsoft Graph requises sont accordées et consenties."
+            },
+            "botFramework": {
+              "title": "Enregistrement Bot Framework",
+              "description": "Enregistrez l'Azure Bot et validez les identifiants du connecteur du bot de déploiement."
+            },
+            "activate": {
+              "title": "Activer Teams",
+              "description": "Activez l'intégration Teams une fois le profil Microsoft validé."
+            },
+            "package": {
+              "title": "Générer et télécharger le package",
+              "description": "Créez le package d'application Teams pour le profil sélectionné et la base URL de déploiement.",
+              "hint": "Utilisez la carte Package Teams ci-dessous pour générer et télécharger le package d'application."
+            },
+            "sideload": {
+              "title": "Charger l'application en sideload",
+              "description": "Téléversez le package d'application vers Teams afin que les utilisateurs puissent l'installer.",
+              "body": "Téléversez le package téléchargé vers le centre d'administration Teams (Gérer les applications puis Charger une nouvelle application) ou chargez-le en sideload depuis le client Teams."
+            },
+            "verify": {
+              "title": "Vérifier",
+              "description": "Exécutez les diagnostics et envoyez un message de test pour confirmer que l'intégration fonctionne de bout en bout.",
+              "hint": "Utilisez la carte Diagnostics et message de test ci-dessous pour vérifier la configuration de bout en bout."
+            }
+          }
+        },
+        "runbook": {
+          "viewGuide": "Voir le guide de configuration"
+        },
+        "deliveryLog": {
+          "title": "Journal de distribution Teams",
+          "description": "Chaque tentative de distribution de notification Teams enregistrée pour ce locataire.",
+          "error": "Échec du chargement du journal de distribution Teams",
+          "forbidden": "Vous n'avez pas l'autorisation d'afficher le journal de distribution Teams.",
+          "empty": "Aucune distribution Teams enregistrée pour le moment.",
+          "refresh": "Actualiser",
+          "loadMore": "Charger plus",
+          "loading": "Chargement...",
+          "filter": {
+            "statusLabel": "Statut",
+            "statusAll": "Tous les statuts",
+            "categoryLabel": "Catégorie",
+            "categoryAll": "Toutes les catégories"
+          },
+          "columns": {
+            "createdAt": "Heure",
+            "category": "Catégorie",
+            "destination": "Destination",
+            "status": "Statut",
+            "errorCode": "Code d'erreur",
+            "errorMessage": "Message d'erreur"
+          },
+          "status": {
+            "delivered": "Distribué",
+            "sent": "Envoyé",
+            "failed": "Échec",
+            "skipped": "Ignoré"
+          },
+          "category": {
+            "assignment": "Attribution",
+            "customer_reply": "Réponse du client",
+            "approval_request": "Demande d'approbation",
+            "escalation": "Escalade",
+            "sla_risk": "Risque de SLA"
+          }
+        },
+        "auditLog": {
+          "title": "Journal d'audit Teams",
+          "description": "Mutations exécutées depuis le bot Teams, l'extension de message et les surfaces d'actions rapides.",
+          "error": "Échec du chargement du journal d'audit Teams",
+          "forbidden": "Vous n'avez pas l'autorisation d'afficher le journal d'audit Teams.",
+          "empty": "Aucun événement d'audit Teams enregistré pour le moment.",
+          "refresh": "Actualiser",
+          "loadMore": "Charger plus",
+          "loading": "Chargement...",
+          "filter": {
+            "surfaceLabel": "Surface",
+            "surfaceAll": "Toutes les surfaces",
+            "actionLabel": "Id d'action",
+            "actionPlaceholder": "p. ex. assign_ticket"
+          },
+          "surface": {
+            "bot": "Bot",
+            "message_extension": "Extension de message",
+            "quick_action": "Action rapide",
+            "tab": "Onglet"
+          },
+          "columns": {
+            "createdAt": "Heure",
+            "surface": "Surface",
+            "action": "Action",
+            "target": "Cible",
+            "result": "Résultat",
+            "errorCode": "Code d'erreur"
+          },
+          "result": {
+            "success": "Réussite",
+            "failure": "Échec"
+          }
+        },
+        "troubleshooting": {
+          "title": "Référence des erreurs de distribution",
+          "description": "Ce que signifie chaque code d'erreur de distribution Teams et comment le résoudre.",
+          "show": "Afficher la référence des erreurs",
+          "hide": "Masquer la référence des erreurs",
+          "columns": {
+            "code": "Code d'erreur",
+            "cause": "Cause",
+            "remedy": "Solution"
+          },
+          "codes": {
+            "graph_unauthorized": {
+              "cause": "Microsoft Graph a rejeté le jeton de l'application (401/403) ; une autorisation d'application Graph requise n'est pas consentie.",
+              "remedy": "Accordez le consentement administrateur pour les autorisations Graph requises (par exemple TeamsActivity.Send) dans l'enregistrement d'application Azure."
+            },
+            "user_not_mapped": {
+              "cause": "Le destinataire ne s'est pas connecté à Alga PSA avec Microsoft, il n'existe donc aucune association de compte.",
+              "remedy": "Demandez à l'utilisateur de se connecter avec Microsoft (SSO du portail MSP ou l'onglet Teams) afin que son compte soit associé."
+            },
+            "addon_inactive": {
+              "cause": "Le module complémentaire Teams est expiré ou absent, les envois sont donc ignorés tandis que la configuration est conservée.",
+              "remedy": "Renouvelez le module complémentaire Teams pour ce locataire."
+            },
+            "integration_inactive": {
+              "cause": "L'intégration Teams n'est pas active pour ce locataire.",
+              "remedy": "Activez l'intégration Teams dans les paramètres."
+            },
+            "package_misconfigured": {
+              "cause": "Le package d'application n'a jamais été généré, ou des prérequis de distribution (app ID, base URL) sont manquants.",
+              "remedy": "Générez le package d'application Teams dans les paramètres, puis réessayez."
+            },
+            "graph_not_found": {
+              "cause": "L'application Teams n'est pas installée pour le destinataire, Microsoft Graph ne peut donc pas le cibler (404).",
+              "remedy": "Installez ou autorisez au niveau de l'organisation l'application Alga PSA pour cet utilisateur."
+            },
+            "graph_throttled": {
+              "cause": "Microsoft Graph a limité la requête (429).",
+              "remedy": "Transitoire ; Alga PSA réessaie avec un délai progressif. N'enquêtez que si le problème persiste."
+            },
+            "graph_server_error": {
+              "cause": "Microsoft Graph a renvoyé une erreur de serveur (5xx).",
+              "remedy": "Panne transitoire de Graph ; Alga PSA réessaie. Attendez et vérifiez l'état du service Microsoft si le problème persiste."
+            },
+            "transient": {
+              "cause": "Une défaillance temporaire (réseau ou expiration) a interrompu la distribution.",
+              "remedy": "Nouvelle tentative automatique ; aucune action nécessaire sauf si les échecs persistent."
+            },
+            "unknown": {
+              "cause": "L'échec ne correspond à aucune cause connue.",
+              "remedy": "Consultez les journaux du serveur pour le détail de l'erreur de distribution et relancez les diagnostics."
+            }
+          }
+        },
+        "paywall": {
+          "title": "Module complémentaire Microsoft Teams",
+          "description": "L'intégration Microsoft Teams nécessite le module complémentaire Teams pour ce locataire.",
+          "includedTitle": "Ce qui est inclus",
+          "feature": {
+            "tab": "Onglet personnel : ouvrez Alga PSA dans Microsoft Teams.",
+            "bot": "Bot personnel et de conversation de groupe pour les tickets, approbations, temps et notes.",
+            "messageExtension": "Extension de message et actions rapides pour agir sur les enregistrements PSA depuis n'importe quel message.",
+            "meetings": "Réunions Teams sur les approbations de rendez-vous avec de véritables invitations de calendrier Outlook/Teams.",
+            "recordings": "Capture automatique des enregistrements et transcriptions de réunions dans les interactions.",
+            "notifications": "Notifications de fil d'activité et de message direct du bot pour les attributions, réponses, approbations et risque de SLA."
+          },
+          "cta": "Acheter le module complémentaire Teams",
+          "nonBilling": "Contactez un administrateur de facturation pour acheter le module complémentaire Teams pour ce locataire."
+        },
+        "addonExpiredBanner": {
+          "title": "Module complémentaire Microsoft Teams expiré",
+          "message": "Le module complémentaire Microsoft Teams a expiré. Votre configuration et votre historique de distribution sont conservés, mais les notifications Teams sont ignorées jusqu'au renouvellement du module complémentaire.",
+          "cta": "Renouveler le module complémentaire Teams"
+        },
+        "staleManifest": {
+          "title": "Le package d'application Teams est obsolète",
+          "warning": "Votre package d'application Teams est obsolète — régénérez-le et téléversez-le à nouveau.",
+          "regenerate": "Régénérer le package",
+          "regenerating": "Régénération..."
         }
       }
     },

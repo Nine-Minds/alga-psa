@@ -129,7 +129,8 @@
     "title": "Cancelar cita",
     "message": "¿Está seguro de que desea cancelar esta solicitud de cita? Esta acción no se puede deshacer.",
     "confirm": "Sí, cancelar",
-    "messageWithTeamsWarning": "¿Seguro que quieres cancelar esta solicitud de cita? Esta acción no se puede deshacer. También se eliminará la reunión de Microsoft Teams."
+    "messageWithTeamsWarning": "¿Seguro que quieres cancelar esta solicitud de cita? Esta acción no se puede deshacer. También se eliminará la reunión de Microsoft Teams.",
+    "teamsMeetingCleanupNotice": "La reunión de Microsoft Teams vinculada se está cancelando; los asistentes verán que desaparece de sus calendarios en breve."
   },
   "ticketSection": {
     "title": "Solicitudes de cita",

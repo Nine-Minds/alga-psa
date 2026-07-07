@@ -98,9 +98,8 @@ const hoisted = vi.hoisted(() => {
       reason: 'enabled',
       flagKey: 'teams-integration-ui',
     })),
-    buildTeamsPersonalTabDeepLinkFromPsaUrlMock: vi.fn(
-      (baseUrl: string, appId: string, psaUrl: string) => `https://teams.microsoft.com/l/entity/${appId}/alga-psa-personal-tab?base=${encodeURIComponent(baseUrl)}&psa=${encodeURIComponent(psaUrl)}`
-    ),
+    deliveryRows: [] as Array<Record<string, unknown>>,
+    writeTeamsDeliveryRowMock: vi.fn(),
   };
 });
 
@@ -146,8 +145,22 @@ vi.mock('@alga-psa/integrations/lib/teamsAvailability', () => ({
   getTeamsAvailability: hoisted.getTeamsAvailabilityMock,
 }));
 
-vi.mock('../../../../../ee/server/src/lib/teams/teamsDeepLinks', () => ({
-  buildTeamsPersonalTabDeepLinkFromPsaUrl: hoisted.buildTeamsPersonalTabDeepLinkFromPsaUrlMock,
+// Route the shared delegator's edition seam at the real EE implementation
+// (with instant retries so throttling tests do not sleep) — the same wiring
+// the EE build produces via the @alga-psa/ee-stubs alias.
+vi.mock('@alga-psa/ee-stubs/lib/notifications/teamsNotificationDelivery', async () => {
+  const actual = await import(
+    '../../../../../ee/packages/microsoft-teams/src/lib/notifications/teamsNotificationDelivery'
+  );
+  return {
+    ...actual,
+    deliverTeamsNotificationImpl: (notification: unknown) =>
+      actual.deliverTeamsNotificationImpl(notification as any, { retry: { baseDelayMs: 0 } }),
+  };
+});
+
+vi.mock('@alga-psa/ee-microsoft-teams/lib/notifications/teamsDeliveryRecorder', () => ({
+  writeTeamsDeliveryRow: hoisted.writeTeamsDeliveryRowMock,
 }));
 
 import {
@@ -197,7 +210,12 @@ describe('Teams notification delivery', () => {
     hoisted.publishWorkflowEventMock.mockClear();
     hoisted.enterpriseState.value = true;
     hoisted.getTeamsAvailabilityMock.mockClear();
-    hoisted.buildTeamsPersonalTabDeepLinkFromPsaUrlMock.mockClear();
+    hoisted.deliveryRows.length = 0;
+    hoisted.writeTeamsDeliveryRowMock.mockReset();
+    hoisted.writeTeamsDeliveryRowMock.mockImplementation(async (row: Record<string, unknown>) => {
+      hoisted.deliveryRows.push(row);
+      return { inserted: true, idempotencyKey: `key-${hoisted.deliveryRows.length}`, deliveryId: `delivery-${hoisted.deliveryRows.length}` };
+    });
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
     hoisted.getTeamsAvailabilityMock.mockResolvedValue({
@@ -329,6 +347,17 @@ describe('Teams notification delivery', () => {
         providerMessageId: 'graph-request-1',
       }),
     });
+
+    // T015/T023: the production path records a delivered observability row that
+    // diagnostics recent_delivery_health reads.
+    expect(hoisted.deliveryRows).toHaveLength(1);
+    expect(hoisted.deliveryRows[0]).toMatchObject({
+      tenant: 'tenant-1',
+      internalNotificationId: 'notification-1',
+      status: 'delivered',
+      providerMessageId: 'graph-request-1',
+      destinationId: 'aad-user-1',
+    });
   });
 
   it('T435/T437/T439/T441: routes customer-reply, approval-request, escalation, and SLA-risk notifications into the matching Teams activity types', async () => {
@@ -430,13 +459,13 @@ describe('Teams notification delivery', () => {
     expect(hoisted.publishWorkflowEventMock).not.toHaveBeenCalled();
   });
 
-  it('T452: records Teams delivery failures with sent/failed workflow events when Microsoft Graph rejects the activity notification attempt', async () => {
+  it('T452/T021: records Teams delivery failures with sent/failed workflow events after bounded retries when Microsoft Graph rejects the activity notification attempt', async () => {
     fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ access_token: 'graph-token' }),
       })
-      .mockResolvedValueOnce({
+      .mockResolvedValue({
         ok: false,
         status: 429,
         statusText: 'Too Many Requests',
@@ -451,6 +480,14 @@ describe('Teams notification delivery', () => {
       category: 'assignment',
       errorCode: 'teams_delivery_failed',
       errorMessage: 'Teams activity notification delivery failed (429): rate limit',
+      retryable: true,
+    });
+    // 1 token call + 3 bounded Graph attempts; only the final failure is recorded.
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(hoisted.deliveryRows).toHaveLength(1);
+    expect(hoisted.deliveryRows[0]).toMatchObject({
+      status: 'failed',
+      errorCode: 'graph_throttled',
       retryable: true,
     });
     expect(hoisted.publishWorkflowEventMock).toHaveBeenCalledTimes(2);

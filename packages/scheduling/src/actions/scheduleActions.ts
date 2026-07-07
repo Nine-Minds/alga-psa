@@ -41,6 +41,7 @@ import {
 } from '@alga-psa/workflow-streams';
 import { maybePublishCapacityThresholdReached } from '../lib/capacityThresholdWorkflowEvents';
 import { resolveTeamsMeetingService } from '../lib/teamsMeetingService';
+import { resolveAppointmentTeamsMeetingContext } from '../lib/teamsMeetingContent';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
@@ -317,6 +318,96 @@ export const addScheduleEntry = withAuth(async (
   }
 });
 
+/**
+ * Keeps an appointment's linked Teams meeting in sync when the schedule entry
+ * is rescheduled directly on the calendar (drag/edit) — not just through the
+ * appointment-request reschedule action. PATCHes the Graph event with the new
+ * times plus refreshed subject/attendees so attendees receive an updated
+ * calendar invite, then moves the online_meetings row. Best-effort and
+ * post-commit (never rolls back the schedule change); returns a warning string
+ * when the Graph update could not be applied.
+ */
+async function syncTeamsMeetingForRescheduledEntry(
+  db: Knex,
+  tenant: string,
+  updatedEntry: IScheduleEntry,
+): Promise<string | undefined> {
+  if (updatedEntry.work_item_type !== 'appointment_request' || !updatedEntry.work_item_id) {
+    return undefined;
+  }
+
+  const scopedDb = tenantDb(db, tenant) as any;
+  const request = await scopedDb.table('appointment_requests')
+    .where({ appointment_request_id: updatedEntry.work_item_id, tenant })
+    .first();
+  if (!request) {
+    return undefined;
+  }
+
+  const onlineMeeting = await scopedDb.table('online_meetings')
+    .where({ appointment_request_id: request.appointment_request_id })
+    .first();
+
+  const provider = onlineMeeting?.provider ?? request.online_meeting_provider;
+  const providerMeetingId = onlineMeeting?.provider_meeting_id ?? request.online_meeting_id;
+  const liveStatuses = ['scheduled', 'recording_pending', 'recording_ready', 'ended', 'no_recording'];
+  const meetingIsLive = onlineMeeting ? liveStatuses.includes(onlineMeeting.status) : true;
+  if (provider !== 'teams' || !providerMeetingId || !meetingIsLive) {
+    return undefined;
+  }
+
+  const startDate = new Date(updatedEntry.scheduled_start as unknown as string);
+  const endDate = new Date(updatedEntry.scheduled_end as unknown as string);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return undefined;
+  }
+
+  const context = await resolveAppointmentTeamsMeetingContext({
+    trx: db,
+    tenant,
+    request: {
+      appointment_request_id: request.appointment_request_id,
+      service_id: request.service_id,
+      is_authenticated: request.is_authenticated,
+      contact_id: request.contact_id,
+      requester_email: request.requester_email,
+      requester_name: request.requester_name,
+      description: request.description,
+      schedule_entry_id: updatedEntry.entry_id,
+    },
+  });
+
+  const teamsMeetingService = await resolveTeamsMeetingService();
+  const outcome = await teamsMeetingService.updateTeamsMeetingWithResult({
+    tenantId: tenant,
+    meetingId: providerMeetingId,
+    eventId: onlineMeeting?.provider_event_id ?? null,
+    startDateTime: startDate.toISOString(),
+    endDateTime: endDate.toISOString(),
+    subject: context.subject,
+    attendees: context.attendees,
+    bodyHtml: context.bodyHtml,
+    appointmentRequestId: request.appointment_request_id,
+  });
+
+  if (outcome.status === 'skipped') {
+    // Tenant not configured for Teams meetings — the local move stands; no invite change.
+    return undefined;
+  }
+
+  if (outcome.status === 'failed') {
+    return 'Appointment moved, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
+  }
+
+  if (onlineMeeting) {
+    await scopedDb.table('online_meetings')
+      .where({ meeting_id: onlineMeeting.meeting_id })
+      .update({ start_time: startDate, end_time: endDate, updated_at: new Date() });
+  }
+
+  return undefined;
+}
+
 export const updateScheduleEntry = withAuth(async (
   user,
   { tenant },
@@ -376,6 +467,8 @@ export const updateScheduleEntry = withAuth(async (
       return { success: false, error: 'Permission denied to update this schedule entry.' };
     }
     // --- End Permission Check ---
+
+    let teamsMeetingWarning: string | undefined;
 
     // Ensure work_item_type is preserved if not explicitly updated
     if (entry.work_item_id && !entry.work_item_type && existingEntry.work_item_type) {
@@ -473,6 +566,15 @@ export const updateScheduleEntry = withAuth(async (
                 timezone,
               }),
             });
+
+            // Keep the linked Teams meeting in sync with the calendar move so
+            // attendees get an updated invite (best-effort, post-commit).
+            try {
+              teamsMeetingWarning = await syncTeamsMeetingForRescheduledEntry(db, tenant, updatedEntry);
+            } catch (teamsError) {
+              console.error('[ScheduleActions] Failed to sync Teams meeting on reschedule', teamsError);
+              teamsMeetingWarning = 'Appointment moved, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
+            }
           }
 
           const previousAssigneeId = getSingleUserAssigneeId(existingEntry);
@@ -617,7 +719,7 @@ export const updateScheduleEntry = withAuth(async (
       }
     }
 
-    return { success: true, entry: updatedEntry };
+    return { success: true, entry: updatedEntry, teamsMeetingWarning };
   } catch (error) {
     console.error('Error updating schedule entry:', error);
     const message = error instanceof Error ? error.message : 'Failed to update schedule entry';

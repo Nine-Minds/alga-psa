@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleTeamsMeetingSweepJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob } from './index';
 import { scheduleAccountingSyncCycleJob } from './handlers/accountingSyncCycleHandler';
 import { scheduleHuduAutoSyncJob } from './handlers/huduAutoSyncHandler';
 import logger from '@alga-psa/core/logger';
@@ -197,7 +197,7 @@ export async function initializeScheduledJobs(): Promise<void> {
           if (renewalJobId) {
             logger.info(`Scheduled Teams meeting artifact subscription renewal job for tenant ${tenantId} with job ID ${renewalJobId}`);
           } else {
-            logger.info('Teams meeting artifact subscription renewal job already scheduled (singleton active)', {
+            logger.info('Teams meeting artifact subscription renewal covered by the Temporal fan-out schedule (or singleton already active)', {
               tenantId,
               cron,
               returnedJobId: renewalJobId
@@ -205,6 +205,22 @@ export async function initializeScheduledJobs(): Promise<void> {
           }
         } catch (error) {
           logger.error(`Failed to schedule Teams meeting artifact subscription renewal job for tenant ${tenantId}`, error);
+        }
+
+        try {
+          const cron = '*/10 * * * *';
+          const sweepJobId = await scheduleTeamsMeetingSweepJob(tenantId, cron);
+          if (sweepJobId) {
+            logger.info(`Scheduled Teams meeting sweep job for tenant ${tenantId} with job ID ${sweepJobId}`);
+          } else {
+            logger.info('Teams meeting sweep covered by the Temporal fan-out schedule (or singleton already active)', {
+              tenantId,
+              cron,
+              returnedJobId: sweepJobId
+            });
+          }
+        } catch (error) {
+          logger.error(`Failed to schedule Teams meeting sweep job for tenant ${tenantId}`, error);
         }
       }
 

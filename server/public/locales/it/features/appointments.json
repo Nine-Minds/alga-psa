@@ -129,7 +129,8 @@
     "title": "Annulla appuntamento",
     "message": "Sei sicuro di voler annullare questa richiesta di appuntamento? Questa azione non può essere annullata.",
     "confirm": "Sì, annulla",
-    "messageWithTeamsWarning": "Sei sicuro di voler annullare questa richiesta di appuntamento? Questa azione non può essere annullata. Verrà eliminata anche la riunione Microsoft Teams."
+    "messageWithTeamsWarning": "Sei sicuro di voler annullare questa richiesta di appuntamento? Questa azione non può essere annullata. Verrà eliminata anche la riunione Microsoft Teams.",
+    "teamsMeetingCleanupNotice": "La riunione di Microsoft Teams collegata è in fase di annullamento; i partecipanti la vedranno rimossa dai loro calendari a breve."
   },
   "ticketSection": {
     "title": "Richieste di appuntamento",

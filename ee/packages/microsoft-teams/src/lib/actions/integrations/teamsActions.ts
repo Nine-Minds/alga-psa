@@ -4,6 +4,12 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import { fetchMicrosoftGraphAppToken } from '../../graphAuth';
+import {
+  TEAMS_NOTIFICATION_CHANNEL_MODES,
+  type TeamsNotificationChannelMode,
+} from '../../notifications/teamsNotificationDelivery';
+import { isBotConnectorConfigured } from '../../teams/bot/teamsBotConnector';
+import { getTeamsAddOnState, type TeamsAddOnState } from '../../teams/teamsAddOnGate';
 import { getTeamsAvailability } from '../../teams/teamsAvailability';
 import {
   TEAMS_ALLOWED_ACTIONS,
@@ -27,6 +33,7 @@ interface TeamsIntegrationRow {
   install_status: TeamsInstallStatus;
   enabled_capabilities: unknown;
   notification_categories: unknown;
+  notification_channels?: unknown;
   allowed_actions: unknown;
   app_id?: string | null;
   bot_id?: string | null;
@@ -34,6 +41,7 @@ interface TeamsIntegrationRow {
   last_error: string | null;
   default_meeting_organizer_upn?: string | null;
   default_meeting_organizer_object_id?: string | null;
+  send_meeting_invites?: boolean | null;
   download_recordings?: boolean | null;
   expose_recordings_in_portal?: boolean | null;
   created_by: string | null;
@@ -51,7 +59,29 @@ interface MicrosoftProfileRow {
   is_archived: boolean;
 }
 
-const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
+// The EE contract types are shared with the CE mirror; extend them locally with
+// the per-category notification channel preference and bot-connector state.
+type TeamsNotificationChannels = Partial<Record<TeamsNotificationCategory, TeamsNotificationChannelMode>>;
+
+type TeamsIntegrationPayload = NonNullable<TeamsIntegrationStatusResponse['integration']> & {
+  notificationChannels: TeamsNotificationChannels;
+  botConnectorConfigured: boolean;
+  addOnState: TeamsAddOnState;
+};
+
+type TeamsIntegrationStatusResponseWithChannels = Omit<TeamsIntegrationStatusResponse, 'integration'> & {
+  integration?: TeamsIntegrationPayload;
+};
+
+type TeamsIntegrationExecutionStateWithChannels = TeamsIntegrationExecutionState & {
+  notificationChannels: TeamsNotificationChannels;
+};
+
+type TeamsIntegrationSettingsInputWithChannels = TeamsIntegrationSettingsInput & {
+  notificationChannels?: TeamsNotificationChannels | Record<string, string> | null;
+};
+
+const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionStateWithChannels = {
   selectedProfileId: null,
   installStatus: 'not_configured',
   enabledCapabilities: ['personal_tab', 'personal_bot', 'message_extension', 'activity_notifications'],
@@ -60,8 +90,10 @@ const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
   packageMetadata: null,
   defaultMeetingOrganizerUpn: null,
   defaultMeetingOrganizerObjectId: null,
+  sendMeetingInvites: true,
   downloadRecordings: false,
   exposeRecordingsInPortal: false,
+  notificationChannels: {},
 };
 
 function isClientPortalUser(user: any): boolean {
@@ -94,6 +126,30 @@ function normalizeEnumArray<T extends string>(values: unknown, supported: readon
   return supported.filter((value) => requested.has(value));
 }
 
+function normalizeNotificationChannels(value: unknown): TeamsNotificationChannels {
+  let parsed = value;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return {};
+    }
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {};
+  }
+
+  const channels: TeamsNotificationChannels = {};
+  for (const category of TEAMS_NOTIFICATION_CATEGORIES) {
+    const mode = (parsed as Record<string, unknown>)[category];
+    if (typeof mode === 'string' && (TEAMS_NOTIFICATION_CHANNEL_MODES as readonly string[]).includes(mode)) {
+      channels[category] = mode as TeamsNotificationChannelMode;
+    }
+  }
+  return channels;
+}
+
 function toJsonbValue<T>(value: T): string {
   return JSON.stringify(value);
 }
@@ -116,6 +172,7 @@ function defaultTeamsIntegrationState() {
       (capability) => !TEAMS_CAPABILITIES_OPT_IN.includes(capability)
     ) as TeamsCapability[],
     notificationCategories: [...TEAMS_NOTIFICATION_CATEGORIES] as TeamsNotificationCategory[],
+    notificationChannels: {} as TeamsNotificationChannels,
     allowedActions: [...TEAMS_ALLOWED_ACTIONS] as TeamsAllowedAction[],
     appId: null as string | null,
     botId: null as string | null,
@@ -123,12 +180,17 @@ function defaultTeamsIntegrationState() {
     lastError: null as string | null,
     defaultMeetingOrganizerUpn: null as string | null,
     defaultMeetingOrganizerObjectId: null as string | null,
+    sendMeetingInvites: true,
     downloadRecordings: false,
     exposeRecordingsInPortal: false,
+    botConnectorConfigured: isBotConnectorConfigured(),
+    // Overridden with the live add-on state in the status path; a configured row
+    // implies the add-on was active at save time.
+    addOnState: 'active' as TeamsAddOnState,
   };
 }
 
-function mapTeamsIntegrationRow(row?: TeamsIntegrationRow | null): NonNullable<TeamsIntegrationStatusResponse['integration']> {
+function mapTeamsIntegrationRow(row?: TeamsIntegrationRow | null): TeamsIntegrationPayload {
   if (!row) {
     return defaultTeamsIntegrationState();
   }
@@ -138,6 +200,7 @@ function mapTeamsIntegrationRow(row?: TeamsIntegrationRow | null): NonNullable<T
     installStatus: isTeamsInstallStatus(row.install_status) ? row.install_status : 'not_configured',
     enabledCapabilities: normalizeEnumArray(row.enabled_capabilities, TEAMS_CAPABILITIES),
     notificationCategories: normalizeEnumArray(row.notification_categories, TEAMS_NOTIFICATION_CATEGORIES),
+    notificationChannels: normalizeNotificationChannels(row.notification_channels),
     allowedActions: normalizeEnumArray(row.allowed_actions, TEAMS_ALLOWED_ACTIONS),
     appId: row.app_id || null,
     botId: row.bot_id || null,
@@ -147,8 +210,11 @@ function mapTeamsIntegrationRow(row?: TeamsIntegrationRow | null): NonNullable<T
     lastError: row.last_error || null,
     defaultMeetingOrganizerUpn: normalizeNullableString(row.default_meeting_organizer_upn),
     defaultMeetingOrganizerObjectId: normalizeNullableString(row.default_meeting_organizer_object_id),
+    sendMeetingInvites: row.send_meeting_invites !== false,
     downloadRecordings: Boolean(row.download_recordings),
     exposeRecordingsInPortal: Boolean(row.expose_recordings_in_portal),
+    botConnectorConfigured: isBotConnectorConfigured(),
+    addOnState: 'active',
   };
 }
 
@@ -240,7 +306,7 @@ async function validateSelectedProfile(
 export async function getTeamsIntegrationStatusImpl(
   user: unknown,
   { tenant }: { tenant: string }
-): Promise<TeamsIntegrationStatusResponse> {
+): Promise<TeamsIntegrationStatusResponseWithChannels> {
   try {
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
     if (!(await canManageTeamsSettings(user))) return { success: false, error: 'Forbidden' };
@@ -249,15 +315,20 @@ export async function getTeamsIntegrationStatusImpl(
       tenantId: tenant,
       userId: (user as any)?.user_id,
     });
-    if (availability.enabled === false) {
+
+    const { knex } = await createTenantKnex();
+    const addOnState = await getTeamsAddOnState(knex, tenant);
+
+    // Soft-disable: an expired add-on keeps its preserved configuration visible so
+    // the admin banner can explain the lapse. A truly absent add-on stays gated.
+    if (availability.enabled === false && addOnState !== 'expired') {
       return { success: false, error: availability.message };
     }
 
-    const { knex } = await createTenantKnex();
     const row = await getTeamsIntegrationRow(knex, tenant);
     return {
       success: true,
-      integration: mapTeamsIntegrationRow(row),
+      integration: { ...mapTeamsIntegrationRow(row), addOnState },
     };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to load Teams integration settings' };
@@ -266,7 +337,7 @@ export async function getTeamsIntegrationStatusImpl(
 
 export async function getTeamsIntegrationExecutionStateImpl(
   tenant: string
-): Promise<TeamsIntegrationExecutionState> {
+): Promise<TeamsIntegrationExecutionStateWithChannels> {
   const availability = await getTeamsAvailability({ tenantId: tenant });
   if (availability.enabled === false) {
     return DEFAULT_EXECUTION_STATE;
@@ -285,8 +356,10 @@ export async function getTeamsIntegrationExecutionStateImpl(
     packageMetadata: integration.packageMetadata,
     defaultMeetingOrganizerUpn: integration.defaultMeetingOrganizerUpn,
     defaultMeetingOrganizerObjectId: integration.defaultMeetingOrganizerObjectId,
+    sendMeetingInvites: integration.sendMeetingInvites,
     downloadRecordings: integration.downloadRecordings,
     exposeRecordingsInPortal: integration.exposeRecordingsInPortal,
+    notificationChannels: integration.notificationChannels,
   };
 }
 
@@ -340,8 +413,8 @@ async function ensureOnlineMeetingInteractionType(
 export async function saveTeamsIntegrationSettingsImpl(
   user: unknown,
   { tenant }: { tenant: string },
-  input: TeamsIntegrationSettingsInput
-): Promise<TeamsIntegrationStatusResponse> {
+  input: TeamsIntegrationSettingsInputWithChannels
+): Promise<TeamsIntegrationStatusResponseWithChannels> {
   try {
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
     if (!(await canManageTeamsSettings(user))) return { success: false, error: 'Forbidden' };
@@ -391,6 +464,9 @@ export async function saveTeamsIntegrationSettingsImpl(
     const notificationCategories = input.notificationCategories
       ? normalizeEnumArray(input.notificationCategories, TEAMS_NOTIFICATION_CATEGORIES)
       : next.notificationCategories;
+    const notificationChannels = input.notificationChannels === undefined
+      ? next.notificationChannels
+      : normalizeNotificationChannels(input.notificationChannels);
     const allowedActions = input.allowedActions
       ? normalizeEnumArray(input.allowedActions, TEAMS_ALLOWED_ACTIONS)
       : next.allowedActions;
@@ -418,6 +494,9 @@ export async function saveTeamsIntegrationSettingsImpl(
       defaultMeetingOrganizerObjectId = organizerLookup.objectId || null;
     }
 
+    const sendMeetingInvites = input.sendMeetingInvites === undefined
+      ? next.sendMeetingInvites
+      : Boolean(input.sendMeetingInvites);
     const downloadRecordings = input.downloadRecordings === undefined
       ? next.downloadRecordings
       : Boolean(input.downloadRecordings);
@@ -432,6 +511,7 @@ export async function saveTeamsIntegrationSettingsImpl(
       install_status: installStatus,
       enabled_capabilities: toJsonbValue(enabledCapabilities),
       notification_categories: toJsonbValue(notificationCategories),
+      notification_channels: toJsonbValue(notificationChannels),
       allowed_actions: toJsonbValue(allowedActions),
       app_id: selectedProfileChanged ? null : next.appId,
       bot_id: selectedProfileChanged ? null : next.botId,
@@ -441,6 +521,7 @@ export async function saveTeamsIntegrationSettingsImpl(
       last_error: lastError || null,
       default_meeting_organizer_upn: defaultMeetingOrganizerUpn,
       default_meeting_organizer_object_id: defaultMeetingOrganizerObjectId,
+      send_meeting_invites: sendMeetingInvites,
       download_recordings: downloadRecordings,
       expose_recordings_in_portal: exposeRecordingsInPortal,
       created_by: existing?.created_by || (user as any)?.user_id || null,
