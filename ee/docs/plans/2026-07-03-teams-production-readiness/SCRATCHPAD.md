@@ -65,3 +65,30 @@ Rolling notes from the 2026-07-03 codebase deep-dive (four parallel exploration 
 - Citus: new conversation-context table needs tenant in PK; UPDATEs should select-then-update with params.
 - CE build must stay green: any new EE import from shared packages goes through dynamic import + edition guard (see ce-ee-stub-fixer skill if e2e breaks).
 - `getTeamsRuntimeAvailability` returns `addon_required` — reuse for paywall states rather than new checks.
+
+## Implementation notes (2026-07-06/07 session)
+
+### E1 (done)
+- Shared inbound auth: `ee/.../teams/bot/teamsInboundAuth.ts` — `authenticateTeamsInboundRequest(request, surface)` used by all three POST handlers; JWT-first, then JSON, then serviceUrl trust + claim/body consistency (oid/tid/serviceurl). Unconfigured creds → 403 `bot_connector_not_configured`; bad token/mismatch → 401. Verified identity threaded into handlers as `options.verifiedIdentity` (claims-first for resolveTeamsLinkedUser).
+- `teamsBotJwtVerifier.ts` now fetches JWKS JSON itself (`createLocalJWKSet`) so tests can mock global fetch; `resetTeamsBotJwksCacheForTests()` exported.
+- Diagnostics step `bot_id_consistency` (manifest webApplicationInfo.id vs TEAMS_BOT_APP_ID).
+
+### E2 (done)
+- `packages/notifications/src/realtime/teamsNotificationDelivery.ts` is now a CE-safe delegator over `@alga-psa/ee-stubs/lib/notifications/teamsNotificationDelivery` (EE: ee/server shim → EE impl; CE: packages/ee stub). All delivery/classification logic lives only in the EE impl (records rows).
+- EE impl: bounded Graph retry (`sendGraphActivityNotificationWithRetry`, 429 Retry-After + 5xx, default 3 attempts, per-call `options.retry` override); deep links now use `buildTeamsNotificationDeepLinkFromPsaUrl` (source:'notification').
+
+### E3 (done)
+- Migrations: `server/migrations/20260707090000_online_meetings_cancel_pending_and_error_code.cjs` (cancel_pending status, error_code col, join_url/provider_meeting_id nullable) and `ee/server/migrations/20260707090100_add_teams_meeting_invites_and_bot_settings.cjs` (teams_integrations.send_meeting_invites default true + notification_channels jsonb; teams_conversation_references.context + context_expires_at).
+- EE meetings layer: typed outcomes `create/update/deleteTeamsMeetingWithResult` (+ old wrappers kept); `resolveTeamsMeetingConfigState` distinguishes addon_inactive/not_configured/no_organizer and carries `sendMeetingInvites` (attendees stripped when off — both create + update paths, so both entry points honor the toggle at one enforcement point). delete: Graph 404 = deleted(alreadyDeleted). create fire-and-forgets `renewTeamsMeetingArtifactSubscriptions` (F026).
+- Seam `packages/scheduling/src/lib/teamsMeetingService.ts` gained the three WithResult methods (CE noop → skipped ee_disabled).
+- Approval flow (`appointmentRequestManagementActions.ts`, @ts-nocheck REMOVED): attendees = contact + assigned tech (buildTeamsMeetingAttendees, deduped, empty-safe), bodyHtml carries service+description+/msp/schedule?requestId link; failed creation ABORTS approval with `meetingCreationFailed: true` unless `approve_without_meeting` (new schema flag) — then failed online_meetings row (status failed, error_code, null provider ids). Decline now accepts approved requests; live meetings → cancel_pending + post-commit `enqueueTeamsMeetingCleanupJob` (dynamic import '@alga-psa/jobs/runner', singletonKey teams-meeting-cleanup:tenant:meetingId). Reschedule PATCHes subject+attendees (current assignee re-resolved)+bodyHtml. New action `generateTeamsMeetingForApprovedRequest` (F023) reuses/updates the failed row.
+- Client portal cancel: same cancel_pending + enqueue pattern; returned teamsMeetingWarning surfaced as localized toast (cancel.teamsMeetingCleanupNotice in 10 locales).
+- Jobs: `packages/jobs/src/lib/handlers/teamsMeetingCleanupHandler.ts` (idempotent; 404=success; failed→throw for runner retry) + `teamsMeetingSweepHandler.ts` ('sweep-teams-online-meetings': recording polling fallback paced by isRecordingFetchDue + cancel_pending retry). Wired: registerAllHandlers (EE gate), legacy index.ts, worker forwardJobToServer('teams-meeting-cleanup'), MAINTENANCE_JOBS + Temporal fan-out cron */10. F027: `scheduleTeamsMeetingArtifactSubscriptionRenewalJob` + new `scheduleTeamsMeetingSweepJob` are RUNNER-gated (getRunnerType()==='temporal' → null; pg-boss → per-tenant schedule via IJobRunner) instead of edition-gated.
+- F029: capture backoff — `RECORDING_BACKOFF_WINDOW_MS` 48h since end_time decides terminal no_recording (attempt count no longer terminal); `recordingFetchIntervalMs`/`isRecordingFetchDue` pace the sweep (5m·2^n capped 6h).
+- Approver UI (AppointmentRequestsPanel): inline `teams-meeting-failure-alert` with retry / approve-without-meeting; `generate-teams-meeting-request-details` button on approved+linkless when capability available.
+- UI footgun fixed: react-hot-toast has no toast.info — use toast(msg, {icon}).
+
+### Gotchas discovered
+- packages/scheduling and client-portal do NOT declare @alga-psa/jobs dep (would cycle with jobs→scheduling); resolution works via workspace symlinks + tsconfig paths; enqueue uses dynamic import of the dependency-free accessor leaf '@alga-psa/jobs/runner'.
+- EE + pg-boss: JobRunnerFactory refuses JOB_RUNNER_TYPE=pgboss on EE unless an explicit config type is passed — runner-gating (not edition-gating) is still the correct seam for the schedule helpers.
+- vitest fake-knex harnesses: actions use `.select().where().first()` — chainable select + thenable chain needed.

@@ -1,74 +1,464 @@
 [
-  { "id": "F001", "epic": "E1", "phase": "P0", "description": "Shared inbound-verification helper (Bot Framework JWT verify + audience check + trusted serviceUrl allow-list) extracted from the bot route and reusable by all Teams inbound surfaces", "implemented": false },
-  { "id": "F002", "epic": "E1", "phase": "P0", "description": "Message-extension query endpoint verifies Bot Framework JWT before invoking the handler; unverified requests rejected 401", "implemented": false },
-  { "id": "F003", "epic": "E1", "phase": "P0", "description": "Quick-actions endpoint verifies Bot Framework JWT before invoking the handler; unverified requests rejected 401", "implemented": false },
-  { "id": "F004", "epic": "E1", "phase": "P0", "description": "Bot messages endpoint fails closed: when TEAMS_BOT_APP_* credentials are unset, inbound activities are rejected (401/403) instead of processed unauthenticated", "implemented": false },
-  { "id": "F005", "epic": "E1", "phase": "P0", "description": "Caller identity (Microsoft tenant id, AAD object id) sourced from verified JWT claims; mismatches with the activity body are rejected", "implemented": false },
-  { "id": "F006", "epic": "E1", "phase": "P0", "description": "Diagnostics check verifying generated-manifest botId/webApplicationInfo.id consistency with runtime TEAMS_BOT_APP_ID (registration-mismatch footgun surfaced)", "implemented": false },
-
-  { "id": "F007", "epic": "E2", "phase": "P0", "description": "Production notification path delivers through the EE implementation that records teams_notification_deliveries rows (skipped/delivered/failed) for every attempt", "implemented": false },
-  { "id": "F008", "epic": "E2", "phase": "P0", "description": "Duplicate delivery module in packages/notifications reduced to a CE-safe dynamic delegator to the EE implementation (no duplicated delivery logic)", "implemented": false },
-  { "id": "F009", "epic": "E2", "phase": "P1", "description": "Retryable Graph notification failures (429 with Retry-After, 5xx) retried with bounded backoff before a failed delivery row is recorded", "implemented": false },
-  { "id": "F010", "epic": "E2", "phase": "P1", "description": "Diagnostics recent_delivery_health step reflects real production delivery rows end-to-end", "implemented": false },
-
-  { "id": "F011", "epic": "E3", "phase": "P1", "description": "Approval-path Teams meeting creation includes the client contact as a required attendee on the Graph event", "implemented": false },
-  { "id": "F012", "epic": "E3", "phase": "P1", "description": "Approval-path Teams meeting creation includes the assigned technician as a required attendee on the Graph event", "implemented": false },
-  { "id": "F013", "epic": "E3", "phase": "P1", "description": "Attendees receive native Outlook/Teams calendar invites for generated meetings (Graph event created with attendee list, invites dispatched)", "implemented": false },
-  { "id": "F014", "epic": "E3", "phase": "P1", "description": "Admin toggle 'Send calendar invites to participants' on Teams meeting settings, default on, respected by both meeting-creation entry points", "implemented": false },
-  { "id": "F015", "epic": "E3", "phase": "P1", "description": "Generated meeting subject and body carry appointment context (service/appointment title and PSA link)", "implemented": false },
-  { "id": "F016", "epic": "E3", "phase": "P1", "description": "Reschedule PATCHes subject and attendees in addition to start/end (attendee set refreshed when the assignee changed)", "implemented": false },
-  { "id": "F017", "epic": "E3", "phase": "P1", "description": "Rescheduling an approved appointment sends updated calendar invites to attendees via the Graph event update", "implemented": false },
-  { "id": "F018", "epic": "E3", "phase": "P1", "description": "Declining a previously-approved appointment request deletes the associated Graph meeting (parity with cancel)", "implemented": false },
-  { "id": "F019", "epic": "E3", "phase": "P1", "description": "Cancel/decline Graph meeting cleanup runs as an idempotent retried job via IJobRunner; online_meetings shows cancel_pending until cleanup confirmed", "implemented": false },
-  { "id": "F020", "epic": "E3", "phase": "P1", "description": "Client-portal cancel dialogs surface the existing teamsMeetingWarning (localized) before confirmation", "implemented": false },
-  { "id": "F021", "epic": "E3", "phase": "P1", "description": "Teams meeting CRUD returns typed results distinguishing created/failed(reason)/skipped(not_configured|addon_inactive); callers no longer conflate them", "implemented": false },
-  { "id": "F022", "epic": "E3", "phase": "P1", "description": "Approver UI surfaces meeting-generation failure at approval time with explicit 'approve without meeting' and 'retry' choices (inline alert, not toast)", "implemented": false },
-  { "id": "F023", "epic": "E3", "phase": "P1", "description": "'Generate Teams meeting' retry action available on approved appointment requests that lack a meeting link", "implemented": false },
-  { "id": "F024", "epic": "E3", "phase": "P1", "description": "Failed meeting creation persists an online_meetings row with status='failed' and an error code (no silent absence)", "implemented": false },
-  { "id": "F025", "epic": "E3", "phase": "P1", "description": "// @ts-nocheck removed from appointmentRequestManagementActions.ts and the file passes typecheck", "implemented": false },
-  { "id": "F026", "epic": "E3", "phase": "P1", "description": "Artifact change-notification subscriptions ensured at meeting-creation time, not only via the 30-minute renewal schedule", "implemented": false },
-  { "id": "F027", "epic": "E3", "phase": "P1", "description": "Artifact subscription renewal scheduled through the IJobRunner abstraction so it runs on both Temporal and pg-boss deployments", "implemented": false },
-  { "id": "F028", "epic": "E3", "phase": "P1", "description": "Polling fallback job sweeps recording_pending meetings after meeting end (using listPendingRecordings) and fetches artifacts independent of webhooks", "implemented": false },
-  { "id": "F029", "epic": "E3", "phase": "P1", "description": "recording_fetch_attempts hard cap replaced with a bounded backoff schedule; early empty notifications do not drive a meeting to terminal no_recording", "implemented": false },
-  { "id": "F030", "epic": "E3", "phase": "P1", "description": "Diagnostics checks for artifact subscription expiry and webhook base-URL reachability", "implemented": false },
-
-  { "id": "F031", "epic": "E4", "phase": "P1", "description": "Unlinked bot users receive a sign-in card with a working sign-in button (deep link into the Microsoft account-link flow) instead of a dead-end text card", "implemented": false },
-  { "id": "F032", "epic": "E4", "phase": "P1", "description": "Completing sign-in from the bot links the account and the bot sends a welcome/confirmation card", "implemented": false },
-  { "id": "F033", "epic": "E4", "phase": "P1", "description": "Bot accepts human ticket references: ticket number with or without '#' resolves to the ticket", "implemented": false },
-  { "id": "F034", "epic": "E4", "phase": "P1", "description": "'ticket <text>' falls back to title search returning a numbered pick list when the argument is not an id/number", "implemented": false },
-  { "id": "F035", "epic": "E4", "phase": "P1", "description": "List results (my tickets, my approvals, search) are numbered and follow-up commands accept ordinal references (e.g. 'approve 2', 'ticket 3')", "implemented": false },
-  { "id": "F036", "epic": "E4", "phase": "P1", "description": "Per-conversation context of last-listed entities persisted (tenant-keyed, TTL) to back ordinal references", "implemented": false },
-  { "id": "F037", "epic": "E4", "phase": "P1", "description": "Commands with missing arguments prompt with concrete examples instead of the generic unsupported fallback", "implemented": false },
-  { "id": "F038", "epic": "E4", "phase": "P1", "description": "Near-miss command suggestions for misspelled commands ('assing ticket…' → did you mean 'assign ticket')", "implemented": false },
-  { "id": "F039", "epic": "E4", "phase": "P1", "description": "'new ticket <title>' (optional client) creates a ticket from bot chat via the create_ticket_from_message registry action", "implemented": false },
-  { "id": "F040", "epic": "E4", "phase": "P1", "description": "Bot replies migrated to Adaptive Cards with hero-card fallback for clients that reject them", "implemented": false },
-  { "id": "F041", "epic": "E4", "phase": "P1", "description": "Ticket cards carry inline actions (Assign to me, Add note, Open) that execute via the action registry and update the card in place", "implemented": false },
-  { "id": "F042", "epic": "E4", "phase": "P1", "description": "Manifest bot command list generated from the same source of truth as the handler (includes my approvals, approval commands, new ticket)", "implemented": false },
-  { "id": "F043", "epic": "E4", "phase": "P1", "description": "Unsupported-scope (channel) messages get a friendly reply explaining supported scopes with a docs link", "implemented": false },
-  { "id": "F044", "epic": "E4", "phase": "P1", "description": "Optional bot-DM delivery of notifications as actionable Adaptive Cards using stored conversation references", "implemented": false },
-  { "id": "F045", "epic": "E4", "phase": "P1", "description": "Per-category notification channel preference (activity feed / bot DM / both) configurable in Teams admin settings", "implemented": false },
-  { "id": "F046", "epic": "E4", "phase": "P1", "description": "Help card generated from the action registry filtered by the requesting user's RBAC (only shows commands they can run)", "implemented": false },
-  { "id": "F047", "epic": "E4", "phase": "P1", "description": "Teams settings shows a prominent banner when bot connector credentials are missing ('bot cannot reply'), linking to diagnostics", "implemented": false },
-
-  { "id": "F048", "epic": "E5", "phase": "P2", "description": "LLM intent parsing maps free-text bot messages to existing registry actions; deterministic parser remains default/fallback", "implemented": false },
-  { "id": "F049", "epic": "E5", "phase": "P2", "description": "Every NL-parsed mutation shows a confirmation card before executing", "implemented": false },
-  { "id": "F050", "epic": "E5", "phase": "P2", "description": "NL execution goes exclusively through executeTeamsAction (RBAC, audit, idempotency preserved; no scope widening via prompt injection)", "implemented": false },
-  { "id": "F051", "epic": "E5", "phase": "P2", "description": "NL disambiguation dialog when the target entity is ambiguous", "implemented": false },
-  { "id": "F052", "epic": "E5", "phase": "P2", "description": "NL layer gated behind AI Assistant add-on, a tenant toggle, and its own PostHog flag", "implemented": false },
-
-  { "id": "F053", "epic": "E6", "phase": "P1", "description": "Guided setup wizard stepper: profile → Graph permissions → bot registration → activate → package → sideload instructions → verify", "implemented": false },
-  { "id": "F054", "epic": "E6", "phase": "P1", "description": "Live Graph credential validation: token acquisition attempted on save/validate (not just field-presence readiness)", "implemented": false },
-  { "id": "F055", "epic": "E6", "phase": "P1", "description": "Per-permission Graph consent probe reporting granted/missing status for each required application permission", "implemented": false },
-  { "id": "F056", "epic": "E6", "phase": "P1", "description": "On-demand Bot Framework token acquisition validation step in wizard/diagnostics", "implemented": false },
-  { "id": "F057", "epic": "E6", "phase": "P1", "description": "Complete admin runbook docs/integrations/teams-setup.md covering Azure app registration, Bot Framework registration (and its relation to platform creds + manifest botId), Graph permissions, access policies, sideload, verification", "implemented": false },
-  { "id": "F058", "epic": "E6", "phase": "P1", "description": "In-app links from wizard/settings steps to the corresponding runbook sections", "implemented": false },
-  { "id": "F059", "epic": "E6", "phase": "P1", "description": "Stale-manifest detection: warning when deployment base URL or selected profile changed after the last package generation", "implemented": false },
-  { "id": "F060", "epic": "E6", "phase": "P1", "description": "Delivery log viewer in Teams settings consuming listTeamsDeliveries with status/category filters and pagination", "implemented": false },
-  { "id": "F061", "epic": "E6", "phase": "P1", "description": "Audit log viewer in Teams settings consuming listTeamsAuditEvents with surface/action filters and pagination", "implemented": false },
-  { "id": "F062", "epic": "E6", "phase": "P1", "description": "Troubleshooting panel mapping delivery error codes (graph_unauthorized, user_not_mapped, addon_inactive, package_misconfigured, …) to concrete remedies", "implemented": false },
-
-  { "id": "F063", "epic": "E7", "phase": "P1", "description": "Centralized tenantHasTeamsAddOn/assertTeamsAddOn helper exported from one module; all duplicated copies migrated to it", "implemented": false },
-  { "id": "F064", "epic": "E7", "phase": "P1", "description": "Teams settings paywall card shows included capabilities and a purchase CTA deep-linking billing admins to Account Management add-on purchase", "implemented": false },
-  { "id": "F065", "epic": "E7", "phase": "P1", "description": "Expired Teams add-on soft-disables: sends skipped with addon_inactive, configuration and history preserved, admin banner explains state", "implemented": false },
-  { "id": "F066", "epic": "E7", "phase": "P1", "description": "ADD_ON_DESCRIPTIONS[TEAMS] updated to include meetings and recordings/transcripts capture", "implemented": false }
+  {
+    "id": "F001",
+    "epic": "E1",
+    "phase": "P0",
+    "description": "Shared inbound-verification helper (Bot Framework JWT verify + audience check + trusted serviceUrl allow-list) extracted from the bot route and reusable by all Teams inbound surfaces",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "epic": "E1",
+    "phase": "P0",
+    "description": "Message-extension query endpoint verifies Bot Framework JWT before invoking the handler; unverified requests rejected 401",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "epic": "E1",
+    "phase": "P0",
+    "description": "Quick-actions endpoint verifies Bot Framework JWT before invoking the handler; unverified requests rejected 401",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "epic": "E1",
+    "phase": "P0",
+    "description": "Bot messages endpoint fails closed: when TEAMS_BOT_APP_* credentials are unset, inbound activities are rejected (401/403) instead of processed unauthenticated",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "epic": "E1",
+    "phase": "P0",
+    "description": "Caller identity (Microsoft tenant id, AAD object id) sourced from verified JWT claims; mismatches with the activity body are rejected",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "epic": "E1",
+    "phase": "P0",
+    "description": "Diagnostics check verifying generated-manifest botId/webApplicationInfo.id consistency with runtime TEAMS_BOT_APP_ID (registration-mismatch footgun surfaced)",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "epic": "E2",
+    "phase": "P0",
+    "description": "Production notification path delivers through the EE implementation that records teams_notification_deliveries rows (skipped/delivered/failed) for every attempt",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "epic": "E2",
+    "phase": "P0",
+    "description": "Duplicate delivery module in packages/notifications reduced to a CE-safe dynamic delegator to the EE implementation (no duplicated delivery logic)",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "epic": "E2",
+    "phase": "P1",
+    "description": "Retryable Graph notification failures (429 with Retry-After, 5xx) retried with bounded backoff before a failed delivery row is recorded",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "epic": "E2",
+    "phase": "P1",
+    "description": "Diagnostics recent_delivery_health step reflects real production delivery rows end-to-end",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Approval-path Teams meeting creation includes the client contact as a required attendee on the Graph event",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Approval-path Teams meeting creation includes the assigned technician as a required attendee on the Graph event",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Attendees receive native Outlook/Teams calendar invites for generated meetings (Graph event created with attendee list, invites dispatched)",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Admin toggle 'Send calendar invites to participants' on Teams meeting settings, default on, respected by both meeting-creation entry points",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Generated meeting subject and body carry appointment context (service/appointment title and PSA link)",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Reschedule PATCHes subject and attendees in addition to start/end (attendee set refreshed when the assignee changed)",
+    "implemented": true
+  },
+  {
+    "id": "F017",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Rescheduling an approved appointment sends updated calendar invites to attendees via the Graph event update",
+    "implemented": true
+  },
+  {
+    "id": "F018",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Declining a previously-approved appointment request deletes the associated Graph meeting (parity with cancel)",
+    "implemented": true
+  },
+  {
+    "id": "F019",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Cancel/decline Graph meeting cleanup runs as an idempotent retried job via IJobRunner; online_meetings shows cancel_pending until cleanup confirmed",
+    "implemented": true
+  },
+  {
+    "id": "F020",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Client-portal cancel dialogs surface the existing teamsMeetingWarning (localized) before confirmation",
+    "implemented": true
+  },
+  {
+    "id": "F021",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Teams meeting CRUD returns typed results distinguishing created/failed(reason)/skipped(not_configured|addon_inactive); callers no longer conflate them",
+    "implemented": true
+  },
+  {
+    "id": "F022",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Approver UI surfaces meeting-generation failure at approval time with explicit 'approve without meeting' and 'retry' choices (inline alert, not toast)",
+    "implemented": true
+  },
+  {
+    "id": "F023",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "'Generate Teams meeting' retry action available on approved appointment requests that lack a meeting link",
+    "implemented": true
+  },
+  {
+    "id": "F024",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Failed meeting creation persists an online_meetings row with status='failed' and an error code (no silent absence)",
+    "implemented": true
+  },
+  {
+    "id": "F025",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "// @ts-nocheck removed from appointmentRequestManagementActions.ts and the file passes typecheck",
+    "implemented": true
+  },
+  {
+    "id": "F026",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Artifact change-notification subscriptions ensured at meeting-creation time, not only via the 30-minute renewal schedule",
+    "implemented": true
+  },
+  {
+    "id": "F027",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Artifact subscription renewal scheduled through the IJobRunner abstraction so it runs on both Temporal and pg-boss deployments",
+    "implemented": true
+  },
+  {
+    "id": "F028",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Polling fallback job sweeps recording_pending meetings after meeting end (using listPendingRecordings) and fetches artifacts independent of webhooks",
+    "implemented": true
+  },
+  {
+    "id": "F029",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "recording_fetch_attempts hard cap replaced with a bounded backoff schedule; early empty notifications do not drive a meeting to terminal no_recording",
+    "implemented": true
+  },
+  {
+    "id": "F030",
+    "epic": "E3",
+    "phase": "P1",
+    "description": "Diagnostics checks for artifact subscription expiry and webhook base-URL reachability",
+    "implemented": true
+  },
+  {
+    "id": "F031",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "Unlinked bot users receive a sign-in card with a working sign-in button (deep link into the Microsoft account-link flow) instead of a dead-end text card",
+    "implemented": true
+  },
+  {
+    "id": "F032",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "Completing sign-in from the bot links the account and the bot sends a welcome/confirmation card",
+    "implemented": true
+  },
+  {
+    "id": "F033",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "Bot accepts human ticket references: ticket number with or without '#' resolves to the ticket",
+    "implemented": true
+  },
+  {
+    "id": "F034",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "'ticket <text>' falls back to title search returning a numbered pick list when the argument is not an id/number",
+    "implemented": true
+  },
+  {
+    "id": "F035",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "List results (my tickets, my approvals, search) are numbered and follow-up commands accept ordinal references (e.g. 'approve 2', 'ticket 3')",
+    "implemented": true
+  },
+  {
+    "id": "F036",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "Per-conversation context of last-listed entities persisted (tenant-keyed, TTL) to back ordinal references",
+    "implemented": true
+  },
+  {
+    "id": "F037",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "Commands with missing arguments prompt with concrete examples instead of the generic unsupported fallback",
+    "implemented": true
+  },
+  {
+    "id": "F038",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "Near-miss command suggestions for misspelled commands ('assing ticket…' → did you mean 'assign ticket')",
+    "implemented": true
+  },
+  {
+    "id": "F039",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "'new ticket <title>' (optional client) creates a ticket from bot chat via the create_ticket_from_message registry action",
+    "implemented": true
+  },
+  {
+    "id": "F040",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "Bot replies migrated to Adaptive Cards with hero-card fallback for clients that reject them",
+    "implemented": true
+  },
+  {
+    "id": "F041",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "Ticket cards carry inline actions (Assign to me, Add note, Open) that execute via the action registry and update the card in place",
+    "implemented": true
+  },
+  {
+    "id": "F042",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "Manifest bot command list generated from the same source of truth as the handler (includes my approvals, approval commands, new ticket)",
+    "implemented": true
+  },
+  {
+    "id": "F043",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "Unsupported-scope (channel) messages get a friendly reply explaining supported scopes with a docs link",
+    "implemented": true
+  },
+  {
+    "id": "F044",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "Optional bot-DM delivery of notifications as actionable Adaptive Cards using stored conversation references",
+    "implemented": true
+  },
+  {
+    "id": "F045",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "Per-category notification channel preference (activity feed / bot DM / both) configurable in Teams admin settings",
+    "implemented": true
+  },
+  {
+    "id": "F046",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "Help card generated from the action registry filtered by the requesting user's RBAC (only shows commands they can run)",
+    "implemented": true
+  },
+  {
+    "id": "F047",
+    "epic": "E4",
+    "phase": "P1",
+    "description": "Teams settings shows a prominent banner when bot connector credentials are missing ('bot cannot reply'), linking to diagnostics",
+    "implemented": true
+  },
+  {
+    "id": "F048",
+    "epic": "E5",
+    "phase": "P2",
+    "description": "LLM intent parsing maps free-text bot messages to existing registry actions; deterministic parser remains default/fallback",
+    "implemented": false
+  },
+  {
+    "id": "F049",
+    "epic": "E5",
+    "phase": "P2",
+    "description": "Every NL-parsed mutation shows a confirmation card before executing",
+    "implemented": false
+  },
+  {
+    "id": "F050",
+    "epic": "E5",
+    "phase": "P2",
+    "description": "NL execution goes exclusively through executeTeamsAction (RBAC, audit, idempotency preserved; no scope widening via prompt injection)",
+    "implemented": false
+  },
+  {
+    "id": "F051",
+    "epic": "E5",
+    "phase": "P2",
+    "description": "NL disambiguation dialog when the target entity is ambiguous",
+    "implemented": false
+  },
+  {
+    "id": "F052",
+    "epic": "E5",
+    "phase": "P2",
+    "description": "NL layer gated behind AI Assistant add-on, a tenant toggle, and its own PostHog flag",
+    "implemented": false
+  },
+  {
+    "id": "F053",
+    "epic": "E6",
+    "phase": "P1",
+    "description": "Guided setup wizard stepper: profile → Graph permissions → bot registration → activate → package → sideload instructions → verify",
+    "implemented": false
+  },
+  {
+    "id": "F054",
+    "epic": "E6",
+    "phase": "P1",
+    "description": "Live Graph credential validation: token acquisition attempted on save/validate (not just field-presence readiness)",
+    "implemented": true
+  },
+  {
+    "id": "F055",
+    "epic": "E6",
+    "phase": "P1",
+    "description": "Per-permission Graph consent probe reporting granted/missing status for each required application permission",
+    "implemented": true
+  },
+  {
+    "id": "F056",
+    "epic": "E6",
+    "phase": "P1",
+    "description": "On-demand Bot Framework token acquisition validation step in wizard/diagnostics",
+    "implemented": true
+  },
+  {
+    "id": "F057",
+    "epic": "E6",
+    "phase": "P1",
+    "description": "Complete admin runbook docs/integrations/teams-setup.md covering Azure app registration, Bot Framework registration (and its relation to platform creds + manifest botId), Graph permissions, access policies, sideload, verification",
+    "implemented": true
+  },
+  {
+    "id": "F058",
+    "epic": "E6",
+    "phase": "P1",
+    "description": "In-app links from wizard/settings steps to the corresponding runbook sections",
+    "implemented": false
+  },
+  {
+    "id": "F059",
+    "epic": "E6",
+    "phase": "P1",
+    "description": "Stale-manifest detection: warning when deployment base URL or selected profile changed after the last package generation",
+    "implemented": false
+  },
+  {
+    "id": "F060",
+    "epic": "E6",
+    "phase": "P1",
+    "description": "Delivery log viewer in Teams settings consuming listTeamsDeliveries with status/category filters and pagination",
+    "implemented": false
+  },
+  {
+    "id": "F061",
+    "epic": "E6",
+    "phase": "P1",
+    "description": "Audit log viewer in Teams settings consuming listTeamsAuditEvents with surface/action filters and pagination",
+    "implemented": false
+  },
+  {
+    "id": "F062",
+    "epic": "E6",
+    "phase": "P1",
+    "description": "Troubleshooting panel mapping delivery error codes (graph_unauthorized, user_not_mapped, addon_inactive, package_misconfigured, …) to concrete remedies",
+    "implemented": false
+  },
+  {
+    "id": "F063",
+    "epic": "E7",
+    "phase": "P1",
+    "description": "Centralized tenantHasTeamsAddOn/assertTeamsAddOn helper exported from one module; all duplicated copies migrated to it",
+    "implemented": false
+  },
+  {
+    "id": "F064",
+    "epic": "E7",
+    "phase": "P1",
+    "description": "Teams settings paywall card shows included capabilities and a purchase CTA deep-linking billing admins to Account Management add-on purchase",
+    "implemented": false
+  },
+  {
+    "id": "F065",
+    "epic": "E7",
+    "phase": "P1",
+    "description": "Expired Teams add-on soft-disables: sends skipped with addon_inactive, configuration and history preserved, admin banner explains state",
+    "implemented": false
+  },
+  {
+    "id": "F066",
+    "epic": "E7",
+    "phase": "P1",
+    "description": "ADD_ON_DESCRIPTIONS[TEAMS] updated to include meetings and recordings/transcripts capture",
+    "implemented": true
+  }
 ]
