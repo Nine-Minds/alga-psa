@@ -35,7 +35,25 @@ function escapeLike(term: string): string {
 }
 
 /**
+ * Base query for UI listings: `stock_units` plus its resolved location and client
+ * NAMES via LEFT JOINs, so tables never have to render raw FK UUIDs. Callers add
+ * their own filters on the `su.*` columns and choose the order.
+ */
+function stockUnitsWithNames(trx: Knex.Transaction, tenant: string) {
+  return trx('stock_units as su')
+    .leftJoin('stock_locations as sl', function () {
+      this.on('su.location_id', '=', 'sl.location_id').andOn('su.tenant', '=', 'sl.tenant');
+    })
+    .leftJoin('clients as c', function () {
+      this.on('su.client_id', '=', 'c.client_id').andOn('su.tenant', '=', 'c.tenant');
+    })
+    .where({ 'su.tenant': tenant })
+    .select('su.*', 'sl.name as location_name', 'c.client_name');
+}
+
+/**
  * List serialized units with optional filters. Newest-received first.
+ * Rows carry resolved `location_name` / `client_name` for display.
  */
 export const listStockUnits = withAuth(
   async (
@@ -51,12 +69,12 @@ export const listStockUnits = withAuth(
     await requireInvRead(user);
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const q = trx('stock_units').where({ tenant });
-      if (filter?.service_id) q.andWhere({ service_id: filter.service_id });
-      if (filter?.status) q.andWhere({ status: filter.status });
-      if (filter?.location_id) q.andWhere({ location_id: filter.location_id });
-      if (filter?.client_id) q.andWhere({ client_id: filter.client_id });
-      return (await q.orderBy('received_at', 'desc')) as IStockUnit[];
+      const q = stockUnitsWithNames(trx, tenant);
+      if (filter?.service_id) q.andWhere({ 'su.service_id': filter.service_id });
+      if (filter?.status) q.andWhere({ 'su.status': filter.status });
+      if (filter?.location_id) q.andWhere({ 'su.location_id': filter.location_id });
+      if (filter?.client_id) q.andWhere({ 'su.client_id': filter.client_id });
+      return (await q.orderBy('su.received_at', 'desc')) as IStockUnit[];
     });
   },
 );
@@ -83,10 +101,9 @@ export const searchUnitsBySerial = withAuth(
     if (!term) return [];
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      return (await trx('stock_units')
-        .where({ tenant })
-        .whereRaw('serial_number ILIKE ? ESCAPE ?', [`%${escapeLike(term)}%`, '\\'])
-        .orderBy('received_at', 'desc')) as IStockUnit[];
+      return (await stockUnitsWithNames(trx, tenant)
+        .whereRaw('su.serial_number ILIKE ? ESCAPE ?', [`%${escapeLike(term)}%`, '\\'])
+        .orderBy('su.received_at', 'desc')) as IStockUnit[];
     });
   },
 );
@@ -102,11 +119,10 @@ export const searchUnitsByMac = withAuth(
     if (!term) return [];
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      return (await trx('stock_units')
-        .where({ tenant })
-        .whereNotNull('mac_address')
-        .whereRaw('mac_address ILIKE ? ESCAPE ?', [`%${escapeLike(term)}%`, '\\'])
-        .orderBy('received_at', 'desc')) as IStockUnit[];
+      return (await stockUnitsWithNames(trx, tenant)
+        .whereNotNull('su.mac_address')
+        .whereRaw('su.mac_address ILIKE ? ESCAPE ?', [`%${escapeLike(term)}%`, '\\'])
+        .orderBy('su.received_at', 'desc')) as IStockUnit[];
     });
   },
 );

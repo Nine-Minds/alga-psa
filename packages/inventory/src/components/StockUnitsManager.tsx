@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { ClientNameCell } from '@alga-psa/ui/components/ClientNameCell';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockLocation, IStockMovement, IStockUnit } from '@alga-psa/types';
@@ -209,6 +210,8 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     URL.revokeObjectURL(url);
   }, [units]);
 
+  const emptyCell = <span className="text-[rgb(var(--color-text-400))]">{t('common.emptyValue', '—')}</span>;
+
   const columns: ColumnDefinition<IStockUnit>[] = [
     { title: t('stockUnits.columns.serialNumber', 'Serial Number'), dataIndex: 'serial_number' },
     { title: t('stockUnits.columns.macAddress', 'MAC Address'), dataIndex: 'mac_address', render: (v: any) => v || '' },
@@ -221,8 +224,19 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
         </Badge>
       ),
     },
-    { title: t('stockUnits.columns.location', 'Location'), dataIndex: 'location_id', render: (v: any) => v || '' },
-    { title: t('stockUnits.columns.client', 'Client'), dataIndex: 'client_id', render: (v: any) => v || '' },
+    {
+      title: t('stockUnits.columns.location', 'Location'),
+      dataIndex: 'location_id',
+      render: (_value: unknown, record: IStockUnit) =>
+        record.location_name ? <span>{record.location_name}</span> : emptyCell,
+    },
+    {
+      title: t('stockUnits.columns.client', 'Client'),
+      dataIndex: 'client_id',
+      render: (_value: unknown, record: IStockUnit) => (
+        <ClientNameCell clientId={record.client_id} clientName={record.client_name} />
+      ),
+    },
     {
       title: t('stockUnits.columns.warrantyExpires', 'Warranty Expires'),
       dataIndex: 'warranty_expires_at',
