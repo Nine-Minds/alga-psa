@@ -282,6 +282,33 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
             : t('integrations.items.google.description.oss'),
           component: () => (
             <div className="space-y-6">
+              {/* Conspicuous, above-the-fold pointer: admins mistake this Providers tab for the
+                  SSO setup path, so the redirect must be the first thing they see — not a card
+                  buried under the Google/Microsoft panels. */}
+              <div className="flex flex-col gap-3 rounded-lg border-2 border-primary-500 bg-alert-info-bg p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <Shield className="mt-0.5 h-6 w-6 shrink-0 text-primary-500" />
+                  <div className="space-y-0.5">
+                    <div className="text-base font-semibold text-[rgb(var(--color-text-900))]">
+                      {tIntegrations('integrations.sso.msp.moved.title', { defaultValue: 'MSP SSO Login Domains' })}
+                    </div>
+                    <div className="text-sm text-[rgb(var(--color-text-700))]">
+                      {tIntegrations('integrations.sso.msp.moved.body', {
+                        defaultValue:
+                          'Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.',
+                      })}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  id="msp-sso-moved-link"
+                  type="button"
+                  onClick={() => router.push('/msp/security-settings?tab=single-sign-on')}
+                  className="shrink-0"
+                >
+                  {tIntegrations('integrations.sso.msp.moved.cta', { defaultValue: 'Open Single Sign-On settings' })}
+                </Button>
+              </div>
               <Card>
                 <CardHeader>
                   <CardTitle>{t('integrations.items.google.cardTitle')}</CardTitle>
@@ -294,29 +321,6 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
               </Card>
               <GoogleIntegrationSettings />
               <MicrosoftIntegrationSettings canUseTeams={canUseTeams} />
-              <Card>
-                <CardHeader>
-                  <CardTitle>
-                    {tIntegrations('integrations.sso.msp.moved.title', { defaultValue: 'MSP SSO Login Domains' })}
-                  </CardTitle>
-                  <CardDescription>
-                    {tIntegrations('integrations.sso.msp.moved.body', {
-                      defaultValue:
-                        'Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.',
-                    })}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button
-                    id="msp-sso-moved-link"
-                    type="button"
-                    variant="outline"
-                    onClick={() => router.push('/msp/security-settings?tab=single-sign-on')}
-                  >
-                    {tIntegrations('integrations.sso.msp.moved.cta', { defaultValue: 'Open Single Sign-On settings' })}
-                  </Button>
-                </CardContent>
-              </Card>
             </div>
           ),
         },
