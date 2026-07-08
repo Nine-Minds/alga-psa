@@ -1195,7 +1195,9 @@
     },
     "filter": {
       "status": "Status",
-      "allStatuses": "All statuses"
+      "allStatuses": "All statuses",
+      "client": "Client",
+      "allClients": "All clients"
     }
   },
   "transfers": {

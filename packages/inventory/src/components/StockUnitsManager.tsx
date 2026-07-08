@@ -123,6 +123,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
   const [searchMode, setSearchMode] = useState<SearchMode>('serial');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [clientFilter, setClientFilter] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [locations, setLocations] = useState<IStockLocation[] | null>(null);
   const [historyDetail, setHistoryDetail] = useState<UnitDetail | null>(null);
@@ -144,13 +145,30 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     [locationMap, t],
   );
 
-  // Status filter is applied client-side over the loaded set (the reader loads
-  // all units for the tenant, so this narrows without another round-trip).
+  // Status/client filters apply client-side over the loaded set (the reader
+  // loads all units for the tenant, so this narrows without another round-trip).
   const visibleUnits = useMemo(
-    () => (statusFilter ? units.filter((u) => u.status === statusFilter) : units),
-    [units, statusFilter],
+    () =>
+      units.filter(
+        (u) =>
+          (!statusFilter || u.status === statusFilter) &&
+          (!clientFilter || (u.client_name || '') === clientFilter),
+      ),
+    [units, statusFilter, clientFilter],
   );
-  const isFiltered = query.trim() !== '' || statusFilter !== '';
+  const isFiltered = query.trim() !== '' || statusFilter !== '' || clientFilter !== '';
+
+  // Client options built from the clients actually present in the loaded units,
+  // so the filter only offers clients that have gear.
+  const CLIENT_FILTER_OPTIONS = useMemo(() => {
+    const names = Array.from(
+      new Set(units.map((u) => u.client_name).filter((n): n is string => !!n)),
+    ).sort((a, b) => a.localeCompare(b));
+    return [
+      { value: '', label: t('stockUnits.filter.allClients', 'All clients') },
+      ...names.map((n) => ({ value: n, label: n })),
+    ];
+  }, [units, t]);
   const totalValueCents = useMemo(
     () => visibleUnits.reduce((sum, u) => sum + (Number(u.unit_cost) || 0), 0),
     [visibleUnits],
@@ -196,6 +214,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
 
   const clearFilters = useCallback(async () => {
     setStatusFilter('');
+    setClientFilter('');
     setQuery('');
     await reload();
   }, [reload]);
@@ -382,6 +401,15 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
             options={STATUS_FILTER_OPTIONS}
             value={statusFilter}
             onValueChange={setStatusFilter}
+          />
+        </div>
+        <div>
+          <CustomSelect
+            id="stock-units-client-filter"
+            label={t('stockUnits.filter.client', 'Client')}
+            options={CLIENT_FILTER_OPTIONS}
+            value={clientFilter}
+            onValueChange={setClientFilter}
           />
         </div>
         <div className="flex-1">
