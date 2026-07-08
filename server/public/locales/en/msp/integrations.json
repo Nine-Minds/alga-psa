@@ -1065,7 +1065,10 @@
           "needsAttention": "Needs attention",
           "saving": "Saving…",
           "selectProfile": "Select a profile",
-          "unbound": "Unbound"
+          "unbound": "Unbound",
+          "noCapablePlaceholder": "No enabled profile",
+          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.",
+          "noEmailCapableProfiles": "No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app."
         },
         "bindings": {
           "summaryBound": "{{consumer}} is bound to {{profile}}.",
@@ -1074,7 +1077,8 @@
           "warningArchived": "{{consumer}} is still bound to an archived profile. Rebind it to an active profile.",
           "warningNoBinding": "No {{consumer}} binding is configured yet.",
           "warningNotReady": "{{consumer}} is bound to {{profile}}, but that profile still needs configuration.",
-          "warningProfileMissing": "{{consumer}} is bound to a profile that is no longer available. Rebind it to an active profile."
+          "warningProfileMissing": "{{consumer}} is bound to a profile that is no longer available. Rebind it to an active profile.",
+          "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
         },
         "bindingsAlertCe": "Explicit bindings are the source of truth for MSP SSO profile selection. Configure login domains separately after choosing the bound profile.",
         "bindingsAlertEe": "Explicit bindings are the source of truth for MSP SSO, email, calendar, and Teams profile selection.",
@@ -1123,7 +1127,9 @@
           "setDefault": "Set this profile as the default Microsoft profile",
           "setDefaultHelp": "Default profiles stay available for profile-management workflows and migration-safe metadata, not consumer routing.",
           "storedSecretHint": "Stored secret: {{secret}}. Leave this field empty to keep it unchanged.",
-          "tenantId": "Tenant ID"
+          "tenantId": "Tenant ID",
+          "capabilities": "Enabled capabilities",
+          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "Create Microsoft Profile",
@@ -1177,7 +1183,9 @@
           "storedSecret": "Stored secret",
           "teamsAppIdUri": "Teams application ID URI",
           "tenantIdLabel": "Tenant ID:",
-          "updating": "Updating…"
+          "updating": "Updating…",
+          "enabledCapabilities": "Enabled capabilities",
+          "noEnabledCapabilities": "No enabled capabilities"
         },
         "providerReconnect": {
           "description": "Use this if you rotate credentials or intentionally rebind Outlook email or calendar to a different Microsoft profile.",

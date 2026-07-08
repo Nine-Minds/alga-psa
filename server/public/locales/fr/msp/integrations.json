@@ -1065,7 +1065,10 @@
           "needsAttention": "Nécessite une attention",
           "saving": "Enregistrement…",
           "selectProfile": "Sélectionner un profil",
-          "unbound": "Non lié"
+          "unbound": "Non lié",
+          "noCapablePlaceholder": "No enabled profile",
+          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.",
+          "noEmailCapableProfiles": "No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app."
         },
         "bindings": {
           "summaryBound": "{{consumer}} est lié à {{profile}}.",
@@ -1074,7 +1077,8 @@
           "warningArchived": "{{consumer}} est toujours lié à un profil archivé. Relisez-le à un profil actif.",
           "warningNoBinding": "Aucune liaison {{consumer}} n'est encore configurée.",
           "warningNotReady": "{{consumer}} est lié à {{profile}}, mais ce profil nécessite encore une configuration.",
-          "warningProfileMissing": "{{consumer}} est lié à un profil qui n'est plus disponible. Relisez-le à un profil actif."
+          "warningProfileMissing": "{{consumer}} est lié à un profil qui n'est plus disponible. Relisez-le à un profil actif.",
+          "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
         },
         "bindingsAlertCe": "Les liaisons explicites font foi pour la sélection du profil MSP SSO. Configurez les domaines de connexion séparément après avoir choisi le profil lié.",
         "bindingsAlertEe": "Les liaisons explicites font foi pour la sélection des profils MSP SSO, e-mail, calendrier et Teams.",
@@ -1123,7 +1127,9 @@
           "setDefault": "Définir ce profil comme profil Microsoft par défaut",
           "setDefaultHelp": "Les profils par défaut restent disponibles pour les workflows de gestion de profil et les métadonnées sûres pour la migration, mais pas pour le routage de consommateur.",
           "storedSecretHint": "Secret enregistré : {{secret}}. Laissez ce champ vide pour le conserver inchangé.",
-          "tenantId": "Tenant ID"
+          "tenantId": "Tenant ID",
+          "capabilities": "Enabled capabilities",
+          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "Créer un profil Microsoft",
@@ -1177,7 +1183,9 @@
           "storedSecret": "Secret enregistré",
           "teamsAppIdUri": "Application ID URI Teams",
           "tenantIdLabel": "Tenant ID :",
-          "updating": "Mise à jour…"
+          "updating": "Mise à jour…",
+          "enabledCapabilities": "Enabled capabilities",
+          "noEnabledCapabilities": "No enabled capabilities"
         },
         "providerReconnect": {
           "description": "Utilisez ceci si vous effectuez une rotation des identifiants ou si vous reliez volontairement l'e-mail Outlook ou le calendrier à un autre profil Microsoft.",

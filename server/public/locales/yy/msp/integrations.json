@@ -1065,7 +1065,10 @@
           "needsAttention": "55555",
           "saving": "55555",
           "selectProfile": "55555",
-          "unbound": "55555"
+          "unbound": "55555",
+          "noCapablePlaceholder": "No enabled profile",
+          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.",
+          "noEmailCapableProfiles": "No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app."
         },
         "bindings": {
           "summaryBound": "55555 {{consumer}} 55555 {{profile}} 55555",
@@ -1074,7 +1077,8 @@
           "warningArchived": "55555 {{consumer}} 55555",
           "warningNoBinding": "55555 {{consumer}} 55555",
           "warningNotReady": "55555 {{consumer}} 55555 {{profile}} 55555",
-          "warningProfileMissing": "55555 {{consumer}} 55555"
+          "warningProfileMissing": "55555 {{consumer}} 55555",
+          "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
         },
         "bindingsAlertCe": "55555",
         "bindingsAlertEe": "55555",
@@ -1123,7 +1127,9 @@
           "setDefault": "55555",
           "setDefaultHelp": "55555",
           "storedSecretHint": "55555 {{secret}} 55555",
-          "tenantId": "55555"
+          "tenantId": "55555",
+          "capabilities": "Enabled capabilities",
+          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "55555",
@@ -1177,7 +1183,9 @@
           "storedSecret": "55555",
           "teamsAppIdUri": "55555",
           "tenantIdLabel": "55555",
-          "updating": "55555"
+          "updating": "55555",
+          "enabledCapabilities": "Enabled capabilities",
+          "noEnabledCapabilities": "No enabled capabilities"
         },
         "providerReconnect": {
           "description": "55555",

@@ -1065,7 +1065,10 @@
           "needsAttention": "Requiere atención",
           "saving": "Guardando…",
           "selectProfile": "Seleccionar un perfil",
-          "unbound": "Sin enlazar"
+          "unbound": "Sin enlazar",
+          "noCapablePlaceholder": "No enabled profile",
+          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.",
+          "noEmailCapableProfiles": "No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app."
         },
         "bindings": {
           "summaryBound": "{{consumer}} está enlazado a {{profile}}.",
@@ -1074,7 +1077,8 @@
           "warningArchived": "{{consumer}} sigue enlazado a un perfil archivado. Vuelva a enlazarlo a un perfil activo.",
           "warningNoBinding": "Aún no se ha configurado ningún enlace de {{consumer}}.",
           "warningNotReady": "{{consumer}} está enlazado a {{profile}}, pero ese perfil aún necesita configuración.",
-          "warningProfileMissing": "{{consumer}} está enlazado a un perfil que ya no está disponible. Vuelva a enlazarlo a un perfil activo."
+          "warningProfileMissing": "{{consumer}} está enlazado a un perfil que ya no está disponible. Vuelva a enlazarlo a un perfil activo.",
+          "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
         },
         "bindingsAlertCe": "Los enlaces explícitos son la fuente de verdad para la selección de perfil de MSP SSO. Configure los dominios de inicio de sesión por separado después de elegir el perfil enlazado.",
         "bindingsAlertEe": "Los enlaces explícitos son la fuente de verdad para la selección de perfiles de MSP SSO, correo, calendario y Teams.",
@@ -1123,7 +1127,9 @@
           "setDefault": "Establecer este perfil como perfil de Microsoft predeterminado",
           "setDefaultHelp": "Los perfiles predeterminados siguen disponibles para los flujos de gestión de perfiles y los metadatos seguros en la migración, no para el enrutamiento de consumidores.",
           "storedSecretHint": "Secret almacenado: {{secret}}. Deje este campo vacío para mantenerlo sin cambios.",
-          "tenantId": "Tenant ID"
+          "tenantId": "Tenant ID",
+          "capabilities": "Enabled capabilities",
+          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "Crear perfil de Microsoft",
@@ -1177,7 +1183,9 @@
           "storedSecret": "Secret almacenado",
           "teamsAppIdUri": "Application ID URI de Teams",
           "tenantIdLabel": "Tenant ID:",
-          "updating": "Actualizando…"
+          "updating": "Actualizando…",
+          "enabledCapabilities": "Enabled capabilities",
+          "noEnabledCapabilities": "No enabled capabilities"
         },
         "providerReconnect": {
           "description": "Utilice esto si rota credenciales o enlaza intencionalmente el correo de Outlook o el calendario a un perfil de Microsoft diferente.",
