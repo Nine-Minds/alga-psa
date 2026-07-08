@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
+import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -329,22 +329,21 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
           />
         </div>
         <div className="flex-1">
-          <Input
+          <SearchInput
             id="stock-units-search-input"
-            label={t('stockUnits.searchTerm', 'Search term')}
+            className="w-full"
             value={query}
+            loading={loading}
             onChange={(e) => setQuery(e.target.value)}
+            onClear={clearSearch}
             onKeyDown={(e) => {
               if (e.key === 'Enter') runSearch();
             }}
-            placeholder={searchMode === 'serial' ? t('stockUnits.searchPlaceholder.serial', 'Serial number…') : t('stockUnits.searchPlaceholder.mac', 'MAC address…')}
+            placeholder={searchMode === 'serial' ? t('stockUnits.searchPlaceholder.serial', 'e.g. SSD990-0007') : t('stockUnits.searchPlaceholder.mac', 'e.g. AA:BB:CC:00:00:01')}
           />
         </div>
         <Button id="stock-units-search-button" onClick={runSearch} disabled={loading}>
           {t('common.search', 'Search')}
-        </Button>
-        <Button id="stock-units-clear-button" variant="ghost" onClick={clearSearch} disabled={loading}>
-          {t('common.clear', 'Clear')}
         </Button>
         <Button id="stock-units-export-csv" variant="outline" onClick={exportCsv} disabled={units.length === 0}>
           {t('stockUnits.exportCsv', 'Export CSV')}
