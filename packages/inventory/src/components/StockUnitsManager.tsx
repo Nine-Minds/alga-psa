@@ -114,9 +114,15 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     return UNIT_STATUS_LABELS[v] ?? v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
   };
 
+  const STATUS_FILTER_OPTIONS = [
+    { value: '', label: t('stockUnits.filter.allStatuses', 'All statuses') },
+    ...Object.entries(UNIT_STATUS_LABELS).map(([value, label]) => ({ value, label })),
+  ];
+
   const [units, setUnits] = useState<IStockUnit[]>(initialUnits || []);
   const [searchMode, setSearchMode] = useState<SearchMode>('serial');
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [locations, setLocations] = useState<IStockLocation[] | null>(null);
   const [historyDetail, setHistoryDetail] = useState<UnitDetail | null>(null);
@@ -137,6 +143,14 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     },
     [locationMap, t],
   );
+
+  // Status filter is applied client-side over the loaded set (the reader loads
+  // all units for the tenant, so this narrows without another round-trip).
+  const visibleUnits = useMemo(
+    () => (statusFilter ? units.filter((u) => u.status === statusFilter) : units),
+    [units, statusFilter],
+  );
+  const isFiltered = query.trim() !== '' || statusFilter !== '';
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -172,6 +186,12 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
   }, [query, searchMode, reload, t]);
 
   const clearSearch = useCallback(async () => {
+    setQuery('');
+    await reload();
+  }, [reload]);
+
+  const clearFilters = useCallback(async () => {
+    setStatusFilter('');
     setQuery('');
     await reload();
   }, [reload]);
@@ -213,7 +233,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
       t('stockUnits.columns.client', 'Client'),
       t('stockUnits.columns.warrantyExpires', 'Warranty Expires'),
     ];
-    const rows = units.map((unit) => [
+    const rows = visibleUnits.map((unit) => [
       unit.serial_number,
       fmtMac(unit.mac_address),
       humanizeStatus(unit.status),
@@ -231,7 +251,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-  }, [units, t]);
+  }, [visibleUnits, t]);
 
   const emptyCell = <span className="text-[rgb(var(--color-text-400))]">{t('common.emptyValue', '—')}</span>;
 
@@ -308,9 +328,9 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
         <div>
           <h1 className="text-2xl font-semibold">{t('stockUnits.title', 'Stock Units')}</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {units.length === 1
-              ? t('stockUnits.summary.one', '{{n}} unit', { n: units.length })
-              : t('stockUnits.summary.many', '{{n}} units', { n: units.length })}
+            {visibleUnits.length === 1
+              ? t('stockUnits.summary.one', '{{n}} unit', { n: visibleUnits.length })
+              : t('stockUnits.summary.many', '{{n}} units', { n: visibleUnits.length })}
           </p>
         </div>
         <Button id="stock-units-refresh-button" variant="outline" onClick={reload} disabled={loading}>
@@ -326,6 +346,15 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
             options={SEARCH_MODE_OPTIONS}
             value={searchMode}
             onValueChange={(value) => setSearchMode(value as SearchMode)}
+          />
+        </div>
+        <div>
+          <CustomSelect
+            id="stock-units-status-filter"
+            label={t('stockUnits.filter.status', 'Status')}
+            options={STATUS_FILTER_OPTIONS}
+            value={statusFilter}
+            onValueChange={setStatusFilter}
           />
         </div>
         <div className="flex-1">
@@ -345,20 +374,24 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
         <Button id="stock-units-search-button" onClick={runSearch} disabled={loading}>
           {t('common.search', 'Search')}
         </Button>
-        <Button id="stock-units-export-csv" variant="outline" onClick={exportCsv} disabled={units.length === 0}>
+        <Button id="stock-units-export-csv" variant="outline" onClick={exportCsv} disabled={visibleUnits.length === 0}>
           {t('stockUnits.exportCsv', 'Export CSV')}
         </Button>
       </div>
 
-      {!loading && units.length === 0 ? (
-        query.trim() ? (
+      {!loading && visibleUnits.length === 0 ? (
+        isFiltered ? (
           <EmptyState
             icon={<PackageSearch size={20} />}
-            title={t('stockUnits.empty.noMatchTitle', 'No units match "{{term}}"', { term: query.trim() })}
-            description={t('stockUnits.empty.noMatchDescription', 'Check the serial or MAC address, or clear the search to see all units.')}
+            title={
+              query.trim()
+                ? t('stockUnits.empty.noMatchTitle', 'No units match "{{term}}"', { term: query.trim() })
+                : t('stockUnits.empty.noFilterMatchTitle', 'No units match this filter')
+            }
+            description={t('stockUnits.empty.noMatchDescription', 'Clear the search and filters to see all units.')}
             action={
-              <Button id="stock-units-empty-clear" variant="link" onClick={clearSearch}>
-                {t('stockUnits.empty.clearSearch', 'Clear search')}
+              <Button id="stock-units-empty-clear" variant="link" onClick={clearFilters}>
+                {t('stockUnits.empty.clearFilters', 'Clear filters')}
               </Button>
             }
           />
@@ -370,7 +403,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
           />
         )
       ) : (
-        <DataTable id="stock-units-table" data={units} columns={columns} />
+        <DataTable id="stock-units-table" data={visibleUnits} columns={columns} />
       )}
 
       <Dialog
