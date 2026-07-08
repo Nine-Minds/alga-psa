@@ -8,8 +8,9 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import {
   Building2,
@@ -27,7 +28,6 @@ import RmmIntegrationsSetup from './RmmIntegrationsSetup';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import { MicrosoftIntegrationSettings } from './MicrosoftIntegrationSettings';
-import { MspSsoLoginDomainsSettings } from './MspSsoLoginDomainsSettings';
 import { CalendarEnterpriseIntegrationSettings } from './CalendarEnterpriseIntegrationSettings';
 import { TeamsEnterpriseIntegrationSettings } from './TeamsEnterpriseIntegrationSettings';
 import dynamic from 'next/dynamic';
@@ -144,6 +144,8 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
   qboOnboardingSlot,
 }) => {
   const { t } = useTranslation('msp/settings');
+  const { t: tIntegrations } = useTranslation('msp/integrations');
+  const router = useRouter();
   const isEEAvailable = isCalendarEnterpriseEdition();
   const entraUiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
   const isEntraUiEnabled = isEEAvailable && entraUiFlag.enabled;
@@ -292,7 +294,29 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
               </Card>
               <GoogleIntegrationSettings />
               <MicrosoftIntegrationSettings canUseTeams={canUseTeams} />
-              <MspSsoLoginDomainsSettings />
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {tIntegrations('integrations.sso.msp.moved.title', { defaultValue: 'MSP SSO Login Domains' })}
+                  </CardTitle>
+                  <CardDescription>
+                    {tIntegrations('integrations.sso.msp.moved.body', {
+                      defaultValue:
+                        'Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.',
+                    })}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    id="msp-sso-moved-link"
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push('/msp/security-settings?tab=single-sign-on')}
+                  >
+                    {tIntegrations('integrations.sso.msp.moved.cta', { defaultValue: 'Open Single Sign-On settings' })}
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           ),
         },

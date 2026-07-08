@@ -1792,6 +1792,12 @@
       "title": "Single Sign-On",
       "description": "SSO-Massenzuweisungs-Werkzeuge werden geladen..."
     },
+    "status": {
+      "title": "Sign-in providers",
+      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
+      "available": "Available",
+      "notConfigured": "Not configured"
+    },
     "autoLink": {
       "title": "SSO für neue interne Benutzer automatisch einrichten",
       "description": "Aktivieren Sie diese Option, um jedem neuen Mitarbeiterkonto sofort Ihren Unternehmens-SSO-Anbieter zuzuweisen, sodass eine passwortbasierte Anmeldung nicht erforderlich ist.",

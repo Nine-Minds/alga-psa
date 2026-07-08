@@ -1864,6 +1864,11 @@
         },
         "descriptionCe": "11111",
         "descriptionEe": "11111",
+        "moved": {
+          "title": "MSP SSO Login Domains",
+          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "cta": "Open Single Sign-On settings"
+        },
         "dnsHost": "11111",
         "dnsInstructions": "11111",
         "dnsValue": "11111",
