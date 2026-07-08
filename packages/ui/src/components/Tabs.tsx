@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { cn } from '../lib/utils';
 
+// LEVERAGE: pattern duplicate-tabs-components — hand-rolled twin of CustomTabs.tsx (Radix-based) with the same default underline look but a compositional API; ~21 vs ~32 consumers split along package-extraction lines. Consolidate to a single tabs layer.
 interface TabsContextValue {
   value: string;
   onValueChange: (value: string) => void;

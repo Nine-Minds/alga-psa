@@ -306,13 +306,12 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
             onValueChange={handleDocumentTypeChange}
             className="w-auto"
           >
-            <TabsList className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-1">
+            <TabsList>
               {documentTypeOptions.map((option) => (
                 <TabsTrigger
                   key={option.type}
                   id={`document-template-type-${option.type}`}
                   value={option.type}
-                  className="rounded px-3 py-1.5 text-sm aria-selected:bg-[rgb(var(--color-primary-100))] dark:aria-selected:bg-[rgb(var(--color-primary-400)/0.30)]"
                 >
                   {option.label}
                 </TabsTrigger>
