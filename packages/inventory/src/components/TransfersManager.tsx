@@ -207,7 +207,7 @@ export function TransfersManager({
       const transfer = await dispatchTransfer({
         from_location_id: loadListResult.from_location_id,
         to_location_id: loadListResult.to_location_id,
-        notes: 'Van load list replenishment',
+        notes: t('transfers.vanLoadListReplenishment', 'Van load list replenishment'),
         lines,
       });
       const lineCount = transfer.lines?.length ?? lines.length;

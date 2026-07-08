@@ -963,6 +963,15 @@
     "emailFailed": "Não foi possível enviar a confirmação por e-mail.",
     "emailSuccess": "Confirmação enviada por e-mail para {{recipients}}",
     "enterSerial": "Insira pelo menos um número de série.",
+    "errors": {
+      "documentGenerationFailed": "Não foi possível gerar o documento",
+      "downloadPermissionDenied": "Permissão negada: não é possível baixar documentos de pedidos de venda",
+      "emailConfirmationFailed": "Não foi possível enviar a confirmação por e-mail",
+      "emailPermissionDenied": "Permissão negada: não é possível enviar documentos de pedidos de venda por e-mail",
+      "emailSendFailed": "Falha ao enviar o e-mail.",
+      "noRecipientEmail": "Não há e-mail de destinatário cadastrado para este cliente.",
+      "notFound": "Pedido de venda não encontrado"
+    },
     "fields": {
       "allocationMode": "Modo de alocação",
       "clientPoNumber": "Client PO number",
@@ -1234,6 +1243,7 @@
     "title": "Transferências",
     "toLocation": "Localização de destino",
     "vanLoadList": "Lista de carga da van",
+    "vanLoadListReplenishment": "Reposição da lista de carga da van",
     "status": {
       "dispatched": "Despachado",
       "received": "Recebido",

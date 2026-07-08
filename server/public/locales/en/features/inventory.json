@@ -963,6 +963,15 @@
     "emailFailed": "Couldn't email the confirmation.",
     "emailSuccess": "Confirmation emailed to {{recipients}}",
     "enterSerial": "Enter at least one serial number.",
+    "errors": {
+      "documentGenerationFailed": "Failed to generate the document",
+      "downloadPermissionDenied": "Permission denied: cannot download sales order documents",
+      "emailConfirmationFailed": "Failed to email the confirmation",
+      "emailPermissionDenied": "Permission denied: cannot email sales order documents",
+      "emailSendFailed": "Email failed to send.",
+      "noRecipientEmail": "No recipient email on file for this client.",
+      "notFound": "Sales order not found"
+    },
     "fields": {
       "allocationMode": "How to allocate stock",
       "clientPoNumber": "Client PO number",
@@ -1234,6 +1243,7 @@
     "title": "Transfers",
     "toLocation": "To location",
     "vanLoadList": "Van load list",
+    "vanLoadListReplenishment": "Van load list replenishment",
     "status": {
       "dispatched": "Dispatched",
       "received": "Received",

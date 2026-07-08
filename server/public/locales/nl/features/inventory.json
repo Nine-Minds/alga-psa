@@ -963,6 +963,15 @@
     "emailFailed": "Kon de bevestiging niet e-mailen.",
     "emailSuccess": "Bevestiging per e-mail verzonden naar {{recipients}}",
     "enterSerial": "Voer minstens één serienummer in.",
+    "errors": {
+      "documentGenerationFailed": "Kon het document niet genereren",
+      "downloadPermissionDenied": "Toegang geweigerd: verkooporderdocumenten kunnen niet worden gedownload",
+      "emailConfirmationFailed": "Kon de bevestiging niet e-mailen",
+      "emailPermissionDenied": "Toegang geweigerd: verkooporderdocumenten kunnen niet per e-mail worden verzonden",
+      "emailSendFailed": "E-mail verzenden mislukt.",
+      "noRecipientEmail": "Er is geen e-mailadres van een ontvanger voor deze klant geregistreerd.",
+      "notFound": "Verkooporder niet gevonden"
+    },
     "fields": {
       "allocationMode": "Toewijzingsmodus",
       "clientPoNumber": "Client PO number",
@@ -1234,6 +1243,7 @@
     "title": "Overboekingen",
     "toLocation": "Bestemmingslocatie",
     "vanLoadList": "Buslaadlijst",
+    "vanLoadListReplenishment": "Aanvulling voor buslaadlijst",
     "status": {
       "dispatched": "Verzonden",
       "received": "Ontvangen",

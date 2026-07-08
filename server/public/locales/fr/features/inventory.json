@@ -963,6 +963,15 @@
     "emailFailed": "Impossible d'envoyer la confirmation par e-mail.",
     "emailSuccess": "Confirmation envoyée par e-mail à {{recipients}}",
     "enterSerial": "Saisissez au moins un numéro de série.",
+    "errors": {
+      "documentGenerationFailed": "Impossible de générer le document",
+      "downloadPermissionDenied": "Autorisation refusée : impossible de télécharger les documents de commande client",
+      "emailConfirmationFailed": "Impossible d'envoyer la confirmation par e-mail",
+      "emailPermissionDenied": "Autorisation refusée : impossible d'envoyer les documents de commande client par e-mail",
+      "emailSendFailed": "L'e-mail n'a pas pu être envoyé.",
+      "noRecipientEmail": "Aucun e-mail de destinataire n'est enregistré pour ce client.",
+      "notFound": "Commande client introuvable"
+    },
     "fields": {
       "allocationMode": "Mode d'allocation",
       "clientPoNumber": "Client PO number",
@@ -1234,6 +1243,7 @@
     "title": "Transferts",
     "toLocation": "Emplacement de destination",
     "vanLoadList": "Liste de chargement de la camionnette",
+    "vanLoadListReplenishment": "Réapprovisionnement de la liste de chargement de la camionnette",
     "status": {
       "dispatched": "Expédié",
       "received": "Réceptionné",
