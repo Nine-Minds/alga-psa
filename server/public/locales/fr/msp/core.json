@@ -32,6 +32,7 @@
     "inventoryPurchaseOrders": "Bons de commande",
     "inventoryVendorBills": "Factures fournisseurs",
     "inventorySalesOrders": "Commandes client",
+    "inventoryDocumentLayouts": "Mises en page des documents",
     "inventoryTransfers": "Transferts",
     "inventoryCounts": "Inventaires tournants",
     "inventoryWriteOffs": "Radiations",

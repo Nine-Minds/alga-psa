@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { Tabs, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +24,7 @@ import {
   deleteDocumentTemplate,
 } from '../../../actions/documentTemplateActions';
 import {
+  DOCUMENT_TYPES,
   getDocumentTypeRegistryEntry,
   isDocumentType,
 } from '../../../lib/document-templates/registry';
@@ -37,11 +40,19 @@ type ViewState =
   | { mode: 'editor'; draft: DocumentTemplateDraft };
 
 const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentType }) => {
+  const router = useRouter();
   const registryEntry = useMemo(
     () => (isDocumentType(documentType) ? getDocumentTypeRegistryEntry(documentType) : null),
     [documentType],
   );
   const typeLabel = registryEntry?.label ?? 'Document';
+  const documentTypeOptions = useMemo(
+    () => DOCUMENT_TYPES.map((type) => ({
+      type,
+      label: getDocumentTypeRegistryEntry(type).label,
+    })),
+    [],
+  );
 
   const [templates, setTemplates] = useState<DocumentTemplateListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -163,6 +174,12 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
     await fetchTemplates();
   }, [fetchTemplates]);
 
+  const handleDocumentTypeChange = useCallback((nextType: string) => {
+    if (nextType !== documentType) {
+      router.push(`/msp/document-templates/${nextType}`);
+    }
+  }, [documentType, router]);
+
   const columns = useMemo((): ColumnDefinition<DocumentTemplateListItem>[] => [
     {
       title: 'Name',
@@ -283,9 +300,29 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
             Design the layouts used to render {typeLabel.toLowerCase()} PDFs and previews.
           </p>
         </div>
-        <Button id="document-templates-new" onClick={openNewTemplate} disabled={!registryEntry}>
-          New Layout
-        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Tabs
+            value={documentType}
+            onValueChange={handleDocumentTypeChange}
+            className="w-auto"
+          >
+            <TabsList className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-1">
+              {documentTypeOptions.map((option) => (
+                <TabsTrigger
+                  key={option.type}
+                  id={`document-template-type-${option.type}`}
+                  value={option.type}
+                  className="rounded px-3 py-1.5 text-sm aria-selected:bg-[rgb(var(--color-primary-100))] dark:aria-selected:bg-[rgb(var(--color-primary-400)/0.30)]"
+                >
+                  {option.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+          <Button id="document-templates-new" onClick={openNewTemplate} disabled={!registryEntry}>
+            New Layout
+          </Button>
+        </div>
       </div>
 
       {error ? (

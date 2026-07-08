@@ -32,6 +32,7 @@
     "inventoryPurchaseOrders": "Inkooporders",
     "inventoryVendorBills": "Leveranciersfacturen",
     "inventorySalesOrders": "Verkooporders",
+    "inventoryDocumentLayouts": "Documentlay-outs",
     "inventoryTransfers": "Overboekingen",
     "inventoryCounts": "Voorraadtellingen",
     "inventoryWriteOffs": "Afschrijvingen",
