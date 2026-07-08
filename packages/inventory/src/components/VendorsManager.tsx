@@ -31,7 +31,13 @@ const EMPTY_FORM: FormState = {
   account_number: '',
 };
 
-export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }) {
+export function VendorsManager({
+  initialVendors,
+  defaultCurrencyCode = 'USD',
+}: {
+  initialVendors: IVendor[];
+  defaultCurrencyCode?: string;
+}) {
   const { t } = useTranslation('features/inventory');
   const [priceListVendor, setPriceListVendor] = useState<IVendor | null>(null);
   const [vendors, setVendors] = useState<IVendor[]>(initialVendors || []);
@@ -167,7 +173,11 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
 
       <DataTable id="vendors-table" data={vendors} columns={columns} onRowClick={openEdit} />
 
-      <VendorPriceList vendor={priceListVendor} onClose={() => setPriceListVendor(null)} />
+      <VendorPriceList
+        vendor={priceListVendor}
+        onClose={() => setPriceListVendor(null)}
+        defaultCurrencyCode={defaultCurrencyCode}
+      />
 
       <Dialog
         isOpen={dialogOpen}

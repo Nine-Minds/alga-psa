@@ -6,6 +6,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IPoLandedCost, IPurchaseOrderLine } from '@alga-psa/types';
 import { recordStockMovement } from '../lib';
+import { resolveTenantCurrency } from '../lib';
 
 // NOTE: 'use server' file — export ONLY async functions (+ erased types).
 
@@ -47,6 +48,7 @@ export const addPoLandedCost = withAuth(
     input: {
       cost_type: 'freight' | 'duty' | 'other';
       amount: number; // cents
+      currency_code?: string | null;
       allocation_method?: 'value' | 'quantity';
       description?: string | null;
     },
@@ -60,13 +62,18 @@ export const addPoLandedCost = withAuth(
       const po = await trx('purchase_orders').where({ tenant, po_id: poId }).first();
       if (!po) throw new Error('Purchase order not found');
       if (po.status === 'cancelled') throw new Error('Cannot add landed cost to a cancelled purchase order');
+      const poCurrency = po.currency_code || await resolveTenantCurrency(trx, tenant);
+      const inputCurrency = input.currency_code?.trim();
+      if (inputCurrency && inputCurrency !== poCurrency) {
+        throw new Error(`Landed cost currency_code (${inputCurrency}) must match PO currency_code (${poCurrency})`);
+      }
       const [row] = await trx('po_landed_costs')
         .insert({
           tenant,
           po_id: poId,
           cost_type: input.cost_type,
           amount: input.amount,
-          currency_code: po.currency_code ?? 'USD', // landed costs share the PO currency
+          currency_code: poCurrency,
           allocation_method: input.allocation_method ?? 'value',
           description: input.description ?? null,
         })
@@ -112,11 +119,16 @@ export const applyPoLandedCosts = withAuth(
       // whole operation idempotent (F071).
       const po = await trx('purchase_orders').where({ tenant, po_id: poId }).forUpdate().first();
       if (!po) throw new Error('Purchase order not found');
+      const poCurrency = po.currency_code || await resolveTenantCurrency(trx, tenant);
 
       const entries = (await trx('po_landed_costs')
         .where({ tenant, po_id: poId, applied: false })
         .forUpdate()) as IPoLandedCost[];
       if (entries.length === 0) return { applied_entries: 0, total_applied_cents: 0, allocations: [] };
+      const mixedEntry = entries.find((entry) => entry.currency_code !== poCurrency);
+      if (mixedEntry) {
+        throw new Error(`Landed cost currency_code (${mixedEntry.currency_code}) must match PO currency_code (${poCurrency})`);
+      }
 
       const lines = (await trx('purchase_order_lines')
         .where({ tenant, po_id: poId })
@@ -189,7 +201,7 @@ export const applyPoLandedCosts = withAuth(
           service_id: l.service_id,
           quantity: 0,
           unit_cost: allocated,
-          cost_currency: po.currency_code ?? 'USD',
+          cost_currency: poCurrency,
           reason: `landed_cost: PO ${po.po_number} — ${allocated} cents allocated (${perUnit}/unit)`,
           source_doc_type: 'purchase_order',
           source_doc_id: poId,

@@ -24,6 +24,7 @@ import {
   type RmaReceivables,
   type UnbilledSoRow,
 } from '../lib/dashboardQueries';
+import { resolveTenantCurrency } from '../lib/tenantCurrency';
 
 /**
  * Consolidated data feed for the Inventory dashboard ("money before lunch").
@@ -205,11 +206,7 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
     const tech_count = Number(techRow?.c ?? 0);
 
     /* ---- tenant default billing currency (money formatting) ---- */
-    const billingSettingsRow = await trx('default_billing_settings')
-      .where({ tenant })
-      .select<{ default_currency_code: string | null }>('default_currency_code')
-      .first();
-    const currency_code = billingSettingsRow?.default_currency_code || 'USD';
+    const currency_code = await resolveTenantCurrency(trx, tenant);
 
     /* ---- on-hand value + units (footer) ---- */
     const nonSerValueRow = await trx('stock_levels as sl')

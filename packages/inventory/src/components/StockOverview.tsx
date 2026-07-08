@@ -4,12 +4,14 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
+import { toMinorUnits } from '@alga-psa/core';
 import type { ColumnDefinition, IProductInventorySettings, IStockLocation } from '@alga-psa/types';
 import {
   listInventoryProducts,
@@ -45,9 +47,6 @@ interface StockLevelRow {
   available: number;
 }
 
-const dollars = (cents?: number | null): string =>
-  cents == null ? '—' : `$${(cents / 100).toFixed(2)}`;
-
 interface ReceiveForm {
   service_id: string;
   location_id: string;
@@ -60,7 +59,13 @@ const EMPTY_RECEIVE: ReceiveForm = { service_id: '', location_id: '', quantity: 
 const NUM_HEADER = 'text-right';
 const NUM_CELL = 'text-right tabular-nums';
 
-export function StockOverview({ initialProducts }: { initialProducts: InventoryProduct[] }) {
+export function StockOverview({
+  initialProducts,
+  defaultCurrencyCode = 'USD',
+}: {
+  initialProducts: InventoryProduct[];
+  defaultCurrencyCode?: string;
+}) {
   const { t } = useTranslation('features/inventory');
 
   /** "Out · 1 site" / "Low · 2 sites" — per-location scope so a summed total never
@@ -145,6 +150,8 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
     setReceiveOpen(true);
   };
 
+  const selectedProduct = products.find((p) => p.service_id === receiveForm.service_id) || null;
+
   const saveReceive = async () => {
     if (!receiveForm.service_id) {
       toast.error(t('stock.receive.pickProduct', 'Pick a product.'));
@@ -170,7 +177,7 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
         service_id: receiveForm.service_id,
         location_id: receiveForm.location_id,
         quantity,
-        unit_cost: Math.round(unitDollars * 100),
+        unit_cost: toMinorUnits(unitDollars, undefined, selectedProduct?.cost_currency ?? defaultCurrencyCode),
       });
       toast.success(t('stock.receive.success', 'Stock received.'));
       if (result?.warnings?.length) {
@@ -203,8 +210,6 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
     setLevelsOpen(true);
     await loadLevels(product);
   };
-
-  const selectedProduct = products.find((p) => p.service_id === receiveForm.service_id) || null;
 
   const columns: ColumnDefinition<InventoryProduct>[] = [
     {
@@ -312,7 +317,7 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
         </div>
         <div className="flex items-center gap-2">
           {/* Day-one migration path (Sam review P1): opening balances from CSV as real receipts. */}
-          <ImportOpeningBalances onApplied={reload} />
+          <ImportOpeningBalances onApplied={reload} defaultCurrencyCode={defaultCurrencyCode} />
           {/* Repair path for cache drift (F028): recompute on-hand + reserved/held from
               the ledger, unit statuses, and open SO reservations. */}
           <Button
@@ -420,14 +425,12 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
             value={receiveForm.quantity}
             onChange={(e) => setReceiveForm({ ...receiveForm, quantity: e.target.value })}
           />
-          <Input
+          <CurrencyInput
             id="receive-stock-unit-cost"
-            label={t('stock.fields.unitCost', 'Unit cost (USD)')}
-            type="number"
-            min="0"
-            step="0.01"
-            value={receiveForm.unit_cost}
-            onChange={(e) => setReceiveForm({ ...receiveForm, unit_cost: e.target.value })}
+            label={t('stock.fields.unitCost', 'Unit cost')}
+            currencyCode={selectedProduct?.cost_currency ?? defaultCurrencyCode}
+            value={receiveForm.unit_cost ? Number(receiveForm.unit_cost) : undefined}
+            onChange={(value) => setReceiveForm({ ...receiveForm, unit_cost: value == null ? '' : String(value) })}
           />
           {selectedProduct?.is_serialized && (
             <p className="text-xs text-[rgb(var(--color-text-500))]">

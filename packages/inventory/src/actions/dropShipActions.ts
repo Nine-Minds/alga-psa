@@ -15,6 +15,7 @@ import {
   PurchaseOrderStatus,
 } from '@alga-psa/types';
 import { publishInventoryEvent, recordStockMovement, timestampPayload } from '../lib';
+import { resolveTenantCurrency } from '../lib';
 
 /**
  * Drop-ship: vendor ships straight to the client, the stock never touches one of
@@ -42,6 +43,7 @@ async function resolveCost(
   serviceId: string,
   fallbackCurrency: string,
 ): Promise<{ unitCost: number; costCurrency: string }> {
+  const defaultCurrency = fallbackCurrency || await resolveTenantCurrency(trx, tenant);
   const pis = await trx('product_inventory_settings')
     .where({ tenant, service_id: serviceId })
     .select('average_cost', 'cost_currency')
@@ -52,7 +54,7 @@ async function resolveCost(
     .first();
   return {
     unitCost: Number(pis?.average_cost ?? sc?.cost ?? 0),
-    costCurrency: pis?.cost_currency ?? sc?.cost_currency ?? fallbackCurrency ?? 'USD',
+    costCurrency: pis?.cost_currency ?? sc?.cost_currency ?? defaultCurrency,
   };
 }
 
@@ -98,7 +100,7 @@ export const createDropShipForSoLine = withAuth(
       const vendor = await trx('vendors').where({ tenant, vendor_id: input.vendor_id }).first();
       if (!vendor) throw new Error('Vendor not found');
 
-      const currencyCode = so.currency_code ?? 'USD';
+      const currencyCode = so.currency_code || await resolveTenantCurrency(trx, tenant);
       const numRes = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'PURCHASE_ORDER']);
       const poNumber = numRes.rows[0].number;
 
@@ -253,7 +255,7 @@ export const confirmDropShipShipment = withAuth(
         trx,
         tenant,
         soLine.service_id,
-        po.currency_code ?? 'USD',
+        po.currency_code || await resolveTenantCurrency(trx, tenant),
       );
 
       const serials = input?.serials ?? [];

@@ -365,6 +365,7 @@ export interface UnbilledSoRow {
   so_number: string;
   client_id: string | null;
   client_name: string | null;
+  currency_code: string | null;
   amount: number;
   /** Days since the last consume movement for this SO (null when untracked, e.g. drop-ship). */
   shipped_days_ago: number | null;
@@ -397,13 +398,14 @@ export async function queryUnbilled(db: Db, tenant: string, ghost: GhostWeek): P
       .where({ 'so.tenant': tenant })
       .whereNot('so.status', 'cancelled')
       .andWhere('l.fulfillment_type', dropShip ? 'drop_ship' : 'from_stock')
-      .groupBy('so.so_id', 'so.so_number', 'so.status', 'so.order_date', 'so.client_id', 'c.client_name')
+      .groupBy('so.so_id', 'so.so_number', 'so.status', 'so.order_date', 'so.client_id', 'so.currency_code', 'c.client_name')
       .havingRaw('COALESCE(SUM(GREATEST(l.quantity_fulfilled - l.quantity_invoiced, 0)),0) > 0')
       .select<any[]>(
         'so.so_id as so_id',
         'so.so_number as so_number',
         'so.status as so_status',
         'so.client_id as client_id',
+        'so.currency_code as currency_code',
         'c.client_name as client_name',
         db.raw('COUNT(*) FILTER (WHERE l.quantity_fulfilled > l.quantity_invoiced) as line_count'),
         db.raw('COALESCE(SUM(GREATEST(l.quantity_fulfilled - l.quantity_invoiced, 0) * l.unit_price),0) as amount'),
@@ -432,6 +434,7 @@ export async function queryUnbilled(db: Db, tenant: string, ghost: GhostWeek): P
     so_number: r.so_number,
     client_id: r.client_id ?? null,
     client_name: r.client_name ?? null,
+    currency_code: r.currency_code ?? null,
     amount: num(r.amount),
     shipped_days_ago: shipAges.get(r.so_id) ?? null,
     line_count: Number(r.line_count ?? 0),
