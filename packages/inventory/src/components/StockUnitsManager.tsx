@@ -8,6 +8,8 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientNameCell } from '@alga-psa/ui/components/ClientNameCell';
+import { EmptyState } from '@alga-psa/ui/components/EmptyState';
+import { PackageSearch } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockLocation, IStockMovement, IStockUnit } from '@alga-psa/types';
@@ -302,7 +304,28 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
         </Button>
       </div>
 
-      <DataTable id="stock-units-table" data={units} columns={columns} />
+      {!loading && units.length === 0 ? (
+        query.trim() ? (
+          <EmptyState
+            icon={<PackageSearch size={20} />}
+            title={t('stockUnits.empty.noMatchTitle', 'No units match "{{term}}"', { term: query.trim() })}
+            description={t('stockUnits.empty.noMatchDescription', 'Check the serial or MAC address, or clear the search to see all units.')}
+            action={
+              <Button id="stock-units-empty-clear" variant="link" onClick={clearSearch}>
+                {t('stockUnits.empty.clearSearch', 'Clear search')}
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={<PackageSearch size={20} />}
+            title={t('stockUnits.empty.noUnitsTitle', 'No stock units yet')}
+            description={t('stockUnits.empty.noUnitsDescription', 'Serialized units appear here once stock is received against a serialized product.')}
+          />
+        )
+      ) : (
+        <DataTable id="stock-units-table" data={units} columns={columns} />
+      )}
 
       <Dialog
         isOpen={historyDetail !== null}
