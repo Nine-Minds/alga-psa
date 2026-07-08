@@ -128,10 +128,11 @@ jobs:
           REFERENCE=$(psql -h localhost -U postgres -d server -tAc "SELECT count(*) FILTER (WHERE partmethod = 'n' AND repmodel = 't') FROM pg_dist_partition;")
           echo "Distributed tables: $DISTRIBUTED, reference tables: $REFERENCE"
           psql -h localhost -U postgres -d server -c "SELECT logicalrelid::regclass AS table_name, CASE WHEN partmethod = 'h' THEN 'distributed' WHEN repmodel = 't' THEN 'reference' ELSE 'citus-local' END AS type FROM pg_dist_partition ORDER BY 2, 1;"
-          # A green run distributes ~160 tables; 100 is a safe floor that still
-          # catches wholesale silent breakage.
-          if [ "$DISTRIBUTED" -lt 100 ]; then
-            echo "::error::Only $DISTRIBUTED tables distributed (expected ~160) — Citus branches of the migrations did not run."
+          # A green run distributes ~360 tables (the 20260708* catch-up
+          # migrations converge the full topology); 300 is a safe floor that
+          # still catches wholesale silent breakage.
+          if [ "$DISTRIBUTED" -lt 300 ]; then
+            echo "::error::Only $DISTRIBUTED tables distributed (expected ~360) — Citus branches of the migrations did not run."
             exit 1
           fi
           # Cornerstone tables that must be distributed for the schema to work

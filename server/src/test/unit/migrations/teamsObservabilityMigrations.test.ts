@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import path from 'path';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 
 function readRepoFile(relativePathFromRepoRoot: string): string {
   const repoRoot = path.resolve(__dirname, '../../../../..');
@@ -91,7 +91,10 @@ describe('teams observability migrations', () => {
 
   it('keeps the observability migrations in the CE migration path without Citus-only mirrors', () => {
     const repoRoot = path.resolve(__dirname, '../../../../..');
-    const citusMigrationNames = readdirSync(path.join(repoRoot, 'ee/server/migrations/citus'));
+    // The citus folder was dead tooling and has been removed; its absence is
+    // the strongest form of "no Citus-only mirrors".
+    const citusDir = path.join(repoRoot, 'ee/server/migrations/citus');
+    const citusMigrationNames = existsSync(citusDir) ? readdirSync(citusDir) : [];
     expect(citusMigrationNames).not.toContain('20260524090000_create_teams_notification_deliveries.cjs');
     expect(citusMigrationNames).not.toContain('20260524090100_create_teams_audit_events.cjs');
     expect(citusMigrationNames).not.toContain('20260524090200_create_teams_conversation_references.cjs');

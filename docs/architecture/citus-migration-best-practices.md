@@ -131,6 +131,20 @@ if (isCitusDistributed) {
 
 For new tenant tables, the shared helper `server/migrations/utils/citusDistribution.cjs` wraps this check: `ensureTenantDistribution(knex, 'my_table')` distributes on `tenant` colocated with `tenants`, and is a no-op on plain PostgreSQL or when the table is already distributed. Migrations that distribute must set `exports.config = { transaction: false }`. A new tenant table also needs registration in the query metadata registry — follow the checklist in [tenant-isolation.md](tenant-isolation.md).
 
+**All distribution lives in `server/migrations`, guarded at runtime — never in a separate Citus-only track.** A creation migration distributes its own table in the same file. The former `ee/server/migrations/citus/` directory was never part of the migration workflow (its scripts were run against production manually in 2025) and has been removed; every tenant table it covered — plus the ~10 months of tables created afterwards without distribution — is converged by two catch-up migrations, `20260708120000_distribute_quotes_family_and_tax_reference_tables.cjs` and `20260708130000_distribute_remaining_tenant_tables.cjs`. A table skipped there deliberately (auth-token lookup tables, stripe control-plane, trigger-bearing tables, varchar-tenant families) is documented in the second file's header; do not distribute one without addressing the reason it was deferred.
+
+### Distribution constraints (hard-won, Citus 12.1)
+
+Rules `create_distributed_table` enforces that plain PostgreSQL never exercises — each of these has broken a real migration:
+
+- The `PRIMARY KEY` and **every** UNIQUE constraint/index must include the distribution column (`tenant`), or distribution fails with `cannot create constraint`.
+- Distributed tables cannot have triggers; drop them before distributing.
+- A composite FK that includes `tenant` cannot use `ON DELETE SET NULL` (it would null the distribution column) — even the PG15 column-limited `SET NULL (col)` form is rejected, both at distribute time and at `ADD CONSTRAINT` time. Recreate such FKs as plain (NO ACTION) before distributing; deletes of the referenced row then block instead of auto-nulling.
+- `colocate_with => 'tenants'` requires the distribution column type to match (`uuid`); a `varchar` tenant column cannot join the colocation group.
+- Converting a table to a reference table pulls local tables that reference it into citus-local conversion, which fails if those referrers carry FKs to distributed tables. Drop the inbound FKs first, convert, distribute the referrers, then re-add the FKs (distributed → reference FKs are legal).
+- FK cycles between tenant tables must be broken (drop one edge) before distributing and re-added afterwards.
+- `DROP TRIGGER IF EXISTS` and similar DDL fail wholesale on an already-distributed table — guard repair steps with a `pg_dist_partition` check.
+
 ### 2. Use Raw SQL for DDL
 
 Knex's schema builder may not handle Citus correctly. Use raw SQL:
@@ -247,6 +261,7 @@ if (isCitus.rows[0]?.is_distributed) {
 Before deploying a migration:
 
 - [ ] Migration is idempotent (can be run multiple times safely)
+- [ ] New tenant table calls `ensureTenantDistribution` in its creation migration (PK and uniques include `tenant`; no triggers; no composite `SET NULL` FKs — see Distribution constraints)
 - [ ] If it distributes a possibly-non-empty table, it calls `truncate_local_data_after_distributing_table()` right after (see Issue 4)
 - [ ] Tested on both PostgreSQL and CitusDB
 - [ ] Large backfills include delays for propagation
