@@ -53,18 +53,31 @@ function csvEscape(v: unknown): string {
   return /[",\n\r]/.test(s) ? `"${s}"` : s;
 }
 
+// A distinct, semantic variant for every one of the 8 unit statuses, so the
+// status color is a reliable scan signal. The old map colored only 4 and let
+// the other 4 (allocated/in_transit/on_loan/returned) silently share retired's
+// grey. `default` is a visibly-neutral catch-all so a new status can never
+// masquerade as an existing one.
 function statusVariant(v?: string | null) {
   switch (v) {
-    case 'retired':
-      return 'secondary' as const;
-    case 'in_rma':
-      return 'warning' as const;
-    case 'delivered':
-      return 'success' as const;
     case 'in_stock':
-      return 'info' as const;
+      return 'info' as const; // available at a location
+    case 'allocated':
+      return 'primary' as const; // reserved to an order
+    case 'in_transit':
+      return 'outline' as const; // moving between locations
+    case 'on_loan':
+      return 'warning' as const; // out with a client, due back
+    case 'delivered':
+      return 'success' as const; // shipped to the client
+    case 'returned':
+      return 'secondary' as const; // came back from the client
+    case 'in_rma':
+      return 'error' as const; // out for repair/replacement
+    case 'retired':
+      return 'default-muted' as const; // end of life
     default:
-      return 'secondary' as const;
+      return 'default-muted' as const;
   }
 }
 
