@@ -137,6 +137,7 @@ function buildStatus(overrides: Record<string, unknown> = {}) {
         clientSecretRef: 'microsoft_profile_profile-1_client_secret',
         isDefault: true,
         isArchived: false,
+        capabilities: ['msp_sso', 'email', 'calendar', 'teams'],
         readiness: {
           ready: true,
           clientIdConfigured: true,
@@ -158,6 +159,7 @@ function buildStatus(overrides: Record<string, unknown> = {}) {
         clientSecretRef: 'microsoft_profile_profile-2_client_secret',
         isDefault: false,
         isArchived: false,
+        capabilities: ['email', 'calendar'],
         readiness: {
           ready: true,
           clientIdConfigured: true,
@@ -179,6 +181,7 @@ function buildStatus(overrides: Record<string, unknown> = {}) {
         clientSecretRef: 'microsoft_profile_profile-archived_client_secret',
         isDefault: false,
         isArchived: true,
+        capabilities: ['msp_sso', 'email', 'calendar', 'teams'],
         readiness: {
           ready: false,
           clientIdConfigured: true,
@@ -376,6 +379,11 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     expect(optionLabels).toContain('Secondary Profile');
     expect(optionLabels).not.toContain('Archived Profile');
 
+    const teamsSelect = screen.getByTestId('microsoft-binding-select-teams');
+    const teamsOptionLabels = within(teamsSelect).getAllByRole('option').map((option) => option.textContent);
+    expect(teamsOptionLabels).toContain('Primary Profile');
+    expect(teamsOptionLabels).not.toContain('Secondary Profile');
+
     await user.selectOptions(emailSelect, '');
     expect(setMicrosoftConsumerBindingMock).not.toHaveBeenCalled();
 
@@ -473,6 +481,9 @@ describe('MicrosoftIntegrationSettings contracts', () => {
       )
     ).toBeInTheDocument();
     expect(within(createDialog).getByText('Set this profile as the default Microsoft profile')).toBeInTheDocument();
+    expect(within(createDialog).getByText('Enabled capabilities')).toBeInTheDocument();
+    expect(within(createDialog).getByLabelText('Email')).toBeChecked();
+    expect(within(createDialog).getByLabelText('Calendar')).toBeChecked();
     expect(
       within(createDialog).getByText(
         'Default profiles stay available for profile-management workflows and migration-safe metadata, not consumer routing.'
@@ -507,6 +518,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
         clientId: 'primary-client-id',
         clientSecret: '',
         tenantId: 'tenant-guid-1',
+        capabilities: ['msp_sso', 'email', 'calendar', 'teams'],
       });
     });
 

@@ -1065,7 +1065,10 @@
           "needsAttention": "Vereist aandacht",
           "saving": "Opslaan…",
           "selectProfile": "Selecteer een profiel",
-          "unbound": "Niet gekoppeld"
+          "unbound": "Niet gekoppeld",
+          "noCapablePlaceholder": "No enabled profile",
+          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.",
+          "noEmailCapableProfiles": "No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app."
         },
         "bindings": {
           "summaryBound": "{{consumer}} is gekoppeld aan {{profile}}.",
@@ -1074,7 +1077,8 @@
           "warningArchived": "{{consumer}} is nog steeds gekoppeld aan een gearchiveerd profiel. Koppel opnieuw aan een actief profiel.",
           "warningNoBinding": "Er is nog geen {{consumer}}-binding geconfigureerd.",
           "warningNotReady": "{{consumer}} is gekoppeld aan {{profile}}, maar dat profiel moet nog worden geconfigureerd.",
-          "warningProfileMissing": "{{consumer}} is gekoppeld aan een profiel dat niet meer beschikbaar is. Koppel opnieuw aan een actief profiel."
+          "warningProfileMissing": "{{consumer}} is gekoppeld aan een profiel dat niet meer beschikbaar is. Koppel opnieuw aan een actief profiel.",
+          "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
         },
         "bindingsAlertCe": "Expliciete bindingen zijn de bron van waarheid voor de selectie van het MSP SSO-profiel. Configureer aanmeldingsdomeinen apart na het kiezen van het gekoppelde profiel.",
         "bindingsAlertEe": "Expliciete bindingen zijn de bron van waarheid voor de selectie van MSP SSO-, e-mail-, agenda- en Teams-profielen.",
@@ -1123,7 +1127,9 @@
           "setDefault": "Dit profiel instellen als standaard Microsoft-profiel",
           "setDefaultHelp": "Standaardprofielen blijven beschikbaar voor profielbeheer-workflows en migratieveilige metadata, niet voor consumer-routing.",
           "storedSecretHint": "Opgeslagen secret: {{secret}}. Laat dit veld leeg om het ongewijzigd te houden.",
-          "tenantId": "Tenant ID"
+          "tenantId": "Tenant ID",
+          "capabilities": "Enabled capabilities",
+          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "Microsoft-profiel aanmaken",
@@ -1177,7 +1183,9 @@
           "storedSecret": "Opgeslagen secret",
           "teamsAppIdUri": "Teams Application ID URI",
           "tenantIdLabel": "Tenant ID:",
-          "updating": "Bijwerken…"
+          "updating": "Bijwerken…",
+          "enabledCapabilities": "Enabled capabilities",
+          "noEnabledCapabilities": "No enabled capabilities"
         },
         "providerReconnect": {
           "description": "Gebruik dit als u inloggegevens roteert of opzettelijk Outlook-e-mail of de agenda aan een ander Microsoft-profiel koppelt.",

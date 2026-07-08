@@ -1065,7 +1065,10 @@
           "needsAttention": "Erfordert Aufmerksamkeit",
           "saving": "Speichern…",
           "selectProfile": "Profil auswählen",
-          "unbound": "Nicht gebunden"
+          "unbound": "Nicht gebunden",
+          "noCapablePlaceholder": "No enabled profile",
+          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.",
+          "noEmailCapableProfiles": "No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app."
         },
         "bindings": {
           "summaryBound": "{{consumer}} ist an {{profile}} gebunden.",
@@ -1074,7 +1077,8 @@
           "warningArchived": "{{consumer}} ist weiterhin an ein archiviertes Profil gebunden. Binden Sie es an ein aktives Profil neu.",
           "warningNoBinding": "Für {{consumer}} ist noch keine Bindung konfiguriert.",
           "warningNotReady": "{{consumer}} ist an {{profile}} gebunden, aber dieses Profil benötigt noch eine Konfiguration.",
-          "warningProfileMissing": "{{consumer}} ist an ein Profil gebunden, das nicht mehr verfügbar ist. Binden Sie es an ein aktives Profil neu."
+          "warningProfileMissing": "{{consumer}} ist an ein Profil gebunden, das nicht mehr verfügbar ist. Binden Sie es an ein aktives Profil neu.",
+          "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
         },
         "bindingsAlertCe": "Explizite Bindungen sind die Referenz für die Auswahl des MSP-SSO-Profils. Konfigurieren Sie die Anmeldedomänen separat, nachdem Sie das gebundene Profil ausgewählt haben.",
         "bindingsAlertEe": "Explizite Bindungen sind die Referenz für die Auswahl des MSP-SSO-, E-Mail-, Kalender- und Teams-Profils.",
@@ -1123,7 +1127,9 @@
           "setDefault": "Dieses Profil als Standard-Microsoft-Profil festlegen",
           "setDefaultHelp": "Standardprofile stehen für Profilverwaltungs-Workflows und migrations­sichere Metadaten zur Verfügung, jedoch nicht für das Consumer-Routing.",
           "storedSecretHint": "Gespeichertes Secret: {{secret}}. Lassen Sie dieses Feld leer, um es unverändert zu lassen.",
-          "tenantId": "Tenant ID"
+          "tenantId": "Tenant ID",
+          "capabilities": "Enabled capabilities",
+          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "Microsoft-Profil erstellen",
@@ -1177,7 +1183,9 @@
           "storedSecret": "Gespeichertes Secret",
           "teamsAppIdUri": "Teams Application ID URI",
           "tenantIdLabel": "Tenant ID:",
-          "updating": "Wird aktualisiert…"
+          "updating": "Wird aktualisiert…",
+          "enabledCapabilities": "Enabled capabilities",
+          "noEnabledCapabilities": "No enabled capabilities"
         },
         "providerReconnect": {
           "description": "Verwenden Sie dies, wenn Sie Anmeldedaten rotieren oder Outlook-E-Mail bzw. den Kalender absichtlich an ein anderes Microsoft-Profil binden.",
