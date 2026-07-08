@@ -717,7 +717,7 @@
     },
     "entryAdded": "Landed-cost entry added.",
     "fields": {
-      "amount": "Amount ($ {{currency}})"
+      "amount": "Amount ({{currency}})"
     },
     "loadError": "Couldn't load landed costs.",
     "nothingReceived": "Nothing received yet — receive the PO first, then apply.",

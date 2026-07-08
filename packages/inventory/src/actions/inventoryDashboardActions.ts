@@ -15,14 +15,16 @@ import {
   queryPriceCreep,
   queryRmaReceivables,
   queryUnbilled,
-  queryValueWowDelta,
+  queryValueWowDeltaByCurrency,
   queryVanContext,
   queryWarrantyExpiring,
   type DeadStock,
   type DeploymentRow,
+  type MoneyByCurrency,
   type Pipeline,
   type RmaReceivables,
   type UnbilledSoRow,
+  totalMoneyByCurrency,
 } from '../lib/dashboardQueries';
 import { resolveTenantCurrency } from '../lib/tenantCurrency';
 
@@ -151,8 +153,12 @@ export interface InventoryDashboardData {
     techs: Array<{ name: string; count: number; est: number | null }>;
   };
   footer: {
+    /** Legacy total; use value_by_currency for display so non-2-decimal currencies keep their scale. */
     value: number;
+    value_by_currency: MoneyByCurrency[];
+    /** Legacy total; use wow_delta_by_currency for display. */
     wow_delta: number;
+    wow_delta_by_currency: MoneyByCurrency[];
     on_hand_units: number;
     serialized_units: number;
     dead_stock: DeadStock | null;
@@ -176,6 +182,18 @@ const ROUTES = {
   quotes: '/msp/billing?tab=quotes',
   client: (id: string) => `/msp/clients/${id}`,
 } as const;
+
+function mergeMoneyBuckets(rows: Array<{ currency_code: string | null; amount: unknown }>, fallbackCurrency: string): MoneyByCurrency[] {
+  const byCurrency = new Map<string, number>();
+  for (const row of rows) {
+    const currency = row.currency_code?.trim() || fallbackCurrency;
+    byCurrency.set(currency, (byCurrency.get(currency) ?? 0) + Math.round(Number(row.amount ?? 0)));
+  }
+  return [...byCurrency.entries()]
+    .map(([currency_code, amount]) => ({ currency_code, amount }))
+    .filter((row) => row.amount !== 0)
+    .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount) || a.currency_code.localeCompare(b.currency_code));
+}
 
 function sameLocalDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -209,20 +227,40 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
     const currency_code = await resolveTenantCurrency(trx, tenant);
 
     /* ---- on-hand value + units (footer) ---- */
-    const nonSerValueRow = await trx('stock_levels as sl')
+    const settingsCurrency = trx.raw("COALESCE(NULLIF(pis.cost_currency, ''), ?) as currency_code", [currency_code]);
+    const settingsCurrencyGroup = trx.raw("COALESCE(NULLIF(pis.cost_currency, ''), ?)", [currency_code]);
+    const nonSerValueRows = await trx('stock_levels as sl')
       .join('product_inventory_settings as pis', function () {
         this.on('sl.service_id', '=', 'pis.service_id').andOn('sl.tenant', '=', 'pis.tenant');
       })
       .where({ 'sl.tenant': tenant, 'pis.is_serialized': false })
       .andWhere('sl.quantity_on_hand', '>', 0)
-      .select<{ value: string }[]>(trx.raw('COALESCE(SUM(sl.quantity_on_hand * COALESCE(pis.average_cost, 0)),0) as value'))
-      .first();
-    const serValueRow = await trx('stock_units')
-      .where({ tenant, status: 'in_stock' })
-      .whereNotNull('location_id')
-      .select<{ value: string }[]>(trx.raw('COALESCE(SUM(COALESCE(unit_cost,0)),0) as value'))
-      .first();
-    const footerValue = Math.round(Number(nonSerValueRow?.value ?? 0)) + Math.round(Number(serValueRow?.value ?? 0));
+      .groupBy(settingsCurrencyGroup)
+      .select<{ currency_code: string | null; value: string }[]>(
+        settingsCurrency,
+        trx.raw('COALESCE(SUM(sl.quantity_on_hand * COALESCE(pis.average_cost, 0)),0) as value'),
+      );
+    const unitCurrency = trx.raw("COALESCE(NULLIF(su.cost_currency, ''), NULLIF(pis.cost_currency, ''), ?) as currency_code", [currency_code]);
+    const unitCurrencyGroup = trx.raw("COALESCE(NULLIF(su.cost_currency, ''), NULLIF(pis.cost_currency, ''), ?)", [currency_code]);
+    const serValueRows = await trx('stock_units as su')
+      .leftJoin('product_inventory_settings as pis', function () {
+        this.on('su.service_id', '=', 'pis.service_id').andOn('su.tenant', '=', 'pis.tenant');
+      })
+      .where({ 'su.tenant': tenant, 'su.status': 'in_stock' })
+      .whereNotNull('su.location_id')
+      .groupBy(unitCurrencyGroup)
+      .select<{ currency_code: string | null; value: string }[]>(
+        unitCurrency,
+        trx.raw('COALESCE(SUM(COALESCE(su.unit_cost,0)),0) as value'),
+      );
+    const footerValueByCurrency = mergeMoneyBuckets(
+      [
+        ...nonSerValueRows.map((row) => ({ currency_code: row.currency_code, amount: row.value })),
+        ...serValueRows.map((row) => ({ currency_code: row.currency_code, amount: row.value })),
+      ],
+      currency_code,
+    );
+    const footerValue = totalMoneyByCurrency(footerValueByCurrency);
 
     const onHandRow = await trx('stock_levels').where({ tenant }).sum<{ s: string }>('quantity_on_hand as s').first();
     const serCountRow = await trx('stock_units').where({ tenant, status: 'in_stock' }).count<{ c: string }>('* as c').first();
@@ -318,8 +356,9 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
     const rma_receivables = await queryRmaReceivables(trx, tenant);
     const deployments = await queryDeployments(trx, tenant);
     const pipeline = await queryPipeline(trx, tenant);
-    const deadStock = await queryDeadStock(trx, tenant);
-    const wowDelta = await queryValueWowDelta(trx, tenant);
+    const deadStock = await queryDeadStock(trx, tenant, currency_code);
+    const wowDeltaByCurrency = await queryValueWowDeltaByCurrency(trx, tenant, currency_code);
+    const wowDelta = totalMoneyByCurrency(wowDeltaByCurrency);
     const overdueLoaners = await queryOverdueLoaners(trx, tenant);
     const countApprovals = await queryCountApprovals(trx, tenant);
     const billCreep = await queryBillCreep(trx, tenant);
@@ -822,7 +861,9 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
       ghost_week: { count: ghost_week.count, est_total: ghost_week.est_total, techs: ghost_week.techs },
       footer: {
         value: footerValue,
+        value_by_currency: footerValueByCurrency,
         wow_delta: wowDelta,
+        wow_delta_by_currency: wowDeltaByCurrency,
         on_hand_units: Number(onHandRow?.s ?? 0),
         serialized_units: Number(serCountRow?.c ?? 0),
         dead_stock: deadStock,

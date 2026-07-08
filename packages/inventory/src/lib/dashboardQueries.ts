@@ -21,6 +21,34 @@ function num(v: unknown): number {
   return Math.round(Number(v ?? 0));
 }
 
+export interface MoneyByCurrency {
+  currency_code: string;
+  amount: number;
+}
+
+function normalizeCurrency(currency: string | null | undefined, fallbackCurrency: string): string {
+  return currency?.trim() || fallbackCurrency;
+}
+
+function mergeMoneyByCurrency(
+  rows: Array<{ currency_code: string | null; amount: unknown }>,
+  fallbackCurrency: string,
+): MoneyByCurrency[] {
+  const byCurrency = new Map<string, number>();
+  for (const row of rows) {
+    const currency = normalizeCurrency(row.currency_code, fallbackCurrency);
+    byCurrency.set(currency, (byCurrency.get(currency) ?? 0) + num(row.amount));
+  }
+  return [...byCurrency.entries()]
+    .map(([currency_code, amount]) => ({ currency_code, amount }))
+    .filter((row) => row.amount !== 0)
+    .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount) || a.currency_code.localeCompare(b.currency_code));
+}
+
+export function totalMoneyByCurrency(rows: MoneyByCurrency[]): number {
+  return rows.reduce((sum, row) => sum + row.amount, 0);
+}
+
 /* ------------------------------ D1 deployments ------------------------------ */
 
 export type DeploymentStatus = 'at_risk' | 'ready' | 'staging';
@@ -587,8 +615,10 @@ export async function queryBillCreep(db: Db, tenant: string): Promise<BillCreepR
 export interface DeadStock {
   location_id: string;
   location_name: string | null;
-  /** Cents tied up at the worst location. */
+  /** Legacy ranking total for the worst location; use amount_by_currency for display. */
   amount: number;
+  /** Minor units tied up at the worst location, grouped by stock cost currency. */
+  amount_by_currency: MoneyByCurrency[];
   /** Number of locations with dead stock (worst is surfaced; rest rolled up). */
   location_count: number;
 }
@@ -599,7 +629,9 @@ export interface DeadStock {
  * that location) plus in_stock serialized units received >90d ago with no
  * unit movement since.
  */
-export async function queryDeadStock(db: Db, tenant: string): Promise<DeadStock | null> {
+export async function queryDeadStock(db: Db, tenant: string, fallbackCurrency: string): Promise<DeadStock | null> {
+  const settingsCurrency = db.raw("COALESCE(NULLIF(pis.cost_currency, ''), ?) as currency_code", [fallbackCurrency]);
+  const settingsCurrencyGroup = db.raw("COALESCE(NULLIF(pis.cost_currency, ''), ?)", [fallbackCurrency]);
   const nonSer = await db('stock_levels as sl')
     .join('product_inventory_settings as pis', function () {
       this.on('sl.service_id', '=', 'pis.service_id').andOn('sl.tenant', '=', 'pis.tenant');
@@ -614,10 +646,19 @@ export async function queryDeadStock(db: Db, tenant: string): Promise<DeadStock 
         .whereRaw('(sm.from_location_id = sl.location_id OR sm.to_location_id = sl.location_id)')
         .whereRaw("sm.created_at >= now() - interval '90 days'");
     })
-    .groupBy('sl.location_id')
-    .select<any[]>('sl.location_id as location_id', db.raw('SUM(sl.quantity_on_hand * COALESCE(pis.average_cost, 0)) as value'));
+    .groupBy('sl.location_id', settingsCurrencyGroup)
+    .select<any[]>(
+      'sl.location_id as location_id',
+      settingsCurrency,
+      db.raw('SUM(sl.quantity_on_hand * COALESCE(pis.average_cost, 0)) as value'),
+    );
 
+  const unitCurrency = db.raw("COALESCE(NULLIF(su.cost_currency, ''), NULLIF(pis.cost_currency, ''), ?) as currency_code", [fallbackCurrency]);
+  const unitCurrencyGroup = db.raw("COALESCE(NULLIF(su.cost_currency, ''), NULLIF(pis.cost_currency, ''), ?)", [fallbackCurrency]);
   const ser = await db('stock_units as su')
+    .leftJoin('product_inventory_settings as pis', function () {
+      this.on('su.service_id', '=', 'pis.service_id').andOn('su.tenant', '=', 'pis.tenant');
+    })
     .where({ 'su.tenant': tenant, 'su.status': 'in_stock' })
     .whereNotNull('su.location_id')
     .andWhereRaw("COALESCE(su.received_at, su.created_at) < now() - interval '90 days'")
@@ -628,18 +669,30 @@ export async function queryDeadStock(db: Db, tenant: string): Promise<DeadStock 
         .whereRaw('sm.unit_id = su.unit_id')
         .whereRaw("sm.created_at >= now() - interval '90 days'");
     })
-    .groupBy('su.location_id')
-    .select<any[]>('su.location_id as location_id', db.raw('SUM(COALESCE(su.unit_cost, 0)) as value'));
+    .groupBy('su.location_id', unitCurrencyGroup)
+    .select<any[]>(
+      'su.location_id as location_id',
+      unitCurrency,
+      db.raw('SUM(COALESCE(su.unit_cost, 0)) as value'),
+    );
 
-  const byLocation = new Map<string, number>();
+  const byLocation = new Map<string, MoneyByCurrency[]>();
   for (const r of [...nonSer, ...ser]) {
-    byLocation.set(r.location_id, (byLocation.get(r.location_id) ?? 0) + num(r.value));
+    const rows = byLocation.get(r.location_id) ?? [];
+    rows.push({ currency_code: normalizeCurrency(r.currency_code, fallbackCurrency), amount: num(r.value) });
+    byLocation.set(r.location_id, rows);
   }
-  const entries = [...byLocation.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  const entries = [...byLocation.entries()]
+    .map(([locationId, rows]) => {
+      const amount_by_currency = mergeMoneyByCurrency(rows, fallbackCurrency);
+      return { locationId, amount_by_currency, amount: totalMoneyByCurrency(amount_by_currency) };
+    })
+    .filter((entry) => entry.amount_by_currency.length > 0)
+    .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount) || a.locationId.localeCompare(b.locationId));
   if (entries.length === 0) return null;
-  const [locationId, amount] = entries[0];
+  const { locationId, amount, amount_by_currency } = entries[0];
   const loc = await db('stock_locations').where({ tenant, location_id: locationId }).first<{ name: string }>('name');
-  return { location_id: locationId, location_name: loc?.name ?? null, amount, location_count: entries.length };
+  return { location_id: locationId, location_name: loc?.name ?? null, amount, amount_by_currency, location_count: entries.length };
 }
 
 /* --------------------------- D8 van context --------------------------- */
@@ -802,6 +855,23 @@ export async function queryPipeline(db: Db, tenant: string): Promise<Pipeline> {
  * drift over the week is accepted as part of the approximation.
  */
 export async function queryValueWowDelta(db: Db, tenant: string): Promise<number> {
+  const rows = await queryValueWowDeltaByCurrency(db, tenant, 'USD');
+  return totalMoneyByCurrency(rows);
+}
+
+export async function queryValueWowDeltaByCurrency(
+  db: Db,
+  tenant: string,
+  fallbackCurrency: string,
+): Promise<MoneyByCurrency[]> {
+  const currencyExpr = db.raw(
+    "COALESCE(NULLIF(sm.cost_currency, ''), NULLIF(su.cost_currency, ''), NULLIF(pis.cost_currency, ''), ?) as currency_code",
+    [fallbackCurrency],
+  );
+  const currencyGroup = db.raw(
+    "COALESCE(NULLIF(sm.cost_currency, ''), NULLIF(su.cost_currency, ''), NULLIF(pis.cost_currency, ''), ?)",
+    [fallbackCurrency],
+  );
   const row = await db('stock_movements as sm')
     .leftJoin('stock_units as su', function () {
       this.on('sm.unit_id', '=', 'su.unit_id').andOn('sm.tenant', '=', 'su.tenant');
@@ -811,7 +881,9 @@ export async function queryValueWowDelta(db: Db, tenant: string): Promise<number
     })
     .where('sm.tenant', tenant)
     .andWhereRaw("sm.created_at >= now() - interval '7 days'")
-    .select<{ delta: string }[]>(
+    .groupBy(currencyGroup)
+    .select<{ currency_code: string | null; delta: string }[]>(
+      currencyExpr,
       db.raw(`COALESCE(SUM(
         (CASE
           WHEN sm.movement_type = 'retire' THEN -1
@@ -821,9 +893,11 @@ export async function queryValueWowDelta(db: Db, tenant: string): Promise<number
           ELSE 0
         END) * sm.quantity * COALESCE(sm.unit_cost, su.unit_cost, pis.average_cost, 0)
       ), 0) as delta`),
-    )
-    .first();
-  return num(row?.delta);
+    );
+  return mergeMoneyByCurrency(
+    row.map((r) => ({ currency_code: r.currency_code, amount: r.delta })),
+    fallbackCurrency,
+  );
 }
 
 /* --------------------------- RMA receivables --------------------------- */

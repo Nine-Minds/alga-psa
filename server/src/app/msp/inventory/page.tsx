@@ -48,7 +48,9 @@ const EMPTY: InventoryDashboardData = {
   ghost_week: { count: 0, est_total: null, techs: [] },
   footer: {
     value: 0,
+    value_by_currency: [],
     wow_delta: 0,
+    wow_delta_by_currency: [],
     on_hand_units: 0,
     serialized_units: 0,
     dead_stock: null,
