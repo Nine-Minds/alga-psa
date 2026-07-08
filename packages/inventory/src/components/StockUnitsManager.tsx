@@ -284,16 +284,20 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
       title: t('common.actions', 'Actions'),
       dataIndex: 'unit_id',
       width: '120px',
-      render: (_: any, rec: IStockUnit) => (
-        <Button
-          id={`unit-history-${rec.unit_id}`}
-          variant="ghost"
-          size="sm"
-          onClick={() => openHistory(rec.unit_id)}
-          disabled={historyLoadingUnitId !== null}
-        >
-          {historyLoadingUnitId === rec.unit_id ? t('common.loading', 'Loading…') : t('stockUnits.history', 'History')}
-        </Button>
+      headerClassName: 'text-right',
+      sortable: false,
+      render: (_value: unknown, rec: IStockUnit) => (
+        <div className="flex justify-end">
+          <Button
+            id={`unit-history-${rec.unit_id}`}
+            variant="ghost"
+            size="sm"
+            onClick={() => openHistory(rec.unit_id)}
+            disabled={historyLoadingUnitId !== null}
+          >
+            {historyLoadingUnitId === rec.unit_id ? t('common.loading', 'Loading…') : t('stockUnits.history', 'History')}
+          </Button>
+        </div>
       ),
     },
   ];
@@ -301,7 +305,14 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
   return (
     <div className="p-6 space-y-4" id="stock-units-page">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{t('stockUnits.title', 'Stock Units')}</h1>
+        <div>
+          <h1 className="text-2xl font-semibold">{t('stockUnits.title', 'Stock Units')}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {units.length === 1
+              ? t('stockUnits.summary.one', '{{n}} unit', { n: units.length })
+              : t('stockUnits.summary.many', '{{n}} units', { n: units.length })}
+          </p>
+        </div>
         <Button id="stock-units-refresh-button" variant="outline" onClick={reload} disabled={loading}>
           {t('common.refresh', 'Refresh')}
         </Button>
@@ -394,7 +405,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">{t('stockUnits.detail.location', 'Location')}</div>
-                  <div className="font-mono text-xs">{locationName(historyDetail.unit.location_id)}</div>
+                  <div>{locationName(historyDetail.unit.location_id)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">{t('stockUnits.detail.unitCost', 'Unit cost')}</div>
