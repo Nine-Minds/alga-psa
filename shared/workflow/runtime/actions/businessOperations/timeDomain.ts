@@ -705,21 +705,24 @@ async function resolveBucketUsagePeriod(params: {
     };
   }
 
-  const contractAssignmentQuery = tenantScopedTable(trx, 'client_contract_lines as ccl', tenantId);
-  tenantJoin(trx, tenantId, contractAssignmentQuery, 'contract_lines as cl', 'ccl.contract_line_id', 'cl.contract_line_id');
+  // LEVERAGE: pattern bucket-usage-period - same period logic also in @alga-psa/billing bucketUsageService;
+  // kept separate to respect the shared/workflow -> billing layering boundary.
+  const contractAssignmentQuery = tenantScopedTable(trx, 'client_contracts as cc', tenantId);
+  tenantJoin(trx, tenantId, contractAssignmentQuery, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
+  tenantJoin(trx, tenantId, contractAssignmentQuery, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
 
   const contractAssignment = await contractAssignmentQuery
     .where({
-      'ccl.client_id': clientId,
-      'ccl.contract_line_id': contractLineId,
-      'ccl.is_active': true,
+      'cc.client_id': clientId,
+      'cl.contract_line_id': contractLineId,
+      'cc.is_active': true,
     })
-    .andWhere('ccl.start_date', '<=', targetDateIso)
+    .andWhere('cc.start_date', '<=', targetDateIso)
     .andWhere((query) => {
-      query.whereNull('ccl.end_date').orWhere('ccl.end_date', '>=', targetDateIso);
+      query.whereNull('cc.end_date').orWhere('cc.end_date', '>=', targetDateIso);
     })
-    .orderBy('ccl.start_date', 'desc')
-    .select('ccl.start_date', 'cl.billing_frequency')
+    .orderBy('cc.start_date', 'desc')
+    .select('cc.start_date', 'cl.billing_frequency')
     .first<{ start_date: string; billing_frequency: string }>();
 
   if (!contractAssignment) {

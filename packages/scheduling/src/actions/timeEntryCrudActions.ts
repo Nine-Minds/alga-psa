@@ -3,7 +3,7 @@
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { determineDefaultContractLine } from '../lib/contractLineDisambiguation';
-import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
+import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '@alga-psa/billing/services/bucketUsageService';
 import {
   ITimeEntry,
   ITimeEntryWithWorkItem,

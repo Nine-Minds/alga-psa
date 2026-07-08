@@ -13,6 +13,7 @@ export default defineConfig({
       // Must precede the @alga-psa/auth alias, whose regex would otherwise
       // swallow "@alga-psa/authorization/..." specifiers.
       { find: /^@alga-psa\/authorization(.*)$/, replacement: path.resolve(__dirname, '../authorization/src$1') },
+      { find: /^@alga-psa\/billing(.*)$/, replacement: path.resolve(__dirname, '../billing/src$1') },
       { find: /^@alga-psa\/auth(.*)$/, replacement: path.resolve(__dirname, '../auth/src$1') },
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../core/src/index.ts') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/lib/$1') },

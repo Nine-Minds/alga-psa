@@ -89,10 +89,12 @@ describe('workflow time domain tenant-scoped query contract', () => {
     const createEntryValidationSection = sectionBetween('export async function createWorkflowTimeEntry', '  const startDate = ensureValidDate');
 
     expect(bucketPeriodSection).toContain("tenantScopedTable(trx, 'client_billing_cycles', tenantId)");
-    expect(bucketPeriodSection).toContain("tenantScopedTable(trx, 'client_contract_lines as ccl', tenantId)");
+    expect(bucketPeriodSection).toContain("tenantScopedTable(trx, 'client_contracts as cc', tenantId)");
+    expect(bucketPeriodSection).toContain("tenantJoin(trx, tenantId, contractAssignmentQuery, 'contracts as ct'");
+    expect(bucketPeriodSection).toContain("tenantJoin(trx, tenantId, contractAssignmentQuery, 'contract_lines as cl'");
     expect(bucketPeriodSection).toContain("tenantScopedTable(trx, 'bucket_usage', tenantId)");
     expect(bucketPeriodSection).not.toMatch(/\.where\(\{\s*tenant:\s*tenantId/);
-    expect(bucketPeriodSection).not.toContain("'ccl.tenant': tenantId");
+    expect(bucketPeriodSection).not.toContain("'cc.tenant': tenantId");
 
     expect(usageSection).toContain("tenantScopedTable(trx, 'contract_line_service_configuration as cfg', tenantId)");
     expect(usageSection).toContain("tenantScopedTable(trx, 'bucket_usage', tenantId)");

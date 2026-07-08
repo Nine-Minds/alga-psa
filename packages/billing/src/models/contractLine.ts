@@ -21,14 +21,16 @@ const ContractLine = {
     const tenant = await requireTenantId(knexOrTrx);
 
     try {
-      const result = await tenantScopedTable(knexOrTrx, tenant, 'client_contract_lines')
-        .where({
-          contract_line_id: planId
-        })
-        .count('client_contract_line_id as count')
-        .first() as { count: string };
+      const db = tenantDb(knexOrTrx, tenant);
+      const usageQuery = db.table('contract_lines as cl');
+      db.tenantJoin(usageQuery, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
 
-      return parseInt(result?.count || '0', 10) > 0;
+      const result = await usageQuery
+        .where('cl.contract_line_id', planId)
+        .count('cc.client_contract_id as count')
+        .first() as { count: string | number } | undefined;
+
+      return Number(result?.count ?? 0) > 0;
     } catch (error) {
       console.error(`Error checking contract line ${planId} usage:`, error);
       throw error;

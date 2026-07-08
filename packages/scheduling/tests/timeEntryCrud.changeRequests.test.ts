@@ -39,7 +39,7 @@ vi.mock('../src/lib/contractLineDisambiguation', () => ({
   determineDefaultContractLine: (...args: any[]) => determineDefaultContractLineMock(...args),
 }));
 
-vi.mock('../src/services/bucketUsageService', () => ({
+vi.mock('@alga-psa/billing/services/bucketUsageService', () => ({
   findOrCreateCurrentBucketUsageRecord: vi.fn(),
   updateBucketUsageMinutes: vi.fn(),
 }));
