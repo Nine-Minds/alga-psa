@@ -21,5 +21,6 @@ export * from './recurringTiming';
 export * from './recurringRunExecutionIdentity';
 export * from './clientCadenceServicePeriods';
 export * from './postDropRecurringObligationIdentity';
+export * from './bucketUsageService';
 export * from './clientCadenceScheduleRegeneration';
 export * from './applyClientCadenceChange';

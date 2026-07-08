@@ -37,7 +37,7 @@ describe('multi-active remaining checklist wiring coverage', () => {
   });
 
   it('T066: bucket ambiguity failures include actionable assignment context', () => {
-    const serviceSource = readRepo('packages/billing/src/services/bucketUsageService.ts');
+    const serviceSource = readRepo('shared/billingClients/bucketUsageService.ts');
     const testSource = readRepo('server/src/test/unit/billing/bucketUsageService.periods.test.ts');
     expect(serviceSource).toContain('Ambiguous bucket usage assignment resolution for client');
     expect(serviceSource).toContain('Matched assignments: ${clientPlan.client_contract_id}, ${conflictingClientPlan.client_contract_id}.');

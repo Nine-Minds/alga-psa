@@ -17,18 +17,25 @@ function tenantScopedTable<Row extends object = Record<string, any>>(
 }
 
 const ContractLine = {
+  // "In use by a client" means some client has adopted this line's contract.
+  // Resolve that through contract_lines (cl) -> client_contracts (cc); do NOT
+  // reach for `client_contract_lines` — that table was dropped in the
+  // contract-lines migration and no longer exists. Any new query touching
+  // contract-line ownership in this model should follow the same join.
   isInUse: async (knexOrTrx: Knex | Knex.Transaction, planId: string): Promise<boolean> => {
     const tenant = await requireTenantId(knexOrTrx);
 
     try {
-      const result = await tenantScopedTable(knexOrTrx, tenant, 'client_contract_lines')
-        .where({
-          contract_line_id: planId
-        })
-        .count('client_contract_line_id as count')
-        .first() as { count: string };
+      const db = tenantDb(knexOrTrx, tenant);
+      const usageQuery = db.table('contract_lines as cl');
+      db.tenantJoin(usageQuery, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
 
-      return parseInt(result?.count || '0', 10) > 0;
+      const result = await usageQuery
+        .where('cl.contract_line_id', planId)
+        .count('cc.client_contract_id as count')
+        .first() as { count: string | number } | undefined;
+
+      return Number(result?.count ?? 0) > 0;
     } catch (error) {
       console.error(`Error checking contract line ${planId} usage:`, error);
       throw error;
