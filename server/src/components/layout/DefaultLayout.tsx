@@ -53,6 +53,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     if (path.startsWith('/msp/billing')) return 'billing';
     if (path.startsWith('/msp/extensions')) return 'extensions';
     if (path.startsWith('/msp/inventory')) return 'inventory';
+    if (path.startsWith('/msp/document-templates')) return 'inventory';
     return 'main';
   };
 
