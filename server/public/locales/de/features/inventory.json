@@ -963,6 +963,15 @@
     "emailFailed": "Die Bestätigung konnte nicht per E-Mail gesendet werden.",
     "emailSuccess": "Bestätigung per E-Mail an {{recipients}} gesendet",
     "enterSerial": "Geben Sie mindestens eine Seriennummer ein.",
+    "errors": {
+      "documentGenerationFailed": "Das Dokument konnte nicht erstellt werden",
+      "downloadPermissionDenied": "Keine Berechtigung: Kundenauftragsdokumente können nicht heruntergeladen werden",
+      "emailConfirmationFailed": "Die Bestätigung konnte nicht per E-Mail gesendet werden",
+      "emailPermissionDenied": "Keine Berechtigung: Kundenauftragsdokumente können nicht per E-Mail gesendet werden",
+      "emailSendFailed": "E-Mail konnte nicht gesendet werden.",
+      "noRecipientEmail": "Für diesen Kunden ist keine Empfänger-E-Mail hinterlegt.",
+      "notFound": "Kundenauftrag nicht gefunden"
+    },
     "fields": {
       "allocationMode": "Zuordnungsmodus",
       "clientPoNumber": "Client PO number",
@@ -1234,6 +1243,7 @@
     "title": "Umlagerungen",
     "toLocation": "Zielstandort",
     "vanLoadList": "Fahrzeug-Ladeliste",
+    "vanLoadListReplenishment": "Auffüllung der Fahrzeug-Ladeliste",
     "status": {
       "dispatched": "Versendet",
       "received": "Empfangen",

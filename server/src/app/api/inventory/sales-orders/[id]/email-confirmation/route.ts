@@ -9,7 +9,11 @@
  * app because the inventory package cannot depend on billing.
  */
 
-import { emailSalesOrderConfirmation } from '@alga-psa/billing/actions';
+import {
+  emailSalesOrderConfirmation,
+  SalesOrderDocumentError,
+} from '@alga-psa/billing/actions';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,8 +33,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to email the confirmation';
-    const status = /permission denied/i.test(message) ? 403 : /not found/i.test(message) ? 404 : 400;
+    const { t } = await getServerTranslation(undefined, 'features/inventory');
+    const message = error instanceof Error
+      ? error.message
+      : t('salesOrders.errors.emailConfirmationFailed', 'Failed to email the confirmation');
+    const status = error instanceof SalesOrderDocumentError
+      ? error.code === 'permission_denied'
+        ? 403
+        : error.code === 'not_found'
+          ? 404
+          : 400
+      : 400;
     return new Response(JSON.stringify({ success: false, recipients: [], error: message }), {
       status,
       headers: { 'Content-Type': 'application/json' },

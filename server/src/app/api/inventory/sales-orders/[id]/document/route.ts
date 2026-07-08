@@ -9,7 +9,12 @@
  * is here (server app) because the inventory package cannot depend on billing.
  */
 
-import { downloadSalesOrderPDF, type SalesOrderDocumentType } from '@alga-psa/billing/actions';
+import {
+  downloadSalesOrderPDF,
+  SalesOrderDocumentError,
+  type SalesOrderDocumentType,
+} from '@alga-psa/billing/actions';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 const VALID_TYPES: SalesOrderDocumentType[] = ['sales-order', 'packing-slip', 'pick-list'];
 
@@ -31,8 +36,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to generate the document';
-    const status = /permission denied/i.test(message) ? 403 : /not found/i.test(message) ? 404 : 400;
+    const { t } = await getServerTranslation(undefined, 'features/inventory');
+    const message = error instanceof Error
+      ? error.message
+      : t('salesOrders.errors.documentGenerationFailed', 'Failed to generate the document');
+    const status = error instanceof SalesOrderDocumentError
+      ? error.code === 'permission_denied'
+        ? 403
+        : error.code === 'not_found'
+          ? 404
+          : 400
+      : 400;
     return new Response(JSON.stringify({ error: message }), {
       status,
       headers: { 'Content-Type': 'application/json' },

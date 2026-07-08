@@ -50,9 +50,9 @@ import {
  * the server picks the standard (or tenant/client override) template per type.
  */
 const SO_DOCUMENT_TYPES = [
-  { type: 'sales-order', label: 'Order Confirmation', suffix: '' },
-  { type: 'packing-slip', label: 'Packing Slip', suffix: '-packing-slip' },
-  { type: 'pick-list', label: 'Pick List', suffix: '-pick-list' },
+  { type: 'sales-order', suffix: '' },
+  { type: 'packing-slip', suffix: '-packing-slip' },
+  { type: 'pick-list', suffix: '-pick-list' },
 ] as const;
 
 /**
@@ -479,7 +479,7 @@ export function SalesOrdersManager({
                   id={`document-so-${rec.so_id}-${d.type}`}
                   onClick={() => downloadSalesOrderDocument(rec.so_id, rec.so_number, d.type, d.suffix, t)}
                 >
-                  {documentLabels[d.type] ?? d.label}
+                  {documentLabels[d.type]}
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />

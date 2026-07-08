@@ -3,6 +3,7 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { cn } from '@alga-psa/ui/lib/utils';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 /**
  * Shared primitives for the inventory dashboard bento tiles
@@ -181,6 +182,8 @@ export function TileLink({ id, href, children }: { id: string; href: string; chi
 
 /** Aging chip, color-stepped: ≥45d red, ≥30d amber, else quiet. */
 export function AgePill({ days, prefix = '' }: { days: number | null; prefix?: string }) {
+  const { t } = useTranslation('features/inventory');
+
   if (days == null) return null;
   const cls =
     days >= 45
@@ -188,5 +191,6 @@ export function AgePill({ days, prefix = '' }: { days: number | null; prefix?: s
       : days >= 30
         ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400'
         : 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-500))]';
-  return <span className={`rounded px-1.5 py-0.5 font-mono text-[11px] ${cls}`}>{prefix}{days}d</span>;
+  const age = t('dashboard.attention.metric.ageDays', '{{days}}d', { days });
+  return <span className={`rounded px-1.5 py-0.5 font-mono text-[11px] ${cls}`}>{prefix}{age}</span>;
 }

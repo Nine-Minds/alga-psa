@@ -963,6 +963,15 @@
     "emailFailed": "Nie udało się wysłać potwierdzenia e-mailem.",
     "emailSuccess": "Potwierdzenie wysłane e-mailem do {{recipients}}",
     "enterSerial": "Wprowadź co najmniej jeden numer seryjny.",
+    "errors": {
+      "documentGenerationFailed": "Nie udało się wygenerować dokumentu",
+      "downloadPermissionDenied": "Odmowa uprawnień: nie można pobrać dokumentów zamówienia sprzedaży",
+      "emailConfirmationFailed": "Nie udało się wysłać potwierdzenia e-mailem",
+      "emailPermissionDenied": "Odmowa uprawnień: nie można wysłać e-mailem dokumentów zamówienia sprzedaży",
+      "emailSendFailed": "Nie udało się wysłać e-maila.",
+      "noRecipientEmail": "Brak adresu e-mail odbiorcy dla tego klienta.",
+      "notFound": "Nie znaleziono zamówienia sprzedaży"
+    },
     "fields": {
       "allocationMode": "Tryb alokacji",
       "clientPoNumber": "Client PO number",
@@ -1234,6 +1243,7 @@
     "title": "Transfery",
     "toLocation": "Lokalizacja docelowa",
     "vanLoadList": "Lista załadunku vana",
+    "vanLoadListReplenishment": "Uzupełnienie listy załadunku vana",
     "status": {
       "dispatched": "Wysłano",
       "received": "Odebrano",

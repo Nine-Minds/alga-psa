@@ -963,6 +963,15 @@
     "emailFailed": "Impossibile inviare la conferma via email.",
     "emailSuccess": "Conferma inviata via email a {{recipients}}",
     "enterSerial": "Inserisci almeno un numero di serie.",
+    "errors": {
+      "documentGenerationFailed": "Impossibile generare il documento",
+      "downloadPermissionDenied": "Autorizzazione negata: impossibile scaricare i documenti dell'ordine di vendita",
+      "emailConfirmationFailed": "Impossibile inviare la conferma via email",
+      "emailPermissionDenied": "Autorizzazione negata: impossibile inviare via email i documenti dell'ordine di vendita",
+      "emailSendFailed": "Invio dell'email non riuscito.",
+      "noRecipientEmail": "Nessuna email destinatario registrata per questo cliente.",
+      "notFound": "Ordine di vendita non trovato"
+    },
     "fields": {
       "allocationMode": "Modalità di allocazione",
       "clientPoNumber": "Client PO number",
@@ -1234,6 +1243,7 @@
     "title": "Trasferimenti",
     "toLocation": "Ubicazione di destinazione",
     "vanLoadList": "Lista di carico del furgone",
+    "vanLoadListReplenishment": "Rifornimento della lista di carico del furgone",
     "status": {
       "dispatched": "Spedito",
       "received": "Ricevuto",
