@@ -82,9 +82,10 @@ In the MSP app:
 
 1. Go to `Settings -> Integrations -> Microsoft Teams`.
 2. Enter the organizer UPN in `Default meeting organizer UPN`.
-3. Enable `Download recordings to internal storage` only if the tenant wants Alga PSA to copy recording blobs into tenant storage.
-4. Enable `Show recordings and transcripts in the client portal` only if client users should see meeting artifacts. This is off by default.
-5. Save Teams settings.
+3. Enable **Send calendar invites to participants** (on by default) to have AlgaPSA send native Outlook/Teams calendar invites to the client contact and assigned technician when an approval-path meeting is created. Disable this only if your Exchange Application Access Policy restricts calendar writes to the organizer account or if participants should receive only the join link in the approval email.
+4. Enable `Download recordings to internal storage` only if the tenant wants Alga PSA to copy recording blobs into tenant storage.
+5. Enable `Show recordings and transcripts in the client portal` only if client users should see meeting artifacts. This is off by default.
+6. Save Teams settings.
 
 Saving resolves and stores the organizer's Microsoft Entra object ID for Graph recording/transcript calls.
 
@@ -117,13 +118,14 @@ Verification does two checks:
 ## 7. Expected behavior after setup
 
 - MSP approvers see the `Generate Microsoft Teams meeting link` toggle during approval.
-- Approved-client and assigned-technician emails include a Teams join button when the toggle stays enabled.
+- When **Send calendar invites to participants** is enabled in Teams settings (the default), both the client contact and the assigned technician receive a native Outlook/Teams calendar invite from the organizer account at approval time. If the toggle is disabled, participants receive only the approval email containing a join link.
+- If Teams meeting creation fails during approval, the approver sees an inline error alert with two recovery options: **Approve without meeting** (completes the approval without a Teams link) or **Retry** (attempts meeting creation again before proceeding).
 - ICS attachments include:
   - `LOCATION: Microsoft Teams Meeting`
   - `URL: <join link>`
   - `DESCRIPTION: Join Teams Meeting: <join link>`
-- Rescheduling PATCHes the same Teams meeting.
-- Cancel / delete attempts to remove the Teams meeting as well.
+- Rescheduling PATCHes the same Teams meeting and sends updated invites to attendees.
+- Declining or cancelling the appointment deletes the associated Teams meeting from Microsoft Graph.
 - After a recorded meeting ends, `Refresh recordings` can populate transcript documents and recording proxy links.
 - When a technician creates an **Online Meeting** interaction and turns on the **Create Teams meeting** toggle, an attendee picker appears beneath the toggle. Three tabs let the technician build the invite list: **Contacts** (scoped to the linked client if applicable), **Users** (internal staff), or a bare **Email** address typed in directly. The form pre-fills the linked contact's email or the client's default location email. All selected attendees appear in a consolidated badge list before saving. The full attendee list is submitted to Microsoft Graph when the meeting is created; each recipient receives a Teams calendar invite from the organizer account.
 
