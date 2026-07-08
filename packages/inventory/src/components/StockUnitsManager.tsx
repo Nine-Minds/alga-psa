@@ -180,23 +180,23 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
   );
 
   const exportCsv = useCallback(() => {
+    // Export exactly what the table shows: resolved names, humanized status —
+    // not raw FK UUIDs or enum values.
     const headers = [
-      'serial_number',
-      'mac_address',
-      'service_id',
-      'status',
-      'location_id',
-      'unit_cost_cents',
-      'received_at',
+      t('stockUnits.columns.serialNumber', 'Serial Number'),
+      t('stockUnits.columns.macAddress', 'MAC Address'),
+      t('common.status', 'Status'),
+      t('stockUnits.columns.location', 'Location'),
+      t('stockUnits.columns.client', 'Client'),
+      t('stockUnits.columns.warrantyExpires', 'Warranty Expires'),
     ];
     const rows = units.map((unit) => [
       unit.serial_number,
       unit.mac_address,
-      unit.service_id,
-      unit.status,
-      unit.location_id,
-      unit.unit_cost,
-      unit.received_at,
+      humanizeStatus(unit.status),
+      unit.location_name,
+      unit.client_name,
+      fmtDate(unit.warranty_expires_at),
     ]);
     const csv = [headers, ...rows].map((row) => row.map(csvEscape).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -208,7 +208,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-  }, [units]);
+  }, [units, t]);
 
   const emptyCell = <span className="text-[rgb(var(--color-text-400))]">{t('common.emptyValue', '—')}</span>;
 
