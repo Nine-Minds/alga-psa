@@ -151,6 +151,10 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     [units, statusFilter],
   );
   const isFiltered = query.trim() !== '' || statusFilter !== '';
+  const totalValueCents = useMemo(
+    () => visibleUnits.reduce((sum, u) => sum + (Number(u.unit_cost) || 0), 0),
+    [visibleUnits],
+  );
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -233,6 +237,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
       t('stockUnits.columns.location', 'Location'),
       t('stockUnits.columns.client', 'Client'),
       t('stockUnits.columns.warrantyExpires', 'Warranty Expires'),
+      t('stockUnits.columns.unitCost', 'Unit Cost'),
     ];
     const rows = visibleUnits.map((unit) => [
       unit.serial_number,
@@ -242,6 +247,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
       unit.location_name,
       unit.client_name,
       fmtDate(unit.warranty_expires_at),
+      fmtCents(unit.unit_cost),
     ]);
     const csv = [headers, ...rows].map((row) => row.map(csvEscape).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -309,6 +315,16 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
       },
     },
     {
+      title: t('stockUnits.columns.unitCost', 'Unit Cost'),
+      dataIndex: 'unit_cost',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right tabular-nums',
+      render: (value: number | string | null | undefined) => {
+        const c = fmtCents(value);
+        return c ? <span className="font-mono">{c}</span> : emptyCell;
+      },
+    },
+    {
       title: t('common.actions', 'Actions'),
       dataIndex: 'unit_id',
       width: '120px',
@@ -339,6 +355,9 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
             {visibleUnits.length === 1
               ? t('stockUnits.summary.one', '{{n}} unit', { n: visibleUnits.length })
               : t('stockUnits.summary.many', '{{n}} units', { n: visibleUnits.length })}
+            {totalValueCents > 0 && (
+              <span>{t('stockUnits.summary.valueSuffix', ' · {{value}} value', { value: fmtCents(totalValueCents) })}</span>
+            )}
           </p>
         </div>
         <Button id="stock-units-refresh-button" variant="outline" onClick={reload} disabled={loading}>

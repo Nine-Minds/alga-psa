@@ -1137,7 +1137,8 @@
       "macAddress": "MAC Address",
       "serialNumber": "Serial Number",
       "warrantyExpires": "Warranty Expires",
-      "product": "Product"
+      "product": "Product",
+      "unitCost": "Unit Cost"
     },
     "detail": {
       "delivered": "Delivered",
@@ -1189,7 +1190,8 @@
     },
     "summary": {
       "one": "{{n}} unit",
-      "many": "{{n}} units"
+      "many": "{{n}} units",
+      "valueSuffix": " · {{value}} value"
     },
     "filter": {
       "status": "Status",
