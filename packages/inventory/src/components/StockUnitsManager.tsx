@@ -144,7 +144,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
       setUnits(await listStockUnits({}));
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || t('stockUnits.loadFailed', 'Failed to load units'));
+      toast.error(e?.message || t('stockUnits.loadFailed', "Couldn't load stock units. Try Refresh."));
     } finally {
       setLoading(false);
     }
@@ -165,7 +165,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
       setUnits(results);
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || t('stockUnits.searchFailed', 'Search failed'));
+      toast.error(e?.message || t('stockUnits.searchFailed', "Couldn't run that search. Check the serial or MAC address and try again."));
     } finally {
       setLoading(false);
     }
@@ -185,7 +185,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
           locations === null ? listStockLocations() : Promise.resolve(locations),
         ]);
         if (!detail) {
-          toast.error(t('stockUnits.historyNotFound', 'Unit history not found'));
+          toast.error(t('stockUnits.historyNotFound', 'No history recorded for this unit yet.'));
           return;
         }
         if (locations === null) {
@@ -194,7 +194,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
         setHistoryDetail(detail);
       } catch (e: any) {
         console.error(e);
-        toast.error(e?.message || t('stockUnits.historyLoadFailed', 'Failed to load unit history'));
+        toast.error(e?.message || t('stockUnits.historyLoadFailed', "Couldn't load this unit's history. Try again."));
       } finally {
         setHistoryLoadingUnitId(null);
       }
@@ -426,7 +426,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
             </div>
 
             {historyDetail.movements.length === 0 ? (
-              <p className="text-sm text-gray-500">{t('stockUnits.noMovements', 'No movements recorded.')}</p>
+              <p className="text-sm text-gray-500">{t('stockUnits.noMovements', 'No movements yet')}</p>
             ) : (
               <div className="space-y-3 border-l border-gray-200 pl-4">
                 {historyDetail.movements.map((movement) => (
