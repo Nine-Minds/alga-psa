@@ -14,22 +14,22 @@ import {
   createServiceTypeInline,
   updateServiceTypeInline,
   deleteServiceTypeInline,
-  getDefaultBillingSettings,
-} from '@alga-psa/billing/actions';
-import { getTaxRates } from '@alga-psa/billing/actions';
+} from '@alga-psa/billing/actions/serviceActions';
+import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
+import { getTaxRates } from '@alga-psa/billing/actions/taxRateActions';
 import {
   getProductInventorySettings,
   enableInventory,
   updateInventorySettings,
   setProductSerialized,
   setProductKit,
-  listVendorProducts,
-} from '@alga-psa/inventory/actions';
+} from '@alga-psa/inventory/actions/productInventorySettingsActions';
+import { listVendorProducts } from '@alga-psa/inventory/actions/vendorProductActions';
 import toast from 'react-hot-toast';
 import { ITaxRate } from '@alga-psa/types';
 import { IService, IServiceCategory, KitPricingMode } from '@alga-psa/types';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
-import { getServiceCategories } from '@alga-psa/billing/actions';
+import { getServiceCategories } from '@alga-psa/billing/actions/categoryActions';
 import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

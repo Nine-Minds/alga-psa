@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { getTenantSettings, updateTenantSettings } from '@alga-psa/tenancy/actions';
+import { getTenantSettings, updateTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import type { OnboardingStepId } from '../onboarding-progress';
 import type { OnboardingActionResult } from './onboardingActions';
 import {

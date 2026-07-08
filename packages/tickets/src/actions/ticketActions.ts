@@ -14,13 +14,13 @@ import type {
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import Ticket from '../models/ticket';
 import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
-import { getTicketAttributes } from '@alga-psa/auth/actions';
+import { getTicketAttributes } from '@alga-psa/auth/actions/policyActions';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteTicketChildRecords } from '../lib/deleteTicketChildRecords';
-import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
 import { assignTeamToTicket, removeTeamFromTicket } from './teamAssignmentActions';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {

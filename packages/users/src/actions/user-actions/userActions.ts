@@ -14,7 +14,7 @@ import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/lib/permissions';
-import { getUserRoles } from '@alga-psa/user-composition/actions';
+import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import logger from '@alga-psa/core/logger';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';

@@ -11,7 +11,8 @@ import type {
 import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddContact';
 import QuickAddClient from '@alga-psa/clients/components/clients/QuickAddClient';
 import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';
-import { getContactsByClient, getAllContacts, getContactByContactNameId } from '@alga-psa/clients/actions';
+import { getContactsByClient, getAllContacts } from '@alga-psa/clients/actions/queryActions';
+import { getContactByContactNameId } from '@alga-psa/clients/actions/contact-actions/contactActions';
 
 export function MspClientIntegrationProvider({ children }: { children: ReactNode }) {
   const renderQuickAddContact = useCallback(

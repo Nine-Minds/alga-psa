@@ -10,6 +10,35 @@ import path from 'path';
 // Ensure tsconfig resolution works regardless of process.cwd()
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Feature packages whose `@alga-psa/<pkg>/actions` (and, where noted, `/components`) BARREL
+// must not be imported from shared/hot code: a barrel pulls every 'use server' file of the
+// package into every route's RSC server-reference manifest, which in dev grows ~O(actions ×
+// routes) and eventually exceeds V8's ~512MB JSON.stringify string cap (OOM). Import the
+// specific module instead (e.g. @alga-psa/clients/actions/queryActions). Exact-string `paths`
+// (not globs) so granular subpaths like `.../actions/queryActions` stay allowed.
+// See docs/architecture/package-build-system.md.
+const ALGA_ACTION_BARREL_PKGS = [
+    "assets", "auth", "billing", "block-content", "client-portal", "clients", "documents",
+    "email", "integrations", "inventory", "jobs", "licensing", "notifications", "onboarding",
+    "portal-shared", "projects", "reference-data", "reporting", "scheduling", "search", "sla",
+    "surveys", "tags", "teams", "tenancy", "tickets", "user-activities", "user-composition", "users",
+];
+const ALGA_COMPONENT_BARREL_PKGS = [
+    "assets", "auth", "billing", "client-portal", "clients", "documents", "integrations",
+    "inventory", "jobs", "notifications", "onboarding", "projects", "reference-data", "scheduling",
+    "sla", "surveys", "tags", "tenancy", "tickets", "user-activities", "users",
+];
+const ALGA_BARREL_RESTRICTED_PATHS = [
+    ...ALGA_ACTION_BARREL_PKGS.map((p) => ({
+        name: `@alga-psa/${p}/actions`,
+        message: `Import the specific action module (e.g. @alga-psa/${p}/actions/<file>), not the /actions barrel — the barrel pulls every 'use server' file of the package into every route's RSC server-reference manifest (dev OOM). See docs/architecture/package-build-system.md.`,
+    })),
+    ...ALGA_COMPONENT_BARREL_PKGS.map((p) => ({
+        name: `@alga-psa/${p}/components`,
+        message: `Import the specific component file (e.g. @alga-psa/${p}/components/<file>), not the feature /components barrel — it transitively pulls the package's /actions barrel into every route's manifest (dev OOM).`,
+    })),
+];
+
 export default [
     // Global ignores (apply to all config blocks)
     {
@@ -261,6 +290,37 @@ export default [
                 }
             ]
         }
+    },
+    // Server-action barrel guardrail (dev RSC server-reference-manifest bloat → OOM).
+    // A `@alga-psa/<pkg>/actions` barrel (or a feature `/components` barrel, which pulls it)
+    // drags every 'use server' file of the package into every route's server-reference
+    // manifest — dev has no tree-shaking, so the manifest grows ~O(actions × routes) and
+    // eventually exceeds V8's ~512MB string cap during JSON.stringify. In shared/hot code,
+    // import the specific module: `@alga-psa/clients/actions/queryActions`, not `/actions`.
+    // See docs/architecture/package-build-system.md.
+    {
+        files: [
+            "server/src/components/layout/**/*.{ts,tsx}",
+            "server/src/app/layout.tsx",
+            "server/src/app/msp/layout.tsx",
+            "server/src/app/msp/MspLayoutClient.tsx",
+            "packages/msp-composition/src/**/*.{ts,tsx}",
+            // Shell-reachable feature components granularized in the same pass:
+            "packages/billing/src/components/settings/billing/QuickAddProduct.tsx",
+            "packages/billing/src/components/settings/billing/QuickAddService.tsx",
+            "packages/clients/src/components/clients/QuickAddClient.tsx",
+            "packages/clients/src/components/clients/ClientQuickView.tsx",
+            "packages/clients/src/components/contacts/QuickAddContact.tsx",
+            "packages/projects/src/components/ProjectQuickAdd.tsx",
+            "packages/tickets/src/components/QuickAddTicket.tsx",
+            // Cross-package barrels inside action files re-close the graph over every package,
+            // so every server-action file is held to the same rule.
+            "packages/*/src/actions/**/*.{ts,tsx}",
+        ],
+        ignores: ["**/*.test.*", "**/*.spec.*", "**/__tests__/**"],
+        rules: {
+            "no-restricted-imports": ["error", { paths: ALGA_BARREL_RESTRICTED_PATHS }],
+        },
     },
     // Configuration for test files
     {

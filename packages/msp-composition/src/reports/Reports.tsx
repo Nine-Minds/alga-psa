@@ -42,7 +42,7 @@ import {
   type TicketAgingReport,
   type TicketWorkloadReport,
   type TimeUtilizationReport,
-} from '@alga-psa/reporting/actions';
+} from '@alga-psa/reporting/actions/helpdeskReportActions';
 
 type ReportCategory = 'helpdesk' | 'operations' | 'billing' | 'inventory';
 type ReportKind = 'embedded' | 'link' | 'planned';

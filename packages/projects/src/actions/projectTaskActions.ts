@@ -27,7 +27,7 @@ import { revalidatePath } from 'next/cache';
 import {
   bulkApplyTagsToEntities,
   findTagsByEntityIds,
-} from '@alga-psa/tags/actions';
+} from '@alga-psa/tags/actions/tagActions';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';

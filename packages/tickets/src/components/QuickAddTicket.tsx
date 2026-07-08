@@ -13,7 +13,9 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { addTicket, updateTicket } from '../actions/ticketActions';
 import { addTicketResource } from '../actions/ticketResourceActions';
-import { getCurrentUser, getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions/searchUsersForMentions';
 import { getContactsByClient, getClientLocations } from '../actions/clientLookupActions';
 import { getTicketFormData } from '../actions/ticketFormActions';
 import { getTicketCategoriesByBoard, BoardCategoryData } from '../actions/ticketCategoryActions';
@@ -36,12 +38,13 @@ import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponen
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { calculateItilPriority, ItilLabels } from '@alga-psa/tickets/lib/itilUtils';
-import { QuickAddTagPicker } from '@alga-psa/tags/components';
+import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
-import { createTagsForEntity } from '@alga-psa/tags/actions';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
+import { getTeams } from '@alga-psa/teams/actions/team-actions/teamActions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions/team-actions/avatarActions';
 import { assignTeamToTicket } from '../actions/teamAssignmentActions';
 import type { ITeam } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
@@ -53,7 +56,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../lib/ticketRichText';
 import { removeTicketRichTextImageUrls, replaceTicketRichTextImageUrls } from '../lib/ticketRichTextImages';
 import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSession';
-import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actions/statusActions';
 import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */

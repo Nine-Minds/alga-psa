@@ -5,7 +5,7 @@ import {
   getPortalInvitations as getPortalInvitationsAction,
   revokePortalInvitation as revokePortalInvitationAction,
   updateClientUser as updateClientUserAction
-} from '@alga-psa/portal-shared/actions';
+} from '@alga-psa/portal-shared/actions/portalInvitationActions';
 import type { IUser } from '@alga-psa/types';
 import type {
   SendInvitationResult,

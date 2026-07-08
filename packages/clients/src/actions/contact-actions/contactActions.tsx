@@ -13,7 +13,7 @@ import { Knex } from 'knex';
 import { isEnterprise, unparseCSV } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
-import { createTag } from '@alga-psa/tags/actions';
+import { createTag } from '@alga-psa/tags/actions/tagActions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import {
   assertMspOrClientPortalOwnClientPermission,

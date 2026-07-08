@@ -4,7 +4,7 @@ import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { chargeForUnreturned } from '@alga-psa/inventory/actions';
+import { chargeForUnreturned } from '@alga-psa/inventory/actions/rmaActions';
 import { generateManualInvoice } from './manualInvoiceActions';
 
 /**

@@ -76,6 +76,8 @@
       "@alga-psa/user-activities": ["packages/user-activities/src/index.ts"],
       "@alga-psa/user-activities/actions": ["packages/user-activities/src/actions/index.ts"],
       "@alga-psa/user-activities/components": ["packages/user-activities/src/components/index.ts"],
+      "@alga-psa/user-activities/components/ActivityDrawerProvider": ["packages/user-activities/src/components/ActivityDrawerProvider.tsx"],
+      "@alga-psa/user-activities/components/UserActivitiesDashboard": ["packages/user-activities/src/components/UserActivitiesDashboard.tsx"],
       "@alga-psa/user-activities/hooks/useActivitiesCache": ["packages/user-activities/src/hooks/useActivitiesCache.ts"],
       "@alga-psa/user-activities/constants": ["packages/user-activities/src/components/constants.ts"],
       "@alga-psa/scheduling": ["packages/scheduling/src"],

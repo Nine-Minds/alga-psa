@@ -11,21 +11,25 @@ import RightSidebar from "./RightSidebar";
 import { DrawerProvider, DrawerOutlet } from "@alga-psa/ui";
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { ActivityDrawerProvider } from "@alga-psa/msp-composition/user-activities";
+import { ActivityDrawerProvider } from "@alga-psa/msp-composition/user-activities/ActivityDrawerProvider";
 import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
 import { QuickAskProvider } from './QuickAskContext';
 import { PlatformNotificationBanner } from './PlatformNotificationBanner';
 import VimNavigationLayer from './VimNavigationLayer';
-import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
+import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { SchedulingProviderWithCallbacks } from '@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks';
-import { MspTicketIntegrationProvider, MspClientIntegrationProvider } from '@alga-psa/msp-composition/projects';
-import { MspClientDrawerProvider, MspClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients';
+// Granular msp-composition imports: the package index barrels also pull each feature's
+// whole page-client tree (and its action barrel) into every route's manifest (dev OOM).
+import { MspTicketIntegrationProvider } from '@alga-psa/msp-composition/projects/MspTicketIntegrationProvider';
+import { MspClientIntegrationProvider } from '@alga-psa/msp-composition/projects/MspClientIntegrationProvider';
+import { MspClientDrawerProvider } from '@alga-psa/msp-composition/clients/MspClientDrawerProvider';
+import { MspClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients/MspClientCrossFeatureProvider';
 import { QuickAddClientProviderWithCallbacks } from '@alga-psa/clients/providers/QuickAddClientProviderWithCallbacks';
-import { MspAssetCrossFeatureProvider } from '@alga-psa/msp-composition/assets';
-import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents';
+import { MspAssetCrossFeatureProvider } from '@alga-psa/msp-composition/assets/MspAssetCrossFeatureProvider';
+import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents/MspDocumentsCrossFeatureProvider';
 import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider';
-import { MspActivityCrossFeatureProvider } from '@alga-psa/msp-composition/workflows';
+import { MspActivityCrossFeatureProvider } from '@alga-psa/msp-composition/workflows/MspActivityCrossFeatureProvider';
 import { useTier } from 'server/src/context/TierContext';
 import {
   useCatalogShortcut,

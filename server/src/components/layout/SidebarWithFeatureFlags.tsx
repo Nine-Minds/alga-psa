@@ -11,7 +11,7 @@ import {
   type MenuItem,
   type NavigationSection,
 } from '@/config/menuConfig';
-import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
+import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
 import { useTier } from '@/context/TierContext';
 import { useProduct } from '@/context/ProductContext';
 import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';

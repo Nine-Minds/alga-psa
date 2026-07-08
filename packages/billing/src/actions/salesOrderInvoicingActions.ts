@@ -10,11 +10,13 @@ import {
   fulfillSalesOrderLine,
   FulfillSalesOrderLineInput,
   FulfillSalesOrderLineResult,
+} from '@alga-psa/inventory/actions/fulfillmentActions';
+import {
   confirmDropShipShipment,
   ConfirmDropShipShipmentInput,
   ConfirmDropShipShipmentResult,
   DropShipLineRef,
-} from '@alga-psa/inventory/actions';
+} from '@alga-psa/inventory/actions/dropShipActions';
 import { generateManualInvoice } from './manualInvoiceActions';
 import { TaxService } from '../services/taxService';
 import * as invoiceService from '../services/invoiceService';

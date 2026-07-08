@@ -1,8 +1,8 @@
 import { cookies } from "next/headers.js";
 import { redirect } from "next/navigation";
 import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
-import { getTenantSettings } from "@alga-psa/tenancy/actions";
-import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
+import { getTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
+import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale";
 import { MspLayoutClient } from "./MspLayoutClient";
 import { registerSlaIntegration } from "@alga-psa/msp-composition/tickets/registerSlaIntegration";
 import { getCurrentTenantProduct } from "@/lib/productAccess";

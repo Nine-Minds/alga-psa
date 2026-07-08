@@ -8,7 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { addContact, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
+import { addContact, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import type { ContactPhoneNumberInput, CreateContactInput, IClient } from '@alga-psa/types';
 import QuickAddClient from '../clients/QuickAddClient';
@@ -16,15 +16,15 @@ import { IContact } from '@alga-psa/types';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useToast } from '@alga-psa/ui';
-import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
+import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActions';
 import {
   validateContactName,
   validateEmailAddress,
   validateNotes
 } from '@alga-psa/validation';
-import { QuickAddTagPicker } from '@alga-psa/tags/components';
+import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
-import { createTagsForEntity } from '@alga-psa/tags/actions';
+import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ContactPhoneNumbersEditor, {
   compactContactPhoneNumbers,

@@ -22,7 +22,7 @@ import type {
   ProjectStatus,
   ProjectWithPhases,
 } from '@alga-psa/types';
-import { getAllUsers, findUserById } from '@alga-psa/user-composition/actions';
+import { getAllUsers, findUserById } from '@alga-psa/user-composition/actions/userQueryActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- server action calling another server action; cannot use React context composition
 import { getContactByContactNameId } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { withAuth } from '@alga-psa/auth';

@@ -4,7 +4,7 @@ import type { ITag } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, throwPermissionError } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
 import { Knex } from 'knex';
 import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';

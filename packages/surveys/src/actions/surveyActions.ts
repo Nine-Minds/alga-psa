@@ -7,8 +7,9 @@ import { z } from 'zod';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IBoard, IPriority, IStatus, IUserWithRoles, DeletionValidationResult } from '@alga-psa/types';
-import { getAllBoards, getTicketStatuses } from '@alga-psa/reference-data/actions';
-import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actions/statusActions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 
 const SURVEY_TEMPLATE_TABLE = 'survey_templates';
