@@ -42,6 +42,14 @@ function fmtCents(v?: number | string | null): string {
   return Number.isFinite(n) ? `$${(n / 100).toFixed(2)}` : '';
 }
 
+/** Normalize a MAC to canonical upper-case, colon-grouped form for display. */
+function fmtMac(v?: string | null): string {
+  if (!v) return '';
+  const hex = v.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+  if (hex.length !== 12) return v.toUpperCase(); // leave unexpected shapes as-is
+  return hex.match(/.{2}/g)!.join(':');
+}
+
 function csvValue(v: unknown): string {
   if (v === null || v === undefined) return '';
   if (v instanceof Date) return v.toISOString();
@@ -207,7 +215,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     ];
     const rows = units.map((unit) => [
       unit.serial_number,
-      unit.mac_address,
+      fmtMac(unit.mac_address),
       humanizeStatus(unit.status),
       unit.location_name,
       unit.client_name,
@@ -228,8 +236,20 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
   const emptyCell = <span className="text-[rgb(var(--color-text-400))]">{t('common.emptyValue', '—')}</span>;
 
   const columns: ColumnDefinition<IStockUnit>[] = [
-    { title: t('stockUnits.columns.serialNumber', 'Serial Number'), dataIndex: 'serial_number' },
-    { title: t('stockUnits.columns.macAddress', 'MAC Address'), dataIndex: 'mac_address', render: (v: any) => v || '' },
+    {
+      title: t('stockUnits.columns.serialNumber', 'Serial Number'),
+      dataIndex: 'serial_number',
+      render: (value: string | null | undefined) =>
+        value ? <span className="font-mono">{value}</span> : emptyCell,
+    },
+    {
+      title: t('stockUnits.columns.macAddress', 'MAC Address'),
+      dataIndex: 'mac_address',
+      render: (value: string | null | undefined) => {
+        const mac = fmtMac(value);
+        return mac ? <span className="font-mono">{mac}</span> : emptyCell;
+      },
+    },
     {
       title: t('common.status', 'Status'),
       dataIndex: 'status',
@@ -255,7 +275,10 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     {
       title: t('stockUnits.columns.warrantyExpires', 'Warranty Expires'),
       dataIndex: 'warranty_expires_at',
-      render: (v: any) => fmtDate(v),
+      render: (value: string | Date | null | undefined) => {
+        const d = fmtDate(value);
+        return d ? <span>{d}</span> : emptyCell;
+      },
     },
     {
       title: t('common.actions', 'Actions'),
@@ -362,7 +385,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
                 {historyDetail.unit.mac_address && (
                   <div>
                     <div className="text-xs text-gray-500">{t('stockUnits.detail.mac', 'MAC')}</div>
-                    <div className="font-mono">{historyDetail.unit.mac_address}</div>
+                    <div className="font-mono">{fmtMac(historyDetail.unit.mac_address)}</div>
                   </div>
                 )}
                 <div>
