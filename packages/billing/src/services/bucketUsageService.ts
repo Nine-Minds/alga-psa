@@ -1,3 +1,20 @@
+/*
+ * CANONICAL bucket-usage service. This is the single source of truth for
+ * resolving a client's active bucket contract line and its billing period.
+ * Do NOT fork or re-implement this logic elsewhere — call these exports
+ * (`findOrCreateCurrentBucketUsageRecord`, `updateBucketUsageMinutes`,
+ * `reconcileBucketUsageRecord`) instead. A stale fork in @alga-psa/scheduling
+ * that kept querying the dropped `client_contract_lines` table shipped a prod
+ * outage ("relation client_contract_lines does not exist" on time-entry save).
+ *
+ * Contract-line ownership resolves through:
+ *   client_contracts (cc) -> contracts (ct) -> contract_lines (cl)
+ * The old `client_contract_lines` / `client_contract_services` join tables were
+ * DROPPED in the contract-lines migration. If you find yourself typing either
+ * name in a runtime query, you are on the wrong path — use the join above.
+ * (The static guard clientContractLineRuntimeSourceGuards.static.test.ts will
+ * fail the build if a dropped-table reference slips into packages/ or shared/.)
+ */
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import type { ISO8601String, IClientContractLine } from '@alga-psa/types';
@@ -86,6 +103,8 @@ async function calculatePeriod(
 
     // Find the active client-owned contract line that covers the target date AND
     // is associated with a bucket configuration for the given serviceCatalogId.
+    // Canonical ownership join (client_contract_lines was dropped — see file header):
+    //   client_contracts (cc) -> contracts (ct) -> contract_lines (cl).
     const clientPlanQuery = db.table('client_contracts as cc');
     db.tenantJoin(clientPlanQuery, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
     db.tenantJoin(clientPlanQuery, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');

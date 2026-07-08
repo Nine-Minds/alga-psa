@@ -705,8 +705,11 @@ async function resolveBucketUsagePeriod(params: {
     };
   }
 
-  // LEVERAGE: pattern bucket-usage-period - same period logic also in @alga-psa/billing bucketUsageService;
-  // kept separate to respect the shared/workflow -> billing layering boundary.
+  // LEVERAGE: pattern bucket-usage-period - same period logic also in @alga-psa/billing bucketUsageService
+  // (the CANONICAL implementation); this is a deliberate hand-maintained copy kept separate to respect the
+  // shared/workflow -> billing layering boundary. If you touch this query, mirror the canonical join and
+  // NEVER reintroduce `client_contract_lines` (dropped table): resolve ownership via
+  // client_contracts (cc) -> contracts (ct) -> contract_lines (cl), as below.
   const contractAssignmentQuery = tenantScopedTable(trx, 'client_contracts as cc', tenantId);
   tenantJoin(trx, tenantId, contractAssignmentQuery, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
   tenantJoin(trx, tenantId, contractAssignmentQuery, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');

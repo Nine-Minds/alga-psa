@@ -17,6 +17,11 @@ function tenantScopedTable<Row extends object = Record<string, any>>(
 }
 
 const ContractLine = {
+  // "In use by a client" means some client has adopted this line's contract.
+  // Resolve that through contract_lines (cl) -> client_contracts (cc); do NOT
+  // reach for `client_contract_lines` — that table was dropped in the
+  // contract-lines migration and no longer exists. Any new query touching
+  // contract-line ownership in this model should follow the same join.
   isInUse: async (knexOrTrx: Knex | Knex.Transaction, planId: string): Promise<boolean> => {
     const tenant = await requireTenantId(knexOrTrx);
 
