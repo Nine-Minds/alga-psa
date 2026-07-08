@@ -189,6 +189,7 @@ describe('menuConfig i18n metadata', () => {
       'nav.inventoryPurchaseOrders',
       'nav.inventoryVendorBills',
       'nav.inventorySalesOrders',
+      'nav.inventoryDocumentLayouts',
       'nav.inventoryRma',
       'nav.inventoryLoaners',
       'nav.inventoryKits',
