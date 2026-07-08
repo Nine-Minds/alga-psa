@@ -32,6 +32,7 @@
     "inventoryPurchaseOrders": "Pedidos de Compra",
     "inventoryVendorBills": "Faturas de Fornecedores",
     "inventorySalesOrders": "Pedidos de Venda",
+    "inventoryDocumentLayouts": "Layouts de documentos",
     "inventoryTransfers": "Transferências",
     "inventoryCounts": "Contagens Cíclicas",
     "inventoryWriteOffs": "Baixas",

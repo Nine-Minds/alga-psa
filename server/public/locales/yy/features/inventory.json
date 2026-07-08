@@ -892,6 +892,7 @@
       "fulfilling": "55555",
       "generateInvoice": "55555",
       "invoicing": "55555",
+      "manageLayouts": "55555",
       "reopenToDraft": "55555",
       "reopening": "55555"
     },

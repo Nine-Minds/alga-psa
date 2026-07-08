@@ -32,6 +32,7 @@
     "inventoryPurchaseOrders": "55555",
     "inventoryVendorBills": "55555",
     "inventorySalesOrders": "55555",
+    "inventoryDocumentLayouts": "55555",
     "inventoryTransfers": "55555",
     "inventoryCounts": "55555",
     "inventoryWriteOffs": "55555",

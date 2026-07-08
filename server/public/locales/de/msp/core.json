@@ -32,6 +32,7 @@
     "inventoryPurchaseOrders": "Bestellungen",
     "inventoryVendorBills": "Lieferantenrechnungen",
     "inventorySalesOrders": "Kundenaufträge",
+    "inventoryDocumentLayouts": "Dokumentenlayouts",
     "inventoryTransfers": "Umlagerungen",
     "inventoryCounts": "Bestandszählungen",
     "inventoryWriteOffs": "Abschreibungen",
