@@ -10,6 +10,7 @@ const hoisted = vi.hoisted(() => {
     client_id: string;
     tenant_id: string;
     client_secret_ref: string;
+    capabilities?: string[] | string | null;
     is_default: boolean;
     is_archived: boolean;
     archived_at: string | Date | null;
@@ -562,6 +563,45 @@ describe('Microsoft consumer binding actions', () => {
       }),
     ]);
     expect(microsoftConsumerBindings.filter((binding) => binding.tenant === 'tenant-2')).toEqual([]);
+  });
+
+  it('does not auto-bind or explicitly bind Email to a Teams-only Microsoft profile', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
+    const teamsOnly = await createMicrosoftProfile({
+      displayName: 'Teams Only Profile',
+      clientId: 'teams-client-id',
+      clientSecret: 'teams-secret',
+      tenantId: 'teams-tenant-guid',
+      capabilities: ['teams'],
+    });
+    emailProviders.push({
+      id: 'email-provider-1',
+      tenant: 'tenant-1',
+      provider_type: 'microsoft',
+    });
+
+    const bindings = await listMicrosoftConsumerBindings();
+
+    expect(bindings.success).toBe(true);
+    expect(bindings.bindings?.find((binding) => binding.consumerType === 'email')).toEqual({
+      consumerType: 'email',
+      consumerLabel: 'Email',
+      profileId: null,
+      profileDisplayName: undefined,
+      isArchived: false,
+    });
+    expect(microsoftConsumerBindings.filter((binding) => binding.consumer_type === 'email')).toHaveLength(0);
+
+    await expect(
+      setMicrosoftConsumerBinding({
+        consumerType: 'email',
+        profileId: teamsOnly.profile!.profileId,
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: 'Microsoft profile is not enabled for Email',
+    });
   });
 
   it('rejects EE-only binding writes in CE while keeping MSP SSO available', async () => {

@@ -56,7 +56,12 @@ export function MicrosoftCalendarProviderForm({
   const [providerSetupReady, setProviderSetupReady] = useState(false);
   const [providerSetupLoading, setProviderSetupLoading] = useState(true);
   const [providerSetupReasonCode, setProviderSetupReasonCode] = useState<
-    'unsupported_consumer' | 'binding_not_configured' | 'profile_missing' | 'profile_credentials_missing' | null
+    | 'unsupported_consumer'
+    | 'binding_not_configured'
+    | 'profile_missing'
+    | 'profile_capability_missing'
+    | 'profile_credentials_missing'
+    | null
   >(null);
   const { t } = useTranslation('msp/calendar');
 

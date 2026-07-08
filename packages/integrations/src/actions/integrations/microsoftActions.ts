@@ -16,7 +16,11 @@ import {
   isVisibleMicrosoftConsumerType,
 } from '../../lib/microsoftConsumerVisibility';
 import {
+  DEFAULT_MICROSOFT_PROFILE_CAPABILITIES,
+  hasMicrosoftProfileCapability,
+  isSupportedMicrosoftProfileConsumer,
   MICROSOFT_PROFILE_CONSUMERS,
+  normalizeMicrosoftProfileCapabilities,
   type MicrosoftProfileConsumer,
 } from './microsoftShared';
 import { resolveMicrosoftBindingCandidateProfile } from '../../lib/microsoftConsumerProfileResolution';
@@ -34,6 +38,7 @@ interface MicrosoftProfileRow {
   client_id: string;
   tenant_id: string;
   client_secret_ref: string;
+  capabilities: MicrosoftProfileConsumer[] | string | null;
   is_default: boolean;
   is_archived: boolean;
   archived_at: string | Date | null;
@@ -77,6 +82,7 @@ export interface MicrosoftProfileSummary {
   clientSecretRef: string;
   isDefault: boolean;
   isArchived: boolean;
+  capabilities: MicrosoftProfileConsumer[];
   readiness: ProviderReadinessResult;
   status: 'ready' | 'incomplete' | 'archived';
   archivedAt?: string | null;
@@ -131,6 +137,10 @@ function maskSecret(value: string): string {
   return `${'•'.repeat(Math.max(0, value.length - 4))}${value.slice(-4)}`;
 }
 
+function toJsonbValue<T>(value: T): string {
+  return JSON.stringify(value);
+}
+
 function computeBaseUrl(envValue?: string | null): string {
   const raw = (envValue || '').trim();
   if (!raw) return 'http://localhost:3000';
@@ -177,10 +187,6 @@ function normalizeDisplayName(value: string): string {
 
 function normalizeDisplayNameKey(value: string): string {
   return normalizeDisplayName(value).toLocaleLowerCase();
-}
-
-function isSupportedMicrosoftProfileConsumer(value: string): value is MicrosoftProfileConsumer {
-  return (MICROSOFT_PROFILE_CONSUMERS as readonly string[]).includes(value);
 }
 
 function getMicrosoftConsumerLabel(consumer: MicrosoftProfileConsumer): string {
@@ -236,7 +242,10 @@ async function canManageMicrosoftSettings(user: any): Promise<boolean> {
 
 async function getTenantMicrosoftProfiles(knex: any, tenant: string): Promise<MicrosoftProfileRow[]> {
   const rows = await tenantDb(knex, tenant).table<MicrosoftProfileRow>('microsoft_profiles').select('*');
-  return [...rows].sort((left: MicrosoftProfileRow, right: MicrosoftProfileRow) => {
+  return rows.map((row) => ({
+    ...row,
+    capabilities: normalizeMicrosoftProfileCapabilities(row.capabilities),
+  })).sort((left: MicrosoftProfileRow, right: MicrosoftProfileRow) => {
     if (left.is_default !== right.is_default) return left.is_default ? -1 : 1;
     if (left.is_archived !== right.is_archived) return left.is_archived ? 1 : -1;
     return left.display_name.localeCompare(right.display_name);
@@ -252,7 +261,20 @@ async function getMicrosoftProfileRow(
     .table<MicrosoftProfileRow>('microsoft_profiles')
     .where({ profile_id: profileId })
     .first();
-  return row || undefined;
+  return row ? {
+    ...row,
+    capabilities: normalizeMicrosoftProfileCapabilities(row.capabilities),
+  } : undefined;
+}
+
+function profileHasCapability(
+  profile: Pick<MicrosoftProfileRow, 'capabilities'>,
+  consumerType: MicrosoftProfileConsumer
+): boolean {
+  return hasMicrosoftProfileCapability(
+    normalizeMicrosoftProfileCapabilities(profile.capabilities),
+    consumerType
+  );
 }
 
 async function getTenantMicrosoftConsumerBindings(
@@ -443,6 +465,7 @@ async function ensureLegacyMicrosoftProfileBackfill(
     client_id: normalizeMicrosoftClientId(legacyClientId || ''),
     tenant_id: normalizeTenantId(legacyTenantId),
     client_secret_ref: clientSecretRef,
+    capabilities: JSON.stringify(DEFAULT_MICROSOFT_PROFILE_CAPABILITIES),
     is_default: true,
     is_archived: false,
     archived_at: null,
@@ -505,11 +528,6 @@ async function ensureMicrosoftConsumerBindingMigration(
 ): Promise<MicrosoftConsumerBindingRow[]> {
   await ensureLegacyMicrosoftProfileBackfill(knex, tenant, secretProvider, userId);
 
-  const candidateProfile = await resolveMicrosoftBindingCandidateProfile(knex, tenant, secretProvider);
-  if (!candidateProfile) {
-    return [];
-  }
-
   const existingBindings = await getTenantMicrosoftConsumerBindings(knex, tenant);
   const now = new Date();
   const visibleConsumers = new Set(getVisibleMicrosoftConsumerTypes());
@@ -546,6 +564,11 @@ async function ensureMicrosoftConsumerBindingMigration(
   }
 
   for (const consumerType of consumersToBackfill) {
+    const candidateProfile = await resolveMicrosoftBindingCandidateProfile(knex, tenant, secretProvider, consumerType);
+    if (!candidateProfile) {
+      continue;
+    }
+
     const binding: MicrosoftConsumerBindingRow = {
       tenant,
       consumer_type: consumerType,
@@ -690,6 +713,7 @@ async function buildMicrosoftProfileSummary(
     clientSecretRef: row.client_secret_ref,
     isDefault: row.is_default,
     isArchived: row.is_archived,
+    capabilities: normalizeMicrosoftProfileCapabilities(row.capabilities),
     readiness,
     status: row.is_archived ? 'archived' : readiness.ready ? 'ready' : 'incomplete',
     archivedAt: row.archived_at ? String(row.archived_at) : null,
@@ -739,6 +763,7 @@ async function createMicrosoftProfileInternal(
     clientId: string;
     clientSecret: string;
     tenantId?: string;
+    capabilities?: MicrosoftProfileConsumer[];
     setAsDefault?: boolean;
   }
 ): Promise<{ success: boolean; error?: string; profile?: MicrosoftProfileSummary }> {
@@ -750,6 +775,10 @@ async function createMicrosoftProfileInternal(
   const clientSecret = (input.clientSecret || '').trim();
   const tenantId = normalizeTenantId(input.tenantId);
   const tenantIdProvided = Boolean((input.tenantId || '').trim());
+  const capabilities = normalizeMicrosoftProfileCapabilities(
+    input.capabilities,
+    DEFAULT_MICROSOFT_PROFILE_CAPABILITIES
+  );
 
   if (!displayName) return { success: false, error: 'Microsoft profile display name is required' };
   if (!clientId) return { success: false, error: 'Microsoft OAuth Client ID is required' };
@@ -780,6 +809,7 @@ async function createMicrosoftProfileInternal(
       client_id: clientId,
       tenant_id: tenantId,
       client_secret_ref: clientSecretRef,
+      capabilities,
       is_default: shouldBeDefault,
       is_archived: false,
       archived_at: null,
@@ -799,7 +829,10 @@ async function createMicrosoftProfileInternal(
         });
       }
 
-      await db.table('microsoft_profiles').insert(row);
+      await db.table('microsoft_profiles').insert({
+        ...row,
+        capabilities: toJsonbValue(capabilities),
+      });
     });
 
     await secretProvider.setTenantSecret(tenant, clientSecretRef, clientSecret);
@@ -825,6 +858,7 @@ async function updateMicrosoftProfileInternal(
     clientId?: string;
     clientSecret?: string;
     tenantId?: string;
+    capabilities?: MicrosoftProfileConsumer[];
   }
 ): Promise<{ success: boolean; error?: string; profile?: MicrosoftProfileSummary }> {
   if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
@@ -851,6 +885,9 @@ async function updateMicrosoftProfileInternal(
       ? normalizeTenantId(existing.tenant_id)
       : normalizeTenantId(input.tenantId);
     const nextClientSecret = input.clientSecret === undefined ? undefined : (input.clientSecret || '').trim();
+    const nextCapabilities = input.capabilities === undefined
+      ? normalizeMicrosoftProfileCapabilities(existing.capabilities)
+      : normalizeMicrosoftProfileCapabilities(input.capabilities, []);
 
     if (!nextDisplayName) return { success: false, error: 'Microsoft profile display name is required' };
     if (!nextClientId) return { success: false, error: 'Microsoft OAuth Client ID is required' };
@@ -869,6 +906,7 @@ async function updateMicrosoftProfileInternal(
         display_name_normalized: normalizeDisplayNameKey(nextDisplayName),
         client_id: nextClientId,
         tenant_id: nextTenantId,
+        capabilities: toJsonbValue(nextCapabilities),
         updated_by: user?.user_id || null,
         updated_at: now,
       });
@@ -1052,6 +1090,7 @@ export const createMicrosoftProfile = withAuth(async (user, { tenant }, input: {
   clientId: string;
   clientSecret: string;
   tenantId?: string;
+  capabilities?: MicrosoftProfileConsumer[];
   setAsDefault?: boolean;
 }) => createMicrosoftProfileInternal(user, tenant, input));
 
@@ -1061,6 +1100,7 @@ export const updateMicrosoftProfile = withAuth(async (user, { tenant }, input: {
   clientId?: string;
   clientSecret?: string;
   tenantId?: string;
+  capabilities?: MicrosoftProfileConsumer[];
 }) => updateMicrosoftProfileInternal(user, tenant, input));
 
 export const archiveMicrosoftProfile = withAuth(async (user, { tenant }, profileId: string) =>
@@ -1149,6 +1189,12 @@ export const setMicrosoftConsumerBinding = withAuth(async (
     if (profile.is_archived) {
       return { success: false, error: 'Archived Microsoft profiles cannot be bound to consumers' };
     }
+    if (!profileHasCapability(profile, input.consumerType)) {
+      return {
+        success: false,
+        error: `Microsoft profile is not enabled for ${getMicrosoftConsumerLabel(input.consumerType)}`,
+      };
+    }
 
     const existing = await getMicrosoftConsumerBindingRow(knex, tenant, input.consumerType);
     const now = new Date();
@@ -1211,7 +1257,7 @@ export const resolveMicrosoftProfileForConsumer = async (
 
   if (binding) {
     const row = await getMicrosoftProfileRow(knex, tenant, binding.profile_id);
-    if (row && !row.is_archived) {
+    if (row && !row.is_archived && profileHasCapability(row, consumerType)) {
       return buildMicrosoftProfileSummary(tenant, row, secretProvider, [getMicrosoftConsumerLabel(consumerType)]);
     }
   }
@@ -1314,6 +1360,7 @@ export const saveMicrosoftIntegrationSettings = withAuth(async (
     clientId: string;
     clientSecret: string;
     tenantId?: string;
+    capabilities?: MicrosoftProfileConsumer[];
   }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
@@ -1336,6 +1383,7 @@ export const saveMicrosoftIntegrationSettings = withAuth(async (
         clientId,
         clientSecret,
         tenantId,
+        capabilities: input.capabilities,
       });
 
       return result.success ? { success: true } : { success: false, error: result.error };
@@ -1346,6 +1394,7 @@ export const saveMicrosoftIntegrationSettings = withAuth(async (
       clientId,
       clientSecret,
       tenantId,
+      capabilities: input.capabilities,
       setAsDefault: true,
     });
 

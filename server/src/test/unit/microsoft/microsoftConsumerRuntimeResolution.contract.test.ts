@@ -55,6 +55,8 @@ describe('microsoft consumer runtime resolution contracts', () => {
     expect(sharedResolverSource).toContain("tenantScopedTable(db, 'microsoft_profile_consumer_bindings', tenant)");
     expect(sharedResolverSource).toContain("tenantScopedTable(db, 'email_providers', tenant)");
     expect(sharedResolverSource).toContain("tenantScopedTable(db, 'calendar_providers', tenant)");
+    expect(sharedResolverSource).toContain('profileHasCapability(profile, consumerType)');
+    expect(sharedResolverSource).toContain('resolveMicrosoftBindingCandidateProfile(db, tenant, secretProvider, consumerType)');
     expect(sharedResolverSource).not.toContain("from '../actions/integrations/microsoftActions'");
 
     expect(emailOauthActionSource).toContain('resolveMicrosoftConsumerProfileConfig(tenant, \'email\')');
@@ -62,6 +64,10 @@ describe('microsoft consumer runtime resolution contracts', () => {
     expect(emailOauthActionSource).not.toContain('process.env.MICROSOFT_CLIENT_ID');
 
     expect(emailCallbackSource).toContain("resolveMicrosoftConsumerProfileConfig(stateData.tenant, 'email')");
+    expect(emailCallbackSource).toContain('persistProviderError');
+    expect(emailCallbackSource).toContain("status: 'error'");
+    expect(emailCallbackSource).toContain('error_message: message');
+    expect(emailCallbackSource).toContain("error: 'token_persistence_failed'");
     expect(emailCallbackSource).not.toContain("getTenantSecret(stateData.tenant, 'microsoft_client_id')");
     expect(emailCallbackSource).not.toContain('process.env.MICROSOFT_CLIENT_ID');
 

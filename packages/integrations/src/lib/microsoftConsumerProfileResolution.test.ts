@@ -9,6 +9,7 @@ const hoisted = vi.hoisted(() => {
     client_id: string;
     tenant_id: string;
     client_secret_ref: string;
+    capabilities?: string[] | string | null;
     is_default: boolean;
     is_archived: boolean;
     archived_at: string | Date | null;
@@ -240,6 +241,7 @@ describe('resolveMicrosoftConsumerProfileConfig', () => {
       client_id: 'sso-client-id',
       tenant_id: 'sso-tenant-id',
       client_secret_ref: 'sso-secret-ref',
+      capabilities: ['teams'],
       is_default: true,
       is_archived: false,
       archived_at: null,
@@ -264,6 +266,48 @@ describe('resolveMicrosoftConsumerProfileConfig', () => {
       credentialSource: 'app',
     });
     expect(hoisted.state.microsoftConsumerBindings).toHaveLength(0);
+  });
+
+  it('falls back to hosted email credentials when an explicit Email binding points at a non-email-capable profile', async () => {
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_ID', 'hosted-client-id');
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_SECRET', 'hosted-client-secret');
+    hoisted.state.microsoftProfiles.push({
+      tenant: 'tenant-bound-teams-only',
+      profile_id: 'teams-only-profile',
+      display_name: 'Teams Profile',
+      display_name_normalized: 'teams profile',
+      client_id: 'teams-client-id',
+      tenant_id: 'teams-tenant-id',
+      client_secret_ref: 'teams-secret-ref',
+      capabilities: ['teams'],
+      is_default: true,
+      is_archived: false,
+      archived_at: null,
+      created_by: null,
+      updated_by: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    hoisted.state.microsoftConsumerBindings.push({
+      tenant: 'tenant-bound-teams-only',
+      consumer_type: 'email',
+      profile_id: 'teams-only-profile',
+      created_by: null,
+      updated_by: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    hoisted.state.tenantSecrets.set('tenant-bound-teams-only:teams-secret-ref', 'teams-secret');
+
+    await expect(resolveMicrosoftConsumerProfileConfig('tenant-bound-teams-only', 'email')).resolves.toEqual({
+      status: 'ready',
+      tenantId: 'tenant-bound-teams-only',
+      consumerType: 'email',
+      clientId: 'hosted-client-id',
+      clientSecret: 'hosted-client-secret',
+      microsoftTenantId: 'common',
+      credentialSource: 'app',
+    });
   });
 
   it('T404: does not fall back to hosted credentials when an explicit Email binding is invalid', async () => {
