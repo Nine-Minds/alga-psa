@@ -5,9 +5,31 @@
  * was the production write-off report failure (see
  * docs/plans/2026-07-06-inventory-citus-errors-plan.md).
  */
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import knexLib from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { marginReport } from './inventoryReportingActions';
+
+const createTenantKnexMock = vi.hoisted(() => vi.fn());
+const withTransactionMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: any) => fn,
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
+vi.mock('@alga-psa/db', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  return {
+    ...actual,
+    createTenantKnex: createTenantKnexMock,
+    withTransaction: withTransactionMock,
+  };
+});
 
 describe('inventoryReportingActions SQL shape', () => {
   const knex = knexLib({ client: 'pg' });
@@ -32,5 +54,103 @@ describe('inventoryReportingActions SQL shape', () => {
 
     expect(sql).toContain('"floc"."tenant" = "sm"."tenant"');
     expect(sql).toContain('"tloc"."tenant" = "sm"."tenant"');
+  });
+});
+
+function makeQueryBuilder<T>(result: T[]) {
+  const builder = {
+    joinRaw: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
+    join: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    andWhere: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    groupBy: vi.fn().mockReturnThis(),
+    orderBy: vi.fn(async () => result),
+  };
+  return builder;
+}
+
+function makeBillingSettingsQuery(currencyCode: string | null) {
+  return {
+    where: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    first: vi.fn(async () => (
+      currencyCode ? { default_currency_code: currencyCode } : undefined
+    )),
+  };
+}
+
+function makeReportTransaction({
+  currencyCode,
+  groupedRows = [],
+}: {
+  currencyCode: string | null;
+  groupedRows?: Array<Record<string, unknown>>;
+}) {
+  const trx = vi.fn((tableName: string) => {
+    if (tableName === 'stock_movements as sm') {
+      return makeQueryBuilder(groupedRows);
+    }
+    if (tableName === 'default_billing_settings') {
+      return makeBillingSettingsQuery(currencyCode);
+    }
+    throw new Error(`Unexpected table ${tableName}`);
+  });
+  return Object.assign(trx, {
+    raw: vi.fn((sql: string) => sql),
+  });
+}
+
+describe('marginReport currency', () => {
+  const TENANT = '00000000-0000-0000-0000-000000000001';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(hasPermission).mockResolvedValue(true);
+    withTransactionMock.mockImplementation(async (knex, callback) => callback(knex));
+  });
+
+  it('returns the tenant default billing currency', async () => {
+    const trx = makeReportTransaction({
+      currencyCode: 'EUR',
+      groupedRows: [
+        {
+          service_id: 'service-1',
+          service_name: 'Router',
+          sku: 'RTR-1',
+          qty_sold: '2',
+          revenue_cents: '30000',
+          cogs_cents: '12000',
+        },
+      ],
+    });
+    createTenantKnexMock.mockResolvedValue({ knex: trx });
+
+    const report = await (marginReport as any)(
+      { user_id: 'user-1' },
+      { tenant: TENANT },
+      {},
+    );
+
+    expect(report).toMatchObject({
+      currency_code: 'EUR',
+      total_revenue_cents: 30000,
+      total_cogs_cents: 12000,
+      total_margin_cents: 18000,
+    });
+  });
+
+  it('falls back to USD when billing settings do not exist', async () => {
+    const trx = makeReportTransaction({ currencyCode: null });
+    createTenantKnexMock.mockResolvedValue({ knex: trx });
+
+    const report = await (marginReport as any)(
+      { user_id: 'user-1' },
+      { tenant: TENANT },
+      {},
+    );
+
+    expect(report.currency_code).toBe('USD');
   });
 });

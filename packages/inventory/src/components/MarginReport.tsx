@@ -8,19 +8,78 @@ import { toast } from 'react-hot-toast';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { marginReport, type MarginReport as MarginReportData, type MarginReportRow } from '../actions';
+import { CurrencyFormatProvider, useCurrencyFormat } from './dashboard/shared';
 
 /**
  * Margin report (F042/F043): per-service revenue, COGS, and margin from sales-driven
  * consume movements, over an optional date window. Read-only; internal (owner) view.
  */
 
-const money = (cents: number | null | undefined): string =>
-  `$${(Number(cents ?? 0) / 100).toFixed(2)}`;
+type InventoryTranslator = ReturnType<typeof useTranslation>['t'];
+
+const pct = (t: InventoryTranslator, value: number | null | undefined): string =>
+  value == null ? t('common.emptyValue', '—') : `${value.toFixed(1)}%`;
+
+function MarginReportBody({
+  report,
+  t,
+}: {
+  report: MarginReportData;
+  t: InventoryTranslator;
+}) {
+  const { money } = useCurrencyFormat();
+  const rows: MarginReportRow[] = report.rows ?? [];
+
+  const columns: ColumnDefinition<MarginReportRow>[] = [
+    {
+      title: t('margin.columns.product', 'Product'),
+      dataIndex: 'service_name',
+      render: (v: any, rec) => (
+        <div className="flex items-center gap-2">
+          <span>{v || t('common.emptyValue', '—')}</span>
+          {rec.sku ? <span className="font-mono text-xs text-gray-500">{rec.sku}</span> : null}
+        </div>
+      ),
+    },
+    { title: t('margin.columns.qtySold', 'Qty sold'), dataIndex: 'qty_sold', render: (v: any) => <span className="tabular-nums">{Number(v ?? 0)}</span> },
+    { title: t('margin.columns.revenue', 'Revenue'), dataIndex: 'revenue_cents', render: (v: any) => <span className="tabular-nums">{money(v, 2)}</span> },
+    { title: t('margin.columns.cogs', 'COGS'), dataIndex: 'cogs_cents', render: (v: any) => <span className="tabular-nums">{money(v, 2)}</span> },
+    { title: t('margin.columns.margin', 'Margin'), dataIndex: 'margin_cents', render: (v: any) => <span className="tabular-nums">{money(v, 2)}</span> },
+    { title: t('margin.columns.marginPct', 'Margin %'), dataIndex: 'margin_pct', render: (v: any) => <span className="tabular-nums">{pct(t, v)}</span> },
+  ];
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4" id="margin-report-totals">
+        <div className="rounded border p-3">
+          <div className="text-xs text-gray-500">{t('margin.metrics.revenue', 'Revenue')}</div>
+          <div className="text-xl font-semibold tabular-nums">{money(report.total_revenue_cents, 2)}</div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-gray-500">{t('margin.metrics.cogs', 'COGS')}</div>
+          <div className="text-xl font-semibold tabular-nums">{money(report.total_cogs_cents, 2)}</div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-gray-500">{t('margin.metrics.margin', 'Margin')}</div>
+          <div className="text-xl font-semibold tabular-nums">{money(report.total_margin_cents, 2)}</div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-gray-500">{t('margin.metrics.marginPct', 'Margin %')}</div>
+          <div className="text-xl font-semibold tabular-nums">{pct(t, report.total_margin_pct)}</div>
+        </div>
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="text-sm text-gray-500">{t('margin.empty', 'No sales-driven margin in this window.')}</p>
+      ) : (
+        <DataTable id="margin-report-table" data={rows} columns={columns} />
+      )}
+    </>
+  );
+}
 
 export function MarginReport() {
-  const { t } = useTranslation('features/inventory');
-  const pct = (value: number | null | undefined): string =>
-    value == null ? t('common.emptyValue', '—') : `${value.toFixed(1)}%`;
+  const { t, i18n } = useTranslation('features/inventory');
   const [report, setReport] = useState<MarginReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [from, setFrom] = useState('');
@@ -41,26 +100,6 @@ export function MarginReport() {
     void run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const rows: MarginReportRow[] = report?.rows ?? [];
-
-  const columns: ColumnDefinition<MarginReportRow>[] = [
-    {
-      title: t('margin.columns.product', 'Product'),
-      dataIndex: 'service_name',
-      render: (v: any, rec) => (
-        <div className="flex items-center gap-2">
-          <span>{v || t('common.emptyValue', '—')}</span>
-          {rec.sku ? <span className="font-mono text-xs text-gray-500">{rec.sku}</span> : null}
-        </div>
-      ),
-    },
-    { title: t('margin.columns.qtySold', 'Qty sold'), dataIndex: 'qty_sold', render: (v: any) => <span className="tabular-nums">{Number(v ?? 0)}</span> },
-    { title: t('margin.columns.revenue', 'Revenue'), dataIndex: 'revenue_cents', render: (v: any) => <span className="tabular-nums">{money(v)}</span> },
-    { title: t('margin.columns.cogs', 'COGS'), dataIndex: 'cogs_cents', render: (v: any) => <span className="tabular-nums">{money(v)}</span> },
-    { title: t('margin.columns.margin', 'Margin'), dataIndex: 'margin_cents', render: (v: any) => <span className="tabular-nums">{money(v)}</span> },
-    { title: t('margin.columns.marginPct', 'Margin %'), dataIndex: 'margin_pct', render: (v: any) => <span className="tabular-nums">{pct(v)}</span> },
-  ];
 
   return (
     <div className="p-6 space-y-5" id="margin-report-page">
@@ -84,33 +123,17 @@ export function MarginReport() {
         </Button>
       </div>
 
-      {report && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4" id="margin-report-totals">
-          <div className="rounded border p-3">
-            <div className="text-xs text-gray-500">{t('margin.metrics.revenue', 'Revenue')}</div>
-            <div className="text-xl font-semibold tabular-nums">{money(report.total_revenue_cents)}</div>
-          </div>
-          <div className="rounded border p-3">
-            <div className="text-xs text-gray-500">{t('margin.metrics.cogs', 'COGS')}</div>
-            <div className="text-xl font-semibold tabular-nums">{money(report.total_cogs_cents)}</div>
-          </div>
-          <div className="rounded border p-3">
-            <div className="text-xs text-gray-500">{t('margin.metrics.margin', 'Margin')}</div>
-            <div className="text-xl font-semibold tabular-nums">{money(report.total_margin_cents)}</div>
-          </div>
-          <div className="rounded border p-3">
-            <div className="text-xs text-gray-500">{t('margin.metrics.marginPct', 'Margin %')}</div>
-            <div className="text-xl font-semibold tabular-nums">{pct(report.total_margin_pct)}</div>
-          </div>
-        </div>
-      )}
-
-      {loading && !report ? (
+      {report ? (
+        <CurrencyFormatProvider
+          currencyCode={report.currency_code || 'USD'}
+          locale={i18n.language || 'en'}
+        >
+          <MarginReportBody report={report} t={t} />
+        </CurrencyFormatProvider>
+      ) : loading ? (
         <p className="text-sm text-gray-500">{t('margin.loading', 'Loading margin…')}</p>
-      ) : rows.length === 0 ? (
-        <p className="text-sm text-gray-500">{t('margin.empty', 'No sales-driven margin in this window.')}</p>
       ) : (
-        <DataTable id="margin-report-table" data={rows} columns={columns} />
+        <p className="text-sm text-gray-500">{t('margin.empty', 'No sales-driven margin in this window.')}</p>
       )}
     </div>
   );
