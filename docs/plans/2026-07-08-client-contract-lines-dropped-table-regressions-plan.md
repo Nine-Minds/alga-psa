@@ -27,8 +27,11 @@ were never updated** and still query the dropped table:
 | 2 | `shared/workflow/runtime/actions/businessOperations/timeDomain.ts:708` (`resolveBucketUsagePeriod`) | Time entries created via workflow (`createWorkflowTimeEntry`) | Inline third copy of the bucket-period logic |
 | 3 | `packages/billing/src/models/contractLine.ts:24` (`ContractLine.isInUse`) | Contract-line delete guard (only caller is `ContractLine.delete()`) | Separate stale reference |
 
-The canonical, already-migrated implementation is
-`packages/billing/src/services/bucketUsageService.ts`, which resolves the active plan via
+The canonical, migrated implementation now lives in
+`shared/billingClients/bucketUsageService.ts` so both billing and scheduling can
+call it without adding a package cycle. Billing keeps
+`packages/billing/src/services/bucketUsageService.ts` as a compatibility
+re-export. The shared implementation resolves the active plan via
 `client_contracts as cc → contracts as ct → contract_lines as cl` (+ `recurring_service_periods`).
 Its exported functions (`findOrCreateCurrentBucketUsageRecord`, `updateBucketUsageMinutes`,
 `reconcileBucketUsageRecord`) have signatures identical to the scheduling fork.
@@ -41,28 +44,30 @@ used in fix #3.
 
 ## Fixes
 
-### Fix #1 — Time-entry save (reported error): delete the fork, re-point to billing
+### Fix #1 — Time-entry save (reported error): delete the fork, re-point to shared
 
 - **Delete** `packages/scheduling/src/services/bucketUsageService.ts`. The only runtime
   importer is `packages/scheduling/src/actions/timeEntryCrudActions.ts`.
 - In `packages/scheduling/src/actions/timeEntryCrudActions.ts` change the import (line 6) from
-  `'../services/bucketUsageService'` to `'@alga-psa/billing/services/bucketUsageService'`.
-  This covers both call sites (~line 714 and ~line 1067).
-- Add `"@alga-psa/billing": "*"` to `packages/scheduling/package.json` dependencies.
-  - `@alga-psa/billing/services/bucketUsageService` is already imported by
-    `packages/jobs/src/lib/handlers/reconcileBucketUsageHandler.ts`, so the subpath resolves.
-  - No dependency cycle: `@alga-psa/billing` does not import `@alga-psa/scheduling` (verify via
-    typecheck/build).
-- **Behavior note:** the time-entry path now uses billing's migrated period resolution
+  `'../services/bucketUsageService'` to
+  `'@alga-psa/shared/billingClients/bucketUsageService'`. This covers both call
+  sites (~line 714 and ~line 1067).
+- Keep `packages/billing/src/services/bucketUsageService.ts` as a compatibility
+  re-export from the shared service for existing billing/jobs imports.
+- **Cycle note:** re-pointing scheduling directly at `@alga-psa/billing` created
+  a package cycle (`billing → integrations → ee-calendar → scheduling → billing`)
+  in CI. The shared location avoids that cycle because both billing and
+  scheduling already depend on `@alga-psa/shared`.
+- **Behavior note:** the time-entry path now uses the shared migrated period resolution
   (`recurring_service_periods` + cadence disambiguation) instead of the fork's
   `client_billing_cycles` logic — this is the intended, consistent behavior.
 - **Tests:**
   - Delete `packages/scheduling/tests/bucketUsageService.periods.test.ts` (it imports the
-    deleted file; billing has equivalent coverage in
+    deleted file; the shared canonical service has equivalent coverage in
     `server/src/test/unit/billing/bucketUsageService.periods.test.ts`).
   - In `packages/scheduling/tests/timeEntryCrud.changeRequests.test.ts` (~line 42) update
     `vi.mock('../src/services/bucketUsageService', …)` to
-    `vi.mock('@alga-psa/billing/services/bucketUsageService', …)`.
+    `vi.mock('@alga-psa/shared/billingClients/bucketUsageService', …)`.
 
 ### Fix #2 — Workflow-created time entries: in-place migration
 
@@ -77,7 +82,7 @@ query in place rather than re-pointing.
   date window on `cc.start_date`/`cc.end_date`; select `cc.start_date`, `cl.billing_frequency`).
   Keep the existing `client_billing_cycles`-first strategy and `calculateAnchoredPeriod` fallback.
 - Add a marker documenting the intentional non-dedup:
-  `// LEVERAGE: pattern bucket-usage-period — same period logic also in @alga-psa/billing bucketUsageService; kept separate to respect the shared/workflow → billing layering boundary.`
+  `// LEVERAGE: pattern bucket-usage-period — same period logic also in shared/billingClients/bucketUsageService; kept separate to respect the workflow runtime action boundary.`
 - Update contract test `server/src/test/unit/scheduling/workflowTimeDomainTenantScoped.contract.test.ts`
   (~line 92): replace the `tenantScopedTable(trx, 'client_contract_lines as ccl', tenantId)`
   assertion with assertions matching the new `client_contracts` join shape.
