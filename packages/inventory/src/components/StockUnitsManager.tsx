@@ -227,6 +227,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     // not raw FK UUIDs or enum values.
     const headers = [
       t('stockUnits.columns.serialNumber', 'Serial Number'),
+      t('stockUnits.columns.product', 'Product'),
       t('stockUnits.columns.macAddress', 'MAC Address'),
       t('common.status', 'Status'),
       t('stockUnits.columns.location', 'Location'),
@@ -235,6 +236,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     ];
     const rows = visibleUnits.map((unit) => [
       unit.serial_number,
+      unit.product_name,
       fmtMac(unit.mac_address),
       humanizeStatus(unit.status),
       unit.location_name,
@@ -261,6 +263,12 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
       dataIndex: 'serial_number',
       render: (value: string | null | undefined) =>
         value ? <span className="font-mono">{value}</span> : emptyCell,
+    },
+    {
+      title: t('stockUnits.columns.product', 'Product'),
+      dataIndex: 'product_name',
+      render: (_value: unknown, record: IStockUnit) =>
+        record.product_name ? <span>{record.product_name}</span> : emptyCell,
     },
     {
       title: t('stockUnits.columns.macAddress', 'MAC Address'),

@@ -47,8 +47,11 @@ function stockUnitsWithNames(trx: Knex.Transaction, tenant: string) {
     .leftJoin('clients as c', function () {
       this.on('su.client_id', '=', 'c.client_id').andOn('su.tenant', '=', 'c.tenant');
     })
+    .leftJoin('service_catalog as sc', function () {
+      this.on('su.service_id', '=', 'sc.service_id').andOn('su.tenant', '=', 'sc.tenant');
+    })
     .where({ 'su.tenant': tenant })
-    .select('su.*', 'sl.name as location_name', 'c.client_name');
+    .select('su.*', 'sl.name as location_name', 'c.client_name', 'sc.service_name as product_name');
 }
 
 /**

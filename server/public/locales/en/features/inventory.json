@@ -1136,7 +1136,8 @@
       "location": "Location",
       "macAddress": "MAC Address",
       "serialNumber": "Serial Number",
-      "warrantyExpires": "Warranty Expires"
+      "warrantyExpires": "Warranty Expires",
+      "product": "Product"
     },
     "detail": {
       "delivered": "Delivered",
