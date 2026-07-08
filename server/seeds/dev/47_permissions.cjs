@@ -256,7 +256,36 @@ exports.seed = async function(knex) {
         { resource: 'service', action: 'delete', msp: true, client: false, description: 'Archive/delete services/products in the service catalog' },
 
         // Job monitoring
-        { resource: 'job', action: 'delete', msp: true, client: false, description: 'Clear job monitoring history' }
+        { resource: 'job', action: 'delete', msp: true, client: false, description: 'Clear job monitoring history' },
+
+        // Inventory module permissions (MSP-only; the MSP Admin role receives all
+        // msp permissions below. Mirrors migration 20260626100600_add_inventory_permissions.
+        // Without these the Add Sales Order / stock-location / inventory server actions
+        // fail the RBAC check even for Admin, e.g. "Permission denied: sales_order create required".)
+        { resource: 'inventory', action: 'create', msp: true, client: false, description: 'Create inventory records' },
+        { resource: 'inventory', action: 'read', msp: true, client: false, description: 'View inventory records' },
+        { resource: 'inventory', action: 'update', msp: true, client: false, description: 'Update inventory records' },
+        { resource: 'inventory', action: 'delete', msp: true, client: false, description: 'Delete inventory records' },
+        { resource: 'vendor', action: 'create', msp: true, client: false, description: 'Create vendors' },
+        { resource: 'vendor', action: 'read', msp: true, client: false, description: 'View vendors' },
+        { resource: 'vendor', action: 'update', msp: true, client: false, description: 'Update vendors' },
+        { resource: 'vendor', action: 'delete', msp: true, client: false, description: 'Delete vendors' },
+        { resource: 'purchase_order', action: 'create', msp: true, client: false, description: 'Create purchase orders' },
+        { resource: 'purchase_order', action: 'read', msp: true, client: false, description: 'View purchase orders' },
+        { resource: 'purchase_order', action: 'update', msp: true, client: false, description: 'Update purchase orders' },
+        { resource: 'purchase_order', action: 'delete', msp: true, client: false, description: 'Delete purchase orders' },
+        { resource: 'sales_order', action: 'create', msp: true, client: false, description: 'Create sales orders' },
+        { resource: 'sales_order', action: 'read', msp: true, client: false, description: 'View sales orders' },
+        { resource: 'sales_order', action: 'update', msp: true, client: false, description: 'Update sales orders' },
+        { resource: 'sales_order', action: 'delete', msp: true, client: false, description: 'Delete sales orders' },
+        { resource: 'stock_transfer', action: 'create', msp: true, client: false, description: 'Create stock transfers' },
+        { resource: 'stock_transfer', action: 'read', msp: true, client: false, description: 'View stock transfers' },
+        { resource: 'stock_transfer', action: 'update', msp: true, client: false, description: 'Update stock transfers' },
+        { resource: 'stock_transfer', action: 'delete', msp: true, client: false, description: 'Delete stock transfers' },
+        { resource: 'stock_location', action: 'create', msp: true, client: false, description: 'Create stock locations' },
+        { resource: 'stock_location', action: 'read', msp: true, client: false, description: 'View stock locations' },
+        { resource: 'stock_location', action: 'update', msp: true, client: false, description: 'Update stock locations' },
+        { resource: 'stock_location', action: 'delete', msp: true, client: false, description: 'Delete stock locations' }
     ];
 
     // Process each tenant

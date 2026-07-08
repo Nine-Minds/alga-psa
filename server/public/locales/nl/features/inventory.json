@@ -901,8 +901,10 @@
       "hard": "Hard",
       "soft": "Zacht"
     },
+    "allocationModeHelp": "Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.",
     "availabilityOk": "OK",
     "backorderBadge": "Backorder {{shortfall}}",
+    "billingAllocation": "Billing & allocation",
     "billsOnFulfillment": "Factureert bij uitvoering",
     "cancelDialog": {
       "confirm": "Verkooporder annuleren",
@@ -931,6 +933,7 @@
       "vendorPlaceholder": "Selecteer een leverancier…"
     },
     "created": "Verkooporder aangemaakt",
+    "currencyFromClient": "Set from client",
     "currencyRequired": "Valutacode is verplicht",
     "detailTitle": "Verkooporder {{number}}",
     "detailTitleFallback": "Verkooporder",
@@ -962,12 +965,22 @@
     "enterSerial": "Voer minstens één serienummer in.",
     "fields": {
       "allocationMode": "Toewijzingsmodus",
+      "clientPoNumber": "Client PO number",
       "currencyCode": "Valutacode",
+      "expectedShipDate": "Expected ship date",
+      "fulfillment": "Fulfillment",
       "invoiceMode": "Factuurmodus",
+      "items": "Items",
       "lines": "Regels",
+      "noService": "No service found.",
+      "notes": "Notes",
       "qty": "Aantal",
+      "searchService": "Search services…",
+      "selectService": "Select a service…",
+      "service": "Service",
       "serviceId": "Service-ID",
-      "unitPrice": "Stukprijs ($)"
+      "unitPrice": "Stukprijs ($)",
+      "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "Uit offerte",
     "fulfillDialog": {
@@ -986,6 +999,10 @@
       "title": "Uitvoeren — {{name}}"
     },
     "fulfilledUnits": "{{count}} eenhe(i)d(en) uitgevoerd.",
+    "fulfillment": {
+      "dropShip": "Drop-ship",
+      "fromStock": "From stock"
+    },
     "fulfillmentFailed": "Uitvoering mislukt.",
     "invoiceColumns": {
       "amount": "Bedrag",
@@ -997,6 +1014,7 @@
       "manual": "Handmatig",
       "onFulfillment": "Bij uitvoering"
     },
+    "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
     "invoicedItems": "{{count}} item(s) gefactureerd.",
     "invoices": "Facturen",
     "invoicingFailed": "Facturatie mislukt: {{error}}. Gebruik \"Factuur genereren\" om het opnieuw te proberen.",
@@ -1017,8 +1035,10 @@
     "nothingBackordered": "Er staat niets in backorder.",
     "nothingToInvoice": "Er is niets meer te factureren.",
     "onlyRemaining": "Nog maar {{remaining}} resterend op deze regel.",
+    "pickServiceForLine": "Pick a service for this line.",
     "pickVendor": "Kies de leverancier die deze regel gaat verzenden.",
     "productDefaultLocation": "Standaardlocatie product",
+    "qtyPositive": "Must be > 0.",
     "qtyPositiveInteger": "Aantal moet een positief geheel getal zijn.",
     "reopenError": "Kon de verkooporder niet heropenen.",
     "reopened": "Verkooporder heropend — het is weer een concept.",
@@ -1034,7 +1054,9 @@
       "partiallyFulfilled": "Gedeeltelijk uitgevoerd"
     },
     "title": "Verkooporders",
-    "unassignedBackorder": "{{count}} backorderregel(s) hebben geen voorkeursleverancier — maak die inkooporders handmatig aan."
+    "total": "Total",
+    "unassignedBackorder": "{{count}} backorderregel(s) hebben geen voorkeursleverancier — maak die inkooporders handmatig aan.",
+    "unnamedService": "Unnamed"
   },
   "stock": {
     "actions": {

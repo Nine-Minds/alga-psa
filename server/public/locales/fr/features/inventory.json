@@ -901,8 +901,10 @@
       "hard": "Ferme",
       "soft": "Souple"
     },
+    "allocationModeHelp": "Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.",
     "availabilityOk": "OK",
     "backorderBadge": "Reliquat {{shortfall}}",
+    "billingAllocation": "Billing & allocation",
     "billsOnFulfillment": "Facturé à la livraison",
     "cancelDialog": {
       "confirm": "Annuler la commande client",
@@ -931,6 +933,7 @@
       "vendorPlaceholder": "Sélectionnez un fournisseur…"
     },
     "created": "Commande client créée",
+    "currencyFromClient": "Set from client",
     "currencyRequired": "Le code de devise est requis",
     "detailTitle": "Commande client {{number}}",
     "detailTitleFallback": "Commande client",
@@ -962,12 +965,22 @@
     "enterSerial": "Saisissez au moins un numéro de série.",
     "fields": {
       "allocationMode": "Mode d'allocation",
+      "clientPoNumber": "Client PO number",
       "currencyCode": "Code de devise",
+      "expectedShipDate": "Expected ship date",
+      "fulfillment": "Fulfillment",
       "invoiceMode": "Mode de facturation",
+      "items": "Items",
       "lines": "Lignes",
+      "noService": "No service found.",
+      "notes": "Notes",
       "qty": "Qté",
+      "searchService": "Search services…",
+      "selectService": "Select a service…",
+      "service": "Service",
       "serviceId": "ID de service",
-      "unitPrice": "Prix unitaire ($)"
+      "unitPrice": "Prix unitaire ($)",
+      "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "Depuis le devis",
     "fulfillDialog": {
@@ -986,6 +999,10 @@
       "title": "Livrer — {{name}}"
     },
     "fulfilledUnits": "{{count}} unité(s) livrée(s).",
+    "fulfillment": {
+      "dropShip": "Drop-ship",
+      "fromStock": "From stock"
+    },
     "fulfillmentFailed": "Échec de la livraison.",
     "invoiceColumns": {
       "amount": "Montant",
@@ -997,6 +1014,7 @@
       "manual": "Manuel",
       "onFulfillment": "À la livraison"
     },
+    "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
     "invoicedItems": "{{count}} article(s) facturé(s).",
     "invoices": "Factures",
     "invoicingFailed": "Échec de la facturation : {{error}}. Utilisez « Générer la facture » pour réessayer.",
@@ -1017,8 +1035,10 @@
     "nothingBackordered": "Aucun reliquat.",
     "nothingToInvoice": "Plus rien à facturer.",
     "onlyRemaining": "Il ne reste que {{remaining}} sur cette ligne.",
+    "pickServiceForLine": "Pick a service for this line.",
     "pickVendor": "Choisissez le fournisseur qui expédiera cette ligne.",
     "productDefaultLocation": "Emplacement par défaut du produit",
+    "qtyPositive": "Must be > 0.",
     "qtyPositiveInteger": "La quantité doit être un nombre entier positif.",
     "reopenError": "Impossible de rouvrir la commande client.",
     "reopened": "Commande client rouverte — elle est de nouveau à l'état de brouillon.",
@@ -1034,7 +1054,9 @@
       "partiallyFulfilled": "Partiellement livrée"
     },
     "title": "Commandes client",
-    "unassignedBackorder": "{{count}} ligne(s) en reliquat n'ont pas de fournisseur préféré — créez ces PO manuellement."
+    "total": "Total",
+    "unassignedBackorder": "{{count}} ligne(s) en reliquat n'ont pas de fournisseur préféré — créez ces PO manuellement.",
+    "unnamedService": "Unnamed"
   },
   "stock": {
     "actions": {

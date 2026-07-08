@@ -901,8 +901,10 @@
       "hard": "Twarda",
       "soft": "Miękka"
     },
+    "allocationModeHelp": "Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.",
     "availabilityOk": "OK",
     "backorderBadge": "Zamówienie zaległe {{shortfall}}",
+    "billingAllocation": "Billing & allocation",
     "billsOnFulfillment": "Rozliczenie przy realizacji",
     "cancelDialog": {
       "confirm": "Anuluj zamówienie sprzedaży",
@@ -931,6 +933,7 @@
       "vendorPlaceholder": "Wybierz dostawcę…"
     },
     "created": "Zamówienie sprzedaży utworzone",
+    "currencyFromClient": "Set from client",
     "currencyRequired": "Kod waluty jest wymagany",
     "detailTitle": "Zamówienie sprzedaży {{number}}",
     "detailTitleFallback": "Zamówienie sprzedaży",
@@ -962,12 +965,22 @@
     "enterSerial": "Wprowadź co najmniej jeden numer seryjny.",
     "fields": {
       "allocationMode": "Tryb alokacji",
+      "clientPoNumber": "Client PO number",
       "currencyCode": "Kod waluty",
+      "expectedShipDate": "Expected ship date",
+      "fulfillment": "Fulfillment",
       "invoiceMode": "Tryb fakturowania",
+      "items": "Items",
       "lines": "Linie",
+      "noService": "No service found.",
+      "notes": "Notes",
       "qty": "Ilość",
+      "searchService": "Search services…",
+      "selectService": "Select a service…",
+      "service": "Service",
       "serviceId": "ID usługi",
-      "unitPrice": "Cena jednostkowa ($)"
+      "unitPrice": "Cena jednostkowa ($)",
+      "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "Z oferty",
     "fulfillDialog": {
@@ -986,6 +999,10 @@
       "title": "Zrealizuj — {{name}}"
     },
     "fulfilledUnits": "Zrealizowano {{count}} jednostek.",
+    "fulfillment": {
+      "dropShip": "Drop-ship",
+      "fromStock": "From stock"
+    },
     "fulfillmentFailed": "Realizacja nie powiodła się.",
     "invoiceColumns": {
       "amount": "Kwota",
@@ -997,6 +1014,7 @@
       "manual": "Ręczny",
       "onFulfillment": "Przy realizacji"
     },
+    "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
     "invoicedItems": "Zafakturowano {{count}} pozycji.",
     "invoices": "Faktury",
     "invoicingFailed": "Fakturowanie nie powiodło się: {{error}}. Użyj „Wygeneruj fakturę”, aby spróbować ponownie.",
@@ -1017,8 +1035,10 @@
     "nothingBackordered": "Nic nie jest zaległe.",
     "nothingToInvoice": "Nic nie pozostało do zafakturowania.",
     "onlyRemaining": "Na tej linii pozostało tylko {{remaining}}.",
+    "pickServiceForLine": "Pick a service for this line.",
     "pickVendor": "Wybierz dostawcę, który wyśle tę linię.",
     "productDefaultLocation": "Domyślna lokalizacja produktu",
+    "qtyPositive": "Must be > 0.",
     "qtyPositiveInteger": "Ilość musi być dodatnią liczbą całkowitą.",
     "reopenError": "Nie udało się otworzyć ponownie zamówienia sprzedaży.",
     "reopened": "Zamówienie sprzedaży otwarte ponownie — jest znowu szkicem.",
@@ -1034,7 +1054,9 @@
       "partiallyFulfilled": "Częściowo zrealizowane"
     },
     "title": "Zamówienia sprzedaży",
-    "unassignedBackorder": "{{count}} zaległych linii nie ma preferowanego dostawcy — utwórz te PO ręcznie."
+    "total": "Total",
+    "unassignedBackorder": "{{count}} zaległych linii nie ma preferowanego dostawcy — utwórz te PO ręcznie.",
+    "unnamedService": "Unnamed"
   },
   "stock": {
     "actions": {
