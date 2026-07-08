@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
@@ -91,6 +92,7 @@ function statusVariant(v?: string | null) {
 
 export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[] }) {
   const { t } = useTranslation('features/inventory');
+  const router = useRouter();
 
   const SEARCH_MODE_OPTIONS = [
     { value: 'serial', label: t('stockUnits.searchMode.serial', 'Serial number') },
@@ -346,11 +348,21 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     {
       title: t('common.actions', 'Actions'),
       dataIndex: 'unit_id',
-      width: '120px',
+      width: '200px',
       headerClassName: 'text-right',
       sortable: false,
       render: (_value: unknown, rec: IStockUnit) => (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-1">
+          {rec.asset_id && (
+            <Button
+              id={`unit-asset-${rec.unit_id}`}
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push(`/msp/assets/${rec.asset_id}`)}
+            >
+              {t('stockUnits.viewAsset', 'View asset')}
+            </Button>
+          )}
           <Button
             id={`unit-history-${rec.unit_id}`}
             variant="ghost"
@@ -508,6 +520,20 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
                   <div>
                     <div className="text-xs text-gray-500">{t('stockUnits.detail.delivered', 'Delivered')}</div>
                     <div className="font-mono">{fmtDate(historyDetail.unit.delivered_at)}</div>
+                  </div>
+                )}
+                {historyDetail.unit.asset_id && (
+                  <div>
+                    <div className="text-xs text-gray-500">{t('stockUnits.detail.asset', 'Asset')}</div>
+                    <Button
+                      id="unit-detail-view-asset"
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0"
+                      onClick={() => router.push(`/msp/assets/${historyDetail.unit.asset_id}`)}
+                    >
+                      {t('stockUnits.viewAsset', 'View asset')}
+                    </Button>
                   </div>
                 )}
               </div>

@@ -1146,7 +1146,8 @@
       "mac": "MAC",
       "received": "Received",
       "serial": "Serial",
-      "unitCost": "Unit cost"
+      "unitCost": "Unit cost",
+      "asset": "Asset"
     },
     "exportCsv": "Export CSV",
     "history": "History",
@@ -1198,7 +1199,8 @@
       "allStatuses": "All statuses",
       "client": "Client",
       "allClients": "All clients"
-    }
+    },
+    "viewAsset": "View asset"
   },
   "transfers": {
     "addLine": "Add Line",
