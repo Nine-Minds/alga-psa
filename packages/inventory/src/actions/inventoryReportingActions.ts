@@ -125,6 +125,7 @@ export interface MarginReport {
   total_cogs_cents: number;
   total_margin_cents: number;
   total_margin_pct: number | null;
+  currency_code: string;
 }
 
 function normalizeReportBoundary(value: string | Date | undefined, endExclusive: boolean): string | Date | undefined {
@@ -203,12 +204,18 @@ export const marginReport = withAuth(
       const total_revenue_cents = rows.reduce((s, r) => s + r.revenue_cents, 0);
       const total_cogs_cents = rows.reduce((s, r) => s + r.cogs_cents, 0);
       const total_margin_cents = total_revenue_cents - total_cogs_cents;
+      const billingSettingsRow = await trx('default_billing_settings')
+        .where({ tenant })
+        .select<{ default_currency_code: string | null }>('default_currency_code')
+        .first();
+      const currency_code = billingSettingsRow?.default_currency_code || 'USD';
       return {
         rows,
         total_revenue_cents,
         total_cogs_cents,
         total_margin_cents,
         total_margin_pct: total_revenue_cents === 0 ? null : (total_margin_cents / total_revenue_cents) * 100,
+        currency_code,
       };
     });
   },
