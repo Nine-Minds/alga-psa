@@ -1872,6 +1872,11 @@
         },
         "descriptionCe": "Zarejestruj domeny doradcze dla wykrywania SSO logowania MSP. Weryfikacja własności nie jest wymuszana w edycji Community, a niezarządzane domeny korzystają z dostawców Nine Minds na poziomie aplikacji.",
         "descriptionEe": "Zarządzaj cyklem życia zgłoszeń domen dla wykrywania dostawców SSO logowania MSP. Niezgłoszone lub niekwalifikujące się domeny korzystają z dostawców Nine Minds na poziomie aplikacji.",
+        "moved": {
+          "title": "MSP SSO Login Domains",
+          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "cta": "Open Single Sign-On settings"
+        },
         "dnsHost": "Host:",
         "dnsInstructions": "Dodaj rekord DNS TXT, a następnie kliknij Zweryfikuj:",
         "dnsValue": "Wartość:",

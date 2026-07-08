@@ -1872,6 +1872,11 @@
         },
         "descriptionCe": "Registra domini consultivi per la discovery dell'SSO di accesso MSP. La verifica della proprietà non è imposta nella Community Edition, e i domini non gestiti ricorrono ai provider a livello di applicazione di Nine Minds.",
         "descriptionEe": "Gestisci il ciclo di vita dei reclami di dominio per la discovery dei provider SSO di accesso MSP. I domini non reclamati o non idonei ricorrono ai provider a livello di applicazione di Nine Minds.",
+        "moved": {
+          "title": "MSP SSO Login Domains",
+          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "cta": "Open Single Sign-On settings"
+        },
         "dnsHost": "Host:",
         "dnsInstructions": "Aggiungi il record DNS TXT, poi clicca su Verifica:",
         "dnsValue": "Valore:",

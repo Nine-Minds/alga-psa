@@ -17,10 +17,15 @@ describe('IntegrationsSettingsPage providers tab', () => {
     expect(source).toContain("import { GoogleIntegrationSettings } from './GoogleIntegrationSettings'");
     expect(source).toContain("import { MicrosoftIntegrationSettings } from './MicrosoftIntegrationSettings'");
     expect(source).toContain("import { TeamsEnterpriseIntegrationSettings } from './TeamsEnterpriseIntegrationSettings'");
-    expect(source).toContain("import { MspSsoLoginDomainsSettings } from './MspSsoLoginDomainsSettings'");
+    // MSP SSO login domains moved to Security → Single Sign-On; the Providers tab now shows a
+    // pointer card that deep-links there instead of rendering the domain panel inline.
+    expect(source).not.toContain("import { MspSsoLoginDomainsSettings } from './MspSsoLoginDomainsSettings'");
+    expect(source).not.toContain('<MspSsoLoginDomainsSettings />');
+    expect(source).toContain('id="msp-sso-moved-link"');
+    expect(source).toContain("router.push('/msp/security-settings?tab=single-sign-on')");
+    expect(source).toContain("tIntegrations('integrations.sso.msp.moved.title'");
     expect(source).toContain('<GoogleIntegrationSettings />');
     expect(source).toContain('<MicrosoftIntegrationSettings canUseTeams={canUseTeams} />');
-    expect(source).toContain('<MspSsoLoginDomainsSettings />');
     expect(source).not.toContain('<TeamsIntegrationSettings />');
     expect(source).toContain("id: 'communication'");
     expect(source).toContain("id: 'teams'");
