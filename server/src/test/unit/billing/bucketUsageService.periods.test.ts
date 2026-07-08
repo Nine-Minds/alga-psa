@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { findOrCreateCurrentBucketUsageRecord } from "@alga-psa/billing/services/bucketUsageService";
+import {
+  findOrCreateCurrentBucketUsageRecord,
+  reconcileBucketUsageRecord,
+  updateBucketUsageMinutes,
+} from "@alga-psa/billing/services/bucketUsageService";
 
 type RecurringServicePeriodRow = {
   schedule_key: string;
@@ -147,6 +151,65 @@ function buildBucketUsageTransaction(config: {
   }) as any;
 
   trx.raw = (value: string) => value;
+  trx.client = {
+    config: {
+      tenant: "test-tenant",
+    },
+  };
+
+  return { trx, state };
+}
+
+function buildBucketUsageUpdateTransaction(config: {
+  currentUsage: Record<string, unknown>;
+  timeEntryMinutes?: string | number | null;
+  usageMinutes?: string | number | null;
+  updateCount?: number;
+}) {
+  const state = {
+    tablesCalled: [] as string[],
+    updates: [] as Array<{ tableName: string; payload: Record<string, unknown> }>,
+  };
+
+  const trx: any = ((tableName: string) => {
+    state.tablesCalled.push(tableName);
+
+    const builder: any = {};
+    builder.where = vi.fn().mockImplementation(() => builder);
+    builder.andWhere = vi.fn().mockImplementation(() => builder);
+    builder.join = vi.fn().mockImplementation(() => builder);
+    builder.leftJoin = vi.fn().mockImplementation(() => builder);
+    builder.andOn = vi.fn().mockImplementation(() => builder);
+    builder.andOnVal = vi.fn().mockImplementation(() => builder);
+    builder.select = vi.fn().mockImplementation(() => builder);
+    builder.sum = vi.fn().mockImplementation(() => builder);
+    builder.first = vi.fn().mockImplementation(async () => {
+      if (tableName === "bucket_usage as bu") {
+        return config.currentUsage;
+      }
+
+      if (tableName === "time_entries") {
+        return { total_duration_minutes: config.timeEntryMinutes ?? 0 };
+      }
+
+      if (tableName === "usage_tracking") {
+        return { total_quantity: config.usageMinutes ?? 0 };
+      }
+
+      return undefined;
+    });
+    builder.update = vi.fn().mockImplementation(async (payload: Record<string, unknown>) => {
+      state.updates.push({ tableName, payload });
+      return config.updateCount ?? 1;
+    });
+
+    return builder;
+  }) as any;
+
+  trx.raw = (value: string) => value;
+  trx.fn = {
+    now: vi.fn(() => "NOW"),
+  };
   trx.client = {
     config: {
       tenant: "test-tenant",
@@ -318,5 +381,54 @@ describe("bucketUsageService period selection", () => {
     ).rejects.toThrow(
       "Ambiguous bucket usage assignment resolution for client client-1, service service-1, date 2025-02-10. Matched assignments: assignment-1, assignment-2. Provide explicit assignment identity before bucket billing.",
     );
+  });
+
+  it("T056: bucket usage delta updates coerce bigint strings and never write audit timestamps", async () => {
+    const { trx, state } = buildBucketUsageUpdateTransaction({
+      currentUsage: {
+        minutes_used: "30",
+        rolled_over_minutes: "0",
+        total_minutes: "120",
+      },
+    });
+
+    await updateBucketUsageMinutes(trx, "usage-1", 15);
+
+    expect(state.updates).toEqual([
+      {
+        tableName: "bucket_usage",
+        payload: {
+          minutes_used: 45,
+          overage_minutes: 0,
+        },
+      },
+    ]);
+  });
+
+  it("T057: bucket usage reconciliation coerces aggregate strings and never writes audit timestamps", async () => {
+    const { trx, state } = buildBucketUsageUpdateTransaction({
+      currentUsage: {
+        client_id: "client-1",
+        service_catalog_id: "service-1",
+        period_start: "2025-02-01",
+        period_end: "2025-02-28",
+        rolled_over_minutes: "5",
+        total_minutes: "40",
+      },
+      timeEntryMinutes: "45",
+      usageMinutes: "5",
+    });
+
+    await reconcileBucketUsageRecord(trx, "usage-1");
+
+    expect(state.updates).toEqual([
+      {
+        tableName: "bucket_usage",
+        payload: {
+          minutes_used: 50,
+          overage_minutes: 5,
+        },
+      },
+    ]);
   });
 });

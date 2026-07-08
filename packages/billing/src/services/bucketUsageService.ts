@@ -42,8 +42,6 @@ interface IBucketUsage {
     minutes_used: number;
     overage_minutes: number;
     rolled_over_minutes: number;
-    created_at?: Date;
-    updated_at?: Date;
 }
 
 // Simplified interface for bucket config needed in this function
@@ -59,12 +57,23 @@ interface IContractLineServiceBucketConfigLocal {
     // other fields...
 }
 
+type DbNumeric = number | string | null | undefined;
+
+function toBucketNumber(value: DbNumeric, fieldName: string): number {
+    const normalized = value == null ? 0 : Number(value);
+    if (!Number.isFinite(normalized)) {
+        throw new Error(`Invalid numeric value for ${fieldName}: ${String(value)}`);
+    }
+
+    return normalized;
+}
+
 // Minimal interfaces for summing data
 interface TimeEntrySum {
-   total_duration_minutes: number | null;
+   total_duration_minutes: DbNumeric;
 }
 interface UsageTrackingSum {
-   total_quantity: number | null;
+   total_quantity: DbNumeric;
 }
 
 interface PeriodInfo {
@@ -473,7 +482,7 @@ export async function findOrCreateCurrentBucketUsageRecord(
         minutes_used: 0,
         overage_minutes: 0,
         rolled_over_minutes: rolledOverMinutes,
-        // created_at, updated_at should be handled by DB defaults (e.g., DEFAULT now())
+        // bucket_usage has no audit timestamp columns in the current schema.
     };
 
     try {
@@ -535,15 +544,17 @@ export async function updateBucketUsageMinutes(
             'bu.rolled_over_minutes',
             'psbc.total_minutes'
         )
-        .first<{ minutes_used: number; rolled_over_minutes: number; total_minutes: number } | undefined>();
+        .first<{ minutes_used: DbNumeric; rolled_over_minutes: DbNumeric; total_minutes: DbNumeric } | undefined>();
 
     if (!currentUsage) {
         throw new Error(`Bucket usage record with ID ${bucketUsageId} or its configuration not found.`);
     }
 
-    const newMinutesUsed = (currentUsage.minutes_used || 0) + minutesDelta;
+    const newMinutesUsed = toBucketNumber(currentUsage.minutes_used, 'bucket_usage.minutes_used') + minutesDelta;
 
-    const totalAvailableMinutes = (currentUsage.total_minutes || 0) + (currentUsage.rolled_over_minutes || 0);
+    const totalAvailableMinutes =
+        toBucketNumber(currentUsage.total_minutes, 'contract_line_service_bucket_config.total_minutes')
+        + toBucketNumber(currentUsage.rolled_over_minutes, 'bucket_usage.rolled_over_minutes');
 
     const newOverageMinutes = Math.max(0, newMinutesUsed - totalAvailableMinutes);
 
@@ -610,8 +621,8 @@ export async function reconcileBucketUsageRecord(
            service_catalog_id: string;
            period_start: ISO8601String;
            period_end: ISO8601String;
-           rolled_over_minutes: number;
-           total_minutes: number;
+           rolled_over_minutes: DbNumeric;
+           total_minutes: DbNumeric;
        } | undefined>();
 
    if (!usageRecord) {
@@ -632,7 +643,7 @@ export async function reconcileBucketUsageRecord(
        .sum('billable_duration as total_duration_minutes')
        .first<TimeEntrySum>();
 
-   const timeEntryMinutes = timeEntrySumResult?.total_duration_minutes || 0;
+   const timeEntryMinutes = toBucketNumber(timeEntrySumResult?.total_duration_minutes, 'time_entries.billable_duration sum');
    console.log(`Reconciliation: Found ${timeEntryMinutes} minutes from time entries.`);
 
    // 4. Sum Billable Usage Tracking (assuming 1 quantity = 1 minute)
@@ -647,12 +658,14 @@ export async function reconcileBucketUsageRecord(
        .sum('quantity as total_quantity')
        .first<UsageTrackingSum>();
 
-   const usageMinutes = usageTrackingSumResult?.total_quantity || 0;
+   const usageMinutes = toBucketNumber(usageTrackingSumResult?.total_quantity, 'usage_tracking.quantity sum');
    console.log(`Reconciliation: Found ${usageMinutes} minutes from usage tracking.`);
 
    // 5. Calculate total minutes used and overage
    const totalMinutesUsed = timeEntryMinutes + usageMinutes;
-   const totalAvailableMinutes = (total_minutes || 0) + (usageRecord.rolled_over_minutes || 0);
+   const totalAvailableMinutes =
+       toBucketNumber(total_minutes, 'contract_line_service_bucket_config.total_minutes')
+       + toBucketNumber(usageRecord.rolled_over_minutes, 'bucket_usage.rolled_over_minutes');
    const newOverageMinutes = Math.max(0, totalMinutesUsed - totalAvailableMinutes);
 
    console.log(`Reconciliation: Calculated total_minutes_used = ${totalMinutesUsed}, new_overage_minutes = ${newOverageMinutes}`);
@@ -665,7 +678,6 @@ export async function reconcileBucketUsageRecord(
        .update({
            minutes_used: totalMinutesUsed,
            overage_minutes: newOverageMinutes,
-           updated_at: trx.fn.now(),
        });
 
    if (updateCount === 0) {

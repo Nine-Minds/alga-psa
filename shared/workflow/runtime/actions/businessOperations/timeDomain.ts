@@ -799,8 +799,6 @@ async function findOrCreateBucketUsageForEntry(params: {
       minutes_used: 0,
       overage_minutes: 0,
       rolled_over_minutes: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     })
     .returning('usage_id');
 
@@ -870,7 +868,6 @@ async function applyBucketUsageDeltaForEntry(params: {
     .update({
       minutes_used: newMinutesUsed,
       overage_minutes: newOverageMinutes,
-      updated_at: new Date().toISOString(),
     });
 }
 
