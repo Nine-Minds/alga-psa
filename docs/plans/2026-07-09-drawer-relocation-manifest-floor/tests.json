@@ -114,21 +114,21 @@
   {
     "id": "T070",
     "description": "Final canary: non-work routes floor-free; work routes unchanged; >=15 mixed routes compile with NO Zone-Allocation OOM; Results table filled",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-verify",
     "featureIds": ["F070"]
   },
   {
     "id": "T071",
     "description": "Final gates: full typecheck exit 0; ESLint barrel guard 0; rg finds zero dynamic import('@alga-psa/ in shell/layouts/msp-composition; packageDependencies.test.ts passes; touched-package unit tests pass",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-verify",
     "featureIds": ["F071"]
   },
   {
     "id": "T072",
     "description": "Final runtime smoke matrix: full cross-feature drawer navigation works on work routes (ticket↔client↔interaction↔project chains with back/forward); non-work routes render chrome only, no drawer regressions",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-verify",
     "featureIds": ["F072"]
   }

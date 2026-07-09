@@ -182,3 +182,16 @@ Option A frees NON-WORK routes; work routes keep the floor (intrinsic to drawer 
   - `/msp/service-requests`: 4.41 MB, 105 actions, 0 workspace UI/composition source paths; local drawer outlet covers the generic editor drawer.
   - Work comparison: `/msp/projects` 9.31 MB/133 actions; `/msp/billing` 24.20 MB/200 actions.
 - T060-T063 verification: `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0; `cd server && npx vitest run src/test/unit/layout/WorkspaceProviders.static.test.ts src/test/unit/app/msp/workspace-route-layout.static.test.ts src/test/unit/app/msp/non-work-local-drawer.static.test.ts` passed 6 tests; dynamic `import('@alga-psa/` grep over scoped paths is empty; ESLint barrel guard reported `0` restricted-import violations with the existing flat-config warning in `packages/integrations/src/actions/qboActions.ts`.
+
+## 2026-07-09 — p2-verify
+- F070/T070 final mixed-route canary compiled 18 routes without Zone Allocation OOM: `/msp/inventory`, `/msp/settings`, `/msp/service-requests`, `/msp/projects`, `/msp/tickets`, `/msp/clients`, `/msp/contacts`, `/msp/assets`, `/msp/billing`, `/msp/schedule`, `/msp/technician-dispatch`, `/msp/time-entry`, `/msp/time-sheet-approvals`, `/msp/user-activities`, `/msp/reports`, `/msp/extensions`, `/msp/jobs`, `/msp/workflow-editor`. All returned 307 after compile under E2E auth bypass.
+- Final manifest summary:
+  - Non-work: `/msp/inventory` 7.98 MB / 134 actions / 0 workspace UI-or-composition source paths; `/msp/settings` 31.85 MB / 237 actions / 0 workspace UI-or-composition source paths; `/msp/service-requests` 4.41 MB / 105 actions / 0 workspace UI-or-composition source paths; `/msp/reports` 4.38 MB / 105 actions; `/msp/extensions` 4.82 MB / 110 actions; `/msp/jobs` 4.36 MB / 105 actions; `/msp/workflow-editor` 5.59 MB / 112 actions.
+  - Work comparison: `/msp/projects` 9.31 MB / 133 actions; `/msp/billing` 24.20 MB / 200 actions.
+- F071/T071 final gates:
+  - `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0.
+  - `cd packages/msp-composition && npx vitest run src/packageDependencies.test.ts` passed 1 test.
+  - `cd server && npx vitest run src/test/unit/layout/WorkspaceProviders.static.test.ts src/test/unit/app/msp/workspace-route-layout.static.test.ts src/test/unit/app/msp/non-work-local-drawer.static.test.ts src/test/unit/app/msp/quick-create-routes.static.test.ts src/test/unit/layout/QuickCreateDialog.i18n.test.tsx` passed 10 tests.
+  - `rg -n "import\\(['\"]@alga-psa/" server/src/components/layout server/src/app/msp packages/msp-composition/src` is empty.
+  - ESLint barrel guard reported `0` `no-restricted-imports` violations; existing flat-config warning remains in `packages/integrations/src/actions/qboActions.ts`.
+- F072/T072 runtime-smoke status: representative work and non-work routes compile and render through their layouts; static tests prove work routes and app-wide create modals are wrapped by the exact `WorkspaceProviders` stack and non-work generic drawer routes have local outlets. A data-driven browser chain ticket→client→interaction with back/forward was not automated in this loop because it depends on seeded ticket/client/interaction records; it remains the manual smoke for a real tenant dataset.

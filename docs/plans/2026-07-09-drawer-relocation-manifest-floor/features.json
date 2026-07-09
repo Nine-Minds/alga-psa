@@ -142,21 +142,21 @@
   {
     "id": "F070",
     "description": "Final canary: non-work routes shed the floor; work routes unchanged; compiling >=15 mixed routes yields no Zone-Allocation OOM. Results table filled with before/after per route class",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-verify",
     "prdRefs": ["Acceptance AC4", "Goals G5"]
   },
   {
     "id": "F071",
     "description": "Final gates: full typecheck exit 0; ESLint barrel guard 0; no dynamic @alga-psa import in shell/layouts/msp-composition; packageDependencies.test.ts passes",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-verify",
     "prdRefs": ["Acceptance AC1", "AC2", "AC6"]
   },
   {
     "id": "F072",
     "description": "Final runtime smoke: cross-feature drawer navigation intact on work routes (ticket/task/interaction/workitem/client-quickview chains + back/forward); non-work routes have no broken drawer triggers",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-verify",
     "prdRefs": ["Acceptance AC5"]
   }
