@@ -98,7 +98,19 @@ cd packages/msp-composition && npx vitest run src/packageDependencies.test.ts   
 Option A frees NON-WORK routes; work routes keep the floor (intrinsic to drawer nav — accepted).
 | Milestone | non-work route (/msp/inventory) cross-feature modules | non-work partial size | work route (/msp/projects) — expected unchanged | notes |
 |---|---|---|---|---|
-| baseline (Phase A+B) | ? (measure in F001) | ? | 137 | — |
+| baseline (Phase A+B) | tickets 16522, clients 10514, scheduling 7510, projects 4506, user-activities 751 | 13.70 MB / 163 actions | 9.80 MB / 137 actions | measured 2026-07-09 via dev canary |
 | after P1 (intercept quick-create) | ? (quick-add graphs gone) | ? | ~unchanged | — |
 | after P2 (workspace layer) | target 0 tickets/projects/scheduling/clients/ua | target ≪ baseline | ~137 (accepted) | — |
-| /msp/settings (non-work) | target 0 | target ≪ baseline | — | — |
+| /msp/settings (non-work) | baseline tickets 30383, clients 31704, scheduling 14531, projects 15852, user-activities 1321 | 37.39 MB / 251 actions | — | measured 2026-07-09 |
+| /msp/billing (ambiguous) | baseline tickets 24002, clients 15274, scheduling 10910, projects 6546, user-activities 1091 | 24.43 MB / 201 actions | — | classification deferred to p2 work-set grep |
+
+## 2026-07-09 — p1-intercept-scaffold
+- F001/T001 baseline canary captured with `NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NX_TUI=false NX_DAEMON=false E2E_AUTH_BYPASS=true PORT=3000 npx nx next:dev server`; route hits returned 307 after compiling, which is acceptable because manifest generation occurs before auth redirect.
+- Baseline manifest readings:
+  - `/msp/projects`: `server/.next/dev/server/app/msp/projects/page/server-reference-manifest.json`, 9.80 MB (`10280206` bytes), 137 `ACTIONS_MODULE*` entries.
+  - `/msp/inventory`: 13.70 MB (`14367196` bytes), 163 actions; cross-feature counts tickets 16522, clients 10514, scheduling 7510, projects 4506, user-activities 751.
+  - `/msp/settings`: 37.39 MB (`39208781` bytes), 251 actions; cross-feature counts clients 31704, tickets 30383, projects 15852, scheduling 14531, user-activities 1321.
+  - `/msp/billing`: 24.43 MB (`25617939` bytes), 201 actions; cross-feature counts tickets 24002, clients 15274, scheduling 10910, projects 6546, user-activities 1091.
+- F002 ticket intercepted quick-create pattern: `packages/tickets/src/lib/createTicketRoute.ts` owns `CREATE_TICKET_PATH`, `buildCreateTicketHref`, and `parseCreateTicketPrefill`; `server/src/app/msp/create-ticket/page.tsx` renders the full-page route with `closeMode="replace"`; `server/src/app/msp/@modal/(.)create-ticket/page.tsx` renders the intercepted modal with `closeMode="back"`; both delegate UI to `server/src/app/msp/_components/CreateTicketRouteClient.tsx`.
+- F003 changed `server/src/components/layout/QuickCreateDialog.tsx` into a route-only dispatcher. It now imports only `buildCreateTicketHref` from feature packages and maps client/contact/asset/project/service/product to `/msp/create-<x>`, eliminating direct shell imports of `QuickAddClient`, `QuickAddContact`, `QuickAddAsset`, `ProjectQuickAdd`, `QuickAddService`, and `QuickAddProduct`.
+- T002 verification: `rg` over `QuickCreateDialog.tsx` finds no heavy dialog/action/loading imports (only the component name itself); `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0; `cd server && npx vitest run src/test/unit/layout/QuickCreateDialog.i18n.test.tsx` passed 2 tests. Attempting the older ticket integration test also hit an existing Vite resolver issue in `Header.tsx` for `@alga-psa/auth/actions/permission-actions`, so it is not used as the scaffold gate.

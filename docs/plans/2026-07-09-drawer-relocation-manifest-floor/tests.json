@@ -2,14 +2,14 @@
   {
     "id": "T001",
     "description": "Canary baseline: projects route 9.8MB/137 modules; non-work routes /msp/inventory, /msp/settings, /msp/billing floor recorded (current cross-feature module counts captured)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-intercept-scaffold",
     "featureIds": ["F001"]
   },
   {
     "id": "T002",
     "description": "QuickCreateDialog.tsx no longer statically imports QuickAddClient/Contact/Asset/ProjectQuickAdd/QuickAddService/QuickAddProduct (grep + typecheck green)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-intercept-scaffold",
     "featureIds": ["F003"]
   },

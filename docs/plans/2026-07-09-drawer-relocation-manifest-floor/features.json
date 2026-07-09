@@ -2,21 +2,21 @@
   {
     "id": "F001",
     "description": "Baseline captured via canary: projects route 9.8MB/137 modules; also capture the floor on 3 non-work routes (/msp/inventory, /msp/settings, /msp/billing) — recorded in SCRATCHPAD",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-intercept-scaffold",
     "prdRefs": ["Root cause", "Acceptance AC3", "AC4"]
   },
   {
     "id": "F002",
     "description": "Document the reusable ticket intercepted-quick-create shape (create-ticket route + @modal/(.)create-ticket slot + buildCreateTicketHref) in SCRATCHPAD",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-intercept-scaffold",
     "prdRefs": ["Technical approach / Phase 1"]
   },
   {
     "id": "F003",
     "description": "QuickCreateDialog dispatches client/contact/asset/project/service/product via navigation/href instead of statically importing the dialog components",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-intercept-scaffold",
     "prdRefs": ["Technical approach / Phase 1"]
   },
