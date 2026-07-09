@@ -16,6 +16,29 @@ function tenantScopedTable(db: Knex, table: string, tenant: string): Knex.QueryB
   return tenantDb(db, tenant).table(table);
 }
 
+type TicketNotificationSuppression = {
+  suppressContactNotifications: boolean;
+  suppressInternalNotifications: boolean;
+};
+
+function resolveTicketNotificationSuppression(payload: {
+  suppressContactNotifications?: boolean;
+  suppressInternalNotifications?: boolean;
+}): TicketNotificationSuppression {
+  return {
+    suppressContactNotifications: payload.suppressContactNotifications === true,
+    suppressInternalNotifications: payload.suppressInternalNotifications === true,
+  };
+}
+
+function shouldCreateContactPortalTicketNotification(suppression: TicketNotificationSuppression): boolean {
+  return !suppression.suppressContactNotifications;
+}
+
+function shouldCreateStaffTicketNotification(suppression: TicketNotificationSuppression): boolean {
+  return !suppression.suppressInternalNotifications;
+}
+
 /**
  * Handle ticket created events
  */
@@ -684,6 +707,7 @@ async function handleProjectTaskAdditionalAgentAssigned(
 async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId, ticketId, userId, changes } = payload;
+  const suppression = resolveTicketNotificationSuppression(payload);
 
   try {
     const db = await getConnection(tenantId);
@@ -803,34 +827,46 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       ticketNumber: ticket.ticket_number
     });
 
-    // Notify all assigned agents
-    const allAssignees = await getAllTicketAssignees(db, tenantId, ticketId);
-    const notifiedUserIds = new Set<string>([userId]); // Don't notify the person who made the change
+    if (!shouldCreateStaffTicketNotification(suppression)) {
+      logger.debug('[InternalNotificationSubscriber] Skipped ticket updated staff notifications due to suppression', {
+        ticketId,
+        tenantId,
+      });
+    } else {
+      // Notify all assigned agents
+      const allAssignees = await getAllTicketAssignees(db, tenantId, ticketId);
+      const notifiedUserIds = new Set<string>([userId]); // Don't notify the person who made the change
 
-    for (const assigneeId of allAssignees) {
-      if (!notifiedUserIds.has(assigneeId)) {
-        await createNotificationFromTemplateInternal(db, {
-          tenant: tenantId,
-          user_id: assigneeId,
-          template_name: templateName,
-          type: 'info',
-          category: 'tickets',
-          link: internalUrl,
-          data: metadata
-        });
-        notifiedUserIds.add(assigneeId);
+      for (const assigneeId of allAssignees) {
+        if (!notifiedUserIds.has(assigneeId)) {
+          await createNotificationFromTemplateInternal(db, {
+            tenant: tenantId,
+            user_id: assigneeId,
+            template_name: templateName,
+            type: 'info',
+            category: 'tickets',
+            link: internalUrl,
+            data: metadata
+          });
+          notifiedUserIds.add(assigneeId);
 
-        logger.info('[InternalNotificationSubscriber] Created notification for ticket updated (MSP user)', {
-          ticketId,
-          userId: assigneeId,
-          tenantId,
-          changes: metadata.changes
-        });
+          logger.info('[InternalNotificationSubscriber] Created notification for ticket updated (MSP user)', {
+            ticketId,
+            userId: assigneeId,
+            tenantId,
+            changes: metadata.changes
+          });
+        }
       }
     }
 
     // Create notification for client contact if they have portal access
-    if (ticket.contact_name_id && portalUrl) {
+    if (!shouldCreateContactPortalTicketNotification(suppression)) {
+      logger.debug('[InternalNotificationSubscriber] Skipped ticket updated client portal notification due to suppression', {
+        ticketId,
+        tenantId,
+      });
+    } else if (ticket.contact_name_id && portalUrl) {
       const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'user_type')
         .where({
@@ -872,6 +908,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId, ticketId } = payload;
+  const suppression = resolveTicketNotificationSuppression(payload);
 
   try {
     const db = await getConnection(tenantId);
@@ -904,37 +941,49 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       ticketNumber: ticket.ticket_number
     });
 
-    // Notify all assigned agents
-    const allAssignees = await getAllTicketAssignees(db, tenantId, ticketId);
-    const notifiedUserIds = new Set<string>([userId]);
+    if (!shouldCreateStaffTicketNotification(suppression)) {
+      logger.debug('[InternalNotificationSubscriber] Skipped ticket closed staff notifications due to suppression', {
+        ticketId,
+        tenantId,
+      });
+    } else {
+      // Notify all assigned agents
+      const allAssignees = await getAllTicketAssignees(db, tenantId, ticketId);
+      const notifiedUserIds = new Set<string>([userId]);
 
-    for (const assigneeId of allAssignees) {
-      if (!notifiedUserIds.has(assigneeId)) {
-        await createNotificationFromTemplateInternal(db, {
-          tenant: tenantId,
-          user_id: assigneeId,
-          template_name: 'ticket-closed',
-          type: 'success',
-          category: 'tickets',
-          link: internalUrl,
-          data: {
-            ticketId: ticket.ticket_number || 'New Ticket',
-            ticketTitle: ticket.title,
-            closedByName: performedByName
-          }
-        });
-        notifiedUserIds.add(assigneeId);
+      for (const assigneeId of allAssignees) {
+        if (!notifiedUserIds.has(assigneeId)) {
+          await createNotificationFromTemplateInternal(db, {
+            tenant: tenantId,
+            user_id: assigneeId,
+            template_name: 'ticket-closed',
+            type: 'success',
+            category: 'tickets',
+            link: internalUrl,
+            data: {
+              ticketId: ticket.ticket_number || 'New Ticket',
+              ticketTitle: ticket.title,
+              closedByName: performedByName
+            }
+          });
+          notifiedUserIds.add(assigneeId);
 
-        logger.info('[InternalNotificationSubscriber] Created notification for ticket closed (MSP user)', {
-          ticketId,
-          userId: assigneeId,
-          tenantId
-        });
+          logger.info('[InternalNotificationSubscriber] Created notification for ticket closed (MSP user)', {
+            ticketId,
+            userId: assigneeId,
+            tenantId
+          });
+        }
       }
     }
 
     // Create notification for client contact if they have portal access
-    if (ticket.contact_name_id && portalUrl) {
+    if (!shouldCreateContactPortalTicketNotification(suppression)) {
+      logger.debug('[InternalNotificationSubscriber] Skipped ticket closed client portal notification due to suppression', {
+        ticketId,
+        tenantId,
+      });
+    } else if (ticket.contact_name_id && portalUrl) {
       const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'user_type')
         .where({
@@ -2789,6 +2838,15 @@ async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> 
       break;
   }
 }
+
+export const internalNotificationSubscriberTestHarness = {
+  resolveTicketNotificationSuppression,
+  shouldCreateContactPortalTicketNotification,
+  shouldCreateStaffTicketNotification,
+  handleTicketUpdated,
+  handleTicketClosed,
+  handleInternalNotificationEvent,
+};
 
 /**
  * Register internal notification subscriber

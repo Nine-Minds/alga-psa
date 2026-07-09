@@ -99,6 +99,20 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
 - Plan folder: `ee/docs/plans/2026-07-07-silent-ticket-close/`
 - Entry board-change test to mirror: `packages/tickets/src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx`
 
+## 2026-07-09 Implementation Notes — Close Notification Gates
+
+- Completed F016-F019 and F025:
+  - `ticketEmailSubscriber.handleTicketClosed` now resolves the operation suppression flags once and gates contact-facing close emails, bundle-child requester emails, internal staff emails, and watcher emails at the send sites. Contact suppression skips primary/requester/external watcher sends; full suppression also skips assignee/additional/internal watcher sends. Added debug-level skip logs.
+  - `surveySubscriber` returns before loading triggers when `suppressContactNotifications` is true, so silent closes do not invite surveys.
+  - `internalNotificationSubscriber` now uses shared predicates for ticket update/close in-app notifications: contact suppression skips client-portal contact notifications, internal suppression skips staff notifications, and contact-only still notifies staff.
+- Tests added:
+  - `server/src/lib/eventBus/subscribers/__tests__/ticketEmailSubscriber.suppression.test.ts`
+  - `server/src/lib/eventBus/subscribers/__tests__/surveySubscriber.suppression.test.ts`
+  - `server/src/lib/eventBus/subscribers/__tests__/internalNotificationSubscriber.suppression.test.ts`
+- Verification:
+  - `cd server && npx vitest run --config vitest.config.ts src/lib/eventBus/subscribers/__tests__/ticketEmailSubscriber.suppression.test.ts src/lib/eventBus/subscribers/__tests__/surveySubscriber.suppression.test.ts src/lib/eventBus/subscribers/__tests__/internalNotificationSubscriber.suppression.test.ts`
+- Bundle note: current bundled-master close behavior sends child-requester close emails from the master `TICKET_CLOSED` event; it does not publish separate child close workflow events in the existing optimized path. This batch gates the existing child-requester email path. F020/T024 remain open for the deeper child-close propagation requirement.
+
 ## 2026-07-09 — Shared suppression plumbing batch (F001-F010, T001-T011)
 
 - Implemented the base operation-level suppression option pair:
