@@ -37,14 +37,14 @@
   {
     "id": "T030",
     "description": "Work-set grep is exhaustive: every file calling useDrawer/openDrawer/replaceDrawer and every cross-feature use* hook is traced to a /msp route and classified; no route with drawer usage lands in the non-work list",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-define-work-set",
     "featureIds": ["F030", "F031"]
   },
   {
     "id": "T031",
     "description": "Work vs non-work lists recorded with measured non-work floor; the user's OOM-trigger routes (inventory/billing/settings) are correctly classified",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-define-work-set",
     "featureIds": ["F031"]
   },
@@ -103,6 +103,13 @@
     "implemented": false,
     "commitGroup": "p2-remove-from-shell",
     "featureIds": ["F061"]
+  },
+  {
+    "id": "T063",
+    "description": "Settings user management and service-request definition editor drawer triggers work with local lightweight drawer handling after the shell DrawerOutlet is removed; neither route imports WorkspaceProviders",
+    "implemented": false,
+    "commitGroup": "p2-remove-from-shell",
+    "featureIds": ["F062"]
   },
   {
     "id": "T070",

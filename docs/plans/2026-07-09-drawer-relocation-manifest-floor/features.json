@@ -72,14 +72,14 @@
   {
     "id": "F030",
     "description": "Enumerate WORK routes: grep useDrawer/openDrawer/replaceDrawer + cross-feature use* hooks, trace to their /msp route(s). Any route that triggers or renders drawer content = work",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-define-work-set",
     "prdRefs": ["Technical approach / Phase 2 step 1", "OQ3"]
   },
   {
     "id": "F031",
     "description": "Produce the work vs non-work route lists (resolve ambiguous ones like billing empirically); record in SCRATCHPAD with the measured non-work floor from F001",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-define-work-set",
     "prdRefs": ["Technical approach / Phase 2 step 1", "OQ3"]
   },
@@ -131,6 +131,13 @@
     "implemented": false,
     "commitGroup": "p2-remove-from-shell",
     "prdRefs": ["Acceptance AC4", "Goals G1", "G5"]
+  },
+  {
+    "id": "F062",
+    "description": "Localize generic non-work drawer usage in settings user management and service-request definition editor so those routes do not need the cross-feature WorkspaceProviders or shell DrawerOutlet",
+    "implemented": false,
+    "commitGroup": "p2-remove-from-shell",
+    "prdRefs": ["Acceptance AC4", "Acceptance AC7", "Risks (route thought non-work actually opens a drawer)"]
   },
   {
     "id": "F070",

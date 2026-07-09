@@ -137,3 +137,23 @@ Option A frees NON-WORK routes; work routes keep the floor (intrinsic to drawer 
   - Route smoke compiled `/msp/create-ticket`, the six new `/msp/create-*` routes, `/msp/projects`, and `/msp/user-activities`; all returned 307 after compile.
   - `cd server && npx vitest run src/test/unit/layout/QuickCreateDialog.i18n.test.tsx src/test/unit/app/msp/quick-create-routes.static.test.ts` passed 4 tests.
 - Runtime submit note: browser-level form submission was not automated in this loop because valid create payloads depend on tenant data and DB state; the static route contract plus typecheck validates that each dialog is mounted with its submit callbacks and close behavior preserved.
+
+## 2026-07-09 — p2-define-work-set
+- F030/T030 grep used:
+  - `rg -n "\b(useDrawer|openDrawer|replaceDrawer|useClientDrawer|useActivityDrawer|useTicketIntegration|useClientIntegration|useSchedulingCrossFeature|useActivityCrossFeature|useClientCrossFeature|useAssetCrossFeature|useDocumentsCrossFeature|useQuickAddClient)\b" server/src/app/msp server/src/components packages --glob '*.{ts,tsx}' --glob '!**/*.test.*' --glob '!**/__tests__/**'`
+  - `find server/src/app/msp -name page.tsx -o -name layout.tsx`
+- Workspace WORK routes (need full cross-feature provider stack + single outlet):
+  - Tickets: `/msp/tickets/**` including bulk/import/export intercepted modal routes.
+  - Projects: `/msp/projects/**` (projects list/details/tasks/templates use `useDrawer`, `useTicketIntegration`, `useClientIntegration`, documents cross-feature hooks).
+  - Clients/contacts/interactions: `/msp/clients/**`, `/msp/contacts/**`, `/msp/account-manager` is client-domain but no drawer hook found in `AccountManagerDashboard`.
+  - Assets: `/msp/assets/**` (asset dashboard/detail/form use `useClientDrawer`, `useAssetCrossFeature`, documents cross-feature).
+  - Scheduling/time: `/msp/schedule`, `/msp/technician-dispatch`, `/msp/time-entry/**`, `/msp/time-sheet-approvals` (schedule entry/time sheet/dispatch drawers and scheduling cross-feature work item drawer).
+  - User activities: `/msp/user-activities` (activity drawer provider + activity cross-feature).
+  - Billing: `/msp/billing/**`, `/msp/invoices/[id]`, `/msp/quote-approvals`, `/msp/quote-document-templates` are classified WORK because billing dashboard components use `useQuickAddClient`, `ContractDetail` uses `useDrawer`/`replaceDrawer` and documents cross-feature, and contract basics uses quick-add client. This means `/msp/billing` is not a Phase 2 floor-free route under current behavior.
+  - Create routes: `/msp/create-ticket`, `/msp/create-client`, `/msp/create-contact`, `/msp/create-asset`, `/msp/create-project`, `/msp/create-service`, `/msp/create-product` and their `@modal/(.)create-*` counterparts render feature dialogs and need the route-local composition needed by those dialogs.
+- NON-WORK routes (no cross-feature workspace stack intended): `/msp/inventory/**`, `/msp/settings/**`, `/msp/extensions/**`, `/msp/reports`, `/msp/automation-hub`, `/msp/document-templates/**`, `/msp/surveys/**`, `/msp/profile`, `/msp/account`, `/msp/jobs`, `/msp/workflow-editor/**`, `/msp/workflow-control`, `/msp/workflows/**`, `/msp/documents`, `/msp/knowledge-base/**`, `/msp/email-logs`, `/msp/licenses/**`, `/msp/onboarding`, `/msp/platform-updates/**`, `/msp/search`, `/msp/security-settings`, `/msp/share_document`, `/msp/test/**`, `/msp/chat`.
+- Important exception/remediation: `/msp/settings` and `/msp/service-requests/[definitionId]` use the generic `useDrawer` for local details/editing (`UserList`, `OrgChart`, `UserDetails`, `ServiceRequestDefinitionEditorPage`). These are not cross-feature drawer navigation and should not force the full workspace stack. Added F062/T063 to localize these generic drawers before shell `DrawerOutlet` removal.
+- User OOM route classification:
+  - `/msp/inventory`: non-work, target floor-free after WorkspaceProviders moves.
+  - `/msp/settings`: non-work after F062 local drawer remediation, target floor-free.
+  - `/msp/billing`: empirically work due contract/client/document drawer integrations; work-route floor remains accepted unless billing UX is redesigned separately.
