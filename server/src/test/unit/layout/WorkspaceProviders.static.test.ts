@@ -32,11 +32,11 @@ describe('WorkspaceProviders static structure', () => {
     }
   });
 
-  it('keeps DrawerProvider state global while moving heavy providers behind WorkspaceProviders', () => {
+  it('keeps only DrawerProvider state in DefaultLayout', () => {
     expect(defaultLayoutSource).toContain('import { DrawerProvider } from "@alga-psa/ui"');
-    expect(defaultLayoutSource).toContain("import WorkspaceProviders from './WorkspaceProviders'");
     expect(defaultLayoutSource).toContain('<DrawerProvider>');
-    expect(defaultLayoutSource).toContain('<WorkspaceProviders>');
+    expect(defaultLayoutSource).not.toContain("import WorkspaceProviders from './WorkspaceProviders'");
+    expect(defaultLayoutSource).not.toContain('<WorkspaceProviders>');
     expect(defaultLayoutSource).not.toContain('DrawerOutlet');
 
     for (const provider of providerOrder.slice(0, -1)) {

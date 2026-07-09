@@ -100,8 +100,8 @@ Option A frees NON-WORK routes; work routes keep the floor (intrinsic to drawer 
 |---|---|---|---|---|
 | baseline (Phase A+B) | tickets 16522, clients 10514, scheduling 7510, projects 4506, user-activities 751 | 13.70 MB / 163 actions | 9.80 MB / 137 actions | measured 2026-07-09 via dev canary |
 | after P1 (intercept quick-create) | ? (quick-add graphs gone) | ? | ~unchanged | — |
-| after P2 (workspace layer) | target 0 tickets/projects/scheduling/clients/ua | target ≪ baseline | ~137 (accepted) | — |
-| /msp/settings (non-work) | baseline tickets 30383, clients 31704, scheduling 14531, projects 15852, user-activities 1321 | 37.39 MB / 251 actions | — | measured 2026-07-09 |
+| after P2 (workspace layer) | 0 workspace UI/composition paths; 35 cross-feature action paths remain | 7.98 MB / 134 actions | 9.31 MB / 133 actions | measured after F060-F062 |
+| /msp/settings (non-work) | 0 workspace UI/composition paths; 63 settings-owned cross-feature action paths remain | 31.85 MB / 237 actions | — | settings tabs import tickets/projects/clients settings actions |
 | /msp/billing (ambiguous) | baseline tickets 24002, clients 15274, scheduling 10910, projects 6546, user-activities 1091 | 24.43 MB / 201 actions | — | classification deferred to p2 work-set grep |
 
 ## 2026-07-09 — p1-intercept-scaffold
@@ -171,3 +171,14 @@ Option A frees NON-WORK routes; work routes keep the floor (intrinsic to drawer 
 - F052 context preservation rationale: the wrapped routes use the same `WorkspaceProviders` component extracted from `DefaultLayout`, so cross-feature contexts and the single drawer outlet remain co-mounted. Full data-driven ticket→client→interaction browser smoke remains for final verification; this group covered structural and route-compile gates.
 - T050-T052 verification: `cd server && npx vitest run src/test/unit/app/msp/workspace-route-layout.static.test.ts src/test/unit/layout/WorkspaceProviders.static.test.ts src/test/unit/app/msp/quick-create-routes.static.test.ts` passed 6 tests; `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0; route compile smoke returned 307 for `/msp/projects`, `/msp/tickets`, `/msp/clients`, `/msp/contacts`, `/msp/assets`, `/msp/billing`, `/msp/schedule`, `/msp/technician-dispatch`, `/msp/time-entry`, `/msp/time-sheet-approvals`, `/msp/user-activities`, `/msp/create-ticket`, `/msp/create-client`, `/msp/create-project`.
 - Temporary state until p2-remove-from-shell: work routes are now wrapped both by their route layout and by the still-global `DefaultLayout` workspace wrapper. The next commit removes the global wrapper so there is one active outlet again.
+
+## 2026-07-09 — p2-remove-from-shell
+- F060 removed `WorkspaceProviders` from `server/src/components/layout/DefaultLayout.tsx`; the shell keeps only lightweight `DrawerProvider` state. `DefaultLayout` grep is empty for `WorkspaceProviders`, `DrawerOutlet`, and all heavy provider names.
+- F062 added `server/src/app/msp/_components/LocalDrawerOutlet.tsx`, `server/src/app/msp/settings/layout.tsx`, and a local outlet in `server/src/app/msp/service-requests/layout.tsx` so generic non-work drawers still have an outlet without importing `WorkspaceProviders`.
+- Moved `registerSlaIntegration()` out of the root `/msp` layout and into `WorkspaceRouteLayout`; otherwise ticket actions stayed in every non-work manifest.
+- F061 clean canary after `rm -rf server/.next/dev`:
+  - `/msp/inventory`: 7.98 MB, 134 actions, 0 workspace UI/composition source paths. Remaining 35 cross-feature source paths are action modules, not `msp-composition`/provider/drawer UI.
+  - `/msp/settings`: 31.85 MB, 237 actions, 0 workspace UI/composition source paths. Remaining 63 cross-feature action paths come from settings tabs (`TicketingSettings`, `ProjectSettings`, `TimeEntrySettings`, user/client settings), not the workspace stack.
+  - `/msp/service-requests`: 4.41 MB, 105 actions, 0 workspace UI/composition source paths; local drawer outlet covers the generic editor drawer.
+  - Work comparison: `/msp/projects` 9.31 MB/133 actions; `/msp/billing` 24.20 MB/200 actions.
+- T060-T063 verification: `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0; `cd server && npx vitest run src/test/unit/layout/WorkspaceProviders.static.test.ts src/test/unit/app/msp/workspace-route-layout.static.test.ts src/test/unit/app/msp/non-work-local-drawer.static.test.ts` passed 6 tests; dynamic `import('@alga-psa/` grep over scoped paths is empty; ESLint barrel guard reported `0` restricted-import violations with the existing flat-config warning in `packages/integrations/src/actions/qboActions.ts`.

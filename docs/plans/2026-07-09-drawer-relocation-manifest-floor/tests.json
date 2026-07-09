@@ -86,28 +86,28 @@
   {
     "id": "T060",
     "description": "DefaultLayout no longer imports/renders the cross-feature provider stack or DrawerOutlet (grep + typecheck); only justified globals remain",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-remove-from-shell",
     "featureIds": ["F060"]
   },
   {
     "id": "T061",
     "description": "Canary: /msp/inventory and /msp/settings pull ZERO tickets/projects/scheduling/clients/user-activities cross-feature modules; their partial size drops materially vs T001 baseline",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-remove-from-shell",
     "featureIds": ["F061"]
   },
   {
     "id": "T062",
     "description": "No non-work route has a broken drawer trigger (runtime smoke a sample of non-work routes: no openDrawer-with-no-outlet dead-ends)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-remove-from-shell",
     "featureIds": ["F061"]
   },
   {
     "id": "T063",
     "description": "Settings user management and service-request definition editor drawer triggers work with local lightweight drawer handling after the shell DrawerOutlet is removed; neither route imports WorkspaceProviders",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-remove-from-shell",
     "featureIds": ["F062"]
   },

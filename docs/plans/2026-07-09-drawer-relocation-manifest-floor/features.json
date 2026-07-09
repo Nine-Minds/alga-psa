@@ -121,21 +121,21 @@
   {
     "id": "F060",
     "description": "Remove the cross-feature provider stack (461-472) + DrawerOutlet (575) from DefaultLayout; keep only justified globals (DrawerProvider state per OQ1, QuickAddClientProviderWithCallbacks, command palette, chat)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-remove-from-shell",
     "prdRefs": ["Technical approach / Phase 2 step 4", "Acceptance AC7"]
   },
   {
     "id": "F061",
     "description": "Non-work routes render only shell chrome; canary confirms /msp/inventory + /msp/settings pull zero tickets/projects/scheduling/clients/user-activities cross-feature modules",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-remove-from-shell",
     "prdRefs": ["Acceptance AC4", "Goals G1", "G5"]
   },
   {
     "id": "F062",
     "description": "Localize generic non-work drawer usage in settings user management and service-request definition editor so those routes do not need the cross-feature WorkspaceProviders or shell DrawerOutlet",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-remove-from-shell",
     "prdRefs": ["Acceptance AC4", "Acceptance AC7", "Risks (route thought non-work actually opens a drawer)"]
   },
