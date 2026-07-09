@@ -3395,7 +3395,7 @@ const handleClose = () => {
                     boardOptions={boardOptions}
                     agentOptions={agentOptions}
                     onSelectChange={handleSelectChange}
-                    onBatchSelectChange={(changes) => { void handleBatchSaveChanges(changes); }}
+                    onBatchSelectChange={(changes, options) => handleBatchSaveChanges(changes, options)}
                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                     hideSlaStatus={hideSlaStatus}
                     hideBilling={hideBilling}
@@ -3408,6 +3408,7 @@ const handleClose = () => {
                     liveHighlightedFields={liveHighlightedFields}
                     liveFrozenFields={Object.keys(liveFieldConflicts)}
                     liveFieldConflicts={liveFieldConflicts}
+                    onLiveDirtyFieldsChange={setTicketInfoDirtyFields}
                     onKeepLiveConflict={handleKeepLiveConflict}
                     onTakeLiveConflict={handleTakeLiveConflict}
                     liveEditingUsers={liveEditingUsers}

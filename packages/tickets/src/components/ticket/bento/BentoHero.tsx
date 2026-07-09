@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { Pencil, SlidersHorizontal, Flame } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pencil, SlidersHorizontal, Flame, Save } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import UserAndTeamPicker, { type GetTeamAvatarUrlsBatch } from '@alga-psa/ui/components/UserAndTeamPicker';
 import type { GetUserAvatarUrlsBatch } from '@alga-psa/ui/components/UserPicker';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
@@ -20,6 +22,13 @@ import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
 import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
 import { useTeamAvatarUrl } from './useTeamAvatarUrl';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { getTicketCategoriesByBoard, type BoardCategoryData } from '../../../actions/ticketCategoryActions';
+import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
+import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import TicketNotificationSuppressionControl, {
+  type TicketNotificationSuppressionValue,
+} from '../TicketNotificationSuppressionControl';
 
 interface HeroSelectOption {
   value: string;
@@ -28,6 +37,25 @@ interface HeroSelectOption {
   board_id?: string | null;
   color?: string | null;
 }
+
+type HeroPendingChanges = Record<string, string | null>;
+
+const trackedHeroFields = [
+  'title',
+  'status_id',
+  'priority_id',
+  'board_id',
+  'category_id',
+  'subcategory_id',
+  'assigned_to',
+  'due_date',
+  'response_state',
+] as const;
+
+const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
+  suppressContactNotifications: false,
+  suppressInternalNotifications: false,
+});
 
 interface BentoHeroProps {
   id: string;
@@ -57,7 +85,10 @@ interface BentoHeroProps {
    * flushed here as ONE combined update (one server write + one live broadcast
    * + one timeline row). Falls back to per-field onSelectChange when absent.
    */
-  onBatchSelectChange?: (changes: Record<string, string | null>) => Promise<void> | void;
+  onBatchSelectChange?: (
+    changes: Record<string, string | null>,
+    options?: TicketNotificationSuppressionValue
+  ) => Promise<boolean | void> | boolean | void;
   responseStateTrackingEnabled?: boolean;
   hideSlaStatus?: boolean;
   /** Locks workflow fields when the ticket is a bundle child. */
@@ -82,6 +113,8 @@ interface BentoHeroProps {
   liveEditingUsers?: Partial<Record<string, string[]>>;
   /** Broadcasts which field this user is editing (null on blur). */
   onLiveEditingFieldChange?: (field: string | null) => void;
+  /** Reports locally dirty hero fields for live update conflict/highlight filtering. */
+  onLiveDirtyFieldsChange?: (fields: string[]) => void;
 }
 
 function HeroField({ label, children }: { label: string; children: React.ReactNode }) {
@@ -131,82 +164,77 @@ export function BentoHero({
   onTakeLiveConflict,
   liveEditingUsers,
   onLiveEditingFieldChange,
+  onLiveDirtyFieldsChange,
 }: BentoHeroProps) {
   const { t } = useTranslation('features/tickets');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [notificationSuppression, setNotificationSuppression] =
+    useState<TicketNotificationSuppressionValue>(() => defaultNotificationSuppression());
+  const saveSuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // "Keep yours" on a live conflict re-saves the last value THIS user set for a
   // field (the remote value is already applied to `ticket`).
   const lastLocalEditRef = React.useRef<Record<string, string | null | undefined>>({});
 
-  // --- Debounced coalescing (Task 3 / B) --------------------------------------
-  // Rapid consecutive hero edits are buffered and flushed as ONE combined
-  // update instead of a write + broadcast + timeline row per field. Two layers:
-  //   - `pendingEdits`   : optimistic display overrides so a control reflects
-  //                        the change instantly; cleared per-field once the real
-  //                        `ticket` value lands (effect below), never eagerly.
-  //   - `bufferRef`      : the not-yet-flushed changes; cleared on flush (sent).
-  const [pendingEdits, setPendingEdits] = useState<Record<string, string | null>>({});
-  const bufferRef = React.useRef<Record<string, string | null>>({});
-  const flushTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const buildOriginalTicketValues = useCallback((): HeroPendingChanges => {
+    const values: HeroPendingChanges = {};
+    for (const field of trackedHeroFields) {
+      const raw = ticket[field as keyof ITicket] as unknown;
+      values[field] = raw == null ? null : (raw as string);
+    }
+    return values;
+  }, [ticket]);
+
+  const [originalTicketValues, setOriginalTicketValues] = useState<HeroPendingChanges>(() => buildOriginalTicketValues());
+  const [pendingChanges, setPendingChanges] = useState<HeroPendingChanges>({});
+  const hasUnsavedChanges = Object.keys(pendingChanges).length > 0;
+  const hasActiveLiveConflict = Boolean(liveFieldConflicts && Object.keys(liveFieldConflicts).length > 0);
+
+  useRegisterUnsavedChanges(`ticket-bento-hero-${id}`, hasUnsavedChanges);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      setOriginalTicketValues(buildOriginalTicketValues());
+    }
+  }, [buildOriginalTicketValues, hasUnsavedChanges]);
+
+  useEffect(() => {
+    onLiveDirtyFieldsChange?.(Object.keys(pendingChanges));
+  }, [onLiveDirtyFieldsChange, pendingChanges]);
+
+  useEffect(() => {
+    return () => {
+      onLiveDirtyFieldsChange?.([]);
+      if (saveSuccessTimeoutRef.current) {
+        clearTimeout(saveSuccessTimeoutRef.current);
+      }
+    };
+  }, [onLiveDirtyFieldsChange]);
 
   // Displayed value for a field: the pending override (present even when null,
   // e.g. cleared due date / "no reply needed") wins over the persisted value.
   const displayValue = (field: keyof ITicket): string | null => {
     const key = field as string;
-    if (key in pendingEdits) return pendingEdits[key];
+    if (key in pendingChanges) return pendingChanges[key];
     const raw = ticket[field] as unknown;
     return raw == null ? null : (raw as string);
   };
 
-  const flushPending = React.useCallback(() => {
-    if (flushTimerRef.current) {
-      clearTimeout(flushTimerRef.current);
-      flushTimerRef.current = null;
-    }
-    const changes = bufferRef.current;
-    bufferRef.current = {};
-    if (Object.keys(changes).length === 0) return;
-    if (onBatchSelectChange) {
-      void onBatchSelectChange(changes);
-    } else {
-      // No batch handler wired: fall back to per-field immediate saves.
-      for (const [field, value] of Object.entries(changes)) {
-        void onSelectChange(field as keyof ITicket, value);
-      }
-    }
-  }, [onBatchSelectChange, onSelectChange]);
-
-  // Record a hero edit: remember it for F7 "Keep yours", show it optimistically,
-  // buffer it, and (re)arm the debounce so a burst flushes as one update.
-  const commitField = (field: keyof ITicket, value: string | null) => {
+  const handlePendingChange = useCallback((field: keyof ITicket, value: string | null) => {
+    const key = field as string;
     lastLocalEditRef.current[field as string] = value;
-    bufferRef.current = { ...bufferRef.current, [field as string]: value };
-    setPendingEdits((prev) => ({ ...prev, [field as string]: value }));
-    if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
-    flushTimerRef.current = setTimeout(() => flushPending(), 700);
-  };
-
-  // Drop each optimistic override exactly when the persisted `ticket` value
-  // catches up to it — so the control never flickers back to the old value and
-  // a stale override never lingers.
-  useEffect(() => {
-    setPendingEdits((prev) => {
-      const keys = Object.keys(prev);
-      if (keys.length === 0) return prev;
-      let changed = false;
-      const next = { ...prev };
-      for (const key of keys) {
-        const raw = ticket[key as keyof ITicket] as unknown;
-        const ticketValue = raw == null ? null : (raw as string);
-        if (ticketValue === prev[key]) {
-          delete next[key];
-          changed = true;
-        }
+    setPendingChanges((prev) => {
+      const originalValue = originalTicketValues[key] ?? null;
+      if (value === originalValue) {
+        const { [key]: _removed, ...rest } = prev;
+        return rest;
       }
-      return changed ? next : prev;
+      return { ...prev, [key]: value };
     });
-  }, [ticket]);
+  }, [originalTicketValues]);
 
   // A live conflict (F7) supersedes any buffered/optimistic local edit for that
   // field: refreshTicketSnapshot has already written the authoritative remote
@@ -217,14 +245,7 @@ export function BentoHero({
   useEffect(() => {
     const conflicted = liveFieldConflicts ? Object.keys(liveFieldConflicts) : [];
     if (conflicted.length === 0) return;
-    for (const field of conflicted) {
-      if (field in bufferRef.current) {
-        const nextBuffer = { ...bufferRef.current };
-        delete nextBuffer[field];
-        bufferRef.current = nextBuffer;
-      }
-    }
-    setPendingEdits((prev) => {
+    setPendingChanges((prev) => {
       let changed = false;
       const next = { ...prev };
       for (const field of conflicted) {
@@ -236,20 +257,6 @@ export function BentoHero({
       return changed ? next : prev;
     });
   }, [liveFieldConflicts]);
-
-  // Never lose a buffered edit: flush on unmount and when focus leaves the hero.
-  const flushPendingRef = React.useRef(flushPending);
-  useEffect(() => {
-    flushPendingRef.current = flushPending;
-  }, [flushPending]);
-  useEffect(() => {
-    return () => flushPendingRef.current();
-  }, []);
-  const handleHeroBlurCapture = (event: React.FocusEvent<HTMLDivElement>) => {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-      flushPending();
-    }
-  };
 
   const [titleDraft, setTitleDraft] = useState(ticket.title ?? '');
 
@@ -275,19 +282,136 @@ export function BentoHero({
       ? 'rounded-md ring-2 ring-[rgb(var(--color-primary-300))] transition-shadow'
       : '';
 
-  // Ticket statuses are board-scoped. Match legacy TicketInfo (which fetches
-  // getTicketStatuses(boardId) — strictly board_id = boardId) and offer only
-  // this board's statuses. We intentionally drop the old `!option.board_id`
-  // inclusion: board-less statuses (project/global standard statuses) were
-  // leaking into the dropdown. The ticket's current status is always kept so
-  // switching to a board whose statuses are still board-less can't blank it.
-  const scopedStatusOptions = useMemo(
+  const effectiveBoardId = displayValue('board_id');
+  const [boardScopedStatusOptions, setBoardScopedStatusOptions] = useState<HeroSelectOption[]>(() =>
+    statusOptions.filter((option) => option.board_id === ticket.board_id || option.value === ticket.status_id),
+  );
+  const [boardCategories, setBoardCategories] = useState<BoardCategoryData['categories']>([]);
+  const [savedBoardConfig, setSavedBoardConfig] = useState<BoardCategoryData['boardConfig'] | null>(null);
+  const [pendingBoardConfig, setPendingBoardConfig] = useState<BoardCategoryData['boardConfig'] | null>(null);
+  const [isLoadingStatusOptions, setIsLoadingStatusOptions] = useState(false);
+  const [isLoadingBoardConfig, setIsLoadingBoardConfig] = useState(false);
+  const fetchingBoardIdRef = useRef<string | null>(null);
+  const ignoredPriorityResetBoardRef = useRef<string | null>(null);
+
+  const requiresDestinationStatusSelection = Boolean(
+    pendingChanges.board_id
+      && pendingChanges.board_id !== originalTicketValues.board_id
+      && !pendingChanges.status_id,
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadBoardStatuses = async () => {
+      if (!effectiveBoardId) {
+        setBoardScopedStatusOptions([]);
+        return;
+      }
+
+      setIsLoadingStatusOptions(true);
+      try {
+        const statuses = await getTicketStatuses(effectiveBoardId);
+        if (!isMounted) return;
+        setBoardScopedStatusOptions(
+          statuses.map((status) => ({
+            value: status.status_id,
+            label: status.name ?? '',
+            is_closed: status.is_closed,
+            board_id: effectiveBoardId,
+          })),
+        );
+      } catch (error) {
+        console.error('[BentoHero] Failed to load board statuses:', error);
+        if (isMounted) {
+          setBoardScopedStatusOptions([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingStatusOptions(false);
+        }
+      }
+    };
+
+    loadBoardStatuses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [effectiveBoardId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadBoardCategories = async () => {
+      if (!effectiveBoardId) {
+        setBoardCategories([]);
+        setPendingBoardConfig(null);
+        return;
+      }
+
+      fetchingBoardIdRef.current = effectiveBoardId;
+      setIsLoadingBoardConfig(true);
+      try {
+        const data = await getTicketCategoriesByBoard(effectiveBoardId);
+        if (!isMounted || fetchingBoardIdRef.current !== effectiveBoardId) return;
+        const categories = Array.isArray(data.categories) ? data.categories : [];
+        setBoardCategories(categories);
+        if (effectiveBoardId === ticket.board_id) {
+          setSavedBoardConfig(data.boardConfig);
+          setPendingBoardConfig(null);
+        } else {
+          setPendingBoardConfig(data.boardConfig);
+        }
+      } catch (error) {
+        console.error('[BentoHero] Failed to load board categories:', error);
+        if (isMounted) {
+          setBoardCategories([]);
+          if (effectiveBoardId !== ticket.board_id) {
+            setPendingBoardConfig(null);
+          }
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingBoardConfig(false);
+        }
+      }
+    };
+
+    loadBoardCategories();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [effectiveBoardId, ticket.board_id]);
+
+  useEffect(() => {
+    if (!pendingChanges.board_id || !pendingBoardConfig || !savedBoardConfig) {
+      return;
+    }
+
+    if (ignoredPriorityResetBoardRef.current === pendingChanges.board_id) {
+      return;
+    }
+
+    if (savedBoardConfig.priority_type !== pendingBoardConfig.priority_type) {
+      handlePendingChange('priority_id', null);
+    }
+  }, [handlePendingChange, pendingBoardConfig, pendingChanges.board_id, savedBoardConfig]);
+
+  const scopedStatusOptions = boardScopedStatusOptions.length > 0
+    ? boardScopedStatusOptions
+    : statusOptions.filter((option) => option.board_id === effectiveBoardId || option.value === displayValue('status_id'));
+
+  const categoryOptions = useMemo<SelectOption[]>(
     () =>
-      statusOptions.filter(
-        (option) =>
-          option.board_id === ticket.board_id || option.value === ticket.status_id,
-      ),
-    [statusOptions, ticket.board_id, ticket.status_id],
+      (boardCategories ?? [])
+        .filter((category) => category.category_id)
+        .map((category) => ({
+          value: category.category_id,
+          label: category.category_name ?? '',
+        })),
+    [boardCategories],
   );
 
   // Priority options may carry the priority color; render it as a dot.
@@ -340,7 +464,7 @@ export function BentoHero({
 
   const handleDueDateChange = (date: Date | undefined) => {
     if (!date) {
-      void commitField('due_date', null);
+      handlePendingChange('due_date', null);
       return;
     }
     // Preserve the existing time-of-day when only the date changes.
@@ -348,7 +472,7 @@ export function BentoHero({
     if (dueDate && !Number.isNaN(dueDate.getTime())) {
       next.setHours(dueDate.getHours(), dueDate.getMinutes(), 0, 0);
     }
-    void commitField('due_date', next.toISOString());
+    handlePendingChange('due_date', next.toISOString());
   };
 
   // Re-derive the SLA countdown once a minute so "2h left" doesn't go stale
@@ -371,7 +495,7 @@ export function BentoHero({
     const next = titleDraft.trim();
     try {
       if (next && next !== displayedTitle) {
-        commitField('title', next);
+        handlePendingChange('title', next);
       } else {
         setTitleDraft(displayedTitle);
       }
@@ -379,6 +503,83 @@ export function BentoHero({
       committingTitleRef.current = false;
     }
   };
+
+  const handleBoardChange = useCallback((value: string) => {
+    ignoredPriorityResetBoardRef.current = null;
+    handlePendingChange('board_id', value);
+    handlePendingChange('status_id', null);
+    handlePendingChange('category_id', null);
+    handlePendingChange('subcategory_id', null);
+  }, [handlePendingChange]);
+
+  const handleSaveChanges = useCallback(async () => {
+    if (!hasUnsavedChanges || requiresDestinationStatusSelection || hasActiveLiveConflict) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const changes = { ...pendingChanges };
+      const saveOptions = notificationSuppression.suppressContactNotifications
+        ? notificationSuppression
+        : undefined;
+
+      if (onBatchSelectChange) {
+        const result = saveOptions
+          ? await onBatchSelectChange(changes, saveOptions)
+          : await onBatchSelectChange(changes);
+        if (result === false) {
+          return;
+        }
+      } else {
+        for (const [field, value] of Object.entries(changes)) {
+          await onSelectChange(field as keyof ITicket, value);
+        }
+      }
+
+      setOriginalTicketValues((prev) => ({ ...prev, ...changes }));
+      setPendingChanges({});
+      setNotificationSuppression(defaultNotificationSuppression());
+      setIsEditingTitle(false);
+      setSaveSuccess(true);
+      if (saveSuccessTimeoutRef.current) {
+        clearTimeout(saveSuccessTimeoutRef.current);
+      }
+      saveSuccessTimeoutRef.current = setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      console.error('[BentoHero] Failed to save hero changes:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    hasActiveLiveConflict,
+    hasUnsavedChanges,
+    notificationSuppression,
+    onBatchSelectChange,
+    onSelectChange,
+    pendingChanges,
+    requiresDestinationStatusSelection,
+  ]);
+
+  usePageSaveShortcut(handleSaveChanges, {
+    enabled: hasUnsavedChanges && !requiresDestinationStatusSelection && !hasActiveLiveConflict && !isSaving,
+  });
+
+  const resetPendingChanges = useCallback(() => {
+    setPendingChanges({});
+    setTitleDraft(ticket.title ?? '');
+    setIsEditingTitle(false);
+    setNotificationSuppression(defaultNotificationSuppression());
+    setShowCancelConfirm(false);
+  }, [ticket.title]);
+
+  const handleCancelClick = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setShowCancelConfirm(true);
+      return;
+    }
+    resetPendingChanges();
+  }, [hasUnsavedChanges, resetPendingChanges]);
 
   // --- Live edit presence + conflict helpers (ported from TicketInfo) ---
   const editingUsersFor = (field: string) => liveEditingUsers?.[field] ?? [];
@@ -451,6 +652,24 @@ export function BentoHero({
     onKeepLiveConflict?.(field);
   };
 
+  const takeTheirs = (field: string) => {
+    if (field === 'board_id') {
+      ignoredPriorityResetBoardRef.current = pendingChanges.board_id ?? null;
+      fetchingBoardIdRef.current = ticket.board_id ?? null;
+      setPendingBoardConfig(null);
+      setPendingChanges((prev) => {
+        const next = { ...prev };
+        delete next.board_id;
+        delete next.status_id;
+        delete next.category_id;
+        delete next.subcategory_id;
+        delete next.priority_id;
+        return next;
+      });
+    }
+    onTakeLiveConflict?.(field);
+  };
+
   // Wraps a hero control with edit-presence reporting, a remote-edit dim, an
   // "N is editing" caption, and the Keep/Take conflict banner. A plain render
   // helper (not a component) so the control isn't remounted each render.
@@ -473,7 +692,7 @@ export function BentoHero({
             remoteAt={conflict.updatedAt}
             remoteValue={getConflictRemoteValue(field)}
             onKeepYours={() => keepMine(field)}
-            onTakeTheirs={() => onTakeLiveConflict?.(field)}
+            onTakeTheirs={() => takeTheirs(field)}
           />
         ) : null}
       </div>
@@ -482,7 +701,7 @@ export function BentoHero({
 
   return (
     <BentoTile id={id}>
-      <div onBlurCapture={handleHeroBlurCapture}>
+      <div>
         <div className="flex items-start gap-3 flex-wrap">
           <div className="min-w-0 flex-1" {...editHandlers('title')}>
             <div className={`transition-opacity ${isRemotelyEdited('title') ? 'opacity-60' : ''}`.trim()}>
@@ -527,7 +746,7 @@ export function BentoHero({
                 remoteAt={liveFieldConflicts['title']!.updatedAt}
                 remoteValue={getConflictRemoteValue('title')}
                 onKeepYours={() => keepMine('title')}
-                onTakeTheirs={() => onTakeLiveConflict?.('title')}
+                onTakeTheirs={() => takeTheirs('title')}
               />
             ) : null}
           </div>
@@ -575,7 +794,15 @@ export function BentoHero({
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {requiresDestinationStatusSelection ? (
+          <Alert id={`${id}-destination-status-warning`} variant="warning" className="mt-3">
+            <AlertDescription>
+              {t('bento.hero.selectDestinationStatus', 'Select a status for the new board before saving.')}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
           <HeroField label={t('bento.hero.status', 'Status')}>
             {renderLiveField('status_id', '', (
               <CustomSelect
@@ -583,8 +810,8 @@ export function BentoHero({
                 placeholder={t('bento.hero.status', 'Status')}
                 value={displayValue('status_id') ?? ''}
                 options={scopedStatusOptions}
-                onValueChange={(value: string) => void commitField('status_id', value)}
-                disabled={workflowLocked || isFrozen('status_id')}
+                onValueChange={(value: string) => handlePendingChange('status_id', value)}
+                disabled={workflowLocked || isFrozen('status_id') || isLoadingStatusOptions}
                 className="!w-full"
               />
             ))}
@@ -596,7 +823,7 @@ export function BentoHero({
                 placeholder={t('bento.hero.priority', 'Priority')}
                 value={displayValue('priority_id') ?? ''}
                 options={priorityJsxOptions}
-                onValueChange={(value: string) => void commitField('priority_id', value)}
+                onValueChange={(value: string) => handlePendingChange('priority_id', value)}
                 disabled={workflowLocked || isFrozen('priority_id')}
                 className="!w-full"
               />
@@ -609,8 +836,21 @@ export function BentoHero({
                 placeholder={t('bento.hero.board', 'Board')}
                 value={displayValue('board_id') ?? ''}
                 options={boardOptions}
-                onValueChange={(value: string) => void commitField('board_id', value)}
+                onValueChange={handleBoardChange}
                 disabled={workflowLocked || isFrozen('board_id')}
+                className="!w-full"
+              />
+            ))}
+          </HeroField>
+          <HeroField label={t('bento.hero.category', 'Category')}>
+            {renderLiveField('category_id', '', (
+              <CustomSelect
+                id={`${id}-category-select`}
+                placeholder={t('bento.hero.category', 'Category')}
+                value={displayValue('category_id') ?? ''}
+                options={categoryOptions}
+                onValueChange={(value: string) => handlePendingChange('category_id', value || null)}
+                disabled={workflowLocked || isFrozen('category_id') || isLoadingBoardConfig}
                 className="!w-full"
               />
             ))}
@@ -621,7 +861,7 @@ export function BentoHero({
               <UserAndTeamPicker
                 id={`${id}-assignee-picker`}
                 value={displayValue('assigned_to') ?? ''}
-                onValueChange={(value) => void commitField('assigned_to', value)}
+                onValueChange={(value) => handlePendingChange('assigned_to', value)}
                 onTeamSelect={async (teamId) => {
                   await onAssignTeam?.(teamId);
                 }}
@@ -694,12 +934,12 @@ export function BentoHero({
             <HeroField label={t('bento.hero.replyStatus', 'Reply status')}>
               {renderLiveField('response_state', '', (
                 <CustomSelect
-                  id={`${id}-response-state-select`}
-                  placeholder={t('bento.hero.replyStatus', 'Reply status')}
-                  value={displayValue('response_state') ?? 'none'}
-                  options={responseStateOptions}
-                  onValueChange={(value: string) =>
-                    void commitField('response_state', value === 'none' ? null : value)
+                id={`${id}-response-state-select`}
+                placeholder={t('bento.hero.replyStatus', 'Reply status')}
+                value={displayValue('response_state') ?? 'none'}
+                options={responseStateOptions}
+                onValueChange={(value: string) =>
+                    handlePendingChange('response_state', value === 'none' ? null : value)
                   }
                   disabled={isFrozen('response_state')}
                   className="!w-full"
@@ -723,7 +963,63 @@ export function BentoHero({
             />
           </div>
         ) : null}
+
+        {hasUnsavedChanges ? (
+          <div
+            id={`${id}-save-bar`}
+            className="mt-4 flex flex-wrap items-center gap-3 border-t border-[rgb(var(--color-border-200))] pt-3"
+          >
+            <TicketNotificationSuppressionControl
+              idPrefix={`${id}-save-bar`}
+              value={notificationSuppression}
+              onChange={setNotificationSuppression}
+              disabled={isSaving}
+              className="min-w-[260px]"
+            />
+            {saveSuccess ? (
+              <span className="text-sm text-green-700">{t('info.saved', 'Saved')}</span>
+            ) : null}
+            <div className="flex-1" />
+            <Button
+              id={`${id}-cancel-btn`}
+              type="button"
+              variant="outline"
+              onClick={handleCancelClick}
+              disabled={isSaving}
+            >
+              {t('actions.cancel', 'Cancel')}
+            </Button>
+            <Button
+              id={`${id}-save-changes-btn`}
+              type="button"
+              onClick={handleSaveChanges}
+              disabled={isSaving || requiresDestinationStatusSelection || hasActiveLiveConflict}
+            >
+              <span className="font-bold">
+                {isSaving
+                  ? t('info.saving', 'Saving...')
+                  : `${t('info.saveChanges', 'Save Changes')} *`}
+              </span>
+              {!isSaving ? <Save className="ml-2 h-4 w-4" /> : null}
+            </Button>
+          </div>
+        ) : null}
+        {hasActiveLiveConflict ? (
+          <p className="mt-2 text-sm text-amber-700">
+            {t('info.resolveLiveConflict', 'Resolve live update conflicts before saving your changes.')}
+          </p>
+        ) : null}
       </div>
+      <ConfirmationDialog
+        id={`${id}-cancel-confirm-dialog`}
+        isOpen={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={resetPendingChanges}
+        title={t('info.discardChangesTitle', 'Discard Changes')}
+        message={t('info.discardChangesMessage', 'Are you sure you want to discard your unsaved changes?')}
+        confirmLabel={t('info.discardChanges', 'Discard Changes')}
+        cancelLabel={t('actions.cancel', 'Cancel')}
+      />
     </BentoTile>
   );
 }

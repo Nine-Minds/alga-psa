@@ -262,3 +262,28 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
 - Tests/verification:
   - `cd packages/tickets && npx vitest run src/actions/ticketActions.moveToBoard.test.ts`
   - `cd server && npx vitest run --config vitest.config.ts src/app/msp/tickets/ticketsModalRoutes.contract.test.ts`
+
+## 2026-07-09 — Grid Hero Pending Save + Board Reselection (F028/F051-F060, T036/T056-T067)
+
+- Replaced `BentoHero`'s 700ms `commitField`/`flushPending` auto-save model with an explicit pending diff:
+  - `pendingChanges` + `originalTicketValues` drive display overrides and self-clean when a value returns to its original value.
+  - `hasUnsavedChanges` controls the grid Save/Cancel bar and `useRegisterUnsavedChanges`.
+  - `onLiveDirtyFieldsChange` is now threaded through `TicketDetails` → `TicketBentoLayout` → `BentoHero` so live update conflict filtering sees dirty grid hero fields.
+  - `usePageSaveShortcut` is wired for grid hero saves.
+- Grid hero Save/Cancel bar:
+  - Uses the reusable `TicketNotificationSuppressionControl` and passes options into `handleBatchSaveChanges` through `onBatchSelectChange`.
+  - Clears pending buffers and resets suppression state after successful save.
+  - Cancel opens a discard confirmation and reverts pending values.
+- Board-change parity:
+  - Selecting a new board clears `status_id`, `category_id`, and `subcategory_id` immediately.
+  - `BentoHero` loads board-scoped statuses via `getTicketStatuses(effectiveBoardId)` and categories/board config via `getTicketCategoriesByBoard(effectiveBoardId)`.
+  - Added a Category picker in the hero for the effective board.
+  - If the destination board's priority type differs from the saved board, `priority_id` is cleared.
+  - Save is disabled and a warning is shown until a destination status is selected.
+  - Saving persists board/status/category/subcategory/priority reset in one batched write.
+- Live conflict note:
+  - Grid "take theirs" for a board conflict clears the board-coupled pending fields and invalidates stale async priority reset work from the discarded pending board.
+- Tests/verification:
+  - `cd packages/tickets && npx vitest run src/components/ticket/bento/BentoHero.unsavedChanges.test.tsx`
+  - `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx src/components/ticket/bento/BentoHero.unsavedChanges.test.tsx`
+  - `npm -w @alga-psa/tickets run typecheck`
