@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useProduct } from "@/context/ProductContext";
 import { DrawerOutlet } from "@alga-psa/ui";
 import { ActivityDrawerProvider } from "@alga-psa/msp-composition/user-activities/ActivityDrawerProvider";
 import { SchedulingProviderWithCallbacks } from '@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks';
@@ -21,6 +22,17 @@ interface WorkspaceProvidersProps {
 }
 
 export default function WorkspaceProviders({ children }: WorkspaceProvidersProps) {
+  const { isAlgaDesk } = useProduct();
+
+  // AlgaDesk mounts its own (deliberately lean, feature-gated) cross-feature providers
+  // and a single DrawerOutlet in AlgaDeskMspShell. Wrapping again here would (1) mount a
+  // SECOND DrawerOutlet — both read the one global drawer state, so every drawer renders
+  // twice (stacking) — and (2) shadow AlgaDesk's gating with the full MSP stack. So on
+  // AlgaDesk this is a passthrough; the full MSP workspace applies only under DefaultLayout.
+  if (isAlgaDesk) {
+    return <>{children}</>;
+  }
+
   return (
     <SchedulingProviderWithCallbacks>
       <MspTicketIntegrationProvider>
