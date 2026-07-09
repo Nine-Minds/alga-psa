@@ -15,6 +15,13 @@ build
 !shared/dist/**
 !ee/packages/workflows/dist/**
 !packages/workflow-streams/dist/**
+# Runtime-resolved @alga-psa packages: their dist/ must ship in images whose
+# code resolves them from node_modules at runtime — the onboarding seeds
+# dynamic-import '@alga-psa/db', and db's dist imports @alga-psa/core. Missing
+# db/dist broke tenant provisioning (temporal-worker) and the appliance
+# install (server image).
+!packages/core/dist/**
+!packages/db/dist/**
 !packages/event-schemas/dist/**
 
 # Environment variables

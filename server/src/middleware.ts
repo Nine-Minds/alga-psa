@@ -70,6 +70,7 @@ const apiKeySkipPaths = [
   '/api/teams/message-extension/',
   '/api/teams/webhooks/',  // Microsoft Graph change notifications; authenticated via clientState secret in the route
   '/api/teams/package/download',
+  '/api/online-meetings/recordings/',
   '/api/client-portal/domain-session',
   // Mobile auth endpoints use OTT/refresh tokens (no x-api-key)
   '/api/v1/mobile/auth/',
@@ -132,7 +133,9 @@ const apiKeySkipPaths = [
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
     (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
-    (pathname.startsWith('/api/documents/') && (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview'))) ||
+    (pathname.startsWith('/api/documents/') &&
+      (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview') ||
+        pathname.endsWith('/download') || pathname.endsWith('/content'))) ||
     // Session-authenticated inventory SO document endpoints (auth enforced in-handler via withAuth).
     (pathname.startsWith('/api/inventory/sales-orders/') &&
       (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation')));
