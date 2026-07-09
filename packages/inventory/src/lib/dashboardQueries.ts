@@ -631,7 +631,6 @@ export interface DeadStock {
  */
 export async function queryDeadStock(db: Db, tenant: string, fallbackCurrency: string): Promise<DeadStock | null> {
   const settingsCurrency = db.raw("COALESCE(NULLIF(pis.cost_currency, ''), ?) as currency_code", [fallbackCurrency]);
-  const settingsCurrencyGroup = db.raw("COALESCE(NULLIF(pis.cost_currency, ''), ?)", [fallbackCurrency]);
   const nonSer = await db('stock_levels as sl')
     .join('product_inventory_settings as pis', function () {
       this.on('sl.service_id', '=', 'pis.service_id').andOn('sl.tenant', '=', 'pis.tenant');
@@ -646,7 +645,7 @@ export async function queryDeadStock(db: Db, tenant: string, fallbackCurrency: s
         .whereRaw('(sm.from_location_id = sl.location_id OR sm.to_location_id = sl.location_id)')
         .whereRaw("sm.created_at >= now() - interval '90 days'");
     })
-    .groupBy('sl.location_id', settingsCurrencyGroup)
+    .groupBy('sl.location_id', 'currency_code')
     .select<any[]>(
       'sl.location_id as location_id',
       settingsCurrency,
@@ -654,7 +653,6 @@ export async function queryDeadStock(db: Db, tenant: string, fallbackCurrency: s
     );
 
   const unitCurrency = db.raw("COALESCE(NULLIF(su.cost_currency, ''), NULLIF(pis.cost_currency, ''), ?) as currency_code", [fallbackCurrency]);
-  const unitCurrencyGroup = db.raw("COALESCE(NULLIF(su.cost_currency, ''), NULLIF(pis.cost_currency, ''), ?)", [fallbackCurrency]);
   const ser = await db('stock_units as su')
     .leftJoin('product_inventory_settings as pis', function () {
       this.on('su.service_id', '=', 'pis.service_id').andOn('su.tenant', '=', 'pis.tenant');
@@ -669,7 +667,7 @@ export async function queryDeadStock(db: Db, tenant: string, fallbackCurrency: s
         .whereRaw('sm.unit_id = su.unit_id')
         .whereRaw("sm.created_at >= now() - interval '90 days'");
     })
-    .groupBy('su.location_id', unitCurrencyGroup)
+    .groupBy('su.location_id', 'currency_code')
     .select<any[]>(
       'su.location_id as location_id',
       unitCurrency,
@@ -868,10 +866,6 @@ export async function queryValueWowDeltaByCurrency(
     "COALESCE(NULLIF(sm.cost_currency, ''), NULLIF(su.cost_currency, ''), NULLIF(pis.cost_currency, ''), ?) as currency_code",
     [fallbackCurrency],
   );
-  const currencyGroup = db.raw(
-    "COALESCE(NULLIF(sm.cost_currency, ''), NULLIF(su.cost_currency, ''), NULLIF(pis.cost_currency, ''), ?)",
-    [fallbackCurrency],
-  );
   const row = await db('stock_movements as sm')
     .leftJoin('stock_units as su', function () {
       this.on('sm.unit_id', '=', 'su.unit_id').andOn('sm.tenant', '=', 'su.tenant');
@@ -881,7 +875,7 @@ export async function queryValueWowDeltaByCurrency(
     })
     .where('sm.tenant', tenant)
     .andWhereRaw("sm.created_at >= now() - interval '7 days'")
-    .groupBy(currencyGroup)
+    .groupBy('currency_code')
     .select<{ currency_code: string | null; delta: string }[]>(
       currencyExpr,
       db.raw(`COALESCE(SUM(

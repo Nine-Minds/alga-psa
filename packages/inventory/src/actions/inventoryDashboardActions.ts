@@ -228,27 +228,25 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
 
     /* ---- on-hand value + units (footer) ---- */
     const settingsCurrency = trx.raw("COALESCE(NULLIF(pis.cost_currency, ''), ?) as currency_code", [currency_code]);
-    const settingsCurrencyGroup = trx.raw("COALESCE(NULLIF(pis.cost_currency, ''), ?)", [currency_code]);
     const nonSerValueRows = await trx('stock_levels as sl')
       .join('product_inventory_settings as pis', function () {
         this.on('sl.service_id', '=', 'pis.service_id').andOn('sl.tenant', '=', 'pis.tenant');
       })
       .where({ 'sl.tenant': tenant, 'pis.is_serialized': false })
       .andWhere('sl.quantity_on_hand', '>', 0)
-      .groupBy(settingsCurrencyGroup)
+      .groupBy('currency_code')
       .select<{ currency_code: string | null; value: string }[]>(
         settingsCurrency,
         trx.raw('COALESCE(SUM(sl.quantity_on_hand * COALESCE(pis.average_cost, 0)),0) as value'),
       );
     const unitCurrency = trx.raw("COALESCE(NULLIF(su.cost_currency, ''), NULLIF(pis.cost_currency, ''), ?) as currency_code", [currency_code]);
-    const unitCurrencyGroup = trx.raw("COALESCE(NULLIF(su.cost_currency, ''), NULLIF(pis.cost_currency, ''), ?)", [currency_code]);
     const serValueRows = await trx('stock_units as su')
       .leftJoin('product_inventory_settings as pis', function () {
         this.on('su.service_id', '=', 'pis.service_id').andOn('su.tenant', '=', 'pis.tenant');
       })
       .where({ 'su.tenant': tenant, 'su.status': 'in_stock' })
       .whereNotNull('su.location_id')
-      .groupBy(unitCurrencyGroup)
+      .groupBy('currency_code')
       .select<{ currency_code: string | null; value: string }[]>(
         unitCurrency,
         trx.raw('COALESCE(SUM(COALESCE(su.unit_cost,0)),0) as value'),
