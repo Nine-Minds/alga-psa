@@ -560,7 +560,8 @@
       "createKit": "Create kit",
       "createSalesOrder": "Create sales order",
       "productSettings": "Open product settings",
-      "updateQuantity": "Update quantity"
+      "updateQuantity": "Update quantity",
+      "viewSalesOrders": "View sales orders"
     },
     "bom": {
       "componentCount": "{{count}} components",
@@ -639,7 +640,9 @@
       "componentLinesValue": "Explode as child lines",
       "parentLine": "Parent kit line",
       "parentLineValue": "Priced at {{price}}",
-      "preview": "Preview for qty 1",
+      "preview": "Sales-order preview",
+      "previewQuantity": "Kit quantity",
+      "previewQuantityInvalid": "Enter a positive whole number.",
       "stockEffect": "Stock effect",
       "stockEffectValue": "Components allocate and fulfill stock",
       "title": "Sales-order behavior"
@@ -1110,6 +1113,9 @@
       "serviceId": "Service ID",
       "unitPrice": "Unit Price ($)",
       "unitPriceIn": "Unit price ({{currency}})"
+    },
+    "filters": {
+      "kitUsageActive": "Showing sales orders using {{kit}}."
     },
     "fromQuote": "From quote",
     "fulfillDialog": {

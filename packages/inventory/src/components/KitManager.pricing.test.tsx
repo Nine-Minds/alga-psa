@@ -32,7 +32,9 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, asChild, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }) =>
-    asChild ? <>{children}</> : <button {...props}>{children}</button>,
+    asChild && React.isValidElement(children)
+      ? React.cloneElement(children as React.ReactElement<any>, props)
+      : <button {...props}>{children}</button>,
 }));
 
 vi.mock('@alga-psa/ui/components/Input', () => ({
@@ -91,7 +93,7 @@ const kit = {
   component_cost: 350,
   margin_amount: 49650,
   margin_percent: 0.993,
-  sales_order_count: 0,
+  sales_order_count: 2,
 };
 
 const detail = {
@@ -150,6 +152,16 @@ describe('KitManager pricing policy UI', () => {
     expect(screen.getByText('Component selling prices × quantity')).toBeTruthy();
     expect(screen.getByText(/\$250\.00 each/)).toBeTruthy();
     expect(screen.getByText(/\$500\.00 extended/)).toBeTruthy();
+    expect(document.querySelector('#kit-create-sales-order-link')?.getAttribute('href'))
+      .toBe('/msp/inventory/sales-orders?create=1&service_id=kit-1');
+    expect(document.querySelector('#kit-view-sales-orders-link')?.getAttribute('href'))
+      .toBe('/msp/inventory/sales-orders?service_id=kit-1');
+
+    const previewQuantity = document.querySelector('#kit-sales-order-preview-quantity') as HTMLInputElement;
+    fireEvent.change(previewQuantity, { target: { value: '3' } });
+    expect(await screen.findByText('3 × Desk setup kit')).toBeTruthy();
+    expect(screen.getByText('6 × Monitor')).toBeTruthy();
+    expect(screen.getByText('$1,500.00')).toBeTruthy();
 
     fireEvent.change(document.querySelector('#kit-pricing-mode')!, { target: { value: 'fixed' } });
     await waitFor(() => expect(document.querySelector('#kit-fixed-price')).not.toBeNull());
@@ -163,5 +175,38 @@ describe('KitManager pricing policy UI', () => {
     fireEvent.change(document.querySelector('#kit-create-pricing-mode')!, { target: { value: 'fixed' } });
     await waitFor(() => expect(document.querySelector('#kit-create-fixed-price')).not.toBeNull());
     expect(document.querySelectorAll('#kit-create-fixed-price')).toHaveLength(1);
+  });
+
+  it('renders empty, filtered, and inline retry states', async () => {
+    const { unmount } = render(
+      <KitManager
+        initialKits={[]}
+        serviceTypes={[]}
+        componentCandidates={[]}
+      />,
+    );
+
+    expect(screen.getByText('No inventory kits yet')).toBeTruthy();
+    unmount();
+
+    getKitDetail.mockRejectedValueOnce(new Error('network unavailable'));
+    render(
+      <KitManager
+        initialKits={[kit as any]}
+        serviceTypes={[{ id: 'type-1', name: 'Hardware', is_standard: false }]}
+        componentCandidates={[]}
+      />,
+    );
+
+    expect(await screen.findByText('Could not load this kit')).toBeTruthy();
+    getKitDetail.mockResolvedValueOnce(detail);
+    fireEvent.click(document.querySelector('#kits-detail-retry-button')!);
+    expect(await screen.findAllByText('Calculated kit price')).toHaveLength(2);
+
+    fireEvent.change(document.querySelector('#kits-search')!, { target: { value: 'missing kit' } });
+    expect(screen.getByText('No kits match those filters.')).toBeTruthy();
+    fireEvent.change(document.querySelector('#kits-search')!, { target: { value: '' } });
+    fireEvent.change(document.querySelector('#kits-status-filter')!, { target: { value: 'no_bom' } });
+    expect(screen.getByText('No kits match those filters.')).toBeTruthy();
   });
 });

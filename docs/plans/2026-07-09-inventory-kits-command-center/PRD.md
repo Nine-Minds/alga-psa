@@ -2,7 +2,7 @@
 
 - Slug: `2026-07-09-inventory-kits-command-center`
 - Date: `2026-07-09`
-- Status: Approved for implementation
+- Status: Implemented; headed browser smoke remains blocked by the local test harness
 - Design: `../2026-07-09-inventory-kits-command-center-design.md`
 
 ## Summary
@@ -102,6 +102,10 @@ Primary flow:
   on component cost.
 - A changed kit price on a sales order reads `Overridden from {{price}}` and can
   be reset to the resolved kit price before save.
+- The sales-order preview accepts a positive whole-number kit quantity and
+  multiplies the parent total and every child quantity.
+- `Create sales order` opens the existing create flow with the selected kit
+  preselected. `View sales orders` shows only orders containing that kit.
 
 ## Requirements
 
@@ -124,6 +128,7 @@ Primary flow:
 - Keep component selling-price basis separate from component cost and margin.
 - Map known server errors to user-facing explanations.
 - Link to advanced product settings and sales-order surfaces.
+- Filter sales-order usage on the server by the selected kit service ID.
 
 ### Non-functional Requirements
 
@@ -169,8 +174,6 @@ the current screen.
 
 ## Open Questions
 
-- Whether `Create sales order` can preselect the kit immediately, or should link
-  to the existing create-sales-order flow in this pass.
 - Whether the product settings link should open Billing -> Products filtered to
   the product or a future product detail route.
 
@@ -194,4 +197,8 @@ the current screen.
 - Missing or mixed-currency component costs never render as zero-cost margin.
 - BOM rows show stock and cost context.
 - The sales-order preview matches backend expansion behavior.
+- The sales-order preview multiplies parent totals and component quantities for
+  a user-entered kit quantity.
+- Kit detail can start a sales order with that kit preselected and inspect a
+  server-filtered list of orders using it.
 - Existing kit sales-order and invoice behavior does not regress.

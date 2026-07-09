@@ -560,7 +560,8 @@
       "createKit": "55555",
       "createSalesOrder": "55555",
       "productSettings": "55555",
-      "updateQuantity": "55555"
+      "updateQuantity": "55555",
+      "viewSalesOrders": "55555"
     },
     "bom": {
       "componentCount": "55555 {{count}} 55555",
@@ -640,6 +641,8 @@
       "parentLine": "55555",
       "parentLineValue": "55555 {{price}} 55555",
       "preview": "55555",
+      "previewQuantity": "55555",
+      "previewQuantityInvalid": "55555",
       "stockEffect": "55555",
       "stockEffectValue": "55555",
       "title": "55555"
@@ -1110,6 +1113,9 @@
       "serviceId": "55555",
       "unitPrice": "55555",
       "unitPriceIn": "55555 {{currency}} 55555"
+    },
+    "filters": {
+      "kitUsageActive": "55555 {{kit}} 55555"
     },
     "fromQuote": "55555",
     "fulfillDialog": {

@@ -233,10 +233,9 @@ Primary actions from kit detail:
 - `View sales orders using this kit`.
 - `Open product settings`.
 
-`Create sales order` should send the user into the existing sales-order flow with
-the kit preselected if the current route architecture supports it. If preselection
-is not immediately practical, link to the sales-order create flow and keep the
-preselection feature in the implementation plan as a follow-up item.
+`Create sales order` sends the user into the existing sales-order flow with the
+kit preselected. `View sales orders using this kit` applies a server-side kit
+usage filter rather than loading every order and filtering only in the browser.
 
 ## Data And API Boundaries
 

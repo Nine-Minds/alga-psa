@@ -160,5 +160,17 @@
     "description": "Suppress cost, gross profit, and gross margin when component costs are missing or use another currency.",
     "implemented": true,
     "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F028",
+    "description": "Let the operator enter a positive whole-number kit quantity in the sales-order preview and multiply both parent totals and child quantities.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F029",
+    "description": "Open sales-order creation with the selected kit preselected and link kit usage to a server-filtered list of sales orders containing that kit.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "UX / UI Notes", "Acceptance Criteria"]
   }
 ]

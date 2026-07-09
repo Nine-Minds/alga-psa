@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SalesOrdersManager } from './SalesOrdersManager';
 
 const createSalesOrder = vi.fn(async (_input: any) => ({ so_id: 'so-1', lines: [] }));
+const navigationState = vi.hoisted(() => ({ params: {} as Record<string, string> }));
 
 vi.mock('../actions', () => ({
   cancelSalesOrder: vi.fn(),
@@ -16,7 +17,7 @@ vi.mock('../actions', () => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-  useSearchParams: () => ({ get: () => null }),
+  useSearchParams: () => ({ get: (key: string) => navigationState.params[key] ?? null }),
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -44,7 +45,7 @@ vi.mock('@alga-psa/ui/components/TextArea', () => ({
   ),
 }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, title, children }: any) => isOpen ? <section><h2>{title}</h2>{children}</section> : null,
+  Dialog: ({ id, isOpen, title, children }: any) => isOpen ? <section id={id}><h2>{title}</h2>{children}</section> : null,
 }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   default: ({ id, label, value, options, onValueChange }: any) => (
@@ -83,6 +84,7 @@ vi.mock('./SalesOrderDetail', () => ({ SalesOrderDetail: () => null }));
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  navigationState.params = {};
 });
 
 const props = {
@@ -105,6 +107,25 @@ const props = {
 };
 
 describe('SalesOrdersManager kit price override', () => {
+  it('opens the existing create flow with a requested kit preselected', async () => {
+    navigationState.params = { create: '1', service_id: 'kit-1' };
+    render(<SalesOrdersManager {...props} />);
+
+    await waitFor(() => expect(document.querySelector('#sales-order-dialog')).not.toBeNull());
+    const service = document.querySelector('#sales-order-line-service-0') as HTMLSelectElement;
+    const price = document.querySelector('#sales-order-line-price-0') as HTMLInputElement;
+    expect(service.value).toBe('kit-1');
+    expect(price.value).toBe('500');
+    expect(screen.getByText('Calculated from components')).toBeTruthy();
+  });
+
+  it('explains when the sales-order list is scoped to kit usage', () => {
+    navigationState.params = { service_id: 'kit-1' };
+    render(<SalesOrdersManager {...props} />);
+    expect(screen.getByText('Showing sales orders using Desk setup kit.')).toBeTruthy();
+    expect(document.querySelector('#sales-orders-clear-service-filter')).not.toBeNull();
+  });
+
   it('marks an edited kit price as an override and reset clears override intent', async () => {
     render(<SalesOrdersManager {...props} />);
     fireEvent.click(document.querySelector('#sales-orders-add-button')!);

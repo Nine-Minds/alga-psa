@@ -127,6 +127,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
   const [pricingMode, setPricingMode] = useState<'sum' | 'fixed'>('sum');
   const [fixedPriceInput, setFixedPriceInput] = useState('');
   const [savingPricing, setSavingPricing] = useState(false);
+  const [previewQuantity, setPreviewQuantity] = useState('1');
 
   const selectedSummary = useMemo(
     () => kits.find((kit) => kit.service_id === selectedKitId) ?? null,
@@ -177,6 +178,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
     setDetailLoading(true);
     setComponentServiceId('');
     setQuantity('1');
+    setPreviewQuantity('1');
     try {
       const loaded = await getKitDetail(kitId);
       if (!loaded) {
@@ -235,6 +237,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
   const draftGrossMargin = draftKitPrice !== null && draftKitPrice > 0 && draftGrossProfit !== null
     ? draftGrossProfit / draftKitPrice
     : null;
+  const previewQuantityValue = isPositiveIntegerText(previewQuantity) ? Number(previewQuantity) : null;
 
   const handleCreate = async () => {
     setCreateError(null);
@@ -510,9 +513,16 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
                     </Button>
                   ) : (
                     <Button id="kit-create-sales-order-link" variant="default" size="sm" asChild>
-                      <Link href="/msp/inventory/sales-orders">
+                      <Link href={`/msp/inventory/sales-orders?create=1&service_id=${encodeURIComponent(detail.service_id)}`}>
                         <ShoppingCart className="mr-2 h-4 w-4" />
                         {t('kits.actions.createSalesOrder', { defaultValue: 'Create sales order' })}
+                      </Link>
+                    </Button>
+                  )}
+                  {detail.sales_order_count > 0 && (
+                    <Button id="kit-view-sales-orders-link" variant="outline" size="sm" asChild>
+                      <Link href={`/msp/inventory/sales-orders?service_id=${encodeURIComponent(detail.service_id)}`}>
+                        {t('kits.actions.viewSalesOrders', { defaultValue: 'View sales orders' })}
                       </Link>
                     </Button>
                   )}
@@ -749,17 +759,41 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
                 </div>
                 {detail.components.length > 0 && (
                   <div className="mt-3 rounded-md border border-[rgb(var(--color-border-100))] p-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-                      {t('kits.salesOrder.preview', { defaultValue: 'Preview for qty 1' })}
-                    </p>
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
+                        {t('kits.salesOrder.preview', { defaultValue: 'Sales-order preview' })}
+                      </p>
+                      <div className="w-28">
+                        <Input
+                          id="kit-sales-order-preview-quantity"
+                          label={t('kits.salesOrder.previewQuantity', { defaultValue: 'Kit quantity' })}
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={previewQuantity}
+                          onChange={(event) => setPreviewQuantity(event.target.value)}
+                        />
+                      </div>
+                    </div>
+                    {previewQuantityValue === null && (
+                      <p className="mt-1 text-xs text-[rgb(var(--color-accent-600))]">
+                        {t('kits.salesOrder.previewQuantityInvalid', { defaultValue: 'Enter a positive whole number.' })}
+                      </p>
+                    )}
                     <ul className="mt-2 space-y-1.5 text-sm">
                       <li className="flex justify-between gap-3">
-                        <span className="truncate text-[rgb(var(--color-text-700))]">{detail.service_name}</span>
-                        <span className="font-mono text-[rgb(var(--color-text-900))]">{draftKitPrice === null ? '—' : money(draftKitPrice)}</span>
+                        <span className="truncate text-[rgb(var(--color-text-700))]">
+                          {previewQuantityValue === null ? '—' : previewQuantityValue} × {detail.service_name}
+                        </span>
+                        <span className="font-mono text-[rgb(var(--color-text-900))]">
+                          {draftKitPrice === null || previewQuantityValue === null ? '—' : money(draftKitPrice * previewQuantityValue)}
+                        </span>
                       </li>
                       {detail.components.map((component) => (
                         <li key={component.component_service_id} className="flex justify-between gap-3 text-[rgb(var(--color-text-500))]">
-                          <span className="truncate">{component.quantity} x {component.service_name}</span>
+                          <span className="truncate">
+                            {previewQuantityValue === null ? '—' : component.quantity * previewQuantityValue} × {component.service_name}
+                          </span>
                           <span className="font-mono">{money(0)}</span>
                         </li>
                       ))}

@@ -22,6 +22,11 @@ command-center screen.
   not change the kit's saved pricing mode or price. This pass identifies and
   resets the override during order creation; a durable price-source audit field
   for saved lines is deferred.
+- 2026-07-09: The preview accepts a positive whole-number kit quantity. The
+  parent total and each component quantity use that value.
+- 2026-07-09: Kit detail can open sales-order creation with the kit preselected.
+  The usage link applies a tenant-scoped server filter for orders containing the
+  selected kit.
 
 ## Discoveries / Constraints
 
@@ -51,6 +56,11 @@ command-center screen.
   gross profit.
 - 2026-07-09: The existing worktree has unrelated changes in `package-lock.json`
   and pseudo-locale files. Do not stage or revert them.
+- 2026-07-09: The Alga Dev layout exposes the worktree browser as `popup-4`, but
+  browser commands cannot resolve popup panes. The headed Playwright harness is
+  also blocked before discovery on Node 22 because `@alga-psa/db` is required
+  through an ESM graph containing top-level await. An existing Playwright test
+  fails at the same import boundary.
 
 ## Commands / Runbooks
 
@@ -65,9 +75,19 @@ command-center screen.
 - 2026-07-09: The focused pricing suite passes 6 tests across
   `kitPricing.test.ts`, `KitManager.pricing.test.tsx`, and
   `SalesOrdersManager.kitPricing.test.tsx`.
-- 2026-07-09: Alga Dev still exposes the worktree browser as `popup-4`. Browser
-  commands cannot resolve popup panes, so live DOM/screenshot verification was
-  not available in this pass.
+- 2026-07-09: The expanded rendered-component suite passes 9 tests across the
+  pricing library, kit manager, and sales-order manager. It covers preview
+  multiplication, empty/no-results/retry states, preselection, and usage-filter
+  messaging.
+- 2026-07-09: The DB-backed kit suites pass 13 tests, including all four planned
+  action/read-model cases and server-side sales-order usage filtering.
+- 2026-07-09: The complete inventory package suite passes 122 tests across 23
+  files.
+- 2026-07-09: Inventory and server TypeScript checks pass. The server check uses
+  the documented 8 GB heap setting.
+- 2026-07-09: A headed Playwright workflow test exists at
+  `ee/server/src/__tests__/integration/inventory-kits-command-center.playwright.test.ts`.
+  It remains unexecuted because the shared harness fails during test discovery.
 
 ## Links / References
 
@@ -80,5 +100,5 @@ command-center screen.
 
 ## Open Questions
 
-- Whether Create sales order can preselect the selected kit in the existing sales
-  order creation flow.
+- Whether product settings should deep-link to the selected Billing product or
+  move to a future product detail route.

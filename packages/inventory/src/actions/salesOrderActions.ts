@@ -346,7 +346,7 @@ export const getSalesOrder = withAuth(
 );
 
 export const listSalesOrders = withAuth(
-  async (user, { tenant }, _input?: { includeCancelled?: boolean }): Promise<ISalesOrder[]> => {
+  async (user, { tenant }, input?: { includeCancelled?: boolean; serviceId?: string }): Promise<ISalesOrder[]> => {
     await requireSoPerm(user, 'read');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -371,7 +371,7 @@ export const listSalesOrders = withAuth(
         .as('lm');
 
       // Join the client so the list can show a name, not a raw UUID.
-      return (await trx('sales_orders as so')
+      const query = trx('sales_orders as so')
         .leftJoin('clients as c', function () {
           this.on('c.client_id', '=', 'so.client_id').andOn('c.tenant', '=', 'so.tenant');
         })
@@ -390,7 +390,19 @@ export const listSalesOrders = withAuth(
           trx.raw('COALESCE(lm.quantity_invoiced_total, 0)::int as quantity_invoiced_total'),
           trx.raw('COALESCE(lm.line_count, 0)::int as line_count'),
           trx.raw('COALESCE(lm.drop_ship_line_count, 0)::int as drop_ship_line_count'),
-        )) as ISalesOrder[];
+        );
+
+      if (input?.serviceId) {
+        query.whereExists(function () {
+          this.select(trx.raw('1'))
+            .from('sales_order_lines as usage_sol')
+            .whereRaw('usage_sol.tenant = so.tenant')
+            .whereRaw('usage_sol.so_id = so.so_id')
+            .where('usage_sol.service_id', input.serviceId);
+        });
+      }
+
+      return (await query) as ISalesOrder[];
     });
   },
 );

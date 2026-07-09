@@ -204,6 +204,8 @@ export function SalesOrdersManager({
   const { t } = useTranslation('features/inventory');
   const attentionFilter = searchParams?.get('attention');
   const showInvoiceableOnly = attentionFilter === 'invoiceable';
+  const requestedServiceId = searchParams?.get('service_id') || null;
+  const createRequested = searchParams?.get('create') === '1';
   const INVOICE_MODE_OPTIONS: { value: SalesOrderInvoiceMode; label: string }[] = [
     { value: 'on_fulfillment', label: t('salesOrders.invoiceMode.onFulfillment', 'On fulfillment') },
     { value: 'manual', label: t('salesOrders.invoiceMode.manual', 'Manual') },
@@ -226,6 +228,7 @@ export function SalesOrdersManager({
     () => new Map(services.map((s) => [s.service_id, s])),
     [services],
   );
+  const requestedService = requestedServiceId ? serviceById.get(requestedServiceId) : undefined;
   const documentLabels: Record<string, string> = {
     'sales-order': t('salesOrders.documents.salesOrder', 'Order Confirmation'),
     'packing-slip': t('salesOrders.documents.packingSlip', 'Packing Slip'),
@@ -314,12 +317,9 @@ export function SalesOrdersManager({
     }));
   };
 
-  // The browser shows the current resolved kit price, but an untouched kit line is resolved again
-  // inside the write transaction. That prevents a stale picker value from becoming an accidental
-  // override when component prices change before save.
-  const onServicePicked = (idx: number, serviceId: string) => {
+  const lineForService = useCallback((serviceId: string, requestedCurrency?: string): LineForm => {
     const svc = serviceById.get(serviceId);
-    const currency = form.currency_code || 'USD';
+    const currency = requestedCurrency || svc?.kit_currency || 'USD';
     const kitCurrencyMismatch = Boolean(
       svc?.is_kit && svc.kit_currency && svc.kit_currency.toUpperCase() !== currency.toUpperCase(),
     );
@@ -330,7 +330,8 @@ export function SalesOrdersManager({
       priceMinor != null
         ? String(priceMinor / Math.pow(10, currencyFractionDigits(currency)))
         : undefined;
-    setLine(idx, {
+    return {
+      ...emptyLine(),
       service_id: serviceId,
       unit_price: seededPrice ?? '',
       is_kit: Boolean(svc?.is_kit),
@@ -338,8 +339,24 @@ export function SalesOrdersManager({
       kit_currency: svc?.kit_currency ?? null,
       resolved_unit_price: svc?.is_kit ? seededPrice ?? null : null,
       price_overridden: false,
-    });
+    };
+  }, [serviceById]);
+
+  // The browser shows the current resolved kit price, but an untouched kit line is resolved again
+  // inside the write transaction. That prevents a stale picker value from becoming an accidental
+  // override when component prices change before save.
+  const onServicePicked = (idx: number, serviceId: string) => {
+    setLine(idx, lineForService(serviceId, form.currency_code || undefined));
   };
+
+  React.useEffect(() => {
+    if (!createRequested || !requestedServiceId || !serviceById.has(requestedServiceId)) return;
+    setForm({
+      ...emptyForm(),
+      lines: [lineForService(requestedServiceId)],
+    });
+    setDialogOpen(true);
+  }, [createRequested, lineForService, requestedServiceId, serviceById]);
 
   const addLine = () => setForm((f) => ({ ...f, lines: [...f.lines, emptyLine()] }));
   const removeLine = (idx: number) =>
@@ -668,6 +685,19 @@ export function SalesOrdersManager({
         </div>
       )}
 
+      {requestedServiceId && !createRequested && (
+        <div className="flex items-center gap-3 rounded-md border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] px-3 py-2">
+          <span className="text-sm text-[rgb(var(--color-text-800))]">
+            {t('salesOrders.filters.kitUsageActive', 'Showing sales orders using {{kit}}.', {
+              kit: requestedService?.service_name || requestedServiceId,
+            })}
+          </span>
+          <Button id="sales-orders-clear-service-filter" variant="link" size="sm" onClick={clearAttentionFilter}>
+            {t('common.clear', 'Clear')}
+          </Button>
+        </div>
+      )}
+
       <DataTable id="sales-orders-table" data={visibleSos} columns={columns} />
 
       <Dialog
@@ -733,7 +763,7 @@ export function SalesOrdersManager({
               <div className="flex-1">{t('salesOrders.fields.service', 'Service')}</div>
               <div className="w-32">{t('salesOrders.fields.fulfillment', 'Fulfillment')}</div>
               <div className="w-20 text-right">{t('salesOrders.fields.qty', 'Qty')}</div>
-              <div className="w-32 text-right">
+              <div className="w-56 text-right">
                 {t('salesOrders.fields.unitPriceIn', 'Unit price ({{currency}})', { currency })}
               </div>
               <div className="w-8" />

@@ -20,7 +20,11 @@ export const metadata: Metadata = {
   title: 'Sales Orders',
 };
 
-export default async function SalesOrdersPage() {
+interface SalesOrdersPageProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function SalesOrdersPage({ searchParams }: SalesOrdersPageProps) {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/inventory/sales-orders', scope: 'msp' });
   if (boundary) {
     return boundary;
@@ -33,7 +37,11 @@ export default async function SalesOrdersPage() {
 
   let initialSos: ISalesOrder[] = [];
   try {
-    initialSos = await listSalesOrders({});
+    const query = await searchParams;
+    const serviceId = query?.create === '1'
+      ? undefined
+      : typeof query?.service_id === 'string' ? query.service_id : undefined;
+    initialSos = await listSalesOrders({ serviceId });
   } catch (error) {
     console.error('Failed to load sales orders:', error);
   }
