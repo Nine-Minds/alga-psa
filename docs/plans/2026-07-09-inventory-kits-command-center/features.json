@@ -1,0 +1,92 @@
+[
+  {
+    "id": "F001",
+    "description": "Create server-side kit summary read model with derived status, pricing mode, component count, buildable quantity, and usage metadata.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Acceptance Criteria"]
+  },
+  {
+    "id": "F002",
+    "description": "Create server-side kit detail read model with product identity, inventory settings, BOM rows, stock/cost context, pricing/margin, readiness, and sales-order behavior data.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "UX / UI Notes"]
+  },
+  {
+    "id": "F003",
+    "description": "Add create-kit action that creates a product-backed kit and enables inventory with is_kit=true.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "Add update-kit action for identity and kit pricing fields exposed by the Kits screen.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F005",
+    "description": "Replace the Kits page header with Inventory kits summary counts and a primary Create kit action.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F006",
+    "description": "Add searchable/filterable kit list with status, SKU, pricing mode, can-build quantity, component count, and row action.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F007",
+    "description": "Add selected-kit detail view with product identity, BOM, pricing/margin, stock readiness, sales-order behavior, and usage links.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F008",
+    "description": "Make component loading clear stale BOM rows immediately and show inline retry on load failure.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F009",
+    "description": "Render empty BOM as an explicit warning state.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F010",
+    "description": "Make duplicate component add read as an update-quantity operation.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F011",
+    "description": "Validate positive integer component quantities in the UI.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F012",
+    "description": "Expose and validate fixed-price kit amount when kit pricing mode is fixed.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Acceptance Criteria"]
+  },
+  {
+    "id": "F013",
+    "description": "Map known kit server errors to human operator-facing explanations.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F014",
+    "description": "Preserve existing sales-order kit explosion behavior: priced parent and zero-dollar child component lines.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Acceptance Criteria"]
+  },
+  {
+    "id": "F015",
+    "description": "Add inventory locale keys for all new Kits screen copy.",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements"]
+  }
+]

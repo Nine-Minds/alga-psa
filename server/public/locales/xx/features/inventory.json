@@ -543,7 +543,9 @@
     "componentsHeading": "11111 {{name}} 11111",
     "fields": {
       "component": "11111",
-      "componentPlaceholder": "11111"
+      "componentPlaceholder": "11111",
+      "sku": "11111",
+      "unit": "11111"
     },
     "loadComponentsFailed": "11111",
     "loadKitsFailed": "11111",
@@ -552,7 +554,113 @@
     "removeConfirm": "11111 {{name}} 11111",
     "removeFailed": "11111",
     "removeTitle": "11111",
-    "title": "11111"
+    "title": "11111",
+    "actions": {
+      "addComponent": "11111",
+      "createKit": "11111",
+      "createSalesOrder": "11111",
+      "productSettings": "11111",
+      "updateQuantity": "11111"
+    },
+    "bom": {
+      "componentCount": "11111 {{count}} 11111",
+      "componentCountShort": "11111",
+      "emptyBody": "11111",
+      "emptyTitle": "11111",
+      "qtyPerKit": "11111",
+      "title": "11111"
+    },
+    "create": {
+      "created": "11111",
+      "fields": {
+        "name": "11111",
+        "productType": "11111"
+      },
+      "noServiceTypes": "11111",
+      "title": "11111",
+      "validation": {
+        "costInvalid": "11111",
+        "nameRequired": "11111",
+        "priceRequired": "11111",
+        "typeRequired": "11111"
+      }
+    },
+    "detail": {
+      "loadFailedTitle": "11111",
+      "notFound": "11111",
+      "pickKit": "11111"
+    },
+    "empty": {
+      "body": "11111",
+      "noResults": "11111",
+      "title": "11111"
+    },
+    "filters": {
+      "all": "11111"
+    },
+    "list": {
+      "label": "11111"
+    },
+    "pricing": {
+      "componentCost": "11111",
+      "currency": "11111",
+      "extCost": "11111",
+      "fixed": "11111",
+      "fixedAmount": "11111",
+      "kitCostOptional": "11111",
+      "kitPrice": "11111",
+      "margin": "11111",
+      "mode": "11111",
+      "salesOrderPrice": "11111",
+      "save": "11111",
+      "saved": "11111",
+      "sum": "11111",
+      "title": "11111",
+      "unitCost": "11111",
+      "validation": {
+        "fixedRequired": "11111",
+        "priceRequired": "11111"
+      }
+    },
+    "salesOrder": {
+      "componentLines": "11111",
+      "componentLinesValue": "11111",
+      "parentLine": "11111",
+      "parentLineValue": "11111 {{price}} 11111",
+      "preview": "11111",
+      "stockEffect": "11111",
+      "stockEffectValue": "11111",
+      "title": "11111"
+    },
+    "searchPlaceholder": "11111",
+    "status": {
+      "incomplete": "11111",
+      "lowStock": "11111",
+      "noBom": "11111",
+      "ready": "11111"
+    },
+    "stock": {
+      "available": "11111",
+      "canBuildLabel": "11111",
+      "noStockLimit": "11111",
+      "noStockLimitShort": "11111",
+      "nonStocked": "11111",
+      "serialized": "11111",
+      "shortComponents": "11111",
+      "shortWarning": "11111",
+      "stocked": "11111",
+      "stockedComponents": "11111",
+      "title": "11111"
+    },
+    "summary": {
+      "attention": "11111 {{count}} 11111",
+      "ready": "11111 {{count}} 11111",
+      "total": "11111 {{count}} 11111"
+    },
+    "usage": {
+      "usedOnSalesOrders": "11111"
+    },
+    "componentUpdated": "11111"
   },
   "loaners": {
     "clientIdRequired": "11111",

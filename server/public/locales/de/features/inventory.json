@@ -543,7 +543,9 @@
     "componentsHeading": "Komponenten — {{name}}",
     "fields": {
       "component": "Komponente",
-      "componentPlaceholder": "Produkt auswählen…"
+      "componentPlaceholder": "Produkt auswählen…",
+      "sku": "SKU",
+      "unit": "Unit"
     },
     "loadComponentsFailed": "Komponenten konnten nicht geladen werden",
     "loadKitsFailed": "Kits konnten nicht geladen werden",
@@ -552,7 +554,113 @@
     "removeConfirm": "{{name}} aus diesem Kit entfernen?",
     "removeFailed": "Entfernen fehlgeschlagen",
     "removeTitle": "Komponente entfernen",
-    "title": "Kits"
+    "title": "Kits",
+    "actions": {
+      "addComponent": "Add component",
+      "createKit": "Create kit",
+      "createSalesOrder": "Create sales order",
+      "productSettings": "Open product settings",
+      "updateQuantity": "Update quantity"
+    },
+    "bom": {
+      "componentCount": "{{count}} components",
+      "componentCountShort": "Components",
+      "emptyBody": "Componentless kits cannot be used on sales orders because there is nothing to allocate or fulfill.",
+      "emptyTitle": "Add at least one BOM component",
+      "qtyPerKit": "Qty per kit",
+      "title": "Bill of materials"
+    },
+    "create": {
+      "created": "Kit created.",
+      "fields": {
+        "name": "Kit name",
+        "productType": "Product type"
+      },
+      "noServiceTypes": "Create a product type in Billing before creating a kit.",
+      "title": "Create kit",
+      "validation": {
+        "costInvalid": "Kit cost must be a valid amount.",
+        "nameRequired": "Kit name is required.",
+        "priceRequired": "Kit price must be greater than 0.",
+        "typeRequired": "Product type is required."
+      }
+    },
+    "detail": {
+      "loadFailedTitle": "Could not load this kit",
+      "notFound": "This kit could not be found.",
+      "pickKit": "Select a kit to manage its bill of materials."
+    },
+    "empty": {
+      "body": "Create a sellable kit, then add its bill of materials.",
+      "noResults": "No kits match those filters.",
+      "title": "No inventory kits yet"
+    },
+    "filters": {
+      "all": "All"
+    },
+    "list": {
+      "label": "Kit list"
+    },
+    "pricing": {
+      "componentCost": "Component cost",
+      "currency": "Currency",
+      "extCost": "Ext. cost",
+      "fixed": "Fixed price",
+      "fixedAmount": "Fixed kit price",
+      "kitCostOptional": "Kit cost (optional)",
+      "kitPrice": "Kit price",
+      "margin": "Margin",
+      "mode": "Pricing mode",
+      "salesOrderPrice": "Sales-order kit price",
+      "save": "Save pricing",
+      "saved": "Pricing saved.",
+      "sum": "Sum of components",
+      "title": "Pricing and margin",
+      "unitCost": "Unit cost",
+      "validation": {
+        "fixedRequired": "Fixed kit price must be greater than 0.",
+        "priceRequired": "Kit price must be greater than 0."
+      }
+    },
+    "salesOrder": {
+      "componentLines": "Component lines",
+      "componentLinesValue": "Explode as child lines",
+      "parentLine": "Parent kit line",
+      "parentLineValue": "Priced at {{price}}",
+      "preview": "Preview for qty 1",
+      "stockEffect": "Stock effect",
+      "stockEffectValue": "Components allocate and fulfill stock",
+      "title": "Sales-order behavior"
+    },
+    "searchPlaceholder": "Search kits or SKUs",
+    "status": {
+      "incomplete": "Incomplete",
+      "lowStock": "Low stock",
+      "noBom": "No BOM",
+      "ready": "Ready"
+    },
+    "stock": {
+      "available": "Available",
+      "canBuildLabel": "Can build",
+      "noStockLimit": "No stock limit",
+      "noStockLimitShort": "n/a",
+      "nonStocked": "Non-stocked",
+      "serialized": "Serialized",
+      "shortComponents": "Short components",
+      "shortWarning": "At least one stocked component cannot cover one complete kit from available stock.",
+      "stocked": "Stocked",
+      "stockedComponents": "Stocked components",
+      "title": "Stock readiness"
+    },
+    "summary": {
+      "attention": "{{count}} need attention",
+      "ready": "{{count}} ready",
+      "total": "{{count}} kits"
+    },
+    "usage": {
+      "usedOnSalesOrders": "Used on sales orders"
+    },
+    "componentUpdated": "Component quantity updated."
   },
   "loaners": {
     "clientIdRequired": "Kunden-ID ist erforderlich",

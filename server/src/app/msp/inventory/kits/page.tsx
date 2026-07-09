@@ -1,4 +1,4 @@
-import { listInventoryProducts } from '@alga-psa/inventory/actions';
+import { listKitComponentCandidates, listKitServiceTypes, listKitSummaries } from '@alga-psa/inventory/actions';
 import { KitManager } from '@alga-psa/inventory/components';
 import { getSession } from '@alga-psa/auth';
 import { redirect } from 'next/navigation';
@@ -21,13 +21,19 @@ export default async function KitsPage() {
   }
 
   let initialKits: any[] = [];
+  let serviceTypes: any[] = [];
+  let componentCandidates: any[] = [];
   try {
-    initialKits = (await listInventoryProducts()).filter((p: any) => p.is_kit);
+    [initialKits, serviceTypes, componentCandidates] = await Promise.all([
+      listKitSummaries(),
+      listKitServiceTypes(),
+      listKitComponentCandidates(),
+    ]);
   } catch (error) {
     console.error('Failed to load kits:', error);
   }
 
-  return <KitManager initialKits={initialKits} />;
+  return <KitManager initialKits={initialKits} serviceTypes={serviceTypes} componentCandidates={componentCandidates} />;
 }
 
 export const dynamic = 'force-dynamic';

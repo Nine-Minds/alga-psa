@@ -5,10 +5,28 @@
  *
  * Run: (cd packages/inventory && npx vitest run src/lib/kitmisc.test.ts)
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import knexLib, { Knex } from 'knex';
+import { explodeKitOntoSalesOrder } from '../actions/kitActions';
+
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: any) => fn,
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(),
+}));
 
 function readEnv(): Record<string, string> {
   const p = path.resolve(__dirname, '../../../../server/.env.local');
@@ -25,6 +43,7 @@ let TENANT: string;
 let KIT_SERVICE: string;
 let COMP_A: string;
 let COMP_B: string;
+let CLIENT: string;
 
 beforeAll(async () => {
   const e = readEnv();
@@ -38,6 +57,7 @@ beforeAll(async () => {
   KIT_SERVICE = svcs[0].service_id;
   COMP_A = svcs[1].service_id;
   COMP_B = svcs[2].service_id;
+  CLIENT = (await knex('clients').where({ tenant: TENANT }).first()).client_id;
 });
 
 afterAll(async () => {
@@ -54,6 +74,52 @@ async function inTx(fn: (trx: Knex.Transaction) => Promise<void>) {
 }
 
 describe('kit explosion + contract no-consume (real server DB, rolled back)', () => {
+  it('T020: actual sales-order kit explosion creates one priced parent and zero-dollar child lines', async () => {
+    await inTx(async (trx) => {
+      await trx('product_inventory_settings')
+        .insert({
+          tenant: TENANT,
+          service_id: KIT_SERVICE,
+          track_stock: true,
+          is_serialized: false,
+          is_kit: true,
+          cost_currency: 'USD',
+        })
+        .onConflict(['tenant', 'service_id'])
+        .merge({ track_stock: true, is_kit: true });
+      await trx('kit_components').insert([
+        { tenant: TENANT, kit_service_id: KIT_SERVICE, component_service_id: COMP_A, quantity: 2 },
+        { tenant: TENANT, kit_service_id: KIT_SERVICE, component_service_id: COMP_B, quantity: 3 },
+      ]);
+      const [so] = await trx('sales_orders')
+        .insert({
+          tenant: TENANT,
+          so_number: `SO-KIT-${randomUUID().slice(0, 8)}`,
+          client_id: CLIENT,
+          status: 'draft',
+          currency_code: 'USD',
+          invoice_mode: 'manual',
+          allocation_mode: 'soft',
+        })
+        .returning('so_id');
+
+      const exploded = await explodeKitOntoSalesOrder(trx, TENANT, so.so_id, KIT_SERVICE, 2, 42500);
+
+      expect(Number(exploded.parentLine.unit_price)).toBe(42500);
+      expect(Number(exploded.parentLine.quantity_ordered)).toBe(2);
+      expect(exploded.parentLine.parent_so_line_id).toBeNull();
+      expect(exploded.componentLines).toHaveLength(2);
+      expect(exploded.componentLines.every((line) => Number(line.unit_price) === 0)).toBe(true);
+      expect(exploded.componentLines.every((line) => line.parent_so_line_id === exploded.parentLine.so_line_id)).toBe(true);
+
+      const childQtyByService = Object.fromEntries(
+        exploded.componentLines.map((line) => [line.service_id, Number(line.quantity_ordered)]),
+      );
+      expect(childQtyByService[COMP_A]).toBe(4);
+      expect(childQtyByService[COMP_B]).toBe(6);
+    });
+  });
+
   it('T020: exploding a kit yields per-component quantity = component qty x kit qty', async () => {
     await inTx(async (trx) => {
       // A kit made of: 2x COMP_A and 3x COMP_B per kit.

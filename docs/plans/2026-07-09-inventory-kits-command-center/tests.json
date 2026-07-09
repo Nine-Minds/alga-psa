@@ -1,0 +1,38 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed kit summary/detail test covers no-BOM, ready, low-stock, fixed-price, sum-price, and non-stocked component cases.",
+    "implemented": false,
+    "featureIds": ["F001", "F002", "F009", "F012"]
+  },
+  {
+    "id": "T002",
+    "description": "Action test proves create-kit creates a catalog product and inventory settings with is_kit=true.",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T003",
+    "description": "Action test proves update-kit persists identity, pricing mode, and fixed price validation.",
+    "implemented": false,
+    "featureIds": ["F004", "F012"]
+  },
+  {
+    "id": "T004",
+    "description": "BOM mutation test covers add, duplicate update quantity, positive-integer validation, and remove.",
+    "implemented": false,
+    "featureIds": ["F010", "F011"]
+  },
+  {
+    "id": "T005",
+    "description": "Sales-order regression proves kit explosion still creates one priced parent line and zero-dollar child component lines.",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T006",
+    "description": "Browser smoke covers create kit, add BOM, see readiness/margin, sales-order preview, error/empty states, search, and status filter.",
+    "implemented": false,
+    "featureIds": ["F005", "F006", "F007", "F008", "F009", "F013", "F015"]
+  }
+]
