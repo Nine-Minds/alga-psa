@@ -113,6 +113,10 @@ vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
   buildTicketResolutionSlaStageCompletionEvent: vi.fn(() => null),
 }));
 
+vi.mock('../lib/validateTicketClosure', () => ({
+  enforceTicketCloseRules: vi.fn(async () => undefined),
+}));
+
 import {
   resetTicketUpdatePublisherClientForTests,
   setTicketUpdateEventBusLoaderForTests,
@@ -148,7 +152,7 @@ function makeStatus(status_id: string, is_closed = false) {
   return {
     status_id,
     tenant: 'tenant-1',
-    is_closed,
+    is_closed: is_closed || status_id.startsWith('closed-'),
   };
 }
 
@@ -357,5 +361,157 @@ describe('updateTicketWithCache live updates', () => {
     await expect(updateTicketWithCache('ticket-1', { status_id: 'status-2' })).resolves.toBe('success');
 
     expect(publishRedisMock).not.toHaveBeenCalled();
+  });
+
+  it('accepts contact-only suppression and publishes it on TICKET_UPDATED without changing dedupe behavior', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    await expect(
+      updateTicketWithCache(
+        'ticket-1',
+        { title: 'Silently changed title' },
+        { suppressContactNotifications: true }
+      )
+    ).resolves.toBe('success');
+
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_UPDATED',
+        payload: expect.objectContaining({
+          ticketId: 'ticket-1',
+          suppressContactNotifications: true,
+          suppressInternalNotifications: false,
+        }),
+      })
+    );
+  });
+
+  it('accepts full suppression and publishes it on TICKET_UPDATED', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    await expect(
+      updateTicketWithCache(
+        'ticket-1',
+        { title: 'Fully silent title' },
+        {
+          suppressContactNotifications: true,
+          suppressInternalNotifications: true,
+        }
+      )
+    ).resolves.toBe('success');
+
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_UPDATED',
+        payload: expect.objectContaining({
+          suppressContactNotifications: true,
+          suppressInternalNotifications: true,
+        }),
+      })
+    );
+  });
+
+  it('rejects internal suppression unless contact suppression is also set', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    await expect(
+      updateTicketWithCache(
+        'ticket-1',
+        { title: 'Invalid suppression request' },
+        { suppressInternalNotifications: true }
+      )
+    ).rejects.toThrow('suppressInternalNotifications requires suppressContactNotifications');
+
+    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+  });
+
+  it('publishes default-false suppression flags when no suppression options are supplied', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    await expect(updateTicketWithCache('ticket-1', { title: 'Normal title' })).resolves.toBe('success');
+
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_UPDATED',
+        payload: expect.objectContaining({
+          suppressContactNotifications: false,
+          suppressInternalNotifications: false,
+        }),
+      })
+    );
+  });
+
+  it('propagates suppression flags on a non-closing status update without error', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    await expect(
+      updateTicketWithCache(
+        'ticket-1',
+        { status_id: 'status-2' },
+        { suppressContactNotifications: true }
+      )
+    ).resolves.toBe('success');
+
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_UPDATED',
+        payload: expect.objectContaining({
+          changes: expect.objectContaining({
+            status_id: { old: 'status-1', new: 'status-2' },
+          }),
+          suppressContactNotifications: true,
+          suppressInternalNotifications: false,
+        }),
+      })
+    );
+  });
+
+  it('publishes suppression flags on TICKET_ASSIGNED', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    await expect(
+      updateTicketWithCache(
+        'ticket-1',
+        { assigned_to: 'user-2' },
+        {
+          suppressContactNotifications: true,
+          suppressInternalNotifications: true,
+        }
+      )
+    ).resolves.toBe('success');
+
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_ASSIGNED',
+        payload: expect.objectContaining({
+          newAssigneeId: 'user-2',
+          suppressContactNotifications: true,
+          suppressInternalNotifications: true,
+        }),
+      })
+    );
+  });
+
+  it('publishes suppression flags on TICKET_CLOSED', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    await expect(
+      updateTicketWithCache(
+        'ticket-1',
+        { status_id: 'closed-status-1' },
+        { suppressContactNotifications: true }
+      )
+    ).resolves.toBe('success');
+
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_CLOSED',
+        payload: expect.objectContaining({
+          ticketId: 'ticket-1',
+          suppressContactNotifications: true,
+          suppressInternalNotifications: false,
+        }),
+      })
+    );
   });
 });

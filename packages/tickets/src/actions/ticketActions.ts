@@ -636,12 +636,22 @@ export interface UpdateTicketOptions {
   /** Close despite unmet close rules; honored only with ticket:close_override. */
   overrideCloseRules?: boolean;
   overrideCloseRulesReason?: string | null;
+  /** Skip customer-facing ticket notifications for this update operation. */
+  suppressContactNotifications?: boolean;
+  /** Also skip internal staff notifications; requires suppressContactNotifications. */
+  suppressInternalNotifications?: boolean;
 }
 
 export const updateTicket = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>, options?: UpdateTicketOptions): Promise<'success' | TicketActionError> => {
   try {
     // Validate update data
     const validatedData = validateData(ticketUpdateSchema, data);
+    const suppressContactNotifications = options?.suppressContactNotifications === true;
+    const suppressInternalNotifications = options?.suppressInternalNotifications === true;
+
+    if (suppressInternalNotifications && !suppressContactNotifications) {
+      throw new Error('suppressInternalNotifications requires suppressContactNotifications');
+    }
 
     const {knex: db} = await createTenantKnex();
 
@@ -1088,6 +1098,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
             closedByUserId: user.user_id,
             closedAt: occurredAt,
             changes: structuredChanges,
+            suppressContactNotifications,
+            suppressInternalNotifications,
           },
           ctx: workflowCtx,
           eventName: 'Ticket Closed',
@@ -1133,6 +1145,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
             newAssigneeType: 'user',
             assignedAt: occurredAt,
             changes: structuredChanges,
+            suppressContactNotifications,
+            suppressInternalNotifications,
           },
           ctx: workflowCtx,
           eventName: 'Ticket Assigned',
@@ -1153,6 +1167,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
             userId: user.user_id,
             updatedByUserId: user.user_id,
             changes: structuredChanges,
+            suppressContactNotifications,
+            suppressInternalNotifications,
           },
           ctx: workflowCtx,
           eventName: 'Ticket Updated',
@@ -1173,6 +1189,9 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
     return 'success';
   } catch (error) {
+    if (error instanceof Error && error.message === 'suppressInternalNotifications requires suppressContactNotifications') {
+      throw error;
+    }
     const expected = ticketActionErrorFrom(error);
     if (expected) {
       return expected;

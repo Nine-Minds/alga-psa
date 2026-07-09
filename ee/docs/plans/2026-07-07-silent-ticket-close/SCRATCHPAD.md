@@ -98,3 +98,38 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
 
 - Plan folder: `ee/docs/plans/2026-07-07-silent-ticket-close/`
 - Entry board-change test to mirror: `packages/tickets/src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx`
+
+## 2026-07-09 — Shared suppression plumbing batch (F001-F010, T001-T011)
+
+- Implemented the base operation-level suppression option pair:
+  - `packages/tickets/src/actions/optimizedTicketActions.ts`
+    - `UpdateTicketInTransactionOptions` now accepts `suppressContactNotifications` and `suppressInternalNotifications`.
+    - `updateTicketWithCache` exposes the same option pair.
+    - `updateTicketInTransaction` validates `suppressInternalNotifications` requires `suppressContactNotifications`.
+    - `TICKET_CLOSED`, `TICKET_UPDATED`, and `TICKET_ASSIGNED` payloads now include default-false suppression booleans.
+  - `packages/tickets/src/actions/ticketActions.ts`
+    - Mirror `UpdateTicketOptions` accepts the pair, validates the same invariant, preserves the validation error instead of wrapping it, and emits the flags on the same three event payloads.
+- Event schema changes:
+  - `packages/event-schemas/src/schemas/domain/ticketEventSchemas.ts` adds optional/default-false suppression fields to the three domain payload schemas.
+  - `packages/event-schemas/src/schemas/eventBusSchema.ts` also adds the fields to legacy `TicketEventPayloadSchema`; this matters because `EventSchemas.TICKET_*` unions legacy + domain schemas, and otherwise non-boolean suppression fields could pass through the broad legacy branch.
+- Notification accumulator decision:
+  - No production code change was needed in `server/src/lib/notifications/NotificationAccumulator.ts`; it already stores each accumulated event's full `payload` while deduping only by `tenantId:ticketId:eventType`.
+  - Added a regression test proving both suppression flags survive accumulation and the pending Redis key stays unchanged.
+- Tests added/updated:
+  - `packages/tickets/src/actions/optimizedTicketActions.liveUpdates.test.ts`
+    - contact-only/full suppression succeeds, invalid internal-only suppression rejects, default flags are false, non-closing status updates propagate without error, assigned/closed/update payloads carry flags.
+  - `packages/tickets/src/actions/ticketActions.authorizationNarrowing.test.ts`
+    - mirror path rejects internal-only suppression before DB work; repaired existing mocks for `trx.raw`, status subquery, positional `where`, and `users.orderBy` used by the current ticket list/detail implementation.
+  - `packages/tickets/src/actions/ticketActions.suppressionMirror.contract.test.ts`
+    - source-level drift guard that both optimized and mirror paths include both fields in all three ticket event payloads and share the validation invariant.
+  - `packages/event-schemas/src/schemas/eventBusSchema.ticketSuppressionFlags.test.ts`
+    - legacy payloads default false, domain payloads accept booleans, non-boolean suppression fields reject.
+  - `server/src/lib/notifications/__tests__/NotificationAccumulator.suppression.test.ts`
+    - payload preservation + dedupe-key regression.
+- Verification:
+  - `npx vitest run src/actions/optimizedTicketActions.liveUpdates.test.ts src/actions/ticketActions.authorizationNarrowing.test.ts src/actions/ticketActions.suppressionMirror.contract.test.ts` from `packages/tickets` passed: 3 files, 19 tests.
+  - `npx vitest run --config vitest.config.ts ../packages/event-schemas/src/schemas/eventBusSchema.ticketSuppressionFlags.test.ts src/lib/notifications/__tests__/NotificationAccumulator.suppression.test.ts` from `server` passed: 2 files, 10 tests.
+  - `npm -w @alga-psa/tickets run typecheck` passed.
+  - `npm -w @alga-psa/event-schemas run typecheck` passed.
+  - `cd server && npm run typecheck -- --pretty false` was first attempted but Node hit heap OOM near 8GB after ~94s.
+  - `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -- --pretty false` from `server` passed.

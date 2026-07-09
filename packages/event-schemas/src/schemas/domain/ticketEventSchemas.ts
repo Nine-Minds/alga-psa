@@ -21,6 +21,12 @@ const messageIdSchema = uuidSchema('Message ID');
 const noteIdSchema = uuidSchema('Note ID');
 const timeEntryIdSchema = uuidSchema('Time Entry ID');
 const assigneeTypeSchema = z.enum(['user', 'team']).describe('Assignee type');
+const suppressionFlagsSchema = {
+  suppressContactNotifications: z.boolean().optional().default(false)
+    .describe('Whether customer-facing notifications are suppressed for this operation'),
+  suppressInternalNotifications: z.boolean().optional().default(false)
+    .describe('Whether internal staff notifications are suppressed for this operation'),
+};
 
 export const ticketCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
@@ -44,6 +50,7 @@ export const ticketAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.ext
   assignedAt: z.string().optional().describe('Assigned timestamp (ISO 8601)'),
   updatedFields: updatedFieldsSchema,
   changes: changesSchema,
+  ...suppressionFlagsSchema,
 }).describe('Payload for TICKET_ASSIGNED');
 
 export type TicketAssignedEventPayload = z.infer<typeof ticketAssignedEventPayloadSchema>;
@@ -55,6 +62,7 @@ export const ticketClosedEventPayloadSchema = BaseDomainEventPayloadSchema.exten
   reason: z.string().optional().describe('Optional close reason'),
   updatedFields: updatedFieldsSchema,
   changes: changesSchema,
+  ...suppressionFlagsSchema,
 }).describe('Payload for TICKET_CLOSED');
 
 export type TicketClosedEventPayload = z.infer<typeof ticketClosedEventPayloadSchema>;
@@ -76,6 +84,7 @@ export const ticketUpdatedEventPayloadSchema = BaseDomainEventPayloadSchema.exte
   updatedByUserId: userIdSchema.optional().describe('User who updated the ticket'),
   updatedFields: updatedFieldsSchema,
   changes: changesSchema,
+  ...suppressionFlagsSchema,
 }).describe('Payload for TICKET_UPDATED');
 
 export type TicketUpdatedEventPayload = z.infer<typeof ticketUpdatedEventPayloadSchema>;
