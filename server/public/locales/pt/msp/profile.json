@@ -4,7 +4,7 @@
     "tabs": {
       "profile": "Perfil",
       "security": "Segurança",
-      "sso": "Logon único",
+      "sso": "Login único",
       "apiKeys": "Chaves de API",
       "notifications": "Notificações",
       "calendar": "Calendário",
@@ -72,7 +72,7 @@
     },
     "loadingStates": {
       "sso": {
-        "title": "Logon único",
+        "title": "Login único",
         "description": "Carregando configurações de SSO..."
       },
       "calendar": {
@@ -86,7 +86,7 @@
     "tabs": {
       "roles": "Funções",
       "sessions": "Sessões",
-      "sso": "Logon único",
+      "sso": "Login único",
       "permissions": "Permissões",
       "userRoles": "Funções de usuário",
       "policies": "Políticas",
