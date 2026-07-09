@@ -16,9 +16,11 @@ import {
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   addTicketCommentWithCacheForCurrentUser,
+  updateTicketWithCache,
   updateTicketWithCacheForCurrentUser,
 } from '../../actions/optimizedTicketActions';
 import TicketDetails from './TicketDetails';
+import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
 import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { persistTicketDescriptionUpdate } from './ticketDescriptionUpdate';
@@ -202,7 +204,10 @@ export default function TicketDetailsContainer({
   };
 
   // Handler for batch ticket updates (used by Save Changes button)
-  const handleBatchTicketUpdate = useCallback(async (changes: Record<string, unknown>): Promise<boolean> => {
+  const handleBatchTicketUpdate = useCallback(async (
+    changes: Record<string, unknown>,
+    options?: TicketNotificationSuppressionValue
+  ): Promise<boolean> => {
     if (!session?.user) {
       toast.error(t('errors.authRequiredUpdate', 'You must be logged in to update tickets'));
       return false;
@@ -217,7 +222,9 @@ export default function TicketDetailsContainer({
           normalizedChanges.assigned_to = value && value !== 'unassigned' ? value : null;
         }
 
-        const result = await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, normalizedChanges);
+        const result = options?.suppressContactNotifications
+          ? await updateTicketWithCache(ticketData.ticket.ticket_id, normalizedChanges, options)
+          : await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, normalizedChanges);
         if (isReturnedActionError(result)) {
           throw result;
         }

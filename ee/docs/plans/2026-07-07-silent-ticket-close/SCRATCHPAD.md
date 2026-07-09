@@ -149,6 +149,17 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
   - `cd packages/tickets && npx vitest run src/components/ticket/TicketNotificationSuppressionControl.test.tsx`
   - `npm -w @alga-psa/tickets run typecheck`
 
+## 2026-07-09 Implementation Notes — Entry Hero Suppression Wiring
+
+- Completed F027/T035.
+- `TicketInfo` now renders `TicketNotificationSuppressionControl` in the Save/Cancel bar while the entry hero has unsaved changes.
+- Suppression state is local to the save session and resets after successful save or discard. Normal saves preserve the previous one-argument `onSaveChanges(changes)` call shape; only contact-suppressed saves pass a second options argument.
+- `TicketDetails.handleBatchSaveChanges` and `TicketDetailsContainer.handleBatchTicketUpdate` now accept optional suppression options. The MSP container calls `updateTicketWithCache(..., options)` when suppression is enabled and keeps using `updateTicketWithCacheForCurrentUser` for normal saves, preserving the client-safe wrapper contract.
+- Test added to `TicketInfo.boardChangeStatusReselection.test.tsx` for the entry hero save options.
+- Verification:
+  - `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx src/components/ticket/TicketNotificationSuppressionControl.test.tsx`
+  - `npm -w @alga-psa/tickets run typecheck`
+
 ## 2026-07-09 — Shared suppression plumbing batch (F001-F010, T001-T011)
 
 - Implemented the base operation-level suppression option pair:

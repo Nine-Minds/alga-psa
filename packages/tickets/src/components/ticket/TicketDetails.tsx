@@ -30,6 +30,7 @@ import { TagManager } from "@alga-psa/tags/components";
 import { findTagsByEntityId, isTagActionError } from "@alga-psa/tags/actions";
 import { useTags } from '@alga-psa/tags/context';
 import TicketInfo from "./TicketInfo";
+import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
@@ -176,7 +177,10 @@ interface TicketDetailsProps {
 
     // Optimized handlers
     onTicketUpdate?: (field: string, value: any) => Promise<void>;
-    onBatchTicketUpdate?: (changes: Record<string, unknown>) => Promise<boolean>;
+    onBatchTicketUpdate?: (
+        changes: Record<string, unknown>,
+        options?: TicketNotificationSuppressionValue
+    ) => Promise<boolean>;
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
@@ -2473,10 +2477,13 @@ const handleClose = () => {
     };
 
     // Handler for batch save changes from TicketInfo
-    const handleBatchSaveChanges = useCallback(async (changes: Record<string, unknown>): Promise<boolean> => {
+    const handleBatchSaveChanges = useCallback(async (
+        changes: Record<string, unknown>,
+        options?: TicketNotificationSuppressionValue
+    ): Promise<boolean> => {
         // If we have a batch handler from container, use it
         if (onBatchTicketUpdate) {
-            const success = await runWithPendingLiveFields(Object.keys(changes), () => onBatchTicketUpdate(changes));
+            const success = await runWithPendingLiveFields(Object.keys(changes), () => onBatchTicketUpdate(changes, options));
             if (success) {
                 // Update local ticket state with the saved changes
                 setTicket(prevTicket => ({

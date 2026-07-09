@@ -392,4 +392,50 @@ describe('TicketInfo board change status reselection', () => {
       });
     });
   });
+
+  it('T035: threads contact suppression options into the entry hero batched save', async () => {
+    getTicketStatusesMock.mockResolvedValue([
+      { status_id: 'status-a', name: 'Board A Default', is_closed: false },
+      { status_id: 'status-a-closed', name: 'Board A Closed', is_closed: true },
+    ]);
+    const onSaveChanges = vi.fn().mockResolvedValue(true);
+
+    render(
+      <TicketInfo
+        id="ticket-info"
+        ticket={baseTicket}
+        conversations={[]}
+        statusOptions={[]}
+        agentOptions={[]}
+        boardOptions={[{ value: 'board-a', label: 'Board A' }]}
+        priorityOptions={[{ value: 'priority-1', label: 'Priority 1' }]}
+        onSelectChange={vi.fn()}
+        onSaveChanges={onSaveChanges}
+        responseStateTrackingEnabled={false}
+      />
+    );
+
+    await waitFor(() => {
+      expect(getTicketStatusesMock).toHaveBeenCalledWith('board-a');
+    });
+
+    expect(screen.queryByLabelText("Don't notify contact")).not.toBeInTheDocument();
+
+    const [statusSelect] = screen.getAllByRole('combobox');
+    fireEvent.change(statusSelect, { target: { value: 'status-a-closed' } });
+
+    const contactSuppression = await screen.findByLabelText("Don't notify contact");
+    fireEvent.click(contactSuppression);
+    fireEvent.click(screen.getByTestId('ticket-info-save-changes-btn'));
+
+    await waitFor(() => {
+      expect(onSaveChanges).toHaveBeenCalledWith(
+        { status_id: 'status-a-closed' },
+        {
+          suppressContactNotifications: true,
+          suppressInternalNotifications: false,
+        }
+      );
+    });
+  });
 });
