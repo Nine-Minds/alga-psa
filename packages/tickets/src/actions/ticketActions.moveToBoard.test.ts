@@ -173,6 +173,10 @@ describe('ticketActions moveTicketsToBoard', () => {
     validateStatusBelongsToBoardMock.mockReset();
     updateTicketWithCacheMock.mockReset();
     updateTicketWithCacheMock.mockResolvedValue('success');
+    updateTicketInTransactionMock.mockReset();
+    updateTicketInTransactionMock.mockResolvedValue('success');
+    hasPermissionMock.mockReset();
+    hasPermissionMock.mockResolvedValue(true);
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
       const tickets = new Map();
       return callback(createMockTrx(tickets));
@@ -197,12 +201,16 @@ describe('ticketActions moveTicketsToBoard', () => {
 
     expect(getDefaultStatusIdMock).toHaveBeenCalledWith('tenant-1', expect.anything(), 'board-dest');
     expect(result).toEqual({ movedIds: ['ticket-1'], failed: [] });
-    expect(updateTicketWithCacheMock).toHaveBeenCalledWith('ticket-1', expect.objectContaining({
-      board_id: 'board-dest',
-      status_id: 'status-default',
-      category_id: null,
-      subcategory_id: null,
-    }));
+    expect(updateTicketWithCacheMock).toHaveBeenCalledWith(
+      'ticket-1',
+      expect.objectContaining({
+        board_id: 'board-dest',
+        status_id: 'status-default',
+        category_id: null,
+        subcategory_id: null,
+      }),
+      {},
+    );
   });
 
   it('T010: override status is used when destination status is provided', async () => {
@@ -224,10 +232,14 @@ describe('ticketActions moveTicketsToBoard', () => {
     expect(getDefaultStatusIdMock).not.toHaveBeenCalled();
     expect(validateStatusBelongsToBoardMock).toHaveBeenCalledWith('status-override', 'board-dest', 'tenant-1', expect.anything());
     expect(result).toEqual({ movedIds: ['ticket-2'], failed: [] });
-    expect(updateTicketWithCacheMock).toHaveBeenCalledWith('ticket-2', {
-      board_id: 'board-dest',
-      status_id: 'status-override',
-    });
+    expect(updateTicketWithCacheMock).toHaveBeenCalledWith(
+      'ticket-2',
+      {
+        board_id: 'board-dest',
+        status_id: 'status-override',
+      },
+      {},
+    );
   });
 
   it('T012: invalid destination status fails for all selected tickets', async () => {
@@ -292,6 +304,134 @@ describe('ticketActions moveTicketsToBoard', () => {
       { ticketId: 'ticket-8', message: 'Permission denied: Cannot update ticket' },
     ]);
     expect(result.movedIds).toEqual(['ticket-7']);
+  });
+
+  it('T042: forwards suppression flags to every moved ticket', async () => {
+    const tickets = new Map<string, Record<string, any>>([
+      ['ticket-9', { ticket_id: 'ticket-9', tenant: 'tenant-1', board_id: 'board-source' }],
+      ['ticket-10', { ticket_id: 'ticket-10', tenant: 'tenant-1', board_id: 'board-source' }],
+    ]);
+    const options = {
+      suppressContactNotifications: true,
+      suppressInternalNotifications: true,
+    };
+    validateStatusBelongsToBoardMock.mockResolvedValue({ valid: true });
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(createMockTrx(tickets)));
+
+    const { moveTicketsToBoard } = await import('./ticketActions');
+    const result = await moveTicketsToBoard(['ticket-9', 'ticket-10'], 'board-dest', 'status-selected', options);
+
+    expect(result).toEqual({ movedIds: ['ticket-9', 'ticket-10'], failed: [] });
+    expect(updateTicketWithCacheMock).toHaveBeenNthCalledWith(
+      1,
+      'ticket-9',
+      expect.objectContaining({ board_id: 'board-dest', status_id: 'status-selected' }),
+      options,
+    );
+    expect(updateTicketWithCacheMock).toHaveBeenNthCalledWith(
+      2,
+      'ticket-10',
+      expect.objectContaining({ board_id: 'board-dest', status_id: 'status-selected' }),
+      options,
+    );
+  });
+});
+
+describe('ticketActions bulk notification suppression options', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    createTenantKnexMock.mockResolvedValue({ knex: {} });
+    updateTicketInTransactionMock.mockResolvedValue('success');
+    hasPermissionMock.mockResolvedValue(true);
+    assignTeamToTicketMock.mockResolvedValue(undefined);
+    removeTeamFromTicketMock.mockResolvedValue(undefined);
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback({}));
+  });
+
+  it('T029: bulk status update forwards silent options to each ticket update', async () => {
+    const options = {
+      suppressContactNotifications: true,
+      suppressInternalNotifications: false,
+    };
+
+    const { bulkUpdateTicketStatus } = await import('./ticketActions');
+    const result = await bulkUpdateTicketStatus(['ticket-1', 'ticket-2'], 'status-cleanup', options);
+
+    expect(result).toEqual({ updatedIds: ['ticket-1', 'ticket-2'], failed: [] });
+    expect(updateTicketInTransactionMock).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      expect.objectContaining({ user_id: 'internal-user-1' }),
+      'tenant-1',
+      'ticket-1',
+      { status_id: 'status-cleanup' },
+      options,
+    );
+    expect(updateTicketInTransactionMock).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      expect.objectContaining({ user_id: 'internal-user-1' }),
+      'tenant-1',
+      'ticket-2',
+      { status_id: 'status-cleanup' },
+      options,
+    );
+  });
+
+  it('T038-T041: bulk priority, due-date, and user assignment forward suppression options', async () => {
+    const options = {
+      suppressContactNotifications: true,
+      suppressInternalNotifications: true,
+    };
+
+    const {
+      bulkAssignTickets,
+      bulkUpdateTicketDueDate,
+      bulkUpdateTicketPriority,
+    } = await import('./ticketActions');
+
+    await bulkUpdateTicketPriority(['ticket-priority'], 'priority-low', options);
+    await bulkUpdateTicketDueDate(['ticket-due'], '2026-07-31T12:00:00.000Z', options);
+    await bulkAssignTickets(['ticket-assignee'], { kind: 'user', userId: 'user-2' }, options);
+
+    expect(updateTicketInTransactionMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ user_id: 'internal-user-1' }),
+      'tenant-1',
+      'ticket-priority',
+      { priority_id: 'priority-low' },
+      options,
+    );
+    expect(updateTicketInTransactionMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ user_id: 'internal-user-1' }),
+      'tenant-1',
+      'ticket-due',
+      { due_date: '2026-07-31T12:00:00.000Z' },
+      options,
+    );
+    expect(updateTicketInTransactionMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ user_id: 'internal-user-1' }),
+      'tenant-1',
+      'ticket-assignee',
+      { assigned_to: 'user-2' },
+      options,
+    );
+  });
+
+  it('T040: bulk team assignment forwards suppression options to the team assignment helper', async () => {
+    const options = {
+      suppressContactNotifications: true,
+      suppressInternalNotifications: false,
+    };
+
+    const { bulkAssignTickets } = await import('./ticketActions');
+    const result = await bulkAssignTickets(['ticket-team'], { kind: 'team', teamId: 'team-1' }, options);
+
+    expect(result).toEqual({ updatedIds: ['ticket-team'], failed: [] });
+    expect(assignTeamToTicketMock).toHaveBeenCalledWith('ticket-team', 'team-1', options);
+    expect(removeTeamFromTicketMock).not.toHaveBeenCalled();
   });
 });
 

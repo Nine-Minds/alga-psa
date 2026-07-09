@@ -7,6 +7,11 @@ import { revalidatePath } from 'next/cache';
 import { Knex } from 'knex';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
+export type TeamAssignmentNotificationOptions = {
+  suppressContactNotifications?: boolean;
+  suppressInternalNotifications?: boolean;
+};
+
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
   table: string,
@@ -19,8 +24,15 @@ export const assignTeamToTicket = withAuth(async (
   user,
   { tenant },
   ticketId: string,
-  teamId: string
+  teamId: string,
+  options: TeamAssignmentNotificationOptions = {}
 ): Promise<void | TicketActionError> => {
+  const suppressContactNotifications = options.suppressContactNotifications === true;
+  const suppressInternalNotifications = options.suppressInternalNotifications === true;
+  if (suppressInternalNotifications && !suppressContactNotifications) {
+    throw new Error('suppressInternalNotifications requires suppressContactNotifications');
+  }
+
   try {
     const { knex: db } = await createTenantKnex();
     const assignedTo = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -110,7 +122,9 @@ export const assignTeamToTicket = withAuth(async (
         ticketId,
         userId: assignedTo,
         assignedByUserId: user.user_id,
-        changes: { assigned_team_id: teamId }
+        changes: { assigned_team_id: teamId },
+        suppressContactNotifications,
+        suppressInternalNotifications,
       }
     });
 

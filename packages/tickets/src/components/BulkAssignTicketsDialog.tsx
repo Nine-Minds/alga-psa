@@ -10,6 +10,9 @@ import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError, teamActionEr
 import type { IUser, ITeam } from '@alga-psa/types';
 import { useTranslation } from 'react-i18next';
 import type { BulkTicketAssignSelection } from '../actions/ticketActions';
+import TicketNotificationSuppressionControl, {
+  type TicketNotificationSuppressionValue,
+} from './ticket/TicketNotificationSuppressionControl';
 
 interface BulkAssignTicketsDialogProps {
   isOpen: boolean;
@@ -18,7 +21,10 @@ interface BulkAssignTicketsDialogProps {
   users: IUser[];
   failed: Array<{ ticketId: string; message: string; label?: string }>;
   isSubmitting: boolean;
-  onConfirm: (selection: BulkTicketAssignSelection) => Promise<void>;
+  onConfirm: (
+    selection: BulkTicketAssignSelection,
+    options?: TicketNotificationSuppressionValue
+  ) => Promise<void>;
   idPrefix?: string;
 }
 
@@ -38,12 +44,20 @@ export default function BulkAssignTicketsDialog({
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
   const [teamsLoadError, setTeamsLoadError] = useState<string | null>(null);
+  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>({
+    suppressContactNotifications: false,
+    suppressInternalNotifications: false,
+  });
 
   useEffect(() => {
     if (!isOpen) return;
     setPickerValue('');
     setPendingTeamId(null);
     setTeamsLoadError(null);
+    setNotificationSuppression({
+      suppressContactNotifications: false,
+      suppressInternalNotifications: false,
+    });
     let cancelled = false;
     setIsLoadingTeams(true);
     getTeams()
@@ -80,10 +94,15 @@ export default function BulkAssignTicketsDialog({
   };
 
   const handleConfirm = async () => {
+    const options = notificationSuppression.suppressContactNotifications ? notificationSuppression : undefined;
     if (pendingTeamId) {
-      await onConfirm({ kind: 'team', teamId: pendingTeamId });
+      await (options
+        ? onConfirm({ kind: 'team', teamId: pendingTeamId }, options)
+        : onConfirm({ kind: 'team', teamId: pendingTeamId }));
     } else {
-      await onConfirm({ kind: 'user', userId: pickerValue || null });
+      await (options
+        ? onConfirm({ kind: 'user', userId: pickerValue || null }, options)
+        : onConfirm({ kind: 'user', userId: pickerValue || null }));
     }
   };
 
@@ -144,6 +163,14 @@ export default function BulkAssignTicketsDialog({
             )}
           </p>
         )}
+        <div className="mb-4">
+          <TicketNotificationSuppressionControl
+            idPrefix={`${idPrefix}-notification-suppression`}
+            value={notificationSuppression}
+            onChange={setNotificationSuppression}
+            disabled={isSubmitting}
+          />
+        </div>
         <div className="flex justify-end space-x-2">
           <Button id={`${idPrefix}-cancel`} variant="ghost" onClick={onClose} disabled={isSubmitting}>
             {t('actions.cancel', 'Cancel')}

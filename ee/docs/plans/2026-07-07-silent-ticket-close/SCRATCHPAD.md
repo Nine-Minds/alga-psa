@@ -247,3 +247,18 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
   - `npx vitest run src/actions/client-portal-actions/client-tickets.suppression.contract.test.ts` from `packages/client-portal` passed: 1 file, 3 tests.
   - `npm -w @alga-psa/tickets run typecheck` passed.
   - `npm -w @alga-psa/client-portal run typecheck` passed.
+
+## 2026-07-09 — Bulk Update Suppression Surfaces (F030-F037, T029/T038-T043)
+
+- Completed the eligible bulk-update surfaces:
+  - `BulkChangeStatusDialog`, `BulkChangePriorityDialog`, `BulkAssignTicketsDialog`, and `BulkSetDueDateDialog` render `TicketNotificationSuppressionControl`, reset it to unchecked when opened, and only pass an options object when contact suppression is checked.
+  - Routed bulk clients in `server/src/app/msp/tickets/_components/` accept optional `TicketNotificationSuppressionOptions` and pass them to `bulkUpdateTicketStatus`, `bulkUpdateTicketPriority`, `bulkAssignTickets`, and `bulkUpdateTicketDueDate`.
+  - Inline Move to Board in `TicketingDashboard.tsx` now renders the same suppression control, resets it on open/close/success, and passes selected flags to `moveTicketsToBoard`.
+- Bulk actions now forward suppression flags per ticket:
+  - `bulkUpdateTicketStatus`, `bulkUpdateTicketPriority`, `bulkUpdateTicketDueDate`, and user assignment pass options into `updateTicketInTransaction`.
+  - `moveTicketsToBoard` passes options into `updateTicketWithCache` for each moved ticket.
+  - `bulkAssignTickets` passes options into `assignTeamToTicket`; `assignTeamToTicket` validates `internal ⇒ contact` and includes the flags on its `TICKET_ASSIGNED` payload.
+- Scope note: `BulkAddTagsDialog` remains intentionally unchanged because `bulkAddTagsToTickets` writes tags directly and publishes no ticket lifecycle update event. Added a regression guard for that exclusion.
+- Tests/verification:
+  - `cd packages/tickets && npx vitest run src/actions/ticketActions.moveToBoard.test.ts`
+  - `cd server && npx vitest run --config vitest.config.ts src/app/msp/tickets/ticketsModalRoutes.contract.test.ts`
