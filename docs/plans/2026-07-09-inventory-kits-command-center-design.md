@@ -2,7 +2,7 @@
 
 - Date: 2026-07-09
 - Branch: `fix/inventory-per-unit-billing`
-- Status: Approved design, ready for implementation planning
+- Status: Approved design, pricing correction added
 - Related design: `docs/plans/2026-06-26-inventory-module-design.md`
 
 ## Summary
@@ -43,6 +43,9 @@ availability, not a new stock balance for the kit product.
   discovering Billing -> Products.
 - Make "bill of materials" the central editing concept.
 - Surface pricing mode and fixed-price amount directly on the kit screen.
+- Make sum pricing visibly derived from component selling prices rather than an
+  independently editable kit amount.
+- Resolve the same configured price in the kit preview and the sales-order flow.
 - Show margin and cost impact before the kit is sold.
 - Show buildable quantity and component stock constraints.
 - Make componentless or invalid kits visibly incomplete.
@@ -57,6 +60,8 @@ availability, not a new stock balance for the kit product.
 - Quote/template integration.
 - Barcode or scanning workflows.
 - Changes to the invoice writer beyond preserving the existing kit line behavior.
+- Removing the existing ability to override a unit price on an individual sales
+  order line.
 - Full replacement of Billing -> Products.
 
 ## Page Structure
@@ -114,7 +119,7 @@ Required fields should be the minimum needed to create a sellable kit product:
 - Kit name.
 - SKU.
 - Pricing mode.
-- Kit price or fixed price where required.
+- Fixed kit price only when fixed pricing is selected.
 - Required catalog basics that the existing product model enforces.
 
 After save, the user lands directly in the new kit detail/BOM editor.
@@ -162,15 +167,28 @@ Expose existing inventory settings:
 - `kit_pricing_mode`: `sum` or `fixed`.
 - `kit_fixed_price`: required when pricing mode is `fixed`.
 
+The pricing mode is the kit's reusable pricing policy:
+
+- `sum` derives the kit selling price from each BOM component's catalog selling
+  price multiplied by its quantity. The calculated amount is read-only on the
+  kit screen.
+- `fixed` uses one operator-entered fixed kit price. Do not show a second catalog
+  or sales-order kit price beside it.
+
 The UI should show:
 
-- Kit price.
+- Calculated kit price for `sum`, including copy that identifies component
+  selling prices as its basis.
+- One editable kit price for `fixed`.
 - Component cost.
 - Gross margin dollars.
 - Gross margin percent.
 
 For `sum` pricing, show the calculated component-derived price/cost basis. For
 `fixed` pricing, use the fixed amount and flag missing or invalid fixed prices.
+
+Component cost is not a selling-price input. It remains a separate value used to
+calculate margin.
 
 ### Preview Business Behavior
 
@@ -180,6 +198,13 @@ Add a `Sales-order behavior` section that previews the actual expansion model:
 - Component lines are child lines.
 - Component lines are normally zero-dollar lines.
 - Component lines allocate and fulfill stock.
+
+The preview price must come from the same canonical resolver used to seed the
+sales-order parent line. A sales-order user may still edit that line's unit price,
+but that edit is a transaction-scoped override: it affects only that order and
+does not change the kit's pricing mode or saved price. The sales-order UI should
+identify an override relative to the resolved kit price and offer a reset to the
+resolved amount.
 
 The preview should support at least quantity 1 and a user-entered quantity so the
 operator can see multiplied component quantities before creating a sales order.
@@ -208,6 +233,8 @@ Recommended actions:
 - `getKitDetail(kitServiceId)`
 - `createKitProduct(input)`
 - `updateKitProduct(input)`
+- A transaction-safe kit price resolver reusable by authenticated reads and
+  sales-order mutations.
 
 `listKitSummaries()` should return the row data needed by the list:
 
@@ -240,6 +267,13 @@ instead of inventing a parallel kit master.
 - Pricing mode and fixed price.
 - Inventory kit settings that affect sales-order behavior.
 
+The canonical resolver should return the sum of component catalog selling prices
+for `sum` mode and `kit_fixed_price` for `fixed` mode. It must not silently fall
+back to the kit product's catalog `default_rate` when a sum is zero. Sales-order
+creation should resolve the configured kit price server-side rather than trusting
+a stale generic catalog rate. An explicitly submitted different unit price is
+stored only on the sales-order line as the order-specific override.
+
 Advanced catalog fields should remain linked through Billing -> Products.
 
 ## Existing Backend Behavior To Preserve
@@ -252,6 +286,8 @@ The implementation should preserve the current kit sales-order model:
 - `explodeKitOntoSalesOrder` inserts one parent sales-order line for the kit.
 - Component lines are inserted with `parent_so_line_id` set.
 - Parent line carries the kit price.
+- The parent line's default price is resolved from the kit pricing mode at the
+  time it is added to the sales order.
 - Component lines have `unit_price=0`.
 - Component lines drive stock allocation and fulfillment.
 - Single-level BOM is enforced; a kit cannot contain another kit.
@@ -262,6 +298,9 @@ The implementation should preserve the current kit sales-order model:
 - Component load failures should render inline with a retry action.
 - Empty BOM should render a warning state, not an empty valid table.
 - Fixed-price kits should block save when fixed price is missing or invalid.
+- Sum-priced kits should never ask the operator to save an independent kit price.
+- A componentless sum-priced kit has no valid calculated price and remains
+  unusable on a sales order until a BOM exists.
 - Quantity entry should be positive integer only, matching server behavior.
 - Known server errors should map to operator language where possible:
   - `Kit has no components defined` -> `Add at least one BOM component before using this kit on a sales order.`
@@ -279,6 +318,10 @@ Use operator language consistently:
 - `Sales-order behavior`
 - `Used on sales orders`
 - `Create sales order`
+- `Calculated kit price`
+- `Based on component selling prices`
+- `Overridden from {{price}}`
+- `Reset to calculated price`
 
 Avoid making the user infer that "kit" means "a product configured elsewhere."
 The screen should say what is sellable, what is inside it, and what happens when
@@ -295,6 +338,11 @@ Implementation should include DB-backed coverage for the read and write behavior
 - Fixed-price kit with valid fixed price.
 - Fixed-price kit with missing fixed price.
 - Sum-priced kit margin calculation.
+- Sum-priced kit ignores the kit catalog default rate and resolves the exact BOM
+  selling-price sum.
+- Fixed-priced kit resolves its configured fixed amount.
+- Sales-order creation uses the resolved kit price by default while preserving an
+  explicit one-order override.
 - Create kit product creates catalog product and inventory kit settings.
 - Update kit pricing mode and fixed amount.
 - Add, update, and remove BOM component.
@@ -306,7 +354,10 @@ Browser smoke should cover:
 - Create kit.
 - Add BOM components.
 - See readiness and margin update.
+- Confirm sum mode is read-only and fixed mode exposes exactly one price field.
 - Preview sales-order behavior.
+- Confirm a sales-order override is visibly marked and can be reset without
+  changing kit configuration.
 - Enter the create-sales-order path.
 
 ## Rollout
@@ -327,6 +378,11 @@ complete enough to replace the current screen.
   and usage links.
 - Componentless kits are visibly incomplete.
 - Fixed-price kits expose and validate the fixed amount.
+- Sum-priced kits expose a read-only component-derived selling price and no
+  independent kit-price input.
+- Kit preview and sales-order default price use the same canonical resolver.
+- A sales-order price override affects only that sales-order line and is visibly
+  distinguishable from the kit's configured price.
 - BOM rows show stock and cost context.
 - The sales-order preview matches actual backend expansion behavior.
 - Existing kit sales-order and invoice behavior does not regress.
