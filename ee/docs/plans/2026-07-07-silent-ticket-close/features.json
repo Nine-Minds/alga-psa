@@ -19,7 +19,7 @@
   { "id": "F017", "description": "[A] handleTicketClosed skips assignee, additional-agent, internal-watcher emails on internal suppression, and external-watcher emails on contact suppression", "implemented": true, "prdRefs": ["FR9"] },
   { "id": "F018", "description": "[A] surveySubscriber skips the survey invitation on contact suppression (TICKET_CLOSED)", "implemented": true, "prdRefs": ["FR12"] },
   { "id": "F019", "description": "[A] internalNotificationSubscriber skips client-portal contact notification on contact suppression and staff in-app on internal suppression (TICKET_CLOSED case)", "implemented": true, "prdRefs": ["FR13"] },
-  { "id": "F020", "description": "[A] Bundle master close propagates the suppression flags to child-ticket closes", "implemented": false, "prdRefs": ["FR18"] },
+  { "id": "F020", "description": "[A] Bundle master close propagates the suppression flags to child-ticket closes", "implemented": true, "prdRefs": ["FR18"] },
 
   { "id": "F021", "description": "[B] handleTicketUpdated skips the ticket-updated-client contact/client send (:1416) on contact suppression", "implemented": false, "prdRefs": ["FR10"] },
   { "id": "F022", "description": "[B] handleAccumulatedTicketUpdates skips the ticket-updated-client contact send (:1820) on contact suppression", "implemented": false, "prdRefs": ["FR10"] },

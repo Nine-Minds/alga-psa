@@ -111,7 +111,17 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
   - `server/src/lib/eventBus/subscribers/__tests__/internalNotificationSubscriber.suppression.test.ts`
 - Verification:
   - `cd server && npx vitest run --config vitest.config.ts src/lib/eventBus/subscribers/__tests__/ticketEmailSubscriber.suppression.test.ts src/lib/eventBus/subscribers/__tests__/surveySubscriber.suppression.test.ts src/lib/eventBus/subscribers/__tests__/internalNotificationSubscriber.suppression.test.ts`
-- Bundle note: current bundled-master close behavior sends child-requester close emails from the master `TICKET_CLOSED` event; it does not publish separate child close workflow events in the existing optimized path. This batch gates the existing child-requester email path. F020/T024 remain open for the deeper child-close propagation requirement.
+- Bundle note: current bundled-master close behavior sends child-requester close emails from the master `TICKET_CLOSED` event; it did not publish separate child close workflow events in the existing optimized path. The close-gate batch gates the existing child-requester email path.
+
+## 2026-07-09 Implementation Notes — Bundle Silent Child Close Propagation
+
+- Completed F020/T024 in `packages/tickets/src/actions/optimizedTicketActions.ts`.
+- Decision: publish child `TICKET_CLOSED` workflow events only for suppressed bundled-master closes whose sync update actually changes a child `status_id`. This satisfies silent child propagation and avoids introducing duplicate child requester emails for normal, non-suppressed master closes, which already notify child requesters from the master close handler.
+- Child close event payload carries the child ticket id, child status change, `closedAt`, actor attribution when present, and the same `suppressContactNotifications` / `suppressInternalNotifications` flags as the master close.
+- Test added to `packages/tickets/src/actions/optimizedTicketActions.liveUpdates.test.ts` (`T024` case) to verify only the changed child gets the suppressed child close event.
+- Verification:
+  - `cd packages/tickets && npx vitest run src/actions/optimizedTicketActions.liveUpdates.test.ts`
+  - `npm -w @alga-psa/tickets run typecheck`
 
 ## 2026-07-09 — Shared suppression plumbing batch (F001-F010, T001-T011)
 

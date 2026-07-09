@@ -23,7 +23,7 @@
   { "id": "T021", "description": "[A] surveySubscriber skips the survey invitation on contact suppression and still sends without flags", "implemented": true, "featureIds": ["F018", "F066"] },
   { "id": "T022", "description": "[A] internalNotificationSubscriber skips client-portal contact notification on contact suppression (close)", "implemented": true, "featureIds": ["F019"] },
   { "id": "T023", "description": "[A] internalNotificationSubscriber skips staff in-app notifications on internal suppression but keeps them on contact-only (close)", "implemented": true, "featureIds": ["F019"] },
-  { "id": "T024", "description": "[A] Closing a bundle master silently closes children with no child-requester contact emails; child close events carry the flags", "implemented": false, "featureIds": ["F020"] },
+  { "id": "T024", "description": "[A] Closing a bundle master silently closes children with no child-requester contact emails; child close events carry the flags", "implemented": true, "featureIds": ["F020"] },
   { "id": "T025", "description": "[A] Normal close (no flags) sends the full pre-change recipient set (regression)", "implemented": false, "featureIds": ["F066"] },
 
   { "id": "T026", "description": "[B] handleTicketUpdated with contact suppression sends no ticket-updated-client email to the contact", "implemented": false, "featureIds": ["F021"] },

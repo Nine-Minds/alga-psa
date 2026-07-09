@@ -359,6 +359,74 @@ describe('updateTicketWithCache live updates', () => {
     expect(channels).not.toContain('alga-psa:ticket-updates:tenant-1:child-2');
   });
 
+  it('T024: suppressed bundled master close publishes child close events with suppression flags', async () => {
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+      callback(
+        buildTrx({
+          currentTicket: makeTicket({
+            ticket_id: 'parent-1',
+            status_id: 'status-1',
+          }),
+          bundleSettings: {
+            tenant: 'tenant-1',
+            master_ticket_id: 'parent-1',
+            mode: 'sync_updates',
+          },
+          childTickets: [
+            makeTicket({ ticket_id: 'child-1', master_ticket_id: 'parent-1', status_id: 'status-1' }),
+            makeTicket({ ticket_id: 'child-2', master_ticket_id: 'parent-1', status_id: 'closed-status-1' }),
+          ],
+        })
+      )
+    );
+
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    await expect(
+      updateTicketWithCache(
+        'parent-1',
+        { status_id: 'closed-status-1' },
+        {
+          suppressContactNotifications: true,
+          suppressInternalNotifications: true,
+        }
+      )
+    ).resolves.toBe('success');
+
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_CLOSED',
+        payload: expect.objectContaining({
+          ticketId: 'parent-1',
+          suppressContactNotifications: true,
+          suppressInternalNotifications: true,
+        }),
+      })
+    );
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_CLOSED',
+        payload: expect.objectContaining({
+          ticketId: 'child-1',
+          changes: {
+            status_id: {
+              old: 'status-1',
+              new: 'closed-status-1',
+            },
+          },
+          suppressContactNotifications: true,
+          suppressInternalNotifications: true,
+        }),
+        fromState: 'status-1',
+        toState: 'closed-status-1',
+      })
+    );
+    expect(
+      publishWorkflowEventMock.mock.calls.some(
+        ([event]) => event.eventType === 'TICKET_CLOSED' && event.payload?.ticketId === 'child-2'
+      )
+    ).toBe(false);
+  });
+
   it('T007: live-update kill switch skips Redis publish without blocking the ticket update', async () => {
     process.env.LIVE_TICKET_UPDATES_DISABLED = '1';
 
