@@ -23,42 +23,42 @@
   {
     "id": "F010",
     "description": "Intercepted route create-client (real route + @modal/(.)create-client slot importing QuickAddClient only)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-intercept-dialogs",
     "prdRefs": ["Technical approach / Phase 1"]
   },
   {
     "id": "F011",
     "description": "Intercepted route create-contact (QuickAddContact)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-intercept-dialogs",
     "prdRefs": ["Technical approach / Phase 1"]
   },
   {
     "id": "F012",
     "description": "Intercepted route create-asset (QuickAddAsset)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-intercept-dialogs",
     "prdRefs": ["Technical approach / Phase 1"]
   },
   {
     "id": "F013",
     "description": "Intercepted route create-project (ProjectQuickAdd)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-intercept-dialogs",
     "prdRefs": ["Technical approach / Phase 1"]
   },
   {
     "id": "F014",
     "description": "Intercepted routes create-service (QuickAddService) and create-product (QuickAddProduct)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-intercept-dialogs",
     "prdRefs": ["Technical approach / Phase 1"]
   },
   {
     "id": "F015",
     "description": "Header/QuickCreateDialog no longer statically imports any of the 6 heavy dialogs; canary confirms their graphs are gone from the shell chunk (present only under create-<x> routes)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-intercept-dialogs",
     "prdRefs": ["Acceptance AC3"]
   },

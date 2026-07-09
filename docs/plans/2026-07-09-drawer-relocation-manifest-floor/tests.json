@@ -16,14 +16,14 @@
   {
     "id": "T010",
     "description": "Each intercepted create-<x> route resolves and its @modal slot renders the dialog; the existing create-ticket path still works unchanged",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-intercept-dialogs",
     "featureIds": ["F010", "F011", "F012", "F013", "F014"]
   },
   {
     "id": "T011",
     "description": "Canary after intercept: assets/clients/projects/billing quick-add component graphs absent from the shell/header chunk (present only under their create-<x> route)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-intercept-dialogs",
     "featureIds": ["F015"]
   },
