@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Adicionar Pedido de Compra",
     "allVendors": "Todos os fornecedores",
     "amountOnOrder": "{{amount}} em pedido",
+    "mixedCurrencyOnOrder": "{{count}} pedidos de compra em aberto em várias moedas",
     "cancelConfirm": "Tem certeza de que deseja cancelar o pedido de compra {{poNumber}}? Isso não pode ser desfeito.",
     "cancelFailed": "Não foi possível cancelar o pedido de compra.",
     "cancelTitle": "Cancelar pedido de compra",

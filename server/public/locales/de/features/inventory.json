@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Bestellung hinzufügen",
     "allVendors": "Alle Lieferanten",
     "amountOnOrder": "{{amount}} bestellt",
+    "mixedCurrencyOnOrder": "{{count}} Bestellungen über mehrere Währungen hinweg bestellt",
     "cancelConfirm": "Möchten Sie die Bestellung {{poNumber}} wirklich stornieren? Dies kann nicht rückgängig gemacht werden.",
     "cancelFailed": "Die Bestellung konnte nicht storniert werden.",
     "cancelTitle": "Bestellung stornieren",

@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Dodaj zamówienie zakupu",
     "allVendors": "Wszyscy dostawcy",
     "amountOnOrder": "{{amount}} zamówione",
+    "mixedCurrencyOnOrder": "{{count}} zamówień zakupu w toku w wielu walutach",
     "cancelConfirm": "Czy na pewno chcesz anulować zamówienie zakupu {{poNumber}}? Tej operacji nie można cofnąć.",
     "cancelFailed": "Nie udało się anulować zamówienia zakupu.",
     "cancelTitle": "Anuluj zamówienie zakupu",

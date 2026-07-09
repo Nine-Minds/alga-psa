@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Ajouter un bon de commande",
     "allVendors": "Tous les fournisseurs",
     "amountOnOrder": "{{amount}} en commande",
+    "mixedCurrencyOnOrder": "{{count}} bons de commande en cours dans plusieurs devises",
     "cancelConfirm": "Êtes-vous sûr de vouloir annuler le bon de commande {{poNumber}} ? Cette action est irréversible.",
     "cancelFailed": "Impossible d'annuler le bon de commande.",
     "cancelTitle": "Annuler le bon de commande",

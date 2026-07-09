@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Inkooporder toevoegen",
     "allVendors": "Alle leveranciers",
     "amountOnOrder": "{{amount}} besteld",
+    "mixedCurrencyOnOrder": "{{count}} inkooporders in bestelling in meerdere valuta",
     "cancelConfirm": "Weet u zeker dat u inkooporder {{poNumber}} wilt annuleren? Dit kan niet ongedaan worden gemaakt.",
     "cancelFailed": "Kon de inkooporder niet annuleren.",
     "cancelTitle": "Inkooporder annuleren",

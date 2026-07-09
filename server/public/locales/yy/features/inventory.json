@@ -744,6 +744,7 @@
     "addPurchaseOrder": "55555",
     "allVendors": "55555",
     "amountOnOrder": "55555 {{amount}} 55555",
+    "mixedCurrencyOnOrder": "55555 {{count}} 55555",
     "cancelConfirm": "55555 {{poNumber}} 55555",
     "cancelFailed": "55555",
     "cancelTitle": "55555",
