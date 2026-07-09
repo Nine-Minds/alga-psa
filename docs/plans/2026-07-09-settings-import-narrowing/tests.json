@@ -1,0 +1,93 @@
+[
+  {
+    "id": "T001",
+    "description": "Baseline recorded: /msp/settings partial ~31.85MB/237 modules + package breakdown; sla/notifications sub-route partials recorded",
+    "implemented": false,
+    "commitGroup": "baseline",
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T010",
+    "description": "Tier 1: grep confirms zero bare @alga-psa/*/components imports remain in SettingsPage.tsx + general/ tabs; each replaced component still renders (typecheck + tab smoke)",
+    "implemented": false,
+    "commitGroup": "t1-components-barrels",
+    "featureIds": ["F010", "F011", "F012", "F013", "F014", "F015"]
+  },
+  {
+    "id": "T011",
+    "description": "Tier 1 canary: /msp/settings partial drops vs baseline; per-package trace shows clients/tickets/projects/scheduling contributions reduced (record numbers)",
+    "implemented": false,
+    "commitGroup": "t1-components-barrels",
+    "featureIds": ["F010", "F011", "F012", "F013"]
+  },
+  {
+    "id": "T020",
+    "description": "Tier 2 (clients/user-comp/users/teams): zero bare /actions barrel imports remain at the 21 listed sites; aliases and import type preserved; typecheck exit 0",
+    "implemented": false,
+    "commitGroup": "t2-actions-clients-users",
+    "featureIds": ["F020", "F021", "F022", "F023"]
+  },
+  {
+    "id": "T021",
+    "description": "User management smoke: user list loads with avatars, add user, edit user (roles, password change), org chart renders; team list/add/edit with avatars",
+    "implemented": false,
+    "commitGroup": "t2-actions-clients-users",
+    "featureIds": ["F020", "F021", "F022", "F023"]
+  },
+  {
+    "id": "T030",
+    "description": "Tier 2 (tenancy/refdata/misc): zero bare barrel imports at the listed sites; 'verify'-flagged symbols (tenant logo/client fns, role fns) resolved to correct defining files; typecheck exit 0",
+    "implemented": false,
+    "commitGroup": "t2-actions-tenancy-refdata",
+    "featureIds": ["F030", "F031", "F032"]
+  },
+  {
+    "id": "T031",
+    "description": "Tenancy/general smoke: general settings load+save (tenant name, timezone), language settings, client portal settings (branding, locales, portal domain status), experimental features, secrets CRUD, interaction types/statuses CRUD incl reference-data import dialog",
+    "implemented": false,
+    "commitGroup": "t2-actions-tenancy-refdata",
+    "featureIds": ["F030", "F031", "F032"]
+  },
+  {
+    "id": "T040",
+    "description": "Tier 3: grep confirms no bare @alga-psa/*/actions or /components barrels remain in the swept packages/*/src/components/settings subtrees; typecheck exit 0",
+    "implemented": false,
+    "commitGroup": "t3-package-subtrees",
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T041",
+    "description": "Tier 3 canary: settings manifest drops further; per-package trace recorded; non-productive narrowings noted rather than forced",
+    "implemented": false,
+    "commitGroup": "t3-package-subtrees",
+    "featureIds": ["F040", "F041"]
+  },
+  {
+    "id": "T050",
+    "description": "Sub-routes: settings/sla and settings/notifications pages render and their partials shrink; zero barrels in those page files",
+    "implemented": false,
+    "commitGroup": "subroutes",
+    "featureIds": ["F050"]
+  },
+  {
+    "id": "T060",
+    "description": "ESLint: the three new globs report 0 no-restricted-imports violations; a probe file with a bare barrel import in the settings tree IS flagged (negative test), then removed",
+    "implemented": false,
+    "commitGroup": "guard-verify",
+    "featureIds": ["F060"]
+  },
+  {
+    "id": "T061",
+    "description": "Final: full typecheck exit 0; full canary with target met or residual documented; SCRATCHPAD results filled; OQ1 decision note present if applicable",
+    "implemented": false,
+    "commitGroup": "guard-verify",
+    "featureIds": ["F061", "F063"]
+  },
+  {
+    "id": "T062",
+    "description": "Full settings smoke matrix: every tab (General, Ticketing, Billing, Projects, Time Entry, Integrations, Email, Notifications, Secrets, Import/Export, Extensions, MCP) renders without console/provider errors",
+    "implemented": false,
+    "commitGroup": "guard-verify",
+    "featureIds": ["F062"]
+  }
+]

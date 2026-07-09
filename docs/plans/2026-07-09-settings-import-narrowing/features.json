@@ -1,0 +1,149 @@
+[
+  {
+    "id": "F001",
+    "description": "Baseline canary recorded: /msp/settings partial size + ACTIONS_MODULE count + per-package breakdown (expect ~31.85MB / 237); also settings/sla and settings/notifications sub-route partials",
+    "implemented": false,
+    "commitGroup": "baseline",
+    "prdRefs": ["Context", "Verification"]
+  },
+  {
+    "id": "F010",
+    "description": "Tier 1: UserManagement.tsx:61 QuickAddContact -> @alga-psa/clients/components/contacts/QuickAddContact (kills the clients components barrel, top offender)",
+    "implemented": false,
+    "commitGroup": "t1-components-barrels",
+    "prdRefs": ["Approach / Tier 1"]
+  },
+  {
+    "id": "F011",
+    "description": "Tier 1: TicketingSettings.tsx:8 BoardsSettings/CategoriesSettings/DisplaySettings -> granular @alga-psa/tickets/components/settings/* files (kills the tickets components barrel)",
+    "implemented": false,
+    "commitGroup": "t1-components-barrels",
+    "prdRefs": ["Approach / Tier 1"]
+  },
+  {
+    "id": "F012",
+    "description": "Tier 1: SettingsPage.tsx:81 ProjectSettings -> @alga-psa/projects/components/settings/ProjectSettings; :68 TimeEntrySettings -> granular scheduling settings path",
+    "implemented": false,
+    "commitGroup": "t1-components-barrels",
+    "prdRefs": ["Approach / Tier 1"]
+  },
+  {
+    "id": "F013",
+    "description": "Tier 1: SettingsPage.tsx:69 billing (BillingSettings, TaxDelegationNudge, QboSyncHealthPanel, QboOnboardingWizardEntry) -> granular billing settings component files",
+    "implemented": false,
+    "commitGroup": "t1-components-barrels",
+    "prdRefs": ["Approach / Tier 1"]
+  },
+  {
+    "id": "F014",
+    "description": "Tier 1: SettingsPage.tsx:72,79 integrations (IntegrationsSettingsPage, EmailProviderConfiguration) -> granular integrations settings/email paths",
+    "implemented": false,
+    "commitGroup": "t1-components-barrels",
+    "prdRefs": ["Approach / Tier 1"]
+  },
+  {
+    "id": "F015",
+    "description": "Tier 1: NotificationsTab.tsx:9 (4 notification settings components), TicketingSettings.tsx:9 + InteractionStatusSettings.tsx:23,25 (reference-data components), ClientPortalSettings.tsx:26 useBranding (tenancy components) -> granular files",
+    "implemented": false,
+    "commitGroup": "t1-components-barrels",
+    "prdRefs": ["Approach / Tier 1"]
+  },
+  {
+    "id": "F020",
+    "description": "Tier 2: clients/actions barrel at 5 sites (GeneralSettings:14, UserManagement:10,11, InteractionTypeSettings:8-12, QuickAddInteractionType:11) -> queryActions / contact-actions/contactActions / interactionTypeActions",
+    "implemented": false,
+    "commitGroup": "t2-actions-clients-users",
+    "prdRefs": ["Approach / Tier 2"]
+  },
+  {
+    "id": "F021",
+    "description": "Tier 2: user-composition/actions barrel at 9 sites (UserManagement, UserList, UserDetails, TeamList, TeamDetails, ClientPortalSettings, InteractionStatusSettings, OrgChart) -> userQueryActions / avatarActions",
+    "implemented": false,
+    "commitGroup": "t2-actions-clients-users",
+    "prdRefs": ["Approach / Tier 2"]
+  },
+  {
+    "id": "F022",
+    "description": "Tier 2: users/actions barrel at 4 sites (UserManagement:8, UserList:10, UserDetails:6, CollapsiblePasswordChangeForm:10) -> user-actions/userActions + userClientActions; resolve role-fn defining file (OQ2)",
+    "implemented": false,
+    "commitGroup": "t2-actions-clients-users",
+    "prdRefs": ["Approach / Tier 2", "OQ2"]
+  },
+  {
+    "id": "F023",
+    "description": "Tier 2: teams/actions barrel at 3 sites (TeamManagement:6, TeamList:4-5, TeamDetails:9-12) -> team-actions/teamActions + team-actions/avatarActions",
+    "implemented": false,
+    "commitGroup": "t2-actions-clients-users",
+    "prdRefs": ["Approach / Tier 2"]
+  },
+  {
+    "id": "F030",
+    "description": "Tier 2: tenancy/actions barrel at 8 sites (GeneralSettings, MspLanguageSettings, ClientPortalSettings x3, ExperimentalFeaturesSettings, SecretsManagement, SecretDialog) -> coreTenantActions / tenantSettingsActions / tenantLocaleActions / tenantBrandingActions / tenantClientPortalLocaleActions / portalDomainActions / tenant-secret-actions (verify flagged ones)",
+    "implemented": false,
+    "commitGroup": "t2-actions-tenancy-refdata",
+    "prdRefs": ["Approach / Tier 2"]
+  },
+  {
+    "id": "F031",
+    "description": "Tier 2: reference-data/actions at 4 sites (ChecklistTemplatesSettings:30, InteractionStatusSettings:8,9, InteractionTypeSettings:13) -> priorityActions / status-actions/statusActions / referenceDataActions",
+    "implemented": false,
+    "commitGroup": "t2-actions-tenancy-refdata",
+    "prdRefs": ["Approach / Tier 2"]
+  },
+  {
+    "id": "F032",
+    "description": "Tier 2: client-portal/actions (UserManagement:12,14 -> portalInvitationActions / clientPortalLinkActions), licensing/actions (UserManagement:54, UserDetails:17 -> license-actions), sla/actions (TicketingSettings:10 -> slaActions)",
+    "implemented": false,
+    "commitGroup": "t2-actions-tenancy-refdata",
+    "prdRefs": ["Approach / Tier 2"]
+  },
+  {
+    "id": "F040",
+    "description": "Tier 3: sweep packages/*/src/components/settings/** subtrees reached from the hub for barrel imports (known: tickets BoardsSettings.tsx:25 tickets/actions + reference-data/user-composition/teams barrels; billing BillingSettings.tsx:10 + projects ProjectSettings.tsx:6 reference-data/components) and granularize",
+    "implemented": false,
+    "commitGroup": "t3-package-subtrees",
+    "prdRefs": ["Approach / Tier 3"]
+  },
+  {
+    "id": "F041",
+    "description": "Tier 3: canary after sweep; if one package still dominates the settings manifest, extend the sweep to that package's remaining settings-reachable components (measure-driven, no blind expansion)",
+    "implemented": false,
+    "commitGroup": "t3-package-subtrees",
+    "prdRefs": ["Approach / Tier 3", "AC4"]
+  },
+  {
+    "id": "F050",
+    "description": "Sub-routes: settings/sla/page.tsx (sla components+actions, reference-data boardActions, clients queryActions) and settings/notifications/page.tsx (notifications components) -> granular",
+    "implemented": false,
+    "commitGroup": "subroutes",
+    "prdRefs": ["Approach / Sub-route cleanups"]
+  },
+  {
+    "id": "F060",
+    "description": "ESLint guard extended with the three settings globs (server settings app tree, server settings components tree, packages/*/src/components/settings) - each added only when violation-free",
+    "implemented": false,
+    "commitGroup": "guard-verify",
+    "prdRefs": ["Approach / Guard", "G3"]
+  },
+  {
+    "id": "F061",
+    "description": "Final gates: typecheck exit 0; guard 0 violations; /msp/settings canary target met or honest residual recorded (AC1/AC4); SCRATCHPAD results table filled",
+    "implemented": false,
+    "commitGroup": "guard-verify",
+    "prdRefs": ["Acceptance criteria"]
+  },
+  {
+    "id": "F062",
+    "description": "Runtime smoke: all settings tabs render; user/team/interaction-type CRUD flows work; sla + notifications sub-pages render",
+    "implemented": false,
+    "commitGroup": "guard-verify",
+    "prdRefs": ["Verification", "AC3"]
+  },
+  {
+    "id": "F063",
+    "description": "OQ1 decision note: if a single tab's package still dominates post-narrowing, record measurements + flag tab->segment promotion as a separate proposal (do NOT implement)",
+    "implemented": false,
+    "commitGroup": "guard-verify",
+    "prdRefs": ["OQ1", "N1"]
+  }
+]
