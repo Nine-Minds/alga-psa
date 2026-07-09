@@ -8,7 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IconPicker, getIconComponent } from '@alga-psa/ui/components/IconPicker';
-import { createInteractionType, updateInteractionType, getAllInteractionTypes } from '@alga-psa/clients/actions';
+import { createInteractionType, updateInteractionType, getAllInteractionTypes } from '@alga-psa/clients/actions/interactionTypeActions';
 import { IInteractionType } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

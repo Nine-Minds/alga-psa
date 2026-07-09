@@ -4,14 +4,15 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import UserList from './UserList';
-import { getAllUsers, getUserWithRoles, getMSPRoles, getClientPortalRoles, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { addUser } from '@alga-psa/users/actions';
+import { getAllUsers, getUserWithRoles, getMSPRoles, getClientPortalRoles } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
+import { addUser } from '@alga-psa/users/actions/user-actions/userActions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getAllClients } from '@alga-psa/clients/actions';
-import { addContact, getContactsByClient, getAllContacts, getContactsEligibleForInvitation } from '@alga-psa/clients/actions';
-import { sendPortalInvitation, createClientPortalUser } from '@alga-psa/client-portal/actions';
+import { getAllClients, getContactsByClient, getAllContacts } from '@alga-psa/clients/actions/queryActions';
+import { addContact, getContactsEligibleForInvitation } from '@alga-psa/clients/actions/contact-actions/contactActions';
+import { sendPortalInvitation, createClientPortalUser } from '@alga-psa/client-portal/actions/portal-actions/portalInvitationActions';
 import type { PortalInvitationErrorCode } from '@alga-psa/portal-shared/types';
-import { getTenantPortalLoginLink } from '@alga-psa/client-portal/actions';
+import { getTenantPortalLoginLink } from '@alga-psa/client-portal/actions/portal-actions/clientPortalLinkActions';
 
 const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string>> = {
   PERMISSION_DENIED_INVITE: 'users.messages.error.permissionDeniedInvite',
@@ -51,14 +52,14 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/components/Tabs';
 import { Search, Eye, EyeOff } from 'lucide-react';
-import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
+import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
 import type { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
 import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import OrgChart from './org-chart/OrgChart';
-import { QuickAddContact } from '@alga-psa/clients/components';
+import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddContact';
 import { useTier } from '@/context/TierContext';
 
 const UserManagement = (): React.JSX.Element => {

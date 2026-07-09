@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import type { Edge, Node, NodeTypes } from 'reactflow';
 import type { IUser } from '@alga-psa/types';
 import { useDrawer } from '@alga-psa/ui';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import UserDetails from '../UserDetails';
 import OrgChartNode, { type OrgChartNodeData } from './OrgChartNode';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';

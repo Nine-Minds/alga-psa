@@ -10,7 +10,7 @@ import {
   createSecret,
   updateSecret,
   validateSecretName
-} from '@alga-psa/tenancy/actions';
+} from '@alga-psa/tenancy/actions/tenant-secret-actions';
 import type { TenantSecretMetadata } from '@alga-psa/workflows/secrets';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';

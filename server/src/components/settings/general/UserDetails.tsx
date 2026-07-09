@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { IUser, IUserWithRoles, IRole } from '@alga-psa/types';
-import { findUserById, getCurrentUser, getAllUsers, getUserRoles, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { updateUser, adminChangeUserPassword, getRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/users/actions';
+import { findUserById, getCurrentUser, getAllUsers, getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
+import { updateUser, adminChangeUserPassword } from '@alga-psa/users/actions/user-actions/userActions';
+import { getRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/users/lib/roleActions';
 import { useDrawer } from "@alga-psa/ui";
 import { Text, Flex } from '@radix-ui/themes';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -14,7 +16,7 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import CollapsiblePasswordChangeForm from './CollapsiblePasswordChangeForm';
-import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
+import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
 import toast from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

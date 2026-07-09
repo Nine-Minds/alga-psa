@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import TeamList from './TeamList';
 import TeamDetails from './TeamDetails';
-import { getTeams } from '@alga-psa/teams/actions';
+import { getTeams } from '@alga-psa/teams/actions/team-actions/teamActions';
 import { ITeam } from '@alga-psa/types';
 import { Card } from '@alga-psa/ui/components/Card';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';

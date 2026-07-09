@@ -5,12 +5,15 @@ import { Pencil, Check, X } from 'lucide-react';
 import {
   getTeamById,
   updateTeam,
-  saveTeamChanges,
+  saveTeamChanges
+} from '@alga-psa/teams/actions/team-actions/teamActions';
+import {
   uploadTeamAvatar,
   deleteTeamAvatar,
   getTeamAvatarUrlsBatchAction
-} from '@alga-psa/teams/actions';
-import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+} from '@alga-psa/teams/actions/team-actions/avatarActions';
+import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { ITeam, ITeamMember, IUserWithRoles, ColumnDefinition } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';

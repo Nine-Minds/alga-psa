@@ -8,7 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { canEnableAiAssistant, getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions';
+import { canEnableAiAssistant, getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ExperimentalFeatureKey = 'aiAssistant';

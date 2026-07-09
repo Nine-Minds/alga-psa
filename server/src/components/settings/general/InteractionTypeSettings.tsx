@@ -9,8 +9,8 @@ import {
   getAllInteractionTypes,
   deleteInteractionType,
   getSystemInteractionTypes
-} from '@alga-psa/clients/actions';
-import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
+} from '@alga-psa/clients/actions/interactionTypeActions';
+import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
