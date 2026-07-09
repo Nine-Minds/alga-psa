@@ -134,6 +134,21 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
   - `cd server && npx vitest run --config vitest.config.ts src/lib/eventBus/subscribers/__tests__/ticketEmailSubscriber.suppression.test.ts src/lib/eventBus/subscribers/__tests__/internalNotificationSubscriber.suppression.test.ts`
   - `cd server && NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -- --pretty false`
 
+## 2026-07-09 Implementation Notes — Reusable Suppression Control
+
+- Completed F026/T033/T034.
+- Added `packages/tickets/src/components/ticket/TicketNotificationSuppressionControl.tsx`, a ticket-specific reusable control with:
+  - contact checkbox (`Don't notify contact`) plus helper text;
+  - indented internal checkbox (`Also skip internal notifications`);
+  - coupling where internal is disabled until contact is checked, and unchecking contact clears internal;
+  - kebab-case ids derived from an `idPrefix` prop;
+  - `features/tickets` translation keys under `notifications.suppression`.
+- Added English and `xx` pseudo-locale entries for the new keys. Broader pseudo-locale generation/validation remains open under F061/T069.
+- Tests added in `TicketNotificationSuppressionControl.test.tsx`.
+- Verification:
+  - `cd packages/tickets && npx vitest run src/components/ticket/TicketNotificationSuppressionControl.test.tsx`
+  - `npm -w @alga-psa/tickets run typecheck`
+
 ## 2026-07-09 — Shared suppression plumbing batch (F001-F010, T001-T011)
 
 - Implemented the base operation-level suppression option pair:

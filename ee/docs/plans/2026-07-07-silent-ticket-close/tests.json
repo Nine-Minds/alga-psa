@@ -34,8 +34,8 @@
   { "id": "T031", "description": "[B] internalNotificationSubscriber TICKET_UPDATED case honors contact/internal gating", "implemented": true, "featureIds": ["F025"] },
   { "id": "T032", "description": "[B] Non-silent bulk update still notifies contacts for each ticket (regression)", "implemented": false, "featureIds": ["F037", "F066"] },
 
-  { "id": "T033", "description": "[A/B] Suppression control: internal checkbox disabled until contact checked; unchecking contact clears+disables internal", "implemented": false, "featureIds": ["F026"] },
-  { "id": "T034", "description": "[A/B] Suppression control renders helper text and kebab-case ids", "implemented": false, "featureIds": ["F026", "F062"] },
+  { "id": "T033", "description": "[A/B] Suppression control: internal checkbox disabled until contact checked; unchecking contact clears+disables internal", "implemented": true, "featureIds": ["F026"] },
+  { "id": "T034", "description": "[A/B] Suppression control renders helper text and kebab-case ids", "implemented": true, "featureIds": ["F026", "F062"] },
   { "id": "T035", "description": "[A/B] Entry hero Save with 'don't notify contact' threads flags into the batched update (no contact email)", "implemented": false, "featureIds": ["F027"] },
   { "id": "T036", "description": "[A/B] Grid hero Save with suppression threads flags into the batched update", "implemented": false, "featureIds": ["F028"] },
   { "id": "T037", "description": "[A/B] Suppression control resets to unchecked on every open (no sticky state)", "implemented": false, "featureIds": ["F029"] },

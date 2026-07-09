@@ -35,6 +35,13 @@
   },
   "title": "Support Tickets",
   "subtitle": "View and manage your support tickets",
+  "notifications": {
+    "suppression": {
+      "contactLabel": "Don't notify contact",
+      "contactHelper": "Skips the customer email, survey invitation, and client-portal notification",
+      "internalLabel": "Also skip internal notifications"
+    }
+  },
   "backToTickets": "Back to Tickets",
   "createNew": "Create New Ticket",
   "createButton": "Create Support Ticket",

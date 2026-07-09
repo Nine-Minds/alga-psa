@@ -27,7 +27,7 @@
   { "id": "F024", "description": "[B] TICKET_ASSIGNED contact sends (team-assignment client :2136, first individual :2156, watcher team :2232) gated on contact suppression; internal assignment notifications gated on internal suppression", "implemented": true, "prdRefs": ["FR11"] },
   { "id": "F025", "description": "[B] internalNotificationSubscriber applies the same contact/internal gating for the TICKET_UPDATED case", "implemented": true, "prdRefs": ["FR13"] },
 
-  { "id": "F026", "description": "[A/B] Reusable two-level suppression control component (contact checkbox + indented internal checkbox with coupling, helper text, kebab-case ids, i18n)", "implemented": false, "prdRefs": ["UX / UI Notes"] },
+  { "id": "F026", "description": "[A/B] Reusable two-level suppression control component (contact checkbox + indented internal checkbox with coupling, helper text, kebab-case ids, i18n)", "implemented": true, "prdRefs": ["UX / UI Notes"] },
   { "id": "F027", "description": "[A/B] Suppression control added to the entry hero (TicketInfo) Save/Cancel bar; values threaded into handleBatchSaveChanges → updateTicketWithCache options", "implemented": false, "prdRefs": ["FR15"] },
   { "id": "F028", "description": "[A/B] Suppression control added to the grid hero (BentoHero) Save/Cancel bar; values threaded into the batched save", "implemented": false, "prdRefs": ["FR15", "FR29"] },
   { "id": "F029", "description": "[A/B] Suppression control unchecked on every open (no sticky state) in all surfaces", "implemented": false, "prdRefs": ["UX / UI Notes"] },

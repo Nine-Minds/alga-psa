@@ -35,6 +35,13 @@
   },
   "title": "11111",
   "subtitle": "11111",
+  "notifications": {
+    "suppression": {
+      "contactLabel": "11111",
+      "contactHelper": "11111",
+      "internalLabel": "11111"
+    }
+  },
   "backToTickets": "11111",
   "createNew": "11111",
   "createButton": "11111",
