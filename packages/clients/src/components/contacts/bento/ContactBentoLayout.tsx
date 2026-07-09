@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { IClient, IContact, IDocument, IInteraction, ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
+import BackNav from '@alga-psa/ui/components/BackNav';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
@@ -57,6 +58,8 @@ interface ContactBentoLayoutProps {
   documents?: IDocument[];
   /** AlgaDesk composes contact details without the PSA documents surface. */
   showDocuments?: boolean;
+  /** AlgaDesk has no projects or quotes to relate. */
+  showRelatedWork?: boolean;
   interactions?: IInteraction[];
   tags?: ITag[];
   stats?: ContactStatsSummary | null;
@@ -206,6 +209,7 @@ export function ContactBentoLayout({
   clients,
   documents = [],
   showDocuments = true,
+  showRelatedWork = true,
   interactions: initialInteractions,
   tags = [],
   stats,
@@ -369,6 +373,13 @@ export function ContactBentoLayout({
     <BentoTile id={`${id}-hero`} className="col-span-12">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 gap-3">
+          {!quickView ? (
+            <div className="flex-shrink-0 self-start">
+              <BackNav href="/msp/contacts">
+                {t('contactDetails.backToContacts', { defaultValue: 'Back to Contacts' })}
+              </BackNav>
+            </div>
+          ) : null}
           <ContactAvatar
             contactId={contact.contact_name_id}
             contactName={contact.full_name}
@@ -818,7 +829,7 @@ export function ContactBentoLayout({
         {reachTile}
         {portalTile}
         {showDocuments ? documentsTile : null}
-        {relatedWorkTile}
+        {showRelatedWork ? relatedWorkTile : null}
         {notesTile}
       </div>
 

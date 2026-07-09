@@ -26,6 +26,8 @@ interface ClientTimelinePanelProps {
   clientId: string;
   formatMoney: (cents: number) => string;
   onEventClick: (event: ClientTimelineEvent) => void;
+  /** AlgaDesk has no billing/inventory/materials surface: only ticket + interaction lanes. */
+  isAlgaDeskMode?: boolean;
   t: TFn;
 }
 
@@ -35,6 +37,11 @@ const FILTER_TYPES: Record<Exclude<FilterKey, 'all'>, ClientTimelineEventType[]>
   service: ['ticket_opened', 'ticket_closed', 'material_added'],
   money: ['invoice_created', 'invoice_finalized', 'quote_activity'],
   inventory: ['unit_delivered', 'so_created', 'rma_opened', 'rma_closed'],
+  interactions: ['interaction'],
+};
+
+const ALGADESK_FILTER_TYPES: Partial<typeof FILTER_TYPES> = {
+  service: ['ticket_opened', 'ticket_closed'],
   interactions: ['interaction'],
 };
 
@@ -61,20 +68,25 @@ function relativeTime(iso: string, t: TFn): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export default function ClientTimelinePanel({ idPrefix, clientId, formatMoney, onEventClick, t }: ClientTimelinePanelProps) {
+export default function ClientTimelinePanel({ idPrefix, clientId, formatMoney, onEventClick, isAlgaDeskMode = false, t }: ClientTimelinePanelProps) {
   const [events, setEvents] = useState<ClientTimelineEvent[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterKey>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const filterTypes = isAlgaDeskMode ? ALGADESK_FILTER_TYPES : FILTER_TYPES;
+
   const loadPage = useCallback(async (activeFilter: FilterKey, cursor: string | null) => {
     setIsLoading(true);
     setError(null);
     try {
+      const activeTypes = isAlgaDeskMode ? ALGADESK_FILTER_TYPES : FILTER_TYPES;
       const page = await listClientTimeline(clientId, {
         cursor,
-        types: activeFilter === 'all' ? undefined : FILTER_TYPES[activeFilter],
+        types: activeFilter === 'all'
+          ? (isAlgaDeskMode ? Object.values(activeTypes).flat() : undefined)
+          : activeTypes[activeFilter],
         limit: 20,
       });
       if (isReturnedActionError(page)) {
@@ -88,7 +100,7 @@ export default function ClientTimelinePanel({ idPrefix, clientId, formatMoney, o
     } finally {
       setIsLoading(false);
     }
-  }, [clientId, t]);
+  }, [clientId, isAlgaDeskMode, t]);
 
   useEffect(() => {
     setEvents([]);
@@ -125,13 +137,15 @@ export default function ClientTimelinePanel({ idPrefix, clientId, formatMoney, o
     }
   };
 
-  const filters: Array<{ key: FilterKey; label: string }> = [
+  const filters: Array<{ key: FilterKey; label: string }> = ([
     { key: 'all', label: t('clientCommandCenter.timeline.filterAll', { defaultValue: 'All' }) },
     { key: 'service', label: t('clientCommandCenter.timeline.filterService', { defaultValue: 'Service' }) },
     { key: 'money', label: t('clientCommandCenter.timeline.filterMoney', { defaultValue: 'Money' }) },
     { key: 'inventory', label: t('clientCommandCenter.timeline.filterInventory', { defaultValue: 'Inventory' }) },
     { key: 'interactions', label: t('clientCommandCenter.timeline.filterInteractions', { defaultValue: 'Interactions' }) },
-  ];
+  ] as Array<{ key: FilterKey; label: string }>).filter(
+    (entry) => entry.key === 'all' || filterTypes[entry.key] !== undefined,
+  );
 
   return (
     <CardShell

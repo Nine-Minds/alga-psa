@@ -16,6 +16,7 @@ import { SEARCH_RECONCILE_JOB_NAME, searchReconcileHandler } from './handlers/se
 import { verifyGoogleCalendarProvisioning } from './handlers/calendarWebhookMaintenanceHandler';
 import { renewGoogleGmailWatchSubscriptions } from './handlers/googleGmailWatchRenewalHandler';
 import { renewTeamsMeetingArtifactSubscriptions } from './handlers/teamsMeetingArtifactWebhookHandler';
+import { teamsMeetingSweepHandler, TEAMS_MEETING_SWEEP_JOB } from './handlers/teamsMeetingSweepHandler';
 import { workflowQuotaResumeScanHandler } from './handlers/workflowQuotaResumeScanHandler';
 import { cleanupAiSessionKeysHandler } from './handlers/cleanupAiSessionKeysHandler';
 import { cleanupTemporaryFormsJob } from './handlers/cleanupTemporaryFormsJob';
@@ -42,6 +43,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'verify-google-calendar-pubsub': { scope: 'tenant', run: (tenantId) => verifyGoogleCalendarProvisioning({ tenantId }) },
   'renew-google-gmail-watch': { scope: 'tenant', run: (tenantId) => renewGoogleGmailWatchSubscriptions({ tenantId }) },
   'renew-teams-meeting-artifact-subscriptions': { scope: 'tenant', run: (tenantId) => renewTeamsMeetingArtifactSubscriptions({ tenantId }) },
+  [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }) },
   'workflow-quota-resume-scan': { scope: 'system', run: () => workflowQuotaResumeScanHandler({ tenantId: 'system', batchSize: WORKFLOW_QUOTA_RESUME_BATCH_SIZE }) },
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },

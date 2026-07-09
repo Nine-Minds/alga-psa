@@ -1792,6 +1792,12 @@
       "title": "Single Sign-On",
       "description": "Loading SSO bulk assignment tools..."
     },
+    "status": {
+      "title": "Sign-in providers",
+      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
+      "available": "Available",
+      "notConfigured": "Not configured"
+    },
     "autoLink": {
       "title": "Automatically set up SSO for new internal users",
       "description": "Turn this on to provision every new staff account with your corporate SSO provider right away, so they never need a password-based sign-in.",

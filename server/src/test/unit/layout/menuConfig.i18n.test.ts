@@ -4,6 +4,7 @@ import {
   billingNavigationSections,
   bottomMenuItems,
   extensionsNavigationSections,
+  inventoryNavigationSections,
   navigationSections,
   settingsNavigationSections,
 } from '../../../config/menuConfig';
@@ -49,7 +50,7 @@ describe('menuConfig i18n metadata', () => {
       'nav.contacts',
       'nav.documents',
       'nav.assets',
-      'nav.inventory',
+      'nav.inventory.label',
       'nav.billing.reports',
       'nav.timeManagement',
       'nav.billing.label',
@@ -74,22 +75,6 @@ describe('menuConfig i18n metadata', () => {
       'nav.projectsTemplates',
       'nav.documentsAll',
       'nav.knowledgeBase',
-      'nav.inventoryDashboard',
-      'nav.inventoryStock',
-      'nav.inventoryLocations',
-      'nav.inventoryUnits',
-      'nav.inventoryVendors',
-      'nav.inventoryPurchaseOrders',
-      'nav.inventoryVendorBills',
-      'nav.inventorySalesOrders',
-      'nav.inventoryTransfers',
-      'nav.inventoryCounts',
-      'nav.inventoryWriteOffs',
-      'nav.inventoryMargin',
-      'nav.inventoryGhostUsage',
-      'nav.inventoryRma',
-      'nav.inventoryLoaners',
-      'nav.inventoryKits',
       'nav.timeEntry',
       'nav.approvals',
       'nav.controlPanel',
@@ -178,6 +163,38 @@ describe('menuConfig i18n metadata', () => {
   it('F006 wiring: extensions navigation item exposes sidebar settings translation key', () => {
     expect(extensionsNavigationSections[0].items.map((item) => item.translationKey)).toEqual([
       'sidebar.settings',
+    ]);
+  });
+
+  it('T010: inventory navigation section titles use nav.inventory.sections.* translation keys', () => {
+    expect(inventoryNavigationSections.map((section) => section.translationKey)).toEqual([
+      'nav.inventory.sections.overview',
+      'nav.inventory.sections.stock',
+      'nav.inventory.sections.purchasing',
+      'nav.inventory.sections.salesFulfillment',
+      'nav.inventory.sections.analytics',
+    ]);
+  });
+
+  it('T011: inventory navigation items use nav.inventory* translation keys', () => {
+    expect(collectSectionItems(inventoryNavigationSections).map((item) => item.translationKey)).toEqual([
+      'nav.inventoryDashboard',
+      'nav.inventoryStock',
+      'nav.inventoryLocations',
+      'nav.inventoryUnits',
+      'nav.inventoryTransfers',
+      'nav.inventoryCounts',
+      'nav.inventoryWriteOffs',
+      'nav.inventoryVendors',
+      'nav.inventoryPurchaseOrders',
+      'nav.inventoryVendorBills',
+      'nav.inventorySalesOrders',
+      'nav.inventoryDocumentLayouts',
+      'nav.inventoryRma',
+      'nav.inventoryLoaners',
+      'nav.inventoryKits',
+      'nav.inventoryMargin',
+      'nav.inventoryGhostUsage',
     ]);
   });
 });

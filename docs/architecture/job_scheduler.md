@@ -24,6 +24,7 @@ Both backends write to the same database tables (`jobs` and `job_details`), prov
 - Job history tracking
 - **Edition-based backend selection** (CE: PG Boss, EE: Temporal)
 - **Unified job monitoring dashboard**
+- **Recurring job self-healing** (Temporal EE) — if a recurring schedule's baked-in tracker row is missing from the database, the next `scheduleRecurringJob` call creates a fresh row and re-points the schedule automatically
 
 ## Architecture
 
@@ -206,6 +207,50 @@ await runner.scheduleJob('my-new-job', {
 });
 ```
 
+## Recurring Job Lifecycle (Temporal EE)
+
+Recurring schedules (created via `scheduleRecurringJob`) manage their `jobs` table tracker row differently from one-shot jobs. Understanding this lifecycle is important when querying the database or building on top of the job system.
+
+### Tracker row status stays `queued`
+
+After each fire (success or failure), the recurring job's tracker row is reset to **`queued`** status — it never transitions to `completed` or `failed`. The actual outcome of the most-recent fire is stored in the row's `metadata` JSON column:
+
+```json
+{
+  "recurring": true,
+  "lastRunStatus": "completed",
+  "lastRunAt": "2026-07-02T14:30:00.000Z"
+}
+```
+
+This mirrors how pg-boss handles recurring rows and ensures schedule reconcilers — which check for non-terminal rows to detect live schedules — can always find the tracker.
+
+> **When reading the jobs table:** a recurring Temporal job perpetually in `queued` status is healthy and expected behavior, not a sign that the job is stuck. Check `metadata.lastRunStatus` for the outcome of the most recent fire.
+
+### Self-healing for orphaned tracker rows
+
+A recurring Temporal schedule bakes one `jobId` into its workflow action args at creation time. If that row is later missing from the `jobs` table (e.g. the row was deleted, or the schedule was provisioned against a different database), `scheduleRecurringJob` detects this on the next call and automatically:
+
+1. Detects that the baked `jobId` no longer exists in the tenant's `jobs` table.
+2. Creates a fresh `jobs` row.
+3. Re-points the schedule's workflow action args to the new `jobId`.
+4. Logs a `WARN`-level entry in the Temporal worker log so the repair is visible.
+
+Without this self-healing, every subsequent schedule fire would fail at bookkeeping before the handler ran, generating orphan `pending` rows (~13k rows/day in a busy installation) while appearing COMPLETED in Temporal.
+
+### Job handler failures surface as FAILED in Temporal
+
+When `genericJobWorkflow` runs a handler that reports failure, it throws `ApplicationFailure.create({ type: 'GenericJobFailure', nonRetryable: true })`. Temporal marks the workflow run as **FAILED**, which surfaces in:
+
+- Temporal's UI schedule history (Last Result shows FAILED)
+- Any Temporal SDK metric collectors watching for FAILED workflow runs
+
+> **Historical note:** Before the July 2026 fix, handler failures returned a failure-shaped result object that Temporal interpreted as a successful workflow completion (COMPLETED). Historical runs from before this fix may appear as COMPLETED even if the underlying handler encountered an error.
+
+### Bookkeeping failures do not block the handler
+
+Pre- and post-handler status updates (`updateJobStatus`, `createJobDetail`) are wrapped in a best-effort try/catch inside `genericJobWorkflow`. If the tracker row is inaccessible at runtime, the workflow logs a warning and continues to execute the handler. Real handler failures still throw `ApplicationFailure` and surface as FAILED in Temporal.
+
 ## Monitoring and Metrics
 
 ### Dashboard
@@ -244,6 +289,14 @@ SELECT * FROM jobs WHERE runner_type = 'temporal';
 
 -- Find job by Temporal workflow ID
 SELECT * FROM jobs WHERE external_id = 'workflow-id';
+
+-- Find recurring job tracker rows (always in 'queued' status; last outcome in metadata)
+SELECT job_id, type, status,
+       metadata->>'lastRunStatus' AS last_run_status,
+       metadata->>'lastRunAt'     AS last_run_at
+FROM jobs
+WHERE runner_type = 'temporal'
+  AND metadata->>'recurring' = 'true';
 ```
 
 ## Error Handling
@@ -287,7 +340,7 @@ CREATE TABLE jobs (
   updated_at TIMESTAMP,
   user_id UUID NOT NULL,
   runner_type VARCHAR DEFAULT 'pgboss' NOT NULL,  -- 'pgboss' or 'temporal'
-  external_id VARCHAR,          -- PG Boss job ID or Temporal workflow ID
+  external_id VARCHAR,          -- PG Boss job ID or Temporal workflow ID (nulled on cancel)
   external_run_id VARCHAR,      -- Temporal run ID
   PRIMARY KEY (tenant, job_id)
 );
@@ -365,6 +418,14 @@ If you see "No handler registered for job: X":
 1. Verify `TEMPORAL_ADDRESS` is correct
 2. Check Temporal server is running
 3. If `JOB_RUNNER_FALLBACK_TO_PGBOSS=true`, jobs will use PG Boss
+
+### Recurring Jobs Appear Stuck in `queued`
+
+This is expected behavior for Temporal recurring jobs — see [Recurring Job Lifecycle](#recurring-job-lifecycle-temporal-ee). The tracker row stays `queued` between fires; check `metadata.lastRunStatus` and `metadata.lastRunAt` for the last run outcome.
+
+### Recurring Jobs Show COMPLETED in Temporal Despite Handler Errors
+
+This applies only to runs before the July 2026 self-healing fix. After that fix, handler failures throw `ApplicationFailure` and surface as FAILED in Temporal's UI. If you are seeing COMPLETED for jobs you expect to have failed, check whether those runs pre-date the fix.
 
 ## See Also
 

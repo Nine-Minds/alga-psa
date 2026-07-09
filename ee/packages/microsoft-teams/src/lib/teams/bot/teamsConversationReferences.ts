@@ -138,6 +138,195 @@ function mapConversationReferenceRow(row: Record<string, unknown>): TeamsConvers
   };
 }
 
+export async function findTeamsConversationReferenceByConversationId(input: {
+  tenantId: string;
+  conversationId: string;
+}): Promise<TeamsConversationReferenceRecord | null> {
+  const tenantId = normalizeOptionalString(input.tenantId);
+  const conversationId = normalizeOptionalString(input.conversationId);
+  if (!tenantId || !conversationId) {
+    return null;
+  }
+
+  try {
+    const { knex, tenant } = await createTenantKnex(tenantId);
+    const scopedTenant = tenant || tenantId;
+    const row = await tenantDb(knex, scopedTenant).table('teams_conversation_references')
+      .where({ conversation_id: conversationId })
+      .orderBy('last_activity_at', 'desc')
+      .first([
+        'tenant',
+        'microsoft_user_id',
+        'conversation_id',
+        'conversation_type',
+        'service_url',
+        'tenant_id_aad',
+        'channel_id_bot_framework',
+        'last_activity_at',
+        'created_at',
+        'updated_at',
+      ]);
+
+    return row ? mapConversationReferenceRow(row) : null;
+  } catch (error) {
+    logger.warn('[TeamsConversationReferences] Failed to read Teams conversation reference by conversation id', {
+      tenant: input.tenantId,
+      conversationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+export interface TeamsConversationContextItem {
+  entityType: string;
+  id: string;
+  displayId?: string;
+}
+
+export interface TeamsConversationContext {
+  items: TeamsConversationContextItem[];
+  listedAt: string;
+}
+
+export const TEAMS_CONVERSATION_CONTEXT_TTL_MINUTES = 30;
+
+/**
+ * Persist the last-listed-entities context for a conversation so follow-up
+ * commands can use ordinal references ("ticket 2", "approve 2"). Stored on
+ * teams_conversation_references (tenant in every WHERE — Citus) with a TTL.
+ */
+export async function saveTeamsConversationContext(input: {
+  tenantId: string;
+  conversationId: string;
+  items: TeamsConversationContextItem[];
+  ttlMinutes?: number;
+}): Promise<boolean> {
+  const tenantId = normalizeOptionalString(input.tenantId);
+  const conversationId = normalizeOptionalString(input.conversationId);
+  if (!tenantId || !conversationId || input.items.length === 0) {
+    return false;
+  }
+
+  const ttlMinutes = input.ttlMinutes ?? TEAMS_CONVERSATION_CONTEXT_TTL_MINUTES;
+  const context: TeamsConversationContext = {
+    items: input.items.map((item) => ({
+      entityType: item.entityType,
+      id: item.id,
+      ...(item.displayId ? { displayId: item.displayId } : {}),
+    })),
+    listedAt: new Date().toISOString(),
+  };
+
+  try {
+    const { knex, tenant } = await createTenantKnex(tenantId);
+    const scopedTenant = tenant || tenantId;
+    await tenantDb(knex, scopedTenant).table('teams_conversation_references')
+      .where({ conversation_id: conversationId })
+      .update({
+        context: JSON.stringify(context),
+        context_expires_at: new Date(Date.now() + ttlMinutes * 60_000).toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    return true;
+  } catch (error) {
+    logger.warn('[TeamsConversationReferences] Failed to save Teams conversation context', {
+      tenant: input.tenantId,
+      conversationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+function parseStoredConversationContext(value: unknown): TeamsConversationContext | null {
+  let parsed: unknown = value;
+  if (typeof value === 'string') {
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!parsed || typeof parsed !== 'object') {
+    return null;
+  }
+
+  const candidate = parsed as { items?: unknown; listedAt?: unknown };
+  if (!Array.isArray(candidate.items)) {
+    return null;
+  }
+
+  const items = candidate.items
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const row = item as Record<string, unknown>;
+      const entityType = normalizeOptionalString(row.entityType);
+      const id = normalizeOptionalString(row.id);
+      if (!entityType || !id) return null;
+      const displayId = normalizeOptionalString(row.displayId);
+      return { entityType, id, ...(displayId ? { displayId } : {}) };
+    })
+    .filter((item): item is TeamsConversationContextItem => item !== null);
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return {
+    items,
+    listedAt: normalizeOptionalString(candidate.listedAt) || '',
+  };
+}
+
+/**
+ * Read the last-listed-entities context for a conversation. Returns null when
+ * missing or expired (TTL enforced on read; tenant-keyed lookup).
+ */
+export async function getTeamsConversationContext(input: {
+  tenantId: string;
+  conversationId: string;
+}): Promise<TeamsConversationContext | null> {
+  const tenantId = normalizeOptionalString(input.tenantId);
+  const conversationId = normalizeOptionalString(input.conversationId);
+  if (!tenantId || !conversationId) {
+    return null;
+  }
+
+  try {
+    const { knex, tenant } = await createTenantKnex(tenantId);
+    const scopedTenant = tenant || tenantId;
+    const row = await tenantDb(knex, scopedTenant).table('teams_conversation_references')
+      .where({ conversation_id: conversationId })
+      .orderBy('last_activity_at', 'desc')
+      .first(['context', 'context_expires_at']);
+
+    if (!row) {
+      return null;
+    }
+
+    const expiresAtRaw = (row as Record<string, unknown>).context_expires_at;
+    const expiresAt = expiresAtRaw instanceof Date
+      ? expiresAtRaw.getTime()
+      : typeof expiresAtRaw === 'string'
+        ? Date.parse(expiresAtRaw)
+        : Number.NaN;
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      return null;
+    }
+
+    return parseStoredConversationContext((row as Record<string, unknown>).context);
+  } catch (error) {
+    logger.warn('[TeamsConversationReferences] Failed to read Teams conversation context', {
+      tenant: input.tenantId,
+      conversationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
 export async function getLatestTeamsConversationReferenceImpl(
   input: GetLatestTeamsConversationReferenceInput
 ): Promise<TeamsConversationReferenceRecord | null> {

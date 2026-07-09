@@ -230,6 +230,8 @@ interface TicketDetailsProps {
      */
     renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
     hideSlaStatus?: boolean;
+    hideBilling?: boolean;
+    hideScheduling?: boolean;
     hideTimeEntry?: boolean;
     hideMaterials?: boolean;
     uploadTicketAttachmentAction?: (
@@ -290,6 +292,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderClientDetails,
     renderIntervalManagement,
     hideSlaStatus = false,
+    hideBilling = false,
+    hideScheduling = false,
     hideTimeEntry = false,
     hideMaterials = false,
     uploadTicketAttachmentAction,
@@ -326,18 +330,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     useEffect(() => {
         setHasHydrated(true);
-    }, []);
-
-    // Show title in sticky header only when the card title scrolls out of view
-    useEffect(() => {
-        const el = cardTitleRef.current;
-        if (!el) return;
-        const observer = new IntersectionObserver(
-            ([entry]) => setCardTitleVisible(entry.isIntersecting),
-            { threshold: 0 }
-        );
-        observer.observe(el);
-        return () => observer.disconnect();
     }, []);
 
     useEffect(() => {
@@ -533,6 +525,22 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, []);
 
     const useGridLayout = layoutMode === 'grid' && !isInDrawer;
+
+    // Show title in sticky header only when the card title scrolls out of view.
+    // Entry and grid render different title nodes, so re-attach on layout flips.
+    useEffect(() => {
+        const el = cardTitleRef.current;
+        if (!el) {
+            setCardTitleVisible(true);
+            return;
+        }
+        const observer = new IntersectionObserver(
+            ([entry]) => setCardTitleVisible(entry.isIntersecting),
+            { threshold: 0 }
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [useGridLayout]);
     const [ticketPropertiesDirtyFields, setTicketPropertiesDirtyFields] = useState<string[]>([]);
     const [liveHighlightedFields, setLiveHighlightedFields] = useState<string[]>([]);
     const [liveFieldConflicts, setLiveFieldConflicts] = useState<Partial<Record<string, TicketLiveConflictState>>>({});
@@ -3113,6 +3121,14 @@ const handleClose = () => {
                             </div>
 
                             <div className="flex items-center gap-2">
+                                {ticketLive.enabled && ticketLive.connectionStatus === 'connected' && livePresenceUsers.length > 0 ? (
+                                    <PresenceBar users={livePresenceUsers} />
+                                ) : null}
+                                {ticketLive.enabled && connectionStatusLabel ? (
+                                    <span className="text-xs font-medium text-amber-700" data-testid="ticket-live-connection-status">
+                                        {connectionStatusLabel}
+                                    </span>
+                                ) : null}
                                 {!isInDrawer ? (
                                     <LayoutToggle value={layoutMode} onChange={handleLayoutModeChange} />
                                 ) : null}
@@ -3147,18 +3163,6 @@ const handleClose = () => {
                         >
                             {ticket.title}
                         </h1>
-                        {ticketLive.enabled ? (
-                            <div className="flex flex-wrap items-center gap-3 text-sm">
-                                {ticketLive.connectionStatus === 'connected' && livePresenceUsers.length > 0 ? (
-                                    <PresenceBar users={livePresenceUsers} />
-                                ) : null}
-                                {connectionStatusLabel ? (
-                                    <span className="text-xs font-medium text-amber-700" data-testid="ticket-live-connection-status">
-                                        {connectionStatusLabel}
-                                    </span>
-                                ) : null}
-                            </div>
-                        ) : null}
                     </div>
                 </div>
 
@@ -3377,6 +3381,7 @@ const handleClose = () => {
                 {useGridLayout ? (
                 <TicketBentoLayout
                     id={`${id}-bento`}
+                    titleRef={cardTitleRef}
                     ticket={ticket as any}
                     statusOptions={statusOptions}
                     priorityOptions={priorityOptions}
@@ -3386,6 +3391,8 @@ const handleClose = () => {
                     onBatchSelectChange={(changes) => { void handleBatchSaveChanges(changes); }}
                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                     hideSlaStatus={hideSlaStatus}
+                    hideBilling={hideBilling}
+                    hideScheduling={hideScheduling}
                     workflowLocked={Boolean(bundle?.isBundleChild)}
                     onOpenAllFields={() => setIsAllFieldsDrawerOpen(true)}
                     tags={tags}
@@ -3699,7 +3706,6 @@ const handleClose = () => {
                     {isAllFieldsDrawerOpen ? (
                         <TicketInfo
                             id={`${id}-all-fields-info`}
-                            titleRef={cardTitleRef}
                             ticket={ticket}
                             conversations={conversations}
                             statusOptions={statusOptions}

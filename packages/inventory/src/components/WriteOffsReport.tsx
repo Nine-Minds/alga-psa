@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { writeOffReport, type WriteOffReportData, type WriteOffRow, type WriteOffByUser } from '../actions';
 
 /**
@@ -17,20 +18,16 @@ import { writeOffReport, type WriteOffReportData, type WriteOffRow, type WriteOf
  * person who HOLDS the approve button. Signs follow stock: negative = written down.
  */
 
-const money = (cents: number): string => {
-  const v = cents / 100;
-  const s = `$${Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  return v < 0 ? `-${s}` : s;
-};
-
 const dateInputValue = (iso: string): string => iso.slice(0, 10);
 
 export function WriteOffsReport({ initialData }: { initialData: WriteOffReportData | null }) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   const [data, setData] = useState<WriteOffReportData | null>(initialData);
   const [from, setFrom] = useState(initialData ? dateInputValue(initialData.from) : '');
   const [to, setTo] = useState(initialData ? dateInputValue(initialData.to) : '');
   const [loading, setLoading] = useState(false);
+  const currencyCode = data?.currency_code ?? initialData?.currency_code ?? 'USD';
 
   const run = useCallback(async () => {
     setLoading(true);
@@ -55,18 +52,18 @@ export function WriteOffsReport({ initialData }: { initialData: WriteOffReportDa
     {
       title: t('writeOffs.columns.writtenOff', 'Written off'),
       dataIndex: 'losses_cents',
-      render: (v: any) => <span className="text-red-700 tabular-nums">{money(Number(v))}</span>,
+      render: (v: any) => <span className="text-red-700 tabular-nums">{money(Number(v), currencyCode)}</span>,
     },
     {
       title: t('writeOffs.columns.foundAdded', 'Found / added'),
       dataIndex: 'gains_cents',
-      render: (v: any) => <span className="text-green-700 tabular-nums">{money(Number(v))}</span>,
+      render: (v: any) => <span className="text-green-700 tabular-nums">{money(Number(v), currencyCode)}</span>,
     },
     {
       title: t('writeOffs.columns.net', 'Net'),
       dataIndex: 'net_cents',
       render: (v: any) => (
-        <span className={`tabular-nums ${Number(v) < 0 ? 'text-red-700' : 'text-gray-700'}`}>{money(Number(v))}</span>
+        <span className={`tabular-nums ${Number(v) < 0 ? 'text-red-700' : 'text-gray-700'}`}>{money(Number(v), currencyCode)}</span>
       ),
     },
   ];
@@ -113,7 +110,7 @@ export function WriteOffsReport({ initialData }: { initialData: WriteOffReportDa
       title: t('writeOffs.columns.value', 'Value'),
       dataIndex: 'value_cents',
       render: (v: any) => (
-        <span className={`tabular-nums ${Number(v) < 0 ? 'text-red-700' : 'text-green-700'}`}>{money(Number(v))}</span>
+        <span className={`tabular-nums ${Number(v) < 0 ? 'text-red-700' : 'text-green-700'}`}>{money(Number(v), currencyCode)}</span>
       ),
     },
     { title: t('writeOffs.columns.reason', 'Reason'), dataIndex: 'reason', render: (v: any) => <span className="text-xs">{v || t('common.emptyValue', '—')}</span> },
@@ -143,16 +140,16 @@ export function WriteOffsReport({ initialData }: { initialData: WriteOffReportDa
           <div className="flex gap-6 text-sm" id="write-offs-totals">
             <div>
               <span className="text-gray-500">{t('writeOffs.totals.writtenOff', 'Written off: ')}</span>
-              <span className="font-semibold text-red-700 tabular-nums">{money(data.total_losses_cents)}</span>
+              <span className="font-semibold text-red-700 tabular-nums">{money(data.total_losses_cents, currencyCode)}</span>
             </div>
             <div>
               <span className="text-gray-500">{t('writeOffs.totals.foundAdded', 'Found / added: ')}</span>
-              <span className="font-semibold text-green-700 tabular-nums">{money(data.total_gains_cents)}</span>
+              <span className="font-semibold text-green-700 tabular-nums">{money(data.total_gains_cents, currencyCode)}</span>
             </div>
             <div>
               <span className="text-gray-500">{t('writeOffs.totals.net', 'Net: ')}</span>
               <span className={`font-semibold tabular-nums ${data.net_cents < 0 ? 'text-red-700' : 'text-gray-800'}`}>
-                {money(data.net_cents)}
+                {money(data.net_cents, currencyCode)}
               </span>
             </div>
           </div>

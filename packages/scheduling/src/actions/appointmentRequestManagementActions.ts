@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: Model argument count issues
 'use server';
 
 import { createTenantKnex, tenantDb, User } from '@alga-psa/db';
@@ -20,6 +18,7 @@ import {
   type AssociateRequestToTicketInput
 } from '../schemas/appointmentRequestSchemas';
 import { SystemEmailService } from '@alga-psa/email';
+import { enqueueImmediateJob } from '@alga-psa/core';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -37,7 +36,18 @@ import {
 } from './appointmentHelpers';
 import { generateICSBuffer, generateICSFilename, ICSEventData } from '../utils/icsGenerator';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
-import { resolveTeamsMeetingService } from '../lib/teamsMeetingService';
+import {
+  resolveTeamsMeetingService,
+  type CreateTeamsMeetingResult,
+  type TeamsMeetingAttendee,
+} from '../lib/teamsMeetingService';
+import {
+  buildTeamsMeetingAttendees,
+  buildAppointmentMeetingBodyHtml,
+  teamsMeetingSkipWarning,
+  resolveAppointmentTeamsMeetingContext,
+  type TeamsMeetingParticipant,
+} from '../lib/teamsMeetingContent';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -75,6 +85,11 @@ export interface AppointmentRequestResult<T> {
   data?: T;
   error?: string;
   teamsMeetingWarning?: string;
+  /**
+   * Set when the request itself was not processed because Teams meeting
+   * creation failed — the approver can retry or approve without a meeting.
+   */
+  meetingCreationFailed?: boolean;
 }
 
 export interface OnlineMeetingAppointmentArtifact {
@@ -175,6 +190,30 @@ export const getTeamsMeetingCapability = withAuth(async (
   const teamsMeetingService = await resolveTeamsMeetingService();
   return teamsMeetingService.getTeamsMeetingCapability(tenant);
 });
+
+/**
+ * Enqueues the idempotent Graph cleanup job for a cancelled/declined meeting.
+ * The online_meetings row stays cancel_pending until the job confirms Graph
+ * deletion; the recurring Teams meeting sweep retries rows whose job was lost.
+ */
+async function enqueueTeamsMeetingCleanupJob(tenantId: string, meetingId: string): Promise<boolean> {
+  try {
+    // Enqueue via the core DI seam rather than importing @alga-psa/jobs, which
+    // would close a scheduling <-> jobs cycle (jobs already imports scheduling's
+    // buildTeamsArtifactCaptureDeps). The handler is idempotent (404=success) and
+    // the recurring Teams meeting sweep re-enqueues any cancel_pending row, so we
+    // do not need the runner's singletonKey de-duplication.
+    await enqueueImmediateJob('teams-meeting-cleanup', { tenantId, meetingId });
+    return true;
+  } catch (error) {
+    console.warn('[TeamsMeetingCleanup] Failed to enqueue cleanup job; the Teams meeting sweep will retry', {
+      tenantId,
+      meetingId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
 
 /**
  * Builds a knex `.where(...)` callback that matches `availability_settings` rows whose
@@ -559,9 +598,10 @@ export const approveAppointmentRequest = withAuth(async (
     const teamsMeetingService = validatedData.generate_teams_meeting
       ? await resolveTeamsMeetingService()
       : null;
-    let preparedTeamsMeeting: any = null;
-    let createdMeetingForCompensation: any = null;
+    let preparedTeamsMeeting: CreateTeamsMeetingResult | null = null;
+    let createdMeetingForCompensation: CreateTeamsMeetingResult | null = null;
     let teamsMeetingWarning: string | undefined;
+    let failedMeetingErrorCode: string | null = null;
 
     if (validatedData.generate_teams_meeting && teamsMeetingService) {
       const meetingInput = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -638,46 +678,67 @@ export const approveAppointmentRequest = withAuth(async (
 
         const scheduledEnd = new Date(scheduledStart.getTime() + request.requested_duration * 60000);
 
+        // The client contact and the assigned technician receive native
+        // calendar invites (F011/F012): resolve their emails here so the
+        // Graph event carries the attendee list.
+        let contactEmail: string | null = request.requester_email || null;
+        let contactName: string | null = request.requester_name || null;
+        if (request.is_authenticated && request.contact_id) {
+          const contact = await trxTenantDb.table('contacts')
+            .where({ contact_name_id: request.contact_id })
+            .first('email', 'full_name');
+          contactEmail = contact?.email || contactEmail;
+          contactName = contact?.full_name || contactName;
+        }
+
         return {
           appointmentRequestId: request.appointment_request_id,
           subject: `Appointment: ${service.service_name}`,
+          serviceName: service.service_name,
+          description: request.description || null,
           startDateTime: scheduledStart.toISOString(),
           endDateTime: scheduledEnd.toISOString(),
+          contact: { email: contactEmail, name: contactName },
+          technician: {
+            email: assignedUser.email || null,
+            name: [assignedUser.first_name, assignedUser.last_name].filter(Boolean).join(' ') || null,
+          },
         };
       });
 
-      const capability = await teamsMeetingService.getTeamsMeetingCapability(tenant);
-
-      if (!capability.available) {
-        switch (capability.reason) {
-          case 'no_organizer':
-            teamsMeetingWarning = 'Microsoft Teams meeting was not created because no default organizer is configured.';
-            break;
-          case 'ee_disabled':
-            teamsMeetingWarning = 'Microsoft Teams meetings are only available in Enterprise Edition.';
-            break;
-          case 'addon_required':
-            teamsMeetingWarning = 'Microsoft Teams meeting was not created because the Teams add-on is not active for this tenant.';
-            break;
-          case 'not_configured':
-          default:
-            teamsMeetingWarning = 'Microsoft Teams meeting was not created because Teams is not configured for this tenant.';
-            break;
-        }
-      } else {
-        preparedTeamsMeeting = await teamsMeetingService.createTeamsMeeting({
-          tenantId: tenant,
-          subject: meetingInput.subject,
-          startDateTime: meetingInput.startDateTime,
-          endDateTime: meetingInput.endDateTime,
+      const outcome = await teamsMeetingService.createTeamsMeetingWithResult({
+        tenantId: tenant,
+        subject: meetingInput.subject,
+        startDateTime: meetingInput.startDateTime,
+        endDateTime: meetingInput.endDateTime,
+        attendees: buildTeamsMeetingAttendees({
+          contact: meetingInput.contact,
+          technician: meetingInput.technician,
+        }),
+        bodyHtml: buildAppointmentMeetingBodyHtml({
+          serviceName: meetingInput.serviceName,
           appointmentRequestId: meetingInput.appointmentRequestId,
-        });
+          description: meetingInput.description,
+        }),
+        appointmentRequestId: meetingInput.appointmentRequestId,
+      });
 
-        if (!preparedTeamsMeeting) {
-          teamsMeetingWarning = 'Appointment approved, but the Microsoft Teams meeting could not be created. Please try again or create it manually in Teams.';
-        } else {
-          createdMeetingForCompensation = preparedTeamsMeeting;
-        }
+      if (outcome.status === 'created') {
+        preparedTeamsMeeting = outcome.meeting;
+        createdMeetingForCompensation = outcome.meeting;
+      } else if (outcome.status === 'skipped') {
+        teamsMeetingWarning = teamsMeetingSkipWarning(outcome.reason);
+      } else if (!validatedData.approve_without_meeting) {
+        // Graph failure surfaces at approval time (F022): abort so the
+        // approver can retry — a silent link-less approval is never produced.
+        return {
+          success: false,
+          error: 'The Microsoft Teams meeting could not be created, so the appointment was not approved. Retry, or approve without a meeting.',
+          meetingCreationFailed: true,
+        };
+      } else {
+        failedMeetingErrorCode = outcome.errorCode;
+        teamsMeetingWarning = 'Appointment approved without a Microsoft Teams meeting because meeting creation failed. Use "Generate Teams meeting" on the approved request to retry.';
       }
     }
 
@@ -1005,6 +1066,32 @@ export const approveAppointmentRequest = withAuth(async (
           created_at: now,
           updated_at: now,
         });
+      } else if (failedMeetingErrorCode) {
+        // Failed creation is persisted, never silent absence (F024): the row
+        // records the error code and backs the "Generate Teams meeting" retry.
+        await trxTenantDb.table('online_meetings').insert({
+          meeting_id: uuidv4(),
+          tenant,
+          provider: 'teams',
+          provider_meeting_id: null,
+          provider_event_id: null,
+          organizer_upn: null,
+          organizer_user_id: null,
+          subject: `Appointment: ${service.service_name}`,
+          join_url: null,
+          start_time: scheduledStart,
+          end_time: scheduledEnd,
+          status: 'failed',
+          error_code: failedMeetingErrorCode,
+          recording_fetch_attempts: 0,
+          last_fetch_at: null,
+          appointment_request_id: request.appointment_request_id,
+          interaction_id: null,
+          schedule_entry_id: scheduleEntry.entry_id,
+          created_by: user.user_id,
+          created_at: now,
+          updated_at: now,
+        });
       }
 
       // Update appointment request
@@ -1250,7 +1337,7 @@ export const declineAppointmentRequest = withAuth(async (
     // match against the request's preferred technician.
     const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
 
-    await withTransaction(db, async (trx: Knex.Transaction) => {
+    const meetingsToCleanUp = await withTransaction(db, async (trx: Knex.Transaction) => {
       const trxTenantDb = tenantDb(trx, tenant);
       // Get the appointment request
       const request = await trxTenantDb.table('appointment_requests')
@@ -1263,7 +1350,10 @@ export const declineAppointmentRequest = withAuth(async (
         throw new Error('Appointment request not found');
       }
 
-      if (request.status !== 'pending') {
+      // Declining a previously-approved request revokes it (F018): the
+      // schedule entry is removed and the Teams meeting is cleaned up on
+      // Graph, exactly like a client cancellation.
+      if (!['pending', 'approved'].includes(request.status)) {
         throw new Error(`Cannot decline request with status: ${request.status}`);
       }
 
@@ -1312,14 +1402,29 @@ export const declineAppointmentRequest = withAuth(async (
           updated_at: now
         });
 
-      await trxTenantDb.table('online_meetings')
+      // Live Teams meetings move to cancel_pending until the idempotent
+      // cleanup job confirms Graph deletion (F019); rows without a provider
+      // meeting (failed creations) are cancelled directly.
+      const meetings = await trxTenantDb.table('online_meetings')
         .where({
           appointment_request_id: validatedData.appointment_request_id,
         })
-        .update({
-          status: 'cancelled',
-          updated_at: now,
-        });
+        .whereNotIn('status', ['cancelled'])
+        .select('meeting_id', 'provider', 'provider_meeting_id');
+
+      const cleanupTargets: string[] = [];
+      for (const meeting of meetings) {
+        const needsGraphCleanup = meeting.provider === 'teams' && meeting.provider_meeting_id;
+        await trxTenantDb.table('online_meetings')
+          .where({ meeting_id: meeting.meeting_id })
+          .update({
+            status: needsGraphCleanup ? 'cancel_pending' : 'cancelled',
+            updated_at: now,
+          });
+        if (needsGraphCleanup) {
+          cleanupTargets.push(meeting.meeting_id);
+        }
+      }
 
       // Get service details
       const service = await trxTenantDb.table('service_catalog')
@@ -1424,7 +1529,13 @@ export const declineAppointmentRequest = withAuth(async (
         console.error('Error sending decline email:', emailError);
         // Don't fail the decline if email fails
       }
+
+      return cleanupTargets;
     });
+
+    for (const meetingId of meetingsToCleanUp) {
+      await enqueueTeamsMeetingCleanupJob(tenant, meetingId);
+    }
 
     return { success: true };
   } catch (error) {
@@ -1490,8 +1601,17 @@ export const updateAppointmentRequestDateTime = withAuth(async (
         eventId?: string | null;
         startDateTime: string;
         endDateTime: string;
+        subject?: string | null;
+        attendees?: TeamsMeetingAttendee[] | null;
+        bodyHtml?: string | null;
         appointmentRequestId: string;
       } | null = null;
+
+      // Reschedules PATCH subject + attendees in addition to times (F016) so
+      // Graph sends updated invites; the technician attendee reflects the
+      // current assignee (refreshed if the assignment changed since approval).
+      const buildMeetingUpdateContext = () =>
+        resolveAppointmentTeamsMeetingContext({ trx, tenant, request });
       const updateData: any = {
         requested_date: validatedData.new_date,
         requested_time: validatedData.new_time,
@@ -1595,22 +1715,30 @@ export const updateAppointmentRequestDateTime = withAuth(async (
         }
 
         if (onlineMeeting.provider === 'teams' && onlineMeeting.provider_meeting_id) {
+          const updateContext = await buildMeetingUpdateContext();
           teamsMeetingUpdateInput = {
             tenantId: tenant,
             meetingId: onlineMeeting.provider_meeting_id,
             eventId: onlineMeeting.provider_event_id ?? null,
             startDateTime: scheduledStart.toISOString(),
             endDateTime: scheduledEnd.toISOString(),
+            subject: updateContext.subject,
+            attendees: updateContext.attendees,
+            bodyHtml: updateContext.bodyHtml,
             appointmentRequestId: request.appointment_request_id,
           };
         }
       } else if (request.online_meeting_id && request.online_meeting_provider === 'teams') {
+        const updateContext = await buildMeetingUpdateContext();
         teamsMeetingUpdateInput = {
           tenantId: tenant,
           meetingId: request.online_meeting_id,
           eventId: null,
           startDateTime: scheduledStart.toISOString(),
           endDateTime: scheduledEnd.toISOString(),
+          subject: updateContext.subject,
+          attendees: updateContext.attendees,
+          bodyHtml: updateContext.bodyHtml,
           appointmentRequestId: request.appointment_request_id,
         };
       }
@@ -1631,9 +1759,11 @@ export const updateAppointmentRequestDateTime = withAuth(async (
     let teamsMeetingWarning: string | undefined;
     if (result.teamsMeetingUpdateInput) {
       const teamsMeetingService = await resolveTeamsMeetingService();
-      const updatedMeeting = await teamsMeetingService.updateTeamsMeeting(result.teamsMeetingUpdateInput);
+      const updateOutcome = await teamsMeetingService.updateTeamsMeetingWithResult(result.teamsMeetingUpdateInput);
 
-      if (!updatedMeeting) {
+      if (updateOutcome.status === 'skipped') {
+        teamsMeetingWarning = teamsMeetingSkipWarning(updateOutcome.reason);
+      } else if (updateOutcome.status === 'failed') {
         teamsMeetingWarning = 'Appointment updated, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
       }
     }
@@ -1739,6 +1869,251 @@ export const associateRequestToTicket = withAuth(async (
   } catch (error) {
     console.error('Error associating request to ticket:', error);
     const message = appointmentRequestActionErrorMessage(error, 'Failed to associate request to ticket');
+    return { success: false, error: message };
+  }
+});
+
+/**
+ * Retry action for approved requests without a meeting link (F023): creates
+ * the Teams meeting (with attendees + context), records/updates the
+ * online_meetings row, and stores the join link on the request.
+ */
+export const generateTeamsMeetingForApprovedRequest = withAuth(async (
+  user,
+  { tenant },
+  appointmentRequestId: string
+): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
+  try {
+    const { knex: db } = await createTenantKnex();
+    const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
+
+    const context = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const trxTenantDb = tenantDb(trx, tenant);
+      const request = await trxTenantDb.table('appointment_requests')
+        .where({ appointment_request_id: appointmentRequestId })
+        .first();
+
+      if (!request) {
+        throw new Error('Appointment request not found');
+      }
+
+      if (request.status !== 'approved') {
+        throw new Error('A Teams meeting can only be generated for approved appointment requests');
+      }
+
+      if (request.online_meeting_url) {
+        throw new Error('This appointment request already has a meeting link');
+      }
+
+      if (!canUpdate) {
+        const isApprover = await isConfiguredApproverFor(
+          trx,
+          tenant,
+          user.user_id,
+          request.preferred_assigned_user_id ?? null
+        );
+        if (!isApprover) {
+          throw new Error('Insufficient permissions to generate Teams meetings');
+        }
+      }
+
+      const service = await trxTenantDb.table('service_catalog')
+        .where({ service_id: request.service_id })
+        .first();
+      if (!service) {
+        throw new Error('Service not found');
+      }
+
+      if (!request.schedule_entry_id) {
+        throw new Error('The approved request has no schedule entry to attach a meeting to');
+      }
+
+      const scheduleEntry = await trxTenantDb.table('schedule_entries')
+        .where({ entry_id: request.schedule_entry_id })
+        .first('entry_id', 'scheduled_start', 'scheduled_end');
+      if (!scheduleEntry) {
+        throw new Error('Schedule entry not found for the approved request');
+      }
+
+      let contactEmail: string | null = request.requester_email || null;
+      let contactName: string | null = request.requester_name || null;
+      if (request.is_authenticated && request.contact_id) {
+        const contact = await trxTenantDb.table('contacts')
+          .where({ contact_name_id: request.contact_id })
+          .first('email', 'full_name');
+        contactEmail = contact?.email || contactEmail;
+        contactName = contact?.full_name || contactName;
+      }
+
+      let technician: TeamsMeetingParticipant | null = null;
+      const assignee = await trxTenantDb.table('schedule_entry_assignees')
+        .where({ entry_id: request.schedule_entry_id })
+        .first('user_id');
+      if (assignee?.user_id) {
+        const technicianUser = await trxTenantDb.table('users')
+          .where({ user_id: assignee.user_id })
+          .first('email', 'first_name', 'last_name');
+        if (technicianUser) {
+          technician = {
+            email: technicianUser.email || null,
+            name: [technicianUser.first_name, technicianUser.last_name].filter(Boolean).join(' ') || null,
+          };
+        }
+      }
+
+      const existingMeetingRow = await trxTenantDb.table('online_meetings')
+        .where({ appointment_request_id: appointmentRequestId })
+        .whereIn('status', ['failed'])
+        .first('meeting_id');
+
+      return {
+        request,
+        serviceName: service.service_name as string,
+        scheduleEntryId: scheduleEntry.entry_id as string,
+        startTime: new Date(scheduleEntry.scheduled_start),
+        endTime: new Date(scheduleEntry.scheduled_end),
+        contact: { email: contactEmail, name: contactName },
+        technician,
+        existingFailedMeetingId: existingMeetingRow?.meeting_id ?? null,
+      };
+    });
+
+    const teamsMeetingService = await resolveTeamsMeetingService();
+    const outcome = await teamsMeetingService.createTeamsMeetingWithResult({
+      tenantId: tenant,
+      subject: `Appointment: ${context.serviceName}`,
+      startDateTime: context.startTime.toISOString(),
+      endDateTime: context.endTime.toISOString(),
+      attendees: buildTeamsMeetingAttendees({
+        contact: context.contact,
+        technician: context.technician,
+      }),
+      bodyHtml: buildAppointmentMeetingBodyHtml({
+        serviceName: context.serviceName,
+        appointmentRequestId,
+        description: context.request.description || null,
+      }),
+      appointmentRequestId,
+    });
+
+    if (outcome.status === 'skipped') {
+      return { success: false, error: teamsMeetingSkipWarning(outcome.reason) };
+    }
+
+    if (outcome.status === 'failed') {
+      const failedNow = new Date();
+      await withTransaction(db, async (trx: Knex.Transaction) => {
+        const trxTenantDb = tenantDb(trx, tenant);
+        if (context.existingFailedMeetingId) {
+          await trxTenantDb.table('online_meetings')
+            .where({ meeting_id: context.existingFailedMeetingId })
+            .update({ error_code: outcome.errorCode, updated_at: failedNow });
+        }
+      });
+      return {
+        success: false,
+        error: 'The Microsoft Teams meeting could not be created. Please try again.',
+        meetingCreationFailed: true,
+      };
+    }
+
+    const meeting = outcome.meeting;
+    const interactionSideEffects: Array<() => Promise<void>> = [];
+
+    const updatedRequest = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const trxTenantDb = tenantDb(trx, tenant);
+      const now = new Date();
+
+      let interactionId: string | null = null;
+      if (context.request.client_id || context.request.contact_id) {
+        const onlineMeetingType = await trxTenantDb.table('system_interaction_types')
+          .where({ type_name: 'Online Meeting' })
+          .first('type_id');
+
+        if (onlineMeetingType?.type_id) {
+          const { createInteractionWithSideEffects } = await import('@alga-psa/clients/actions/interactionCreateHelper');
+          const interactionResult = await createInteractionWithSideEffects({
+            tenant,
+            trx,
+            user,
+            interactionData: {
+              type_id: onlineMeetingType.type_id,
+              client_id: context.request.client_id ?? null,
+              contact_name_id: context.request.contact_id ?? null,
+              user_id: user.user_id,
+              ticket_id: context.request.ticket_id || null,
+              title: `Online Meeting: ${context.serviceName}`,
+              notes: `Join Teams Meeting: ${meeting.joinWebUrl}`,
+              start_time: context.startTime,
+              end_time: context.endTime,
+              duration: Math.max(1, Math.round((context.endTime.getTime() - context.startTime.getTime()) / 60000)),
+            },
+          });
+          interactionId = interactionResult.interaction.interaction_id;
+          interactionSideEffects.push(interactionResult.publishSideEffects);
+        }
+      }
+
+      const meetingRow = {
+        provider: 'teams',
+        provider_meeting_id: meeting.meetingId,
+        provider_event_id: meeting.eventId ?? null,
+        organizer_upn: meeting.organizerUpn ?? null,
+        organizer_user_id: meeting.organizerUserId ?? null,
+        subject: `Appointment: ${context.serviceName}`,
+        join_url: meeting.joinWebUrl,
+        start_time: context.startTime,
+        end_time: context.endTime,
+        status: 'scheduled',
+        error_code: null,
+        interaction_id: interactionId,
+        schedule_entry_id: context.scheduleEntryId,
+        updated_at: now,
+      };
+
+      if (context.existingFailedMeetingId) {
+        await trxTenantDb.table('online_meetings')
+          .where({ meeting_id: context.existingFailedMeetingId })
+          .update(meetingRow);
+      } else {
+        await trxTenantDb.table('online_meetings').insert({
+          meeting_id: uuidv4(),
+          tenant,
+          ...meetingRow,
+          recording_fetch_attempts: 0,
+          last_fetch_at: null,
+          appointment_request_id: appointmentRequestId,
+          created_by: user.user_id,
+          created_at: now,
+        });
+      }
+
+      await trxTenantDb.table('appointment_requests')
+        .where({ appointment_request_id: appointmentRequestId })
+        .update({
+          online_meeting_provider: 'teams',
+          online_meeting_url: meeting.joinWebUrl,
+          online_meeting_id: meeting.meetingId,
+          updated_at: now,
+        });
+
+      return trxTenantDb.table('appointment_requests')
+        .where({ appointment_request_id: appointmentRequestId })
+        .first();
+    });
+
+    for (const publishSideEffects of interactionSideEffects) {
+      try {
+        await publishSideEffects();
+      } catch (eventError) {
+        console.error('[GenerateTeamsMeeting] Failed to publish Online Meeting interaction side effects', eventError);
+      }
+    }
+
+    return { success: true, data: updatedRequest as IAppointmentRequest };
+  } catch (error) {
+    console.error('Error generating Teams meeting for approved request:', error);
+    const message = error instanceof Error ? error.message : 'Failed to generate Teams meeting';
     return { success: false, error: message };
   }
 });

@@ -40,6 +40,7 @@ const {
   recordPendingDeletion,
   updateDeletionStatus,
   deleteTenantData,
+  deleteTenantSchedules,
   cancelTenantStripeSubscription,
   sendCancellationConfirmationEmail,
   linkSubscriptionToExistingTenant,
@@ -374,6 +375,27 @@ export async function tenantDeletionWorkflow(
     state.step = 'deleting_tenant_data';
     state.status = 'deleting';
     await updateDeletionStatus({ deletionId, status: 'deleting' });
+
+    // Step 10a: Tear down the tenant's recurring Temporal schedules BEFORE
+    // dropping the jobs table. Otherwise every schedule keeps firing
+    // genericJobWorkflow against deleted parent rows and fails forever (the
+    // orphaned-schedule bug). Non-blocking: the activity already retries; if it
+    // still fails we log and proceed so a schedule-cleanup hiccup can't strand
+    // the deletion — the leftover schedule is recoverable via a backfill sweep.
+    state.step = 'deleting_schedules';
+    try {
+      const scheduleTeardown = await deleteTenantSchedules(input.tenantId);
+      log.info('Recurring Temporal schedules torn down', {
+        tenantId: input.tenantId,
+        deletedCount: scheduleTeardown.deletedScheduleIds.length,
+        deletedScheduleIds: scheduleTeardown.deletedScheduleIds,
+      });
+    } catch (scheduleError) {
+      log.error('Failed to tear down tenant schedules (continuing with deletion)', {
+        tenantId: input.tenantId,
+        error: scheduleError instanceof Error ? scheduleError.message : 'Unknown error',
+      });
+    }
 
     log.info('Executing tenant deletion', { tenantId: input.tenantId });
     const deleteResult = await deleteTenantData(input.tenantId, deletionId);

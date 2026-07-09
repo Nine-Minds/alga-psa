@@ -1857,6 +1857,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             refreshNonce={pulseRefreshNonce}
             surveySummary={surveySummary}
             renderSurveySummaryCard={renderSurveySummaryCard}
+            isAlgaDeskMode={isAlgaDeskMode}
             t={t}
           />
         )}

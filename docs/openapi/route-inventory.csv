@@ -12,6 +12,7 @@ CE,/api/accounting/exports/{batchId}/download,POST,server/src/app/api/accounting
 CE,/api/accounting/exports/{batchId}/errors,POST,server/src/app/api/accounting/exports/[batchId]/errors/route.ts,ApiAccountingExportController,../../../../../../lib/api/controllers/ApiAccountingExportController,server/src/lib/api/controllers/ApiAccountingExportController.ts
 CE,/api/accounting/exports/{batchId}/execute,POST,server/src/app/api/accounting/exports/[batchId]/execute/route.ts,ApiAccountingExportController,../../../../../../lib/api/controllers/ApiAccountingExportController,server/src/lib/api/controllers/ApiAccountingExportController.ts
 CE,/api/accounting/exports/{batchId}/lines,POST,server/src/app/api/accounting/exports/[batchId]/lines/route.ts,ApiAccountingExportController,../../../../../../lib/api/controllers/ApiAccountingExportController,server/src/lib/api/controllers/ApiAccountingExportController.ts
+CE,/api/auth/captcha-config,GET,server/src/app/api/auth/captcha-config/route.ts,,,
 CE,/api/auth/e2e/google/authorize,GET,server/src/app/api/auth/e2e/google/authorize/route.ts,,,
 CE,/api/auth/e2e/google/complete,GET,server/src/app/api/auth/e2e/google/complete/route.ts,,,
 CE,/api/auth/e2e/google/token,POST,server/src/app/api/auth/e2e/google/token/route.ts,,,
@@ -32,7 +33,12 @@ CE,/api/auth/validate-api-key,POST,server/src/app/api/auth/validate-api-key/rout
 CE,/api/auth/validate-token,POST,server/src/app/api/auth/validate-token/route.ts,,,
 CE,/api/auth/{nextauth},GET POST,server/src/app/api/auth/[...nextauth]/route.ts,,,
 CE,/api/billing/check-tenant,GET,server/src/app/api/billing/check-tenant/route.ts,,,
+CE,/api/billing/complete-reactivation,POST,server/src/app/api/billing/complete-reactivation/route.ts,,,
 CE,/api/billing/licence-count,GET POST,server/src/app/api/billing/licence-count/route.ts,,,
+CE,/api/billing/reactivation-password-reset,POST,server/src/app/api/billing/reactivation-password-reset/route.ts,,,
+CE,/api/billing/reactivation-token,POST,server/src/app/api/billing/reactivation-token/route.ts,,,
+CE,/api/billing/reactivation-token/session,POST,server/src/app/api/billing/reactivation-token/session/route.ts,,,
+CE,/api/billing/request-reactivation,POST,server/src/app/api/billing/request-reactivation/route.ts,,,
 CE,/api/calendar/appointment/{id},GET,server/src/app/api/calendar/appointment/[id]/route.ts,,,
 CE,/api/calendar/webhooks/google,GET OPTIONS POST,server/src/app/api/calendar/webhooks/google/route.ts,,,
 CE,/api/calendar/webhooks/microsoft,GET OPTIONS POST,server/src/app/api/calendar/webhooks/microsoft/route.ts,,,
@@ -103,6 +109,7 @@ CE,/api/integrations/entra/sync/runs,GET OPTIONS,server/src/app/api/integrations
 CE,/api/integrations/entra/sync/runs/{runId},GET OPTIONS,server/src/app/api/integrations/entra/sync/runs/[runId]/route.ts,,,
 CE,/api/integrations/entra/validate-cipp,OPTIONS POST,server/src/app/api/integrations/entra/validate-cipp/route.ts,,,
 CE,/api/integrations/entra/validate-direct,OPTIONS POST,server/src/app/api/integrations/entra/validate-direct/route.ts,,,
+CE,/api/integrations/hudu,GET OPTIONS,server/src/app/api/integrations/hudu/route.ts,,,
 CE,/api/integrations/ninjaone/callback,GET,server/src/app/api/integrations/ninjaone/callback/route.ts,,,
 CE,/api/integrations/qbo/callback,GET,server/src/app/api/integrations/qbo/callback/route.ts,,,
 CE,/api/integrations/qbo/connect,GET,server/src/app/api/integrations/qbo/connect/route.ts,,,
@@ -116,6 +123,10 @@ CE,/api/internal/ext-runner/install-config,POST,server/src/app/api/internal/ext-
 CE,/api/internal/ext-scheduler/install/{installId},POST,server/src/app/api/internal/ext-scheduler/install/[installId]/route.ts,,,
 CE,/api/internal/ext-services/install/{installId},POST,server/src/app/api/internal/ext-services/install/[installId]/route.ts,,,
 CE,/api/internal/ext-storage/install/{installId},POST,server/src/app/api/internal/ext-storage/install/[installId]/route.ts,,,
+CE,/api/mcp,GET POST,server/src/app/api/mcp/route.ts,,,
+CE,/api/mcp/oauth/authorize,GET POST,server/src/app/api/mcp/oauth/authorize/route.ts,,,
+CE,/api/mcp/oauth/revoke,POST,server/src/app/api/mcp/oauth/revoke/route.ts,,,
+CE,/api/mcp/oauth/token,POST,server/src/app/api/mcp/oauth/token/route.ts,,,
 CE,/api/online-meetings/recordings/{artifactId},GET,server/src/app/api/online-meetings/recordings/[artifactId]/route.ts,,,
 CE,/api/projects,GET,server/src/app/api/projects/route.ts,,,
 CE,/api/projects/templates,GET POST,server/src/app/api/projects/templates/route.ts,,,
@@ -146,8 +157,18 @@ CE,/api/v1/accounting-exports/xero-csv/client-export,GET,server/src/app/api/v1/a
 CE,/api/v1/accounting-exports/xero-csv/client-import,POST,server/src/app/api/v1/accounting-exports/xero-csv/client-import/route.ts,,,
 CE,/api/v1/accounting-exports/xero-csv/tax-import,POST,server/src/app/api/v1/accounting-exports/xero-csv/tax-import/route.ts,,,
 CE,/api/v1/accounting-exports/{batchId}/download,GET,server/src/app/api/v1/accounting-exports/[batchId]/download/route.ts,,,
+CE,/api/v1/activities,GET,server/src/app/api/v1/activities/route.ts,,,
+CE,/api/v1/activities/ad-hoc,POST,server/src/app/api/v1/activities/ad-hoc/route.ts,,,
+CE,/api/v1/activities/ad-hoc/{id},DELETE PATCH,server/src/app/api/v1/activities/ad-hoc/[id]/route.ts,,,
+CE,/api/v1/activities/ad-hoc/{id}/done,POST,server/src/app/api/v1/activities/ad-hoc/[id]/done/route.ts,,,
+CE,/api/v1/activities/groups,GET,server/src/app/api/v1/activities/groups/route.ts,,,
+CE,/api/v1/activities/groups/items,DELETE POST,server/src/app/api/v1/activities/groups/items/route.ts,,,
+CE,/api/v1/activities/groups/{groupId}/items,PATCH,server/src/app/api/v1/activities/groups/[groupId]/items/route.ts,,,
 CE,/api/v1/admin/telemetry-settings,GET POST,server/src/app/api/v1/admin/telemetry-settings/route.ts,,,
 CE,/api/v1/ai/document-assist,POST,server/src/app/api/v1/ai/document-assist/route.ts,,,
+CE,/api/v1/appliance-installs,GET OPTIONS,server/src/app/api/v1/appliance-installs/route.ts,,,
+CE,/api/v1/appliance-installs/access,OPTIONS POST,server/src/app/api/v1/appliance-installs/access/route.ts,,,
+CE,/api/v1/appliance-installs/{tenantId},GET OPTIONS,server/src/app/api/v1/appliance-installs/[tenantId]/route.ts,,,
 CE,/api/v1/assets,GET POST,server/src/app/api/v1/assets/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/bulk-status,PUT,server/src/app/api/v1/assets/bulk-status/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/bulk-update,PUT,server/src/app/api/v1/assets/bulk-update/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
@@ -340,9 +361,19 @@ CE,/api/v1/kb-articles/{id},DELETE GET PUT,server/src/app/api/v1/kb-articles/[id
 CE,/api/v1/kb-articles/{id}/archive,POST,server/src/app/api/v1/kb-articles/[id]/archive/route.ts,ApiKbArticleController,@/lib/api/controllers/ApiKbArticleController,server/src/lib/api/controllers/ApiKbArticleController.ts
 CE,/api/v1/kb-articles/{id}/content,GET PUT,server/src/app/api/v1/kb-articles/[id]/content/route.ts,ApiKbArticleController,@/lib/api/controllers/ApiKbArticleController,server/src/lib/api/controllers/ApiKbArticleController.ts
 CE,/api/v1/kb-articles/{id}/publish,POST,server/src/app/api/v1/kb-articles/[id]/publish/route.ts,ApiKbArticleController,@/lib/api/controllers/ApiKbArticleController,server/src/lib/api/controllers/ApiKbArticleController.ts
+CE,/api/v1/mcp/agents,DELETE GET PATCH POST,server/src/app/api/v1/mcp/agents/route.ts,,,
+CE,/api/v1/mcp/audit,GET,server/src/app/api/v1/mcp/audit/route.ts,,,
+CE,/api/v1/mcp/connect/callback,GET,server/src/app/api/v1/mcp/connect/callback/route.ts,,,
+CE,/api/v1/mcp/connect/start,POST,server/src/app/api/v1/mcp/connect/start/route.ts,,,
+CE,/api/v1/mcp/connections,DELETE GET,server/src/app/api/v1/mcp/connections/route.ts,,,
+CE,/api/v1/mcp/idp-providers,GET POST,server/src/app/api/v1/mcp/idp-providers/route.ts,,,
+CE,/api/v1/mcp/idp-suggestions,GET,server/src/app/api/v1/mcp/idp-suggestions/route.ts,,,
+CE,/api/v1/mcp/platform-providers,GET,server/src/app/api/v1/mcp/platform-providers/route.ts,,,
+CE,/api/v1/mcp/roles,GET,server/src/app/api/v1/mcp/roles/route.ts,,,
 CE,/api/v1/meta/docs,GET,server/src/app/api/v1/meta/docs/route.ts,ApiMetadataController,@/lib/api/controllers/ApiMetadataController,server/src/lib/api/controllers/ApiMetadataController.ts
 CE,/api/v1/meta/endpoints,GET,server/src/app/api/v1/meta/endpoints/route.ts,ApiMetadataController,@/lib/api/controllers/ApiMetadataController,server/src/lib/api/controllers/ApiMetadataController.ts
 CE,/api/v1/meta/health,GET,server/src/app/api/v1/meta/health/route.ts,ApiMetadataController,@/lib/api/controllers/ApiMetadataController,server/src/lib/api/controllers/ApiMetadataController.ts
+CE,/api/v1/meta/mcp-registry,GET,server/src/app/api/v1/meta/mcp-registry/route.ts,ApiMetadataController,@/lib/api/controllers/ApiMetadataController,server/src/lib/api/controllers/ApiMetadataController.ts
 CE,/api/v1/meta/openapi,GET,server/src/app/api/v1/meta/openapi/route.ts,ApiMetadataController,@/lib/api/controllers/ApiMetadataController,server/src/lib/api/controllers/ApiMetadataController.ts
 CE,/api/v1/meta/permissions,GET,server/src/app/api/v1/meta/permissions/route.ts,ApiMetadataController,@/lib/api/controllers/ApiMetadataController,server/src/lib/api/controllers/ApiMetadataController.ts
 CE,/api/v1/meta/schemas,GET,server/src/app/api/v1/meta/schemas/route.ts,ApiMetadataController,@/lib/api/controllers/ApiMetadataController,server/src/lib/api/controllers/ApiMetadataController.ts
@@ -606,6 +637,13 @@ CE,/api/v1/webhooks/{id}/secret/rotate,POST,server/src/app/api/v1/webhooks/[id]/
 CE,/api/v1/webhooks/{id}/subscriptions,GET,server/src/app/api/v1/webhooks/[id]/subscriptions/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/{id}/test,POST,server/src/app/api/v1/webhooks/[id]/test/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/workflows,GET,server/src/app/api/v1/workflows/route.ts,,,
+CE,/api/v1/workflows/tasks,GET,server/src/app/api/v1/workflows/tasks/route.ts,,,
+CE,/api/v1/workflows/tasks/{id},GET,server/src/app/api/v1/workflows/tasks/[id]/route.ts,,,
+CE,/api/v1/workflows/tasks/{id}/claim,POST,server/src/app/api/v1/workflows/tasks/[id]/claim/route.ts,,,
+CE,/api/v1/workflows/tasks/{id}/complete,POST,server/src/app/api/v1/workflows/tasks/[id]/complete/route.ts,,,
+CE,/api/v1/workflows/tasks/{id}/unclaim,POST,server/src/app/api/v1/workflows/tasks/[id]/unclaim/route.ts,,,
+CE,/api/webhooks/alternative-payments,GET POST,server/src/app/api/webhooks/alternative-payments/route.ts,,,
+CE,/api/webhooks/levelio,OPTIONS POST,server/src/app/api/webhooks/levelio/route.ts,,,
 CE,/api/webhooks/ninjaone,GET OPTIONS POST,server/src/app/api/webhooks/ninjaone/route.ts,,,
 CE,/api/webhooks/stripe,POST,server/src/app/api/webhooks/stripe/route.ts,,,
 CE,/api/webhooks/stripe/payments,POST,server/src/app/api/webhooks/stripe/payments/route.ts,,,
@@ -630,9 +668,6 @@ CE,/api/workflow-runs/{runId}/audit/export,GET,server/src/app/api/workflow-runs/
 CE,/api/workflow-runs/{runId}/cancel,POST,server/src/app/api/workflow-runs/[runId]/cancel/route.ts,,,
 CE,/api/workflow-runs/{runId}/export,GET,server/src/app/api/workflow-runs/[runId]/export/route.ts,,,
 CE,/api/workflow-runs/{runId}/replay,POST,server/src/app/api/workflow-runs/[runId]/replay/route.ts,,,
-CE,/api/workflow-runs/{runId}/requeue,POST,server/src/app/api/workflow-runs/[runId]/requeue/route.ts,,,
-CE,/api/workflow-runs/{runId}/resume,POST,server/src/app/api/workflow-runs/[runId]/resume/route.ts,,,
-CE,/api/workflow-runs/{runId}/retry,POST,server/src/app/api/workflow-runs/[runId]/retry/route.ts,,,
 CE,/api/workflow-runs/{runId}/steps,GET,server/src/app/api/workflow-runs/[runId]/steps/route.ts,,,
 CE,/api/workflow-runs/{runId}/summary,GET,server/src/app/api/workflow-runs/[runId]/summary/route.ts,,,
 CE,/api/workflow-runs/{runId}/timeline,GET,server/src/app/api/workflow-runs/[runId]/timeline/route.ts,,,
@@ -647,6 +682,12 @@ CE,/api/workflow/registry/schemas/{schemaRef},GET,server/src/app/api/workflow/re
 EE,/api/auth/google/calendar/callback,GET,ee/server/src/app/api/auth/google/calendar/callback/route.ts,,,
 EE,/api/auth/microsoft/calendar/callback,GET,ee/server/src/app/api/auth/microsoft/calendar/callback/route.ts,,,
 EE,/api/auth/microsoft/entra/callback,GET,ee/server/src/app/api/auth/microsoft/entra/callback/route.ts,,,
+EE,/api/billing/check-tenant,GET,ee/server/src/app/api/billing/check-tenant/route.ts,,,
+EE,/api/billing/complete-reactivation,POST,ee/server/src/app/api/billing/complete-reactivation/route.ts,,,
+EE,/api/billing/reactivation-password-reset,POST,ee/server/src/app/api/billing/reactivation-password-reset/route.ts,,,
+EE,/api/billing/reactivation-token,POST,ee/server/src/app/api/billing/reactivation-token/route.ts,,,
+EE,/api/billing/reactivation-token/session,POST,ee/server/src/app/api/billing/reactivation-token/session/route.ts,,,
+EE,/api/billing/request-reactivation,POST,ee/server/src/app/api/billing/request-reactivation/route.ts,,,
 EE,/api/calendar/webhooks/google,GET OPTIONS POST,ee/server/src/app/api/calendar/webhooks/google/route.ts,,,
 EE,/api/calendar/webhooks/microsoft,GET OPTIONS POST,ee/server/src/app/api/calendar/webhooks/microsoft/route.ts,,,
 EE,/api/ext-bundles/abort,POST,ee/server/src/app/api/ext-bundles/abort/route.ts,,,
@@ -680,6 +721,7 @@ EE,/api/integrations/entra/sync/runs,GET,ee/server/src/app/api/integrations/entr
 EE,/api/integrations/entra/sync/runs/{runId},GET,ee/server/src/app/api/integrations/entra/sync/runs/[runId]/route.ts,,,
 EE,/api/integrations/entra/validate-cipp,POST,ee/server/src/app/api/integrations/entra/validate-cipp/route.ts,,,
 EE,/api/integrations/entra/validate-direct,POST,ee/server/src/app/api/integrations/entra/validate-direct/route.ts,,,
+EE,/api/integrations/hudu,GET,ee/server/src/app/api/integrations/hudu/route.ts,,,
 EE,/api/integrations/ninjaone/callback,GET,ee/server/src/app/api/integrations/ninjaone/callback/route.ts,,,
 EE,/api/internal/ext-clients/install/{installId},POST,ee/server/src/app/api/internal/ext-clients/install/[installId]/route.ts,,,
 EE,/api/internal/ext-invoicing/install/{installId},POST,ee/server/src/app/api/internal/ext-invoicing/install/[installId]/route.ts,,,
@@ -696,6 +738,9 @@ EE,/api/teams/message-extension/query,POST,ee/server/src/app/api/teams/message-e
 EE,/api/teams/package,GET OPTIONS POST,ee/server/src/app/api/teams/package/route.ts,,,
 EE,/api/teams/package/download,GET OPTIONS,ee/server/src/app/api/teams/package/download/route.ts,,,
 EE,/api/teams/quick-actions,POST,ee/server/src/app/api/teams/quick-actions/route.ts,,,
+EE,/api/v1/appliance-installs,GET,ee/server/src/app/api/v1/appliance-installs/route.ts,,,
+EE,/api/v1/appliance-installs/access,POST,ee/server/src/app/api/v1/appliance-installs/access/route.ts,,,
+EE,/api/v1/appliance-installs/{tenantId},GET,ee/server/src/app/api/v1/appliance-installs/[tenantId]/route.ts,,,
 EE,/api/v1/auth/verify,POST,ee/server/src/app/api/v1/auth/verify/route.ts,,,
 EE,/api/v1/extensions/install,POST,ee/server/src/app/api/v1/extensions/install/route.ts,,,
 EE,/api/v1/extensions/uninstall,POST,ee/server/src/app/api/v1/extensions/uninstall/route.ts,,,
@@ -729,4 +774,5 @@ EE,/api/v1/tenant-management/start-deletion,POST,ee/server/src/app/api/v1/tenant
 EE,/api/v1/tenant-management/start-premium-trial,POST,ee/server/src/app/api/v1/tenant-management/start-premium-trial/route.ts,,,
 EE,/api/v1/tenant-management/tenants,GET,ee/server/src/app/api/v1/tenant-management/tenants/route.ts,,,
 EE,/api/v1/tenant-management/tenants/{tenantId}/addons,POST,ee/server/src/app/api/v1/tenant-management/tenants/[tenantId]/addons/route.ts,,,
+EE,/api/webhooks/levelio,OPTIONS POST,ee/server/src/app/api/webhooks/levelio/route.ts,,,
 EE,/api/webhooks/ninjaone,GET OPTIONS POST,ee/server/src/app/api/webhooks/ninjaone/route.ts,,,

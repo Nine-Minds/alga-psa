@@ -163,6 +163,18 @@ Controls access to the new service request definition and client portal request-
 - When enabled: The full service request UI is accessible.
 - Backend (tables, actions, provider execution, portal submission processing) remains active regardless of flag state.
 
+### 11. `inventory-enabled`
+Controls access to the Inventory section in the MSP sidebar.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Inventory sidebar navigation section and all sub-items (Dashboard, Stock, Stock Locations, Stock Units, Vendors, Purchase Orders, Vendor Bills, Sales Orders, Transfers, Cycle Counts, Write-offs, Margin, Ghost Usage, RMA, Loaners, Kits) — hidden when disabled
+
+**Behavior:**
+- When disabled (default): The entire Inventory sidebar section is hidden.
+- When enabled: The full Inventory section is shown.
+- Backend (models, actions, routes) remains available regardless of flag state; this gates the sidebar entry only.
+
 ## Implementation Details
 
 ### User Identification

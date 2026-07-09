@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { toISODate, toPlainDate } from '@alga-psa/core';
 import type { ISO8601String } from '@alga-psa/types';
 
 export type RecurringApprovalBlockerRow = {
@@ -43,6 +44,18 @@ function applyNonApprovedStatusFilter(query: Knex.QueryBuilder, column: string) 
   query.where(function applyApprovalStatusGuard(this: Knex.QueryBuilder) {
     this.whereNull(column).orWhere(column, '<>', APPROVED_TIME_STATUS);
   });
+}
+
+// `service_period_end` is persisted as the EXCLUSIVE end of a half-open service
+// period (e.g. a June period ends 2026-07-01, which is not itself part of June),
+// so it is already the correct upper bound for an `end_time < ...` comparison --
+// matching both the billing engine (`servicePeriodEndExclusive = coveredPeriod.end`)
+// and `countUnresolvedSelectionUnapprovedTimeEntries`, which uses it directly.
+// Previously this added a day, treating the value as inclusive, which pulled the
+// entire first day of the NEXT period into the approval scan and blocked a
+// completed period on unapproved time that belongs to the following one.
+export function getContractServicePeriodEndExclusive(servicePeriodEnd: ISO8601String): ISO8601String {
+  return toISODate(toPlainDate(servicePeriodEnd));
 }
 
 async function getServiceIdsForContractLine(params: {

@@ -1,4 +1,4 @@
-import { listVendors } from '@alga-psa/inventory/actions';
+import { getInventoryTenantCurrency, listVendors } from '@alga-psa/inventory/actions';
 import { VendorsManager } from '@alga-psa/inventory/components';
 import { getSession } from '@alga-psa/auth';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -23,6 +23,7 @@ export default async function VendorsPage() {
   }
 
   let initialVendors: IVendor[] = [];
+  let defaultCurrencyCode = 'USD';
   try {
     const result = await listVendors({});
     if (isActionMessageError(result) || isActionPermissionError(result)) {
@@ -33,8 +34,13 @@ export default async function VendorsPage() {
   } catch (error) {
     console.error('Failed to load vendors:', error);
   }
+  try {
+    defaultCurrencyCode = await getInventoryTenantCurrency();
+  } catch (error) {
+    console.error('Failed to load inventory default currency:', error);
+  }
 
-  return <VendorsManager initialVendors={initialVendors} />;
+  return <VendorsManager initialVendors={initialVendors} defaultCurrencyCode={defaultCurrencyCode} />;
 }
 
 export const dynamic = 'force-dynamic';

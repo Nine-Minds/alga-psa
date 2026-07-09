@@ -1,4 +1,4 @@
-import { listSalesOrders, listStockLocations } from '@alga-psa/inventory/actions';
+import { getInventoryTenantCurrency, listSalesOrders, listStockLocations } from '@alga-psa/inventory/actions';
 import { SalesOrdersManager } from '@alga-psa/inventory/components';
 // Billing owns SO invoicing (billing → inventory dependency direction); the server
 // action references are passed down to the client component as props (F008).
@@ -6,12 +6,14 @@ import {
   confirmDropShipAndInvoice,
   fulfillAndInvoiceSoLine,
   generateInvoiceForSalesOrder,
+  getServices,
 } from '@alga-psa/billing/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getSession } from '@alga-psa/auth';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
 import type { IClient, ISalesOrder, IStockLocation } from '@alga-psa/types';
+import type { SalesOrderServiceOption } from '@alga-psa/inventory/components';
 import type { Metadata } from 'next';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
@@ -62,15 +64,40 @@ export default async function SalesOrdersPage() {
     console.error('Failed to load clients:', error);
   }
 
+  // Products *and* services can be sold on a sales order (item_kind: 'any'). The picker and
+  // price auto-fill live in the inventory client component, but the fetch belongs on the server
+  // beside the other prop loads — inventory can't import billing's getServices directly.
+  let services: SalesOrderServiceOption[] = [];
+  try {
+    const paginated = await getServices(1, 999, { item_kind: 'any' });
+    services = paginated.services.map((s) => ({
+      service_id: s.service_id,
+      service_name: s.service_name,
+      sku: s.sku ?? null,
+      default_rate: s.default_rate ?? null,
+    }));
+  } catch (error) {
+    console.error('Failed to load services:', error);
+  }
+
+  let defaultCurrencyCode = 'USD';
+  try {
+    defaultCurrencyCode = await getInventoryTenantCurrency();
+  } catch (error) {
+    console.error('Failed to load inventory default currency:', error);
+  }
+
   return (
     <SalesOrdersManager
       initialSos={initialSos}
       loadErrorMessage={loadErrorMessage}
       locations={locations}
       clients={clients}
+      services={services}
       fulfillAndInvoice={fulfillAndInvoiceSoLine}
       generateInvoice={generateInvoiceForSalesOrder}
       confirmDropShip={confirmDropShipAndInvoice}
+      defaultCurrencyCode={defaultCurrencyCode}
     />
   );
 }

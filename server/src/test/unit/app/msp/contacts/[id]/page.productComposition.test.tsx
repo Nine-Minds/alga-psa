@@ -121,6 +121,9 @@ describe('MSP contact detail page product composition', () => {
     expect(props.showDocuments).toBe(false);
     expect(props.documents).toEqual([]);
     expect(getDocumentsByEntityMock).not.toHaveBeenCalled();
+    expect(props.showRelatedWork).toBe(false);
+    expect(props.relatedWork).toBeNull();
+    expect(getContactRelatedWorkMock).not.toHaveBeenCalled();
   });
 
   it('keeps PSA contact detail composition for PSA tenants', async () => {
@@ -131,5 +134,7 @@ describe('MSP contact detail page product composition', () => {
     expect(props.showDocuments).toBe(true);
     expect(props.documents).toEqual([{ document_id: 'doc-1' }]);
     expect(getDocumentsByEntityMock).toHaveBeenCalledWith('contact-1', 'contact');
+    expect(props.showRelatedWork).toBe(true);
+    expect(getContactRelatedWorkMock).toHaveBeenCalledWith('contact-1');
   });
 });

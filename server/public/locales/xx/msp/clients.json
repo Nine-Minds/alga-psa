@@ -903,6 +903,10 @@
     "email": "11111",
     "clientName": "11111",
     "importCompleteMessage": "11111 {{count}} 11111",
+    "importCompleteWithErrors": "11111",
+    "importResultSummary": "{{created}} 11111, {{updated}} 11111, {{skipped}} 11111, {{failed}} 11111",
+    "skippedExistingMessage": "{{count}} 11111",
+    "error": "11111",
     "updateExistingTitle": "11111",
     "updateExistingMessage": "11111 {{count}} 11111"
   },

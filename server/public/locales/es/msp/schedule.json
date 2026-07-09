@@ -129,11 +129,16 @@
       "assignTechnicianRequired": "Por favor asigne un técnico",
       "approve": "No se pudo aprobar la solicitud",
       "declineReasonRequired": "Por favor proporcione una razón para rechazar",
-      "decline": "No se pudo rechazar la solicitud"
+      "decline": "No se pudo rechazar la solicitud",
+      "reschedule": "No se pudo reprogramar la cita",
+      "rescheduleDateRequired": "Elija una nueva fecha y hora",
+      "generateTeamsMeeting": "No se pudo crear la reunión de Microsoft Teams"
     },
     "feedback": {
       "approved": "Solicitud de cita aprobada",
-      "declined": "Solicitud de cita rechazada"
+      "declined": "Solicitud de cita rechazada",
+      "rescheduled": "Cita reprogramada",
+      "teamsMeetingGenerated": "Reunión de Microsoft Teams creada"
     },
     "filters": {
       "statusLabel": "Filtrar por estado",
@@ -181,8 +186,10 @@
         "teamsMeeting": "Reunión de Teams"
       },
       "actions": {
-        "joinTeamsMeeting": "Unirse a la reunión de Teams"
-      }
+        "joinTeamsMeeting": "Unirse a la reunión de Teams",
+        "generateTeamsMeeting": "Crear reunión de Teams"
+      },
+      "teamsMeetingMissing": "Esta cita aprobada aún no tiene un enlace de reunión de Teams."
     },
     "approval": {
       "title": "Detalles de aprobación",
@@ -201,6 +208,12 @@
       "actions": {
         "approve": "Aprobar",
         "decline": "Rechazar"
+      },
+      "teamsMeetingFailure": {
+        "title": "No se pudo crear la reunión de Microsoft Teams",
+        "description": "La cita no fue aprobada. Reintente la creación de la reunión o apruebe sin reunión y cree una más tarde.",
+        "retry": "Reintentar",
+        "approveWithout": "Aprobar sin reunión"
       }
     },
     "decline": {
@@ -213,6 +226,18 @@
       },
       "actions": {
         "confirm": "Confirmar rechazo",
+        "cancel": "Cancelar"
+      }
+    },
+    "reschedule": {
+      "title": "Reprogramar",
+      "teamsNote": "Los asistentes recibirán una invitación actualizada de la reunión de Microsoft Teams.",
+      "fields": {
+        "newDateTime": "Nueva fecha y hora"
+      },
+      "actions": {
+        "open": "Reprogramar cita",
+        "confirm": "Confirmar reprogramación",
         "cancel": "Cancelar"
       }
     }

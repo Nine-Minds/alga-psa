@@ -86,7 +86,7 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
       settledValue(findTagsByEntityIds([id], 'contact'), []),
       settledValue(getContactStats(id), null),
       settledValue(getContactTicketsSummary(id), null),
-      settledValue(getContactRelatedWork(id), null),
+      isAlgaDesk ? Promise.resolve(null) : settledValue(getContactRelatedWork(id), null),
       settledValue(getContactPortalSummary(id), null),
     ]);
 
@@ -121,6 +121,7 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
             clients={clients}
             documents={documents}
             showDocuments={!isAlgaDesk}
+            showRelatedWork={!isAlgaDesk}
             interactions={interactions}
             tags={safeTags}
             stats={stats}

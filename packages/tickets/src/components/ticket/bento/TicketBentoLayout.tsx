@@ -35,7 +35,6 @@ import TicketMaterialsCard from './../TicketMaterialsCard';
 import TicketWatchListCard from './../TicketWatchListCard';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from '@alga-psa/ui/components/bento/BentoTile';
@@ -44,6 +43,7 @@ import { BentoTimelineTile } from './BentoTimelineTile';
 import { SlaClocksTile } from './SlaClocksTile';
 import { NextVisitTile, AppointmentRequestsTile, CallsEmailsTile, BillingTile } from './dataTiles';
 import { TimeLoggedSummary } from './TimeLoggedSummary';
+import { useTeamAvatarUrl } from './useTeamAvatarUrl';
 import type { TicketSlaFields } from './slaClocks';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
 
@@ -57,6 +57,8 @@ function formatElapsed(totalSeconds: number): string {
 
 export interface TicketBentoLayoutProps {
   id: string;
+  /** Observed by TicketDetails' sticky header to float the title on scroll. */
+  titleRef?: React.Ref<HTMLHeadingElement>;
   ticket: ITicket &
     TicketSlaFields & {
       tenant?: string;
@@ -74,6 +76,10 @@ export interface TicketBentoLayoutProps {
   onBatchSelectChange?: (changes: Record<string, string | null>) => Promise<void> | void;
   responseStateTrackingEnabled?: boolean;
   hideSlaStatus?: boolean;
+  /** Hides the billing rollup tile (AlgaDesk has no billing surface). */
+  hideBilling?: boolean;
+  /** Hides the Next visit / Appointment requests tiles (AlgaDesk has no scheduling surface). */
+  hideScheduling?: boolean;
   workflowLocked?: boolean;
   onOpenAllFields: () => void;
   tags?: any[];
@@ -205,7 +211,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const { id, ticket } = props;
   const { t } = useTranslation('features/tickets');
   const ticketId = ticket.ticket_id ?? '';
-  const { enabled: billingEnabled } = useFeatureFlag('billing-enabled');
   const [requestExpanded, setRequestExpanded] = React.useState(false);
   // Guards against re-entrant add/remove churn on rapid multi-select changes.
   const isProcessingAgentsRef = useRef(false);
@@ -573,20 +578,24 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         <div id={`${id}-assets-container`}>{props.associatedAssets}</div>
       ) : null}
 
-      <Suspense fallback={<BentoTileSkeleton id={`${id}-next-visit-tile-loading`} title={t('bento.tiles.nextVisit', 'Next visit')} />}>
-        <NextVisitTile
-          id={`${id}-next-visit-tile`}
-          ticketId={ticketId}
-          refreshKey={props.nextVisitRefreshKey}
-          initialData={props.bentoStreams?.scheduleEntries}
-          onScheduleVisit={props.onScheduleVisit}
-        />
-      </Suspense>
-      <AppointmentRequestsTile
-        id={`${id}-appointment-requests-tile`}
-        ticketId={ticketId}
-        refreshKey={props.nextVisitRefreshKey}
-      />
+      {!props.hideScheduling ? (
+        <>
+          <Suspense fallback={<BentoTileSkeleton id={`${id}-next-visit-tile-loading`} title={t('bento.tiles.nextVisit', 'Next visit')} />}>
+            <NextVisitTile
+              id={`${id}-next-visit-tile`}
+              ticketId={ticketId}
+              refreshKey={props.nextVisitRefreshKey}
+              initialData={props.bentoStreams?.scheduleEntries}
+              onScheduleVisit={props.onScheduleVisit}
+            />
+          </Suspense>
+          <AppointmentRequestsTile
+            id={`${id}-appointment-requests-tile`}
+            ticketId={ticketId}
+            refreshKey={props.nextVisitRefreshKey}
+          />
+        </>
+      ) : null}
       <Suspense fallback={<BentoTileSkeleton id={`${id}-calls-emails-tile-loading`} title={t('bento.tiles.callsAndEmails', 'Calls and emails')} />}>
         <CallsEmailsTile
           id={`${id}-calls-emails-tile`}
@@ -712,6 +721,8 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
     </BentoTile>
   ) : null;
 
+  const assignedTeamAvatarUrl = useTeamAvatarUrl(props.team?.team_id, props.team?.tenant, getTeamAvatarUrlsBatchAction);
+
   const teamTile = (
     <BentoTile
       id={`${id}-team-tile`}
@@ -724,7 +735,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             <TeamAvatar
               teamId={props.team.team_id}
               teamName={props.team.team_name || t('bento.tiles.teamFallback', 'Team')}
-              avatarUrl={null}
+              avatarUrl={assignedTeamAvatarUrl}
               size="xs"
             />
             <span className="text-[rgb(var(--color-text-700))] truncate">
@@ -810,7 +821,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
 
       {timerTile}
 
-      {billingEnabled ? (
+      {!props.hideBilling ? (
         <Suspense fallback={<BentoTileSkeleton id={`${id}-billing-tile-loading`} title={t('bento.tiles.billing', 'Billing')} />}>
           <BillingTile
             id={`${id}-billing-tile`}
@@ -867,6 +878,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       <div className="mb-4">
         <BentoHero
           id={`${id}-hero`}
+          titleRef={props.titleRef}
           ticket={ticket}
           statusOptions={props.statusOptions}
           priorityOptions={props.priorityOptions}

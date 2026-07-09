@@ -4,19 +4,20 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { toMinorUnits } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { IPurchaseOrder, IPurchaseOrderLine, IPoLandedCost } from '@alga-psa/types';
 import { listPoLandedCosts, addPoLandedCost, removePoLandedCost, applyPoLandedCosts, getPurchaseOrder } from '../actions';
 
-const money = (cents: number, currency: string): string => `$${(cents / 100).toFixed(2)} ${currency}`;
-
 interface EntryForm {
   cost_type: 'freight' | 'duty' | 'other';
-  amount: string; // dollars
+  amount: string; // major units, converted to integer minor units on save
   allocation_method: 'value' | 'quantity';
   description: string;
 }
@@ -41,6 +42,7 @@ export function PoLandedCostDialog({
   productName: (serviceId: string) => string;
 }) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   // Localized display labels for the entry enums. The stored values ('freight'/'value'/…)
   // stay raw in state and requests; only the table text is translated. Unknown values fall
   // back to the raw value so behavior never regresses.
@@ -102,6 +104,7 @@ export function PoLandedCostDialog({
   const unapplied = entries.filter((e) => !e.applied);
   const appliedTotal = entries.filter((e) => e.applied).reduce((s, e) => s + Number(e.amount), 0);
   const unappliedTotal = unapplied.reduce((s, e) => s + Number(e.amount), 0);
+  const currency = po?.currency_code ?? 'USD';
 
   // Estimated allocation preview for the unapplied entries — same weights the server uses.
   const preview = useMemo(() => {
@@ -135,8 +138,9 @@ export function PoLandedCostDialog({
     try {
       const result = await addPoLandedCost(po.po_id, {
         cost_type: form.cost_type,
-        amount: Math.round(dollars * 100),
+        amount: toMinorUnits(dollars, undefined, currency),
         allocation_method: form.allocation_method,
+        currency_code: currency,
         description: form.description.trim() || null,
       });
       if (isReturnedActionError(result)) {
@@ -196,8 +200,6 @@ export function PoLandedCostDialog({
       setBusy(null);
     }
   };
-
-  const currency = po?.currency_code ?? 'USD';
 
   return (
     <Dialog
@@ -274,12 +276,12 @@ export function PoLandedCostDialog({
                 { value: 'other', label: t('poLandedCost.costType.other', 'Other') },
               ]}
             />
-            <Input
+            <CurrencyInput
               id="landed-cost-amount"
-              label={t('poLandedCost.fields.amount', 'Amount ($ {{currency}})', { currency })}
-              type="number"
-              value={form.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              label={t('poLandedCost.fields.amount', 'Amount ({{currency}})', { currency })}
+              currencyCode={currency}
+              value={form.amount ? Number(form.amount) : undefined}
+              onChange={(value) => setForm({ ...form, amount: value == null ? '' : String(value) })}
             />
             <CustomSelect
               id="landed-cost-method"

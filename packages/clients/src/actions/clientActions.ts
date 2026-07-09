@@ -18,7 +18,7 @@ import {
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { Knex } from 'knex';
-import { createTag, isTagActionError } from '@alga-psa/tags/actions';
+import { createTag, findTagsByEntityId } from '@alga-psa/tags/actions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -37,9 +37,8 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
 
-const CLIENT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
-const CLIENT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'website',
   'industry',
@@ -105,57 +104,6 @@ function clientActionMessageFrom(error: unknown, fallback: string, clientName?: 
 
   return fallback;
 }
-
-function tenantScopedDerivedTableSql(
-  facade: ReturnType<typeof tenantDb>,
-  tableName: string,
-  alias: string
-): { subquery: Knex.QueryBuilder; sql: string; bindings: Knex.RawBinding[] } {
-  const subquery = facade
-    .subquery(tableName)
-    .select('*')
-    .as(alias);
-  const scoped = subquery.toSQL();
-
-  return {
-    subquery,
-    sql: scoped.sql,
-    bindings: scoped.bindings as Knex.RawBinding[],
-  };
-}
-
-function tenantJoinSubquerySql(
-  facade: ReturnType<typeof tenantDb>,
-  conn: Knex | Knex.Transaction,
-  subquery: Knex.QueryBuilder | Knex.Raw,
-  left: string | Knex.Raw,
-  right: string | Knex.Raw,
-  options: Parameters<ReturnType<typeof tenantDb>['tenantJoinSubquery']>[4]
-): { sql: string; bindings: Knex.RawBinding[] } {
-  const fragmentSource = (conn as Knex)('__tenant_join_fragment__').select(conn.raw('1'));
-
-  facade.tenantJoinSubquery(
-    fragmentSource,
-    subquery as unknown as Knex.QueryBuilder,
-    left as unknown as string,
-    right as unknown as string,
-    options
-  );
-
-  const compiled = fragmentSource.toSQL();
-  const marker = ' from "__tenant_join_fragment__" ';
-  const markerIndex = compiled.sql.indexOf(marker);
-
-  if (markerIndex < 0) {
-    throw new Error('Tenant join subquery SQL fragment marker was not present in compiled SQL.');
-  }
-
-  return {
-    sql: compiled.sql.slice(markerIndex + marker.length),
-    bindings: compiled.bindings as Knex.RawBinding[],
-  };
-}
-
 function maybeUserActor(currentUser: any) {
   const userId = currentUser?.user_id;
   if (typeof userId !== 'string' || !userId) return undefined;
@@ -664,236 +612,6 @@ export interface PaginatedClientsResponse {
 export interface BillingCycleDateRange {
   from?: string;
   to?: string;
-}
-
-function buildClientListSearchPrefixTsquery(raw: string): string | null {
-  const tokens = raw
-    .toLowerCase()
-    .replace(CLIENT_LIST_SEARCH_TSQUERY_UNSAFE_RE, ' ')
-    .split(/\s+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length > 0);
-
-  if (tokens.length === 0) {
-    return null;
-  }
-
-  return tokens.map((token) => `${token}:*`).join(' & ');
-}
-
-function applyClientListIndexedSearchFilter(
-  trx: Knex.Transaction,
-  baseQuery: Knex.QueryBuilder,
-  tenant: string,
-  user: { user_id: string; user_type?: string; clientId?: string | null },
-  rawSearchInput: string | undefined,
-  permissions: string[]
-): Knex.QueryBuilder {
-  const rawSearch = rawSearchInput?.replace(/\s+/g, ' ').trim();
-  if (!rawSearch) {
-    return baseQuery;
-  }
-
-  const prefixTsquery = buildClientListSearchPrefixTsquery(rawSearch);
-  const identifier = rawSearch.match(CLIENT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
-  const isInternalUser = user.user_type !== 'client';
-  const clientScopePredicate = isInternalUser
-    ? 'TRUE'
-    : user.clientId
-      ? '(si.client_scope_id IS NULL OR si.client_scope_id = ?::uuid)'
-      : 'si.client_scope_id IS NULL';
-  const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
-  const ilikePattern = `%${rawSearch}%`;
-  const scopedDb = tenantDb(trx, tenant);
-  const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');
-  const interactions = tenantScopedDerivedTableSql(scopedDb, 'interactions', 'im');
-  const documentAssociations = tenantScopedDerivedTableSql(scopedDb, 'document_associations', 'da');
-  const titleSearchClients = tenantScopedDerivedTableSql(scopedDb, 'clients', 'c2');
-  const locationSearchClients = tenantScopedDerivedTableSql(scopedDb, 'client_locations', 'cl_search');
-  const interactionJoin = tenantJoinSubquerySql(
-    scopedDb,
-    trx,
-    interactions.subquery,
-    trx.raw('??::text', ['im.interaction_id']),
-    'si.object_id',
-    {
-      rootTenantColumn: 'si.tenant',
-      joinedTenantColumn: 'im.tenant',
-    }
-  );
-  const documentAssociationJoin = tenantJoinSubquerySql(
-    scopedDb,
-    trx,
-    documentAssociations.subquery,
-    trx.raw('??::text', ['da.document_id']),
-    'si.object_id',
-    {
-      rootTenantColumn: 'si.tenant',
-      joinedTenantColumn: 'da.tenant',
-      on: (join) => {
-        join.andOn('da.entity_type', '=', trx.raw("'client'"));
-      },
-    }
-  );
-
-  // Citus cannot push down an OR that mixes correlated EXISTS across multiple
-  // distributed tables (app_search_index, interactions, document_associations,
-  // client_locations). Rewrite as UNION ALL of single-distributed-table legs
-  // producing (client_id, tenant); each leg is independently pushdown-safe and
-  // the outer INNER JOIN is co-located on the distribution column. Mirrors the
-  // ticket search rewrite in optimizedTicketActions.ts (PR #2547).
-  const qCte = `
-    CROSS JOIN (
-      SELECT
-        websearch_to_tsquery('english', ?) AS tsq,
-        CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
-        ?::text AS raw,
-        ?::text AS identifier
-    ) q
-  `;
-  const qBindings: Knex.RawBinding[] = [rawSearch, prefixTsquery, prefixTsquery, rawSearch, identifier];
-
-  const siFilters = `
-    AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
-    AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
-    AND (si.is_internal_only = false OR ?::boolean = true)
-    AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
-    AND ${clientScopePredicate}
-    AND (
-      si.search_vector @@ q.tsq
-      OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
-      OR si.title ILIKE '%' || q.raw || '%'
-      OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
-      OR si.title % q.raw
-      OR coalesce(si.subtitle, '') % q.raw
-      OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier)
-      OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%')
-    )
-  `;
-  const siFilterBindings: Knex.RawBinding[] = [
-    permissions,
-    user.user_id,
-    isInternalUser,
-    user.user_id,
-    ...clientScopeBindings,
-  ];
-
-  const legA = `
-    SELECT si.object_id::uuid AS client_id, si.tenant
-    FROM ${searchIndex.sql}
-    ${qCte}
-    WHERE si.object_type = 'client'
-      ${siFilters}
-  `;
-  const legABindings: Knex.RawBinding[] = [
-    ...searchIndex.bindings,
-    ...qBindings,
-    ...siFilterBindings,
-  ];
-
-  const legB = `
-    SELECT im.client_id AS client_id, im.tenant
-    FROM ${searchIndex.sql}
-    ${qCte}
-    ${interactionJoin.sql}
-    WHERE si.object_type = 'interaction'
-      ${siFilters}
-  `;
-  const legBBindings: Knex.RawBinding[] = [
-    ...searchIndex.bindings,
-    ...qBindings,
-    ...interactionJoin.bindings,
-    ...siFilterBindings,
-  ];
-
-  const legC = `
-    SELECT da.entity_id::uuid AS client_id, da.tenant
-    FROM ${searchIndex.sql}
-    ${qCte}
-    ${documentAssociationJoin.sql}
-    WHERE si.object_type = 'document'
-      ${siFilters}
-  `;
-  const legCBindings: Knex.RawBinding[] = [
-    ...searchIndex.bindings,
-    ...qBindings,
-    ...documentAssociationJoin.bindings,
-    ...siFilterBindings,
-  ];
-
-  const legD = `
-    SELECT c2.client_id, c2.tenant
-    FROM ${titleSearchClients.sql}
-    WHERE (
-        c2.client_name ILIKE ?
-        OR c2.billing_email ILIKE ?
-        OR c2.url ILIKE ?
-        OR c2.notes ILIKE ?
-      )
-  `;
-  const legDBindings: Knex.RawBinding[] = [
-    ...titleSearchClients.bindings,
-    ilikePattern,
-    ilikePattern,
-    ilikePattern,
-    ilikePattern,
-  ];
-
-  const legE = `
-    SELECT cl_search.client_id, cl_search.tenant
-    FROM ${locationSearchClients.sql}
-    WHERE (
-        cl_search.phone ILIKE ?
-        OR cl_search.email ILIKE ?
-        OR cl_search.address_line1 ILIKE ?
-        OR cl_search.address_line2 ILIKE ?
-        OR cl_search.city ILIKE ?
-        OR cl_search.state_province ILIKE ?
-        OR cl_search.postal_code ILIKE ?
-        OR cl_search.country_name ILIKE ?
-      )
-  `;
-  const legEBindings: Knex.RawBinding[] = [
-    ...locationSearchClients.bindings,
-    ilikePattern, ilikePattern, ilikePattern, ilikePattern,
-    ilikePattern, ilikePattern, ilikePattern, ilikePattern,
-  ];
-
-  const searchMatchesSql = `
-    (
-      SELECT DISTINCT client_id, tenant FROM (
-        ${legA}
-        UNION ALL
-        ${legB}
-        UNION ALL
-        ${legC}
-        UNION ALL
-        ${legD}
-        UNION ALL
-        ${legE}
-      ) u
-    ) as sm
-  `;
-  const searchMatchesBindings: Knex.RawBinding[] = [
-    ...legABindings,
-    ...legBBindings,
-    ...legCBindings,
-    ...legDBindings,
-    ...legEBindings,
-  ];
-  const searchMatchesJoin = tenantJoinSubquerySql(
-    scopedDb,
-    trx,
-    trx.raw(searchMatchesSql, searchMatchesBindings),
-    'sm.client_id',
-    'c.client_id',
-    {
-      rootTenantColumn: 'c.tenant',
-      joinedTenantColumn: 'sm.tenant',
-    }
-  );
-
-  return baseQuery.joinRaw(searchMatchesJoin.sql, searchMatchesJoin.bindings as unknown as Knex.Value[]);
 }
 
 function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: string): Knex.QueryBuilder {
@@ -1781,6 +1499,7 @@ export interface ImportClientResult {
   message: string;
   client?: IClient;
   originalData: Record<string, any>;
+  skipped?: boolean;
 }
 
 function clientImportFailureResults(
@@ -1819,52 +1538,114 @@ export const importClientsFromCSV = withAuth(async (
     .first();
   const tenantDefaultCurrencyCode = tenantDefaultBillingSettings?.default_currency_code || 'USD';
 
-  // Start a transaction to ensure all operations succeed or fail together
-  await withTransaction(db, async (trx: Knex.Transaction) => {
-    for (const clientData of clientsData) {
-      try {
-        if (!clientData.client_name) {
-          throw new Error('Client name is required');
-        }
+  const parseCsvBoolean = (value: unknown): boolean =>
+    value === true || value === 'true' || value === 'Yes';
 
+  const hasLocationData = (row: Record<string, any>): boolean =>
+    Boolean(row.email || row.phone_number || row.address_line1 || row.city || row.location_name);
+
+  const locationFieldsFromRow = (row: Record<string, any>) => ({
+    location_name: row.location_name || 'Main Office',
+    address_line1: row.address_line1 || '',
+    address_line2: row.address_line2 || '',
+    city: row.city || '',
+    state_province: row.state_province || '',
+    postal_code: row.postal_code || '',
+    country_code: 'US',
+    country_name: row.country || 'United States',
+    phone: row.phone_number || '',
+    email: row.email || ''
+  });
+
+  // Each row gets its own transaction: a failed row rolls back alone instead of
+  // aborting a shared transaction and taking every later row down with it.
+  // LEVERAGE: pattern csv-import-row-isolation — tickets importer solves the same problem with savepoints (ticketImportActions safeInsert); contacts/phase-tasks/xero importers still share one abortable transaction
+  for (const clientData of clientsData) {
+    try {
+      if (!clientData.client_name) {
+        throw new Error('Client name is required');
+      }
+
+      let savedClient: IClient | undefined;
+      let created = false;
+      let skipped = false;
+
+      await withTransaction(db, async (trx: Knex.Transaction) => {
         const existingClient = await tenantScopedTable(trx, 'clients', tenant)
           .where({ client_name: clientData.client_name })
           .first();
 
         if (existingClient && !updateExisting) {
-          results.push({
-            success: false,
-            message: `Client with name ${clientData.client_name} already exists`,
-            originalData: clientData
-          });
-          continue;
+          skipped = true;
+          return;
         }
 
-        let savedClient: IClient;
-
-        if (existingClient && updateExisting) {
-          // Keep the existing tenant when updating
-          const { tenant: _, ...safeClientData } = clientData; // Remove tenant from spread to prevent override
-          const { account_manager_id, ...restOfSafeData } = safeClientData;
-          const updateData = {
-            ...restOfSafeData,
-            account_manager_id: account_manager_id === '' ? null : account_manager_id,
-            tenant: existingClient.tenant, // Explicitly set correct tenant
+        if (existingClient) {
+          // Map CSV fields onto real clients columns only — location data lives
+          // in client_locations, and tenant must never be part of the SET list.
+          const updateData: Record<string, any> = {
             updated_at: new Date().toISOString()
           };
+          if (clientData.website !== undefined || clientData.url !== undefined) {
+            updateData.url = clientData.website || clientData.url || '';
+          }
+          if (clientData.client_type !== undefined) {
+            updateData.client_type = clientData.client_type || 'company';
+          }
+          if (clientData.is_inactive !== undefined) {
+            updateData.is_inactive = parseCsvBoolean(clientData.is_inactive);
+          }
+          if (clientData.is_tax_exempt !== undefined) {
+            updateData.is_tax_exempt = parseCsvBoolean(clientData.is_tax_exempt);
+          }
+          if (clientData.auto_invoice !== undefined) {
+            updateData.auto_invoice = parseCsvBoolean(clientData.auto_invoice);
+          }
+          if (clientData.notes !== undefined) {
+            updateData.notes = clientData.notes || '';
+          }
+          if (clientData.credit_limit !== undefined && clientData.credit_limit !== null && clientData.credit_limit !== '') {
+            updateData.credit_limit = Number(clientData.credit_limit);
+          }
+          if (clientData.account_manager_id !== undefined) {
+            updateData.account_manager_id = clientData.account_manager_id === '' ? null : clientData.account_manager_id;
+          }
 
           [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
             .where({ client_id: existingClient.client_id })
             .update(updateData)
             .returning('*');
 
-          results.push({
-            success: true,
-            message: 'Client updated',
-            client: savedClient,
-            originalData: clientData
-          });
+          if (hasLocationData(clientData)) {
+            const defaultLocation = await tenantScopedTable(trx, 'client_locations', tenant)
+              .where({ client_id: existingClient.client_id, is_default: true })
+              .first();
+
+            if (defaultLocation) {
+              await tenantScopedTable(trx, 'client_locations', tenant)
+                .where({ location_id: defaultLocation.location_id })
+                .update({
+                  ...locationFieldsFromRow(clientData),
+                  updated_at: new Date().toISOString()
+                });
+            } else {
+              await tenantScopedTable(trx, 'client_locations', tenant).insert({
+                location_id: trx.raw('gen_random_uuid()'),
+                client_id: existingClient.client_id,
+                tenant: tenant,
+                ...locationFieldsFromRow(clientData),
+                is_default: true,
+                is_billing_address: true,
+                is_shipping_address: true,
+                is_active: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+            }
+          }
         } else {
+          created = true;
+
           // Create new client with synchronized website fields
           const properties = clientData.properties ? { ...clientData.properties } : {};
           const url = clientData.url || '';
@@ -1879,9 +1660,9 @@ export const importClientsFromCSV = withAuth(async (
           }
 
           const clientToCreate = {
-            client_name: clientData.client_name || clientData.client_name,
+            client_name: clientData.client_name,
             url: clientData.website || clientData.url || '',
-            is_inactive: clientData.is_inactive === 'Yes' || clientData.is_inactive === true || false,
+            is_inactive: parseCsvBoolean(clientData.is_inactive),
             is_tax_exempt: clientData.is_tax_exempt || false,
             client_type: clientData.client_type || 'company',
             tenant: tenant,
@@ -1906,75 +1687,72 @@ export const importClientsFromCSV = withAuth(async (
             .insert(clientToCreate)
             .returning('*');
 
-          // Create default location if any location data exists in CSV
-          if (clientData.email || clientData.phone_number || clientData.address_line1 ||
-              clientData.city || clientData.location_name) {
-            try {
-              await tenantScopedTable(trx, 'client_locations', tenant).insert({
-                location_id: trx.raw('gen_random_uuid()'),
-                client_id: savedClient.client_id,
-                tenant: tenant,
-                location_name: clientData.location_name || 'Main Office',
-                address_line1: clientData.address_line1 || '',
-                address_line2: clientData.address_line2 || '',
-                city: clientData.city || '',
-                state_province: clientData.state_province || '',
-                postal_code: clientData.postal_code || '',
-                country_code: 'US',
-                country_name: clientData.country || 'United States',
-                phone: clientData.phone_number || '',
-                email: clientData.email || '',
-                is_default: true,
-                is_billing_address: true,
-                is_shipping_address: true,
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              });
-            } catch (locationError) {
-              console.error('Failed to create location during CSV import:', locationError);
-              // Don't fail the client import if location creation fails
-            }
+          if (hasLocationData(clientData)) {
+            await tenantScopedTable(trx, 'client_locations', tenant).insert({
+              location_id: trx.raw('gen_random_uuid()'),
+              client_id: savedClient!.client_id,
+              tenant: tenant,
+              ...locationFieldsFromRow(clientData),
+              is_default: true,
+              is_billing_address: true,
+              is_shipping_address: true,
+              is_active: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
           }
-
-          // Handle tags if provided
-          if (clientData.tags) {
-            try {
-              const tagTexts = clientData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
-              for (const tagText of tagTexts) {
-                const tagResult = await createTag({
-                  tag_text: tagText,
-                  tagged_id: savedClient.client_id,
-                  tagged_type: 'client',
-                  created_by: user.user_id
-                });
-                if (isTagActionError(tagResult)) {
-                  console.warn('Failed to create tag during CSV import:', tagResult);
-                }
-              }
-            } catch (tagError) {
-              console.error('Failed to create tags during CSV import:', tagError);
-              // Don't fail the client import if tag creation fails
-            }
-          }
-
-          results.push({
-            success: true,
-            message: 'Client created',
-            client: savedClient,
-            originalData: clientData
-          });
         }
-      } catch (error) {
-        console.error('Error processing client:', clientData, error);
+      });
+
+      if (skipped) {
         results.push({
           success: false,
-          message: clientActionMessageFrom(error, 'Failed to import client', clientData.client_name),
+          skipped: true,
+          message: `Client with name ${clientData.client_name} already exists`,
           originalData: clientData
         });
+        continue;
       }
+
+      // Tags run after the row commits: createTag opens its own connection, so
+      // creating them inside the transaction would leak tags for rolled-back rows.
+      if (savedClient && clientData.tags) {
+        try {
+          const tagTexts = clientData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
+          const existingTags = created ? [] : await findTagsByEntityId(savedClient.client_id, 'client');
+          const existingTagTexts = new Set(existingTags.map((tag): string => tag.tag_text.toLowerCase()));
+          for (const tagText of tagTexts) {
+            if (existingTagTexts.has(tagText.toLowerCase())) {
+              continue;
+            }
+            await createTag({
+              tag_text: tagText,
+              tagged_id: savedClient.client_id,
+              tagged_type: 'client',
+              created_by: user.user_id
+            });
+          }
+        } catch (tagError) {
+          console.error('Failed to create tags during CSV import:', tagError);
+          // Don't fail the client import if tag creation fails
+        }
+      }
+
+      results.push({
+        success: true,
+        message: created ? 'Client created' : 'Client updated',
+        client: savedClient,
+        originalData: clientData
+      });
+    } catch (error) {
+      console.error('Error processing client:', clientData, error);
+      results.push({
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error occurred',
+        originalData: clientData
+      });
     }
-  });
+  }
 
   return results;
 });

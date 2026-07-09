@@ -4,6 +4,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
 import { TenantEmailService } from '@alga-psa/email';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 import { createPDFGenerationService } from '../services/pdfGenerationService';
 import {
@@ -34,14 +35,24 @@ export const downloadSalesOrderPDF = withAuth(
     soId: string,
     documentType: SalesOrderDocumentType = 'sales-order',
   ): Promise<{ pdfData: number[]; soNumber: string; documentType: SalesOrderDocumentType } | SalesOrderDocumentActionError> => {
+  ): Promise<{ pdfData: number[]; soNumber: string; documentType: SalesOrderDocumentType } | SalesOrderDocumentActionError> => {
+    const { t } = await getServerTranslation(undefined, 'features/inventory');
+
     if (!(await hasPermission(user, 'sales_order', 'read'))) {
-      return permissionError('Permission denied: cannot download sales order documents');
+      return permissionError(
+        t(
+          'salesOrders.errors.downloadPermissionDenied',
+          'Permission denied: cannot download sales order documents',
+        ),
+      );
     }
 
     const { knex } = await createTenantKnex();
     const so = await knex('sales_orders').where({ tenant, so_id: soId }).first();
     if (!so) {
-      return actionError('Sales order not found');
+      return actionError(
+        t('salesOrders.errors.notFound', 'Sales order not found'),
+      );
     }
 
     const pdfGenerationService = createPDFGenerationService(tenant);
@@ -89,14 +100,27 @@ export const emailSalesOrderConfirmation = withAuth(
     soId: string,
     opts?: { recipients?: string[]; message?: string },
   ): Promise<{ success: boolean; recipients: string[]; messageId?: string; error?: string }> => {
+    const { t } = await getServerTranslation(undefined, 'features/inventory');
+
     if (!(await hasPermission(user, 'sales_order', 'update'))) {
-      return { success: false, recipients: [], error: 'Permission denied: cannot email sales order documents' };
+      return {
+        success: false,
+        recipients: [],
+        error: t(
+          'salesOrders.errors.emailPermissionDenied',
+          'Permission denied: cannot email sales order documents',
+        ),
+      };
     }
 
     const { knex } = await createTenantKnex();
     const so = await knex('sales_orders').where({ tenant, so_id: soId }).first();
     if (!so) {
-      return { success: false, recipients: [], error: 'Sales order not found' };
+      return {
+        success: false,
+        recipients: [],
+        error: t('salesOrders.errors.notFound', 'Sales order not found'),
+      };
     }
 
     const { recipients, clientName } = await resolveSalesOrderRecipients(
@@ -106,7 +130,14 @@ export const emailSalesOrderConfirmation = withAuth(
       opts?.recipients ?? [],
     );
     if (recipients.length === 0) {
-      return { success: false, recipients: [], error: 'No recipient email on file for this client.' };
+      return {
+        success: false,
+        recipients: [],
+        error: t(
+          'salesOrders.errors.noRecipientEmail',
+          'No recipient email on file for this client.',
+        ),
+      };
     }
 
     const pdfBuffer = await createPDFGenerationService(tenant).generatePDF({
@@ -142,7 +173,9 @@ export const emailSalesOrderConfirmation = withAuth(
       success: result.success,
       recipients,
       messageId: result.messageId,
-      error: result.success ? undefined : result.error ?? 'Email failed to send.',
+      error: result.success
+        ? undefined
+        : result.error ?? t('salesOrders.errors.emailSendFailed', 'Email failed to send.'),
     };
   },
 );

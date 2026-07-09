@@ -11,7 +11,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { availableQuantity } from '../lib';
+import { availableQuantity, resolveTenantCurrency } from '../lib';
 
 async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'inventory', action))) {
@@ -199,6 +199,7 @@ export const createPoFromLowStock = withAuth(async (user, { tenant }): Promise<C
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
     const skipped: LowStockRow[] = [];
+    const defaultCurrency = await resolveTenantCurrency(trx, tenant);
 
     /**
      * Cost basis for a suggested line: the preferred vendor's price-list offer
@@ -209,7 +210,7 @@ export const createPoFromLowStock = withAuth(async (user, { tenant }): Promise<C
         .where({ tenant, service_id: serviceId, is_preferred: true })
         .first();
       if (offer?.unit_cost != null) {
-        return { unitCost: Number(offer.unit_cost), currency: offer.cost_currency ?? 'USD' };
+        return { unitCost: Number(offer.unit_cost), currency: offer.cost_currency ?? defaultCurrency };
       }
       const pis = await trx('product_inventory_settings')
         .where({ tenant, service_id: serviceId })
@@ -221,7 +222,7 @@ export const createPoFromLowStock = withAuth(async (user, { tenant }): Promise<C
         .first();
       return {
         unitCost: Number(pis?.average_cost ?? sc?.cost ?? 0),
-        currency: pis?.cost_currency ?? sc?.cost_currency ?? 'USD',
+        currency: pis?.cost_currency ?? sc?.cost_currency ?? defaultCurrency,
       };
     };
 

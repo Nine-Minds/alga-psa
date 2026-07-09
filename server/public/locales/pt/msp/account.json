@@ -63,7 +63,6 @@
   "features": {
     "integrations": "Integrações – conecte calendário, Teams, Entra e outros serviços externos",
     "extensions": "Extensões — instale e gerencie extensões do Marketplace para seu espaço de trabalho",
-    "managedEmail": "E-mail gerenciado – configure a entrega de e-mail hospedado do Alga PSA",
     "sso": "Single Sign-On — configure provedores de identidade SSO e OAuth para sua equipe",
     "advancedAssets": "Ativos avançados — desbloqueie a descoberta de ativos vinculados ao RMM e controles de ativos mais avançados",
     "clientPortalAdmin": "Administrador do portal do cliente — gerencie a marca e a administração avançadas do portal do cliente",

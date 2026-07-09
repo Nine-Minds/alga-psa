@@ -174,9 +174,8 @@ async function createFixedPlanAssignment(
   context: BillingFixtureContext,
   serviceId: string,
   options: FixedPlanFixtureOptions = {}
-): Promise<{ contractLineId: string; clientContractLineId: string; contractId: string; clientContractId: string }> {
+): Promise<{ contractLineId: string; contractId: string; clientContractId: string }> {
   const contractLineId = uuidv4();
-  const clientContractLineId = uuidv4();
   const contractId = uuidv4();
   const clientContractId = uuidv4();
   const configId = uuidv4();
@@ -260,17 +259,7 @@ async function createFixedPlanAssignment(
     base_rate: baseRateDollars,
   });
 
-  await contextTable(context, 'client_contract_lines').insert({
-    tenant: context.tenantId,
-    client_contract_line_id: clientContractLineId,
-    client_id: targetClientId,
-    contract_line_id: contractLineId,
-    start_date: startDate,
-    end_date: endDate,
-    is_active: true,
-  });
-
-  return { contractLineId, clientContractLineId, contractId, clientContractId };
+  return { contractLineId, contractId, clientContractId };
 }
 
 async function createBucketOverlayForPlan(

@@ -15,6 +15,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IVendorBill, IVendor, VendorBillStatus } from '@alga-psa/types';
 import {
@@ -38,9 +39,6 @@ interface VendorBillExportProps {
   getExportStatuses?: (billIds: string[]) => Promise<VendorBillExportStatus[] | ActionMessageError | ActionPermissionError>;
 }
 
-const money = (cents: number, currency?: string): string =>
-  `$${(Number(cents || 0) / 100).toFixed(2)}${currency ? ` ${currency}` : ''}`;
-
 interface CreateForm {
   vendor_id: string;
   bill_number: string;
@@ -61,6 +59,7 @@ export function VendorBillsManager({
   getExportStatuses,
 }: { initialBills: BillRow[]; loadErrorMessage?: string } & VendorBillExportProps) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   const [bills, setBills] = useState<BillRow[]>(initialBills || []);
   const [statusFilter, setStatusFilter] = useState('');
   const [vendors, setVendors] = useState<IVendor[]>([]);
@@ -485,8 +484,8 @@ export function VendorBillsManager({
                     <tr key={l.bill_line_id} className="border-b last:border-0">
                       <td className="py-1 pr-2">{l.service_name || l.description || t('common.emptyValue', '—')}</td>
                       <td className="py-1 px-2 text-right tabular-nums">{l.quantity}</td>
-                      <td className="py-1 px-2 text-right tabular-nums">{money(l.unit_cost)}</td>
-                      <td className="py-1 px-2 text-right tabular-nums">{money(l.amount)}</td>
+                      <td className="py-1 px-2 text-right tabular-nums">{money(l.unit_cost, detail.currency_code)}</td>
+                      <td className="py-1 px-2 text-right tabular-nums">{money(l.amount, detail.currency_code)}</td>
                       <td className="py-1 pl-2 text-right">
                         {l.line_variance_cents == null ? (
                           <span className="text-gray-400">{t('common.emptyValue', '—')}</span>
@@ -500,7 +499,7 @@ export function VendorBillsManager({
                             }`}
                           >
                             {l.line_variance_cents > 0 ? '+' : ''}
-                            {money(l.line_variance_cents)}
+                            {money(l.line_variance_cents, detail.currency_code)}
                           </span>
                         )}
                       </td>

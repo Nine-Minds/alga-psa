@@ -97,11 +97,124 @@
   "dashboard": {
     "actions": {
       "newPurchaseOrder": "Novo pedido de compra",
-      "receiveStock": "Receber estoque"
+      "receiveStock": "Receber estoque",
+      "stockLedger": "Abrir razão de estoque"
+    },
+    "loadError": {
+      "title": "Não foi possível carregar os dados de inventário em tempo real",
+      "body": "O painel mostra valores vazios até que o feed de dados seja concluído."
     },
     "attention": {
       "allClear": "Tudo certo — nada precisa de atenção no momento.",
-      "title": "Precisa de atenção"
+      "title": "Precisa de atenção",
+      "urgent": "{{count}} urgente(s)",
+      "footer": "Ordenado por impacto em dinheiro + cliente · atualizado agora mesmo",
+      "itemFallback": "unidade",
+      "refFallback": "RMA",
+      "noneFallback": "nenhum",
+      "personFallback": "alguém",
+      "vendorFallback": "fornecedor",
+      "filters": {
+        "all": "Todos",
+        "money": "Financeiro",
+        "fulfillment": "Atendimento",
+        "field": "Campo",
+        "ops": "Operações"
+      },
+      "bands": {
+        "red": "Custa dinheiro ou um cliente hoje",
+        "amber": "Vale a pena cobrar esta semana",
+        "info": "Fique de olho"
+      },
+      "actions": {
+        "invoice": "Faturar",
+        "viewSo": "Ver SO",
+        "trackTransfer": "Rastrear transferência",
+        "recall": "Recolher",
+        "review": "Revisar",
+        "chase": "Cobrar",
+        "openStaging": "Abrir preparação",
+        "requote": "Recotar",
+        "reviewBill": "Revisar fatura",
+        "approve": "Aprovar",
+        "reorder": "Repor",
+        "createPo": "Criar PO",
+        "receive": "Receber",
+        "shipReplacement": "Enviar substituição",
+        "view": "Ver"
+      },
+      "kind": {
+        "unbilled": "não faturado",
+        "dropship": "entrega direta",
+        "cutoverRisk": "migração em risco",
+        "cutover": "migração",
+        "vanShortage": "falta na van",
+        "loaner": "empréstimo atrasado",
+        "ghost": "uso fantasma",
+        "rmaAging": "rma parado",
+        "rmaClient": "substituição",
+        "priceCreep": "desvio de preço",
+        "billCreep": "desvio de fatura",
+        "billsOverdue": "faturas vencidas",
+        "countApproval": "aprovação de contagem",
+        "stockLow": "estoque baixo",
+        "stockOut": "sem estoque",
+        "poPartial": "PO parcial",
+        "warranty": "garantia",
+        "deadStock": "estoque parado"
+      },
+      "fact": {
+        "unbilledSo": "enviado, ainda não faturado",
+        "unbilledDropship": "entregas diretas não faturadas em {{count}} SOs",
+        "cutoverRisk": "migração {{date}} — {{backordered}} de {{ordered}} em pendência",
+        "cutoverStaging": "migração {{date}} — {{staged}} de {{ordered}} preparados",
+        "vanShortage": "falta de {{service}} com {{jobs}} instalações hoje",
+        "overdueLoaner": "empréstimo de {{service}} {{days}}d atrasado",
+        "ghostTech": "{{count}} chamados de hardware fechados, sem peças faturadas",
+        "rmaVendor": "deve crédito — sem resposta há {{days}} dias",
+        "rmaClient": "unidade de substituição ainda pendente",
+        "priceCreepSo": "ainda precificado pelo custo antigo",
+        "priceCreepQuotes": "{{count}} cotação(ões) aberta(s) agora abaixo do custo atual",
+        "priceCreepBill": "fatura excede o PO correspondente",
+        "billsOverdue": "{{count}} fatura(s) de fornecedor vencida(s)",
+        "countApproval": "variação de contagem precisa de aprovador",
+        "stockOut": "{{service}} está sem estoque",
+        "stockLow": "{{service}} abaixo do ponto de reposição",
+        "poPartial": "PO parcialmente recebido ainda aberto",
+        "warranty": "{{count}} unidades com garantia expirando <30d",
+        "deadStock": "sem movimentação há 90 dias"
+      },
+      "meta": {
+        "unbilledSo": "{{so}} · {{lines}} linhas · enviado há {{days}}d",
+        "unbilledDropship": "linhas de entrega direta confirmadas prontas para faturar",
+        "cutoverFeeder": "ETA {{po}} {{eta}} · {{slack}}d de folga · prontidão {{pct}}%",
+        "cutover": "{{so}} · {{pct}}% de prontidão · faltam {{days}}d",
+        "vanShortageTransit": "disponível {{available}} · transferência {{from}} despachada",
+        "vanShortage": "disponível {{available}} · ponto de reposição {{reorder}}",
+        "overdueLoaner": "vence {{date}}{{serial}}",
+        "ghostTech": "exposição est. de materiais de chamados de hardware fechados",
+        "rmaVendor": "{{ref}} · recebível aberto mais antigo",
+        "rmaClient": "{{ref}} · {{service}} · vence em {{days}}d",
+        "priceCreepSo": "{{so}} · exposição de margem se atendido como está",
+        "priceCreepQuotes": "cotação(ões): {{numbers}}",
+        "priceCreepBill": "{{bill}} · sinalizado vs PO correspondente",
+        "billsOverdue": "mais antiga vencida há {{days}}d",
+        "countApproval": "contado por {{name}} · dupla checagem",
+        "stockLevel": "disponível {{available}} · ponto de reposição {{reorder}}",
+        "poPartial": "{{po}} · {{received}} de {{ordered}} recebidos · {{vendor}}",
+        "warranty": "{{count}} clientes",
+        "deadStock": "{{locations}} localização(ões) imobilizam capital de giro"
+      },
+      "metric": {
+        "ageDays": "{{days}}d",
+        "percent": "{{pct}}%",
+        "daysOut": "faltam {{days}}d",
+        "jobs": "{{count}} serviços",
+        "today": "hoje",
+        "units": "{{count}} unidades",
+        "ltThirty": "<30d",
+        "available": "disponível"
+      }
     },
     "bills": {
       "acrossBill": "{{total}} em {{count}} fatura",
@@ -192,6 +305,107 @@
       "loanOut": "Emprestado",
       "loanIn": "Empréstimo devolvido",
       "retire": "Baixado"
+    },
+    "header": {
+      "branch": "filial",
+      "branches": "filiais",
+      "van": "van",
+      "vans": "vans",
+      "tech": "técnico",
+      "techs": "técnicos",
+      "subtitle": "{{branches}} · {{vans}} · {{techs}} — {{attention}} precisam de atenção, {{inPlay}} em andamento hoje."
+    },
+    "money": {
+      "estUnavailable": "apenas contagem",
+      "unbilled": {
+        "title": "Não faturado, mas enviado",
+        "noShippedSos": "Nenhum SO enviado aguardando",
+        "otherSos": "mais {{count}} SOs enviados",
+        "dropship": "Entregas diretas não faturadas",
+        "soCount": "{{count}} SOs",
+        "ghost": "Uso fantasma",
+        "ticketCount": "{{count}} chamados",
+        "ledgerLink": "Ver razão de receita"
+      },
+      "margin": {
+        "title": "Margem no mês",
+        "vsLastMonth": "vs mês ant.",
+        "meta": "{{margin}} de margem · {{revenue}} de receita · {{cogs}} COGS",
+        "priceCreep": "{{count}} cotação(ões) e {{sos}} ainda com custo antigo — {{amount}} de margem em risco.",
+        "noSos": "nenhum SO aberto"
+      },
+      "rma": {
+        "title": "Devido pelo fornecedor (créditos de RMA)",
+        "oldest": "{{days}}d o mais antigo",
+        "empty": "Nenhum RMA de fornecedor está parado.",
+        "vendorFallback": "Fornecedor",
+        "creditRef": "crédito · {{ref}}",
+        "credit": "crédito",
+        "link": "Cobrar todos os RMAs"
+      }
+    },
+    "deployments": {
+      "title": "Implantações desta semana",
+      "subtitle": "{{count}} migração(ões) agendada(s)",
+      "eyebrow": "Esta semana",
+      "scope": "{{qty}}× {{name}} — {{staged}} preparados · {{backordered}} em pendência",
+      "itemFallback": "item",
+      "scopeFallback": "{{staged}} preparados · {{backordered}} em pendência",
+      "feeder": "Abastecido por {{po}} {{vendor}}, ETA {{eta}} — {{slack}}d de folga.",
+      "vendorFallback": "fornecedor",
+      "noEta": "sem ETA",
+      "allServiceOrders": "Todos os pedidos de serviço",
+      "countdownBefore": "T-{{days}}",
+      "countdownAfter": "T+{{days}}",
+      "status": {
+        "atRisk": "Em risco",
+        "ready": "Pronto",
+        "staging": "Preparando"
+      }
+    },
+    "pipeline": {
+      "title": "Funil de pedidos de venda",
+      "openSos": "{{count}} SOs abertos",
+      "quotes": "Cotação",
+      "quotesValue": "{{count}} abertas",
+      "booked": "SO registrado",
+      "bookedValue": "{{count}} · {{draft}} rascunho",
+      "fulfilling": "Atendendo",
+      "fulfillingValue": "{{count}} em pendência",
+      "invoiced": "Faturado",
+      "invoicedValue": "esta sem.",
+      "blocked": "{{count}} SOs bloqueados por pendência",
+      "allSos": "Todos os SOs"
+    },
+    "receivingToday": {
+      "title": "Recebendo hoje",
+      "meta": "POs · {{amount}} · mais {{more}} esta sem.",
+      "empty": "Nenhum pedido de compra chega hoje.",
+      "vendorFallback": "Fornecedor",
+      "flag": "Alerta: {{po}} chega com {{slack}}d de folga antes da migração de {{client}}.",
+      "clientFallback": "cliente",
+      "receiveStock": "Receber estoque"
+    },
+    "ghostWeek": {
+      "title": "Uso fantasma esta semana",
+      "countOnly": "chamados fechados, 0 peças",
+      "est": "chamados fechados, 0 peças · est. {{amount}}",
+      "explainer": "Chamados de hardware fechados sem material lançado — fechamentos apenas de mão de obra não faturados por técnico.",
+      "empty": "Nenhum candidato a uso fantasma esta semana.",
+      "techChip": "{{name}} · {{count}}{{amount}}",
+      "review": "Revisar uso fantasma"
+    },
+    "footer": {
+      "title": "Saúde do inventário",
+      "weekAbbrev": "sem.",
+      "onHand": "Unidades em estoque",
+      "serialized": "{{count}} serializadas",
+      "deadStock": "Estoque parado",
+      "deadStockDetail": "{{location}} · 90d",
+      "locationFallback": "Localização",
+      "thisWeek": "Esta semana",
+      "weekActivity": "{{received}} recebidos · {{deployed}} implantados · {{transfers}} transferências · {{rmas}} RMAs",
+      "valuationReport": "Relatório de avaliação"
     }
   },
   "ghostUsage": {
@@ -530,6 +744,7 @@
     "addPurchaseOrder": "Adicionar Pedido de Compra",
     "allVendors": "Todos os fornecedores",
     "amountOnOrder": "{{amount}} em pedido",
+    "mixedCurrencyOnOrder": "{{count}} pedidos de compra em aberto em várias moedas",
     "cancelConfirm": "Tem certeza de que deseja cancelar o pedido de compra {{poNumber}}? Isso não pode ser desfeito.",
     "cancelFailed": "Não foi possível cancelar o pedido de compra.",
     "cancelTitle": "Cancelar pedido de compra",
@@ -678,6 +893,7 @@
       "fulfilling": "Atendendo…",
       "generateInvoice": "Gerar fatura",
       "invoicing": "Faturando…",
+      "manageLayouts": "Gerenciar layouts",
       "reopenToDraft": "Reabrir como rascunho",
       "reopening": "Reabrindo…"
     },
@@ -686,8 +902,10 @@
       "hard": "Rígida",
       "soft": "Flexível"
     },
+    "allocationModeHelp": "Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.",
     "availabilityOk": "OK",
     "backorderBadge": "Pendência {{shortfall}}",
+    "billingAllocation": "Billing & allocation",
     "billsOnFulfillment": "Fatura no atendimento",
     "cancelDialog": {
       "confirm": "Cancelar pedido de venda",
@@ -716,6 +934,7 @@
       "vendorPlaceholder": "Selecione um fornecedor…"
     },
     "created": "Pedido de venda criado",
+    "currencyFromClient": "Set from client",
     "currencyRequired": "O código da moeda é obrigatório",
     "detailTitle": "Pedido de Venda {{number}}",
     "detailTitleFallback": "Pedido de Venda",
@@ -745,14 +964,33 @@
     "emailFailed": "Não foi possível enviar a confirmação por e-mail.",
     "emailSuccess": "Confirmação enviada por e-mail para {{recipients}}",
     "enterSerial": "Insira pelo menos um número de série.",
+    "errors": {
+      "documentGenerationFailed": "Não foi possível gerar o documento",
+      "downloadPermissionDenied": "Permissão negada: não é possível baixar documentos de pedidos de venda",
+      "emailConfirmationFailed": "Não foi possível enviar a confirmação por e-mail",
+      "emailPermissionDenied": "Permissão negada: não é possível enviar documentos de pedidos de venda por e-mail",
+      "emailSendFailed": "Falha ao enviar o e-mail.",
+      "noRecipientEmail": "Não há e-mail de destinatário cadastrado para este cliente.",
+      "notFound": "Pedido de venda não encontrado"
+    },
     "fields": {
       "allocationMode": "Modo de alocação",
+      "clientPoNumber": "Client PO number",
       "currencyCode": "Código da moeda",
+      "expectedShipDate": "Expected ship date",
+      "fulfillment": "Fulfillment",
       "invoiceMode": "Modo de faturamento",
+      "items": "Items",
       "lines": "Linhas",
+      "noService": "No service found.",
+      "notes": "Notes",
       "qty": "Qtd",
+      "searchService": "Search services…",
+      "selectService": "Select a service…",
+      "service": "Service",
       "serviceId": "ID do serviço",
-      "unitPrice": "Preço Unitário ($)"
+      "unitPrice": "Preço Unitário ($)",
+      "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "A partir de cotação",
     "fulfillDialog": {
@@ -771,6 +1009,10 @@
       "title": "Atender — {{name}}"
     },
     "fulfilledUnits": "Atendidas {{count}} unidade(s).",
+    "fulfillment": {
+      "dropShip": "Drop-ship",
+      "fromStock": "From stock"
+    },
     "fulfillmentFailed": "Falha no atendimento.",
     "invoiceColumns": {
       "amount": "Valor",
@@ -782,6 +1024,7 @@
       "manual": "Manual",
       "onFulfillment": "No atendimento"
     },
+    "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
     "invoicedItems": "Faturados {{count}} item(ns).",
     "invoices": "Faturas",
     "invoicingFailed": "Falha no faturamento: {{error}}. Use \"Gerar fatura\" para tentar novamente.",
@@ -802,8 +1045,10 @@
     "nothingBackordered": "Nada em pendência.",
     "nothingToInvoice": "Nada mais a faturar.",
     "onlyRemaining": "Apenas {{remaining}} restantes nesta linha.",
+    "pickServiceForLine": "Pick a service for this line.",
     "pickVendor": "Escolha o fornecedor que enviará esta linha.",
     "productDefaultLocation": "Localização padrão do produto",
+    "qtyPositive": "Must be > 0.",
     "qtyPositiveInteger": "A quantidade deve ser um número inteiro positivo.",
     "reopenError": "Não foi possível reabrir o pedido de venda.",
     "reopened": "Pedido de venda reaberto — voltou a ser um rascunho.",
@@ -819,7 +1064,9 @@
       "partiallyFulfilled": "Parcialmente atendido"
     },
     "title": "Pedidos de Venda",
-    "unassignedBackorder": "{{count}} linha(s) em pendência não têm fornecedor preferencial — crie esses POs manualmente."
+    "total": "Total",
+    "unassignedBackorder": "{{count}} linha(s) em pendência não têm fornecedor preferencial — crie esses POs manualmente.",
+    "unnamedService": "Unnamed"
   },
   "stock": {
     "actions": {
@@ -997,6 +1244,7 @@
     "title": "Transferências",
     "toLocation": "Localização de destino",
     "vanLoadList": "Lista de carga da van",
+    "vanLoadListReplenishment": "Reposição da lista de carga da van",
     "status": {
       "dispatched": "Despachado",
       "received": "Recebido",

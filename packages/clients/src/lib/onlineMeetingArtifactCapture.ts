@@ -6,7 +6,49 @@ import { isEnterprise } from '@alga-psa/core/features';
 import type { IOnlineMeeting, IOnlineMeetingArtifact, OnlineMeetingArtifactType } from '@alga-psa/types';
 import OnlineMeetingModel from '../models/onlineMeeting';
 
-const RECORDING_FETCH_ATTEMPT_CAP = 3;
+// A meeting only becomes terminal `no_recording` after this much time has
+// passed since the meeting ended with no artifacts found — attempt counts do
+// not drive the terminal state (early empty webhook notifications while Teams
+// is still processing must not exhaust the meeting's chances).
+const RECORDING_BACKOFF_WINDOW_MS = 48 * 60 * 60 * 1000;
+
+// Bounded backoff pacing for repeated fetches (webhook retries + polling
+// sweeps): 5m, 10m, 20m, 40m, ... capped at 6h between attempts.
+const RECORDING_FETCH_BASE_INTERVAL_MS = 5 * 60 * 1000;
+const RECORDING_FETCH_MAX_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+export function recordingFetchIntervalMs(attempts: number): number {
+  const exponent = Math.max(0, Math.min(attempts, 20));
+  return Math.min(
+    RECORDING_FETCH_BASE_INTERVAL_MS * 2 ** exponent,
+    RECORDING_FETCH_MAX_INTERVAL_MS,
+  );
+}
+
+/**
+ * Whether a fetch attempt is due for the meeting per the backoff schedule.
+ * Used by the polling sweep so it does not hammer Graph on every pass.
+ */
+export function isRecordingFetchDue(
+  meeting: Pick<IOnlineMeeting, 'recording_fetch_attempts' | 'last_fetch_at' | 'end_time'>,
+  now: Date = new Date(),
+): boolean {
+  if (new Date(meeting.end_time).getTime() > now.getTime()) {
+    return false;
+  }
+  if (!meeting.last_fetch_at) {
+    return true;
+  }
+  const lastFetch = new Date(meeting.last_fetch_at).getTime();
+  return now.getTime() >= lastFetch + recordingFetchIntervalMs(meeting.recording_fetch_attempts ?? 0);
+}
+
+export function hasRecordingWindowElapsed(
+  meeting: Pick<IOnlineMeeting, 'end_time'>,
+  now: Date = new Date(),
+): boolean {
+  return now.getTime() >= new Date(meeting.end_time).getTime() + RECORDING_BACKOFF_WINDOW_MS;
+}
 
 interface TeamsMeetingArtifactPayload {
   artifactType: OnlineMeetingArtifactType;
@@ -225,19 +267,20 @@ export async function fetchAndPersistMeetingArtifacts(
   if (!meeting) {
     throw new Error('Online meeting not found');
   }
-  if (meeting.status === 'cancelled') {
+  if (meeting.status === 'cancelled' || meeting.status === 'cancel_pending' || meeting.status === 'failed') {
     return meeting;
   }
   if (!isEnterpriseEdition()) {
     return meeting;
   }
-  if (!meeting.organizer_user_id) {
+  if (!meeting.organizer_user_id || !meeting.provider_meeting_id) {
     const updated = await updateMeeting(meeting.meeting_id, {
       status: 'failed',
       last_fetch_at: now(),
     }, input.tenantId);
     return updated ?? meeting;
   }
+  const providerMeetingId = meeting.provider_meeting_id;
 
   const actorUserId = resolveActorUserId(meeting, input.actorUserId);
   const [settings, entity, existingArtifacts, fetchedArtifacts] = await Promise.all([
@@ -246,7 +289,7 @@ export async function fetchAndPersistMeetingArtifacts(
     listArtifacts(meeting.meeting_id, input.tenantId),
     fetchArtifacts({
       tenantId: input.tenantId,
-      meetingId: meeting.provider_meeting_id,
+      meetingId: providerMeetingId,
       organizerUserId: meeting.organizer_user_id,
     }),
   ]);
@@ -288,9 +331,12 @@ export async function fetchAndPersistMeetingArtifacts(
 
   const latestArtifacts = await listArtifacts(meeting.meeting_id, input.tenantId);
   const nextAttempts = (meeting.recording_fetch_attempts ?? 0) + 1;
+  // Terminal no_recording is time-based, never attempt-count based: the
+  // meeting keeps its recording_pending status until the full backoff window
+  // after meeting end has elapsed without artifacts.
   const nextStatus = latestArtifacts.length > 0
     ? 'recording_ready'
-    : nextAttempts >= RECORDING_FETCH_ATTEMPT_CAP
+    : hasRecordingWindowElapsed(meeting, now())
       ? 'no_recording'
       : 'recording_pending';
 

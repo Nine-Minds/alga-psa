@@ -4,6 +4,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { ADD_ONS } from '@alga-psa/types';
 import { getTeamsAvailability, resolveTeamsAvailability } from '../../lib/teamsAvailability';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import {
@@ -17,14 +18,30 @@ import {
   type TeamsNotificationCategory,
 } from './teamsShared';
 import type {
+  TeamsAddOnState,
   TeamsIntegrationExecutionState,
   TeamsIntegrationSettingsInput,
   TeamsIntegrationStatusResponse,
+  TeamsNotificationChannelMode,
+  TeamsNotificationChannels,
 } from './teamsContracts';
 
 type EeTeamsDiagnosticsActions = typeof import('@alga-psa/ee-microsoft-teams/actions');
 export type TeamsDiagnosticsReport = Awaited<ReturnType<EeTeamsDiagnosticsActions['runTeamsDiagnosticsImpl']>>;
 export type TeamsTestMessageResult = Awaited<ReturnType<EeTeamsDiagnosticsActions['sendTeamsTestMessageImpl']>>;
+
+// F054-F056 live-validation results (typed via the EE impls through the /actions facade).
+export type TeamsGraphCredentialValidationResult = Awaited<ReturnType<EeTeamsDiagnosticsActions['validateTeamsGraphCredentialsImpl']>>;
+export type TeamsGraphPermissionsProbeResult = Awaited<ReturnType<EeTeamsDiagnosticsActions['probeTeamsGraphPermissionsImpl']>>;
+export type TeamsBotConnectorValidationResult = Awaited<ReturnType<EeTeamsDiagnosticsActions['validateTeamsBotConnectorImpl']>>;
+
+// F060/F061 observability read pages.
+export type TeamsDeliveriesPage = Awaited<ReturnType<EeTeamsDiagnosticsActions['listTeamsDeliveriesImpl']>>;
+export type TeamsAuditEventsPage = Awaited<ReturnType<EeTeamsDiagnosticsActions['listTeamsAuditEventsImpl']>>;
+export type TeamsDeliveryLogRow = TeamsDeliveriesPage['rows'][number];
+export type TeamsAuditLogRow = TeamsAuditEventsPage['rows'][number];
+export type ListTeamsDeliveriesParams = Parameters<EeTeamsDiagnosticsActions['listTeamsDeliveriesImpl']>[2];
+export type ListTeamsAuditEventsParams = Parameters<EeTeamsDiagnosticsActions['listTeamsAuditEventsImpl']>[2];
 
 interface TeamsIntegrationRow {
   tenant: string;
@@ -32,6 +49,7 @@ interface TeamsIntegrationRow {
   install_status: TeamsInstallStatus;
   enabled_capabilities: unknown;
   notification_categories: unknown;
+  notification_channels?: unknown;
   allowed_actions: unknown;
   app_id?: string | null;
   bot_id?: string | null;
@@ -39,6 +57,7 @@ interface TeamsIntegrationRow {
   last_error: string | null;
   default_meeting_organizer_upn?: string | null;
   default_meeting_organizer_object_id?: string | null;
+  send_meeting_invites?: boolean | null;
   download_recordings?: boolean | null;
   expose_recordings_in_portal?: boolean | null;
   created_by: string | null;
@@ -56,6 +75,8 @@ interface MicrosoftProfileRow {
   is_archived: boolean;
 }
 
+const TEAMS_NOTIFICATION_CHANNEL_MODES: readonly TeamsNotificationChannelMode[] = ['activity_feed', 'bot_dm', 'both'];
+
 const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
   selectedProfileId: null,
   installStatus: 'not_configured',
@@ -65,9 +86,21 @@ const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
   packageMetadata: null,
   defaultMeetingOrganizerUpn: null,
   defaultMeetingOrganizerObjectId: null,
+  sendMeetingInvites: true,
   downloadRecordings: false,
   exposeRecordingsInPortal: false,
+  notificationChannels: {},
 };
+
+// Mirrors readBotCredentialsFromEnv() in the EE bot connector; kept env-only so
+// the shared (CE-safe) actions never import the EE package statically.
+function isBotConnectorConfiguredFromEnv(): boolean {
+  return Boolean(
+    process.env.TEAMS_BOT_APP_ID?.trim()
+    && process.env.TEAMS_BOT_APP_TENANT_ID?.trim()
+    && process.env.TEAMS_BOT_APP_PASSWORD?.trim()
+  );
+}
 
 function isClientPortalUser(user: any): boolean {
   return user?.user_type === 'client';
@@ -108,6 +141,30 @@ function normalizeEnumArray<T extends string>(values: unknown, supported: readon
     normalizedValues.filter((value): value is T => typeof value === 'string' && supported.includes(value as T))
   );
   return supported.filter((value) => requested.has(value));
+}
+
+function normalizeNotificationChannels(value: unknown): TeamsNotificationChannels {
+  let parsed = value;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return {};
+    }
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {};
+  }
+
+  const channels: TeamsNotificationChannels = {};
+  for (const category of TEAMS_NOTIFICATION_CATEGORIES) {
+    const mode = (parsed as Record<string, unknown>)[category];
+    if (typeof mode === 'string' && (TEAMS_NOTIFICATION_CHANNEL_MODES as readonly string[]).includes(mode)) {
+      channels[category] = mode as TeamsNotificationChannelMode;
+    }
+  }
+  return channels;
 }
 
 function toJsonbValue<T>(value: T): string {
@@ -162,6 +219,7 @@ function defaultTeamsIntegrationState() {
       (capability) => !TEAMS_CAPABILITIES_OPT_IN.includes(capability)
     ) as TeamsCapability[],
     notificationCategories: [...TEAMS_NOTIFICATION_CATEGORIES] as TeamsNotificationCategory[],
+    notificationChannels: {} as TeamsNotificationChannels,
     allowedActions: [...TEAMS_ALLOWED_ACTIONS] as TeamsAllowedAction[],
     appId: null as string | null,
     botId: null as string | null,
@@ -169,9 +227,37 @@ function defaultTeamsIntegrationState() {
     lastError: null as string | null,
     defaultMeetingOrganizerUpn: null as string | null,
     defaultMeetingOrganizerObjectId: null as string | null,
+    sendMeetingInvites: true,
     downloadRecordings: false,
     exposeRecordingsInPortal: false,
+    botConnectorConfigured: isBotConnectorConfiguredFromEnv(),
+    // Overridden with the live add-on state in the status path; a configured row
+    // implies the add-on was active at save time.
+    addOnState: 'active' as TeamsAddOnState,
   };
+}
+
+// CE-safe mirror of the EE teamsAddOnGate.getTeamsAddOnState helper; kept local so
+// the shared status action never statically imports the EE microsoft-teams package.
+async function resolveTeamsAddOnState(knex: any, tenant: string): Promise<TeamsAddOnState> {
+  const row = await tenantDb(knex, tenant).table<{ addon_key: string; expires_at: string | Date | null }>('tenant_addons')
+    .where({ addon_key: ADD_ONS.TEAMS })
+    .first('addon_key', 'expires_at');
+
+  if (!row) {
+    return 'absent';
+  }
+
+  if (row.expires_at === null || row.expires_at === undefined) {
+    return 'active';
+  }
+
+  const expiresAt = row.expires_at instanceof Date ? row.expires_at : new Date(row.expires_at);
+  if (Number.isNaN(expiresAt.getTime())) {
+    return 'active';
+  }
+
+  return expiresAt.getTime() > Date.now() ? 'active' : 'expired';
 }
 
 function mapTeamsIntegrationRow(
@@ -189,6 +275,7 @@ function mapTeamsIntegrationRow(
       row.notification_categories,
       TEAMS_NOTIFICATION_CATEGORIES
     ),
+    notificationChannels: normalizeNotificationChannels(row.notification_channels),
     allowedActions: normalizeEnumArray(row.allowed_actions, TEAMS_ALLOWED_ACTIONS),
     appId: row.app_id || null,
     botId: row.bot_id || null,
@@ -199,8 +286,11 @@ function mapTeamsIntegrationRow(
     lastError: row.last_error || null,
     defaultMeetingOrganizerUpn: normalizeNullableString(row.default_meeting_organizer_upn),
     defaultMeetingOrganizerObjectId: normalizeNullableString(row.default_meeting_organizer_object_id),
+    sendMeetingInvites: row.send_meeting_invites !== false,
     downloadRecordings: Boolean(row.download_recordings),
     exposeRecordingsInPortal: Boolean(row.expose_recordings_in_portal),
+    botConnectorConfigured: isBotConnectorConfiguredFromEnv(),
+    addOnState: 'active',
   };
 }
 
@@ -307,15 +397,21 @@ async function getTeamsIntegrationStatusImpl(
       tenantId: tenant,
       userId: (user as any)?.user_id,
     });
-    if (availability.enabled === false) {
-      return { success: false, error: availability.message };
-    }
 
     const { knex } = await createTenantKnex();
+    const addOnState = await resolveTeamsAddOnState(knex, tenant);
+
+    // Soft-disable: an expired add-on keeps its preserved configuration visible so
+    // the admin banner can explain the lapse. A truly absent add-on stays gated, but
+    // still reports addOnState so the settings UI can render the paywall.
+    if (availability.enabled === false && addOnState !== 'expired') {
+      return { success: false, error: availability.message, addOnState };
+    }
+
     const row = await getTeamsIntegrationRow(knex, tenant);
     return {
       success: true,
-      integration: mapTeamsIntegrationRow(row),
+      integration: { ...mapTeamsIntegrationRow(row), addOnState },
     };
   } catch (err: any) {
     return { success: false, error: teamsActionErrorMessage(err, 'Failed to load Teams integration settings') };
@@ -343,8 +439,10 @@ async function getTeamsIntegrationExecutionStateImpl(
     packageMetadata: integration.packageMetadata,
     defaultMeetingOrganizerUpn: integration.defaultMeetingOrganizerUpn,
     defaultMeetingOrganizerObjectId: integration.defaultMeetingOrganizerObjectId,
+    sendMeetingInvites: integration.sendMeetingInvites,
     downloadRecordings: integration.downloadRecordings,
     exposeRecordingsInPortal: integration.exposeRecordingsInPortal,
+    notificationChannels: integration.notificationChannels,
   };
 }
 
@@ -406,6 +504,9 @@ async function saveTeamsIntegrationSettingsImpl(
     const notificationCategories = input.notificationCategories
       ? normalizeEnumArray(input.notificationCategories, TEAMS_NOTIFICATION_CATEGORIES)
       : next.notificationCategories;
+    const notificationChannels = input.notificationChannels === undefined
+      ? next.notificationChannels
+      : normalizeNotificationChannels(input.notificationChannels);
     const allowedActions = input.allowedActions
       ? normalizeEnumArray(input.allowedActions, TEAMS_ALLOWED_ACTIONS)
       : next.allowedActions;
@@ -433,6 +534,9 @@ async function saveTeamsIntegrationSettingsImpl(
       defaultMeetingOrganizerObjectId = organizerLookup.objectId || null;
     }
 
+    const sendMeetingInvites = input.sendMeetingInvites === undefined
+      ? next.sendMeetingInvites
+      : Boolean(input.sendMeetingInvites);
     const downloadRecordings = input.downloadRecordings === undefined
       ? next.downloadRecordings
       : Boolean(input.downloadRecordings);
@@ -447,6 +551,7 @@ async function saveTeamsIntegrationSettingsImpl(
       install_status: installStatus,
       enabled_capabilities: toJsonbValue(enabledCapabilities),
       notification_categories: toJsonbValue(notificationCategories),
+      notification_channels: toJsonbValue(notificationChannels),
       allowed_actions: toJsonbValue(allowedActions),
       app_id: selectedProfileChanged ? null : next.appId,
       bot_id: selectedProfileChanged ? null : next.botId,
@@ -455,6 +560,7 @@ async function saveTeamsIntegrationSettingsImpl(
       last_error: lastError || null,
       default_meeting_organizer_upn: defaultMeetingOrganizerUpn,
       default_meeting_organizer_object_id: defaultMeetingOrganizerObjectId,
+      send_meeting_invites: sendMeetingInvites,
       download_recordings: downloadRecordings,
       expose_recordings_in_portal: exposeRecordingsInPortal,
       created_by: existing?.created_by || (user as any)?.user_id || null,
@@ -561,4 +667,87 @@ export const sendTeamsTestMessage = withAuth(async (
 
   const actions = await loadEeTeamsActions();
   return actions.sendTeamsTestMessageImpl(user, { tenant }, input);
+});
+
+// F054-F056: thin CE-safe delegators to the EE live-validation actions. In CE the
+// edition guard returns a typed addon_inactive failure rather than importing EE.
+export const validateTeamsGraphCredentials = withAuth(async (
+  user,
+  { tenant },
+  input: Record<string, never> = {}
+): Promise<TeamsGraphCredentialValidationResult> => {
+  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    return { status: 'failed', reason: 'addon_inactive', message: availability.message };
+  }
+
+  const actions = await loadEeTeamsActions();
+  return actions.validateTeamsGraphCredentialsImpl(user, { tenant }, input);
+});
+
+export const probeTeamsGraphPermissions = withAuth(async (
+  user,
+  { tenant },
+  input: Record<string, never> = {}
+): Promise<TeamsGraphPermissionsProbeResult> => {
+  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    return { status: 'failed', reason: 'addon_inactive', message: availability.message };
+  }
+
+  const actions = await loadEeTeamsActions();
+  return actions.probeTeamsGraphPermissionsImpl(user, { tenant }, input);
+});
+
+export const validateTeamsBotConnector = withAuth(async (
+  user,
+  { tenant },
+  input: Record<string, never> = {}
+): Promise<TeamsBotConnectorValidationResult> => {
+  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    return { status: 'failed', reason: 'addon_inactive', message: availability.message };
+  }
+
+  const actions = await loadEeTeamsActions();
+  return actions.validateTeamsBotConnectorImpl(user, { tenant }, input);
+});
+
+// F060/F061: delivery + audit log read delegators. Permission gating lives in the EE
+// impl (throws 'Forbidden'); the CE edition guard returns an empty page.
+export const listTeamsDeliveries = withAuth(async (
+  user,
+  { tenant },
+  params: ListTeamsDeliveriesParams = {}
+): Promise<TeamsDeliveriesPage> => {
+  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    return { rows: [], nextCursor: null };
+  }
+
+  const actions = await loadEeTeamsActions();
+  return actions.listTeamsDeliveriesImpl(user, { tenant }, params);
+});
+
+export const listTeamsAuditEvents = withAuth(async (
+  user,
+  { tenant },
+  params: ListTeamsAuditEventsParams = {}
+): Promise<TeamsAuditEventsPage> => {
+  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    return { rows: [], nextCursor: null };
+  }
+
+  const actions = await loadEeTeamsActions();
+  return actions.listTeamsAuditEventsImpl(user, { tenant }, params);
+});
+
+// F064: paywall CTA gating. Only billing admins can purchase the add-on.
+export const getTeamsAddonPurchaseAccess = withAuth(async (
+  user,
+  _ctx
+): Promise<{ canPurchase: boolean }> => {
+  const canPurchase = await hasPermission(user as any, 'billing', 'update');
+  return { canPurchase };
 });

@@ -87,7 +87,7 @@ function subscriptionColumn(kind: ArtifactSubscriptionKind): {
       };
 }
 
-function resolveWebhookUrl(): string {
+export function resolveTeamsRecordingsWebhookUrl(): string {
   const configured = [
     process.env.TEAMS_RECORDINGS_WEBHOOK_URL,
     process.env.TEAMS_WEBHOOK_BASE_URL,
@@ -245,7 +245,7 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
     clientId: config.clientId,
     clientSecret: config.clientSecret,
   });
-  const notificationUrl = input.notificationUrl ?? resolveWebhookUrl();
+  const notificationUrl = input.notificationUrl ?? resolveTeamsRecordingsWebhookUrl();
   const results: TeamsMeetingArtifactSubscriptionResult[] = [];
 
   for (const kind of [TEAMS_RECORDING_KIND, TEAMS_TRANSCRIPT_KIND]) {

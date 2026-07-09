@@ -7,6 +7,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { toast } from 'react-hot-toast';
 import {
   validateOpeningBalanceImport,
@@ -28,15 +29,19 @@ const TEMPLATE_CSV = [
   'YLNK-T46U,,Dmitri Van,4,,805EC0AABBCC,155.00',
 ].join('\n');
 
-const dollars = (cents: number): string =>
-  `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
 const MAX_LISTED_ISSUES = 20;
 const MAX_SAMPLE_ROWS = 8;
 const isReturnedActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
 
-export function ImportOpeningBalances({ onApplied }: { onApplied?: () => void | Promise<void> }) {
+export function ImportOpeningBalances({
+  onApplied,
+  defaultCurrencyCode = 'USD',
+}: {
+  onApplied?: () => void | Promise<void>;
+  defaultCurrencyCode?: string;
+}) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   const [open, setOpen] = useState(false);
   const [csvText, setCsvText] = useState('');
   const [fileName, setFileName] = useState('');
@@ -131,7 +136,7 @@ export function ImportOpeningBalances({ onApplied }: { onApplied?: () => void | 
         t('import_.apply.success', 'Imported {{receipts}} ({{units}}, {{value}}) as "{{label}}".', {
           receipts: receiptsText,
           units: unitsText,
-          value: dollars(result.total_value_cents),
+          value: money(result.total_value_cents, defaultCurrencyCode),
           label: result.batch_label,
         }),
       );
@@ -231,7 +236,7 @@ export function ImportOpeningBalances({ onApplied }: { onApplied?: () => void | 
                   <span className="text-gray-500">{t('import_.summary.bulkQuantity', 'Bulk quantity:')}</span> <b>{preview.summary.bulk_quantity}</b>
                 </span>
                 <span>
-                  <span className="text-gray-500">{t('import_.summary.value', 'Value:')}</span> <b>{dollars(preview.summary.total_value_cents)}</b>
+                  <span className="text-gray-500">{t('import_.summary.value', 'Value:')}</span> <b>{money(preview.summary.total_value_cents, defaultCurrencyCode)}</b>
                 </span>
                 {preview.summary.settings_to_create > 0 && (
                   <span className="text-amber-700">
@@ -297,7 +302,7 @@ export function ImportOpeningBalances({ onApplied }: { onApplied?: () => void | 
                         <td className="py-1 px-2 text-right tabular-nums">{r.quantity}</td>
                         <td className="py-1 px-2 font-mono text-xs">{r.serial_number || t('common.emptyValue', '—')}</td>
                         <td className="py-1 pl-2 text-right tabular-nums">
-                          {r.unit_cost_cents != null ? dollars(r.unit_cost_cents) : t('common.emptyValue', '—')}
+                          {r.unit_cost_cents != null ? money(r.unit_cost_cents, defaultCurrencyCode) : t('common.emptyValue', '—')}
                         </td>
                       </tr>
                     ))}

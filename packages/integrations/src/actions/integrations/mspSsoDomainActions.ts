@@ -7,11 +7,13 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
+  hasTenantProviderCredentials,
   normalizeMspSsoDomain,
   normalizeMspSsoDomainClaimStatus,
   validateMspSsoDomain,
   type MspSsoDomainClaimStatus,
 } from '@alga-psa/auth/lib/sso/mspSsoResolution';
+import logger from '@alga-psa/core/logger';
 import type { Knex } from 'knex';
 
 const MSP_SSO_LOGIN_DOMAIN_TABLE = 'msp_sso_tenant_login_domains';
@@ -100,6 +102,12 @@ export interface RevokeMspSsoDomainClaimResult {
   success: boolean;
   claim?: MspSsoDomainClaim;
   error?: string;
+}
+
+export interface MspSsoTenantCredentialStatusResult {
+  success: boolean;
+  google: boolean;
+  microsoft: boolean;
 }
 
 function normalizeDomain(value: string): string {
@@ -931,5 +939,35 @@ export const saveMspSsoLoginDomains = withAuth(async (
       success: false,
       error: 'Unable to save MSP SSO login domains.',
     };
+  }
+});
+
+/**
+ * Read-only status of tenant-scoped IdP credentials, used by the Security → Single Sign-On
+ * "Advanced" section to explain when login-domain claims are inert (no tenant credentials
+ * configured, so login SSO uses the hosted app-level providers). On any failure it reports
+ * `success: false` and both providers `false` — the UI treats that as "unknown" and shows no
+ * inert-state notice rather than a wrong one.
+ */
+export const getMspSsoTenantCredentialStatus = withAuth(async (
+  user,
+  { tenant }
+): Promise<MspSsoTenantCredentialStatusResult> => {
+  try {
+    if (!(await canManageDomains(user))) {
+      return { success: false, google: false, microsoft: false };
+    }
+
+    const [google, microsoft] = await Promise.all([
+      hasTenantProviderCredentials(tenant, 'google'),
+      hasTenantProviderCredentials(tenant, 'azure-ad'),
+    ]);
+
+    return { success: true, google, microsoft };
+  } catch (error: unknown) {
+    logger.warn('Failed to resolve MSP SSO tenant credential status', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { success: false, google: false, microsoft: false };
   }
 });

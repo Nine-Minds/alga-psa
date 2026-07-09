@@ -11,6 +11,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { resolveTenantCurrency } from '../lib';
 
 // NOTE: 'use server' file — export ONLY async functions (+ erased types).
 
@@ -237,9 +238,11 @@ export const createVendorBill = withAuth(
           ? new Date(input.due_date)
           : new Date(billDate.getTime() + termsToDays(vendor.payment_terms) * 24 * 60 * 60 * 1000);
 
-        const currency = (await (input.po_id
-          ? trx('purchase_orders').where({ tenant, po_id: input.po_id }).first()
-          : Promise.resolve(null)))?.currency_code ?? 'USD';
+        const po = input.po_id
+          ? await trx('purchase_orders').where({ tenant, po_id: input.po_id }).first()
+          : null;
+        if (input.po_id && !po) throw new Error('Purchase order not found');
+        const currency = po?.currency_code ?? await resolveTenantCurrency(trx, tenant);
 
         const lines = (input.lines ?? []).map((l) => {
           const quantity = Number(l.quantity);

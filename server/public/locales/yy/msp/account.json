@@ -63,7 +63,6 @@
   "features": {
     "integrations": "55555",
     "extensions": "55555",
-    "managedEmail": "55555",
     "sso": "55555",
     "advancedAssets": "55555",
     "clientPortalAdmin": "55555",

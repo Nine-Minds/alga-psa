@@ -11,6 +11,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { resolveTenantCurrency } from '../lib/tenantCurrency';
 
 /**
  * Read-only inventory reporting + dashboard widgets. See design doc §10 / §11.
@@ -89,6 +90,7 @@ export interface InventoryValueLocationRow {
 export interface InventoryValueReport {
   by_location: InventoryValueLocationRow[];
   grand_total: number;
+  currency_code: string;
 }
 
 /**
@@ -102,6 +104,7 @@ export const inventoryValueReport = withAuth(async (user, { tenant }): Promise<I
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenant);
+    const currency_code = await resolveTenantCurrency(trx, tenant);
     const valueByLocation = new Map<string, number>();
 
     // Non-serialized: on-hand × average_cost from stock_levels joined to settings.
@@ -145,7 +148,7 @@ export const inventoryValueReport = withAuth(async (user, { tenant }): Promise<I
       .sort((a, b) => a.location_name.localeCompare(b.location_name));
 
     const grand_total = by_location.reduce((sum, r) => sum + r.total_value, 0);
-    return { by_location, grand_total };
+    return { by_location, grand_total, currency_code };
     });
   });
 });
@@ -168,6 +171,7 @@ export interface MarginReport {
   total_cogs_cents: number;
   total_margin_cents: number;
   total_margin_pct: number | null;
+  currency_code: string;
 }
 
 function normalizeReportBoundary(value: string | Date | undefined, endExclusive: boolean): string | Date | undefined {
@@ -247,12 +251,14 @@ export const marginReport = withAuth(
       const total_revenue_cents = rows.reduce((s, r) => s + r.revenue_cents, 0);
       const total_cogs_cents = rows.reduce((s, r) => s + r.cogs_cents, 0);
       const total_margin_cents = total_revenue_cents - total_cogs_cents;
+      const currency_code = await resolveTenantCurrency(trx, tenant);
       return {
         rows,
         total_revenue_cents,
         total_cogs_cents,
         total_margin_cents,
         total_margin_pct: total_revenue_cents === 0 ? null : (total_margin_cents / total_revenue_cents) * 100,
+        currency_code,
       };
       });
     });
@@ -385,6 +391,7 @@ export interface WriteOffByUser {
 export interface WriteOffReportData {
   from: string;
   to: string;
+  currency_code: string;
   rows: WriteOffRow[];
   /** True when more events exist than the row cap; totals below still cover the FULL range. */
   truncated: boolean;
@@ -414,6 +421,7 @@ export const writeOffReport = withAuth(
       const { knex: db } = await createTenantKnex();
       return withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
+      const currency_code = await resolveTenantCurrency(trx, tenant);
       const to = opts?.to ? new Date(opts.to) : new Date();
       const from = opts?.from ? new Date(opts.from) : new Date(to.getTime() - 90 * 86_400_000);
       // End of the 'to' day, so a date-only input includes that whole day.
@@ -511,6 +519,7 @@ export const writeOffReport = withAuth(
       return {
         from: from.toISOString(),
         to: toEnd.toISOString(),
+        currency_code,
         rows,
         truncated,
         by_user,

@@ -9,9 +9,21 @@
  * app because the inventory package cannot depend on billing.
  */
 
-import { emailSalesOrderConfirmation } from '@alga-psa/billing/actions';
+import {
+  emailSalesOrderConfirmation,
+  SalesOrderDocumentError,
+} from '@alga-psa/billing/actions';
 
 function salesOrderEmailError(error: unknown): { status: number; message: string } {
+  if (error instanceof SalesOrderDocumentError) {
+    if (error.code === 'permission_denied') {
+      return { status: 403, message: error.message };
+    }
+    if (error.code === 'not_found') {
+      return { status: 404, message: error.message };
+    }
+    return { status: 422, message: error.message };
+  }
   const message = error instanceof Error ? error.message : '';
   if (/permission denied/i.test(message)) {
     return { status: 403, message: 'You do not have permission to email sales order documents.' };

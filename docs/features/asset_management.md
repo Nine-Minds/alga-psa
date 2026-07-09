@@ -297,8 +297,7 @@ CREATE TABLE asset_history (
 - Client portal
 
 ### Security Considerations
-- Row-level security
-- Tenant isolation
+- Tenant isolation (application-enforced via the `tenantDb` facade — see [tenant-isolation.md](../architecture/tenant-isolation.md))
 - Role-based access
 - Audit logging
 

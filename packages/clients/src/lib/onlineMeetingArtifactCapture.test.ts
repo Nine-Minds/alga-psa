@@ -4,7 +4,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { IOnlineMeeting, IOnlineMeetingArtifact } from '@alga-psa/types';
-import { fetchAndPersistMeetingArtifacts } from './onlineMeetingArtifactCapture';
+import {
+  fetchAndPersistMeetingArtifacts,
+  isRecordingFetchDue,
+  recordingFetchIntervalMs,
+} from './onlineMeetingArtifactCapture';
 
 function meeting(overrides: Partial<IOnlineMeeting> = {}): IOnlineMeeting {
   const now = new Date('2026-06-01T10:00:00.000Z');
@@ -21,6 +25,7 @@ function meeting(overrides: Partial<IOnlineMeeting> = {}): IOnlineMeeting {
     start_time: new Date('2026-06-01T09:00:00.000Z'),
     end_time: new Date('2026-06-01T09:30:00.000Z'),
     status: 'ended',
+    error_code: null,
     recording_fetch_attempts: 0,
     last_fetch_at: null,
     appointment_request_id: null,
@@ -187,11 +192,28 @@ describe('online meeting artifact capture', () => {
     expect(on.artifacts[0]).toMatchObject({ content_url: 'https://graph/rec-1', file_id: 'file-1' });
   });
 
-  it('T060 marks no_recording after the bounded retry cap with empty artifact results', async () => {
+  it('T052 (teams-production-readiness): early empty artifact results never drive terminal no_recording inside the backoff window, regardless of attempt count', async () => {
+    const harness = createDeps({
+      currentMeeting: meeting({ recording_fetch_attempts: 7 }),
+      fetchedArtifacts: [],
+    });
+    // now() is 2.5h after meeting end — well inside the 48h backoff window.
+
+    await fetchAndPersistMeetingArtifacts({ tenantId: 'tenant-1', meetingId: 'meeting-1', actorUserId: 'actor-1' }, harness.deps as any);
+
+    expect(harness.updates.at(-1)).toMatchObject({
+      status: 'recording_pending',
+      recording_fetch_attempts: 8,
+    });
+  });
+
+  it('T053 (teams-production-readiness): reaches no_recording only after the full backoff window elapses with no artifacts', async () => {
     const harness = createDeps({
       currentMeeting: meeting({ recording_fetch_attempts: 2 }),
       fetchedArtifacts: [],
     });
+    // Meeting ended 2026-06-01T09:30Z; probe 48h+ later.
+    harness.deps.now = () => new Date('2026-06-03T10:00:00.000Z');
 
     await fetchAndPersistMeetingArtifacts({ tenantId: 'tenant-1', meetingId: 'meeting-1', actorUserId: 'actor-1' }, harness.deps as any);
 
@@ -199,6 +221,22 @@ describe('online meeting artifact capture', () => {
       status: 'no_recording',
       recording_fetch_attempts: 3,
     });
+  });
+
+  it('T052: the polling backoff schedule is bounded and monotonic', () => {
+    expect(recordingFetchIntervalMs(0)).toBe(5 * 60 * 1000);
+    expect(recordingFetchIntervalMs(1)).toBe(10 * 60 * 1000);
+    expect(recordingFetchIntervalMs(4)).toBe(80 * 60 * 1000);
+    expect(recordingFetchIntervalMs(10)).toBe(6 * 60 * 60 * 1000);
+    expect(recordingFetchIntervalMs(50)).toBe(6 * 60 * 60 * 1000);
+
+    const base = meeting({ recording_fetch_attempts: 1, last_fetch_at: new Date('2026-06-01T10:00:00.000Z') });
+    // Before the 10-minute interval has elapsed → not due; after → due.
+    expect(isRecordingFetchDue(base as any, new Date('2026-06-01T10:05:00.000Z'))).toBe(false);
+    expect(isRecordingFetchDue(base as any, new Date('2026-06-01T10:15:00.000Z'))).toBe(true);
+    // Meetings that have not ended yet are never due.
+    const future = meeting({ end_time: new Date('2026-06-01T14:00:00.000Z'), last_fetch_at: null });
+    expect(isRecordingFetchDue(future as any, new Date('2026-06-01T12:00:00.000Z'))).toBe(false);
   });
 
   it('T061 does not create a second transcript document when the artifact already has document_id', async () => {

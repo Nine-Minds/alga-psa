@@ -1,4 +1,4 @@
-import { listPurchaseOrders } from '@alga-psa/inventory/actions';
+import { getInventoryTenantCurrency, listPurchaseOrders } from '@alga-psa/inventory/actions';
 import type { PurchaseOrderListRow } from '@alga-psa/inventory/actions';
 import { PurchaseOrdersManager } from '@alga-psa/inventory/components';
 import { getSession } from '@alga-psa/auth';
@@ -25,6 +25,7 @@ export default async function PurchaseOrdersPage() {
   let initialPos: PurchaseOrderListRow[] = [];
   let loadError = false;
   let loadErrorMessage: string | undefined;
+  let defaultCurrencyCode = 'USD';
   try {
     const result = await listPurchaseOrders({});
     if (isActionMessageError(result) || isActionPermissionError(result)) {
@@ -37,8 +38,20 @@ export default async function PurchaseOrdersPage() {
     console.error('Failed to load purchase orders:', error);
     loadError = true;
   }
+  try {
+    defaultCurrencyCode = await getInventoryTenantCurrency();
+  } catch (error) {
+    console.error('Failed to load inventory default currency:', error);
+  }
 
-  return <PurchaseOrdersManager initialPos={initialPos} loadError={loadError} loadErrorMessage={loadErrorMessage} />;
+  return (
+    <PurchaseOrdersManager
+      initialPos={initialPos}
+      loadError={loadError}
+      loadErrorMessage={loadErrorMessage}
+      defaultCurrencyCode={defaultCurrencyCode}
+    />
+  );
 }
 
 export const dynamic = 'force-dynamic';

@@ -1065,7 +1065,10 @@
           "needsAttention": "Wymaga uwagi",
           "saving": "Zapisywanie…",
           "selectProfile": "Wybierz profil",
-          "unbound": "Niepowiązany"
+          "unbound": "Niepowiązany",
+          "noCapablePlaceholder": "No enabled profile",
+          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.",
+          "noEmailCapableProfiles": "No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app."
         },
         "bindings": {
           "summaryBound": "{{consumer}} jest powiązany z {{profile}}.",
@@ -1074,7 +1077,8 @@
           "warningArchived": "{{consumer}} nadal jest powiązany z zarchiwizowanym profilem. Powiąż go ponownie z aktywnym profilem.",
           "warningNoBinding": "Nie skonfigurowano jeszcze żadnego powiązania dla {{consumer}}.",
           "warningNotReady": "{{consumer}} jest powiązany z {{profile}}, ale ten profil nadal wymaga konfiguracji.",
-          "warningProfileMissing": "{{consumer}} jest powiązany z profilem, który nie jest już dostępny. Powiąż go ponownie z aktywnym profilem."
+          "warningProfileMissing": "{{consumer}} jest powiązany z profilem, który nie jest już dostępny. Powiąż go ponownie z aktywnym profilem.",
+          "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
         },
         "bindingsAlertCe": "Jawne powiązania są źródłem prawdy dla wyboru profilu MSP SSO. Skonfiguruj domeny logowania osobno po wybraniu powiązanego profilu.",
         "bindingsAlertEe": "Jawne powiązania są źródłem prawdy dla wyboru profili MSP SSO, poczty, kalendarza i Teams.",
@@ -1123,7 +1127,9 @@
           "setDefault": "Ustaw ten profil jako domyślny profil Microsoft",
           "setDefaultHelp": "Domyślne profile pozostają dostępne dla procesów zarządzania profilem i metadanych bezpiecznych dla migracji, a nie dla routingu konsumentów.",
           "storedSecretHint": "Zapisany secret: {{secret}}. Pozostaw to pole puste, aby zachować je bez zmian.",
-          "tenantId": "Tenant ID"
+          "tenantId": "Tenant ID",
+          "capabilities": "Enabled capabilities",
+          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "Utwórz profil Microsoft",
@@ -1177,7 +1183,9 @@
           "storedSecret": "Zapisany secret",
           "teamsAppIdUri": "Teams Application ID URI",
           "tenantIdLabel": "Tenant ID:",
-          "updating": "Aktualizowanie…"
+          "updating": "Aktualizowanie…",
+          "enabledCapabilities": "Enabled capabilities",
+          "noEnabledCapabilities": "No enabled capabilities"
         },
         "providerReconnect": {
           "description": "Użyj tego, jeśli rotujesz poświadczenia lub celowo przepinasz pocztę Outlook lub kalendarz na inny profil Microsoft.",
@@ -1864,6 +1872,11 @@
         },
         "descriptionCe": "Zarejestruj domeny doradcze dla wykrywania SSO logowania MSP. Weryfikacja własności nie jest wymuszana w edycji Community, a niezarządzane domeny korzystają z dostawców Nine Minds na poziomie aplikacji.",
         "descriptionEe": "Zarządzaj cyklem życia zgłoszeń domen dla wykrywania dostawców SSO logowania MSP. Niezgłoszone lub niekwalifikujące się domeny korzystają z dostawców Nine Minds na poziomie aplikacji.",
+        "moved": {
+          "title": "MSP SSO Login Domains",
+          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "cta": "Open Single Sign-On settings"
+        },
         "dnsHost": "Host:",
         "dnsInstructions": "Dodaj rekord DNS TXT, a następnie kliknij Zweryfikuj:",
         "dnsValue": "Wartość:",
@@ -2013,6 +2026,12 @@
             "description": "Powiadamiaj techników, gdy przypisywana jest praca.",
             "label": "Zdarzenia przypisania"
           },
+          "channel": {
+            "activityFeed": "Kanał aktywności",
+            "botDm": "Wiadomość bezpośrednia bota",
+            "both": "Oba",
+            "label": "Kanał dostarczania"
+          },
           "customerReply": {
             "description": "Powiadamiaj techników, gdy klienci odpowiadają.",
             "label": "Odpowiedzi klientów"
@@ -2141,6 +2160,10 @@
             "help": "Zapisanie rozwiązuje i przechowuje identyfikator obiektu Microsoft Entra używany do wywołań spotkań Graph.",
             "resolved": "Rozwiązany identyfikator obiektu: {{objectId}}"
           },
+          "sendMeetingInvites": {
+            "label": "Wysyłaj zaproszenia kalendarza do uczestników",
+            "description": "Uczestnicy otrzymują natywne zaproszenia kalendarza Outlook/Teams do wygenerowanych spotkań."
+          },
           "downloadRecordings": {
             "label": "Pobieraj nagrania do magazynu wewnętrznego",
             "description": "Gdy włączone, obiekty blob nagrań są kopiowane do magazynu dzierżawcy oprócz uwierzytelnionego serwera proxy Graph."
@@ -2149,6 +2172,218 @@
             "label": "Pokaż nagrania i transkrypcje w portalu klienta",
             "description": "Domyślnie wyłączone; użytkownicy MSP nadal mogą przeglądać artefakty ze szczegółów interakcji i spotkań."
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "Uruchom poniżej diagnostykę, aby poznać szczegóły.",
+          "message": "Bot Teams nie może odpowiadać: dane uwierzytelniające łącznika bota (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) nie są skonfigurowane na serwerze."
+        },
+        "wizard": {
+          "title": "Konfiguracja Teams z przewodnikiem",
+          "description": "Wykonaj każdy krok, aby usługa Microsoft Teams działała dla tej dzierżawy.",
+          "status": {
+            "complete": "Ukończono",
+            "current": "Bieżący",
+            "incomplete": "Nieukończony"
+          },
+          "validate": {
+            "error": "Walidacja nie powiodła się",
+            "validating": "Walidacja...",
+            "profile": "Zweryfikuj profil Microsoft",
+            "profileOk": "Poświadczenia profilu Microsoft są prawidłowe.",
+            "permissions": "Sprawdź uprawnienia Graph",
+            "permissionsOk": "Wszystkie wymagane uprawnienia Graph zostały przyznane.",
+            "permissionGranted": "Przyznano",
+            "permissionMissing": "Brak",
+            "bot": "Zweryfikuj łącznik Bot Framework",
+            "botOk": "Poświadczenia Bot Framework są prawidłowe ({{appId}})."
+          },
+          "activationBlocked": "Zweryfikuj powyższy profil Microsoft przed aktywacją Teams.",
+          "step": {
+            "microsoftProfile": {
+              "title": "Profil Microsoft",
+              "description": "Wybierz profil Microsoft dla Teams i zweryfikuj jego poświadczenia Graph."
+            },
+            "graphPermissions": {
+              "title": "Uprawnienia Graph",
+              "description": "Potwierdź, że wymagane uprawnienia aplikacji Microsoft Graph zostały przyznane i zatwierdzone."
+            },
+            "botFramework": {
+              "title": "Rejestracja Bot Framework",
+              "description": "Zarejestruj Azure Bot i zweryfikuj poświadczenia łącznika bota wdrożenia."
+            },
+            "activate": {
+              "title": "Aktywuj Teams",
+              "description": "Aktywuj integrację Teams po zweryfikowaniu profilu Microsoft."
+            },
+            "package": {
+              "title": "Wygeneruj i pobierz pakiet",
+              "description": "Zbuduj pakiet aplikacji Teams dla wybranego profilu i base URL wdrożenia.",
+              "hint": "Użyj karty Pakiet Teams poniżej, aby wygenerować i pobrać pakiet aplikacji."
+            },
+            "sideload": {
+              "title": "Załaduj aplikację metodą sideload",
+              "description": "Prześlij pakiet aplikacji do Teams, aby użytkownicy mogli ją zainstalować.",
+              "body": "Prześlij pobrany pakiet do centrum administracyjnego Teams (Zarządzaj aplikacjami, a następnie Prześlij nową aplikację) lub załaduj go metodą sideload z klienta Teams."
+            },
+            "verify": {
+              "title": "Zweryfikuj",
+              "description": "Uruchom diagnostykę i wyślij wiadomość testową, aby potwierdzić, że integracja działa od początku do końca.",
+              "hint": "Użyj karty Diagnostyka i wiadomość testowa poniżej, aby zweryfikować konfigurację od początku do końca."
+            }
+          }
+        },
+        "runbook": {
+          "viewGuide": "Wyświetl przewodnik konfiguracji"
+        },
+        "deliveryLog": {
+          "title": "Dziennik dostarczania Teams",
+          "description": "Każda próba dostarczenia powiadomienia Teams zarejestrowana dla tej dzierżawy.",
+          "error": "Nie udało się załadować dziennika dostarczania Teams",
+          "forbidden": "Nie masz uprawnień do wyświetlania dziennika dostarczania Teams.",
+          "empty": "Nie zarejestrowano jeszcze żadnych dostaw Teams.",
+          "refresh": "Odśwież",
+          "loadMore": "Załaduj więcej",
+          "loading": "Ładowanie...",
+          "filter": {
+            "statusLabel": "Stan",
+            "statusAll": "Wszystkie stany",
+            "categoryLabel": "Kategoria",
+            "categoryAll": "Wszystkie kategorie"
+          },
+          "columns": {
+            "createdAt": "Czas",
+            "category": "Kategoria",
+            "destination": "Miejsce docelowe",
+            "status": "Stan",
+            "errorCode": "Kod błędu",
+            "errorMessage": "Komunikat o błędzie"
+          },
+          "status": {
+            "delivered": "Dostarczono",
+            "sent": "Wysłano",
+            "failed": "Niepowodzenie",
+            "skipped": "Pominięto"
+          },
+          "category": {
+            "assignment": "Przypisanie",
+            "customer_reply": "Odpowiedź klienta",
+            "approval_request": "Prośba o zatwierdzenie",
+            "escalation": "Eskalacja",
+            "sla_risk": "Ryzyko SLA"
+          }
+        },
+        "auditLog": {
+          "title": "Dziennik audytu Teams",
+          "description": "Zmiany wykonane z bota Teams, rozszerzenia komunikatów i powierzchni szybkich akcji.",
+          "error": "Nie udało się załadować dziennika audytu Teams",
+          "forbidden": "Nie masz uprawnień do wyświetlania dziennika audytu Teams.",
+          "empty": "Nie zarejestrowano jeszcze żadnych zdarzeń audytu Teams.",
+          "refresh": "Odśwież",
+          "loadMore": "Załaduj więcej",
+          "loading": "Ładowanie...",
+          "filter": {
+            "surfaceLabel": "Powierzchnia",
+            "surfaceAll": "Wszystkie powierzchnie",
+            "actionLabel": "Identyfikator akcji",
+            "actionPlaceholder": "np. assign_ticket"
+          },
+          "surface": {
+            "bot": "Bot",
+            "message_extension": "Rozszerzenie komunikatów",
+            "quick_action": "Szybka akcja",
+            "tab": "Karta"
+          },
+          "columns": {
+            "createdAt": "Czas",
+            "surface": "Powierzchnia",
+            "action": "Akcja",
+            "target": "Cel",
+            "result": "Wynik",
+            "errorCode": "Kod błędu"
+          },
+          "result": {
+            "success": "Powodzenie",
+            "failure": "Niepowodzenie"
+          }
+        },
+        "troubleshooting": {
+          "title": "Dokumentacja błędów dostarczania",
+          "description": "Co oznacza każdy kod błędu dostarczania Teams i jak go rozwiązać.",
+          "show": "Pokaż dokumentację błędów",
+          "hide": "Ukryj dokumentację błędów",
+          "columns": {
+            "code": "Kod błędu",
+            "cause": "Przyczyna",
+            "remedy": "Rozwiązanie"
+          },
+          "codes": {
+            "graph_unauthorized": {
+              "cause": "Microsoft Graph odrzucił token aplikacji (401/403); wymagane uprawnienie aplikacji Graph nie zostało zatwierdzone.",
+              "remedy": "Udziel zgody administratora na wymagane uprawnienia Graph (na przykład TeamsActivity.Send) w rejestracji aplikacji Azure."
+            },
+            "user_not_mapped": {
+              "cause": "Odbiorca nie zalogował się do Alga PSA za pomocą konta Microsoft, więc nie istnieje żadne mapowanie konta.",
+              "remedy": "Poproś użytkownika o zalogowanie się za pomocą konta Microsoft (SSO portalu MSP lub karta Teams), aby jego konto zostało zmapowane."
+            },
+            "addon_inactive": {
+              "cause": "Dodatek Teams wygasł lub jest nieobecny, więc wysyłki są pomijane, natomiast konfiguracja jest zachowywana.",
+              "remedy": "Odnów dodatek Teams dla tej dzierżawy."
+            },
+            "integration_inactive": {
+              "cause": "Integracja Teams nie jest aktywna dla tej dzierżawy.",
+              "remedy": "Aktywuj integrację Teams w ustawieniach."
+            },
+            "package_misconfigured": {
+              "cause": "Pakiet aplikacji nigdy nie został wygenerowany lub brakuje wymagań wstępnych dostarczania (app ID, base URL).",
+              "remedy": "Wygeneruj pakiet aplikacji Teams w ustawieniach, a następnie spróbuj ponownie."
+            },
+            "graph_not_found": {
+              "cause": "Aplikacja Teams nie jest zainstalowana dla odbiorcy, więc Microsoft Graph nie może go wskazać (404).",
+              "remedy": "Zainstaluj aplikację Alga PSA dla tego użytkownika lub zezwól na nią w całej organizacji."
+            },
+            "graph_throttled": {
+              "cause": "Microsoft Graph ograniczył żądanie (429).",
+              "remedy": "Przejściowe; Alga PSA ponawia próbę z opóźnieniem. Zbadaj tylko, jeśli problem się utrzymuje."
+            },
+            "graph_server_error": {
+              "cause": "Microsoft Graph zwrócił błąd serwera (5xx).",
+              "remedy": "Przejściowa awaria Graph; Alga PSA ponawia próbę. Poczekaj i sprawdź stan usługi Microsoft, jeśli problem się utrzymuje."
+            },
+            "transient": {
+              "cause": "Tymczasowy błąd (sieć lub przekroczenie limitu czasu) przerwał dostarczanie.",
+              "remedy": "Ponawiane automatycznie; nie jest wymagane żadne działanie, chyba że błędy się utrzymują."
+            },
+            "unknown": {
+              "cause": "Błąd nie został przypisany do żadnej znanej przyczyny.",
+              "remedy": "Sprawdź dzienniki serwera pod kątem szczegółów błędu dostarczania i ponownie uruchom diagnostykę."
+            }
+          }
+        },
+        "paywall": {
+          "title": "Dodatek Microsoft Teams",
+          "description": "Integracja Microsoft Teams wymaga dodatku Teams dla tej dzierżawy.",
+          "includedTitle": "Co jest w zestawie",
+          "feature": {
+            "tab": "Karta osobista: otwórz Alga PSA w programie Microsoft Teams.",
+            "bot": "Osobisty bot i bot czatu grupowego do obsługi zgłoszeń, zatwierdzeń, czasu i notatek.",
+            "messageExtension": "Rozszerzenie komunikatów i szybkie akcje umożliwiające działanie na rekordach PSA z poziomu dowolnej wiadomości.",
+            "meetings": "Spotkania Teams przy zatwierdzeniach terminów z prawdziwymi zaproszeniami z kalendarza Outlook/Teams.",
+            "recordings": "Automatyczne przechwytywanie nagrań i transkrypcji spotkań w interakcjach.",
+            "notifications": "Powiadomienia w kanale aktywności i wiadomości bezpośrednich bota dotyczące przypisań, odpowiedzi, zatwierdzeń i ryzyka SLA."
+          },
+          "cta": "Kup dodatek Teams",
+          "nonBilling": "Skontaktuj się z administratorem rozliczeń, aby kupić dodatek Teams dla tej dzierżawy."
+        },
+        "addonExpiredBanner": {
+          "title": "Dodatek Microsoft Teams wygasł",
+          "message": "Dodatek Microsoft Teams wygasł. Twoja konfiguracja i historia dostarczania są zachowane, ale powiadomienia Teams są pomijane do czasu odnowienia dodatku.",
+          "cta": "Odnów dodatek Teams"
+        },
+        "staleManifest": {
+          "title": "Pakiet aplikacji Teams jest nieaktualny",
+          "warning": "Twój pakiet aplikacji Teams jest nieaktualny — wygeneruj go ponownie i prześlij jeszcze raz.",
+          "regenerate": "Wygeneruj pakiet ponownie",
+          "regenerating": "Ponowne generowanie..."
         }
       }
     },

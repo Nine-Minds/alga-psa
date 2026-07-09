@@ -1792,6 +1792,12 @@
       "title": "Logon único",
       "description": "Carregando ferramentas de atribuição em massa de SSO..."
     },
+    "status": {
+      "title": "Sign-in providers",
+      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
+      "available": "Available",
+      "notConfigured": "Not configured"
+    },
     "autoLink": {
       "title": "Configure automaticamente o SSO para novos usuários internos",
       "description": "Ative esta opção para provisionar imediatamente cada nova conta de equipe com seu provedor de SSO corporativo, para que eles nunca precisem de um login baseado em senha.",

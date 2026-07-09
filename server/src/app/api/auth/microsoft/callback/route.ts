@@ -82,8 +82,59 @@ export async function GET(request: NextRequest) {
       return new NextResponse(html, { status: 200, headers: { 'Content-Type': 'text/html' } });
     };
 
+    const parseStateValue = (rawState: string) => {
+      try {
+        const decodedState = Buffer.from(rawState, 'base64').toString();
+        return JSON.parse(decodedState);
+      } catch (e: any) {
+        console.error('[MS OAuth] Failed to parse state:', {
+          error: e.message,
+          stateLength: rawState?.length,
+          statePreview: rawState ? `${rawState.substring(0, 20)}...` : 'null'
+        });
+        return null;
+      }
+    };
+
+    const persistProviderError = async (stateData: any, errorCode: string, description?: string | null) => {
+      if (!stateData?.providerId || !stateData?.tenant) {
+        return;
+      }
+
+      const sessionUser = await getCurrentUser();
+      if (!sessionUser?.tenant || sessionUser.tenant !== stateData.tenant) {
+        console.error('[MS OAuth] Skipping provider error persistence because session tenant does not match state tenant', {
+          hasSession: Boolean(sessionUser?.tenant),
+          stateTenant: stateData.tenant,
+        });
+        return;
+      }
+
+      const message = [errorCode, description].filter(Boolean).join(': ');
+      await runWithTenant(stateData.tenant, async () => {
+        const { knex } = await createTenantKnex();
+        await tenantDb(knex, stateData.tenant)
+          .table('email_providers')
+          .where({ id: stateData.providerId })
+          .update({
+            status: 'error',
+            error_message: message,
+            updated_at: knex.fn.now(),
+          });
+      });
+    };
+
     // Handle OAuth errors
     if (error) {
+      const errorStateData = state ? parseStateValue(state) : null;
+      if (errorStateData?.providerId) {
+        try {
+          await persistProviderError(errorStateData, error, errorDescription || '');
+        } catch (persistError: any) {
+          console.warn('⚠️ Failed to persist Microsoft OAuth error:', persistError?.message || persistError);
+        }
+      }
+
       console.error('[MS OAuth] OAuth error from Microsoft:', {
         error,
         errorDescription: errorDescription || '',
@@ -113,14 +164,11 @@ export async function GET(request: NextRequest) {
     // Parse state to get tenant and other info
     let stateData;
     try {
-      const decodedState = Buffer.from(state, 'base64').toString();
-      stateData = JSON.parse(decodedState);
+      stateData = parseStateValue(state);
+      if (!stateData) {
+        throw new Error('Invalid state parameter');
+      }
     } catch (e: any) {
-      console.error('[MS OAuth] Failed to parse state:', {
-        error: e.message,
-        stateLength: state?.length,
-        statePreview: state ? `${state.substring(0, 20)}...` : 'null'
-      });
       return respondWithPostMessage({
         type: 'oauth-callback',
         provider: 'microsoft',
@@ -195,6 +243,11 @@ export async function GET(request: NextRequest) {
 
     if (!clientId || !clientSecret) {
       console.error('Microsoft OAuth credentials not configured');
+      try {
+        await persistProviderError(stateData, 'configuration_error', 'OAuth credentials not configured');
+      } catch (persistError: any) {
+        console.warn('⚠️ Failed to persist Microsoft OAuth configuration error:', persistError?.message || persistError);
+      }
       return respondWithPostMessage({
         type: 'oauth-callback',
         provider: 'microsoft',
@@ -336,6 +389,18 @@ export async function GET(request: NextRequest) {
           });
         } catch (persistErr: any) {
           console.warn('⚠️ Failed to persist Microsoft OAuth tokens or initialize webhook:', persistErr?.message || persistErr);
+          try {
+            await persistProviderError(stateData, 'token_persistence_failed', persistErr?.message || 'Failed to persist Microsoft OAuth tokens or initialize webhook');
+          } catch (providerErrorPersistErr: any) {
+            console.warn('⚠️ Failed to persist Microsoft OAuth token persistence error:', providerErrorPersistErr?.message || providerErrorPersistErr);
+          }
+          return respondWithPostMessage({
+            type: 'oauth-callback',
+            provider: 'microsoft',
+            success: false,
+            error: 'token_persistence_failed',
+            errorDescription: persistErr?.message || 'Failed to persist Microsoft OAuth tokens or initialize webhook'
+          });
         }
       }
 
@@ -368,6 +433,12 @@ export async function GET(request: NextRequest) {
         hasCode: !!code,
         hasState: !!state
       });
+
+      try {
+        await persistProviderError(stateData, errorCode, errorMessage);
+      } catch (persistError: any) {
+        console.warn('⚠️ Failed to persist Microsoft OAuth token exchange error:', persistError?.message || persistError);
+      }
       
       return respondWithPostMessage({
         type: 'oauth-callback',

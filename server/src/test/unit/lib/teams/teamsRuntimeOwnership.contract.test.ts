@@ -215,10 +215,13 @@ describe('teams runtime EE ownership', () => {
 
     expect(fs.existsSync(sharedTeamsNotificationPath)).toBe(true);
     expect(fs.existsSync(repoPath('ee/server/src/lib/notifications/teamsNotificationDelivery.ts'))).toBe(true);
-    // Teams notification delivery was consolidated into the shared notifications
-    // package (availability-gated) instead of delegating to an EE wrapper.
+    // Teams notification delivery is owned by the EE implementation that
+    // records teams_notification_deliveries rows; the shared notifications
+    // module is a CE-safe delegator across the @alga-psa/ee-stubs seam with no
+    // duplicated delivery logic (F007/F008).
     expect(sharedTeamsNotificationSource).toContain('deliverTeamsNotification');
-    expect(sharedTeamsNotificationSource).toContain('teamwork/sendActivityNotification');
+    expect(sharedTeamsNotificationSource).toContain("import('@alga-psa/ee-stubs/lib/notifications/teamsNotificationDelivery')");
+    expect(sharedTeamsNotificationSource).not.toContain('teamwork/sendActivityNotification');
     expect(sharedNotificationBroadcasterSource).toContain("import { deliverTeamsNotification } from './teamsNotificationDelivery';");
     expect(sharedNotificationBroadcasterSource).not.toContain('ee/server/src/lib/notifications/teamsNotificationDelivery');
   });

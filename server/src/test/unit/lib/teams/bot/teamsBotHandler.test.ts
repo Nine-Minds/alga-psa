@@ -16,6 +16,18 @@ const {
   executeTeamsActionMock,
   listAvailableTeamsActionsMock,
   getTeamsRuntimeAvailabilityMock,
+  verifyTeamsBotRequestMock,
+  searchTeamsTicketsMock,
+  searchTeamsClientsByNameMock,
+  listTeamsActiveClientsMock,
+  getTeamsTicketCreationDefaultsMock,
+  upsertTeamsConversationReferenceMock,
+  saveTeamsConversationContextMock,
+  getTeamsConversationContextMock,
+  findTeamsConversationReferenceByConversationIdMock,
+  sendBotActivityMock,
+  updateBotActivityMock,
+  isBotConnectorConfiguredMock,
 } = vi.hoisted(() => ({
   resolveTeamsTenantContextMock: vi.fn(),
   resolveTeamsLinkedUserMock: vi.fn(),
@@ -26,6 +38,23 @@ const {
   executeTeamsActionMock: vi.fn(),
   listAvailableTeamsActionsMock: vi.fn(),
   getTeamsRuntimeAvailabilityMock: vi.fn(),
+  verifyTeamsBotRequestMock: vi.fn(),
+  searchTeamsTicketsMock: vi.fn(),
+  searchTeamsClientsByNameMock: vi.fn(),
+  listTeamsActiveClientsMock: vi.fn(),
+  getTeamsTicketCreationDefaultsMock: vi.fn(),
+  upsertTeamsConversationReferenceMock: vi.fn(),
+  saveTeamsConversationContextMock: vi.fn(),
+  getTeamsConversationContextMock: vi.fn(),
+  findTeamsConversationReferenceByConversationIdMock: vi.fn(),
+  sendBotActivityMock: vi.fn(),
+  updateBotActivityMock: vi.fn(),
+  isBotConnectorConfiguredMock: vi.fn(),
+}));
+
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/bot/teamsBotJwtVerifier', () => ({
+  verifyTeamsBotRequest: verifyTeamsBotRequestMock,
+  resetTeamsBotJwksCacheForTests: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/resolveTeamsTenantContext', () => ({
@@ -64,6 +93,37 @@ vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/getTeamsRuntimeAvailability', ()
   getTeamsRuntimeAvailability: (...args: unknown[]) => getTeamsRuntimeAvailabilityMock(...args),
 }));
 
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/teamsPsaData', () => ({
+  searchTeamsTickets: searchTeamsTicketsMock,
+  searchTeamsClientsByName: searchTeamsClientsByNameMock,
+  listTeamsActiveClients: listTeamsActiveClientsMock,
+  getTeamsTicketCreationDefaults: getTeamsTicketCreationDefaultsMock,
+}));
+
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/bot/teamsConversationReferences', () => ({
+  upsertTeamsConversationReference: upsertTeamsConversationReferenceMock,
+  saveTeamsConversationContext: saveTeamsConversationContextMock,
+  getTeamsConversationContext: getTeamsConversationContextMock,
+  findTeamsConversationReferenceByConversationId: findTeamsConversationReferenceByConversationIdMock,
+}));
+
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/bot/teamsBotConnector', () => {
+  class BotConnectorRequestError extends Error {
+    status: number;
+    constructor(message: string, status: number) {
+      super(message);
+      this.status = status;
+    }
+  }
+  return {
+    BotConnectorRequestError,
+    isBotConnectorConfigured: (...args: unknown[]) => isBotConnectorConfiguredMock(...args),
+    isTrustedServiceUrl: () => true,
+    sendBotActivity: sendBotActivityMock,
+    updateBotActivity: updateBotActivityMock,
+  };
+});
+
 function buildUser(overrides: Partial<IUserWithRoles> = {}): IUserWithRoles {
   return {
     user_id: 'user-1',
@@ -96,6 +156,51 @@ function buildPersonalMessageActivity(text: string): TeamsBotActivity {
         id: 'entra-tenant-1',
       },
     },
+  };
+}
+
+const ALL_ACTION_IDS = [
+  'my_tickets',
+  'my_approvals',
+  'open_record',
+  'create_ticket_from_message',
+  'update_from_message',
+  'assign_ticket',
+  'add_note',
+  'reply_to_contact',
+  'log_time',
+  'approval_response',
+] as const;
+
+function buildFullAvailability(overrides: Partial<Record<string, boolean>> = {}) {
+  return ALL_ACTION_IDS.map((actionId) => ({
+    actionId,
+    operation: 'lookup' as const,
+    available: overrides[actionId] ?? true,
+    targetEntityTypes: [],
+    requiredInputs: [],
+    businessOperations: [],
+  }));
+}
+
+function buildActionSuccess(actionId: string, overrides: Record<string, unknown> = {}) {
+  return {
+    success: true,
+    actionId,
+    surface: 'bot',
+    operation: 'lookup',
+    summary: { title: 'OK', text: 'Command completed.' },
+    links: [],
+    items: [],
+    warnings: [],
+    metadata: {
+      surface: 'bot',
+      idempotencyKey: null,
+      idempotentReplay: false,
+      invokingSurface: 'bot',
+      businessOperations: [],
+    },
+    ...overrides,
   };
 }
 
@@ -133,8 +238,22 @@ describe('teamsBotHandler', () => {
         baseUrl: 'https://example.test',
       },
     });
-    listAvailableTeamsActionsMock.mockResolvedValue([]);
+    // RBAC-aware help derives visibility from listAvailableTeamsActions, so
+    // the default harness exposes every registry action as available.
+    listAvailableTeamsActionsMock.mockResolvedValue(buildFullAvailability());
     getTeamsRuntimeAvailabilityMock.mockResolvedValue(null);
+    verifyTeamsBotRequestMock.mockResolvedValue({ status: 'verified', payload: {} });
+    searchTeamsTicketsMock.mockResolvedValue([]);
+    searchTeamsClientsByNameMock.mockResolvedValue([]);
+    listTeamsActiveClientsMock.mockResolvedValue([]);
+    getTeamsTicketCreationDefaultsMock.mockResolvedValue({ boardId: 'board-1', statusId: 'status-1' });
+    upsertTeamsConversationReferenceMock.mockResolvedValue(true);
+    saveTeamsConversationContextMock.mockResolvedValue(true);
+    getTeamsConversationContextMock.mockResolvedValue(null);
+    findTeamsConversationReferenceByConversationIdMock.mockResolvedValue(null);
+    sendBotActivityMock.mockResolvedValue({ status: 'sent' });
+    updateBotActivityMock.mockResolvedValue({ status: 'sent' });
+    isBotConnectorConfiguredMock.mockReturnValue(false);
     createTenantKnexMock.mockResolvedValue({
       knex: Object.assign(
         vi.fn(() => ({
@@ -170,7 +289,10 @@ describe('teamsBotHandler', () => {
     expect(help.attachments?.[0]?.content.text).toContain('add note <number>: <note>');
     expect(help.attachments?.[0]?.content.text).toContain('reply to contact <number>: <reply>');
     expect(help.attachments?.[0]?.content.text).toContain('log time ticket <number> 30m: <note>');
-    expect(help.attachments?.[0]?.content.text).toContain('approve approval <approval-id>');
+    // Command examples now come from the shared TEAMS_BOT_COMMAND_DEFINITIONS
+    // module, which uses "approve approval <n>" (ordinal-friendly syntax).
+    expect(help.attachments?.[0]?.content.text).toContain('approve approval <n>');
+    expect(help.attachments?.[0]?.content.text).toContain('new ticket <title>');
     expect(help.metadata?.commandId).toBe('help');
   });
 
@@ -747,7 +869,8 @@ describe('teamsBotHandler', () => {
       })
     );
     expect(response.text).toContain('Found 2 assigned tickets');
-    expect(response.attachments?.[1]?.content.title).toBe('T-1001');
+    // List results are numbered (F035) so follow-up ordinals ("ticket 2") work.
+    expect(response.attachments?.[1]?.content.title).toBe('1. T-1001');
     expect(response.attachments?.[1]?.content.text).toContain('Broken VPN');
     expect(response.attachments?.[1]?.content.buttons).toContainEqual(
       expect.objectContaining({ type: 'openUrl', value: 'https://teams.test/ticket-1001' })
@@ -1083,7 +1206,10 @@ describe('teamsBotHandler', () => {
     expect(success.attachments?.[0]?.content.title).toBe('Ticket T-3003');
     expect(success.attachments?.[0]?.content.text).toContain('Email outage');
 
-    const notFound = await handleTeamsBotActivity(buildPersonalMessageActivity('ticket ticket-missing'), {
+    // Non-identifier text now falls back to title search (F034), so the
+    // invalid-reference case uses a numeric reference to stay on the direct
+    // lookup path.
+    const notFound = await handleTeamsBotActivity(buildPersonalMessageActivity('ticket 999999'), {
       tenantIdHint: 'tenant-1',
     });
     expect(notFound.text).toContain('not found');
@@ -1120,5 +1246,674 @@ describe('teamsBotHandler', () => {
     await expect(badResponse.json()).resolves.toMatchObject({
       error: 'invalid_json',
     });
+  });
+
+  it('T056/T057: unlinked users get a sign-in card whose deep link carries tenant and conversation context', async () => {
+    resolveTeamsLinkedUserMock.mockResolvedValue({
+      status: 'not_found',
+      tenantId: 'tenant-1',
+      message: 'No Microsoft account link matches this Teams user for the current tenant.',
+    });
+
+    const response = await handleTeamsBotActivity(buildPersonalMessageActivity('my tickets'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    const card = response.attachments?.[0]?.content;
+    expect(card?.title).toBe('Teams sign-in required');
+    const signInButton = card?.buttons?.find((button) => button.type === 'openUrl');
+    expect(signInButton).toBeDefined();
+    expect(signInButton?.value).toContain('https://example.test/api/teams/auth/callback/bot?');
+    expect(signInButton?.value).toContain('tenantId=tenant-1');
+    expect(signInButton?.value).toContain('conversationId=conversation-1');
+    expect(signInButton?.value).toContain('microsoftTenantId=entra-tenant-1');
+    // The adaptive rendering carries the same sign-in action.
+    const adaptiveActions = (response.adaptiveAttachments?.[0]?.content.actions ?? []) as Array<{ type: string; url?: string }>;
+    expect(adaptiveActions.some((action) => action.type === 'Action.OpenUrl' && action.url?.includes('tenantId=tenant-1'))).toBe(true);
+    expect(executeTeamsActionMock).not.toHaveBeenCalled();
+  });
+
+  it('T059: "ticket 1234" and "ticket #1234" resolve by ticket number through open_record', async () => {
+    executeTeamsActionMock.mockResolvedValue(
+      buildActionSuccess('open_record', {
+        summary: { title: 'Ticket 1234', text: 'Printer offline • Open' },
+      })
+    );
+
+    await handleTeamsBotActivity(buildPersonalMessageActivity('ticket 1234'), { tenantIdHint: 'tenant-1' });
+    await handleTeamsBotActivity(buildPersonalMessageActivity('ticket #1234'), { tenantIdHint: 'tenant-1' });
+
+    expect(executeTeamsActionMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        actionId: 'open_record',
+        target: { entityType: 'ticket', ticketId: '1234' },
+      })
+    );
+    expect(executeTeamsActionMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        actionId: 'open_record',
+        target: { entityType: 'ticket', ticketId: '1234' },
+      })
+    );
+  });
+
+  it('T061: "ticket printer" returns a numbered pick list gated by ticket:read RBAC and saves ordinal context', async () => {
+    searchTeamsTicketsMock.mockResolvedValue([
+      {
+        ticket_id: 'ticket-uuid-1',
+        ticket_number: 'ALGA-101',
+        title: 'Printer offline',
+        status_name: 'Open',
+        priority_name: 'High',
+        client_name: 'Acme',
+      },
+      {
+        ticket_id: 'ticket-uuid-2',
+        ticket_number: 'ALGA-102',
+        title: 'Printer jam',
+        status_name: 'Open',
+        priority_name: 'Low',
+        client_name: 'Acme',
+      },
+    ]);
+
+    const response = await handleTeamsBotActivity(buildPersonalMessageActivity('ticket printer'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(hasPermissionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'user-1' }),
+      'ticket',
+      'read',
+      expect.anything()
+    );
+    expect(searchTeamsTicketsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId: 'tenant-1', query: 'printer' })
+    );
+    expect(response.attachments?.[1]?.content.title).toBe('1. ALGA-101');
+    expect(response.attachments?.[2]?.content.title).toBe('2. ALGA-102');
+    // The footer documents the ordinal-vs-ticket-number collision rule.
+    expect(response.text).toContain('Reply “ticket 2” to open the second result');
+    expect(saveTeamsConversationContextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        conversationId: 'conversation-1',
+        items: [
+          { entityType: 'ticket', id: 'ticket-uuid-1', displayId: 'ALGA-101' },
+          { entityType: 'ticket', id: 'ticket-uuid-2', displayId: 'ALGA-102' },
+        ],
+      })
+    );
+    expect(executeTeamsActionMock).not.toHaveBeenCalled();
+  });
+
+  it('T061: ticket title search is denied without ticket:read', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+
+    const response = await handleTeamsBotActivity(buildPersonalMessageActivity('ticket printer'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(response.text).toContain('do not have permission to search tickets');
+    expect(searchTeamsTicketsMock).not.toHaveBeenCalled();
+  });
+
+  it('T062: ticket title search with no matches returns a friendly empty state with suggestions', async () => {
+    searchTeamsTicketsMock.mockResolvedValue([]);
+
+    const response = await handleTeamsBotActivity(buildPersonalMessageActivity('ticket unfindable widget'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(response.text).toContain('No open tickets matched “unfindable widget”');
+    expect(response.attachments?.[0]?.content.title).toBe('No tickets found');
+    expect(response.attachments?.[0]?.content.text).toContain('my tickets');
+    expect(response.suggestedActions?.actions.map((action) => action.value)).toContain('my tickets');
+  });
+
+  it('T063: "approve 2" after "my approvals" resolves ordinal 2 from stored context and executes approval_response', async () => {
+    executeTeamsActionMock.mockResolvedValueOnce(
+      buildActionSuccess('my_approvals', {
+        summary: { title: 'My approvals', text: 'Found 2 approval items ready for review in Teams.' },
+        items: [
+          { id: 'approval-uuid-1', title: 'Approval approval-uuid-1', summary: 'Taylor', entityType: 'approval', links: [] },
+          { id: 'approval-uuid-2', title: 'Approval approval-uuid-2', summary: 'Jamie', entityType: 'approval', links: [] },
+        ],
+      })
+    );
+
+    await handleTeamsBotActivity(buildPersonalMessageActivity('my approvals'), { tenantIdHint: 'tenant-1' });
+
+    expect(saveTeamsConversationContextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        conversationId: 'conversation-1',
+        items: [
+          { entityType: 'approval', id: 'approval-uuid-1' },
+          { entityType: 'approval', id: 'approval-uuid-2' },
+        ],
+      })
+    );
+
+    getTeamsConversationContextMock.mockResolvedValue({
+      items: [
+        { entityType: 'approval', id: 'approval-uuid-1' },
+        { entityType: 'approval', id: 'approval-uuid-2' },
+      ],
+      listedAt: new Date().toISOString(),
+    });
+    executeTeamsActionMock.mockResolvedValueOnce(
+      buildActionSuccess('approval_response', {
+        operation: 'mutation',
+        summary: { title: 'Approval completed', text: 'Approval approval-uuid-2 was approved successfully.' },
+      })
+    );
+
+    const response = await handleTeamsBotActivity(buildPersonalMessageActivity('approve 2'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(executeTeamsActionMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        actionId: 'approval_response',
+        target: { entityType: 'approval', approvalId: 'approval-uuid-2' },
+        input: expect.objectContaining({ approvalId: 'approval-uuid-2', outcome: 'approve' }),
+      })
+    );
+    expect(response.text).toContain('approved successfully');
+  });
+
+  it('T063: "ticket 2" resolves the second stored ticket when an unexpired ticket context exists', async () => {
+    getTeamsConversationContextMock.mockResolvedValue({
+      items: [
+        { entityType: 'ticket', id: 'ticket-uuid-1', displayId: 'ALGA-101' },
+        { entityType: 'ticket', id: 'ticket-uuid-2', displayId: 'ALGA-102' },
+      ],
+      listedAt: new Date().toISOString(),
+    });
+    executeTeamsActionMock.mockResolvedValue(buildActionSuccess('open_record'));
+
+    await handleTeamsBotActivity(buildPersonalMessageActivity('ticket 2'), { tenantIdHint: 'tenant-1' });
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'open_record',
+        target: { entityType: 'ticket', ticketId: 'ticket-uuid-2' },
+      })
+    );
+  });
+
+  it('T064: expired or out-of-range ordinal references return guidance, not an error', async () => {
+    // Expired/missing context: "approve 2" cannot be a real approval id.
+    getTeamsConversationContextMock.mockResolvedValue(null);
+    const expired = await handleTeamsBotActivity(buildPersonalMessageActivity('approve 2'), {
+      tenantIdHint: 'tenant-1',
+    });
+    expect(expired.text).toContain('expire after 30 minutes');
+    expect(expired.attachments?.[0]?.content.title).toBe('List reference expired');
+    expect(executeTeamsActionMock).not.toHaveBeenCalled();
+
+    // Out-of-range ordinal against a fresh list.
+    getTeamsConversationContextMock.mockResolvedValue({
+      items: [{ entityType: 'approval', id: 'approval-uuid-1' }],
+      listedAt: new Date().toISOString(),
+    });
+    const outOfRange = await handleTeamsBotActivity(buildPersonalMessageActivity('approve 5'), {
+      tenantIdHint: 'tenant-1',
+    });
+    expect(outOfRange.text).toContain('out of range');
+    expect(executeTeamsActionMock).not.toHaveBeenCalled();
+  });
+
+  it('T063/T035: "assign 2 to me" resolves the ordinal ticket and executes assign_ticket', async () => {
+    getTeamsConversationContextMock.mockResolvedValue({
+      items: [
+        { entityType: 'ticket', id: 'ticket-uuid-1', displayId: 'ALGA-101' },
+        { entityType: 'ticket', id: 'ticket-uuid-2', displayId: 'ALGA-102' },
+      ],
+      listedAt: new Date().toISOString(),
+    });
+    executeTeamsActionMock.mockResolvedValue(
+      buildActionSuccess('assign_ticket', {
+        operation: 'mutation',
+        summary: { title: 'Ticket assigned', text: 'Ticket ALGA-102 was reassigned successfully.' },
+      })
+    );
+
+    const response = await handleTeamsBotActivity(buildPersonalMessageActivity('assign 2 to me'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'assign_ticket',
+        target: { entityType: 'ticket', ticketId: 'ticket-uuid-2' },
+        input: expect.objectContaining({ ticketId: 'ticket-uuid-2', assigneeId: 'user-1' }),
+      })
+    );
+    expect(response.text).toContain('assigned to');
+  });
+
+  it('T066: "assign ticket" with no args prompts with a concrete example instead of the unsupported fallback', async () => {
+    const response = await handleTeamsBotActivity(buildPersonalMessageActivity('assign ticket'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(response.text).toContain('Specify a ticket reference');
+    expect(response.text).toContain('assign ticket <ticket-id> to me');
+    expect(response.text).not.toContain('not supported');
+    expect(executeTeamsActionMock).not.toHaveBeenCalled();
+  });
+
+  it('T067: "log time" without duration prompts for the duration format and completes on follow-up', async () => {
+    const prompt = await handleTeamsBotActivity(buildPersonalMessageActivity('log time ticket ticket-2002'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(prompt.attachments?.[0]?.content.title).toBe('Duration required');
+    expect(prompt.attachments?.[0]?.content.text).toContain('1h 30m');
+    expect(executeTeamsActionMock).not.toHaveBeenCalled();
+
+    executeTeamsActionMock.mockResolvedValue(
+      buildActionSuccess('log_time', {
+        operation: 'mutation',
+        summary: { title: 'Time logged', text: 'Logged 30 minutes from Teams.' },
+      })
+    );
+    const completed = await handleTeamsBotActivity(
+      buildPersonalMessageActivity('log time ticket ticket-2002 30m: Investigated'),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'log_time',
+        input: expect.objectContaining({ durationMinutes: 30 }),
+      })
+    );
+    expect(completed.text).toContain('Logged 30 minutes');
+  });
+
+  it('T068: "assing ticket 12" yields a did-you-mean suggestion for assign ticket', async () => {
+    const response = await handleTeamsBotActivity(buildPersonalMessageActivity('assing ticket 12'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(response.text).toContain('Did you mean');
+    expect(response.text).toContain('assign ticket <number> to me');
+    expect(response.attachments?.[0]?.content.title).toBe('Teams bot commands');
+    expect(executeTeamsActionMock).not.toHaveBeenCalled();
+  });
+
+  it('T069: "new ticket <title> for <client>" creates a ticket via create_ticket_from_message and returns the ticket card', async () => {
+    searchTeamsClientsByNameMock.mockResolvedValue([{ client_id: 'client-1', client_name: 'Acme' }]);
+    executeTeamsActionMock.mockResolvedValue(
+      buildActionSuccess('create_ticket_from_message', {
+        operation: 'mutation',
+        summary: { title: 'Created ticket ALGA-200', text: 'Created ticket ALGA-200 from the selected Teams message.' },
+        links: [{ type: 'psa', label: 'Open in full PSA', url: 'https://example.test/msp/tickets/ticket-200' }],
+      })
+    );
+
+    const response = await handleTeamsBotActivity(
+      buildPersonalMessageActivity('new ticket Printer offline for Acme'),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(searchTeamsClientsByNameMock).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId: 'tenant-1', name: 'Acme' })
+    );
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'create_ticket_from_message',
+        idempotencyKey: expect.any(String),
+        input: expect.objectContaining({
+          title: 'Printer offline',
+          description: 'Printer offline',
+          boardId: 'board-1',
+          statusId: 'status-1',
+          clientId: 'client-1',
+        }),
+      })
+    );
+    expect(response.attachments?.[0]?.content.title).toBe('Created ticket ALGA-200');
+  });
+
+  it('T069: "new ticket" guidance covers missing title, unknown client, and ambiguous client', async () => {
+    const missingTitle = await handleTeamsBotActivity(buildPersonalMessageActivity('new ticket'), {
+      tenantIdHint: 'tenant-1',
+    });
+    expect(missingTitle.text).toContain('Add a ticket title');
+
+    searchTeamsClientsByNameMock.mockResolvedValue([]);
+    const unknownClient = await handleTeamsBotActivity(
+      buildPersonalMessageActivity('new ticket Printer offline for Nowhere Inc'),
+      { tenantIdHint: 'tenant-1' }
+    );
+    expect(unknownClient.text).toContain('No active client matched “Nowhere Inc”');
+
+    searchTeamsClientsByNameMock.mockResolvedValue([
+      { client_id: 'client-1', client_name: 'Acme East' },
+      { client_id: 'client-2', client_name: 'Acme West' },
+    ]);
+    const ambiguousClient = await handleTeamsBotActivity(
+      buildPersonalMessageActivity('new ticket Printer offline for Acme'),
+      { tenantIdHint: 'tenant-1' }
+    );
+    expect(ambiguousClient.text).toContain('More than one client matched');
+    expect(executeTeamsActionMock).not.toHaveBeenCalled();
+  });
+
+  it('T070: "new ticket" without ticket:create renders the standard permission-denied result', async () => {
+    listTeamsActiveClientsMock.mockResolvedValue([{ client_id: 'client-1', client_name: 'Acme' }]);
+    executeTeamsActionMock.mockResolvedValue({
+      success: false,
+      actionId: 'create_ticket_from_message',
+      surface: 'bot',
+      operation: 'mutation',
+      error: {
+        code: 'forbidden',
+        message: 'You do not have permission to create PSA tickets from Teams messages.',
+        remediation: 'Use the full PSA application if you need access to this operation.',
+      },
+      warnings: [],
+      metadata: {
+        surface: 'bot',
+        idempotencyKey: 'key-1',
+        idempotentReplay: false,
+        invokingSurface: 'bot',
+        businessOperations: [],
+      },
+    });
+
+    const response = await handleTeamsBotActivity(buildPersonalMessageActivity('new ticket Printer offline'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(response.text).toContain('do not have permission to create PSA tickets');
+    expect(response.attachments?.[0]?.content.title).toBe('Teams bot request unavailable');
+  });
+
+  it('T071: replies carry Adaptive Card primaries and retry with the hero fallback when the client rejects adaptive content', async () => {
+    isBotConnectorConfiguredMock.mockReturnValue(true);
+    executeTeamsActionMock.mockResolvedValue(
+      buildActionSuccess('my_tickets', {
+        summary: { title: 'My tickets', text: 'Found 1 assigned ticket for the signed-in technician.' },
+        items: [
+          {
+            id: 'ticket-uuid-1',
+            displayId: 'ALGA-101',
+            title: 'ALGA-101',
+            summary: 'Printer offline • Open',
+            entityType: 'ticket',
+            links: [{ type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/ticket-1' }],
+          },
+        ],
+      })
+    );
+    sendBotActivityMock
+      .mockRejectedValueOnce(new Error('Failed to send Bot Framework activity (415 Unsupported Media Type): adaptive rejected'))
+      .mockResolvedValueOnce({ status: 'sent' });
+
+    const request = new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...buildPersonalMessageActivity('my tickets'),
+        id: 'activity-1',
+        serviceUrl: 'https://smba.trafficmanager.net/amer/',
+      }),
+    });
+
+    const response = await handleTeamsBotActivityRequest(request);
+    expect(response.status).toBe(200);
+    expect(sendBotActivityMock).toHaveBeenCalledTimes(2);
+
+    const primaryActivity = sendBotActivityMock.mock.calls[0][0].activity;
+    expect(primaryActivity.attachments?.[0]?.contentType).toBe('application/vnd.microsoft.card.adaptive');
+    // Ticket adaptive cards carry inline registry-backed actions.
+    const ticketCardActions = primaryActivity.attachments?.[1]?.content?.actions ?? [];
+    expect(ticketCardActions).toContainEqual(
+      expect.objectContaining({
+        type: 'Action.Submit',
+        title: 'Assign to me',
+        data: expect.objectContaining({
+          command: 'bot_card_action',
+          actionId: 'assign_ticket',
+          ticketId: 'ALGA-101',
+          idempotencyKey: expect.any(String),
+        }),
+      })
+    );
+
+    const fallbackActivity = sendBotActivityMock.mock.calls[1][0].activity;
+    expect(fallbackActivity.attachments?.[0]?.contentType).toBe('application/vnd.microsoft.card.hero');
+  });
+
+  it('T072: the "Assign to me" card action executes assign_ticket and updates the card in place', async () => {
+    isBotConnectorConfiguredMock.mockReturnValue(true);
+    executeTeamsActionMock.mockResolvedValue(
+      buildActionSuccess('assign_ticket', {
+        operation: 'mutation',
+        summary: { title: 'Ticket assigned', text: 'Ticket ALGA-101 was reassigned successfully.' },
+      })
+    );
+
+    const request = new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...buildPersonalMessageActivity(''),
+        id: 'submit-activity-1',
+        replyToId: 'card-activity-1',
+        serviceUrl: 'https://smba.trafficmanager.net/amer/',
+        value: {
+          command: 'bot_card_action',
+          actionId: 'assign_ticket',
+          ticketId: 'ALGA-101',
+          idempotencyKey: 'card-idem-1',
+        },
+      }),
+    });
+
+    const response = await handleTeamsBotActivityRequest(request);
+    expect(response.status).toBe(200);
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'assign_ticket',
+        idempotencyKey: 'card-idem-1',
+        target: { entityType: 'ticket', ticketId: 'ALGA-101' },
+        input: expect.objectContaining({ ticketId: 'ALGA-101', assigneeId: 'user-1' }),
+      })
+    );
+    expect(updateBotActivityMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 'conversation-1',
+        activityId: 'card-activity-1',
+      })
+    );
+    const updatedActivity = updateBotActivityMock.mock.calls[0][0].activity;
+    expect(updatedActivity.attachments?.[0]?.contentType).toBe('application/vnd.microsoft.card.adaptive');
+    expect(updatedActivity.text).toContain('was assigned to Alex Tech');
+    expect(sendBotActivityMock).not.toHaveBeenCalled();
+  });
+
+  it('T072: a failed in-place card update falls back to a normal reply', async () => {
+    isBotConnectorConfiguredMock.mockReturnValue(true);
+    executeTeamsActionMock.mockResolvedValue(
+      buildActionSuccess('assign_ticket', {
+        operation: 'mutation',
+        summary: { title: 'Ticket assigned', text: 'Ticket ALGA-101 was reassigned successfully.' },
+      })
+    );
+    updateBotActivityMock.mockRejectedValueOnce(
+      new Error('Failed to update Bot Framework activity (403 Forbidden): nope')
+    );
+
+    const request = new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...buildPersonalMessageActivity(''),
+        id: 'submit-activity-1',
+        replyToId: 'card-activity-1',
+        serviceUrl: 'https://smba.trafficmanager.net/amer/',
+        value: {
+          command: 'bot_card_action',
+          actionId: 'assign_ticket',
+          ticketId: 'ALGA-101',
+          idempotencyKey: 'card-idem-2',
+        },
+      }),
+    });
+
+    await handleTeamsBotActivityRequest(request);
+    expect(updateBotActivityMock).toHaveBeenCalledTimes(1);
+    expect(sendBotActivityMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('T073: card actions denied by allowed_actions/RBAC render the registry failure and never update the card', async () => {
+    isBotConnectorConfiguredMock.mockReturnValue(true);
+    executeTeamsActionMock.mockResolvedValue({
+      success: false,
+      actionId: 'assign_ticket',
+      surface: 'bot',
+      operation: 'mutation',
+      error: {
+        code: 'capability_disabled',
+        message: 'This Teams quick action is disabled for the tenant.',
+        remediation: 'Review the tenant Teams settings or use the full PSA application instead.',
+      },
+      warnings: [],
+      metadata: {
+        surface: 'bot',
+        idempotencyKey: 'card-idem-3',
+        idempotentReplay: false,
+        invokingSurface: 'bot',
+        businessOperations: [],
+      },
+    });
+
+    const request = new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...buildPersonalMessageActivity(''),
+        id: 'submit-activity-2',
+        replyToId: 'card-activity-2',
+        serviceUrl: 'https://smba.trafficmanager.net/amer/',
+        value: {
+          command: 'bot_card_action',
+          actionId: 'assign_ticket',
+          ticketId: 'ALGA-101',
+          idempotencyKey: 'card-idem-3',
+        },
+      }),
+    });
+
+    await handleTeamsBotActivityRequest(request);
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ actionId: 'assign_ticket' })
+    );
+    expect(updateBotActivityMock).not.toHaveBeenCalled();
+    expect(sendBotActivityMock).toHaveBeenCalledTimes(1);
+    const replyActivity = sendBotActivityMock.mock.calls[0][0].activity;
+    expect(replyActivity.text).toContain('disabled for the tenant');
+  });
+
+  it('T073: the "Add note" card action replies with an instructions prompt without executing a mutation', async () => {
+    const response = await handleTeamsBotActivity(
+      {
+        ...buildPersonalMessageActivity(''),
+        replyToId: 'card-activity-3',
+        value: {
+          command: 'bot_card_action',
+          actionId: 'add_note',
+          ticketId: 'ALGA-101',
+        },
+      },
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(response.text).toContain('add note ALGA-101:');
+    expect(response.replaceActivityId).toBeUndefined();
+    expect(executeTeamsActionMock).not.toHaveBeenCalled();
+  });
+
+  it('T074: every shared command definition parses to a real handler command (no unsupported fallbacks)', async () => {
+    const { TEAMS_BOT_COMMAND_DEFINITIONS } = await import(
+      '@alga-psa/ee-microsoft-teams/lib/teams/bot/teamsBotCommands'
+    );
+    executeTeamsActionMock.mockResolvedValue(buildActionSuccess('open_record'));
+    searchTeamsClientsByNameMock.mockResolvedValue([{ client_id: 'client-1', client_name: 'Acme' }]);
+    listTeamsActiveClientsMock.mockResolvedValue([{ client_id: 'client-1', client_name: 'Acme' }]);
+
+    const substitutions: Record<string, string> = {
+      '<number>': '1234',
+      '<title>': 'Printer offline',
+      '<note>': 'note text',
+      '<reply>': 'reply text',
+      '<n>': '2',
+      '<comment>': 'needs detail',
+      '<client>': 'Acme',
+    };
+
+    for (const definition of TEAMS_BOT_COMMAND_DEFINITIONS) {
+      let commandText = definition.example;
+      for (const [placeholder, value] of Object.entries(substitutions)) {
+        commandText = commandText.split(placeholder).join(value);
+      }
+
+      const response = await handleTeamsBotActivity(buildPersonalMessageActivity(commandText), {
+        tenantIdHint: 'tenant-1',
+      });
+
+      expect(response.text, `command "${commandText}" (from "${definition.id}") must be recognized`).not.toContain(
+        'is not supported'
+      );
+    }
+  });
+
+  it('T075: channel-scope messages get the friendly unsupported-scope reply with a docs link', async () => {
+    const response = await handleTeamsBotActivity(
+      {
+        ...buildPersonalMessageActivity('my tickets'),
+        conversation: {
+          id: 'conversation-2',
+          conversationType: 'channel',
+        },
+      },
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(response.attachments?.[0]?.content.title).toBe('Unsupported conversation type');
+    expect(response.attachments?.[0]?.content.buttons).toContainEqual(
+      expect.objectContaining({
+        type: 'openUrl',
+        value: 'https://docs.algapsa.com/integrations/teams-setup#supported-scopes',
+      })
+    );
+  });
+
+  it('T080: the help card lists only commands the user\'s RBAC allows, read-only commands always shown', async () => {
+    listAvailableTeamsActionsMock.mockResolvedValue(
+      buildFullAvailability({ my_approvals: false, approval_response: false })
+    );
+
+    const response = await handleTeamsBotActivity(buildPersonalMessageActivity('help'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    const helpText = response.attachments?.[0]?.content.text ?? '';
+    expect(helpText).toContain('my tickets');
+    expect(helpText).toContain('ticket <number>');
+    expect(helpText).toContain('assign ticket <number> to me');
+    expect(helpText).not.toContain('my approvals');
+    expect(helpText).not.toContain('approve approval');
+    expect(helpText).not.toContain('request changes approval');
   });
 });

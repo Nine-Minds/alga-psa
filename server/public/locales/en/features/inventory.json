@@ -97,11 +97,124 @@
   "dashboard": {
     "actions": {
       "newPurchaseOrder": "New purchase order",
-      "receiveStock": "Receive stock"
+      "receiveStock": "Receive stock",
+      "stockLedger": "Open stock ledger"
+    },
+    "loadError": {
+      "title": "Could not load live inventory data",
+      "body": "The dashboard is showing empty values until the data feed succeeds."
     },
     "attention": {
       "allClear": "All clear — nothing needs attention right now.",
-      "title": "Needs attention"
+      "title": "Needs attention",
+      "urgent": "{{count}} urgent",
+      "footer": "Ranked by dollar + customer impact · refreshed just now",
+      "itemFallback": "unit",
+      "refFallback": "RMA",
+      "noneFallback": "none",
+      "personFallback": "someone",
+      "vendorFallback": "vendor",
+      "filters": {
+        "all": "All",
+        "money": "Money",
+        "fulfillment": "Fulfillment",
+        "field": "Field",
+        "ops": "Ops"
+      },
+      "bands": {
+        "red": "Costs money or a customer today",
+        "amber": "Worth chasing this week",
+        "info": "Keep an eye on"
+      },
+      "actions": {
+        "invoice": "Invoice",
+        "viewSo": "View SO",
+        "trackTransfer": "Track transfer",
+        "recall": "Recall",
+        "review": "Review",
+        "chase": "Chase",
+        "openStaging": "Open staging",
+        "requote": "Re-quote",
+        "reviewBill": "Review bill",
+        "approve": "Approve",
+        "reorder": "Reorder",
+        "createPo": "Create PO",
+        "receive": "Receive",
+        "shipReplacement": "Ship replacement",
+        "view": "View"
+      },
+      "kind": {
+        "unbilled": "unbilled",
+        "dropship": "drop-ship",
+        "cutoverRisk": "at-risk cutover",
+        "cutover": "cutover",
+        "vanShortage": "van shortage",
+        "loaner": "overdue loaner",
+        "ghost": "ghost usage",
+        "rmaAging": "rma aging",
+        "rmaClient": "replacement",
+        "priceCreep": "price creep",
+        "billCreep": "bill creep",
+        "billsOverdue": "overdue bills",
+        "countApproval": "count approval",
+        "stockLow": "stock low",
+        "stockOut": "stock out",
+        "poPartial": "partial PO",
+        "warranty": "warranty",
+        "deadStock": "dead stock"
+      },
+      "fact": {
+        "unbilledSo": "shipped, still not invoiced",
+        "unbilledDropship": "drop-ships not invoiced across {{count}} SOs",
+        "cutoverRisk": "cutover {{date}} — {{backordered}} of {{ordered}} backordered",
+        "cutoverStaging": "cutover {{date}} — {{staged}} of {{ordered}} staged",
+        "vanShortage": "{{service}} shortage with {{jobs}} installs today",
+        "overdueLoaner": "{{service}} loaner {{days}}d overdue",
+        "ghostTech": "closed {{count}} hardware tickets, no parts billed",
+        "rmaVendor": "owes credit — no response {{days}} days",
+        "rmaClient": "replacement unit still owed",
+        "priceCreepSo": "still priced at old cost",
+        "priceCreepQuotes": "{{count}} open quote(s) now below current cost",
+        "priceCreepBill": "bill exceeds matching PO",
+        "billsOverdue": "{{count}} vendor bill(s) overdue",
+        "countApproval": "count variance needs approver",
+        "stockOut": "{{service}} is out of stock",
+        "stockLow": "{{service}} below reorder point",
+        "poPartial": "partially received PO still open",
+        "warranty": "{{count}} units warranty-expiring <30d",
+        "deadStock": "no movement in 90 days"
+      },
+      "meta": {
+        "unbilledSo": "{{so}} · {{lines}} lines · shipped {{days}}d ago",
+        "unbilledDropship": "confirmed drop-ship lines ready for invoice",
+        "cutoverFeeder": "ETA {{po}} {{eta}} · {{slack}}d slack · readiness {{pct}}%",
+        "cutover": "{{so}} · {{pct}}% readiness · {{days}}d out",
+        "vanShortageTransit": "available {{available}} · transfer {{from}} dispatched",
+        "vanShortage": "available {{available}} · reorder point {{reorder}}",
+        "overdueLoaner": "due {{date}}{{serial}}",
+        "ghostTech": "est. materials exposure from closed hardware tickets",
+        "rmaVendor": "{{ref}} · oldest open receivable",
+        "rmaClient": "{{ref}} · {{service}} · due in {{days}}d",
+        "priceCreepSo": "{{so}} · margin exposure if fulfilled as-is",
+        "priceCreepQuotes": "quote(s): {{numbers}}",
+        "priceCreepBill": "{{bill}} · flagged vs matching PO",
+        "billsOverdue": "oldest overdue {{days}}d",
+        "countApproval": "counted by {{name}} · four-eyes hold",
+        "stockLevel": "available {{available}} · reorder point {{reorder}}",
+        "poPartial": "{{po}} · {{received}} of {{ordered}} received · {{vendor}}",
+        "warranty": "{{count}} clients",
+        "deadStock": "{{locations}} location(s) tie up working capital"
+      },
+      "metric": {
+        "ageDays": "{{days}}d",
+        "percent": "{{pct}}%",
+        "daysOut": "{{days}}d out",
+        "jobs": "{{count}} jobs",
+        "today": "today",
+        "units": "{{count}} units",
+        "ltThirty": "<30d",
+        "available": "available"
+      }
     },
     "bills": {
       "acrossBill": "{{total}} across {{count}} bill",
@@ -192,6 +305,107 @@
       "loanOut": "Loaned out",
       "loanIn": "Loan returned",
       "retire": "Retired"
+    },
+    "header": {
+      "branch": "branch",
+      "branches": "branches",
+      "van": "van",
+      "vans": "vans",
+      "tech": "tech",
+      "techs": "techs",
+      "subtitle": "{{branches}} · {{vans}} · {{techs}} — {{attention}} need attention, {{inPlay}} in play today."
+    },
+    "money": {
+      "estUnavailable": "count only",
+      "unbilled": {
+        "title": "Unbilled but shipped",
+        "noShippedSos": "No shipped SOs waiting",
+        "otherSos": "{{count}} more shipped SOs",
+        "dropship": "Drop-ships not invoiced",
+        "soCount": "{{count}} SOs",
+        "ghost": "Ghost usage",
+        "ticketCount": "{{count}} tickets",
+        "ledgerLink": "View revenue ledger"
+      },
+      "margin": {
+        "title": "Margin MTD",
+        "vsLastMonth": "vs last mo",
+        "meta": "{{margin}} margin · {{revenue}} rev · {{cogs}} COGS",
+        "priceCreep": "{{count}} quote(s) and {{sos}} still at old cost — {{amount}} margin at risk.",
+        "noSos": "no open SOs"
+      },
+      "rma": {
+        "title": "Vendor-owed (RMA credits)",
+        "oldest": "{{days}}d oldest",
+        "empty": "No vendor RMAs are aging.",
+        "vendorFallback": "Vendor",
+        "creditRef": "credit · {{ref}}",
+        "credit": "credit",
+        "link": "Chase all RMAs"
+      }
+    },
+    "deployments": {
+      "title": "This week's deployments",
+      "subtitle": "{{count}} dated cutover(s)",
+      "eyebrow": "This week",
+      "scope": "{{qty}}× {{name}} — {{staged}} staged · {{backordered}} backordered",
+      "itemFallback": "item",
+      "scopeFallback": "{{staged}} staged · {{backordered}} backordered",
+      "feeder": "Fed by {{po}} {{vendor}}, ETA {{eta}} — {{slack}}d slack.",
+      "vendorFallback": "vendor",
+      "noEta": "no ETA",
+      "allServiceOrders": "All service orders",
+      "countdownBefore": "T-{{days}}",
+      "countdownAfter": "T+{{days}}",
+      "status": {
+        "atRisk": "At risk",
+        "ready": "Ready",
+        "staging": "Staging"
+      }
+    },
+    "pipeline": {
+      "title": "Sales-order pipeline",
+      "openSos": "{{count}} open SOs",
+      "quotes": "Quote",
+      "quotesValue": "{{count}} open",
+      "booked": "SO booked",
+      "bookedValue": "{{count}} · {{draft}} draft",
+      "fulfilling": "Fulfilling",
+      "fulfillingValue": "{{count}} backorder",
+      "invoiced": "Invoiced",
+      "invoicedValue": "this wk",
+      "blocked": "{{count}} SOs blocked on backorder",
+      "allSos": "All SOs"
+    },
+    "receivingToday": {
+      "title": "Receiving today",
+      "meta": "POs · {{amount}} · {{more}} more this wk",
+      "empty": "No purchase orders land today.",
+      "vendorFallback": "Vendor",
+      "flag": "Flag: {{po}} lands with {{slack}}d slack before {{client}} cutover.",
+      "clientFallback": "client",
+      "receiveStock": "Receive stock"
+    },
+    "ghostWeek": {
+      "title": "Ghost usage this week",
+      "countOnly": "tickets closed, 0 parts",
+      "est": "tickets closed, 0 parts · est. {{amount}}",
+      "explainer": "Hardware tickets closed with no material posted — unbilled labor-only closes by tech.",
+      "empty": "No ghost usage candidates this week.",
+      "techChip": "{{name}} · {{count}}{{amount}}",
+      "review": "Review ghost usage"
+    },
+    "footer": {
+      "title": "Inventory health",
+      "weekAbbrev": "wk",
+      "onHand": "On-hand units",
+      "serialized": "{{count}} serialized",
+      "deadStock": "Dead stock",
+      "deadStockDetail": "{{location}} · 90d",
+      "locationFallback": "Location",
+      "thisWeek": "This week",
+      "weekActivity": "{{received}} received · {{deployed}} deployed · {{transfers}} transfers · {{rmas}} RMAs",
+      "valuationReport": "Valuation report"
     }
   },
   "ghostUsage": {
@@ -503,7 +717,7 @@
     },
     "entryAdded": "Landed-cost entry added.",
     "fields": {
-      "amount": "Amount ($ {{currency}})"
+      "amount": "Amount ({{currency}})"
     },
     "loadError": "Couldn't load landed costs.",
     "nothingReceived": "Nothing received yet — receive the PO first, then apply.",
@@ -530,6 +744,7 @@
     "addPurchaseOrder": "Add Purchase Order",
     "allVendors": "All vendors",
     "amountOnOrder": "{{amount}} on order",
+    "mixedCurrencyOnOrder": "{{count}} purchase orders on order across multiple currencies",
     "cancelConfirm": "Are you sure you want to cancel purchase order {{poNumber}}? This cannot be undone.",
     "cancelFailed": "Couldn't cancel the purchase order.",
     "cancelTitle": "Cancel purchase order",
@@ -678,6 +893,7 @@
       "fulfilling": "Fulfilling…",
       "generateInvoice": "Generate invoice",
       "invoicing": "Invoicing…",
+      "manageLayouts": "Manage layouts",
       "reopenToDraft": "Reopen to draft",
       "reopening": "Reopening…"
     },
@@ -686,8 +902,10 @@
       "hard": "Hard",
       "soft": "Soft"
     },
+    "allocationModeHelp": "Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.",
     "availabilityOk": "OK",
     "backorderBadge": "Backorder {{shortfall}}",
+    "billingAllocation": "Billing & allocation",
     "billsOnFulfillment": "Bills on fulfillment",
     "cancelDialog": {
       "confirm": "Cancel sales order",
@@ -716,6 +934,7 @@
       "vendorPlaceholder": "Select a vendor…"
     },
     "created": "Sales order created",
+    "currencyFromClient": "Set from client",
     "currencyRequired": "Currency code is required",
     "detailTitle": "Sales Order {{number}}",
     "detailTitleFallback": "Sales Order",
@@ -745,14 +964,33 @@
     "emailFailed": "Couldn't email the confirmation.",
     "emailSuccess": "Confirmation emailed to {{recipients}}",
     "enterSerial": "Enter at least one serial number.",
+    "errors": {
+      "documentGenerationFailed": "Failed to generate the document",
+      "downloadPermissionDenied": "Permission denied: cannot download sales order documents",
+      "emailConfirmationFailed": "Failed to email the confirmation",
+      "emailPermissionDenied": "Permission denied: cannot email sales order documents",
+      "emailSendFailed": "Email failed to send.",
+      "noRecipientEmail": "No recipient email on file for this client.",
+      "notFound": "Sales order not found"
+    },
     "fields": {
-      "allocationMode": "Allocation mode",
+      "allocationMode": "How to allocate stock",
+      "clientPoNumber": "Client PO number",
       "currencyCode": "Currency code",
-      "invoiceMode": "Invoice mode",
+      "expectedShipDate": "Expected ship date",
+      "fulfillment": "Fulfillment",
+      "invoiceMode": "When to invoice",
+      "items": "Items",
       "lines": "Lines",
+      "noService": "No service found.",
+      "notes": "Notes",
       "qty": "Qty",
+      "searchService": "Search services…",
+      "selectService": "Select a service…",
+      "service": "Service",
       "serviceId": "Service ID",
-      "unitPrice": "Unit Price ($)"
+      "unitPrice": "Unit Price ($)",
+      "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "From quote",
     "fulfillDialog": {
@@ -771,6 +1009,10 @@
       "title": "Fulfill — {{name}}"
     },
     "fulfilledUnits": "Fulfilled {{count}} unit(s).",
+    "fulfillment": {
+      "dropShip": "Drop-ship",
+      "fromStock": "From stock"
+    },
     "fulfillmentFailed": "Fulfillment failed.",
     "invoiceColumns": {
       "amount": "Amount",
@@ -782,6 +1024,7 @@
       "manual": "Manual",
       "onFulfillment": "On fulfillment"
     },
+    "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
     "invoicedItems": "Invoiced {{count}} item(s).",
     "invoices": "Invoices",
     "invoicingFailed": "Invoicing failed: {{error}}. Use \"Generate invoice\" to retry.",
@@ -802,8 +1045,10 @@
     "nothingBackordered": "Nothing is backordered.",
     "nothingToInvoice": "Nothing left to invoice.",
     "onlyRemaining": "Only {{remaining}} remaining on this line.",
+    "pickServiceForLine": "Pick a service for this line.",
     "pickVendor": "Pick the vendor that will ship this line.",
     "productDefaultLocation": "Product default location",
+    "qtyPositive": "Must be > 0.",
     "qtyPositiveInteger": "Quantity must be a positive whole number.",
     "reopenError": "Couldn't reopen the sales order.",
     "reopened": "Sales order reopened — it is a draft again.",
@@ -819,7 +1064,9 @@
       "partiallyFulfilled": "Partially fulfilled"
     },
     "title": "Sales Orders",
-    "unassignedBackorder": "{{count}} backordered line(s) have no preferred vendor — create those POs manually."
+    "total": "Total",
+    "unassignedBackorder": "{{count}} backordered line(s) have no preferred vendor — create those POs manually.",
+    "unnamedService": "Unnamed"
   },
   "stock": {
     "actions": {
@@ -997,6 +1244,7 @@
     "title": "Transfers",
     "toLocation": "To location",
     "vanLoadList": "Van load list",
+    "vanLoadListReplenishment": "Van load list replenishment",
     "status": {
       "dispatched": "Dispatched",
       "received": "Received",

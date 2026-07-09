@@ -1340,6 +1340,7 @@ const Clients: React.FC = () => {
 
   const handleImportComplete = async () => {
     setIsImportDialogOpen(false);
+    await refreshClients();
     router.refresh();
   };
 

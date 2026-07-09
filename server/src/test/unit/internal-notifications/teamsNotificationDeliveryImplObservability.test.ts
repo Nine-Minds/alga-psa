@@ -210,22 +210,74 @@ describe('deliverTeamsNotificationImpl observability rows', () => {
   });
 
   it.each([
-    [429, 'graph_throttled', true],
-    [401, 'graph_unauthorized', false],
-    [403, 'graph_unauthorized', false],
-    [404, 'graph_not_found', false],
-    [500, 'graph_server_error', true],
-  ])('writes failed row for Graph %s', async (status, errorCode, retryable) => {
-    vi.stubGlobal('fetch', vi.fn(async () => graphResponse(status, 'failure body', `request-${status}`)));
+    [429, 'graph_throttled', true, 3],
+    [401, 'graph_unauthorized', false, 1],
+    [403, 'graph_unauthorized', false, 1],
+    [404, 'graph_not_found', false, 1],
+    [500, 'graph_server_error', true, 3],
+  ])('writes failed row for Graph %s', async (status, errorCode, retryable, expectedAttempts) => {
+    const fetchMock = vi.fn(async () => graphResponse(status, 'failure body', `request-${status}`));
+    vi.stubGlobal('fetch', fetchMock);
 
-    const result = await deliverTeamsNotificationImpl(notification());
+    const result = await deliverTeamsNotificationImpl(notification(), { retry: { baseDelayMs: 0 } });
 
     expect(result.status).toBe('failed');
+    // T021/T022: retryable statuses get bounded retries; non-retryable 4xx get one attempt.
+    expect(fetchMock).toHaveBeenCalledTimes(expectedAttempts);
+    expect(hoisted.state.deliveryRows).toHaveLength(1);
     expect(hoisted.state.deliveryRows[0]).toMatchObject({
       status: 'failed',
       errorCode,
       retryable,
       providerRequestId: `request-${status}`,
+    });
+  });
+
+  it('T020: retries 429 honouring Retry-After and records only the final delivered row', async () => {
+    const throttled = {
+      ok: false,
+      status: 429,
+      statusText: 'Too Many Requests',
+      headers: {
+        get: (name: string) =>
+          name.toLowerCase() === 'retry-after' ? '0' : name === 'request-id' ? 'request-429' : null,
+      },
+      text: vi.fn(async () => 'throttled'),
+    } as unknown as Response;
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(throttled)
+      .mockResolvedValueOnce(throttled)
+      .mockResolvedValueOnce(graphResponse(200, '', 'request-final'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await deliverTeamsNotificationImpl(notification());
+
+    expect(result).toMatchObject({ status: 'delivered', providerMessageId: 'request-final' });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(hoisted.state.deliveryRows).toHaveLength(1);
+    expect(hoisted.state.deliveryRows[0]).toMatchObject({
+      status: 'delivered',
+      providerMessageId: 'request-final',
+    });
+  });
+
+  it('T021: bounded retries stop after maxAttempts and record failed with retryable=true', async () => {
+    const fetchMock = vi.fn(async () => graphResponse(503, 'server busy', 'request-503'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await deliverTeamsNotificationImpl(notification(), {
+      retry: { maxAttempts: 2, baseDelayMs: 0 },
+    });
+
+    expect(result).toMatchObject({ status: 'failed', retryable: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(hoisted.state.deliveryRows).toHaveLength(1);
+    expect(hoisted.state.deliveryRows[0]).toMatchObject({
+      status: 'failed',
+      errorCode: 'graph_server_error',
+      retryable: true,
     });
   });
 

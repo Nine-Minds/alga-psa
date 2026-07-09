@@ -33,8 +33,11 @@ interface TeamsIntegrationStatusResponse {
     lastError: string | null;
     defaultMeetingOrganizerUpn: string | null;
     defaultMeetingOrganizerObjectId: string | null;
+    sendMeetingInvites: boolean;
     downloadRecordings: boolean;
     exposeRecordingsInPortal: boolean;
+    // Defaults to 'active' in EE; the CE stub never returns an integration payload.
+    addOnState: 'active' | 'expired' | 'absent';
   };
 }
 
@@ -47,6 +50,7 @@ interface TeamsIntegrationExecutionState {
   packageMetadata: Record<string, unknown> | null;
   defaultMeetingOrganizerUpn: string | null;
   defaultMeetingOrganizerObjectId: string | null;
+  sendMeetingInvites: boolean;
   downloadRecordings: boolean;
   exposeRecordingsInPortal: boolean;
 }
@@ -59,6 +63,7 @@ interface TeamsIntegrationSettingsInput {
   allowedActions?: TeamsAllowedAction[];
   lastError?: string | null;
   defaultMeetingOrganizerUpn?: string | null;
+  sendMeetingInvites?: boolean;
   downloadRecordings?: boolean;
   exposeRecordingsInPortal?: boolean;
 }
@@ -72,6 +77,7 @@ const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
   packageMetadata: null,
   defaultMeetingOrganizerUpn: null,
   defaultMeetingOrganizerObjectId: null,
+  sendMeetingInvites: true,
   downloadRecordings: false,
   exposeRecordingsInPortal: false,
 };

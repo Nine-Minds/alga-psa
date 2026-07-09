@@ -4,11 +4,13 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
+import { toMinorUnits } from '@alga-psa/core';
 import type { ColumnDefinition, IStockLocation } from '@alga-psa/types';
 import {
   loanOut,
@@ -27,7 +29,13 @@ function formatDue(value: string | Date | null): string {
 
 const isReturnedActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
 
-export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRow[] }) {
+export function LoanersManager({
+  initialLoaners,
+  defaultCurrencyCode = 'USD',
+}: {
+  initialLoaners: LoanerOutRow[];
+  defaultCurrencyCode?: string;
+}) {
   const { t } = useTranslation('features/inventory');
   const [rows, setRows] = useState<LoanerOutRow[]>(initialLoaners || []);
   const [locations, setLocations] = useState<IStockLocation[]>([]);
@@ -170,7 +178,7 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
         toast.error(t('loaners.restockFeeInvalid', 'Restocking fee must be a non-negative amount'));
         return;
       }
-      restocking_fee_cents = Math.round(parsed * 100);
+      restocking_fee_cents = toMinorUnits(parsed, undefined, defaultCurrencyCode);
     }
     setSaving(true);
     try {
@@ -324,14 +332,12 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
             ]}
             onValueChange={(v: string) => setRestockForm({ ...restockForm, location_id: v })}
           />
-          <Input
+          <CurrencyInput
             id="loaner-restock-fee"
             label={t('loaners.fields.restockingFee', 'Restocking fee (optional)')}
-            type="number"
-            min="0"
-            step="0.01"
-            value={restockForm.restocking_fee}
-            onChange={(e) => setRestockForm({ ...restockForm, restocking_fee: e.target.value })}
+            currencyCode={defaultCurrencyCode}
+            value={restockForm.restocking_fee ? Number(restockForm.restocking_fee) : undefined}
+            onChange={(value) => setRestockForm({ ...restockForm, restocking_fee: value == null ? '' : String(value) })}
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button id="loaner-restock-cancel" variant="outline" onClick={() => setRestockOpen(false)}>

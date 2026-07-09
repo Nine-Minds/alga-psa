@@ -5,6 +5,8 @@ import * as Tabs from '@radix-ui/react-tabs';
 import { AutomationProps } from '../ui-reflection/types';
 import { type LucideIcon, ChevronDown } from 'lucide-react';
 
+// LEVERAGE: pattern duplicate-tabs-components — Radix-based twin of Tabs.tsx (hand-rolled) with the same default underline look but a data-driven API; ~32 vs ~21 consumers split along package-extraction lines. Consolidate to a single tabs layer.
+
 export interface TabContent {
   id: string;
   label: string;

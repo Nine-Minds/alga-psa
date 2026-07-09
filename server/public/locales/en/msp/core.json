@@ -14,7 +14,16 @@
     "documentsAll": "All Documents",
     "knowledgeBase": "Knowledge Base",
     "assets": "Assets",
-    "inventory": "Inventory",
+    "inventory": {
+      "label": "Inventory",
+      "sections": {
+        "overview": "Overview",
+        "stock": "Stock",
+        "purchasing": "Purchasing",
+        "salesFulfillment": "Sales & Fulfillment",
+        "analytics": "Analytics"
+      }
+    },
     "inventoryDashboard": "Dashboard",
     "inventoryStock": "Stock",
     "inventoryLocations": "Stock Locations",
@@ -23,6 +32,7 @@
     "inventoryPurchaseOrders": "Purchase Orders",
     "inventoryVendorBills": "Vendor Bills",
     "inventorySalesOrders": "Sales Orders",
+    "inventoryDocumentLayouts": "Document Layouts",
     "inventoryTransfers": "Transfers",
     "inventoryCounts": "Cycle Counts",
     "inventoryWriteOffs": "Write-offs",

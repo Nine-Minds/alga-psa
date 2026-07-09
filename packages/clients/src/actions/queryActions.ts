@@ -18,10 +18,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-
-const CONTACT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
-const CONTACT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
-const CONTACT_LIST_SEARCH_TYPES = ['contact', 'document', 'interaction'] as const;
+import { buildContactListSearchQuery } from '../lib/listSearchSql';
 
 type QueryActionUser = {
   user_id: string;
@@ -53,56 +50,6 @@ function tenantScopedTable<Row extends object = Record<string, any>>(
   tenant: string
 ): Knex.QueryBuilder<Row, Row[]> {
   return tenantDb(conn, tenant).table<Row>(table);
-}
-
-function tenantScopedDerivedTableSql(
-  facade: ReturnType<typeof tenantDb>,
-  tableName: string,
-  alias: string
-): { subquery: Knex.QueryBuilder; sql: string; bindings: Knex.RawBinding[] } {
-  const subquery = facade
-    .subquery(tableName)
-    .select('*')
-    .as(alias);
-  const scoped = subquery.toSQL();
-
-  return {
-    subquery,
-    sql: scoped.sql,
-    bindings: scoped.bindings as Knex.RawBinding[],
-  };
-}
-
-function tenantJoinSubquerySql(
-  facade: ReturnType<typeof tenantDb>,
-  conn: DbConnection,
-  subquery: Knex.QueryBuilder | Knex.Raw,
-  left: string | Knex.Raw,
-  right: string | Knex.Raw,
-  options: Parameters<ReturnType<typeof tenantDb>['tenantJoinSubquery']>[4]
-): { sql: string; bindings: Knex.RawBinding[] } {
-  const fragmentSource = (conn as Knex)('__tenant_join_fragment__').select(conn.raw('1'));
-
-  facade.tenantJoinSubquery(
-    fragmentSource,
-    subquery as unknown as Knex.QueryBuilder,
-    left as unknown as string,
-    right as unknown as string,
-    options
-  );
-
-  const compiled = fragmentSource.toSQL();
-  const marker = ' from "__tenant_join_fragment__" ';
-  const markerIndex = compiled.sql.indexOf(marker);
-
-  if (markerIndex < 0) {
-    throw new Error('Tenant join subquery SQL fragment marker was not present in compiled SQL.');
-  }
-
-  return {
-    sql: compiled.sql.slice(markerIndex + marker.length),
-    bindings: compiled.bindings as Knex.RawBinding[],
-  };
 }
 
 function isClientPortalUser(user: QueryActionUser): boolean {
@@ -434,21 +381,6 @@ export const getContactsByClient = withAuth(async (
   }
 });
 
-function buildContactListSearchPrefixTsquery(raw: string): string | null {
-  const tokens = raw
-    .toLowerCase()
-    .replace(CONTACT_LIST_SEARCH_TSQUERY_UNSAFE_RE, ' ')
-    .split(/\s+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length > 0);
-
-  if (tokens.length === 0) {
-    return null;
-  }
-
-  return tokens.map((token) => `${token}:*`).join(' & ');
-}
-
 export const searchContactListIds = withAuth(async (
   user,
   { tenant },
@@ -469,126 +401,11 @@ export const searchContactListIds = withAuth(async (
     permissions.push('interaction:read');
   }
 
-  const prefixTsquery = buildContactListSearchPrefixTsquery(rawSearch);
-  const identifier = rawSearch.match(CONTACT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const scopedDb = tenantDb(trx, tenant);
-    const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');
-    const interactions = tenantScopedDerivedTableSql(scopedDb, 'interactions', 'interaction_match');
-    const noteContacts = tenantScopedDerivedTableSql(scopedDb, 'contacts', 'note_contact');
-    const documentAssociations = tenantScopedDerivedTableSql(scopedDb, 'document_associations', 'document_contact_match');
-    const interactionJoin = tenantJoinSubquerySql(
-      scopedDb,
-      trx,
-      interactions.subquery,
-      trx.raw('??::text', ['interaction_match.interaction_id']),
-      'si.object_id',
-      {
-        type: 'left',
-        rootTenantColumn: 'si.tenant',
-        joinedTenantColumn: 'interaction_match.tenant',
-        on: (join) => {
-          join.andOn('si.object_type', '=', trx.raw("'interaction'"));
-        },
-      }
-    );
-    const noteContactJoin = tenantJoinSubquerySql(
-      scopedDb,
-      trx,
-      noteContacts.subquery,
-      trx.raw('??::text', ['note_contact.notes_document_id']),
-      'si.object_id',
-      {
-        type: 'left',
-        rootTenantColumn: 'si.tenant',
-        joinedTenantColumn: 'note_contact.tenant',
-        on: (join) => {
-          join.andOn('si.object_type', '=', trx.raw("'document'"));
-        },
-      }
-    );
-    const documentAssociationJoin = tenantJoinSubquerySql(
-      scopedDb,
-      trx,
-      documentAssociations.subquery,
-      trx.raw('??::text', ['document_contact_match.document_id']),
-      'si.object_id',
-      {
-        type: 'left',
-        rootTenantColumn: 'si.tenant',
-        joinedTenantColumn: 'document_contact_match.tenant',
-        on: (join) => {
-          join.andOn('si.object_type', '=', trx.raw("'document'"));
-          join.andOn('document_contact_match.entity_type', '=', trx.raw("'contact'"));
-        },
-      }
-    );
-    const result = await trx.raw<{ rows: Array<{ contact_id: string }> }>(
-      `
-        WITH q AS (
-          SELECT
-            websearch_to_tsquery('english', ?) AS tsq,
-            CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
-            ?::text AS raw,
-            ?::text AS identifier
-        ),
-        matched AS (
-          SELECT DISTINCT
-            CASE
-              WHEN si.object_type = 'contact' THEN si.object_id
-              WHEN si.object_type = 'interaction' THEN interaction_match.contact_name_id::text
-              WHEN si.object_type = 'document' THEN coalesce(note_contact.contact_name_id::text, document_contact_match.entity_id::text)
-            END AS contact_id
-          FROM ${searchIndex.sql}
-          CROSS JOIN q
-          ${interactionJoin.sql}
-          ${noteContactJoin.sql}
-          ${documentAssociationJoin.sql}
-          WHERE si.object_type = ANY(?::text[])
-            AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
-            AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
-            AND (si.is_internal_only = false OR ?::boolean = true)
-            AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
-            AND (
-              si.search_vector @@ q.tsq
-              OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
-              OR si.title ILIKE '%' || q.raw || '%'
-              OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
-              OR si.title % q.raw
-              OR coalesce(si.subtitle, '') % q.raw
-              OR (
-                q.identifier IS NOT NULL
-                AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier
-              )
-              OR (
-                q.identifier IS NOT NULL
-                AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%'
-              )
-            )
-        )
-        SELECT contact_id
-        FROM matched
-        WHERE contact_id IS NOT NULL
-      `,
-      [
-        rawSearch,
-        prefixTsquery,
-        prefixTsquery,
-        rawSearch,
-        identifier,
-        ...searchIndex.bindings,
-        ...interactionJoin.bindings,
-        ...noteContactJoin.bindings,
-        ...documentAssociationJoin.bindings,
-        [...CONTACT_LIST_SEARCH_TYPES],
-        permissions,
-        user.user_id,
-        true,
-        user.user_id,
-      ]
-    );
+    const { sql, bindings } = buildContactListSearchQuery(trx, tenant, rawSearch, permissions, user.user_id);
+    const result = await trx.raw<{ rows: Array<{ contact_id: string }> }>(sql, bindings);
 
     return result.rows.map((row) => row.contact_id);
   });

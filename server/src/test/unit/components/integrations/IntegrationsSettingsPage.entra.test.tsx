@@ -11,6 +11,7 @@ const useFeatureFlagMock = vi.hoisted(() => vi.fn());
 
 vi.mock('next/navigation', () => ({
   useSearchParams: useSearchParamsMock,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
 }));
 
 // Resolve integration category labels/descriptions against the real msp/settings

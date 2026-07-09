@@ -18,10 +18,12 @@ import {
 } from '../../teams/bot/teamsConversationReferences';
 import {
   isBotConnectorConfigured,
+  readBotCredentialsFromEnv,
   sendBotActivity,
 } from '../../teams/bot/teamsBotConnector';
 import type { TeamsBotResponseActivity } from '../../teams/bot/teamsBotHandler';
 import { getTeamsAvailability } from '../../teams/teamsAvailability';
+import { resolveTeamsRecordingsWebhookUrl } from '../../meetings/artifactSubscriptions';
 
 type TeamsTestMessageSkipReason =
   | 'addon_inactive'
@@ -57,9 +59,14 @@ interface TeamsIntegrationRow {
   install_status: string | null;
   enabled_capabilities: unknown;
   app_id?: string | null;
+  bot_id?: string | null;
   package_metadata?: unknown;
   default_meeting_organizer_upn?: string | null;
   default_meeting_organizer_object_id?: string | null;
+  recordings_subscription_id?: string | null;
+  recordings_subscription_expires_at?: Date | string | null;
+  transcripts_subscription_id?: string | null;
+  transcripts_subscription_expires_at?: Date | string | null;
 }
 
 interface MicrosoftProfileRow {
@@ -159,6 +166,25 @@ function getPackageBaseUrl(metadata: unknown): string {
     return '';
   }
   return normalizeString((metadata as { baseUrl?: unknown }).baseUrl);
+}
+
+function getPackageWebApplicationInfoId(metadata: unknown): string {
+  let parsed = metadata;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return '';
+    }
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    return '';
+  }
+  const webApplicationInfo = (parsed as { webApplicationInfo?: unknown }).webApplicationInfo;
+  if (!webApplicationInfo || typeof webApplicationInfo !== 'object') {
+    return '';
+  }
+  return normalizeString((webApplicationInfo as { id?: unknown }).id);
 }
 
 function isResolvableBaseUrl(value: string): boolean {
@@ -677,6 +703,148 @@ export async function runTeamsDiagnosticsImpl(
       };
     }
     return { status: 'pass', detail: 'Teams bot connector credentials are configured.' };
+  });
+
+  await runStep('bot_id_consistency', 'Manifest bot id matches runtime credentials', async () => {
+    if (!integration || !integration.package_metadata) {
+      return {
+        status: 'skip',
+        detail: 'Generate the Teams app package before the manifest bot id can be checked.',
+      };
+    }
+
+    const manifestBotId =
+      getPackageWebApplicationInfoId(integration.package_metadata) || normalizeString(integration.bot_id);
+    if (!manifestBotId) {
+      return {
+        status: 'warn',
+        detail: 'The generated Teams package metadata does not record a bot id. Regenerate the Teams app package.',
+        recommendations: ['Regenerate the Teams app package so its bot id can be validated.'],
+      };
+    }
+
+    const credentials = readBotCredentialsFromEnv();
+    if (!credentials) {
+      return {
+        status: 'skip',
+        detail: 'Bot connector credentials are required before the manifest bot id can be compared.',
+        recommendations: [BOT_ENV_RECOMMENDATION],
+      };
+    }
+
+    if (manifestBotId.toLowerCase() !== credentials.appId.toLowerCase()) {
+      return {
+        status: 'fail',
+        detail:
+          `The generated manifest registers bot id ${manifestBotId}, but the runtime authenticates as TEAMS_BOT_APP_ID ${credentials.appId}. ` +
+          'Teams will address activities to the manifest bot id, and inbound verification only accepts tokens for the runtime app id, so the bot will never reply. ' +
+          'Create an Azure Bot registration whose Microsoft App ID matches the manifest bot id and set TEAMS_BOT_APP_* to that app, or regenerate the package from the profile that matches the runtime credentials.',
+        data: { manifestBotId, runtimeBotAppId: credentials.appId },
+        recommendations: [
+          'Align the Bot Framework registration, TEAMS_BOT_APP_ID, and the generated manifest bot id (see the Teams setup runbook).',
+        ],
+      };
+    }
+
+    return {
+      status: 'pass',
+      detail: 'The generated manifest bot id matches the runtime bot credentials.',
+      data: { manifestBotId },
+    };
+  });
+
+  await runStep('artifact_subscriptions', 'Meeting artifact subscriptions', async () => {
+    if (!integration || normalizeString(integration.install_status) !== 'active') {
+      return {
+        status: 'skip',
+        detail: 'An active Teams integration is required before meeting artifact subscriptions can be checked.',
+      };
+    }
+
+    const recordingsSubscriptionId = normalizeString(integration.recordings_subscription_id);
+    const transcriptsSubscriptionId = normalizeString(integration.transcripts_subscription_id);
+    if (!recordingsSubscriptionId || !transcriptsSubscriptionId) {
+      return {
+        status: 'fail',
+        detail: 'Recording/transcript change-notification subscriptions have not been created.',
+        data: {
+          recordingsSubscriptionPresent: Boolean(recordingsSubscriptionId),
+          transcriptsSubscriptionPresent: Boolean(transcriptsSubscriptionId),
+        },
+        recommendations: [
+          'Create a Teams meeting or wait for the renew-teams-meeting-artifact-subscriptions job to create the recording/transcript subscriptions.',
+        ],
+      };
+    }
+
+    const recordingsExpiresAt = serializeDate(integration.recordings_subscription_expires_at);
+    const transcriptsExpiresAt = serializeDate(integration.transcripts_subscription_expires_at);
+    const expiryHorizonMs = 3 * 60 * 60 * 1000;
+    const now = Date.now();
+    const problems: string[] = [];
+    for (const { kind, expiresAt } of [
+      { kind: 'recordings', expiresAt: recordingsExpiresAt },
+      { kind: 'transcripts', expiresAt: transcriptsExpiresAt },
+    ]) {
+      const expiryTime = expiresAt ? new Date(expiresAt).getTime() : NaN;
+      if (Number.isNaN(expiryTime)) {
+        problems.push(`The ${kind} subscription has no recorded expiry.`);
+      } else if (expiryTime <= now) {
+        problems.push(`The ${kind} subscription expired at ${new Date(expiryTime).toISOString()}.`);
+      } else if (expiryTime <= now + expiryHorizonMs) {
+        problems.push(`The ${kind} subscription is expiring at ${new Date(expiryTime).toISOString()}.`);
+      }
+    }
+
+    if (problems.length > 0) {
+      return {
+        status: 'warn',
+        detail: problems.join(' '),
+        data: { recordingsExpiresAt, transcriptsExpiresAt },
+        recommendations: ['Verify the renew-teams-meeting-artifact-subscriptions job is running.'],
+      };
+    }
+
+    return {
+      status: 'pass',
+      detail: 'Recording and transcript change-notification subscriptions are active.',
+      data: { recordingsExpiresAt, transcriptsExpiresAt },
+    };
+  });
+
+  await runStep('webhook_reachability', 'Recording webhook base URL', async () => {
+    let webhookUrl: string;
+    try {
+      webhookUrl = resolveTeamsRecordingsWebhookUrl();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error || 'Unknown error');
+      return {
+        status: 'fail',
+        detail: errorMessage,
+        error: errorMessage,
+        recommendations: ['Set TEAMS_RECORDINGS_WEBHOOK_URL to a publicly reachable HTTPS URL.'],
+      };
+    }
+
+    try {
+      const response = await fetch(webhookUrl, { method: 'GET', signal: AbortSignal.timeout(5000) });
+      return {
+        status: 'pass',
+        detail: 'The recording webhook base URL responded to an HTTPS probe.',
+        data: { webhookUrl, status: response.status },
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error || 'Unknown error');
+      return {
+        status: 'warn',
+        detail: 'The webhook base URL did not respond, so Microsoft Graph subscription validation may not reach it.',
+        data: { webhookUrl },
+        error: errorMessage,
+        recommendations: [
+          'Confirm the recording webhook base URL is publicly reachable (DNS, TLS, and firewall) so Microsoft Graph can validate subscriptions.',
+        ],
+      };
+    }
   });
 
   await runStep('user_linkage', 'Admin Microsoft account linkage', async () => {

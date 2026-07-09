@@ -9,7 +9,11 @@
  * is here (server app) because the inventory package cannot depend on billing.
  */
 
-import { downloadSalesOrderPDF, type SalesOrderDocumentType } from '@alga-psa/billing/actions';
+import {
+  downloadSalesOrderPDF,
+  SalesOrderDocumentError,
+  type SalesOrderDocumentType,
+} from '@alga-psa/billing/actions';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const VALID_TYPES: SalesOrderDocumentType[] = ['sales-order', 'packing-slip', 'pick-list'];
@@ -20,6 +24,15 @@ function salesOrderDocumentError(error: unknown): { status: number; message: str
   }
   if (isActionMessageError(error)) {
     return { status: /not found/i.test(error.actionError) ? 404 : 422, message: error.actionError };
+  }
+  if (error instanceof SalesOrderDocumentError) {
+    if (error.code === 'permission_denied') {
+      return { status: 403, message: error.message };
+    }
+    if (error.code === 'not_found') {
+      return { status: 404, message: error.message };
+    }
+    return { status: 422, message: error.message };
   }
   const message = error instanceof Error ? error.message : '';
   if (/permission denied/i.test(message)) {

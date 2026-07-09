@@ -112,11 +112,18 @@ async function getAccessToken(credentials: BotCredentials): Promise<string> {
   return inFlightTokenRequest;
 }
 
+/**
+ * Wire activity accepted by the connector: a bot response activity or any
+ * hand-built activity shape (e.g. proactive welcome cards with Adaptive
+ * Card attachments).
+ */
+export type BotConnectorActivity = TeamsBotResponseActivity | Record<string, unknown>;
+
 export interface SendBotActivityInput {
   serviceUrl: string;
   conversationId: string;
   replyToId?: string | null;
-  activity: TeamsBotResponseActivity;
+  activity: BotConnectorActivity;
 }
 
 export interface SendBotActivityResult {
@@ -124,9 +131,63 @@ export interface SendBotActivityResult {
   reason?: string;
 }
 
-export async function sendBotActivity(input: SendBotActivityInput): Promise<SendBotActivityResult> {
+/** Connector request failure carrying the HTTP status for retry decisions. */
+export class BotConnectorRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'BotConnectorRequestError';
+    this.status = status;
+  }
+}
+
+async function dispatchBotConnectorRequest(params: {
+  method: 'POST' | 'PUT';
+  url: string;
+  activity: BotConnectorActivity;
+  operation: string;
+}): Promise<void> {
   const credentials = readBotCredentialsFromEnv();
   if (!credentials) {
+    throw new Error('Bot Framework credentials are not configured.');
+  }
+
+  const token = await getAccessToken(credentials);
+  const response = await fetch(params.url, {
+    method: params.method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(params.activity),
+  });
+
+  if (response.status === 401) {
+    // Token likely expired between cache check and request. Clear the cache
+    // so the next send forces a fresh token, then surface the error.
+    cachedToken = null;
+  }
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new BotConnectorRequestError(
+      `Failed to ${params.operation} Bot Framework activity (${response.status} ${response.statusText}): ${detail.slice(0, 200)}`,
+      response.status
+    );
+  }
+}
+
+function buildConversationBaseUrl(serviceUrl: string, conversationId: string): string {
+  const base = serviceUrl.endsWith('/') ? serviceUrl.slice(0, -1) : serviceUrl;
+  return `${base}/v3/conversations/${encodeURIComponent(conversationId)}`;
+}
+
+function checkBotConnectorPreconditions(input: {
+  serviceUrl: string;
+  conversationId: string;
+}): SendBotActivityResult | null {
+  if (!readBotCredentialsFromEnv()) {
     return {
       status: 'skipped',
       reason: 'teams_bot_credentials_not_configured',
@@ -147,35 +208,58 @@ export async function sendBotActivity(input: SendBotActivityInput): Promise<Send
     };
   }
 
-  const token = await getAccessToken(credentials);
+  return null;
+}
 
-  const base = input.serviceUrl.endsWith('/') ? input.serviceUrl.slice(0, -1) : input.serviceUrl;
-  const conversation = encodeURIComponent(input.conversationId);
+export async function sendBotActivity(input: SendBotActivityInput): Promise<SendBotActivityResult> {
+  const skipped = checkBotConnectorPreconditions(input);
+  if (skipped) {
+    return skipped;
+  }
+
+  const base = buildConversationBaseUrl(input.serviceUrl, input.conversationId);
   const url = input.replyToId
-    ? `${base}/v3/conversations/${conversation}/activities/${encodeURIComponent(input.replyToId)}`
-    : `${base}/v3/conversations/${conversation}/activities`;
+    ? `${base}/activities/${encodeURIComponent(input.replyToId)}`
+    : `${base}/activities`;
 
-  const response = await fetch(url, {
+  await dispatchBotConnectorRequest({
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(input.activity),
+    url,
+    activity: input.activity,
+    operation: 'send',
   });
 
-  if (response.status === 401) {
-    // Token likely expired between cache check and request. Clear the cache
-    // so the next send forces a fresh token, then surface the error.
-    cachedToken = null;
+  return { status: 'sent' };
+}
+
+export interface UpdateBotActivityInput {
+  serviceUrl: string;
+  conversationId: string;
+  activityId: string;
+  activity: BotConnectorActivity;
+}
+
+/** Update an existing activity in place (PUT), e.g. refresh a card after an inline action. */
+export async function updateBotActivity(input: UpdateBotActivityInput): Promise<SendBotActivityResult> {
+  const skipped = checkBotConnectorPreconditions(input);
+  if (skipped) {
+    return skipped;
   }
 
-  if (!response.ok) {
-    const detail = await response.text().catch(() => '');
-    throw new Error(
-      `Failed to send Bot Framework activity (${response.status} ${response.statusText}): ${detail.slice(0, 200)}`
-    );
+  if (!input.activityId) {
+    return {
+      status: 'skipped',
+      reason: 'missing_activity_id',
+    };
   }
+
+  const base = buildConversationBaseUrl(input.serviceUrl, input.conversationId);
+  await dispatchBotConnectorRequest({
+    method: 'PUT',
+    url: `${base}/activities/${encodeURIComponent(input.activityId)}`,
+    activity: input.activity,
+    operation: 'update',
+  });
 
   return { status: 'sent' };
 }

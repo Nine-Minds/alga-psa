@@ -495,6 +495,13 @@ export const submitPurchaseOrder = withAuth(
         if (po.status !== 'draft') throw new Error(`Only draft purchase orders can be submitted (current: ${po.status})`);
         const lineCount = await trx('purchase_order_lines').where({ tenant, po_id: poId }).count<{ c: string }>('* as c').first();
         if (Number(lineCount?.c ?? 0) === 0) throw new Error('Cannot submit a purchase order with no lines');
+        const mixedLine = await trx('purchase_order_lines')
+          .where({ tenant, po_id: poId })
+          .andWhere('cost_currency', '<>', po.currency_code)
+          .first();
+        if (mixedLine) {
+          throw new Error(`Line cost_currency (${mixedLine.cost_currency}) must match PO currency_code (${po.currency_code})`);
+        }
 
         const [row] = await trx('purchase_orders')
           .where({ tenant, po_id: poId })

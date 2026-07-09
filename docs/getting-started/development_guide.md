@@ -174,16 +174,17 @@ All server actions that need authentication and database access should use the `
 
 ```typescript
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 export const myAction = withAuth(async (user, { tenant }, arg1: string): Promise<Result> => {
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
 
   if (!await hasPermission(user, 'resource', 'action')) {
     throw new Error('Permission denied');
   }
 
-  return knex('table').where({ tenant }).select('*');
+  return db.table('table').select('*');
 });
 ```
 
@@ -192,6 +193,7 @@ export const myAction = withAuth(async (user, { tenant }, arg1: string): Promise
 - The wrapper provides typed `user` (IUserWithRoles) and `{ tenant }` as first two arguments
 - Additional action arguments follow after the context
 - Always check permissions using `hasPermission(user, resource, action)`
+- Query tenant data through the `tenantDb` facade, which applies tenant scoping for you — see [Tenant isolation and the tenantDb query facade](../architecture/tenant-isolation.md)
 
 ### 3. Testing
 

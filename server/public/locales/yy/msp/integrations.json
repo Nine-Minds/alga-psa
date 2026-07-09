@@ -1065,7 +1065,10 @@
           "needsAttention": "55555",
           "saving": "55555",
           "selectProfile": "55555",
-          "unbound": "55555"
+          "unbound": "55555",
+          "noCapablePlaceholder": "No enabled profile",
+          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.",
+          "noEmailCapableProfiles": "No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app."
         },
         "bindings": {
           "summaryBound": "55555 {{consumer}} 55555 {{profile}} 55555",
@@ -1074,7 +1077,8 @@
           "warningArchived": "55555 {{consumer}} 55555",
           "warningNoBinding": "55555 {{consumer}} 55555",
           "warningNotReady": "55555 {{consumer}} 55555 {{profile}} 55555",
-          "warningProfileMissing": "55555 {{consumer}} 55555"
+          "warningProfileMissing": "55555 {{consumer}} 55555",
+          "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
         },
         "bindingsAlertCe": "55555",
         "bindingsAlertEe": "55555",
@@ -1123,7 +1127,9 @@
           "setDefault": "55555",
           "setDefaultHelp": "55555",
           "storedSecretHint": "55555 {{secret}} 55555",
-          "tenantId": "55555"
+          "tenantId": "55555",
+          "capabilities": "Enabled capabilities",
+          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "55555",
@@ -1177,7 +1183,9 @@
           "storedSecret": "55555",
           "teamsAppIdUri": "55555",
           "tenantIdLabel": "55555",
-          "updating": "55555"
+          "updating": "55555",
+          "enabledCapabilities": "Enabled capabilities",
+          "noEnabledCapabilities": "No enabled capabilities"
         },
         "providerReconnect": {
           "description": "55555",
@@ -1864,6 +1872,11 @@
         },
         "descriptionCe": "55555",
         "descriptionEe": "55555",
+        "moved": {
+          "title": "MSP SSO Login Domains",
+          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "cta": "Open Single Sign-On settings"
+        },
         "dnsHost": "55555",
         "dnsInstructions": "55555",
         "dnsValue": "55555",
@@ -2013,6 +2026,12 @@
             "description": "55555",
             "label": "55555"
           },
+          "channel": {
+            "activityFeed": "55555",
+            "botDm": "55555",
+            "both": "55555",
+            "label": "55555"
+          },
           "customerReply": {
             "description": "55555",
             "label": "55555"
@@ -2141,6 +2160,10 @@
             "help": "55555",
             "resolved": "55555 {{objectId}} 55555"
           },
+          "sendMeetingInvites": {
+            "label": "55555",
+            "description": "55555"
+          },
           "downloadRecordings": {
             "label": "55555",
             "description": "55555"
@@ -2149,6 +2172,218 @@
             "label": "55555",
             "description": "55555"
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "55555",
+          "message": "55555"
+        },
+        "wizard": {
+          "title": "55555",
+          "description": "55555",
+          "status": {
+            "complete": "55555",
+            "current": "55555",
+            "incomplete": "55555"
+          },
+          "validate": {
+            "error": "55555",
+            "validating": "55555",
+            "profile": "55555",
+            "profileOk": "55555",
+            "permissions": "55555",
+            "permissionsOk": "55555",
+            "permissionGranted": "55555",
+            "permissionMissing": "55555",
+            "bot": "55555",
+            "botOk": "55555"
+          },
+          "activationBlocked": "55555",
+          "step": {
+            "microsoftProfile": {
+              "title": "55555",
+              "description": "55555"
+            },
+            "graphPermissions": {
+              "title": "55555",
+              "description": "55555"
+            },
+            "botFramework": {
+              "title": "55555",
+              "description": "55555"
+            },
+            "activate": {
+              "title": "55555",
+              "description": "55555"
+            },
+            "package": {
+              "title": "55555",
+              "description": "55555",
+              "hint": "55555"
+            },
+            "sideload": {
+              "title": "55555",
+              "description": "55555",
+              "body": "55555"
+            },
+            "verify": {
+              "title": "55555",
+              "description": "55555",
+              "hint": "55555"
+            }
+          }
+        },
+        "runbook": {
+          "viewGuide": "55555"
+        },
+        "deliveryLog": {
+          "title": "55555",
+          "description": "55555",
+          "error": "55555",
+          "forbidden": "55555",
+          "empty": "55555",
+          "refresh": "55555",
+          "loadMore": "55555",
+          "loading": "55555",
+          "filter": {
+            "statusLabel": "55555",
+            "statusAll": "55555",
+            "categoryLabel": "55555",
+            "categoryAll": "55555"
+          },
+          "columns": {
+            "createdAt": "55555",
+            "category": "55555",
+            "destination": "55555",
+            "status": "55555",
+            "errorCode": "55555",
+            "errorMessage": "55555"
+          },
+          "status": {
+            "delivered": "55555",
+            "sent": "55555",
+            "failed": "55555",
+            "skipped": "55555"
+          },
+          "category": {
+            "assignment": "55555",
+            "customer_reply": "55555",
+            "approval_request": "55555",
+            "escalation": "55555",
+            "sla_risk": "55555"
+          }
+        },
+        "auditLog": {
+          "title": "55555",
+          "description": "55555",
+          "error": "55555",
+          "forbidden": "55555",
+          "empty": "55555",
+          "refresh": "55555",
+          "loadMore": "55555",
+          "loading": "55555",
+          "filter": {
+            "surfaceLabel": "55555",
+            "surfaceAll": "55555",
+            "actionLabel": "55555",
+            "actionPlaceholder": "55555"
+          },
+          "surface": {
+            "bot": "55555",
+            "message_extension": "55555",
+            "quick_action": "55555",
+            "tab": "55555"
+          },
+          "columns": {
+            "createdAt": "55555",
+            "surface": "55555",
+            "action": "55555",
+            "target": "55555",
+            "result": "55555",
+            "errorCode": "55555"
+          },
+          "result": {
+            "success": "55555",
+            "failure": "55555"
+          }
+        },
+        "troubleshooting": {
+          "title": "55555",
+          "description": "55555",
+          "show": "55555",
+          "hide": "55555",
+          "columns": {
+            "code": "55555",
+            "cause": "55555",
+            "remedy": "55555"
+          },
+          "codes": {
+            "graph_unauthorized": {
+              "cause": "55555",
+              "remedy": "55555"
+            },
+            "user_not_mapped": {
+              "cause": "55555",
+              "remedy": "55555"
+            },
+            "addon_inactive": {
+              "cause": "55555",
+              "remedy": "55555"
+            },
+            "integration_inactive": {
+              "cause": "55555",
+              "remedy": "55555"
+            },
+            "package_misconfigured": {
+              "cause": "55555",
+              "remedy": "55555"
+            },
+            "graph_not_found": {
+              "cause": "55555",
+              "remedy": "55555"
+            },
+            "graph_throttled": {
+              "cause": "55555",
+              "remedy": "55555"
+            },
+            "graph_server_error": {
+              "cause": "55555",
+              "remedy": "55555"
+            },
+            "transient": {
+              "cause": "55555",
+              "remedy": "55555"
+            },
+            "unknown": {
+              "cause": "55555",
+              "remedy": "55555"
+            }
+          }
+        },
+        "paywall": {
+          "title": "55555",
+          "description": "55555",
+          "includedTitle": "55555",
+          "feature": {
+            "tab": "55555",
+            "bot": "55555",
+            "messageExtension": "55555",
+            "meetings": "55555",
+            "recordings": "55555",
+            "notifications": "55555"
+          },
+          "cta": "55555",
+          "nonBilling": "55555"
+        },
+        "addonExpiredBanner": {
+          "title": "55555",
+          "message": "55555",
+          "cta": "55555"
+        },
+        "staleManifest": {
+          "title": "55555",
+          "warning": "55555",
+          "regenerate": "55555",
+          "regenerating": "55555"
         }
       }
     },

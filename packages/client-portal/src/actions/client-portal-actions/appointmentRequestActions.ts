@@ -32,7 +32,7 @@ import {
 } from '../../services/availabilityService';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import { resolveAppointmentApproverUserIds } from '@alga-psa/msp-composition/scheduling/appointmentApprovers';
-import { isValidEmail } from '@alga-psa/core';
+import { isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
 import { isEnterprise } from '@alga-psa/core/features';
 import { format, type Locale } from 'date-fns';
 import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
@@ -287,30 +287,27 @@ async function getClientCompanyName(clientId: string, tenant: string): Promise<s
   });
 }
 
-async function deleteTeamsMeetingIfAvailable(params: {
-  tenantId: string;
-  meetingId: string;
-  eventId?: string | null;
-  appointmentRequestId: string;
-}): Promise<boolean> {
+/**
+ * Enqueues the idempotent Graph cleanup job for a cancelled meeting (F019).
+ * The online_meetings row stays cancel_pending until the job confirms Graph
+ * deletion; the recurring Teams meeting sweep retries rows whose job was lost.
+ */
+async function enqueueTeamsMeetingCleanupJob(tenantId: string, meetingId: string): Promise<boolean> {
   if (!isEnterprise) {
     return false;
   }
 
   try {
-    const teamsModule = await import('@alga-psa/ee-microsoft-teams/lib');
-    if (typeof teamsModule.deleteTeamsMeeting !== 'function') {
-      return false;
-    }
-
-    return teamsModule.deleteTeamsMeeting({
-      tenantId: params.tenantId,
-      meetingId: params.meetingId,
-      eventId: params.eventId ?? null,
-      appointmentRequestId: params.appointmentRequestId,
-    });
+    // Enqueue via the core DI seam rather than importing @alga-psa/jobs, which
+    // would create a client-portal -> jobs cycle. The handler is idempotent
+    // (404=success) and the recurring Teams meeting sweep re-enqueues any
+    // cancel_pending row, so runner-level singletonKey de-duplication is not needed.
+    await enqueueImmediateJob('teams-meeting-cleanup', { tenantId, meetingId });
+    return true;
   } catch (error) {
-    console.warn('[ClientPortalAppointmentRequests] Failed to load Teams meeting delete implementation', {
+    console.warn('[ClientPortalAppointmentRequests] Failed to enqueue Teams meeting cleanup job; the Teams meeting sweep will retry', {
+      tenantId,
+      meetingId,
       error: error instanceof Error ? error.message : String(error),
     });
     return false;
@@ -1337,14 +1334,29 @@ export const cancelAppointmentRequest = withAuth(async (
           updated_at: now
         });
 
-      await tenantDb(trx, tenant).table('online_meetings')
+      // Live Teams meetings move to cancel_pending until the idempotent
+      // cleanup job confirms Graph deletion (F019); rows without a provider
+      // meeting (failed creations) are cancelled directly.
+      const cleanupTargets: string[] = [];
+      const meetingRows = await tenantDb(trx, tenant).table('online_meetings')
         .where({
           appointment_request_id: request.appointment_request_id,
         })
-        .update({
-          status: 'cancelled',
-          updated_at: now,
-        });
+        .whereNot({ status: 'cancelled' })
+        .select('meeting_id', 'provider', 'provider_meeting_id');
+
+      for (const meetingRow of meetingRows) {
+        const needsGraphCleanup = meetingRow.provider === 'teams' && meetingRow.provider_meeting_id;
+        await tenantDb(trx, tenant).table('online_meetings')
+          .where({ meeting_id: meetingRow.meeting_id })
+          .update({
+            status: needsGraphCleanup ? 'cancel_pending' : 'cancelled',
+            updated_at: now,
+          });
+        if (needsGraphCleanup) {
+          cleanupTargets.push(meetingRow.meeting_id);
+        }
+      }
 
       try {
         if (request.schedule_entry_id) {
@@ -1456,28 +1468,27 @@ export const cancelAppointmentRequest = withAuth(async (
 
       return {
         appointmentRequestId: request.appointment_request_id,
-        meetingId: onlineMeeting?.provider === 'teams'
-          ? onlineMeeting.provider_meeting_id
-          : request.online_meeting_provider === 'teams' && request.online_meeting_id
-            ? request.online_meeting_id
-            : null,
-        eventId: onlineMeeting?.provider_event_id ?? null,
+        hadTeamsMeeting:
+          cleanupTargets.length > 0 ||
+          onlineMeeting?.provider === 'teams' ||
+          request.online_meeting_provider === 'teams',
+        cleanupTargets,
       };
     });
 
     let teamsMeetingWarning: string | undefined;
 
-    if (cancellationContext?.meetingId) {
-      const deletedMeeting = await deleteTeamsMeetingIfAvailable({
-        tenantId: tenant,
-        meetingId: cancellationContext.meetingId,
-        eventId: cancellationContext.eventId,
-        appointmentRequestId: cancellationContext.appointmentRequestId,
-      });
-
-      if (!deletedMeeting) {
-        teamsMeetingWarning = 'Appointment deleted, but the Microsoft Teams meeting could not be removed. Please remove it manually in Teams.';
+    if (cancellationContext?.cleanupTargets?.length) {
+      let allEnqueued = true;
+      for (const meetingId of cancellationContext.cleanupTargets) {
+        const enqueued = await enqueueTeamsMeetingCleanupJob(tenant, meetingId);
+        allEnqueued = allEnqueued && enqueued;
       }
+      teamsMeetingWarning = allEnqueued
+        ? 'The linked Microsoft Teams meeting is being cancelled; attendees will see it removed from their calendars shortly.'
+        : 'Appointment cancelled, but the Microsoft Teams meeting removal could not be scheduled. It will be retried automatically.';
+    } else if (cancellationContext?.hadTeamsMeeting) {
+      teamsMeetingWarning = 'Appointment cancelled, but the Microsoft Teams meeting could not be removed automatically. Please remove it manually in Teams.';
     }
 
     return { success: true, teamsMeetingWarning };

@@ -97,11 +97,124 @@
   "dashboard": {
     "actions": {
       "newPurchaseOrder": "Nouveau bon de commande",
-      "receiveStock": "Réceptionner du stock"
+      "receiveStock": "Réceptionner du stock",
+      "stockLedger": "Ouvrir le registre de stock"
+    },
+    "loadError": {
+      "title": "Impossible de charger les données d’inventaire en direct",
+      "body": "Le tableau de bord affiche des valeurs vides jusqu’à ce que le flux de données réussisse."
     },
     "attention": {
       "allClear": "Tout est en ordre — rien ne nécessite d'attention pour le moment.",
-      "title": "Nécessite une attention"
+      "title": "Nécessite une attention",
+      "urgent": "{{count}} urgent(s)",
+      "footer": "Classé par impact financier + client · actualisé à l'instant",
+      "itemFallback": "unité",
+      "refFallback": "RMA",
+      "noneFallback": "aucun",
+      "personFallback": "quelqu'un",
+      "vendorFallback": "fournisseur",
+      "filters": {
+        "all": "Tous",
+        "money": "Argent",
+        "fulfillment": "Livraison",
+        "field": "Terrain",
+        "ops": "Ops"
+      },
+      "bands": {
+        "red": "Coûte de l'argent ou un client aujourd'hui",
+        "amber": "À relancer cette semaine",
+        "info": "À surveiller"
+      },
+      "actions": {
+        "invoice": "Facturer",
+        "viewSo": "Voir la SO",
+        "trackTransfer": "Suivre le transfert",
+        "recall": "Rappeler",
+        "review": "Examiner",
+        "chase": "Relancer",
+        "openStaging": "Ouvrir la préparation",
+        "requote": "Refaire le devis",
+        "reviewBill": "Vérifier la facture",
+        "approve": "Approuver",
+        "reorder": "Réapprovisionner",
+        "createPo": "Créer un PO",
+        "receive": "Réceptionner",
+        "shipReplacement": "Expédier le remplacement",
+        "view": "Voir"
+      },
+      "kind": {
+        "unbilled": "non facturé",
+        "dropship": "livraison directe",
+        "cutoverRisk": "bascule à risque",
+        "cutover": "bascule",
+        "vanShortage": "pénurie camionnette",
+        "loaner": "prêt en retard",
+        "ghost": "usage fantôme",
+        "rmaAging": "RMA en attente",
+        "rmaClient": "remplacement",
+        "priceCreep": "dérive de prix",
+        "billCreep": "dérive de facturation",
+        "billsOverdue": "factures en retard",
+        "countApproval": "approbation d'inventaire",
+        "stockLow": "stock faible",
+        "stockOut": "rupture de stock",
+        "poPartial": "PO partiel",
+        "warranty": "garantie",
+        "deadStock": "stock dormant"
+      },
+      "fact": {
+        "unbilledSo": "expédié, toujours pas facturé",
+        "unbilledDropship": "livraisons directes non facturées sur {{count}} SO",
+        "cutoverRisk": "bascule {{date}} — {{backordered}} sur {{ordered}} en reliquat",
+        "cutoverStaging": "bascule {{date}} — {{staged}} sur {{ordered}} préparés",
+        "vanShortage": "pénurie de {{service}} avec {{jobs}} installations aujourd'hui",
+        "overdueLoaner": "prêt de {{service}} en retard de {{days}} j",
+        "ghostTech": "{{count}} tickets matériel fermés, aucune pièce facturée",
+        "rmaVendor": "doit un crédit — aucune réponse depuis {{days}} jours",
+        "rmaClient": "unité de remplacement toujours due",
+        "priceCreepSo": "toujours à l'ancien coût",
+        "priceCreepQuotes": "{{count}} devis ouvert(s) désormais sous le coût actuel",
+        "priceCreepBill": "la facture dépasse le PO correspondant",
+        "billsOverdue": "{{count}} facture(s) fournisseur en retard",
+        "countApproval": "l'écart d'inventaire nécessite un approbateur",
+        "stockOut": "{{service}} est en rupture de stock",
+        "stockLow": "{{service}} sous le point de réapprovisionnement",
+        "poPartial": "PO partiellement réceptionné toujours ouvert",
+        "warranty": "{{count}} unités dont la garantie expire <30 j",
+        "deadStock": "aucun mouvement depuis 90 jours"
+      },
+      "meta": {
+        "unbilledSo": "{{so}} · {{lines}} lignes · expédié il y a {{days}} j",
+        "unbilledDropship": "lignes en livraison directe confirmées, prêtes à facturer",
+        "cutoverFeeder": "ETA {{po}} {{eta}} · {{slack}} j de marge · préparation {{pct}} %",
+        "cutover": "{{so}} · {{pct}} % préparé · {{days}} j restants",
+        "vanShortageTransit": "disponible {{available}} · transfert {{from}} expédié",
+        "vanShortage": "disponible {{available}} · point de réappro {{reorder}}",
+        "overdueLoaner": "échéance {{date}}{{serial}}",
+        "ghostTech": "exposition matériel estimée sur les tickets matériel fermés",
+        "rmaVendor": "{{ref}} · plus ancienne créance ouverte",
+        "rmaClient": "{{ref}} · {{service}} · échéance dans {{days}} j",
+        "priceCreepSo": "{{so}} · risque de marge si livré tel quel",
+        "priceCreepQuotes": "devis : {{numbers}}",
+        "priceCreepBill": "{{bill}} · signalé vs PO correspondant",
+        "billsOverdue": "plus ancienne en retard de {{days}} j",
+        "countApproval": "compté par {{name}} · contrôle à quatre yeux",
+        "stockLevel": "disponible {{available}} · point de réappro {{reorder}}",
+        "poPartial": "{{po}} · {{received}} sur {{ordered}} réceptionnés · {{vendor}}",
+        "warranty": "{{count}} clients",
+        "deadStock": "{{locations}} emplacement(s) immobilisent du fonds de roulement"
+      },
+      "metric": {
+        "ageDays": "{{days}} j",
+        "percent": "{{pct}} %",
+        "daysOut": "{{days}} j restants",
+        "jobs": "{{count}} tâches",
+        "today": "aujourd'hui",
+        "units": "{{count}} unités",
+        "ltThirty": "<30 j",
+        "available": "disponible"
+      }
     },
     "bills": {
       "acrossBill": "{{total}} sur {{count}} facture",
@@ -192,6 +305,107 @@
       "loanOut": "Prêté",
       "loanIn": "Prêt retourné",
       "retire": "Retiré"
+    },
+    "header": {
+      "branch": "succursale",
+      "branches": "succursales",
+      "van": "camionnette",
+      "vans": "camionnettes",
+      "tech": "technicien",
+      "techs": "techniciens",
+      "subtitle": "{{branches}} · {{vans}} · {{techs}} — {{attention}} à traiter, {{inPlay}} en cours aujourd'hui."
+    },
+    "money": {
+      "estUnavailable": "comptage uniquement",
+      "unbilled": {
+        "title": "Non facturé mais expédié",
+        "noShippedSos": "Aucune SO expédiée en attente",
+        "otherSos": "{{count}} SO expédiées de plus",
+        "dropship": "Livraisons directes non facturées",
+        "soCount": "{{count}} SO",
+        "ghost": "Usage fantôme",
+        "ticketCount": "{{count}} tickets",
+        "ledgerLink": "Voir le registre des revenus"
+      },
+      "margin": {
+        "title": "Marge depuis le début du mois",
+        "vsLastMonth": "vs mois dernier",
+        "meta": "{{margin}} de marge · {{revenue}} CA · {{cogs}} COGS",
+        "priceCreep": "{{count}} devis et {{sos}} toujours à l'ancien coût — {{amount}} de marge en risque.",
+        "noSos": "aucune SO ouverte"
+      },
+      "rma": {
+        "title": "Dû par le fournisseur (crédits RMA)",
+        "oldest": "{{days}} j le plus ancien",
+        "empty": "Aucun RMA fournisseur en attente.",
+        "vendorFallback": "Fournisseur",
+        "creditRef": "crédit · {{ref}}",
+        "credit": "crédit",
+        "link": "Relancer tous les RMA"
+      }
+    },
+    "deployments": {
+      "title": "Déploiements de cette semaine",
+      "subtitle": "{{count}} bascule(s) datée(s)",
+      "eyebrow": "Cette semaine",
+      "scope": "{{qty}}× {{name}} — {{staged}} préparés · {{backordered}} en reliquat",
+      "itemFallback": "article",
+      "scopeFallback": "{{staged}} préparés · {{backordered}} en reliquat",
+      "feeder": "Alimenté par {{po}} {{vendor}}, ETA {{eta}} — {{slack}} j de marge.",
+      "vendorFallback": "fournisseur",
+      "noEta": "aucune ETA",
+      "allServiceOrders": "Toutes les commandes de service",
+      "countdownBefore": "J-{{days}}",
+      "countdownAfter": "J+{{days}}",
+      "status": {
+        "atRisk": "À risque",
+        "ready": "Prêt",
+        "staging": "Préparation"
+      }
+    },
+    "pipeline": {
+      "title": "Pipeline des commandes client",
+      "openSos": "{{count}} SO ouvertes",
+      "quotes": "Devis",
+      "quotesValue": "{{count}} ouverts",
+      "booked": "SO enregistrée",
+      "bookedValue": "{{count}} · {{draft}} brouillon",
+      "fulfilling": "En livraison",
+      "fulfillingValue": "{{count}} reliquat",
+      "invoiced": "Facturé",
+      "invoicedValue": "cette sem.",
+      "blocked": "{{count}} SO bloquées sur reliquat",
+      "allSos": "Toutes les SO"
+    },
+    "receivingToday": {
+      "title": "Réception aujourd'hui",
+      "meta": "PO · {{amount}} · {{more}} de plus cette sem.",
+      "empty": "Aucun bon de commande n'arrive aujourd'hui.",
+      "vendorFallback": "Fournisseur",
+      "flag": "Signalement : {{po}} arrive avec {{slack}} j de marge avant la bascule de {{client}}.",
+      "clientFallback": "client",
+      "receiveStock": "Réceptionner du stock"
+    },
+    "ghostWeek": {
+      "title": "Usage fantôme cette semaine",
+      "countOnly": "tickets fermés, 0 pièce",
+      "est": "tickets fermés, 0 pièce · est. {{amount}}",
+      "explainer": "Tickets matériel fermés sans matériel enregistré — clôtures main-d'œuvre seule non facturées, par technicien.",
+      "empty": "Aucun candidat d'usage fantôme cette semaine.",
+      "techChip": "{{name}} · {{count}}{{amount}}",
+      "review": "Examiner l'usage fantôme"
+    },
+    "footer": {
+      "title": "État de l'inventaire",
+      "weekAbbrev": "sem.",
+      "onHand": "Unités en stock",
+      "serialized": "{{count}} sérialisées",
+      "deadStock": "Stock dormant",
+      "deadStockDetail": "{{location}} · 90 j",
+      "locationFallback": "Emplacement",
+      "thisWeek": "Cette semaine",
+      "weekActivity": "{{received}} réceptionnées · {{deployed}} déployées · {{transfers}} transferts · {{rmas}} RMA",
+      "valuationReport": "Rapport de valorisation"
     }
   },
   "ghostUsage": {
@@ -530,6 +744,7 @@
     "addPurchaseOrder": "Ajouter un bon de commande",
     "allVendors": "Tous les fournisseurs",
     "amountOnOrder": "{{amount}} en commande",
+    "mixedCurrencyOnOrder": "{{count}} bons de commande en cours dans plusieurs devises",
     "cancelConfirm": "Êtes-vous sûr de vouloir annuler le bon de commande {{poNumber}} ? Cette action est irréversible.",
     "cancelFailed": "Impossible d'annuler le bon de commande.",
     "cancelTitle": "Annuler le bon de commande",
@@ -678,6 +893,7 @@
       "fulfilling": "Livraison…",
       "generateInvoice": "Générer la facture",
       "invoicing": "Facturation…",
+      "manageLayouts": "Gérer les mises en page",
       "reopenToDraft": "Rouvrir en brouillon",
       "reopening": "Réouverture…"
     },
@@ -686,8 +902,10 @@
       "hard": "Ferme",
       "soft": "Souple"
     },
+    "allocationModeHelp": "Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.",
     "availabilityOk": "OK",
     "backorderBadge": "Reliquat {{shortfall}}",
+    "billingAllocation": "Billing & allocation",
     "billsOnFulfillment": "Facturé à la livraison",
     "cancelDialog": {
       "confirm": "Annuler la commande client",
@@ -716,6 +934,7 @@
       "vendorPlaceholder": "Sélectionnez un fournisseur…"
     },
     "created": "Commande client créée",
+    "currencyFromClient": "Set from client",
     "currencyRequired": "Le code de devise est requis",
     "detailTitle": "Commande client {{number}}",
     "detailTitleFallback": "Commande client",
@@ -745,14 +964,33 @@
     "emailFailed": "Impossible d'envoyer la confirmation par e-mail.",
     "emailSuccess": "Confirmation envoyée par e-mail à {{recipients}}",
     "enterSerial": "Saisissez au moins un numéro de série.",
+    "errors": {
+      "documentGenerationFailed": "Impossible de générer le document",
+      "downloadPermissionDenied": "Autorisation refusée : impossible de télécharger les documents de commande client",
+      "emailConfirmationFailed": "Impossible d'envoyer la confirmation par e-mail",
+      "emailPermissionDenied": "Autorisation refusée : impossible d'envoyer les documents de commande client par e-mail",
+      "emailSendFailed": "L'e-mail n'a pas pu être envoyé.",
+      "noRecipientEmail": "Aucun e-mail de destinataire n'est enregistré pour ce client.",
+      "notFound": "Commande client introuvable"
+    },
     "fields": {
       "allocationMode": "Mode d'allocation",
+      "clientPoNumber": "Client PO number",
       "currencyCode": "Code de devise",
+      "expectedShipDate": "Expected ship date",
+      "fulfillment": "Fulfillment",
       "invoiceMode": "Mode de facturation",
+      "items": "Items",
       "lines": "Lignes",
+      "noService": "No service found.",
+      "notes": "Notes",
       "qty": "Qté",
+      "searchService": "Search services…",
+      "selectService": "Select a service…",
+      "service": "Service",
       "serviceId": "ID de service",
-      "unitPrice": "Prix unitaire ($)"
+      "unitPrice": "Prix unitaire ($)",
+      "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "Depuis le devis",
     "fulfillDialog": {
@@ -771,6 +1009,10 @@
       "title": "Livrer — {{name}}"
     },
     "fulfilledUnits": "{{count}} unité(s) livrée(s).",
+    "fulfillment": {
+      "dropShip": "Drop-ship",
+      "fromStock": "From stock"
+    },
     "fulfillmentFailed": "Échec de la livraison.",
     "invoiceColumns": {
       "amount": "Montant",
@@ -782,6 +1024,7 @@
       "manual": "Manuel",
       "onFulfillment": "À la livraison"
     },
+    "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
     "invoicedItems": "{{count}} article(s) facturé(s).",
     "invoices": "Factures",
     "invoicingFailed": "Échec de la facturation : {{error}}. Utilisez « Générer la facture » pour réessayer.",
@@ -802,8 +1045,10 @@
     "nothingBackordered": "Aucun reliquat.",
     "nothingToInvoice": "Plus rien à facturer.",
     "onlyRemaining": "Il ne reste que {{remaining}} sur cette ligne.",
+    "pickServiceForLine": "Pick a service for this line.",
     "pickVendor": "Choisissez le fournisseur qui expédiera cette ligne.",
     "productDefaultLocation": "Emplacement par défaut du produit",
+    "qtyPositive": "Must be > 0.",
     "qtyPositiveInteger": "La quantité doit être un nombre entier positif.",
     "reopenError": "Impossible de rouvrir la commande client.",
     "reopened": "Commande client rouverte — elle est de nouveau à l'état de brouillon.",
@@ -819,7 +1064,9 @@
       "partiallyFulfilled": "Partiellement livrée"
     },
     "title": "Commandes client",
-    "unassignedBackorder": "{{count}} ligne(s) en reliquat n'ont pas de fournisseur préféré — créez ces PO manuellement."
+    "total": "Total",
+    "unassignedBackorder": "{{count}} ligne(s) en reliquat n'ont pas de fournisseur préféré — créez ces PO manuellement.",
+    "unnamedService": "Unnamed"
   },
   "stock": {
     "actions": {
@@ -997,6 +1244,7 @@
     "title": "Transferts",
     "toLocation": "Emplacement de destination",
     "vanLoadList": "Liste de chargement de la camionnette",
+    "vanLoadListReplenishment": "Réapprovisionnement de la liste de chargement de la camionnette",
     "status": {
       "dispatched": "Expédié",
       "received": "Réceptionné",

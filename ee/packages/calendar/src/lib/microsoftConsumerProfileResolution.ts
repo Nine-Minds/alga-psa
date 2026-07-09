@@ -5,6 +5,9 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 
 const MICROSOFT_PROFILE_CONSUMERS = ['msp_sso', 'email', 'calendar', 'teams'] as const;
 type MicrosoftProfileConsumer = typeof MICROSOFT_PROFILE_CONSUMERS[number];
+const DEFAULT_MICROSOFT_PROFILE_CAPABILITIES: MicrosoftProfileConsumer[] = [
+  ...MICROSOFT_PROFILE_CONSUMERS,
+];
 
 const LEGACY_MICROSOFT_CLIENT_ID_SECRET = 'microsoft_client_id';
 const LEGACY_MICROSOFT_CLIENT_SECRET_SECRET = 'microsoft_client_secret';
@@ -19,6 +22,7 @@ interface MicrosoftProfileRow {
   client_id: string;
   tenant_id: string;
   client_secret_ref: string;
+  capabilities: MicrosoftProfileConsumer[] | string | null;
   is_default: boolean;
   is_archived: boolean;
   archived_at: string | Date | null;
@@ -44,6 +48,7 @@ export type MicrosoftConsumerProfileReasonCode =
   | 'unsupported_consumer'
   | 'binding_not_configured'
   | 'profile_missing'
+  | 'profile_capability_missing'
   | 'profile_credentials_missing';
 
 export interface MicrosoftConsumerProfileResolution {
@@ -80,6 +85,41 @@ function hasLegacyMicrosoftConfig(values: {
 
 function isConfigured(value?: string | null): boolean {
   return Boolean((value || '').trim());
+}
+
+function isSupportedMicrosoftProfileConsumer(value: string): value is MicrosoftProfileConsumer {
+  return (MICROSOFT_PROFILE_CONSUMERS as readonly string[]).includes(value);
+}
+
+function normalizeMicrosoftProfileCapabilities(value: unknown): MicrosoftProfileConsumer[] {
+  let rawValue = value;
+  if (typeof rawValue === 'string') {
+    try {
+      rawValue = JSON.parse(rawValue);
+    } catch {
+      rawValue = null;
+    }
+  }
+
+  if (!Array.isArray(rawValue)) {
+    return [...DEFAULT_MICROSOFT_PROFILE_CAPABILITIES];
+  }
+
+  const capabilities = new Set<MicrosoftProfileConsumer>();
+  for (const capability of rawValue) {
+    if (typeof capability === 'string' && isSupportedMicrosoftProfileConsumer(capability)) {
+      capabilities.add(capability);
+    }
+  }
+
+  return [...capabilities];
+}
+
+function profileHasCapability(
+  profile: Pick<MicrosoftProfileRow, 'capabilities'>,
+  consumerType: MicrosoftProfileConsumer
+): boolean {
+  return normalizeMicrosoftProfileCapabilities(profile.capabilities).includes(consumerType);
 }
 
 async function getLegacyMicrosoftConfig(
@@ -122,7 +162,10 @@ function tenantScopedTable(db: any, table: string, tenant: string) {
 
 async function getTenantMicrosoftProfiles(db: any, tenant: string): Promise<MicrosoftProfileRow[]> {
   const rows = (await tenantScopedTable(db, 'microsoft_profiles', tenant).select('*')) as MicrosoftProfileRow[];
-  return [...rows].sort((left, right) => {
+  return rows.map((row) => ({
+    ...row,
+    capabilities: normalizeMicrosoftProfileCapabilities(row.capabilities),
+  })).sort((left, right) => {
     if (left.is_default !== right.is_default) return left.is_default ? -1 : 1;
     if (left.is_archived !== right.is_archived) return left.is_archived ? 1 : -1;
     return left.display_name.localeCompare(right.display_name);
@@ -149,16 +192,20 @@ async function getMicrosoftProfileRow(
   const row = await tenantScopedTable(db, 'microsoft_profiles', tenant)
     .where({ profile_id: profileId })
     .first() as MicrosoftProfileRow | undefined;
-  return row || undefined;
+  return row ? {
+    ...row,
+    capabilities: normalizeMicrosoftProfileCapabilities(row.capabilities),
+  } : undefined;
 }
 
 async function resolveMicrosoftBindingCandidateProfile(
   db: any,
   tenant: string,
-  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>,
+  consumerType: MicrosoftProfileConsumer
 ): Promise<MicrosoftProfileRow | undefined> {
   const activeProfiles = (await getTenantMicrosoftProfiles(db, tenant)).filter(
-    (profile) => !profile.is_archived
+    (profile) => !profile.is_archived && profileHasCapability(profile, consumerType)
   );
 
   if (activeProfiles.length === 0) return undefined;
@@ -238,6 +285,7 @@ async function ensureLegacyMicrosoftProfileBackfill(
     client_id: (legacyClientId || '').trim(),
     tenant_id: normalizeTenantId(legacyTenantId),
     client_secret_ref: clientSecretRef,
+    capabilities: JSON.stringify(DEFAULT_MICROSOFT_PROFILE_CAPABILITIES),
     is_default: true,
     is_archived: false,
     archived_at: null,
@@ -298,7 +346,7 @@ async function ensureMicrosoftConsumerBindingMigration(
     return undefined;
   }
 
-  const candidateProfile = await resolveMicrosoftBindingCandidateProfile(db, tenant, secretProvider);
+  const candidateProfile = await resolveMicrosoftBindingCandidateProfile(db, tenant, secretProvider, consumerType);
   if (!candidateProfile) {
     return undefined;
   }
@@ -359,6 +407,17 @@ export async function resolveMicrosoftConsumerProfileConfig(
       profileId: binding.profile_id,
       reasonCode: 'profile_missing',
       message: `Selected ${getConsumerLabel(consumerType)} Microsoft profile is missing or archived`,
+    };
+  }
+
+  if (!profileHasCapability(profile, consumerType)) {
+    return {
+      status: 'invalid_profile',
+      tenantId,
+      consumerType,
+      profileId: profile.profile_id,
+      reasonCode: 'profile_capability_missing',
+      message: `Selected ${getConsumerLabel(consumerType)} Microsoft profile is not enabled for ${getConsumerLabel(consumerType)}`,
     };
   }
 

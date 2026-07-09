@@ -101,6 +101,8 @@ export default function MspTicketDetailsContainerClient({
         renderClientDetails={renderClientDetails}
         renderIntervalManagement={isAlgaDeskMode ? undefined : renderIntervalManagement}
         hideSlaStatus={isAlgaDeskMode}
+        hideBilling={isAlgaDeskMode}
+        hideScheduling={isAlgaDeskMode}
         hideTimeEntry={isAlgaDeskMode}
         hideMaterials={isAlgaDeskMode}
         uploadTicketAttachmentAction={uploadTicketAttachmentDocument}

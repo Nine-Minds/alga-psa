@@ -14,7 +14,16 @@
     "documentsAll": "Todos os documentos",
     "knowledgeBase": "Base de conhecimento",
     "assets": "Ativos",
-    "inventory": "Inventário",
+    "inventory": {
+      "label": "Inventário",
+      "sections": {
+        "overview": "Visão geral",
+        "stock": "Estoque",
+        "purchasing": "Compras",
+        "salesFulfillment": "Vendas e atendimento",
+        "analytics": "Análises"
+      }
+    },
     "inventoryDashboard": "Painel",
     "inventoryStock": "Estoque",
     "inventoryLocations": "Localizações de Estoque",
@@ -23,6 +32,7 @@
     "inventoryPurchaseOrders": "Pedidos de Compra",
     "inventoryVendorBills": "Faturas de Fornecedores",
     "inventorySalesOrders": "Pedidos de Venda",
+    "inventoryDocumentLayouts": "Layouts de documentos",
     "inventoryTransfers": "Transferências",
     "inventoryCounts": "Contagens Cíclicas",
     "inventoryWriteOffs": "Baixas",

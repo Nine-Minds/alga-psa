@@ -97,11 +97,124 @@
   "dashboard": {
     "actions": {
       "newPurchaseOrder": "Nieuwe inkooporder",
-      "receiveStock": "Voorraad ontvangen"
+      "receiveStock": "Voorraad ontvangen",
+      "stockLedger": "Voorraadgrootboek openen"
+    },
+    "loadError": {
+      "title": "Live voorraadgegevens konden niet worden geladen",
+      "body": "Het dashboard toont lege waarden totdat de gegevensfeed slaagt."
     },
     "attention": {
       "allClear": "Alles in orde — er is momenteel niets dat aandacht vereist.",
-      "title": "Vereist aandacht"
+      "title": "Vereist aandacht",
+      "urgent": "{{count}} urgent",
+      "footer": "Gerangschikt op geldbedrag + klantimpact · zojuist vernieuwd",
+      "itemFallback": "eenheid",
+      "refFallback": "RMA",
+      "noneFallback": "geen",
+      "personFallback": "iemand",
+      "vendorFallback": "leverancier",
+      "filters": {
+        "all": "Alle",
+        "money": "Geld",
+        "fulfillment": "Uitvoering",
+        "field": "Buitendienst",
+        "ops": "Ops"
+      },
+      "bands": {
+        "red": "Kost vandaag geld of een klant",
+        "amber": "Deze week het opvolgen waard",
+        "info": "In de gaten houden"
+      },
+      "actions": {
+        "invoice": "Factureren",
+        "viewSo": "SO bekijken",
+        "trackTransfer": "Overboeking volgen",
+        "recall": "Terughalen",
+        "review": "Beoordelen",
+        "chase": "Opvolgen",
+        "openStaging": "Staging openen",
+        "requote": "Opnieuw offreren",
+        "reviewBill": "Factuur beoordelen",
+        "approve": "Goedkeuren",
+        "reorder": "Bijbestellen",
+        "createPo": "PO aanmaken",
+        "receive": "Ontvangen",
+        "shipReplacement": "Vervanging verzenden",
+        "view": "Bekijken"
+      },
+      "kind": {
+        "unbilled": "niet gefactureerd",
+        "dropship": "dropship",
+        "cutoverRisk": "risicovolle overgang",
+        "cutover": "overgang",
+        "vanShortage": "bustekort",
+        "loaner": "achterstallige leeneenheid",
+        "ghost": "ghost-verbruik",
+        "rmaAging": "rma-veroudering",
+        "rmaClient": "vervanging",
+        "priceCreep": "prijsstijging",
+        "billCreep": "factuurstijging",
+        "billsOverdue": "achterstallige facturen",
+        "countApproval": "telgoedkeuring",
+        "stockLow": "lage voorraad",
+        "stockOut": "geen voorraad",
+        "poPartial": "gedeeltelijke PO",
+        "warranty": "garantie",
+        "deadStock": "dode voorraad"
+      },
+      "fact": {
+        "unbilledSo": "verzonden, nog niet gefactureerd",
+        "unbilledDropship": "dropships niet gefactureerd over {{count}} SO's",
+        "cutoverRisk": "overgang {{date}} — {{backordered}} van {{ordered}} in backorder",
+        "cutoverStaging": "overgang {{date}} — {{staged}} van {{ordered}} klaargezet",
+        "vanShortage": "{{service}}-tekort met {{jobs}} installaties vandaag",
+        "overdueLoaner": "{{service}}-leeneenheid {{days}}d achterstallig",
+        "ghostTech": "{{count}} hardwaretickets gesloten, geen onderdelen gefactureerd",
+        "rmaVendor": "verschuldigde creditering — geen reactie {{days}} dagen",
+        "rmaClient": "vervangende eenheid nog verschuldigd",
+        "priceCreepSo": "nog geprijsd tegen oude kostprijs",
+        "priceCreepQuotes": "{{count}} open offerte(s) nu onder huidige kostprijs",
+        "priceCreepBill": "factuur overschrijdt bijbehorende PO",
+        "billsOverdue": "{{count}} leveranciersfactu(u)r(en) achterstallig",
+        "countApproval": "telafwijking vereist goedkeurder",
+        "stockOut": "{{service}} is niet op voorraad",
+        "stockLow": "{{service}} onder bestelpunt",
+        "poPartial": "gedeeltelijk ontvangen PO nog open",
+        "warranty": "{{count}} eenheden met garantie die <30d verloopt",
+        "deadStock": "geen beweging in 90 dagen"
+      },
+      "meta": {
+        "unbilledSo": "{{so}} · {{lines}} regels · verzonden {{days}}d geleden",
+        "unbilledDropship": "bevestigde dropship-regels klaar voor facturatie",
+        "cutoverFeeder": "ETA {{po}} {{eta}} · {{slack}}d speling · gereedheid {{pct}}%",
+        "cutover": "{{so}} · {{pct}}% gereedheid · nog {{days}}d",
+        "vanShortageTransit": "beschikbaar {{available}} · overboeking {{from}} verzonden",
+        "vanShortage": "beschikbaar {{available}} · bestelpunt {{reorder}}",
+        "overdueLoaner": "vervalt {{date}}{{serial}}",
+        "ghostTech": "gesch. materiaalblootstelling uit gesloten hardwaretickets",
+        "rmaVendor": "{{ref}} · oudste openstaande vordering",
+        "rmaClient": "{{ref}} · {{service}} · vervalt over {{days}}d",
+        "priceCreepSo": "{{so}} · margeblootstelling bij uitvoering zoals nu",
+        "priceCreepQuotes": "offerte(s): {{numbers}}",
+        "priceCreepBill": "{{bill}} · gemarkeerd t.o.v. bijbehorende PO",
+        "billsOverdue": "oudste achterstallig {{days}}d",
+        "countApproval": "geteld door {{name}} · vierogenprincipe",
+        "stockLevel": "beschikbaar {{available}} · bestelpunt {{reorder}}",
+        "poPartial": "{{po}} · {{received}} van {{ordered}} ontvangen · {{vendor}}",
+        "warranty": "{{count}} klanten",
+        "deadStock": "{{locations}} locatie(s) leggen werkkapitaal vast"
+      },
+      "metric": {
+        "ageDays": "{{days}}d",
+        "percent": "{{pct}}%",
+        "daysOut": "nog {{days}}d",
+        "jobs": "{{count}} klussen",
+        "today": "vandaag",
+        "units": "{{count}} eenheden",
+        "ltThirty": "<30d",
+        "available": "beschikbaar"
+      }
     },
     "bills": {
       "acrossBill": "{{total}} verdeeld over {{count}} factuur",
@@ -192,6 +305,107 @@
       "loanOut": "Uitgeleend",
       "loanIn": "Lening geretourneerd",
       "retire": "Afgevoerd"
+    },
+    "header": {
+      "branch": "vestiging",
+      "branches": "vestigingen",
+      "van": "bus",
+      "vans": "bussen",
+      "tech": "monteur",
+      "techs": "monteurs",
+      "subtitle": "{{branches}} · {{vans}} · {{techs}} — {{attention}} vereisen aandacht, {{inPlay}} vandaag in behandeling."
+    },
+    "money": {
+      "estUnavailable": "alleen aantal",
+      "unbilled": {
+        "title": "Niet gefactureerd maar verzonden",
+        "noShippedSos": "Geen verzonden SO's in wachtrij",
+        "otherSos": "nog {{count}} verzonden SO's",
+        "dropship": "Dropships niet gefactureerd",
+        "soCount": "{{count}} SO's",
+        "ghost": "Ghost-verbruik",
+        "ticketCount": "{{count}} tickets",
+        "ledgerLink": "Omzetgrootboek bekijken"
+      },
+      "margin": {
+        "title": "Marge lopende maand",
+        "vsLastMonth": "t.o.v. vorige mnd",
+        "meta": "{{margin}} marge · {{revenue}} omzet · {{cogs}} COGS",
+        "priceCreep": "{{count}} offerte(s) en {{sos}} nog tegen oude kostprijs — {{amount}} marge in gevaar.",
+        "noSos": "geen open SO's"
+      },
+      "rma": {
+        "title": "Verschuldigd door leverancier (RMA-creditering)",
+        "oldest": "{{days}}d oudste",
+        "empty": "Geen leveranciers-RMA's verouderen.",
+        "vendorFallback": "Leverancier",
+        "creditRef": "creditering · {{ref}}",
+        "credit": "creditering",
+        "link": "Alle RMA's opvolgen"
+      }
+    },
+    "deployments": {
+      "title": "Uitrol van deze week",
+      "subtitle": "{{count}} geplande overgang(en)",
+      "eyebrow": "Deze week",
+      "scope": "{{qty}}× {{name}} — {{staged}} klaargezet · {{backordered}} in backorder",
+      "itemFallback": "item",
+      "scopeFallback": "{{staged}} klaargezet · {{backordered}} in backorder",
+      "feeder": "Aangevoerd door {{po}} {{vendor}}, ETA {{eta}} — {{slack}}d speling.",
+      "vendorFallback": "leverancier",
+      "noEta": "geen ETA",
+      "allServiceOrders": "Alle serviceorders",
+      "countdownBefore": "T-{{days}}",
+      "countdownAfter": "T+{{days}}",
+      "status": {
+        "atRisk": "Risicovol",
+        "ready": "Gereed",
+        "staging": "Klaarzetten"
+      }
+    },
+    "pipeline": {
+      "title": "Verkooporderpijplijn",
+      "openSos": "{{count}} open SO's",
+      "quotes": "Offerte",
+      "quotesValue": "{{count}} open",
+      "booked": "SO geboekt",
+      "bookedValue": "{{count}} · {{draft}} concept",
+      "fulfilling": "In uitvoering",
+      "fulfillingValue": "{{count}} backorder",
+      "invoiced": "Gefactureerd",
+      "invoicedValue": "deze wk",
+      "blocked": "{{count}} SO's geblokkeerd door backorder",
+      "allSos": "Alle SO's"
+    },
+    "receivingToday": {
+      "title": "Vandaag ontvangen",
+      "meta": "PO's · {{amount}} · {{more}} meer deze wk",
+      "empty": "Vandaag komen er geen inkooporders binnen.",
+      "vendorFallback": "Leverancier",
+      "flag": "Let op: {{po}} komt binnen met {{slack}}d speling vóór overgang {{client}}.",
+      "clientFallback": "klant",
+      "receiveStock": "Voorraad ontvangen"
+    },
+    "ghostWeek": {
+      "title": "Ghost-verbruik deze week",
+      "countOnly": "tickets gesloten, 0 onderdelen",
+      "est": "tickets gesloten, 0 onderdelen · gesch. {{amount}}",
+      "explainer": "Hardwaretickets gesloten zonder geboekt materiaal — niet-gefactureerde afsluitingen met alleen arbeid per monteur.",
+      "empty": "Deze week geen kandidaten voor ghost-verbruik.",
+      "techChip": "{{name}} · {{count}}{{amount}}",
+      "review": "Ghost-verbruik beoordelen"
+    },
+    "footer": {
+      "title": "Voorraadstatus",
+      "weekAbbrev": "wk",
+      "onHand": "Eenheden op voorraad",
+      "serialized": "{{count}} met serienummer",
+      "deadStock": "Dode voorraad",
+      "deadStockDetail": "{{location}} · 90d",
+      "locationFallback": "Locatie",
+      "thisWeek": "Deze week",
+      "weekActivity": "{{received}} ontvangen · {{deployed}} uitgerold · {{transfers}} overboekingen · {{rmas}} RMA's",
+      "valuationReport": "Waarderingsrapport"
     }
   },
   "ghostUsage": {
@@ -530,6 +744,7 @@
     "addPurchaseOrder": "Inkooporder toevoegen",
     "allVendors": "Alle leveranciers",
     "amountOnOrder": "{{amount}} besteld",
+    "mixedCurrencyOnOrder": "{{count}} inkooporders in bestelling in meerdere valuta",
     "cancelConfirm": "Weet u zeker dat u inkooporder {{poNumber}} wilt annuleren? Dit kan niet ongedaan worden gemaakt.",
     "cancelFailed": "Kon de inkooporder niet annuleren.",
     "cancelTitle": "Inkooporder annuleren",
@@ -678,6 +893,7 @@
       "fulfilling": "Uitvoeren…",
       "generateInvoice": "Factuur genereren",
       "invoicing": "Factureren…",
+      "manageLayouts": "Lay-outs beheren",
       "reopenToDraft": "Heropenen als concept",
       "reopening": "Heropenen…"
     },
@@ -686,8 +902,10 @@
       "hard": "Hard",
       "soft": "Zacht"
     },
+    "allocationModeHelp": "Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.",
     "availabilityOk": "OK",
     "backorderBadge": "Backorder {{shortfall}}",
+    "billingAllocation": "Billing & allocation",
     "billsOnFulfillment": "Factureert bij uitvoering",
     "cancelDialog": {
       "confirm": "Verkooporder annuleren",
@@ -716,6 +934,7 @@
       "vendorPlaceholder": "Selecteer een leverancier…"
     },
     "created": "Verkooporder aangemaakt",
+    "currencyFromClient": "Set from client",
     "currencyRequired": "Valutacode is verplicht",
     "detailTitle": "Verkooporder {{number}}",
     "detailTitleFallback": "Verkooporder",
@@ -745,14 +964,33 @@
     "emailFailed": "Kon de bevestiging niet e-mailen.",
     "emailSuccess": "Bevestiging per e-mail verzonden naar {{recipients}}",
     "enterSerial": "Voer minstens één serienummer in.",
+    "errors": {
+      "documentGenerationFailed": "Kon het document niet genereren",
+      "downloadPermissionDenied": "Toegang geweigerd: verkooporderdocumenten kunnen niet worden gedownload",
+      "emailConfirmationFailed": "Kon de bevestiging niet e-mailen",
+      "emailPermissionDenied": "Toegang geweigerd: verkooporderdocumenten kunnen niet per e-mail worden verzonden",
+      "emailSendFailed": "E-mail verzenden mislukt.",
+      "noRecipientEmail": "Er is geen e-mailadres van een ontvanger voor deze klant geregistreerd.",
+      "notFound": "Verkooporder niet gevonden"
+    },
     "fields": {
       "allocationMode": "Toewijzingsmodus",
+      "clientPoNumber": "Client PO number",
       "currencyCode": "Valutacode",
+      "expectedShipDate": "Expected ship date",
+      "fulfillment": "Fulfillment",
       "invoiceMode": "Factuurmodus",
+      "items": "Items",
       "lines": "Regels",
+      "noService": "No service found.",
+      "notes": "Notes",
       "qty": "Aantal",
+      "searchService": "Search services…",
+      "selectService": "Select a service…",
+      "service": "Service",
       "serviceId": "Service-ID",
-      "unitPrice": "Stukprijs ($)"
+      "unitPrice": "Stukprijs ($)",
+      "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "Uit offerte",
     "fulfillDialog": {
@@ -771,6 +1009,10 @@
       "title": "Uitvoeren — {{name}}"
     },
     "fulfilledUnits": "{{count}} eenhe(i)d(en) uitgevoerd.",
+    "fulfillment": {
+      "dropShip": "Drop-ship",
+      "fromStock": "From stock"
+    },
     "fulfillmentFailed": "Uitvoering mislukt.",
     "invoiceColumns": {
       "amount": "Bedrag",
@@ -782,6 +1024,7 @@
       "manual": "Handmatig",
       "onFulfillment": "Bij uitvoering"
     },
+    "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
     "invoicedItems": "{{count}} item(s) gefactureerd.",
     "invoices": "Facturen",
     "invoicingFailed": "Facturatie mislukt: {{error}}. Gebruik \"Factuur genereren\" om het opnieuw te proberen.",
@@ -802,8 +1045,10 @@
     "nothingBackordered": "Er staat niets in backorder.",
     "nothingToInvoice": "Er is niets meer te factureren.",
     "onlyRemaining": "Nog maar {{remaining}} resterend op deze regel.",
+    "pickServiceForLine": "Pick a service for this line.",
     "pickVendor": "Kies de leverancier die deze regel gaat verzenden.",
     "productDefaultLocation": "Standaardlocatie product",
+    "qtyPositive": "Must be > 0.",
     "qtyPositiveInteger": "Aantal moet een positief geheel getal zijn.",
     "reopenError": "Kon de verkooporder niet heropenen.",
     "reopened": "Verkooporder heropend — het is weer een concept.",
@@ -819,7 +1064,9 @@
       "partiallyFulfilled": "Gedeeltelijk uitgevoerd"
     },
     "title": "Verkooporders",
-    "unassignedBackorder": "{{count}} backorderregel(s) hebben geen voorkeursleverancier — maak die inkooporders handmatig aan."
+    "total": "Total",
+    "unassignedBackorder": "{{count}} backorderregel(s) hebben geen voorkeursleverancier — maak die inkooporders handmatig aan.",
+    "unnamedService": "Unnamed"
   },
   "stock": {
     "actions": {
@@ -997,6 +1244,7 @@
     "title": "Overboekingen",
     "toLocation": "Bestemmingslocatie",
     "vanLoadList": "Buslaadlijst",
+    "vanLoadListReplenishment": "Aanvulling voor buslaadlijst",
     "status": {
       "dispatched": "Verzonden",
       "received": "Ontvangen",

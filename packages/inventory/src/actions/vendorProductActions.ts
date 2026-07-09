@@ -11,6 +11,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { resolveTenantCurrency } from '../lib';
 
 // NOTE: 'use server' file — export ONLY async functions (+ erased types).
 
@@ -113,6 +114,7 @@ export const upsertVendorProduct = withAuth(
       }
       const { knex: db } = await createTenantKnex();
       return withTransaction(db, async (trx: Knex.Transaction) => {
+        const costCurrency = input.cost_currency?.trim() || await resolveTenantCurrency(trx, tenant);
         if (input.is_preferred) {
           // Single preferred offer per product (backed by the partial unique index).
           await trx('vendor_products')
@@ -127,7 +129,7 @@ export const upsertVendorProduct = withAuth(
             service_id: input.service_id,
             vendor_sku: input.vendor_sku?.trim() || null,
             unit_cost: input.unit_cost ?? null,
-            cost_currency: (input.cost_currency ?? 'USD').trim() || 'USD',
+            cost_currency: costCurrency,
             lead_time_days: input.lead_time_days ?? null,
             is_preferred: input.is_preferred ?? false,
           })
@@ -135,7 +137,7 @@ export const upsertVendorProduct = withAuth(
           .merge({
             vendor_sku: input.vendor_sku?.trim() || null,
             unit_cost: input.unit_cost ?? null,
-            cost_currency: (input.cost_currency ?? 'USD').trim() || 'USD',
+            cost_currency: costCurrency,
             lead_time_days: input.lead_time_days ?? null,
             is_preferred: input.is_preferred ?? false,
             updated_at: trx.fn.now(),

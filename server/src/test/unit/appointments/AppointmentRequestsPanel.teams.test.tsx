@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AppointmentRequestsPanel from '../../../../../packages/scheduling/src/components/schedule/AppointmentRequestsPanel';
@@ -12,19 +12,25 @@ const {
   getTeamsMeetingCapability,
   approveAppointmentRequest,
   declineAppointmentRequest,
+  generateTeamsMeetingForApprovedRequest,
+  updateAppointmentRequestDateTime,
   getAllUsersBasic,
   getCurrentUser,
   getUserAvatarUrlsBatchAction,
   getSchedulingTicketById,
+  toastMock,
 } = vi.hoisted(() => ({
   getAppointmentRequests: vi.fn(),
   getTeamsMeetingCapability: vi.fn(),
   approveAppointmentRequest: vi.fn(),
   declineAppointmentRequest: vi.fn(),
+  generateTeamsMeetingForApprovedRequest: vi.fn(),
+  updateAppointmentRequestDateTime: vi.fn(),
   getAllUsersBasic: vi.fn(),
   getCurrentUser: vi.fn(),
   getUserAvatarUrlsBatchAction: vi.fn(),
   getSchedulingTicketById: vi.fn(),
+  toastMock: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
 }));
 
 vi.mock('@alga-psa/scheduling/actions', () => ({
@@ -32,6 +38,8 @@ vi.mock('@alga-psa/scheduling/actions', () => ({
   getTeamsMeetingCapability,
   approveAppointmentRequest,
   declineAppointmentRequest,
+  generateTeamsMeetingForApprovedRequest,
+  updateAppointmentRequestDateTime,
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
@@ -55,10 +63,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 }));
 
 vi.mock('react-hot-toast', () => ({
-  default: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
+  default: toastMock,
 }));
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
@@ -208,6 +213,8 @@ describe('AppointmentRequestsPanel Teams UI', () => {
     });
     getUserAvatarUrlsBatchAction.mockResolvedValue({});
     getSchedulingTicketById.mockResolvedValue(null);
+    updateAppointmentRequestDateTime.mockResolvedValue({ success: true, data: approvedRequest });
+    generateTeamsMeetingForApprovedRequest.mockResolvedValue({ success: true, data: approvedRequest });
     vi.spyOn(window, 'open').mockImplementation(() => null);
   });
 
@@ -271,5 +278,64 @@ describe('AppointmentRequestsPanel Teams UI', () => {
     );
 
     expect(await screen.findByRole('button', { name: 'Join Teams Meeting' })).toBeInTheDocument();
+  });
+
+  it('offers a Reschedule control for approved requests and reschedules through the appointment action', async () => {
+    getAppointmentRequests.mockResolvedValueOnce({
+      success: true,
+      data: [approvedRequest],
+    });
+    updateAppointmentRequestDateTime.mockResolvedValueOnce({
+      success: true,
+      data: { ...approvedRequest, requested_time: '09:00:00' },
+      teamsMeetingWarning: 'Appointment updated, but the Microsoft Teams meeting could not be rescheduled.',
+    });
+
+    render(
+      <AppointmentRequestsPanel
+        isOpen={true}
+        onClose={vi.fn()}
+        highlightedRequestId="request-approved"
+      />
+    );
+
+    // Open the reschedule form, then confirm (the picker is prefilled with the
+    // appointment's current date/time on open).
+    fireEvent.click(await screen.findByRole('button', { name: 'Reschedule appointment' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm reschedule' }));
+
+    await waitFor(() => {
+      expect(updateAppointmentRequestDateTime).toHaveBeenCalledWith(
+        expect.objectContaining({
+          appointment_request_id: 'request-approved',
+          // requested_date/time 2026-05-01 14:00 in UTC → formatted back to the
+          // same wall-clock strings + explicit timezone.
+          new_date: '2026-05-01',
+          new_time: '14:00',
+          new_timezone: 'UTC',
+        })
+      );
+    });
+
+    // Success toast plus the surfaced Teams warning.
+    expect(toastMock.success).toHaveBeenCalled();
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.stringContaining('could not be rescheduled'),
+      expect.objectContaining({ icon: '⚠️' })
+    );
+  });
+
+  it('does not show the Reschedule control for pending requests', async () => {
+    render(
+      <AppointmentRequestsPanel
+        isOpen={true}
+        onClose={vi.fn()}
+        highlightedRequestId="request-pending"
+      />
+    );
+
+    // The pending request's approval form renders instead of a reschedule control.
+    expect(await screen.findByRole('button', { name: /Approve/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reschedule appointment' })).not.toBeInTheDocument();
   });
 });

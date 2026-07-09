@@ -443,9 +443,13 @@ export async function refreshMobileSession(input: z.infer<typeof refreshSessionS
   // Probabilistic stale-key cleanup: run on ~5% of refreshes to avoid
   // unnecessary DB work on every token rotation.
   if (Math.random() < 0.05) {
-    ApiKeyService.cleanupStaleKeys(result.existing.user_id, result.existing.tenant).catch((err) => {
-      console.warn('[mobileAuth] stale key cleanup failed', { error: err });
-    });
+    // Fire-and-forget: route through a promise so even a synchronous throw
+    // cannot fail the (already successful) rotation.
+    Promise.resolve()
+      .then(() => ApiKeyService.cleanupStaleKeys(result.existing.user_id, result.existing.tenant))
+      .catch((err) => {
+        console.warn('[mobileAuth] stale key cleanup failed', { error: err });
+      });
   }
 
   return {

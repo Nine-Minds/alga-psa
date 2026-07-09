@@ -1,11 +1,15 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -16,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Trash2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -26,6 +30,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
+import { formatCurrencyFromMinorUnits, toMinorUnits, currencyFractionDigits } from '@alga-psa/core';
 import type {
   ColumnDefinition,
   IClient,
@@ -33,6 +38,7 @@ import type {
   IStockLocation,
   SalesOrderInvoiceMode,
   SalesOrderAllocationMode,
+  SalesOrderLineFulfillmentType,
 } from '@alga-psa/types';
 import {
   listSalesOrders,
@@ -52,9 +58,9 @@ import {
  * the server picks the standard (or tenant/client override) template per type.
  */
 const SO_DOCUMENT_TYPES = [
-  { type: 'sales-order', label: 'Order Confirmation', suffix: '' },
-  { type: 'packing-slip', label: 'Packing Slip', suffix: '-packing-slip' },
-  { type: 'pick-list', label: 'Pick List', suffix: '-pick-list' },
+  { type: 'sales-order', suffix: '' },
+  { type: 'packing-slip', suffix: '-packing-slip' },
+  { type: 'pick-list', suffix: '-pick-list' },
 ] as const;
 
 /**
@@ -110,24 +116,49 @@ const STATUS_VARIANTS: Record<string, BadgeVariant> = {
 interface LineForm {
   service_id: string;
   quantity_ordered: string;
-  unit_price: string; // dollars
+  unit_price: string; // major units (e.g. dollars), converted to minor units on save
+  fulfillment_type: SalesOrderLineFulfillmentType;
 }
 
 interface FormState {
   client_id: string;
+  /** Derived from the picked client, never free-typed. */
   currency_code: string;
   invoice_mode: SalesOrderInvoiceMode;
   allocation_mode: SalesOrderAllocationMode;
+  client_po_number: string;
+  expected_ship_date: string; // yyyy-mm-dd, optional
+  notes: string;
   lines: LineForm[];
 }
 
-const emptyLine = (): LineForm => ({ service_id: '', quantity_ordered: '1', unit_price: '0' });
+/**
+ * A sellable catalog entry for the line-item picker. Fetched by the page via billing's
+ * `getServices` and passed down (inventory can't import billing directly). `default_rate` is in
+ * the currency's minor units (e.g. cents) and seeds the editable unit price.
+ */
+export interface SalesOrderServiceOption {
+  service_id: string;
+  service_name: string | null;
+  sku: string | null;
+  default_rate: number | null;
+}
+
+const emptyLine = (): LineForm => ({
+  service_id: '',
+  quantity_ordered: '1',
+  unit_price: '',
+  fulfillment_type: 'from_stock',
+});
 
 const emptyForm = (): FormState => ({
   client_id: '',
-  currency_code: 'USD',
+  currency_code: '',
   invoice_mode: 'on_fulfillment',
   allocation_mode: 'soft',
+  client_po_number: '',
+  expected_ship_date: '',
+  notes: '',
   lines: [emptyLine()],
 });
 
@@ -138,10 +169,13 @@ export interface SalesOrdersManagerProps {
   locations?: IStockLocation[];
   /** Clients for the create-SO client picker. */
   clients?: IClient[];
+  /** Sellable services/products for the line-item picker (fetched by the page from billing). */
+  services?: SalesOrderServiceOption[];
   /** Billing-owned actions passed from the page (billing → inventory dependency). */
   fulfillAndInvoice: FulfillAndInvoiceFn;
   generateInvoice: GenerateInvoiceFn;
   confirmDropShip: ConfirmDropShipFn;
+  defaultCurrencyCode?: string;
 }
 
 type ReturnedActionError = ActionMessageError | ActionPermissionError;
@@ -154,10 +188,13 @@ export function SalesOrdersManager({
   loadErrorMessage,
   locations = [],
   clients = [],
+  services = [],
   fulfillAndInvoice,
   generateInvoice,
   confirmDropShip,
+  defaultCurrencyCode = 'USD',
 }: SalesOrdersManagerProps) {
+  const router = useRouter();
   const { t } = useTranslation('features/inventory');
   const INVOICE_MODE_OPTIONS: { value: SalesOrderInvoiceMode; label: string }[] = [
     { value: 'on_fulfillment', label: t('salesOrders.invoiceMode.onFulfillment', 'On fulfillment') },
@@ -167,6 +204,20 @@ export function SalesOrdersManager({
     { value: 'soft', label: t('salesOrders.allocationMode.soft', 'Soft') },
     { value: 'hard', label: t('salesOrders.allocationMode.hard', 'Hard') },
   ];
+  const FULFILLMENT_OPTIONS: { value: SalesOrderLineFulfillmentType; label: string }[] = [
+    { value: 'from_stock', label: t('salesOrders.fulfillment.fromStock', 'From stock') },
+    { value: 'drop_ship', label: t('salesOrders.fulfillment.dropShip', 'Drop-ship') },
+  ];
+  const serviceOptions = services.map((s) => ({
+    value: s.service_id,
+    label: s.sku
+      ? `${s.service_name ?? t('salesOrders.unnamedService', 'Unnamed')} (${s.sku})`
+      : s.service_name ?? t('salesOrders.unnamedService', 'Unnamed'),
+  }));
+  const serviceById = React.useMemo(
+    () => new Map(services.map((s) => [s.service_id, s])),
+    [services],
+  );
   const documentLabels: Record<string, string> = {
     'sales-order': t('salesOrders.documents.salesOrder', 'Order Confirmation'),
     'packing-slip': t('salesOrders.documents.packingSlip', 'Packing Slip'),
@@ -231,6 +282,17 @@ export function SalesOrdersManager({
     setDialogOpen(true);
   };
 
+  // Currency is a property of who you bill, not a per-order choice: derive it from the picked
+  // client and render it read-only (falling back to the tenant default when the client has none).
+  const onClientSelect = (clientId: string | null) => {
+    const picked = clientId ? clients.find((c) => c.client_id === clientId) : undefined;
+    setForm((f) => ({
+      ...f,
+      client_id: clientId ?? '',
+      currency_code: picked?.default_currency_code || (clientId ? defaultCurrencyCode : ''),
+    }));
+  };
+
   const setLine = (idx: number, patch: Partial<LineForm>) => {
     setForm((f) => ({
       ...f,
@@ -238,9 +300,35 @@ export function SalesOrdersManager({
     }));
   };
 
+  // Picking a service both binds a real service_id (a picker can't yield a non-existent one) and
+  // seeds the editable unit price from its catalog default_rate (stored in minor units).
+  const onServicePicked = (idx: number, serviceId: string) => {
+    const svc = serviceById.get(serviceId);
+    const currency = form.currency_code || defaultCurrencyCode;
+    const seededPrice =
+      svc?.default_rate != null
+        ? String(svc.default_rate / Math.pow(10, currencyFractionDigits(currency)))
+        : undefined;
+    setLine(idx, { service_id: serviceId, ...(seededPrice !== undefined ? { unit_price: seededPrice } : {}) });
+  };
+
   const addLine = () => setForm((f) => ({ ...f, lines: [...f.lines, emptyLine()] }));
   const removeLine = (idx: number) =>
     setForm((f) => ({ ...f, lines: f.lines.filter((_, i) => i !== idx) }));
+
+  const currency = form.currency_code || defaultCurrencyCode;
+  // Running total: Σ quantity × unit price, in the resolved currency's minor units. Lines without
+  // a picked service or a positive quantity don't contribute.
+  const totalMinor = form.lines.reduce((sum, l) => {
+    const qty = Number(l.quantity_ordered);
+    const price = Number(l.unit_price);
+    if (!l.service_id || !(qty > 0) || !Number.isFinite(price)) return sum;
+    return sum + toMinorUnits(price, undefined, currency) * qty;
+  }, 0);
+  // A line is "priced" once a service is picked with a positive quantity. Save needs a client and
+  // at least one such line; individual invalid lines are marked inline rather than via a toast.
+  const lineIsValid = (l: LineForm) => Boolean(l.service_id) && Number(l.quantity_ordered) > 0;
+  const canSave = Boolean(form.client_id) && form.lines.some(lineIsValid) && !saving;
 
   const save = async () => {
     if (!form.client_id.trim()) {
@@ -256,8 +344,9 @@ export function SalesOrdersManager({
       .map((l) => ({
         service_id: l.service_id.trim(),
         quantity_ordered: Number(l.quantity_ordered),
-        // Money is integer cents — convert dollars to cents.
-        unit_price: Math.round(Number(l.unit_price) * 100),
+        // Convert the major-unit price to the currency's integer minor units (JPY ×1, USD ×100).
+        unit_price: toMinorUnits(Number(l.unit_price || 0), undefined, form.currency_code),
+        fulfillment_type: l.fulfillment_type,
       }));
     for (const l of lines) {
       if (!(l.quantity_ordered > 0)) {
@@ -272,6 +361,9 @@ export function SalesOrdersManager({
         currency_code: form.currency_code.trim(),
         invoice_mode: form.invoice_mode,
         allocation_mode: form.allocation_mode,
+        client_po_number: form.client_po_number.trim() || null,
+        expected_ship_date: form.expected_ship_date || null,
+        notes: form.notes.trim() || null,
         lines,
       });
       if (isReturnedActionError(result)) {
@@ -429,7 +521,7 @@ export function SalesOrdersManager({
                   id={`document-so-${rec.so_id}-${d.type}`}
                   onClick={() => downloadSalesOrderDocument(rec.so_id, rec.so_number, d.type, d.suffix, t)}
                 >
-                  {documentLabels[d.type] ?? d.label}
+                  {documentLabels[d.type]}
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
@@ -438,6 +530,13 @@ export function SalesOrdersManager({
                 onClick={() => setEmailTarget(rec)}
               >
                 {t('salesOrders.actions.emailConfirmation', 'Email confirmation to client…')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                id={`manage-layouts-so-${rec.so_id}`}
+                onClick={() => router.push('/msp/document-templates/sales-order')}
+              >
+                {t('salesOrders.actions.manageLayouts', 'Manage layouts')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -473,100 +572,208 @@ export function SalesOrdersManager({
         id="sales-order-dialog"
       >
         <div className="space-y-4 p-1">
-          <div className="space-y-1">
-            <label className="block text-sm font-medium">{t('salesOrders.columns.client', 'Client')}</label>
-            <ClientPicker
-              id="sales-order-client"
-              clients={clients}
-              selectedClientId={form.client_id || null}
-              onSelect={(clientId) => setForm({ ...form, client_id: clientId ?? '' })}
-              filterState={clientFilterState}
-              onFilterStateChange={setClientFilterState}
-              clientTypeFilter={clientTypeFilter}
-              onClientTypeFilterChange={setClientTypeFilter}
+          {/* Order details — who it's for (currency follows from that) and their reference. */}
+          <div className="grid grid-cols-2 gap-3 items-start">
+            <div className="space-y-1">
+              <label className="block text-sm font-medium">{t('salesOrders.columns.client', 'Client')}</label>
+              <ClientPicker
+                id="sales-order-client"
+                clients={clients}
+                selectedClientId={form.client_id || null}
+                onSelect={onClientSelect}
+                filterState={clientFilterState}
+                onFilterStateChange={setClientFilterState}
+                clientTypeFilter={clientTypeFilter}
+                onClientTypeFilterChange={setClientTypeFilter}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-sm font-medium">{t('salesOrders.columns.currency', 'Currency')}</label>
+              {/* Read-only: currency is a property of who you bill, derived on client select. */}
+              <div
+                id="sales-order-currency"
+                className="h-10 flex items-center rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] px-3 text-sm text-[rgb(var(--color-text-700))]"
+              >
+                {form.currency_code || t('salesOrders.currencyFromClient', 'Set from client')}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              id="sales-order-client-po"
+              label={t('salesOrders.fields.clientPoNumber', 'Client PO number')}
+              value={form.client_po_number}
+              onChange={(e) => setForm({ ...form, client_po_number: e.target.value })}
+            />
+            <Input
+              id="sales-order-expected-ship-date"
+              label={t('salesOrders.fields.expectedShipDate', 'Expected ship date')}
+              type="date"
+              value={form.expected_ship_date}
+              onChange={(e) => setForm({ ...form, expected_ship_date: e.target.value })}
             />
           </div>
-          <Input
-            id="sales-order-currency-code"
-            label={t('salesOrders.fields.currencyCode', 'Currency code')}
-            required
-            value={form.currency_code}
-            onChange={(e) => setForm({ ...form, currency_code: e.target.value })}
-          />
-          <CustomSelect
-            id="sales-order-invoice-mode"
-            label={t('salesOrders.fields.invoiceMode', 'Invoice mode')}
-            options={INVOICE_MODE_OPTIONS}
-            value={form.invoice_mode}
-            onValueChange={(value) =>
-              setForm({ ...form, invoice_mode: value as SalesOrderInvoiceMode })
-            }
-          />
-          <CustomSelect
-            id="sales-order-allocation-mode"
-            label={t('salesOrders.fields.allocationMode', 'Allocation mode')}
-            options={ALLOCATION_MODE_OPTIONS}
-            value={form.allocation_mode}
-            onValueChange={(value) =>
-              setForm({ ...form, allocation_mode: value as SalesOrderAllocationMode })
-            }
-          />
 
+          {/* Items */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium">{t('salesOrders.fields.lines', 'Lines')}</label>
+              <label className="block text-sm font-medium">{t('salesOrders.fields.items', 'Items')}</label>
               <Button id="sales-order-add-line" variant="outline" size="sm" onClick={addLine}>
                 {t('salesOrders.actions.addLine', 'Add Line')}
               </Button>
             </div>
-            {form.lines.map((line, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-2 items-end">
-                <div className="col-span-5">
-                  <label className="block text-xs mb-1">{t('salesOrders.fields.serviceId', 'Service ID')}</label>
-                  <Input
-                    id={`sales-order-line-service-${idx}`}
-                    value={line.service_id}
-                    onChange={(e) => setLine(idx, { service_id: e.target.value })}
-                  />
-                </div>
-                <div className="col-span-3">
-                  <label className="block text-xs mb-1">{t('salesOrders.fields.qty', 'Qty')}</label>
-                  <Input
-                    id={`sales-order-line-qty-${idx}`}
-                    type="number"
-                    value={line.quantity_ordered}
-                    onChange={(e) => setLine(idx, { quantity_ordered: e.target.value })}
-                  />
-                </div>
-                <div className="col-span-3">
-                  <label className="block text-xs mb-1">{t('salesOrders.fields.unitPrice', 'Unit Price ($)')}</label>
-                  <Input
-                    id={`sales-order-line-price-${idx}`}
-                    type="number"
-                    value={line.unit_price}
-                    onChange={(e) => setLine(idx, { unit_price: e.target.value })}
-                  />
-                </div>
-                <div className="col-span-1">
-                  <Button
-                    id={`sales-order-line-remove-${idx}`}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeLine(idx)}
-                    disabled={form.lines.length <= 1}
-                  >
-                    {t('common.remove', 'Remove')}
-                  </Button>
-                </div>
+            {/* Column headers once, so each row carries inputs only. */}
+            <div className="flex gap-2 items-center text-xs font-medium text-gray-600">
+              <div className="flex-1">{t('salesOrders.fields.service', 'Service')}</div>
+              <div className="w-32">{t('salesOrders.fields.fulfillment', 'Fulfillment')}</div>
+              <div className="w-20 text-right">{t('salesOrders.fields.qty', 'Qty')}</div>
+              <div className="w-32 text-right">
+                {t('salesOrders.fields.unitPriceIn', 'Unit price ({{currency}})', { currency })}
               </div>
-            ))}
+              <div className="w-8" />
+            </div>
+            {/* Keep the footer reachable when a large order pushes past the fold. */}
+            <div className="max-h-[22rem] overflow-y-auto space-y-2 pr-1">
+              {form.lines.map((line, idx) => {
+                const missingService = !line.service_id && Number(line.quantity_ordered) > 0;
+                const badQty = Boolean(line.service_id) && !(Number(line.quantity_ordered) > 0);
+                return (
+                  <div key={idx} className="flex gap-2 items-start" id={`sales-order-line-${idx}`}>
+                    <div className="flex-1">
+                      <SearchableSelect
+                        id={`sales-order-line-service-${idx}`}
+                        options={serviceOptions}
+                        value={line.service_id}
+                        onChange={(value) => onServicePicked(idx, value)}
+                        placeholder={t('salesOrders.fields.selectService', 'Select a service…')}
+                        searchPlaceholder={t('salesOrders.fields.searchService', 'Search services…')}
+                        emptyMessage={t('salesOrders.fields.noService', 'No service found.')}
+                        dropdownMode="overlay"
+                        maxListHeight="250px"
+                      />
+                      {missingService && (
+                        <p className="mt-1 text-xs text-[rgb(var(--color-accent-500))]">
+                          {t('salesOrders.pickServiceForLine', 'Pick a service for this line.')}
+                        </p>
+                      )}
+                    </div>
+                    <div className="w-32">
+                      <CustomSelect
+                        id={`sales-order-line-fulfillment-${idx}`}
+                        options={FULFILLMENT_OPTIONS}
+                        value={line.fulfillment_type}
+                        onValueChange={(value) =>
+                          setLine(idx, { fulfillment_type: value as SalesOrderLineFulfillmentType })
+                        }
+                      />
+                    </div>
+                    <div className="w-20">
+                      <Input
+                        id={`sales-order-line-qty-${idx}`}
+                        type="number"
+                        min="1"
+                        step="1"
+                        className="text-right tabular-nums"
+                        value={line.quantity_ordered}
+                        onChange={(e) => setLine(idx, { quantity_ordered: e.target.value })}
+                      />
+                      {badQty && (
+                        <p className="mt-1 text-xs text-[rgb(var(--color-accent-500))]">
+                          {t('salesOrders.qtyPositive', 'Must be > 0.')}
+                        </p>
+                      )}
+                    </div>
+                    <div className="w-32">
+                      <CurrencyInput
+                        id={`sales-order-line-price-${idx}`}
+                        currencyCode={currency}
+                        className="text-right tabular-nums"
+                        value={line.unit_price ? Number(line.unit_price) : undefined}
+                        onChange={(value) => setLine(idx, { unit_price: value == null ? '' : String(value) })}
+                      />
+                    </div>
+                    <div className="w-8 flex justify-center pt-2">
+                      <Button
+                        id={`sales-order-line-remove-${idx}`}
+                        variant="ghost"
+                        size="sm"
+                        aria-label={t('common.remove', 'Remove')}
+                        onClick={() => removeLine(idx)}
+                        disabled={form.lines.length <= 1}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          {/* Billing & allocation — kept visible; helper text spells out the consequence. */}
+          <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] p-3">
+            <label className="block text-sm font-medium">
+              {t('salesOrders.billingAllocation', 'Billing & allocation')}
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <CustomSelect
+                  id="sales-order-invoice-mode"
+                  label={t('salesOrders.fields.invoiceMode', 'When to invoice')}
+                  options={INVOICE_MODE_OPTIONS}
+                  value={form.invoice_mode}
+                  onValueChange={(value) =>
+                    setForm({ ...form, invoice_mode: value as SalesOrderInvoiceMode })
+                  }
+                />
+                <p className="text-xs text-gray-500">
+                  {t(
+                    'salesOrders.invoiceModeHelp',
+                    'On fulfillment bills as items ship; Manual leaves invoicing to you.',
+                  )}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <CustomSelect
+                  id="sales-order-allocation-mode"
+                  label={t('salesOrders.fields.allocationMode', 'How to allocate stock')}
+                  options={ALLOCATION_MODE_OPTIONS}
+                  value={form.allocation_mode}
+                  onValueChange={(value) =>
+                    setForm({ ...form, allocation_mode: value as SalesOrderAllocationMode })
+                  }
+                />
+                <p className="text-xs text-gray-500">
+                  {t(
+                    'salesOrders.allocationModeHelp',
+                    'Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.',
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <TextArea
+            id="sales-order-notes"
+            label={t('salesOrders.fields.notes', 'Notes')}
+            rows={2}
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          />
+
+          <div className="flex items-center justify-between border-t border-[rgb(var(--color-border-200))] pt-3">
+            <span className="text-sm text-gray-600">{t('salesOrders.total', 'Total')}</span>
+            <span id="sales-order-total" className="text-base font-semibold tabular-nums">
+              {formatCurrencyFromMinorUnits(totalMinor, undefined, currency)}
+            </span>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
             <Button id="sales-order-cancel" variant="outline" onClick={() => setDialogOpen(false)}>
               {t('common.cancel', 'Cancel')}
             </Button>
-            <Button id="sales-order-save" onClick={save} disabled={saving}>
+            <Button id="sales-order-save" onClick={save} disabled={!canSave}>
               {saving ? t('common.saving', 'Saving…') : t('common.save', 'Save')}
             </Button>
           </div>

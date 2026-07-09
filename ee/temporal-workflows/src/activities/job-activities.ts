@@ -121,6 +121,12 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, forwardJobToServer(HUNTRESS_INCIDENT_POLL_JOB));
   registerJobHandlerForActivities(ACCOUNTING_SYNC_CYCLE_JOB, forwardJobToServer(ACCOUNTING_SYNC_CYCLE_JOB));
   registerJobHandlerForActivities(HUDU_AUTO_SYNC_JOB, forwardJobToServer(HUDU_AUTO_SYNC_JOB));
+  // Teams meeting Graph cleanup (cancel/decline): the handler imports
+  // src-consumed vertical packages (@alga-psa/clients + EE Teams lib), so the
+  // worker forwards it to the server like the polling jobs above. The
+  // recurring sweep-teams-online-meetings maintenance job re-attempts any
+  // cancel_pending rows if a forwarded run is lost.
+  registerJobHandlerForActivities('teams-meeting-cleanup', forwardJobToServer('teams-meeting-cleanup'));
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
   // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /

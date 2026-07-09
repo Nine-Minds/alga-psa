@@ -1065,7 +1065,10 @@
           "needsAttention": "Vereist aandacht",
           "saving": "Opslaan…",
           "selectProfile": "Selecteer een profiel",
-          "unbound": "Niet gekoppeld"
+          "unbound": "Niet gekoppeld",
+          "noCapablePlaceholder": "No enabled profile",
+          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.",
+          "noEmailCapableProfiles": "No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app."
         },
         "bindings": {
           "summaryBound": "{{consumer}} is gekoppeld aan {{profile}}.",
@@ -1074,7 +1077,8 @@
           "warningArchived": "{{consumer}} is nog steeds gekoppeld aan een gearchiveerd profiel. Koppel opnieuw aan een actief profiel.",
           "warningNoBinding": "Er is nog geen {{consumer}}-binding geconfigureerd.",
           "warningNotReady": "{{consumer}} is gekoppeld aan {{profile}}, maar dat profiel moet nog worden geconfigureerd.",
-          "warningProfileMissing": "{{consumer}} is gekoppeld aan een profiel dat niet meer beschikbaar is. Koppel opnieuw aan een actief profiel."
+          "warningProfileMissing": "{{consumer}} is gekoppeld aan een profiel dat niet meer beschikbaar is. Koppel opnieuw aan een actief profiel.",
+          "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
         },
         "bindingsAlertCe": "Expliciete bindingen zijn de bron van waarheid voor de selectie van het MSP SSO-profiel. Configureer aanmeldingsdomeinen apart na het kiezen van het gekoppelde profiel.",
         "bindingsAlertEe": "Expliciete bindingen zijn de bron van waarheid voor de selectie van MSP SSO-, e-mail-, agenda- en Teams-profielen.",
@@ -1123,7 +1127,9 @@
           "setDefault": "Dit profiel instellen als standaard Microsoft-profiel",
           "setDefaultHelp": "Standaardprofielen blijven beschikbaar voor profielbeheer-workflows en migratieveilige metadata, niet voor consumer-routing.",
           "storedSecretHint": "Opgeslagen secret: {{secret}}. Laat dit veld leeg om het ongewijzigd te houden.",
-          "tenantId": "Tenant ID"
+          "tenantId": "Tenant ID",
+          "capabilities": "Enabled capabilities",
+          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "Microsoft-profiel aanmaken",
@@ -1177,7 +1183,9 @@
           "storedSecret": "Opgeslagen secret",
           "teamsAppIdUri": "Teams Application ID URI",
           "tenantIdLabel": "Tenant ID:",
-          "updating": "Bijwerken…"
+          "updating": "Bijwerken…",
+          "enabledCapabilities": "Enabled capabilities",
+          "noEnabledCapabilities": "No enabled capabilities"
         },
         "providerReconnect": {
           "description": "Gebruik dit als u inloggegevens roteert of opzettelijk Outlook-e-mail of de agenda aan een ander Microsoft-profiel koppelt.",
@@ -1864,6 +1872,11 @@
         },
         "descriptionCe": "Registreer adviesdomeinen voor de detectie van MSP-aanmeldings-SSO. Eigendomsverificatie wordt niet afgedwongen in Community Edition, en onbeheerde domeinen vallen terug op providers op applicatieniveau van Nine Minds.",
         "descriptionEe": "Beheer de levenscyclus van domeinclaims voor de detectie van MSP-aanmeldings-SSO-providers. Niet-geclaimde of niet-geschikte domeinen vallen terug op providers op applicatieniveau van Nine Minds.",
+        "moved": {
+          "title": "MSP SSO Login Domains",
+          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "cta": "Open Single Sign-On settings"
+        },
         "dnsHost": "Host:",
         "dnsInstructions": "Voeg het DNS TXT-record toe en klik vervolgens op Verifiëren:",
         "dnsValue": "Waarde:",
@@ -2013,6 +2026,12 @@
             "description": "Breng technici op de hoogte wanneer werk wordt toegewezen.",
             "label": "Toewijzingsgebeurtenissen"
           },
+          "channel": {
+            "activityFeed": "Activiteitenfeed",
+            "botDm": "Direct bericht van de bot",
+            "both": "Beide",
+            "label": "Bezorgkanaal"
+          },
           "customerReply": {
             "description": "Breng technici op de hoogte wanneer klanten reageren.",
             "label": "Klantreacties"
@@ -2141,6 +2160,10 @@
             "help": "Bij het opslaan wordt de Microsoft Entra-object-ID die voor Graph-vergaderaanroepen wordt gebruikt, omgezet en opgeslagen.",
             "resolved": "Omgezette object-ID: {{objectId}}"
           },
+          "sendMeetingInvites": {
+            "label": "Agenda-uitnodigingen naar deelnemers verzenden",
+            "description": "Deelnemers ontvangen native Outlook/Teams-agenda-uitnodigingen voor gegenereerde vergaderingen."
+          },
           "downloadRecordings": {
             "label": "Opnamen downloaden naar interne opslag",
             "description": "Indien ingeschakeld worden opname-blobs naar de tenantopslag gekopieerd, naast de geverifieerde Graph-proxy."
@@ -2149,6 +2172,218 @@
             "label": "Opnamen en transcripties in het klantportaal weergeven",
             "description": "Standaard uitgeschakeld; MSP-gebruikers kunnen artefacten nog steeds bekijken via de interactie- en afspraakdetails."
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "Voer hieronder de diagnostiek uit voor details.",
+          "message": "De Teams-bot kan niet antwoorden: de bot-connectorreferenties (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) zijn niet geconfigureerd op de server."
+        },
+        "wizard": {
+          "title": "Begeleide Teams-installatie",
+          "description": "Voltooi elke stap om Microsoft Teams voor deze tenant te laten werken.",
+          "status": {
+            "complete": "Voltooid",
+            "current": "Huidig",
+            "incomplete": "Onvolledig"
+          },
+          "validate": {
+            "error": "Validatie mislukt",
+            "validating": "Valideren...",
+            "profile": "Microsoft-profiel valideren",
+            "profileOk": "De referenties van het Microsoft-profiel zijn geldig.",
+            "permissions": "Graph-machtigingen controleren",
+            "permissionsOk": "Alle vereiste Graph-machtigingen zijn verleend.",
+            "permissionGranted": "Verleend",
+            "permissionMissing": "Ontbreekt",
+            "bot": "Bot Framework-connector valideren",
+            "botOk": "De Bot Framework-referenties zijn geldig ({{appId}})."
+          },
+          "activationBlocked": "Valideer het Microsoft-profiel hierboven voordat u Teams activeert.",
+          "step": {
+            "microsoftProfile": {
+              "title": "Microsoft-profiel",
+              "description": "Selecteer het Microsoft-profiel voor Teams en valideer de bijbehorende Graph-referenties."
+            },
+            "graphPermissions": {
+              "title": "Graph-machtigingen",
+              "description": "Bevestig dat de vereiste Microsoft Graph-toepassingsmachtigingen zijn verleend en toegestaan."
+            },
+            "botFramework": {
+              "title": "Bot Framework-registratie",
+              "description": "Registreer de Azure Bot en valideer de referenties van de bot-connector van de implementatie."
+            },
+            "activate": {
+              "title": "Teams activeren",
+              "description": "Activeer de Teams-integratie zodra het Microsoft-profiel is gevalideerd."
+            },
+            "package": {
+              "title": "Het pakket genereren en downloaden",
+              "description": "Bouw het Teams-app-pakket voor het geselecteerde profiel en de base URL van de implementatie.",
+              "hint": "Gebruik de kaart Teams-pakket hieronder om het app-pakket te genereren en te downloaden."
+            },
+            "sideload": {
+              "title": "De app sideloaden",
+              "description": "Upload het app-pakket naar Teams zodat gebruikers het kunnen installeren.",
+              "body": "Upload het gedownloade pakket naar het Teams-beheercentrum (Apps beheren en vervolgens Nieuwe app uploaden) of sideload het vanuit de Teams-client."
+            },
+            "verify": {
+              "title": "Verifiëren",
+              "description": "Voer diagnostische gegevens uit en verstuur een testbericht om te bevestigen dat de integratie van begin tot eind werkt.",
+              "hint": "Gebruik de kaart Diagnostiek en testbericht hieronder om de installatie van begin tot eind te verifiëren."
+            }
+          }
+        },
+        "runbook": {
+          "viewGuide": "Installatiegids bekijken"
+        },
+        "deliveryLog": {
+          "title": "Teams-bezorglogboek",
+          "description": "Elke bezorgpoging van een Teams-melding die voor deze tenant is vastgelegd.",
+          "error": "Teams-bezorglogboek kan niet worden geladen",
+          "forbidden": "U hebt geen toestemming om het Teams-bezorglogboek te bekijken.",
+          "empty": "Nog geen Teams-bezorgingen vastgelegd.",
+          "refresh": "Vernieuwen",
+          "loadMore": "Meer laden",
+          "loading": "Laden...",
+          "filter": {
+            "statusLabel": "Status",
+            "statusAll": "Alle statussen",
+            "categoryLabel": "Categorie",
+            "categoryAll": "Alle categorieën"
+          },
+          "columns": {
+            "createdAt": "Tijd",
+            "category": "Categorie",
+            "destination": "Bestemming",
+            "status": "Status",
+            "errorCode": "Foutcode",
+            "errorMessage": "Foutmelding"
+          },
+          "status": {
+            "delivered": "Bezorgd",
+            "sent": "Verzonden",
+            "failed": "Mislukt",
+            "skipped": "Overgeslagen"
+          },
+          "category": {
+            "assignment": "Toewijzing",
+            "customer_reply": "Reactie van klant",
+            "approval_request": "Goedkeuringsverzoek",
+            "escalation": "Escalatie",
+            "sla_risk": "SLA-risico"
+          }
+        },
+        "auditLog": {
+          "title": "Teams-auditlogboek",
+          "description": "Wijzigingen uitgevoerd vanuit de Teams-bot, de berichtextensie en de oppervlakken voor snelle acties.",
+          "error": "Teams-auditlogboek kan niet worden geladen",
+          "forbidden": "U hebt geen toestemming om het Teams-auditlogboek te bekijken.",
+          "empty": "Nog geen Teams-auditgebeurtenissen vastgelegd.",
+          "refresh": "Vernieuwen",
+          "loadMore": "Meer laden",
+          "loading": "Laden...",
+          "filter": {
+            "surfaceLabel": "Oppervlak",
+            "surfaceAll": "Alle oppervlakken",
+            "actionLabel": "Actie-id",
+            "actionPlaceholder": "bijv. assign_ticket"
+          },
+          "surface": {
+            "bot": "Bot",
+            "message_extension": "Berichtextensie",
+            "quick_action": "Snelle actie",
+            "tab": "Tabblad"
+          },
+          "columns": {
+            "createdAt": "Tijd",
+            "surface": "Oppervlak",
+            "action": "Actie",
+            "target": "Doel",
+            "result": "Resultaat",
+            "errorCode": "Foutcode"
+          },
+          "result": {
+            "success": "Geslaagd",
+            "failure": "Mislukt"
+          }
+        },
+        "troubleshooting": {
+          "title": "Referentie voor bezorgfouten",
+          "description": "Wat elke Teams-bezorgfoutcode betekent en hoe u deze oplost.",
+          "show": "Foutreferentie tonen",
+          "hide": "Foutreferentie verbergen",
+          "columns": {
+            "code": "Foutcode",
+            "cause": "Oorzaak",
+            "remedy": "Oplossing"
+          },
+          "codes": {
+            "graph_unauthorized": {
+              "cause": "Microsoft Graph heeft het toepassingstoken geweigerd (401/403); voor een vereiste Graph-toepassingsmachtiging is geen toestemming gegeven.",
+              "remedy": "Verleen beheerderstoestemming voor de vereiste Graph-machtigingen (bijvoorbeeld TeamsActivity.Send) in de Azure-app-registratie."
+            },
+            "user_not_mapped": {
+              "cause": "De ontvanger heeft zich niet met Microsoft aangemeld bij Alga PSA, dus er bestaat geen accountkoppeling.",
+              "remedy": "Laat de gebruiker zich aanmelden met Microsoft (MSP-portal-SSO of het Teams-tabblad) zodat hun account wordt gekoppeld."
+            },
+            "addon_inactive": {
+              "cause": "De Teams-invoegtoepassing is verlopen of afwezig, dus verzendingen worden overgeslagen terwijl de configuratie behouden blijft.",
+              "remedy": "Vernieuw de Teams-invoegtoepassing voor deze tenant."
+            },
+            "integration_inactive": {
+              "cause": "De Teams-integratie is niet actief voor deze tenant.",
+              "remedy": "Activeer de Teams-integratie in de instellingen."
+            },
+            "package_misconfigured": {
+              "cause": "Het app-pakket is nooit gegenereerd, of de vereisten voor bezorging (app ID, base URL) ontbreken.",
+              "remedy": "Genereer het Teams-app-pakket in de instellingen en probeer het opnieuw."
+            },
+            "graph_not_found": {
+              "cause": "De Teams-app is niet geïnstalleerd voor de ontvanger, dus Microsoft Graph kan deze niet bereiken (404).",
+              "remedy": "Installeer de Alga PSA-app voor die gebruiker of sta deze organisatiebreed toe."
+            },
+            "graph_throttled": {
+              "cause": "Microsoft Graph heeft de aanvraag beperkt (429).",
+              "remedy": "Tijdelijk; Alga PSA probeert het opnieuw met backoff. Onderzoek dit alleen als het aanhoudt."
+            },
+            "graph_server_error": {
+              "cause": "Microsoft Graph heeft een serverfout geretourneerd (5xx).",
+              "remedy": "Tijdelijke Graph-storing; Alga PSA probeert het opnieuw. Wacht en controleer de servicestatus van Microsoft als het aanhoudt."
+            },
+            "transient": {
+              "cause": "Een tijdelijke fout (netwerk of time-out) heeft de bezorging onderbroken.",
+              "remedy": "Wordt automatisch opnieuw geprobeerd; geen actie nodig tenzij de fouten aanhouden."
+            },
+            "unknown": {
+              "cause": "De fout kon niet aan een bekende oorzaak worden gekoppeld.",
+              "remedy": "Controleer de serverlogboeken voor de details van de bezorgfout en voer de diagnostiek opnieuw uit."
+            }
+          }
+        },
+        "paywall": {
+          "title": "Microsoft Teams-invoegtoepassing",
+          "description": "Voor de Microsoft Teams-integratie is de Teams-invoegtoepassing voor deze tenant vereist.",
+          "includedTitle": "Wat is inbegrepen",
+          "feature": {
+            "tab": "Persoonlijk tabblad: open Alga PSA binnen Microsoft Teams.",
+            "bot": "Persoonlijke en groepschat-bot voor tickets, goedkeuringen, tijd en notities.",
+            "messageExtension": "Berichtextensie en snelle acties om vanuit elk bericht op PSA-records te reageren.",
+            "meetings": "Teams-vergaderingen bij goedkeuringen van afspraken met echte Outlook/Teams-agenda-uitnodigingen.",
+            "recordings": "Automatische vastlegging van vergaderopnamen en transcripties in interacties.",
+            "notifications": "Meldingen via activiteitenfeed en bot-DM voor toewijzingen, reacties, goedkeuringen en SLA-risico."
+          },
+          "cta": "Teams-invoegtoepassing kopen",
+          "nonBilling": "Neem contact op met een factureringsbeheerder om de Teams-invoegtoepassing voor deze tenant te kopen."
+        },
+        "addonExpiredBanner": {
+          "title": "Microsoft Teams-invoegtoepassing verlopen",
+          "message": "De Microsoft Teams-invoegtoepassing is verlopen. Uw configuratie en bezorggeschiedenis blijven behouden, maar Teams-meldingen worden overgeslagen totdat de invoegtoepassing wordt vernieuwd.",
+          "cta": "Teams-invoegtoepassing vernieuwen"
+        },
+        "staleManifest": {
+          "title": "Teams-app-pakket is verouderd",
+          "warning": "Uw Teams-app-pakket is verouderd — genereer het opnieuw en upload het opnieuw.",
+          "regenerate": "Pakket opnieuw genereren",
+          "regenerating": "Opnieuw genereren..."
         }
       }
     },

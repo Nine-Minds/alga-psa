@@ -319,6 +319,7 @@ function normalizeDateInput(input: ProfitabilityDateInput): { startDate: string;
   return { startDate, endDate };
 }
 
+// LEVERAGE: friction tenant-default-currency - duplicate of inventory resolveTenantCurrency; consolidate into a shared server util.
 async function getTenantDefaultCurrency(knex: Knex, tenant: string): Promise<string> {
   const row = await tenantDb(knex, tenant).table('default_billing_settings')
     .select('default_currency_code')

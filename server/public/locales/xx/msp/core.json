@@ -14,7 +14,16 @@
     "documentsAll": "11111",
     "knowledgeBase": "11111",
     "assets": "11111",
-    "inventory": "11111",
+    "inventory": {
+      "label": "11111",
+      "sections": {
+        "overview": "11111",
+        "stock": "11111",
+        "purchasing": "11111",
+        "salesFulfillment": "11111",
+        "analytics": "11111"
+      }
+    },
     "inventoryDashboard": "11111",
     "inventoryStock": "11111",
     "inventoryLocations": "11111",
@@ -23,6 +32,7 @@
     "inventoryPurchaseOrders": "11111",
     "inventoryVendorBills": "11111",
     "inventorySalesOrders": "11111",
+    "inventoryDocumentLayouts": "11111",
     "inventoryTransfers": "11111",
     "inventoryCounts": "11111",
     "inventoryWriteOffs": "11111",

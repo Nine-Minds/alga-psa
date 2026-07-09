@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -78,9 +79,6 @@ const STATUS_VARIANTS: Record<string, BadgeVariant> = {
   cancelled: 'error',
 };
 
-const dollars = (cents?: number | null): string =>
-  cents == null ? '—' : `$${(Number(cents) / 100).toFixed(2)}`;
-
 const remainingOf = (l: SalesOrderLineDetail): number =>
   Math.max(0, Number(l.quantity_ordered) - Number(l.quantity_fulfilled ?? 0));
 
@@ -110,6 +108,7 @@ export function SalesOrderDetail({
   confirmDropShip,
 }: SalesOrderDetailProps) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   const statusLabel = (status: string): string => {
     switch (status) {
       case 'draft':
@@ -635,7 +634,9 @@ export function SalesOrderDetail({
                       <td className="py-2 px-2 text-right tabular-nums">{Number(line.quantity_ordered)}</td>
                       <td className="py-2 px-2 text-right tabular-nums">{Number(line.quantity_fulfilled ?? 0)}</td>
                       <td className="py-2 px-2 text-right tabular-nums">{Number(line.quantity_invoiced ?? 0)}</td>
-                      <td className="py-2 px-2 text-right tabular-nums">{dollars(line.unit_price)}</td>
+                      <td className="py-2 px-2 text-right tabular-nums">
+                        {line.unit_price == null ? t('common.emptyValue', '—') : money(line.unit_price, so.currency_code)}
+                      </td>
                       <td className="py-2 px-2">
                         {bo?.backordered ? (
                           <Badge variant="error" size="sm">
@@ -717,7 +718,9 @@ export function SalesOrderDetail({
                           </a>
                         </td>
                         <td className="py-2 px-2">{inv.status || t('common.emptyValue', '—')}</td>
-                        <td className="py-2 px-2 text-right tabular-nums">{dollars(inv.total_amount)}</td>
+                        <td className="py-2 px-2 text-right tabular-nums">
+                          {inv.total_amount == null ? t('common.emptyValue', '—') : money(inv.total_amount, inv.currency_code || so.currency_code)}
+                        </td>
                         <td className="py-2 pl-2 text-gray-500">
                           {inv.created_at ? new Date(inv.created_at).toLocaleDateString() : t('common.emptyValue', '—')}
                         </td>

@@ -3,7 +3,11 @@
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { determineDefaultContractLine } from '../lib/contractLineDisambiguation';
-import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
+// Bucket usage MUST go through the shared canonical service. This package used
+// to carry a local fork (src/services/bucketUsageService.ts) that kept querying
+// the dropped `client_contract_lines` table and caused a prod outage on
+// time-entry save. Don't recreate a local copy.
+import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '@alga-psa/shared/billingClients/bucketUsageService';
 import {
   ITimeEntry,
   ITimeEntryWithWorkItem,

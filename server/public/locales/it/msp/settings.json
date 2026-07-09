@@ -1792,6 +1792,12 @@
       "title": "SSO",
       "description": "Caricamento degli strumenti di assegnazione SSO in blocco..."
     },
+    "status": {
+      "title": "Sign-in providers",
+      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
+      "available": "Available",
+      "notConfigured": "Not configured"
+    },
     "autoLink": {
       "title": "Configuri automaticamente l'SSO per i nuovi utenti interni",
       "description": "Attivi questa opzione per provisionare immediatamente ogni nuovo account del personale con il Suo provider SSO aziendale, in modo che non sia mai necessario un accesso basato su password.",

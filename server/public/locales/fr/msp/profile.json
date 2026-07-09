@@ -103,6 +103,13 @@
       "sso": "Chargement des outils de gestion SSO...",
       "sessions": "Chargement des sessions actives..."
     },
+    "sso": {
+      "advanced": {
+        "title": "Advanced: custom identity provider routing",
+        "description": "Route MSP login SSO to your own identity provider using verified login domains. Only needed on custom or on-premise installations.",
+        "inertNotice": "No tenant identity provider credentials are configured, so domain claims currently have no effect. Users sign in with the hosted Google / Microsoft providers. Tenant credentials are provisioned on custom and on-premise installations."
+      }
+    },
     "userRoles": {
       "title": "Attribuer des rôles aux utilisateurs",
       "description": {

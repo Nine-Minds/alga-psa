@@ -39,6 +39,24 @@ export function formatCurrencyFromMinorUnits(
 }
 
 /**
+ * The number of minor-unit fraction digits a currency uses (USD=2, JPY=0, some=3),
+ * derived from `Intl.NumberFormat` so it stays correct without a hand-kept table.
+ */
+export function currencyFractionDigits(currency: string = 'USD', locale: string = 'en-US'): number {
+  const resolved = new Intl.NumberFormat(locale, { style: 'currency', currency }).resolvedOptions();
+  return resolved.maximumFractionDigits ?? 2;
+}
+
+/**
+ * Convert a major-unit amount (e.g. dollars) to the currency's integer minor units
+ * (e.g. cents), using the currency's own exponent — so JPY multiplies by 1, not 100.
+ * The inverse of {@link formatCurrencyFromMinorUnits}; replaces hardcoded `× 100`.
+ */
+export function toMinorUnits(value: number, locale: string = 'en-US', currency: string = 'USD'): number {
+  return Math.round(value * Math.pow(10, currencyFractionDigits(currency, locale)));
+}
+
+/**
  * Format a date as a string
  * @param date The date to format
  * @param locale The locale to use (default: 'en-US')

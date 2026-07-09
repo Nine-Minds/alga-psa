@@ -50,6 +50,7 @@ export type TenantDeletionStep =
   | 'awaiting_confirmation'
   | 'waiting_for_deletion_date'
   | 'rolling_back'
+  | 'deleting_schedules'
   | 'deleting_tenant_data'
   | 'completed'
   | 'failed';

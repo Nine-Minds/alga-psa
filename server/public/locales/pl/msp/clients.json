@@ -933,6 +933,10 @@
     "email": "E-mail",
     "clientName": "Nazwa klienta",
     "importCompleteMessage": "Pomyślnie zaimportowano klientów {{count}}",
+    "importCompleteWithErrors": "Import zakończony z błędami",
+    "importResultSummary": "{{created}} utworzono, {{updated}} zaktualizowano, {{skipped}} pominięto, {{failed}} nie powiodło się",
+    "skippedExistingMessage": "Pominięto {{count}} klientów, ponieważ już istnieją. Włącz „Zaktualizuj istniejących klientów”, aby ich nadpisać.",
+    "error": "Błąd",
     "updateExistingTitle": "Zaktualizuj istniejących klientów",
     "updateExistingMessage": "Klienci {{count}} już istnieją. Chcesz je zaktualizować o nowe dane?"
   },

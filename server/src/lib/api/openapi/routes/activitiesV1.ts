@@ -120,10 +120,7 @@ export function registerActivitiesV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerSchema('ActivityV1', activitySchema);
 
   const ActivityListResponse = registry.registerSchema('ActivityListResponseV1', activityListResponseSchema);
-  const GroupedActivitiesResponse = registry.registerSchema(
-    'ActivityGroupedResponseV1',
-    groupedActivitiesResponseSchema,
-  );
+  registry.registerSchema('ActivityGroupedResponseV1', groupedActivitiesResponseSchema);
   const AdHocActivityResponse = registry.registerSchema('AdHocActivityResponseV1', adHocActivityResponseSchema);
 
   const CreateAdHocBody = registry.registerSchema('CreateAdHocActivityBodyV1', createAdHocActivitySchema);
@@ -175,7 +172,7 @@ export function registerActivitiesV1Routes(registry: ApiOpenApiRegistry) {
       403: { description: 'Permission denied for one of the underlying activity sources.', schema: ApiError },
       500: { description: 'Unexpected failure resolving activities.', schema: ApiError },
     },
-    extensions: { ...extensions, 'x-response-when-grouped': GroupedActivitiesResponse },
+    extensions: { ...extensions, 'x-response-when-grouped': '#/components/schemas/ActivityGroupedResponseV1' },
     edition: 'both',
   });
 

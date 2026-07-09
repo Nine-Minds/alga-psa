@@ -18,10 +18,13 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
   const mod = await importOriginal<typeof import('@alga-psa/auth')>();
   return {
     ...mod,
+    // ApiKeyService is a class: spreading it copies no statics, so every
+    // method the service calls must be listed here explicitly.
     ApiKeyService: {
       ...mod.ApiKeyService,
       createApiKey: vi.fn(),
       deactivateApiKey: vi.fn(),
+      cleanupStaleKeys: vi.fn(async () => undefined),
     },
   };
 });

@@ -1,5 +1,5 @@
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { ADD_ONS } from '@alga-psa/types';
+import { createTenantKnex } from '@alga-psa/db';
+import { tenantHasTeamsAddOn } from './teamsAddOnGate';
 
 export type TeamsAvailabilityDisabledReason =
   | 'ce_unavailable'
@@ -68,18 +68,6 @@ export function resolveTeamsAvailability(input: ResolveTeamsAvailabilityInput = 
   };
 }
 
-async function tenantHasTeamsAddOn(tenantId: string): Promise<boolean> {
-  const { knex } = await createTenantKnex();
-  const row = await tenantDb(knex, tenantId).table('tenant_addons')
-    .where({ addon_key: ADD_ONS.TEAMS })
-    .andWhere((builder: any) => {
-      builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
-    })
-    .first('addon_key');
-
-  return Boolean(row);
-}
-
 export async function getTeamsAvailability(input: GetTeamsAvailabilityInput = {}): Promise<TeamsAvailability> {
   const enterpriseEnabled = input.isEnterpriseEdition ?? isTeamsEnterpriseEdition();
   const tenantId = (input.tenantId || '').trim();
@@ -92,8 +80,11 @@ export async function getTeamsAvailability(input: GetTeamsAvailabilityInput = {}
     return disabledAvailability('tenant_not_configured');
   }
 
-  if (tenantId && !(await tenantHasTeamsAddOn(tenantId))) {
-    return disabledAvailability('addon_required');
+  if (tenantId) {
+    const { knex } = await createTenantKnex();
+    if (!(await tenantHasTeamsAddOn(knex, tenantId))) {
+      return disabledAvailability('addon_required');
+    }
   }
 
   return {
