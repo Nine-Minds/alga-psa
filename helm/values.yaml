@@ -57,6 +57,12 @@ setup:
     lockTimeoutSeconds: 1800
     lockStaleSeconds: 120
     lockHeartbeatSeconds: 10
+    # Temporal connection for the initial-tenant workflow (appliance only).
+    # address defaults to temporal-frontend.<release namespace>.svc.cluster.local:7233.
+    temporal:
+      address: ""
+      namespace: "default"
+      taskQueue: "tenant-workflows"
   waitForBootstrap:
     image:
       # Optional lightweight image with psql used by the app initContainer while

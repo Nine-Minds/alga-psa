@@ -27,7 +27,16 @@ export interface TenantCreationInput {
     firstName: string;
     lastName: string;
     email: string;
+    // Pre-set admin password (appliance install). Omitted => generated.
+    password?: string;
   };
+  // Pre-minted tenant id to adopt (appliance install-code redemption).
+  // Omitted => DB-generated.
+  tenantId?: string;
+  // Appliance installs skip the hosted-only steps (no nineminds management
+  // tenant; the operator already knows their password).
+  skipCustomerTracking?: boolean;
+  skipWelcomeEmail?: boolean;
   companyName: string;
   clientName: string;
   licenseCount?: number;
