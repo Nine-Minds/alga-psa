@@ -6,6 +6,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IRmaCase, IStockUnit, RmaStatus } from '@alga-psa/types';
 import { publishInventoryEvent, recordStockMovement, timestampPayload } from '../lib';
+import { resolveTenantCurrency } from '../lib';
 
 /**
  * RMA / return-path lifecycle (design §6.G).
@@ -124,6 +125,7 @@ async function createInStockUnit(
     .where({ tenant, service_id: serviceId })
     .select('cost_currency')
     .first();
+  const defaultCurrency = await resolveTenantCurrency(trx, tenant);
 
   const [row] = await trx('stock_units')
     .insert({
@@ -134,7 +136,7 @@ async function createInStockUnit(
       status: 'in_stock',
       location_id: input.location_id,
       unit_cost: input.unit_cost ?? null,
-      cost_currency: input.cost_currency ?? settings?.cost_currency ?? 'USD',
+      cost_currency: input.cost_currency ?? settings?.cost_currency ?? defaultCurrency,
       warranty_expires_at: input.warranty_expires_at ?? null,
       warranty_term: input.warranty_term ?? null,
       received_at: trx.fn.now(),

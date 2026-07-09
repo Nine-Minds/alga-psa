@@ -5,7 +5,7 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { ICountSession, ICountLine, IStockUnit } from '@alga-psa/types';
-import { recordStockMovement, recomputeSerializedOnHand, assertLocationWritable, ensureStockLevel } from '../lib';
+import { recordStockMovement, recomputeSerializedOnHand, assertLocationWritable, ensureStockLevel, resolveTenantCurrency } from '../lib';
 
 // NOTE: 'use server' file — export ONLY async functions (+ erased types).
 
@@ -72,6 +72,8 @@ export interface CountLineView extends ICountLine {
   variance?: number | null;
   /** Variance valued at the product's average cost, cents (approvers only). */
   variance_value_cents?: number | null;
+  /** Currency for the average cost used to value variance. */
+  cost_currency?: string | null;
 }
 
 export interface CountSessionView extends ICountSession {
@@ -216,6 +218,7 @@ export const getCountSession = withAuth(
           'sc.sku',
           trx.raw('COALESCE(pis.is_serialized, false) as is_serialized'),
           'pis.average_cost',
+          'pis.cost_currency',
         )) as any[];
 
       const out: CountLineView[] = [];
@@ -422,6 +425,7 @@ export const approveCountSession = withAuth(
         })
         .where({ 'cl.tenant': tenant, 'cl.session_id': sessionId })
         .select('cl.*', trx.raw('COALESCE(pis.is_serialized, false) as is_serialized'), 'pis.average_cost', 'pis.cost_currency')) as any[];
+      const defaultCurrency = await resolveTenantCurrency(trx, tenant);
 
       const result: ApproveCountResult = {
         session,
@@ -502,7 +506,7 @@ export const approveCountSession = withAuth(
                 status: 'in_stock',
                 location_id: locationId,
                 unit_cost: line.average_cost ?? null,
-                cost_currency: line.cost_currency ?? 'USD',
+                cost_currency: line.cost_currency ?? defaultCurrency,
                 received_at: trx.fn.now(),
                 notes: `Found via ${reason}`,
               })

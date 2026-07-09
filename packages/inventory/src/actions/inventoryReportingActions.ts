@@ -5,6 +5,7 @@ import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IPurchaseOrder, ISalesOrder } from '@alga-psa/types';
+import { resolveTenantCurrency } from '../lib/tenantCurrency';
 
 /**
  * Read-only inventory reporting + dashboard widgets. See design doc §10 / §11.
@@ -48,6 +49,7 @@ export interface InventoryValueLocationRow {
 export interface InventoryValueReport {
   by_location: InventoryValueLocationRow[];
   grand_total: number;
+  currency_code: string;
 }
 
 /**
@@ -60,6 +62,7 @@ export const inventoryValueReport = withAuth(async (user, { tenant }): Promise<I
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenant);
+    const currency_code = await resolveTenantCurrency(trx, tenant);
     const valueByLocation = new Map<string, number>();
 
     // Non-serialized: on-hand × average_cost from stock_levels joined to settings.
@@ -103,7 +106,7 @@ export const inventoryValueReport = withAuth(async (user, { tenant }): Promise<I
       .sort((a, b) => a.location_name.localeCompare(b.location_name));
 
     const grand_total = by_location.reduce((sum, r) => sum + r.total_value, 0);
-    return { by_location, grand_total };
+    return { by_location, grand_total, currency_code };
   });
 });
 
@@ -204,11 +207,7 @@ export const marginReport = withAuth(
       const total_revenue_cents = rows.reduce((s, r) => s + r.revenue_cents, 0);
       const total_cogs_cents = rows.reduce((s, r) => s + r.cogs_cents, 0);
       const total_margin_cents = total_revenue_cents - total_cogs_cents;
-      const billingSettingsRow = await trx('default_billing_settings')
-        .where({ tenant })
-        .select<{ default_currency_code: string | null }>('default_currency_code')
-        .first();
-      const currency_code = billingSettingsRow?.default_currency_code || 'USD';
+      const currency_code = await resolveTenantCurrency(trx, tenant);
       return {
         rows,
         total_revenue_cents,
@@ -341,6 +340,7 @@ export interface WriteOffByUser {
 export interface WriteOffReportData {
   from: string;
   to: string;
+  currency_code: string;
   rows: WriteOffRow[];
   /** True when more events exist than the row cap; totals below still cover the FULL range. */
   truncated: boolean;
@@ -369,6 +369,7 @@ export const writeOffReport = withAuth(
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
+      const currency_code = await resolveTenantCurrency(trx, tenant);
       const to = opts?.to ? new Date(opts.to) : new Date();
       const from = opts?.from ? new Date(opts.from) : new Date(to.getTime() - 90 * 86_400_000);
       // End of the 'to' day, so a date-only input includes that whole day.
@@ -466,6 +467,7 @@ export const writeOffReport = withAuth(
       return {
         from: from.toISOString(),
         to: toEnd.toISOString(),
+        currency_code,
         rows,
         truncated,
         by_user,

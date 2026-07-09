@@ -10,6 +10,7 @@ export interface SalesOrderInvoiceLink {
   invoice_number: string | null;
   status: string | null;
   total_amount: number; // cents
+  currency_code: string | null;
   created_at: string; // ISO
 }
 
@@ -59,6 +60,7 @@ export const listSalesOrderInvoices = withAuth(async (
         'i.status',
         'i.finalized_at',
         'i.total_amount',
+        'i.currency_code',
         'i.created_at'
       )
       .orderBy('i.created_at', 'desc');
@@ -72,6 +74,7 @@ export const listSalesOrderInvoices = withAuth(async (
         ? 'finalized'
         : ((row.status as string | null) ?? null),
       total_amount: Number(row.total_amount ?? 0),
+      currency_code: (row.currency_code as string | null) ?? null,
       created_at: toIsoString(row.created_at),
     }));
   });

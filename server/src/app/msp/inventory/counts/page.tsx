@@ -1,4 +1,4 @@
-import { listCountSessions, listStockLocations } from '@alga-psa/inventory/actions';
+import { getInventoryTenantCurrency, listCountSessions, listStockLocations } from '@alga-psa/inventory/actions';
 import { CycleCountsManager } from '@alga-psa/inventory/components';
 import { getSession } from '@alga-psa/auth';
 import { redirect } from 'next/navigation';
@@ -29,13 +29,25 @@ export default async function CycleCountsPage() {
   }
 
   let locations: IStockLocation[] = [];
+  let defaultCurrencyCode = 'USD';
   try {
     locations = await listStockLocations();
   } catch (error) {
     console.error('Failed to load stock locations:', error);
   }
+  try {
+    defaultCurrencyCode = await getInventoryTenantCurrency();
+  } catch (error) {
+    console.error('Failed to load inventory default currency:', error);
+  }
 
-  return <CycleCountsManager initialSessions={initialSessions} locations={locations} />;
+  return (
+    <CycleCountsManager
+      initialSessions={initialSessions}
+      locations={locations}
+      defaultCurrencyCode={defaultCurrencyCode}
+    />
+  );
 }
 
 export const dynamic = 'force-dynamic';

@@ -1,4 +1,4 @@
-import { loanersOutReport } from '@alga-psa/inventory/actions';
+import { getInventoryTenantCurrency, loanersOutReport } from '@alga-psa/inventory/actions';
 import { LoanersManager } from '@alga-psa/inventory/components';
 import { getSession } from '@alga-psa/auth';
 import { redirect } from 'next/navigation';
@@ -22,13 +22,19 @@ export default async function LoanersPage() {
   }
 
   let initialLoaners: LoanerOutRow[] = [];
+  let defaultCurrencyCode = 'USD';
   try {
     initialLoaners = await loanersOutReport();
   } catch (error) {
     console.error('Failed to load loaners:', error);
   }
+  try {
+    defaultCurrencyCode = await getInventoryTenantCurrency();
+  } catch (error) {
+    console.error('Failed to load inventory default currency:', error);
+  }
 
-  return <LoanersManager initialLoaners={initialLoaners} />;
+  return <LoanersManager initialLoaners={initialLoaners} defaultCurrencyCode={defaultCurrencyCode} />;
 }
 
 export const dynamic = 'force-dynamic';

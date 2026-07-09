@@ -8,6 +8,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, ICountSession, IStockLocation } from '@alga-psa/types';
@@ -26,16 +27,17 @@ import {
 
 type SessionRow = ICountSession & { location_name: string | null; line_count: number; counted_count: number };
 
-const dollars = (cents: number): string => `$${(cents / 100).toFixed(2)}`;
-
 export function CycleCountsManager({
   initialSessions,
   locations,
+  defaultCurrencyCode = 'USD',
 }: {
   initialSessions: SessionRow[];
   locations: IStockLocation[];
+  defaultCurrencyCode?: string;
 }) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   const [sessions, setSessions] = useState<SessionRow[]>(initialSessions || []);
   const [startOpen, setStartOpen] = useState(false);
   const [startLocation, setStartLocation] = useState('');
@@ -340,7 +342,7 @@ export function CycleCountsManager({
                               <span className={line.variance === 0 ? 'text-gray-500' : line.variance > 0 ? 'text-green-700' : 'text-red-700'}>
                                 {' '}{t('counts.varianceLabel', '· variance')} {line.variance > 0 ? '+' : ''}
                                 {line.variance}
-                                {line.variance_value_cents != null && line.variance !== 0 && ` (${dollars(line.variance_value_cents)})`}
+                                {line.variance_value_cents != null && line.variance !== 0 && ` (${money(line.variance_value_cents, line.cost_currency ?? defaultCurrencyCode)})`}
                               </span>
                             )}
                           </span>

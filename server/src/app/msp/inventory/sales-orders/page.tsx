@@ -1,4 +1,4 @@
-import { listSalesOrders, listStockLocations } from '@alga-psa/inventory/actions';
+import { getInventoryTenantCurrency, listSalesOrders, listStockLocations } from '@alga-psa/inventory/actions';
 import { SalesOrdersManager } from '@alga-psa/inventory/components';
 // Billing owns SO invoicing (billing → inventory dependency direction); the server
 // action references are passed down to the client component as props (F008).
@@ -68,6 +68,13 @@ export default async function SalesOrdersPage() {
     console.error('Failed to load services:', error);
   }
 
+  let defaultCurrencyCode = 'USD';
+  try {
+    defaultCurrencyCode = await getInventoryTenantCurrency();
+  } catch (error) {
+    console.error('Failed to load inventory default currency:', error);
+  }
+
   return (
     <SalesOrdersManager
       initialSos={initialSos}
@@ -77,6 +84,7 @@ export default async function SalesOrdersPage() {
       fulfillAndInvoice={fulfillAndInvoiceSoLine}
       generateInvoice={generateInvoiceForSalesOrder}
       confirmDropShip={confirmDropShipAndInvoice}
+      defaultCurrencyCode={defaultCurrencyCode}
     />
   );
 }

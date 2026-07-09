@@ -5,6 +5,7 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IProductInventorySettings, KitPricingMode } from '@alga-psa/types';
+import { resolveTenantCurrency } from '../lib';
 
 async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'inventory', action))) {
@@ -108,6 +109,7 @@ export const enableInventory = withAuth(
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const { cost_currency } = await assertProduct(trx, tenant, serviceId);
+      const defaultCurrency = await resolveTenantCurrency(trx, tenant);
 
       // Default preferred vendor from the legacy freeform service_catalog.vendor, if it maps to a vendor.
       const svc = await trx('service_catalog').where({ tenant, service_id: serviceId }).select('vendor').first();
@@ -130,7 +132,7 @@ export const enableInventory = withAuth(
           creates_asset_on_delivery: input?.creates_asset_on_delivery ?? false,
           reorder_point: input?.reorder_point ?? null,
           reorder_quantity: input?.reorder_quantity ?? null,
-          cost_currency: cost_currency ?? 'USD',
+          cost_currency: cost_currency ?? defaultCurrency,
           default_location_id: input?.default_location_id ?? null,
           preferred_vendor_id: preferredVendorId,
         })
