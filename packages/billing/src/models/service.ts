@@ -15,6 +15,9 @@ const log = {
       globalThis.console.log(message, ...args);
     }
   },
+  warn: (message: string, ...args: unknown[]) => {
+    globalThis.console.warn(message, ...args);
+  },
   error: (message: string, ...args: unknown[]) => {
     globalThis.console.error(message, ...args);
   }
@@ -128,6 +131,59 @@ export const serviceSchema = refinedServiceSchema.transform((data) => {
 // Infer the final type matching IService structure
 export type ServiceSchemaType = z.infer<typeof serviceSchema>;
 
+type ServiceReadRow = { service_id: string; billing_method?: string | null };
+
+/**
+ * Validate service_catalog rows for the read/list path, tolerating one bad row
+ * instead of aborting the entire load.
+ *
+ * `serviceSchema.billing_method` is deliberately the canonical billing vocabulary
+ * (`fixed | hourly | usage`) — the T013 hard cutover purged `per_unit` from
+ * billing's `IService` contract (guarded by billingInterfacesCutover.static.test).
+ * But inventory legitimately stores products as `service_catalog` rows with
+ * `billing_method = 'per_unit'` (see packages/inventory materials/tests). A plain
+ * `.map(schema.parse(...))` therefore throws on the first per_unit row and takes
+ * down every consumer of getServices (Sales Order line picker, Manual Invoice
+ * client+service load). We validate per-row with `safeParse` and drop rows billing
+ * can't represent so the canonical services still load.
+ *
+ * Skipped rows are logged (not silently swallowed): a `per_unit` product will not
+ * appear in billing-sourced service pickers by design, and the log makes that
+ * discoverable rather than a mystery. Surfacing per_unit products for sale is a
+ * separate inventory concern (an inventory-owned product reader), not a widening
+ * of billing's per_unit-free contract.
+ */
+export function parseServiceReadRows(
+  rows: ServiceReadRow[],
+  pricesByService: Record<string, IServicePrice[]>
+): IService[] {
+  const validatedServices: IService[] = [];
+  const skipped: string[] = [];
+
+  for (const service of rows) {
+    const result = serviceSchema.safeParse({
+      ...service,
+      prices: pricesByService[service.service_id] || []
+    });
+
+    if (result.success) {
+      validatedServices.push(result.data as IService);
+    } else {
+      skipped.push(service.service_id);
+    }
+  }
+
+  if (skipped.length > 0) {
+    log.warn(
+      `[parseServiceReadRows] Skipped ${skipped.length} service_catalog row(s) not representable as a billing IService ` +
+        `(e.g. per_unit inventory products); they are excluded from billing-sourced service lists. ` +
+        `service_ids: ${skipped.join(', ')}`
+    );
+  }
+
+  return validatedServices;
+}
+
 // Create schema: Omit service_id and tenant from the *base* schema first
 // We omit tenant because it will be added by the server-side code after validation
 const baseCreateServiceSchema = baseServiceSchema.omit({ service_id: true, tenant: true, created_at: true, updated_at: true });
@@ -206,15 +262,7 @@ const Service = {
         return acc;
       }, {} as Record<string, IServicePrice[]>);
 
-      // Validate and transform using the final schema's parse method
-      const validatedServices = servicesData.map((service) => {
-        // .parse() validates against the refined schema AND applies the transform
-        const validated = serviceSchema.parse({
-          ...service,
-          prices: pricesByService[service.service_id] || []
-        });
-        return validated as IService;
-      });
+      const validatedServices = parseServiceReadRows(servicesData, pricesByService);
 
       log.info(`[Service.getAll] Services data validated successfully`);
       return validatedServices;
@@ -718,13 +766,7 @@ const Service = {
         return acc;
       }, {} as Record<string, IServicePrice[]>);
 
-      // Validate and transform using the final schema's parse method
-      return servicesData.map(service => {
-        return serviceSchema.parse({
-          ...service,
-          prices: pricesByService[service.service_id] || []
-        }) as IService;
-      });
+      return parseServiceReadRows(servicesData, pricesByService);
     } catch (error) {
       log.error(`[Service.getByCategoryId] Error fetching services for category ${category_id}:`, error);
       throw error;
