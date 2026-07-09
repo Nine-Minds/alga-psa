@@ -15,7 +15,7 @@ import {
   getXeroCsvSettings,
   updateXeroCsvSettings,
   XeroCsvSettings as XeroCsvSettingsType
-} from '@alga-psa/integrations/actions';
+} from '../../../actions/integrations/xeroCsvActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 /**

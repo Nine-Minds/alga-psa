@@ -3,9 +3,10 @@
 import React from 'react';
 import toast from 'react-hot-toast';
 
-import { getAllBoards, getTicketStatuses } from '@alga-psa/reference-data/actions';
-import { getDefaultBillingSettings, updateDefaultBillingSettings } from '@alga-psa/billing/actions';
-import type { BillingSettings } from '@alga-psa/billing/actions';
+import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actions/statusActions';
+import { getDefaultBillingSettings, updateDefaultBillingSettings } from '../../../actions/billingSettingsActions';
+import type { BillingSettings } from '../../../actions/billingSettingsActions';
 import type { IStatus } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';

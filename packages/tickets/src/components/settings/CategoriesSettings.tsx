@@ -12,7 +12,7 @@ import {
 } from '../../actions/ticketCategoryActions';
 import { getAllBoards } from '../../actions/board-actions/boardActions';
 import type { IBoard } from '@alga-psa/types';
-import { getAvailableReferenceData, importReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
+import { getAvailableReferenceData, importReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';

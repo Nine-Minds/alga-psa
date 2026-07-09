@@ -31,7 +31,7 @@ import {
   createTaxHoliday,
   updateTaxHoliday,
   deleteTaxHoliday,
-} from '@alga-psa/billing/actions';
+} from '../../../actions/taxSettingsActions';
 
 // Zod schema for form validation
 const taxHolidaySchema = z.object({

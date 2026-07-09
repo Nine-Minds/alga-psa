@@ -16,7 +16,7 @@ import {
   revokeMspSsoDomainClaim,
   saveMspSsoLoginDomains,
   verifyMspSsoDomainClaimOwnership,
-} from '@alga-psa/integrations/actions';
+} from '../../../actions/integrations/mspSsoDomainActions';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

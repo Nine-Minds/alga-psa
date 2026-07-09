@@ -20,7 +20,7 @@ import {
   getRolePermissions, 
   assignPermissionToRole, 
   removePermissionFromRole 
-} from '@alga-psa/auth/actions';
+} from '../../../actions/policyActions';
 import { IPermission, IRole } from '@alga-psa/types';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';

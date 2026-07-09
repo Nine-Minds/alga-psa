@@ -16,7 +16,7 @@ import { TaxSource } from '@alga-psa/types';
 import {
   getTenantTaxSettings,
   updateTenantTaxSettings,
-} from '@alga-psa/billing/actions';
+} from '../../../actions/taxSettingsActions';
 
 interface LocalTaxSettings {
   default_tax_source: TaxSource;

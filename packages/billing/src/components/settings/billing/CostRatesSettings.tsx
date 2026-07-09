@@ -21,7 +21,7 @@ import {
   type CostRateUserRow,
   type ListCostRatesResult,
   type UpsertCostRateActionInput,
-} from '@alga-psa/billing/actions';
+} from '../../../actions/costRateActions';
 import type { ColumnDefinition, IUserCostRate } from '@alga-psa/types';
 import toast from 'react-hot-toast';
 

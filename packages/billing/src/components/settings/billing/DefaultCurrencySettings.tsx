@@ -3,8 +3,8 @@ import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getDefaultBillingSettings, updateDefaultBillingSettings } from "@alga-psa/billing/actions";
-import type { BillingSettings } from "@alga-psa/billing/actions";
+import { getDefaultBillingSettings, updateDefaultBillingSettings } from "../../../actions/billingSettingsActions";
+import type { BillingSettings } from "../../../actions/billingSettingsActions";
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 
 const DefaultCurrencySettings = (): React.JSX.Element => {

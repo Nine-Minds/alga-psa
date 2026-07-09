@@ -14,7 +14,7 @@ import {
   disconnectQbo,
   getQboConnectionStatus,
   saveQboCredentials
-} from '@alga-psa/integrations/actions';
+} from '../../../actions/qboActions';
 import { QboLiveMappingManager } from '../../qbo/QboLiveMappingManager';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

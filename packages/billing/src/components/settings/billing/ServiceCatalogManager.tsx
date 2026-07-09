@@ -7,12 +7,13 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 // Import new action and types
-import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices, getDefaultBillingSettings } from '@alga-psa/billing/actions';
+import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '../../../actions/serviceActions';
+import { getDefaultBillingSettings } from '../../../actions/billingSettingsActions';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
-import { getServiceCategories } from '@alga-psa/billing/actions';
+import { getServiceCategories } from '../../../actions/categoryActions';
 // Import action to get tax rates
-import { getTaxRates } from '@alga-psa/billing/actions';
+import { getTaxRates } from '../../../actions/taxRateActions';
 import { IService, IServiceCategory, IServiceType, IServicePrice, DeletionValidationResult } from '@alga-psa/types'; // Added IServiceType, IServicePrice
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 // Import ITaxRate interface

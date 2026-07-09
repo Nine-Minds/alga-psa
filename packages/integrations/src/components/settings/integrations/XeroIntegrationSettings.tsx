@@ -14,7 +14,7 @@ import {
   disconnectXero,
   getXeroConnectionStatus,
   saveXeroCredentials
-} from '@alga-psa/integrations/actions';
+} from '../../../actions/integrations/xeroActions';
 import { XeroLiveMappingManager } from '../../xero/XeroLiveMappingManager';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

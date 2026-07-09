@@ -13,14 +13,14 @@ import {
   validateTenantProjectStatusDeletion,
   reorderTenantProjectStatuses
 } from '@alga-psa/projects/actions/projectTaskStatusActions';
-import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
+import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
 import type { DeletionValidationResult, IStatus, IStandardStatus } from '@alga-psa/types';
 import { ChevronUp, ChevronDown, Trash2, Edit2, Plus, Palette } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
-import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
+import { ConflictResolutionDialog } from '@alga-psa/reference-data/components/dialogs/ConflictResolutionDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
