@@ -175,6 +175,11 @@ describe('KitManager pricing policy UI', () => {
     fireEvent.change(document.querySelector('#kit-create-pricing-mode')!, { target: { value: 'fixed' } });
     await waitFor(() => expect(document.querySelector('#kit-create-fixed-price')).not.toBeNull());
     expect(document.querySelectorAll('#kit-create-fixed-price')).toHaveLength(1);
+
+    fireEvent.click(document.querySelector('#kit-create-cancel')!);
+    fireEvent.click(document.querySelector('#kits-create-kit-button')!);
+    expect((document.querySelector('#kit-create-pricing-mode') as HTMLSelectElement).value).toBe('sum');
+    expect(document.querySelector('#kit-create-fixed-price')).toBeNull();
   });
 
   it('renders empty, filtered, and inline retry states', async () => {

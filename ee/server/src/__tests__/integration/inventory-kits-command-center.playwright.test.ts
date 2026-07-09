@@ -124,7 +124,7 @@ test('Inventory Kits command center end-to-end workflow', async ({ page }) => {
     await expect(page.getByText('No inventory kits yet')).toBeVisible();
 
     await page.locator('#kits-create-kit-button').click();
-    await expect(page.locator('#kit-create-dialog')).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Create kit' })).toBeVisible();
     await page.locator('#kit-create-name').fill(kitName);
     await page.locator('#kit-create-sku').fill(kitSku);
     await page.locator('#kit-create-product-type').click();
@@ -162,7 +162,7 @@ test('Inventory Kits command center end-to-end workflow', async ({ page }) => {
 
     await page.locator('#kit-create-sales-order-link').click();
     await page.waitForURL(/\/msp\/inventory\/sales-orders\?create=1&service_id=/);
-    await expect(page.locator('#sales-order-dialog')).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Add Sales Order' })).toBeVisible();
     await expect(page.locator('#sales-order-line-0')).toContainText(kitName);
     await expect(page.locator('#sales-order-line-0')).toContainText('Calculated from components');
 

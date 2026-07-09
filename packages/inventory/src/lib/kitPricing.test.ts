@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { calculateKitFinancials, resolveKitPricePolicy } from '../actions/kitActions';
+import { calculateKitFinancials, resolveKitPricePolicy } from './kitPricing';
 
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => fn }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));

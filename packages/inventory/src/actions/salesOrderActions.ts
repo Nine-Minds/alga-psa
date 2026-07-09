@@ -20,7 +20,8 @@ import {
   recomputeSerializedOnHand,
   timestampPayload,
 } from '../lib';
-import { explodeKitOntoSalesOrder, resolveKitPriceInTransaction } from './kitActions';
+import { explodeKitOntoSalesOrder } from './kitActions';
+import { resolveKitPriceInTransaction } from '../lib/kitPricing';
 
 /**
  * Sales orders (outbound document) — see design §6.I.
@@ -65,7 +66,7 @@ export async function resolveKitSalesOrderUnitPrice(
       })
       .where({ 'pis.tenant': tenant, 'pis.service_id': kitServiceId })
       .select(trx.raw("COALESCE(pis.cost_currency, sc.cost_currency, 'USD') as currency_code"))
-      .first();
+      .first() as { currency_code?: string } | undefined;
     const kitCurrency = String(kit?.currency_code ?? 'USD').toUpperCase();
     if (kitCurrency !== orderCurrency.toUpperCase()) {
       throw new Error(

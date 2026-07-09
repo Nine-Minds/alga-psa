@@ -10,7 +10,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import knexLib, { Knex } from 'knex';
-import { explodeKitOntoSalesOrder, resolveKitPriceInTransaction } from '../actions/kitActions';
+import { explodeKitOntoSalesOrder } from '../actions/kitActions';
+import { resolveKitPriceInTransaction } from './kitPricing';
 import { resolveKitSalesOrderUnitPrice } from '../actions/salesOrderActions';
 
 vi.mock('@alga-psa/auth', () => ({

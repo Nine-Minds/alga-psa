@@ -2,7 +2,7 @@
 
 - Slug: `2026-07-09-inventory-kits-command-center`
 - Date: `2026-07-09`
-- Status: Implemented; headed browser smoke remains blocked by the local test harness
+- Status: Implemented and verified
 - Design: `../2026-07-09-inventory-kits-command-center-design.md`
 
 ## Summary

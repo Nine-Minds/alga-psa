@@ -61,6 +61,10 @@ command-center screen.
   also blocked before discovery on Node 22 because `@alga-psa/db` is required
   through an ESM graph containing top-level await. An existing Playwright test
   fails at the same import boundary.
+- 2026-07-09: A later current-tab browser pane was addressable as
+  `78b22331-5788-4a9a-990d-399f574efc7f`. Live testing found that synchronous
+  pricing helpers exported from a `use server` module prevented Next.js from
+  compiling the route. The helpers now live in `src/lib/kitPricing.ts`.
 
 ## Commands / Runbooks
 
@@ -69,8 +73,8 @@ command-center screen.
   reverted.
 - 2026-07-09: `npm run typecheck` passes in `packages/inventory`.
 - 2026-07-09: The server typecheck needs
-  `NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck`; the default 4 GB heap
-  exits before TypeScript completes.
+  `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck`; smaller heaps can
+  exit before TypeScript completes.
 - 2026-07-09: `npx vitest run src/lib/kitmisc.test.ts` passes 8 DB-backed tests.
 - 2026-07-09: The focused pricing suite passes 6 tests across
   `kitPricing.test.ts`, `KitManager.pricing.test.tsx`, and
@@ -88,6 +92,19 @@ command-center screen.
 - 2026-07-09: A headed Playwright workflow test exists at
   `ee/server/src/__tests__/integration/inventory-kits-command-center.playwright.test.ts`.
   It remains unexecuted because the shared harness fails during test discovery.
+- 2026-07-09: Alga Dev browser smoke passed against `http://localhost:3477`.
+  Sum mode rendered a read-only $300 component-derived price. Quantity 3
+  previewed a $900 parent, three dock lines, and six cable lines. Fixed mode
+  rendered exactly one $500 input. Search, Low stock filtering, sales-order kit
+  preselection, and server-filtered usage listing all behaved as designed.
+- 2026-07-09: The write-path smoke created `KIT-ALGATEST-1934` in the local dev
+  tenant. It started in No BOM state, then became Ready with a $10 calculated
+  price, $3.50 component cost, and 65% gross margin after adding one stocked
+  component.
+- 2026-07-09: Cancelling a fixed-price create draft initially left fixed mode
+  selected on the next open. Create kit now clears the draft on open and close;
+  the live regression reopened with blank identity fields, sum mode, and no
+  fixed-price input.
 
 ## Links / References
 

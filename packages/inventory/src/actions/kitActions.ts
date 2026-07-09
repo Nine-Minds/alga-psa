@@ -7,6 +7,11 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IKitComponent, ISalesOrderLine, KitPricingMode } from '@alga-psa/types';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import {
+  calculateKitFinancials,
+  resolveKitPriceInTransaction,
+  resolveKitPricePolicy,
+} from '../lib/kitPricing';
 
 /**
  * Kit (bundle) management — single-level bill of materials (F102).
@@ -61,70 +66,6 @@ function normalizeKitPricingMode(value?: KitPricingMode | null): KitPricingMode 
     throw new Error(`Invalid kit_pricing_mode: ${mode}`);
   }
   return mode;
-}
-
-type KitPriceComponent = Pick<KitComponentDetail, 'default_rate' | 'quantity'>;
-
-/** Resolve a kit's reusable price policy from already-loaded data. */
-export function resolveKitPricePolicy(
-  mode: KitPricingMode,
-  fixedPrice: number | null,
-  components: KitPriceComponent[],
-): number {
-  if (mode === 'fixed') return fixedPrice ?? 0;
-  return components.reduce(
-    (sum, component) => sum + asNumber(component.default_rate) * normalizeQuantity(component.quantity),
-    0,
-  );
-}
-
-type KitCostComponent = Pick<KitComponentDetail, 'extended_cost' | 'cost_currency'>;
-
-export function calculateKitFinancials(
-  kitPrice: number,
-  kitCurrency: string,
-  components: KitCostComponent[],
-): { componentCost: number | null; marginAmount: number | null; marginPercent: number | null } {
-  const normalizedCurrency = kitCurrency.toUpperCase();
-  const hasCompleteComponentCost = components.length > 0 && components.every((component) =>
-    component.extended_cost !== null &&
-    (!component.cost_currency || component.cost_currency.toUpperCase() === normalizedCurrency),
-  );
-  const componentCost = hasCompleteComponentCost
-    ? components.reduce((sum, component) => sum + (component.extended_cost ?? 0), 0)
-    : null;
-  const marginAmount = componentCost === null ? null : kitPrice - componentCost;
-  const marginPercent = kitPrice > 0 && marginAmount !== null ? marginAmount / kitPrice : null;
-  return { componentCost, marginAmount, marginPercent };
-}
-
-/** Resolve kit pricing inside an existing transaction so order writes cannot use a stale browser value. */
-export async function resolveKitPriceInTransaction(
-  trx: Knex.Transaction,
-  tenant: string,
-  kitServiceId: string,
-): Promise<number> {
-  const settings = await trx('product_inventory_settings')
-    .where({ tenant, service_id: kitServiceId })
-    .select('is_kit', 'kit_pricing_mode', 'kit_fixed_price')
-    .first();
-  if (!settings) throw new Error('Inventory not enabled for this product');
-  if (!settings.is_kit) throw new Error('Product is not flagged as a kit (is_kit=false)');
-
-  const mode = normalizeKitPricingMode(settings.kit_pricing_mode);
-  const fixedPrice = settings.kit_fixed_price == null ? null : asNumber(settings.kit_fixed_price);
-  if (mode === 'fixed' && !(fixedPrice && fixedPrice > 0)) {
-    throw new Error('Fixed kit price must be greater than 0');
-  }
-
-  const components = (await trx('kit_components as kc')
-    .join('service_catalog as sc', function () {
-      this.on('kc.component_service_id', '=', 'sc.service_id').andOn('kc.tenant', '=', 'sc.tenant');
-    })
-    .where({ 'kc.tenant': tenant, 'kc.kit_service_id': kitServiceId })
-    .select('kc.quantity', 'sc.default_rate')) as KitPriceComponent[];
-
-  return resolveKitPricePolicy(mode, fixedPrice, components);
 }
 
 function safeRevalidate(path: string): void {

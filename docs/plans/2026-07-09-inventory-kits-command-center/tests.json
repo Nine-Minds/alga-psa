@@ -31,9 +31,9 @@
   },
   {
     "id": "T006",
-    "description": "Browser smoke covers create kit, add BOM, see readiness/margin, sales-order preview, error/empty states, search, and status filter.",
-    "implemented": false,
-    "featureIds": ["F005", "F006", "F007", "F008", "F009", "F013", "F015"]
+    "description": "Alga Dev browser smoke covers create kit, no-BOM state, add BOM, readiness/margin, variable sales-order preview, search, status filter, kit preselection, and usage filtering; rendered component coverage verifies load-error, empty-page, and no-results states.",
+    "implemented": true,
+    "featureIds": ["F005", "F006", "F007", "F008", "F009", "F013", "F015", "F028", "F029"]
   },
   {
     "id": "T007",

@@ -239,6 +239,22 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
     : null;
   const previewQuantityValue = isPositiveIntegerText(previewQuantity) ? Number(previewQuantity) : null;
 
+  const resetCreateDraft = () => {
+    setCreateDraft({ ...DEFAULT_CREATE_DRAFT, custom_service_type_id: serviceTypes[0]?.id ?? '' });
+  };
+
+  const openCreateDialog = () => {
+    resetCreateDraft();
+    setCreateError(null);
+    setCreateOpen(true);
+  };
+
+  const closeCreateDialog = () => {
+    setCreateOpen(false);
+    setCreateError(null);
+    resetCreateDraft();
+  };
+
   const handleCreate = async () => {
     setCreateError(null);
     if (!createDraft.service_name.trim()) {
@@ -266,8 +282,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
         kit_pricing_mode: createDraft.kit_pricing_mode,
         kit_fixed_price: fixedPrice,
       });
-      setCreateOpen(false);
-      setCreateDraft({ ...DEFAULT_CREATE_DRAFT, custom_service_type_id: serviceTypes[0]?.id ?? '' });
+      closeCreateDialog();
       await refreshKits();
       setSelectedKitId(created.service_id);
       setDetail(created);
@@ -372,7 +387,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
             <span>{t('kits.summary.attention', { defaultValue: '{{count}} need attention', count: attentionCount })}</span>
           </div>
         </div>
-        <Button id="kits-create-kit-button" onClick={() => setCreateOpen(true)}>
+        <Button id="kits-create-kit-button" onClick={openCreateDialog}>
           <PackagePlus className="mr-2 h-4 w-4" />
           {t('kits.actions.createKit', { defaultValue: 'Create kit' })}
         </Button>
@@ -419,7 +434,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
                 <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
                   {t('kits.empty.body', { defaultValue: 'Create a sellable kit, then add its bill of materials.' })}
                 </p>
-                <Button id="kits-empty-create-button" className="mt-4" onClick={() => setCreateOpen(true)}>
+                <Button id="kits-empty-create-button" className="mt-4" onClick={openCreateDialog}>
                   {t('kits.actions.createKit', { defaultValue: 'Create kit' })}
                 </Button>
               </div>
@@ -809,14 +824,11 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
       <Dialog
         id="kit-create-dialog"
         isOpen={createOpen}
-        onClose={() => {
-          setCreateOpen(false);
-          setCreateError(null);
-        }}
+        onClose={closeCreateDialog}
         title={t('kits.create.title', { defaultValue: 'Create kit' })}
         footer={(
           <div className="flex justify-end gap-2">
-            <Button id="kit-create-cancel" variant="outline" onClick={() => setCreateOpen(false)}>
+            <Button id="kit-create-cancel" variant="outline" onClick={closeCreateDialog}>
               {t('common.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button id="kit-create-submit" onClick={handleCreate} disabled={creating || serviceTypes.length === 0}>
