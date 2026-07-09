@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Add Purchase Order",
     "allVendors": "All vendors",
     "amountOnOrder": "{{amount}} on order",
+    "mixedCurrencyOnOrder": "{{count}} purchase orders on order across multiple currencies",
     "cancelConfirm": "Are you sure you want to cancel purchase order {{poNumber}}? This cannot be undone.",
     "cancelFailed": "Couldn't cancel the purchase order.",
     "cancelTitle": "Cancel purchase order",
