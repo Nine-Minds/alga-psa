@@ -323,9 +323,10 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
       });
 
       return this.mapGoogleEventToExternal(response.data);
-    } catch {
+    } catch (error) {
       // Handle 404 quietly - this is expected when events are deleted
-      const status = error?.response?.status || error?.code;
+      const googleError = error as { response?: { status?: number }; code?: number | string };
+      const status = googleError.response?.status || googleError.code;
       if (status === 404) {
         const notFoundError = new Error('Event not found');
         (notFoundError as any).status = 404;

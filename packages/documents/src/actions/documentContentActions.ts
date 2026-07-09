@@ -37,7 +37,7 @@ export const createContentDocument = withAuth(async (
         });
 
         if (isActionPermissionError(documentResult)) {
-            return documentResult;
+            return documentResult as DocumentActionError;
         }
 
         // Create the document content
@@ -90,7 +90,7 @@ export const getDocumentContent = withAuth(async (
         });
 
         if (isActionPermissionError(content)) {
-            return content;
+            return content as DocumentActionError;
         }
 
         return content || null;
@@ -153,7 +153,7 @@ export const updateDocumentContent = withAuth(async (
         });
 
         if (isActionPermissionError(updateResult)) {
-            return updateResult;
+            return updateResult as DocumentActionError;
         }
     } catch (error) {
         console.error('Error updating document content:', error);
@@ -190,7 +190,7 @@ export const deleteDocumentContent = withAuth(async (
         });
 
         if (isActionPermissionError(deletionResult)) {
-            return deletionResult;
+            return deletionResult as DocumentActionError;
         }
     } catch (error) {
         console.error('Error deleting document content:', error);

@@ -314,8 +314,8 @@ const QuotesTab: React.FC = () => {
         getQuoteDocumentTemplates(),
       ]);
 
-      if ('permissionError' in quotesResult) {
-        setError(quotesResult.permissionError);
+      if (isActionPermissionError(quotesResult)) {
+        setError(getErrorMessage(quotesResult));
         setQuotes([]);
       } else {
         setQuotes(quotesResult.data);

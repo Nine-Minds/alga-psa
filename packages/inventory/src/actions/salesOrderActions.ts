@@ -26,7 +26,8 @@ import {
   recomputeSerializedOnHand,
   timestampPayload,
 } from '../lib';
-import { explodeKitOntoSalesOrder, kitActionErrorFrom } from './kitActions';
+import { kitActionErrorFrom } from '../lib/kitActionErrors';
+import { explodeKitOntoSalesOrder } from './kitActions';
 
 /**
  * Sales orders (outbound document) — see design §6.I.

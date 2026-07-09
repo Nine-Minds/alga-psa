@@ -722,8 +722,8 @@ export class TimeSheetService extends BaseService<any> {
         }
 
         const overlappingPeriod = await tenantDb(trx, context.tenant).table('time_periods')
-          .where('start_date', '<', data.end_date)
-          .where('end_date', '>', data.start_date)
+          .whereRaw('start_date < ?', [data.end_date])
+          .whereRaw('end_date > ?', [data.start_date])
           .first();
 
         if (overlappingPeriod) {

@@ -27,7 +27,7 @@ function tenantScopedTable(
 
 function serviceCategoryActionErrorFrom(error: unknown): ServiceCategoryActionError | null {
   if (isActionMessageError(error) || isActionPermissionError(error)) {
-    return error;
+    return error as ServiceCategoryActionError;
   }
 
   if (error instanceof Error) {

@@ -88,12 +88,10 @@ export async function registerSlaCancellation(fn: (tenantId: string, ticketId: s
 function ticketBulkFailureMessage(error: unknown, fallback: string): string {
   const expected = ticketActionErrorFrom(error);
   if (expected) {
-    if ('actionError' in expected) {
-      return expected.actionError;
-    }
-    if ('permissionError' in expected) {
-      return expected.permissionError;
-    }
+    const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+    return typeof candidate.actionError === 'string'
+      ? candidate.actionError
+      : String(candidate.permissionError ?? fallback);
   }
 
   return fallback;
@@ -620,9 +618,12 @@ export const fetchTicketAttributes = withAuth(async (user, { tenant }, ticketId:
   } catch (error) {
     const expected = ticketActionErrorFrom(error);
     if (expected) {
+      const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
       return {
         success: false,
-        error: 'permissionError' in expected ? expected.permissionError : expected.actionError,
+        error: typeof candidate.permissionError === 'string'
+          ? candidate.permissionError
+          : String(candidate.actionError ?? 'Failed to fetch ticket attributes'),
       };
     }
     console.error(error);
@@ -2390,9 +2391,12 @@ export const getTicketAppointmentRequests = withAuth(async (
   } catch (error) {
     const expected = ticketActionErrorFrom(error);
     if (expected) {
+      const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
       return {
         success: false,
-        error: 'permissionError' in expected ? expected.permissionError : expected.actionError,
+        error: typeof candidate.permissionError === 'string'
+          ? candidate.permissionError
+          : String(candidate.actionError ?? 'Failed to fetch appointment requests.'),
       };
     }
     console.error('Error fetching ticket appointment requests:', error);

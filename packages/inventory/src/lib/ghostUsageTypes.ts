@@ -3,6 +3,9 @@
  * and the EE AI classifier. Pure types — no runtime imports — so the UI, the
  * inventory actions, and the EE classifier can all depend on one vocabulary.
  */
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+export type GhostUsageActionError = ActionMessageError | ActionPermissionError;
 
 /** §17.2 — the model's three-way call on a ticket's text. */
 export type GhostClassificationVerdict = 'hardware_missing' | 'no_hardware' | 'unclear';

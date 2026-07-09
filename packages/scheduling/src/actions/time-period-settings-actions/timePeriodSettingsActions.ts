@@ -41,7 +41,7 @@ function tenantScopedTable<T extends object = Record<string, unknown>>(
 
 function timePeriodSettingsActionErrorFrom(error: unknown, fallback: string): TimePeriodSettingsActionError {
   if (isActionMessageError(error) || isActionPermissionError(error)) {
-    return error;
+    return error as TimePeriodSettingsActionError;
   }
 
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';

@@ -9,8 +9,8 @@ import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
 import {
   actionError,
-  type ActionMessageError,
 } from '@alga-psa/ui/lib/errorHandling';
+import type { PriorityActionError } from './priorityActionErrors';
 
 const tenantScopedTable = (trx: Knex | Knex.Transaction, table: string, tenant: string) =>
   tenantDb(trx, tenant).table(table);
@@ -26,17 +26,6 @@ function priorityActionErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback;
-}
-
-export type PriorityActionError = ActionMessageError;
-
-export function isPriorityActionError(value: unknown): value is PriorityActionError {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'actionError' in value &&
-    typeof (value as { actionError?: unknown }).actionError === 'string'
-  );
 }
 
 function priorityActionErrorFrom(error: unknown): PriorityActionError | null {

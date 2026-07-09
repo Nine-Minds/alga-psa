@@ -21,6 +21,7 @@ import {
 import { enqueueCreditApplication } from '../services/accountingSync/syncProducers';
 import {
     actionError,
+    getErrorMessage,
     permissionError,
     type ActionMessageError,
     type ActionPermissionError,
@@ -506,7 +507,7 @@ export async function validateTransactionBalance(
         // Get the available (non-expired) credit balance
         const validation = await validateCreditBalance(clientId, undefined, trx);
         if (isCreditActionError(validation)) {
-            throw new Error('permissionError' in validation ? validation.permissionError : validation.actionError);
+            throw new Error(getErrorMessage(validation));
         }
         const availableBalance = validation.actualBalance;
         

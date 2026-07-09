@@ -31,7 +31,6 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
 import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';

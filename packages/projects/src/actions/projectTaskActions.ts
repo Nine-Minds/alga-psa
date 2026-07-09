@@ -44,7 +44,8 @@ import {
 import { OrderingService } from '../lib/orderingUtils';
 import { buildProjectTaskWebhookChanges } from '../lib/projectTaskWebhookChanges';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
-import { isProjectOrderKeyActionError, validateAndFixOrderKeys } from './regenerateOrderKeys';
+import { validateAndFixOrderKeys } from './regenerateOrderKeys';
+import { isProjectOrderKeyActionError } from './projectOrderKeyActionErrors';
 import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCompletedPayload,
@@ -114,7 +115,7 @@ function formatProjectTaskValidationIssues(error: unknown): string | null {
 
 function projectTaskActionErrorFrom(error: unknown): ProjectTaskActionError | null {
     if (isActionMessageError(error) || isActionPermissionError(error)) {
-        return error;
+        return error as ProjectTaskActionError;
     }
 
     if (error instanceof Error) {
@@ -2691,9 +2692,12 @@ export const cleanupOrderKeysForStatus = withAuth(async (
         console.error('Error cleaning up order keys:', error);
         const expected = projectTaskActionErrorFrom(error);
         if (expected) {
+            const candidate = expected as unknown as { permissionError?: unknown; actionError?: unknown };
             return {
                 success: false,
-                message: 'permissionError' in expected ? expected.permissionError : expected.actionError
+                message: typeof candidate.permissionError === 'string'
+                    ? candidate.permissionError
+                    : String(candidate.actionError ?? 'Failed to clean up order keys')
             };
         }
         return {

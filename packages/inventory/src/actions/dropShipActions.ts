@@ -6,8 +6,6 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   actionError,
-  isActionMessageError,
-  isActionPermissionError,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -26,10 +24,6 @@ import { publishInventoryEvent, recordStockMovement, timestampPayload } from '..
 import { resolveTenantCurrency } from '../lib';
 
 export type InventoryActionError = ActionMessageError | ActionPermissionError;
-
-export function isInventoryActionError(value: unknown): value is InventoryActionError {
-  return isActionMessageError(value) || isActionPermissionError(value);
-}
 
 function dropShipActionErrorFrom(error: unknown): InventoryActionError | null {
   if (error instanceof Error) {

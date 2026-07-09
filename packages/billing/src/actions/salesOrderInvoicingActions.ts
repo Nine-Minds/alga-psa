@@ -14,9 +14,12 @@ import {
   ConfirmDropShipShipmentInput,
   ConfirmDropShipShipmentResult,
   DropShipLineRef,
-  isInventoryActionError,
   type InventoryActionError,
 } from '@alga-psa/inventory/actions';
+import {
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { generateManualInvoice } from './manualInvoiceActions';
 import { TaxService } from '../services/taxService';
 import * as invoiceService from '../services/invoiceService';
@@ -48,6 +51,10 @@ function expectedSalesOrderInvoiceErrorMessage(error: unknown): string | null {
   }
 
   return null;
+}
+
+function isInventoryActionError(value: unknown): value is InventoryActionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export const generateInvoiceForSalesOrder = withAuth(

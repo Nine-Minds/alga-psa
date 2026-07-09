@@ -74,12 +74,10 @@ function ticketImportActionErrorFrom(error: unknown): TicketImportActionError | 
 function ticketImportRowErrorMessage(error: unknown): string {
   const expected = ticketImportActionErrorFrom(error);
   if (expected) {
-    if ('actionError' in expected) {
-      return expected.actionError;
-    }
-    if ('permissionError' in expected) {
-      return expected.permissionError;
-    }
+    const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+    return typeof candidate.actionError === 'string'
+      ? candidate.actionError
+      : String(candidate.permissionError ?? 'Ticket import failed');
   }
 
   const dbError = error as { code?: string; column?: string; constraint?: string };

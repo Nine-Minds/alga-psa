@@ -240,7 +240,7 @@ export const getBlockContent = withAuth(async (user, { tenant }, documentId: str
     });
 
     if (isActionPermissionError(content)) {
-      return content;
+      return content as DocumentActionError;
     }
 
     return content || null;
@@ -327,7 +327,7 @@ export const updateBlockContent = withAuth(async (
     });
 
     if (isActionPermissionError(result)) {
-      return result;
+      return result as DocumentActionError;
     }
 
     // After transaction commits successfully, publish event
@@ -409,7 +409,7 @@ export const deleteBlockContent = withAuth(async (_user, { tenant }, documentId:
     });
 
     if (isActionPermissionError(deletionResult)) {
-      return deletionResult;
+      return deletionResult as DocumentActionError;
     }
 
     await publishDocumentUpdatedSearchEvent(

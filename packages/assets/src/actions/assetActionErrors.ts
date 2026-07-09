@@ -7,8 +7,9 @@ import {
 
 export type AssetActionError = ActionMessageError | ActionPermissionError;
 
-export function assetActionErrorMessage(error: AssetActionError): string {
-  return 'permissionError' in error ? error.permissionError : error.actionError;
+export function assetActionErrorMessage(error: unknown): string {
+  const candidate = error as { permissionError?: unknown; actionError?: unknown };
+  return typeof candidate.permissionError === 'string' ? candidate.permissionError : String(candidate.actionError ?? 'Action failed');
 }
 
 export function isAssetActionError(value: unknown): value is AssetActionError {

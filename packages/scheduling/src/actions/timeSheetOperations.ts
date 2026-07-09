@@ -40,9 +40,10 @@ function tenantScopedTable<Row extends object = Record<string, any>>(
 function timeSheetRemovalErrorMessage(error: unknown): string {
   const mappedError = timeSheetActionErrorFrom(error);
   if (mappedError) {
-    return 'permissionError' in mappedError
-      ? mappedError.permissionError
-      : mappedError.actionError;
+    const candidate = mappedError as unknown as { permissionError?: unknown; actionError?: unknown };
+    return typeof candidate.permissionError === 'string'
+      ? candidate.permissionError
+      : String(candidate.actionError ?? 'Failed to remove time sheet');
   }
 
   return 'Failed to remove time sheet';

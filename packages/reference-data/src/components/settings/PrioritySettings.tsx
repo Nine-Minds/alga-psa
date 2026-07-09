@@ -18,7 +18,7 @@ import type { IPriority, IStandardPriority, DeletionValidationResult } from '@al
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError } from '@alga-psa/ui/lib/errorHandling';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -86,7 +86,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
     try {
       const result = await updatePriority(updatedPriority.priority_id, updatedPriority);
       if (isPriorityActionError(result)) {
-        toast.error(result.actionError);
+        toast.error(getErrorMessage(result));
         return;
       }
       setPriorities(priorities.map((priority) =>
@@ -428,7 +428,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                   item_type: selectedPriorityType
                 });
                 if (isPriorityActionError(createdPriority)) {
-                  toast.error(createdPriority.actionError);
+                  toast.error(getErrorMessage(createdPriority));
                   return;
                 }
               }

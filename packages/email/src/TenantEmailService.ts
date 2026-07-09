@@ -274,7 +274,7 @@ export class TenantEmailService extends BaseEmailService {
       }
 
       return { allowed: true };
-    } catch {
+    } catch (error) {
       // Fail open on error
       logger.error(`[${this.getServiceName()}] Rate limit check failed, allowing request:`, error);
       return { allowed: true };
@@ -380,7 +380,7 @@ export class TenantEmailService extends BaseEmailService {
       }
       
       return TenantEmailService.normalizeSettingsRecord(tenantId, settings);
-    } catch {
+    } catch (error) {
       logger.error(`[TenantEmailService] Error fetching tenant email settings:`, error);
       return null;
     }

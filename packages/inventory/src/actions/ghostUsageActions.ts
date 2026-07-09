@@ -7,14 +7,13 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   actionError,
   permissionError,
-  type ActionMessageError,
-  type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import {
   queryGhostUsageReport,
   setGhostUsageReviewDisposition,
 } from '../lib/ghostUsage';
 import type {
+  GhostUsageActionError,
   GhostUsageFilters,
   GhostUsageReportResult,
   GhostDisposition,
@@ -25,8 +24,6 @@ import type {
  * The EE classifier actions live in server/src (D12: passed to the UI as props)
  * so this package stays free of @ee imports.
  */
-type GhostUsageActionError = ActionMessageError | ActionPermissionError;
-
 /** §16.1/§16.8 — funnel + candidates + worklist. Requires inventory:read. */
 export const getGhostUsageReport = withAuth(async (
   _user,

@@ -7,8 +7,9 @@ import {
 
 export type StatusActionError = ActionMessageError | ActionPermissionError;
 
-export function statusActionErrorMessage(error: StatusActionError): string {
-  return 'permissionError' in error ? error.permissionError : error.actionError;
+export function statusActionErrorMessage(error: unknown): string {
+  const candidate = error as { permissionError?: unknown; actionError?: unknown };
+  return typeof candidate.permissionError === 'string' ? candidate.permissionError : String(candidate.actionError ?? 'Action failed');
 }
 
 export function isStatusActionError(value: unknown): value is StatusActionError {

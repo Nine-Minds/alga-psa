@@ -133,8 +133,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         };
       }
       this.log('warn', `Folder '${requested}' not found; defaulting subscription to Inbox`);
-    } catch {
-      this.log('warn', `Failed to resolve folder '${requested}'; defaulting to Inbox`, error?.message || error);
+    } catch (error) {
+      const graphError = error as { message?: string };
+      this.log('warn', `Failed to resolve folder '${requested}'; defaulting to Inbox`, graphError.message || error);
     }
 
     return fallbackResult;

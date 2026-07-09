@@ -5,7 +5,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   isActionPermissionError,
   permissionError,
-  type ActionPermissionError,
+  type ActionPermissionErrorShape,
 } from '@alga-psa/ui/lib/errorHandling';
 import {
   getLicenseStateRow,
@@ -41,9 +41,9 @@ export interface LicenseStatus {
 
 type LicenseAdminUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 type LicenseMutationResult = { success: boolean; error?: string; status?: LicenseStatus };
-export type LicenseStatusResult = LicenseStatus | ActionPermissionError;
+export type LicenseStatusResult = LicenseStatus | ActionPermissionErrorShape;
 
-async function assertAdminPermission(): Promise<LicenseAdminUser | ActionPermissionError> {
+async function assertAdminPermission(): Promise<LicenseAdminUser | ActionPermissionErrorShape> {
   // Must use getCurrentUser (returns a full IUserWithRoles with user_id) — the
   // raw NextAuth session.user exposes `id`, not `user_id`, and hasPermission
   // binds user_roles.user_id, so passing session.user yields an undefined-binding
@@ -56,7 +56,7 @@ async function assertAdminPermission(): Promise<LicenseAdminUser | ActionPermiss
   return user;
 }
 
-function permissionFailureResult(error: ActionPermissionError): LicenseMutationResult {
+function permissionFailureResult(error: ActionPermissionErrorShape): LicenseMutationResult {
   return { success: false, error: error.permissionError };
 }
 

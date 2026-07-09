@@ -168,7 +168,10 @@ function normalizeBulkAssetIds(assetIds: string[]): string[] {
 function assetActionErrorMessage(error: unknown, fallback: string): string {
     const expected = expectedAssetActionError(error);
     if (expected) {
-        return 'permissionError' in expected ? expected.permissionError : expected.actionError;
+        const candidate = expected as unknown as { permissionError?: unknown; actionError?: unknown };
+        return typeof candidate.permissionError === 'string'
+            ? candidate.permissionError
+            : String(candidate.actionError ?? fallback);
     }
 
     const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';

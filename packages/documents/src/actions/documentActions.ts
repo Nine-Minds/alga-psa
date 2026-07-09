@@ -665,7 +665,7 @@ export async function getAuthorizedDocumentById(
 }
 
 function isActionPermissionErrorResult(value: unknown): value is ActionPermissionError {
-  return Boolean(value) && typeof value === 'object' && 'permissionError' in (value as Record<string, unknown>);
+  return Boolean(value) && typeof value === 'object' && typeof (value as { permissionError?: unknown }).permissionError === 'string';
 }
 
 function expectedDocumentActionError(message: string): DocumentActionError {
@@ -2702,7 +2702,7 @@ export const uploadDocument = withAuth(async (
 
       // Get document type based on mime type
       const typeResult = await getDocumentTypeId(fileData.type);
-      if ('permissionError' in typeResult) return typeResult;
+      if (isActionPermissionErrorResult(typeResult)) return typeResult;
       const { typeId, isShared } = typeResult;
 
       // Auto-file into entity folder if folder_path not set and entity context exists

@@ -7,8 +7,9 @@ import {
 
 export type TeamActionError = ActionMessageError | ActionPermissionError;
 
-export function teamActionErrorMessage(error: TeamActionError): string {
-  return 'permissionError' in error ? error.permissionError : error.actionError;
+export function teamActionErrorMessage(error: unknown): string {
+  const candidate = error as { permissionError?: unknown; actionError?: unknown };
+  return typeof candidate.permissionError === 'string' ? candidate.permissionError : String(candidate.actionError ?? 'Action failed');
 }
 
 export function isTeamActionError(value: unknown): value is TeamActionError {

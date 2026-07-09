@@ -7,8 +7,9 @@ import {
 
 export type SlaActionError = ActionMessageError | ActionPermissionError;
 
-export function slaActionErrorMessage(error: SlaActionError): string {
-  return 'permissionError' in error ? error.permissionError : error.actionError;
+export function slaActionErrorMessage(error: unknown): string {
+  const candidate = error as { permissionError?: unknown; actionError?: unknown };
+  return typeof candidate.permissionError === 'string' ? candidate.permissionError : String(candidate.actionError ?? 'Action failed');
 }
 
 export function isSlaActionError(value: unknown): value is SlaActionError {

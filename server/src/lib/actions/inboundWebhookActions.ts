@@ -483,7 +483,7 @@ export const listInboundWebhooks = withAuth(async (
   for (const row of rows) {
     const mapped = safeMapInboundWebhook(row);
     if ('actionError' in mapped) {
-      return mapped;
+      return mapped as InboundWebhookServerActionError;
     }
     configs.push(mapped);
   }
@@ -686,7 +686,7 @@ export const upsertInboundWebhook = withAuth(
 
     const mapped = safeMapInboundWebhook(row);
     if ('actionError' in mapped) {
-      return mapped;
+      return mapped as InboundWebhookServerActionError;
     }
 
     return {
@@ -797,7 +797,7 @@ export const rotateInboundWebhookSecret = withAuth(
 
     const mapped = safeMapInboundWebhook(row);
     if ('actionError' in mapped) {
-      return mapped;
+      return mapped as InboundWebhookServerActionError;
     }
 
     return {

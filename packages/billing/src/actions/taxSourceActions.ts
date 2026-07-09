@@ -94,7 +94,7 @@ export const shouldUseTaxDelegation = withAuth(async (_user, ctx, clientId: stri
 export const getInitialInvoiceTaxSource = withAuth(async (_user, ctx, clientId: string): Promise<TaxSource | TaxSourceActionError> => {
   const result = await getEffectiveTaxSourceForClient(clientId);
   if (isActionMessageError(result) || isActionPermissionError(result)) {
-    return result;
+    return result as TaxSourceActionError;
   }
 
   // If client uses external tax, new invoices start as 'pending_external'

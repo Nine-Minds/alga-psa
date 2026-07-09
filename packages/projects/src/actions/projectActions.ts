@@ -73,7 +73,7 @@ const EXPECTED_PROJECT_ACTION_ERROR_PREFIXES = [
 
 function projectActionErrorFrom(error: unknown): ProjectActionError | null {
     if (isActionMessageError(error) || isActionPermissionError(error)) {
-        return error;
+        return error as ProjectActionError;
     }
 
     const issues = (error as { issues?: unknown })?.issues;
@@ -1079,7 +1079,8 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
             console.error('Error generating order key for phase:', error);
 
             // Try to recover by regenerating all order keys for the project
-            const { isProjectOrderKeyActionError, regenerateOrderKeysForPhases } = await import('./regenerateOrderKeys');
+            const { regenerateOrderKeysForPhases } = await import('./regenerateOrderKeys');
+            const { isProjectOrderKeyActionError } = await import('./projectOrderKeyActionErrors');
             const regenerationResult = await regenerateOrderKeysForPhases(phase.project_id);
             if (isProjectOrderKeyActionError(regenerationResult)) {
                 throw regenerationResult;

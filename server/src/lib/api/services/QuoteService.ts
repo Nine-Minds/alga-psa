@@ -287,7 +287,8 @@ export class QuoteService extends BaseService<IQuote> {
         alternatives: result.alternatives,
       };
 
-      if (result.code === 'NOT_FOUND' || result.code === 'NOT_FOUND_OR_ALREADY_DELETED') {
+      const resultCode = result.code as typeof result.code | 'NOT_FOUND_OR_ALREADY_DELETED';
+      if (resultCode === 'NOT_FOUND' || resultCode === 'NOT_FOUND_OR_ALREADY_DELETED') {
         throw new NotFoundError(message);
       }
 

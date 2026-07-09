@@ -190,7 +190,7 @@ function managedDomainWorkflowFailure(operation: 'request' | 'refresh' | 'delete
 
 async function managedDomainAction<T extends { success: true }>(
   operation: 'request' | 'refresh' | 'delete',
-  action: () => Promise<T>,
+  action: () => Promise<T | ManagedDomainActionFailure>,
 ): Promise<T | ManagedDomainActionFailure> {
   try {
     return await action();

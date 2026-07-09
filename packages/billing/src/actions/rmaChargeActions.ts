@@ -33,7 +33,7 @@ export type RmaChargeActionError = ActionMessageError | ActionPermissionError;
 
 function rmaChargeActionErrorFrom(error: unknown): RmaChargeActionError | null {
   if (isActionMessageError(error) || isActionPermissionError(error)) {
-    return error;
+    return error as RmaChargeActionError;
   }
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
@@ -68,7 +68,7 @@ export const chargeRmaForUnreturned = withAuth(
     // Step 1 — locked status flip (throws unless dead_unit_owed → idempotent).
     const rma: any = await chargeForUnreturned(rmaId);
     if (isActionMessageError(rma) || isActionPermissionError(rma)) {
-      return rma;
+      return rma as RmaChargeActionError;
     }
 
     const { knex: db } = await createTenantKnex();

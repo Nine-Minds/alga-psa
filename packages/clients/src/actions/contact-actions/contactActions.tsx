@@ -185,12 +185,10 @@ function contactUpdateActionErrorFrom(error: unknown): ContactUpdateActionError 
 function contactActionResultErrorFrom(error: unknown, fallback: string): string {
   const expected = contactUpdateActionErrorFrom(error);
   if (expected) {
-    if ('actionError' in expected) {
-      return expected.actionError;
-    }
-    if ('permissionError' in expected) {
-      return expected.permissionError;
-    }
+    const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+    return typeof candidate.actionError === 'string'
+      ? candidate.actionError
+      : String(candidate.permissionError ?? fallback);
   }
 
   return fallback;

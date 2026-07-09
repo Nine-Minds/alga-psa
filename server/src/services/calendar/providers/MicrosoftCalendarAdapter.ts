@@ -384,10 +384,11 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       const response = await this.httpClient.get(`${calendarBase}/events/${eventId}`);
 
       return this.mapMicrosoftEventToExternal(response.data);
-    } catch {
+    } catch (error) {
       // Handle 404 quietly - this is expected when events are deleted
-      const status = error?.response?.status;
-      const code = error?.response?.data?.error?.code;
+      const graphError = error as { response?: { status?: number; data?: { error?: { code?: string } } } };
+      const status = graphError.response?.status;
+      const code = graphError.response?.data?.error?.code;
       if (status === 404 || code === 'ErrorItemNotFound') {
         const notFoundError = new Error('Event not found');
         (notFoundError as any).status = 404;

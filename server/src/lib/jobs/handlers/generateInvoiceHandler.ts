@@ -39,9 +39,9 @@ export async function generateInvoiceHandler(data: GenerateInvoiceData): Promise
       )
     ) {
       throw new Error(
-        'permissionError' in result
-          ? String((result as { permissionError: string }).permissionError)
-          : String((result as { actionError: string }).actionError),
+        'permissionError' in (result as unknown as Record<string, unknown>)
+          ? String((result as unknown as { permissionError: string }).permissionError)
+          : String((result as unknown as { actionError: string }).actionError),
       );
     }
   } catch (error) {

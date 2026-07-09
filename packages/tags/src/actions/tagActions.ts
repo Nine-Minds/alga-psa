@@ -18,12 +18,9 @@ import {
 } from '@alga-psa/workflow-streams';
 import {
   actionError,
-  isActionMessageError,
-  isActionPermissionError,
   permissionError,
-  type ActionMessageError,
-  type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { isTagActionError, type TagActionError } from './tagActionErrors';
 
 /** Map tagged entity types to their permission resource equivalents */
 const ENTITY_PERMISSION_MAP: Partial<Record<TaggedEntityType, string>> = {
@@ -36,11 +33,6 @@ function getPermissionResource(taggedType: TaggedEntityType): string {
 }
 
 type TagTextSnapshot = string[];
-export type TagActionError = ActionMessageError | ActionPermissionError;
-
-export function isTagActionError(value: unknown): value is TagActionError {
-  return isActionMessageError(value) || isActionPermissionError(value);
-}
 
 function tagActionErrorFrom(error: unknown): TagActionError | null {
   if (isTagActionError(error)) {

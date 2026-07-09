@@ -160,7 +160,7 @@ export async function createOrFindContact(input: CreateOrFindContactInput): Prom
     title: input.title
   });
   if (isActionMessageError(result)) {
-    return result;
+    return result as ActionMessageError;
   }
 
   // Transform to email workflow expected format

@@ -30,7 +30,7 @@ export interface AllSessionsResponse {
   total: number;
 }
 
-export interface AuthActionPermissionError {
+export interface AuthSessionPermissionError {
   readonly permissionError: string;
 }
 
@@ -51,7 +51,7 @@ export interface RevokeAllSessionsResult {
   message: string;
 }
 
-function permissionError(message: string): AuthActionPermissionError {
+function permissionError(message: string): AuthSessionPermissionError {
   return { permissionError: message };
 }
 
@@ -98,7 +98,7 @@ export const getUserSessionsAction = withAuth(async (currentUser, { tenant }): P
 /**
  * Get all users' active sessions (admin only)
  */
-export const getAllSessionsAction = withAuth(async (currentUser, { tenant }): Promise<AllSessionsResponse | AuthActionPermissionError> => {
+export const getAllSessionsAction = withAuth(async (currentUser, { tenant }): Promise<AllSessionsResponse | AuthSessionPermissionError> => {
   // Check if user has permission to read security settings
   const canReadSecuritySettings = await hasPermission(
     currentUser,

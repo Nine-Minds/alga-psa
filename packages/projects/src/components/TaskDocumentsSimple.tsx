@@ -17,8 +17,8 @@ import {
   handleError,
   isActionMessageError,
   isActionPermissionError,
-  type ActionMessageError,
-  type ActionPermissionError,
+  type ActionMessageErrorShape,
+  type ActionPermissionErrorShape,
 } from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
@@ -38,7 +38,7 @@ const DEFAULT_BLOCKS: PartialBlock[] = [{
   }]
 }];
 
-const isDocumentActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+const isDocumentActionError = (value: unknown): value is ActionMessageErrorShape | ActionPermissionErrorShape =>
   isActionPermissionError(value) || isActionMessageError(value);
 
 // Pending document for create mode (before task is saved)

@@ -364,8 +364,8 @@ export const checkTicketClosure = withAuth(
         allowed: false,
         failures: [
           {
-            field: 'status',
-            label: 'Ticket not found. It may have been deleted. Please refresh and try again.',
+            rule: 'required_fields',
+            message: 'Ticket not found. It may have been deleted. Please refresh and try again.',
           },
         ],
         canOverride: false,
@@ -385,8 +385,8 @@ export const checkTicketClosure = withAuth(
         allowed: false,
         failures: [
           {
-            field: 'status',
-            label: 'Target status not found. It may have been deleted. Please refresh and try again.',
+            rule: 'required_fields',
+            message: 'Target status not found. It may have been deleted. Please refresh and try again.',
           },
         ],
         canOverride: false,

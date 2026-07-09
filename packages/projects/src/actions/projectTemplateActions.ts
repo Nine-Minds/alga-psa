@@ -57,7 +57,7 @@ const EXPECTED_TEMPLATE_ACTION_MESSAGES = [
 
 function projectTemplateActionErrorFrom(error: unknown): ProjectTemplateActionError | null {
   if (isActionPermissionError(error) || isActionMessageError(error)) {
-    return error;
+    return error as ProjectTemplateActionError;
   }
 
   const issues = (error as { issues?: unknown })?.issues;

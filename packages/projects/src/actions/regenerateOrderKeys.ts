@@ -8,12 +8,12 @@ import type { IProjectPhase, IProjectTask } from '@alga-psa/types';
 import { Knex } from 'knex';
 import {
   actionError,
-  isActionMessageError,
-  isActionPermissionError,
   permissionError,
-  type ActionMessageError,
-  type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import {
+  isProjectOrderKeyActionError,
+  type ProjectOrderKeyActionError,
+} from './projectOrderKeyActionErrors';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -21,12 +21,6 @@ function tenantScopedTable(
   tenant: string,
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
-}
-
-export type ProjectOrderKeyActionError = ActionMessageError | ActionPermissionError;
-
-export function isProjectOrderKeyActionError(value: unknown): value is ProjectOrderKeyActionError {
-  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 function projectOrderKeyActionErrorFrom(error: unknown): ProjectOrderKeyActionError | null {

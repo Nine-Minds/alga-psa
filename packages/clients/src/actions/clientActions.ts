@@ -94,12 +94,10 @@ function updateClientExpectedErrorFrom(error: unknown, clientName?: string | nul
 function clientActionMessageFrom(error: unknown, fallback: string, clientName?: string | null): string {
   const expected = updateClientExpectedErrorFrom(error, clientName);
   if (expected) {
-    if ('actionError' in expected) {
-      return expected.actionError;
-    }
-    if ('permissionError' in expected) {
-      return expected.permissionError;
-    }
+    const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+    return typeof candidate.actionError === 'string'
+      ? candidate.actionError
+      : String(candidate.permissionError ?? fallback);
   }
 
   return fallback;
@@ -546,9 +544,12 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
 
     const expected = updateClientExpectedErrorFrom(error, client.client_name);
     if (expected) {
+      const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
       return {
         success: false,
-        error: 'permissionError' in expected ? expected.permissionError : expected.actionError,
+        error: typeof candidate.permissionError === 'string'
+          ? candidate.permissionError
+          : String(candidate.actionError ?? 'Failed to create client'),
       };
     }
 

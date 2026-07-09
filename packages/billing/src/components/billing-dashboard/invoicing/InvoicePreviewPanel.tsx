@@ -350,7 +350,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     try {
       const result = await voidInvoice(invoiceId, voidReason);
       if (!result.success) {
-        setVoidError(result.error);
+        setVoidError((result as { error?: string }).error ?? null);
         return;
       }
       setVoidDialogOpen(false);
