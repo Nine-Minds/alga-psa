@@ -65,21 +65,21 @@
   {
     "id": "T050",
     "description": "SPIKE: the chosen mount mechanism coexists with the @modal parallel slot + create-<x> intercepting routes (create-ticket modal still intercepts from a work route; no route-group/parallel-route breakage)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-workspace-mount",
     "featureIds": ["F050"]
   },
   {
     "id": "T051",
     "description": "Every work route is wrapped by WorkspaceProviders (a cross-feature hook consumer on each work route resolves context; SSR of each work route succeeds)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-workspace-mount",
     "featureIds": ["F051"]
   },
   {
     "id": "T052",
     "description": "CROSS-FEATURE DRAWER NAV intact: on a work route, open ticket drawer → replaceDrawer to client → openDrawer interaction → goBack/forward through the stack + drawer.historyBack shortcut, all with intact context",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-workspace-mount",
     "featureIds": ["F052"]
   },

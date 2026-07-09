@@ -100,21 +100,21 @@
   {
     "id": "F050",
     "description": "SPIKE (gate): mount WorkspaceProviders over one work route group and confirm the mechanism — validate (work) route-group interaction with the existing @modal parallel slot + create-<x> intercepting routes; fall back to per-work-feature layout.tsx if the group misbehaves (OQ2)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-workspace-mount",
     "prdRefs": ["Technical approach / Phase 2 step 3", "OQ2", "Risks (route group vs @modal)"]
   },
   {
     "id": "F051",
     "description": "Mount WorkspaceProviders over ALL work routes (via the chosen mechanism); every work route renders the full stack + outlet",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-workspace-mount",
     "prdRefs": ["Technical approach / Phase 2 step 3"]
   },
   {
     "id": "F052",
     "description": "SPIKE verifies cross-feature drawer navigation still works on a work route: ticket→client→interaction chain + goBack/forward + drawer.historyBack shortcut, context intact",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-workspace-mount",
     "prdRefs": ["Acceptance AC5", "Root cause (drawer nav)"]
   },
