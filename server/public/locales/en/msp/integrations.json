@@ -1075,23 +1075,23 @@
           "bound": "Bound",
           "boundProfileLabel": "Microsoft app",
           "createFirst": "Create an app first",
-          "needsAttention": "Needs attention",
+          "needsAttention": "Needs setup",
           "saving": "Saving…",
           "selectProfile": "Select an app",
           "unbound": "Unbound",
-          "noCapablePlaceholder": "No enabled app",
-          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Enable it on an app registration, or leave {{consumer}} unassigned.",
-          "noEmailCapableProfiles": "No Microsoft app is enabled for Outlook email. Enable it on an app registration, or leave Outlook email on the hosted app."
+          "noCapablePlaceholder": "No enabled app"
         },
         "bindings": {
           "summaryBound": "Current: {{profile}}.",
           "summaryNone": "No {{consumer}} app selected.",
           "summaryUnavailable": "Selected app unavailable.",
-          "warningArchived": "Current: {{profile}} is archived. Choose an active Microsoft app.",
-          "warningNoBinding": "No {{consumer}} app is selected. Enable {{consumer}} on a Microsoft app, then choose it here.",
-          "warningNotReady": "Current: {{profile}}. Finish configuring that app before {{consumer}} will work.",
+          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
+          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
+          "warningNoBinding": "Choose a Microsoft app for {{consumer}}.",
+          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here.",
+          "warningNotReady": "{{profile}} is missing required setup. Open the app below and add the missing values before {{consumer}} can use it.",
           "warningProfileMissing": "The selected Microsoft app is no longer available. Choose another app.",
-          "warningMissingCapability": "Current: {{profile}}. It is not enabled for {{consumer}}. Enable {{consumer}} on that app, choose another app, or leave {{consumer}} unassigned."
+          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app."
         },
         "consumerBindings": {
           "descriptionCe": "This does not affect Google sign-in.",
@@ -1191,7 +1191,7 @@
           "edit": "Edit",
           "guidanceSummary": "Values to copy into Microsoft Entra",
           "noVisibleBindings": "Not used yet",
-          "readinessTitle": "App readiness",
+          "readinessTitle": "Setup needed",
           "readyCe": "This app is ready for staff sign-in.",
           "readyEe": "This app is ready for staff sign-in, Outlook email, and calendar sync.",
           "readyEeTeams": "This app is ready for staff sign-in, Outlook email, calendar sync, and Teams.",
@@ -1201,7 +1201,7 @@
           "tenantIdLabel": "Tenant ID:",
           "updating": "Updating…",
           "enabledCapabilities": "Services this app can handle",
-          "noEnabledCapabilities": "No services enabled"
+          "noEnabledCapabilities": "No services turned on"
         },
         "providerReconnect": {
           "description": "Use after rotating Microsoft credentials or moving Outlook email/calendar to another Microsoft app.",
@@ -1213,13 +1213,13 @@
         },
         "readiness": {
           "archived": "Archived apps cannot be selected for Microsoft services.",
-          "clientIdMissing": "Client ID is missing.",
-          "clientSecretMissing": "Client secret has not been configured.",
-          "tenantIdMissing": "Tenant ID is missing."
+          "clientIdMissing": "Add a client ID.",
+          "clientSecretMissing": "Add a client secret.",
+          "tenantIdMissing": "Add a tenant ID."
         },
         "statusBadges": {
           "archived": "Archived",
-          "needsAttention": "Needs Attention",
+          "needsAttention": "Needs setup",
           "ready": "Ready"
         },
         "title": "Microsoft",

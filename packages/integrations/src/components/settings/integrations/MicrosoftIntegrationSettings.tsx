@@ -89,13 +89,13 @@ function getReadinessMessages(profile: MicrosoftProfile, t: TranslateFn): string
     messages.push(t('integrations.microsoft.settings.readiness.archived', { defaultValue: 'Archived apps cannot be selected for Microsoft services.' }));
   }
   if (!profile.readiness.clientIdConfigured) {
-    messages.push(t('integrations.microsoft.settings.readiness.clientIdMissing', { defaultValue: 'Client ID is missing.' }));
+    messages.push(t('integrations.microsoft.settings.readiness.clientIdMissing', { defaultValue: 'Add a client ID.' }));
   }
   if (!profile.readiness.clientSecretConfigured) {
-    messages.push(t('integrations.microsoft.settings.readiness.clientSecretMissing', { defaultValue: 'Client secret has not been configured.' }));
+    messages.push(t('integrations.microsoft.settings.readiness.clientSecretMissing', { defaultValue: 'Add a client secret.' }));
   }
   if (!profile.readiness.tenantIdConfigured) {
-    messages.push(t('integrations.microsoft.settings.readiness.tenantIdMissing', { defaultValue: 'Tenant ID is missing.' }));
+    messages.push(t('integrations.microsoft.settings.readiness.tenantIdMissing', { defaultValue: 'Add a tenant ID.' }));
   }
 
   return messages;
@@ -113,7 +113,7 @@ function getProfileStatusBadge(profile: MicrosoftProfile, t: TranslateFn): {
     return { label: t('integrations.microsoft.settings.statusBadges.ready', { defaultValue: 'Ready' }), variant: 'success' };
   }
 
-  return { label: t('integrations.microsoft.settings.statusBadges.needsAttention', { defaultValue: 'Needs Attention' }), variant: 'warning' };
+  return { label: t('integrations.microsoft.settings.statusBadges.needsAttention', { defaultValue: 'Needs setup' }), variant: 'warning' };
 }
 
 function getTeamsApplicationIdUri(baseUrl?: string, clientId?: string): string | null {
@@ -230,10 +230,20 @@ function getBindingWarning(
   consumerType: MicrosoftConsumerType,
   binding: MicrosoftConsumerBinding | undefined,
   profile: MicrosoftProfile | undefined,
+  hasCapableProfiles: boolean,
+  hasActiveProfiles: boolean,
   t: TranslateFn
 ): string | null {
   if (!binding || !binding.profileId) {
-    return t('integrations.microsoft.settings.bindings.warningNoBinding', { defaultValue: 'No {{consumer}} app is selected. Enable {{consumer}} on a Microsoft app, then choose it here.', consumer: consumerLabel });
+    if (!hasActiveProfiles) {
+      return t('integrations.microsoft.settings.bindings.warningNoApps', { defaultValue: 'Create a Microsoft app, turn on {{consumer}}, then choose it here.', consumer: consumerLabel });
+    }
+
+    if (!hasCapableProfiles) {
+      return t('integrations.microsoft.settings.bindings.warningNoCapable', { defaultValue: 'No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here.', consumer: consumerLabel });
+    }
+
+    return t('integrations.microsoft.settings.bindings.warningNoBinding', { defaultValue: 'Choose a Microsoft app for {{consumer}}.', consumer: consumerLabel });
   }
 
   if (!profile) {
@@ -241,19 +251,19 @@ function getBindingWarning(
   }
 
   if (profile.isArchived) {
-    return t('integrations.microsoft.settings.bindings.warningArchived', { defaultValue: 'Current: {{profile}} is archived. Choose an active Microsoft app.', consumer: consumerLabel, profile: profile.displayName });
+    return t('integrations.microsoft.settings.bindings.warningArchived', { defaultValue: '{{profile}} is archived. Choose an active Microsoft app.', consumer: consumerLabel, profile: profile.displayName });
   }
 
   if (!profileSupportsConsumer(profile, consumerType)) {
     return t('integrations.microsoft.settings.bindings.warningMissingCapability', {
-      defaultValue: 'Current: {{profile}}. It is not enabled for {{consumer}}. Enable {{consumer}} on that app, choose another app, or leave {{consumer}} unassigned.',
+      defaultValue: '{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.',
       consumer: consumerLabel,
       profile: profile.displayName,
     });
   }
 
   if (!profile.readiness.ready) {
-    return t('integrations.microsoft.settings.bindings.warningNotReady', { defaultValue: 'Current: {{profile}}. Finish configuring that app before {{consumer}} will work.', consumer: consumerLabel, profile: profile.displayName });
+    return t('integrations.microsoft.settings.bindings.warningNotReady', { defaultValue: '{{profile}} is missing required setup. Open the app below and add the missing values before {{consumer}} can use it.', consumer: consumerLabel, profile: profile.displayName });
   }
 
   return null;
@@ -776,15 +786,22 @@ export function MicrosoftIntegrationSettings({
                 const boundProfile = binding?.profileId ? profileById.get(binding.profileId) : undefined;
                 const activeBoundProfile =
                   boundProfile && !boundProfile.isArchived ? boundProfile : undefined;
-                const warning = getBindingWarning(consumer.consumerLabel, consumer.consumerType, binding, boundProfile, t);
                 const capableProfiles = activeProfiles.filter((profile) =>
                   profileSupportsConsumer(profile, consumer.consumerType)
+                );
+                const warning = getBindingWarning(
+                  consumer.consumerLabel,
+                  consumer.consumerType,
+                  binding,
+                  boundProfile,
+                  capableProfiles.length > 0,
+                  activeProfiles.length > 0,
+                  t
                 );
                 const options = capableProfiles.map((profile) => ({
                   value: profile.profileId,
                   label: profile.displayName,
                 }));
-                const noCapableProfiles = activeProfiles.length > 0 && capableProfiles.length === 0;
 
                 return (
                   <div
@@ -829,34 +846,19 @@ export function MicrosoftIntegrationSettings({
                         {savingBindingConsumer === consumer.consumerType
                           ? t('integrations.microsoft.settings.binding.saving', { defaultValue: 'Saving…' })
                           : warning
-                            ? t('integrations.microsoft.settings.binding.needsAttention', { defaultValue: 'Needs attention' })
+                            ? t('integrations.microsoft.settings.binding.needsAttention', { defaultValue: 'Needs setup' })
                             : binding?.profileId
                               ? t('integrations.microsoft.settings.binding.bound', { defaultValue: 'Bound' })
                               : t('integrations.microsoft.settings.binding.unbound', { defaultValue: 'Unbound' })}
                       </Badge>
                     </div>
 
-                    {(noCapableProfiles || warning) && (
-                      <div className="space-y-2 lg:col-span-3">
-                        {noCapableProfiles && !warning && (
-                          <div className="text-xs text-muted-foreground">
-                            {consumer.consumerType === 'email'
-                              ? t('integrations.microsoft.settings.binding.noEmailCapableProfiles', {
-                                  defaultValue: 'No Microsoft app is enabled for Outlook email. Enable it on an app registration, or leave Outlook email on the hosted app.',
-                                })
-                              : t('integrations.microsoft.settings.binding.noCapableProfiles', {
-                                  defaultValue: 'No Microsoft app is enabled for {{consumer}}. Enable it on an app registration, or leave {{consumer}} unassigned.',
-                                  consumer: consumer.consumerLabel,
-                                })}
-                          </div>
-                        )}
-
-                        {warning && (
-                          <Alert variant="destructive">
-                            <AlertTriangle className="h-4 w-4" />
-                            <AlertDescription>{warning}</AlertDescription>
-                          </Alert>
-                        )}
+                    {warning && (
+                      <div className="lg:col-span-3">
+                        <Alert variant="warning">
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription>{warning}</AlertDescription>
+                        </Alert>
                       </div>
                     )}
                   </div>
@@ -1010,10 +1012,10 @@ export function MicrosoftIntegrationSettings({
                       </div>
 
                       {readinessMessages.length > 0 ? (
-                        <Alert variant={profile.isArchived ? 'default' : 'destructive'}>
+                        <Alert variant={profile.isArchived ? 'default' : 'warning'}>
                           <AlertTriangle className="h-4 w-4" />
                           <AlertDescription>
-                            <div className="font-medium">{t('integrations.microsoft.settings.profileCard.readinessTitle', { defaultValue: 'App readiness' })}</div>
+                            <div className="font-medium">{t('integrations.microsoft.settings.profileCard.readinessTitle', { defaultValue: 'Setup needed' })}</div>
                             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
                               {readinessMessages.map((message) => (
                                 <li key={`${profile.profileId}-${message}`}>{message}</li>
@@ -1048,7 +1050,7 @@ export function MicrosoftIntegrationSettings({
                             ))}
                           {capabilityDescriptors.every((capability) => !profileSupportsConsumer(profile, capability.consumerType)) && (
                             <span className="text-xs text-muted-foreground">
-                              {t('integrations.microsoft.settings.profileCard.noEnabledCapabilities', { defaultValue: 'No services enabled' })}
+                              {t('integrations.microsoft.settings.profileCard.noEnabledCapabilities', { defaultValue: 'No services turned on' })}
                             </span>
                           )}
                         </div>
