@@ -2910,6 +2910,14 @@ export async function updateTicketInTransaction(
           userId: user.user_id,
           displayName: formatLiveUpdateDisplayName(user),
         };
+    const notificationSuppressionDetails = suppressContactNotifications
+      ? {
+          notification_suppression: {
+            suppress_contact_notifications: true,
+            suppress_internal_notifications: suppressInternalNotifications,
+          },
+        }
+      : undefined;
     const curated = await buildCuratedTicketDiffWithLabels(
       trx,
       tenant,
@@ -2951,6 +2959,7 @@ export async function updateTicketInTransaction(
         source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
         occurredAt,
         changes: curated,
+        details: notificationSuppressionDetails,
       });
     }
 

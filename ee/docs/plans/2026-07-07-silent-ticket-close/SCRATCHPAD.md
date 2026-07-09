@@ -152,3 +152,23 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
   - `npx vitest run --config vitest.config.ts src/lib/eventBus/subscribers/webhook/__tests__/webhookTicketPayload.test.ts src/lib/eventBus/index.suppressionPayload.test.ts` from `server` passed: 2 files, 7 tests.
   - `npm -w @alga-psa/tickets run typecheck` passed.
   - `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -- --pretty false` from `server` passed.
+
+## 2026-07-09 — Activity metadata + silent timeline annotation (F013-F014, T014-T015)
+
+- Activity metadata (F013/T014):
+  - `packages/tickets/src/actions/optimizedTicketActions.ts`
+    - Silent ticket updates/closes now pass `details.notification_suppression` into `writeTicketActivity`.
+    - Shape: `{ notification_suppression: { suppress_contact_notifications: true, suppress_internal_notifications: boolean } }`.
+    - Normal/non-suppressed updates continue writing no suppression metadata.
+  - `packages/tickets/src/actions/optimizedTicketActions.liveUpdates.test.ts`
+    - Captures `ticket_audit_logs` inserts and asserts silent updates carry the metadata while normal updates do not.
+- Timeline annotation (F014/T015):
+  - `packages/tickets/src/components/ticket/TicketActivityTimeline.tsx`
+    - Derives a muted inline annotation from `activity.details.notification_suppression`.
+    - Contact-only text: `silent — contact not notified`; full silence text: `silent — no notifications`.
+    - Exported `formatEntries` for focused formatter tests.
+  - `packages/tickets/src/components/ticket/TicketActivityTimeline.silentAnnotation.test.tsx`
+    - Verifies contact-suppressed update annotation, fully-suppressed close annotation, and no annotation for normal rows.
+- Verification:
+  - `npx vitest run src/actions/optimizedTicketActions.liveUpdates.test.ts src/components/ticket/TicketActivityTimeline.silentAnnotation.test.tsx` from `packages/tickets` passed: 2 files, 14 tests.
+  - `npm -w @alga-psa/tickets run typecheck` passed.

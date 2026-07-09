@@ -12,6 +12,7 @@ const disconnectRedisMock = vi.fn();
 const validateStatusBelongsToBoardMock = vi.fn(
   async (_statusId: string, _boardId: string, _tenant: string, _trx: unknown) => ({ valid: true })
 );
+const auditLogInserts: Record<string, unknown>[] = [];
 // Queue mirroring @alga-psa/db's after-commit hook registry: hooks registered
 // via registerAfterCommit during a transaction run after the (mocked)
 // transaction resolves, matching production's flush-after-commit semantics.
@@ -253,7 +254,10 @@ function buildTrx(params: {
 
     if (table === 'ticket_audit_logs') {
       return {
-        insert: vi.fn(async () => undefined),
+        insert: vi.fn(async (row: Record<string, unknown>) => {
+          auditLogInserts.push(row);
+          return undefined;
+        }),
       };
     }
 
@@ -265,6 +269,7 @@ describe('updateTicketWithCache live updates', () => {
   beforeEach(async () => {
     await resetTicketUpdatePublisherClientForTests();
     vi.clearAllMocks();
+    auditLogInserts.length = 0;
     afterCommitHooksQueue.length = 0;
     setTicketUpdateEventBusLoaderForTests(async () => ({
       getRedisClient: vi.fn(async () => ({
@@ -384,6 +389,11 @@ describe('updateTicketWithCache live updates', () => {
         }),
       })
     );
+    const activityDetails = JSON.parse(String(auditLogInserts.at(-1)?.details ?? '{}'));
+    expect(activityDetails.notification_suppression).toEqual({
+      suppress_contact_notifications: true,
+      suppress_internal_notifications: false,
+    });
   });
 
   it('accepts full suppression and publishes it on TICKET_UPDATED', async () => {
@@ -439,6 +449,8 @@ describe('updateTicketWithCache live updates', () => {
         }),
       })
     );
+    const activityDetails = JSON.parse(String(auditLogInserts.at(-1)?.details ?? '{}'));
+    expect(activityDetails.notification_suppression).toBeUndefined();
   });
 
   it('propagates suppression flags on a non-closing status update without error', async () => {
