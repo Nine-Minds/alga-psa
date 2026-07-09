@@ -138,6 +138,12 @@ export async function createTenantInDB(
         updated_at: knex.fn.now()
       };
 
+      // Adopt a pre-minted tenant id when provided (appliance install-code
+      // redemption mints the id in the registry before the tenant exists).
+      if (input.tenantId) {
+        tenantData.tenant = input.tenantId;
+      }
+
       // Record which system is paying for this tenant. Defaults to 'stripe'
       // at the DB level so existing flows don't need to change.
       if (input.billingSource) {

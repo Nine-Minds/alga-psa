@@ -39,9 +39,10 @@ export async function createAdminUserInDB(
         throw new Error(`An internal user with email ${input.email} already exists. Each internal user email must be unique across all tenants.`);
       }
 
-      // Generate temporary password
-      const temporaryPassword = generateSecurePassword();
-      
+      // Use the pre-set password when supplied (appliance install: the
+      // operator chose it during setup); otherwise generate a temporary one.
+      const temporaryPassword = input.password || generateSecurePassword();
+
       // Create user (matching actual Alga schema)
       const userResult = await db.table('users')
         .insert({
@@ -51,7 +52,7 @@ export async function createAdminUserInDB(
           tenant: input.tenantId,
           user_type: 'internal',
           username: input.email.toLowerCase(), // use lowercased email as username
-          hashed_password: await hashPassword(temporaryPassword) // hash the temporary password
+          hashed_password: await hashPassword(temporaryPassword)
         })
         .returning('user_id');
       

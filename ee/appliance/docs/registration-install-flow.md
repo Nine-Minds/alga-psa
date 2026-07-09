@@ -30,10 +30,13 @@ license JWT, a per-appliance credential, and the check-in URL. Those flow into t
 Secrets the in-cluster bootstrap consumes:
 
 - `appliance-initial-tenant` gains `INITIAL_TENANT_ID`. The bootstrap
-  (`helm/templates/appliance-bootstrap-configmap.yaml`) runs `create-tenant`, which
-  **adopts that id** instead of generating one, so the appliance's local tenant row
-  *is* the registry tenant. (No install code → `create-tenant` generates a id as
-  before; nothing else changes.)
+  (`helm/templates/appliance-bootstrap-configmap.yaml`) runs
+  `server/scripts/appliance-create-tenant.mjs`, which starts the same Temporal
+  `tenantCreationWorkflow` the hosted environment uses (on the appliance's own
+  Temporal, with the hosted-only customer-tracking/welcome-email steps skipped)
+  and **adopts that id** instead of generating one, so the appliance's local
+  tenant row *is* the registry tenant. (No install code → the workflow generates
+  an id as before; nothing else changes.)
 - `appliance-license-seed` carries the edition + (paid) license token + connected
   credential/check-in URL. The bootstrap seeds `license_state` from it: essentials
   runs at the essentials tier with no token; paid is licensed from first boot and
