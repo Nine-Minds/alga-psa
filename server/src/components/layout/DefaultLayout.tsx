@@ -8,28 +8,16 @@ import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
 import Header, { QUICK_CREATE_OPEN_EVENT } from "./Header";
 import Body from "./Body";
 import RightSidebar from "./RightSidebar";
-import { DrawerProvider, DrawerOutlet } from "@alga-psa/ui";
+import { DrawerProvider } from "@alga-psa/ui";
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { ActivityDrawerProvider } from "@alga-psa/msp-composition/user-activities/ActivityDrawerProvider";
 import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
 import { QuickAskProvider } from './QuickAskContext';
 import { PlatformNotificationBanner } from './PlatformNotificationBanner';
 import VimNavigationLayer from './VimNavigationLayer';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
-import { SchedulingProviderWithCallbacks } from '@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks';
-// Granular msp-composition imports: the package index barrels also pull each feature's
-// whole page-client tree (and its action barrel) into every route's manifest (dev OOM).
-import { MspTicketIntegrationProvider } from '@alga-psa/msp-composition/projects/MspTicketIntegrationProvider';
-import { MspClientIntegrationProvider } from '@alga-psa/msp-composition/projects/MspClientIntegrationProvider';
-import { MspClientDrawerProvider } from '@alga-psa/msp-composition/clients/MspClientDrawerProvider';
-import { MspClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients/MspClientCrossFeatureProvider';
-import { QuickAddClientProviderWithCallbacks } from '@alga-psa/clients/providers/QuickAddClientProviderWithCallbacks';
-import { MspAssetCrossFeatureProvider } from '@alga-psa/msp-composition/assets/MspAssetCrossFeatureProvider';
-import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents/MspDocumentsCrossFeatureProvider';
-import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider';
-import { MspActivityCrossFeatureProvider } from '@alga-psa/msp-composition/workflows/MspActivityCrossFeatureProvider';
+import WorkspaceProviders from './WorkspaceProviders';
 import { useTier } from 'server/src/context/TierContext';
 import {
   useCatalogShortcut,
@@ -458,18 +446,8 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
 
 
   return (
-    <SchedulingProviderWithCallbacks>
     <DrawerProvider>
-    <MspTicketIntegrationProvider>
-    <MspClientIntegrationProvider>
-      <ActivityDrawerProvider>
-      <MspClientDrawerProvider>
-      <MspClientCrossFeatureProvider>
-      <MspAssetCrossFeatureProvider>
-      <MspDocumentsCrossFeatureProvider>
-      <MspSchedulingCrossFeatureProvider>
-      <MspActivityCrossFeatureProvider>
-      <QuickAddClientProviderWithCallbacks>
+      <WorkspaceProviders>
         <div className="flex h-screen overflow-hidden bg-gray-100">
           <SidebarWithFeatureFlags
             sidebarOpen={sidebarOpen}
@@ -572,18 +550,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
             }
           />
         )}
-        <DrawerOutlet />
-      </QuickAddClientProviderWithCallbacks>
-      </MspActivityCrossFeatureProvider>
-      </MspSchedulingCrossFeatureProvider>
-      </MspDocumentsCrossFeatureProvider>
-      </MspAssetCrossFeatureProvider>
-      </MspClientCrossFeatureProvider>
-      </MspClientDrawerProvider>
-      </ActivityDrawerProvider>
-    </MspClientIntegrationProvider>
-    </MspTicketIntegrationProvider>
+      </WorkspaceProviders>
     </DrawerProvider>
-    </SchedulingProviderWithCallbacks>
   );
 }

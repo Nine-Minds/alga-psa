@@ -157,3 +157,9 @@ Option A frees NON-WORK routes; work routes keep the floor (intrinsic to drawer 
   - `/msp/inventory`: non-work, target floor-free after WorkspaceProviders moves.
   - `/msp/settings`: non-work after F062 local drawer remediation, target floor-free.
   - `/msp/billing`: empirically work due contract/client/document drawer integrations; work-route floor remains accepted unless billing UX is redesigned separately.
+
+## 2026-07-09 — p2-workspace-extract
+- F040 extracted `server/src/components/layout/WorkspaceProviders.tsx`. It contains the previous DefaultLayout workspace stack in order: `SchedulingProviderWithCallbacks` → `MspTicketIntegrationProvider` → `MspClientIntegrationProvider` → `ActivityDrawerProvider` → `MspClientDrawerProvider` → `MspClientCrossFeatureProvider` → `MspAssetCrossFeatureProvider` → `MspDocumentsCrossFeatureProvider` → `MspSchedulingCrossFeatureProvider` → `MspActivityCrossFeatureProvider` → `QuickAddClientProviderWithCallbacks` → children + `DrawerOutlet`.
+- `server/src/components/layout/DefaultLayout.tsx` now imports only lightweight `DrawerProvider` from `@alga-psa/ui` plus `WorkspaceProviders`; it no longer directly imports the heavy msp-composition providers or `DrawerOutlet`.
+- F041/OQ1 decision: keep `DrawerProvider` state global in `DefaultLayout` for now. Chrome grep found no direct `useDrawer` usage in `server/src/components/layout`, but global state keeps existing generic drawer callers alive while F062 localizes non-work generic drawers. `WorkspaceProviders` owns the single outlet and all heavy cross-feature providers.
+- T040/T041 verification: `cd server && npx vitest run src/test/unit/layout/WorkspaceProviders.static.test.ts src/test/unit/layout/QuickCreateDialog.i18n.test.tsx` passed 4 tests; `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0.

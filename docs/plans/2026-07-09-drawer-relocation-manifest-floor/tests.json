@@ -51,14 +51,14 @@
   {
     "id": "T040",
     "description": "WorkspaceProviders renders the exact same provider nesting + DrawerOutlet as DefaultLayout 461-472/575 did (structural equivalence — a work route wrapped in it resolves every cross-feature context)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-workspace-extract",
     "featureIds": ["F040"]
   },
   {
     "id": "T041",
     "description": "DrawerProvider state placement decided (OQ1): a surviving chrome trigger (if any) can still open a drawer; if none, state moving into WorkspaceProviders is confirmed safe",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-workspace-extract",
     "featureIds": ["F041"]
   },

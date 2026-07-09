@@ -86,14 +86,14 @@
   {
     "id": "F040",
     "description": "Extract WorkspaceProviders: a component holding the exact cross-feature provider stack (DefaultLayout 461-472) + DrawerOutlet (575), moved verbatim (folds in the projects TicketIntegration/ClientIntegration relocation)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-workspace-extract",
     "prdRefs": ["Technical approach / Phase 2 step 2", "Seam map"]
   },
   {
     "id": "F041",
     "description": "Decide DrawerProvider state placement (OQ1): keep global in DefaultLayout so chrome can trigger, WorkspaceProviders holds cross-feature providers + outlet only; confirm no surviving chrome trigger loses drawer context",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p2-workspace-extract",
     "prdRefs": ["OQ1", "Risks (DrawerProvider placement)"]
   },
