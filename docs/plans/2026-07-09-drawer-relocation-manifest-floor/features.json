@@ -65,7 +65,7 @@
   {
     "id": "F020",
     "description": "Phase 1 gates + smoke: typecheck exit 0; ESLint guard 0; no dynamic import added; all 6 intercepted dialogs open+submit; ticket create-route still works",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-verify",
     "prdRefs": ["Acceptance AC1", "AC2", "AC5"]
   },

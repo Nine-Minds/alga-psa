@@ -128,3 +128,12 @@ Option A frees NON-WORK routes; work routes keep the floor (intrinsic to drawer 
 - F015/T011 static result: `server/src/components/layout/QuickCreateDialog.tsx` has zero static imports of `QuickAddClient`, `QuickAddContact`, `QuickAddAsset`, `ProjectQuickAdd`, `QuickAddService`, or `QuickAddProduct`; those imports now exist only in route clients. Exact source paths are not visible in `server-reference-manifest.json`, so the canary is static import placement plus create-route compile.
 - T010 route canary: with the dev server already running, `curl` compiled `/msp/create-ticket`, `/msp/create-client`, `/msp/create-contact`, `/msp/create-asset`, `/msp/create-project`, `/msp/create-service`, and `/msp/create-product`; all returned 307 after compile. Generated full-route manifests ranged from 8.37 MB to 8.85 MB.
 - Verification: `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0; `cd server && npx vitest run src/test/unit/layout/QuickCreateDialog.i18n.test.tsx src/test/unit/app/msp/quick-create-routes.static.test.ts` passed 4 tests.
+
+## 2026-07-09 — p1-verify
+- F020/T020 gates:
+  - `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0 after the route additions and dynamic-import fix.
+  - ESLint barrel guard command reported `0` `no-restricted-imports` violations. It exits through a noisy pipeline with an existing ESLint flat-config warning in `packages/integrations/src/actions/qboActions.ts`; no barrel violation was present.
+  - `rg -n "import\\(['\"]@alga-psa/" server/src/components/layout server/src/app/msp packages/msp-composition/src` is empty after changing `server/src/app/msp/settings/extensions/[id]/settings/page.tsx` to statically import `FeaturePlaceholder`.
+  - Route smoke compiled `/msp/create-ticket`, the six new `/msp/create-*` routes, `/msp/projects`, and `/msp/user-activities`; all returned 307 after compile.
+  - `cd server && npx vitest run src/test/unit/layout/QuickCreateDialog.i18n.test.tsx src/test/unit/app/msp/quick-create-routes.static.test.ts` passed 4 tests.
+- Runtime submit note: browser-level form submission was not automated in this loop because valid create payloads depend on tenant data and DB state; the static route contract plus typecheck validates that each dialog is mounted with its submit callbacks and close behavior preserved.

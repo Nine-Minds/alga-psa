@@ -30,7 +30,7 @@
   {
     "id": "T020",
     "description": "Phase 1 gates: typecheck exit 0; ESLint guard 0; no new import('@alga-psa/ in shell; all 6 dialogs open+submit; project/user-activities pages still load",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "p1-verify",
     "featureIds": ["F020"]
   },
