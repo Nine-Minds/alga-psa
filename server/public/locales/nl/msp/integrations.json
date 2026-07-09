@@ -668,7 +668,8 @@
           "resetProviders": "Google-providers resetten",
           "resetting": "Resetten…",
           "save": "Opslaan",
-          "saving": "Opslaan…"
+          "saving": "Opslaan…",
+          "disconnectProviders": "Disconnect Google providers"
         },
         "afterSaveNotice": "Ga na het opslaan naar de integraties voor inkomende e-mail en agenda en autoriseer de providers opnieuw. Bestaande Google-providers worden niet gemigreerd.",
         "consoleLink": "Google Cloud Console",
@@ -714,6 +715,14 @@
           "savedDescription": "De Google-configuratie van de tenant is succesvol bijgewerkt.",
           "savedTitle": "Google-instellingen opgeslagen",
           "unknownError": "Onbekende fout"
+        },
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Gmail and Google Calendar provider connections will be marked disconnected and must be re-authorized. Stored Google credentials stay in place.",
+          "title": "Disconnect Google providers?"
+        },
+        "oauthValues": {
+          "title": "Google OAuth app values"
         }
       }
     },
@@ -1049,7 +1058,8 @@
           "openTeamsSetup": "Teams-installatie openen",
           "refresh": "Vernieuwen",
           "resetProviders": "Microsoft-providers resetten",
-          "resetting": "Resetten…"
+          "resetting": "Resetten…",
+          "disconnectProviders": "Disconnect Microsoft providers"
         },
         "archiveDialog": {
           "archiving": "Archiveren…",
@@ -1228,6 +1238,15 @@
           "clientSecretRequired": "Microsoft OAuth Client Secret is verplicht",
           "displayNameRequired": "Weergavenaam van Microsoft-profiel is verplicht",
           "tenantIdRequired": "Microsoft Tenant ID is verplicht"
+        },
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft profiles and service bindings stay in place.",
+          "title": "Disconnect Microsoft providers?"
+        },
+        "profileLibrary": {
+          "description": "Named Microsoft app registrations that services can bind to.",
+          "title": "Profile library"
         }
       }
     },
@@ -2661,6 +2680,30 @@
         "secretKeyFormat": "Secret key moet beginnen met sk_",
         "publishableKeyFormat": "Publishable key moet beginnen met pk_"
       }
+    },
+    "providersWorkbench": {
+      "badges": {
+        "loading": "Loading",
+        "needsAttention": "Needs attention",
+        "needsSetup": "Needs setup",
+        "notConfigured": "Not configured",
+        "ready": "Ready"
+      },
+      "descriptionCe": "Set up the provider path your tenant uses. Configure both only when email or SSO workflows require both ecosystems.",
+      "descriptionEe": "Set up the provider path your tenant uses. Configure both only when email, calendar, SSO, or Teams workflows require both ecosystems.",
+      "eyebrow": "Provider setup",
+      "google": {
+        "description": "Gmail inbound email and Google Calendar.",
+        "label": "Google"
+      },
+      "microsoft": {
+        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
+        "label": "Microsoft"
+      },
+      "selected": "Selected provider path",
+      "selectorLabel": "Provider credential paths",
+      "title": "Provider Credentials"
     }
   }
 }

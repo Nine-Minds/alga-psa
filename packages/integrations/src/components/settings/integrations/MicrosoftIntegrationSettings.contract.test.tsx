@@ -287,26 +287,27 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     }
   });
 
-  it('renders EE explicit binding controls and removes the legacy compatibility pane', async () => {
+  it('renders EE service binding controls and removes the legacy compatibility pane', async () => {
     render(<MicrosoftIntegrationSettings />);
 
     await waitFor(() => {
       expect(document.getElementById('microsoft-profile-profile-1')).not.toBeNull();
     });
-    expect(screen.getByText('Explicit consumer bindings')).toBeInTheDocument();
+    expect(screen.getByText('Service profile bindings')).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-msp_sso')).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-email')).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-calendar')).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-teams')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Reset Microsoft Providers' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open Teams Setup' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Disconnect Microsoft providers' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open Teams Setup' })).not.toBeInTheDocument();
     expect(screen.queryByText('Legacy Microsoft consumers')).not.toBeInTheDocument();
     expect(screen.queryByText(/default active profile remains the compatibility source/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Current consumers')).not.toBeInTheDocument();
     expect(screen.queryByText(/default profile\)/i)).not.toBeInTheDocument();
-    expect(screen.getAllByText('Email Guidance').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Calendar Guidance').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Teams Guidance').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Microsoft Entra app values').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Email').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Calendar').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Teams').length).toBeGreaterThan(0);
   });
 
   it('renders CE copy and bindings only for MSP SSO', async () => {
@@ -355,10 +356,10 @@ describe('MicrosoftIntegrationSettings contracts', () => {
       screen.getByText('Manage tenant-owned Microsoft profiles for MSP SSO, Microsoft sign-in, and login-domain discovery.')
     ).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-msp_sso')).toBeInTheDocument();
-    expect(screen.queryByText('Email Guidance')).not.toBeInTheDocument();
-    expect(screen.queryByText('Calendar Guidance')).not.toBeInTheDocument();
-    expect(screen.queryByText('Teams Guidance')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Reset Microsoft Providers' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Inbound email redirect URI')).not.toBeInTheDocument();
+    expect(screen.queryByText('Calendar sync redirect URI')).not.toBeInTheDocument();
+    expect(screen.queryByText('Teams scopes')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Disconnect Microsoft providers' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Open Teams Setup' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('microsoft-binding-select-email')).not.toBeInTheDocument();
     expect(screen.queryByTestId('microsoft-binding-select-calendar')).not.toBeInTheDocument();
@@ -477,7 +478,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     const createDialog = await screen.findByRole('dialog', { name: 'Create Microsoft Profile' });
     expect(
       within(createDialog).getByText(
-        'Create a tenant-owned Microsoft profile, then bind it explicitly to the Microsoft consumers you want to use.'
+        'Create a tenant-owned Microsoft profile, then bind it to the Microsoft services you want to use.'
       )
     ).toBeInTheDocument();
     expect(within(createDialog).getByText('Set this profile as the default Microsoft profile')).toBeInTheDocument();

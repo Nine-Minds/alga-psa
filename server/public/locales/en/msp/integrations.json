@@ -664,8 +664,9 @@
     "google": {
       "settings": {
         "actions": {
+          "disconnectProviders": "Disconnect Google providers",
           "refresh": "Refresh",
-          "resetProviders": "Reset Google Providers",
+          "resetProviders": "Disconnect Google providers",
           "resetting": "Resetting…",
           "save": "Save",
           "saving": "Saving…"
@@ -673,6 +674,11 @@
         "afterSaveNotice": "After saving, go to Inbound Email and Calendar integrations and re-authorize providers. Existing Google providers are not migrated.",
         "consoleLink": "Google Cloud Console",
         "description": "Configure tenant-owned Google Cloud credentials for Gmail inbound email and Google Calendar.",
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Gmail and Google Calendar provider connections will be marked disconnected and must be re-authorized. Stored Google credentials stay in place.",
+          "title": "Disconnect Google providers?"
+        },
         "errors": {
           "loadFailed": "Failed to load Google settings",
           "resetFailed": "Failed to reset Google providers",
@@ -691,9 +697,12 @@
           "gmailClientId": "Gmail OAuth Client ID",
           "gmailClientSecret": "Gmail OAuth Client Secret",
           "sectionTitle": "OAuth app",
-          "shareApp": "Use the same OAuth app for Gmail + Calendar",
+          "shareApp": "Use one Google OAuth client for Gmail and Calendar",
           "shareAppHelp": "Recommended. You can still authorize separate Google accounts per integration.",
           "storedSecret": "Stored secret: {{secret}}"
+        },
+        "oauthValues": {
+          "title": "Google OAuth app values"
         },
         "redirectUrisLabel": "Redirect URIs (copy into Google OAuth client)",
         "scopes": "Scopes",
@@ -1044,11 +1053,12 @@
     "microsoft": {
       "settings": {
         "actions": {
+          "disconnectProviders": "Disconnect Microsoft providers",
           "entraLink": "Microsoft Entra",
           "newProfile": "New Profile",
-          "openTeamsSetup": "Open Teams Setup",
+          "openTeamsSetup": "Open Teams integration",
           "refresh": "Refresh",
-          "resetProviders": "Reset Microsoft Providers",
+          "resetProviders": "Disconnect Microsoft providers",
           "resetting": "Resetting…"
         },
         "archiveDialog": {
@@ -1080,35 +1090,40 @@
           "warningProfileMissing": "{{consumer}} is bound to a profile that is no longer available. Rebind it to an active profile.",
           "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
         },
-        "bindingsAlertCe": "Explicit bindings are the source of truth for MSP SSO profile selection. Configure login domains separately after choosing the bound profile.",
-        "bindingsAlertEe": "Explicit bindings are the source of truth for MSP SSO, email, calendar, and Teams profile selection.",
+        "bindingsAlertCe": "MSP SSO uses the Microsoft profile selected below. Configure login domains separately in Security.",
+        "bindingsAlertEe": "Each service uses the Microsoft profile selected below for MSP SSO, email, calendar, and Teams.",
         "consumerBindings": {
-          "descriptionCe": "Bind one Microsoft profile to MSP SSO for sign-in and login-domain usage.",
-          "descriptionEe": "Bind one Microsoft profile per supported consumer. Reassigning one consumer does not change the others.",
-          "title": "Explicit consumer bindings"
+          "descriptionCe": "MSP SSO uses the Microsoft profile selected below for sign-in and login-domain usage.",
+          "descriptionEe": "Each service uses the Microsoft profile selected below. Reassigning one service does not change the others.",
+          "title": "Service profile bindings"
         },
         "consumers": {
           "calendar": {
-            "description": "Choose which Microsoft profile Outlook calendar sync should use.",
+            "description": "Select the Microsoft profile for Outlook calendar sync.",
             "label": "Calendar",
             "reconnect": "Existing Microsoft calendar connections may need re-authorization after changing the bound profile."
           },
           "email": {
-            "description": "Choose which Microsoft profile Outlook inbound email should use.",
+            "description": "Select the Microsoft profile for Outlook inbound email.",
             "label": "Email",
             "reconnect": "Existing Outlook email connections may need re-authorization after changing the bound profile."
           },
           "mspSso": {
-            "description": "Choose which Microsoft profile backs MSP SSO login domains, Microsoft sign-in, and tenant discovery.",
+            "description": "Select the Microsoft profile for MSP SSO login domains, Microsoft sign-in, and tenant discovery.",
             "label": "MSP SSO"
           },
           "teams": {
-            "description": "Choose which Microsoft profile Microsoft Teams installation and auth flows should use.",
+            "description": "Select the Microsoft profile for Microsoft Teams installation and auth flows.",
             "label": "Teams"
           }
         },
         "descriptionCe": "Manage tenant-owned Microsoft profiles for MSP SSO, Microsoft sign-in, and login-domain discovery.",
         "descriptionEe": "Manage tenant-owned Microsoft profiles for MSP SSO, Outlook email, calendar sync, and Microsoft Teams.",
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft profiles and service bindings stay in place.",
+          "title": "Disconnect Microsoft providers?"
+        },
         "dialog": {
           "cancel": "Cancel",
           "clientId": "Client ID",
@@ -1117,7 +1132,7 @@
           "clientSecretPlaceholderEdit": "Leave blank to keep the current secret",
           "createProfile": "Create Profile",
           "createTitle": "Create Microsoft Profile",
-          "descriptionCreate": "Create a tenant-owned Microsoft profile, then bind it explicitly to the Microsoft consumers you want to use.",
+          "descriptionCreate": "Create a tenant-owned Microsoft profile, then bind it to the Microsoft services you want to use.",
           "descriptionEdit": "Update the selected Microsoft profile. Leave the secret blank to keep the existing value.",
           "displayName": "Display name",
           "displayNamePlaceholder": "Acme production tenant",
@@ -1129,12 +1144,12 @@
           "storedSecretHint": "Stored secret: {{secret}}. Leave this field empty to keep it unchanged.",
           "tenantId": "Tenant ID",
           "capabilities": "Enabled capabilities",
-          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
+          "capabilitiesHelp": "Only enabled services can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "Create Microsoft Profile",
-          "descriptionCe": "Create a named profile first, then bind it explicitly to MSP SSO and login-domain sign-in flows.",
-          "descriptionEe": "Create a named profile first, then bind it explicitly to MSP SSO, Outlook email, calendar sync, and Teams.",
+          "descriptionCe": "Create a named profile first, then bind it to MSP SSO and login-domain sign-in flows.",
+          "descriptionEe": "Create a named profile first, then bind it to MSP SSO, Outlook email, calendar sync, and Teams.",
           "title": "No Microsoft profiles yet"
         },
         "errors": {
@@ -1149,12 +1164,12 @@
         "guidance": {
           "applicationIdUri": "Application ID URI",
           "calendarRedirect": "Calendar sync redirect URI",
-          "calendarTitle": "Calendar Guidance",
+          "calendarTitle": "Calendar",
           "clientId": "Client ID",
-          "currentProfileTitle": "Current Profile Values",
+          "currentProfileTitle": "Current profile values",
           "emailRedirect": "Inbound email redirect URI",
-          "emailTitle": "Email Guidance",
-          "mspSsoTitle": "MSP SSO Guidance",
+          "emailTitle": "Email",
+          "mspSsoTitle": "MSP SSO",
           "notConfigured": "Not configured",
           "redirectUri": "Redirect URI",
           "requiresBaseUrl": "Requires base URL and client ID",
@@ -1163,7 +1178,7 @@
           "teamsMessageRedirect": "Message extension redirect URI",
           "teamsScopes": "Teams scopes",
           "teamsTabRedirect": "Personal tab redirect URI",
-          "teamsTitle": "Teams Guidance",
+          "teamsTitle": "Teams",
           "tenantId": "Tenant ID",
           "unavailable": "Unavailable"
         },
@@ -1173,12 +1188,12 @@
           "clientId": "Client ID",
           "defaultBadge": "Default",
           "edit": "Edit",
-          "guidanceSummary": "Microsoft app registration guidance",
-          "noVisibleBindings": "No visible consumer bindings",
+          "guidanceSummary": "Microsoft Entra app values",
+          "noVisibleBindings": "No visible service bindings",
           "readinessTitle": "Profile readiness",
-          "readyCe": "This profile is ready for MSP SSO binding and login-domain sign-in flows.",
-          "readyEe": "This profile is ready for MSP SSO, Outlook email, and calendar bindings.",
-          "readyEeTeams": "This profile is ready for MSP SSO, Outlook email, calendar sync, and Teams bindings.",
+          "readyCe": "This profile is ready for MSP SSO and login-domain sign-in flows.",
+          "readyEe": "This profile is ready for MSP SSO, Outlook email, and calendar service bindings.",
+          "readyEeTeams": "This profile is ready for MSP SSO, Outlook email, calendar sync, and Teams service bindings.",
           "setDefault": "Set Default",
           "storedSecret": "Stored secret",
           "teamsAppIdUri": "Teams application ID URI",
@@ -1190,6 +1205,10 @@
         "providerReconnect": {
           "description": "Use this if you rotate credentials or intentionally rebind Outlook email or calendar to a different Microsoft profile.",
           "title": "Provider reconnection"
+        },
+        "profileLibrary": {
+          "description": "Named Microsoft app registrations that services can bind to.",
+          "title": "Profile library"
         },
         "readiness": {
           "archived": "Archived profiles cannot be used for new Microsoft bindings.",
@@ -1213,7 +1232,7 @@
           "defaultUpdatedDescription": "{{name}} is now the default Microsoft profile record.",
           "defaultUpdatedTitle": "Default Microsoft profile updated",
           "profileCreated": "Microsoft profile created",
-          "profileCreatedDescription": "The Microsoft profile is ready to be bound to visible Microsoft consumers.",
+          "profileCreatedDescription": "The Microsoft profile is ready to be bound to visible Microsoft services.",
           "profileUpdated": "Microsoft profile updated",
           "profileUpdatedDescription": "The Microsoft profile changes were saved successfully.",
           "resetDescription": "Existing Outlook email and calendar connections now require re-authorization.",
@@ -1230,6 +1249,30 @@
           "tenantIdRequired": "Microsoft Tenant ID is required"
         }
       }
+    },
+    "providersWorkbench": {
+      "badges": {
+        "loading": "Loading",
+        "needsAttention": "Needs attention",
+        "needsSetup": "Needs setup",
+        "notConfigured": "Not configured",
+        "ready": "Ready"
+      },
+      "descriptionCe": "Set up the provider path your tenant uses. Configure both only when email or SSO workflows require both ecosystems.",
+      "descriptionEe": "Set up the provider path your tenant uses. Configure both only when email, calendar, SSO, or Teams workflows require both ecosystems.",
+      "eyebrow": "Provider setup",
+      "google": {
+        "description": "Gmail inbound email and Google Calendar.",
+        "label": "Google"
+      },
+      "microsoft": {
+        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
+        "label": "Microsoft"
+      },
+      "selected": "Selected provider path",
+      "selectorLabel": "Provider credential paths",
+      "title": "Provider Credentials"
     },
     "qbo": {
       "live": {
@@ -1876,7 +1919,7 @@
         "moved": {
           "title": "MSP SSO Login Domains",
           "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
-          "cta": "Open Single Sign-On settings"
+          "cta": "Open Single Sign-On"
         },
         "dnsHost": "Host:",
         "dnsInstructions": "Add DNS TXT record, then click Verify:",

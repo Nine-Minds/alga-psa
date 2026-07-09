@@ -668,7 +668,8 @@
           "resetProviders": "11111",
           "resetting": "11111",
           "save": "11111",
-          "saving": "11111"
+          "saving": "11111",
+          "disconnectProviders": "Disconnect Google providers"
         },
         "afterSaveNotice": "11111",
         "consoleLink": "11111",
@@ -714,6 +715,14 @@
           "savedDescription": "11111",
           "savedTitle": "11111",
           "unknownError": "11111"
+        },
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Gmail and Google Calendar provider connections will be marked disconnected and must be re-authorized. Stored Google credentials stay in place.",
+          "title": "Disconnect Google providers?"
+        },
+        "oauthValues": {
+          "title": "Google OAuth app values"
         }
       }
     },
@@ -1049,7 +1058,8 @@
           "openTeamsSetup": "11111",
           "refresh": "11111",
           "resetProviders": "11111",
-          "resetting": "11111"
+          "resetting": "11111",
+          "disconnectProviders": "Disconnect Microsoft providers"
         },
         "archiveDialog": {
           "archiving": "11111",
@@ -1228,6 +1238,15 @@
           "clientSecretRequired": "11111",
           "displayNameRequired": "11111",
           "tenantIdRequired": "11111"
+        },
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft profiles and service bindings stay in place.",
+          "title": "Disconnect Microsoft providers?"
+        },
+        "profileLibrary": {
+          "description": "Named Microsoft app registrations that services can bind to.",
+          "title": "Profile library"
         }
       }
     },
@@ -2661,6 +2680,30 @@
         "secretKeyFormat": "11111",
         "publishableKeyFormat": "11111"
       }
+    },
+    "providersWorkbench": {
+      "badges": {
+        "loading": "Loading",
+        "needsAttention": "Needs attention",
+        "needsSetup": "Needs setup",
+        "notConfigured": "Not configured",
+        "ready": "Ready"
+      },
+      "descriptionCe": "Set up the provider path your tenant uses. Configure both only when email or SSO workflows require both ecosystems.",
+      "descriptionEe": "Set up the provider path your tenant uses. Configure both only when email, calendar, SSO, or Teams workflows require both ecosystems.",
+      "eyebrow": "Provider setup",
+      "google": {
+        "description": "Gmail inbound email and Google Calendar.",
+        "label": "Google"
+      },
+      "microsoft": {
+        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
+        "label": "Microsoft"
+      },
+      "selected": "Selected provider path",
+      "selectorLabel": "Provider credential paths",
+      "title": "Provider Credentials"
     }
   }
 }
