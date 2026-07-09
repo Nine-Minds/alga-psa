@@ -41,11 +41,11 @@
   { "id": "F036", "description": "[B] Each bulk route-client threads the flags from its dialog into the bulk action (status/priority/assign/due-date/move)", "implemented": true, "prdRefs": ["FR17"] },
   { "id": "F037", "description": "[B] bulkUpdateTicketStatus/Priority/DueDate, bulkAssignTickets, moveTicketsToBoard forward the flags into updateTicketInTransaction/updateTicketWithCache for every ticket in the batch", "implemented": true, "prdRefs": ["FR17"] },
 
-  { "id": "F038", "description": "[A] Migration adds suppress_contact_notifications and suppress_internal_notifications boolean NOT NULL DEFAULT false to board_auto_close_rules", "implemented": false, "prdRefs": ["FR19", "NFR2"] },
-  { "id": "F039", "description": "[A] closeRuleActions read/write/validate the two new rule fields (internal implies contact)", "implemented": false, "prdRefs": ["FR19"] },
-  { "id": "F040", "description": "[A] Auto-close rule settings UI exposes the two suppression toggles", "implemented": false, "prdRefs": ["FR19"] },
-  { "id": "F041", "description": "[A] autoCloseTicketsHandler passes the rule's suppression flags into the ticket close call", "implemented": false, "prdRefs": ["FR19"] },
-  { "id": "F042", "description": "[A] Auto-close pre-close warning email is skipped when the rule sets suppress_contact_notifications", "implemented": false, "prdRefs": ["FR19"] },
+  { "id": "F038", "description": "[A] Migration adds suppress_contact_notifications and suppress_internal_notifications boolean NOT NULL DEFAULT false to board_auto_close_rules", "implemented": true, "prdRefs": ["FR19", "NFR2"] },
+  { "id": "F039", "description": "[A] closeRuleActions read/write/validate the two new rule fields (internal implies contact)", "implemented": true, "prdRefs": ["FR19"] },
+  { "id": "F040", "description": "[A] Auto-close rule settings UI exposes the two suppression toggles", "implemented": true, "prdRefs": ["FR19"] },
+  { "id": "F041", "description": "[A] autoCloseTicketsHandler passes the rule's suppression flags into the ticket close call", "implemented": true, "prdRefs": ["FR19"] },
+  { "id": "F042", "description": "[A] Auto-close pre-close warning email is skipped when the rule sets suppress_contact_notifications", "implemented": true, "prdRefs": ["FR19"] },
 
   { "id": "F043", "description": "[C] Add third closeStatusId argument to BentoTimelineTile.onAddNewComment (:70) and TicketBentoLayout.onAddNewComment (:112), matching TicketConversation (:73)", "implemented": false, "prdRefs": ["FR20"] },
   { "id": "F044", "description": "[C] TicketDetails threads closedStatusOptions (:413-425) into TicketBentoLayout → BentoTimelineTile", "implemented": false, "prdRefs": ["FR21"] },

@@ -43,6 +43,8 @@ export interface IBoardAutoCloseRule {
   warning_days_before: number | null;
   close_to_status_id: string;
   is_enabled: boolean;
+  suppress_contact_notifications: boolean;
+  suppress_internal_notifications: boolean;
 }
 
 export interface BoardAutoCloseRuleInput {
@@ -51,6 +53,8 @@ export interface BoardAutoCloseRuleInput {
   warning_days_before?: number | null;
   close_to_status_id: string;
   is_enabled?: boolean;
+  suppress_contact_notifications?: boolean;
+  suppress_internal_notifications?: boolean;
 }
 
 const DEFAULT_CLOSE_RULES: Omit<IBoardCloseRules, 'board_id'> = {
@@ -178,6 +182,10 @@ async function validateAutoCloseRule(
     throw new Error('Inactivity days must be a positive whole number');
   }
 
+  if (input.suppress_internal_notifications && !input.suppress_contact_notifications) {
+    throw new Error('suppress_internal_notifications requires suppress_contact_notifications');
+  }
+
   const warning = input.warning_days_before ?? null;
   if (warning !== null) {
     if (!Number.isInteger(warning) || warning < 1 || warning >= input.inactivity_days) {
@@ -231,7 +239,9 @@ export const getBoardAutoCloseRules = withAuth(
         'inactivity_days',
         'warning_days_before',
         'close_to_status_id',
-        'is_enabled'
+        'is_enabled',
+        'suppress_contact_notifications',
+        'suppress_internal_notifications'
       );
   }
 );
@@ -261,6 +271,8 @@ export const createBoardAutoCloseRule = withAuth(
             warning_days_before: input.warning_days_before ?? null,
             close_to_status_id: input.close_to_status_id,
             is_enabled: input.is_enabled ?? true,
+            suppress_contact_notifications: input.suppress_contact_notifications ?? false,
+            suppress_internal_notifications: input.suppress_internal_notifications ?? false,
           })
           .returning('*');
         return row;
@@ -301,6 +313,8 @@ export const updateBoardAutoCloseRule = withAuth(
             warning_days_before: input.warning_days_before ?? null,
             close_to_status_id: input.close_to_status_id,
             is_enabled: input.is_enabled ?? existing.is_enabled,
+            suppress_contact_notifications: input.suppress_contact_notifications ?? existing.suppress_contact_notifications ?? false,
+            suppress_internal_notifications: input.suppress_internal_notifications ?? existing.suppress_internal_notifications ?? false,
             updated_at: trx.fn.now(),
           })
           .returning('*');

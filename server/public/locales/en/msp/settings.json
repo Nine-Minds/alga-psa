@@ -711,13 +711,17 @@
         "inactivityDaysLabel": "Days of inactivity",
         "warningDaysLabel": "Warn days before close",
         "warningDaysPlaceholder": "No warning",
+        "suppressContactNotificationsLabel": "Don't notify contact",
+        "suppressContactNotificationsHelp": "Skips the warning email, close email, survey invitation, and client-portal notification.",
+        "suppressInternalNotificationsLabel": "Also skip internal notifications",
         "ruleEnabledLabel": "Enabled",
         "removeRule": "Remove",
         "messages": {
           "fetchFailed": "Failed to load close rules for this board",
           "autoCloseStatusRequired": "Each auto-close rule needs a trigger status and a closed target status",
           "autoCloseDaysInvalid": "Auto-close inactivity days must be a positive whole number",
-          "autoCloseWarningInvalid": "The warning lead time must be smaller than the inactivity days"
+          "autoCloseWarningInvalid": "The warning lead time must be smaller than the inactivity days",
+          "autoCloseSuppressionInvalid": "Internal notifications can only be skipped when contact notifications are skipped."
         }
       },
       "editor": {

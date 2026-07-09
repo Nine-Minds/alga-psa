@@ -47,11 +47,11 @@
   { "id": "T042", "description": "[B] Inline Move-to-Board dialog shows the control; moveTicketsToBoard receives and applies the flags to each ticket", "implemented": true, "featureIds": ["F034", "F037"] },
   { "id": "T043", "description": "[B] BulkAddTagsDialog shows NO suppression control (regression guard on scope)", "implemented": true, "featureIds": ["F035"] },
 
-  { "id": "T044", "description": "[A] Migration adds both columns NOT NULL DEFAULT false; existing rows read false; migration guarded/re-runnable", "implemented": false, "featureIds": ["F038"] },
-  { "id": "T045", "description": "[A] closeRuleActions persist and return both fields and reject internal-without-contact", "implemented": false, "featureIds": ["F039"] },
-  { "id": "T046", "description": "[A] Auto-close rule settings UI round-trips the toggles (set, save, reload)", "implemented": false, "featureIds": ["F040"] },
-  { "id": "T047", "description": "[A] autoCloseTicketsHandler under a suppressing rule closes aging tickets with no contact email and no survey", "implemented": false, "featureIds": ["F041"] },
-  { "id": "T048", "description": "[A] Auto-close warning email skipped when rule suppresses contact; still sent for non-suppressing rules", "implemented": false, "featureIds": ["F042", "F066"] },
+  { "id": "T044", "description": "[A] Migration adds both columns NOT NULL DEFAULT false; existing rows read false; migration guarded/re-runnable", "implemented": true, "featureIds": ["F038"] },
+  { "id": "T045", "description": "[A] closeRuleActions persist and return both fields and reject internal-without-contact", "implemented": true, "featureIds": ["F039"] },
+  { "id": "T046", "description": "[A] Auto-close rule settings UI round-trips the toggles (set, save, reload)", "implemented": true, "featureIds": ["F040"] },
+  { "id": "T047", "description": "[A] autoCloseTicketsHandler under a suppressing rule closes aging tickets with no contact email and no survey", "implemented": true, "featureIds": ["F041"] },
+  { "id": "T048", "description": "[A] Auto-close warning email skipped when rule suppresses contact; still sent for non-suppressing rules", "implemented": true, "featureIds": ["F042", "F066"] },
 
   { "id": "T049", "description": "[C] BentoTimelineTile/TicketBentoLayout onAddNewComment accept a closeStatusId argument", "implemented": false, "featureIds": ["F043"] },
   { "id": "T050", "description": "[C] closedStatusOptions are threaded into the grid composer and populate the Close status select", "implemented": false, "featureIds": ["F044", "F045"] },

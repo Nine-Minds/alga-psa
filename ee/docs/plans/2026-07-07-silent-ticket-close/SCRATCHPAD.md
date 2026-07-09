@@ -287,3 +287,30 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
   - `cd packages/tickets && npx vitest run src/components/ticket/bento/BentoHero.unsavedChanges.test.tsx`
   - `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx src/components/ticket/bento/BentoHero.unsavedChanges.test.tsx`
   - `npm -w @alga-psa/tickets run typecheck`
+
+## 2026-07-09 — Auto-Close Rule Suppression (F038-F042, T044-T048)
+
+- Migration:
+  - Added `server/migrations/20260709120000_add_suppression_to_board_auto_close_rules.cjs`.
+  - Adds `suppress_contact_notifications` and `suppress_internal_notifications` as boolean `NOT NULL DEFAULT false`.
+  - Adds `board_auto_close_rules_suppression_check` so internal suppression requires contact suppression.
+  - Migration is guarded with `hasColumn`; rollback drops the check and both columns.
+- Rule actions:
+  - `IBoardAutoCloseRule` / `BoardAutoCloseRuleInput` now include the two suppression fields.
+  - `getBoardAutoCloseRules` selects them.
+  - create/update persist them; update preserves existing values when omitted.
+  - validation rejects `suppress_internal_notifications` without `suppress_contact_notifications`.
+- Settings UI:
+  - Auto-close rules in `BoardsSettings.tsx` expose contact and internal suppression checkboxes.
+  - Contact uncheck clears internal; internal is disabled until contact is checked.
+  - Save/reload maps the fields through `autoCloseRulesForm`; new English and pseudo-locale keys were added.
+- Handler:
+  - `autoCloseTicketsHandler` selects the rule suppression flags for due closes and passes them into `updateTicketInTransaction`, so existing `TICKET_CLOSED` subscriber gates skip contact/survey/portal/internal work according to the level.
+  - Pre-close warnings are skipped when contact suppression is set. Decision: mark `warning_sent_at` and write an `AUTO_CLOSE_WARNING_SENT` activity with `outcome: warning_suppressed` so the worker does not retry an intentionally suppressed warning every run.
+- Tests/verification:
+  - `cd packages/tickets && npx vitest run src/actions/close-rules/closeRuleActions.suppression.contract.test.ts`
+  - `cd packages/jobs && npx vitest run src/lib/handlers/autoCloseTicketsHandlerTenantScoped.contract.test.ts`
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/migrations/autoCloseSuppressionMigration.test.ts`
+  - `npm -w @alga-psa/tickets run typecheck`
+  - `npm -w @alga-psa/jobs run typecheck`
+  - `cd server && NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -- --pretty false`
