@@ -122,6 +122,9 @@ Required fields should be the minimum needed to create a sellable kit product:
 - Fixed kit price only when fixed pricing is selected.
 - Required catalog basics that the existing product model enforces.
 
+Place pricing mode before its dependent price field. Do not ask for a separate
+kit cost here. The kit workspace calculates margin from BOM component cost.
+
 After save, the user lands directly in the new kit detail/BOM editor.
 
 ### Build BOM
@@ -138,6 +141,8 @@ Each component row should show:
 - Available quantity.
 - Component unit cost.
 - Extended component cost.
+- Component selling price and extended selling price so an operator can audit a
+  sum-priced kit without leaving the BOM.
 - Constraint contribution to can-build quantity.
 - Edit and remove actions.
 
@@ -181,7 +186,7 @@ The UI should show:
   selling prices as its basis.
 - One editable kit price for `fixed`.
 - Component cost.
-- Gross margin dollars.
+- Gross profit dollars.
 - Gross margin percent.
 
 For `sum` pricing, show the calculated component-derived price/cost basis. For
@@ -189,6 +194,9 @@ For `sum` pricing, show the calculated component-derived price/cost basis. For
 
 Component cost is not a selling-price input. It remains a separate value used to
 calculate margin.
+
+Enable `Save pricing` only when the selected mode or fixed price differs from the
+saved policy. The calculated sum does not need an operator save.
 
 ### Preview Business Behavior
 

@@ -20,6 +20,11 @@ support it, how pricing works, or what happens when the kit is added to a sales
 order. Operators are forced to discover Billing -> Products and learn hidden
 backend behavior by trial and error.
 
+The first command-center implementation also exposed an editable sales-order kit
+price while `Sum of components` was selected. That amount competes with the
+component-derived price and can disagree with the price placed on a sales order.
+The screen must make the kit pricing policy singular and predictable.
+
 ## Goals
 
 - Make Inventory -> Kits the canonical surface for common kit lifecycle work.
@@ -32,6 +37,11 @@ backend behavior by trial and error.
   orders, create sales order.
 - Make loading, empty, no-results, error, duplicate-component, and invalid-pricing
   states explicit.
+- Make sum pricing read-only and derived from component selling prices.
+- Make fixed pricing use one editable kit price.
+- Use the same price resolver for the kit preview and sales-order defaults.
+- Preserve order-specific price negotiation as an explicit sales-order override
+  that does not change kit configuration.
 
 ## Non-goals
 
@@ -39,8 +49,11 @@ backend behavior by trial and error.
 - Finished-good assembly or stock held under the kit SKU.
 - Quote/template integration.
 - Barcode or scanning workflows.
-- Rewriting sales-order or invoice generation behavior beyond preserving existing
-  kit explosion semantics.
+- Rewriting invoice generation beyond preserving existing kit explosion
+  semantics.
+- Removing unit-price overrides from sales orders.
+- Persisting a new historical price-source audit record for saved sales-order
+  lines in this pass.
 - Replacing Billing -> Products as the advanced catalog admin screen.
 
 ## Users and Primary Flows
@@ -58,7 +71,8 @@ Primary flow:
 3. Add BOM components and quantities.
 4. Confirm pricing/margin and stock readiness.
 5. Preview sales-order expansion.
-6. Create or inspect related sales orders.
+6. Create or inspect related sales orders. The sales order starts with the
+   resolved kit price and may record a one-order override.
 
 ## UX / UI Notes
 
@@ -71,6 +85,19 @@ Primary flow:
 - Empty BOM is a warning state.
 - Duplicate component add reads as update quantity.
 - Fixed-price kits require a valid fixed price.
+- Sum-priced kits show `Calculated kit price` as read-only, with component
+  selling prices identified as the basis.
+- Fixed-priced kits show exactly one editable `Kit price` field.
+- The create dialog asks for a price only when fixed pricing is selected.
+- BOM rows show the component selling price and extended selling price used by
+  sum mode.
+- Pricing separates component cost, gross profit, and gross margin rather than
+  combining the latter two under one label.
+- `Save pricing` is enabled only when the pricing policy has unsaved changes.
+- The create dialog does not ask for a separate kit cost because margin is based
+  on component cost.
+- A changed kit price on a sales order reads `Overridden from {{price}}` and can
+  be reset to the resolved kit price before save.
 
 ## Requirements
 
@@ -83,6 +110,12 @@ Primary flow:
 - Add/update/remove BOM components.
 - Validate positive integer component quantities.
 - Validate fixed-price kit configuration.
+- Resolve sum pricing from BOM component selling prices and quantities without a
+  kit catalog-rate fallback.
+- Resolve fixed pricing from the configured fixed kit price.
+- Seed sales-order kit lines from the canonical resolver and distinguish an
+  explicit order override from the resolved default.
+- Keep component selling-price basis separate from component cost and margin.
 - Map known server errors to user-facing explanations.
 - Link to advanced product settings and sales-order surfaces.
 
@@ -101,6 +134,8 @@ New or expanded inventory actions:
 - `getKitDetail(kitServiceId)`
 - `createKitProduct(input)`
 - `updateKitProduct(input)`
+- A transaction-safe canonical kit price resolver shared by kit reads and
+  sales-order mutations.
 
 Existing behavior to preserve:
 
@@ -110,6 +145,8 @@ Existing behavior to preserve:
 - Sales-order explosion creates one priced parent line and zero-dollar child
   component lines.
 - Child lines allocate and fulfill stock.
+- The parent line uses the resolved kit price unless the sales order explicitly
+  submits an override.
 
 ## Security / Permissions
 
@@ -140,6 +177,14 @@ the current screen.
   sales-order behavior, and usage links.
 - Componentless kits are visibly incomplete.
 - Fixed-price kits expose and validate fixed amount.
+- Sum-priced kits expose a read-only calculated amount and no independent kit
+  price input.
+- Fixed-priced kits expose exactly one editable price.
+- The create flow does not require a price for sum mode.
+- Kit preview and sales-order default price agree because both use the canonical
+  resolver.
+- A sales-order override is visibly identified, resettable before save, and does
+  not mutate the kit's saved pricing policy.
 - BOM rows show stock and cost context.
 - The sales-order preview matches backend expansion behavior.
 - Existing kit sales-order and invoice behavior does not regress.
