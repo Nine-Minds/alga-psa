@@ -163,8 +163,12 @@ const OPEN_PO_STATUSES = ['draft', 'open', 'partially_received'];
 
 const ROUTES = {
   salesOrders: '/msp/inventory/sales-orders',
+  salesOrdersInvoiceable: '/msp/inventory/sales-orders?attention=invoiceable',
   purchaseOrders: '/msp/inventory/purchase-orders',
+  purchaseOrdersPartial: '/msp/inventory/purchase-orders?status=partially_received',
   rma: '/msp/inventory/rma',
+  rmaVendorCredits: '/msp/inventory/rma?status=sent_to_vendor',
+  rmaDeadUnitsOwed: '/msp/inventory/rma?status=dead_unit_owed',
   loaners: '/msp/inventory/loaners',
   transfers: '/msp/inventory/transfers',
   ghostUsage: '/msp/inventory/ghost-usage',
@@ -172,6 +176,7 @@ const ROUTES = {
   counts: '/msp/inventory/counts',
   units: '/msp/inventory/units',
   stock: '/msp/inventory/stock',
+  stockAttention: '/msp/inventory/stock?attention=1',
   quotes: '/msp/billing?tab=quotes',
   client: (id: string) => `/msp/clients/${id}`,
 } as const;
@@ -416,7 +421,7 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
         },
         amount_cents: so.amount,
         age_days: so.shipped_days_ago,
-        action: { key: 'invoice', href: ROUTES.salesOrders, primary: true },
+        action: { key: 'invoice', href: ROUTES.salesOrdersInvoiceable, primary: true },
       });
     }
     if (unbilled.dropship.so_count > 0) {
@@ -430,7 +435,7 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
         params: { so_count: unbilled.dropship.so_count },
         amount_cents: unbilled.dropship.amount,
         age_days: null,
-        action: { key: 'invoice', href: ROUTES.salesOrders, primary: true },
+        action: { key: 'invoice', href: ROUTES.salesOrdersInvoiceable, primary: true },
       });
     }
 
@@ -483,7 +488,7 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
         band: avail <= 0 && jobs > 0 ? 'red' : 'amber',
         category: 'field',
         name: tech ? `${s.location_name} · ${tech}` : (s.location_name ?? null),
-        href: ROUTES.stock,
+        href: ROUTES.stockAttention,
         params: {
           service_name: s.service_name,
           available: avail,
@@ -495,7 +500,7 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
         },
         amount_cents: null,
         age_days: null,
-        action: inbound ? { key: 'trackTransfer', href: ROUTES.transfers } : { key: 'reorder', href: ROUTES.purchaseOrders },
+        action: inbound ? { key: 'trackTransfer', href: ROUTES.transfers } : { key: 'reorder', href: ROUTES.stockAttention },
       });
     }
 
@@ -545,7 +550,7 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
         band: 'amber',
         category: 'money',
         name: r.vendor_name,
-        href: ROUTES.rma,
+        href: ROUTES.rmaVendorCredits,
         params: {
           ...(r.rma_reference ? { rma_reference: r.rma_reference } : {}),
           ...(r.service_name ? { service_name: r.service_name } : {}),
@@ -553,7 +558,7 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
         },
         amount_cents: r.amount,
         age_days: r.age_days,
-        action: { key: 'chase', href: ROUTES.rma },
+        action: { key: 'chase', href: ROUTES.rmaVendorCredits },
       });
     }
 
@@ -575,7 +580,7 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
         },
         amount_cents: null,
         age_days: daysRemaining != null && daysRemaining < 0 ? Math.abs(daysRemaining) : null,
-        action: { key: 'shipReplacement', href: ROUTES.rma },
+        action: { key: 'shipReplacement', href: ROUTES.rmaDeadUnitsOwed },
       });
     }
 
@@ -667,11 +672,11 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
         band: out ? 'red' : 'amber',
         category: 'ops',
         name: s.location_name ?? null,
-        href: ROUTES.stock,
+        href: ROUTES.stockAttention,
         params: { service_name: s.service_name, available: avail, reorder_point: Number(s.reorder_point) },
         amount_cents: null,
         age_days: null,
-        action: out ? { key: 'createPo', href: ROUTES.purchaseOrders, primary: true } : { key: 'reorder', href: ROUTES.purchaseOrders },
+        action: { key: 'reorder', href: ROUTES.stockAttention, primary: out },
       });
     }
 
@@ -683,7 +688,7 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
         band: 'amber',
         category: 'ops',
         name: po.po_number,
-        href: ROUTES.purchaseOrders,
+        href: ROUTES.purchaseOrdersPartial,
         params: {
           po_number: po.po_number,
           vendor_name: po.vendor_name ?? '',
@@ -692,7 +697,7 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
         },
         amount_cents: null,
         age_days: null,
-        action: { key: 'receive', href: ROUTES.purchaseOrders },
+        action: { key: 'receive', href: ROUTES.purchaseOrdersPartial },
       });
     }
 

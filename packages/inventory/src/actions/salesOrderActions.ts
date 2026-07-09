@@ -313,14 +313,47 @@ export const listSalesOrders = withAuth(
     await requireSoPerm(user, 'read');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+      const lineMetrics = trx('sales_order_lines as sol')
+        .where({ 'sol.tenant': tenant })
+        .groupBy('sol.tenant', 'sol.so_id')
+        .select('sol.tenant', 'sol.so_id')
+        .select(
+          trx.raw('COALESCE(SUM(sol.quantity_ordered * sol.unit_price), 0)::bigint as total_amount'),
+          trx.raw(
+            `COALESCE(SUM(
+              GREATEST(COALESCE(sol.quantity_fulfilled, 0) - COALESCE(sol.quantity_invoiced, 0), 0)
+              * sol.unit_price
+            ), 0)::bigint as invoiceable_amount`,
+          ),
+          trx.raw('COALESCE(SUM(sol.quantity_ordered), 0)::int as quantity_ordered_total'),
+          trx.raw('COALESCE(SUM(sol.quantity_fulfilled), 0)::int as quantity_fulfilled_total'),
+          trx.raw('COALESCE(SUM(sol.quantity_invoiced), 0)::int as quantity_invoiced_total'),
+          trx.raw('COUNT(*)::int as line_count'),
+          trx.raw("COUNT(*) FILTER (WHERE sol.fulfillment_type = 'drop_ship')::int as drop_ship_line_count"),
+        )
+        .as('lm');
+
       // Join the client so the list can show a name, not a raw UUID.
       return (await trx('sales_orders as so')
         .leftJoin('clients as c', function () {
           this.on('c.client_id', '=', 'so.client_id').andOn('c.tenant', '=', 'so.tenant');
         })
+        .leftJoin(lineMetrics, function () {
+          this.on('lm.so_id', '=', 'so.so_id').andOn('lm.tenant', '=', 'so.tenant');
+        })
         .where('so.tenant', tenant)
         .orderBy('so.created_at', 'desc')
-        .select('so.*', 'c.client_name')) as ISalesOrder[];
+        .select(
+          'so.*',
+          'c.client_name',
+          trx.raw('COALESCE(lm.total_amount, 0)::bigint as total_amount'),
+          trx.raw('COALESCE(lm.invoiceable_amount, 0)::bigint as invoiceable_amount'),
+          trx.raw('COALESCE(lm.quantity_ordered_total, 0)::int as quantity_ordered_total'),
+          trx.raw('COALESCE(lm.quantity_fulfilled_total, 0)::int as quantity_fulfilled_total'),
+          trx.raw('COALESCE(lm.quantity_invoiced_total, 0)::int as quantity_invoiced_total'),
+          trx.raw('COALESCE(lm.line_count, 0)::int as line_count'),
+          trx.raw('COALESCE(lm.drop_ship_line_count, 0)::int as drop_ship_line_count'),
+        )) as ISalesOrder[];
     });
   },
 );

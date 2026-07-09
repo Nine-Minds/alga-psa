@@ -3,7 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import type { IService, IClient } from '@alga-psa/types';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { getServices } from '@alga-psa/billing/actions';
+import {
+  getServices,
+  listInvoiceableSalesOrdersForBilling,
+  type InvoiceableSalesOrderForBilling,
+} from '@alga-psa/billing/actions';
 import AutomaticInvoices from '../AutomaticInvoices';
 import ManualInvoices from '../ManualInvoices';
 import PrepaymentInvoices from '../PrepaymentInvoices';
@@ -20,13 +24,15 @@ interface GenerateTabProps {
   invoiceType: InvoiceType;
   onGenerateSuccess: () => void;
   refreshTrigger: number;
+  sourceSalesOrderId?: string | null;
 }
 
 const GenerateTab: React.FC<GenerateTabProps> = ({
   initialServices,
   invoiceType,
   onGenerateSuccess,
-  refreshTrigger
+  refreshTrigger,
+  sourceSalesOrderId
 }) => {
   const { t } = useTranslation('msp/invoicing');
   const { enabled: billingEnabled } = useFeatureFlag('billing-enabled');
@@ -36,6 +42,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [internalRefreshTrigger, setInternalRefreshTrigger] = useState(0);
+  const [invoiceableSalesOrders, setInvoiceableSalesOrders] = useState<InvoiceableSalesOrderForBilling[]>([]);
 
   // Only load clients and services for manual/prepayment invoices
   useEffect(() => {
@@ -46,12 +53,14 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
 
   const loadManualInvoiceData = async () => {
     try {
-      const [clientsData, servicesData] = await Promise.all([
+      const [clientsData, servicesData, invoiceableSalesOrdersData] = await Promise.all([
         getAllClientsForBilling(),
-        getServices(1, 999, { item_kind: 'any' })
+        getServices(1, 999, { item_kind: 'any' }),
+        invoiceType === 'manual' ? listInvoiceableSalesOrdersForBilling() : Promise.resolve([])
       ]);
 
       setClients(clientsData);
+      setInvoiceableSalesOrders(invoiceableSalesOrdersData);
 
       if (servicesData && Array.isArray(servicesData.services)) {
         setServices(servicesData.services);
@@ -93,6 +102,8 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
             clients={clients}
             services={services}
             onGenerateSuccess={handleGenerateSuccess}
+            invoiceableSalesOrders={invoiceableSalesOrders}
+            sourceSalesOrderId={sourceSalesOrderId}
           />
         );
       case 'prepayment':

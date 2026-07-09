@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { ChevronDown, Trash2 } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import { formatCurrencyFromMinorUnits, toMinorUnits, currencyFractionDigits } from '@alga-psa/core';
@@ -105,6 +105,14 @@ const STATUS_VARIANTS: Record<string, BadgeVariant> = {
   cancelled: 'error',
 };
 
+const NUM_HEADER = 'text-right';
+const NUM_CELL = 'text-right tabular-nums';
+
+const asNumber = (value: unknown): number => Number(value ?? 0);
+
+const money = (cents: unknown, currency?: string | null): string =>
+  formatCurrencyFromMinorUnits(asNumber(cents), 'en-US', currency || 'USD');
+
 interface LineForm {
   service_id: string;
   quantity_ordered: string;
@@ -178,7 +186,10 @@ export function SalesOrdersManager({
   confirmDropShip,
 }: SalesOrdersManagerProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation('features/inventory');
+  const attentionFilter = searchParams?.get('attention');
+  const showInvoiceableOnly = attentionFilter === 'invoiceable';
   const INVOICE_MODE_OPTIONS: { value: SalesOrderInvoiceMode; label: string }[] = [
     { value: 'on_fulfillment', label: t('salesOrders.invoiceMode.onFulfillment', 'On fulfillment') },
     { value: 'manual', label: t('salesOrders.invoiceMode.manual', 'Manual') },
@@ -405,6 +416,15 @@ export function SalesOrdersManager({
     }
   };
 
+  const visibleSos = React.useMemo(
+    () => sos.filter((so) => !showInvoiceableOnly || asNumber(so.invoiceable_amount) > 0),
+    [sos, showInvoiceableOnly],
+  );
+
+  const clearAttentionFilter = () => {
+    router.push('/msp/inventory/sales-orders');
+  };
+
   const columns: ColumnDefinition<ISalesOrder>[] = [
     {
       title: t('salesOrders.columns.soNumber', 'SO Number'),
@@ -426,6 +446,52 @@ export function SalesOrdersManager({
       render: (_: any, rec: ISalesOrder) => rec.client_name?.trim() || rec.client_id,
     },
     {
+      title: t('salesOrders.columns.amount', 'Amount'),
+      dataIndex: 'total_amount',
+      headerClassName: NUM_HEADER,
+      cellClassName: `${NUM_CELL} font-medium text-gray-900`,
+      render: (_: any, rec: ISalesOrder) => money(rec.total_amount, rec.currency_code),
+    },
+    {
+      title: t('salesOrders.columns.fulfillment', 'Fulfillment'),
+      dataIndex: 'quantity_fulfilled_total',
+      headerClassName: NUM_HEADER,
+      cellClassName: NUM_CELL,
+      render: (_: any, rec: ISalesOrder) => {
+        const ordered = asNumber(rec.quantity_ordered_total);
+        const fulfilled = asNumber(rec.quantity_fulfilled_total);
+        if (ordered <= 0) return t('common.emptyValue', '—');
+        return (
+          <div className="flex items-center justify-end gap-2">
+            <span>{fulfilled} / {ordered}</span>
+            {asNumber(rec.drop_ship_line_count) > 0 && (
+              <Badge variant="info" size="sm">
+                {t('salesOrders.badges.dropShip', 'Drop-ship')}
+              </Badge>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      title: t('salesOrders.columns.invoiceable', 'Invoiceable'),
+      dataIndex: 'invoiceable_amount',
+      headerClassName: NUM_HEADER,
+      cellClassName: NUM_CELL,
+      render: (_: any, rec: ISalesOrder) => {
+        const amount = asNumber(rec.invoiceable_amount);
+        if (amount <= 0) return t('common.emptyValue', '—');
+        return (
+          <div className="flex items-center justify-end gap-2">
+            <span className="font-medium text-gray-900">{money(amount, rec.currency_code)}</span>
+            <Badge variant="success" size="sm">
+              {t('salesOrders.badges.readyToInvoice', 'Ready')}
+            </Badge>
+          </div>
+        );
+      },
+    },
+    {
       title: t('common.status', 'Status'),
       dataIndex: 'status',
       render: (value: any) => {
@@ -442,7 +508,7 @@ export function SalesOrdersManager({
     {
       title: t('common.actions', 'Actions'),
       dataIndex: 'so_id',
-      width: '260px',
+      width: '300px',
       render: (_: any, rec: ISalesOrder) => (
         <div className="flex gap-2">
           <Button
@@ -468,7 +534,7 @@ export function SalesOrdersManager({
                 disabled={rec.status === 'cancelled'}
                 className="gap-1"
               >
-                {t('salesOrders.actions.document', 'Document')}
+                {t('salesOrders.actions.orderPdfs', 'Order PDFs')}
                 <ChevronDown className="h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
@@ -498,15 +564,29 @@ export function SalesOrdersManager({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button
-            id={`cancel-so-${rec.so_id}`}
-            variant="ghost"
-            size="sm"
-            onClick={() => setCancelTarget(rec)}
-            disabled={rec.status === 'cancelled' || busy !== null}
-          >
-            {t('common.cancel', 'Cancel')}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id={`more-so-${rec.so_id}`}
+                variant="ghost"
+                size="sm"
+                aria-label={t('salesOrders.actions.moreActions', 'More actions')}
+                disabled={busy !== null}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                id={`cancel-so-${rec.so_id}`}
+                disabled={rec.status === 'cancelled' || busy !== null}
+                onClick={() => setCancelTarget(rec)}
+                className="text-red-600 focus:text-red-700"
+              >
+                {t('salesOrders.actions.cancelSalesOrder', 'Cancel sales order')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
     },
@@ -521,7 +601,18 @@ export function SalesOrdersManager({
         </Button>
       </div>
 
-      <DataTable id="sales-orders-table" data={sos} columns={columns} />
+      {showInvoiceableOnly && (
+        <div className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+          <span className="text-sm text-amber-900">
+            {t('salesOrders.filters.invoiceableActive', 'Showing sales orders with fulfilled, uninvoiced items.')}
+          </span>
+          <Button id="sales-orders-clear-attention-filter" variant="link" size="sm" onClick={clearAttentionFilter}>
+            {t('common.clear', 'Clear')}
+          </Button>
+        </div>
+      )}
+
+      <DataTable id="sales-orders-table" data={visibleSos} columns={columns} />
 
       <Dialog
         isOpen={dialogOpen}
