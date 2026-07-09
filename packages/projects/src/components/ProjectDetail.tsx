@@ -16,7 +16,7 @@ import {
 } from '../lib/kanbanPreferences';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTaskTypes } from '../actions/projectTaskActions';
-import { findTagsByEntityId, findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { findTagsByEntityId, findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getTaskCommentCountsBatch } from '../actions/projectTaskCommentActions';
 import { TagFilter } from '@alga-psa/ui/components';
@@ -36,7 +36,12 @@ import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deleteP
 import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import MoveTaskDialog from './MoveTaskDialog';
@@ -62,7 +67,7 @@ import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
 import { useUserPreferencesBatch } from '@alga-psa/user-composition/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITeam } from '@alga-psa/types';
 import RemoveTeamDialog from './RemoveTeamDialog';
 import { useTheme } from 'next-themes';
@@ -83,6 +88,17 @@ const PROJECT_LIST_COLUMN_WIDTHS_SETTING = 'project_list_column_widths';
 // hydration so existing per-project widths survive the move to server prefs.
 const projectListColumnWidthsLegacyKey = (projectId: string) =>
   `tasklistview-column-sizing:${projectId}`;
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
+function unwrapActionResult<T>(value: T | { actionError: string } | { permissionError: string }): T {
+  if (isReturnedActionError(value)) {
+    throw new Error(getErrorMessage(value));
+  }
+  return value;
+}
 
 // Row density (zoom) presets for the list view, mirroring the tickets table.
 // Indexed by level/10 (0..10); each scales row vertical padding + font size,
@@ -429,6 +445,11 @@ export default function ProjectDetail({
           return [];
         });
         if (stale) return;
+        if (isTagActionError(tags)) {
+          console.warn('Failed to fetch project tags, continuing without tags:', tags);
+          setProjectTags([]);
+          return;
+        }
 
         setProjectTags(tags);
 
@@ -585,6 +606,14 @@ export default function ProjectDetail({
           getProjectStatusesByPhase(project.project_id),
         ]);
         if (stale) return;
+        if (isReturnedActionError(data)) {
+          handleError(data);
+          return;
+        }
+        if (isReturnedActionError(phaseStatuses)) {
+          handleError(phaseStatuses);
+          return;
+        }
         setAllProjectTasks(data.tasks);
         setAllProjectTaskResources(data.taskResources);
         setAllProjectTaskTags(data.taskTags);
@@ -1228,7 +1257,7 @@ export default function ProjectDetail({
       for (const task of tasksToMove) {
         try {
           if (task.phase_id !== newPhaseId) {
-            await moveTaskToPhase(
+            const moveResult = await moveTaskToPhase(
               task.task_id,
               newPhaseId,
               newStatusMappingId,
@@ -1236,6 +1265,11 @@ export default function ProjectDetail({
               prevBefore,
               safeAfter,
             );
+            if (isReturnedActionError(moveResult)) {
+              toast.error(getErrorMessage(moveResult));
+              failed++;
+              continue;
+            }
             crossPhaseMoved++;
           } else {
             const updatedTask = await updateTaskStatus(
@@ -1244,6 +1278,11 @@ export default function ProjectDetail({
               prevBefore,
               safeAfter,
             );
+            if (isReturnedActionError(updatedTask)) {
+              toast.error(getErrorMessage(updatedTask));
+              failed++;
+              continue;
+            }
             statusUpdatedById.set(task.task_id, updatedTask);
           }
           prevBefore = task.task_id;
@@ -1307,21 +1346,29 @@ export default function ProjectDetail({
       // Check if we're moving to a different phase
       if (task.phase_id !== newPhaseId) {
         // Move to different phase with new status
-        await moveTaskToPhase(taskId, newPhaseId, newStatusMappingId);
+        const moveResult = await moveTaskToPhase(taskId, newPhaseId, newStatusMappingId);
+        if (isReturnedActionError(moveResult)) {
+          toast.error(getErrorMessage(moveResult));
+          return;
+        }
         setAllProjectTasks(prev => prev.map(t =>
           t.task_id === taskId ? { ...t, phase_id: newPhaseId, project_status_mapping_id: newStatusMappingId } : t
         ));
         toast.success(t('projectDetail.taskMovedToNewPhase', 'Task moved to new phase'));
       } else if (task.project_status_mapping_id !== newStatusMappingId) {
         // Same phase, different status
-        await updateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
+        const updatedTask = await updateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
+        if (isReturnedActionError(updatedTask)) {
+          toast.error(getErrorMessage(updatedTask));
+          return;
+        }
         setAllProjectTasks(prev => prev.map(t =>
           t.task_id === taskId ? { ...t, project_status_mapping_id: newStatusMappingId } : t
         ));
         toast.success(t('projectDetail.taskStatusUpdated', 'Task status updated'));
       } else {
         // Same phase and status - just reorder
-        await reorderTask(taskId, beforeTaskId, afterTaskId);
+        unwrapActionResult(await reorderTask(taskId, beforeTaskId, afterTaskId));
         toast.success(t('projectDetail.taskReordered', 'Task reordered'));
       }
     } catch (error) {
@@ -1393,7 +1440,11 @@ export default function ProjectDetail({
         }
 
         setPriorities(allPriorities);
-        setTaskTypes(types);
+        if (isReturnedActionError(types)) {
+          handleError(types);
+        } else {
+          setTaskTypes(types);
+        }
       } catch (error) {
         if (!stale) handleError(error, 'Failed to load initial data');
       }
@@ -1460,7 +1511,12 @@ export default function ProjectDetail({
 
       setIsLoadingTasks(true);
       try {
-        const { tasks, ticketLinks, taskResources, taskDependencies, checklistItems, taskTags: phaseTags } = await getTasksForPhase(selectedPhase.phase_id);
+        const phaseData = await getTasksForPhase(selectedPhase.phase_id);
+        if (isReturnedActionError(phaseData)) {
+          handleError(phaseData);
+          return;
+        }
+        const { tasks, ticketLinks, taskResources, taskDependencies, checklistItems, taskTags: phaseTags } = phaseData;
         if (stale) return;
 
         // Add checklist items to tasks from batch-loaded data
@@ -1535,6 +1591,10 @@ export default function ProjectDetail({
       try {
         const allTeams = await getTeams();
         if (stale) return;
+        if (isTeamActionError(allTeams)) {
+          console.warn('Cannot load teams for project task display:', allTeams);
+          return;
+        }
         setTeams(allTeams);
         const namesMap: Record<string, string> = {};
         allTeams.forEach(team => {
@@ -1574,6 +1634,10 @@ export default function ProjectDetail({
     const loadTaskAndSelectPhase = async () => {
       try {
         const task = await getTaskById(initialTaskId);
+        if (isReturnedActionError(task)) {
+          toast.error(getErrorMessage(task));
+          return;
+        }
         if (!task) {
           toast.error(t('projectDetail.taskNotFound', 'Task not found'));
           return;
@@ -1658,6 +1722,13 @@ export default function ProjectDetail({
       try {
         const taskIds = projectTasks.map(task => task.task_id);
         const counts = await getTaskCommentCountsBatch(taskIds);
+        if (isReturnedActionError(counts)) {
+          if (!stale) {
+            toast.error(getErrorMessage(counts));
+            setTaskCommentCounts({});
+          }
+          return;
+        }
         if (!stale) setTaskCommentCounts(counts);
       } catch (error) {
         if (!stale) {
@@ -1742,6 +1813,11 @@ export default function ProjectDetail({
       for (const task of samePhaseTasks) {
         try {
           const updatedTask = await updateTaskStatus(task.task_id, targetStatusId, prevBefore, afterTaskId);
+          if (isReturnedActionError(updatedTask)) {
+            toast.error(getErrorMessage(updatedTask));
+            failed++;
+            continue;
+          }
           statusUpdatedById.set(task.task_id, updatedTask);
           prevBefore = task.task_id;
         } catch (error) {
@@ -1753,7 +1829,7 @@ export default function ProjectDetail({
       // Move cross-phase tasks into the current phase at the target status
       for (const task of otherPhaseTasks) {
         try {
-          await moveTaskToPhase(task.task_id, currentPhaseId, targetStatusId);
+          unwrapActionResult(await moveTaskToPhase(task.task_id, currentPhaseId, targetStatusId));
           movedInCount++;
         } catch (error) {
           console.error(`Failed to move task ${task.task_id}:`, error);
@@ -1885,7 +1961,18 @@ export default function ProjectDetail({
 
       try {
         const updatedTask = await updateTaskStatus(draggedTaskId, targetStatusId, beforeTaskId, afterTaskId);
-        const checklistItems = await getTaskChecklistItems(draggedTaskId);
+        if (isReturnedActionError(updatedTask)) {
+          setProjectTasks(prevTasks =>
+            prevTasks.map((t): IProjectTask =>
+              t.task_id === draggedTaskId
+                ? { ...t, project_status_mapping_id: task.project_status_mapping_id, order_key: task.order_key }
+                : t
+            )
+          );
+          toast.error(getErrorMessage(updatedTask));
+          return;
+        }
+        const checklistItems = unwrapActionResult(await getTaskChecklistItems(draggedTaskId));
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
         // Reconcile with the authoritative server values (final order_key, etc.).
@@ -1914,7 +2001,7 @@ export default function ProjectDetail({
       animateDroppedTask();
 
       try {
-        await reorderTask(draggedTaskId, beforeTaskId, afterTaskId);
+        unwrapActionResult(await reorderTask(draggedTaskId, beforeTaskId, afterTaskId));
       } catch (error) {
         // Roll back the optimistic reorder on failure.
         setProjectTasks(prevTasks =>
@@ -2066,8 +2153,8 @@ export default function ProjectDetail({
       if (!draggedPhase) return;
       
       const reorderResult = await reorderPhase(draggedPhaseId, beforePhaseId, afterPhaseId);
-      if (isActionPermissionError(reorderResult)) {
-        handleError(reorderResult.permissionError);
+      if (isReturnedActionError(reorderResult)) {
+        handleError(getErrorMessage(reorderResult));
         return;
       }
 
@@ -2203,7 +2290,7 @@ export default function ProjectDetail({
           // Omit the status mapping so moveTaskToPhase performs phase-aware
           // status remapping — passing the source status can land a task on a
           // mapping that isn't valid for the target phase's status set.
-          const movedTask = await moveTaskToPhase(id, targetPhase.phase_id);
+          const movedTask = unwrapActionResult(await moveTaskToPhase(id, targetPhase.phase_id));
           movedById.set(id, movedTask);
           success++;
         } catch (error) {
@@ -2255,12 +2342,12 @@ export default function ProjectDetail({
       // Omit the status mapping so moveTaskToPhase performs phase-aware status
       // remapping — passing the source status can land the task on a mapping
       // that isn't valid for the target phase's status set.
-      const updatedTask = await moveTaskToPhase(
+      const updatedTask = unwrapActionResult(await moveTaskToPhase(
         moveConfirmation.taskId,
         moveConfirmation.targetPhase.phase_id,
-      );
+      ));
 
-      const checklistItems = await getTaskChecklistItems(moveConfirmation.taskId);
+      const checklistItems = unwrapActionResult(await getTaskChecklistItems(moveConfirmation.taskId));
       const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
       setProjectTasks(prevTasks =>
@@ -2302,10 +2389,12 @@ export default function ProjectDetail({
       const activePhase = selectedPhase || currentPhase;
 
       if (activePhase && newTask.wbs_code.startsWith(activePhase.wbs_code)) {
-        const [checklistItems, taskResources] = await Promise.all([
+        const [checklistResult, taskResourcesResult] = await Promise.all([
           getTaskChecklistItems(newTask.task_id),
           getTaskResourcesAction(newTask.task_id)
         ]);
+        const checklistItems = unwrapActionResult(checklistResult);
+        const taskResources = unwrapActionResult(taskResourcesResult);
         const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
 
         setProjectTasks((prevTasks) => [...prevTasks, taskWithChecklist]);
@@ -2385,10 +2474,12 @@ export default function ProjectDetail({
     if (updatedTask) {
       try {
         // Fetch checklist items and task resources in parallel
-        const [checklistItems, taskResources] = await Promise.all([
+        const [checklistResult, taskResourcesResult] = await Promise.all([
           getTaskChecklistItems(updatedTask.task_id),
           getTaskResourcesAction(updatedTask.task_id)
         ]);
+        const checklistItems = unwrapActionResult(checklistResult);
+        const taskResources = unwrapActionResult(taskResourcesResult);
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
         // Update kanban view data
@@ -2483,9 +2574,13 @@ export default function ProjectDetail({
         actual_hours: Number(task.actual_hours) || 0,
         checklist_items: task.checklist_items
       });
+      if (isReturnedActionError(updatedTask)) {
+        toast.error(getErrorMessage(updatedTask));
+        return;
+      }
 
       if (updatedTask) {
-        const checklistItems = await getTaskChecklistItems(taskId);
+        const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
         // Update kanban view data
@@ -2524,6 +2619,10 @@ export default function ProjectDetail({
         checklist_items: task.checklist_items,
         ...updates,
       });
+      if (isReturnedActionError(updatedTask)) {
+        toast.error(getErrorMessage(updatedTask));
+        return;
+      }
 
       if (updatedTask) {
         // Inline list edits (status, priority, due date, hours, etc.) never
@@ -2539,12 +2638,14 @@ export default function ProjectDetail({
   };
 
   const refreshTaskAfterTeamChange = async (taskId: string) => {
-    const [updatedTask, resources] = await Promise.all([
+    const [updatedTaskResult, resourcesResult] = await Promise.all([
       getTaskById(taskId),
       getTaskResourcesAction(taskId),
     ]);
+    const updatedTask = unwrapActionResult(updatedTaskResult);
+    const resources = unwrapActionResult(resourcesResult);
     if (!updatedTask) return;
-    const checklistItems = await getTaskChecklistItems(taskId);
+    const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
     const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
     setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
@@ -2558,7 +2659,7 @@ export default function ProjectDetail({
 
   const performTeamAssign = async (taskId: string, teamId: string) => {
     try {
-      await assignTeamToProjectTask(taskId, teamId);
+      unwrapActionResult(await assignTeamToProjectTask(taskId, teamId));
       await refreshTaskAfterTeamChange(taskId);
       toast.success(t('projectDetail.teamAssignedSuccess', 'Team assigned successfully'));
     } catch (error) {
@@ -2573,7 +2674,7 @@ export default function ProjectDetail({
 
     if (task.assigned_team_id) {
       try {
-        const resources = await getTaskResourcesAction(taskId);
+        const resources = unwrapActionResult(await getTaskResourcesAction(taskId));
         setPendingTaskTeamMembers(resources.filter((r: any) => r.role === 'team_member'));
       } catch (error) {
         console.error('Failed to load task resources for team switch dialog:', error);
@@ -2594,7 +2695,7 @@ export default function ProjectDetail({
     if (!pendingTeamAssign) return;
     const { taskId, teamId } = pendingTeamAssign;
     try {
-      await removeTeamFromProjectTask(taskId, { mode, keepUserIds });
+      unwrapActionResult(await removeTeamFromProjectTask(taskId, { mode, keepUserIds }));
       await performTeamAssign(taskId, teamId);
     } catch (error) {
       handleError(error, t('projectDetail.assignTeamFailed', 'Failed to assign team'));
@@ -2627,8 +2728,8 @@ export default function ProjectDetail({
         start_date: editingStartDate || null,
         end_date: editingEndDate || null
       });
-      if (isActionPermissionError(updatedPhase)) {
-        handleError(updatedPhase.permissionError);
+      if (isReturnedActionError(updatedPhase)) {
+        handleError(getErrorMessage(updatedPhase));
         return;
       }
 
@@ -2674,8 +2775,8 @@ export default function ProjectDetail({
 
     try {
       const deleteResult = await deletePhase(deletePhaseConfirmation.phaseId);
-      if (isActionPermissionError(deleteResult)) {
-        handleError(deleteResult.permissionError);
+      if (isReturnedActionError(deleteResult)) {
+        handleError(getErrorMessage(deleteResult));
         return;
       }
       setProjectPhases(prevPhases =>
@@ -2714,7 +2815,7 @@ export default function ProjectDetail({
 
   const handleReorderTasks = async (updates: { taskId: string, newWbsCode: string }[]) => {
     try {
-      await reorderTasksInStatus(updates);
+      unwrapActionResult(await reorderTasksInStatus(updates));
       // Update local state to reflect the new order
       const updatedTasks = [...projectTasks];
       updates.forEach(({taskId, newWbsCode}) => {
@@ -2751,11 +2852,14 @@ export default function ProjectDetail({
 
     try {
         // Fetch necessary details for the dialog toggles
-        const [resources, links, checklist] = await Promise.all([
+        const [resourcesResult, linksResult, checklistResult] = await Promise.all([
             getTaskResourcesAction(task.task_id),
             getTaskTicketLinksAction(task.task_id),
             getTaskChecklistItems(task.task_id)
         ]);
+        const resources = unwrapActionResult(resourcesResult);
+        const links = unwrapActionResult(linksResult);
+        const checklist = unwrapActionResult(checklistResult);
 
         setTaskToDuplicate(task);
         setDuplicateTaskToggleDetails({
@@ -2782,14 +2886,14 @@ export default function ProjectDetail({
 
     console.log(`Moving task ${taskToMove.task_id} to phase ${targetPhaseId} with status ${targetStatusId}`);
     try {
-      const movedTask = await moveTaskToPhase(
+      const movedTask = unwrapActionResult(await moveTaskToPhase(
         taskToMove.task_id,
         targetPhaseId,
         targetStatusId
-      );
+      ));
 
       if (movedTask) {
-        const checklistItems = await getTaskChecklistItems(movedTask.task_id);
+        const checklistItems = unwrapActionResult(await getTaskChecklistItems(movedTask.task_id));
         const taskWithDetails = { ...movedTask, checklist_items: checklistItems };
 
         // Check if the task was moved to a different phase than the currently selected one
@@ -2843,7 +2947,7 @@ export default function ProjectDetail({
 
     for (const taskId of ids) {
       try {
-        const movedTask = await moveTaskToPhase(taskId, targetPhaseId, targetStatusId);
+        const movedTask = unwrapActionResult(await moveTaskToPhase(taskId, targetPhaseId, targetStatusId));
         if (movedTask) {
           moved.push(movedTask);
         } else {
@@ -2899,7 +3003,12 @@ export default function ProjectDetail({
 
     for (const taskId of ids) {
       try {
-        await deleteTaskAction(taskId);
+        const result = await deleteTaskAction(taskId);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          failed.push(taskId);
+          continue;
+        }
         deleted.push(taskId);
       } catch (error) {
         console.error(`Failed to delete task ${taskId}:`, error);
@@ -2959,7 +3068,7 @@ export default function ProjectDetail({
           // A user assignment should become the primary assignee. The UI renders the
           // team over the user, so any existing team assignment must be removed first.
           if (task.assigned_team_id) {
-            await removeTeamFromProjectTask(taskId, { mode: 'remove_all' });
+            unwrapActionResult(await removeTeamFromProjectTask(taskId, { mode: 'remove_all' }));
             resourcesToRefresh.push(taskId);
           }
           const updatedTask = await updateTaskWithChecklist(taskId, {
@@ -2970,8 +3079,13 @@ export default function ProjectDetail({
             actual_hours: Number(task.actual_hours) || 0,
             checklist_items: task.checklist_items,
           });
+          if (isReturnedActionError(updatedTask)) {
+            toast.error(getErrorMessage(updatedTask));
+            failed++;
+            continue;
+          }
           if (updatedTask) {
-            const checklistItems = await getTaskChecklistItems(taskId);
+            const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
             const taskWithChecklist = { ...updatedTask, assigned_team_id: null, checklist_items: checklistItems };
             setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
             setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
@@ -2989,7 +3103,7 @@ export default function ProjectDetail({
         const refreshed = await Promise.all(
           resourcesToRefresh.map(async (id) => {
             try {
-              return [id, await getTaskResourcesAction(id)] as const;
+              return [id, unwrapActionResult(await getTaskResourcesAction(id))] as const;
             } catch (error) {
               console.error(`Failed to refresh resources for task ${id}:`, error);
               return null;
@@ -3043,9 +3157,9 @@ export default function ProjectDetail({
           // can't surface the per-task keep/remove prompt, so we mirror the
           // single-user-assign path (which always removes the prior team).
           if (task.assigned_team_id) {
-            await removeTeamFromProjectTask(taskId, { mode: 'remove_all' });
+            unwrapActionResult(await removeTeamFromProjectTask(taskId, { mode: 'remove_all' }));
           }
-          await assignTeamToProjectTask(taskId, teamId);
+          unwrapActionResult(await assignTeamToProjectTask(taskId, teamId));
           await refreshTaskAfterTeamChange(taskId);
           success++;
         } catch (error) {
@@ -3088,6 +3202,10 @@ export default function ProjectDetail({
         // the per-task tag state via the existing handler.
         try {
           const refreshed = await findTagsByEntityIds(result.updatedIds, 'project_task');
+          if (isTagActionError(refreshed)) {
+            console.error('Failed to refresh task tags after bulk add:', refreshed);
+            return;
+          }
           const byTask = new Map<string, ITag[]>();
           for (const id of result.updatedIds) byTask.set(id, []);
           for (const tag of refreshed) {
@@ -4116,13 +4234,13 @@ export default function ProjectDetail({
           onConfirm={async (targetPhaseId: string, options: DuplicateOptions) => {
             if (!taskToDuplicate) return;
             try {
-              const newTask = await duplicateTaskToPhase(
+              const newTask = unwrapActionResult(await duplicateTaskToPhase(
                 taskToDuplicate.task_id,
                 targetPhaseId,
                 options
-              );
+              ));
               
-              const checklistItems = await getTaskChecklistItems(newTask.task_id);
+              const checklistItems = unwrapActionResult(await getTaskChecklistItems(newTask.task_id));
               const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
               setProjectTasks(prev => [...prev, taskWithChecklist]);
               // Add to allProjectTasks for filtered counts
@@ -4231,7 +4349,12 @@ export default function ProjectDetail({
           onConfirm={async () => {
             if (!taskToDelete) return;
             try {
-              await deleteTaskAction(taskToDelete.task_id);
+              const result = await deleteTaskAction(taskToDelete.task_id);
+              if (isReturnedActionError(result)) {
+                toast.error(getErrorMessage(result));
+                setTaskToDelete(null);
+                return;
+              }
               setProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));
               // Remove from allProjectTasks for filtered counts
               setAllProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));

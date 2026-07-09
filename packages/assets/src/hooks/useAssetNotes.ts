@@ -2,13 +2,28 @@ import useSWR from 'swr';
 import { useState, useCallback } from 'react';
 import { getAssetNoteContent, saveAssetNote } from '@alga-psa/assets/actions/assetNoteActions';
 import { toast } from 'react-hot-toast';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type PartialBlock = unknown;
+const isAssetActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionPermissionError(value) || isActionMessageError(value);
 
 export function useAssetNotes(assetId: string) {
   const { data: noteContent, error, isLoading, mutate: mutateNotes } = useSWR(
     assetId ? ['asset', assetId, 'notes'] : null,
-    ([_, id]) => getAssetNoteContent(id)
+    async ([_, id]) => {
+      const result = await getAssetNoteContent(id);
+      if (isAssetActionError(result)) {
+        throw new Error(getErrorMessage(result));
+      }
+      return result;
+    }
   );
 
   const [isSaving, setIsSaving] = useState(false);
@@ -21,7 +36,11 @@ export function useAssetNotes(assetId: string) {
         setIsSaving(true);
         const payload = typeof blockData === 'string' ? blockData : JSON.stringify(blockData);
 
-        await saveAssetNote(assetId, payload);
+        const result = await saveAssetNote(assetId, payload);
+        if (isAssetActionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
 
         await mutateNotes();
 
@@ -29,7 +48,6 @@ export function useAssetNotes(assetId: string) {
       } catch (error) {
         console.error('Error saving notes:', error);
         toast.error('Failed to save notes');
-        throw error;
       } finally {
         setIsSaving(false);
       }
@@ -48,4 +66,3 @@ export function useAssetNotes(assetId: string) {
     isSaving,
   };
 }
-

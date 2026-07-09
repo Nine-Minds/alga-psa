@@ -5,7 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import type { TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   addTicketCommentWithCacheForCurrentUser,
@@ -16,6 +23,17 @@ import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { persistTicketDescriptionUpdate } from './ticketDescriptionUpdate';
 import { TicketLiveProvider } from './TicketLiveProvider';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
+const handleTicketActionError = (error: unknown, fallback: string) => {
+  if (isReturnedActionError(error)) {
+    toast.error(getErrorMessage(error));
+    return;
+  }
+  handleError(error, fallback);
+};
 
 interface TicketDetailsContainerProps {
   ticketData: {
@@ -162,10 +180,13 @@ export default function TicketDetailsContainer({
 
     try {
       setIsSubmitting(true);
-      await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, { [field]: value });
+      const result = await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, { [field]: value });
+      if (isReturnedActionError(result)) {
+        throw result;
+      }
       toast.success(t('messages.ticketUpdated', 'Ticket updated successfully'));
     } catch (error) {
-      handleError(error, t('errors.updateField', 'Failed to update {{field}}', { field }));
+      handleTicketActionError(error, t('errors.updateField', 'Failed to update {{field}}', { field }));
       // Re-throw so the optimistic caller (handleSelectChange) reverts the field
       // to its previous value. Without this, a rejected write (e.g. a board
       // change that the server refuses without a destination status) leaves the
@@ -192,7 +213,10 @@ export default function TicketDetailsContainer({
           normalizedChanges.assigned_to = value && value !== 'unassigned' ? value : null;
         }
 
-        await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, normalizedChanges);
+        const result = await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, normalizedChanges);
+        if (isReturnedActionError(result)) {
+          throw result;
+        }
         toast.success(t('info.changesSaved', 'Changes saved successfully!'));
 
         // Refresh the page to get updated data
@@ -200,7 +224,7 @@ export default function TicketDetailsContainer({
 
         return true;
       } catch (error) {
-        handleError(error, t('errors.saveChanges', 'Failed to save changes'));
+        handleTicketActionError(error, t('errors.saveChanges', 'Failed to save changes'));
         return false;
       }
     });
@@ -226,11 +250,14 @@ export default function TicketDetailsContainer({
         isResolution,
         closesTicket
       );
+      if (isReturnedActionError(newComment)) {
+        throw newComment;
+      }
 
       setComments(prev => [...prev, newComment]);
       toast.success(t('messages.commentAdded', 'Comment added successfully'));
     } catch (error) {
-      handleError(error, t('errors.addComment', 'Failed to add comment'));
+      handleTicketActionError(error, t('errors.addComment', 'Failed to add comment'));
     } finally {
       setIsSubmitting(false);
     }

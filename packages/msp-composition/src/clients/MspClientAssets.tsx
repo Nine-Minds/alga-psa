@@ -4,11 +4,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { ClientMaintenanceSummary, Asset, AssetTypeRegistryEntry } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { getClientMaintenanceSummary, listAssets } from '@alga-psa/assets/actions/assetActions';
+import { unwrapAssetActionResult } from '@alga-psa/assets/actions/assetActionErrors';
 import { loadAssetDetailDrawerData } from '@alga-psa/assets/actions/assetDrawerActions';
 import { getAssetTypes } from '@alga-psa/assets/actions/assetTypeRegistryActions';
 import { fallbackAssetTypeLabel, resolveAssetTypeLabel } from '@alga-psa/assets/lib/assetTypeDisplay';
 import { isBuiltinAssetTypeSlug } from '@alga-psa/assets/lib/assetTypeAttributes';
 import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   Boxes,
   AlertTriangle,
@@ -79,7 +81,12 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
     let mounted = true;
     getAssetTypes()
       .then((entries) => {
-        if (mounted) setAssetTypeEntries(entries);
+        if (!mounted) return;
+        if (isActionPermissionError(entries)) {
+          setAssetTypeEntries([]);
+          return;
+        }
+        setAssetTypeEntries(entries);
       })
       .catch((error) => {
         console.error('Error loading asset types:', error);
@@ -189,13 +196,13 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
     try {
       setLoadError(false);
       const [summaryData, assetsData] = await Promise.all([
-        getClientMaintenanceSummary(clientId),
+        getClientMaintenanceSummary(clientId).then(unwrapAssetActionResult),
         listAssets({
           client_id: clientId,
           asset_type: selectedType === 'all' ? undefined : selectedType,
           page: currentPage,
           limit: pageSize
-        })
+        }).then(unwrapAssetActionResult)
       ]);
       setSummary(summaryData);
       setAssets(assetsData.assets);

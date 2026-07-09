@@ -191,7 +191,7 @@ export function MicrosoftCalendarProviderForm({
 
     } catch (error: any) {
       setOAuthStatus('error');
-      setOAuthError(error.message || t('calendar.providers.common.oauth.initiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
+      setOAuthError(t('calendar.providers.common.oauth.initiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
     }
   };
 
@@ -230,7 +230,7 @@ export function MicrosoftCalendarProviderForm({
         onSuccess();
       }
     } catch (error: any) {
-      form.setError('root', { message: error.message || t('calendar.providers.common.errors.saveFailed', { defaultValue: 'Failed to save provider' }) });
+      form.setError('root', { message: t('calendar.providers.common.errors.saveFailed', { defaultValue: 'Failed to save provider' }) });
     } finally {
       setIsSubmitting(false);
     }

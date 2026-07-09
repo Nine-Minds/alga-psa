@@ -26,8 +26,16 @@ import { BucketOverlayFields } from '../contracts/BucketOverlayFields';
 import { BucketOverlayInput } from '../contracts/ContractWizard';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; labelKey: string; defaultLabel: string }> = [
   { value: 'fixed', labelKey: 'services.hourlyPreset.billingMethod.fixed', defaultLabel: 'Fixed Price' },
@@ -70,11 +78,19 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
     try {
       // Fetch preset to get billing frequency
       const preset = await getContractLinePresetById(presetId);
+      if (isReturnedActionError(preset)) {
+        setError(getErrorMessage(preset));
+        return;
+      }
       if (preset) {
         setBillingFrequency(preset.billing_frequency || 'monthly');
       }
 
       const presetServicesData = await getContractLinePresetServices(presetId);
+      if (isReturnedActionError(presetServicesData)) {
+        setError(getErrorMessage(presetServicesData));
+        return;
+      }
       const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
       const allAvailableServices = Array.isArray(servicesResponse)
         ? servicesResponse
@@ -295,7 +311,11 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
         bucket_allow_rollover: s.bucket_overlay?.allow_rollover
       }));
 
-      await updateContractLinePresetServices(presetId, servicesToSave);
+      const result = await updateContractLinePresetServices(presetId, servicesToSave);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       await fetchData();
 
       toast.success(t('services.hourlyPreset.toast.savedSuccessfully', {

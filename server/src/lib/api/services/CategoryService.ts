@@ -8,6 +8,7 @@ import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
+import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 // Import category models and interfaces
 import TicketCategory from '../../models/ticketCategory';
@@ -213,7 +214,7 @@ export class CategoryService extends BaseService {
         .returning('*');
 
       if (!updated) {
-        throw new Error('Service category not found');
+        throw new NotFoundError('Service category not found');
       }
 
       return updated as ServiceCategoryResponse;
@@ -234,7 +235,7 @@ export class CategoryService extends BaseService {
         .first();
 
       if (parseInt(usageCount?.count as string || '0') > 0) {
-        throw new Error('Cannot delete category that is in use by service items');
+        throw new ConflictError('Cannot delete category that is in use by service items');
       }
 
       // Clear category_id from service_request_definitions (replaces ON DELETE SET NULL)
@@ -247,7 +248,7 @@ export class CategoryService extends BaseService {
         .del();
 
       if (!deleted) {
-        throw new Error('Service category not found');
+        throw new NotFoundError('Service category not found');
       }
     });
   }
@@ -356,7 +357,7 @@ export class CategoryService extends BaseService {
           .first();
 
         if (!parent) {
-          throw new Error('Parent category not found');
+          throw new NotFoundError('Parent category not found');
         }
 
         // Check for circular hierarchy
@@ -368,8 +369,23 @@ export class CategoryService extends BaseService {
         );
 
         if (wouldCreateCircular) {
-          throw new Error('Cannot create circular hierarchy');
+          throw new ValidationError('Cannot create circular hierarchy');
         }
+      }
+
+      const duplicate = await this.buildTenantScopedQuery(trx, context)
+        .whereRaw('LOWER(category_name) = LOWER(?)', [data.category_name.trim()])
+        .modify((q) => {
+          if (data.board_id) {
+            q.where('board_id', data.board_id);
+          } else {
+            q.whereNull('board_id');
+          }
+        })
+        .first();
+
+      if (duplicate) {
+        throw new ConflictError('A ticket category with this name already exists in this board');
       }
 
       // display_order is NOT NULL with no default; append after the current max
@@ -426,7 +442,7 @@ export class CategoryService extends BaseService {
             .first();
 
           if (!parent) {
-            throw new Error('Parent category not found');
+            throw new NotFoundError('Parent category not found');
           }
 
           // Check for circular hierarchy
@@ -438,7 +454,7 @@ export class CategoryService extends BaseService {
           );
 
           if (wouldCreateCircular) {
-            throw new Error('Cannot create circular hierarchy');
+            throw new ValidationError('Cannot create circular hierarchy');
           }
         }
       }
@@ -460,10 +476,37 @@ export class CategoryService extends BaseService {
           .where('category_id', id)
           .first();
         if (!existing) {
-          throw new Error('Ticket category not found');
+          throw new NotFoundError('Ticket category not found');
         }
         const [enrichedExisting] = await this.enrichCategoriesWithHierarchy([existing], trx);
         return enrichedExisting as TicketCategoryResponse;
+      }
+
+      if (updateData.category_name !== undefined || updateData.board_id !== undefined) {
+        const existing = await this.buildTenantScopedQuery(trx, context)
+          .where('category_id', id)
+          .first();
+
+        if (!existing) {
+          throw new NotFoundError('Ticket category not found');
+        }
+
+        const nextBoardId = updateData.board_id ?? existing.board_id;
+        const duplicate = await this.buildTenantScopedQuery(trx, context)
+          .whereRaw('LOWER(category_name) = LOWER(?)', [(updateData.category_name ?? existing.category_name).trim()])
+          .whereNot('category_id', id)
+          .modify((q) => {
+            if (nextBoardId) {
+              q.where('board_id', nextBoardId);
+            } else {
+              q.whereNull('board_id');
+            }
+          })
+          .first();
+
+        if (duplicate) {
+          throw new ConflictError('A ticket category with this name already exists in this board');
+        }
       }
 
       const [updated] = await this.buildTenantScopedQuery(trx, context)
@@ -472,7 +515,7 @@ export class CategoryService extends BaseService {
         .returning('*');
 
       if (!updated) {
-        throw new Error('Ticket category not found');
+        throw new NotFoundError('Ticket category not found');
       }
 
       // Enrich with hierarchy information
@@ -495,7 +538,7 @@ export class CategoryService extends BaseService {
         .first();
 
       if (parseInt(childrenCount?.count as string || '0') > 0) {
-        throw new Error('Cannot delete category that has child categories');
+        throw new ConflictError('Cannot delete category that has child categories');
       }
 
       // Check if category is in use by tickets
@@ -505,7 +548,7 @@ export class CategoryService extends BaseService {
         .first();
 
       if (parseInt(usageCount?.count as string || '0') > 0) {
-        throw new Error('Cannot delete category that is in use by tickets');
+        throw new ConflictError('Cannot delete category that is in use by tickets');
       }
 
       const deleted = await this.buildTenantScopedQuery(trx, context)
@@ -513,7 +556,7 @@ export class CategoryService extends BaseService {
         .del();
 
       if (!deleted) {
-        throw new Error('Ticket category not found');
+        throw new NotFoundError('Ticket category not found');
       }
     });
   }
@@ -562,7 +605,7 @@ export class CategoryService extends BaseService {
           .first();
 
         if (!parent) {
-          throw new Error('New parent category not found');
+          throw new NotFoundError('New parent category not found');
         }
 
         // Check for circular hierarchy
@@ -574,7 +617,7 @@ export class CategoryService extends BaseService {
         );
 
         if (wouldCreateCircular) {
-          throw new Error('Cannot create circular hierarchy');
+          throw new ValidationError('Cannot create circular hierarchy');
         }
       }
 
@@ -586,7 +629,7 @@ export class CategoryService extends BaseService {
         .returning('*');
 
       if (!updated) {
-        throw new Error('Category not found');
+        throw new NotFoundError('Category not found');
       }
 
       // Enrich with hierarchy information
@@ -752,9 +795,9 @@ export class CategoryService extends BaseService {
         try {
           await this.deleteTicketCategory(categoryId, context);
           success++;
-        } catch (error) {
+        } catch {
           failed++;
-          errors.push(`${categoryId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          errors.push(`${categoryId}: Failed to delete category.`);
         }
       }
 

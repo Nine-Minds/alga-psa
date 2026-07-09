@@ -11,7 +11,7 @@ import { Calendar, Settings } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAppointmentRequests } from '@alga-psa/scheduling/actions';
 import { getCurrentUserPermissions, getCurrentUser, getReportsToSubordinates } from '@alga-psa/user-composition/actions';
-import { getTeams } from '@alga-psa/teams/actions';
+import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 
 export default function SchedulePage() {
   const { t } = useTranslation('msp/schedule');
@@ -48,6 +48,11 @@ export default function SchedulePage() {
       const currentUser = await getCurrentUser();
       if (currentUser) {
         const teams = await getTeams();
+        if (isTeamActionError(teams)) {
+          console.warn('Cannot load teams for availability permission check:', teams);
+          setCanConfigureAvailability(false);
+          return;
+        }
         const isManager = teams.some(team => team.manager_id === currentUser.user_id);
         if (isManager) {
           setCanConfigureAvailability(true);

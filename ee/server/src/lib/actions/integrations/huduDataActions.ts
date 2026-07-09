@@ -48,6 +48,7 @@ import type {
   HuduAssetPassword,
   HuduAssetPasswordSummary,
 } from '../../integrations/hudu/contracts';
+import { huduActionErrorMessage } from './huduActionErrors';
 
 // NB: HuduLinkedItem / HuduCompanyDataResult / HuduCompanyFetchOptions are NOT
 // re-exported here — a `'use server'` module may only export async actions, and
@@ -231,8 +232,12 @@ export const revealHuduPassword = withHuduSettingsAccess(
         error: toErrorMessage(error),
       });
       return error instanceof HuduRequestError
-        ? { state: 'error', error: toErrorMessage(error), errorKind: error.hudu.kind }
-        : { state: 'error', error: toErrorMessage(error) };
+        ? {
+            state: 'error',
+            error: huduActionErrorMessage(error, 'Unable to reveal the Hudu password. Please try again.'),
+            errorKind: error.hudu.kind
+          }
+        : { state: 'error', error: huduActionErrorMessage(error, 'Unable to reveal the Hudu password. Please try again.') };
     }
   }
 );

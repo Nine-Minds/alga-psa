@@ -11,6 +11,7 @@ import { TemplateHourlyServicesStep } from './steps/TemplateHourlyServicesStep';
 import { TemplateUsageBasedServicesStep } from './steps/TemplateUsageBasedServicesStep';
 import { TemplateReviewContractStep } from './steps/TemplateReviewContractStep';
 import { createContractTemplateFromWizard, ContractTemplateWizardSubmission, checkTemplateNameExists } from '@alga-psa/billing/actions/contractWizardActions';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   getUnsupportedRecurringAuthoringCombination,
   getUnsupportedRecurringAuthoringCombinationMessage,
@@ -350,7 +351,14 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     setIsSaving(true);
     try {
       const submission = buildSubmissionData();
-      await createContractTemplateFromWizard(submission);
+      const result = await createContractTemplateFromWizard(submission);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setErrors((prev) => ({
+          ...prev,
+          [currentStep]: getErrorMessage(result),
+        }));
+        return;
+      }
       if (onComplete) {
         onComplete(wizardData);
       }

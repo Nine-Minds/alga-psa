@@ -11,6 +11,12 @@ import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import type { IDocument, IFolderNode } from '@alga-psa/types';
 import { getClientDocuments, getClientDocumentFolders, downloadClientDocument, ClientDocumentFilters, PaginatedClientDocuments } from '@alga-psa/client-portal/actions/client-portal-actions/client-documents';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 function getDocumentIcon(mimeType: string | undefined): React.ReactNode {
   if (!mimeType) return <File className="w-5 h-5" />;
@@ -187,6 +193,10 @@ export default function ClientDocumentsPage() {
       }
 
       const result = await getClientDocuments(page, pageSize, filters);
+      if (isReturnedActionError(result)) {
+        setLoadError(getErrorMessage(result));
+        return;
+      }
       setDocuments(result.documents);
       setTotalPages(result.totalPages);
       setTotal(result.total);
@@ -201,6 +211,10 @@ export default function ClientDocumentsPage() {
   const loadFolders = useCallback(async () => {
     try {
       const result = await getClientDocumentFolders();
+      if (isReturnedActionError(result)) {
+        setLoadError(getErrorMessage(result));
+        return;
+      }
       setFolders(result);
     } catch (error) {
       console.error('Failed to load folders:', error);
@@ -229,7 +243,11 @@ export default function ClientDocumentsPage() {
     try {
       setDownloadingId(doc.document_id);
       // Verify access before downloading
-      await downloadClientDocument(doc.document_id);
+      const accessResult = await downloadClientDocument(doc.document_id);
+      if (isReturnedActionError(accessResult)) {
+        setLoadError(getErrorMessage(accessResult));
+        return;
+      }
       // Use the standard download utility
       await downloadDocument(await getDocumentDownloadUrl(doc.file_id || ''), doc.document_name);
     } catch (error) {

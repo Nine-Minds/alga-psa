@@ -7,7 +7,7 @@ import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
-import { createDefaultTaxSettings } from '@alga-psa/billing/actions';
+import { createDefaultTaxSettingsInternal } from '@alga-psa/billing/actions';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { NotFoundError, ValidationError } from '../../api/middleware/apiMiddleware';
@@ -320,7 +320,7 @@ export class ClientService extends BaseService<IClient> {
     // Try to create default tax settings for the client with tenant context (after transaction)
     try {
       await runWithTenant(context.tenant, async () => {
-        await createDefaultTaxSettings(client.client_id);
+        await createDefaultTaxSettingsInternal(client.client_id);
       });
     } catch (taxError) {
       console.warn('Failed to create default tax settings:', taxError);
@@ -1053,7 +1053,7 @@ export class ClientService extends BaseService<IClient> {
 
         const tagId = tagDef?.tag_id;
         if (!tagId) {
-          throw new Error('Failed to resolve tag definition');
+          throw new Error('Tag definition upsert completed without returning a tag ID.');
         }
 
         // Create the mapping

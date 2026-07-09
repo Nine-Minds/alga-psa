@@ -52,10 +52,33 @@ type AuthoritativePreviewResult = {
   };
 };
 
+function previewFailureResult(message: string, details?: string): AuthoritativePreviewResult {
+  return {
+    success: false,
+    sourceHash: null,
+    generatedSource: null,
+    compile: {
+      status: 'error',
+      diagnostics: [
+        {
+          kind: 'runtime',
+          severity: 'error',
+          message,
+          raw: message,
+        },
+      ],
+      error: message,
+      details,
+    },
+    render: { status: 'idle', html: null, css: null, contentHeightPx: null },
+    verification: { status: 'idle', mismatches: [] },
+  };
+}
+
 export const runAuthoritativeInvoiceTemplatePreview = withAuth(
   async (user, _context, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
     if (!await hasPermission(user, 'billing', 'read')) {
-      throw new Error('Permission denied: billing read required');
+      return previewFailureResult('Permission denied: billing read required');
     }
 
     const hasWorkspaceNodes =
@@ -144,6 +167,7 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
       };
     } catch (error: any) {
       const isEvaluationError = error instanceof TemplateEvaluationError;
+      const runtimeMessage = 'Template evaluation failed unexpectedly.';
       return {
         success: false,
         sourceHash,
@@ -164,12 +188,12 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
                 {
                   kind: 'runtime',
                   severity: 'error',
-                  message: error?.message || String(error),
-                  raw: String(error?.message || error),
+                  message: runtimeMessage,
+                  raw: runtimeMessage,
                 },
               ],
           error: isEvaluationError ? error.message : 'Evaluation failed.',
-          details: error?.message || String(error),
+          details: isEvaluationError ? error.message : runtimeMessage,
         },
         render: {
           status: 'idle',

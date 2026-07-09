@@ -34,7 +34,7 @@ import { IBoard } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { TagManager } from '@alga-psa/tags/components';
-import { findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import ContactAvatarUpload from './ContactAvatarUpload';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { getClientById } from '@alga-psa/clients/actions';
@@ -47,6 +47,16 @@ import ContactEmailAddressesEditor, {
   compactContactEmailAddresses,
   validateContactEmailAddresses,
 } from './ContactEmailAddressesEditor';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 type EditableContact = Omit<IContact, 'phone_numbers' | 'additional_email_addresses'> & {
   phone_numbers: ContactPhoneNumberInput[];
@@ -241,6 +251,10 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       if (!currentUser) return;
       try {
         const options = await getTicketFormOptions();
+        if (isReturnedActionError(options)) {
+          console.warn('Error fetching ticket form options:', getErrorMessage(options));
+          return;
+        }
         setTicketFormOptions({
           statusOptions: options.statusOptions,
           priorityOptions: options.priorityOptions,
@@ -283,6 +297,11 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       try {
         const rows = await listInboundTicketDestinationOptions();
         if (cancelled) return;
+        if (isReturnedActionError(rows)) {
+          console.error('Error loading inbound ticket destination options:', getErrorMessage(rows));
+          setInboundDestinationOptions([]);
+          return;
+        }
         setInboundDestinationOptions(
           (rows ?? []).map((row: any) => ({
             value: row.id,
@@ -318,7 +337,12 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           ]);
           
           setAvatarUrl(contactAvatarUrl);
-          setTags(fetchedTags);
+          if (isTagActionError(fetchedTags)) {
+            console.error('Error fetching contact tags:', fetchedTags);
+            setTags([]);
+          } else {
+            setTags(fetchedTags);
+          }
         } catch (error) {
           console.error('Error fetching avatar and tags:', error);
         }
@@ -401,12 +425,11 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       } else {
         router.push('/msp/contacts');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to delete contact:', error);
-      const errorMessage = error.message || t('contactDetails.delete.failed', { defaultValue: 'Failed to delete contact. Please try again.' });
       toast({
         title: t('contactDetails.error.title', { defaultValue: 'Error' }),
-        description: errorMessage,
+        description: t('contactDetails.delete.failed', { defaultValue: 'Failed to delete contact. Please try again.' }),
         variant: "destructive"
       });
     } finally {
@@ -433,6 +456,14 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         ...editedContact,
         is_inactive: true
       });
+      if (isReturnedActionError(updatedContact)) {
+        toast({
+          title: t('contactDetails.error.title', { defaultValue: 'Error' }),
+          description: getErrorMessage(updatedContact),
+          variant: "destructive"
+        });
+        return;
+      }
 
       setIsDeleteDialogOpen(false);
 
@@ -495,6 +526,15 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       };
 
       const updatedContact = await updateContact(dataToUpdate);
+      if (isReturnedActionError(updatedContact)) {
+        toast({
+          title: t('contactDetails.saveFailed.title', { defaultValue: 'Save Failed' }),
+          description: getErrorMessage(updatedContact),
+          variant: 'destructive',
+        });
+        return;
+      }
+
       setEditedContact({
         ...updatedContact,
         additional_email_addresses: updatedContact.additional_email_addresses ?? [],

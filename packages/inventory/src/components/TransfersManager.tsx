@@ -9,6 +9,13 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockTransfer, IStockLocation } from '@alga-psa/types';
 import {
@@ -50,6 +57,12 @@ const STATUS_VARIANT: Record<string, 'secondary' | 'info' | 'warning' | 'success
   received: 'success',
   cancelled: 'error',
 };
+
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+function isReturnedActionError(value: unknown): value is ReturnedActionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 export function TransfersManager({
   initialTransfers,
@@ -95,7 +108,13 @@ export function TransfersManager({
 
   const reload = useCallback(async () => {
     try {
-      setTransfers(await listTransfers({}));
+      const result = await listTransfers({});
+      if (isReturnedActionError(result)) {
+        setTransfers([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setTransfers(result);
     } catch (e) {
       console.error(e);
       toast.error(t('transfers.loadFailed', 'Failed to load transfers'));
@@ -106,7 +125,13 @@ export function TransfersManager({
     setForm(emptyForm());
     setDialogOpen(true);
     try {
-      setLocations(await listStockLocations({ includeInactive: false }));
+      const result = await listStockLocations({ includeInactive: false });
+      if (isReturnedActionError(result)) {
+        setLocations([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setLocations(result);
     } catch (e) {
       console.error(e);
       toast.error(t('transfers.loadLocationsFailed', 'Failed to load locations'));
@@ -126,7 +151,13 @@ export function TransfersManager({
     setLoadListOpening(true);
     setLoadListOpen(true);
     try {
-      setLocations(await listStockLocations({ includeInactive: false }));
+      const result = await listStockLocations({ includeInactive: false });
+      if (isReturnedActionError(result)) {
+        setLocations([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setLocations(result);
     } catch (e) {
       console.error(e);
       toast.error(t('transfers.loadLocationsFailed', 'Failed to load locations'));
@@ -170,7 +201,13 @@ export function TransfersManager({
   const computeVanLoadList = async () => {
     setLoadListComputing(true);
     try {
-      setLoadListResult(await computeLoadList(loadListTo, loadListFrom));
+      const result = await computeLoadList(loadListTo, loadListFrom);
+      if (isReturnedActionError(result)) {
+        setLoadListResult(null);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setLoadListResult(result);
     } catch (e: any) {
       toast.error(e?.message || t('transfers.computeFailed', 'Failed to compute load list'));
     } finally {
@@ -210,6 +247,10 @@ export function TransfersManager({
         notes: 'Van load list replenishment',
         lines,
       });
+      if (isReturnedActionError(transfer)) {
+        toast.error(getErrorMessage(transfer));
+        return;
+      }
       const lineCount = transfer.lines?.length ?? lines.length;
       toast.success(
         lineCount === 1
@@ -243,11 +284,15 @@ export function TransfersManager({
     }
     setSaving(true);
     try {
-      await dispatchTransfer({
+      const result = await dispatchTransfer({
         from_location_id: form.from_location_id,
         to_location_id: form.to_location_id,
         lines,
       });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('transfers.dispatched', 'Transfer dispatched'));
       setDialogOpen(false);
       await reload();
@@ -260,7 +305,12 @@ export function TransfersManager({
 
   const receive = async (rec: IStockTransfer) => {
     try {
-      await receiveTransfer(rec.transfer_id);
+      const result = await receiveTransfer(rec.transfer_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('transfers.received', 'Transfer received'));
       await reload();
     } catch (e: any) {
@@ -272,7 +322,12 @@ export function TransfersManager({
     if (!cancelTarget) return;
     setCancelling(true);
     try {
-      await cancelTransfer(cancelTarget.transfer_id);
+      const result = await cancelTransfer(cancelTarget.transfer_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('transfers.cancelled', 'Transfer cancelled'));
       setCancelTarget(null);
       await reload();

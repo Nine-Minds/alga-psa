@@ -130,8 +130,8 @@ export const getGoogleIntegrationStatus = withAuth(async (
         usingSharedOAuthApp: Boolean(gmailClientId && gmailClientSecret && !calendarClientId && !calendarClientSecret)
       }
     };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to load Google integration status' };
+  } catch {
+    return { success: false, error: 'Failed to load Google integration status' };
   }
 });
 
@@ -203,8 +203,8 @@ export const saveGoogleIntegrationSettings = withAuth(async (
     }
 
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to save Google integration settings' };
+  } catch {
+    return { success: false, error: 'Failed to save Google integration settings' };
   }
 });
 
@@ -266,7 +266,7 @@ export const resetGoogleProvidersToDisconnected = withAuth(async (
       });
 
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to reset Google providers' };
+  } catch {
+    return { success: false, error: 'Failed to reset Google providers' };
   }
 });

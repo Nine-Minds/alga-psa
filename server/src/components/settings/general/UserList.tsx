@@ -21,6 +21,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface UserListProps {
   users: IUser[];
@@ -114,6 +115,10 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
 
       try {
         const result = await getUsersClientInfo(usersToFetch);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          console.error('Error fetching clients for users', result);
+          return;
+        }
         const map: Record<string, { client_id: string; client_name: string } | null> = {};
         result.forEach((row) => {
           map[row.user_id] = row.client_id

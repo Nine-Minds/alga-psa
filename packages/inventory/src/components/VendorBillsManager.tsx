@@ -8,6 +8,13 @@ import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IVendorBill, IVendor, VendorBillStatus } from '@alga-psa/types';
 import {
@@ -27,8 +34,8 @@ type BillRow = IVendorBill & { vendor_name: string | null; po_number: string | n
 // Billing actions cannot be imported here (inventory must not depend on billing); the
 // vendor-bills server page injects them (F047, ghost-usage props idiom).
 interface VendorBillExportProps {
-  exportBill?: (billId: string) => Promise<VendorBillExportStatus>;
-  getExportStatuses?: (billIds: string[]) => Promise<VendorBillExportStatus[]>;
+  exportBill?: (billId: string) => Promise<VendorBillExportStatus | ActionMessageError | ActionPermissionError>;
+  getExportStatuses?: (billIds: string[]) => Promise<VendorBillExportStatus[] | ActionMessageError | ActionPermissionError>;
 }
 
 const money = (cents: number, currency?: string): string =>
@@ -42,11 +49,17 @@ interface CreateForm {
 
 const emptyCreate = (): CreateForm => ({ vendor_id: '', bill_number: '', po_id: '' });
 
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
 export function VendorBillsManager({
   initialBills,
+  loadErrorMessage,
   exportBill,
   getExportStatuses,
-}: { initialBills: BillRow[] } & VendorBillExportProps) {
+}: { initialBills: BillRow[]; loadErrorMessage?: string } & VendorBillExportProps) {
   const { t } = useTranslation('features/inventory');
   const [bills, setBills] = useState<BillRow[]>(initialBills || []);
   const [statusFilter, setStatusFilter] = useState('');
@@ -75,18 +88,41 @@ export function VendorBillsManager({
 
   const reload = useCallback(async () => {
     try {
-      setBills(await listVendorBills());
+      const result = await listVendorBills();
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setBills(result);
     } catch (e: any) {
       toast.error(e?.message || t('vendorBills.loadError', "Couldn't load vendor bills."));
     }
   }, [t]);
 
   useEffect(() => {
-    listVendors({ includeInactive: false }).then(setVendors).catch(() => setVendors([]));
+    if (loadErrorMessage) {
+      toast.error(loadErrorMessage);
+    }
+  }, [loadErrorMessage]);
+
+  useEffect(() => {
+    listVendors({ includeInactive: false })
+      .then((rows) => {
+        if (isReturnedActionError(rows)) {
+          setVendors([]);
+          return;
+        }
+        setVendors(rows);
+      })
+      .catch(() => setVendors([]));
     listPurchaseOrders()
-      .then((rows: any[]) =>
-        setPos(rows.map((r) => ({ po_id: r.po_id, po_number: r.po_number, vendor_id: r.vendor_id }))),
-      )
+      .then((rows) => {
+        if (isActionMessageError(rows) || isActionPermissionError(rows)) {
+          setPos([]);
+          return;
+        }
+        setPos(rows.map((r) => ({ po_id: r.po_id, po_number: r.po_number, vendor_id: r.vendor_id })));
+      })
       .catch(() => setPos([]));
   }, []);
 
@@ -97,6 +133,9 @@ export function VendorBillsManager({
     let cancelled = false;
     getExportStatuses(bills.map((b) => b.bill_id))
       .then((rows) => {
+        if (isActionMessageError(rows) || isActionPermissionError(rows)) {
+          return;
+        }
         if (!cancelled) setExportStatuses(new Map(rows.map((r) => [r.bill_id, r])));
       })
       .catch(() => {
@@ -112,6 +151,10 @@ export function VendorBillsManager({
     setExporting(bill.bill_id);
     try {
       const status = await exportBill(bill.bill_id);
+      if (isActionMessageError(status) || isActionPermissionError(status)) {
+        toast.error(getErrorMessage(status));
+        return;
+      }
       setExportStatuses((prev) => new Map(prev).set(bill.bill_id, status));
       if (status.state === 'exported') {
         toast.success(t('vendorBills.exportedToAccounting', 'Exported to accounting.'));
@@ -134,15 +177,17 @@ export function VendorBillsManager({
     }
     setBusy('create');
     try {
-      if (form.po_id) {
-        // Prefill from the PO's received quantities/costs (F078).
-        await createBillFromPo(form.po_id, form.bill_number.trim());
-      } else {
-        if (!form.vendor_id) {
-          toast.error(t('vendorBills.pickVendor', 'Pick a vendor (or a PO to prefill from).'));
-          return;
-        }
-        await createVendorBill({ vendor_id: form.vendor_id, bill_number: form.bill_number.trim() });
+      if (!form.po_id && !form.vendor_id) {
+        toast.error(t('vendorBills.pickVendor', 'Pick a vendor (or a PO to prefill from).'));
+        return;
+      }
+      // Prefill from the PO's received quantities/costs (F078).
+      const result = form.po_id
+        ? await createBillFromPo(form.po_id, form.bill_number.trim())
+        : await createVendorBill({ vendor_id: form.vendor_id, bill_number: form.bill_number.trim() });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
       }
       toast.success(t('vendorBills.billCreated', 'Bill created (draft).'));
       setCreateOpen(false);
@@ -158,7 +203,12 @@ export function VendorBillsManager({
   const transition = async (bill: BillRow, status: VendorBillStatus) => {
     setBusy(`${status}:${bill.bill_id}`);
     try {
-      await setVendorBillStatus(bill.bill_id, status);
+      const result = await setVendorBillStatus(bill.bill_id, status);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(
         status === 'paid'
           ? t('vendorBills.billPaid', 'Bill marked paid.')
@@ -176,7 +226,13 @@ export function VendorBillsManager({
 
   const openDetail = async (bill: BillRow) => {
     try {
-      setDetail(await getVendorBill(bill.bill_id));
+      const result = await getVendorBill(bill.bill_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
+      setDetail(result);
     } catch (e: any) {
       toast.error(e?.message || t('vendorBills.billLoadError', "Couldn't load the bill."));
     }

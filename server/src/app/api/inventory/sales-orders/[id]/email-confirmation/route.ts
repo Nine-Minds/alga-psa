@@ -11,6 +11,17 @@
 
 import { emailSalesOrderConfirmation } from '@alga-psa/billing/actions';
 
+function salesOrderEmailError(error: unknown): { status: number; message: string } {
+  const message = error instanceof Error ? error.message : '';
+  if (/permission denied/i.test(message)) {
+    return { status: 403, message: 'You do not have permission to email sales order documents.' };
+  }
+  if (/not found/i.test(message)) {
+    return { status: 404, message: 'Sales order not found.' };
+  }
+  return { status: 500, message: 'Failed to email the confirmation.' };
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   let body: { recipients?: string[]; message?: string } = {};
@@ -24,13 +35,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       recipients: Array.isArray(body?.recipients) ? body.recipients : undefined,
       message: typeof body?.message === 'string' ? body.message : undefined,
     });
+    const status = result.success
+      ? 200
+      : /permission denied/i.test(result.error ?? '')
+        ? 403
+        : /not found/i.test(result.error ?? '')
+          ? 404
+          : 422;
     return new Response(JSON.stringify(result), {
-      status: result.success ? 200 : 422,
+      status,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to email the confirmation';
-    const status = /permission denied/i.test(message) ? 403 : /not found/i.test(message) ? 404 : 400;
+    const { status, message } = salesOrderEmailError(error);
     return new Response(JSON.stringify({ success: false, recipients: [], error: message }), {
       status,
       headers: { 'Content-Type': 'application/json' },

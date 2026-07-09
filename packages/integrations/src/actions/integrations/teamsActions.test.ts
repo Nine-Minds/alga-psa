@@ -270,6 +270,29 @@ describe('Teams integration actions', () => {
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
+  it('diagnostics actions return unavailable results instead of throwing in CE mode', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+
+    const diagnostics = await runTeamsDiagnostics();
+    const testMessage = await sendTeamsTestMessage();
+
+    expect(diagnostics.overallStatus).toBe('fail');
+    expect(diagnostics.steps).toEqual([
+      expect.objectContaining({
+        id: 'addon_entitlement',
+        status: 'fail',
+        detail: 'Microsoft Teams integration is only available in Enterprise Edition.',
+      }),
+    ]);
+    expect(testMessage).toEqual({
+      status: 'skipped',
+      reason: 'addon_inactive',
+      detail: 'Microsoft Teams integration is only available in Enterprise Edition.',
+      deliveryId: null,
+    });
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+  });
+
   it('returns an add-on required result when the tenant lacks the Teams add-on', async () => {
     tenantAddOns.length = 0;
 

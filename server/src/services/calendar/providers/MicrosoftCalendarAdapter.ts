@@ -384,7 +384,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       const response = await this.httpClient.get(`${calendarBase}/events/${eventId}`);
 
       return this.mapMicrosoftEventToExternal(response.data);
-    } catch (error: any) {
+    } catch {
       // Handle 404 quietly - this is expected when events are deleted
       const status = error?.response?.status;
       const code = error?.response?.data?.error?.code;
@@ -678,7 +678,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'Failed to connect to Microsoft Calendar'
+        error: 'Microsoft calendar connection test failed. Check calendar permissions and OAuth credentials.'
       };
     }
   }

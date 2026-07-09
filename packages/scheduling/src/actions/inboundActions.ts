@@ -1,7 +1,11 @@
 import { computeWorkDateFields, createTenantKnex, resolveUserTimeZone, tenantDb, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
-import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
+import {
+  registerAction,
+  type InboundActionDefinition,
+  type InboundActionResult,
+} from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
 
 interface CreateTimeEntryMappedValues extends Record<string, unknown> {
@@ -15,6 +19,30 @@ interface CreateTimeEntryMappedValues extends Record<string, unknown> {
   is_billable?: boolean;
   tax_region?: string;
   external_id?: string;
+}
+
+class ExpectedInboundActionFailure extends Error {
+  constructor(readonly result: InboundActionResult) {
+    super(result.message ?? 'Inbound action failed');
+  }
+}
+
+function validationFailure(
+  message: string,
+  externalId?: string,
+  metadata: Record<string, unknown> = {},
+): ExpectedInboundActionFailure {
+  return new ExpectedInboundActionFailure({
+    success: false,
+    entityType: 'time_entry',
+    externalId,
+    message,
+    metadata: { code: 'VALIDATION_ERROR', ...metadata },
+  });
+}
+
+function toExpectedInboundActionResult(error: unknown): InboundActionResult | null {
+  return error instanceof ExpectedInboundActionFailure ? error.result : null;
 }
 
 const createTimeEntryAction: InboundActionDefinition<CreateTimeEntryMappedValues> = {
@@ -42,65 +70,89 @@ const createTimeEntryAction: InboundActionDefinition<CreateTimeEntryMappedValues
   ],
   async handle(ctx, mappedValues) {
     const { knex } = await createTenantKnex(ctx.tenant);
-    const timeEntry = await withTransaction(knex, async (trx) => {
-      const scopedDb = tenantDb(trx, ctx.tenant);
-      const startTime = new Date(mappedValues.start_time);
-      if (Number.isNaN(startTime.getTime())) {
-        throw new Error('VALIDATION_ERROR: start_time must be a valid timestamp');
-      }
+    let timeEntry;
+    try {
+      timeEntry = await withTransaction(knex, async (trx) => {
+        const scopedDb = tenantDb(trx, ctx.tenant);
+        const startTime = new Date(mappedValues.start_time);
+        if (Number.isNaN(startTime.getTime())) {
+          throw validationFailure(
+            'VALIDATION_ERROR: start_time must be a valid timestamp',
+            mappedValues.external_id,
+            { field: 'start_time' },
+          );
+        }
 
-      if (mappedValues.duration_minutes <= 0) {
-        throw new Error('VALIDATION_ERROR: duration_minutes must be greater than zero');
-      }
+        if (mappedValues.duration_minutes <= 0) {
+          throw validationFailure(
+            'VALIDATION_ERROR: duration_minutes must be greater than zero',
+            mappedValues.external_id,
+            { field: 'duration_minutes' },
+          );
+        }
 
-      const endTime = new Date(startTime.getTime() + mappedValues.duration_minutes * 60_000);
-      await assertTimeEntryReferences({
-        trx,
-        tenant: ctx.tenant,
-        userId: mappedValues.user_id,
-        serviceId: mappedValues.service_id,
-        workItemType: mappedValues.work_item_type,
-        workItemId: mappedValues.work_item_id,
-      });
-
-      const workTimezone = await resolveUserTimeZone(trx, ctx.tenant, mappedValues.user_id);
-      const { work_date, work_timezone } = computeWorkDateFields(startTime, workTimezone);
-      const timeSheetId = await getOrCreateTimeSheetForWorkDate(trx, ctx.tenant, mappedValues.user_id, work_date);
-      const billableDuration = mappedValues.is_billable === false ? 0 : mappedValues.duration_minutes;
-
-      const [created] = await scopedDb.table('time_entries')
-        .insert({
+        const endTime = new Date(startTime.getTime() + mappedValues.duration_minutes * 60_000);
+        await assertTimeEntryReferences({
+          trx,
           tenant: ctx.tenant,
-          user_id: mappedValues.user_id,
-          work_item_id: mappedValues.work_item_id ?? null,
-          work_item_type: mappedValues.work_item_type,
-          service_id: mappedValues.service_id,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
-          work_date,
-          work_timezone,
-          billable_duration: billableDuration,
-          notes: mappedValues.notes ?? '',
-          time_sheet_id: timeSheetId,
-          approval_status: 'DRAFT',
-          tax_region: mappedValues.tax_region ?? null,
-          invoiced: false,
-          created_by: mappedValues.user_id,
-          updated_by: mappedValues.user_id,
-          created_at: trx.fn.now(),
-          updated_at: trx.fn.now(),
-        })
-        .returning(['entry_id', 'work_item_id', 'work_item_type', 'billable_duration', 'created_at']);
-
-      if (mappedValues.external_id) {
-        await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'time_entry', created.entry_id, mappedValues.external_id, {
-          knex: trx,
-          metadata: { source: 'inbound_webhook', delivery_id: ctx.deliveryId },
+          userId: mappedValues.user_id,
+          serviceId: mappedValues.service_id,
+          workItemType: mappedValues.work_item_type,
+          workItemId: mappedValues.work_item_id,
+          externalId: mappedValues.external_id,
         });
-      }
 
-      return created;
-    });
+        const workTimezone = await resolveUserTimeZone(trx, ctx.tenant, mappedValues.user_id);
+        const { work_date, work_timezone } = computeWorkDateFields(startTime, workTimezone);
+        const timeSheetId = await getOrCreateTimeSheetForWorkDate(
+          trx,
+          ctx.tenant,
+          mappedValues.user_id,
+          work_date,
+          mappedValues.external_id,
+        );
+        const billableDuration = mappedValues.is_billable === false ? 0 : mappedValues.duration_minutes;
+
+        const [created] = await scopedDb.table('time_entries')
+          .insert({
+            tenant: ctx.tenant,
+            user_id: mappedValues.user_id,
+            work_item_id: mappedValues.work_item_id ?? null,
+            work_item_type: mappedValues.work_item_type,
+            service_id: mappedValues.service_id,
+            start_time: startTime.toISOString(),
+            end_time: endTime.toISOString(),
+            work_date,
+            work_timezone,
+            billable_duration: billableDuration,
+            notes: mappedValues.notes ?? '',
+            time_sheet_id: timeSheetId,
+            approval_status: 'DRAFT',
+            tax_region: mappedValues.tax_region ?? null,
+            invoiced: false,
+            created_by: mappedValues.user_id,
+            updated_by: mappedValues.user_id,
+            created_at: trx.fn.now(),
+            updated_at: trx.fn.now(),
+          })
+          .returning(['entry_id', 'work_item_id', 'work_item_type', 'billable_duration', 'created_at']);
+
+        if (mappedValues.external_id) {
+          await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'time_entry', created.entry_id, mappedValues.external_id, {
+            knex: trx,
+            metadata: { source: 'inbound_webhook', delivery_id: ctx.deliveryId },
+          });
+        }
+
+        return created;
+      });
+    } catch (error) {
+      const expectedResult = toExpectedInboundActionResult(error);
+      if (expectedResult) {
+        return expectedResult;
+      }
+      throw error;
+    }
 
     await publishEvent({
       eventType: 'TIME_ENTRY_CREATED',
@@ -139,18 +191,23 @@ async function assertTimeEntryReferences(args: {
   serviceId: string;
   workItemType: CreateTimeEntryMappedValues['work_item_type'];
   workItemId?: string;
+  externalId?: string;
 }): Promise<void> {
   const scopedDb = tenantDb(args.trx, args.tenant);
   const user = await scopedDb.table('users').where({ user_id: args.userId }).first('user_id');
   if (!user) {
-    throw new Error(`VALIDATION_ERROR: user_id "${args.userId}" does not exist`);
+    throw validationFailure(`VALIDATION_ERROR: user_id "${args.userId}" does not exist`, args.externalId, {
+      field: 'user_id',
+    });
   }
 
   const service = await scopedDb.table('service_catalog')
     .where({ service_id: args.serviceId })
     .first('service_id');
   if (!service) {
-    throw new Error(`VALIDATION_ERROR: service_id "${args.serviceId}" does not exist`);
+    throw validationFailure(`VALIDATION_ERROR: service_id "${args.serviceId}" does not exist`, args.externalId, {
+      field: 'service_id',
+    });
   }
 
   if (args.workItemType === 'ad_hoc') {
@@ -158,7 +215,11 @@ async function assertTimeEntryReferences(args: {
   }
 
   if (!args.workItemId) {
-    throw new Error(`VALIDATION_ERROR: work_item_id is required when work_item_type is ${args.workItemType}`);
+    throw validationFailure(
+      `VALIDATION_ERROR: work_item_id is required when work_item_type is ${args.workItemType}`,
+      args.externalId,
+      { field: 'work_item_id', work_item_type: args.workItemType },
+    );
   }
 
   const workItemTable = workItemTableForType(args.workItemType);
@@ -170,7 +231,11 @@ async function assertTimeEntryReferences(args: {
     .where({ [workItemTable.idColumn]: args.workItemId })
     .first(workItemTable.idColumn);
   if (!workItem) {
-    throw new Error(`VALIDATION_ERROR: ${args.workItemType} work_item_id "${args.workItemId}" does not exist`);
+    throw validationFailure(
+      `VALIDATION_ERROR: ${args.workItemType} work_item_id "${args.workItemId}" does not exist`,
+      args.externalId,
+      { field: 'work_item_id', work_item_type: args.workItemType },
+    );
   }
 }
 
@@ -198,6 +263,7 @@ async function getOrCreateTimeSheetForWorkDate(
   tenant: string,
   userId: string,
   workDate: string,
+  externalId?: string,
 ): Promise<string> {
   const scopedDb = tenantDb(trx, tenant);
   const period = await scopedDb.table('time_periods')
@@ -206,7 +272,9 @@ async function getOrCreateTimeSheetForWorkDate(
     .first('period_id');
 
   if (!period) {
-    throw new Error(`VALIDATION_ERROR: no time period found for work_date "${workDate}"`);
+    throw validationFailure(`VALIDATION_ERROR: no time period found for work_date "${workDate}"`, externalId, {
+      field: 'work_date',
+    });
   }
 
   const existing = await scopedDb.table('time_sheets')

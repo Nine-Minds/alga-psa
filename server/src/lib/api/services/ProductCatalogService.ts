@@ -2,6 +2,7 @@ import type { IService } from '@/interfaces/billing.interfaces';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { publishServiceCatalogSearchEvent } from './ServiceCatalogService';
+import { NotFoundError } from '../middleware/apiMiddleware';
 
 type SortField = 'service_name' | 'billing_method' | 'default_rate';
 
@@ -245,7 +246,7 @@ export class ProductCatalogService extends BaseService<IService> {
       .select('item_kind')
       .first();
     if (!existing || existing.item_kind !== 'product') {
-      throw new Error('Resource not found or permission denied');
+      throw new NotFoundError('Resource not found or permission denied');
     }
 
     const { prices, billing_method: _billing_method, service_type_name: _, ...updateData } = data as any;

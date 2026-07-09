@@ -20,6 +20,10 @@ import {
 } from './timeEntrySchemas'; // Import schemas from the new module
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
+import {
+  timeSheetActionErrorFrom,
+  type TimeSheetActionError,
+} from './timeSheetActionErrors';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -31,6 +35,17 @@ function tenantScopedTable<Row extends object = Record<string, any>>(
   tenant: string,
 ): Knex.QueryBuilder<Row, Row[]> {
   return tenantDb(conn, tenant).table<Row>(table);
+}
+
+function timeSheetRemovalErrorMessage(error: unknown): string {
+  const mappedError = timeSheetActionErrorFrom(error);
+  if (mappedError) {
+    return 'permissionError' in mappedError
+      ? mappedError.permissionError
+      : mappedError.actionError;
+  }
+
+  return 'Failed to remove time sheet';
 }
 
 // Type for Knex raw query results with aggregate functions
@@ -101,7 +116,7 @@ export const fetchTimeSheets = withAuth(async (user, { tenant }): Promise<ITimeS
   }));
 });
 
-export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheet> => {
+export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheet | TimeSheetActionError> => {
   // Validate input
   const validatedParams = validateData<SubmitTimeSheetParams>(submitTimeSheetParamsSchema, { timeSheetId });
 
@@ -178,7 +193,9 @@ export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: st
     });
   } catch (error) {
     console.error('Error submitting time sheet:', error);
-    throw new Error('Failed to submit time sheet');
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -210,166 +227,180 @@ export const fetchAllTimeSheets = withAuth(async (_user, { tenant }): Promise<IT
   }));
 });
 
-export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string): Promise<ITimePeriodWithStatusView[]> => {
-  // Validate input
-  const validatedParams = validateData<FetchTimePeriodsParams>(fetchTimePeriodsParamsSchema, { userId });
+export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string): Promise<ITimePeriodWithStatusView[] | TimeSheetActionError> => {
+  try {
+    // Validate input
+    const validatedParams = validateData<FetchTimePeriodsParams>(fetchTimePeriodsParamsSchema, { userId });
 
-  const {knex: db} = await createTenantKnex();
+    const {knex: db} = await createTenantKnex();
 
-  await assertCanActOnBehalf(user, tenant, validatedParams.userId, db);
+    await assertCanActOnBehalf(user, tenant, validatedParams.userId, db);
 
-  const facade = tenantDb(db, tenant);
-  const timeEntrySummaries = facade.table('time_sheets as summary_ts');
-  facade.tenantJoin(timeEntrySummaries, 'time_periods as summary_tp', 'summary_ts.period_id', 'summary_tp.period_id');
-  facade.tenantJoin(timeEntrySummaries, 'time_entries as te', 'summary_ts.id', 'te.time_sheet_id', {
-    type: 'left',
-    on(join) {
-      join
-        .andOn(db.raw('te.work_date >= summary_tp.start_date'))
-        .andOn(db.raw('te.work_date < summary_tp.end_date'));
-    },
-  });
-  timeEntrySummaries
-    .where({
-      'summary_ts.user_id': validatedParams.userId
-    })
-    .groupBy('summary_ts.period_id', 'summary_ts.tenant')
-    .select(
-      'summary_ts.period_id',
-      'summary_ts.tenant',
-      db.raw('COALESCE(SUM(EXTRACT(EPOCH FROM (te.end_time - te.start_time)) / 3600.0), 0) as hours_entered'),
-      db.raw('COUNT(DISTINCT te.work_date) as days_logged'),
-      db.raw('MAX(te.work_date) as last_entry_date')
-    )
-    .as('tes');
+    const facade = tenantDb(db, tenant);
+    const timeEntrySummaries = facade.table('time_sheets as summary_ts');
+    facade.tenantJoin(timeEntrySummaries, 'time_periods as summary_tp', 'summary_ts.period_id', 'summary_tp.period_id');
+    facade.tenantJoin(timeEntrySummaries, 'time_entries as te', 'summary_ts.id', 'te.time_sheet_id', {
+      type: 'left',
+      on(join) {
+        join
+          .andOn(db.raw('te.work_date >= summary_tp.start_date'))
+          .andOn(db.raw('te.work_date < summary_tp.end_date'));
+      },
+    });
+    timeEntrySummaries
+      .where({
+        'summary_ts.user_id': validatedParams.userId
+      })
+      .groupBy('summary_ts.period_id', 'summary_ts.tenant')
+      .select(
+        'summary_ts.period_id',
+        'summary_ts.tenant',
+        db.raw('COALESCE(SUM(EXTRACT(EPOCH FROM (te.end_time - te.start_time)) / 3600.0), 0) as hours_entered'),
+        db.raw('COUNT(DISTINCT te.work_date) as days_logged'),
+        db.raw('MAX(te.work_date) as last_entry_date')
+      )
+      .as('tes');
 
-  // True count of time_entries per timesheet (independent of the work_date-filtered
-  // summary above), used to decide whether a timesheet is safe to remove.
-  const entryCounts = facade.table('time_entries')
-    .groupBy('time_sheet_id', 'tenant')
-    .select('time_sheet_id', 'tenant')
-    .count('* as entry_count')
-    .as('ec');
+    // True count of time_entries per timesheet (independent of the work_date-filtered
+    // summary above), used to decide whether a timesheet is safe to remove.
+    const entryCounts = facade.table('time_entries')
+      .groupBy('time_sheet_id', 'tenant')
+      .select('time_sheet_id', 'tenant')
+      .count('* as entry_count')
+      .as('ec');
 
-  // Number of timesheets attached to each period across ALL users. Zero => the period
-  // itself is unused (no one has logged against it) and is safe to remove entirely.
-  const periodSheetCounts = facade.table('time_sheets')
-    .groupBy('period_id', 'tenant')
-    .select('period_id', 'tenant')
-    .count('* as period_sheet_count')
-    .as('psc');
+    // Number of timesheets attached to each period across ALL users. Zero => the period
+    // itself is unused (no one has logged against it) and is safe to remove entirely.
+    const periodSheetCounts = facade.table('time_sheets')
+      .groupBy('period_id', 'tenant')
+      .select('period_id', 'tenant')
+      .count('* as period_sheet_count')
+      .as('psc');
 
-  const periodsQuery = facade.table('time_periods as tp');
-  facade.tenantJoin(periodsQuery, 'time_sheets as ts', 'tp.period_id', 'ts.period_id', {
-    type: 'left',
-    on(join) {
-      join.andOn('ts.user_id', '=', db.raw('?', [validatedParams.userId]));
-    },
-  });
-  facade.tenantJoinSubquery(periodsQuery, timeEntrySummaries, 'tp.period_id', 'tes.period_id', {
-    type: 'left',
-    rootTenantColumn: 'tp.tenant',
-    joinedTenantColumn: 'tes.tenant',
-  });
-  facade.tenantJoinSubquery(periodsQuery, entryCounts, 'ts.id', 'ec.time_sheet_id', {
-    type: 'left',
-    rootTenantColumn: 'tp.tenant',
-    joinedTenantColumn: 'ec.tenant',
-  });
-  facade.tenantJoinSubquery(periodsQuery, periodSheetCounts, 'tp.period_id', 'psc.period_id', {
-    type: 'left',
-    rootTenantColumn: 'tp.tenant',
-    joinedTenantColumn: 'psc.tenant',
-  });
-  periodsQuery
-    .orderBy('tp.start_date', 'desc')
-    .select(
-      'tp.*',
-      'ts.id as time_sheet_id',
-      'ts.approval_status',
-      db.raw('COALESCE(ts.approval_status, ?) as timeSheetStatus', ['DRAFT']),
-      'tes.hours_entered',
-      'tes.days_logged',
-      'tes.last_entry_date',
-      'ec.entry_count',
-      'psc.period_sheet_count'
-    );
-  const periods = (await periodsQuery) as any[];
+    const periodsQuery = facade.table('time_periods as tp');
+    facade.tenantJoin(periodsQuery, 'time_sheets as ts', 'tp.period_id', 'ts.period_id', {
+      type: 'left',
+      on(join) {
+        join.andOn('ts.user_id', '=', db.raw('?', [validatedParams.userId]));
+      },
+    });
+    facade.tenantJoinSubquery(periodsQuery, timeEntrySummaries, 'tp.period_id', 'tes.period_id', {
+      type: 'left',
+      rootTenantColumn: 'tp.tenant',
+      joinedTenantColumn: 'tes.tenant',
+    });
+    facade.tenantJoinSubquery(periodsQuery, entryCounts, 'ts.id', 'ec.time_sheet_id', {
+      type: 'left',
+      rootTenantColumn: 'tp.tenant',
+      joinedTenantColumn: 'ec.tenant',
+    });
+    facade.tenantJoinSubquery(periodsQuery, periodSheetCounts, 'tp.period_id', 'psc.period_id', {
+      type: 'left',
+      rootTenantColumn: 'tp.tenant',
+      joinedTenantColumn: 'psc.tenant',
+    });
+    periodsQuery
+      .orderBy('tp.start_date', 'desc')
+      .select(
+        'tp.*',
+        'ts.id as time_sheet_id',
+        'ts.approval_status',
+        db.raw('COALESCE(ts.approval_status, ?) as timeSheetStatus', ['DRAFT']),
+        'tes.hours_entered',
+        'tes.days_logged',
+        'tes.last_entry_date',
+        'ec.entry_count',
+        'psc.period_sheet_count'
+      );
+    const periods = (await periodsQuery) as any[];
 
-  console.log('Fetched periods:', periods);
+    console.log('Fetched periods:', periods);
 
-  return periods.map((period): ITimePeriodWithStatusView => {
-    const summary = period as typeof period & TimePeriodSummaryRow;
+    return periods.map((period): ITimePeriodWithStatusView => {
+      const summary = period as typeof period & TimePeriodSummaryRow;
 
-    return {
-      ...period,
-      start_date: toPlainDate(period.start_date).toString(),
-      end_date: toPlainDate(period.end_date).toString(),
-      timeSheetStatus: (period.approval_status || period.timeSheetStatus || 'DRAFT') as TimeSheetStatus,
-      hoursEntered: parseNumericValue(summary.hours_entered),
-      daysLogged: parseNumericValue(summary.days_logged),
-      lastEntryDate: toDateOnlyString(summary.last_entry_date),
-      timeSheetId: (period as { time_sheet_id?: string | null }).time_sheet_id ?? null,
-      entryCount: parseNumericValue(summary.entry_count),
-      periodTimesheetCount: parseNumericValue((period as { period_sheet_count?: number | string | null }).period_sheet_count)
-    };
-  });
+      return {
+        ...period,
+        start_date: toPlainDate(period.start_date).toString(),
+        end_date: toPlainDate(period.end_date).toString(),
+        timeSheetStatus: (period.approval_status || period.timeSheetStatus || 'DRAFT') as TimeSheetStatus,
+        hoursEntered: parseNumericValue(summary.hours_entered),
+        daysLogged: parseNumericValue(summary.days_logged),
+        lastEntryDate: toDateOnlyString(summary.last_entry_date),
+        timeSheetId: (period as { time_sheet_id?: string | null }).time_sheet_id ?? null,
+        entryCount: parseNumericValue(summary.entry_count),
+        periodTimesheetCount: parseNumericValue((period as { period_sheet_count?: number | string | null }).period_sheet_count)
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching time periods:', error);
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
-export const fetchOrCreateTimeSheet = withAuth(async (user, { tenant }, userId: string, periodId: string): Promise<ITimeSheetView> => {
-  // Validate input
-  const validatedParams = validateData<FetchOrCreateTimeSheetParams>(
-    fetchOrCreateTimeSheetParamsSchema,
-    { userId, periodId }
-  );
+export const fetchOrCreateTimeSheet = withAuth(async (user, { tenant }, userId: string, periodId: string): Promise<ITimeSheetView | TimeSheetActionError> => {
+  try {
+    // Validate input
+    const validatedParams = validateData<FetchOrCreateTimeSheetParams>(
+      fetchOrCreateTimeSheetParamsSchema,
+      { userId, periodId }
+    );
 
-  const {knex: db} = await createTenantKnex();
+    const {knex: db} = await createTenantKnex();
 
-  await assertCanActOnBehalf(user, tenant, validatedParams.userId, db);
+    await assertCanActOnBehalf(user, tenant, validatedParams.userId, db);
 
-  const facade = tenantDb(db, tenant);
+    const facade = tenantDb(db, tenant);
 
-  let timeSheet = await facade.table('time_sheets')
-    .where({
-      user_id: validatedParams.userId,
-      period_id: validatedParams.periodId,
-    })
-    .first();
-
-  if (!timeSheet) {
-    [timeSheet] = await facade.table('time_sheets')
-      .insert({
+    let timeSheet = await facade.table('time_sheets')
+      .where({
         user_id: validatedParams.userId,
         period_id: validatedParams.periodId,
-        approval_status: 'DRAFT',
-        tenant
       })
-      .returning('*');
+      .first();
+
+    if (!timeSheet) {
+      [timeSheet] = await facade.table('time_sheets')
+        .insert({
+          user_id: validatedParams.userId,
+          period_id: validatedParams.periodId,
+          approval_status: 'DRAFT',
+          tenant
+        })
+        .returning('*');
+    }
+
+    const timePeriod = await facade.table('time_periods')
+      .where({
+        period_id: validatedParams.periodId,
+      })
+      .first() as any;
+
+    // Fetch comments for the time sheet
+    const comments = await facade.table('time_sheet_comments')
+      .where({
+        time_sheet_id: timeSheet.id,
+      })
+      .orderBy('created_at', 'desc')
+      .select('*');
+
+    return {
+      ...timeSheet,
+      time_period: {
+        ...timePeriod,
+        start_date: toPlainDate(timePeriod.start_date).toString(),
+        end_date: toPlainDate(timePeriod.end_date).toString()
+      },
+      comments: comments,
+    } as unknown as ITimeSheetView;
+  } catch (error) {
+    console.error('Error fetching or creating time sheet:', error);
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
-
-  const timePeriod = await facade.table('time_periods')
-    .where({
-      period_id: validatedParams.periodId,
-    })
-    .first() as any;
-
-  // Fetch comments for the time sheet
-  const comments = await facade.table('time_sheet_comments')
-    .where({
-      time_sheet_id: timeSheet.id,
-    })
-    .orderBy('created_at', 'desc')
-    .select('*');
-
-  return {
-    ...timeSheet,
-    time_period: {
-      ...timePeriod,
-      start_date: toPlainDate(timePeriod.start_date).toString(),
-      end_date: toPlainDate(timePeriod.end_date).toString()
-    },
-    comments: comments,
-  } as unknown as ITimeSheetView;
 });
 
 export interface DeleteTimeSheetsResult {
@@ -440,7 +471,7 @@ export const deleteTimeSheets = withAuth(async (
     } catch (error) {
       failed.push({
         timeSheetId,
-        message: error instanceof Error ? error.message : 'Failed to remove time sheet'
+        message: timeSheetRemovalErrorMessage(error)
       });
     }
   }

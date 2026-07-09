@@ -125,7 +125,7 @@ export async function GET(
   } catch (error: any) {
     logger.error('[AccountingExportDownload] Error', { error: error.message });
     return NextResponse.json(
-      { error: error.message ?? 'Internal server error' },
+      { error: 'Failed to download accounting export.' },
       { status: 500 }
     );
   }

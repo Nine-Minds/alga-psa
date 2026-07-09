@@ -184,7 +184,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
       } catch (err) {
         console.error('Error initializing profile:', err);
-        setError(err instanceof Error ? err.message : t('profile.messages.error.loadFailed', {
+        setError(t('profile.messages.error.loadFailed', {
           defaultValue: 'Failed to load profile',
         }));
       } finally {
@@ -292,6 +292,8 @@ export default function UserProfile({ userId }: UserProfileProps) {
           EMAIL_ALREADY_EXISTS: 'profile.messages.error.emailAlreadyExists',
           REPORTS_TO_SELF: 'profile.messages.error.reportsToSelf',
           REPORTS_TO_CYCLE: 'profile.messages.error.reportsToCycle',
+          PERMISSION_DENIED: 'profile.messages.error.permissionDenied',
+          USER_UPDATE_FAILED: 'profile.messages.error.updateFailed',
         };
         toast.error(t(errorKeys[result.code], { defaultValue: result.error }));
         return;

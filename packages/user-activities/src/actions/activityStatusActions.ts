@@ -133,7 +133,7 @@ export const updateActivityStatus = withAuth(async (
     return true;
   } catch (error) {
     console.error(`Error updating activity status (${activityId}, ${activityType}, ${newStatus}):`, error);
-    throw new Error("Failed to update activity status. Please try again later.");
+    throw error;
   }
 });
 
@@ -211,7 +211,7 @@ export const updateActivityStatusById = withAuth(async (
     return true;
   } catch (error) {
     console.error(`Error updating activity status by ID (${activityId}, ${activityType}, ${statusId}):`, error);
-    throw new Error("Failed to update activity status. Please try again later.");
+    throw error;
   }
 });
 
@@ -464,7 +464,7 @@ export const updateActivityPriority = withAuth(async (
     return true;
   } catch (error) {
     console.error(`Error updating activity priority (${activityId}, ${activityType}, ${newPriority}):`, error);
-    throw new Error("Failed to update activity priority. Please try again later.");
+    throw error;
   }
 });
 
@@ -531,7 +531,7 @@ export const updateActivityPriorityById = withAuth(async (
     return true;
   } catch (error) {
     console.error(`Error updating activity priority by ID (${activityId}, ${activityType}, ${priorityId}):`, error);
-    throw new Error("Failed to update activity priority. Please try again later.");
+    throw error;
   }
 });
 
@@ -638,6 +638,6 @@ export const reassignActivity = withAuth(async (
     return true;
   } catch (error) {
     console.error(`Error reassigning activity (${activityId}, ${activityType}, ${newAssigneeId}):`, error);
-    throw new Error("Failed to reassign activity. Please try again later.");
+    throw error;
   }
 });

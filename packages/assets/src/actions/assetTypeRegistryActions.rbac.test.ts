@@ -146,13 +146,17 @@ beforeEach(() => {
 describe('asset type registry action RBAC (T307)', () => {
   it('getAssetTypes requires asset.read', async () => {
     h.permissionState.read = false;
-    await expect(getAssetTypes()).rejects.toThrow('Permission denied: Cannot read asset types');
+    await expect(getAssetTypes()).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot read asset types',
+    });
     expect(hasPermissionMock).toHaveBeenCalledWith(h.mockUser, 'asset', 'read');
   });
 
   it('getAssetType requires asset.read', async () => {
     h.permissionState.read = false;
-    await expect(getAssetType('workstation')).rejects.toThrow('Permission denied: Cannot read asset types');
+    await expect(getAssetType('workstation')).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot read asset types',
+    });
   });
 
   it('reads succeed with asset.read even without asset.update', async () => {
@@ -180,25 +184,25 @@ describe('asset type registry action RBAC (T307)', () => {
 
   it('createAssetTypeAction requires system settings update (asset permissions alone are not enough)', async () => {
     h.permissionState.systemUpdate = false;
-    await expect(createAssetTypeAction({ name: 'Door Access' })).rejects.toThrow(
-      'Permission denied: Cannot manage asset types'
-    );
+    await expect(createAssetTypeAction({ name: 'Door Access' })).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot manage asset types',
+    });
     expect(hasPermissionMock).toHaveBeenCalledWith(h.mockUser, 'system_settings', 'update');
     expect(h.dbState.asset_type_registry).toHaveLength(0);
   });
 
   it('updateAssetTypeAction requires system settings update', async () => {
     h.permissionState.systemUpdate = false;
-    await expect(updateAssetTypeAction('door_access', { name: 'Doors' })).rejects.toThrow(
-      'Permission denied: Cannot manage asset types'
-    );
+    await expect(updateAssetTypeAction('door_access', { name: 'Doors' })).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot manage asset types',
+    });
   });
 
   it('deleteAssetTypeAction requires system settings update', async () => {
     h.permissionState.systemUpdate = false;
-    await expect(deleteAssetTypeAction('door_access')).rejects.toThrow(
-      'Permission denied: Cannot manage asset types'
-    );
+    await expect(deleteAssetTypeAction('door_access')).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot manage asset types',
+    });
   });
 
   it('authorized create returns a typed success envelope', async () => {

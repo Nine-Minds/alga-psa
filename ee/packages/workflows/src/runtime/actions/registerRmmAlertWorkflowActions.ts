@@ -6,6 +6,21 @@ import { createTicketForAlertId } from '../../../../../../shared/rmm/alerts';
 
 let rmmAlertActionsRegistered = false;
 
+function rmmAlertTicketActionMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : '';
+  if (
+    message === 'Alert not found' ||
+    message === 'Alert already has a linked ticket' ||
+    message === 'No client resolvable for this alert (unmapped asset and organization)' ||
+    message === 'No board available for alert ticket (no rule boardId and no default board)' ||
+    message === 'No default ticket status configured for tenant'
+  ) {
+    return message;
+  }
+
+  return 'Unable to create a ticket from this alert.';
+}
+
 /**
  * Provider-agnostic RMM alert actions. Unlike the per-provider ninjaone.*
  * actions these work for any connected RMM, keyed off rmm_alerts rows.
@@ -70,7 +85,7 @@ export function registerRmmAlertWorkflowActionsV2(): void {
         throwActionError(ctx, {
           category: 'ValidationError',
           code: 'CREATE_TICKET_FAILED',
-          message: error instanceof Error ? error.message : 'Failed to create ticket from alert'
+          message: rmmAlertTicketActionMessage(error)
         });
       }
     }

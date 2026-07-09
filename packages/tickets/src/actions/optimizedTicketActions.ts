@@ -82,6 +82,29 @@ import {
   TICKET_STATUS_FILTER_ALL,
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
+import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { actionError } from '@alga-psa/ui/lib/errorHandling';
+
+function isTicketActionError(value: unknown): value is TicketActionError {
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (
+      typeof candidate.actionError === 'string' ||
+      typeof candidate.permissionError === 'string'
+    )
+  );
+}
+
+function ticketListActionErrorFrom(error: unknown): TicketActionError | null {
+  const issues = (error as { issues?: unknown })?.issues;
+  if (Array.isArray(issues) && issues.length > 0) {
+    return actionError('Ticket list filters are no longer valid. Refresh the page and try again.');
+  }
+
+  return ticketActionErrorFrom(error);
+}
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -397,10 +420,11 @@ async function safePublishEvent(eventType: string, payload: any) {
  * Consolidated function to get all ticket data for the ticket details page
  * This reduces multiple network calls by fetching all related data in a single server action
  */
-export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticketId: string) => {
+export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticketId: string): Promise<any> => {
   const {knex: db} = await createTenantKnex();
 
-  return withTransaction(db, async (trx) => {
+  try {
+    return await withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
       throw new Error('Permission denied: Cannot view ticket');
     }
@@ -998,10 +1022,21 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       agentSchedules: agentSchedulesList
     };
     } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
       console.error('Failed to fetch consolidated ticket data:', error);
-      throw new Error('Failed to fetch ticket data');
+      throw error;
     }
   });
+  } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -1391,7 +1426,7 @@ function tenantWhereColumnSql(
   const markerIndex = compiled.sql.indexOf(marker);
 
   if (markerIndex < 0) {
-    throw new Error('Unable to compile tenant where column SQL fragment');
+    throw new Error('Tenant where-column SQL fragment marker was not present in compiled SQL.');
   }
 
   return {
@@ -1423,7 +1458,7 @@ function tenantJoinSubquerySql(
   const markerIndex = compiled.sql.indexOf(marker);
 
   if (markerIndex < 0) {
-    throw new Error('Unable to compile tenant join subquery SQL fragment');
+    throw new Error('Tenant join subquery SQL fragment marker was not present in compiled SQL.');
   }
 
   return {
@@ -1874,15 +1909,15 @@ export const getTicketsForList = withAuth(async (
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
-): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> } }> => {
+): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> } } | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
-    }
-
     try {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+
       const validatedFilters = cleanFilterValues(
         validateData(ticketListFiltersSchema, filters) as ITicketListFilters
       );
@@ -2039,8 +2074,12 @@ export const getTicketsForList = withAuth(async (
       }
     };
     } catch (error) {
+      const expected = ticketListActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
       console.error('Failed to fetch tickets:', error);
-      throw new Error('Failed to fetch tickets');
+      throw error;
     }
   });
 });
@@ -2053,44 +2092,53 @@ export const getAllMatchingTicketIds = withAuth(async (
   user,
   { tenant },
   filters: ITicketListFilters
-): Promise<string[]> => {
+): Promise<string[] | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
-    }
+    try {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
 
-    const validatedFilters = cleanFilterValues(
-      validateData(ticketListFiltersSchema, filters) as ITicketListFilters
-    );
+      const validatedFilters = cleanFilterValues(
+        validateData(ticketListFiltersSchema, filters) as ITicketListFilters
+      );
 
-    const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
-    const authorizationContext = await createTicketAuthorizationContext(
-      trx,
-      tenant,
-      user as IUserWithRoles
-    );
+      const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+      const authorizationContext = await createTicketAuthorizationContext(
+        trx,
+        tenant,
+        user as IUserWithRoles
+      );
 
-    const scopedBaseQuery = scopedQuery.clone();
-    const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
-    const rows = authSqlResult.supported
-      ? await scopedBaseQuery.builder
-          .clearSelect()
-          .clearOrder()
-          .select('t.ticket_id')
-      : await filterAuthorizedTickets(
-          trx,
-          authorizationContext,
-          await baseQuery
-            .clone()
+      const scopedBaseQuery = scopedQuery.clone();
+      const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
+      const rows = authSqlResult.supported
+        ? await scopedBaseQuery.builder
             .clearSelect()
             .clearOrder()
-            .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id')
-        );
+            .select('t.ticket_id')
+        : await filterAuthorizedTickets(
+            trx,
+            authorizationContext,
+            await baseQuery
+              .clone()
+              .clearSelect()
+              .clearOrder()
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id')
+          );
 
-    const ticketIds: Array<string | null | undefined> = rows.map((row: { ticket_id?: string | null }) => row.ticket_id);
-    return ticketIds.filter((ticketId): ticketId is string => typeof ticketId === 'string' && ticketId.length > 0);
+      const ticketIds: Array<string | null | undefined> = rows.map((row: { ticket_id?: string | null }) => row.ticket_id);
+      return ticketIds.filter((ticketId): ticketId is string => typeof ticketId === 'string' && ticketId.length > 0);
+    } catch (error) {
+      const expected = ticketListActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      console.error('Failed to fetch matching ticket IDs:', error);
+      throw error;
+    }
   });
 });
 
@@ -2105,7 +2153,7 @@ export const getTicketBoardIds = withAuth(async (
   user,
   { tenant },
   ticketIds: string[]
-): Promise<Array<{ ticket_id: string; board_id: string | null }>> => {
+): Promise<Array<{ ticket_id: string; board_id: string | null }> | TicketActionError> => {
   const uniqueIds = Array.from(
     new Set(ticketIds.filter((id): id is string => typeof id === 'string' && id.length > 0))
   );
@@ -2116,39 +2164,48 @@ export const getTicketBoardIds = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
+    try {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+
+      const authorizationContext = await createTicketAuthorizationContext(
+        trx,
+        tenant,
+        user as IUserWithRoles
+      );
+
+      const boardQuery = tenantDb(trx, tenant).scoped('tickets as t');
+      boardQuery.builder
+        .whereIn('t.ticket_id', uniqueIds)
+        .select('t.ticket_id', 't.board_id');
+      const authSqlResult = applyTicketReadAuthorizationSql(boardQuery, trx, tenant, authorizationContext);
+
+      const rows: Array<{ ticket_id?: string | null; board_id?: string | null }> = authSqlResult.supported
+        ? await boardQuery.builder
+        : await filterAuthorizedTickets(
+            trx,
+            authorizationContext,
+            await tenantScopedTable(trx, 'tickets as t', tenant)
+              .whereIn('t.ticket_id', uniqueIds)
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id')
+          );
+
+      return rows
+        .filter((row: { ticket_id?: string | null }): row is { ticket_id: string; board_id?: string | null } =>
+          typeof row.ticket_id === 'string' && row.ticket_id.length > 0)
+        .map((row) => ({
+          ticket_id: row.ticket_id,
+          board_id: row.board_id ?? null,
+        }));
+    } catch (error) {
+      const expected = ticketListActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      console.error('Failed to fetch ticket board IDs:', error);
+      throw error;
     }
-
-    const authorizationContext = await createTicketAuthorizationContext(
-      trx,
-      tenant,
-      user as IUserWithRoles
-    );
-
-    const boardQuery = tenantDb(trx, tenant).scoped('tickets as t');
-    boardQuery.builder
-      .whereIn('t.ticket_id', uniqueIds)
-      .select('t.ticket_id', 't.board_id');
-    const authSqlResult = applyTicketReadAuthorizationSql(boardQuery, trx, tenant, authorizationContext);
-
-    const rows: Array<{ ticket_id?: string | null; board_id?: string | null }> = authSqlResult.supported
-      ? await boardQuery.builder
-      : await filterAuthorizedTickets(
-          trx,
-          authorizationContext,
-          await tenantScopedTable(trx, 'tickets as t', tenant)
-            .whereIn('t.ticket_id', uniqueIds)
-            .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id')
-        );
-
-    return rows
-      .filter((row: { ticket_id?: string | null }): row is { ticket_id: string; board_id?: string | null } =>
-        typeof row.ticket_id === 'string' && row.ticket_id.length > 0)
-      .map((row) => ({
-        ticket_id: row.ticket_id,
-        board_id: row.board_id ?? null,
-      }));
   });
 });
 
@@ -2160,28 +2217,27 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view ticket options');
-    }
-
     try {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view ticket options');
+      }
 
-    // Fetch all options in parallel
-    const scopedDb = tenantDb(trx, tenant);
-    const ticketTagMappingsQuery = scopedDb.table('tag_mappings as tm')
-      .select(trx.raw('1'))
-      .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
-    scopedDb.tenantWhereColumn(ticketTagMappingsQuery, 'tm.tenant', 'td.tenant');
+      // Fetch all options in parallel
+      const scopedDb = tenantDb(trx, tenant);
+      const ticketTagMappingsQuery = scopedDb.table('tag_mappings as tm')
+        .select(trx.raw('1'))
+        .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
+      scopedDb.tenantWhereColumn(ticketTagMappingsQuery, 'tm.tenant', 'td.tenant');
 
-    const [
-      statuses,
-      priorities,
-      boards,
-      categories,
-      clients,
-      users,
-      tags
-    ] = await Promise.all([
+      const [
+        statuses,
+        priorities,
+        boards,
+        categories,
+        clients,
+        users,
+        tags
+      ] = await Promise.all([
       tenantScopedTable(trx, 'statuses', tenant)
         .where({
           status_type: 'ticket'  // Changed from item_type to status_type
@@ -2221,76 +2277,80 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('td.created_at', 'asc')
     ]);
 
-    // Format options for dropdowns
-    const statusOptions = [
-      { value: TICKET_STATUS_FILTER_OPEN, label: 'All open statuses' },
-      { value: TICKET_STATUS_FILTER_ALL, label: 'All Statuses' },
-      ...statuses.map((status: any) => ({
-        value: status.status_id,
-        label: status.name || "",
-        className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined,
-        statusName: status.name || "",
-        boardId: status.board_id || null,
-        isClosed: Boolean(status.is_closed),
-      }))
-    ];
+      // Format options for dropdowns
+      const statusOptions = [
+        { value: TICKET_STATUS_FILTER_OPEN, label: 'All open statuses' },
+        { value: TICKET_STATUS_FILTER_ALL, label: 'All Statuses' },
+        ...statuses.map((status: any) => ({
+          value: status.status_id,
+          label: status.name || "",
+          className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined,
+          statusName: status.name || "",
+          boardId: status.board_id || null,
+          isClosed: Boolean(status.is_closed),
+        }))
+      ];
 
-    const priorityOptions = [
-      { value: 'all', label: 'All Priorities' },
-      ...priorities.map((priority: any) => ({
-        value: priority.priority_id,
-        label: priority.priority_name,
-        color: priority.color
-      }))
-    ];
+      const priorityOptions = [
+        { value: 'all', label: 'All Priorities' },
+        ...priorities.map((priority: any) => ({
+          value: priority.priority_id,
+          label: priority.priority_name,
+          color: priority.color
+        }))
+      ];
 
-    const boardOptions: IBoard[] = boards.filter((board: IBoard) => board.board_id !== undefined);
+      const boardOptions: IBoard[] = boards.filter((board: IBoard) => board.board_id !== undefined);
 
-    const agentOptions = users.map((user: any) => ({
-      value: user.user_id,
-      label: `${user.first_name} ${user.last_name}`
-    }));
+      const agentOptions = users.map((user: any) => ({
+        value: user.user_id,
+        label: `${user.first_name} ${user.last_name}`
+      }));
 
-    // --- Add Logo URL Processing ---
-    const clientsData = clients as IClient[];
+      // --- Add Logo URL Processing ---
+      const clientsData = clients as IClient[];
 
-    // Process clients to add logoUrl using batch loading
-    const clientIds = clientsData.map((c: IClient) => c.client_id);
-    const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+      // Process clients to add logoUrl using batch loading
+      const clientIds = clientsData.map((c: IClient) => c.client_id);
+      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
     
-    const clientsWithLogos = clientsData.map((clientData: IClient) => {
-      const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
+      const clientsWithLogos = clientsData.map((clientData: IClient) => {
+        const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
+        return {
+          ...clientData,
+          properties: clientData.properties || {},
+          logoUrl,
+        };
+      });
+      // --- End Logo URL Processing ---
+
+      // Use tenant categories directly (includes ITIL ones if copied)
+
       return {
-        ...clientData,
-        properties: clientData.properties || {},
-        logoUrl,
+        statusOptions,
+        priorityOptions,
+        boardOptions,
+        agentOptions,
+        categories,
+        clients: clientsWithLogos, // Return clients with logos
+        users,
+        tags: (tags || []).map((tag: any) => ({
+          tag_id: tag.tag_id,
+          tag_text: tag.tag_text,
+          tagged_id: '',
+          tagged_type: 'ticket' as const,
+          tenant: tenant,
+          background_color: tag.background_color,
+          text_color: tag.text_color
+        }))
       };
-    });
-    // --- End Logo URL Processing ---
-
-    // Use tenant categories directly (includes ITIL ones if copied)
-
-    return {
-      statusOptions,
-      priorityOptions,
-      boardOptions,
-      agentOptions,
-      categories,
-      clients: clientsWithLogos, // Return clients with logos
-      users,
-      tags: (tags || []).map((tag: any) => ({
-        tag_id: tag.tag_id,
-        tag_text: tag.tag_text,
-        tagged_id: '',
-        tagged_type: 'ticket' as const,
-        tenant: tenant,
-        background_color: tag.background_color,
-        text_color: tag.text_color
-      }))
-    };
     } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
       console.error('Failed to fetch ticket form options:', error);
-      throw new Error('Failed to fetch ticket form options');
+      throw error;
     }
   });
 });
@@ -2957,7 +3017,7 @@ export async function updateTicketInTransaction(
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('Failed to update ticket');
+      throw new Error('Ticket update failed with a non-Error exception.');
     }
 }
 
@@ -2967,16 +3027,24 @@ export const updateTicketWithCache = withAuth(async (
   id: string,
   data: Partial<ITicket>,
   options?: Pick<UpdateTicketInTransactionOptions, 'overrideCloseRules' | 'overrideCloseRulesReason'>,
-) => {
-  const { knex: db } = await createTenantKnex();
+): Promise<'success' | TicketActionError> => {
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'update', trx)) {
-      throw new Error('Permission denied: Cannot update ticket');
+    return await withTransaction(db, async (trx) => {
+      if (!await hasPermission(user, 'ticket', 'update', trx)) {
+        throw new Error('Permission denied: Cannot update ticket');
+      }
+
+      return updateTicketInTransaction(trx, user as IUserWithRoles, tenant, id, data, options);
+    });
+  } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    return updateTicketInTransaction(trx, user as IUserWithRoles, tenant, id, data, options);
-  });
+    throw error;
+  }
 });
 
 /**
@@ -2999,15 +3067,15 @@ export const addTicketCommentWithCache = withAuth(async (
   isInternal: boolean,
   isResolution: boolean,
   closesTicket: boolean = false
-): Promise<IComment> => {
+): Promise<IComment | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
-  return withTransaction(db, async (trx) => {
+  return withTransaction(db, async (trx): Promise<IComment | TicketActionError> => {
+    try {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
       throw new Error('Permission denied: Cannot add comment');
     }
 
-    try {
     const authorType: 'internal' | 'client' | 'unknown' =
       user.user_type === 'client' ? 'client' : 'internal';
 
@@ -3044,7 +3112,7 @@ export const addTicketCommentWithCache = withAuth(async (
     );
     const generatedIds = idsResult.rows?.[0] as { comment_id: string; thread_id: string } | undefined;
     if (!generatedIds?.comment_id || !generatedIds?.thread_id) {
-      throw new Error('Failed to generate comment/thread identifiers');
+      throw new Error('Database UUID generation did not return comment/thread identifiers.');
     }
     const newCommentId = generatedIds.comment_id;
     const threadId = generatedIds.thread_id;
@@ -3131,7 +3199,7 @@ export const addTicketCommentWithCache = withAuth(async (
             | { comment_id: string; thread_id: string }
             | undefined;
           if (!childGenerated?.comment_id || !childGenerated?.thread_id) {
-            throw new Error('Failed to generate mirrored comment/thread identifiers');
+            throw new Error('Database UUID generation did not return mirrored comment/thread identifiers.');
           }
 
           await tenantDb(trx, tenant).table('comment_threads').insert({
@@ -3276,8 +3344,12 @@ export const addTicketCommentWithCache = withAuth(async (
 
     return newComment;
     } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
       console.error('Failed to add ticket comment:', error);
-      throw new Error('Failed to add ticket comment');
+      throw error;
     }
   });
 });
@@ -3293,7 +3365,7 @@ export async function addTicketCommentWithCacheForCurrentUser(
   isInternal: boolean,
   isResolution: boolean,
   closesTicket: boolean = false
-): Promise<IComment> {
+): Promise<IComment | TicketActionError> {
   return addTicketCommentWithCache(ticketId, content, isInternal, isResolution, closesTicket);
 }
 
@@ -3308,32 +3380,54 @@ export const getConsolidatedTicketListData = withAuth(async (
   page: number = 1,
   pageSize: number = 10
 ) => {
-  const {knex: db} = await createTenantKnex();
+  try {
+    const {knex: db} = await createTenantKnex();
 
-  return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
+    return await withTransaction(db, async (trx) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        const expected = ticketActionErrorFrom(new Error('Permission denied: Cannot view tickets'));
+        if (expected) {
+          return expected;
+        }
+      }
+
+      try {
+        // Fetch filter options and tickets in parallel
+        const [formOptions, ticketsData] = await Promise.all([
+          getTicketFormOptions(),
+          getTicketsForList(filters, page, pageSize)
+        ]);
+
+        if (isTicketActionError(formOptions)) {
+          return formOptions;
+        }
+        if (isTicketActionError(ticketsData)) {
+          return ticketsData;
+        }
+
+        // Return consolidated data
+        return {
+          options: formOptions,
+          tickets: ticketsData.tickets,
+          totalCount: ticketsData.totalCount,
+          metadata: ticketsData.metadata
+        };
+      } catch (error) {
+        const expected = ticketListActionErrorFrom(error);
+        if (expected) {
+          return expected;
+        }
+        console.error('Failed to fetch consolidated ticket list data:', error);
+        throw error;
+      }
+    });
+  } catch (error) {
+    const expected = ticketListActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    try {
-      // Fetch filter options and tickets in parallel
-      const [formOptions, ticketsData] = await Promise.all([
-        getTicketFormOptions(),
-        getTicketsForList(filters, page, pageSize)
-      ]);
-
-      // Return consolidated data
-      return {
-        options: formOptions,
-        tickets: ticketsData.tickets,
-        totalCount: ticketsData.totalCount,
-        metadata: ticketsData.metadata
-      };
-    } catch (error) {
-      console.error('Failed to fetch consolidated ticket list data:', error);
-      throw new Error('Failed to fetch ticket list data');
-    }
-  });
+    throw error;
+  }
 });
 
 /**
@@ -3350,15 +3444,24 @@ export const fetchTicketsWithPagination = withAuth(async (
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
-    }
-
     try {
-      return await getTicketsForList(filters, page, pageSize);
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+
+      const result = await getTicketsForList(filters, page, pageSize);
+      if (isTicketActionError(result)) {
+        return result;
+      }
+
+      return result;
     } catch (error) {
+      const expected = ticketListActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
       console.error('Failed to fetch tickets:', error);
-      throw new Error('Failed to fetch tickets');
+      throw error;
     }
   });
 });
@@ -3371,94 +3474,103 @@ export const fetchBundleChildrenForMaster = withAuth(async (
   user,
   { tenant },
   masterTicketId: string
-): Promise<ITicketListItem[]> => {
+): Promise<ITicketListItem[] | TicketActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
+    try {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+
+      const authorizationContext = await createTicketAuthorizationContext(
+        trx,
+        tenant,
+        user as IUserWithRoles
+      );
+
+      const childrenQuery = tenantScopedTable(trx, 'tickets as t', tenant);
+      tenantLeftJoin(trx, tenant, childrenQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'statuses as s', 't.status_id', 's.status_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'priorities as p', 't.priority_id', 'p.priority_id', {
+        on: (join) => join.andOnVal('p.item_type', '=', 'ticket'),
+      });
+      tenantLeftJoin(trx, tenant, childrenQuery, 'boards as c', 't.board_id', 'c.board_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'categories as cat', 't.category_id', 'cat.category_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'clients as comp', 't.client_id', 'comp.client_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'users as u', 't.entered_by', 'u.user_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'users as au', 't.assigned_to', 'au.user_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
+
+      const rows = await childrenQuery
+        .select(
+          't.*',
+          's.name as status_name',
+          'p.priority_name',
+          'p.color as priority_color',
+          'c.board_name',
+          'cat.category_name',
+          'comp.client_name as client_name',
+          trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
+          trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
+          'tm.team_name as assigned_team_name',
+          'mt.ticket_number as bundle_master_ticket_number'
+        )
+        .where({ 't.master_ticket_id': masterTicketId })
+        .orderBy('t.updated_at', 'desc');
+
+      const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
+
+      return authorizedRows.map((ticket: any): ITicketListItem => {
+        const {
+          status_id,
+          priority_id,
+          board_id,
+          category_id,
+          entered_by,
+          status_name,
+          priority_name,
+          priority_color,
+          board_name,
+          category_name,
+          client_name,
+          entered_by_name,
+          assigned_to_name,
+          assigned_team_name,
+          bundle_master_ticket_number,
+          ...rest
+        } = ticket;
+
+        return {
+          ...rest,
+          status_id: status_id || null,
+          priority_id: priority_id || null,
+          board_id: board_id || null,
+          category_id: category_id || null,
+          entered_by: entered_by || null,
+          status_name: status_name || 'Unknown',
+          priority_name: priority_name || 'Unknown',
+          priority_color: priority_color || '#6B7280',
+          board_name: board_name || 'Unknown',
+          category_name: category_name || 'Unknown',
+          client_name: client_name || 'Unknown',
+          entered_by_name: entered_by_name || 'Unknown',
+          assigned_to_name: assigned_to_name || 'Unknown',
+          assigned_team_name: assigned_team_name || null,
+          // Children are not masters; keep these fields stable for the list UI.
+          bundle_child_count: 0,
+          bundle_distinct_client_count: 0,
+          bundle_master_ticket_number: bundle_master_ticket_number ?? null,
+        };
+      });
+    } catch (error) {
+      const expected = ticketListActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      console.error('Failed to fetch bundle children:', error);
+      throw error;
     }
-
-    const authorizationContext = await createTicketAuthorizationContext(
-      trx,
-      tenant,
-      user as IUserWithRoles
-    );
-
-    const childrenQuery = tenantScopedTable(trx, 'tickets as t', tenant);
-    tenantLeftJoin(trx, tenant, childrenQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id');
-    tenantLeftJoin(trx, tenant, childrenQuery, 'statuses as s', 't.status_id', 's.status_id');
-    tenantLeftJoin(trx, tenant, childrenQuery, 'priorities as p', 't.priority_id', 'p.priority_id', {
-      on: (join) => join.andOnVal('p.item_type', '=', 'ticket'),
-    });
-    tenantLeftJoin(trx, tenant, childrenQuery, 'boards as c', 't.board_id', 'c.board_id');
-    tenantLeftJoin(trx, tenant, childrenQuery, 'categories as cat', 't.category_id', 'cat.category_id');
-    tenantLeftJoin(trx, tenant, childrenQuery, 'clients as comp', 't.client_id', 'comp.client_id');
-    tenantLeftJoin(trx, tenant, childrenQuery, 'users as u', 't.entered_by', 'u.user_id');
-    tenantLeftJoin(trx, tenant, childrenQuery, 'users as au', 't.assigned_to', 'au.user_id');
-    tenantLeftJoin(trx, tenant, childrenQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
-
-    const rows = await childrenQuery
-      .select(
-        't.*',
-        's.name as status_name',
-        'p.priority_name',
-        'p.color as priority_color',
-        'c.board_name',
-        'cat.category_name',
-        'comp.client_name as client_name',
-        trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
-        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
-        'tm.team_name as assigned_team_name',
-        'mt.ticket_number as bundle_master_ticket_number'
-      )
-      .where({ 't.master_ticket_id': masterTicketId })
-      .orderBy('t.updated_at', 'desc');
-
-    const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
-
-    return authorizedRows.map((ticket: any): ITicketListItem => {
-      const {
-        status_id,
-        priority_id,
-        board_id,
-        category_id,
-        entered_by,
-        status_name,
-        priority_name,
-        priority_color,
-        board_name,
-        category_name,
-        client_name,
-        entered_by_name,
-        assigned_to_name,
-        assigned_team_name,
-        bundle_master_ticket_number,
-        ...rest
-      } = ticket;
-
-      return {
-        ...rest,
-        status_id: status_id || null,
-        priority_id: priority_id || null,
-        board_id: board_id || null,
-        category_id: category_id || null,
-        entered_by: entered_by || null,
-        status_name: status_name || 'Unknown',
-        priority_name: priority_name || 'Unknown',
-        priority_color: priority_color || '#6B7280',
-        board_name: board_name || 'Unknown',
-        category_name: category_name || 'Unknown',
-        client_name: client_name || 'Unknown',
-        entered_by_name: entered_by_name || 'Unknown',
-        assigned_to_name: assigned_to_name || 'Unknown',
-        assigned_team_name: assigned_team_name || null,
-        // Children are not masters; keep these fields stable for the list UI.
-        bundle_child_count: 0,
-        bundle_distinct_client_count: 0,
-        bundle_master_ticket_number: bundle_master_ticket_number ?? null,
-      };
-    });
   });
 });
 
@@ -3472,10 +3584,13 @@ export const getTicketsForListWithCursor = withAuth(async (
   filters: ITicketListFilters,
   cursor?: string,
   limit: number = 50
-): Promise<{ tickets: ITicketListItem[], nextCursor: string | null }> => {
+): Promise<{ tickets: ITicketListItem[], nextCursor: string | null } | TicketActionError> => {
   // For backward compatibility, we'll use page 1 with the specified limit
   // This doesn't support cursor pagination anymore, but prevents breaking existing code
   const result = await getTicketsForList(filters, 1, limit);
+  if (isTicketActionError(result)) {
+    return result;
+  }
 
   return {
     tickets: result.tickets,

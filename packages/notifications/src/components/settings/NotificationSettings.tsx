@@ -29,7 +29,8 @@ export function NotificationSettings() {
         const currentSettings = await getNotificationSettingsAction(tenantForRequest);
         setSettings(currentSettings);
       } catch (err) {
-        setError(err instanceof Error ? err.message : t('notifications.settingsForm.loadError', 'Failed to load settings'));
+        console.error('Failed to load notification settings:', err);
+        setError(t('notifications.settingsForm.loadError', 'Failed to load settings'));
       }
     }
     init(tenantValue);

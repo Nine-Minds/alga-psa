@@ -33,6 +33,14 @@ import EditPlanServiceQuantityDialog from './contract-lines/EditContractLineServ
 import { getContractLineById } from '@alga-psa/billing/actions/contractLineAction';
 import { getContractById } from '@alga-psa/billing/actions/contractActions';
 import { getCurrencySymbol } from '@alga-psa/core';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 // Removed ContractLineServiceForm import as 'Configure' is removed
@@ -92,8 +100,21 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
         ? servicesResponse
         : (servicesResponse.services || []);
 
+      if (isReturnedActionError(servicesWithConfigs)) {
+        setError(getErrorMessage(servicesWithConfigs));
+        return;
+      }
+      if (isReturnedActionError(planDetails)) {
+        setError(getErrorMessage(planDetails));
+        return;
+      }
+
       if (planDetails?.contract_id) {
         const contract = await getContractById(planDetails.contract_id);
+        if (isReturnedActionError(contract)) {
+          setError(getErrorMessage(contract));
+          return;
+        }
         if (contract?.currency_code) {
           setContractCurrency(contract.currency_code);
         }
@@ -158,14 +179,26 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
                 );
               }
               const cents = Math.round(parsed * 100);
-              await addServiceToContractLine(planId, serviceId, 1, cents);
+              const result = await addServiceToContractLine(planId, serviceId, 1, cents);
+              if (isReturnedActionError(result)) {
+                setError(getErrorMessage(result));
+                return;
+              }
             } else {
               // Let the billing engine pick up the catalog price for the contract currency.
-              await addServiceToContractLine(planId, serviceId, 1);
+              const result = await addServiceToContractLine(planId, serviceId, 1);
+              if (isReturnedActionError(result)) {
+                setError(getErrorMessage(result));
+                return;
+              }
             }
           } else {
             // Fixed-fee services are billed via the contract line's base rate.
-            await addServiceToContractLine(planId, serviceId, 1);
+            const result = await addServiceToContractLine(planId, serviceId, 1);
+            if (isReturnedActionError(result)) {
+              setError(getErrorMessage(result));
+              return;
+            }
           }
         }
       }
@@ -187,7 +220,11 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
     if (!planId) return;
 
     try {
-      await removeServiceFromContractLine(planId, serviceId);
+      const result = await removeServiceFromContractLine(planId, serviceId);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       fetchData();
       
       // Call the onServiceAdded callback if provided (also useful when removing services)
@@ -213,10 +250,13 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
     updates: { quantity: number; unitRateCents?: number | null }
   ) => {
     try {
-      await updateContractLineService(planId, serviceId, {
+      const result = await updateContractLineService(planId, serviceId, {
         quantity: updates.quantity,
         customRate: updates.unitRateCents,
       });
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
+      }
       fetchData(); // Refresh the data
     } catch (error) {
       console.error('Error updating quantity:', error);

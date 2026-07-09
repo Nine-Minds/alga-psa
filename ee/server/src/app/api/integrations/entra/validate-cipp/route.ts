@@ -111,11 +111,11 @@ export async function POST(): Promise<Response> {
           return badRequest('CIPP credentials were rejected by the remote API.');
         }
 
-        lastError = error.message;
+        lastError = 'CIPP validation request failed.';
         continue;
       }
 
-      lastError = error instanceof Error ? error.message : 'Unknown CIPP validation error.';
+      lastError = 'CIPP validation request failed.';
     }
   }
 

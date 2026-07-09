@@ -507,7 +507,7 @@ function DocumentStorageCardComponent({
             setDeleteValidation({
                 canDelete: false,
                 code: 'VALIDATION_FAILED',
-                message: error instanceof Error ? error.message : 'Failed to delete document.',
+                message: 'Failed to delete document.',
                 dependencies: [],
                 alternatives: []
             });

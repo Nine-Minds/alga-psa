@@ -37,16 +37,17 @@ async function getPaymentService(tenantId: string): Promise<any | null> {
   }
 }
 
-async function getAuthenticatedTenantId(): Promise<string> {
+async function getAuthenticatedTenantId(): Promise<string | null> {
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
-    throw new Error('Unauthorized: No authenticated user found');
+    return null;
   }
   return currentUser.tenant;
 }
 
 export async function hasEnabledPaymentProvider(): Promise<boolean> {
   const tenantId = await getAuthenticatedTenantId();
+  if (!tenantId) return false;
   const paymentService = await getPaymentService(tenantId);
   if (!paymentService) return false;
 
@@ -62,6 +63,7 @@ export async function getOrCreateInvoicePaymentLink(
   invoiceId: string
 ): Promise<PaymentLinkResult | null> {
   const tenantId = await getAuthenticatedTenantId();
+  if (!tenantId) return null;
   const paymentService = await getPaymentService(tenantId);
   if (!paymentService) return null;
 
@@ -82,6 +84,7 @@ export async function getInvoicePaymentStatus(
   invoiceId: string
 ): Promise<PaymentDetails | null> {
   const tenantId = await getAuthenticatedTenantId();
+  if (!tenantId) return null;
   const paymentService = await getPaymentService(tenantId);
   if (!paymentService) return null;
 
@@ -95,6 +98,7 @@ export async function getActiveInvoicePaymentLinkUrl(
   invoiceId: string
 ): Promise<string | null> {
   const tenantId = await getAuthenticatedTenantId();
+  if (!tenantId) return null;
   const paymentService = await getPaymentService(tenantId);
   if (!paymentService) return null;
 

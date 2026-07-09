@@ -10,6 +10,14 @@ import { auditLog } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import Invoice from '../models/invoice';
+import {
+    actionError,
+    permissionError,
+    type ActionMessageError,
+    type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+export type CreditReconciliationActionError = ActionMessageError | ActionPermissionError;
 
 type DbRow = Record<string, any>;
 
@@ -49,6 +57,55 @@ function tenantScopedTable(
     tableExpression: string
 ) {
     return tenantDb(conn, tenant).table(tableExpression);
+}
+
+function creditReconciliationActionErrorFrom(error: unknown): CreditReconciliationActionError | null {
+    if (error instanceof Error) {
+        if (error.message.startsWith('Permission denied')) {
+            return permissionError(error.message);
+        }
+        if (error.message.startsWith('Tenant context is required')) {
+            return actionError('No tenant context. Please refresh and try again.');
+        }
+        if (/^Client .+ not found in tenant .+$/.test(error.message)) {
+            return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+        }
+        if (/^Reconciliation report .+ not found$/.test(error.message)) {
+            return actionError('Reconciliation report not found. It may have been updated or deleted. Please refresh and try again.');
+        }
+        if (/^Reconciliation report .+ is already resolved$/.test(error.message)) {
+            return actionError('This reconciliation report is already resolved. Please refresh and try again.');
+        }
+        if (error.message === 'Client ID is required for client-specific validation') {
+            return actionError('Client ID is required for client-specific validation.');
+        }
+    }
+
+    const dbError = error as { code?: string; column?: string };
+    if (dbError?.code === '22P02') {
+        return actionError('One of the selected reconciliation values is invalid. Please refresh and try again.');
+    }
+    if (dbError?.code === '23502') {
+        return actionError(`Missing required reconciliation field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    }
+    if (dbError?.code === '23503') {
+        return actionError('A selected reconciliation record no longer exists. Please refresh and try again.');
+    }
+    if (dbError?.code === '23505') {
+        return actionError('A conflicting reconciliation record already exists. Please refresh and try again.');
+    }
+
+    return null;
+}
+
+async function withCreditReconciliationActionErrors<T>(work: () => Promise<T>): Promise<T | CreditReconciliationActionError> {
+    try {
+        return await work();
+    } catch (error) {
+        const expected = creditReconciliationActionErrorFrom(error);
+        if (expected) return expected;
+        throw error;
+    }
 }
 
 /**
@@ -840,7 +897,8 @@ export const resolveReconciliationReport = withAuth(async (
     reportId: string,
     notes?: string,
     trx?: Knex.Transaction
-): Promise<ICreditReconciliationReport> => {
+): Promise<ICreditReconciliationReport | CreditReconciliationActionError> => {
+    return withCreditReconciliationActionErrors(async () => {
     if (!await hasPermission(user as any, 'billing', 'update')) {
         throw new Error('Permission denied: billing update required');
     }
@@ -961,7 +1019,7 @@ export const resolveReconciliationReport = withAuth(async (
                     changedData: {},
                     details: {
                         action: 'Credit balance correction failed',
-                        reason: error instanceof Error ? error.message : 'Unknown error',
+                        reason: 'Credit balance could not be corrected.',
                         report_id: reportId
                     }
                 }
@@ -975,6 +1033,7 @@ export const resolveReconciliationReport = withAuth(async (
     } else {
         return await withTransaction(knex, executeWithTransaction);
     }
+    });
 });
 
 /**
@@ -999,7 +1058,8 @@ export const validateClientCredit = withAuth(async (
     missingTrackingCount: number;
     inconsistentTrackingCount: number;
     errorCount: number;
-}> => {
+} | CreditReconciliationActionError> => {
+    return withCreditReconciliationActionErrors(async () => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
         throw new Error('Permission denied: billing read required');
     }
@@ -1008,4 +1068,5 @@ export const validateClientCredit = withAuth(async (
     }
 
     return await runScheduledCreditBalanceValidation(clientId, user.user_id);
+    });
 });

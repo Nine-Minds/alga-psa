@@ -32,7 +32,7 @@ export const fetchWorkflowTask = withAuth(async (
     return task || null;
   } catch (error) {
     console.error(`Error fetching workflow task (${taskId}):`, error);
-    throw new Error("Failed to fetch workflow task. Please try again later.");
+    throw error;
   }
 });
 
@@ -85,7 +85,7 @@ export const fetchTaskFormSchema = withAuth(async (
     };
   } catch (error) {
     console.error(`Error fetching task form schema (${formId}):`, error);
-    throw new Error("Failed to fetch task form schema. Please try again later.");
+    throw error;
   }
 });
 
@@ -117,7 +117,7 @@ export const fetchTaskFormData = withAuth(async (
     return task.context_data || null;
   } catch (error) {
     console.error(`Error fetching task form data (${taskId}):`, error);
-    throw new Error("Failed to fetch task form data. Please try again later.");
+    throw error;
   }
 });
 
@@ -163,7 +163,7 @@ export const submitTaskForm = withAuth(async (
     return true;
   } catch (error) {
     console.error(`Error submitting task form (${taskId}):`, error);
-    throw new Error("Failed to submit task form. Please try again later.");
+    throw error;
   }
 });
 
@@ -197,7 +197,7 @@ export const cancelWorkflowTask = withAuth(async (
     return true;
   } catch (error) {
     console.error(`Error cancelling workflow task (${taskId}):`, error);
-    throw new Error("Failed to cancel workflow task. Please try again later.");
+    throw error;
   }
 });
 
@@ -243,7 +243,7 @@ export const reassignWorkflowTask = withAuth(async (
     return true;
   } catch (error) {
     console.error(`Error reassigning workflow task (${taskId}, ${newAssigneeId}):`, error);
-    throw new Error("Failed to reassign workflow task. Please try again later.");
+    throw error;
   }
 });
 
@@ -324,6 +324,6 @@ export const fetchDashboardWorkflowTasks = withAuth(async (
     return sortedTasks.slice(0, limit);
   } catch (error) {
     console.error(`Error fetching dashboard workflow tasks:`, error);
-    throw new Error("Failed to fetch dashboard workflow tasks. Please try again later.");
+    throw error;
   }
 });

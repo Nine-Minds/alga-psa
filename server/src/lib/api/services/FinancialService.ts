@@ -26,6 +26,29 @@ import { TaxService } from '@alga-psa/billing/services/taxService';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { runScheduledCreditBalanceValidation } from '@alga-psa/billing/actions/creditReconciliationActions';
+import {
+  BadRequestError,
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+} from '../middleware/apiMiddleware';
+
+function throwTaxCalculationApiError(error: unknown): never {
+  if (!(error instanceof Error)) {
+    throw error;
+  }
+
+  if (/^Client .+ not found in tenant .+$/.test(error.message)) {
+    throw new NotFoundError('Client not found');
+  }
+
+  if (/^No active tax rate\(s\) found for region .+ on date .+$/.test(error.message)) {
+    throw new NotFoundError(error.message);
+  }
+
+  throw error;
+}
 
 // Import types from schemas and interfaces
 import {
@@ -263,11 +286,11 @@ export class FinancialService extends BaseService<ITransaction> {
     context: ServiceContext
   ): Promise<void> {
     if (!context.user) {
-      throw new Error('Authentication required');
+      throw new UnauthorizedError('Authentication required');
     }
 
     if (!await hasPermission(context.user, resource, operation)) {
-      throw new Error(`Permission denied: Cannot ${operation} ${resource}`);
+      throw new ForbiddenError(`Permission denied: Cannot ${operation} ${resource}`);
     }
   }
 
@@ -611,7 +634,7 @@ export class FinancialService extends BaseService<ITransaction> {
         .first();
 
       if (!invoice) {
-        throw new Error(`Invoice ${request.invoice_id} not found`);
+        throw new NotFoundError(`Invoice ${request.invoice_id} not found`);
       }
 
       const invoiceCurrency = invoice.currency_code || 'USD';
@@ -766,7 +789,7 @@ export class FinancialService extends BaseService<ITransaction> {
       .where('client_id', request.client_id)
       .first();
     if (!client) {
-      throw new Error('Client not found');
+      throw new NotFoundError('Client not found');
     }
 
     const createdInvoice = await withTransaction(knex, async (trx) => {
@@ -890,7 +913,7 @@ export class FinancialService extends BaseService<ITransaction> {
     const tenant = context.tenant;
 
     if (request.amount <= 0) {
-      throw new Error('Transfer amount must be greater than zero');
+      throw new BadRequestError('Transfer amount must be greater than zero');
     }
 
     return withTransaction(knex, async (trx) => {
@@ -900,13 +923,13 @@ export class FinancialService extends BaseService<ITransaction> {
         .first();
 
       if (!sourceCredit) {
-        throw new Error(`Source credit with ID ${request.source_credit_id} not found`);
+        throw new NotFoundError(`Source credit with ID ${request.source_credit_id} not found`);
       }
       if (sourceCredit.is_expired) {
-        throw new Error('Cannot transfer from an expired credit');
+        throw new ConflictError('Cannot transfer from an expired credit');
       }
       if (Number(sourceCredit.remaining_amount) < request.amount) {
-        throw new Error(`Insufficient remaining amount (${sourceCredit.remaining_amount}) for transfer of ${request.amount}`);
+        throw new ConflictError(`Insufficient remaining amount (${sourceCredit.remaining_amount}) for transfer of ${request.amount}`);
       }
 
       // Verify target client
@@ -914,7 +937,7 @@ export class FinancialService extends BaseService<ITransaction> {
         .where('client_id', request.target_client_id)
         .first();
       if (!targetClient) {
-        throw new Error(`Target client with ID ${request.target_client_id} not found`);
+        throw new NotFoundError(`Target client with ID ${request.target_client_id} not found`);
       }
 
       const now = new Date().toISOString();
@@ -1007,7 +1030,7 @@ export class FinancialService extends BaseService<ITransaction> {
     } = query;
 
     if (!client_id) {
-      throw new Error('Client ID is required for credit listing');
+      throw new BadRequestError('Client ID is required for credit listing');
     }
 
     const { knex } = await this.getKnex();
@@ -1152,7 +1175,7 @@ export class FinancialService extends BaseService<ITransaction> {
           charge.total,
           periodEnd,
           charge.tax_region || 'default'
-        );
+        ).catch(throwTaxCalculationApiError);
         totalTaxAmount += taxResult.taxAmount;
       }
     }
@@ -1368,7 +1391,7 @@ export class FinancialService extends BaseService<ITransaction> {
       .first();
 
     if (!client) {
-      throw new Error('Client not found');
+      throw new NotFoundError('Client not found');
     }
 
     // Get available (non-expired) credits
@@ -1758,10 +1781,10 @@ export class FinancialService extends BaseService<ITransaction> {
         .first();
 
       if (!report) {
-        throw new Error(`Reconciliation report ${reportId} not found`);
+        throw new NotFoundError(`Reconciliation report ${reportId} not found`);
       }
       if (report.status === 'resolved') {
-        throw new Error(`Reconciliation report ${reportId} is already resolved`);
+        throw new ConflictError(`Reconciliation report ${reportId} is already resolved`);
       }
 
       const now = new Date().toISOString();
@@ -1899,7 +1922,7 @@ export class FinancialService extends BaseService<ITransaction> {
               break;
               
             default:
-              throw new Error(`Unsupported operation: ${operation.operation}`);
+              throw new BadRequestError(`Unsupported operation: ${operation.operation}`);
           }
           
           results.push({
@@ -1980,7 +2003,7 @@ export class FinancialService extends BaseService<ITransaction> {
             .where('transaction_id', transactionId)
             .first();
           if (!existing) {
-            throw new Error('Transaction not found');
+            throw new NotFoundError('Transaction not found');
           }
 
           let result: any;
@@ -2001,7 +2024,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
             case 'reverse': {
               if (existing.status === 'reversed') {
-                throw new Error('Transaction is already reversed');
+                throw new ConflictError('Transaction is already reversed');
               }
               const reversalAmount = -Number(existing.amount);
               const lastTransaction = await tenantDb(trx, context.tenant).table('transactions')
@@ -2046,7 +2069,7 @@ export class FinancialService extends BaseService<ITransaction> {
             }
 
             default:
-              throw new Error(`Unsupported operation: ${operation.operation}`);
+              throw new BadRequestError(`Unsupported operation: ${operation.operation}`);
           }
 
           results.push({ id: transactionId, success: true, result });
@@ -2115,13 +2138,13 @@ export class FinancialService extends BaseService<ITransaction> {
         if (operation.operation === 'transfer') {
           const targetClientId = operation.parameters?.target_client_id;
           if (!targetClientId) {
-            throw new Error('target_client_id is required for transfer');
+            throw new BadRequestError('target_client_id is required for transfer');
           }
           const credit = await tenantDb(knex, context.tenant).table('credit_tracking')
             .where('credit_id', creditId)
             .first();
           if (!credit) {
-            throw new Error('Credit not found');
+            throw new NotFoundError('Credit not found');
           }
           const transferred = await this.transferCredit({
             user_id: context.userId,
@@ -2137,13 +2160,13 @@ export class FinancialService extends BaseService<ITransaction> {
               .where('credit_id', creditId)
               .first();
             if (!credit) {
-              throw new Error('Credit not found');
+              throw new NotFoundError('Credit not found');
             }
             const now = new Date().toISOString();
 
             if (operation.operation === 'expire') {
               if (credit.is_expired) {
-                throw new Error('Credit is already expired');
+                throw new ConflictError('Credit is already expired');
               }
               const remaining = Number(credit.remaining_amount);
               if (remaining > 0) {
@@ -2178,7 +2201,7 @@ export class FinancialService extends BaseService<ITransaction> {
             if (operation.operation === 'extend_expiration') {
               const newExpiration = operation.parameters?.expiration_date;
               if (!newExpiration) {
-                throw new Error('parameters.expiration_date is required for extend_expiration');
+                throw new BadRequestError('parameters.expiration_date is required for extend_expiration');
               }
               const [updated] = await tenantDb(trx, context.tenant).table('credit_tracking')
                 .where('credit_id', creditId)
@@ -2187,7 +2210,7 @@ export class FinancialService extends BaseService<ITransaction> {
               return updated;
             }
 
-            throw new Error(`Unsupported operation: ${operation.operation}`);
+            throw new BadRequestError(`Unsupported operation: ${operation.operation}`);
           });
         }
 
@@ -2287,7 +2310,7 @@ export class FinancialService extends BaseService<ITransaction> {
       amount,
       date || new Date().toISOString(),
       taxRegion
-    );
+    ).catch(throwTaxCalculationApiError);
 
     return {
       data: result,

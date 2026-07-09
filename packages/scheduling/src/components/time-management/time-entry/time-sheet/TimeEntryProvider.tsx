@@ -11,6 +11,7 @@ import { formatISO, parseISO } from 'date-fns';
 import { generateUUID } from '@alga-psa/core';
 import { getSchedulingClientById } from '../../../../actions/clientInteractionLookupActions';
 import { Service, ITimeEntryWithNew } from './types';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface TimeEntryState {
   entries: ITimeEntryWithNew[];
@@ -141,6 +142,13 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         clientId ? getSchedulingClientById(clientId) : Promise.resolve(null)
       ]);
 
+      if (isActionMessageError(services) || isActionPermissionError(services)) {
+        throw new Error(getErrorMessage(services));
+      }
+      if (isActionMessageError(taxRegions) || isActionPermissionError(taxRegions)) {
+        throw new Error(getErrorMessage(taxRegions));
+      }
+
       dispatch({
         type: 'SET_INITIAL_DATA',
         payload: { services, taxRegions },
@@ -201,6 +209,9 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
 
         if (workItem.type === 'ad_hoc') {
           scheduleEntry = await fetchScheduleEntryForWorkItem(workItem.work_item_id);
+          if (isActionMessageError(scheduleEntry) || isActionPermissionError(scheduleEntry)) {
+            throw new Error(getErrorMessage(scheduleEntry));
+          }
         }
 
         if (scheduleEntry && workItem.type === 'ad_hoc') {

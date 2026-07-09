@@ -7,10 +7,16 @@ import { getClientClient } from '@alga-psa/client-portal/actions';
 import { getClientContractLine, getClientInvoices } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 import type { IClient } from '@alga-psa/types';
 import type { IClientContractLine } from '@alga-psa/types';
 import type { InvoiceViewModel } from '@alga-psa/types';
+
+const isBillingActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export default function ClientAccount() {
   const { t: tProfile } = useTranslation('client-portal');
@@ -22,6 +28,7 @@ export default function ClientAccount() {
   const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
   const [hasInvoiceAccess, setHasInvoiceAccess] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
 
   // Note: Invoice amounts are stored in cents, so we divide by 100
   const formatCurrency = useCallback((amountInCents: number | string | null | undefined, currencyCode: string = 'USD') => {
@@ -64,16 +71,29 @@ export default function ClientAccount() {
 
         if (!mounted) return;
         setClient(clientData);
+        if (isBillingActionError(plan)) {
+          setContractLine(null);
+          setError(getErrorMessage(plan));
+          return;
+        }
         setContractLine(plan);
 
         try {
           const inv = await getClientInvoices();
           if (!mounted) return;
+          if (isBillingActionError(inv)) {
+            setInvoices([]);
+            setHasInvoiceAccess(false);
+            setInvoiceError(getErrorMessage(inv));
+            return;
+          }
           setInvoices(inv);
           setHasInvoiceAccess(true);
+          setInvoiceError(null);
         } catch (e) {
           if (!mounted) return;
           setHasInvoiceAccess(false);
+          setInvoiceError(tBilling('messages.noInvoices'));
         }
       } catch (e) {
         if (!mounted) return;
@@ -166,7 +186,7 @@ export default function ClientAccount() {
         </CardHeader>
         <CardContent>
           {!hasInvoiceAccess ? (
-            <div className="text-sm text-gray-600">{tBilling('messages.noInvoices')}</div>
+            <div className="text-sm text-gray-600">{invoiceError || tBilling('messages.noInvoices')}</div>
           ) : (
             <Table id="invoices-table">
               <thead>

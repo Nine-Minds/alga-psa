@@ -8,6 +8,7 @@ import type { Knex } from 'knex';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { hasPermission } from '../../auth/rbac';
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { Quote, QuoteItem, QuoteActivity } from '@alga-psa/billing/models';
 import {
   buildQuoteConversionPreview,
@@ -41,6 +42,56 @@ export interface QuoteListOptions extends ListOptions {
   search?: string;
 }
 
+function throwQuoteApiError(error: unknown): never {
+  if (!(error instanceof Error)) {
+    throw error;
+  }
+
+  const message = error.message;
+
+  if (/^Quote .+ not found in tenant .+$/.test(message)) {
+    throw new NotFoundError('Quote not found');
+  }
+
+  if (/^Quote item .+ not found in tenant .+$/.test(message)) {
+    throw new NotFoundError('Quote item not found');
+  }
+
+  if (/^Service .+ not found in tenant .+$/.test(message)) {
+    throw new ValidationError('Selected service was not found');
+  }
+
+  if (message === 'Quantity must be an integer' || message === 'Unit price must be an integer') {
+    throw new ValidationError(message);
+  }
+
+  if (
+    message.startsWith('Reorder list length') ||
+    message.startsWith('Reorder list contains item IDs')
+  ) {
+    throw new ValidationError(message);
+  }
+
+  if (
+    message === 'Quote templates do not participate in status transitions' ||
+    message.startsWith('Invalid quote status transition from ') ||
+    message === 'Quote templates cannot be revised' ||
+    message === 'Only sent or rejected quotes can be revised' ||
+    message.startsWith('Quote templates cannot be converted') ||
+    message.startsWith('Only accepted quotes can be converted') ||
+    message.startsWith('Quote does not contain') ||
+    message.startsWith('Quotes must be linked to a client') ||
+    message.startsWith('Quote already has a converted invoice') ||
+    message.startsWith('Product quote item ') ||
+    message === 'Quote has already started conversion and cannot be converted to both again' ||
+    message === 'Quote must contain both recurring and one-time items to convert to both records'
+  ) {
+    throw new ConflictError(message);
+  }
+
+  throw error;
+}
+
 export class QuoteService extends BaseService<IQuote> {
   constructor() {
     super({
@@ -62,7 +113,7 @@ export class QuoteService extends BaseService<IQuote> {
   private async validateBillingPermission(context: ServiceContext, action: string): Promise<void> {
     const hasAccess = await hasPermission(context.user, 'billing', action);
     if (!hasAccess) {
-      throw new Error(`Permission denied: Cannot ${action} quotes`);
+      throw new ForbiddenError(`Permission denied: Cannot ${action} quotes`);
     }
   }
 
@@ -205,7 +256,7 @@ export class QuoteService extends BaseService<IQuote> {
       }
 
       return (await Quote.getById(trx, context.tenant, quote.quote_id))!;
-    });
+    }).catch(throwQuoteApiError);
   }
 
   async update(id: string, data: UpdateQuoteApi, context: ServiceContext): Promise<IQuote> {
@@ -218,15 +269,30 @@ export class QuoteService extends BaseService<IQuote> {
       } as Partial<IQuote>);
 
       return updated;
-    });
+    }).catch(throwQuoteApiError);
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
-      await Quote.delete(trx, context.tenant, id);
-    });
+    const result = await withTransaction(knex, async (trx) => {
+      return Quote.delete(trx, context.tenant, id);
+    }).catch(throwQuoteApiError);
+
+    if (!result.deleted) {
+      const message = result.message || 'Quote cannot be deleted while dependent records exist';
+      const metadata = {
+        code: result.code,
+        dependencies: result.dependencies,
+        alternatives: result.alternatives,
+      };
+
+      if (result.code === 'NOT_FOUND' || result.code === 'NOT_FOUND_OR_ALREADY_DELETED') {
+        throw new NotFoundError(message);
+      }
+
+      throw new ConflictError(message, metadata);
+    }
   }
 
   // ============================================================================
@@ -257,7 +323,7 @@ export class QuoteService extends BaseService<IQuote> {
       });
 
       return item;
-    });
+    }).catch(throwQuoteApiError);
   }
 
   async updateItem(quoteId: string, itemId: string, data: UpdateQuoteItemApi, context: ServiceContext): Promise<IQuoteItem> {
@@ -269,7 +335,7 @@ export class QuoteService extends BaseService<IQuote> {
         .first<{ quote_id: string }>('quote_id');
 
       if (!item || item.quote_id !== quoteId) {
-        throw new Error(`Quote item ${itemId} was not found for quote ${quoteId}`);
+        throw new NotFoundError('Quote item not found');
       }
 
       // QuoteItem.update handles recalculation internally
@@ -277,7 +343,7 @@ export class QuoteService extends BaseService<IQuote> {
         ...data,
         updated_by: context.userId,
       } as Partial<IQuoteItem>);
-    });
+    }).catch(throwQuoteApiError);
   }
 
   async removeItem(quoteId: string, itemId: string, context: ServiceContext): Promise<void> {
@@ -289,12 +355,12 @@ export class QuoteService extends BaseService<IQuote> {
         .first<{ quote_id: string }>('quote_id');
 
       if (!item || item.quote_id !== quoteId) {
-        throw new Error(`Quote item ${itemId} was not found for quote ${quoteId}`);
+        throw new NotFoundError('Quote item not found');
       }
 
       // QuoteItem.delete handles reordering and recalculation internally
       await QuoteItem.delete(trx, context.tenant, itemId);
-    });
+    }).catch(throwQuoteApiError);
   }
 
   async reorderItems(quoteId: string, itemIds: string[], context: ServiceContext): Promise<IQuoteItem[]> {
@@ -302,7 +368,7 @@ export class QuoteService extends BaseService<IQuote> {
 
     return withTransaction(knex, async (trx) => {
       return QuoteItem.reorder(trx, context.tenant, quoteId, itemIds);
-    });
+    }).catch(throwQuoteApiError);
   }
 
   // ============================================================================
@@ -317,7 +383,7 @@ export class QuoteService extends BaseService<IQuote> {
         status: 'pending_approval',
         updated_by: context.userId,
       } as Partial<IQuote>);
-    });
+    }).catch(throwQuoteApiError);
   }
 
   async approve(quoteId: string, context: ServiceContext): Promise<IQuote> {
@@ -328,7 +394,7 @@ export class QuoteService extends BaseService<IQuote> {
         status: 'approved',
         updated_by: context.userId,
       } as Partial<IQuote>);
-    });
+    }).catch(throwQuoteApiError);
   }
 
   async requestChanges(quoteId: string, reason: string, context: ServiceContext): Promise<IQuote> {
@@ -349,7 +415,7 @@ export class QuoteService extends BaseService<IQuote> {
       });
 
       return quote;
-    });
+    }).catch(throwQuoteApiError);
   }
 
   async send(quoteId: string, data: SendQuoteApi, context: ServiceContext): Promise<IQuote> {
@@ -358,7 +424,7 @@ export class QuoteService extends BaseService<IQuote> {
     return withTransaction(knex, async (trx) => {
       const quote = await Quote.getById(trx, context.tenant, quoteId);
       if (!quote) {
-        throw new Error(`Quote ${quoteId} not found`);
+        throw new NotFoundError('Quote not found');
       }
 
       const updated = await Quote.update(trx, context.tenant, quoteId, {
@@ -368,7 +434,7 @@ export class QuoteService extends BaseService<IQuote> {
       } as Partial<IQuote>);
 
       return updated;
-    });
+    }).catch(throwQuoteApiError);
   }
 
   async sendReminder(quoteId: string, context: ServiceContext): Promise<IQuote> {
@@ -377,7 +443,7 @@ export class QuoteService extends BaseService<IQuote> {
     return withTransaction(knex, async (trx) => {
       const quote = await Quote.getById(trx, context.tenant, quoteId);
       if (!quote) {
-        throw new Error(`Quote ${quoteId} not found`);
+        throw new NotFoundError('Quote not found');
       }
 
       await QuoteActivity.create(trx, context.tenant, {
@@ -401,7 +467,7 @@ export class QuoteService extends BaseService<IQuote> {
 
     return withTransaction(knex, async (trx) => {
       const quote = await Quote.getById(trx, context.tenant, quoteId);
-      if (!quote) throw new Error(`Quote ${quoteId} not found`);
+      if (!quote) throw new NotFoundError('Quote not found');
       return buildQuoteConversionPreview(quote, trx, context.tenant);
     });
   }
@@ -424,7 +490,7 @@ export class QuoteService extends BaseService<IQuote> {
           return { contract_id: result.contract.contract_id, invoice_id: result.invoice.invoice_id };
         }
       }
-    });
+    }).catch(throwQuoteApiError);
   }
 
   // ============================================================================
@@ -436,7 +502,7 @@ export class QuoteService extends BaseService<IQuote> {
 
     return withTransaction(knex, async (trx) => {
       return Quote.createRevision(trx, context.tenant, quoteId, context.userId);
-    });
+    }).catch(throwQuoteApiError);
   }
 
   async listVersions(quoteId: string, context: ServiceContext): Promise<IQuote[]> {

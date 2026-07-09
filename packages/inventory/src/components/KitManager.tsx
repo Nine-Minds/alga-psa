@@ -7,6 +7,13 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IKitComponent } from '@alga-psa/types';
 import {
@@ -24,6 +31,11 @@ interface KitProduct {
 }
 
 type ComponentRow = IKitComponent & { service_name?: string; sku?: string | null };
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+function isReturnedActionError(value: unknown): value is ReturnedActionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 export function KitManager({ initialKits }: { initialKits: KitProduct[] }) {
   const { t } = useTranslation('features/inventory');
@@ -38,7 +50,14 @@ export function KitManager({ initialKits }: { initialKits: KitProduct[] }) {
 
   const reloadKits = useCallback(async () => {
     try {
-      const all = (await listInventoryProducts()) as KitProduct[];
+      const result = await listInventoryProducts();
+      if (isReturnedActionError(result)) {
+        setProducts([]);
+        setKits([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      const all = result as KitProduct[];
       setProducts(all);
       setKits(all.filter((p) => p.is_kit));
     } catch (e) {
@@ -53,7 +72,13 @@ export function KitManager({ initialKits }: { initialKits: KitProduct[] }) {
 
   const loadComponents = useCallback(async (kitServiceId: string) => {
     try {
-      setComponents((await listKitComponents(kitServiceId)) as ComponentRow[]);
+      const result = await listKitComponents(kitServiceId);
+      if (isReturnedActionError(result)) {
+        setComponents([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setComponents(result as ComponentRow[]);
     } catch (e) {
       console.error(e);
       toast.error(t('kits.loadComponentsFailed', 'Failed to load components'));
@@ -93,7 +118,11 @@ export function KitManager({ initialKits }: { initialKits: KitProduct[] }) {
     }
     setSaving(true);
     try {
-      await addKitComponent(selectedKit.service_id, componentServiceId.trim(), qty);
+      const result = await addKitComponent(selectedKit.service_id, componentServiceId.trim(), qty);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('kits.componentAdded', 'Component added'));
       setComponentServiceId('');
       setQuantity('1');
@@ -108,7 +137,11 @@ export function KitManager({ initialKits }: { initialKits: KitProduct[] }) {
   const remove = async (rec: ComponentRow) => {
     if (!selectedKit) return;
     try {
-      await removeKitComponent(selectedKit.service_id, rec.component_service_id);
+      const result = await removeKitComponent(selectedKit.service_id, rec.component_service_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('kits.componentRemoved', 'Component removed'));
       await loadComponents(selectedKit.service_id);
     } catch (e: any) {

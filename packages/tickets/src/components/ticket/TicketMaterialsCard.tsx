@@ -8,7 +8,14 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Trash2, Package, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ContentCard } from '@alga-psa/ui/components';
@@ -34,7 +41,11 @@ interface TicketMaterialsCardProps {
   ticketId: string;
   clientId?: string | null;
   /** Server-started materials promise; when provided the mount fetch is skipped. */
-  initialMaterials?: Promise<ITicketMaterial[]>;
+  initialMaterials?: Promise<ITicketMaterial[] | ActionMessageError | ActionPermissionError>;
+}
+
+function isReturnedActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 // On-hand badge for tracked products in the picker (F012): red at zero, amber at/below
@@ -88,6 +99,11 @@ export default function TicketMaterialsCard({
     setIsLoading(true);
     try {
       const data = await listTicketMaterials(ticketId);
+      if (isReturnedActionError(data)) {
+        handleError(data, t('errors.loadMaterials', 'Failed to load materials'));
+        setMaterials([]);
+        return;
+      }
       setMaterials(data);
     } catch (error) {
       handleError(error, t('errors.loadMaterials', 'Failed to load materials'));
@@ -102,7 +118,13 @@ export default function TicketMaterialsCard({
     if (!initialMaterials) return;
     let cancelled = false;
     initialMaterials.then((data) => {
-      if (!cancelled) setMaterials(data);
+      if (cancelled) return;
+      if (isReturnedActionError(data)) {
+        handleError(data, t('errors.loadMaterials', 'Failed to load materials'));
+        setMaterials([]);
+        return;
+      }
+      setMaterials(data);
     });
     return () => {
       cancelled = true;
@@ -239,7 +261,7 @@ export default function TicketMaterialsCard({
     setIsAdding(true);
     setAddError(null);
     try {
-      await addTicketMaterial({
+      const result = await addTicketMaterial({
         ticket_id: ticketId,
         client_id: clientId,
         service_id: selectedProductId,
@@ -249,6 +271,10 @@ export default function TicketMaterialsCard({
         description: description.trim() || null,
         unit_id: selectedUnitId || null,
       });
+      if (isReturnedActionError(result)) {
+        setAddError(getErrorMessage(result));
+        return;
+      }
 
       toast.success(t('materials.addSuccess', 'Material added'));
       setShowAddForm(false);
@@ -277,7 +303,12 @@ export default function TicketMaterialsCard({
     const previousMaterials = materials;
     setMaterials(prev => prev.filter(m => m.ticket_material_id !== materialId));
     try {
-      await deleteTicketMaterial(materialId);
+      const result = await deleteTicketMaterial(materialId);
+      if (isReturnedActionError(result)) {
+        setMaterials(previousMaterials);
+        handleError(result, t('errors.removeMaterial', 'Failed to remove material'));
+        return;
+      }
       toast.success(t('materials.removeSuccess', 'Material removed'));
     } catch (error) {
       // Revert on failure

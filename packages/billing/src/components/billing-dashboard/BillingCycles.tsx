@@ -29,6 +29,14 @@ import { IContract } from '@alga-psa/types';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { DateRangePicker, type DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const getDefaultStartDate = () => {
   const date = new Date();
@@ -140,6 +148,13 @@ const BillingCycles: React.FC = () => {
         getContracts()
       ]);
 
+      const expectedLoadError = [cycles, clientsResponse, allContracts].find(isReturnedActionError);
+      if (expectedLoadError) {
+        setError(getErrorMessage(expectedLoadError));
+        setLoading(false);
+        return;
+      }
+
       setBillingCycles(cycles);
       setClients(clientsResponse.clients);
       setTotalCount(clientsResponse.totalCount);
@@ -168,6 +183,15 @@ const BillingCycles: React.FC = () => {
         getActiveClientContractsByClientIdsForBilling(clientIds),
         getClientBillingScheduleSummaries(clientIds)
       ]);
+
+      if (isReturnedActionError(clientAssignedContracts)) {
+        setError(getErrorMessage(clientAssignedContracts));
+        return;
+      }
+      if (isReturnedActionError(scheduleSummaries)) {
+        setError(getErrorMessage(scheduleSummaries));
+        return;
+      }
 
       // Build active assignment map per client.
       const clientContractsMap: {

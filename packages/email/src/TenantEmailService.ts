@@ -274,7 +274,7 @@ export class TenantEmailService extends BaseEmailService {
       }
 
       return { allowed: true };
-    } catch (error) {
+    } catch {
       // Fail open on error
       logger.error(`[${this.getServiceName()}] Rate limit check failed, allowing request:`, error);
       return { allowed: true };
@@ -380,7 +380,7 @@ export class TenantEmailService extends BaseEmailService {
       }
       
       return TenantEmailService.normalizeSettingsRecord(tenantId, settings);
-    } catch (error) {
+    } catch {
       logger.error(`[TenantEmailService] Error fetching tenant email settings:`, error);
       return null;
     }
@@ -413,7 +413,7 @@ export class TenantEmailService extends BaseEmailService {
       // For SMTP this opens a connection and runs verify() (incl. AUTH/TLS).
       await manager.initialize(settings);
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return { success: false, error: 'The outbound email provider could not be initialized. Check host, credentials, and security settings.' };
     }
 
     const providers = await manager.getAvailableProviders(tenantId);
@@ -445,7 +445,7 @@ export class TenantEmailService extends BaseEmailService {
       }
       return { success: false, error: result.error || 'The provider rejected the test message.' };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return { success: false, error: 'Failed to send the test email. Check provider settings and try again.' };
     }
   }
 

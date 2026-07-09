@@ -33,6 +33,7 @@ import type {
   HuduLayoutAssignment,
 } from '../../integrations/hudu/assetLayoutMap';
 import { buildFieldsSchemaFromHuduLayout } from '../../integrations/hudu/layoutFieldSchema';
+import { huduActionErrorMessage } from './huduActionErrors';
 
 export type HuduLayoutMapActionResult<T> =
   | { success: true; data: T }
@@ -121,7 +122,7 @@ export const getHuduAssetLayoutMap = withHuduSettingsAccess(
       return { success: true, data: { layouts, map, types } };
     } catch (error) {
       logger.error('[HuduLayoutMapActions] getHuduAssetLayoutMap failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to load Hudu asset layout mappings. Please try again.') };
     }
   }
 );
@@ -212,7 +213,7 @@ export const createAssetTypeFromHuduLayout = withHuduSettingsAccess(
         tenant,
         error: toErrorMessage(error),
       });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to create an asset type from the Hudu layout. Please try again.') };
     }
   }
 );
@@ -238,7 +239,7 @@ export const setHuduAssetLayoutMap = withHuduSettingsAccess(
       return { success: true, data: { map: persisted } };
     } catch (error) {
       logger.error('[HuduLayoutMapActions] setHuduAssetLayoutMap failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to save Hudu asset layout mappings. Please try again.') };
     }
   }
 );

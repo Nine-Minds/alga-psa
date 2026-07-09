@@ -23,8 +23,17 @@ import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/Sta
 import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 export function TenantProjectTaskStatusSettings() {
   const { t } = useTranslation(['features/projects', 'common']);
@@ -76,6 +85,11 @@ export function TenantProjectTaskStatusSettings() {
     setLoading(true);
     try {
       const data = await getTenantProjectStatuses();
+      if (isReturnedActionError(data)) {
+        handleError(data, t('settings.statuses.load_task_statuses_failed', 'Failed to load task statuses'));
+        setStatuses([]);
+        return;
+      }
       setStatuses(data);
     } catch (error) {
       console.error('Failed to load statuses:', error);
@@ -110,10 +124,18 @@ export function TenantProjectTaskStatusSettings() {
     setSubmitting(true);
     try {
       if (editingStatus) {
-        await updateTenantProjectStatus(editingStatus.status_id, formData);
+        const result = await updateTenantProjectStatus(editingStatus.status_id, formData);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
         toast.success(t('settings.statuses.status_updated_success', 'Status updated successfully'));
       } else {
-        await createTenantProjectStatus(formData);
+        const result = await createTenantProjectStatus(formData);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
         toast.success(t('settings.statuses.status_created_success', 'Status created successfully'));
       }
       await loadStatuses();
@@ -160,7 +182,17 @@ export function TenantProjectTaskStatusSettings() {
 
     try {
       setIsDeleteProcessing(true);
-      await deleteTenantProjectStatus(statusToDelete.status_id);
+      const result = await deleteTenantProjectStatus(statusToDelete.status_id);
+      if (isReturnedActionError(result)) {
+        setDeleteValidation({
+          canDelete: false,
+          code: 'VALIDATION_FAILED',
+          message: getErrorMessage(result),
+          dependencies: [],
+          alternatives: []
+        });
+        return;
+      }
       setStatuses(statuses.filter(s => s.status_id !== statusToDelete.status_id));
       toast.success(t('settings.statuses.status_deleted_success', 'Status "{{statusName}}" deleted successfully', {
         statusName: statusToDelete.name,
@@ -195,7 +227,11 @@ export function TenantProjectTaskStatusSettings() {
     setStatuses(newStatuses);
 
     try {
-      await reorderTenantProjectStatuses(updates);
+      const result = await reorderTenantProjectStatuses(updates);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        loadStatuses();
+      }
     } catch (error) {
       console.error('Failed to reorder statuses:', error);
       loadStatuses();
@@ -216,7 +252,11 @@ export function TenantProjectTaskStatusSettings() {
     setStatuses(newStatuses);
 
     try {
-      await reorderTenantProjectStatuses(updates);
+      const result = await reorderTenantProjectStatuses(updates);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        loadStatuses();
+      }
     } catch (error) {
       console.error('Failed to reorder statuses:', error);
       loadStatuses();

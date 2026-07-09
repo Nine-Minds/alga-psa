@@ -29,6 +29,26 @@ import {
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
 import { hasPermission } from '../../auth/rbac';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
+
+function throwTimePeriodSettingsApiError(error: unknown): never {
+  const dbError = error as { code?: string; column?: string };
+
+  if (dbError?.code === '22P02') {
+    throw new BadRequestError('One of the time period setting identifiers is invalid');
+  }
+  if (dbError?.code === '23502') {
+    throw new BadRequestError(`Missing required time period setting field${dbError.column ? `: ${dbError.column}` : ''}`);
+  }
+  if (dbError?.code === '23503') {
+    throw new BadRequestError('The selected time period setting references a record that does not exist');
+  }
+  if (dbError?.code === '23505') {
+    throw new ConflictError('A conflicting time period setting already exists');
+  }
+
+  throw error;
+}
 
 export class TimeSheetService extends BaseService<any> {
   constructor() {
@@ -261,17 +281,17 @@ export class TimeSheetService extends BaseService<any> {
       await withTransaction(knex, async (trx) => {
         const existing = await this.getById(id, context);
         if (!existing) {
-          throw new Error('Time sheet not found');
+          throw new NotFoundError('Time sheet not found');
         }
   
         // Check permissions
         if (existing.user_id !== context.userId && !await this.canManageTimeSheets(context)) {
-          throw new Error('Permission denied: Cannot update this time sheet');
+          throw new ForbiddenError('Permission denied: Cannot update this time sheet');
         }
   
         // Check if approved (prevent modification)
         if (existing.approval_status === 'APPROVED' && !await this.canManageTimeSheets(context)) {
-          throw new Error('Cannot modify approved time sheets');
+          throw new ConflictError('Cannot modify approved time sheets');
         }
   
         const updateData = {
@@ -308,17 +328,17 @@ export class TimeSheetService extends BaseService<any> {
       await withTransaction(knex, async (trx) => {
         const existing = await this.getById(id, context);
         if (!existing) {
-          throw new Error('Time sheet not found');
+          throw new NotFoundError('Time sheet not found');
         }
   
         // Check permissions
         if (existing.user_id !== context.userId && !await this.canManageTimeSheets(context)) {
-          throw new Error('Permission denied: Cannot delete this time sheet');
+          throw new ForbiddenError('Permission denied: Cannot delete this time sheet');
         }
   
         // Check if approved
         if (existing.approval_status === 'APPROVED') {
-          throw new Error('Cannot delete approved time sheets');
+          throw new ConflictError('Cannot delete approved time sheets');
         }
   
         await this.buildTenantScopedQuery(trx, context)
@@ -345,23 +365,23 @@ export class TimeSheetService extends BaseService<any> {
       await withTransaction(knex, async (trx) => {
         const timeSheet = await this.getById(id, context);
         if (!timeSheet) {
-          throw new Error('Time sheet not found');
+          throw new NotFoundError('Time sheet not found');
         }
   
         // Check permissions
         if (timeSheet.user_id !== context.userId) {
-          throw new Error('Permission denied: Can only submit your own time sheets');
+          throw new ForbiddenError('Permission denied: Can only submit your own time sheets');
         }
   
         // Check current status
         if (timeSheet.approval_status !== 'DRAFT' && timeSheet.approval_status !== 'CHANGES_REQUESTED') {
-          throw new Error('Time sheet can only be submitted from DRAFT or CHANGES_REQUESTED status');
+          throw new ConflictError('Time sheet can only be submitted from DRAFT or CHANGES_REQUESTED status');
         }
   
         // Validate time sheet has entries
         const hasEntries = await this.hasTimeEntries(id, context);
         if (!hasEntries) {
-          throw new Error('Cannot submit time sheet without time entries');
+          throw new ConflictError('Cannot submit time sheet without time entries');
         }
   
         await this.buildTenantScopedQuery(trx, context)
@@ -397,17 +417,17 @@ export class TimeSheetService extends BaseService<any> {
       await withTransaction(knex, async (trx) => {
         const timeSheet = await this.getById(id, context);
         if (!timeSheet) {
-          throw new Error('Time sheet not found');
+          throw new NotFoundError('Time sheet not found');
         }
   
         // Check permissions
         if (!await this.canApproveTimeSheets(context)) {
-          throw new Error('Permission denied: Cannot approve time sheets');
+          throw new ForbiddenError('Permission denied: Cannot approve time sheets');
         }
   
         // Check current status
         if (timeSheet.approval_status !== 'SUBMITTED') {
-          throw new Error('Time sheet must be submitted before approval');
+          throw new ConflictError('Time sheet must be submitted before approval');
         }
   
         await this.buildTenantScopedQuery(trx, context)
@@ -454,17 +474,17 @@ export class TimeSheetService extends BaseService<any> {
       await withTransaction(knex, async (trx) => {
         const timeSheet = await this.getById(id, context);
         if (!timeSheet) {
-          throw new Error('Time sheet not found');
+          throw new NotFoundError('Time sheet not found');
         }
   
         // Check permissions
         if (!await this.canApproveTimeSheets(context)) {
-          throw new Error('Permission denied: Cannot request changes to time sheets');
+          throw new ForbiddenError('Permission denied: Cannot request changes to time sheets');
         }
   
         // Check current status
         if (timeSheet.approval_status !== 'SUBMITTED') {
-          throw new Error('Time sheet must be submitted before requesting changes');
+          throw new ConflictError('Time sheet must be submitted before requesting changes');
         }
   
         await this.buildTenantScopedQuery(trx, context)
@@ -523,23 +543,23 @@ export class TimeSheetService extends BaseService<any> {
       await withTransaction(knex, async (trx) => {
         const timeSheet = await this.getById(id, context);
         if (!timeSheet) {
-          throw new Error('Time sheet not found');
+          throw new NotFoundError('Time sheet not found');
         }
   
         // Check permissions
         if (!await this.canManageTimeSheets(context)) {
-          throw new Error('Permission denied: Cannot reverse time sheet approval');
+          throw new ForbiddenError('Permission denied: Cannot reverse time sheet approval');
         }
   
         // Check current status
         if (timeSheet.approval_status !== 'APPROVED') {
-          throw new Error('Time sheet is not approved');
+          throw new ConflictError('Time sheet is not approved');
         }
   
         // Check if time sheet has been invoiced (would prevent reversal)
         const isInvoiced = await this.isTimeSheetInvoiced(id, context);
         if (isInvoiced) {
-          throw new Error('Cannot reverse approval of time sheet that has been invoiced');
+          throw new ConflictError('Cannot reverse approval of time sheet that has been invoiced');
         }
   
         await this.buildTenantScopedQuery(trx, context)
@@ -690,6 +710,26 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
+        const startDate = data.start_date ? new Date(data.start_date) : null;
+        const endDate = data.end_date ? new Date(data.end_date) : null;
+
+        if (!startDate || !endDate || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+          throw new BadRequestError('Start date and end date must be valid dates');
+        }
+
+        if (startDate >= endDate) {
+          throw new BadRequestError('Start date must be before end date');
+        }
+
+        const overlappingPeriod = await tenantDb(trx, context.tenant).table('time_periods')
+          .where('start_date', '<', data.end_date)
+          .where('end_date', '>', data.start_date)
+          .first();
+
+        if (overlappingPeriod) {
+          throw new ConflictError('Cannot create time period: overlaps with existing period');
+        }
+
         const periodData = {
           ...data,
           tenant: context.tenant,
@@ -710,14 +750,49 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
+        const existingPeriod = await tenantDb(trx, context.tenant).table('time_periods')
+          .where({ period_id: id })
+          .first();
+
+        if (!existingPeriod) {
+          throw new NotFoundError('Time period not found');
+        }
+
+        const nextStartDate = data.start_date ?? existingPeriod.start_date;
+        const nextEndDate = data.end_date ?? existingPeriod.end_date;
+        const startDate = new Date(nextStartDate);
+        const endDate = new Date(nextEndDate);
+
+        if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+          throw new BadRequestError('Start date and end date must be valid dates');
+        }
+
+        if (startDate >= endDate) {
+          throw new BadRequestError('Start date must be before end date');
+        }
+
+        const overlappingPeriod = await tenantDb(trx, context.tenant).table('time_periods')
+          .whereNot('period_id', id)
+          .where('start_date', '<', nextEndDate)
+          .where('end_date', '>', nextStartDate)
+          .first();
+
+        if (overlappingPeriod) {
+          throw new ConflictError('Cannot update time period: overlaps with existing period');
+        }
+
         const updateData = {
           ...data,
           updated_at: new Date()
         };
   
-        await tenantDb(trx, context.tenant).table('time_periods')
+        const updatedCount = await tenantDb(trx, context.tenant).table('time_periods')
           .where({ period_id: id })
           .update(updateData);
+
+        if (updatedCount === 0) {
+          throw new NotFoundError('Time period not found');
+        }
   
         return this.getTimePeriod(id, context);
       });
@@ -728,18 +803,30 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
+        const period = await tenantDb(trx, context.tenant).table('time_periods')
+          .where({ period_id: id })
+          .first();
+
+        if (!period) {
+          throw new NotFoundError('Time period not found');
+        }
+
         // Check if period has time sheets
         const hasTimeSheets = await tenantDb(trx, context.tenant).table('time_sheets')
           .where({ period_id: id })
           .first();
   
         if (hasTimeSheets) {
-          throw new Error('Cannot delete time period that has associated time sheets');
+          throw new ConflictError('Cannot delete time period that has associated time sheets');
         }
   
-        await tenantDb(trx, context.tenant).table('time_periods')
+        const deletedCount = await tenantDb(trx, context.tenant).table('time_periods')
           .where({ period_id: id })
           .del();
+
+        if (deletedCount === 0) {
+          throw new NotFoundError('Time period not found');
+        }
       });
     }
 
@@ -786,56 +873,82 @@ export class TimeSheetService extends BaseService<any> {
 
   async createTimePeriodSettings(data: CreateTimePeriodSettingsData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
-      
-      return withTransaction(knex, async (trx) => {
-        // Deactivate previous settings if new one is active
-        if (data.is_active) {
-          await tenantDb(trx, context.tenant).table('time_period_settings')
-            .where({ is_active: true })
-            .update({ is_active: false, updated_at: new Date() });
-        }
-  
-        const settingsData = {
-          ...data,
-          tenant: context.tenant,
-          created_at: new Date(),
-          updated_at: new Date()
-        };
-  
-        const [settings] = await tenantDb(trx, context.tenant).table('time_period_settings')
-          .insert(settingsData)
-          .returning('*');
-  
-        return settings;
-      });
+
+      try {
+        return await withTransaction(knex, async (trx) => {
+          // Deactivate previous settings if new one is active
+          if (data.is_active) {
+            await tenantDb(trx, context.tenant).table('time_period_settings')
+              .where({ is_active: true })
+              .update({ is_active: false, updated_at: new Date() });
+          }
+
+          const settingsData = {
+            ...data,
+            tenant: context.tenant,
+            created_at: new Date(),
+            updated_at: new Date()
+          };
+
+          const [settings] = await tenantDb(trx, context.tenant).table('time_period_settings')
+            .insert(settingsData)
+            .returning('*');
+
+          return settings;
+        });
+      } catch (error) {
+        throwTimePeriodSettingsApiError(error);
+      }
     }
 
 
   async updateTimePeriodSettings(id: string, data: UpdateTimePeriodSettingsData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
-      
-      return withTransaction(knex, async (trx) => {
-        // Deactivate other settings if this one is being activated
-        if (data.is_active) {
-          await tenantDb(trx, context.tenant).table('time_period_settings')
-            .where({ is_active: true })
-            .whereNot('settings_id', id)
-            .update({ is_active: false, updated_at: new Date() });
-        }
-  
-        const updateData = {
-          ...data,
-          updated_at: new Date()
-        };
-  
-        await tenantDb(trx, context.tenant).table('time_period_settings')
-          .where({ settings_id: id })
-          .update(updateData);
-  
-        return tenantDb(trx, context.tenant).table('time_period_settings')
-          .where({ settings_id: id })
-          .first();
-      });
+
+      try {
+        return await withTransaction(knex, async (trx) => {
+          const existing = await tenantDb(trx, context.tenant).table('time_period_settings')
+            .where({ time_period_settings_id: id })
+            .first();
+
+          if (!existing) {
+            throw new NotFoundError('Time period settings not found');
+          }
+
+          // Deactivate other settings if this one is being activated
+          if (data.is_active) {
+            await tenantDb(trx, context.tenant).table('time_period_settings')
+              .where({ is_active: true })
+              .whereNot('time_period_settings_id', id)
+              .update({ is_active: false, updated_at: new Date() });
+          }
+
+          const updateData = {
+            ...data,
+            updated_at: new Date()
+          };
+
+          const updatedCount = await tenantDb(trx, context.tenant).table('time_period_settings')
+            .where({ time_period_settings_id: id })
+            .update(updateData);
+
+          if (updatedCount === 0) {
+            throw new NotFoundError('Time period settings not found');
+          }
+
+          const settings = await tenantDb(trx, context.tenant).table('time_period_settings')
+            .where({ time_period_settings_id: id })
+            .first();
+
+          if (!settings) {
+            throw new NotFoundError('Time period settings not found');
+          }
+
+          return settings;
+        });
+      } catch (error) {
+        throwTimePeriodSettingsApiError(error);
+      }
     }
 
 
@@ -977,7 +1090,7 @@ export class TimeSheetService extends BaseService<any> {
           .first();
   
         if (!existing) {
-          throw new Error('Schedule entry not found');
+          throw new NotFoundError('Schedule entry not found');
         }
 
         // Check permissions
@@ -988,7 +1101,7 @@ export class TimeSheetService extends BaseService<any> {
           (assigneeIds.length === 1 && assigneeIds[0] === context.userId);
 
         if (existing.is_private && !isOwnEntry) {
-          throw new Error('Permission denied: Cannot update a private schedule entry');
+          throw new ForbiddenError('Permission denied: Cannot update a private schedule entry');
         }
 
         if (!await this.canManageSchedules(context, 'update')) {
@@ -996,7 +1109,7 @@ export class TimeSheetService extends BaseService<any> {
             ? data.assigned_user_ids.length === 1 && data.assigned_user_ids[0] === context.userId
             : true;
           if (!isOwnEntry || !assignmentRemainsOwn) {
-            throw new Error('Permission denied: Cannot update this schedule entry');
+            throw new ForbiddenError('Permission denied: Cannot update this schedule entry');
           }
         }
 
@@ -1065,7 +1178,7 @@ export class TimeSheetService extends BaseService<any> {
           .first();
   
         if (!existing) {
-          throw new Error('Schedule entry not found');
+          throw new NotFoundError('Schedule entry not found');
         }
 
         // Check permissions
@@ -1076,11 +1189,11 @@ export class TimeSheetService extends BaseService<any> {
           (assigneeIds.length === 1 && assigneeIds[0] === context.userId);
 
         if (existing.is_private && !isOwnEntry) {
-          throw new Error('Permission denied: Cannot delete a private schedule entry');
+          throw new ForbiddenError('Permission denied: Cannot delete a private schedule entry');
         }
 
         if (!isOwnEntry && !await this.canManageSchedules(context, 'delete')) {
-          throw new Error('Permission denied: Cannot delete this schedule entry');
+          throw new ForbiddenError('Permission denied: Cannot delete this schedule entry');
         }
 
         await tenantDb(trx, context.tenant).table('schedule_entries')

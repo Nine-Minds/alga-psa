@@ -41,7 +41,12 @@ import { updateClientContractForBilling } from '@alga-psa/billing/actions/billin
 import { toPlainDate } from '@alga-psa/core';
 import { ContractWizard } from './ContractWizard';
 import { ContractDialog } from './ContractDialog';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
@@ -123,6 +128,10 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     try {
       setIsLoading(true);
       const fetchedAssignments = await getContractsWithClients();
+      if (isActionMessageError(fetchedAssignments) || isActionPermissionError(fetchedAssignments)) {
+        setError(getErrorMessage(fetchedAssignments));
+        return;
+      }
       const renewalRows = await listRenewalQueueRows();
       if (isActionPermissionError(renewalRows)) {
         handleError(renewalRows.permissionError);
@@ -144,8 +153,8 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     setIsDeletingContract(true);
     try {
       const result = await deleteContract(contractToDelete.contractId);
-      if (isActionPermissionError(result)) {
-        handleError(result.permissionError);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        handleError(getErrorMessage(result));
         setContractToDelete(null);
         return;
       }
@@ -168,7 +177,11 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
       }
-      await updateClientContractForBilling(clientContractId, { is_active: false });
+      const result = await updateClientContractForBilling(clientContractId, { is_active: false });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchClientContracts();
       onRefreshNeeded?.();
       setContractToTerminate(null);
@@ -187,7 +200,11 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
       }
-      await updateClientContractForBilling(clientContractId, { is_active: true });
+      const result = await updateClientContractForBilling(clientContractId, { is_active: true });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchClientContracts();
       onRefreshNeeded?.();
     } catch (err) {
@@ -203,7 +220,11 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
       }
-      await updateClientContractForBilling(clientContractId, { is_active: true });
+      const result = await updateClientContractForBilling(clientContractId, { is_active: true });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchClientContracts();
       onRefreshNeeded?.();
     } catch (err) {
@@ -220,6 +241,10 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       const draftData = await getDraftContractForResume(contractId);
       if (isActionPermissionError(draftData)) {
         handleError(draftData.permissionError);
+        return;
+      }
+      if (isActionMessageError(draftData)) {
+        toast.error(getErrorMessage(draftData));
         return;
       }
       setDraftToResume(draftData);
@@ -525,7 +550,12 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     );
 
     try {
-      await markRenewalQueueItemRenewing(rowId);
+      const result = await markRenewalQueueItemRenewing(rowId);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        await refreshRenewalRows();
+        return;
+      }
       await refreshRenewalRows();
       onRefreshNeeded?.();
     } catch (mutationError) {
@@ -555,7 +585,12 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     );
 
     try {
-      await markRenewalQueueItemNonRenewing(rowId);
+      const result = await markRenewalQueueItemNonRenewing(rowId);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        await refreshRenewalRows();
+        return;
+      }
       await refreshRenewalRows();
       onRefreshNeeded?.();
     } catch (mutationError) {

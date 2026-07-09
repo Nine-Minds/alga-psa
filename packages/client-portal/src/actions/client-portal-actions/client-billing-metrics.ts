@@ -12,6 +12,7 @@ import { IProjectTask } from '@alga-psa/types';
 import { IUsageRecord } from '@alga-psa/types';
 import { toPlainDate, formatDateOnly } from '@alga-psa/core';
 import { withAuth } from '@alga-psa/auth';
+import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 
 // Define the schema for the hours by service input parameters
 const HoursByServiceInputSchema = z.object({
@@ -44,12 +45,12 @@ export const getClientHoursByService = withAuth(async (
   user,
   { tenant },
   input: z.infer<typeof HoursByServiceInputSchema>
-): Promise<ClientHoursByServiceResult[]> => {
+): Promise<ClientHoursByServiceResult[] | ClientPortalActionError> => {
   // Validate input
   const validationResult = HoursByServiceInputSchema.safeParse(input);
   if (!validationResult.success) {
     const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
-    throw new Error(`Validation Error: ${errorMessages}`);
+    return clientPortalActionErrorFrom(new Error(`Validation Error: ${errorMessages}`))!;
   }
   const { startDate, endDate, groupByServiceType } = validationResult.data;
 
@@ -151,8 +152,12 @@ export const getClientHoursByService = withAuth(async (
 
     return result;
   } catch (error) {
+    const expected = clientPortalActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error(`Error fetching hours by service in tenant ${tenant}:`, error);
-    throw new Error(`Failed to fetch hours by service: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error;
   }
 });
 
@@ -185,12 +190,12 @@ export const getClientUsageMetrics = withAuth(async (
   user,
   { tenant },
   input: z.infer<typeof UsageMetricsInputSchema>
-): Promise<ClientUsageMetricResult[]> => {
+): Promise<ClientUsageMetricResult[] | ClientPortalActionError> => {
   // Validate input
   const validationResult = UsageMetricsInputSchema.safeParse(input);
   if (!validationResult.success) {
     const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
-    throw new Error(`Validation Error: ${errorMessages}`);
+    return clientPortalActionErrorFrom(new Error(`Validation Error: ${errorMessages}`))!;
   }
   const { startDate, endDate } = validationResult.data;
 
@@ -257,8 +262,12 @@ export const getClientUsageMetrics = withAuth(async (
 
     return result;
   } catch (error) {
+    const expected = clientPortalActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error(`Error fetching usage metrics in tenant ${tenant}:`, error);
-    throw new Error(`Failed to fetch usage metrics: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error;
   }
 });
 
@@ -302,7 +311,7 @@ export const getClientBucketUsageHistory = withAuth(async (
     hours_used: number;
     hours_total: number;
   }>;
-}[]> => {
+}[] | ClientPortalActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -379,8 +388,12 @@ export const getClientBucketUsageHistory = withAuth(async (
 
     return result;
   } catch (error) {
+    const expected = clientPortalActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error(`Error fetching bucket usage history in tenant ${tenant}:`, error);
-    throw new Error(`Failed to fetch bucket usage history: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error;
   }
 });
 
@@ -389,7 +402,7 @@ export const getClientBucketUsageHistory = withAuth(async (
  *
  * @returns A promise that resolves to an array of detailed bucket usage information.
  */
-export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<ClientBucketUsageResult[]> => {
+export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<ClientBucketUsageResult[] | ClientPortalActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -506,7 +519,11 @@ export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<C
 
     return result;
   } catch (error) {
+    const expected = clientPortalActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error(`Error fetching bucket usage in tenant ${tenant}:`, error);
-    throw new Error(`Failed to fetch bucket usage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error;
   }
 });

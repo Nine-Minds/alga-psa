@@ -7,6 +7,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Calculator, Cloud, ArrowRight, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 import { getInvoiceTaxReconciliation } from '@alga-psa/billing/actions';
 
@@ -47,6 +48,11 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
     setIsLoading(true);
     try {
       const result = await getInvoiceTaxReconciliation(invoiceId);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        console.error('Failed to load reconciliation data:', getErrorMessage(result));
+        setData(null);
+        return;
+      }
       setData(result as ReconciliationData);
     } catch (error) {
       console.error('Failed to load reconciliation data:', error);

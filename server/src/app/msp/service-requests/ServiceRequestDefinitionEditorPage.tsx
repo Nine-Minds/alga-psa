@@ -36,6 +36,13 @@ import { Input } from '@alga-psa/ui/components/Input';
 import MspTicketDetailsContainerClient from '@alga-psa/msp-composition/tickets/MspTicketDetailsContainerClient';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { toast } from 'react-hot-toast';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TFunction } from 'i18next';
 import { ServiceRequestCard } from '../../client-portal/request-services/ServiceRequestCard';
@@ -161,6 +168,9 @@ interface TicketRoutingBoardConfig {
   display_itil_impact?: boolean;
   display_itil_urgency?: boolean;
 }
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const FORM_FIELD_TYPES: Array<FormField['type']> = [
   'short-text',
@@ -800,6 +810,13 @@ export default function ServiceRequestDefinitionEditorPage() {
     setTicketRoutingLoading(true);
     try {
       const boardData = await getServiceRequestTicketRoutingBoardDataAction(nextBoardId);
+      if (isReturnedActionError(boardData)) {
+        toast.error(getErrorMessage(boardData));
+        setTicketRoutingStatuses([]);
+        setTicketRoutingCategories([]);
+        setTicketRoutingBoardConfig(null);
+        return;
+      }
       setTicketRoutingStatuses(boardData.statuses as ITicketStatus[]);
       setTicketRoutingCategories(boardData.categories as ITicketCategory[]);
       setTicketRoutingBoardConfig(
@@ -971,6 +988,13 @@ export default function ServiceRequestDefinitionEditorPage() {
     setTicketRoutingLoading(true);
     try {
       const boardData = await getServiceRequestTicketRoutingBoardDataAction(nextBoardId);
+      if (isReturnedActionError(boardData)) {
+        toast.error(getErrorMessage(boardData));
+        setTicketRoutingStatuses([]);
+        setTicketRoutingCategories([]);
+        setTicketRoutingBoardConfig(null);
+        return;
+      }
       const nextStatuses = boardData.statuses as ITicketStatus[];
       const nextBoardConfig = (boardData.boardConfig as TicketRoutingBoardConfig | null) ?? null;
       setTicketRoutingStatuses(nextStatuses);

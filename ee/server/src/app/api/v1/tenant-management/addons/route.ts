@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@alga-psa/auth';
 import { ADD_ON_DESCRIPTIONS, ADD_ON_LABELS, ADD_ONS } from '@alga-psa/types';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
+import { tenantManagementRouteError } from '../tenantManagementRouteErrors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -65,8 +66,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    const status = message === 'Unauthorized' ? 401 : message.includes('Forbidden') ? 403 : 500;
-    return NextResponse.json({ success: false, error: message }, { status });
+    const routeError = tenantManagementRouteError(error, 'Failed to load tenant add-ons.');
+    return NextResponse.json({ success: false, error: routeError.error }, { status: routeError.status });
   }
 }

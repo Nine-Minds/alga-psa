@@ -28,6 +28,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getEmailChannelHealthReport,
@@ -70,6 +75,9 @@ interface ReportsProps {
   productCode?: ProductCode;
   tier?: TenantTier;
 }
+
+const isReportActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const REPORTS: ReportDefinition[] = [
   {
@@ -376,10 +384,15 @@ function TicketWorkloadView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     setError(null);
     getTicketWorkloadReport(rangeDays)
       .then((data) => {
+        if (isReportActionError(data)) {
+          if (!cancelled) setError(getErrorMessage(data));
+          return;
+        }
         if (!cancelled) setReport(data);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
+        console.error('Failed to load ticket workload report:', err);
+        if (!cancelled) setError(t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
       });
     return () => {
       cancelled = true;
@@ -439,10 +452,15 @@ function TimeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     setError(null);
     getTimeUtilizationReport(rangeDays)
       .then((data) => {
+        if (isReportActionError(data)) {
+          if (!cancelled) setError(getErrorMessage(data));
+          return;
+        }
         if (!cancelled) setReport(data);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
+        console.error('Failed to load time utilization report:', err);
+        if (!cancelled) setError(t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
       });
     return () => {
       cancelled = true;
@@ -547,10 +565,15 @@ function TeamPerformanceView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     setError(null);
     getTeamPerformanceReport(rangeDays)
       .then((data) => {
+        if (isReportActionError(data)) {
+          if (!cancelled) setError(getErrorMessage(data));
+          return;
+        }
         if (!cancelled) setReport(data);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
+        console.error('Failed to load team performance report:', err);
+        if (!cancelled) setError(t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
       });
     return () => {
       cancelled = true;
@@ -666,10 +689,15 @@ function EmailChannelHealthView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     setError(null);
     getEmailChannelHealthReport(rangeDays)
       .then((data) => {
+        if (isReportActionError(data)) {
+          if (!cancelled) setError(getErrorMessage(data));
+          return;
+        }
         if (!cancelled) setReport(data);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
+        console.error('Failed to load email channel health report:', err);
+        if (!cancelled) setError(t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
       });
     return () => {
       cancelled = true;
@@ -837,10 +865,15 @@ function TicketAgingView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     setError(null);
     getTicketAgingReport(rangeDays)
       .then((data) => {
+        if (isReportActionError(data)) {
+          if (!cancelled) setError(getErrorMessage(data));
+          return;
+        }
         if (!cancelled) setReport(data);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
+        console.error('Failed to load ticket aging report:', err);
+        if (!cancelled) setError(t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
       });
     return () => {
       cancelled = true;

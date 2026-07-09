@@ -2,7 +2,7 @@ import { JobService, JobStepResult } from 'server/src/services/job.service';
 import { getTenantDetails } from '@alga-psa/tenancy/actions';
 import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { uploadDocument } from '@alga-psa/documents/actions/documentActions';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { TenantCompany } from 'server/src/lib/types';
 /// <reference types="formdata-node" />
 // @ts-ignore - Types exist but aren't properly exposed in package.json
@@ -50,6 +50,9 @@ export class InvoiceZipJobHandler {
     
     // Get invoice details first
     const invoice = await getInvoiceForRendering(invoiceId);
+    if (isActionMessageError(invoice) || isActionPermissionError(invoice)) {
+      throw new Error(getErrorMessage(invoice));
+    }
     if (!invoice || !invoice.invoice_number) {
       throw new Error(`Failed to get invoice details or invoice number for invoice ${invoiceId}`);
     }

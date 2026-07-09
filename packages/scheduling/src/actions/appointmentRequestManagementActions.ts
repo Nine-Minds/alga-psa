@@ -84,6 +84,44 @@ export interface OnlineMeetingAppointmentArtifact {
   created_date_time: Date | null;
 }
 
+function appointmentRequestActionErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (error instanceof Error && error.name === 'ZodError') {
+    return 'Appointment request contains invalid fields. Review the request details and try again.';
+  }
+
+  if (
+    message === 'Appointment request not found' ||
+    message === 'Assigned user not found' ||
+    message === 'Service not found' ||
+    message === 'Ticket not found' ||
+    message === 'Ticket does not belong to the same client as the appointment request' ||
+    message === 'Online Meeting interaction type is not configured'
+  ) {
+    return message;
+  }
+
+  if (
+    message.startsWith('Cannot approve request with status:') ||
+    message.startsWith('Cannot decline request with status:') ||
+    message.startsWith('Cannot update request with status:') ||
+    message.startsWith('Insufficient permissions to ')
+  ) {
+    return message;
+  }
+
+  if (
+    message === 'Invalid requested date/time on appointment request' ||
+    message === 'Invalid final date provided for approval' ||
+    message.startsWith('Invalid date/time:')
+  ) {
+    return 'Appointment request date or time is invalid.';
+  }
+
+  return fallback;
+}
+
 async function loadOnlineMeetingArtifactsForAppointments(
   trx: Knex.Transaction,
   tenant: string,
@@ -279,7 +317,7 @@ export const getAppointmentRequestById = withAuth(async (
     return { success: true, data: request as IAppointmentRequest };
   } catch (error) {
     console.error('Error fetching appointment request:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch appointment request';
+    const message = appointmentRequestActionErrorMessage(error, 'Failed to fetch appointment request');
     return { success: false, error: message };
   }
 });
@@ -443,7 +481,7 @@ export const getAppointmentRequests = withAuth(async (
     return { success: true, data: requests as IAppointmentRequest[] };
   } catch (error) {
     console.error('Error fetching appointment requests:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch appointment requests';
+    const message = appointmentRequestActionErrorMessage(error, 'Failed to fetch appointment requests');
     return { success: false, error: message };
   }
 });
@@ -494,7 +532,7 @@ export const getAppointmentRequestsByTicketId = withAuth(async (
     return { success: true, data: requests as IAppointmentRequest[] };
   } catch (error) {
     console.error('Error fetching appointment requests by ticket ID:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch appointment requests';
+    const message = appointmentRequestActionErrorMessage(error, 'Failed to fetch appointment requests');
     return { success: false, error: message };
   }
 });
@@ -1188,7 +1226,7 @@ export const approveAppointmentRequest = withAuth(async (
     };
   } catch (error) {
     console.error('Error approving appointment request:', error);
-    const message = error instanceof Error ? error.message : 'Failed to approve appointment request';
+    const message = appointmentRequestActionErrorMessage(error, 'Failed to approve appointment request');
     return { success: false, error: message };
   }
 });
@@ -1391,7 +1429,7 @@ export const declineAppointmentRequest = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error declining appointment request:', error);
-    const message = error instanceof Error ? error.message : 'Failed to decline appointment request';
+    const message = appointmentRequestActionErrorMessage(error, 'Failed to decline appointment request');
     return { success: false, error: message };
   }
 });
@@ -1607,7 +1645,7 @@ export const updateAppointmentRequestDateTime = withAuth(async (
     };
   } catch (error) {
     console.error('Error updating appointment request date/time:', error);
-    const message = error instanceof Error ? error.message : 'Failed to update appointment request';
+    const message = appointmentRequestActionErrorMessage(error, 'Failed to update appointment request');
     return { success: false, error: message };
   }
 });
@@ -1700,7 +1738,7 @@ export const associateRequestToTicket = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error associating request to ticket:', error);
-    const message = error instanceof Error ? error.message : 'Failed to associate request to ticket';
+    const message = appointmentRequestActionErrorMessage(error, 'Failed to associate request to ticket');
     return { success: false, error: message };
   }
 });

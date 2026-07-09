@@ -27,6 +27,12 @@ import { TimeSheetApproval } from './TimeSheetApproval';
 import { useDrawer } from "@alga-psa/ui";
 import { parseISO } from 'date-fns';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
+import { toast } from 'react-hot-toast';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface ManagerApprovalDashboardProps {
   currentUser: IUser;
@@ -56,6 +62,14 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
     onSelectedIdsChange: (next) => setSelectedTimeSheets(Array.from(next)),
   });
 
+  const showReturnedActionError = (result: unknown): boolean => {
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      toast.error(getErrorMessage(result));
+      return true;
+    }
+    return false;
+  };
+
   useEffect(() => {
     if (isManager) {
       loadTimeSheets();
@@ -64,6 +78,9 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
 
   const loadTimeSheets = async () => {
     const sheets = await fetchTimeSheetsForApproval(showApproved);
+    if (showReturnedActionError(sheets)) {
+      return;
+    }
     const sortedSheets = [...sheets].sort((a, b) => {
       const aStart = a.time_period?.start_date ? parseISO(a.time_period.start_date).getTime() : 0;
       const bStart = b.time_period?.start_date ? parseISO(b.time_period.start_date).getTime() : 0;
@@ -81,11 +98,14 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
     if (!timeSheetToReverse) return;
 
     try {
-      await reverseTimeSheetApproval(
+      const result = await reverseTimeSheetApproval(
         timeSheetToReverse.id,
         currentUser.user_id,
         'Approval reversed by manager'
       );
+      if (showReturnedActionError(result)) {
+        return;
+      }
       await loadTimeSheets();
       setReverseConfirmOpen(false);
       setTimeSheetToReverse(null);
@@ -97,8 +117,11 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
   };
 
   const handleBulkApprove = async () => {
-    await bulkApproveTimeSheets(selectedTimeSheets, currentUser.user_id);
-    loadTimeSheets();
+    const result = await bulkApproveTimeSheets(selectedTimeSheets, currentUser.user_id);
+    if (showReturnedActionError(result)) {
+      return;
+    }
+    await loadTimeSheets();
     setSelectedTimeSheets([]);
   };
 
@@ -108,6 +131,9 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
         fetchTimeEntriesForTimeSheet(timeSheet.id),
         fetchTimeSheetComments(timeSheet.id)
       ]);
+      if (showReturnedActionError(timeEntries) || showReturnedActionError(comments)) {
+        return;
+      }
 
       const timeSheetWithComments = {
         ...timeSheet,
@@ -120,12 +146,18 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
           timeSheet={timeSheetWithComments}
           timeEntries={timeEntries}
           onApprove={async () => {
-           await approveTimeSheet(timeSheet.id, currentUser.user_id);
+           const result = await approveTimeSheet(timeSheet.id, currentUser.user_id);
+           if (showReturnedActionError(result)) {
+             return;
+           }
            await loadTimeSheets();
            closeDrawer();
           }}
           onRequestChanges={async () => {
-           await requestChangesForTimeSheet(timeSheet.id, currentUser.user_id);
+           const result = await requestChangesForTimeSheet(timeSheet.id, currentUser.user_id);
+           if (showReturnedActionError(result)) {
+             return;
+           }
            await loadTimeSheets();
            closeDrawer();
           }}

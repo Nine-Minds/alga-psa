@@ -152,10 +152,14 @@ export function validateUrl(value: string): boolean {
 }
 
 // Transform utilities
-export const booleanTransform = z.string().transform(val => {
+export const booleanTransform = z.string().transform((val, ctx) => {
   if (val === 'true') return true;
   if (val === 'false') return false;
-  throw new Error('Invalid boolean value');
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    message: 'Invalid boolean value',
+  });
+  return z.NEVER;
 });
 
 export const arrayTransform = <T extends z.ZodTypeAny>(schema: T) =>
@@ -163,7 +167,7 @@ export const arrayTransform = <T extends z.ZodTypeAny>(schema: T) =>
     try {
       const parsed = JSON.parse(val);
       if (!Array.isArray(parsed)) {
-        throw new Error('Not an array');
+        return val.split(',').map(v => v.trim());
       }
       return parsed;
     } catch {
@@ -172,15 +176,27 @@ export const arrayTransform = <T extends z.ZodTypeAny>(schema: T) =>
     }
   }).pipe(z.array(schema));
 
-export const numberTransform = z.string().transform(val => {
+export const numberTransform = z.string().transform((val, ctx) => {
   const num = Number(val);
-  if (isNaN(num)) throw new Error('Invalid number value');
+  if (isNaN(num)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Invalid number value',
+    });
+    return z.NEVER;
+  }
   return num;
 });
 
-export const dateTransform = z.string().transform(val => {
+export const dateTransform = z.string().transform((val, ctx) => {
   const date = new Date(val);
-  if (isNaN(date.getTime())) throw new Error('Invalid date value');
+  if (isNaN(date.getTime())) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Invalid date value',
+    });
+    return z.NEVER;
+  }
   return date.toISOString();
 });
 

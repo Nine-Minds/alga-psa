@@ -1,5 +1,6 @@
 import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
+import { documentPreviewErrorMessage } from './previewErrors';
 import path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
 import { StorageProviderFactory } from '@alga-psa/storage';
@@ -258,7 +259,7 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
       console.error(`[VideoDocumentHandler] Error generating preview for document ${document.document_id}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to generate video preview'
+        error: documentPreviewErrorMessage(error, 'Failed to generate video preview')
       };
     }
   }

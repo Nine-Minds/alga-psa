@@ -31,6 +31,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
 import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
@@ -39,6 +40,7 @@ import { BucketOverlayInput } from './ContractWizard';
 import { getCurrencySymbol } from '@alga-psa/core';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ContractLinesProps {
   contract: IContract;
@@ -76,6 +78,9 @@ interface DetailedContractLineMapping {
  * without colliding with a real location UUID.
  */
 const UNASSIGNED_LOCATION_KEY = '__unassigned__';
+
+const isReturnedActionError = (value: unknown): boolean =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 /**
  * Format a one-line address summary for a location group header.
@@ -177,6 +182,12 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       }
       try {
         const locations = await getActiveClientLocationsForBilling(clientId);
+        if (isActionPermissionError(locations)) {
+          if (isActive) {
+            setClientLocations([]);
+          }
+          return;
+        }
         if (isActive) {
           setClientLocations(locations);
         }
@@ -295,6 +306,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
 
     try {
       const detailedContractLines = await getDetailedContractLines(contract.contract_id);
+      if (isReturnedActionError(detailedContractLines)) {
+        setError(getErrorMessage(detailedContractLines));
+        return;
+      }
       setContractLines(detailedContractLines);
     } catch (err) {
       console.error('Error fetching contract lines:', err);
@@ -320,6 +335,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       const services = isTemplate
         ? await getTemplateLineServicesWithConfigurations(contractLineId)
         : await getContractLineServicesWithConfigurations(contractLineId);
+      if (isReturnedActionError(services)) {
+        setError(getErrorMessage(services));
+        return [];
+      }
 
       setLineServices(prev => ({ ...prev, [contractLineId]: services }));
       return services;
@@ -362,7 +381,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     if (!contract.contract_id) return;
 
     try {
-      await removeContractLine(contract.contract_id, contractLineId);
+      const result = await removeContractLine(contract.contract_id, contractLineId);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       await fetchData();
       onContractLinesChanged?.();
     } catch (err) {
@@ -451,13 +474,17 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     try {
       // Persist recurring authoring fields in one mutation so service periods
       // are rematerialized once from the final contract-line state.
-      await updateContractLine(contractLineId, {
+      const updateResult = await updateContractLine(contractLineId, {
         billing_timing: editLineData.billing_timing,
         cadence_owner: editLineData.cadence_owner,
         minimum_billable_time: editLineData.minimum_billable_time,
         round_up_to_nearest: editLineData.round_up_to_nearest,
         location_id: editLineData.location_id ?? null,
       });
+      if (isReturnedActionError(updateResult)) {
+        setError(getErrorMessage(updateResult));
+        return;
+      }
       // If the saved line adopts a pending location, drop it from the pending set
       // so the group is no longer rendered as a placeholder.
       if (editLineData.location_id) {
@@ -504,13 +531,17 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
           }
         }
 
-        await updateConfiguration(configId, baseConfig, typeConfig);
+        const updateConfigResult = await updateConfiguration(configId, baseConfig, typeConfig);
+        if (isReturnedActionError(updateConfigResult)) {
+          setError(getErrorMessage(updateConfigResult));
+          return;
+        }
       }
 
       // Update bucket configurations separately
       for (const [serviceId, bucketConfig] of Object.entries(editBucketConfigs)) {
         if (bucketConfig && bucketConfig.total_minutes !== undefined && bucketConfig.overage_rate !== undefined) {
-          await upsertContractLineServiceBucketConfigurationAction(
+          const bucketResult = await upsertContractLineServiceBucketConfigurationAction(
             contractLineId,
             serviceId,
             {
@@ -520,6 +551,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
               billing_period: bucketConfig.billing_period ?? 'monthly'
             }
           );
+          if (isReturnedActionError(bucketResult)) {
+            setError(getErrorMessage(bucketResult));
+            return;
+          }
         }
       }
 

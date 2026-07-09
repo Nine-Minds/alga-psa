@@ -133,7 +133,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         };
       }
       this.log('warn', `Folder '${requested}' not found; defaulting subscription to Inbox`);
-    } catch (error: any) {
+    } catch {
       this.log('warn', `Failed to resolve folder '${requested}'; defaulting to Inbox`, error?.message || error);
     }
 
@@ -538,7 +538,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       });
       return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.message || 'Connection test failed' };
+      return { success: false, error: 'Microsoft 365 connection test failed. Check mailbox permissions and OAuth credentials.' };
     }
   }
 

@@ -4,6 +4,12 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type {
   ClientTimelineEvent,
   ClientTimelineEventType,
@@ -20,6 +26,20 @@ type CursorParts = {
 };
 
 type TimelineRow = Record<string, unknown>;
+type ClientTimelineActionError = ActionMessageError | ActionPermissionError;
+
+function clientTimelineActionErrorFrom(error: unknown): ClientTimelineActionError | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+  if (error.message.includes('Permission denied')) {
+    return permissionError(error.message);
+  }
+  if (error.message === 'Invalid client timeline cursor') {
+    return actionError('Invalid client timeline cursor');
+  }
+  return null;
+}
 
 function normalizeLimit(limit: number | undefined): number {
   if (!Number.isFinite(limit)) {
@@ -643,7 +663,8 @@ export const listClientTimeline = withAuth(async (
   { tenant },
   clientId: string,
   query?: ClientTimelineQuery
-): Promise<ClientTimelinePage> => {
+): Promise<ClientTimelinePage | ClientTimelineActionError> => {
+  try {
   if (!(await hasPermission(user, 'client', 'read'))) {
     throw new Error('Permission denied: Cannot read clients');
   }
@@ -732,4 +753,11 @@ export const listClientTimeline = withAuth(async (
       ? encodeCursor(pageEvents[pageEvents.length - 1])
       : null,
   };
+  } catch (error) {
+    const expected = clientTimelineActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });

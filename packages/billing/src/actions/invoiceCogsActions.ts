@@ -5,6 +5,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { InvoiceLineCogsRow } from '@alga-psa/inventory/lib/integrationTypes';
+import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export type { InvoiceLineCogsRow } from '@alga-psa/inventory/lib/integrationTypes';
 
@@ -207,9 +208,9 @@ export const getInvoiceLineCogs = withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<InvoiceLineCogsRow[]> => {
+): Promise<InvoiceLineCogsRow[] | ActionPermissionError> => {
   if (!(await hasPermission(user, 'billing', 'read'))) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
   return withTransaction(knex, (trx: Knex.Transaction) =>

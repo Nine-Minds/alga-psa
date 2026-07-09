@@ -5,10 +5,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/c
 import { Button } from '@alga-psa/ui/components/Button';
 import { getFolders, createFolder } from '../actions/documentActions';
 import { getDefaultFolders } from '../actions/defaultFolderActions';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Folder, Home, ChevronRight, FolderPlus, X, FolderOpen } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+const isDocumentActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionPermissionError(value) || isActionMessageError(value);
 
 interface FolderSelectorModalProps {
   isOpen: boolean;
@@ -153,8 +163,8 @@ export default function FolderSelectorModal({
       const scopedEntityId = hasFullEntityScope ? entityId : undefined;
       const scopedEntityType = hasFullEntityScope ? entityType : undefined;
       const createResult = await createFolder(folderPath, scopedEntityId, scopedEntityType);
-      if (isActionPermissionError(createResult)) {
-        handleError(createResult.permissionError);
+      if (isDocumentActionError(createResult)) {
+        handleError(createResult, getErrorMessage(createResult));
         return;
       }
 

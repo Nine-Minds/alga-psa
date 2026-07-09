@@ -20,6 +20,13 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { ButtonComponent, FormFieldComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface InteractionsFeedProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -29,6 +36,8 @@ interface InteractionsFeedProps {
   interactions: IInteraction[];
   setInteractions: React.Dispatch<React.SetStateAction<IInteraction[]>>;
 }
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 
 const InteractionsFeed: React.FC<InteractionsFeedProps> = ({ 
@@ -48,8 +57,11 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   const [endDate, setEndDate] = useState<string>('');
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [interactionsLoadErrorMessage, setInteractionsLoadErrorMessage] = useState<string | null>(null);
+  const [typesLoadErrorMessage, setTypesLoadErrorMessage] = useState<string | null>(null);
   const openQuickAddInteraction = useCallback(() => setIsQuickAddOpen(true), []);
   usePageCreateShortcut(openQuickAddInteraction);
+  const loadErrorMessage = interactionsLoadErrorMessage ?? typesLoadErrorMessage;
 
   // UI Reflection System Integration
   const { automationIdProps: titleProps } = useAutomationIdAndRegister<ContainerComponent>({
@@ -125,13 +137,27 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   }, [entityId, entityType]);
 
   const fetchInteractions = async () => {
-    const fetchedInteractions = await getInteractionsForEntity(entityId, entityType);
-    setInteractions(fetchedInteractions);
+    try {
+      const fetchedInteractions = await getInteractionsForEntity(entityId, entityType);
+      if (isReturnedActionError(fetchedInteractions)) {
+        setInteractionsLoadErrorMessage(getErrorMessage(fetchedInteractions));
+        return;
+      }
+      setInteractionsLoadErrorMessage(null);
+      setInteractions(fetchedInteractions);
+    } catch (error) {
+      console.error('Error fetching interactions:', error);
+      setInteractionsLoadErrorMessage(t('interactions.feed.loadFailed', { defaultValue: 'Interactions could not be loaded. Please try again.' }));
+    }
   };
 
   const fetchInteractionTypes = async () => {
     try {
       const types = await getAllInteractionTypes();
+      if (isReturnedActionError(types)) {
+        setTypesLoadErrorMessage(getErrorMessage(types));
+        return;
+      }
       // Sort to ensure system types appear first
       const sortedTypes = types.sort((a, b) => {
         // If both are system types or both are tenant types, sort by name
@@ -141,9 +167,11 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
         // System types ('created_at' exists) come first
         return 'created_at' in a ? -1 : 1;
       });
+      setTypesLoadErrorMessage(null);
       setInteractionTypes(sortedTypes);
     } catch (error) {
       console.error('Error fetching interaction types:', error);
+      setTypesLoadErrorMessage(t('interactions.feed.typesLoadFailed', { defaultValue: 'Interaction types could not be loaded. Please try again.' }));
     }
   };
 
@@ -210,6 +238,9 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
         try {
           // Check if interaction still exists (in case it was edited)
           const updatedInteraction = await getInteractionById(interaction.interaction_id);
+          if (isReturnedActionError(updatedInteraction)) {
+            return;
+          }
           setInteractions(prevInteractions => 
             prevInteractions.map((i): IInteraction => 
               i.interaction_id === updatedInteraction.interaction_id ? updatedInteraction : i
@@ -278,6 +309,11 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
           </div>
         </div>
         <CardContent>
+          {loadErrorMessage ? (
+            <div role="alert" className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {loadErrorMessage}
+            </div>
+          ) : null}
           <ShortcutActiveRegion id={`${id}-shortcut-region`} className="outline-none">
           <ul className="space-y-2">
             {filteredInteractions.map((interaction): React.JSX.Element => (

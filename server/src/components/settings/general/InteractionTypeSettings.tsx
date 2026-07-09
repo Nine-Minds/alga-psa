@@ -12,7 +12,14 @@ import {
 } from '@alga-psa/clients/actions';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -31,6 +38,10 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useDeletionValidation } from '@alga-psa/auth/hooks/useDeletionValidation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
 const InteractionTypesSettings: React.FC = () => {
   const { t } = useTranslation('msp/settings');
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
@@ -81,6 +92,11 @@ const InteractionTypesSettings: React.FC = () => {
     try {
       setLoading(true);
       const allTypes = await getAllInteractionTypes();
+      if (isReturnedActionError(allTypes)) {
+        setInteractionTypes([]);
+        setError(getErrorMessage(allTypes));
+        return;
+      }
       setInteractionTypes(allTypes);
       setError(null);
     } catch (error) {
@@ -115,6 +131,10 @@ const InteractionTypesSettings: React.FC = () => {
     setIsDeleteProcessing(true);
     try {
       const result = await deleteInteractionType(deleteDialog.typeId);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       if (result.deleted) {
         toast.success(t('interactions.types.messages.success.deleted'));
         setError(null);

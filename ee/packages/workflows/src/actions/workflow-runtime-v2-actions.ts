@@ -112,6 +112,9 @@ const throwHttpError = (status: number, message: string, details?: unknown): nev
   throw error;
 };
 
+const WORKFLOW_EVENT_INGESTION_FAILED_MESSAGE = 'Workflow event could not be processed.';
+const WORKFLOW_EVENT_DELIVERY_FAILED_MESSAGE = 'Workflow event was recorded but delivery failed.';
+
 const EXPORT_RUNS_LIMIT = 1000;
 const EXPORT_EVENTS_LIMIT = 1000;
 const EXPORT_AUDIT_LIMIT = 5000;
@@ -2905,7 +2908,7 @@ export const cancelWorkflowRunAction = withAuth(async (user, { tenant }, input: 
     await cancelWorkflowRuntimeV2TemporalRun({
       runId: parsed.runId,
     });
-  } catch (error) {
+  } catch {
     return throwHttpError(
       409,
       'Failed to cancel Temporal-backed workflow run',
@@ -2916,7 +2919,7 @@ export const cancelWorkflowRunAction = withAuth(async (user, { tenant }, input: 
         runId: parsed.runId,
         reason: parsed.reason ?? null,
         hint: 'Cancel is Temporal-authoritative; projection state was not updated because Temporal cancel did not succeed.',
-        error: error instanceof Error ? error.message : String(error)
+        error: 'Unable to cancel the workflow run right now.'
       }
     );
   }
@@ -3385,8 +3388,8 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
         }
         temporalEventSignals.push({ runId: wait.run_id });
       }
-    } catch (error) {
-      ingestionError = error instanceof Error ? error.message : String(error);
+    } catch {
+      ingestionError = WORKFLOW_EVENT_INGESTION_FAILED_MESSAGE;
       if (eventId) {
         await WorkflowRuntimeEventModelV2.update(trx, eventId, {
           error_message: ingestionError,
@@ -3416,8 +3419,8 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
         receivedAt: processedAt,
       });
       signaledTemporalRuns.add(signal.runId);
-    } catch (error) {
-      deliveryError = `Failed to signal Temporal event wait for run ${signal.runId}: ${error instanceof Error ? error.message : String(error)}`;
+    } catch {
+      deliveryError = WORKFLOW_EVENT_DELIVERY_FAILED_MESSAGE;
       break;
     }
   }
@@ -3432,8 +3435,8 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
           payload,
         });
         signaledTemporalRuns.add(signal.runId);
-      } catch (error) {
-        deliveryError = `Failed to signal Temporal human task for run ${signal.runId}: ${error instanceof Error ? error.message : String(error)}`;
+      } catch {
+        deliveryError = WORKFLOW_EVENT_DELIVERY_FAILED_MESSAGE;
         break;
       }
     }
@@ -3534,8 +3537,8 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
         executionKey: `event-${Date.now()}`
       });
       startedRuns.push(launched.runId);
-    } catch (error) {
-      deliveryError = `Failed to launch Temporal workflow for workflow ${workflow.workflow_id}: ${error instanceof Error ? error.message : String(error)}`;
+    } catch {
+      deliveryError = WORKFLOW_EVENT_DELIVERY_FAILED_MESSAGE;
       break;
     }
 

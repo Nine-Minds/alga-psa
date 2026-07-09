@@ -9,6 +9,7 @@ import {
   type CloseRuleFailure,
   type CloseRuleRequiredField,
 } from '../../lib/validateTicketClosure';
+import { boardActionErrorFrom, type BoardActionError } from '../board-actions/boardActionErrors';
 
 /**
  * Per-board close rule configuration (validation gates) and auto-close rules.
@@ -113,48 +114,56 @@ export const getBoardCloseRules = withAuth(
 );
 
 export const upsertBoardCloseRules = withAuth(
-  async (user, { tenant }, boardId: string, input: BoardCloseRulesInput): Promise<IBoardCloseRules> => {
-    if (!(await hasPermission(user, 'ticket', 'update'))) {
-      throw new Error('Permission denied: Cannot update board close rules');
-    }
-
-    const requiredFields = validateRequiredFields(input.required_fields ?? []);
-    const { knex: db } = await createTenantKnex();
-
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const board = await tenantScopedTable(trx, 'boards', tenant).where({ board_id: boardId }).first();
-      if (!board) {
-        throw new Error('Board not found');
+  async (user, { tenant }, boardId: string, input: BoardCloseRulesInput): Promise<IBoardCloseRules | BoardActionError> => {
+    try {
+      if (!(await hasPermission(user, 'ticket', 'update'))) {
+        throw new Error('Permission denied: Cannot update board close rules');
       }
 
-      const values = {
-        require_resolution_comment: input.require_resolution_comment ?? false,
-        require_time_entry: input.require_time_entry ?? false,
-        require_checklist_complete: input.require_checklist_complete ?? false,
-        require_no_open_children: input.require_no_open_children ?? false,
-        required_fields: JSON.stringify(requiredFields),
-        is_enabled: input.is_enabled ?? true,
-        // Citus rejects STABLE functions (trx.fn.now() → CURRENT_TIMESTAMP) inside
-        // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
-        updated_at: new Date().toISOString(),
-      };
+      const requiredFields = validateRequiredFields(input.required_fields ?? []);
+      const { knex: db } = await createTenantKnex();
 
-      const [row] = await tenantScopedTable(trx, 'board_close_rules', tenant)
-        .insert({ tenant, board_id: boardId, ...values })
-        .onConflict(['tenant', 'board_id'])
-        .merge(values)
-        .returning('*');
+      return await withTransaction(db, async (trx: Knex.Transaction) => {
+        const board = await tenantScopedTable(trx, 'boards', tenant).where({ board_id: boardId }).first();
+        if (!board) {
+          throw new Error('Board not found');
+        }
 
-      return {
-        board_id: row.board_id,
-        require_resolution_comment: row.require_resolution_comment,
-        require_time_entry: row.require_time_entry,
-        require_checklist_complete: row.require_checklist_complete,
-        require_no_open_children: row.require_no_open_children,
-        required_fields: parseRequiredFields(row.required_fields),
-        is_enabled: row.is_enabled,
-      };
-    });
+        const values = {
+          require_resolution_comment: input.require_resolution_comment ?? false,
+          require_time_entry: input.require_time_entry ?? false,
+          require_checklist_complete: input.require_checklist_complete ?? false,
+          require_no_open_children: input.require_no_open_children ?? false,
+          required_fields: JSON.stringify(requiredFields),
+          is_enabled: input.is_enabled ?? true,
+          // Citus rejects STABLE functions (trx.fn.now() → CURRENT_TIMESTAMP) inside
+          // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
+          updated_at: new Date().toISOString(),
+        };
+
+        const [row] = await tenantScopedTable(trx, 'board_close_rules', tenant)
+          .insert({ tenant, board_id: boardId, ...values })
+          .onConflict(['tenant', 'board_id'])
+          .merge(values)
+          .returning('*');
+
+        return {
+          board_id: row.board_id,
+          require_resolution_comment: row.require_resolution_comment,
+          require_time_entry: row.require_time_entry,
+          require_checklist_complete: row.require_checklist_complete,
+          require_no_open_children: row.require_no_open_children,
+          required_fields: parseRequiredFields(row.required_fields),
+          is_enabled: row.is_enabled,
+        };
+      });
+    } catch (error) {
+      const expected = boardActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
@@ -228,77 +237,104 @@ export const getBoardAutoCloseRules = withAuth(
 );
 
 export const createBoardAutoCloseRule = withAuth(
-  async (user, { tenant }, boardId: string, input: BoardAutoCloseRuleInput): Promise<IBoardAutoCloseRule> => {
-    if (!(await hasPermission(user, 'ticket', 'update'))) {
-      throw new Error('Permission denied: Cannot update board auto-close rules');
-    }
-
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const board = await tenantScopedTable(trx, 'boards', tenant).where({ board_id: boardId }).first();
-      if (!board) {
-        throw new Error('Board not found');
+  async (user, { tenant }, boardId: string, input: BoardAutoCloseRuleInput): Promise<IBoardAutoCloseRule | BoardActionError> => {
+    try {
+      if (!(await hasPermission(user, 'ticket', 'update'))) {
+        throw new Error('Permission denied: Cannot update board auto-close rules');
       }
 
-      await validateAutoCloseRule(trx, tenant, boardId, input);
+      const { knex: db } = await createTenantKnex();
+      return await withTransaction(db, async (trx: Knex.Transaction) => {
+        const board = await tenantScopedTable(trx, 'boards', tenant).where({ board_id: boardId }).first();
+        if (!board) {
+          throw new Error('Board not found');
+        }
 
-      const [row] = await tenantScopedTable(trx, 'board_auto_close_rules', tenant)
-        .insert({
-          tenant,
-          board_id: boardId,
-          trigger_status_id: input.trigger_status_id,
-          inactivity_days: input.inactivity_days,
-          warning_days_before: input.warning_days_before ?? null,
-          close_to_status_id: input.close_to_status_id,
-          is_enabled: input.is_enabled ?? true,
-        })
-        .returning('*');
-      return row;
-    });
+        await validateAutoCloseRule(trx, tenant, boardId, input);
+
+        const [row] = await tenantScopedTable(trx, 'board_auto_close_rules', tenant)
+          .insert({
+            tenant,
+            board_id: boardId,
+            trigger_status_id: input.trigger_status_id,
+            inactivity_days: input.inactivity_days,
+            warning_days_before: input.warning_days_before ?? null,
+            close_to_status_id: input.close_to_status_id,
+            is_enabled: input.is_enabled ?? true,
+          })
+          .returning('*');
+        return row;
+      });
+    } catch (error) {
+      const expected = boardActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
 export const updateBoardAutoCloseRule = withAuth(
-  async (user, { tenant }, ruleId: string, input: BoardAutoCloseRuleInput): Promise<IBoardAutoCloseRule> => {
-    if (!(await hasPermission(user, 'ticket', 'update'))) {
-      throw new Error('Permission denied: Cannot update board auto-close rules');
-    }
-
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const existing = await tenantScopedTable(trx, 'board_auto_close_rules', tenant)
-        .where({ rule_id: ruleId })
-        .first();
-      if (!existing) {
-        throw new Error('Auto-close rule not found');
+  async (user, { tenant }, ruleId: string, input: BoardAutoCloseRuleInput): Promise<IBoardAutoCloseRule | BoardActionError> => {
+    try {
+      if (!(await hasPermission(user, 'ticket', 'update'))) {
+        throw new Error('Permission denied: Cannot update board auto-close rules');
       }
 
-      await validateAutoCloseRule(trx, tenant, existing.board_id, input, ruleId);
+      const { knex: db } = await createTenantKnex();
+      return await withTransaction(db, async (trx: Knex.Transaction) => {
+        const existing = await tenantScopedTable(trx, 'board_auto_close_rules', tenant)
+          .where({ rule_id: ruleId })
+          .first();
+        if (!existing) {
+          throw new Error('Auto-close rule not found');
+        }
 
-      const [row] = await tenantScopedTable(trx, 'board_auto_close_rules', tenant)
-        .where({ rule_id: ruleId })
-        .update({
-          trigger_status_id: input.trigger_status_id,
-          inactivity_days: input.inactivity_days,
-          warning_days_before: input.warning_days_before ?? null,
-          close_to_status_id: input.close_to_status_id,
-          is_enabled: input.is_enabled ?? existing.is_enabled,
-          updated_at: trx.fn.now(),
-        })
-        .returning('*');
-      return row;
-    });
+        await validateAutoCloseRule(trx, tenant, existing.board_id, input, ruleId);
+
+        const [row] = await tenantScopedTable(trx, 'board_auto_close_rules', tenant)
+          .where({ rule_id: ruleId })
+          .update({
+            trigger_status_id: input.trigger_status_id,
+            inactivity_days: input.inactivity_days,
+            warning_days_before: input.warning_days_before ?? null,
+            close_to_status_id: input.close_to_status_id,
+            is_enabled: input.is_enabled ?? existing.is_enabled,
+            updated_at: trx.fn.now(),
+          })
+          .returning('*');
+        return row;
+      });
+    } catch (error) {
+      const expected = boardActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
 export const deleteBoardAutoCloseRule = withAuth(
-  async (user, { tenant }, ruleId: string): Promise<void> => {
-    if (!(await hasPermission(user, 'ticket', 'update'))) {
-      throw new Error('Permission denied: Cannot update board auto-close rules');
-    }
+  async (user, { tenant }, ruleId: string): Promise<void | BoardActionError> => {
+    try {
+      if (!(await hasPermission(user, 'ticket', 'update'))) {
+        throw new Error('Permission denied: Cannot update board auto-close rules');
+      }
 
-    const { knex: db } = await createTenantKnex();
-    await tenantScopedTable(db, 'board_auto_close_rules', tenant).where({ rule_id: ruleId }).del();
+      const { knex: db } = await createTenantKnex();
+      const deleted = await tenantScopedTable(db, 'board_auto_close_rules', tenant).where({ rule_id: ruleId }).del();
+      if (!deleted) {
+        throw new Error('Auto-close rule not found');
+      }
+    } catch (error) {
+      const expected = boardActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
@@ -323,7 +359,17 @@ export const checkTicketClosure = withAuth(
 
     const ticket = await tenantScopedTable(db, 'tickets', tenant).where({ ticket_id: ticketId }).first();
     if (!ticket) {
-      throw new Error('Ticket not found');
+      return {
+        wouldClose: true,
+        allowed: false,
+        failures: [
+          {
+            field: 'status',
+            label: 'Ticket not found. It may have been deleted. Please refresh and try again.',
+          },
+        ],
+        canOverride: false,
+      };
     }
 
     const [targetStatus, currentStatus] = await Promise.all([
@@ -332,6 +378,20 @@ export const checkTicketClosure = withAuth(
         ? tenantScopedTable(db, 'statuses', tenant).where({ status_id: ticket.status_id }).first()
         : Promise.resolve(null),
     ]);
+
+    if (!targetStatus) {
+      return {
+        wouldClose: true,
+        allowed: false,
+        failures: [
+          {
+            field: 'status',
+            label: 'Target status not found. It may have been deleted. Please refresh and try again.',
+          },
+        ],
+        canOverride: false,
+      };
+    }
 
     const wouldClose = !!targetStatus?.is_closed && !currentStatus?.is_closed;
     if (!wouldClose) {

@@ -8,9 +8,19 @@ import { timePeriodSettingsSchema } from '../../schemas/timeSheet.schemas';
 import { formatUtcDateNoTime } from '@alga-psa/core';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import {
+  actionError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 // Special value to indicate end of period
 const END_OF_PERIOD = 0;
+
+export type TimePeriodSettingsActionError = ActionMessageError | ActionPermissionError;
+type TimePeriodSettingsActionResult<T> = T | TimePeriodSettingsActionError;
 
 type TimePeriodSettingsRow = Omit<ITimePeriodSettings, 'effective_from' | 'effective_to' | 'created_at' | 'updated_at'> & {
   effective_from: string | Date;
@@ -29,142 +39,208 @@ function tenantScopedTable<T extends object = Record<string, unknown>>(
   return tenantDb(conn, tenant).table<T>(table);
 }
 
+function timePeriodSettingsActionErrorFrom(error: unknown, fallback: string): TimePeriodSettingsActionError {
+  if (isActionMessageError(error) || isActionPermissionError(error)) {
+    return error;
+  }
+
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  if (
+    message === 'Frequency must be a positive number' ||
+    message === 'Invalid frequency unit' ||
+    message === 'Start day must be between 1 and 31' ||
+    message === 'End day must be between 1 and 31, or 0 to indicate end of period' ||
+    message === 'Start month must be between 1 and 12' ||
+    message === 'End month must be between 1 and 12' ||
+    message === 'Start day of month must be between 1 and 31' ||
+    message === 'End day of month must be between 1 and 31, or 0 to indicate end of period' ||
+    message === 'The specified time period overlaps with existing time periods' ||
+    message === 'Time period settings not found'
+  ) {
+    return actionError(message);
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the time period setting values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required time period setting field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected time period setting is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A conflicting time period setting already exists.');
+  }
+
+  return actionError(fallback);
+}
+
 export const getActiveTimePeriodSettings = withAuth(async (
   _user,
   { tenant }
-): Promise<ITimePeriodSettings[]> => {
-  const { knex: db } = await createTenantKnex();
+): Promise<TimePeriodSettingsActionResult<ITimePeriodSettings[]>> => {
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  const activeSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return await tenantScopedTable<ITimePeriodSettings>(trx, 'time_period_settings', tenant)
-      .where({ is_active: true })
-      .orderBy('effective_from', 'desc')
-      .then(settings => settings.map((setting):ITimePeriodSettings => ({
-        ...setting,
-        effective_from: formatUtcDateNoTime(new Date(setting.effective_from)),
-        effective_to: setting.effective_to ? formatUtcDateNoTime(new Date(setting.effective_to)) : undefined,
-        created_at: formatISO(new Date(setting.created_at)),
-        updated_at: formatISO(new Date(setting.updated_at)),
-        start_month: setting.start_month || 1,
-        end_month: setting.end_month || 12,
-        start_day_of_month: setting.start_day_of_month || 1,
-        end_day_of_month: setting.end_day_of_month || END_OF_PERIOD
-      })));
-  });
+    const activeSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await tenantScopedTable<ITimePeriodSettings>(trx, 'time_period_settings', tenant)
+        .where({ is_active: true })
+        .orderBy('effective_from', 'desc')
+        .then(settings => settings.map((setting):ITimePeriodSettings => ({
+          ...setting,
+          effective_from: formatUtcDateNoTime(new Date(setting.effective_from)),
+          effective_to: setting.effective_to ? formatUtcDateNoTime(new Date(setting.effective_to)) : undefined,
+          created_at: formatISO(new Date(setting.created_at)),
+          updated_at: formatISO(new Date(setting.updated_at)),
+          start_month: setting.start_month || 1,
+          end_month: setting.end_month || 12,
+          start_day_of_month: setting.start_day_of_month || 1,
+          end_day_of_month: setting.end_day_of_month || END_OF_PERIOD
+        })));
+    });
 
-  return validateArray(timePeriodSettingsSchema, activeSettings) as ITimePeriodSettings[];
+    return validateArray(timePeriodSettingsSchema, activeSettings) as ITimePeriodSettings[];
+  } catch (error) {
+    console.error('Error fetching active time period settings:', error);
+    return timePeriodSettingsActionErrorFrom(error, 'Failed to fetch time period settings');
+  }
 });
 
 export const updateTimePeriodSettings = withAuth(async (
   _user,
   { tenant },
   settings: ITimePeriodSettings
-): Promise<void> => {
-  const { knex: db } = await createTenantKnex();
+): Promise<TimePeriodSettingsActionResult<void>> => {
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  // Validate input settings
-  const validatedSettings = validateData(timePeriodSettingsSchema, {
-    ...settings,
-    effective_from: formatUtcDateNoTime(new Date(settings.effective_from)),
-    effective_to: settings.effective_to ? formatUtcDateNoTime(new Date(settings.effective_to)) : undefined,
-    created_at: formatISO(new Date(settings.created_at)),
-    updated_at: formatISO(new Date())
-  });
+    // Validate input settings
+    const validatedSettings = validateData(timePeriodSettingsSchema, {
+      ...settings,
+      effective_from: formatUtcDateNoTime(new Date(settings.effective_from)),
+      effective_to: settings.effective_to ? formatUtcDateNoTime(new Date(settings.effective_to)) : undefined,
+      created_at: formatISO(new Date(settings.created_at)),
+      updated_at: formatISO(new Date())
+    });
 
-  await withTransaction(db, async (trx: Knex.Transaction) => {
-    // Validate business rules and check for overlaps
-    await validateTimePeriodSettings({ ...validatedSettings, tenant }, trx, settings.time_period_settings_id);
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Validate business rules and check for overlaps
+      await validateTimePeriodSettings({ ...validatedSettings, tenant }, trx, settings.time_period_settings_id);
 
-    await tenantScopedTable(trx, 'time_period_settings', tenant)
-      .where({ time_period_settings_id: validatedSettings.time_period_settings_id })
-      .update({
-        frequency: validatedSettings.frequency,
-        frequency_unit: validatedSettings.frequency_unit,
-        is_active: validatedSettings.is_active,
-        effective_from: validatedSettings.effective_from,
-        effective_to: validatedSettings.effective_to,
-        start_day: validatedSettings.start_day,
-        end_day: validatedSettings.end_day,
-        start_month: validatedSettings.start_month,
-        start_day_of_month: validatedSettings.start_day_of_month,
-        end_month: validatedSettings.end_month,
-        end_day_of_month: validatedSettings.end_day_of_month,
-        updated_at: validatedSettings.updated_at,
-      });
-  });
+      const updated = await tenantScopedTable(trx, 'time_period_settings', tenant)
+        .where({ time_period_settings_id: validatedSettings.time_period_settings_id })
+        .update({
+          frequency: validatedSettings.frequency,
+          frequency_unit: validatedSettings.frequency_unit,
+          is_active: validatedSettings.is_active,
+          effective_from: validatedSettings.effective_from,
+          effective_to: validatedSettings.effective_to,
+          start_day: validatedSettings.start_day,
+          end_day: validatedSettings.end_day,
+          start_month: validatedSettings.start_month,
+          start_day_of_month: validatedSettings.start_day_of_month,
+          end_month: validatedSettings.end_month,
+          end_day_of_month: validatedSettings.end_day_of_month,
+          updated_at: validatedSettings.updated_at,
+        });
+
+      if (updated === 0) {
+        throw new Error('Time period settings not found');
+      }
+    });
+  } catch (error) {
+    console.error('Error updating time period settings:', error);
+    return timePeriodSettingsActionErrorFrom(error, 'Failed to update time period settings');
+  }
 });
 
 export const createTimePeriodSettings = withAuth(async (
   _user,
   { tenant },
   settings: Partial<ITimePeriodSettings>
-): Promise<ITimePeriodSettings> => {
-  const { knex: db } = await createTenantKnex();
+): Promise<TimePeriodSettingsActionResult<ITimePeriodSettings>> => {
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  const now = formatISO(new Date());
-  const newSettings = {
-    ...settings,
-    is_active: true,
-    effective_from: settings.effective_from ? formatUtcDateNoTime(new Date(settings.effective_from)) : formatUtcDateNoTime(new Date()),
-    effective_to: settings.effective_to ? formatUtcDateNoTime(new Date(settings.effective_to)) : undefined,
-    start_day: settings.start_day || 1,
-    end_day: settings.end_day || END_OF_PERIOD,
-    start_month: settings.start_month || 1,
-    start_day_of_month: settings.start_day_of_month || 1,
-    end_month: settings.end_month || 12,
-    end_day_of_month: settings.end_day_of_month || END_OF_PERIOD,
-    created_at: now,
-    updated_at: now,
-    tenant: tenant,
-  };
+    const now = formatISO(new Date());
+    const newSettings = {
+      ...settings,
+      is_active: true,
+      effective_from: settings.effective_from ? formatUtcDateNoTime(new Date(settings.effective_from)) : formatUtcDateNoTime(new Date()),
+      effective_to: settings.effective_to ? formatUtcDateNoTime(new Date(settings.effective_to)) : undefined,
+      start_day: settings.start_day || 1,
+      end_day: settings.end_day || END_OF_PERIOD,
+      start_month: settings.start_month || 1,
+      start_day_of_month: settings.start_day_of_month || 1,
+      end_month: settings.end_month || 12,
+      end_day_of_month: settings.end_day_of_month || END_OF_PERIOD,
+      created_at: now,
+      updated_at: now,
+      tenant: tenant,
+    };
 
-  const insertedSetting = await withTransaction(db, async (trx: Knex.Transaction) => {
-    // Validate the business rules and check for overlaps before database insertion
-    await validateTimePeriodSettings(newSettings, trx);
+    const insertedSetting = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Validate the business rules and check for overlaps before database insertion
+      await validateTimePeriodSettings(newSettings, trx);
 
-    // First insert into database to get the ID
-    const [result] = await tenantScopedTable<TimePeriodSettingsRow>(trx, 'time_period_settings', tenant)
-      .insert({
-        ...newSettings,
-        effective_from: new Date(newSettings.effective_from),
-        effective_to: newSettings.effective_to ? new Date(newSettings.effective_to) : null,
-        created_at: new Date(newSettings.created_at),
-        updated_at: new Date(newSettings.updated_at),
-      })
-      .returning('*');
+      // First insert into database to get the ID
+      const [result] = await tenantScopedTable<TimePeriodSettingsRow>(trx, 'time_period_settings', tenant)
+        .insert({
+          ...newSettings,
+          effective_from: new Date(newSettings.effective_from),
+          effective_to: newSettings.effective_to ? new Date(newSettings.effective_to) : null,
+          created_at: new Date(newSettings.created_at),
+          updated_at: new Date(newSettings.updated_at),
+        })
+        .returning('*');
 
-    return result;
-  });
+      return result;
+    });
 
-  // Format all date fields as ISO strings before validation
-  const formattedSetting = {
-    ...insertedSetting,
-    effective_from: formatUtcDateNoTime(new Date(insertedSetting.effective_from)),
-    effective_to: insertedSetting.effective_to ? formatUtcDateNoTime(new Date(insertedSetting.effective_to)) : undefined,
-    created_at: formatISO(new Date(insertedSetting.created_at)),
-    updated_at: formatISO(new Date(insertedSetting.updated_at)),
-    start_date: insertedSetting.start_date ? formatUtcDateNoTime(new Date(insertedSetting.start_date)) : undefined,
-    end_date: insertedSetting.end_date ? formatUtcDateNoTime(new Date(insertedSetting.end_date)) : undefined
-  };
+    // Format all date fields as ISO strings before validation
+    const formattedSetting = {
+      ...insertedSetting,
+      effective_from: formatUtcDateNoTime(new Date(insertedSetting.effective_from)),
+      effective_to: insertedSetting.effective_to ? formatUtcDateNoTime(new Date(insertedSetting.effective_to)) : undefined,
+      created_at: formatISO(new Date(insertedSetting.created_at)),
+      updated_at: formatISO(new Date(insertedSetting.updated_at)),
+      start_date: insertedSetting.start_date ? formatUtcDateNoTime(new Date(insertedSetting.start_date)) : undefined,
+      end_date: insertedSetting.end_date ? formatUtcDateNoTime(new Date(insertedSetting.end_date)) : undefined
+    };
 
-  // NOTE: Recurring job scheduling is handled at a higher layer; avoid scheduling → jobs deps here.
+    // NOTE: Recurring job scheduling is handled at a higher layer; avoid scheduling → jobs deps here.
 
-  // Now validate the complete record with the schema
-  return validateData(timePeriodSettingsSchema, formattedSetting) as ITimePeriodSettings;
+    // Now validate the complete record with the schema
+    return validateData(timePeriodSettingsSchema, formattedSetting) as ITimePeriodSettings;
+  } catch (error) {
+    console.error('Error creating time period settings:', error);
+    return timePeriodSettingsActionErrorFrom(error, 'Failed to create time period settings');
+  }
 });
 
 export const deleteTimePeriodSettings = withAuth(async (
   _user,
   { tenant },
   settingId: string
-): Promise<void> => {
-  const { knex: db } = await createTenantKnex();
+): Promise<TimePeriodSettingsActionResult<void>> => {
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  await withTransaction(db, async (trx: Knex.Transaction) => {
-    await tenantScopedTable(trx, 'time_period_settings', tenant)
-      .where({ time_period_settings_id: settingId })
-      .delete();
-  });
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      const deleted = await tenantScopedTable(trx, 'time_period_settings', tenant)
+        .where({ time_period_settings_id: settingId })
+        .delete();
+
+      if (deleted === 0) {
+        throw new Error('Time period settings not found');
+      }
+    });
+  } catch (error) {
+    console.error('Error deleting time period settings:', error);
+    return timePeriodSettingsActionErrorFrom(error, 'Failed to delete time period settings');
+  }
 });
 
 function getEndOfPeriodDay(period: ITimePeriodSettings, month?: number): number {

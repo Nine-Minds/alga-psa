@@ -3,6 +3,7 @@
 import { listInventoryProducts } from '@alga-psa/inventory/actions';
 import { StockOverview } from '@alga-psa/inventory/components';
 import { getSession } from '@alga-psa/auth';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
@@ -24,7 +25,12 @@ export default async function StockOverviewPage() {
 
   let initialProducts: any[] = [];
   try {
-    initialProducts = await listInventoryProducts();
+    const result = await listInventoryProducts();
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      console.error('Failed to load inventory products:', getErrorMessage(result));
+    } else {
+      initialProducts = result;
+    }
   } catch (error) {
     console.error('Failed to load inventory products:', error);
   }

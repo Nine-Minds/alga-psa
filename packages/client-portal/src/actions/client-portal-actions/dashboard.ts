@@ -11,6 +11,7 @@ import {
   applyVisibilityBoardFilter,
 } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
+import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 
 export interface DashboardMetrics {
   openTickets: number;
@@ -169,19 +170,19 @@ function formatRecentInvoiceDescription(invoice: RecentInvoiceActivityRow): stri
 export const getDashboardMetrics = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext
-): Promise<DashboardMetrics> => {
-  if (user.user_type !== 'client') {
-    throw new Error('Unauthorized: Invalid user type for client portal');
-  }
-
-  if (!user.contact_id) {
-    throw new Error('Unauthorized: Contact information not found');
-  }
-
-  const userContactId = user.contact_id;
-  const { knex } = await createTenantKnex();
-
+): Promise<DashboardMetrics | ClientPortalActionError> => {
   try {
+    if (user.user_type !== 'client') {
+      throw new Error('Unauthorized: Invalid user type for client portal');
+    }
+
+    if (!user.contact_id) {
+      throw new Error('Unauthorized: Contact information not found');
+    }
+
+    const userContactId = user.contact_id;
+    const { knex } = await createTenantKnex();
+
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       // Get client_id from contact
@@ -261,30 +262,31 @@ export const getDashboardMetrics = withAuth(async (
 
     return result;
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith('Unauthorized')) {
-      throw error;
+    const expected = clientPortalActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
     console.error('Error fetching dashboard metrics:', error);
-    throw new Error('Failed to fetch dashboard metrics');
+    throw error;
   }
 });
 
 export const getRecentActivity = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext
-): Promise<RecentActivity[]> => {
-  if (user.user_type !== 'client') {
-    throw new Error('Unauthorized: Invalid user type for client portal');
-  }
-
-  if (!user.contact_id) {
-    throw new Error('Unauthorized: Contact information not found');
-  }
-
-  const userContactId = user.contact_id;
-  const { knex } = await createTenantKnex();
-
+): Promise<RecentActivity[] | ClientPortalActionError> => {
   try {
+    if (user.user_type !== 'client') {
+      throw new Error('Unauthorized: Invalid user type for client portal');
+    }
+
+    if (!user.contact_id) {
+      throw new Error('Unauthorized: Contact information not found');
+    }
+
+    const userContactId = user.contact_id;
+    const { knex } = await createTenantKnex();
+
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       // Get client_id from contact
@@ -486,10 +488,11 @@ export const getRecentActivity = withAuth(async (
 
     return activities;
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith('Unauthorized')) {
-      throw error;
+    const expected = clientPortalActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
     console.error('Error fetching recent activity:', error);
-    throw new Error('Failed to fetch recent activity');
+    throw error;
   }
 });

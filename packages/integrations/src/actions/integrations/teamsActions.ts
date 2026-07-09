@@ -73,6 +73,15 @@ function isClientPortalUser(user: any): boolean {
   return user?.user_type === 'client';
 }
 
+function teamsActionErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : '';
+  if (message === 'Forbidden' || message.includes('Permission denied')) {
+    return 'Forbidden';
+  }
+
+  return fallback;
+}
+
 async function canManageTeamsSettings(user: any): Promise<boolean> {
   return hasPermission(user as any, 'system_settings', 'update');
 }
@@ -128,7 +137,7 @@ async function fetchMicrosoftGraphAppToken(params: {
   });
 
   if (!response.ok) {
-    throw new Error('Failed to acquire Microsoft Graph app token');
+    throw new Error(`Microsoft Graph token request returned HTTP ${response.status}`);
   }
 
   const payload = await response.json() as { access_token?: unknown };
@@ -309,7 +318,7 @@ async function getTeamsIntegrationStatusImpl(
       integration: mapTeamsIntegrationRow(row),
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to load Teams integration settings' };
+    return { success: false, error: teamsActionErrorMessage(err, 'Failed to load Teams integration settings') };
   }
 }
 
@@ -468,7 +477,7 @@ async function saveTeamsIntegrationSettingsImpl(
       integration: mapTeamsIntegrationRow(row),
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to save Teams integration settings' };
+    return { success: false, error: teamsActionErrorMessage(err, 'Failed to save Teams integration settings') };
   }
 }
 
@@ -514,7 +523,21 @@ export const runTeamsDiagnostics = withAuth(async (
 ): Promise<TeamsDiagnosticsReport> => {
   const availability = resolveTeamsAvailability({ tenantId: tenant });
   if (availability.enabled === false) {
-    throw new Error(availability.message);
+    return {
+      createdAt: new Date().toISOString(),
+      overallStatus: 'fail',
+      steps: [
+        {
+          id: 'addon_entitlement',
+          title: 'Teams add-on entitlement',
+          status: 'fail',
+          detail: availability.message,
+          durationMs: 0,
+          error: availability.message,
+        },
+      ],
+      recommendations: [availability.message],
+    } as TeamsDiagnosticsReport;
   }
 
   const actions = await loadEeTeamsActions();
@@ -528,7 +551,12 @@ export const sendTeamsTestMessage = withAuth(async (
 ): Promise<TeamsTestMessageResult> => {
   const availability = resolveTeamsAvailability({ tenantId: tenant });
   if (availability.enabled === false) {
-    throw new Error(availability.message);
+    return {
+      status: 'skipped',
+      reason: 'addon_inactive',
+      detail: availability.message,
+      deliveryId: null,
+    } as TeamsTestMessageResult;
   }
 
   const actions = await loadEeTeamsActions();

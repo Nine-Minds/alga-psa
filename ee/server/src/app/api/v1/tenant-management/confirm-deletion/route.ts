@@ -5,6 +5,7 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 import { confirmTenantDeletion, ConfirmationType } from '@ee/lib/tenant-management/workflowClient';
 import { observabilityLogger } from '@/lib/observability/logging';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
+import { tenantManagementRouteError } from '../tenantManagementRouteErrors';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
@@ -196,7 +197,7 @@ export async function POST(req: NextRequest) {
       message: `Deletion confirmed. Tenant data will be deleted ${deletionTimeMessage}.`,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const routeError = tenantManagementRouteError(error, 'Failed to confirm tenant deletion.');
 
     observabilityLogger.error('Confirm tenant deletion failed', error, {
       event_type: 'tenant_management_action_failed',
@@ -205,7 +206,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: false,
-      error: errorMessage,
-    }, { status: 500 });
+      error: routeError.error,
+    }, { status: routeError.status });
   }
 }

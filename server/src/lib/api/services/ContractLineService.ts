@@ -66,6 +66,7 @@ import {
 
 import { ListOptions } from '../controllers/types';
 import { generateResourceLinks, addHateoasLinks } from '../utils/responseHelpers';
+import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 export interface ContractLineServiceOptions {
   includeServices?: boolean;
@@ -81,6 +82,31 @@ function normalizeContractLineCompatibility<T extends { service_category?: unkno
     service_category: plan.service_category || undefined,
     cadence_owner: resolveCadenceOwner(plan.cadence_owner),
   };
+}
+
+function throwPlanServiceConfigurationApiError(error: unknown): never {
+  if (!(error instanceof Error)) {
+    throw error;
+  }
+
+  if (/^Configuration with ID .+ not found\.?$/.test(error.message)) {
+    throw new NotFoundError('Service configuration not found');
+  }
+
+  if (/^Contract line .+ not found$/.test(error.message)) {
+    throw new NotFoundError('Contract line not found');
+  }
+
+  if (
+    error.message === 'Hourly rate is required for Hourly configuration type.' ||
+    error.message === 'Hourly rate is required when creating hourly configuration.' ||
+    /^Configuration with ID .+ is not an Hourly configuration\.$/.test(error.message) ||
+    /^Bucket billing period \(.+\) must match contract line billing frequency \(.+\)$/.test(error.message)
+  ) {
+    throw new ValidationError(error.message);
+  }
+
+  throw error;
 }
 
 export interface PlanTemplate {
@@ -364,7 +390,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           .returning('*');
         
         if (!updatedPlan) {
-          throw new Error('Plan not found or permission denied');
+          throw new NotFoundError('Plan not found');
         }
         
         // Transform null to undefined for compatibility
@@ -415,7 +441,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           .returning('*');
         
         if (!updatedPlan) {
-          throw new Error('Plan not found or permission denied');
+          throw new NotFoundError('Plan not found');
         }
         
         // Transform null to undefined for compatibility
@@ -436,7 +462,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       // Check if plan is in use
       const isInUse = await this.isPlanInUse(id, context, trx);
       if (isInUse.inUse) {
-        throw new Error(`Cannot delete plan: ${isInUse.reason}`);
+        throw new ConflictError(`Cannot delete plan: ${isInUse.reason}`);
       }
       
       // Remove associated services first
@@ -451,7 +477,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         .delete();
       
       if (deletedCount === 0) {
-        throw new Error('Plan not found or permission denied');
+        throw new NotFoundError('Plan not found');
       }
     });
   }
@@ -486,7 +512,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       // Verify plan exists and is Fixed type
       const plan = await this.getExistingPlan(planId, context, trx);
       if (plan.contract_line_type !== 'Fixed') {
-        throw new Error('Can only add fixed configuration to Fixed type plans');
+        throw new ValidationError('Can only add fixed configuration to Fixed type plans');
       }
 
       const model = new ContractLineFixedConfig(trx, context.tenant);
@@ -556,7 +582,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         // Validate service exists
         const service = await this.getServiceById(data.service_id, context, trx);
         if (!service) {
-          throw new Error('Service not found');
+          throw new NotFoundError('Service not found');
         }
         
         // Check if service already exists in plan
@@ -566,7 +592,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           .first();
         
         if (existingConfig) {
-          throw new Error('Service already exists in this plan');
+          throw new ConflictError('Service already exists in this plan');
         }
         
         // Create service configuration
@@ -584,7 +610,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         const configId = await this.planServiceConfigService.createConfiguration(
           baseConfigData,
           data.type_config || {}
-        );
+        ).catch(throwPlanServiceConfigurationApiError);
         
         // Return the created configuration
         return await this.planServiceConfigService.getConfigurationWithDetails(configId);
@@ -610,7 +636,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         .first();
       
       if (!config) {
-        throw new Error('Service configuration not found in plan');
+        throw new NotFoundError('Service configuration not found in plan');
       }
       
       // Use service to delete configuration and related data
@@ -638,7 +664,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           .first();
         
         if (!config) {
-          throw new Error('Service configuration not found in plan');
+          throw new NotFoundError('Service configuration not found in plan');
         }
         
         // Update service configuration
@@ -648,7 +674,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           config.config_id,
           data,
           data.type_config || {}
-        );
+        ).catch(throwPlanServiceConfigurationApiError);
         
         // Return updated configuration
         return await this.planServiceConfigService.getConfigurationWithDetails(config.config_id);
@@ -811,7 +837,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
 
     if (typeof data.owner_client_id !== 'string' || data.owner_client_id.trim().length === 0) {
-      throw new Error('Non-template contracts require an owning client');
+      throw new ValidationError('Non-template contracts require an owning client');
     }
     
     return withTransaction(knex, async (trx) => {
@@ -871,7 +897,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       const assignmentCount = parseInt(clientAssignments?.[0]?.count ?? '0', 10);
 
       if (assignmentCount > 0) {
-        throw new Error('Cannot remove contract line: the contract is assigned to clients');
+        throw new ConflictError('Cannot remove contract line: the contract is assigned to clients');
       }
 
       await repositoryRemoveContractLine(trx, context.tenant, contractId, contractLineId);
@@ -968,10 +994,10 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
 
       if (!targetContractId) {
-        throw new Error('Client contract not found or missing contract_id');
+        throw new NotFoundError('Client contract not found or missing contract_id');
       }
       if (!templateContractId) {
-        throw new Error(
+        throw new ConflictError(
           `Client contract ${data.client_contract_id} is missing template provenance (template_contract_id) required for template clone operations`
         );
       }
@@ -1067,7 +1093,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         .first();
 
       if (!assignment) {
-        throw new Error('Client contract line assignment not found');
+        throw new NotFoundError('Client contract line assignment not found');
       }
 
       // Check if there are pending invoices or active usage
@@ -1104,7 +1130,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       if (!data.is_active) {
         const usage = await this.isPlanInUse(planId, context, trx);
         if (usage.inUse && !data.reason) {
-          throw new Error('Cannot deactivate plan that is in use without providing a reason');
+          throw new ConflictError('Cannot deactivate plan that is in use without providing a reason');
         }
       }
       
@@ -1227,7 +1253,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         .first();
       
       if (!template) {
-        throw new Error('Template not found');
+        throw new NotFoundError('Template not found');
       }
       
       // Create plan from template
@@ -1642,14 +1668,14 @@ export class ContractLineService extends BaseService<IContractLine> {
         .first();
       
       if (existingPlan) {
-        throw new Error('A plan with this name already exists');
+        throw new ConflictError('A plan with this name already exists');
       }
       
       // Validate plan type specific requirements
       if (data.contract_line_type === 'Fixed') {
         const baseRate = (data as any).base_rate;
         if (baseRate !== undefined && baseRate < 0) {
-          throw new Error('Base rate must be non-negative for Fixed plans');
+          throw new ValidationError('Base rate must be non-negative for Fixed plans');
         }
       }
       
@@ -1672,7 +1698,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         .first();
       
       if (conflictingPlan) {
-        throw new Error('A plan with this name already exists');
+        throw new ConflictError('A plan with this name already exists');
       }
     }
     
@@ -1680,7 +1706,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     if (data.contract_line_type && data.contract_line_type !== existingPlan.contract_line_type) {
       const usage = await this.isPlanInUse(planId, context, trx);
       if (usage.inUse) {
-        throw new Error('Cannot change plan type when plan is in use');
+        throw new ConflictError('Cannot change plan type when plan is in use');
       }
     }
   }
@@ -1697,7 +1723,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       .first();
     
     if (!plan) {
-      throw new Error('Contract Line not found');
+      throw new NotFoundError('Contract Line not found');
     }
     
     return plan;
@@ -1822,7 +1848,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       .first();
     
     if (!contract) {
-      throw new Error('Contract not found');
+      throw new NotFoundError('Contract not found');
     }
   }
 
@@ -1836,7 +1862,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       .first();
     
     if (!client) {
-      throw new Error('Client not found');
+      throw new NotFoundError('Client not found');
     }
   }
 
@@ -1866,7 +1892,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       .first();
     
     if (overlapping) {
-      throw new Error('Client contract already has an active cloned line matching this template assignment');
+      throw new ConflictError('Client contract already has an active cloned line matching this template assignment');
     }
   }
 
@@ -1884,7 +1910,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         .first();
 
       if (parseInt(String(pendingInvoices?.count || '0')) > 0) {
-        throw new Error('Cannot unassign plan: there are pending invoices');
+        throw new ConflictError('Cannot unassign plan: there are pending invoices');
       }
 
       // Check for active usage tracking for this client
@@ -1895,7 +1921,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         .first();
 
       if (parseInt(String(activeUsage?.count || '0')) > 0) {
-        throw new Error('Cannot unassign plan: there is active usage tracking');
+        throw new ConflictError('Cannot unassign plan: there is active usage tracking');
       }
     }
 

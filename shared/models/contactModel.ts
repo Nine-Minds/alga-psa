@@ -299,6 +299,44 @@ function normalizeEmailAddress(emailAddress: string): string {
   return emailAddress.trim().toLowerCase();
 }
 
+function contactEmailConflictMessage(error: unknown): string | null {
+  const dbError = error as { code?: string; constraint?: string };
+  if (
+    dbError?.code === '23505' &&
+    (
+      dbError.constraint === 'ux_contact_additional_email_addresses_tenant_normalized_email' ||
+      dbError.constraint === 'contacts_email_tenant_unique' ||
+      dbError.constraint === 'contacts_tenant_email_unique'
+    )
+  ) {
+    return 'EMAIL_EXISTS: A contact with this email address already exists in the system';
+  }
+
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  const message = error.message;
+  if (
+    message.includes('duplicate key') &&
+    (
+      message.includes('ux_contact_additional_email_addresses_tenant_normalized_email') ||
+      message.includes('contacts_email_tenant_unique') ||
+      message.includes('contacts_tenant_email_unique')
+    )
+  ) {
+    return 'EMAIL_EXISTS: A contact with this email address already exists in the system';
+  }
+  if (message.includes('A contact email already exists as an additional email address in this tenant')) {
+    return 'EMAIL_EXISTS: A contact with this email address already exists in the system';
+  }
+  if (message.includes('An additional email address already exists as a contact primary email in this tenant')) {
+    return 'EMAIL_EXISTS: A contact email address already exists in this tenant';
+  }
+
+  return null;
+}
+
 function toPreparedEmailAddressInput(row: ContactEmailRow): PreparedEmailAddressInput {
   return {
     contact_additional_email_address_id: row.contact_additional_email_address_id,
@@ -739,6 +777,11 @@ export class ContactModel {
     } catch (err) {
       console.error('Error creating contact:', err);
 
+      const emailConflict = contactEmailConflictMessage(err);
+      if (emailConflict) {
+        throw new Error(emailConflict);
+      }
+
       if (err instanceof Error) {
         const message = err.message;
         if (
@@ -942,15 +985,23 @@ export class ContactModel {
         .delete();
     }
 
-    await tenantScopedTable(trx, 'contacts', tenant)
-      .where('contact_name_id', contactId)
-      .update(dbData);
+    try {
+      await tenantScopedTable(trx, 'contacts', tenant)
+        .where('contact_name_id', contactId)
+        .update(dbData);
 
-    if (updateData.phone_numbers !== undefined) {
-      await this.replacePhoneNumbers(contactId, tenant, updateData.phone_numbers, trx, now);
-    }
-    if (updateData.additional_email_addresses !== undefined) {
-      await this.replaceAdditionalEmailAddresses(contactId, tenant, updateData.additional_email_addresses, trx, now);
+      if (updateData.phone_numbers !== undefined) {
+        await this.replacePhoneNumbers(contactId, tenant, updateData.phone_numbers, trx, now);
+      }
+      if (updateData.additional_email_addresses !== undefined) {
+        await this.replaceAdditionalEmailAddresses(contactId, tenant, updateData.additional_email_addresses, trx, now);
+      }
+    } catch (err) {
+      const emailConflict = contactEmailConflictMessage(err);
+      if (emailConflict) {
+        throw new Error(emailConflict);
+      }
+      throw err;
     }
 
     const hydratedContact = await this.getContactById(contactId, tenant, trx);

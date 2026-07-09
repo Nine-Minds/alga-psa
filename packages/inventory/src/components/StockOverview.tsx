@@ -9,6 +9,11 @@ import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IProductInventorySettings, IStockLocation } from '@alga-psa/types';
 import {
@@ -95,7 +100,13 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
 
   const reload = useCallback(async () => {
     try {
-      setProducts(await listInventoryProducts());
+      const result = await listInventoryProducts();
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setProducts([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setProducts(result);
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || t('stock.loadProductsFailed', "Couldn't load products."));
@@ -104,7 +115,13 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
 
   const loadLocations = useCallback(async () => {
     try {
-      setLocations(await listStockLocations({ includeInactive: false }));
+      const result = await listStockLocations({ includeInactive: false });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setLocations([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setLocations(result);
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || t('stock.loadLocationsFailed', "Couldn't load locations."));
@@ -116,6 +133,10 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
     setRebuilding(true);
     try {
       const result = await rebuildStockCaches();
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       const n = result.corrections.length;
       toast.success(
         n === 0
@@ -172,6 +193,10 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
         quantity,
         unit_cost: Math.round(unitDollars * 100),
       });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('stock.receive.success', 'Stock received.'));
       if (result?.warnings?.length) {
         result.warnings.forEach((w) => toast.error(w.message));
@@ -189,7 +214,13 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
     setLevelsLoading(true);
     setLevelsError(null);
     try {
-      setLevels((await getStockLevelsForProduct(product.service_id)) as StockLevelRow[]);
+      const result = await getStockLevelsForProduct(product.service_id);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setLevels([]);
+        setLevelsError(getErrorMessage(result));
+        return;
+      }
+      setLevels(result as StockLevelRow[]);
     } catch (e: any) {
       setLevelsError(e?.message || t('stock.levels.loadFailed', "Couldn't load stock levels."));
     } finally {

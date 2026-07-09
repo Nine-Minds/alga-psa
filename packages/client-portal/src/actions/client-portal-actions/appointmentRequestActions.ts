@@ -80,6 +80,23 @@ export interface OnlineMeetingPortalArtifact {
   created_date_time: Date | null;
 }
 
+function portalAppointmentRequestErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (error instanceof Error && error.name === 'ZodError') {
+    return 'Appointment request contains invalid fields. Review the details and try again.';
+  }
+
+  if (
+    message === 'Appointment request not found' ||
+    message.startsWith('Cannot cancel appointment request with status:')
+  ) {
+    return message;
+  }
+
+  return fallback;
+}
+
 type AppointmentRequestRow = IAppointmentRequest & Record<string, any>;
 
 type OnlineMeetingArtifactRow = {
@@ -765,7 +782,7 @@ export const createAppointmentRequest = withAuth(async (
     return { success: true, data: updatedAppointmentRequest as unknown as IAppointmentRequest };
   } catch (error) {
     console.error('Error creating appointment request:', error);
-    const message = error instanceof Error ? error.message : 'Failed to create appointment request';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to create appointment request');
     return { success: false, error: message };
   }
 });
@@ -1020,7 +1037,7 @@ export const updateAppointmentRequest = withAuth(async (
     return { success: true, data: updatedRequest as IAppointmentRequest };
   } catch (error) {
     console.error('Error updating appointment request:', error);
-    const message = error instanceof Error ? error.message : 'Failed to update appointment request';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to update appointment request');
     return { success: false, error: message };
   }
 });
@@ -1136,7 +1153,7 @@ export const getMyAppointmentRequests = withAuth(async (
     return { success: true, data: mappedRequests as IAppointmentRequest[] };
   } catch (error) {
     console.error('Error fetching appointment requests:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch appointment requests';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to fetch appointment requests');
     return { success: false, error: message };
   }
 });
@@ -1224,7 +1241,7 @@ export const getAppointmentRequestDetails = withAuth(async (
     return { success: true, data: request as unknown as IAppointmentRequest };
   } catch (error) {
     console.error('Error fetching appointment request details:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch appointment request details';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to fetch appointment request details');
     return { success: false, error: message };
   }
 });
@@ -1466,7 +1483,7 @@ export const cancelAppointmentRequest = withAuth(async (
     return { success: true, teamsMeetingWarning };
   } catch (error) {
     console.error('Error cancelling appointment request:', error);
-    const message = error instanceof Error ? error.message : 'Failed to cancel appointment request';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to cancel appointment request');
     return { success: false, error: message };
   }
 });
@@ -1573,7 +1590,7 @@ export const getAvailableServicesAndTickets = withAuth(async (
     };
   } catch (error) {
     console.error('Error fetching available services and tickets:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch data';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to fetch appointment setup data');
     return { success: false, error: message };
   }
 });
@@ -1618,7 +1635,7 @@ export const getAvailableDatesForService = withAuth(async (
     return { success: true, data: availableDates };
   } catch (error) {
     console.error('Error fetching available dates:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch available dates';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to fetch available dates');
     return { success: false, error: message };
   }
 });
@@ -1698,7 +1715,7 @@ export const getAppointmentRequestsByTicketId = withAuth(async (
     return { success: true, data: requests as IAppointmentRequest[] };
   } catch (error) {
     console.error('Error fetching appointment requests by ticket ID:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch appointment requests';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to fetch appointment requests');
     return { success: false, error: message };
   }
 });
@@ -1847,7 +1864,7 @@ export const getAvailableTimeSlotsForDate = withAuth(async (
     };
   } catch (error) {
     console.error('Error fetching time slots:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch time slots';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to fetch time slots');
     return { success: false, error: message };
   }
 });

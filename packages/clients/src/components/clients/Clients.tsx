@@ -23,12 +23,11 @@ import {
   getAllClientsPaginated,
   deleteClient,
   validateClientDeletion,
-  importClientsFromCSV,
   exportClientsToCSV,
   markClientInactiveWithContacts,
   markClientActiveWithContacts,
 } from '@alga-psa/clients/actions';
-import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
@@ -52,11 +51,19 @@ import { useTagPermissions } from '@alga-psa/tags/hooks';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';
 const CLIENTS_GRID_PAGE_SIZE_SETTING = 'clients_grid_page_size';
 const CLIENTS_LIST_PAGE_SIZE_SETTING = 'clients_list_page_size';
 const CLIENTS_PRINT_PAGE_SIZE = 5000;
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const formatClientPrintAddress = (client: IClient): string => {
   return [
@@ -216,19 +223,27 @@ const ClientResults = memo(({
         ]);
 
         const newClientTags: Record<string, ITag[]> = {};
-        clientTags.forEach(tag => {
-          if (!newClientTags[tag.tagged_id]) {
-            newClientTags[tag.tagged_id] = [];
-          }
-          newClientTags[tag.tagged_id].push(tag);
-        });
+        if (isTagActionError(clientTags)) {
+          console.error('Error fetching client tags:', clientTags);
+        } else {
+          clientTags.forEach(tag => {
+            if (!newClientTags[tag.tagged_id]) {
+              newClientTags[tag.tagged_id] = [];
+            }
+            newClientTags[tag.tagged_id].push(tag);
+          });
+        }
 
         setLocalClientTags(newClientTags);
-        setAllUniqueTags(allTags);
+        const safeAllTags = isTagActionError(allTags) ? [] : allTags;
+        if (isTagActionError(allTags)) {
+          console.error('Error fetching all client tags:', allTags);
+        }
+        setAllUniqueTags(safeAllTags);
         
         // Notify parent component about loaded tags
         if (onClientTagsLoaded) {
-          onClientTagsLoaded(newClientTags, allTags);
+          onClientTagsLoaded(newClientTags, safeAllTags);
         }
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -1139,6 +1154,10 @@ const Clients: React.FC = () => {
       }
       
       const csvData = await exportClientsToCSV(clientsToExport);
+      if (isReturnedActionError(csvData)) {
+        toast.error(getErrorMessage(csvData));
+        return;
+      }
       
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       
@@ -1171,6 +1190,10 @@ const Clients: React.FC = () => {
         clientsToPrint.map((client) => client.client_id),
         'client'
       );
+      if (isTagActionError(tags)) {
+        console.error('Error hydrating print client tags:', tags);
+        return;
+      }
       const nextClientTags: Record<string, ITag[]> = {};
       tags.forEach((tag) => {
         if (!nextClientTags[tag.tagged_id]) {
@@ -1315,14 +1338,9 @@ const Clients: React.FC = () => {
     onAfterPrint: () => setPrintClients([]),
   });
 
-  const handleImportComplete = async (clients: IClient[], updateExisting: boolean) => {
-    try {
-      await importClientsFromCSV(clients, updateExisting);
-      setIsImportDialogOpen(false);
-      router.refresh();
-    } catch (error) {
-      console.error('Error importing clients:', error);
-    }
+  const handleImportComplete = async () => {
+    setIsImportDialogOpen(false);
+    router.refresh();
   };
 
   if (viewMode === null || areClientPreferencesLoading) {
@@ -1775,7 +1793,7 @@ const Clients: React.FC = () => {
       <ClientsImportDialog
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
-        onImportComplete={(clients, updateExisting) => void handleImportComplete(clients, updateExisting)}
+        onImportComplete={() => void handleImportComplete()}
       />
       
       {/* Quick View Drawer */}

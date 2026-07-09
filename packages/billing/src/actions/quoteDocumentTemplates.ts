@@ -207,6 +207,6 @@ export const deleteQuoteDocumentTemplate = withAuth(async (
       return { success: false, error: 'Template not found.' };
     }
     console.error(`Error deleting quote document template ${templateId}:`, error);
-    return { success: false, error: error?.message || 'An unexpected error occurred.' };
+    return { success: false, error: 'Failed to delete quote document template.' };
   }
 });

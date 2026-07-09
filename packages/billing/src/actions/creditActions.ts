@@ -19,6 +19,14 @@ import {
     buildCreditNoteCreatedPayload,
 } from '@alga-psa/workflow-streams';
 import { enqueueCreditApplication } from '../services/accountingSync/syncProducers';
+import {
+    actionError,
+    permissionError,
+    type ActionMessageError,
+    type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+export type CreditActionError = ActionMessageError | ActionPermissionError;
 
 type DbRow = Record<string, any>;
 
@@ -57,6 +65,94 @@ type CreditActionTableRows = {
     credit_tracking: CreditTrackingRow;
     credit_allocations: CreditAllocationRow;
 };
+
+function creditActionErrorFrom(error: unknown): CreditActionError | null {
+    if (error instanceof Error) {
+        if (error.message.startsWith('Permission denied')) {
+            return permissionError(error.message);
+        }
+        if (error.message === 'Client ID is required') {
+            return actionError('Client ID is required.');
+        }
+        if (error.message === 'Client not found') {
+            return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+        }
+        if (/^Invoice .+ not found$/.test(error.message)) {
+            return actionError('Invoice not found. It may have been updated or deleted. Please refresh and try again.');
+        }
+        if (/^Credit with ID .+ not found$/.test(error.message)) {
+            return actionError('Credit not found. It may have been updated or deleted. Please refresh and try again.');
+        }
+        if (/^Original transaction for credit .+ not found$/.test(error.message)) {
+            return actionError('The original credit transaction could not be found. Please refresh and try again.');
+        }
+        if (/^Source credit with ID .+ not found$/.test(error.message)) {
+            return actionError('Source credit not found. It may have been updated or deleted. Please refresh and try again.');
+        }
+        if (/^Target client with ID .+ not found$/.test(error.message)) {
+            return actionError('Target client not found. It may have been updated or deleted. Please refresh and try again.');
+        }
+        if (/^Insufficient remaining amount .+ for transfer of .+$/.test(error.message)) {
+            return actionError('Insufficient remaining amount for transfer.');
+        }
+        if (error.message.startsWith('No ') && error.message.includes(' credits available. Credits exist in other currencies')) {
+            return actionError(error.message);
+        }
+
+        const expectedMessages = new Set([
+            'Insufficient credit balance',
+            'Credit balance validation failed',
+            'Cannot update expiration date for an expired credit',
+            'Credit is already expired',
+            'Cannot expire a credit with no remaining amount',
+            'Transfer amount must be greater than zero',
+            'Cannot transfer from an expired credit',
+        ]);
+        if (expectedMessages.has(error.message)) {
+            return actionError(error.message);
+        }
+    }
+
+    const dbError = error as { code?: string; column?: string };
+    if (dbError?.code === '22P02') {
+        return actionError('One of the selected credit values is invalid. Please refresh and try again.');
+    }
+    if (dbError?.code === '23502') {
+        return actionError(`Missing required credit field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    }
+    if (dbError?.code === '23503') {
+        return actionError('The selected credit, client, invoice, or transaction no longer exists. Please refresh and try again.');
+    }
+    if (dbError?.code === '23505') {
+        return actionError('A conflicting credit transaction already exists. Please refresh and try again.');
+    }
+    if (dbError?.code === '23514') {
+        return actionError('One of the credit values is not allowed. Please review the form and try again.');
+    }
+
+    return null;
+}
+
+async function withCreditActionErrors<T>(work: () => Promise<T>): Promise<T | CreditActionError> {
+    try {
+        return await work();
+    } catch (error) {
+        const expected = creditActionErrorFrom(error);
+        if (expected) return expected;
+        throw error;
+    }
+}
+
+function isCreditActionError(value: unknown): value is CreditActionError {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        (
+            typeof (value as { actionError?: unknown }).actionError === 'string' ||
+            typeof (value as { permissionError?: unknown }).permissionError === 'string'
+        )
+    );
+}
 
 function tenantScopedTable<TableName extends keyof CreditActionTableRows>(
     conn: Knex | Knex.Transaction,
@@ -332,7 +428,8 @@ export const validateCreditBalance = withAuth(async (
     clientId: string,
     expectedBalance?: number,
     providedTrx?: Knex.Transaction
-): Promise<{isValid: boolean, actualBalance: number, lastTransaction?: ITransaction}> => {
+): Promise<{isValid: boolean, actualBalance: number, lastTransaction?: ITransaction} | CreditActionError> => {
+    return withCreditActionErrors(async () => {
     const { knex } = await createTenantKnex();
 
     // Check permission for credit reading
@@ -393,6 +490,7 @@ export const validateCreditBalance = withAuth(async (
     } else {
         return await withTransaction(knex, executeWithTransaction);
     }
+    });
 });
 
 export async function validateTransactionBalance(
@@ -407,6 +505,9 @@ export async function validateTransactionBalance(
     if (!skipCreditBalanceCheck) {
         // Get the available (non-expired) credit balance
         const validation = await validateCreditBalance(clientId, undefined, trx);
+        if (isCreditActionError(validation)) {
+            throw new Error('permissionError' in validation ? validation.permissionError : validation.actionError);
+        }
         const availableBalance = validation.actualBalance;
         
         const newBalance = availableBalance + amount;
@@ -432,7 +533,8 @@ export async function validateTransactionBalance(
 export const scheduledCreditBalanceValidation = withAuth(async (
     user,
     { tenant }
-): Promise<void> => {
+): Promise<void | CreditActionError> => {
+    return withCreditActionErrors(async () => {
     // Check permission for credit reading (required for scheduled validation)
     if (!await hasPermission(user, 'credit', 'read')) {
         throw new Error('Permission denied: Cannot perform credit balance validation');
@@ -449,6 +551,7 @@ export const scheduledCreditBalanceValidation = withAuth(async (
     console.log(`Results: ${results.balanceValidCount} valid balances, ${results.balanceDiscrepancyCount} balance discrepancies found`);
     console.log(`Credit tracking: ${results.missingTrackingCount} missing entries, ${results.inconsistentTrackingCount} inconsistent entries`);
     console.log(`Errors: ${results.errorCount}`);
+    });
 });
 
 export const createPrepaymentInvoice = withAuth(async (
@@ -457,7 +560,8 @@ export const createPrepaymentInvoice = withAuth(async (
     clientId: string,
     amount: number,
     manualExpirationDate?: string
-): Promise<IInvoice> => {
+): Promise<IInvoice | CreditActionError> => {
+    return withCreditActionErrors(async () => {
     // Check permission for credit creation
     if (!await hasPermission(user, 'credit', 'create')) {
         throw new Error('Permission denied: Cannot create prepayment invoices or issue credits');
@@ -746,6 +850,7 @@ export const createPrepaymentInvoice = withAuth(async (
     }
 
     return createdInvoice;
+    });
 });
 
 export const applyCreditToInvoice = withAuth(async (
@@ -754,7 +859,8 @@ export const applyCreditToInvoice = withAuth(async (
     clientId: string,
     invoiceId: string,
     requestedAmount: number
-): Promise<void> => {
+): Promise<void | CreditActionError> => {
+    return withCreditActionErrors(async () => {
     // Check permission for credit updates (applying credits modifies credit balances)
     if (!await hasPermission(user, 'credit', 'update')) {
         throw new Error('Permission denied: Cannot apply credits to invoices');
@@ -1076,6 +1182,7 @@ export const applyCreditToInvoice = withAuth(async (
         const { knex: syncKnex } = await createTenantKnex();
         void enqueueCreditApplication(syncKnex, tenant, op);
     }
+    });
 });
 
 export const getCreditHistory = withAuth(async (
@@ -1084,7 +1191,8 @@ export const getCreditHistory = withAuth(async (
     clientId: string,
     startDate?: string,
     endDate?: string
-): Promise<ITransaction[]> => {
+): Promise<ITransaction[] | CreditActionError> => {
+    return withCreditActionErrors(async () => {
     // Check permission for credit reading
     if (!await hasPermission(user, 'credit', 'read')) {
         throw new Error('Permission denied: Cannot read credit history');
@@ -1110,6 +1218,7 @@ export const getCreditHistory = withAuth(async (
 
         return await query as unknown as ITransaction[];
     });
+    });
 });
 
 /**
@@ -1133,7 +1242,8 @@ export const listClientCredits = withAuth(async (
     page: number,
     pageSize: number,
     totalPages: number
-}> => {
+} | CreditActionError> => {
+    return withCreditActionErrors(async () => {
     // Check permission for credit reading
     if (!await hasPermission(user, 'credit', 'read')) {
         throw new Error('Permission denied: Cannot read client credits');
@@ -1221,6 +1331,7 @@ export const listClientCredits = withAuth(async (
             totalPages
         };
     });
+    });
 });
 
 /**
@@ -1240,7 +1351,8 @@ export const getCreditDetails = withAuth(async (
     invoice_context_status?: CreditInvoicePeriodSummary['invoice_context_status'],
     invoice_service_period_start?: string | null,
     invoice_service_period_end?: string | null,
-}> => {
+} | CreditActionError> => {
+    return withCreditActionErrors(async () => {
     // Check permission for credit reading
     if (!await hasPermission(user, 'credit', 'read')) {
         throw new Error('Permission denied: Cannot read credit details');
@@ -1327,6 +1439,7 @@ export const getCreditDetails = withAuth(async (
             invoice_service_period_end: invoiceSummary?.service_period_end ?? null,
         };
     });
+    });
 });
 
 /**
@@ -1342,7 +1455,8 @@ export const updateCreditExpiration = withAuth(async (
     creditId: string,
     newExpirationDate: string | null,
     userId: string
-): Promise<ICreditTracking> => {
+): Promise<ICreditTracking | CreditActionError> => {
+    return withCreditActionErrors(async () => {
     // Check permission for credit updates
     if (!await hasPermission(user, 'credit', 'update')) {
         throw new Error('Permission denied: Cannot update credit expiration dates');
@@ -1426,6 +1540,7 @@ export const updateCreditExpiration = withAuth(async (
 
         return updatedCredit as unknown as ICreditTracking;
     });
+    });
 });
 
 /**
@@ -1441,7 +1556,8 @@ export const manuallyExpireCredit = withAuth(async (
     creditId: string,
     userId: string,
     reason?: string
-): Promise<ICreditTracking> => {
+): Promise<ICreditTracking | CreditActionError> => {
+    return withCreditActionErrors(async () => {
     // Check permission for credit updates
     if (!await hasPermission(user, 'credit', 'update')) {
         throw new Error('Permission denied: Cannot manually expire credits');
@@ -1545,6 +1661,7 @@ export const manuallyExpireCredit = withAuth(async (
 
         return updatedCredit as unknown as ICreditTracking;
     });
+    });
 });
 
 /**
@@ -1564,7 +1681,8 @@ export const transferCredit = withAuth(async (
     amount: number,
     userId: string,
     reason?: string
-): Promise<ICreditTracking> => {
+): Promise<ICreditTracking | CreditActionError> => {
+    return withCreditActionErrors(async () => {
     // Check permission for credit transfers
     if (!await hasPermission(user, 'credit', 'transfer')) {
         throw new Error('Permission denied: Cannot transfer credits between clients');
@@ -1766,5 +1884,6 @@ export const transferCredit = withAuth(async (
         );
 
         return newCredit as unknown as ICreditTracking;
+    });
     });
 });

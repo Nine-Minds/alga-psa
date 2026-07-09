@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -18,6 +18,13 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ChevronDown } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type {
   ColumnDefinition,
@@ -126,6 +133,7 @@ const emptyForm = (): FormState => ({
 
 export interface SalesOrdersManagerProps {
   initialSos: ISalesOrder[];
+  loadErrorMessage?: string;
   /** Active stock locations for the fulfill dialog's source selector. */
   locations?: IStockLocation[];
   /** Clients for the create-SO client picker. */
@@ -136,8 +144,14 @@ export interface SalesOrdersManagerProps {
   confirmDropShip: ConfirmDropShipFn;
 }
 
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
 export function SalesOrdersManager({
   initialSos,
+  loadErrorMessage,
   locations = [],
   clients = [],
   fulfillAndInvoice,
@@ -194,12 +208,23 @@ export function SalesOrdersManager({
 
   const reload = useCallback(async () => {
     try {
-      setSos(await listSalesOrders({}));
+      const result = await listSalesOrders({});
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setSos(result);
     } catch (e) {
       console.error(e);
       toast.error(t('salesOrders.loadError', 'Failed to load sales orders'));
     }
   }, [t]);
+
+  useEffect(() => {
+    if (loadErrorMessage) {
+      toast.error(loadErrorMessage);
+    }
+  }, [loadErrorMessage]);
 
   const openCreate = () => {
     setForm(emptyForm());
@@ -242,13 +267,17 @@ export function SalesOrdersManager({
     }
     setSaving(true);
     try {
-      await createSalesOrder({
+      const result = await createSalesOrder({
         client_id: form.client_id.trim(),
         currency_code: form.currency_code.trim(),
         invoice_mode: form.invoice_mode,
         allocation_mode: form.allocation_mode,
         lines,
       });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('salesOrders.created', 'Sales order created'));
       setDialogOpen(false);
       await reload();
@@ -263,7 +292,12 @@ export function SalesOrdersManager({
     if (busy) return;
     setBusy(`confirm:${so.so_id}`);
     try {
-      await confirmSalesOrder(so.so_id);
+      const result = await confirmSalesOrder(so.so_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('salesOrders.confirmed', 'Sales order confirmed'));
       await reload();
     } catch (e: any) {
@@ -277,7 +311,12 @@ export function SalesOrdersManager({
     if (busy) return;
     setBusy(`cancel:${so.so_id}`);
     try {
-      await cancelSalesOrder(so.so_id);
+      const result = await cancelSalesOrder(so.so_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('salesOrders.cancelled', 'Sales order cancelled'));
       await reload();
     } catch (e: any) {

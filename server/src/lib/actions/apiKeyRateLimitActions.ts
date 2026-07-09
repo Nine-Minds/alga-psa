@@ -4,6 +4,12 @@ import { z } from 'zod';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { IRole } from '@alga-psa/types';
 import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { getUserRoles } from '@alga-psa/auth/actions';
@@ -25,6 +31,8 @@ const apiRateLimitInputSchema = z.object({
   refillPerMin: z.number().int().positive(),
 });
 
+type ApiRateLimitActionError = ActionMessageError | ActionPermissionError;
+
 export interface ApiRateLimitSettingsValue {
   maxTokens: number;
   refillPerMin: number;
@@ -42,25 +50,29 @@ export interface ApiRateLimitSettingsView {
   source: 'key' | 'tenant' | 'default';
 }
 
-async function assertTenantAdmin(userId: string): Promise<void> {
+async function getTenantAdminError(userId: string): Promise<ActionPermissionError | null> {
   const userRoles = await getUserRoles(userId);
   const isAdmin = userRoles.some((role: IRole) => role.role_name.toLowerCase() === 'admin');
 
-  if (!isAdmin) {
-    throw new Error('Forbidden: Admin access required');
+  if (isAdmin) {
+    return null;
   }
+
+  return permissionError('Permission denied: Admin access required');
 }
 
-async function assertApiKeyExists(tenant: string, apiKeyId: string): Promise<void> {
+async function getApiKeyExistsError(tenant: string, apiKeyId: string): Promise<ActionMessageError | null> {
   const { knex } = await createTenantKnex(tenant);
   const apiKey = await tenantDb(knex, tenant).table('api_keys')
     .select('api_key_id')
     .where({ api_key_id: apiKeyId })
     .first();
 
-  if (!apiKey) {
-    throw new Error('API key not found');
+  if (apiKey) {
+    return null;
   }
+
+  return actionError('API key not found.');
 }
 
 function mapSettingsRow(row: ApiRateLimitSettingsRow | null): ApiRateLimitSettingsValue | null {
@@ -105,15 +117,28 @@ async function buildApiRateLimitSettingsView(
   };
 }
 
-export const getApiRateLimitForKey = withAuth(async (user, { tenant }, apiKeyId: string) => {
-  await assertTenantAdmin(user.user_id);
-  await assertApiKeyExists(tenant, apiKeyId);
+export const getApiRateLimitForKey = withAuth(async (
+  user,
+  { tenant },
+  apiKeyId: string,
+): Promise<ApiRateLimitSettingsView | ApiRateLimitActionError> => {
+  const adminError = await getTenantAdminError(user.user_id);
+  if (adminError) {
+    return adminError;
+  }
+  const keyError = await getApiKeyExistsError(tenant, apiKeyId);
+  if (keyError) {
+    return keyError;
+  }
   return buildApiRateLimitSettingsView(tenant, apiKeyId);
 });
 
 export const getApiRateLimitsForKeys = withAuth(
-  async (user, { tenant }, apiKeyIds: string[]): Promise<ApiRateLimitSettingsView[]> => {
-    await assertTenantAdmin(user.user_id);
+  async (user, { tenant }, apiKeyIds: string[]): Promise<ApiRateLimitSettingsView[] | ApiRateLimitActionError> => {
+    const adminError = await getTenantAdminError(user.user_id);
+    if (adminError) {
+      return adminError;
+    }
 
     if (apiKeyIds.length === 0) {
       return [];
@@ -170,12 +195,27 @@ export const getApiRateLimitsForKeys = withAuth(
 );
 
 export const setApiRateLimitForKey = withAuth(
-  async (user, { tenant }, apiKeyId: string, input: ApiRateLimitSettingsValue) => {
-    await assertTenantAdmin(user.user_id);
-    await assertApiKeyExists(tenant, apiKeyId);
+  async (
+    user,
+    { tenant },
+    apiKeyId: string,
+    input: ApiRateLimitSettingsValue,
+  ): Promise<ApiRateLimitSettingsView | ApiRateLimitActionError> => {
+    const adminError = await getTenantAdminError(user.user_id);
+    if (adminError) {
+      return adminError;
+    }
+    const keyError = await getApiKeyExistsError(tenant, apiKeyId);
+    if (keyError) {
+      return keyError;
+    }
 
-    const parsed = apiRateLimitInputSchema.parse(input);
-    await upsertForKey(tenant, apiKeyId, parsed);
+    const parsed = apiRateLimitInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return actionError('API rate limits must be positive whole numbers.');
+    }
+
+    await upsertForKey(tenant, apiKeyId, parsed.data);
     invalidateApiRateLimitConfig(tenant, apiKeyId);
 
     return buildApiRateLimitSettingsView(tenant, apiKeyId);
@@ -183,11 +223,18 @@ export const setApiRateLimitForKey = withAuth(
 );
 
 export const setTenantDefaultApiRateLimit = withAuth(
-  async (_user, { tenant }, input: ApiRateLimitSettingsValue) => {
-    await assertTenantAdmin(_user.user_id);
+  async (_user, { tenant }, input: ApiRateLimitSettingsValue): Promise<ApiRateLimitSettingsValue | ApiRateLimitActionError> => {
+    const adminError = await getTenantAdminError(_user.user_id);
+    if (adminError) {
+      return adminError;
+    }
 
-    const parsed = apiRateLimitInputSchema.parse(input);
-    const row = await upsertForTenant(tenant, parsed);
+    const parsed = apiRateLimitInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return actionError('API rate limits must be positive whole numbers.');
+    }
+
+    const row = await upsertForTenant(tenant, parsed.data);
     invalidateApiRateLimitConfig(tenant);
 
     return {
@@ -197,15 +244,25 @@ export const setTenantDefaultApiRateLimit = withAuth(
   },
 );
 
-export const clearApiRateLimitForKey = withAuth(async (user, { tenant }, apiKeyId: string) => {
-  await assertTenantAdmin(user.user_id);
-  await assertApiKeyExists(tenant, apiKeyId);
+export const clearApiRateLimitForKey = withAuth(async (
+  user,
+  { tenant },
+  apiKeyId: string,
+): Promise<(ApiRateLimitSettingsView & { deleted: boolean; defaultSettings: ApiRateLimitSettingsValue }) | ApiRateLimitActionError> => {
+  const adminError = await getTenantAdminError(user.user_id);
+  if (adminError) {
+    return adminError;
+  }
+  const keyError = await getApiKeyExistsError(tenant, apiKeyId);
+  if (keyError) {
+    return keyError;
+  }
 
   const deleted = await clearApiRateLimitOverride(tenant, apiKeyId);
   invalidateApiRateLimitConfig(tenant, apiKeyId);
 
   return {
-    deleted,
+    deleted: deleted > 0,
     defaultSettings: DEFAULT_API_RATE_LIMIT_SETTINGS,
     ...(await buildApiRateLimitSettingsView(tenant, apiKeyId)),
   };

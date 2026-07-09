@@ -5,11 +5,74 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IStockMovement, IStockUnit, IProductInventorySettings } from '@alga-psa/types';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { recordStockMovement, ensureStockLevel, assertLocationWritable } from '../lib';
 
 async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'inventory', action))) {
     throw new Error(`Permission denied: inventory ${action} required`);
+  }
+}
+
+export type LoanerActionError = ActionMessageError | ActionPermissionError;
+
+function loanerActionErrorFrom(error: unknown): LoanerActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+
+    switch (error.message) {
+      case 'client_id is required to loan out a unit':
+        return actionError('Choose a client before loaning out the unit.');
+      case 'location_id is required to return a loaner':
+        return actionError('Choose a return location.');
+      case 'Stock unit not found':
+        return actionError('Stock unit not found. It may have been updated or deleted. Please refresh and try again.');
+      case 'restocking_fee_cents must be a non-negative integer (cents)':
+        return actionError('Restocking fee must be a non-negative amount.');
+      case 'location_id is required to restock this unit':
+        return actionError('Choose a location to restock this unit.');
+      case 'service_id and location_id are required for a non-serialized restock return':
+        return actionError('Choose a product and location before restocking non-serialized inventory.');
+      case 'quantity must be a positive number for a non-serialized restock return':
+        return actionError('Restock quantity must be greater than zero.');
+      case 'This product is serialized; provide unit_id to restock a specific unit':
+        return actionError('This product is serialized. Enter the specific unit ID to restock.');
+      default:
+        if (
+          error.message.startsWith('Unit must be in_stock ') ||
+          error.message.startsWith('Unit must be on_loan ') ||
+          error.message.startsWith('Unit must be delivered or returned ')
+        ) {
+          return actionError(error.message);
+        }
+    }
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected loaner records is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This loaner update conflicts with an existing record. Please refresh and try again.');
+  }
+
+  return null;
+}
+
+async function withLoanerActionErrors<T>(work: () => Promise<T>): Promise<T | LoanerActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = loanerActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 }
 
@@ -24,7 +87,8 @@ export const loanOut = withAuth(
     { tenant },
     unitId: string,
     input: { client_id: string; loan_due_at?: string | Date | null },
-  ): Promise<IStockMovement> => {
+  ): Promise<IStockMovement | LoanerActionError> => {
+    return withLoanerActionErrors(async () => {
     await requireInvPerm(user, 'update');
     if (!input?.client_id) throw new Error('client_id is required to loan out a unit');
     const { knex: db } = await createTenantKnex();
@@ -52,6 +116,7 @@ export const loanOut = withAuth(
         },
       });
     });
+    });
   },
 );
 
@@ -60,7 +125,8 @@ export const loanOut = withAuth(
  * `on_loan → in_stock`, restore location, clear client_id + loan_due_at.
  */
 export const loanReturn = withAuth(
-  async (user, { tenant }, unitId: string, input: { location_id: string }): Promise<IStockMovement> => {
+  async (user, { tenant }, unitId: string, input: { location_id: string }): Promise<IStockMovement | LoanerActionError> => {
+    return withLoanerActionErrors(async () => {
     await requireInvPerm(user, 'update');
     if (!input?.location_id) throw new Error('location_id is required to return a loaner');
     const { knex: db } = await createTenantKnex();
@@ -89,6 +155,7 @@ export const loanReturn = withAuth(
         },
       });
     });
+    });
   },
 );
 
@@ -107,7 +174,8 @@ export interface LoanerOutRow {
 /**
  * Loaners-out report (design §6.E): which units are out, with whom, and when due back.
  */
-export const loanersOutReport = withAuth(async (user, { tenant }): Promise<LoanerOutRow[]> => {
+export const loanersOutReport = withAuth(async (user, { tenant }): Promise<LoanerOutRow[] | LoanerActionError> => {
+  return withLoanerActionErrors(async () => {
   await requireInvPerm(user, 'read');
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -131,6 +199,7 @@ export const loanersOutReport = withAuth(async (user, { tenant }): Promise<Loane
         'su.loan_due_at',
       )
       .orderBy('su.loan_due_at', 'asc') as unknown as Promise<LoanerOutRow[]>;
+  });
   });
 });
 
@@ -160,7 +229,8 @@ export const restockReturn = withAuth(
       quantity?: number;
       restocking_fee_cents?: number | null;
     },
-  ): Promise<RestockReturnResult> => {
+  ): Promise<RestockReturnResult | LoanerActionError> => {
+    return withLoanerActionErrors(async () => {
     await requireInvPerm(user, 'update');
     const restockingFee = input.restocking_fee_cents ?? null;
     if (restockingFee != null && (!Number.isInteger(restockingFee) || restockingFee < 0)) {
@@ -229,6 +299,7 @@ export const restockReturn = withAuth(
         performed_by: user.user_id,
       });
       return { movement, restocking_fee_cents: restockingFee };
+    });
     });
   },
 );

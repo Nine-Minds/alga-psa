@@ -30,6 +30,7 @@ import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries
 import type { InvoiceViewModel, IQuoteWithClient } from '@alga-psa/types';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 // Lazy load components that aren't immediately visible
 const InvoiceDetailsDialog = dynamic(() => import('./InvoiceDetailsDialog'), {
@@ -100,6 +101,10 @@ const BucketUsageHistoryChart = dynamic(() => import('./BucketUsageHistoryChart'
 // Flag to control visibility of advanced usage tabs and metrics
 const SHOW_USAGE_FEATURES = true;
 const DEFAULT_BILLING_TAB = 'overview';
+const isBillingActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export default function BillingOverview() {
   const { t } = useTranslation('features/billing');
@@ -145,6 +150,7 @@ export default function BillingOverview() {
   const [quotes, setQuotes] = useState<IQuoteWithClient[]>([]);
   const [hasInvoiceAccess, setHasInvoiceAccess] = useState(true); // Default to true to avoid hydration mismatch
   const [isLoading, setIsLoading] = useState(true);
+  const [billingError, setBillingError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({
     startDate: '',
     endDate: ''
@@ -174,6 +180,8 @@ export default function BillingOverview() {
     let isMounted = true;
     const loadBillingData = async () => {
       try {
+        setBillingError(null);
+
         // Load contract line and usage data for all users
         const [plan, usageData] = await Promise.all([
           getClientContractLine(),
@@ -181,9 +189,20 @@ export default function BillingOverview() {
         ]);
 
         if (!isMounted) return;
-        
-        setContractLine(plan);
-        setUsage(usageData);
+
+        if (isBillingActionError(plan)) {
+          setContractLine(null);
+          setBillingError(getErrorMessage(plan));
+        } else {
+          setContractLine(plan);
+        }
+
+        if (isBillingActionError(usageData)) {
+          setUsage({ bucketUsage: null, services: [] });
+          setBillingError((current) => current ?? getErrorMessage(usageData));
+        } else {
+          setUsage(usageData);
+        }
         
         // Try to load invoices and quotes (will fail if user doesn't have permission)
         try {
@@ -192,9 +211,20 @@ export default function BillingOverview() {
             getClientQuotes(),
           ]);
           if (!isMounted) return;
-          setInvoices(invoiceData);
-          setQuotes(quotesData);
-          setHasInvoiceAccess(true);
+
+          if (isBillingActionError(invoiceData) || isBillingActionError(quotesData)) {
+            const message = isBillingActionError(invoiceData)
+              ? getErrorMessage(invoiceData)
+              : getErrorMessage(quotesData);
+            setInvoices([]);
+            setQuotes([]);
+            setHasInvoiceAccess(false);
+            setBillingError((current) => current ?? message);
+          } else {
+            setInvoices(invoiceData);
+            setQuotes(quotesData);
+            setHasInvoiceAccess(true);
+          }
         } catch (error) {
           if (!isMounted) return;
           console.error('User does not have access to invoices:', error);
@@ -351,6 +381,11 @@ export default function BillingOverview() {
     try {
       setIsInvoiceDialogOpen(true); // Show dialog immediately with loading state
       const fullInvoice = await getInvoiceForRendering(invoice.invoice_id);
+      if (isActionMessageError(fullInvoice) || isActionPermissionError(fullInvoice)) {
+        console.error('Failed to fetch invoice details:', getErrorMessage(fullInvoice));
+        setSelectedInvoice(invoice);
+        return;
+      }
       setSelectedInvoice(fullInvoice);
     } catch (error) {
       console.error('Failed to fetch invoice details:', error);
@@ -537,6 +572,12 @@ export default function BillingOverview() {
 
   return (
     <div id="client-billing-overview" className="space-y-6">
+      {billingError && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {billingError}
+        </div>
+      )}
+
       <CustomTabs
         tabs={tabs}
         defaultTab={currentTab || tabs[0]?.id}

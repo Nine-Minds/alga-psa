@@ -7,7 +7,10 @@ import { v4 as uuidv4 } from 'uuid';
 import type { IDocumentContent, UpdateDocumentContentInput } from '@alga-psa/types';
 import { addDocument, getAuthorizedDocumentById } from './documentActions';
 import { isActionPermissionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+    documentActionErrorFrom,
+    type DocumentActionError,
+} from './documentActionErrors';
 
 // Create a new content document
 export const createContentDocument = withAuth(async (
@@ -18,7 +21,7 @@ export const createContentDocument = withAuth(async (
     initialContent: string = '',
     entityId?: string,
     entityType?: 'ticket' | 'client' | 'contact' | 'asset'
-): Promise<{ document_id: string }> => {
+): Promise<{ document_id: string } | DocumentActionError> => {
     try {
         const { knex } = await createTenantKnex();
 
@@ -34,7 +37,7 @@ export const createContentDocument = withAuth(async (
         });
 
         if (isActionPermissionError(documentResult)) {
-            throw new Error(documentResult.permissionError);
+            return documentResult;
         }
 
         // Create the document content
@@ -54,7 +57,11 @@ export const createContentDocument = withAuth(async (
         return { document_id: documentResult._id };
     } catch (error) {
         console.error('Error creating content document:', error);
-        throw new Error('Failed to create content document');
+        const expectedError = documentActionErrorFrom(error);
+        if (expectedError) {
+            return expectedError;
+        }
+        throw error;
     }
 });
 
@@ -63,7 +70,7 @@ export const getDocumentContent = withAuth(async (
     user,
     { tenant },
     documentId: string
-): Promise<IDocumentContent | null | ActionPermissionError> => {
+): Promise<IDocumentContent | null | DocumentActionError> => {
     try {
         if (!await hasPermission(user, 'document', 'read')) {
             return permissionError('Permission denied: Cannot read documents');
@@ -89,7 +96,11 @@ export const getDocumentContent = withAuth(async (
         return content || null;
     } catch (error) {
         console.error('Error getting document content:', error);
-        throw new Error('Failed to get document content');
+        const expectedError = documentActionErrorFrom(error);
+        if (expectedError) {
+            return expectedError;
+        }
+        throw error;
     }
 });
 
@@ -99,7 +110,7 @@ export const updateDocumentContent = withAuth(async (
     { tenant },
     documentId: string,
     data: UpdateDocumentContentInput
-): Promise<void | ActionPermissionError> => {
+): Promise<void | DocumentActionError> => {
     try {
         if (!await hasPermission(user, 'document', 'update')) {
             return permissionError('Permission denied: Cannot update documents');
@@ -146,7 +157,11 @@ export const updateDocumentContent = withAuth(async (
         }
     } catch (error) {
         console.error('Error updating document content:', error);
-        throw new Error('Failed to update document content');
+        const expectedError = documentActionErrorFrom(error);
+        if (expectedError) {
+            return expectedError;
+        }
+        throw error;
     }
 });
 
@@ -155,7 +170,7 @@ export const deleteDocumentContent = withAuth(async (
     user,
     { tenant },
     documentId: string
-): Promise<void | ActionPermissionError> => {
+): Promise<void | DocumentActionError> => {
     try {
         if (!await hasPermission(user, 'document', 'delete')) {
             return permissionError('Permission denied: Cannot delete documents');
@@ -179,6 +194,10 @@ export const deleteDocumentContent = withAuth(async (
         }
     } catch (error) {
         console.error('Error deleting document content:', error);
-        throw new Error('Failed to delete document content');
+        const expectedError = documentActionErrorFrom(error);
+        if (expectedError) {
+            return expectedError;
+        }
+        throw error;
     }
 });

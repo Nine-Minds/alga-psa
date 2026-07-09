@@ -5,7 +5,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { MoreVertical, PlusCircle, Info, Calendar, CalendarDays } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
@@ -52,6 +58,11 @@ const taxHolidaySchema = z.object({
 
 type TaxHolidayFormData = z.infer<typeof taxHolidaySchema>;
 
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
 type HolidayStatus = 'active' | 'upcoming' | 'expired';
 
 interface TaxHolidayManagerProps {
@@ -93,6 +104,11 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
     setIsLoading(true);
     try {
       const fetchedHolidays = await getTaxHolidaysByTaxRate(taxRateId);
+      if (isReturnedActionError(fetchedHolidays)) {
+        setHolidays([]);
+        handleError(fetchedHolidays, t('tax.holidays.errors.load', { defaultValue: 'Failed to load tax holidays.' }));
+        return;
+      }
       setHolidays(fetchedHolidays);
     } catch (error) {
       handleError(error, t('tax.holidays.errors.load', { defaultValue: 'Failed to load tax holidays.' }));
@@ -180,19 +196,21 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
       : t('tax.holidays.errors.create', { defaultValue: 'Failed to create tax holiday.' });
 
     try {
-      if (isEditing) {
-        await updateTaxHoliday(editingHoliday.tax_holiday_id, {
-          start_date: data.start_date,
-          end_date: data.end_date,
-          description: data.description || undefined,
-        });
-      } else {
-        await createTaxHoliday({
-          tax_rate_id: taxRateId,
-          start_date: data.start_date,
-          end_date: data.end_date,
-          description: data.description || undefined,
-        });
+      const result = editingHoliday
+        ? await updateTaxHoliday(editingHoliday.tax_holiday_id, {
+            start_date: data.start_date,
+            end_date: data.end_date,
+            description: data.description || undefined,
+          })
+        : await createTaxHoliday({
+            tax_rate_id: taxRateId,
+            start_date: data.start_date,
+            end_date: data.end_date,
+            description: data.description || undefined,
+          });
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
       }
       toast.success(successMessage);
       await fetchHolidays();
@@ -209,7 +227,11 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
     setIsSubmitting(true);
 
     try {
-      await deleteTaxHoliday(holidayToDelete.tax_holiday_id);
+      const result = await deleteTaxHoliday(holidayToDelete.tax_holiday_id);
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
+      }
       toast.success(t('tax.holidays.toast.deleted', { defaultValue: 'Tax holiday deleted successfully.' }));
       await fetchHolidays();
       handleCloseDeleteDialog();

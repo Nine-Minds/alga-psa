@@ -2,12 +2,18 @@
 
 import type { ITag } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { withAuth, throwPermissionError } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import { Knex } from 'knex';
 import { extractTaskDescriptionText } from '../lib/taskRichText';
-import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
+import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const MAX_EXPORT_ROWS = 10000;
 
@@ -110,6 +116,37 @@ interface ChecklistCounts {
 type PhaseIdRow = {
   phase_id: string;
 };
+
+export type ProjectTaskExportActionError = ActionMessageError | ActionPermissionError;
+
+function projectTaskExportErrorFrom(error: unknown): ProjectTaskExportActionError | null {
+  if (error instanceof ProductAccessError) {
+    return permissionError(error.message);
+  }
+
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.includes('Permission denied')) {
+      return permissionError(message);
+    }
+    if (message.includes('Product access denied')) {
+      return permissionError(message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected projects, phases, or tasks is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected project records no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required project export field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+
+  return null;
+}
 
 function taskToRow(
   task: TaskRow,
@@ -305,123 +342,133 @@ export const exportProjectTasksToCSV = withAuth(async (
   selectedPhaseIds: string[],
   selectedFields?: string[],
   taskIds?: string[],
-): Promise<{ csv: string; count: number }> => {
-  await assertPsaOnlyTenantAccess(tenant, 'project_actions');
-  const { knex: db } = await createTenantKnex();
+): Promise<{ csv: string; count: number } | ProjectTaskExportActionError> => {
+  try {
+    await assertPsaOnlyTenantAccess(tenant, 'project_actions');
+    const { knex: db } = await createTenantKnex();
 
-  return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const hasRead = await hasPermission(_user, 'project', 'read', trx);
-    if (!hasRead) {
-      throwPermissionError('read project');
-    }
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const hasRead = await hasPermission(_user, 'project', 'read', trx);
+      if (!hasRead) {
+        throw new Error('Permission denied: Cannot read project');
+      }
 
-    let tasks: TaskRow[];
+      let tasks: TaskRow[];
 
-    if (taskIds && taskIds.length > 0) {
-      // Export only the explicitly selected tasks, scoped to this project's phases
-      const projectPhases = await tenantScopedTable(trx, 'project_phases', tenant)
-        .where({ project_id: projectId })
-        .select('phase_id') as PhaseIdRow[];
+      if (taskIds && taskIds.length > 0) {
+        // Export only the explicitly selected tasks, scoped to this project's phases
+        const projectPhases = await tenantScopedTable(trx, 'project_phases', tenant)
+          .where({ project_id: projectId })
+          .select('phase_id') as PhaseIdRow[];
 
-      const projectPhaseIds = projectPhases.map(p => p.phase_id);
-      if (projectPhaseIds.length === 0) {
+        const projectPhaseIds = projectPhases.map(p => p.phase_id);
+        if (projectPhaseIds.length === 0) {
+          return { csv: '', count: 0 };
+        }
+
+        tasks = await tenantScopedTable(trx, 'project_tasks', tenant)
+          .whereIn('task_id', taskIds)
+          .whereIn('phase_id', projectPhaseIds)
+          .orderBy(['phase_id', 'order_key'])
+          .limit(MAX_EXPORT_ROWS) as TaskRow[];
+      } else {
+        // Get phases for this project, filtered to selected ones
+        const phases = await tenantScopedTable(trx, 'project_phases', tenant)
+          .where({ project_id: projectId })
+          .whereIn('phase_id', selectedPhaseIds)
+          .select('phase_id') as PhaseIdRow[];
+
+        const phaseIds = phases.map(p => p.phase_id);
+        if (phaseIds.length === 0) {
+          return { csv: '', count: 0 };
+        }
+
+        // Get all tasks for selected phases
+        tasks = await tenantScopedTable(trx, 'project_tasks', tenant)
+          .whereIn('phase_id', phaseIds)
+          .orderBy(['phase_id', 'order_key'])
+          .limit(MAX_EXPORT_ROWS) as TaskRow[];
+      }
+
+      if (tasks.length === 0) {
         return { csv: '', count: 0 };
       }
 
-      tasks = await tenantScopedTable(trx, 'project_tasks', tenant)
-        .whereIn('task_id', taskIds)
-        .whereIn('phase_id', projectPhaseIds)
-        .orderBy(['phase_id', 'order_key'])
-        .limit(MAX_EXPORT_ROWS) as TaskRow[];
-    } else {
-      // Get phases for this project, filtered to selected ones
-      const phases = await tenantScopedTable(trx, 'project_phases', tenant)
-        .where({ project_id: projectId })
-        .whereIn('phase_id', selectedPhaseIds)
-        .select('phase_id') as PhaseIdRow[];
+      const taskRowIds = tasks.map(t => t.task_id);
 
-      const phaseIds = phases.map(p => p.phase_id);
-      if (phaseIds.length === 0) {
+      // Resolve lookups, tags, and checklist counts in parallel
+      const [lookups, tagsResult, checklistRows] = await Promise.all([
+        resolveNameLookups(trx, tenant, tasks),
+        findTagsByEntityIds(taskRowIds, 'project_task').catch(() => []),
+        tenantScopedTable(trx, 'task_checklist_items', tenant)
+          .whereIn('task_id', taskRowIds)
+          .select('task_id', 'completed'),
+      ]);
+      const tagsArray = isTagActionError(tagsResult) ? [] : tagsResult;
+      if (isTagActionError(tagsResult)) {
+        console.warn('[exportProjectTasksCsv] Failed to load task tags:', tagsResult);
+      }
+
+      // Build tag map
+      const taskTags: Record<string, ITag[]> = {};
+      for (const tag of tagsArray) {
+        if (tag.tagged_id) {
+          (taskTags[tag.tagged_id] ??= []).push(tag);
+        }
+      }
+
+      // Build checklist counts map
+      const checklistCounts: Record<string, ChecklistCounts> = {};
+      for (const item of checklistRows) {
+        if (!checklistCounts[item.task_id]) {
+          checklistCounts[item.task_id] = { total: 0, completed: 0 };
+        }
+        checklistCounts[item.task_id].total++;
+        if (item.completed) {
+          checklistCounts[item.task_id].completed++;
+        }
+      }
+
+      const rows = tasks.map(t => taskToRow(t, lookups, taskTags, checklistCounts));
+
+      // Use selected fields if provided, otherwise all fields
+      const allFieldKeys = CSV_FIELDS as readonly string[];
+      const fields = selectedFields
+        ? selectedFields.filter(f => allFieldKeys.includes(f))
+        : [...CSV_FIELDS] as string[];
+
+      if (fields.length === 0) {
         return { csv: '', count: 0 };
       }
 
-      // Get all tasks for selected phases
-      tasks = await tenantScopedTable(trx, 'project_tasks', tenant)
-        .whereIn('phase_id', phaseIds)
-        .orderBy(['phase_id', 'order_key'])
-        .limit(MAX_EXPORT_ROWS) as TaskRow[];
-    }
+      // Build header row using friendly names
+      const headerRow = fields.map(f => CSV_HEADERS[f] || f);
+      const dataRows = rows.map(row =>
+        fields.map(f => row[f] || '')
+      );
 
-    if (tasks.length === 0) {
-      return { csv: '', count: 0 };
-    }
+      const escapeField = (field: string): string => {
+        let str = String(field);
+        // Guard against CSV injection: prefix dangerous leading characters with a single quote
+        if (/^[=+\-@\t\r]/.test(str)) {
+          str = "'" + str;
+        }
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
 
-    const taskRowIds = tasks.map(t => t.task_id);
+      const csvLines = [
+        headerRow.map(escapeField).join(','),
+        ...dataRows.map(row => row.map(escapeField).join(','))
+      ];
 
-    // Resolve lookups, tags, and checklist counts in parallel
-    const [lookups, tagsArray, checklistRows] = await Promise.all([
-      resolveNameLookups(trx, tenant, tasks),
-      findTagsByEntityIds(taskRowIds, 'project_task').catch(() => []),
-      tenantScopedTable(trx, 'task_checklist_items', tenant)
-        .whereIn('task_id', taskRowIds)
-        .select('task_id', 'completed'),
-    ]);
-
-    // Build tag map
-    const taskTags: Record<string, ITag[]> = {};
-    for (const tag of tagsArray) {
-      if (tag.tagged_id) {
-        (taskTags[tag.tagged_id] ??= []).push(tag);
-      }
-    }
-
-    // Build checklist counts map
-    const checklistCounts: Record<string, ChecklistCounts> = {};
-    for (const item of checklistRows) {
-      if (!checklistCounts[item.task_id]) {
-        checklistCounts[item.task_id] = { total: 0, completed: 0 };
-      }
-      checklistCounts[item.task_id].total++;
-      if (item.completed) {
-        checklistCounts[item.task_id].completed++;
-      }
-    }
-
-    const rows = tasks.map(t => taskToRow(t, lookups, taskTags, checklistCounts));
-
-    // Use selected fields if provided, otherwise all fields
-    const allFieldKeys = CSV_FIELDS as readonly string[];
-    const fields = selectedFields
-      ? selectedFields.filter(f => allFieldKeys.includes(f))
-      : [...CSV_FIELDS] as string[];
-
-    if (fields.length === 0) {
-      return { csv: '', count: 0 };
-    }
-
-    // Build header row using friendly names
-    const headerRow = fields.map(f => CSV_HEADERS[f] || f);
-    const dataRows = rows.map(row =>
-      fields.map(f => row[f] || '')
-    );
-
-    const escapeField = (field: string): string => {
-      let str = String(field);
-      // Guard against CSV injection: prefix dangerous leading characters with a single quote
-      if (/^[=+\-@\t\r]/.test(str)) {
-        str = "'" + str;
-      }
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`;
-      }
-      return str;
-    };
-
-    const csvLines = [
-      headerRow.map(escapeField).join(','),
-      ...dataRows.map(row => row.map(escapeField).join(','))
-    ];
-
-    return { csv: csvLines.join('\n'), count: tasks.length };
-  });
+      return { csv: csvLines.join('\n'), count: tasks.length };
+    });
+  } catch (error) {
+    const expected = projectTaskExportErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });

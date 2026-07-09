@@ -200,6 +200,16 @@ function isNameUniqueViolation(error: unknown): boolean {
   return false
 }
 
+const EXTENSION_SCHEDULE_PERMISSION_MESSAGE = 'Permission denied: Cannot manage extension schedules'
+
+function extensionScheduleErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : String((error as any)?.message ?? '')
+  if (message === 'Insufficient permissions' || message.includes('Permission denied')) {
+    return EXTENSION_SCHEDULE_PERMISSION_MESSAGE
+  }
+  return fallback
+}
+
 function getUserId(user: any): string | undefined {
   const rawUserId = String((user as any).id ?? (user as any).user_id ?? '').trim()
   return rawUserId.length > 0 ? rawUserId : undefined
@@ -270,11 +280,11 @@ export const createExtensionSchedule = withAuth(async (
   extensionId: string,
   input: CreateExtensionScheduleInput
 ): Promise<{ success: boolean; message?: string; scheduleId?: string; fieldErrors?: Record<string, string> }> => {
-  if (user.user_type === 'client') throw new Error('Insufficient permissions')
+  if (user.user_type === 'client') return { success: false, message: EXTENSION_SCHEDULE_PERMISSION_MESSAGE }
 
   const { knex } = await createTenantKnex()
   const allowed = await hasPermission(user, 'extension', 'write', knex)
-  if (!allowed) throw new Error('Insufficient permissions')
+  if (!allowed) return { success: false, message: EXTENSION_SCHEDULE_PERMISSION_MESSAGE }
 
   const db = tenantDb(knex, tenant)
   const userId = getUserId(user)
@@ -388,7 +398,7 @@ export const createExtensionSchedule = withAuth(async (
         fieldErrors: { name: 'Schedule name already in use for this extension' },
       }
     }
-    return { success: false, message: error?.message ?? 'Failed to create schedule' }
+    return { success: false, message: extensionScheduleErrorMessage(error, 'Failed to create schedule') }
   }
 })
 
@@ -399,11 +409,11 @@ export const updateExtensionSchedule = withAuth(async (
   scheduleIdRaw: string,
   input: UpdateExtensionScheduleInput
 ): Promise<{ success: boolean; message?: string; fieldErrors?: Record<string, string> }> => {
-  if (user.user_type === 'client') throw new Error('Insufficient permissions')
+  if (user.user_type === 'client') return { success: false, message: EXTENSION_SCHEDULE_PERMISSION_MESSAGE }
 
   const { knex } = await createTenantKnex()
   const allowed = await hasPermission(user, 'extension', 'write', knex)
-  if (!allowed) throw new Error('Insufficient permissions')
+  if (!allowed) return { success: false, message: EXTENSION_SCHEDULE_PERMISSION_MESSAGE }
 
   const db = tenantDb(knex, tenant)
   const userId = getUserId(user)
@@ -478,6 +488,11 @@ export const updateExtensionSchedule = withAuth(async (
               }
             )
           } catch (e: any) {
+            logger.warn('Failed to reschedule extension schedule', {
+              scheduleId,
+              tenant,
+              error: e,
+            })
             // Restore best-effort.
             if (currentJobId) {
               try {
@@ -516,12 +531,12 @@ export const updateExtensionSchedule = withAuth(async (
                     enabled: false,
                     job_id: null,
                     runner_schedule_id: null,
-                    last_error: `Failed to reschedule: ${e?.message ?? String(e)}`.slice(0, 4000),
+                    last_error: 'Failed to reschedule extension schedule.',
                     updated_at: knex.fn.now(),
                   })
               }
             }
-            return { success: false, message: e?.message ?? 'Failed to reschedule' }
+            return { success: false, message: extensionScheduleErrorMessage(e, 'Failed to reschedule extension schedule') }
           }
 
           const jobId = scheduled?.jobId
@@ -551,7 +566,12 @@ export const updateExtensionSchedule = withAuth(async (
               .update({ updated_at: trx.fn.now() })
           })
         } catch (e: any) {
-          return { success: false, message: e?.message ?? 'Failed to reschedule' }
+          logger.warn('Failed to update extension schedule runner state', {
+            scheduleId,
+            tenant,
+            error: e,
+          })
+          return { success: false, message: extensionScheduleErrorMessage(e, 'Failed to reschedule extension schedule') }
         }
       } else {
         // Disable: cancel schedule first; only clear DB handles if cancellation succeeds.
@@ -620,7 +640,7 @@ export const updateExtensionSchedule = withAuth(async (
         fieldErrors: { name: 'Schedule name already in use for this extension' },
       }
     }
-    return { success: false, message: error?.message ?? 'Failed to update schedule' }
+    return { success: false, message: extensionScheduleErrorMessage(error, 'Failed to update schedule') }
   }
 })
 
@@ -630,11 +650,11 @@ export const deleteExtensionSchedule = withAuth(async (
   extensionId: string,
   scheduleIdRaw: string
 ): Promise<{ success: boolean; message?: string; fieldErrors?: Record<string, string> }> => {
-  if (user.user_type === 'client') throw new Error('Insufficient permissions')
+  if (user.user_type === 'client') return { success: false, message: EXTENSION_SCHEDULE_PERMISSION_MESSAGE }
 
   const { knex } = await createTenantKnex()
   const allowed = await hasPermission(user, 'extension', 'write', knex)
-  if (!allowed) throw new Error('Insufficient permissions')
+  if (!allowed) return { success: false, message: EXTENSION_SCHEDULE_PERMISSION_MESSAGE }
 
   const db = tenantDb(knex, tenant)
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
@@ -678,7 +698,7 @@ export const deleteExtensionSchedule = withAuth(async (
     if (error instanceof ExtensionScheduleInputError) {
       return { success: false, message: error.message, fieldErrors: { [error.field]: error.message } }
     }
-    return { success: false, message: error?.message ?? 'Failed to delete schedule' }
+    return { success: false, message: extensionScheduleErrorMessage(error, 'Failed to delete schedule') }
   }
 })
 
@@ -688,11 +708,11 @@ export const runExtensionScheduleNow = withAuth(async (
   extensionId: string,
   scheduleIdRaw: string
 ): Promise<{ success: boolean; message?: string; fieldErrors?: Record<string, string> }> => {
-  if (user.user_type === 'client') throw new Error('Insufficient permissions')
+  if (user.user_type === 'client') return { success: false, message: EXTENSION_SCHEDULE_PERMISSION_MESSAGE }
 
   const { knex } = await createTenantKnex()
   const allowed = await hasPermission(user, 'extension', 'write', knex)
-  if (!allowed) throw new Error('Insufficient permissions')
+  if (!allowed) return { success: false, message: EXTENSION_SCHEDULE_PERMISSION_MESSAGE }
 
   const db = tenantDb(knex, tenant)
   const userId = getUserId(user)
@@ -751,6 +771,6 @@ export const runExtensionScheduleNow = withAuth(async (
     if (error instanceof ExtensionScheduleInputError) {
       return { success: false, message: error.message, fieldErrors: { [error.field]: error.message } }
     }
-    return { success: false, message: error?.message ?? 'Failed to run schedule' }
+    return { success: false, message: extensionScheduleErrorMessage(error, 'Failed to run schedule') }
   }
 })

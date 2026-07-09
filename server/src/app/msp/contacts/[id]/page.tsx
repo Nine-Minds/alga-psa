@@ -16,7 +16,7 @@ import {
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getContactPortalPermissions } from '@alga-psa/auth/actions';
 import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
-import { findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AIChatContextBoundary } from '@product/chat/context';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
@@ -96,6 +96,10 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
         ? documentsResponse
         : documentsResponse.documents || [];
     }
+    const safeTags = isTagActionError(tags) ? [] : tags;
+    if (isTagActionError(tags)) {
+      console.error('[contact-bento] Optional tag fetch failed:', tags);
+    }
 
     return (
       <AIChatContextBoundary
@@ -118,7 +122,7 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
             documents={documents}
             showDocuments={!isAlgaDesk}
             interactions={interactions}
-            tags={tags}
+            tags={safeTags}
             stats={stats}
             ticketsSummary={ticketsSummary}
             relatedWork={relatedWork}

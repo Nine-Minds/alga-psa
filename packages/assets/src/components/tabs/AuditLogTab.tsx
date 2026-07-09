@@ -2,6 +2,7 @@ import React from 'react';
 import useSWR from 'swr';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { getAssetHistory } from '../../actions/assetActions';
+import { unwrapAssetActionResult } from '../../actions/assetActionErrors';
 import { formatDateTime } from '@alga-psa/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -13,7 +14,7 @@ export const AuditLogTab: React.FC<AuditLogTabProps> = ({ assetId }) => {
   const { t } = useTranslation('msp/assets');
   const { data: history, isLoading } = useSWR(
     assetId ? ['asset', assetId, 'history'] : null,
-    ([, id]) => getAssetHistory(id)
+    ([, id]) => getAssetHistory(id).then(unwrapAssetActionResult)
   );
 
   if (isLoading) {

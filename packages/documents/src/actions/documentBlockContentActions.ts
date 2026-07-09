@@ -13,7 +13,10 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildDocumentAssociatedPayload } from '@alga-psa/workflow-streams';
 import { getAuthorizedDocumentById } from './documentActions';
 import { permissionError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  documentActionErrorFrom,
+  type DocumentActionError,
+} from './documentActionErrors';
 
 interface BlockContentInput {
   block_data: any; // JSON data from block editor
@@ -75,7 +78,7 @@ export const createBlockDocument = withAuth(async (
   user,
   { tenant },
   input: CreateBlockDocumentInput
-): Promise<{ document_id: string; content_id: string } | ActionPermissionError> => {
+): Promise<{ document_id: string; content_id: string } | DocumentActionError> => {
   if (!await hasPermission(user, 'document', 'create')) {
     return permissionError('Permission denied: Cannot create documents');
   }
@@ -207,12 +210,16 @@ export const createBlockDocument = withAuth(async (
     };
   } catch (error) {
     console.error('Error creating block document:', error);
-    throw new Error('Failed to create block document');
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
 // Get document block content
-export const getBlockContent = withAuth(async (user, { tenant }, documentId: string): Promise<DocumentBlockContent | null | ActionPermissionError> => {
+export const getBlockContent = withAuth(async (user, { tenant }, documentId: string): Promise<DocumentBlockContent | null | DocumentActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -239,7 +246,11 @@ export const getBlockContent = withAuth(async (user, { tenant }, documentId: str
     return content || null;
   } catch (error) {
     console.error('Error getting block content:', error);
-    throw new Error('Failed to get block content');
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -249,7 +260,7 @@ export const updateBlockContent = withAuth(async (
   { tenant },
   documentId: string,
   input: BlockContentInput & { user_id: string }
-): Promise<unknown | ActionPermissionError> => {
+): Promise<unknown | DocumentActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -369,12 +380,16 @@ export const updateBlockContent = withAuth(async (
     return result.updatedContent;
   } catch (error) {
     console.error('Error updating block content:', error);
-    throw new Error('Failed to update block content');
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
 // Delete document block content
-export const deleteBlockContent = withAuth(async (_user, { tenant }, documentId: string): Promise<void | ActionPermissionError> => {
+export const deleteBlockContent = withAuth(async (_user, { tenant }, documentId: string): Promise<void | DocumentActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -406,6 +421,10 @@ export const deleteBlockContent = withAuth(async (_user, { tenant }, documentId:
     );
   } catch (error) {
     console.error('Error deleting block content:', error);
-    throw new Error('Failed to delete block content');
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });

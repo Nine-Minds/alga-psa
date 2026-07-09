@@ -27,8 +27,19 @@ import {
   RecordCard,
   ServiceCard,
 } from './PulseCards';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+function isReturnedActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 interface ClientCommandCenterProps {
   idPrefix: string;
@@ -104,7 +115,16 @@ export default function ClientCommandCenter({
   useEffect(() => {
     let cancelled = false;
     getClientPulse(clientId)
-      .then((data) => { if (!cancelled) setPulse(data); })
+      .then((data) => {
+        if (cancelled) return;
+        if (isReturnedActionError(data)) {
+          setPulse(null);
+          setPulseError(getErrorMessage(data));
+          return;
+        }
+        setPulseError(null);
+        setPulse(data);
+      })
       .catch(() => {
         if (!cancelled) {
           setPulseError(t('clientCommandCenter.pulseError', { defaultValue: 'Could not load the client snapshot.' }));

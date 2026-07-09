@@ -25,6 +25,14 @@ import {
 import { TemplateWizard } from './template-wizard/TemplateWizard';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface TemplatesTabProps {
   onRefreshNeeded?: () => void;
@@ -48,6 +56,10 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
     try {
       setIsLoading(true);
       const fetchedTemplates = await getContractTemplates();
+      if (isReturnedActionError(fetchedTemplates)) {
+        setError(getErrorMessage(fetchedTemplates));
+        return;
+      }
       setTemplateContracts(fetchedTemplates);
       setError(null);
     } catch (err) {
@@ -60,7 +72,11 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
 
   const handleDeleteContract = async (contractId: string) => {
     try {
-      await deleteContract(contractId);
+      const result = await deleteContract(contractId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchTemplates();
       onRefreshNeeded?.();
     } catch (err) {

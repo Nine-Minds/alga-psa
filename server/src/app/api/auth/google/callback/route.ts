@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
         provider: 'google',
         success: false,
         error,
-        errorDescription: errorDescription || ''
+        errorDescription: 'Google authorization failed. Please try again.'
       });
     }
 
@@ -295,7 +295,7 @@ export async function GET(request: NextRequest) {
         provider: 'google',
         success: false,
         error: 'token_exchange_failed',
-        errorDescription: tokenError.response?.data?.error_description || tokenError.message
+        errorDescription: 'Google authorization failed. Please try again.'
       });
     }
   } catch (error: any) {
@@ -306,7 +306,7 @@ export async function GET(request: NextRequest) {
       provider: 'google',
       success: false,
       error: 'unexpected_error',
-      errorDescription: error?.message || 'Unexpected error'
+      errorDescription: 'Google authorization failed. Please try again.'
     })).toString('base64');
     return new NextResponse(`<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Google OAuth Callback</title></head><body><script>(function(){try{var p=JSON.parse(atob('${encoded}'));(window.opener||window.parent).postMessage(p,'*')}catch(_){}try{window.close()}catch(_){}setTimeout(function(){if(!window.closed){document.body.innerHTML='<p>Authorization failed. You can close this window.</p>'}},100)})();</script></body></html>`, { status: 200, headers: { 'Content-Type': 'text/html' } });
   }

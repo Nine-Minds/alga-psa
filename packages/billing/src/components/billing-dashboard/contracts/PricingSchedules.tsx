@@ -24,6 +24,11 @@ import { formatCurrency } from '@alga-psa/core';
 import { toPlainDate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface PricingSchedulesProps {
   contractId: string;
@@ -50,6 +55,11 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
 
     try {
       const data = await getPricingSchedulesByContract(contractId);
+      if (isActionMessageError(data) || isActionPermissionError(data)) {
+        setError(getErrorMessage(data));
+        setSchedules([]);
+        return;
+      }
       setSchedules(data);
     } catch (error) {
       console.error('Error fetching pricing schedules:', error);
@@ -72,7 +82,11 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
     }
 
     try {
-      await deletePricingSchedule(scheduleId);
+      const result = await deletePricingSchedule(scheduleId);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       fetchSchedules();
     } catch (error) {
       console.error('Error deleting pricing schedule:', error);

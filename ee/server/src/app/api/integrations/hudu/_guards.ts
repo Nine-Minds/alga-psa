@@ -56,7 +56,7 @@ export async function requireHuduUiFlagEnabled(
       return NextResponse.json(
         {
           success: false,
-          error: error.message,
+          error: 'Hudu integration is not available for this workspace.',
         },
         { status: 403 }
       );

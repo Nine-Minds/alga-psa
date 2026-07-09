@@ -16,6 +16,11 @@ import {
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface PricingScheduleDialogProps {
   contractId: string;
@@ -136,10 +141,13 @@ export function PricingScheduleDialog({
         notes: notes || undefined
       };
 
-      if (schedule?.schedule_id) {
-        await updatePricingSchedule(schedule.schedule_id, scheduleData);
-      } else {
-        await createPricingSchedule(scheduleData);
+      const result = schedule?.schedule_id
+        ? await updatePricingSchedule(schedule.schedule_id, scheduleData)
+        : await createPricingSchedule(scheduleData);
+
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setError(getErrorMessage(result));
+        return;
       }
 
       onSave();

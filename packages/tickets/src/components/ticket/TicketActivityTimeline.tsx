@@ -23,6 +23,11 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type { ColumnDefinition } from '@alga-psa/types';
 import type {
   TicketActivityRow,
@@ -395,11 +400,17 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
     getTicketTimelineEntries(ticketId, { order: 'desc' })
       .then((rows) => {
         if (cancelled) return;
+        if (isActionMessageError(rows) || isActionPermissionError(rows)) {
+          setEntries([]);
+          setError(getErrorMessage(rows));
+          return;
+        }
         setEntries(rows);
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : String(err));
+        console.error('Failed to load ticket activity timeline:', err);
+        setError('Failed to load ticket activity timeline.');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

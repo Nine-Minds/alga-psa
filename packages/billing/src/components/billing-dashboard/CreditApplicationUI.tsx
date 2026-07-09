@@ -21,6 +21,18 @@ interface CreditApplicationUIProps {
   onCancel: () => void;
 }
 
+function getReturnedActionError(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+  const candidate = value as { actionError?: unknown; permissionError?: unknown };
+  return typeof candidate.permissionError === 'string'
+    ? candidate.permissionError
+    : typeof candidate.actionError === 'string'
+      ? candidate.actionError
+      : null;
+}
+
 const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
   clientId,
   invoiceId,
@@ -47,6 +59,14 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
         
         // Fetch real credits from the server using the server action
         const result = await listClientCredits(clientId, false, page, 10);
+        const returnedError = getReturnedActionError(result);
+        if (returnedError) {
+          setError(returnedError);
+          setAvailableCredits([]);
+          setTotalPages(1);
+          setTotalCredits(0);
+          return;
+        }
         
         setAvailableCredits(result.credits);
         setTotalPages(result.totalPages);
@@ -114,7 +134,12 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
     try {
       if (invoiceId) {
         // If we have an invoiceId, use the server action directly
-        await applyCreditToInvoice(clientId, invoiceId, applicationAmount);
+        const result = await applyCreditToInvoice(clientId, invoiceId, applicationAmount);
+        const returnedError = getReturnedActionError(result);
+        if (returnedError) {
+          setError(returnedError);
+          return;
+        }
         // Call the parent callback to handle UI updates
         await onApplyCredit(selectedCreditId, applicationAmount);
       } else {

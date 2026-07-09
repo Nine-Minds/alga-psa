@@ -2,6 +2,7 @@ import { getInventoryDashboardData } from '@alga-psa/inventory/actions';
 import type { InventoryDashboardData } from '@alga-psa/inventory/actions';
 import { InventoryDashboard } from '@alga-psa/inventory/components';
 import { getSession } from '@alga-psa/auth';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
@@ -37,7 +38,12 @@ export default async function InventoryDashboardPage() {
 
   let data: InventoryDashboardData = EMPTY;
   try {
-    data = await getInventoryDashboardData();
+    const result = await getInventoryDashboardData();
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      console.error('inventory dashboard: getInventoryDashboardData failed', getErrorMessage(result));
+    } else {
+      data = result;
+    }
   } catch (err) {
     console.error('inventory dashboard: getInventoryDashboardData failed', err);
   }

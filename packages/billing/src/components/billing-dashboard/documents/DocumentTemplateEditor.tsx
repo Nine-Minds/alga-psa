@@ -9,6 +9,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@alga-psa/
 import { Input } from '@alga-psa/ui/components/Input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type { TemplateAst } from '@alga-psa/types';
 import {
   runAuthoritativeTemplatePreview,
@@ -59,6 +64,9 @@ interface DocumentTemplateEditorProps {
 
 type EditorTab = 'visual' | 'code';
 type VisualWorkspaceTab = 'design' | 'transforms' | 'preview';
+
+const isDocumentTemplateActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const useDebouncedValue = <T,>(value: T, delayMs: number) => {
   const [debounced, setDebounced] = React.useState(value);
@@ -178,6 +186,11 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
         const ast = exportWorkspaceToTemplateAst(designerExportWorkspace());
         const result = await runAuthoritativeTemplatePreview(documentType, ast);
         if (cancelled) return;
+        if (isDocumentTemplateActionError(result)) {
+          setPreviewHtml(null);
+          setPreviewError(getErrorMessage(result));
+          return;
+        }
         setPreviewHtml(result.html);
       } catch (err) {
         if (cancelled) return;
@@ -229,7 +242,14 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
         isClone: template.isClone,
       });
 
-      if (!result.success || !result.template_id) {
+      if (isDocumentTemplateActionError(result)) {
+        const message = getErrorMessage(result);
+        setError(message);
+        toast.error(message);
+        return;
+      }
+
+      if (!result.success) {
         throw new Error(result.error ?? `Failed to save ${typeLabel} layout`);
       }
 

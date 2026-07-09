@@ -29,7 +29,21 @@ export async function generateInvoiceHandler(data: GenerateInvoiceData): Promise
   }
 
   try {
-    await generateInvoiceForSelectionInput(data.selectorInput);
+    const result = await generateInvoiceForSelectionInput(data.selectorInput);
+    if (
+      result &&
+      typeof result === 'object' &&
+      (
+        typeof (result as { actionError?: unknown }).actionError === 'string' ||
+        typeof (result as { permissionError?: unknown }).permissionError === 'string'
+      )
+    ) {
+      throw new Error(
+        'permissionError' in result
+          ? String((result as { permissionError: string }).permissionError)
+          : String((result as { actionError: string }).actionError),
+      );
+    }
   } catch (error) {
     console.error(
       `Failed to generate invoice for recurring execution window ${executionWindow?.identityKey}:`,

@@ -18,6 +18,12 @@ import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import TicketSelect, { TicketOption } from './TicketSelect';
 import { mapTicketToTaskFields, TaskPrefillFields } from '../lib/taskTicketMapping';
 import { useTranslation } from 'react-i18next';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface SelectOption {
   value: string;
@@ -40,6 +46,10 @@ interface PrefillFromTicketDialogProps {
     shouldLink: boolean;
   }) => void;
   users: IUser[];
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export default function PrefillFromTicketDialog({
@@ -89,6 +99,11 @@ export default function PrefillFromTicketDialog({
         try {
           const filters: ITicketListFilters = { boardFilterState: 'all' };
           const results = await getTicketsForList(filters);
+          if (isReturnedActionError(results)) {
+            handleError(getErrorMessage(results));
+            setTickets([]);
+            return;
+          }
           setTickets(results || []);
           setTicketsLoaded(true);
         } catch (error) {
@@ -114,7 +129,12 @@ export default function PrefillFromTicketDialog({
             getAllPriorities('ticket').catch(() => [])
           ]);
 
-          setCategories(fetchedCategories || []);
+          if (isReturnedActionError(fetchedCategories)) {
+            handleError(getErrorMessage(fetchedCategories));
+            setCategories([]);
+          } else {
+            setCategories(fetchedCategories || []);
+          }
           setBoards(fetchedBoards || []);
           const fetchedStatuses: IStatus[] = statuses || [];
 

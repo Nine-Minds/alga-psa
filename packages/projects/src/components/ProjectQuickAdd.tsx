@@ -9,7 +9,12 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { IProject, IClient, IStatus } from '@alga-psa/types';
 import { IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { createProject, getProjectStatuses } from '../actions/projectActions';
 import { getTenantProjectStatuses } from '../actions/projectTaskStatusActions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -95,8 +100,13 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
           handleError(projectStatusesResult.permissionError);
           return;
         }
+        if (isActionPermissionError(projectTaskStatuses) || isActionMessageError(projectTaskStatuses)) {
+          handleError(getErrorMessage(projectTaskStatuses));
+          setTaskStatuses([]);
+        } else {
+          setTaskStatuses(projectTaskStatuses);
+        }
         setStatuses(projectStatusesResult);
-        setTaskStatuses(projectTaskStatuses);
         // Default selection is now handled by ProjectTaskStatusSelector component
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -173,8 +183,8 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         .map(s => s.status_id);
 
       const newProject = await createProject(projectData, statusIds);
-      if (isActionPermissionError(newProject)) {
-        handleError(newProject.permissionError);
+      if (isActionPermissionError(newProject) || isActionMessageError(newProject)) {
+        handleError(getErrorMessage(newProject));
         return;
       }
 

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import TeamList from './TeamList';
 import TeamDetails from './TeamDetails';
-import { getTeams } from '@alga-psa/teams/actions';
+import { getTeams, isTeamActionError, teamActionErrorMessage } from '@alga-psa/teams/actions';
 import { ITeam } from '@alga-psa/types';
 import { Card } from '@alga-psa/ui/components/Card';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -25,6 +25,11 @@ const TeamManagement: React.FC = () => {
       setLoading(true);
       setError(null);
       const fetchedTeams = await getTeams();
+      if (isTeamActionError(fetchedTeams)) {
+        setTeams([]);
+        setError(teamActionErrorMessage(fetchedTeams));
+        return;
+      }
       setTeams(fetchedTeams);
     } catch (err) {
       console.error('Failed to fetch teams:', err);

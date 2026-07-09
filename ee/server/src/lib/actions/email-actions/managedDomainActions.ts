@@ -18,6 +18,7 @@ import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 const DEFAULT_REGION = process.env.RESEND_DEFAULT_REGION || 'us-east-1';
 const EMAIL_SETTINGS_RESOURCE = 'ticket_settings';
 type EmailDomainPermissionAction = 'read' | 'create' | 'update' | 'delete';
+type ManagedDomainOperation = 'read' | 'request' | 'refresh' | 'delete';
 
 let loggedManagedDomainConflictFallback = false;
 
@@ -105,6 +106,101 @@ export interface ManagedDomainStatus {
   updatedAt?: string | null;
 }
 
+export type ManagedDomainActionErrorCode =
+  | 'feature_unavailable'
+  | 'permission_denied'
+  | 'invalid_domain'
+  | 'domain_not_found'
+  | 'workflow_enqueue_failed';
+
+export interface ManagedDomainActionFailure {
+  success: false;
+  error: string;
+  code: ManagedDomainActionErrorCode;
+  fieldErrors?: Record<string, string>;
+}
+
+export type ManagedDomainActionResult =
+  | { success: true; alreadyRunning?: boolean }
+  | ManagedDomainActionFailure;
+
+function managedDomainActionFailureFrom(error: unknown, operation: ManagedDomainOperation): ManagedDomainActionFailure | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  const code = (error as { code?: unknown }).code;
+  if (code === 'TIER_ACCESS_DENIED') {
+    return {
+      success: false,
+      code: 'feature_unavailable',
+      error: 'Managed email domains are not available for this workspace.',
+    };
+  }
+  if (error.message === 'You do not have permission to manage managed email domains.') {
+    return {
+      success: false,
+      code: 'permission_denied',
+      error: 'You do not have permission to manage managed email domains.',
+    };
+  }
+  if (error.message === 'Invalid domain format') {
+    return {
+      success: false,
+      code: 'invalid_domain',
+      error: 'Enter a valid domain name, such as example.com.',
+      fieldErrors: { domain: 'Enter a valid domain name.' },
+    };
+  }
+  if (error.message === 'Domain not found') {
+    return {
+      success: false,
+      code: 'domain_not_found',
+      error: 'Managed domain not found. Refresh the page and try again.',
+    };
+  }
+  if (
+    error.message.startsWith('Failed to start managed domain workflow') ||
+    error.message.startsWith('Failed to refresh domain status') ||
+    error.message.startsWith('Failed to delete managed domain')
+  ) {
+    if (operation !== 'read') {
+      return managedDomainWorkflowFailure(operation);
+    }
+  }
+
+  return null;
+}
+
+function managedDomainWorkflowFailure(operation: 'request' | 'refresh' | 'delete'): ManagedDomainActionFailure {
+  const messageByOperation = {
+    request: 'Managed domain setup could not be started. Please try again.',
+    refresh: 'Managed domain verification could not be refreshed. Please try again.',
+    delete: 'Managed domain removal could not be started. Please try again.',
+  };
+
+  return {
+    success: false,
+    code: 'workflow_enqueue_failed',
+    error: messageByOperation[operation],
+  };
+}
+
+async function managedDomainAction<T extends { success: true }>(
+  operation: 'request' | 'refresh' | 'delete',
+  action: () => Promise<T>,
+): Promise<T | ManagedDomainActionFailure> {
+  try {
+    return await action();
+  } catch (error) {
+    const expectedFailure = managedDomainActionFailureFrom(error, operation);
+    if (expectedFailure) {
+      return expectedFailure;
+    }
+    throw error;
+  }
+}
+
 async function checkEmailDomainPermission(
   user: IUser,
   action: EmailDomainPermissionAction,
@@ -117,43 +213,51 @@ async function checkEmailDomainPermission(
   // MSP/internal roles are temporarily allowed even if the granular permission has not been seeded yet.
 }
 
-export const getManagedEmailDomains = withAuth(async (user, { tenant }): Promise<ManagedDomainStatus[]> => {
-  await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
+export const getManagedEmailDomains = withAuth(async (user, { tenant }): Promise<ManagedDomainStatus[] | ManagedDomainActionFailure> => {
+  try {
+    await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
 
-  const { knex } = await createTenantKnex();
-  await checkEmailDomainPermission(user, 'read', knex);
+    const { knex } = await createTenantKnex();
+    await checkEmailDomainPermission(user, 'read', knex);
 
-  const rows = await tenantDb(knex, tenant).table('email_domains')
-    .orderBy('created_at', 'desc');
+    const rows = await tenantDb(knex, tenant).table('email_domains')
+      .orderBy('created_at', 'desc');
 
-  return rows.map((row: any) => {
-    const parsedRecords: DnsRecord[] = row.dns_records
-      ? Array.isArray(row.dns_records)
-        ? row.dns_records
-        : JSON.parse(row.dns_records)
-      : [];
-    const parsedDnsLookup: DnsLookupResult[] = row.dns_lookup_results
-      ? Array.isArray(row.dns_lookup_results)
-        ? row.dns_lookup_results
-        : JSON.parse(row.dns_lookup_results)
-      : [];
+    return rows.map((row: any) => {
+      const parsedRecords: DnsRecord[] = row.dns_records
+        ? Array.isArray(row.dns_records)
+          ? row.dns_records
+          : JSON.parse(row.dns_records)
+        : [];
+      const parsedDnsLookup: DnsLookupResult[] = row.dns_lookup_results
+        ? Array.isArray(row.dns_lookup_results)
+          ? row.dns_lookup_results
+          : JSON.parse(row.dns_lookup_results)
+        : [];
 
-    return {
-      domain: row.domain_name,
-      status: row.status,
-      providerId: row.provider_id,
-      providerDomainId: row.provider_domain_id,
-      dnsRecords: parsedRecords,
-      dnsLookupResults: parsedDnsLookup,
-      dnsLastCheckedAt: row.dns_last_checked_at ? new Date(row.dns_last_checked_at).toISOString() : null,
-      verifiedAt: row.verified_at ? new Date(row.verified_at).toISOString() : null,
-      failureReason: row.failure_reason,
-      updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
-    } as ManagedDomainStatus;
-  });
+      return {
+        domain: row.domain_name,
+        status: row.status,
+        providerId: row.provider_id,
+        providerDomainId: row.provider_domain_id,
+        dnsRecords: parsedRecords,
+        dnsLookupResults: parsedDnsLookup,
+        dnsLastCheckedAt: row.dns_last_checked_at ? new Date(row.dns_last_checked_at).toISOString() : null,
+        verifiedAt: row.verified_at ? new Date(row.verified_at).toISOString() : null,
+        failureReason: row.failure_reason,
+        updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+      } as ManagedDomainStatus;
+    });
+  } catch (error) {
+    const expectedFailure = managedDomainActionFailureFrom(error, 'read');
+    if (expectedFailure) {
+      return expectedFailure;
+    }
+    throw error;
+  }
 });
 
-export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string) => {
+export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string): Promise<ManagedDomainActionResult> => managedDomainAction('request', async () => {
   await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
 
   const { knex } = await createTenantKnex();
@@ -215,7 +319,7 @@ export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domai
       tenant_id: tenant,
       domain: normalizedDomain,
     });
-    throw new Error('Failed to start managed domain workflow');
+    return managedDomainWorkflowFailure('request');
   }
 
   if (!result.enqueued) {
@@ -225,13 +329,13 @@ export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domai
       domain: normalizedDomain,
       workflowError: result.error,
     });
-    throw new Error(`Failed to start managed domain workflow${result.error ? `: ${result.error}` : ''}`);
+    return managedDomainWorkflowFailure('request');
   }
 
   return { success: true, alreadyRunning: result.alreadyRunning ?? false };
-});
+}));
 
-export const refreshManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string) => {
+export const refreshManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string): Promise<ManagedDomainActionResult> => managedDomainAction('refresh', async () => {
   await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
 
   const { knex } = await createTenantKnex();
@@ -261,7 +365,7 @@ export const refreshManagedEmailDomain = withAuth(async (user, { tenant }, domai
       domain: normalizedDomain,
       provider_domain_id: existing.provider_domain_id || undefined,
     });
-    throw new Error('Failed to refresh domain status');
+    return managedDomainWorkflowFailure('refresh');
   }
 
   if (!result.enqueued) {
@@ -272,13 +376,13 @@ export const refreshManagedEmailDomain = withAuth(async (user, { tenant }, domai
       providerDomainId: existing.provider_domain_id || undefined,
       workflowError: result.error,
     });
-    throw new Error(`Failed to refresh domain status${result.error ? `: ${result.error}` : ''}`);
+    return managedDomainWorkflowFailure('refresh');
   }
 
   return { success: true, alreadyRunning: result.alreadyRunning ?? false };
-});
+}));
 
-export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string) => {
+export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string): Promise<ManagedDomainActionResult> => managedDomainAction('delete', async () => {
   await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
 
   const { knex } = await createTenantKnex();
@@ -317,7 +421,7 @@ export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domain
       domain: normalizedDomain,
       provider_domain_id: existing.provider_domain_id || undefined,
     });
-    throw new Error('Failed to delete managed domain');
+    return managedDomainWorkflowFailure('delete');
   }
 
   if (!result.enqueued) {
@@ -328,8 +432,8 @@ export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domain
       providerDomainId: existing.provider_domain_id || undefined,
       workflowError: result.error,
     });
-    throw new Error(`Failed to delete managed domain${result.error ? `: ${result.error}` : ''}`);
+    return managedDomainWorkflowFailure('delete');
   }
 
   return { success: true };
-});
+}));

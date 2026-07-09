@@ -165,7 +165,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       error instanceof Error &&
       /apple identity token|apple signing key|audience|issuer|jwt|malformed/i.test(error.message)
     ) {
-      return handleApiError(new UnauthorizedError(error.message));
+      console.warn('[mobile-auth-apple-link] Apple token verification failed:', error);
+      return handleApiError(new UnauthorizedError('Invalid Apple identity token'));
     }
     return handleApiError(error);
   }

@@ -7,8 +7,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { permissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildContractCreatedPayload,
@@ -44,6 +44,41 @@ import {
   upsertBucketOverlayInTransaction
 } from './bucketOverlayActions';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
+
+export type ContractWizardActionError = ActionMessageError | ActionPermissionError;
+
+function contractWizardActionErrorFrom(error: unknown): ContractWizardActionError | null {
+  if (!(error instanceof Error)) return null;
+
+  if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+    return permissionError(error.message);
+  }
+
+  if (
+    error.message.startsWith('Catalog item "') ||
+    error.message.startsWith('Product "') ||
+    error.message === 'Contract start date is required' ||
+    error.message === 'Draft contract not found' ||
+    error.message === 'Only draft contracts can be updated via the wizard' ||
+    error.message === 'Template not found' ||
+    error.message === 'Contract not found' ||
+    error.message === 'Contract is not a draft' ||
+    error.message === 'Draft contract is missing client assignment' ||
+    error.message === 'Draft contract has an invalid start date'
+  ) {
+    return actionError(error.message);
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected contract wizard records is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A matching contract wizard record already exists.');
+  }
+
+  return null;
+}
 
 // ---------------------- Template wizard types ----------------------
 
@@ -295,7 +330,7 @@ export const createContractTemplateFromWizard = withAuth(async (
   { tenant },
   submission: ContractTemplateWizardSubmission,
   options?: { isDraft?: boolean }
-): Promise<ContractWizardResult | ActionPermissionError> => {
+): Promise<ContractWizardResult | ContractWizardActionError> => {
   const isDraft = options?.isDraft ?? false;
   const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
 
@@ -309,7 +344,8 @@ export const createContractTemplateFromWizard = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const now = new Date();
     const nowIso = now.toISOString();
     const templateId = uuidv4();
@@ -769,7 +805,12 @@ export const createContractTemplateFromWizard = withAuth(async (
       contract_line_id: primaryContractLineId,
       contract_line_ids: createdContractLineIds,
     };
-  });
+    });
+  } catch (error) {
+    const expected = contractWizardActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -781,7 +822,7 @@ export const createClientContractFromWizard = withAuth(async (
   { tenant },
   submission: ClientContractWizardSubmission,
   options?: { isDraft?: boolean }
-): Promise<ContractWizardResult | ActionPermissionError> => {
+): Promise<ContractWizardResult | ContractWizardActionError> => {
   const isDraft = options?.isDraft ?? false;
   const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
 
@@ -795,6 +836,7 @@ export const createClientContractFromWizard = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
+  try {
   let createdForWorkflow: {
     contractId: string;
     clientId: string;
@@ -1538,6 +1580,11 @@ export const createClientContractFromWizard = withAuth(async (
   }
 
   return result;
+  } catch (error) {
+    const expected = contractWizardActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -1565,9 +1612,9 @@ export const checkTemplateNameExists = withAuth(async (
 export const listContractTemplatesForWizard = withAuth(async (
   user,
   { tenant }
-): Promise<TemplateOption[]> => {
+): Promise<TemplateOption[] | ContractWizardActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: Cannot list contract templates');
+    return permissionError('Permission denied: Cannot list contract templates');
   }
   const { knex } = await createTenantKnex();
 
@@ -1594,9 +1641,9 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
   user,
   { tenant },
   templateId: string
-): Promise<ClientTemplateSnapshot> => {
+): Promise<ClientTemplateSnapshot | ContractWizardActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: Cannot view contract template snapshot');
+    return permissionError('Permission denied: Cannot view contract template snapshot');
   }
   const { knex } = await createTenantKnex();
 
@@ -1605,7 +1652,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
     .first();
 
   if (!template) {
-    throw new Error('Template not found');
+    return actionError('Template not found');
   }
 
   const detailedLines = await fetchDetailedContractLines(knex, tenant, templateId);
@@ -1847,7 +1894,7 @@ export const getDraftContractForResume = withAuth(async (
   user,
   { tenant },
   contractId: string
-): Promise<DraftContractWizardData | ActionPermissionError> => {
+): Promise<DraftContractWizardData | ContractWizardActionError> => {
   const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
 
   if (!isBypass) {
@@ -1866,11 +1913,11 @@ export const getDraftContractForResume = withAuth(async (
     .first();
 
   if (!contract) {
-    throw new Error('Contract not found');
+    return actionError('Contract not found');
   }
 
   if (contract.status !== 'draft') {
-    throw new Error('Contract is not a draft');
+    return actionError('Contract is not a draft');
   }
 
   const clientContract = await tenantDb(knex, tenant).table('client_contracts')
@@ -1878,7 +1925,7 @@ export const getDraftContractForResume = withAuth(async (
     .first();
 
   if (!clientContract) {
-    throw new Error('Draft contract is missing client assignment');
+    return actionError('Draft contract is missing client assignment');
   }
 
   const detailedLines = await fetchDetailedContractLines(knex, tenant, contractId);
@@ -2052,7 +2099,7 @@ export const getDraftContractForResume = withAuth(async (
 
   const startDate = normalizeDateOnly(clientContract.start_date);
   if (!startDate) {
-    throw new Error('Draft contract has an invalid start date');
+    return actionError('Draft contract has an invalid start date');
   }
 
   const renewalMode =

@@ -20,6 +20,11 @@ import { getAllUsersBasic, getCurrentUser, getUserAvatarUrlsBatchAction } from '
 import { getSchedulingClients } from '../../../../actions/clientInteractionLookupActions';
 import { IClient } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface WorkItemPickerProps {
   onSelect: (workItem: IWorkItem | null) => void;
@@ -27,6 +32,10 @@ interface WorkItemPickerProps {
   initialWorkItemId?: string | null;
   initialWorkItemType?: WorkItemType;
   timePeriod?: ITimePeriodView;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId, timePeriod }: WorkItemPickerProps) {
@@ -201,6 +210,14 @@ export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId
         } : undefined,
         availableWorkItemIds: availableWorkItems.map(item => item.work_item_id),
       });
+
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        setWorkItems([]);
+        setTotal(0);
+        setHasMore(false);
+        return;
+      }
       
       const itemsWithStatus = result.items.map((item: Omit<IExtendedWorkItem, "tenant">): WorkItemWithStatus => ({
         ...item,
@@ -359,6 +376,11 @@ export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId
                       scheduled_start: startTime.toISOString(),
                       scheduled_end: endTime.toISOString()
                     });
+
+                    if (isReturnedActionError(newItem)) {
+                      toast.error(getErrorMessage(newItem));
+                      return;
+                    }
                     
                     // Add to available work items to prevent duplicate showing
                     availableWorkItems.push(newItem);
@@ -369,7 +391,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId
                     setAdHocTitle('');
                   } catch (error) {
                     console.error('Error creating ad-hoc entry:', error);
-                    // TODO: Show error to user
+                    toast.error(getErrorMessage(error));
                   }
                 }}
                 variant="outline"

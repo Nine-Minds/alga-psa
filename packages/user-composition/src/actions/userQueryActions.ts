@@ -7,11 +7,24 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { getUserAvatarUrl } from '../lib/avatarUtils';
-import { hasPermission, throwPermissionError } from '../lib/permissions';
+import { hasPermission } from '../lib/permissions';
 import logger from '@alga-psa/core/logger';
 import { getCurrentUser, withAuth, withOptionalAuth } from '@alga-psa/auth';
 
 export { getCurrentUser };
+
+function isPermissionDeniedError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('Permission denied:');
+}
+
+function isInvalidUserQueryReference(error: unknown): boolean {
+  const dbError = error as { code?: string };
+  return dbError?.code === '22P02' || dbError?.code === '23503';
+}
+
+function isExpectedUserQueryError(error: unknown): boolean {
+  return isPermissionDeniedError(error) || isInvalidUserQueryReference(error);
+}
 
 export const findUserById = withAuth(async (
   currentUser,
@@ -31,7 +44,10 @@ export const findUserById = withAuth(async (
     });
   } catch (error) {
     logger.error(`Failed to find user with id ${id}:`, error);
-    throw new Error('Failed to find user');
+    if (isExpectedUserQueryError(error)) {
+      return null;
+    }
+    throw error;
   }
 });
 
@@ -63,7 +79,10 @@ export const getAllUsersBasic = withAuth(async (
     });
   } catch (error) {
     logger.error('Failed to fetch users:', error);
-    throw new Error('Failed to fetch users');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -100,7 +119,10 @@ export const getAllUsers = withAuth(async (
     });
   } catch (error) {
     logger.error('Failed to fetch users:', error);
-    throw new Error('Failed to fetch users');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -133,7 +155,10 @@ export const getReportsToSubordinates = withAuth(async (
     });
   } catch (error) {
     logger.error('Failed to fetch reports_to subordinates:', error);
-    throw new Error('Failed to fetch reports_to subordinates');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -147,7 +172,10 @@ export const getUserRoles = withAuth(async (
     return await User.getUserRoles(knex, userId);
   } catch (error) {
     logger.error(`Failed to fetch roles for user with id ${userId}:`, error);
-    throw new Error('Failed to fetch user roles');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -162,7 +190,10 @@ export const getAllRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> 
     });
   } catch (error) {
     logger.error('Failed to fetch all roles:', error);
-    throw new Error('Failed to fetch all roles');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -183,7 +214,10 @@ export const getMSPRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> 
     });
   } catch (error) {
     logger.error('Failed to fetch MSP roles:', error);
-    throw new Error('Failed to fetch MSP roles');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -204,7 +238,10 @@ export const getClientPortalRoles = withAuth(async (_user, { tenant }): Promise<
     });
   } catch (error) {
     logger.error('Failed to fetch client portal roles:', error);
-    throw new Error('Failed to fetch client portal roles');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -239,7 +276,10 @@ export const getUserRolesWithPermissions = withAuth(async (
     }
   } catch (error) {
     logger.error(`Failed to fetch roles with permissions for user with id ${userId}:`, error);
-    throw new Error('Failed to fetch user roles with permissions');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -298,7 +338,10 @@ export const getUserWithRoles = withAuth(async (
     });
   } catch (error) {
     logger.error(`Failed to fetch user with roles for id ${userId}:`, error);
-    throw new Error('Failed to fetch user with roles');
+    if (isExpectedUserQueryError(error)) {
+      return null;
+    }
+    throw error;
   }
 });
 
@@ -320,7 +363,10 @@ export const getMultipleUsersWithRoles = withAuth(async (
     });
   } catch (error) {
     logger.error('Failed to fetch multiple users with roles:', error);
-    throw new Error('Failed to fetch multiple users with roles');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -345,7 +391,10 @@ export const getUserPreference = withAuth(async (
     }
   } catch (error) {
     logger.error('Failed to get user preference:', error);
-    throw new Error('Failed to get user preference');
+    if (isExpectedUserQueryError(error)) {
+      return null;
+    }
+    throw error;
   }
 });
 
@@ -374,7 +423,10 @@ export const getUserPreferencesBatch = withAuth(async (
     return result;
   } catch (error) {
     logger.error('Failed to get user preferences batch:', error);
-    throw new Error('Failed to get user preferences batch');
+    if (isExpectedUserQueryError(error)) {
+      return {};
+    }
+    throw error;
   }
 });
 
@@ -398,7 +450,7 @@ export const setUserPreference = withAuth(async (
     });
   } catch (error) {
     logger.error('Failed to set user preference:', error);
-    throw new Error('Failed to set user preference');
+    throw error;
   }
 });
 
@@ -440,7 +492,10 @@ export const getUserClientId = withAuth(async (
     });
   } catch (error) {
     logger.error('Error getting user client ID:', error);
-    throw new Error('Failed to get user client ID');
+    if (isExpectedUserQueryError(error)) {
+      return null;
+    }
+    throw error;
   }
 });
 
@@ -474,7 +529,10 @@ export const getUserContactId = withAuth(async (
     });
   } catch (error) {
     logger.error('Error getting user contact ID:', error);
-    throw new Error('Failed to get user contact ID');
+    if (isExpectedUserQueryError(error)) {
+      return null;
+    }
+    throw error;
   }
 });
 

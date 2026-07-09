@@ -6,6 +6,11 @@ import type { PartialBlock } from '@blocknote/core';
 import { Activity, AlertTriangle, ArrowDownUp, CheckCircle, Clock, Lock, MessageSquare } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import { buildCommentThreadGroups, HybridThreadNode, type CommentThreadGroup } from '@alga-psa/ui/components';
 import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
@@ -446,6 +451,11 @@ export function BentoTimelineTile({
     getTicketTimelineEntries(ticketId, { order: 'asc', includeTimeEntries: true, includeAlerts: true })
       .then((entries) => {
         if (cancelled) return;
+        if (isActionMessageError(entries) || isActionPermissionError(entries)) {
+          setSystemEntries([]);
+          setFetchError(getErrorMessage(entries));
+          return;
+        }
         // Comments render from the richer local `conversations` payload; the
         // action's comment entries would duplicate them.
         setSystemEntries(entries.filter((entry) => entry.type !== 'comment'));
@@ -515,7 +525,13 @@ export function BentoTimelineTile({
     const next = order === 'asc' ? 'desc' : 'asc';
     setOrder(next);
     // Fire-and-forget persistence; the toggle already applied locally.
-    void setTicketLayoutPreference({ timelineOrder: next }).catch(() => undefined);
+    void setTicketLayoutPreference({ timelineOrder: next })
+      .then((result) => {
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          console.warn('[BentoTimelineTile] Failed to save timeline order:', getErrorMessage(result));
+        }
+      })
+      .catch(() => undefined);
   }, [order]);
 
   const handleSend = useCallback(async () => {

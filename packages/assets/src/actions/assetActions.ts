@@ -88,6 +88,10 @@ import {
     validateAttributesAgainstSchema,
 } from '../lib/assetTypeAttributes';
 import type { AssetTypeRegistryEntry } from '@alga-psa/types';
+import {
+    assetActionErrorFrom,
+    type AssetActionError,
+} from './assetActionErrors';
 
 type AssetExtensionType = WorkstationAsset | NetworkDeviceAsset | ServerAsset | MobileDeviceAsset | PrinterAsset;
 
@@ -159,6 +163,31 @@ function normalizeBulkAssetIds(assetIds: string[]): string[] {
     }
     z.array(z.string().uuid()).parse(ids);
     return ids;
+}
+
+function assetActionErrorMessage(error: unknown, fallback: string): string {
+    const expected = expectedAssetActionError(error);
+    if (expected) {
+        return 'permissionError' in expected ? expected.permissionError : expected.actionError;
+    }
+
+    const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+    if (
+        message === 'Asset not found' ||
+        message === 'Selected location is not available for this client' ||
+        message.startsWith('Invalid input data:') ||
+        message.startsWith('Asset validation failed:') ||
+        message.startsWith('Permission denied:')
+    ) {
+        return message;
+    }
+
+    return fallback;
+}
+
+function expectedAssetActionError(error: unknown): AssetActionError | null {
+    return assetActionErrorFrom(error);
 }
 
 function buildBulkAssetActionResponse(results: BulkAssetActionResult[]): BulkAssetActionResponse {
@@ -606,7 +635,8 @@ async function deleteExtensionData(
 }
 
 // Export getAsset for external use
-export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Promise<Asset> => {
+export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Promise<Asset | AssetActionError> => {
+    try {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset reading
@@ -621,9 +651,15 @@ export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Pro
     });
 
     return asset;
+    } catch (error) {
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
-export const getAvailableAssetFacts = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetFact[]> => {
+export const getAvailableAssetFacts = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetFact[] | AssetActionError> => {
+    try {
     const { knex } = await createTenantKnex();
     if (!await hasPermission(user, 'asset', 'read')) {
         throw new Error('Permission denied: Cannot read asset facts');
@@ -633,9 +669,15 @@ export const getAvailableAssetFacts = withAuth(async (user, { tenant }, asset_id
         await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
         return listAvailableAssetFactsForAsset(trx, { tenant, assetId: asset_id });
     });
+    } catch (error) {
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
-export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetDetailBundle> => {
+export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetDetailBundle | AssetActionError> => {
+    try {
     const { knex } = await createTenantKnex();
 
     if (!await hasPermission(user, 'asset', 'read', knex)) {
@@ -677,6 +719,11 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
             documents
         };
     });
+    } catch (error) {
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
 function formatAssetForOutput(asset: any): Asset {
@@ -809,7 +856,7 @@ export async function createAssetRecord(
             validateData(createAssetSchema, data);
         } catch (error) {
             console.error('Input validation error:', error);
-            throw new Error('Invalid input data: ' + (error instanceof Error ? error.message : 'Unknown error'));
+            throw new Error('Invalid asset input data. Review required fields and try again.');
         }
 
         // Start transaction
@@ -958,7 +1005,7 @@ export async function createAssetRecord(
         if (error instanceof Error) {
             throw error; // Preserve the original error message
         }
-        throw new Error('Failed to create asset');
+        throw new Error('Asset creation failed with a non-Error exception.');
     }
 }
 
@@ -967,7 +1014,8 @@ export const createAsset = withAuth(async (
     { tenant },
     data: CreateAssetRequest,
     options?: { requireCustomAttributes?: boolean }
-): Promise<Asset> => {
+): Promise<Asset | AssetActionError> => {
+    try {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset creation
@@ -976,6 +1024,11 @@ export const createAsset = withAuth(async (
     }
 
     return createAssetRecord(knex, tenant, user.user_id, data, options);
+    } catch (error) {
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
 export interface AssetWriteHooks {
@@ -1249,7 +1302,13 @@ export async function updateAssetRecord(
             // structured message the client knows how to render.
             throw error;
         }
-        throw new Error('Failed to update asset');
+        if (expectedAssetActionError(error)) {
+            throw error;
+        }
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error('Asset update failed with a non-Error exception.');
     }
 }
 
@@ -1259,7 +1318,8 @@ export const updateAsset = withAuth(async (
     asset_id: string,
     data: UpdateAssetRequest,
     opts?: { suppressRevalidate?: boolean }
-): Promise<Asset> => {
+): Promise<Asset | AssetActionError> => {
+    try {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset updating
@@ -1272,6 +1332,14 @@ export const updateAsset = withAuth(async (
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
         },
     });
+    } catch (error) {
+        if (isTypedAssetWriteError(error)) {
+            throw error;
+        }
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
 /**
@@ -1392,11 +1460,15 @@ export async function deleteAssetRecord(
         };
     } catch (error) {
         console.error('Error deleting asset:', error);
+        const expected = expectedAssetActionError(error);
+        if (!expected) {
+            throw error;
+        }
         return {
             success: false,
             canDelete: false,
             code: 'VALIDATION_FAILED',
-            message: error instanceof Error ? error.message : 'Failed to delete asset',
+            message: assetActionErrorMessage(expected, 'Failed to delete asset'),
             dependencies: [],
             alternatives: []
         };
@@ -1408,7 +1480,8 @@ export const deleteAsset = withAuth(async (
     { tenant },
     asset_id: string,
     opts?: { suppressRevalidate?: boolean }
-): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
+): Promise<(DeletionValidationResult & { success: boolean; deleted?: boolean }) | AssetActionError> => {
+    try {
     const { knex } = await createTenantKnex();
 
     if (!await hasPermission(user, 'asset', 'delete')) {
@@ -1420,6 +1493,11 @@ export const deleteAsset = withAuth(async (
             await createAuthorizedAssetReadContextForUser(trx as Knex.Transaction, tenantId, user as AssetAuthUser, asset_id);
         },
     });
+    } catch (error) {
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
 // Each item in a bulk action commits independently so partial failures
@@ -1430,7 +1508,8 @@ export const bulkUpdateAssets = withAuth(async (
     _ctx,
     assetIds: string[],
     data: Pick<UpdateAssetRequest, 'status' | 'location' | 'location_id'>
-): Promise<BulkAssetActionResponse> => {
+): Promise<BulkAssetActionResponse | AssetActionError> => {
+    try {
     if (!await hasPermission(user, 'asset', 'update')) {
         throw new Error('Permission denied: Cannot update assets');
     }
@@ -1443,12 +1522,20 @@ export const bulkUpdateAssets = withAuth(async (
         async (asset_id) => {
             try {
                 const asset = await updateAsset(asset_id, data, { suppressRevalidate: true });
+                const expected = expectedAssetActionError(asset);
+                if (expected) {
+                    return {
+                        asset_id,
+                        success: false,
+                        error: assetActionErrorMessage(expected, 'Failed to update asset'),
+                    };
+                }
                 return { asset_id, success: true, asset };
             } catch (error) {
                 return {
                     asset_id,
                     success: false,
-                    error: error instanceof Error ? error.message : 'Failed to update asset',
+                    error: assetActionErrorMessage(error, 'Failed to update asset'),
                 };
             }
         }
@@ -1460,13 +1547,19 @@ export const bulkUpdateAssets = withAuth(async (
     }
 
     return buildBulkAssetActionResponse(results);
+    } catch (error) {
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
 export const bulkDeleteAssets = withAuth(async (
     user,
     _ctx,
     assetIds: string[]
-): Promise<BulkAssetActionResponse> => {
+): Promise<BulkAssetActionResponse | AssetActionError> => {
+    try {
     if (!await hasPermission(user, 'asset', 'delete')) {
         throw new Error('Permission denied: Cannot delete assets');
     }
@@ -1479,6 +1572,14 @@ export const bulkDeleteAssets = withAuth(async (
         async (asset_id) => {
             try {
                 const result = await deleteAsset(asset_id, { suppressRevalidate: true });
+                const expected = expectedAssetActionError(result);
+                if (expected) {
+                    return {
+                        asset_id,
+                        success: false,
+                        error: assetActionErrorMessage(expected, 'Failed to delete asset'),
+                    };
+                }
                 const success = result.success === true;
                 return {
                     asset_id,
@@ -1489,7 +1590,7 @@ export const bulkDeleteAssets = withAuth(async (
                 return {
                     asset_id,
                     success: false,
-                    error: error instanceof Error ? error.message : 'Failed to delete asset',
+                    error: assetActionErrorMessage(error, 'Failed to delete asset'),
                 };
             }
         }
@@ -1501,6 +1602,11 @@ export const bulkDeleteAssets = withAuth(async (
     }
 
     return buildBulkAssetActionResponse(results);
+    } catch (error) {
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
 async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: string): Promise<Asset> {
@@ -1571,15 +1677,16 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
     return transformedAsset;
 }
 
-export const getAssetRelationships = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetRelationship[]> => {
+export const getAssetRelationships = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetRelationship[] | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset reading
     if (!await hasPermission(user, 'asset', 'read')) {
-        throw new Error('Permission denied: Cannot read asset relationships');
+        return expectedAssetActionError(new Error('Permission denied: Cannot read asset relationships'))!;
     }
 
-    return withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetRelationship[]> => {
+    try {
+        return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetRelationship[]> => {
         await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
 
         const db = tenantDb(trx, tenant);
@@ -1614,16 +1721,22 @@ export const getAssetRelationships = withAuth(async (user, { tenant }, asset_id:
             }) as AssetRelationship;
         });
     });
+    } catch (error) {
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
-export const createAssetRelationship = withAuth(async (user, { tenant }, data: CreateAssetRelationshipRequest): Promise<AssetRelationship> => {
+export const createAssetRelationship = withAuth(async (user, { tenant }, data: CreateAssetRelationshipRequest): Promise<AssetRelationship | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset updating (relationships are an update operation)
     if (!await hasPermission(user, 'asset', 'update')) {
-        throw new Error('Permission denied: Cannot create asset relationships');
+        return expectedAssetActionError(new Error('Permission denied: Cannot create asset relationships'))!;
     }
 
+    try {
     const validated = validateData(createAssetRelationshipSchema, data);
 
     // Prevent self-link
@@ -1666,7 +1779,7 @@ export const createAssetRelationship = withAuth(async (user, { tenant }, data: C
     });
 
     if (!rel) {
-        throw new Error('Failed to create asset relationship');
+        throw new Error('Asset relationship insert completed without returning a hydrated record.');
     }
 
     const created_at = rel.created_at instanceof Date ? rel.created_at.toISOString() : rel.created_at;
@@ -1689,16 +1802,22 @@ export const createAssetRelationship = withAuth(async (user, { tenant }, data: C
         updated_at,
         name
     }) as AssetRelationship;
+    } catch (error) {
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
-export const deleteAssetRelationship = withAuth(async (user, { tenant }, parent_asset_id: string, child_asset_id: string): Promise<void> => {
+export const deleteAssetRelationship = withAuth(async (user, { tenant }, parent_asset_id: string, child_asset_id: string): Promise<void | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset updating (relationships are an update operation)
     if (!await hasPermission(user, 'asset', 'update')) {
-        throw new Error('Permission denied: Cannot delete asset relationships');
+        return expectedAssetActionError(new Error('Permission denied: Cannot delete asset relationships'))!;
     }
 
+    try {
     await withTransaction(knex, async (trx: Knex.Transaction) => {
         const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
         await assertAssetReadAllowedById(trx, tenant, context, parent_asset_id);
@@ -1718,14 +1837,19 @@ export const deleteAssetRelationship = withAuth(async (user, { tenant }, parent_
     revalidatePath('/msp/assets');
     revalidatePath(`/msp/assets/${parent_asset_id}`);
     revalidatePath(`/msp/assets/${child_asset_id}`);
+    } catch (error) {
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
-export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryParams): Promise<AssetListResponse> => {
+export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryParams): Promise<AssetListResponse | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset reading
     if (!await hasPermission(user, 'asset', 'read')) {
-        throw new Error('Permission denied: Cannot read assets');
+        return expectedAssetActionError(new Error('Permission denied: Cannot read assets'))!;
     }
 
     try {
@@ -1877,17 +2001,19 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
         });
     } catch (error) {
         console.error('Error listing assets:', error);
-        throw new Error('Failed to list assets');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 
 // Maintenance Schedule Management
-export const createMaintenanceSchedule = withAuth(async (user, { tenant }, data: CreateMaintenanceScheduleRequest): Promise<AssetMaintenanceSchedule> => {
+export const createMaintenanceSchedule = withAuth(async (user, { tenant }, data: CreateMaintenanceScheduleRequest): Promise<AssetMaintenanceSchedule | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset updating (maintenance is considered an update operation)
     if (!await hasPermission(user, 'asset', 'update')) {
-        throw new Error('Permission denied: Cannot create maintenance schedules');
+        return expectedAssetActionError(new Error('Permission denied: Cannot create maintenance schedules'))!;
     }
 
     try {
@@ -1954,7 +2080,9 @@ export const createMaintenanceSchedule = withAuth(async (user, { tenant }, data:
         return validateData(assetMaintenanceScheduleSchema, transformedSchedule) as AssetMaintenanceSchedule;
     } catch (error) {
         console.error('Error creating maintenance schedule:', error);
-        throw new Error('Failed to create maintenance schedule');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 
@@ -1963,12 +2091,12 @@ export const updateMaintenanceSchedule = withAuth(async (
     { tenant },
     schedule_id: string,
     data: UpdateMaintenanceScheduleRequest
-): Promise<AssetMaintenanceSchedule> => {
+): Promise<AssetMaintenanceSchedule | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset updating (maintenance is considered an update operation)
     if (!await hasPermission(user, 'asset', 'update')) {
-        throw new Error('Permission denied: Cannot update maintenance schedules');
+        return expectedAssetActionError(new Error('Permission denied: Cannot update maintenance schedules'))!;
     }
 
     try {
@@ -2042,16 +2170,18 @@ export const updateMaintenanceSchedule = withAuth(async (
         return validateData(assetMaintenanceScheduleSchema, transformedSchedule) as AssetMaintenanceSchedule;
     } catch (error) {
         console.error('Error updating maintenance schedule:', error);
-        throw new Error('Failed to update maintenance schedule');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 
-export const deleteMaintenanceSchedule = withAuth(async (user, { tenant }, schedule_id: string): Promise<void> => {
+export const deleteMaintenanceSchedule = withAuth(async (user, { tenant }, schedule_id: string): Promise<void | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset deletion
     if (!await hasPermission(user, 'asset', 'delete')) {
-        throw new Error('Permission denied: Cannot delete maintenance schedules');
+        return expectedAssetActionError(new Error('Permission denied: Cannot delete maintenance schedules'))!;
     }
 
     try {
@@ -2078,16 +2208,18 @@ export const deleteMaintenanceSchedule = withAuth(async (user, { tenant }, sched
         }
     } catch (error) {
         console.error('Error deleting maintenance schedule:', error);
-        throw new Error('Failed to delete maintenance schedule');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 
-export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: CreateMaintenanceHistoryRequest): Promise<AssetMaintenanceHistory> => {
+export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: CreateMaintenanceHistoryRequest): Promise<AssetMaintenanceHistory | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset updating (maintenance recording is considered an update operation)
     if (!await hasPermission(user, 'asset', 'update')) {
-        throw new Error('Permission denied: Cannot record maintenance history');
+        return expectedAssetActionError(new Error('Permission denied: Cannot record maintenance history'))!;
     }
 
     try {
@@ -2164,16 +2296,18 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
         return validateData(assetMaintenanceHistorySchema, history) as AssetMaintenanceHistory;
     } catch (error) {
         console.error('Error recording maintenance history:', error);
-        throw new Error('Failed to record maintenance history');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 
 // Maintenance Schedule Listing
-export const getAssetMaintenanceSchedules = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetMaintenanceSchedule[]> => {
+export const getAssetMaintenanceSchedules = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetMaintenanceSchedule[] | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     if (!await hasPermission(user, 'asset', 'read', knex)) {
-        throw new Error('Permission denied: Cannot read asset maintenance schedules');
+        return expectedAssetActionError(new Error('Permission denied: Cannot read asset maintenance schedules'))!;
     }
 
     try {
@@ -2205,16 +2339,18 @@ export const getAssetMaintenanceSchedules = withAuth(async (user, { tenant }, as
         });
     } catch (error) {
         console.error('Error getting asset maintenance schedules:', error);
-        throw new Error('Failed to get asset maintenance schedules');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 
 // Reporting Functions
-export const getAssetMaintenanceReport = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetMaintenanceReport> => {
+export const getAssetMaintenanceReport = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetMaintenanceReport | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     if (!await hasPermission(user, 'asset', 'read', knex)) {
-        throw new Error('Permission denied: Cannot read asset maintenance reports');
+        return expectedAssetActionError(new Error('Permission denied: Cannot read asset maintenance reports'))!;
     }
 
     try {
@@ -2224,11 +2360,13 @@ export const getAssetMaintenanceReport = withAuth(async (user, { tenant }, asset
         });
     } catch (error) {
         console.error('Error getting asset maintenance report:', error);
-        throw new Error('Failed to get asset maintenance report');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 
-export const getAssetHistory = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetHistory[]> => {
+export const getAssetHistory = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetHistory[] | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     try {
@@ -2243,7 +2381,9 @@ export const getAssetHistory = withAuth(async (user, { tenant }, asset_id: strin
         });
     } catch (error) {
         console.error('Error getting asset history:', error);
-        throw new Error('Failed to get asset history');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 
@@ -2268,7 +2408,7 @@ type RawLinkedTicket = {
     client_name?: string | null;
 };
 
-export const getAssetLinkedTickets = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetTicketSummary[]> => {
+export const getAssetLinkedTickets = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetTicketSummary[] | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     try {
@@ -2283,16 +2423,18 @@ export const getAssetLinkedTickets = withAuth(async (user, { tenant }, asset_id:
         });
     } catch (error) {
         console.error('Error getting asset linked tickets:', error);
-        throw new Error('Failed to get asset linked tickets');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 
-export const getClientMaintenanceSummary = withAuth(async (user, { tenant }, client_id: string): Promise<ClientMaintenanceSummary> => {
+export const getClientMaintenanceSummary = withAuth(async (user, { tenant }, client_id: string): Promise<ClientMaintenanceSummary | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset reading
     if (!await hasPermission(user, 'asset', 'read')) {
-        throw new Error('Permission denied: Cannot read client maintenance summaries');
+        return expectedAssetActionError(new Error('Permission denied: Cannot read client maintenance summaries'))!;
     }
 
     try {
@@ -2311,7 +2453,9 @@ export const getClientMaintenanceSummary = withAuth(async (user, { tenant }, cli
         });
     } catch (error) {
         console.error('Error getting client maintenance summary:', error);
-        throw new Error('Failed to get client maintenance summary');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 
@@ -2704,7 +2848,7 @@ async function getClientMaintenanceSummaryForTenant(
     return validateData(clientMaintenanceSummarySchema, summary) as ClientMaintenanceSummary;
 }
 
-export const getClientMaintenanceSummaries = withAuth(async (user, { tenant }, client_ids: string[]): Promise<Record<string, ClientMaintenanceSummary>> => {
+export const getClientMaintenanceSummaries = withAuth(async (user, { tenant }, client_ids: string[]): Promise<Record<string, ClientMaintenanceSummary> | AssetActionError> => {
     if (client_ids.length === 0) {
         return {};
     }
@@ -2712,7 +2856,7 @@ export const getClientMaintenanceSummaries = withAuth(async (user, { tenant }, c
     const { knex } = await createTenantKnex();
 
     if (!await hasPermission(user, 'asset', 'read')) {
-        throw new Error('Permission denied: Cannot read client maintenance summaries');
+        return expectedAssetActionError(new Error('Permission denied: Cannot read client maintenance summaries'))!;
     }
 
     try {
@@ -2746,18 +2890,20 @@ export const getClientMaintenanceSummaries = withAuth(async (user, { tenant }, c
         });
     } catch (error) {
         console.error('Error getting client maintenance summaries:', error);
-        throw new Error('Failed to get client maintenance summaries');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 
 // Asset Association Functions
 // Update only the map callback in listEntityAssets function
-export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: string, entity_type: 'ticket' | 'project'): Promise<Asset[]> => {
+export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: string, entity_type: 'ticket' | 'project'): Promise<Asset[] | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset reading
     if (!await hasPermission(user, 'asset', 'read')) {
-        throw new Error('Permission denied: Cannot read asset associations');
+        return expectedAssetActionError(new Error('Permission denied: Cannot read asset associations'))!;
     }
 
     try {
@@ -2804,16 +2950,18 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
         });
     } catch (error) {
         console.error('Error listing entity assets:', error);
-        throw new Error('Failed to list entity assets');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 
-export const createAssetAssociation = withAuth(async (user, { tenant }, data: CreateAssetAssociationRequest): Promise<AssetAssociation> => {
+export const createAssetAssociation = withAuth(async (user, { tenant }, data: CreateAssetAssociationRequest): Promise<AssetAssociation | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset updating (associations are considered update operations)
     if (!await hasPermission(user, 'asset', 'update')) {
-        throw new Error('Permission denied: Cannot create asset associations');
+        return expectedAssetActionError(new Error('Permission denied: Cannot create asset associations'))!;
     }
 
     try {
@@ -2872,7 +3020,9 @@ export const createAssetAssociation = withAuth(async (user, { tenant }, data: Cr
         return validateData(assetAssociationSchema, sanitizedAssociation) as AssetAssociation;
     } catch (error) {
         console.error('Error creating asset association:', error);
-        throw new Error('Failed to create asset association');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 
@@ -2882,12 +3032,12 @@ export const removeAssetAssociation = withAuth(async (
     asset_id: string,
     entity_id: string,
     entity_type: 'ticket' | 'project'
-): Promise<void> => {
+): Promise<void | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset deletion
     if (!await hasPermission(user, 'asset', 'delete')) {
-        throw new Error('Permission denied: Cannot remove asset associations');
+        return expectedAssetActionError(new Error('Permission denied: Cannot remove asset associations'))!;
     }
 
     try {
@@ -2930,11 +3080,13 @@ export const removeAssetAssociation = withAuth(async (
         }
     } catch (error) {
         console.error('Error removing asset association:', error);
-        throw new Error('Failed to remove asset association');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 
-export const getAssetSummaryMetrics = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetSummaryMetrics> => {
+export const getAssetSummaryMetrics = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetSummaryMetrics | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     try {
@@ -2998,7 +3150,9 @@ export const getAssetSummaryMetrics = withAuth(async (user, { tenant }, asset_id
         });
     } catch (error) {
         console.error('Error getting asset summary metrics:', error);
-        throw new Error('Failed to get asset summary metrics');
+        const expected = expectedAssetActionError(error);
+        if (expected) return expected;
+        throw error;
     }
 });
 

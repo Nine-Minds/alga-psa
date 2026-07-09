@@ -30,6 +30,10 @@ import {
   buildNotificationReadPayload,
   buildNotificationSentPayload,
 } from '@alga-psa/workflow-streams';
+import {
+  notificationActionErrorFrom,
+  type NotificationActionError,
+} from '../notificationActionErrors';
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
@@ -254,84 +258,90 @@ export async function createNotificationFromTemplateInternal(
  */
 export async function createNotificationFromTemplateAction(
   request: CreateInternalNotificationRequest
-): Promise<InternalNotification | null> {
+): Promise<InternalNotification | null | NotificationActionError> {
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Get user's locale
-    const userLocale = await getUserLocale(trx, request.tenant, request.user_id);
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Get user's locale
+      const userLocale = await getUserLocale(trx, request.tenant, request.user_id);
 
-    // Get template in user's language
-    const template = await getNotificationTemplate(
-      trx,
-      request.tenant,
-      request.template_name,
-      userLocale
-    );
+      // Get template in user's language
+      const template = await getNotificationTemplate(
+        trx,
+        request.tenant,
+        request.template_name,
+        userLocale
+      );
 
-    if (!template) {
-      throw new Error(`Template '${request.template_name}' not found`);
-    }
+      if (!template) {
+        throw new Error(`Template '${request.template_name}' not found`);
+      }
 
-    // Check if user has this notification type enabled
-    const subtypeId = template.subtype_id;
-    const isEnabled = await checkInternalNotificationEnabled(trx, request.tenant, request.user_id, subtypeId);
+      // Check if user has this notification type enabled
+      const subtypeId = template.subtype_id;
+      const isEnabled = await checkInternalNotificationEnabled(trx, request.tenant, request.user_id, subtypeId);
 
-    if (!isEnabled) {
-      console.log(`Internal notification disabled for user ${request.user_id}, subtype ${subtypeId}`);
-      return null;
-    }
+      if (!isEnabled) {
+        console.log(`Internal notification disabled for user ${request.user_id}, subtype ${subtypeId}`);
+        return null;
+      }
 
-    // Render template with data
-    const title = renderTemplate(template.title, request.data);
-    const message = renderTemplate(template.message, request.data);
+      // Render template with data
+      const title = renderTemplate(template.title, request.data);
+      const message = renderTemplate(template.message, request.data);
 
-    // Insert notification
-    const [notification] = await tenantDb(trx, request.tenant).table<any>('internal_notifications')
-      .insert({
-        tenant: request.tenant,
-        user_id: request.user_id,
-        template_name: request.template_name,
-        language_code: userLocale,
-        title,
-        message,
-        type: request.type || 'info',
-        category: request.category || null,
-        link: request.link || null,
-        metadata: request.metadata ? JSON.stringify(request.metadata) : null,
-        is_read: false,
-        delivery_status: 'pending',
-        delivery_attempts: 0
-      })
-      .returning('*') as InternalNotification[];
+      // Insert notification
+      const [notification] = await tenantDb(trx, request.tenant).table<any>('internal_notifications')
+        .insert({
+          tenant: request.tenant,
+          user_id: request.user_id,
+          template_name: request.template_name,
+          language_code: userLocale,
+          title,
+          message,
+          type: request.type || 'info',
+          category: request.category || null,
+          link: request.link || null,
+          metadata: request.metadata ? JSON.stringify(request.metadata) : null,
+          is_read: false,
+          delivery_status: 'pending',
+          delivery_attempts: 0
+        })
+        .returning('*') as InternalNotification[];
 
-    const createdAt = normalizeDateTime(notification?.created_at);
+      const createdAt = normalizeDateTime(notification?.created_at);
 
-    safePublishNotificationWorkflowEvent({
-      eventType: 'NOTIFICATION_SENT',
-      payload: buildNotificationSentPayload({
-        notificationId: notification.internal_notification_id,
-        channel: 'in_app',
-        recipientId: request.user_id,
-        sentAt: createdAt,
-        templateId: request.template_name,
-      }),
-      ctx: {
-        tenantId: request.tenant,
-        occurredAt: createdAt,
-        actor: { actorType: 'SYSTEM' },
-        correlationId: notification.internal_notification_id,
-      },
-      idempotencyKey: `notification:${notification.internal_notification_id}:sent`,
+      safePublishNotificationWorkflowEvent({
+        eventType: 'NOTIFICATION_SENT',
+        payload: buildNotificationSentPayload({
+          notificationId: notification.internal_notification_id,
+          channel: 'in_app',
+          recipientId: request.user_id,
+          sentAt: createdAt,
+          templateId: request.template_name,
+        }),
+        ctx: {
+          tenantId: request.tenant,
+          occurredAt: createdAt,
+          actor: { actorType: 'SYSTEM' },
+          correlationId: notification.internal_notification_id,
+        },
+        idempotencyKey: `notification:${notification.internal_notification_id}:sent`,
+      });
+
+      // Broadcast notification to connected clients (async, don't await)
+      broadcastNotification(notification).catch(err => {
+        console.error('Failed to broadcast notification:', err);
+      });
+
+      return notification;
     });
-
-    // Broadcast notification to connected clients (async, don't await)
-    broadcastNotification(notification).catch(err => {
-      console.error('Failed to broadcast notification:', err);
-    });
-
-    return notification;
-  });
+  } catch (error) {
+    const expected = notificationActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 }
 
 /**
@@ -545,28 +555,40 @@ export async function markAsReadAction(
   tenant: string,
   userId: string,
   notificationId: string
-): Promise<InternalNotification> {
+): Promise<InternalNotification | NotificationActionError> {
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
-  const notification = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const [notif] = await tenantScopedTable(trx, 'internal_notifications', tenant)
-      .where({
-        internal_notification_id: notificationId,
-        user_id: userId
-      })
-      .update({
-        is_read: true,
-        read_at: trx.fn.now(),
-        updated_at: trx.fn.now()
-      })
-      .returning('*');
+  const notification = await (async () => {
+    try {
+      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const [notif] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+          .where({
+            internal_notification_id: notificationId,
+            user_id: userId
+          })
+          .update({
+            is_read: true,
+            read_at: trx.fn.now(),
+            updated_at: trx.fn.now()
+          })
+          .returning('*');
 
-    if (!notif) {
-      throw new Error('Notification not found');
+        if (!notif) {
+          throw new Error('Notification not found');
+        }
+
+        return notif;
+      });
+    } catch (error) {
+      const expected = notificationActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
     }
+  })();
 
-    return notif;
-  });
+  if ('actionError' in notification || 'permissionError' in notification) {
+    return notification;
+  }
 
   const readAt = normalizeDateTime(notification.read_at);
 
@@ -892,57 +914,63 @@ export const updateInternalCategoryAction = withAuth(async (
   { tenant },
   categoryId: number,
   updates: Partial<Pick<InternalNotificationCategory, 'is_enabled' | 'is_default_enabled'>>
-): Promise<InternalNotificationCategory> => {
+): Promise<InternalNotificationCategory | NotificationActionError> => {
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Check permission within transaction context
-    const hasUpdatePermission = await hasPermissionAsync(currentUser, 'settings', 'update', trx);
-    if (!hasUpdatePermission) {
-      throw new Error('Permission denied: Cannot update settings');
-    }
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Check permission within transaction context
+      const hasUpdatePermission = await hasPermissionAsync(currentUser, 'settings', 'update', trx);
+      if (!hasUpdatePermission) {
+        throw new Error('Permission denied: Cannot update settings');
+      }
 
-    // Verify category exists
-    const category = await tenantScopedTable(trx, 'internal_notification_categories', tenant)
-      .where({ internal_notification_category_id: categoryId })
-      .first();
+      // Verify category exists
+      const category = await tenantScopedTable(trx, 'internal_notification_categories', tenant)
+        .where({ internal_notification_category_id: categoryId })
+        .first();
 
-    if (!category) {
-      throw new Error('Category not found');
-    }
+      if (!category) {
+        throw new Error('Category not found');
+      }
 
-    // Get existing tenant settings (if any) to preserve values not being updated
-    const existingSettings = await tenantScopedTable(trx, 'tenant_internal_notification_category_settings', tenant)
-      .where({ category_id: categoryId })
-      .first();
+      // Get existing tenant settings (if any) to preserve values not being updated
+      const existingSettings = await tenantScopedTable(trx, 'tenant_internal_notification_category_settings', tenant)
+        .where({ category_id: categoryId })
+        .first();
 
-    // Build update object with only defined values, defaulting to existing or true
-    const is_enabled = updates.is_enabled ?? existingSettings?.is_enabled ?? true;
-    const is_default_enabled = updates.is_default_enabled ?? existingSettings?.is_default_enabled ?? true;
-    // Compute timestamp before query - CitusDB requires IMMUTABLE values in ON CONFLICT UPDATE
-    const now = new Date();
+      // Build update object with only defined values, defaulting to existing or true
+      const is_enabled = updates.is_enabled ?? existingSettings?.is_enabled ?? true;
+      const is_default_enabled = updates.is_default_enabled ?? existingSettings?.is_default_enabled ?? true;
+      // Compute timestamp before query - CitusDB requires IMMUTABLE values in ON CONFLICT UPDATE
+      const now = new Date();
 
-    // Upsert into tenant-specific settings table
-    await tenantDb(trx, tenant).table('tenant_internal_notification_category_settings')
-      .insert({
-        tenant,
-        category_id: categoryId,
+      // Upsert into tenant-specific settings table
+      await tenantDb(trx, tenant).table('tenant_internal_notification_category_settings')
+        .insert({
+          tenant,
+          category_id: categoryId,
+          is_enabled,
+          is_default_enabled
+        })
+        .onConflict(['tenant', 'category_id'])
+        .merge({
+          is_enabled,
+          is_default_enabled,
+          updated_at: now
+        });
+
+      return {
+        ...category,
         is_enabled,
         is_default_enabled
-      })
-      .onConflict(['tenant', 'category_id'])
-      .merge({
-        is_enabled,
-        is_default_enabled,
-        updated_at: now
-      });
-
-    return {
-      ...category,
-      is_enabled,
-      is_default_enabled
-    };
-  });
+      };
+    });
+  } catch (error) {
+    const expected = notificationActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 /**
@@ -954,55 +982,61 @@ export const updateInternalSubtypeAction = withAuth(async (
   { tenant },
   subtypeId: number,
   updates: Partial<Pick<InternalNotificationSubtype, 'is_enabled' | 'is_default_enabled'>>
-): Promise<InternalNotificationSubtype> => {
+): Promise<InternalNotificationSubtype | NotificationActionError> => {
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Check permission within transaction context
-    const hasUpdatePermission = await hasPermissionAsync(currentUser, 'settings', 'update', trx);
-    if (!hasUpdatePermission) {
-      throw new Error('Permission denied: Cannot update settings');
-    }
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Check permission within transaction context
+      const hasUpdatePermission = await hasPermissionAsync(currentUser, 'settings', 'update', trx);
+      if (!hasUpdatePermission) {
+        throw new Error('Permission denied: Cannot update settings');
+      }
 
-    // Verify subtype exists
-    const subtype = await tenantScopedTable(trx, 'internal_notification_subtypes', tenant)
-      .where({ internal_notification_subtype_id: subtypeId })
-      .first();
+      // Verify subtype exists
+      const subtype = await tenantScopedTable(trx, 'internal_notification_subtypes', tenant)
+        .where({ internal_notification_subtype_id: subtypeId })
+        .first();
 
-    if (!subtype) {
-      throw new Error('Subtype not found');
-    }
+      if (!subtype) {
+        throw new Error('Subtype not found');
+      }
 
-    // Get existing tenant settings (if any) to preserve values not being updated
-    const existingSettings = await tenantScopedTable(trx, 'tenant_internal_notification_subtype_settings', tenant)
-      .where({ subtype_id: subtypeId })
-      .first();
+      // Get existing tenant settings (if any) to preserve values not being updated
+      const existingSettings = await tenantScopedTable(trx, 'tenant_internal_notification_subtype_settings', tenant)
+        .where({ subtype_id: subtypeId })
+        .first();
 
-    // Build update object with only defined values, defaulting to existing or true
-    const is_enabled = updates.is_enabled ?? existingSettings?.is_enabled ?? true;
-    const is_default_enabled = updates.is_default_enabled ?? existingSettings?.is_default_enabled ?? true;
-    // Compute timestamp before query - CitusDB requires IMMUTABLE values in ON CONFLICT UPDATE
-    const now = new Date();
+      // Build update object with only defined values, defaulting to existing or true
+      const is_enabled = updates.is_enabled ?? existingSettings?.is_enabled ?? true;
+      const is_default_enabled = updates.is_default_enabled ?? existingSettings?.is_default_enabled ?? true;
+      // Compute timestamp before query - CitusDB requires IMMUTABLE values in ON CONFLICT UPDATE
+      const now = new Date();
 
-    // Upsert into tenant-specific settings table
-    await tenantDb(trx, tenant).table('tenant_internal_notification_subtype_settings')
-      .insert({
-        tenant,
-        subtype_id: subtypeId,
+      // Upsert into tenant-specific settings table
+      await tenantDb(trx, tenant).table('tenant_internal_notification_subtype_settings')
+        .insert({
+          tenant,
+          subtype_id: subtypeId,
+          is_enabled,
+          is_default_enabled
+        })
+        .onConflict(['tenant', 'subtype_id'])
+        .merge({
+          is_enabled,
+          is_default_enabled,
+          updated_at: now
+        });
+
+      return {
+        ...subtype,
         is_enabled,
         is_default_enabled
-      })
-      .onConflict(['tenant', 'subtype_id'])
-      .merge({
-        is_enabled,
-        is_default_enabled,
-        updated_at: now
-      });
-
-    return {
-      ...subtype,
-      is_enabled,
-      is_default_enabled
-    };
-  });
+      };
+    });
+  } catch (error) {
+    const expected = notificationActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });

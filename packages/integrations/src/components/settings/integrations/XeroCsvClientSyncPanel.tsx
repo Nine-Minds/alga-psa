@@ -15,6 +15,11 @@ import {
 } from '@alga-psa/integrations/actions';
 import type { ClientImportPreviewResult, ClientImportResult } from '../../../services/xeroCsvClientSyncService';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type ImportStep = 'idle' | 'uploading' | 'preview' | 'importing' | 'complete';
 
@@ -59,6 +64,10 @@ export function XeroCsvClientSyncPanel() {
 
       try {
         const result = await exportClientsToXeroCsv();
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          setExportError(getErrorMessage(result));
+          return;
+        }
 
         // Create download
         const blob = new Blob([result.csvContent], { type: 'text/csv' });
@@ -94,6 +103,11 @@ export function XeroCsvClientSyncPanel() {
 
       // Generate preview
       const preview = await previewXeroCsvClientImport(content, importOptions);
+      if (isActionMessageError(preview) || isActionPermissionError(preview)) {
+        setImportError(getErrorMessage(preview));
+        setImportStep('idle');
+        return;
+      }
       setPreviewResult(preview);
       setImportStep('preview');
     } catch (err) {
@@ -116,6 +130,11 @@ export function XeroCsvClientSyncPanel() {
 
     try {
       const result = await executeXeroCsvClientImport(csvContent, importOptions);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setImportError(getErrorMessage(result));
+        setImportStep('preview');
+        return;
+      }
       setImportResult(result);
       setImportStep('complete');
     } catch (err) {

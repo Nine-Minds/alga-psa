@@ -1,4 +1,5 @@
 import type { ICreditExpirationSettings, ICreditTracking } from '@alga-psa/types';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCreditExpirationSettings } from '../../actions/creditExpirationSettingsActions';
 import { listCredits } from './actions';
 import CreditsPageClient from './CreditsPageClient';
@@ -16,12 +17,14 @@ interface CreditsListResult {
   error?: string;
 }
 
+type CreditExpirationSettingsResult = ICreditExpirationSettings | ActionMessageError | ActionPermissionError;
+
 export default async function CreditsPage({ params }: { params: Promise<{ clientId?: string }> }) {
   const resolvedParams = await params;
   const clientId = resolvedParams.clientId || '00000000-0000-0000-0000-000000000000';
 
   const [settings, activeCreditsResult, allCreditsResult]: [
-    ICreditExpirationSettings,
+    CreditExpirationSettingsResult,
     CreditsListResult,
     CreditsListResult,
   ] = await Promise.all([

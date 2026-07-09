@@ -8,6 +8,12 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 import type {
   InboundWebhookAuthConfig,
@@ -24,9 +30,12 @@ import {
 import { bootstrapInboundWebhookActions } from '@/lib/inboundWebhooks/actions/bootstrap';
 import { listActions, type InboundActionTargetField } from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { createInboundDelivery, updateInboundDeliveryOutcome } from '@/lib/inboundWebhooks/deliveryPersistence';
-import { dispatchInboundWebhookHandler, InboundWebhookActionError } from '@/lib/inboundWebhooks/dispatcher';
 import {
-  assertInboundWebhookWorkflowHandlersAvailable,
+  dispatchInboundWebhookHandler,
+  InboundWebhookActionError as InboundWebhookDispatchError,
+  InboundWebhookMappingError,
+} from '@/lib/inboundWebhooks/dispatcher';
+import {
   canUseInboundWebhookWorkflowHandlers,
 } from '@/lib/inboundWebhooks/editionGate';
 
@@ -96,6 +105,16 @@ interface SendInboundWebhookTestInput {
   headers?: Record<string, string | string[] | undefined>;
 }
 
+function inboundWebhookDispatchOutcomeFromError(error: unknown): Record<string, unknown> {
+  if (error instanceof InboundWebhookDispatchError) {
+    return error.toOutcome();
+  }
+  if (error instanceof InboundWebhookMappingError) {
+    return { error: error.message };
+  }
+  return { error: 'Inbound webhook dispatch failed' };
+}
+
 export interface InboundActionDefinitionView {
   name: string;
   entityType: string;
@@ -115,6 +134,30 @@ export interface InboundWorkflowOptionView {
 const DEFAULT_DELIVERY_PAGE_SIZE = 25;
 const MAX_DELIVERY_PAGE_SIZE = 100;
 const SAMPLE_CAPTURE_WINDOW_MS = 5 * 60 * 1000;
+
+export type InboundWebhookServerActionError = ActionMessageError | ActionPermissionError;
+
+class ExpectedInboundWebhookConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ExpectedInboundWebhookConfigError';
+  }
+}
+
+function toExpectedConfigError(message: string): ExpectedInboundWebhookConfigError {
+  return new ExpectedInboundWebhookConfigError(message);
+}
+
+function safeMapInboundWebhook(row: InboundWebhookRow): InboundWebhookConfig | ActionMessageError {
+  try {
+    return mapInboundWebhook(row);
+  } catch (error) {
+    if (error instanceof ExpectedInboundWebhookConfigError) {
+      return actionError(error.message);
+    }
+    throw error;
+  }
+}
 
 function toIso(value: Date | string | null): string | null {
   return value ? new Date(value).toISOString() : null;
@@ -151,7 +194,7 @@ function redactAuthConfig(authType: string, config: Record<string, unknown> | nu
         tokenVaultPath: String(raw.token_vault_path ?? raw.tokenVaultPath ?? ''),
       };
     default:
-      throw new Error(`Unsupported inbound webhook auth type: ${authType}`);
+      throw toExpectedConfigError(`Unsupported inbound webhook auth type: ${authType}`);
   }
 }
 
@@ -178,7 +221,7 @@ function mapHandlerConfig(handlerType: string, config: Record<string, unknown> |
     };
   }
 
-  throw new Error(`Unsupported inbound webhook handler type: ${handlerType}`);
+  throw toExpectedConfigError(`Unsupported inbound webhook handler type: ${handlerType}`);
 }
 
 function mapIdempotencySource(source: Record<string, unknown> | null): InboundWebhookIdempotencySource | null {
@@ -409,31 +452,54 @@ function buildStoredHandlerConfig(input: InboundWebhookUpsertInput): Record<stri
   };
 }
 
-async function assertInboundWebhookPermission(
+async function getInboundWebhookPermissionError(
   user: IUserWithRoles,
   action: 'create' | 'read' | 'update' | 'delete' | 'replay',
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
-): Promise<void> {
-  if (!(await hasPermission(user, 'inbound_webhook', action, knex))) {
-    throw new Error(`Forbidden: inbound_webhook:${action} permission required`);
+): Promise<ActionPermissionError | null> {
+  if (await hasPermission(user, 'inbound_webhook', action, knex)) {
+    return null;
   }
+
+  return permissionError(`Permission denied: inbound_webhook:${action} permission required`);
 }
 
-export const listInboundWebhooks = withAuth(async (user, { tenant }): Promise<InboundWebhookConfig[]> => {
+export const listInboundWebhooks = withAuth(async (
+  user,
+  { tenant },
+): Promise<InboundWebhookConfig[] | InboundWebhookServerActionError> => {
   const { knex } = await createTenantKnex(tenant);
-  await assertInboundWebhookPermission(user, 'read', knex);
+  const permissionFailure = await getInboundWebhookPermissionError(user, 'read', knex);
+  if (permissionFailure) {
+    return permissionFailure;
+  }
 
   const db = tenantDb(knex, tenant);
   const rows = await db.table<InboundWebhookRow>('inbound_webhooks')
     .orderBy('updated_at', 'desc')
     .orderBy('name', 'asc');
 
-  return rows.map(mapInboundWebhook);
+  const configs: InboundWebhookConfig[] = [];
+  for (const row of rows) {
+    const mapped = safeMapInboundWebhook(row);
+    if ('actionError' in mapped) {
+      return mapped;
+    }
+    configs.push(mapped);
+  }
+
+  return configs;
 });
 
-export const listInboundWebhookActions = withAuth(async (user, { tenant }): Promise<InboundActionDefinitionView[]> => {
+export const listInboundWebhookActions = withAuth(async (
+  user,
+  { tenant },
+): Promise<InboundActionDefinitionView[] | InboundWebhookServerActionError> => {
   const { knex } = await createTenantKnex(tenant);
-  await assertInboundWebhookPermission(user, 'read', knex);
+  const permissionFailure = await getInboundWebhookPermissionError(user, 'read', knex);
+  if (permissionFailure) {
+    return permissionFailure;
+  }
   await bootstrapInboundWebhookActions();
 
   return listActions().map((action) => ({
@@ -445,9 +511,15 @@ export const listInboundWebhookActions = withAuth(async (user, { tenant }): Prom
   }));
 });
 
-export const listInboundWorkflowOptions = withAuth(async (user, { tenant }): Promise<InboundWorkflowOptionView[]> => {
+export const listInboundWorkflowOptions = withAuth(async (
+  user,
+  { tenant },
+): Promise<InboundWorkflowOptionView[] | InboundWebhookServerActionError> => {
   const { knex } = await createTenantKnex(tenant);
-  await assertInboundWebhookPermission(user, 'read', knex);
+  const permissionFailure = await getInboundWebhookPermissionError(user, 'read', knex);
+  if (permissionFailure) {
+    return permissionFailure;
+  }
 
   if (!canUseInboundWebhookWorkflowHandlers()) {
     return [];
@@ -502,9 +574,16 @@ export const listInboundWorkflowOptions = withAuth(async (user, { tenant }): Pro
 });
 
 export const getInboundWebhook = withAuth(
-  async (user, { tenant }, inboundWebhookId: string): Promise<InboundWebhookConfig | null> => {
+  async (
+    user,
+    { tenant },
+    inboundWebhookId: string,
+  ): Promise<InboundWebhookConfig | null | InboundWebhookServerActionError> => {
     const { knex } = await createTenantKnex(tenant);
-    await assertInboundWebhookPermission(user, 'read', knex);
+    const permissionFailure = await getInboundWebhookPermissionError(user, 'read', knex);
+    if (permissionFailure) {
+      return permissionFailure;
+    }
 
     const db = tenantDb(knex, tenant);
     const row = await db.table<InboundWebhookRow>('inbound_webhooks')
@@ -513,7 +592,7 @@ export const getInboundWebhook = withAuth(
       })
       .first();
 
-    return row ? mapInboundWebhook(row) : null;
+    return row ? safeMapInboundWebhook(row) : null;
   },
 );
 
@@ -522,13 +601,24 @@ export const upsertInboundWebhook = withAuth(
     user,
     { tenant },
     input: unknown,
-  ): Promise<{ webhook: InboundWebhookConfig; secret: string | null }> => {
-    const parsed = inboundWebhookUpsertInputSchema.parse(input);
+  ): Promise<{ webhook: InboundWebhookConfig; secret: string | null } | InboundWebhookServerActionError> => {
+    const parsedInput = inboundWebhookUpsertInputSchema.safeParse(input);
+    if (!parsedInput.success) {
+      const firstIssue = parsedInput.error.issues[0];
+      return actionError(firstIssue?.message ?? 'Check the inbound webhook settings and try again.');
+    }
+
+    const parsed = parsedInput.data;
     const { knex } = await createTenantKnex(tenant);
     const action = parsed.inbound_webhook_id ? 'update' : 'create';
-    await assertInboundWebhookPermission(user, action, knex);
+    const permissionFailure = await getInboundWebhookPermissionError(user, action, knex);
+    if (permissionFailure) {
+      return permissionFailure;
+    }
     if (parsed.handler_type === 'workflow' || parsed.handler_config.type === 'workflow') {
-      assertInboundWebhookWorkflowHandlersAvailable();
+      if (!canUseInboundWebhookWorkflowHandlers()) {
+        return actionError('Inbound webhook workflow handlers require Enterprise edition.');
+      }
     }
 
     const db = tenantDb(knex, tenant);
@@ -539,7 +629,7 @@ export const upsertInboundWebhook = withAuth(
       : null;
 
     if (parsed.inbound_webhook_id && !existing) {
-      throw new Error('Inbound webhook not found');
+      return actionError('Inbound webhook not found.');
     }
 
     const slugCollision = await db.table<InboundWebhookRow>('inbound_webhooks')
@@ -552,7 +642,7 @@ export const upsertInboundWebhook = withAuth(
       .first('inbound_webhook_id');
 
     if (slugCollision) {
-      throw new Error(`Inbound webhook slug "${parsed.slug}" already exists`);
+      return actionError(`Inbound webhook slug "${parsed.slug}" already exists.`);
     }
 
     const inboundWebhookId = parsed.inbound_webhook_id ?? crypto.randomUUID();
@@ -594,17 +684,29 @@ export const upsertInboundWebhook = withAuth(
           })
           .returning('*');
 
+    const mapped = safeMapInboundWebhook(row);
+    if ('actionError' in mapped) {
+      return mapped;
+    }
+
     return {
-      webhook: mapInboundWebhook(row),
+      webhook: mapped,
       secret: oneTimeSecret,
     };
   },
 );
 
 export const deleteInboundWebhook = withAuth(
-  async (user, { tenant }, inboundWebhookId: string): Promise<{ deleted: true; inboundWebhookId: string }> => {
+  async (
+    user,
+    { tenant },
+    inboundWebhookId: string,
+  ): Promise<{ deleted: true; inboundWebhookId: string } | InboundWebhookServerActionError> => {
     const { knex } = await createTenantKnex(tenant);
-    await assertInboundWebhookPermission(user, 'delete', knex);
+    const permissionFailure = await getInboundWebhookPermissionError(user, 'delete', knex);
+    if (permissionFailure) {
+      return permissionFailure;
+    }
 
     const db = tenantDb(knex, tenant);
     const existing = await db.table<InboundWebhookRow>('inbound_webhooks')
@@ -612,7 +714,7 @@ export const deleteInboundWebhook = withAuth(
       .first();
 
     if (!existing) {
-      throw new Error('Inbound webhook not found');
+      return actionError('Inbound webhook not found.');
     }
 
     // Citus does not allow ON DELETE SET NULL when the distribution column is
@@ -637,9 +739,12 @@ export const rotateInboundWebhookSecret = withAuth(
     user,
     { tenant },
     inboundWebhookId: string,
-  ): Promise<{ webhook: InboundWebhookConfig; secret: string }> => {
+  ): Promise<{ webhook: InboundWebhookConfig; secret: string } | InboundWebhookServerActionError> => {
     const { knex } = await createTenantKnex(tenant);
-    await assertInboundWebhookPermission(user, 'update', knex);
+    const permissionFailure = await getInboundWebhookPermissionError(user, 'update', knex);
+    if (permissionFailure) {
+      return permissionFailure;
+    }
 
     const db = tenantDb(knex, tenant);
     const existing = await db.table<InboundWebhookRow>('inbound_webhooks')
@@ -647,11 +752,11 @@ export const rotateInboundWebhookSecret = withAuth(
       .first();
 
     if (!existing) {
-      throw new Error('Inbound webhook not found');
+      return actionError('Inbound webhook not found.');
     }
 
     if (existing.auth_type === 'ip_allowlist') {
-      throw new Error('IP allowlist inbound webhooks do not have a secret to rotate');
+      return actionError('IP allowlist inbound webhooks do not have a secret to rotate.');
     }
 
     const authConfig = { ...(existing.auth_config ?? {}) };
@@ -677,7 +782,7 @@ export const rotateInboundWebhookSecret = withAuth(
       authConfig.type = 'path_token';
       authConfig.token_vault_path = vaultPath;
     } else {
-      throw new Error(`Unsupported inbound webhook auth type: ${existing.auth_type}`);
+      return actionError(`Unsupported inbound webhook auth type: ${existing.auth_type}.`);
     }
 
     await writeTenantSecret(tenant, vaultPath, secret);
@@ -690,8 +795,13 @@ export const rotateInboundWebhookSecret = withAuth(
       })
       .returning('*');
 
+    const mapped = safeMapInboundWebhook(row);
+    if ('actionError' in mapped) {
+      return mapped;
+    }
+
     return {
-      webhook: mapInboundWebhook(row),
+      webhook: mapped,
       secret,
     };
   },
@@ -703,9 +813,12 @@ export const setInboundWebhookActiveState = withAuth(
     { tenant },
     inboundWebhookId: string,
     active: boolean,
-  ): Promise<InboundWebhookConfig> => {
+  ): Promise<InboundWebhookConfig | InboundWebhookServerActionError> => {
     const { knex } = await createTenantKnex(tenant);
-    await assertInboundWebhookPermission(user, 'update', knex);
+    const permissionFailure = await getInboundWebhookPermissionError(user, 'update', knex);
+    if (permissionFailure) {
+      return permissionFailure;
+    }
     const updatePayload: Record<string, unknown> = {
       is_active: active,
       updated_at: knex.fn.now(),
@@ -722,10 +835,10 @@ export const setInboundWebhookActiveState = withAuth(
       .returning('*');
 
     if (!row) {
-      throw new Error('Inbound webhook not found');
+      return actionError('Inbound webhook not found.');
     }
 
-    return mapInboundWebhook(row);
+    return safeMapInboundWebhook(row);
   },
 );
 
@@ -736,9 +849,12 @@ export const listInboundDeliveries = withAuth(
     filter: ListInboundDeliveriesFilter = {},
     page: number = 1,
     limit: number = DEFAULT_DELIVERY_PAGE_SIZE,
-  ): Promise<InboundDeliveryPage> => {
+  ): Promise<InboundDeliveryPage | InboundWebhookServerActionError> => {
     const { knex } = await createTenantKnex(tenant);
-    await assertInboundWebhookPermission(user, 'read', knex);
+    const permissionFailure = await getInboundWebhookPermissionError(user, 'read', knex);
+    if (permissionFailure) {
+      return permissionFailure;
+    }
 
     const safePage = Math.max(1, Math.floor(page || 1));
     const safeLimit = Math.min(MAX_DELIVERY_PAGE_SIZE, Math.max(1, Math.floor(limit || DEFAULT_DELIVERY_PAGE_SIZE)));
@@ -785,9 +901,16 @@ export const listInboundDeliveries = withAuth(
 );
 
 export const getInboundDelivery = withAuth(
-  async (user, { tenant }, deliveryId: string): Promise<InboundWebhookDelivery | null> => {
+  async (
+    user,
+    { tenant },
+    deliveryId: string,
+  ): Promise<InboundWebhookDelivery | null | InboundWebhookServerActionError> => {
     const { knex } = await createTenantKnex(tenant);
-    await assertInboundWebhookPermission(user, 'read', knex);
+    const permissionFailure = await getInboundWebhookPermissionError(user, 'read', knex);
+    if (permissionFailure) {
+      return permissionFailure;
+    }
 
     const db = tenantDb(knex, tenant);
     const row = await db.table<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')
@@ -799,9 +922,16 @@ export const getInboundDelivery = withAuth(
 );
 
 export const captureSamplePayload = withAuth(
-  async (user, { tenant }, inboundWebhookId: string): Promise<InboundWebhookConfig> => {
+  async (
+    user,
+    { tenant },
+    inboundWebhookId: string,
+  ): Promise<InboundWebhookConfig | InboundWebhookServerActionError> => {
     const { knex } = await createTenantKnex(tenant);
-    await assertInboundWebhookPermission(user, 'update', knex);
+    const permissionFailure = await getInboundWebhookPermissionError(user, 'update', knex);
+    if (permissionFailure) {
+      return permissionFailure;
+    }
 
     const captureExpiresAt = new Date(Date.now() + SAMPLE_CAPTURE_WINDOW_MS);
     const db = tenantDb(knex, tenant);
@@ -814,17 +944,24 @@ export const captureSamplePayload = withAuth(
       .returning('*');
 
     if (!row) {
-      throw new Error('Inbound webhook not found');
+      return actionError('Inbound webhook not found.');
     }
 
-    return mapInboundWebhook(row);
+    return safeMapInboundWebhook(row);
   },
 );
 
 export const clearSamplePayload = withAuth(
-  async (user, { tenant }, inboundWebhookId: string): Promise<InboundWebhookConfig> => {
+  async (
+    user,
+    { tenant },
+    inboundWebhookId: string,
+  ): Promise<InboundWebhookConfig | InboundWebhookServerActionError> => {
     const { knex } = await createTenantKnex(tenant);
-    await assertInboundWebhookPermission(user, 'update', knex);
+    const permissionFailure = await getInboundWebhookPermissionError(user, 'update', knex);
+    if (permissionFailure) {
+      return permissionFailure;
+    }
 
     const db = tenantDb(knex, tenant);
     const [row] = await db.table<InboundWebhookRow>('inbound_webhooks')
@@ -837,10 +974,10 @@ export const clearSamplePayload = withAuth(
       .returning('*');
 
     if (!row) {
-      throw new Error('Inbound webhook not found');
+      return actionError('Inbound webhook not found.');
     }
 
-    return mapInboundWebhook(row);
+    return safeMapInboundWebhook(row);
   },
 );
 
@@ -888,10 +1025,7 @@ async function dispatchAndRecordOutcome(args: {
       durationMs: Date.now() - args.startedAt,
     });
   } catch (error) {
-    const handlerOutcome =
-      error instanceof InboundWebhookActionError
-        ? error.toOutcome()
-        : { error: error instanceof Error ? error.message : 'Inbound webhook dispatch failed' };
+    const handlerOutcome = inboundWebhookDispatchOutcomeFromError(error);
     await updateInboundDeliveryOutcome(args.knex, {
       tenant: args.webhook.tenant,
       deliveryId: args.deliveryId,
@@ -905,10 +1039,17 @@ async function dispatchAndRecordOutcome(args: {
 }
 
 export const replayInboundDelivery = withAuth(
-  async (user, { tenant }, deliveryId: string): Promise<InboundWebhookDelivery> => {
+  async (
+    user,
+    { tenant },
+    deliveryId: string,
+  ): Promise<InboundWebhookDelivery | InboundWebhookServerActionError> => {
     const startedAt = Date.now();
     const { knex } = await createTenantKnex(tenant);
-    await assertInboundWebhookPermission(user, 'replay', knex);
+    const permissionFailure = await getInboundWebhookPermissionError(user, 'replay', knex);
+    if (permissionFailure) {
+      return permissionFailure;
+    }
 
     const db = tenantDb(knex, tenant);
     const original = await db.table<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')
@@ -916,11 +1057,11 @@ export const replayInboundDelivery = withAuth(
       .first();
 
     if (!original) {
-      throw new Error('Inbound delivery not found');
+      return actionError('Inbound delivery not found.');
     }
 
     if (!original.inbound_webhook_id) {
-      throw new Error('Cannot replay an inbound delivery without a webhook config');
+      return actionError('Cannot replay an inbound delivery without a webhook config.');
     }
 
     const webhook = await db.table<InboundWebhookRow>('inbound_webhooks')
@@ -928,7 +1069,7 @@ export const replayInboundDelivery = withAuth(
       .first();
 
     if (!webhook || !webhook.is_active) {
-      throw new Error('Inbound webhook not found or inactive');
+      return actionError('Inbound webhook not found or inactive.');
     }
 
     const { deliveryId: replayDeliveryId } = await createInboundDelivery(knex, {
@@ -966,10 +1107,13 @@ export const sendInboundWebhookTest = withAuth(
     { tenant },
     inboundWebhookId: string,
     input: SendInboundWebhookTestInput = {},
-  ): Promise<InboundWebhookDelivery> => {
+  ): Promise<InboundWebhookDelivery | InboundWebhookServerActionError> => {
     const startedAt = Date.now();
     const { knex } = await createTenantKnex(tenant);
-    await assertInboundWebhookPermission(user, 'update', knex);
+    const permissionFailure = await getInboundWebhookPermissionError(user, 'update', knex);
+    if (permissionFailure) {
+      return permissionFailure;
+    }
 
     const db = tenantDb(knex, tenant);
     const webhook = await db.table<InboundWebhookRow>('inbound_webhooks')
@@ -977,7 +1121,7 @@ export const sendInboundWebhookTest = withAuth(
       .first();
 
     if (!webhook || !webhook.is_active) {
-      throw new Error('Inbound webhook not found or inactive');
+      return actionError('Inbound webhook not found or inactive.');
     }
 
     const headers = Object.fromEntries(

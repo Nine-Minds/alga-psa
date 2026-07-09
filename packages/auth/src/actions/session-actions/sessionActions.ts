@@ -30,6 +30,10 @@ export interface AllSessionsResponse {
   total: number;
 }
 
+export interface AuthActionPermissionError {
+  readonly permissionError: string;
+}
+
 export interface RevokeSessionResult {
   success: boolean;
   is_current: boolean;
@@ -45,6 +49,26 @@ export interface RevokeAllSessionsResult {
   revoked_count: number;
   requires_2fa?: boolean;
   message: string;
+}
+
+function permissionError(message: string): AuthActionPermissionError {
+  return { permissionError: message };
+}
+
+function revokeSessionFailure(message: string): RevokeSessionResult {
+  return {
+    success: false,
+    is_current: false,
+    message,
+  };
+}
+
+function revokeAllSessionsFailure(message: string): RevokeAllSessionsResult {
+  return {
+    success: false,
+    revoked_count: 0,
+    message,
+  };
 }
 
 /**
@@ -74,7 +98,7 @@ export const getUserSessionsAction = withAuth(async (currentUser, { tenant }): P
 /**
  * Get all users' active sessions (admin only)
  */
-export const getAllSessionsAction = withAuth(async (currentUser, { tenant }): Promise<AllSessionsResponse> => {
+export const getAllSessionsAction = withAuth(async (currentUser, { tenant }): Promise<AllSessionsResponse | AuthActionPermissionError> => {
   // Check if user has permission to read security settings
   const canReadSecuritySettings = await hasPermission(
     currentUser,
@@ -83,7 +107,7 @@ export const getAllSessionsAction = withAuth(async (currentUser, { tenant }): Pr
   );
 
   if (!canReadSecuritySettings) {
-    throw new Error('Forbidden: Insufficient permissions to view all sessions');
+    return permissionError('Permission denied: You do not have permission to view all sessions.');
   }
 
   const knex = await getConnection(tenant);
@@ -131,7 +155,7 @@ export const revokeSessionAction = withAuth(async (currentUser, { tenant }, sess
   const session = await getSession();
 
   if (!session?.user?.id) {
-    throw new Error('Unauthorized');
+    return revokeSessionFailure('Unauthorized. Sign in again to manage sessions.');
   }
 
   // Verify the session belongs to the current user OR user has admin permission
@@ -141,7 +165,7 @@ export const revokeSessionAction = withAuth(async (currentUser, { tenant }, sess
   );
 
   if (!targetSession) {
-    throw new Error('Session not found');
+    return revokeSessionFailure('Session not found. It may have already expired or been revoked.');
   }
 
   // Check if user has permission to update security settings (admin action)
@@ -153,7 +177,7 @@ export const revokeSessionAction = withAuth(async (currentUser, { tenant }, sess
 
   // Allow if session belongs to user OR user has admin permission
   if (targetSession.user_id !== currentUser.user_id && !canUpdateSecuritySettings) {
-    throw new Error('Forbidden - This session does not belong to you');
+    return revokeSessionFailure('You do not have permission to revoke this session.');
   }
 
   // Check if this is the current session
@@ -191,13 +215,13 @@ export const revokeAllOtherSessionsAction = withAuth(async (
   const session = await getSession();
 
   if (!session?.user?.id) {
-    throw new Error('Unauthorized');
+    return revokeAllSessionsFailure('Unauthorized. Sign in again to manage sessions.');
   }
 
   const currentSessionId = (session as any).session_id;
 
   if (!currentSessionId) {
-    throw new Error('Current session ID not found');
+    return revokeAllSessionsFailure('Current session could not be identified. Sign in again and retry.');
   }
 
   // Check if user has 2FA enabled
@@ -222,7 +246,7 @@ export const revokeAllOtherSessionsAction = withAuth(async (
     );
 
     if (!isValid) {
-      throw new Error('Invalid 2FA code');
+      return revokeAllSessionsFailure('Invalid 2FA code');
     }
   }
 

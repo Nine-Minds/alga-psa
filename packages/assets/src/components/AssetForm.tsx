@@ -23,6 +23,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getAsset, updateAsset } from '../actions/assetActions';
+import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
@@ -167,7 +168,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   useEffect(() => {
     const loadAsset = async () => {
       try {
-        const data = await getAsset(assetId);
+        const data = unwrapAssetActionResult(await getAsset(assetId));
         if (!data) {
           setLoadError(t('assetForm.errors.assetNotFound', { defaultValue: 'Asset not found' }));
           return;
@@ -1062,7 +1063,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         )
       ) as UpdateAssetRequest;
 
-      await updateAsset(assetId, cleanedData);
+      unwrapAssetActionResult(await updateAsset(assetId, cleanedData));
       router.push(`/msp/assets/${assetId}`);
       router.refresh();
     } catch (error) {

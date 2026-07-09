@@ -23,7 +23,11 @@ import {
 } from '@alga-psa/auth/actions';
 import { IPermission, IRole } from '@alga-psa/types';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ViewMode = 'msp' | 'client';
@@ -32,6 +36,9 @@ const viewOptions: ViewSwitcherOption<ViewMode>[] = [
   { value: 'msp', label: 'MSP' },
   { value: 'client', label: 'Client Portal' },
 ];
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface PermissionRow {
   resource: string;
@@ -338,7 +345,7 @@ export default function PermissionsMatrix() {
     setError(null);
     
     try {
-      const promises: Promise<void>[] = [];
+      const promises: Promise<unknown>[] = [];
       
       // Process all pending changes
       pendingChanges.forEach((roleChanges, roleId) => {
@@ -351,7 +358,11 @@ export default function PermissionsMatrix() {
         });
       });
       
-      await Promise.all(promises);
+      const results = await Promise.all(promises);
+      const firstError = results.find(isReturnedActionError);
+      if (firstError) {
+        throw firstError;
+      }
       
       // Clear pending changes
       setPendingChanges(new Map());

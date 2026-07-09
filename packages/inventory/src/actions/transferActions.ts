@@ -5,6 +5,12 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IStockTransfer, IStockTransferLine } from '@alga-psa/types';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { recordStockMovement, availableQuantity, assertLocationWritable } from '../lib';
 
 /**
@@ -20,6 +26,66 @@ import { recordStockMovement, availableQuantity, assertLocationWritable } from '
 async function requireTransferPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'stock_transfer', action))) {
     throw new Error(`Permission denied: stock_transfer ${action} required`);
+  }
+}
+
+export type TransferActionError = ActionMessageError | ActionPermissionError;
+
+function transferActionErrorFrom(error: unknown): TransferActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+
+    switch (error.message) {
+      case 'from_location_id and to_location_id are required':
+        return actionError('Choose both a source location and a destination location.');
+      case 'Transfer source and destination must differ':
+        return actionError('Choose different source and destination locations.');
+      case 'A transfer requires at least one line':
+        return actionError('Add at least one transfer line.');
+      case 'Each transfer line requires a service_id':
+        return actionError('Each transfer line needs a product or service.');
+      case 'Transfer line quantity must be positive':
+        return actionError('Transfer line quantity must be greater than zero.');
+      case 'Stock unit does not match line service_id':
+        return actionError('The selected stock unit does not match the transfer line product.');
+      case 'Only in_stock units can be transferred':
+        return actionError('Only units currently in stock can be transferred.');
+      case 'Stock unit is not at the transfer source location':
+        return actionError('The selected stock unit is not at the source location.');
+      case 'Transfer not found':
+        return actionError('Transfer not found. It may have been updated or deleted. Please refresh and try again.');
+      default:
+        if (
+          error.message.startsWith('Stock unit ') ||
+          error.message.startsWith('Insufficient available stock ') ||
+          error.message.startsWith('Cannot receive a transfer ') ||
+          error.message.startsWith('Cannot cancel a transfer ')
+        ) {
+          return actionError(error.message);
+        }
+    }
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected transfer records is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This transfer conflicts with an existing record. Please refresh and try again.');
+  }
+
+  return null;
+}
+
+async function withTransferActionErrors<T>(work: () => Promise<T>): Promise<T | TransferActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = transferActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 }
 
@@ -51,167 +117,175 @@ async function loadTransfer(
 }
 
 export const dispatchTransfer = withAuth(
-  async (user, { tenant }, input: DispatchTransferInput): Promise<IStockTransfer> => {
-    await requireTransferPerm(user, 'create');
+  async (user, { tenant }, input: DispatchTransferInput): Promise<IStockTransfer | TransferActionError> => {
+    return withTransferActionErrors(async () => {
+      await requireTransferPerm(user, 'create');
 
-    const fromLocation = input.from_location_id;
-    const toLocation = input.to_location_id;
-    if (!fromLocation || !toLocation) throw new Error('from_location_id and to_location_id are required');
-    if (fromLocation === toLocation) throw new Error('Transfer source and destination must differ');
-    if (!input.lines || input.lines.length === 0) throw new Error('A transfer requires at least one line');
+      const fromLocation = input.from_location_id;
+      const toLocation = input.to_location_id;
+      if (!fromLocation || !toLocation) throw new Error('from_location_id and to_location_id are required');
+      if (fromLocation === toLocation) throw new Error('Transfer source and destination must differ');
+      if (!input.lines || input.lines.length === 0) throw new Error('A transfer requires at least one line');
 
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      // A tech can't dispatch stock out of another tech's van (F034).
-      await assertLocationWritable(trx, tenant, (user as any)?.user_id, fromLocation);
-      const [transfer] = await trx('stock_transfers')
-        .insert({
-          tenant,
-          from_location_id: fromLocation,
-          to_location_id: toLocation,
-          status: 'dispatched',
-          dispatched_by: user.user_id,
-          dispatched_at: trx.fn.now(),
-          notes: input.notes ?? null,
-        })
-        .returning('*');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        // A tech can't dispatch stock out of another tech's van (F034).
+        await assertLocationWritable(trx, tenant, (user as any)?.user_id, fromLocation);
+        const [transfer] = await trx('stock_transfers')
+          .insert({
+            tenant,
+            from_location_id: fromLocation,
+            to_location_id: toLocation,
+            status: 'dispatched',
+            dispatched_by: user.user_id,
+            dispatched_at: trx.fn.now(),
+            notes: input.notes ?? null,
+          })
+          .returning('*');
 
-      for (const line of input.lines) {
-        const quantity = Number(line.quantity);
-        if (!line.service_id) throw new Error('Each transfer line requires a service_id');
-        if (!Number.isFinite(quantity) || quantity <= 0) throw new Error('Transfer line quantity must be positive');
+        for (const line of input.lines) {
+          const quantity = Number(line.quantity);
+          if (!line.service_id) throw new Error('Each transfer line requires a service_id');
+          if (!Number.isFinite(quantity) || quantity <= 0) throw new Error('Transfer line quantity must be positive');
 
-        if (line.unit_id) {
-          // Serialized: the unit must be in_stock at the source location. Locked so a
-          // concurrent dispatch/fulfill cannot claim the same unit (F022).
-          const unit = await trx('stock_units').where({ tenant, unit_id: line.unit_id }).forUpdate().first();
-          if (!unit) throw new Error(`Stock unit ${line.unit_id} not found`);
-          if (unit.service_id !== line.service_id) throw new Error('Stock unit does not match line service_id');
-          if (unit.status !== 'in_stock') throw new Error('Only in_stock units can be transferred');
-          if (unit.location_id !== fromLocation) throw new Error('Stock unit is not at the transfer source location');
-        } else {
-          // Non-serialized: source must have enough available stock. Locked so
-          // concurrent dispatches serialize on the availability read (F019).
-          const level = await trx('stock_levels')
-            .where({ tenant, service_id: line.service_id, location_id: fromLocation })
-            .forUpdate()
-            .first();
-          const available = level ? availableQuantity(level) : 0;
-          if (available < quantity) {
-            throw new Error(`Insufficient available stock at source for service ${line.service_id} (have ${available}, need ${quantity})`);
+          if (line.unit_id) {
+            // Serialized: the unit must be in_stock at the source location. Locked so a
+            // concurrent dispatch/fulfill cannot claim the same unit (F022).
+            const unit = await trx('stock_units').where({ tenant, unit_id: line.unit_id }).forUpdate().first();
+            if (!unit) throw new Error(`Stock unit ${line.unit_id} not found`);
+            if (unit.service_id !== line.service_id) throw new Error('Stock unit does not match line service_id');
+            if (unit.status !== 'in_stock') throw new Error('Only in_stock units can be transferred');
+            if (unit.location_id !== fromLocation) throw new Error('Stock unit is not at the transfer source location');
+          } else {
+            // Non-serialized: source must have enough available stock. Locked so
+            // concurrent dispatches serialize on the availability read (F019).
+            const level = await trx('stock_levels')
+              .where({ tenant, service_id: line.service_id, location_id: fromLocation })
+              .forUpdate()
+              .first();
+            const available = level ? availableQuantity(level) : 0;
+            if (available < quantity) {
+              throw new Error(`Insufficient available stock at source for service ${line.service_id} (have ${available}, need ${quantity})`);
+            }
           }
+
+          await trx('stock_transfer_lines').insert({
+            tenant,
+            transfer_id: transfer.transfer_id,
+            service_id: line.service_id,
+            quantity,
+            unit_id: line.unit_id ?? null,
+          });
+
+          await recordStockMovement(trx, tenant, {
+            movement_type: 'transfer_out',
+            service_id: line.service_id,
+            quantity,
+            unit_id: line.unit_id ?? null,
+            from_location_id: fromLocation,
+            to_location_id: toLocation,
+            source_doc_type: 'transfer',
+            source_doc_id: transfer.transfer_id,
+            performed_by: user.user_id,
+            ...(line.unit_id ? { unitPatch: { status: 'in_transit', location_id: null } } : {}),
+          });
         }
 
-        await trx('stock_transfer_lines').insert({
-          tenant,
-          transfer_id: transfer.transfer_id,
-          service_id: line.service_id,
-          quantity,
-          unit_id: line.unit_id ?? null,
-        });
-
-        await recordStockMovement(trx, tenant, {
-          movement_type: 'transfer_out',
-          service_id: line.service_id,
-          quantity,
-          unit_id: line.unit_id ?? null,
-          from_location_id: fromLocation,
-          to_location_id: toLocation,
-          source_doc_type: 'transfer',
-          source_doc_id: transfer.transfer_id,
-          performed_by: user.user_id,
-          ...(line.unit_id ? { unitPatch: { status: 'in_transit', location_id: null } } : {}),
-        });
-      }
-
-      return (await loadTransfer(trx, tenant, transfer.transfer_id)) as IStockTransfer;
+        return (await loadTransfer(trx, tenant, transfer.transfer_id)) as IStockTransfer;
+      });
     });
   },
 );
 
 export const receiveTransfer = withAuth(
-  async (user, { tenant }, transferId: string): Promise<IStockTransfer> => {
-    await requireTransferPerm(user, 'update');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      // Header row lock = transition mutex: a concurrent duplicate receive (or a
-      // racing cancel) blocks here and is then rejected by the status guard (F019).
-      const transfer = await trx('stock_transfers').where({ tenant, transfer_id: transferId }).forUpdate().first();
-      if (!transfer) throw new Error('Transfer not found');
-      if (transfer.status !== 'dispatched') throw new Error(`Cannot receive a transfer in status '${transfer.status}'`);
+  async (user, { tenant }, transferId: string): Promise<IStockTransfer | TransferActionError> => {
+    return withTransferActionErrors(async () => {
+      await requireTransferPerm(user, 'update');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        // Header row lock = transition mutex: a concurrent duplicate receive (or a
+        // racing cancel) blocks here and is then rejected by the status guard (F019).
+        const transfer = await trx('stock_transfers').where({ tenant, transfer_id: transferId }).forUpdate().first();
+        if (!transfer) throw new Error('Transfer not found');
+        if (transfer.status !== 'dispatched') throw new Error(`Cannot receive a transfer in status '${transfer.status}'`);
 
-      const lines = (await trx('stock_transfer_lines')
-        .where({ tenant, transfer_id: transferId })) as IStockTransferLine[];
+        const lines = (await trx('stock_transfer_lines')
+          .where({ tenant, transfer_id: transferId })) as IStockTransferLine[];
 
-      for (const line of lines) {
-        await recordStockMovement(trx, tenant, {
-          movement_type: 'transfer_in',
-          service_id: line.service_id,
-          quantity: Number(line.quantity),
-          unit_id: line.unit_id ?? null,
-          from_location_id: transfer.from_location_id,
-          to_location_id: transfer.to_location_id,
-          source_doc_type: 'transfer',
-          source_doc_id: transferId,
-          performed_by: user.user_id,
-          ...(line.unit_id ? { unitPatch: { status: 'in_stock', location_id: transfer.to_location_id } } : {}),
-        });
-      }
+        for (const line of lines) {
+          await recordStockMovement(trx, tenant, {
+            movement_type: 'transfer_in',
+            service_id: line.service_id,
+            quantity: Number(line.quantity),
+            unit_id: line.unit_id ?? null,
+            from_location_id: transfer.from_location_id,
+            to_location_id: transfer.to_location_id,
+            source_doc_type: 'transfer',
+            source_doc_id: transferId,
+            performed_by: user.user_id,
+            ...(line.unit_id ? { unitPatch: { status: 'in_stock', location_id: transfer.to_location_id } } : {}),
+          });
+        }
 
-      await trx('stock_transfers')
-        .where({ tenant, transfer_id: transferId })
-        .update({ status: 'received', received_by: user.user_id, received_at: trx.fn.now(), updated_at: trx.fn.now() });
+        await trx('stock_transfers')
+          .where({ tenant, transfer_id: transferId })
+          .update({ status: 'received', received_by: user.user_id, received_at: trx.fn.now(), updated_at: trx.fn.now() });
 
-      return (await loadTransfer(trx, tenant, transferId)) as IStockTransfer;
+        return (await loadTransfer(trx, tenant, transferId)) as IStockTransfer;
+      });
     });
   },
 );
 
 /** Cancel a dispatched transfer before receipt: return the in-transit stock to the source. */
 export const cancelTransfer = withAuth(
-  async (user, { tenant }, transferId: string): Promise<IStockTransfer> => {
-    await requireTransferPerm(user, 'update');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      // Same mutex as receiveTransfer: cancel-vs-receive races resolve to exactly one (F019).
-      const transfer = await trx('stock_transfers').where({ tenant, transfer_id: transferId }).forUpdate().first();
-      if (!transfer) throw new Error('Transfer not found');
-      if (transfer.status !== 'dispatched') throw new Error(`Cannot cancel a transfer in status '${transfer.status}'`);
+  async (user, { tenant }, transferId: string): Promise<IStockTransfer | TransferActionError> => {
+    return withTransferActionErrors(async () => {
+      await requireTransferPerm(user, 'update');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        // Same mutex as receiveTransfer: cancel-vs-receive races resolve to exactly one (F019).
+        const transfer = await trx('stock_transfers').where({ tenant, transfer_id: transferId }).forUpdate().first();
+        if (!transfer) throw new Error('Transfer not found');
+        if (transfer.status !== 'dispatched') throw new Error(`Cannot cancel a transfer in status '${transfer.status}'`);
 
-      const lines = (await trx('stock_transfer_lines')
-        .where({ tenant, transfer_id: transferId })) as IStockTransferLine[];
+        const lines = (await trx('stock_transfer_lines')
+          .where({ tenant, transfer_id: transferId })) as IStockTransferLine[];
 
-      for (const line of lines) {
-        // Return the stock to the source: a transfer_in landing back at from_location.
-        await recordStockMovement(trx, tenant, {
-          movement_type: 'transfer_in',
-          service_id: line.service_id,
-          quantity: Number(line.quantity),
-          unit_id: line.unit_id ?? null,
-          from_location_id: transfer.to_location_id,
-          to_location_id: transfer.from_location_id,
-          reason: 'Transfer cancelled — returned to source',
-          source_doc_type: 'transfer',
-          source_doc_id: transferId,
-          performed_by: user.user_id,
-          ...(line.unit_id ? { unitPatch: { status: 'in_stock', location_id: transfer.from_location_id } } : {}),
-        });
-      }
+        for (const line of lines) {
+          // Return the stock to the source: a transfer_in landing back at from_location.
+          await recordStockMovement(trx, tenant, {
+            movement_type: 'transfer_in',
+            service_id: line.service_id,
+            quantity: Number(line.quantity),
+            unit_id: line.unit_id ?? null,
+            from_location_id: transfer.to_location_id,
+            to_location_id: transfer.from_location_id,
+            reason: 'Transfer cancelled — returned to source',
+            source_doc_type: 'transfer',
+            source_doc_id: transferId,
+            performed_by: user.user_id,
+            ...(line.unit_id ? { unitPatch: { status: 'in_stock', location_id: transfer.from_location_id } } : {}),
+          });
+        }
 
-      await trx('stock_transfers')
-        .where({ tenant, transfer_id: transferId })
-        .update({ status: 'cancelled', updated_at: trx.fn.now() });
+        await trx('stock_transfers')
+          .where({ tenant, transfer_id: transferId })
+          .update({ status: 'cancelled', updated_at: trx.fn.now() });
 
-      return (await loadTransfer(trx, tenant, transferId)) as IStockTransfer;
+        return (await loadTransfer(trx, tenant, transferId)) as IStockTransfer;
+      });
     });
   },
 );
 
 export const getTransfer = withAuth(
-  async (user, { tenant }, transferId: string): Promise<IStockTransfer | null> => {
-    await requireTransferPerm(user, 'read');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => loadTransfer(trx, tenant, transferId));
+  async (user, { tenant }, transferId: string): Promise<IStockTransfer | null | TransferActionError> => {
+    return withTransferActionErrors(async () => {
+      await requireTransferPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => loadTransfer(trx, tenant, transferId));
+    });
   },
 );
 
@@ -220,15 +294,17 @@ export const listTransfers = withAuth(
     user,
     { tenant },
     opts?: { status?: IStockTransfer['status']; from_location_id?: string; to_location_id?: string },
-  ): Promise<IStockTransfer[]> => {
-    await requireTransferPerm(user, 'read');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const q = trx('stock_transfers').where({ tenant });
-      if (opts?.status) q.andWhere({ status: opts.status });
-      if (opts?.from_location_id) q.andWhere({ from_location_id: opts.from_location_id });
-      if (opts?.to_location_id) q.andWhere({ to_location_id: opts.to_location_id });
-      return (await q.orderBy('dispatched_at', 'desc')) as IStockTransfer[];
+  ): Promise<IStockTransfer[] | TransferActionError> => {
+    return withTransferActionErrors(async () => {
+      await requireTransferPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const q = trx('stock_transfers').where({ tenant });
+        if (opts?.status) q.andWhere({ status: opts.status });
+        if (opts?.from_location_id) q.andWhere({ from_location_id: opts.from_location_id });
+        if (opts?.to_location_id) q.andWhere({ to_location_id: opts.to_location_id });
+        return (await q.orderBy('dispatched_at', 'desc')) as IStockTransfer[];
+      });
     });
   },
 );

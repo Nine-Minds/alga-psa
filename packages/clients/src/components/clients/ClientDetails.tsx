@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } fr
 import type { DeletionValidationResult, IDocument } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import type { IClient, ITag } from '@alga-psa/types';
-import { findTagsByEntityId } from '@alga-psa/tags/actions';
+import { findTagsByEntityId, isTagActionError } from '@alga-psa/tags/actions';
 import { useTags } from '@alga-psa/tags/context';
 import { getAllUsersBasicAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
 import type { ISlaPolicy } from '@alga-psa/types';
@@ -67,6 +67,13 @@ import ClientContractLineDashboard from './ClientContractLineDashboard';
 import { ClientNotesPanel } from './panels/ClientNotesPanel';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -78,7 +85,11 @@ import {
   isTerminalEntraRunStatus,
   resolveEntraClientSyncStartState,
   shouldShowEntraSyncAction,
-} from './clientDetailsEntraSyncAction';
+  } from './clientDetailsEntraSyncAction';
+
+function isClientActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 import { ClientDetailsTabContent } from './ClientDetailsTabContent';
 import ClientCommandCenter from './command-center/ClientCommandCenter';
 import HuduClientTab from './HuduClientTab';
@@ -472,7 +483,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
     } catch (error: any) {
       console.error('Failed to delete client:', error);
-      toast.error(error.message || t('clientDetails.deleteError'));
+      toast.error(t('clientDetails.deleteError'));
     } finally {
       setIsDeleteProcessing(false);
     }
@@ -772,6 +783,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       if (!currentUser) return;
       try {
         const options = await getTicketFormOptions();
+        if (isClientActionError(options)) {
+          console.error('Error fetching ticket form options:', getErrorMessage(options));
+          return;
+        }
         setTicketFormOptions({
           statusOptions: options.statusOptions,
           priorityOptions: options.priorityOptions,
@@ -793,6 +808,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     const fetchTags = async () => {
       try {
         const clientTags = await findTagsByEntityId(client.client_id, 'client');
+        if (isTagActionError(clientTags)) {
+          console.error('Error fetching tags:', clientTags);
+          setTags([]);
+          return;
+        }
         setTags(clientTags);
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -961,8 +981,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         account_manager_id: editedClientRef.current.account_manager_id === '' ? null : editedClientRef.current.account_manager_id,
       };
       const updatedClientResult = await updateClient(client.client_id, dataToUpdate);
-      // Assuming updateClient returns the full updated client object matching IClient
-      const updatedClient = updatedClientResult as IClient; // Cast if necessary, or adjust based on actual return type
+      if (isClientActionError(updatedClientResult)) {
+        handleError(updatedClientResult);
+        return;
+      }
+
+      const updatedClient = updatedClientResult as IClient;
       setEditedClient(updatedClient);
       setHasUnsavedChanges(false);
       setHasAttemptedSubmit(false);
@@ -1030,6 +1054,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const handleBillingConfigSave = useCallback(async (updatedBillingConfig: Partial<IClient>) => {
     try {
       const updatedClient = await updateClient(client.client_id, updatedBillingConfig);
+      if (isClientActionError(updatedClient)) {
+        throw new Error(getErrorMessage(updatedClient));
+      }
+
       setEditedClient(prevClient => {
         const newClient = { ...prevClient };
         Object.keys(updatedBillingConfig).forEach(key => {
@@ -1039,6 +1067,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       });
     } catch (error) {
       console.error('Error updating client:', error);
+      throw error;
     }
   }, [client.client_id]);
 
@@ -1124,6 +1153,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       try {
         const rows = await listClientInboundEmailDomains(editedClient.client_id);
         if (cancelled) return;
+        if (isClientActionError(rows)) {
+          toast.error(getErrorMessage(rows));
+          return;
+        }
         setInboundEmailDomains((rows ?? []).map((r: any) => ({ id: r.id, domain: r.domain })));
       } catch (error) {
         // Non-blocking; if this fails we don't want to prevent other client edits.
@@ -1142,6 +1175,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       try {
         const rows = await listInboundTicketDestinationOptions();
         if (cancelled) return;
+        if (isClientActionError(rows)) {
+          console.error('Failed to load inbound ticket destination options:', getErrorMessage(rows));
+          setInboundDestinationOptions([]);
+          return;
+        }
         const options = (rows ?? []).map((row: any) => ({
           value: row.id,
           label: row.is_active
@@ -1175,6 +1213,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     setIsInboundDomainBusy(true);
     try {
       const created = await addClientInboundEmailDomain(editedClient.client_id, domain);
+      if (isClientActionError(created)) {
+        toast.error(getErrorMessage(created));
+        return;
+      }
       setInboundEmailDomains((prev) => {
         const next = [...prev, { id: (created as any).id, domain: (created as any).domain }].filter(
           (d, idx, arr) => idx === arr.findIndex((x) => x.id === d.id)
@@ -1185,7 +1227,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setInboundDomainDraft('');
       toast.success(t('clientDetails.inboundDomainAdded'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('clientDetails.inboundDomainAddFailed'));
+      console.error('Failed to add inbound email domain:', error);
+      toast.error(t('clientDetails.inboundDomainAddFailed'));
     } finally {
       setIsInboundDomainBusy(false);
     }
@@ -1195,11 +1238,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     if (!domainId) return;
     setIsInboundDomainBusy(true);
     try {
-      await removeClientInboundEmailDomain(editedClient.client_id, domainId);
+      const result = await removeClientInboundEmailDomain(editedClient.client_id, domainId);
+      if (isClientActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       setInboundEmailDomains((prev) => prev.filter((d) => d.id !== domainId));
       toast.success(t('clientDetails.inboundDomainRemoved'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('clientDetails.inboundDomainRemoveFailed'));
+      console.error('Failed to remove inbound email domain:', error);
+      toast.error(t('clientDetails.inboundDomainRemoveFailed'));
     } finally {
       setIsInboundDomainBusy(false);
     }
@@ -1215,6 +1263,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       try {
         const rows = await listClientNameAliases(editedClient.client_id);
         if (cancelled) return;
+        if (isClientActionError(rows)) {
+          toast.error(getErrorMessage(rows));
+          return;
+        }
         setClientNameAliases((rows ?? []).map((r: any) => ({ id: r.id, alias: r.alias })));
       } catch (error) {
         // Non-blocking; if this fails we don't want to prevent other client edits.
@@ -1232,6 +1284,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     setIsAliasBusy(true);
     try {
       const created = await addClientNameAlias(editedClient.client_id, alias);
+      if (isClientActionError(created)) {
+        toast.error(getErrorMessage(created));
+        return;
+      }
       setClientNameAliases((prev) => {
         const next = [...prev, { id: (created as any).id, alias: (created as any).alias }].filter(
           (a, idx, arr) => idx === arr.findIndex((x) => x.id === a.id)
@@ -1242,7 +1298,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setAliasDraft('');
       toast.success(t('clientDetails.nameAliasAdded', { defaultValue: 'Alias added' }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('clientDetails.nameAliasAddFailed', { defaultValue: 'Failed to add alias' }));
+      console.error('Failed to add client alias:', error);
+      toast.error(t('clientDetails.nameAliasAddFailed', { defaultValue: 'Failed to add alias' }));
     } finally {
       setIsAliasBusy(false);
     }
@@ -1252,11 +1309,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     if (!aliasId) return;
     setIsAliasBusy(true);
     try {
-      await removeClientNameAlias(editedClient.client_id, aliasId);
+      const result = await removeClientNameAlias(editedClient.client_id, aliasId);
+      if (isClientActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       setClientNameAliases((prev) => prev.filter((a) => a.id !== aliasId));
       toast.success(t('clientDetails.nameAliasRemoved', { defaultValue: 'Alias removed' }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('clientDetails.nameAliasRemoveFailed', { defaultValue: 'Failed to remove alias' }));
+      console.error('Failed to remove client alias:', error);
+      toast.error(t('clientDetails.nameAliasRemoveFailed', { defaultValue: 'Failed to remove alias' }));
     } finally {
       setIsAliasBusy(false);
     }

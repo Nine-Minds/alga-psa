@@ -1,6 +1,7 @@
 import { listVendors } from '@alga-psa/inventory/actions';
 import { VendorsManager } from '@alga-psa/inventory/components';
 import { getSession } from '@alga-psa/auth';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
 import type { IVendor } from '@alga-psa/types';
 import type { Metadata } from 'next';
@@ -23,7 +24,12 @@ export default async function VendorsPage() {
 
   let initialVendors: IVendor[] = [];
   try {
-    initialVendors = await listVendors({});
+    const result = await listVendors({});
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      console.error('Failed to load vendors:', getErrorMessage(result));
+    } else {
+      initialVendors = result;
+    }
   } catch (error) {
     console.error('Failed to load vendors:', error);
   }

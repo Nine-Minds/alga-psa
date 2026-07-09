@@ -22,6 +22,7 @@ import { getApiMetadataProducts } from '../../productSurfaceRegistry';
 // import { validateTenantAccess } from '../../utils/validation';
 import fs from 'fs/promises';
 import path from 'path';
+import { BadRequestError } from '../middleware/apiMiddleware';
 
 export class MetadataService {
   private endpointsCache: ApiEndpoint[] | null = null;
@@ -43,7 +44,7 @@ export class MetadataService {
   ): Promise<ApiEndpointsResponse> {
     // Validate tenant access - simplified for metadata endpoints
     if (!tenantId) {
-      throw new Error('Tenant ID is required');
+      throw new BadRequestError('Tenant ID is required');
     }
 
     const endpoints = await this.discoverEndpoints();
@@ -104,7 +105,7 @@ export class MetadataService {
   ): Promise<ApiSchemasResponse> {
     // Validate tenant access - simplified for metadata endpoints
     if (!tenantId) {
-      throw new Error('Tenant ID is required');
+      throw new BadRequestError('Tenant ID is required');
     }
 
     const schemas = await this.discoverSchemas();
@@ -143,7 +144,7 @@ export class MetadataService {
   ): Promise<ApiPermissionsResponse> {
     // Validate tenant access - simplified for metadata endpoints
     if (!tenantId) {
-      throw new Error('Tenant ID is required');
+      throw new BadRequestError('Tenant ID is required');
     }
 
     const permissions = await this.discoverPermissions();
@@ -171,7 +172,7 @@ export class MetadataService {
   ): Promise<OpenApiResponse> {
     // Validate tenant access - simplified for metadata endpoints
     if (!tenantId) {
-      throw new Error('Tenant ID is required');
+      throw new BadRequestError('Tenant ID is required');
     }
 
     const endpoints = await this.discoverEndpoints();
@@ -242,7 +243,7 @@ export class MetadataService {
   async getApiHealth(tenantId: string): Promise<ApiHealthResponse> {
     // Validate tenant access - simplified for metadata endpoints
     if (!tenantId) {
-      throw new Error('Tenant ID is required');
+      throw new BadRequestError('Tenant ID is required');
     }
 
     const startTime = Date.now();
@@ -252,20 +253,20 @@ export class MetadataService {
     try {
       await this.db.findOne('clients', { limit: 1 });
       services.database = { status: 'up', latency: Date.now() - startTime };
-    } catch (error) {
+    } catch {
       services.database = { 
         status: 'down', 
-        message: error instanceof Error ? error.message : 'Unknown error' 
+        message: 'Database health check failed.'
       };
     }
 
     // Check event bus
     try {
       services.eventBus = { status: 'up' };
-    } catch (error) {
+    } catch {
       services.eventBus = { 
         status: 'down', 
-        message: error instanceof Error ? error.message : 'Unknown error' 
+        message: 'Event bus health check failed.'
       };
     }
 
@@ -294,7 +295,7 @@ export class MetadataService {
   ): Promise<ApiStatsResponse> {
     // Validate tenant access - simplified for metadata endpoints
     if (!tenantId) {
-      throw new Error('Tenant ID is required');
+      throw new BadRequestError('Tenant ID is required');
     }
 
     const endpoints = await this.discoverEndpoints();

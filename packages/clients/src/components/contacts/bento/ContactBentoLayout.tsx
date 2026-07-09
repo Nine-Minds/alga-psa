@@ -36,12 +36,19 @@ import type {
   ContactStatsSummary,
   ContactTicketsSummary,
 } from '../../../actions/contact-actions/contactBentoActions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type PortalPermissions = {
   canInvite: boolean;
   canUpdateRoles: boolean;
   canRead: boolean;
 };
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ContactBentoLayoutProps {
   id?: string;
@@ -233,10 +240,19 @@ export function ContactBentoLayout({
   // callbacks across the RSC boundary, and quick-view callers don't pass
   // interactions at all — so the tile refetches its own rows.
   const [interactions, setInteractions] = useState<IInteraction[]>(initialInteractions ?? []);
+  const [interactionsErrorMessage, setInteractionsErrorMessage] = useState<string | null>(null);
   const refreshInteractions = useCallback(async () => {
     try {
-      setInteractions(await getInteractionsForEntity(contact.contact_name_id, 'contact'));
-    } catch {
+      const rows = await getInteractionsForEntity(contact.contact_name_id, 'contact');
+      if (isReturnedActionError(rows)) {
+        setInteractionsErrorMessage(getErrorMessage(rows));
+        return;
+      }
+      setInteractionsErrorMessage(null);
+      setInteractions(rows);
+    } catch (error) {
+      console.error('Failed to refresh contact interactions:', error);
+      setInteractionsErrorMessage('Interactions could not be loaded. Please try again.');
       // Keep the current rows; the drawer/dialog that changed data already surfaced its own errors.
     }
   }, [contact.contact_name_id]);
@@ -293,6 +309,17 @@ export function ContactBentoLayout({
         contact_name_id: contact.contact_name_id,
         [field]: value,
       } as Partial<IContact>);
+      if (isReturnedActionError(updated)) {
+        setContact(previous);
+        setRoleDraft(previous.role ?? '');
+        setNotesDraft(previous.notes ?? '');
+        toast({
+          title: t('contactBento.toast.saveFailed', { defaultValue: 'Could not update contact' }),
+          description: getErrorMessage(updated),
+          variant: 'destructive',
+        });
+        return;
+      }
       setContact(updated);
       onChangesSaved?.();
       await onContactUpdated?.();
@@ -303,9 +330,10 @@ export function ContactBentoLayout({
       setContact(previous);
       setRoleDraft(previous.role ?? '');
       setNotesDraft(previous.notes ?? '');
+      console.error('Failed to update contact field:', error);
       toast({
         title: t('contactBento.toast.saveFailed', { defaultValue: 'Could not update contact' }),
-        description: error instanceof Error ? error.message : undefined,
+        description: t('contactBento.toast.saveFailedDescription', { defaultValue: 'The contact could not be updated. Please try again.' }),
         variant: 'destructive',
       });
     } finally {
@@ -597,7 +625,9 @@ export function ContactBentoLayout({
           </div>
         }
       >
-        {interactions.length ? (
+        {interactionsErrorMessage ? (
+          <BentoTileEmpty id={`${id}-interactions-error`}>{interactionsErrorMessage}</BentoTileEmpty>
+        ) : interactions.length ? (
           <TileRows>
             {interactions.slice(0, 5).map((interaction) => (
               <TileRow

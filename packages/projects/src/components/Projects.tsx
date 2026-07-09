@@ -13,7 +13,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import ProjectQuickAdd from './ProjectQuickAdd';
 import { deleteProject, searchProjectListIds } from '../actions/projectActions';
 import { findUserById } from '@alga-psa/user-composition/actions';
-import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
@@ -341,6 +341,10 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
         
         // Only fetch project-specific tags, not all tags again
         const projectTags = await findTagsByEntityIds(projectIds, 'project');
+        if (isTagActionError(projectTags)) {
+          console.error('Error fetching tags:', projectTags);
+          return;
+        }
 
         const newProjectTags: Record<string, ITag[]> = {};
         projectTags.forEach(tag => {
@@ -365,6 +369,11 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     const fetchAllTags = async () => {
       try {
         const allTags = await findAllTagsByType('project');
+        if (isTagActionError(allTags)) {
+          console.error('Error fetching all tags:', allTags);
+          setAllUniqueTags([]);
+          return;
+        }
         setAllUniqueTags(allTags);
       } catch (error) {
         console.error('Error fetching all tags:', error);

@@ -10,7 +10,14 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   Save,
@@ -43,13 +50,16 @@ import {
   ArticleAudience,
   ArticleStatus,
 } from '../../actions/kbArticleActions';
-import { TagManager, findTagsByEntityId } from '@alga-psa/tags';
+import { TagManager, findTagsByEntityId, isTagActionError } from '@alga-psa/tags';
 import type { ITag } from '@alga-psa/types';
 import {
   useArticleAudienceOptions,
   useArticleTypeOptions,
   useFormatArticleStatus,
 } from '@alga-psa/ui/hooks/useKnowledgeBaseEnumOptions';
+
+const isDocumentActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionPermissionError(value) || isActionMessageError(value);
 
 const STATUS_COLORS: Record<ArticleStatus, string> = {
   draft: 'bg-gray-100 text-gray-700',
@@ -171,6 +181,10 @@ export default function KBArticleEditor({
       // Load tags for the article
       try {
         const tags = await findTagsByEntityId(articleData.article_id, 'knowledge_base_article');
+        if (isTagActionError(tags)) {
+          handleError(tags);
+          return;
+        }
         setArticleTags(tags);
       } catch (tagError) {
         console.error('Failed to load article tags:', tagError);
@@ -260,10 +274,13 @@ export default function KBArticleEditor({
               : 'Snapshot sync failed';
           throw new Error(message);
         }
-        await updateBlockContent(documentId, {
+        const contentResult = await updateBlockContent(documentId, {
           block_data: JSON.stringify(json),
           user_id: userId,
         });
+        if (isDocumentActionError(contentResult)) {
+          throw new Error(getErrorMessage(contentResult));
+        }
       }
       toast.success(
         tRef.current('editor.feedback.contentSaveSuccess', {

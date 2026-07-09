@@ -11,6 +11,65 @@ import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTi
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import { withAuth } from '@alga-psa/auth';
 import { assertMspPermission } from '../lib/authHelpers';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+export type ClientContractLineMutationResult = void | ActionMessageError | ActionPermissionError;
+
+function clientContractLineActionErrorFrom(error: unknown): ActionMessageError | ActionPermissionError | null {
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.includes('Permission denied:')) {
+      return permissionError(message);
+    }
+    if (/unauthorized|not authenticated|must sign in/i.test(message)) {
+      return permissionError('You must be signed in to manage client contract lines.');
+    }
+    if (message.includes('Assignment-scoped client contract line identity is required')) {
+      return actionError('Please refresh the contract assignment and try again.');
+    }
+    if (
+      message.includes('Cannot replace contract line assignment after it has authoritative recurring detail periods') ||
+      message.includes('Cannot deactivate contract line assignment before') ||
+      message.includes('Cannot set end date to')
+    ) {
+      return actionError(message);
+    }
+    if (message.includes('Contract line mutation is ambiguous for assignment')) {
+      return actionError('This contract line is shared by multiple active assignments. Edit the specific contract assignment before changing its lines.');
+    }
+    if (
+      message.includes('not found') ||
+      message.includes('not associated with client contract') ||
+      message.includes('missing template provenance')
+    ) {
+      return actionError(message);
+    }
+    if (message.includes('A contract line with the same details already exists for this client')) {
+      return actionError(message);
+    }
+  }
+
+  const dbError = error as { code?: string; constraint?: string; column?: string };
+  if (dbError?.code === '23505') {
+    return actionError('A contract line with these details already exists for this client.');
+  }
+  if (dbError?.code === '22P02') {
+    return actionError('The selected client or contract line is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required contract line field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected contract line reference is no longer valid. Please refresh and try again.');
+  }
+
+  return null;
+}
 
 const assertCanReadClientContractLines = (user: any) =>
   assertMspPermission(
@@ -240,10 +299,10 @@ export const getClientContractLine = withAuth(async (
   { tenant },
   clientId: string,
   clientContractId?: string
-): Promise<IClientContractLine[]> => {
-  await assertCanReadClientContractLines(_user);
-
+): Promise<IClientContractLine[] | ActionMessageError | ActionPermissionError> => {
   try {
+    await assertCanReadClientContractLines(_user);
+
     const { knex: db } = await createTenantKnex();
     const clientContractLine: IClientContractLine[] = await withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
@@ -289,8 +348,10 @@ export const getClientContractLine = withAuth(async (
       };
     });
   } catch (error) {
+    const expected = clientContractLineActionErrorFrom(error);
+    if (expected) return expected;
     console.error('Error fetching client contract line:', error);
-    throw new Error('Failed to fetch client contract line');
+    throw error;
   }
 });
 
@@ -299,10 +360,10 @@ export const updateClientContractLine = withAuth(async (
   { tenant },
   clientContractLineId: string,
   updates: Partial<IClientContractLine>
-): Promise<void> => {
-  await assertCanUpdateClientContractLines(_user);
-
+): Promise<ClientContractLineMutationResult> => {
   try {
+    await assertCanUpdateClientContractLines(_user);
+
     const { knex: db } = await createTenantKnex();
     const identity = ensureAssignmentScopedIdentity(parseClientContractLineIdentity(clientContractLineId));
     const latestInvoicedPeriodEnd = await getLatestAuthoritativeRecurringPeriodEndDate(db, tenant, clientContractLineId);
@@ -338,7 +399,9 @@ export const updateClientContractLine = withAuth(async (
     }
   } catch (error) {
     console.error('Error updating client contract line:', error);
-    throw new Error('Failed to update client contract line');
+    const expected = clientContractLineActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -346,10 +409,10 @@ export const addClientContractLine = withAuth(async (
   _user,
   { tenant },
   newBilling: Omit<IClientContractLine, 'client_contract_line_id' | 'tenant'>
-): Promise<void> => {
-  await assertCanUpdateClientContractLines(_user);
-
+): Promise<ClientContractLineMutationResult> => {
   try {
+    await assertCanUpdateClientContractLines(_user);
+
     const { knex: db } = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -443,12 +506,14 @@ export const addClientContractLine = withAuth(async (
     });
   } catch (error: any) {
     console.error('Error adding client contract line:', error);
+    const expected = clientContractLineActionErrorFrom(error);
+    if (expected) return expected;
     if (error.code === 'ER_NO_SUCH_TABLE') {
-      throw new Error('Database table not found');
+      return actionError('Client contract line storage is unavailable. Please try again later.');
     } else if (error.code === 'ER_BAD_FIELD_ERROR') {
-      throw new Error('Invalid database field');
+      return actionError('Client contract line data is invalid. Please refresh and try again.');
     } else {
-      throw new Error(error.message || 'Failed to add client contract line');
+      return actionError('Failed to add client contract line.');
     }
   }
 });
@@ -457,10 +522,10 @@ export const removeClientContractLine = withAuth(async (
   _user,
   { tenant },
   clientContractLineId: string
-): Promise<void> => {
-  await assertCanUpdateClientContractLines(_user);
-
+): Promise<ClientContractLineMutationResult> => {
   try {
+    await assertCanUpdateClientContractLines(_user);
+
     const { knex: db } = await createTenantKnex();
     const identity = ensureAssignmentScopedIdentity(parseClientContractLineIdentity(clientContractLineId));
 
@@ -485,8 +550,9 @@ export const removeClientContractLine = withAuth(async (
     }
   } catch (error: any) {
     console.error('Error removing client contract line:', error);
-    // Preserve the original error message if it exists
-    throw new Error(error.message || 'Failed to remove client contract line');
+    const expected = clientContractLineActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -495,10 +561,10 @@ export const editClientContractLine = withAuth(async (
   { tenant },
   clientContractLineId: string,
   updates: Partial<IClientContractLine>
-): Promise<void> => {
-  await assertCanUpdateClientContractLines(_user);
-
+): Promise<ClientContractLineMutationResult> => {
   try {
+    await assertCanUpdateClientContractLines(_user);
+
     const { knex: db } = await createTenantKnex();
     const identity = ensureAssignmentScopedIdentity(parseClientContractLineIdentity(clientContractLineId));
 
@@ -556,7 +622,8 @@ export const editClientContractLine = withAuth(async (
     }
   } catch (error: any) {
     console.error('Error editing client contract line:', error);
-    // Preserve the original error message if it exists
-    throw new Error(error.message || 'Failed to edit client contract line');
+    const expected = clientContractLineActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });

@@ -6,6 +6,14 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { OrderingService } from '../lib/orderingUtils';
 import type { IProjectPhase, IProjectTask } from '@alga-psa/types';
 import { Knex } from 'knex';
+import {
+  actionError,
+  isActionMessageError,
+  isActionPermissionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -13,6 +21,53 @@ function tenantScopedTable(
   tenant: string,
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
+}
+
+export type ProjectOrderKeyActionError = ActionMessageError | ActionPermissionError;
+
+export function isProjectOrderKeyActionError(value: unknown): value is ProjectOrderKeyActionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
+function projectOrderKeyActionErrorFrom(error: unknown): ProjectOrderKeyActionError | null {
+  if (isProjectOrderKeyActionError(error)) {
+    return error;
+  }
+  if (error instanceof Error) {
+    if (error.message.includes('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (
+      error.message.includes('not found') ||
+      error.message.includes('No valid') ||
+      error.message.includes('Missing order key')
+    ) {
+      return actionError(error.message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected project, phase, task, or status values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required project ordering field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected project ordering records no longer exists. Please refresh and try again.');
+  }
+
+  return null;
+}
+
+async function withProjectOrderKeyErrors<T>(operation: () => Promise<T>): Promise<T | ProjectOrderKeyActionError> {
+  try {
+    return await operation();
+  } catch (error) {
+    const expected = projectOrderKeyActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 }
 
 /**
@@ -23,7 +78,7 @@ export const regenerateOrderKeysForStatus = withAuth(async (
   { tenant },
   phaseId: string,
   statusId: string
-): Promise<void> => {
+): Promise<void | ProjectOrderKeyActionError> => withProjectOrderKeyErrors(async () => {
   const { knex: db } = await createTenantKnex();
 
   await db.transaction(async (trx: Knex.Transaction) => {
@@ -53,7 +108,7 @@ export const regenerateOrderKeysForStatus = withAuth(async (
 
     console.log(`Regenerated order keys for ${tasks.length} tasks in status ${statusId}`);
   });
-});
+}));
 
 /**
  * Checks if order keys in a status are valid and regenerates them if needed
@@ -63,7 +118,7 @@ export const validateAndFixOrderKeys = withAuth(async (
   { tenant },
   phaseId: string,
   statusId: string
-): Promise<boolean> => {
+): Promise<boolean | ProjectOrderKeyActionError> => withProjectOrderKeyErrors(async () => {
   const { knex: db } = await createTenantKnex();
 
   if (!await hasPermission(user, 'project', 'update', db)) {
@@ -105,12 +160,15 @@ export const validateAndFixOrderKeys = withAuth(async (
 
   if (needsRegeneration) {
     console.log('Order keys need regeneration for status', statusId);
-    await regenerateOrderKeysForStatus(phaseId, statusId);
+    const result = await regenerateOrderKeysForStatus(phaseId, statusId);
+    if (isProjectOrderKeyActionError(result)) {
+      return result;
+    }
     return true;
   }
 
   return false;
-});
+}));
 
 /**
  * Regenerates order keys for all phases in a project to ensure they follow proper fractional indexing
@@ -119,7 +177,7 @@ export const regenerateOrderKeysForPhases = withAuth(async (
   user,
   { tenant },
   projectId: string
-): Promise<void> => {
+): Promise<void | ProjectOrderKeyActionError> => withProjectOrderKeyErrors(async () => {
   const { knex: db } = await createTenantKnex();
 
   await db.transaction(async (trx: Knex.Transaction) => {
@@ -155,7 +213,7 @@ export const regenerateOrderKeysForPhases = withAuth(async (
 
     console.log(`Regenerated order keys for ${phases.length} phases in project ${projectId}`);
   });
-});
+}));
 
 /**
  * Validates and fixes order keys for phases if needed
@@ -164,7 +222,7 @@ export const validateAndFixPhaseOrderKeys = withAuth(async (
   user,
   { tenant },
   projectId: string
-): Promise<boolean> => {
+): Promise<boolean | ProjectOrderKeyActionError> => withProjectOrderKeyErrors(async () => {
   const { knex: db } = await createTenantKnex();
 
   if (!await hasPermission(user, 'project', 'update', db)) {
@@ -205,9 +263,12 @@ export const validateAndFixPhaseOrderKeys = withAuth(async (
 
   if (needsRegeneration) {
     console.log('Phase order keys need regeneration for project', projectId);
-    await regenerateOrderKeysForPhases(projectId);
+    const result = await regenerateOrderKeysForPhases(projectId);
+    if (isProjectOrderKeyActionError(result)) {
+      return result;
+    }
     return true;
   }
 
   return false;
-});
+}));

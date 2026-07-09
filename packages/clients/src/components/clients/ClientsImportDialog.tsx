@@ -16,11 +16,17 @@ import { checkExistingClients, importClientsFromCSV, generateClientCSVTemplate }
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { ImportClientResult } from '@alga-psa/clients/actions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface ClientsImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onImportComplete: (clients: IClient[], updateExisting: boolean) => void;
+  onImportComplete: (results: ImportClientResult[]) => Promise<void> | void;
 }
 
 type MappableClientField = 
@@ -49,6 +55,9 @@ interface ICSVPreviewData {
   headers: string[];
   rows: string[][];
 }
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ICSVValidationResult {
   isValid: boolean;
@@ -100,6 +109,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
   });
   const [showUpdateConfirmation, setShowUpdateConfirmation] = useState(false);
   const [existingClientsCount, setExistingClientsCount] = useState(0);
+  const [successfulImportCount, setSuccessfulImportCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showOptionalFields, setShowOptionalFields] = useState(false);
 
@@ -129,6 +139,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       });
       setShowUpdateConfirmation(false);
       setExistingClientsCount(0);
+      setSuccessfulImportCount(0);
       setIsProcessing(false);
       setShowOptionalFields(false);
       setCurrentPage(1);
@@ -243,7 +254,8 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       setColumnMappings(autoMappings);
       setStep('mapping');
     } catch (error) {
-      setErrors([error instanceof Error ? error.message : 'Error reading CSV file']);
+      console.error('Error reading client CSV file:', error);
+      setErrors(['Error reading CSV file']);
     } finally {
       setIsProcessing(false);
     }
@@ -302,6 +314,11 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
           .map((result): string => result.data.client_name);
 
         const existingClients = await checkExistingClients(clientNames);
+        if (isReturnedActionError(existingClients)) {
+          setErrors([getErrorMessage(existingClients)]);
+          return;
+        }
+
         const existingClientNames = new Set(existingClients.map((c): string => c.client_name.toLowerCase()));
 
         // Mark existing clients in validation results
@@ -320,7 +337,8 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
         setValidationResults(updatedResults);
         setStep('preview');
       } catch (error) {
-        setErrors([error instanceof Error ? error.message : 'Error processing CSV data']);
+        console.error('Error processing client CSV data:', error);
+        setErrors(['Error processing CSV data']);
       } finally {
         setIsProcessing(false);
       }
@@ -332,15 +350,72 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
 
     try {
       setIsProcessing(true);
-      const validClients = validationResults
-        .filter(result => result.isValid || importOptions.skipInvalid)
-        .map((result): IClient => result.data as IClient);
+      setErrors([]);
 
-      await importClientsFromCSV(validClients, importOptions.updateExisting);
-      await onImportComplete(validClients, importOptions.updateExisting);
+      const invalidCount = validationResults.filter((result) => !result.isValid).length;
+      if (invalidCount > 0 && !importOptions.skipInvalid) {
+        setErrors([
+          t('clientsImportDialog.invalidRowsBlocked', {
+            defaultValue: 'Fix {{count}} invalid rows or enable "Skip invalid records" before importing.',
+            count: invalidCount,
+          })
+        ]);
+        return;
+      }
+
+      const importableRows = validationResults
+        .map((result, index) => ({ result, index, client: result.data as IClient }))
+        .filter((row) => row.result.isValid);
+
+      if (importableRows.length === 0) {
+        setErrors([t('clientsImportDialog.noValidRows', { defaultValue: 'There are no valid client rows to import.' })]);
+        return;
+      }
+
+      const importResults = await importClientsFromCSV(
+        importableRows.map((row) => row.client),
+        importOptions.updateExisting
+      );
+
+      const updatedValidationResults = validationResults.map((result) => ({
+        ...result,
+        errors: [...result.errors],
+        warnings: [...result.warnings],
+      }));
+
+      importResults.forEach((result, index) => {
+        const row = importableRows[index];
+        if (!row || result.success) {
+          return;
+        }
+
+        updatedValidationResults[row.index] = {
+          ...updatedValidationResults[row.index],
+          isValid: false,
+          errors: [...updatedValidationResults[row.index].errors, result.message],
+        };
+      });
+
+      setValidationResults(updatedValidationResults);
+
+      const failedResults = importResults.filter((result) => !result.success);
+      if (failedResults.length > 0) {
+        setErrors([
+          t('clientsImportDialog.serverFailures', {
+            defaultValue: '{{failed}} of {{total}} clients failed to import. Review the row issues below.',
+            failed: failedResults.length,
+            total: importResults.length,
+          })
+        ]);
+        return;
+      }
+
+      setSuccessfulImportCount(importResults.filter((result) => result.success).length);
+      await onImportComplete(importResults);
       setStep('complete');
     } catch (error) {
-      setErrors([error instanceof Error ? error.message : 'Error importing clients']);
+      console.error('Error importing clients:', error);
+      setErrors(['Error importing clients']);
     } finally {
       setIsProcessing(false);
     }
@@ -361,6 +436,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       });
       setShowUpdateConfirmation(false);
       setExistingClientsCount(0);
+      setSuccessfulImportCount(0);
       setShowOptionalFields(false);
       onClose();
     }
@@ -393,7 +469,11 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
           <Button
             id="preview-import-btn"
             onClick={handleImport}
-            disabled={validationResults.every(result => !result.isValid) || isProcessing}
+            disabled={
+              validationResults.every(result => !result.isValid) ||
+              (!importOptions.skipInvalid && validationResults.some(result => !result.isValid)) ||
+              isProcessing
+            }
           >
             {isProcessing
               ? t('clientsImportDialog.importing', { defaultValue: 'Importing...' })
@@ -717,7 +797,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
               <p className="text-gray-600 mb-4">
                 {t('clientsImportDialog.importCompleteMessage', {
                   defaultValue: 'Successfully imported {{count}} clients',
-                  count: validationResults.filter(r => r.isValid).length,
+                  count: successfulImportCount,
                 })}
               </p>
             </div>

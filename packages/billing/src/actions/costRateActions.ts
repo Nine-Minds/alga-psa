@@ -11,7 +11,7 @@ import UserCostRate, {
 } from '../models/userCostRate';
 
 export interface CostRateActionError {
-  code: CostRateValidationCode | 'permission_denied' | 'no_tenant';
+  code: CostRateValidationCode | 'permission_denied' | 'no_tenant' | 'invalid_input';
   message: string;
 }
 
@@ -50,6 +50,42 @@ export interface CostRateWorkedTimeImpactInput {
   effective_to?: string | null;
 }
 
+function costRateActionErrorFrom(error: unknown): CostRateActionError | null {
+  if (error instanceof CostRateValidationError) {
+    return { code: error.code, message: error.message };
+  }
+
+  if (error instanceof Error) {
+    const code = (error as Error & { code?: CostRateActionError['code'] }).code;
+    if (code === 'no_tenant') {
+      return { code: 'no_tenant', message: 'No tenant context. Please refresh and try again.' };
+    }
+    if (error.message.startsWith('Permission denied')) {
+      return { code: 'permission_denied', message: error.message };
+    }
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '23503') {
+    return { code: 'invalid_input', message: 'One of the selected cost rate records is no longer valid. Please refresh and try again.' };
+  }
+  if (dbError?.code === '23505') {
+    return { code: 'overlap', message: 'A cost rate already exists for this user and effective date range.' };
+  }
+
+  return null;
+}
+
+async function withCostRateActionErrors<T>(work: () => Promise<T>): Promise<T | CostRateActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = costRateActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+}
+
 function requireTenant(tenant: string | null | undefined): string {
   if (!tenant) {
     const error = new Error('No tenant context') as Error & { code?: CostRateActionError['code'] };
@@ -69,7 +105,8 @@ function currentRateFor(history: IUserCostRate[], today: string): IUserCostRate 
 export const listCostRates = withAuth(async (
   user,
   { tenant }
-): Promise<ListCostRatesResult> => {
+): Promise<ListCostRatesResult | CostRateActionError> => {
+  return withCostRateActionErrors(async () => {
   if (!await hasPermission(user, 'billing', 'read')) {
     throw new Error('Permission denied: billing read required');
   }
@@ -114,13 +151,15 @@ export const listCostRates = withAuth(async (
       };
     }),
   };
+  });
 });
 
 export const upsertCostRate = withAuth(async (
   user,
   { tenant },
   input: UpsertCostRateActionInput
-): Promise<UpsertCostRateResult> => {
+): Promise<UpsertCostRateResult | CostRateActionError> => {
+  return withCostRateActionErrors(async () => {
   if (!await hasPermission(user, 'billing', 'update')) {
     throw new Error('Permission denied: billing update required');
   }
@@ -128,33 +167,28 @@ export const upsertCostRate = withAuth(async (
   const tenantId = requireTenant(tenant);
   const { knex } = await createTenantKnex();
 
-  try {
-    const rate = await UserCostRate.upsert(knex, tenantId, {
-      ...input,
-      created_by: user.user_id,
-    });
-    const coversWorkedTime = await UserCostRate.coversWorkedTime(
-      knex,
-      tenantId,
-      rate.user_id,
-      rate.effective_from,
-      rate.effective_to
-    );
+  const rate = await UserCostRate.upsert(knex, tenantId, {
+    ...input,
+    created_by: user.user_id,
+  });
+  const coversWorkedTime = await UserCostRate.coversWorkedTime(
+    knex,
+    tenantId,
+    rate.user_id,
+    rate.effective_from,
+    rate.effective_to
+  );
 
-    return { rate, covers_worked_time: coversWorkedTime };
-  } catch (error) {
-    if (error instanceof CostRateValidationError) {
-      throw error;
-    }
-    throw error;
-  }
+  return { rate, covers_worked_time: coversWorkedTime };
+  });
 });
 
 export const deleteCostRate = withAuth(async (
   user,
   { tenant },
   rateId: string
-): Promise<DeleteCostRateResult> => {
+): Promise<DeleteCostRateResult | CostRateActionError> => {
+  return withCostRateActionErrors(async () => {
   if (!await hasPermission(user, 'billing', 'update')) {
     throw new Error('Permission denied: billing update required');
   }
@@ -176,13 +210,15 @@ export const deleteCostRate = withAuth(async (
   const deletedRate = await UserCostRate.delete(knex, tenantId, rateId);
 
   return { deleted_rate: deletedRate, covers_worked_time: coversWorkedTime };
+  });
 });
 
 export const checkCostRateWorkedTimeImpact = withAuth(async (
   user,
   { tenant },
   input: CostRateWorkedTimeImpactInput
-): Promise<{ covers_worked_time: boolean }> => {
+): Promise<{ covers_worked_time: boolean } | CostRateActionError> => {
+  return withCostRateActionErrors(async () => {
   if (!await hasPermission(user, 'billing', 'update')) {
     throw new Error('Permission denied: billing update required');
   }
@@ -198,4 +234,5 @@ export const checkCostRateWorkedTimeImpact = withAuth(async (
   );
 
   return { covers_worked_time: coversWorkedTime };
+  });
 });

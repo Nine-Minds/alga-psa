@@ -155,10 +155,11 @@ describe('client portal visibility group actions', () => {
     });
 
     const { getClientPortalVisibilityGroups } = await import('./visibilityGroupActions');
+    const groups = await getClientPortalVisibilityGroups();
 
-    await expect(getClientPortalVisibilityGroups()).rejects.toThrow(
-      'Permission denied: Client portal admin access is required'
-    );
+    expect(groups).toEqual({
+      permissionError: 'Permission denied: Client portal admin access is required',
+    });
   });
 
   it('T020: client portal admins cannot fetch visibility groups for a different client', async () => {
@@ -184,10 +185,11 @@ describe('client portal visibility group actions', () => {
     });
 
     const { getClientPortalVisibilityGroup } = await import('./visibilityGroupActions');
+    const group = await getClientPortalVisibilityGroup(groupId, undefined, otherClientId);
 
-    await expect(
-      getClientPortalVisibilityGroup(groupId, undefined, otherClientId)
-    ).rejects.toThrow('Cannot manage visibility groups for another client');
+    expect(group).toEqual({
+      permissionError: 'Permission denied: Cannot manage visibility groups for another client',
+    });
   });
 
   it('T002: client portal admin board loading returns active tenant boards without requiring board client ownership', async () => {
@@ -420,15 +422,16 @@ describe('client portal visibility group actions', () => {
     });
 
     const { createClientPortalVisibilityGroup } = await import('./visibilityGroupActions');
+    const result = await createClientPortalVisibilityGroup({
+      clientId,
+      name: 'Invalid',
+      description: null,
+      boardIds: [boardIdOne, crossClientBoardId],
+    });
 
-    await expect(
-      createClientPortalVisibilityGroup({
-        clientId,
-        name: 'Invalid',
-        description: null,
-        boardIds: [boardIdOne, crossClientBoardId],
-      })
-    ).rejects.toThrow('One or more boards are invalid for this tenant');
+    expect(result).toEqual({
+      actionError: 'One or more selected boards are no longer available. Please refresh and try again.',
+    });
   });
 
   it('T003: client portal admin cannot include inactive boards when creating a visibility group', async () => {
@@ -464,15 +467,16 @@ describe('client portal visibility group actions', () => {
     });
 
     const { createClientPortalVisibilityGroup } = await import('./visibilityGroupActions');
+    const result = await createClientPortalVisibilityGroup({
+      clientId,
+      name: 'Inactive Board Rejection',
+      description: null,
+      boardIds: [boardIdOne, boardIdTwo],
+    });
 
-    await expect(
-      createClientPortalVisibilityGroup({
-        clientId,
-        name: 'Inactive Board Rejection',
-        description: null,
-        boardIds: [boardIdOne, boardIdTwo],
-      })
-    ).rejects.toThrow('One or more boards are invalid for this tenant');
+    expect(result).toEqual({
+      actionError: 'One or more selected boards are no longer available. Please refresh and try again.',
+    });
   });
 
   it('allows preserving inactive boards already assigned to a group during updates', async () => {

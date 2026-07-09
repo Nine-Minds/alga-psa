@@ -10,7 +10,11 @@ import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/sha
 
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 
-import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
+import {
+  registerAction,
+  type InboundActionDefinition,
+  type InboundActionResult,
+} from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
 
 interface UpsertClientByExternalIdMappedValues extends Record<string, unknown> {
@@ -49,6 +53,42 @@ interface UpsertContactByExternalIdMappedValues extends Record<string, unknown> 
   phone?: string;
 }
 
+class ExpectedInboundActionFailure extends Error {
+  constructor(readonly result: InboundActionResult) {
+    super(result.message ?? 'Inbound action failed');
+  }
+}
+
+function inboundFailure(
+  code: 'VALIDATION_ERROR' | 'LOOKUP_MISS',
+  message: string,
+  entityType: string,
+  externalId?: string,
+  metadata: Record<string, unknown> = {},
+): InboundActionResult {
+  return {
+    success: false,
+    entityType,
+    externalId,
+    message,
+    metadata: { code, ...metadata },
+  };
+}
+
+function throwInboundFailure(
+  code: 'VALIDATION_ERROR' | 'LOOKUP_MISS',
+  message: string,
+  entityType: string,
+  externalId?: string,
+  metadata: Record<string, unknown> = {},
+): never {
+  throw new ExpectedInboundActionFailure(inboundFailure(code, message, entityType, externalId, metadata));
+}
+
+function toExpectedInboundActionResult(error: unknown): InboundActionResult | null {
+  return error instanceof ExpectedInboundActionFailure ? error.result : null;
+}
+
 const clientFields = [
   { name: 'client_name', type: 'string' as const, required: true, description: 'Client name' },
   {
@@ -84,60 +124,77 @@ const upsertClientByExternalIdAction: InboundActionDefinition<UpsertClientByExte
   ],
   async handle(ctx, mappedValues) {
     const { knex } = await createTenantKnex(ctx.tenant);
-    const { client, wasCreated } = await withTransaction(knex, async (trx) => {
-      const existingMapping = await lookupAlgaEntityByExternalId(
-        ctx.tenant,
-        ctx.webhookSlug,
-        'client',
-        mappedValues.external_id,
-        { knex: trx },
-      );
-      const payload = buildClientPayload(mappedValues);
+    let result;
+    try {
+      result = await withTransaction(knex, async (trx) => {
+        const existingMapping = await lookupAlgaEntityByExternalId(
+          ctx.tenant,
+          ctx.webhookSlug,
+          'client',
+          mappedValues.external_id,
+          { knex: trx },
+        );
+        const payload = buildClientPayload(mappedValues);
 
-      if (existingMapping) {
-        const current = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
-          .where({ client_id: existingMapping.algaEntityId })
-          .first();
+        if (existingMapping) {
+          const current = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
+            .where({ client_id: existingMapping.algaEntityId })
+            .first();
 
-        if (!current) {
-          throw new Error(`lookup_miss: mapped client "${existingMapping.algaEntityId}" no longer exists`);
+          if (!current) {
+            throwInboundFailure(
+              'LOOKUP_MISS',
+              `lookup_miss: mapped client "${existingMapping.algaEntityId}" no longer exists`,
+              'client',
+              mappedValues.external_id,
+              { entity_id: existingMapping.algaEntityId },
+            );
+          }
+
+          const [updated] = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
+            .where({ client_id: existingMapping.algaEntityId })
+            .update({
+              ...payload,
+              properties: {
+                ...(current.properties ?? {}),
+                ...(payload.properties ?? {}),
+              },
+              updated_at: new Date().toISOString(),
+            })
+            .returning('*');
+          return { client: updated, wasCreated: false };
         }
 
-        const [updated] = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
-          .where({ client_id: existingMapping.algaEntityId })
-          .update({
+        const [created] = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
+          .insert({
             ...payload,
-            properties: {
-              ...(current.properties ?? {}),
-              ...(payload.properties ?? {}),
-            },
+            tenant: ctx.tenant,
+            created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
           .returning('*');
-        return { client: updated, wasCreated: false };
-      }
 
-      const [created] = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
-        .insert({
-          ...payload,
+        await ensureDefaultContractForClientIfBillingConfigured(trx, {
           tenant: ctx.tenant,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .returning('*');
+          clientId: created.client_id,
+        });
 
-      await ensureDefaultContractForClientIfBillingConfigured(trx, {
-        tenant: ctx.tenant,
-        clientId: created.client_id,
+        await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'client', created.client_id, mappedValues.external_id, {
+          knex: trx,
+          metadata: { source: 'inbound_webhook', delivery_id: ctx.deliveryId },
+        });
+
+        return { client: created, wasCreated: true };
       });
+    } catch (error) {
+      const expectedResult = toExpectedInboundActionResult(error);
+      if (expectedResult) {
+        return expectedResult;
+      }
+      throw error;
+    }
 
-      await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'client', created.client_id, mappedValues.external_id, {
-        knex: trx,
-        metadata: { source: 'inbound_webhook', delivery_id: ctx.deliveryId },
-      });
-
-      return { client: created, wasCreated: true };
-    });
+    const { client, wasCreated } = result;
 
     if (wasCreated) {
       // Mirror createClient post-commit side effects (tax settings, workflow event).
@@ -227,6 +284,7 @@ const setClientActiveByExternalIdAction: InboundActionDefinition<SetClientActive
         entityType: 'client',
         externalId: mappedValues.external_id,
         message: `lookup_miss: client external_id "${mappedValues.external_id}" is not mapped for webhook "${ctx.webhookSlug}"`,
+        metadata: { code: 'LOOKUP_MISS' },
       };
     }
 
@@ -281,32 +339,55 @@ const upsertContactByExternalIdAction: InboundActionDefinition<UpsertContactByEx
   ],
   async handle(ctx, mappedValues) {
     const { knex } = await createTenantKnex(ctx.tenant);
-    const contact = await withTransaction(knex, async (trx) => {
-      const existingMapping = await lookupAlgaEntityByExternalId(
-        ctx.tenant,
-        ctx.webhookSlug,
-        'contact',
-        mappedValues.external_id,
-        { knex: trx },
-      );
-      const clientId = mappedValues.client_id || (
-        mappedValues.client_external_id
-          ? (await lookupAlgaEntityByExternalId(
-            ctx.tenant,
-            ctx.webhookSlug,
-            'client',
-            mappedValues.client_external_id,
-            { knex: trx },
-          ))?.algaEntityId
-          : undefined
-      );
+    let contact;
+    try {
+      contact = await withTransaction(knex, async (trx) => {
+        const existingMapping = await lookupAlgaEntityByExternalId(
+          ctx.tenant,
+          ctx.webhookSlug,
+          'contact',
+          mappedValues.external_id,
+          { knex: trx },
+        );
+        const clientId = mappedValues.client_id || (
+          mappedValues.client_external_id
+            ? (await lookupAlgaEntityByExternalId(
+              ctx.tenant,
+              ctx.webhookSlug,
+              'client',
+              mappedValues.client_external_id,
+              { knex: trx },
+            ))?.algaEntityId
+            : undefined
+        );
 
-      if (!clientId && !existingMapping) {
-        throw new Error('VALIDATION_ERROR: upsertContactByExternalId requires client_id or resolvable client_external_id when creating a contact');
-      }
+        if (!clientId && !existingMapping) {
+          throwInboundFailure(
+            'VALIDATION_ERROR',
+            'VALIDATION_ERROR: upsertContactByExternalId requires client_id or resolvable client_external_id when creating a contact',
+            'contact',
+            mappedValues.external_id,
+            { field: 'client_id', client_external_id: mappedValues.client_external_id },
+          );
+        }
 
-      if (existingMapping) {
-        const input: UpdateContactInput = {
+        if (existingMapping) {
+          const input: UpdateContactInput = {
+            full_name: mappedValues.full_name,
+            email: mappedValues.email,
+            client_id: clientId,
+            role: mappedValues.role,
+            notes: mappedValues.notes,
+            is_inactive: mappedValues.is_inactive,
+            phone_numbers: mappedValues.phone
+              ? [{ phone_number: mappedValues.phone, canonical_type: 'work', is_default: true, display_order: 0 }]
+              : undefined,
+          };
+
+          return ContactModel.updateContact(existingMapping.algaEntityId, input, ctx.tenant, trx);
+        }
+
+        const input: CreateContactInput = {
           full_name: mappedValues.full_name,
           email: mappedValues.email,
           client_id: clientId,
@@ -317,30 +398,22 @@ const upsertContactByExternalIdAction: InboundActionDefinition<UpsertContactByEx
             ? [{ phone_number: mappedValues.phone, canonical_type: 'work', is_default: true, display_order: 0 }]
             : undefined,
         };
+        const created = await ContactModel.createContact(input, ctx.tenant, trx);
 
-        return ContactModel.updateContact(existingMapping.algaEntityId, input, ctx.tenant, trx);
-      }
+        await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'contact', created.contact_name_id, mappedValues.external_id, {
+          knex: trx,
+          metadata: { source: 'inbound_webhook', delivery_id: ctx.deliveryId },
+        });
 
-      const input: CreateContactInput = {
-        full_name: mappedValues.full_name,
-        email: mappedValues.email,
-        client_id: clientId,
-        role: mappedValues.role,
-        notes: mappedValues.notes,
-        is_inactive: mappedValues.is_inactive,
-        phone_numbers: mappedValues.phone
-          ? [{ phone_number: mappedValues.phone, canonical_type: 'work', is_default: true, display_order: 0 }]
-          : undefined,
-      };
-      const created = await ContactModel.createContact(input, ctx.tenant, trx);
-
-      await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'contact', created.contact_name_id, mappedValues.external_id, {
-        knex: trx,
-        metadata: { source: 'inbound_webhook', delivery_id: ctx.deliveryId },
+        return created;
       });
-
-      return created;
-    });
+    } catch (error) {
+      const expectedResult = toExpectedInboundActionResult(error);
+      if (expectedResult) {
+        return expectedResult;
+      }
+      throw error;
+    }
 
     return {
       success: true,

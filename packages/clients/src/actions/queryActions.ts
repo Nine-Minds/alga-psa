@@ -12,6 +12,12 @@ import {
 } from '@alga-psa/formatting/avatarUtils';
 import { hasPermissionAsync } from '../lib/authHelpers';
 import InteractionModel from '../models/interactions';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const CONTACT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
 const CONTACT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
@@ -26,6 +32,20 @@ type QueryActionUser = {
 };
 
 type DbConnection = Knex | Knex.Transaction;
+type QueryActionError = ActionMessageError | ActionPermissionError;
+
+function queryActionErrorFrom(error: unknown): QueryActionError | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+  if (error.message.includes('Permission denied')) {
+    return permissionError(error.message);
+  }
+  if (error.message === 'Interaction not found') {
+    return actionError('Interaction not found');
+  }
+  return null;
+}
 
 function tenantScopedTable<Row extends object = Record<string, any>>(
   conn: DbConnection,
@@ -76,7 +96,7 @@ function tenantJoinSubquerySql(
   const markerIndex = compiled.sql.indexOf(marker);
 
   if (markerIndex < 0) {
-    throw new Error('Unable to compile tenant join subquery SQL fragment');
+    throw new Error('Tenant join subquery SQL fragment marker was not present in compiled SQL.');
   }
 
   return {
@@ -798,8 +818,14 @@ export const getInteractionById = withAuth(async (
   user,
   { tenant },
   interactionId: string
-): Promise<IInteraction> => {
-  await assertMspPermissionForAction(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
+): Promise<IInteraction | QueryActionError> => {
+  try {
+    await assertMspPermissionForAction(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
+  } catch (error) {
+    const expected = queryActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   try {
     const { knex } = await createTenantKnex();
@@ -812,6 +838,8 @@ export const getInteractionById = withAuth(async (
     return interaction;
   } catch (error) {
     console.error('Error fetching interaction:', error);
-    throw new Error('Failed to fetch interaction');
+    const expected = queryActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });

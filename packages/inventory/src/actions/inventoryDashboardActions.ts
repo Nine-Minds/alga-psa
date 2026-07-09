@@ -4,6 +4,10 @@ import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  permissionError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * Consolidated data feed for the Inventory dashboard ("Command Center").
@@ -73,6 +77,8 @@ export interface InventoryDashboardData {
 
 const OPEN_PO_STATUSES = ['draft', 'open', 'partially_received'];
 
+export type InventoryDashboardActionError = ActionPermissionError;
+
 function etaLabel(expected: Date | string | null | undefined): string | null {
   if (!expected) return null;
   const d = new Date(expected);
@@ -85,9 +91,9 @@ function etaLabel(expected: Date | string | null | undefined): string | null {
   return `ETA ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
 }
 
-export const getInventoryDashboardData = withAuth(async (user, { tenant }): Promise<InventoryDashboardData> => {
+export const getInventoryDashboardData = withAuth(async (user, { tenant }): Promise<InventoryDashboardData | InventoryDashboardActionError> => {
   if (!(await hasPermission(user, 'inventory', 'read'))) {
-    throw new Error('Permission denied: inventory read required');
+    return permissionError('Permission denied: inventory read required');
   }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {

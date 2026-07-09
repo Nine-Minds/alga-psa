@@ -5,6 +5,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { IUsageRecord } from '@alga-psa/types';
 import { Knex } from 'knex'; // Import Knex type
+import { reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
 
 // Define the schema for the input parameters
 const InputSchema = z.object({
@@ -36,12 +37,11 @@ export const getUsageDataMetrics = withAuth(async (
   _user,
   { tenant },
   input: z.infer<typeof InputSchema>
-): Promise<UsageMetricResult[]> => {
+): Promise<UsageMetricResult[] | ReportingActionError> => {
   // Validate input
   const validationResult = InputSchema.safeParse(input);
   if (!validationResult.success) {
-    const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
-    throw new Error(`Validation Error: ${errorMessages}`);
+    return reportingActionErrorFrom(validationResult.error)!;
   }
   const { clientId, startDate, endDate } = validationResult.data;
 
@@ -83,7 +83,9 @@ export const getUsageDataMetrics = withAuth(async (
     return results;
 
   } catch (error) {
+    const expected = reportingActionErrorFrom(error);
+    if (expected) return expected;
     console.error(`Error fetching usage metrics for client ${clientId} in tenant ${tenant}:`, error);
-    throw new Error(`Failed to fetch usage metrics: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error;
   }
 });

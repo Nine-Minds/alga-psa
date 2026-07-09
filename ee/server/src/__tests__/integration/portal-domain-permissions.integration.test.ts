@@ -147,6 +147,10 @@ describe('Portal domain permissions', () => {
       requestPortalDomainRegistrationAction({ domain: 'admin-allowed.example.com' })
     );
 
+    if (!('status' in result)) {
+      throw new Error('Expected portal domain registration to succeed');
+    }
+
     expect(result.status.domain).toBe('admin-allowed.example.com');
     expect(result.status.status).toBe('pending_dns');
 
@@ -164,11 +168,13 @@ describe('Portal domain permissions', () => {
       user_type: clientPortalAdmin!.user_type || 'client',
     });
 
-    await expect(
-      runWithTenant(tenantId, async () =>
-        requestPortalDomainRegistrationAction({ domain: 'not-allowed.example.com' })
-      )
-    ).rejects.toThrow('Client portal users cannot manage custom domains.');
+    const result = await runWithTenant(tenantId, async () =>
+      requestPortalDomainRegistrationAction({ domain: 'not-allowed.example.com' })
+    );
+
+    expect(result).toEqual({
+      permissionError: 'Client portal users cannot manage custom domains.',
+    });
 
     const existing = await tenantTable<PortalDomainRecord>(db, tenantId, 'portal_domains')
       .first();

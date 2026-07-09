@@ -358,12 +358,19 @@ describe('client deletion actions', () => {
   });
 
   describe('deleteClient', () => {
-    it('throws before opening tenant DB access when delete permission is missing', async () => {
+    it('returns a permission status before opening tenant DB access when delete permission is missing', async () => {
       hasPermissionAsyncMock.mockResolvedValue(false);
 
       const { deleteClient } = await import('./clientActions');
 
-      await expect(deleteClient('client-1')).rejects.toThrow('Permission denied: Cannot delete clients');
+      await expect(deleteClient('client-1')).resolves.toEqual({
+        success: false,
+        canDelete: false,
+        code: 'PERMISSION_DENIED',
+        message: 'Permission denied: Cannot delete clients',
+        dependencies: [],
+        alternatives: []
+      });
       expect(createTenantKnexMock).not.toHaveBeenCalled();
       expect(deleteEntityWithValidationMock).not.toHaveBeenCalled();
     });

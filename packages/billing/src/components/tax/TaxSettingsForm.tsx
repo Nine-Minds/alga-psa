@@ -23,10 +23,22 @@ import { ShieldOff, ShieldCheck, Info } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface TaxSettingsFormProps {
   clientId: string;
 }
+
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
   const { t } = useTranslation('msp/billing-settings');
@@ -60,10 +72,33 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
           getEffectiveTaxSourceForClient(clientId)
         ]);
 
+        if (isReturnedActionError(settings)) {
+          setError(getErrorMessage(settings));
+          setLoading(false);
+          return;
+        }
+
+        if (isReturnedActionError(rates)) {
+          setError(getErrorMessage(rates));
+          setLoading(false);
+          return;
+        }
+
+        if (isReturnedActionError(taxExemptStatus)) {
+          setError(getErrorMessage(taxExemptStatus));
+          setLoading(false);
+          return;
+        }
+
         // Automatically create default tax settings when none exist
         if (!settings) {
           try {
             const defaultSettings = await createDefaultTaxSettings(clientId);
+            if (isReturnedActionError(defaultSettings)) {
+              setError(getErrorMessage(defaultSettings));
+              setLoading(false);
+              return;
+            }
             setTaxSettings(defaultSettings);
             setOriginalSettings(JSON.parse(JSON.stringify(defaultSettings)));
             setSuccessMessage(t('clientTaxSettings.messages.defaultCreated', {
@@ -113,6 +148,11 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
     try {
       setLoading(true);
       const defaultSettings = await createDefaultTaxSettings(clientId);
+      if (isReturnedActionError(defaultSettings)) {
+        setError(getErrorMessage(defaultSettings));
+        setLoading(false);
+        return;
+      }
       setTaxSettings(defaultSettings);
       setError(null);
       setSuccessMessage(t('clientTaxSettings.messages.defaultCreated', {
@@ -194,11 +234,17 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
     setError(null);
 
     try {
-      await updateClientTaxExemptStatus(
+      const result = await updateClientTaxExemptStatus(
         clientId,
         isTaxExempt,
         taxExemptionCertificate || undefined
       );
+      if (isReturnedActionError(result)) {
+        setIsTaxExempt(originalTaxExempt);
+        setTaxExemptionCertificate(originalCertificate);
+        setError(getErrorMessage(result));
+        return;
+      }
 
       // Update original values after successful save
       setOriginalTaxExempt(isTaxExempt);
@@ -242,6 +288,13 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
     setIsSubmitting(true);
     try {
       const updatedSettings = await updateClientTaxSettings(clientId, taxSettings);
+      if (isReturnedActionError(updatedSettings)) {
+        if (originalSettings) {
+          setTaxSettings(JSON.parse(JSON.stringify(originalSettings)));
+        }
+        setError(getErrorMessage(updatedSettings));
+        return;
+      }
       setTaxSettings(updatedSettings);
       // Update original settings after successful update
       setOriginalSettings(JSON.parse(JSON.stringify(updatedSettings)));

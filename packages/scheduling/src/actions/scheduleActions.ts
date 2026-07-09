@@ -41,10 +41,63 @@ import {
 } from '@alga-psa/workflow-streams';
 import { maybePublishCapacityThresholdReached } from '../lib/capacityThresholdWorkflowEvents';
 import { resolveTeamsMeetingService } from '../lib/teamsMeetingService';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
   | { success: false; error: string; entries?: never }
+
+type ScheduleActionError = ActionMessageError | ActionPermissionError;
+
+function scheduleActionErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (message.startsWith('Permission denied')) {
+    return message;
+  }
+
+  if (message === 'Schedule entry not found' || /^Schedule entry .+ not found/.test(message)) {
+    return 'Schedule entry not found.';
+  }
+
+  if (/^Users .+ not found/.test(message)) {
+    return 'One or more assigned users could not be found.';
+  }
+
+  if (message === 'Virtual timestamp is required for future updates') {
+    return 'Select a recurrence occurrence before updating future schedule entries.';
+  }
+
+  return fallback;
+}
+
+function scheduleActionErrorFrom(error: unknown): ScheduleActionError | null {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (message.startsWith('Permission denied')) {
+    return permissionError(message);
+  }
+
+  if (message === 'Schedule entry not found' || /^Schedule entry .+ not found/.test(message)) {
+    return actionError('Schedule entry not found.');
+  }
+
+  if (/^Users .+ not found/.test(message)) {
+    return actionError('One or more assigned users could not be found.');
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('The selected schedule entry is invalid. Please refresh and try again.');
+  }
+
+  return null;
+}
 
 async function getTicketIdForAppointmentRequest(
   db: Knex,
@@ -129,7 +182,7 @@ export const getScheduleEntries = withAuth(async (
     return { success: true, entries: filteredEntries };
   } catch (error) {
     console.error('Error fetching schedule entries:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch schedule entries';
+    const message = scheduleActionErrorMessage(error, 'Failed to fetch schedule entries');
     return { success: false, error: message };
   }
 });
@@ -312,7 +365,7 @@ export const addScheduleEntry = withAuth(async (
     return { success: true, entry: createdEntry };
   } catch (error) {
     console.error('Error creating schedule entry:', error);
-    const message = error instanceof Error ? error.message : 'Failed to create schedule entry';
+    const message = scheduleActionErrorMessage(error, 'Failed to create schedule entry');
     return { success: false, error: message };
   }
 });
@@ -620,7 +673,7 @@ export const updateScheduleEntry = withAuth(async (
     return { success: true, entry: updatedEntry };
   } catch (error) {
     console.error('Error updating schedule entry:', error);
-    const message = error instanceof Error ? error.message : 'Failed to update schedule entry';
+    const message = scheduleActionErrorMessage(error, 'Failed to update schedule entry');
     return { success: false, error: message };
   }
 });
@@ -842,7 +895,7 @@ export const deleteScheduleEntry = withAuth(async (
     };
   } catch (error) {
     console.error('Error deleting schedule entry:', error);
-    const message = error instanceof Error ? error.message : 'Failed to delete schedule entry';
+    const message = scheduleActionErrorMessage(error, 'Failed to delete schedule entry');
     return {
       success: false,
       error: message,
@@ -865,7 +918,7 @@ export const getScheduleEntryById = withAuth(async (
   user,
   { tenant },
   entryId: string
-): Promise<IScheduleEntry | null> => {
+): Promise<IScheduleEntry | null | ScheduleActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -915,7 +968,9 @@ export const getScheduleEntryById = withAuth(async (
     });
   } catch (error) {
     console.error('Error fetching schedule entry by ID:', error);
-    throw new Error('Failed to fetch schedule entry');
+    const expected = scheduleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 

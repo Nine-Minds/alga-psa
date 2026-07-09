@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { withAuth, hasPermission, throwPermissionError } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import {
   ISlaPolicy,
@@ -12,6 +12,11 @@ import {
   ISlaNotificationThreshold,
   ISlaNotificationThresholdInput
 } from '../types';
+import {
+  SlaActionError,
+  slaActionErrorFrom,
+  slaPermissionError,
+} from './slaActionErrors';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -28,9 +33,9 @@ function tenantScopedTable(
 /**
  * Get all SLA policies for the current tenant.
  */
-export const getSlaPolicies = withAuth(async (user, { tenant }): Promise<ISlaPolicy[]> => {
+export const getSlaPolicies = withAuth(async (user, { tenant }): Promise<ISlaPolicy[] | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throwPermissionError('view SLA policies');
+    return slaPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -42,7 +47,7 @@ export const getSlaPolicies = withAuth(async (user, { tenant }): Promise<ISlaPol
       return policies as ISlaPolicy[];
     } catch (error) {
       console.error(`Error fetching SLA policies for tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch SLA policies for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -50,9 +55,9 @@ export const getSlaPolicies = withAuth(async (user, { tenant }): Promise<ISlaPol
 /**
  * Get an SLA policy by ID with its targets and notification thresholds.
  */
-export const getSlaPolicyById = withAuth(async (user, { tenant }, policyId: string): Promise<ISlaPolicyWithTargets | null> => {
+export const getSlaPolicyById = withAuth(async (user, { tenant }, policyId: string): Promise<ISlaPolicyWithTargets | SlaActionError | null> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throwPermissionError('view SLA policies');
+    return slaPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -83,7 +88,7 @@ export const getSlaPolicyById = withAuth(async (user, { tenant }, policyId: stri
       } as ISlaPolicyWithTargets;
     } catch (error) {
       console.error(`Error fetching SLA policy ${policyId} for tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch SLA policy for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -91,9 +96,9 @@ export const getSlaPolicyById = withAuth(async (user, { tenant }, policyId: stri
 /**
  * Get the default SLA policy for the current tenant.
  */
-export const getDefaultSlaPolicy = withAuth(async (user, { tenant }): Promise<ISlaPolicy | null> => {
+export const getDefaultSlaPolicy = withAuth(async (user, { tenant }): Promise<ISlaPolicy | SlaActionError | null> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throwPermissionError('view SLA policies');
+    return slaPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -106,7 +111,7 @@ export const getDefaultSlaPolicy = withAuth(async (user, { tenant }): Promise<IS
       return policy || null;
     } catch (error) {
       console.error(`Error fetching default SLA policy for tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch default SLA policy for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -120,9 +125,9 @@ export const createSlaPolicy = withAuth(async (
   { tenant },
   input: ISlaPolicyInput,
   seedDefaultThresholds: boolean = true
-): Promise<ISlaPolicy> => {
+): Promise<ISlaPolicy | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'create')) {
-    throwPermissionError('create SLA policies');
+    return slaPermissionError('create SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -177,8 +182,13 @@ export const createSlaPolicy = withAuth(async (
 
       return newPolicy as ISlaPolicy;
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error creating SLA policy for tenant ${tenant}:`, error);
-      throw new Error(`Failed to create SLA policy for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -191,9 +201,9 @@ export const updateSlaPolicy = withAuth(async (
   { tenant },
   policyId: string,
   input: Partial<ISlaPolicyInput>
-): Promise<ISlaPolicy> => {
+): Promise<ISlaPolicy | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throwPermissionError('update SLA policies');
+    return slaPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -240,8 +250,13 @@ export const updateSlaPolicy = withAuth(async (
 
       return updatedPolicy as ISlaPolicy;
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error updating SLA policy ${policyId} for tenant ${tenant}:`, error);
-      throw new Error(error instanceof Error ? error.message : `Failed to update SLA policy for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -253,9 +268,9 @@ export const getSlaPolicyUsage = withAuth(async (user, { tenant }, policyId: str
   boards: { board_id: string; name: string }[];
   clients: { client_id: string; client_name: string }[];
   ticketCount: number;
-}> => {
+} | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throwPermissionError('view SLA policies');
+    return slaPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -284,9 +299,9 @@ export const getSlaPolicyUsage = withAuth(async (user, { tenant }, policyId: str
 /**
  * Delete an SLA policy and its associated targets and notification thresholds.
  */
-export const deleteSlaPolicy = withAuth(async (user, { tenant }, policyId: string): Promise<void> => {
+export const deleteSlaPolicy = withAuth(async (user, { tenant }, policyId: string): Promise<void | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'delete')) {
-    throwPermissionError('delete SLA policies');
+    return slaPermissionError('delete SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -329,8 +344,13 @@ export const deleteSlaPolicy = withAuth(async (user, { tenant }, policyId: strin
         .where({ sla_policy_id: policyId })
         .delete();
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error deleting SLA policy ${policyId} for tenant ${tenant}:`, error);
-      throw new Error(error instanceof Error ? error.message : `Failed to delete SLA policy for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -339,9 +359,9 @@ export const deleteSlaPolicy = withAuth(async (user, { tenant }, policyId: strin
  * Set a policy as the default for the tenant.
  * Ensures only one policy is default at a time.
  */
-export const setDefaultSlaPolicy = withAuth(async (user, { tenant }, policyId: string): Promise<void> => {
+export const setDefaultSlaPolicy = withAuth(async (user, { tenant }, policyId: string): Promise<void | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throwPermissionError('update SLA policies');
+    return slaPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -366,8 +386,13 @@ export const setDefaultSlaPolicy = withAuth(async (user, { tenant }, policyId: s
         .where({ sla_policy_id: policyId })
         .update({ is_default: true, updated_at: trx.fn.now() });
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error setting default SLA policy ${policyId} for tenant ${tenant}:`, error);
-      throw new Error(error instanceof Error ? error.message : `Failed to set default SLA policy for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -379,9 +404,9 @@ export const setDefaultSlaPolicy = withAuth(async (user, { tenant }, policyId: s
 /**
  * Get all targets for a specific SLA policy.
  */
-export const getSlaPolicyTargets = withAuth(async (user, { tenant }, policyId: string): Promise<ISlaPolicyTarget[]> => {
+export const getSlaPolicyTargets = withAuth(async (user, { tenant }, policyId: string): Promise<ISlaPolicyTarget[] | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throwPermissionError('view SLA policies');
+    return slaPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -394,7 +419,7 @@ export const getSlaPolicyTargets = withAuth(async (user, { tenant }, policyId: s
       return targets as ISlaPolicyTarget[];
     } catch (error) {
       console.error(`Error fetching SLA policy targets for policy ${policyId}, tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch SLA policy targets for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -407,9 +432,9 @@ export const createSlaPolicyTarget = withAuth(async (
   { tenant },
   policyId: string,
   input: ISlaPolicyTargetInput
-): Promise<ISlaPolicyTarget> => {
+): Promise<ISlaPolicyTarget | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throwPermissionError('update SLA policies');
+    return slaPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -461,8 +486,13 @@ export const createSlaPolicyTarget = withAuth(async (
 
       return newTarget as ISlaPolicyTarget;
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error creating SLA policy target for policy ${policyId}, tenant ${tenant}:`, error);
-      throw new Error(error instanceof Error ? error.message : `Failed to create SLA policy target for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -475,9 +505,9 @@ export const updateSlaPolicyTarget = withAuth(async (
   { tenant },
   targetId: string,
   input: Partial<ISlaPolicyTargetInput>
-): Promise<ISlaPolicyTarget> => {
+): Promise<ISlaPolicyTarget | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throwPermissionError('update SLA policies');
+    return slaPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -545,8 +575,13 @@ export const updateSlaPolicyTarget = withAuth(async (
 
       return updatedTarget as ISlaPolicyTarget;
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error updating SLA policy target ${targetId} for tenant ${tenant}:`, error);
-      throw new Error(error instanceof Error ? error.message : `Failed to update SLA policy target for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -554,9 +589,9 @@ export const updateSlaPolicyTarget = withAuth(async (
 /**
  * Delete an SLA policy target.
  */
-export const deleteSlaPolicyTarget = withAuth(async (user, { tenant }, targetId: string): Promise<void> => {
+export const deleteSlaPolicyTarget = withAuth(async (user, { tenant }, targetId: string): Promise<void | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throwPermissionError('update SLA policies');
+    return slaPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -570,8 +605,13 @@ export const deleteSlaPolicyTarget = withAuth(async (user, { tenant }, targetId:
         throw new Error(`SLA policy target ${targetId} not found`);
       }
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error deleting SLA policy target ${targetId} for tenant ${tenant}:`, error);
-      throw new Error(error instanceof Error ? error.message : `Failed to delete SLA policy target for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -585,9 +625,9 @@ export const upsertSlaPolicyTargets = withAuth(async (
   { tenant },
   policyId: string,
   targets: ISlaPolicyTargetInput[]
-): Promise<ISlaPolicyTarget[]> => {
+): Promise<ISlaPolicyTarget[] | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throwPermissionError('update SLA policies');
+    return slaPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -668,8 +708,13 @@ export const upsertSlaPolicyTargets = withAuth(async (
 
       return results;
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error upserting SLA policy targets for policy ${policyId}, tenant ${tenant}:`, error);
-      throw new Error(error instanceof Error ? error.message : `Failed to upsert SLA policy targets for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -681,9 +726,9 @@ export const upsertSlaPolicyTargets = withAuth(async (
 /**
  * Get all notification thresholds for a specific SLA policy.
  */
-export const getSlaNotificationThresholds = withAuth(async (user, { tenant }, policyId: string): Promise<ISlaNotificationThreshold[]> => {
+export const getSlaNotificationThresholds = withAuth(async (user, { tenant }, policyId: string): Promise<ISlaNotificationThreshold[] | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throwPermissionError('view SLA policies');
+    return slaPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -696,7 +741,7 @@ export const getSlaNotificationThresholds = withAuth(async (user, { tenant }, po
       return thresholds as ISlaNotificationThreshold[];
     } catch (error) {
       console.error(`Error fetching SLA notification thresholds for policy ${policyId}, tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch SLA notification thresholds for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -710,9 +755,9 @@ export const upsertSlaNotificationThresholds = withAuth(async (
   { tenant },
   policyId: string,
   thresholds: ISlaNotificationThresholdInput[]
-): Promise<ISlaNotificationThreshold[]> => {
+): Promise<ISlaNotificationThreshold[] | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throwPermissionError('update SLA policies');
+    return slaPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -762,8 +807,13 @@ export const upsertSlaNotificationThresholds = withAuth(async (
 
       return inserted as ISlaNotificationThreshold[];
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error upserting SLA notification thresholds for policy ${policyId}, tenant ${tenant}:`, error);
-      throw new Error(error instanceof Error ? error.message : `Failed to upsert SLA notification thresholds for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -775,9 +825,9 @@ export const upsertSlaNotificationThresholds = withAuth(async (
 /**
  * Get the SLA policy assigned to a specific client.
  */
-export const getClientSlaPolicy = withAuth(async (user, { tenant }, clientId: string): Promise<ISlaPolicy | null> => {
+export const getClientSlaPolicy = withAuth(async (user, { tenant }, clientId: string): Promise<ISlaPolicy | SlaActionError | null> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throwPermissionError('view SLA policies');
+    return slaPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -798,7 +848,7 @@ export const getClientSlaPolicy = withAuth(async (user, { tenant }, clientId: st
       return policy || null;
     } catch (error) {
       console.error(`Error fetching SLA policy for client ${clientId}, tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch SLA policy for client ${tenant}`);
+      throw error;
     }
   });
 });
@@ -811,9 +861,9 @@ export const setClientSlaPolicy = withAuth(async (
   { tenant },
   clientId: string,
   policyId: string | null
-): Promise<void> => {
+): Promise<void | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throwPermissionError('update SLA policies');
+    return slaPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -846,8 +896,13 @@ export const setClientSlaPolicy = withAuth(async (
           updated_at: trx.fn.now()
         });
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error setting SLA policy for client ${clientId}, tenant ${tenant}:`, error);
-      throw new Error(error instanceof Error ? error.message : `Failed to set SLA policy for client ${tenant}`);
+      throw error;
     }
   });
 });
@@ -859,9 +914,9 @@ export const setClientSlaPolicy = withAuth(async (
 /**
  * Get the SLA policy assigned to a specific board.
  */
-export const getBoardSlaPolicy = withAuth(async (user, { tenant }, boardId: string): Promise<ISlaPolicy | null> => {
+export const getBoardSlaPolicy = withAuth(async (user, { tenant }, boardId: string): Promise<ISlaPolicy | SlaActionError | null> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throwPermissionError('view SLA policies');
+    return slaPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -882,7 +937,7 @@ export const getBoardSlaPolicy = withAuth(async (user, { tenant }, boardId: stri
       return policy || null;
     } catch (error) {
       console.error(`Error fetching SLA policy for board ${boardId}, tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch SLA policy for board ${tenant}`);
+      throw error;
     }
   });
 });
@@ -895,9 +950,9 @@ export const setBoardSlaPolicy = withAuth(async (
   { tenant },
   boardId: string,
   policyId: string | null
-): Promise<void> => {
+): Promise<void | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throwPermissionError('update SLA policies');
+    return slaPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -930,8 +985,13 @@ export const setBoardSlaPolicy = withAuth(async (
           updated_at: trx.fn.now()
         });
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error setting SLA policy for board ${boardId}, tenant ${tenant}:`, error);
-      throw new Error(error instanceof Error ? error.message : `Failed to set SLA policy for board ${tenant}`);
+      throw error;
     }
   });
 });
@@ -950,30 +1010,40 @@ export const updateSlaPolicyBoardAssignments = withAuth(async (
   { tenant },
   policyId: string,
   boardIds: string[]
-): Promise<void> => {
+): Promise<void | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throwPermissionError('update SLA policies');
+    return slaPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    // Clear boards previously assigned to this policy but no longer selected
-    if (boardIds.length > 0) {
-      await tenantScopedTable(trx, 'boards', tenant)
-        .where({ sla_policy_id: policyId })
-        .whereNotIn('board_id', boardIds)
-        .update({ sla_policy_id: null });
-    } else {
-      await tenantScopedTable(trx, 'boards', tenant)
-        .where({ sla_policy_id: policyId })
-        .update({ sla_policy_id: null });
-    }
+    try {
+      // Clear boards previously assigned to this policy but no longer selected
+      if (boardIds.length > 0) {
+        await tenantScopedTable(trx, 'boards', tenant)
+          .where({ sla_policy_id: policyId })
+          .whereNotIn('board_id', boardIds)
+          .update({ sla_policy_id: null });
+      } else {
+        await tenantScopedTable(trx, 'boards', tenant)
+          .where({ sla_policy_id: policyId })
+          .update({ sla_policy_id: null });
+      }
 
-    // Assign this policy to newly selected boards
-    if (boardIds.length > 0) {
-      await tenantScopedTable(trx, 'boards', tenant)
-        .whereIn('board_id', boardIds)
-        .update({ sla_policy_id: policyId });
+      // Assign this policy to newly selected boards
+      if (boardIds.length > 0) {
+        await tenantScopedTable(trx, 'boards', tenant)
+          .whereIn('board_id', boardIds)
+          .update({ sla_policy_id: policyId });
+      }
+    } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
+      console.error(`Error updating SLA policy board assignments for policy ${policyId}, tenant ${tenant}:`, error);
+      throw error;
     }
   });
 });
@@ -988,30 +1058,40 @@ export const updateSlaPolicyClientAssignments = withAuth(async (
   { tenant },
   policyId: string,
   clientIds: string[]
-): Promise<void> => {
+): Promise<void | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throwPermissionError('update SLA policies');
+    return slaPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    // Clear clients previously assigned to this policy but no longer selected
-    if (clientIds.length > 0) {
-      await tenantScopedTable(trx, 'clients', tenant)
-        .where({ sla_policy_id: policyId })
-        .whereNotIn('client_id', clientIds)
-        .update({ sla_policy_id: null, updated_at: trx.fn.now() });
-    } else {
-      await tenantScopedTable(trx, 'clients', tenant)
-        .where({ sla_policy_id: policyId })
-        .update({ sla_policy_id: null, updated_at: trx.fn.now() });
-    }
+    try {
+      // Clear clients previously assigned to this policy but no longer selected
+      if (clientIds.length > 0) {
+        await tenantScopedTable(trx, 'clients', tenant)
+          .where({ sla_policy_id: policyId })
+          .whereNotIn('client_id', clientIds)
+          .update({ sla_policy_id: null, updated_at: trx.fn.now() });
+      } else {
+        await tenantScopedTable(trx, 'clients', tenant)
+          .where({ sla_policy_id: policyId })
+          .update({ sla_policy_id: null, updated_at: trx.fn.now() });
+      }
 
-    // Assign this policy to newly selected clients
-    if (clientIds.length > 0) {
-      await tenantScopedTable(trx, 'clients', tenant)
-        .whereIn('client_id', clientIds)
-        .update({ sla_policy_id: policyId, updated_at: trx.fn.now() });
+      // Assign this policy to newly selected clients
+      if (clientIds.length > 0) {
+        await tenantScopedTable(trx, 'clients', tenant)
+          .whereIn('client_id', clientIds)
+          .update({ sla_policy_id: policyId, updated_at: trx.fn.now() });
+      }
+    } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
+      console.error(`Error updating SLA policy client assignments for policy ${policyId}, tenant ${tenant}:`, error);
+      throw error;
     }
   });
 });
@@ -1068,7 +1148,7 @@ export const resolveTicketSlaPolicy = withAuth(async (
       return defaultPolicy || null;
     } catch (error) {
       console.error(`Error resolving SLA policy for client ${clientId}, board ${boardId}, tenant ${tenant}:`, error);
-      throw new Error(`Failed to resolve SLA policy for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -1107,7 +1187,7 @@ export const resolveSlaPolicy = withAuth(async (_user, { tenant }, ticketId: str
       );
     } catch (error) {
       console.error(`Error resolving SLA policy for ticket ${ticketId}, tenant ${tenant}:`, error);
-      throw new Error(`Failed to resolve SLA policy for ticket ${ticketId}`);
+      throw error;
     }
   });
 });
@@ -1136,7 +1216,7 @@ export const resolveSlaPolicyForContext = withAuth(async (
       return resolveSlaPolicyForContextInternal(companyId, boardId, tenant, trx);
     } catch (error) {
       console.error(`Error resolving SLA policy for context (company: ${companyId}, board: ${boardId}), tenant ${tenant}:`, error);
-      throw new Error(`Failed to resolve SLA policy for context`);
+      throw error;
     }
   });
 });

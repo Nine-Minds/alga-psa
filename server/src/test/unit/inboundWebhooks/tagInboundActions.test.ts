@@ -250,8 +250,7 @@ describe('tag inbound webhook actions', () => {
     const { getAction } = await loadTagInboundActions();
     const action = getAction('addTagToEntityByExternalId');
 
-    await expect(
-      action?.handle(
+    await expect(action?.handle(
         {
           tenant: 'tenant-a',
           webhookSlug: 'asset-feed',
@@ -265,8 +264,17 @@ describe('tag inbound webhook actions', () => {
           external_id: 'asset-42',
           tag_text: 'monitored',
         },
-      ),
-    ).rejects.toThrow('VALIDATION_ERROR: unsupported tag entity_type "asset"');
+      )
+    ).resolves.toEqual({
+      success: false,
+      entityType: 'tag',
+      externalId: 'asset-42',
+      message: 'VALIDATION_ERROR: unsupported tag entity_type "asset"',
+      metadata: {
+        code: 'VALIDATION_ERROR',
+        field: 'entity_type',
+      },
+    });
 
     expect(mocks.createTenantKnex).not.toHaveBeenCalled();
     expect(mocks.lookupAlgaEntityByExternalId).not.toHaveBeenCalled();

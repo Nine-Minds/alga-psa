@@ -8,6 +8,11 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { EmailProviderConfig, TenantEmailSettings } from '@alga-psa/types';
 import { TenantEmailService } from '@alga-psa/email';
+import {
+  actionError,
+  isActionMessageError,
+  type ActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
   defaultFromDomain?: string | null;
@@ -67,7 +72,7 @@ function normalizeOptionalString(value?: string | null): string | null {
 export const getEmailSettings = withAuth(async (
   _user,
   { tenant }
-): Promise<TenantEmailSettings | null> => {
+): Promise<TenantEmailSettings | null | ActionMessageError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -121,7 +126,7 @@ export const getEmailSettings = withAuth(async (
     return sanitizedSettings;
   } catch (error: any) {
     console.error('Error fetching email settings:', error);
-    throw new Error('Failed to fetch email settings');
+    return actionError('Failed to fetch email settings');
   }
 });
 
@@ -129,7 +134,7 @@ export const updateEmailSettings = withAuth(async (
   _user,
   { tenant },
   updates: EmailSettingsUpdateInput
-): Promise<TenantEmailSettings> => {
+): Promise<TenantEmailSettings | ActionMessageError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -166,12 +171,12 @@ export const updateEmailSettings = withAuth(async (
     const targetDomain = mergedSettings.defaultFromDomain?.trim().toLowerCase();
     if (mergedSettings.ticketingFromEmail) {
       if (!targetDomain) {
-        throw new Error('Configure an outbound domain before choosing a ticketing From address');
+        return actionError('Configure an outbound domain before choosing a ticketing From address');
       }
 
       const fromDomain = extractDomain(mergedSettings.ticketingFromEmail);
       if (!fromDomain || fromDomain !== targetDomain) {
-        throw new Error('Ticketing From address must use the configured outbound domain');
+        return actionError('Ticketing From address must use the configured outbound domain');
       }
     }
 
@@ -208,14 +213,17 @@ export const updateEmailSettings = withAuth(async (
 
     // Re-fetch and return updated settings
     const updatedSettings = await getEmailSettings();
+    if (isActionMessageError(updatedSettings)) {
+      return updatedSettings;
+    }
     if (!updatedSettings) {
-      throw new Error('Failed to retrieve updated settings');
+      return actionError('Failed to retrieve updated settings');
     }
     
     return updatedSettings;
   } catch (error: any) {
     console.error('Error updating email settings:', error);
-    throw new Error('Failed to update email settings');
+    return actionError('Failed to update email settings');
   }
 });
 
@@ -234,6 +242,6 @@ export const testOutboundEmail = withAuth(async (
     return await TenantEmailService.testConnection(tenant || '', recipient);
   } catch (error: any) {
     console.error('Error testing outbound email:', error);
-    return { success: false, error: error?.message || 'Failed to test outbound email' };
+    return { success: false, error: 'Failed to test outbound email' };
   }
 });

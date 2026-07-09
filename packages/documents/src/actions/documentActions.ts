@@ -37,6 +37,7 @@ import { NextResponse } from 'next/server';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
+import { documentPreviewErrorMessage } from '@alga-psa/documents/handlers/previewErrors';
 import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -45,6 +46,11 @@ import {
 } from '@alga-psa/workflow-streams';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  documentActionErrorFrom,
+  documentActionErrorMessage,
+  type DocumentActionError,
+} from './documentActionErrors';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -662,6 +668,14 @@ function isActionPermissionErrorResult(value: unknown): value is ActionPermissio
   return Boolean(value) && typeof value === 'object' && 'permissionError' in (value as Record<string, unknown>);
 }
 
+function expectedDocumentActionError(message: string): DocumentActionError {
+  const expectedError = documentActionErrorFrom(new Error(message));
+  if (!expectedError) {
+    throw new Error(message);
+  }
+  return expectedError;
+}
+
 async function assertAuthorizedDocumentSetForMutation(
   trx: Knex.Transaction,
   tenant: string,
@@ -822,6 +836,10 @@ export const addDocument = withAuth(async (user, { tenant }, data: DocumentInput
     });
   } catch (error) {
     console.error(error);
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
     throw error;
   }
 });
@@ -870,7 +888,11 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
     );
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to update the document");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1047,11 +1069,16 @@ export const deleteDocument = withAuth(async (
     };
   } catch (error) {
     console.error('Error deleting document:', error);
+    const expectedError = documentActionErrorFrom(error);
+    if (!expectedError) {
+      throw error;
+    }
+
     return {
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: error instanceof Error ? error.message : 'Failed to delete the document',
+      message: documentActionErrorMessage(expectedError),
       dependencies: [],
       alternatives: []
     };
@@ -1129,7 +1156,11 @@ export const getDocument = withAuth(async (user, { tenant }, documentId: string)
     return authorizedDocument;
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to get the document");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1171,7 +1202,11 @@ export const getDocumentByTicketId = withAuth(async (user, { tenant }, ticketId:
     });
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to get the documents");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1213,7 +1248,11 @@ export const getDocumentByClientId = withAuth(async (user, { tenant }, clientId:
     });
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to get the documents");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1273,7 +1312,11 @@ export const associateDocumentWithClient = withAuth(async (user, { tenant }, inp
     return created;
   } catch (error) {
     console.error('Error associating document with client:', error);
-    throw new Error('Failed to associate document with client');
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1315,7 +1358,11 @@ export const getDocumentByContactNameId = withAuth(async (user, { tenant }, cont
     });
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to get the documents");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1349,7 +1396,11 @@ export const getDocumentsByContractId = withAuth(async (user, { tenant }, contra
     });
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to get contract documents");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1412,7 +1463,11 @@ export const associateDocumentWithContract = withAuth(async (user, { tenant }, i
     return created;
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to associate document with contract");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1488,7 +1543,11 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
     return;
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to remove document from contract");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1648,7 +1707,7 @@ export const getDocumentPreview = withAuth(async (
     console.error(`[getDocumentPreview] General error for identifier ${identifier}:`, error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to preview file'
+      error: documentPreviewErrorMessage(error, 'Failed to preview file')
     };
   }
 });
@@ -1824,6 +1883,12 @@ export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFi
         });
     } catch (error) {
         console.error('Error downloading document:', error);
+        const expectedError = documentActionErrorFrom(error);
+        if (expectedError) {
+          const message = documentActionErrorMessage(expectedError);
+          const status = 'permissionError' in expectedError ? 403 : 404;
+          return new Response(message, { status });
+        }
         throw error;
     }
 });
@@ -1914,7 +1979,7 @@ export const getDocumentsByEntity = withAuth(async (
   filters?: DocumentFilters,
   page: number = 1,
   limit: number = 15
-): Promise<PaginatedDocumentsResponse | ActionPermissionError> => {
+): Promise<PaginatedDocumentsResponse | DocumentActionError> => {
   try {
     if (!await hasPermission(user, 'document', 'read')) {
       return permissionError('Permission denied: Cannot read documents');
@@ -1995,7 +2060,11 @@ export const getDocumentsByEntity = withAuth(async (
     });
   } catch (error) {
     console.error('Error fetching documents by entity:', error);
-    throw new Error('Failed to fetch documents');
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -2388,7 +2457,7 @@ export const createDocumentAssociations = withAuth(async (
   entity_id: string,
   entity_type: DocumentAssociationEntityType,
   document_ids: string[]
-): Promise<{ success: boolean } | ActionPermissionError> => {
+): Promise<{ success: boolean } | DocumentActionError> => {
   try {
     // Check permission for document updates (associating documents is an update operation)
     if (!await hasPermission(user, 'document', 'update')) {
@@ -2466,7 +2535,11 @@ export const createDocumentAssociations = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error creating document associations:', error);
-    throw new Error('Failed to create document associations');
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -2556,7 +2629,11 @@ export const removeDocumentAssociations = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error removing document associations:', error);
-    throw new Error('Failed to remove document associations');
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -2875,9 +2952,14 @@ export const uploadDocument = withAuth(async (
       return result;
   } catch (error) {
     console.error('Error uploading document:', error);
+    const expectedError = documentActionErrorFrom(error);
+    if (!expectedError) {
+      throw error;
+    }
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to upload document'
+      error: documentActionErrorMessage(expectedError)
     };
   }
 });
@@ -3053,7 +3135,7 @@ export const getImageUrl = withAuth(async (user, { tenant }, file_id: string): P
   }
 });
 
-export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise<string[] | ActionPermissionError> => {
+export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise<string[] | DocumentActionError> => {
   try {
     // Check permission for document reading
     if (!await hasPermission(user, 'document', 'read')) {
@@ -3070,8 +3152,10 @@ export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise
 
     return result.map((row: { entity_type: string }) => row.entity_type);
   } catch (error) {
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) return expectedError;
     console.error('Error fetching distinct entity types:', error);
-    throw new Error('Failed to fetch distinct entity types');
+    throw error;
   }
 });
 
@@ -3461,36 +3545,45 @@ export const moveDocumentsToFolder = withAuth(async (
   { tenant },
   documentIds: string[],
   newFolderPath: string | null
-): Promise<void | ActionPermissionError> => {
+): Promise<void | DocumentActionError> => {
   if (!(await hasPermission(user, 'document', 'update'))) {
     return permissionError('Permission denied');
   }
 
-  const { knex } = await createTenantKnex();
-  const mutationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const authorizationResult = await assertAuthorizedDocumentSetForMutation(
-      trx,
-      tenant,
-      user,
-      documentIds,
-      'Permission denied: Cannot move documents'
-    );
-    if (isActionPermissionErrorResult(authorizationResult)) {
-      return authorizationResult;
+  try {
+    const { knex } = await createTenantKnex();
+    const mutationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const authorizationResult = await assertAuthorizedDocumentSetForMutation(
+        trx,
+        tenant,
+        user,
+        documentIds,
+        'Permission denied: Cannot move documents'
+      );
+      if (isActionPermissionErrorResult(authorizationResult)) {
+        return authorizationResult;
+      }
+
+      await tenantScopedTable(trx, 'documents', tenant)
+        .whereIn('document_id', documentIds)
+        .update({
+          folder_path: newFolderPath,
+          updated_at: new Date(),
+        });
+
+      return null;
+    });
+
+    if (isActionPermissionErrorResult(mutationResult)) {
+      return mutationResult;
     }
-
-    await tenantScopedTable(trx, 'documents', tenant)
-      .whereIn('document_id', documentIds)
-      .update({
-        folder_path: newFolderPath,
-        updated_at: new Date(),
-      });
-
-    return null;
-  });
-
-  if (isActionPermissionErrorResult(mutationResult)) {
-    return mutationResult;
+  } catch (error) {
+    console.error('Error moving documents:', error);
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -3506,7 +3599,7 @@ export const toggleDocumentVisibility = withAuth(async (
   { tenant },
   documentIds: string[],
   isClientVisible: boolean
-): Promise<number | ActionPermissionError> => {
+): Promise<number | DocumentActionError> => {
   if (!(await hasPermission(user, 'document', 'update'))) {
     return permissionError('Permission denied');
   }
@@ -3515,30 +3608,39 @@ export const toggleDocumentVisibility = withAuth(async (
     return 0;
   }
 
-  const { knex } = await createTenantKnex();
-  const mutationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const authorizationResult = await assertAuthorizedDocumentSetForMutation(
-      trx,
-      tenant,
-      user,
-      documentIds,
-      'Permission denied: Cannot update document visibility'
-    );
-    if (isActionPermissionErrorResult(authorizationResult)) {
-      return authorizationResult;
+  try {
+    const { knex } = await createTenantKnex();
+    const mutationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const authorizationResult = await assertAuthorizedDocumentSetForMutation(
+        trx,
+        tenant,
+        user,
+        documentIds,
+        'Permission denied: Cannot update document visibility'
+      );
+      if (isActionPermissionErrorResult(authorizationResult)) {
+        return authorizationResult;
+      }
+
+      const updatedCount = await tenantScopedTable(trx, 'documents', tenant)
+        .whereIn('document_id', documentIds)
+        .update({
+          is_client_visible: isClientVisible,
+          updated_at: new Date(),
+        });
+
+      return Number(updatedCount || 0);
+    });
+
+    return mutationResult;
+  } catch (error) {
+    console.error('Error updating document visibility:', error);
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
     }
-
-    const updatedCount = await tenantScopedTable(trx, 'documents', tenant)
-      .whereIn('document_id', documentIds)
-      .update({
-        is_client_visible: isClientVisible,
-        updated_at: new Date(),
-      });
-
-    return Number(updatedCount || 0);
-  });
-
-  return mutationResult;
+    throw error;
+  }
 });
 
 /**
@@ -3555,11 +3657,12 @@ export const toggleFolderVisibility = withAuth(async (
   folderId: string,
   isClientVisible: boolean,
   cascade: boolean = false
-): Promise<{ folderUpdated: boolean; updatedDocuments: number } | ActionPermissionError> => {
+): Promise<{ folderUpdated: boolean; updatedDocuments: number } | DocumentActionError> => {
   if (!(await hasPermission(user, 'document', 'update'))) {
     return permissionError('Permission denied');
   }
 
+  try {
   const { knex } = await createTenantKnex();
 
   const folder = await tenantScopedTable(knex, 'document_folders', tenant)
@@ -3568,7 +3671,7 @@ export const toggleFolderVisibility = withAuth(async (
     .first();
 
   if (!folder) {
-    throw new Error('Folder not found');
+    return expectedDocumentActionError('Folder not found');
   }
 
   const folderUpdatedCount = await tenantScopedTable(knex, 'document_folders', tenant)
@@ -3631,6 +3734,13 @@ export const toggleFolderVisibility = withAuth(async (
     folderUpdated: Number(folderUpdatedCount || 0) > 0,
     updatedDocuments,
   };
+  } catch (error) {
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -3644,11 +3754,12 @@ export const toggleFolderVisibilityByPath = withAuth(async (
   entityId?: string | null,
   entityType?: string | null,
   cascade?: boolean
-): Promise<{ folderUpdated: boolean; updatedDocuments: number } | ActionPermissionError> => {
+): Promise<{ folderUpdated: boolean; updatedDocuments: number } | DocumentActionError> => {
   if (!(await hasPermission(user, 'document', 'update'))) {
     return permissionError('Permission denied');
   }
 
+  try {
   const { knex } = await createTenantKnex();
 
   const query = tenantScopedTable(knex, 'document_folders', tenant)
@@ -3662,7 +3773,7 @@ export const toggleFolderVisibilityByPath = withAuth(async (
   const folder = await query.first();
 
   if (!folder) {
-    throw new Error('Folder not found');
+    return expectedDocumentActionError('Folder not found');
   }
 
   const folderUpdatedCount = await tenantScopedTable(knex, 'document_folders', tenant)
@@ -3724,6 +3835,13 @@ export const toggleFolderVisibilityByPath = withAuth(async (
     folderUpdated: Number(folderUpdatedCount || 0) > 0,
     updatedDocuments,
   };
+  } catch (error) {
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -3742,22 +3860,30 @@ export const ensureEntityFolders = withAuth(async (
   { tenant },
   entityId: string,
   entityType: string
-): Promise<IFolderNode[] | ActionPermissionError> => {
+): Promise<IFolderNode[] | DocumentActionError> => {
   if (!(await hasPermission(user, 'document', 'read'))) {
     return permissionError('Permission denied');
   }
 
   if (!entityId || !entityType) {
-    throw new Error('Both entityId and entityType are required');
+    return expectedDocumentActionError('Both entityId and entityType are required');
   }
 
-  const { knex } = await createTenantKnex();
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    await ensureEntityFoldersInitializedInternal(trx, tenant, entityId, entityType, user.user_id);
+  try {
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await ensureEntityFoldersInitializedInternal(trx, tenant, entityId, entityType, user.user_id);
 
-    // Return current folder tree
-    return _getFolderTreeInternal(trx, user, tenant, entityId, entityType);
-  });
+      // Return current folder tree
+      return _getFolderTreeInternal(trx, user, tenant, entityId, entityType);
+    });
+  } catch (error) {
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -3831,20 +3957,21 @@ export const createFolder = withAuth(async (
   entityId?: string | null,
   entityType?: string | null,
   isClientVisible: boolean = false
-): Promise<void | ActionPermissionError> => {
+): Promise<void | DocumentActionError> => {
   if (!(await hasPermission(user, 'document', 'create'))) {
     return permissionError('Permission denied');
   }
 
+  try {
   const { knex } = await createTenantKnex();
 
   // Validate folder path
   if (!folderPath || !folderPath.startsWith('/')) {
-    throw new Error('Folder path must start with /');
+    return expectedDocumentActionError('Folder path must start with /');
   }
 
   if ((entityId && !entityType) || (!entityId && entityType)) {
-    throw new Error('Both entityId and entityType are required when scoping a folder to an entity');
+    return expectedDocumentActionError('Both entityId and entityType are required when scoping a folder to an entity');
   }
 
   const hasEntityScope = Boolean(entityId && entityType);
@@ -3852,7 +3979,7 @@ export const createFolder = withAuth(async (
   // Extract folder name from path
   const parts = folderPath.split('/').filter(p => p.length > 0);
   if (parts.length === 0) {
-    throw new Error('Invalid folder path');
+    return expectedDocumentActionError('Invalid folder path');
   }
   const folderName = parts[parts.length - 1];
 
@@ -3907,15 +4034,23 @@ export const createFolder = withAuth(async (
 
   // Create folder
   await tenantScopedTable(knex, 'document_folders', tenant).insert({
-    tenant,
-    folder_path: folderPath,
-    folder_name: folderName,
-    parent_folder_id: parentFolderId,
-    entity_id: hasEntityScope ? entityId : null,
-    entity_type: hasEntityScope ? entityType : null,
-    is_client_visible: isClientVisible,
-    created_by: user.user_id,
-  });
+      tenant,
+      folder_path: folderPath,
+      folder_name: folderName,
+      parent_folder_id: parentFolderId,
+      entity_id: hasEntityScope ? entityId : null,
+      entity_type: hasEntityScope ? entityType : null,
+      is_client_visible: isClientVisible,
+      created_by: user.user_id,
+    });
+  } catch (error) {
+    console.error('Error creating folder:', error);
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -3924,11 +4059,12 @@ export const createFolder = withAuth(async (
  * @param folderPath - Path to the folder to delete
  * @returns Promise<void>
  */
-export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string): Promise<void | ActionPermissionError> => {
+export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string): Promise<void | DocumentActionError> => {
   if (!(await hasPermission(user, 'document', 'delete'))) {
     return permissionError('Permission denied');
   }
 
+  try {
   const { knex } = await createTenantKnex();
 
   const documentsInFolder = await tenantScopedTable(knex, 'documents', tenant)
@@ -3955,7 +4091,7 @@ export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string
     .first();
 
   if (parseInt(docCount?.count as string) > 0) {
-    throw new Error('Cannot delete folder: contains documents');
+    return expectedDocumentActionError('Cannot delete folder: contains documents');
   }
 
   // Check if folder has subfolders
@@ -3965,13 +4101,20 @@ export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string
     .first();
 
   if (parseInt(subfolderCount?.count as string) > 0) {
-    throw new Error('Cannot delete folder: contains subfolders');
+    return expectedDocumentActionError('Cannot delete folder: contains subfolders');
   }
 
   // Delete folder
   await tenantScopedTable(knex, 'document_folders', tenant)
     .where('folder_path', folderPath)
     .delete();
+  } catch (error) {
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
 });
 
 // Helper functions

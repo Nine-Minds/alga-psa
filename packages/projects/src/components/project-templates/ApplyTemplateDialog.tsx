@@ -19,7 +19,11 @@ import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
 import { getTemplates, applyTemplate } from '../../actions/projectTemplateActions';
 import { getAllClientsForProjects, getProjectStatuses } from '../../actions/projectActions';
 import { createStatus as createStatusAction } from '@alga-psa/reference-data/actions';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
 
 interface ApplyTemplateDialogProps {
@@ -30,6 +34,10 @@ interface ApplyTemplateDialogProps {
 }
 
 type AssignmentOption = 'none' | 'primary' | 'all';
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateId }: ApplyTemplateDialogProps) {
   const { t } = useTranslation(['features/projects', 'common']);
@@ -108,6 +116,14 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
         getProjectStatuses()
       ]);
 
+      if (isReturnedActionError(templatesData)) {
+        toast({
+          title: t('templates.apply.loadErrorTitle', 'Error'),
+          description: getErrorMessage(templatesData),
+          variant: 'destructive'
+        });
+        return;
+      }
       setTemplates(templatesData);
       setClients(clientsData);
       if (!isActionPermissionError(projectStatusesResult)) {
@@ -159,6 +175,14 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
           assignmentOption: options.assignmentOption
         }
       });
+      if (isReturnedActionError(projectId)) {
+        toast({
+          title: t('templates.apply.loadErrorTitle', 'Error'),
+          description: getErrorMessage(projectId),
+          variant: 'destructive'
+        });
+        return;
+      }
 
       toast({
         title: t('common:actions.create', 'Create'),
