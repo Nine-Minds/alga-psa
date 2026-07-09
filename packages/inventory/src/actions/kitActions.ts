@@ -63,6 +63,70 @@ function normalizeKitPricingMode(value?: KitPricingMode | null): KitPricingMode 
   return mode;
 }
 
+type KitPriceComponent = Pick<KitComponentDetail, 'default_rate' | 'quantity'>;
+
+/** Resolve a kit's reusable price policy from already-loaded data. */
+export function resolveKitPricePolicy(
+  mode: KitPricingMode,
+  fixedPrice: number | null,
+  components: KitPriceComponent[],
+): number {
+  if (mode === 'fixed') return fixedPrice ?? 0;
+  return components.reduce(
+    (sum, component) => sum + asNumber(component.default_rate) * normalizeQuantity(component.quantity),
+    0,
+  );
+}
+
+type KitCostComponent = Pick<KitComponentDetail, 'extended_cost' | 'cost_currency'>;
+
+export function calculateKitFinancials(
+  kitPrice: number,
+  kitCurrency: string,
+  components: KitCostComponent[],
+): { componentCost: number | null; marginAmount: number | null; marginPercent: number | null } {
+  const normalizedCurrency = kitCurrency.toUpperCase();
+  const hasCompleteComponentCost = components.length > 0 && components.every((component) =>
+    component.extended_cost !== null &&
+    (!component.cost_currency || component.cost_currency.toUpperCase() === normalizedCurrency),
+  );
+  const componentCost = hasCompleteComponentCost
+    ? components.reduce((sum, component) => sum + (component.extended_cost ?? 0), 0)
+    : null;
+  const marginAmount = componentCost === null ? null : kitPrice - componentCost;
+  const marginPercent = kitPrice > 0 && marginAmount !== null ? marginAmount / kitPrice : null;
+  return { componentCost, marginAmount, marginPercent };
+}
+
+/** Resolve kit pricing inside an existing transaction so order writes cannot use a stale browser value. */
+export async function resolveKitPriceInTransaction(
+  trx: Knex.Transaction,
+  tenant: string,
+  kitServiceId: string,
+): Promise<number> {
+  const settings = await trx('product_inventory_settings')
+    .where({ tenant, service_id: kitServiceId })
+    .select('is_kit', 'kit_pricing_mode', 'kit_fixed_price')
+    .first();
+  if (!settings) throw new Error('Inventory not enabled for this product');
+  if (!settings.is_kit) throw new Error('Product is not flagged as a kit (is_kit=false)');
+
+  const mode = normalizeKitPricingMode(settings.kit_pricing_mode);
+  const fixedPrice = settings.kit_fixed_price == null ? null : asNumber(settings.kit_fixed_price);
+  if (mode === 'fixed' && !(fixedPrice && fixedPrice > 0)) {
+    throw new Error('Fixed kit price must be greater than 0');
+  }
+
+  const components = (await trx('kit_components as kc')
+    .join('service_catalog as sc', function () {
+      this.on('kc.component_service_id', '=', 'sc.service_id').andOn('kc.tenant', '=', 'sc.tenant');
+    })
+    .where({ 'kc.tenant': tenant, 'kc.kit_service_id': kitServiceId })
+    .select('kc.quantity', 'sc.default_rate')) as KitPriceComponent[];
+
+  return resolveKitPricePolicy(mode, fixedPrice, components);
+}
+
 function safeRevalidate(path: string): void {
   try {
     revalidatePath(path);
@@ -149,8 +213,8 @@ export interface KitComponentDetail extends IKitComponent {
   cost_currency: string | null;
   on_hand: number;
   available: number;
-  unit_cost: number;
-  extended_cost: number;
+  unit_cost: number | null;
+  extended_cost: number | null;
   extended_price: number;
   component_buildable_quantity: number | null;
 }
@@ -170,8 +234,8 @@ export interface KitSummary {
   buildable_quantity: number | null;
   status: KitStatus;
   computed_price: number;
-  component_cost: number;
-  margin_amount: number;
+  component_cost: number | null;
+  margin_amount: number | null;
   margin_percent: number | null;
   sales_order_count: number;
 }
@@ -214,7 +278,7 @@ export interface CreateKitProductInput {
   sku?: string | null;
   custom_service_type_id: string;
   unit_of_measure?: string | null;
-  price: number;
+  kit_fixed_price?: number | null;
   cost?: number | null;
   currency_code?: string | null;
   description?: string | null;
@@ -226,7 +290,6 @@ export interface UpdateKitProductInput {
   sku?: string | null;
   custom_service_type_id?: string | null;
   unit_of_measure?: string | null;
-  price?: number;
   cost?: number | null;
   currency_code?: string | null;
   description?: string | null;
@@ -283,7 +346,7 @@ async function queryKitBaseRows(trx: Knex.Transaction, tenant: string, serviceId
       'sc.is_active',
       'sc.default_rate',
       'sc.cost',
-      'sc.cost_currency',
+      trx.raw('COALESCE(pis.cost_currency, sc.cost_currency) as cost_currency'),
       'pis.kit_pricing_mode',
       'pis.kit_fixed_price',
       trx.raw('COALESCE(kc_counts.component_count, 0)::int as component_count'),
@@ -344,7 +407,7 @@ async function queryKitComponents(
     const defaultRate = asNumber(row.default_rate);
     const cost = row.cost == null ? null : asNumber(row.cost);
     const averageCost = row.average_cost == null ? null : asNumber(row.average_cost);
-    const unitCost = averageCost ?? cost ?? 0;
+    const unitCost = averageCost ?? cost;
     const available = asNumber(row.available);
     const detail: KitComponentDetail = {
       ...(row as IKitComponent),
@@ -361,7 +424,7 @@ async function queryKitComponents(
       on_hand: asNumber(row.on_hand),
       available,
       unit_cost: unitCost,
-      extended_cost: unitCost * quantity,
+      extended_cost: unitCost === null ? null : unitCost * quantity,
       extended_price: defaultRate * quantity,
       component_buildable_quantity: row.track_stock ? Math.max(0, Math.floor(available / quantity)) : null,
     };
@@ -381,12 +444,13 @@ function summarizeKit(row: KitBaseRow, components: KitComponentDetail[]): KitSum
   const buildable = stocked.length
     ? Math.min(...stocked.map((c) => c.component_buildable_quantity ?? 0))
     : null;
-  const componentCost = components.reduce((sum, c) => sum + c.extended_cost, 0);
-  const sumPrice = components.reduce((sum, c) => sum + c.extended_price, 0);
   const catalogPrice = asNumber(row.default_rate);
-  const computedPrice = mode === 'fixed' ? (fixedPrice ?? 0) : (sumPrice || catalogPrice);
-  const marginAmount = computedPrice - componentCost;
-  const marginPercent = computedPrice > 0 ? marginAmount / computedPrice : null;
+  const computedPrice = resolveKitPricePolicy(mode, fixedPrice, components);
+  const { componentCost, marginAmount, marginPercent } = calculateKitFinancials(
+    computedPrice,
+    row.cost_currency ?? 'USD',
+    components,
+  );
 
   let status: KitStatus = 'ready';
   if (mode === 'fixed' && !(fixedPrice && fixedPrice > 0)) {
@@ -524,9 +588,12 @@ export const createKitProduct = withAuth(
     if (!serviceName) throw new Error('Kit name is required');
     if (!input.custom_service_type_id) throw new Error('Product type is required');
     const currency = normalizeCurrency(input.currency_code);
-    const price = normalizeMoney(input.price, 'Kit price', { requiredPositive: true });
     const cost = input.cost == null ? null : normalizeMoney(input.cost, 'Kit cost');
     const mode = normalizeKitPricingMode(input.kit_pricing_mode);
+    const fixedPrice = mode === 'fixed'
+      ? normalizeMoney(input.kit_fixed_price, 'Fixed kit price', { requiredPositive: true })
+      : null;
+    const catalogProjection = fixedPrice ?? 0;
 
     const { knex: db } = await createTenantKnex();
     const serviceId = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -541,7 +608,7 @@ export const createKitProduct = withAuth(
           service_name: serviceName,
           custom_service_type_id: input.custom_service_type_id,
           billing_method: 'usage',
-          default_rate: price,
+          default_rate: catalogProjection,
           unit_of_measure: normalizeOptionalText(input.unit_of_measure) ?? 'kit',
           category_id: null,
           tax_rate_id: null,
@@ -565,10 +632,10 @@ export const createKitProduct = withAuth(
           tenant,
           service_id: service.service_id,
           currency_code: currency,
-          rate: price,
+          rate: catalogProjection,
         })
         .onConflict(['tenant', 'service_id', 'currency_code'])
-        .merge({ rate: price, updated_at: trx.fn.now() });
+        .merge({ rate: catalogProjection, updated_at: trx.fn.now() });
 
       await trx('product_inventory_settings')
         .insert({
@@ -580,7 +647,7 @@ export const createKitProduct = withAuth(
           creates_asset_on_delivery: false,
           cost_currency: currency,
           kit_pricing_mode: mode,
-          kit_fixed_price: mode === 'fixed' ? price : null,
+          kit_fixed_price: fixedPrice,
         });
 
       return service.service_id as string;
@@ -616,13 +683,13 @@ export const updateKitProduct = withAuth(
       if (!current) throw new Error('Kit not found');
 
       const currency = input.currency_code !== undefined ? normalizeCurrency(input.currency_code) : current.cost_currency ?? 'USD';
-      const price = input.price !== undefined ? normalizeMoney(input.price, 'Kit price', { requiredPositive: true }) : asNumber(current.default_rate);
       const cost = input.cost === undefined ? current.cost : input.cost === null ? null : normalizeMoney(input.cost, 'Kit cost');
       const mode = normalizeKitPricingMode(input.kit_pricing_mode ?? current.kit_pricing_mode);
       const fixedPrice =
         mode === 'fixed'
-          ? normalizeMoney(input.kit_fixed_price ?? price ?? current.kit_fixed_price, 'Fixed kit price', { requiredPositive: true })
+          ? normalizeMoney(input.kit_fixed_price ?? current.kit_fixed_price, 'Fixed kit price', { requiredPositive: true })
           : null;
+      const catalogProjection = fixedPrice ?? 0;
 
       if (input.custom_service_type_id) {
         const type = await trx('service_types')
@@ -643,7 +710,7 @@ export const updateKitProduct = withAuth(
       }
       if (input.unit_of_measure !== undefined) serviceUpdate.unit_of_measure = normalizeOptionalText(input.unit_of_measure) ?? 'kit';
       if (input.description !== undefined) serviceUpdate.description = input.description ?? '';
-      if (input.price !== undefined) serviceUpdate.default_rate = price;
+      serviceUpdate.default_rate = catalogProjection;
       if (input.cost !== undefined) serviceUpdate.cost = cost;
       if (input.currency_code !== undefined) serviceUpdate.cost_currency = currency;
 
@@ -651,17 +718,15 @@ export const updateKitProduct = withAuth(
         .where({ tenant, service_id: kitServiceId })
         .update(serviceUpdate);
 
-      if (input.price !== undefined || input.currency_code !== undefined) {
-        await trx('service_prices')
-          .insert({
-            tenant,
-            service_id: kitServiceId,
-            currency_code: currency,
-            rate: price,
-          })
-          .onConflict(['tenant', 'service_id', 'currency_code'])
-          .merge({ rate: price, updated_at: trx.fn.now() });
-      }
+      await trx('service_prices')
+        .insert({
+          tenant,
+          service_id: kitServiceId,
+          currency_code: currency,
+          rate: catalogProjection,
+        })
+        .onConflict(['tenant', 'service_id', 'currency_code'])
+        .merge({ rate: catalogProjection, updated_at: trx.fn.now() });
 
       await trx('product_inventory_settings')
         .where({ tenant, service_id: kitServiceId })
@@ -889,31 +954,6 @@ export const computeKitPrice = withAuth(
   async (user, { tenant }, kitServiceId: string, _currency?: string): Promise<number> => {
     await requireInvPerm(user, 'read');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const settings = await trx('product_inventory_settings')
-        .where({ tenant, service_id: kitServiceId })
-        .select('is_kit', 'kit_pricing_mode', 'kit_fixed_price')
-        .first();
-      if (!settings) throw new Error('Inventory not enabled for this product');
-      if (!settings.is_kit) throw new Error('Product is not flagged as a kit (is_kit=false)');
-
-      const mode: KitPricingMode = settings.kit_pricing_mode ?? 'sum';
-      if (mode === 'fixed') {
-        return Number(settings.kit_fixed_price ?? 0);
-      }
-
-      const components = (await trx('kit_components')
-        .where({ tenant, kit_service_id: kitServiceId })) as IKitComponent[];
-      let total = 0;
-      for (const c of components) {
-        const svc = await trx('service_catalog')
-          .where({ tenant, service_id: c.component_service_id })
-          .select('default_rate')
-          .first();
-        const rate = Number(svc?.default_rate ?? 0);
-        total += rate * c.quantity;
-      }
-      return total;
-    });
+    return withTransaction(db, (trx: Knex.Transaction) => resolveKitPriceInTransaction(trx, tenant, kitServiceId));
   },
 );

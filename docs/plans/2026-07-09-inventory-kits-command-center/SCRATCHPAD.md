@@ -43,6 +43,12 @@ command-center screen.
 - 2026-07-09: Component selling-price data already exists in kit detail but the
   BOM renders only component cost. The calculated sum therefore cannot be audited
   from the screen.
+- 2026-07-09: Kit pricing uses the kit currency. This pass does not convert kit
+  prices. A sales order in another currency requires an explicit order-specific
+  amount, preventing an untagged integer from being silently relabeled.
+- 2026-07-09: Missing component costs and component costs in another currency
+  make margin unavailable. Treating either case as zero materially overstates
+  gross profit.
 - 2026-07-09: The existing worktree has unrelated changes in `package-lock.json`
   and pseudo-locale files. Do not stage or revert them.
 
@@ -51,6 +57,17 @@ command-center screen.
 - 2026-07-09: Check worktree with `git status --short`; unrelated local changes in
   `package-lock.json` and pseudo-locale files are pre-existing and must not be
   reverted.
+- 2026-07-09: `npm run typecheck` passes in `packages/inventory`.
+- 2026-07-09: The server typecheck needs
+  `NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck`; the default 4 GB heap
+  exits before TypeScript completes.
+- 2026-07-09: `npx vitest run src/lib/kitmisc.test.ts` passes 8 DB-backed tests.
+- 2026-07-09: The focused pricing suite passes 6 tests across
+  `kitPricing.test.ts`, `KitManager.pricing.test.tsx`, and
+  `SalesOrdersManager.kitPricing.test.tsx`.
+- 2026-07-09: Alga Dev still exposes the worktree browser as `popup-4`. Browser
+  commands cannot resolve popup panes, so live DOM/screenshot verification was
+  not available in this pass.
 
 ## Links / References
 

@@ -53,8 +53,7 @@ interface CreateKitDraft {
   sku: string;
   custom_service_type_id: string;
   unit_of_measure: string;
-  price: string;
-  cost: string;
+  fixed_price: string;
   currency_code: string;
   kit_pricing_mode: 'sum' | 'fixed';
 }
@@ -64,8 +63,7 @@ const DEFAULT_CREATE_DRAFT: CreateKitDraft = {
   sku: '',
   custom_service_type_id: '',
   unit_of_measure: 'kit',
-  price: '',
-  cost: '',
+  fixed_price: '',
   currency_code: 'USD',
   kit_pricing_mode: 'sum',
 };
@@ -127,7 +125,6 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [pricingMode, setPricingMode] = useState<'sum' | 'fixed'>('sum');
-  const [kitPriceInput, setKitPriceInput] = useState('');
   const [fixedPriceInput, setFixedPriceInput] = useState('');
   const [savingPricing, setSavingPricing] = useState(false);
 
@@ -188,8 +185,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
       }
       setDetail(loaded);
       setPricingMode(loaded.kit_pricing_mode);
-      setKitPriceInput(centsToInput(loaded.default_rate));
-      setFixedPriceInput(centsToInput(loaded.kit_fixed_price ?? loaded.default_rate));
+      setFixedPriceInput(centsToInput(loaded.kit_fixed_price));
     } catch (error) {
       setDetailError(mapKitError(error));
     } finally {
@@ -222,6 +218,23 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
   const readyCount = kits.filter((kit) => kit.status === 'ready').length;
   const attentionCount = kits.filter((kit) => kit.status !== 'ready').length;
   const selectedComponentAlreadyExists = detail?.components.some((component) => component.component_service_id === componentServiceId) ?? false;
+  const fixedPriceDraft = fixedPriceInput.trim() === '' ? null : Number(fixedPriceInput);
+  const fixedPriceDraftCents = fixedPriceDraft !== null && Number.isFinite(fixedPriceDraft)
+    ? Math.round(fixedPriceDraft * 100)
+    : null;
+  const pricingDirty = Boolean(detail) && (
+    pricingMode !== detail?.kit_pricing_mode ||
+    (pricingMode === 'fixed' && fixedPriceDraftCents !== detail?.kit_fixed_price)
+  );
+  const draftKitPrice = pricingMode === 'fixed'
+    ? fixedPriceDraftCents
+    : detail?.computed_price ?? 0;
+  const draftGrossProfit = detail?.component_cost == null || draftKitPrice === null
+    ? null
+    : draftKitPrice - detail.component_cost;
+  const draftGrossMargin = draftKitPrice !== null && draftKitPrice > 0 && draftGrossProfit !== null
+    ? draftGrossProfit / draftKitPrice
+    : null;
 
   const handleCreate = async () => {
     setCreateError(null);
@@ -235,20 +248,20 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
     }
     setCreating(true);
     try {
-      const price = toCents(createDraft.price, {
-        requiredPositive: true,
-        field: t('kits.create.validation.priceRequired', { defaultValue: 'Kit price must be greater than 0.' }),
-      });
-      const cost = createDraft.cost.trim() ? toCents(createDraft.cost, { field: t('kits.create.validation.costInvalid', { defaultValue: 'Kit cost must be a valid amount.' }) }) : null;
+      const fixedPrice = createDraft.kit_pricing_mode === 'fixed'
+        ? toCents(createDraft.fixed_price, {
+            requiredPositive: true,
+            field: t('kits.pricing.validation.fixedRequired', { defaultValue: 'Kit price must be greater than 0.' }),
+          })
+        : null;
       const created = await createKitProduct({
         service_name: createDraft.service_name,
         sku: createDraft.sku || null,
         custom_service_type_id: createDraft.custom_service_type_id,
         unit_of_measure: createDraft.unit_of_measure || 'kit',
-        price,
-        cost,
         currency_code: createDraft.currency_code || 'USD',
         kit_pricing_mode: createDraft.kit_pricing_mode,
+        kit_fixed_price: fixedPrice,
       });
       setCreateOpen(false);
       setCreateDraft({ ...DEFAULT_CREATE_DRAFT, custom_service_type_id: serviceTypes[0]?.id ?? '' });
@@ -267,23 +280,20 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
     if (!detail) return;
     setSavingPricing(true);
     try {
-      const price = toCents(kitPriceInput, {
-        requiredPositive: true,
-        field: t('kits.pricing.validation.priceRequired', { defaultValue: 'Kit price must be greater than 0.' }),
-      });
       const fixedPrice = pricingMode === 'fixed'
-        ? toCents(fixedPriceInput || kitPriceInput, {
+        ? toCents(fixedPriceInput, {
             requiredPositive: true,
-            field: t('kits.pricing.validation.fixedRequired', { defaultValue: 'Fixed kit price must be greater than 0.' }),
+            field: t('kits.pricing.validation.fixedRequired', { defaultValue: 'Kit price must be greater than 0.' }),
           })
         : null;
       const updated = await updateKitProduct(detail.service_id, {
-        price,
         currency_code: detail.cost_currency || 'USD',
         kit_pricing_mode: pricingMode,
         kit_fixed_price: fixedPrice,
       });
       setDetail(updated);
+      setPricingMode(updated.kit_pricing_mode);
+      setFixedPriceInput(centsToInput(updated.kit_fixed_price));
       await refreshKits();
       toast.success(t('kits.pricing.saved', { defaultValue: 'Pricing saved.' }));
     } catch (error) {
@@ -493,12 +503,19 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button id="kit-create-sales-order-link" variant="default" size="sm" asChild>
-                    <Link href="/msp/inventory/sales-orders">
+                  {pricingDirty ? (
+                    <Button id="kit-create-sales-order-link" variant="default" size="sm" disabled>
                       <ShoppingCart className="mr-2 h-4 w-4" />
                       {t('kits.actions.createSalesOrder', { defaultValue: 'Create sales order' })}
-                    </Link>
-                  </Button>
+                    </Button>
+                  ) : (
+                    <Button id="kit-create-sales-order-link" variant="default" size="sm" asChild>
+                      <Link href="/msp/inventory/sales-orders">
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        {t('kits.actions.createSalesOrder', { defaultValue: 'Create sales order' })}
+                      </Link>
+                    </Button>
+                  )}
                   <Button id="kit-product-settings-link" variant="outline" size="sm" asChild>
                     <Link href="/msp/billing?tab=products">
                       <ExternalLink className="mr-2 h-4 w-4" />
@@ -511,8 +528,16 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
               <div className="grid gap-3 md:grid-cols-4">
                 <Metric label={t('kits.stock.canBuildLabel', { defaultValue: 'Can build' })} value={renderBuildable(detail)} />
                 <Metric label={t('kits.bom.componentCountShort', { defaultValue: 'Components' })} value={String(detail.component_count)} />
-                <Metric label={t('kits.pricing.kitPrice', { defaultValue: 'Kit price' })} value={money(detail.computed_price)} />
-                <Metric label={t('kits.pricing.margin', { defaultValue: 'Margin' })} value={detail.margin_percent === null ? money(detail.margin_amount) : `${money(detail.margin_amount)} · ${(detail.margin_percent * 100).toFixed(1)}%`} />
+                <Metric
+                  label={detail.kit_pricing_mode === 'sum'
+                    ? t('kits.pricing.calculatedPrice', { defaultValue: 'Calculated kit price' })
+                    : t('kits.pricing.kitPrice', { defaultValue: 'Kit price' })}
+                  value={detail.kit_pricing_mode === 'sum' && detail.component_count === 0 ? '—' : money(detail.computed_price)}
+                />
+                <Metric
+                  label={t('kits.pricing.grossMargin', { defaultValue: 'Gross margin' })}
+                  value={detail.margin_percent === null ? '—' : `${(detail.margin_percent * 100).toFixed(1)}%`}
+                />
               </div>
 
               <Panel title={t('kits.bom.title', { defaultValue: 'Bill of materials' })} icon={<Boxes className="h-4 w-4" />}>
@@ -564,17 +589,18 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
 
                   {detail.components.length > 0 && (
                     <div className="overflow-hidden rounded-md border border-[rgb(var(--color-border-100))]" id="kit-components-table">
-                      <div className="hidden grid-cols-[minmax(0,1.6fr)_90px_90px_110px_110px_96px] gap-2 border-b border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-border-50))] px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] md:grid">
+                      <div className="hidden grid-cols-[minmax(0,1.4fr)_80px_80px_100px_100px_130px_80px] gap-2 border-b border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-border-50))] px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] md:grid">
                         <span>{t('kits.columns.component', { defaultValue: 'Component' })}</span>
                         <span>{t('kits.bom.qtyPerKit', { defaultValue: 'Qty per kit' })}</span>
                         <span>{t('kits.stock.available', { defaultValue: 'Available' })}</span>
                         <span>{t('kits.pricing.unitCost', { defaultValue: 'Unit cost' })}</span>
                         <span>{t('kits.pricing.extCost', { defaultValue: 'Ext. cost' })}</span>
+                        <span>{t('kits.pricing.sellingPrice', { defaultValue: 'Selling price' })}</span>
                         <span className="text-right">{t('common.actions', { defaultValue: 'Actions' })}</span>
                       </div>
                       <div className="divide-y divide-[rgb(var(--color-border-100))]">
                         {detail.components.map((component) => (
-                          <div key={component.component_service_id} className="grid grid-cols-2 gap-3 px-3 py-3 text-sm md:grid-cols-[minmax(0,1.6fr)_90px_90px_110px_110px_96px] md:items-center md:gap-2 md:py-2">
+                          <div key={component.component_service_id} className="grid grid-cols-2 gap-3 px-3 py-3 text-sm md:grid-cols-[minmax(0,1.4fr)_80px_80px_100px_100px_130px_80px] md:items-center md:gap-2 md:py-2">
                             <div className="col-span-2 min-w-0 md:col-span-1">
                               <p className="truncate font-medium text-[rgb(var(--color-text-800))]">{component.service_name}</p>
                               <div className="mt-1 flex flex-wrap gap-1 text-xs text-[rgb(var(--color-text-500))]">
@@ -595,11 +621,16 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
                             </div>
                             <div>
                               <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] md:hidden">{t('kits.pricing.unitCost', { defaultValue: 'Unit cost' })}</span>
-                              <span className="font-mono text-[rgb(var(--color-text-800))]">{money(component.unit_cost)}</span>
+                              <span className="font-mono text-[rgb(var(--color-text-800))]">{component.unit_cost === null ? '—' : money(component.unit_cost)}</span>
                             </div>
                             <div>
                               <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] md:hidden">{t('kits.pricing.extCost', { defaultValue: 'Ext. cost' })}</span>
-                              <span className="font-mono text-[rgb(var(--color-text-800))]">{money(component.extended_cost)}</span>
+                              <span className="font-mono text-[rgb(var(--color-text-800))]">{component.extended_cost === null ? '—' : money(component.extended_cost)}</span>
+                            </div>
+                            <div>
+                              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] md:hidden">{t('kits.pricing.sellingPrice', { defaultValue: 'Selling price' })}</span>
+                              <span className="block font-mono text-[rgb(var(--color-text-800))]">{money(component.default_rate)} {t('kits.pricing.each', { defaultValue: 'each' })}</span>
+                              <span className="block text-xs text-[rgb(var(--color-text-500))]">{money(component.extended_price)} {t('kits.pricing.extended', { defaultValue: 'extended' })}</span>
                             </div>
                             <div className="col-span-2 text-right md:col-span-1">
                               <Button id={`remove-component-${component.component_service_id}`} variant="ghost" size="sm" onClick={() => setPendingRemove(component)}>
@@ -623,21 +654,30 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
                       value={pricingMode}
                       onValueChange={(value) => setPricingMode(value as 'sum' | 'fixed')}
                       options={[
-                        { value: 'sum', label: t('kits.pricing.sum', { defaultValue: 'Sum of components' }) },
+                        { value: 'sum', label: t('kits.pricing.sum', { defaultValue: 'Sum of component prices' }) },
                         { value: 'fixed', label: t('kits.pricing.fixed', { defaultValue: 'Fixed price' }) },
                       ]}
                     />
-                    <Input
-                      id="kit-price"
-                      label={t('kits.pricing.salesOrderPrice', { defaultValue: 'Sales-order kit price' })}
-                      value={kitPriceInput}
-                      inputMode="decimal"
-                      onChange={(event) => setKitPriceInput(event.target.value.replace(/[^0-9.]/g, ''))}
-                    />
-                    {pricingMode === 'fixed' && (
+                    {pricingMode === 'sum' ? (
+                      <div className="rounded-md border border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-border-50))] p-3">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="text-sm font-medium text-[rgb(var(--color-text-700))]">
+                            {t('kits.pricing.calculatedPrice', { defaultValue: 'Calculated kit price' })}
+                          </span>
+                          <span className="font-mono text-base font-semibold text-[rgb(var(--color-text-900))]">
+                            {detail.component_count === 0 ? '—' : money(detail.computed_price)}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+                          {detail.component_count === 0
+                            ? t('kits.pricing.addComponentsToCalculate', { defaultValue: 'Add components to calculate a price.' })
+                            : t('kits.pricing.calculatedBasis', { defaultValue: 'Component selling prices × quantity' })}
+                        </p>
+                      </div>
+                    ) : (
                       <Input
                         id="kit-fixed-price"
-                        label={t('kits.pricing.fixedAmount', { defaultValue: 'Fixed kit price' })}
+                        label={t('kits.pricing.kitPriceWithCurrency', { defaultValue: 'Kit price ({{currency}})', currency })}
                         value={fixedPriceInput}
                         inputMode="decimal"
                         onChange={(event) => setFixedPriceInput(event.target.value.replace(/[^0-9.]/g, ''))}
@@ -647,17 +687,30 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
                     <div className="rounded-md bg-[rgb(var(--color-border-50))] p-3 text-sm">
                       <div className="flex justify-between gap-3">
                         <span className="text-[rgb(var(--color-text-500))]">{t('kits.pricing.componentCost', { defaultValue: 'Component cost' })}</span>
-                        <span className="font-mono text-[rgb(var(--color-text-800))]">{money(detail.component_cost)}</span>
+                        <span className="font-mono text-[rgb(var(--color-text-800))]">{detail.component_cost === null ? '—' : money(detail.component_cost)}</span>
                       </div>
                       <div className="mt-1 flex justify-between gap-3">
-                        <span className="text-[rgb(var(--color-text-500))]">{t('kits.pricing.margin', { defaultValue: 'Margin' })}</span>
+                        <span className="text-[rgb(var(--color-text-500))]">{t('kits.pricing.grossProfit', { defaultValue: 'Gross profit' })}</span>
+                        <span className="font-mono text-[rgb(var(--color-text-800))]">{draftGrossProfit === null ? '—' : money(draftGrossProfit)}</span>
+                      </div>
+                      <div className="mt-1 flex justify-between gap-3">
+                        <span className="text-[rgb(var(--color-text-500))]">{t('kits.pricing.grossMargin', { defaultValue: 'Gross margin' })}</span>
                         <span className="font-mono text-[rgb(var(--color-text-800))]">
-                          {money(detail.margin_amount)}
-                          {detail.margin_percent !== null ? ` · ${(detail.margin_percent * 100).toFixed(1)}%` : ''}
+                          {draftGrossMargin === null ? '—' : `${(draftGrossMargin * 100).toFixed(1)}%`}
                         </span>
                       </div>
                     </div>
-                    <Button id="kit-save-pricing-button" onClick={handleSavePricing} disabled={savingPricing}>
+                    {detail.component_cost === null && detail.component_count > 0 && (
+                      <p className="text-xs text-[rgb(var(--color-accent-600))]">
+                        {t('kits.pricing.marginUnavailable', { defaultValue: 'Add component costs in the kit currency to calculate margin.' })}
+                      </p>
+                    )}
+                    {pricingDirty && (
+                      <p className="text-xs text-[rgb(var(--color-accent-600))]">
+                        {t('kits.pricing.unsaved', { defaultValue: 'Save pricing before creating a sales order.' })}
+                      </p>
+                    )}
+                    <Button id="kit-save-pricing-button" onClick={handleSavePricing} disabled={savingPricing || !pricingDirty}>
                       {savingPricing ? t('common.saving', { defaultValue: 'Saving…' }) : t('kits.pricing.save', { defaultValue: 'Save pricing' })}
                     </Button>
                   </div>
@@ -690,7 +743,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
 
               <Panel title={t('kits.salesOrder.title', { defaultValue: 'Sales-order behavior' })} icon={<ShoppingCart className="h-4 w-4" />}>
                 <div className="grid gap-3 text-sm lg:grid-cols-3">
-                  <BehaviorFact label={t('kits.salesOrder.parentLine', { defaultValue: 'Parent kit line' })} value={t('kits.salesOrder.parentLineValue', { defaultValue: 'Priced at {{price}}', price: money(detail.sales_order_behavior.parent_line_price) })} />
+                  <BehaviorFact label={t('kits.salesOrder.parentLine', { defaultValue: 'Parent kit line' })} value={t('kits.salesOrder.parentLineValue', { defaultValue: 'Priced at {{price}}', price: draftKitPrice === null ? '—' : money(draftKitPrice) })} />
                   <BehaviorFact label={t('kits.salesOrder.componentLines', { defaultValue: 'Component lines' })} value={t('kits.salesOrder.componentLinesValue', { defaultValue: 'Explode as child lines' })} />
                   <BehaviorFact label={t('kits.salesOrder.stockEffect', { defaultValue: 'Stock effect' })} value={t('kits.salesOrder.stockEffectValue', { defaultValue: 'Components allocate and fulfill stock' })} />
                 </div>
@@ -702,7 +755,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
                     <ul className="mt-2 space-y-1.5 text-sm">
                       <li className="flex justify-between gap-3">
                         <span className="truncate text-[rgb(var(--color-text-700))]">{detail.service_name}</span>
-                        <span className="font-mono text-[rgb(var(--color-text-900))]">{money(detail.computed_price)}</span>
+                        <span className="font-mono text-[rgb(var(--color-text-900))]">{draftKitPrice === null ? '—' : money(draftKitPrice)}</span>
                       </li>
                       {detail.components.map((component) => (
                         <li key={component.component_service_id} className="flex justify-between gap-3 text-[rgb(var(--color-text-500))]">
@@ -780,21 +833,6 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
               onChange={(event) => setCreateDraft((prev) => ({ ...prev, unit_of_measure: event.target.value }))}
             />
             <Input
-              id="kit-create-price"
-              label={t('kits.pricing.kitPrice', { defaultValue: 'Kit price' })}
-              value={createDraft.price}
-              inputMode="decimal"
-              onChange={(event) => setCreateDraft((prev) => ({ ...prev, price: event.target.value.replace(/[^0-9.]/g, '') }))}
-              required
-            />
-            <Input
-              id="kit-create-cost"
-              label={t('kits.pricing.kitCostOptional', { defaultValue: 'Kit cost (optional)' })}
-              value={createDraft.cost}
-              inputMode="decimal"
-              onChange={(event) => setCreateDraft((prev) => ({ ...prev, cost: event.target.value.replace(/[^0-9.]/g, '') }))}
-            />
-            <Input
               id="kit-create-currency"
               label={t('kits.pricing.currency', { defaultValue: 'Currency' })}
               value={createDraft.currency_code}
@@ -807,10 +845,24 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
               value={createDraft.kit_pricing_mode}
               onValueChange={(value) => setCreateDraft((prev) => ({ ...prev, kit_pricing_mode: value as 'sum' | 'fixed' }))}
               options={[
-                { value: 'sum', label: t('kits.pricing.sum', { defaultValue: 'Sum of components' }) },
+                { value: 'sum', label: t('kits.pricing.sum', { defaultValue: 'Sum of component prices' }) },
                 { value: 'fixed', label: t('kits.pricing.fixed', { defaultValue: 'Fixed price' }) },
               ]}
             />
+            {createDraft.kit_pricing_mode === 'fixed' ? (
+              <Input
+                id="kit-create-fixed-price"
+                label={t('kits.pricing.kitPriceWithCurrency', { defaultValue: 'Kit price ({{currency}})', currency: createDraft.currency_code || 'USD' })}
+                value={createDraft.fixed_price}
+                inputMode="decimal"
+                onChange={(event) => setCreateDraft((prev) => ({ ...prev, fixed_price: event.target.value.replace(/[^0-9.]/g, '') }))}
+                required
+              />
+            ) : (
+              <div className="rounded-md bg-[rgb(var(--color-border-50))] p-3 text-sm text-[rgb(var(--color-text-600))]">
+                {t('kits.pricing.createSumHint', { defaultValue: 'Price will be calculated after components are added.' })}
+              </div>
+            )}
           </div>
         </div>
       </Dialog>

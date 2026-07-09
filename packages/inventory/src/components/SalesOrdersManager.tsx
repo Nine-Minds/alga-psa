@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { ChevronDown, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import { formatCurrencyFromMinorUnits, toMinorUnits, currencyFractionDigits } from '@alga-psa/core';
@@ -118,6 +118,11 @@ interface LineForm {
   quantity_ordered: string;
   unit_price: string; // major units (e.g. dollars), converted to minor units on save
   fulfillment_type: SalesOrderLineFulfillmentType;
+  is_kit: boolean;
+  kit_pricing_mode: 'sum' | 'fixed' | null;
+  kit_currency: string | null;
+  resolved_unit_price: string | null;
+  price_overridden: boolean;
 }
 
 interface FormState {
@@ -142,6 +147,10 @@ export interface SalesOrderServiceOption {
   service_name: string | null;
   sku: string | null;
   default_rate: number | null;
+  is_kit?: boolean;
+  kit_pricing_mode?: 'sum' | 'fixed' | null;
+  resolved_kit_price?: number | null;
+  kit_currency?: string | null;
 }
 
 const emptyLine = (): LineForm => ({
@@ -149,6 +158,11 @@ const emptyLine = (): LineForm => ({
   quantity_ordered: '1',
   unit_price: '',
   fulfillment_type: 'from_stock',
+  is_kit: false,
+  kit_pricing_mode: null,
+  kit_currency: null,
+  resolved_unit_price: null,
+  price_overridden: false,
 });
 
 const emptyForm = (): FormState => ({
@@ -269,10 +283,27 @@ export function SalesOrdersManager({
   // client and render it read-only (falling back to USD only when the client has none).
   const onClientSelect = (clientId: string | null) => {
     const picked = clientId ? clients.find((c) => c.client_id === clientId) : undefined;
+    const nextCurrency = picked?.default_currency_code || (clientId ? 'USD' : '');
     setForm((f) => ({
       ...f,
       client_id: clientId ?? '',
-      currency_code: picked?.default_currency_code || (clientId ? 'USD' : ''),
+      currency_code: nextCurrency,
+      lines: f.lines.map((line) => {
+        if (!line.is_kit || !line.service_id || !nextCurrency) return line;
+        const service = serviceById.get(line.service_id);
+        const currencyMismatch = Boolean(
+          service?.kit_currency && service.kit_currency.toUpperCase() !== nextCurrency.toUpperCase(),
+        );
+        const resolved = !currencyMismatch && service?.resolved_kit_price != null
+          ? String(service.resolved_kit_price / Math.pow(10, currencyFractionDigits(nextCurrency)))
+          : null;
+        return {
+          ...line,
+          unit_price: resolved ?? '',
+          resolved_unit_price: resolved,
+          price_overridden: false,
+        };
+      }),
     }));
   };
 
@@ -283,16 +314,31 @@ export function SalesOrdersManager({
     }));
   };
 
-  // Picking a service both binds a real service_id (a picker can't yield a non-existent one) and
-  // seeds the editable unit price from its catalog default_rate (stored in minor units).
+  // The browser shows the current resolved kit price, but an untouched kit line is resolved again
+  // inside the write transaction. That prevents a stale picker value from becoming an accidental
+  // override when component prices change before save.
   const onServicePicked = (idx: number, serviceId: string) => {
     const svc = serviceById.get(serviceId);
     const currency = form.currency_code || 'USD';
+    const kitCurrencyMismatch = Boolean(
+      svc?.is_kit && svc.kit_currency && svc.kit_currency.toUpperCase() !== currency.toUpperCase(),
+    );
+    const priceMinor = svc?.is_kit
+      ? kitCurrencyMismatch ? null : svc.resolved_kit_price
+      : svc?.default_rate;
     const seededPrice =
-      svc?.default_rate != null
-        ? String(svc.default_rate / Math.pow(10, currencyFractionDigits(currency)))
+      priceMinor != null
+        ? String(priceMinor / Math.pow(10, currencyFractionDigits(currency)))
         : undefined;
-    setLine(idx, { service_id: serviceId, ...(seededPrice !== undefined ? { unit_price: seededPrice } : {}) });
+    setLine(idx, {
+      service_id: serviceId,
+      unit_price: seededPrice ?? '',
+      is_kit: Boolean(svc?.is_kit),
+      kit_pricing_mode: svc?.kit_pricing_mode ?? null,
+      kit_currency: svc?.kit_currency ?? null,
+      resolved_unit_price: svc?.is_kit ? seededPrice ?? null : null,
+      price_overridden: false,
+    });
   };
 
   const addLine = () => setForm((f) => ({ ...f, lines: [...f.lines, emptyLine()] }));
@@ -310,7 +356,12 @@ export function SalesOrdersManager({
   }, 0);
   // A line is "priced" once a service is picked with a positive quantity. Save needs a client and
   // at least one such line; individual invalid lines are marked inline rather than via a toast.
-  const lineIsValid = (l: LineForm) => Boolean(l.service_id) && Number(l.quantity_ordered) > 0;
+  const lineIsValid = (l: LineForm) =>
+    Boolean(l.service_id) &&
+    Number(l.quantity_ordered) > 0 &&
+    l.unit_price.trim() !== '' &&
+    Number.isFinite(Number(l.unit_price)) &&
+    Number(l.unit_price) >= 0;
   const canSave = Boolean(form.client_id) && form.lines.some(lineIsValid) && !saving;
 
   const save = async () => {
@@ -324,13 +375,18 @@ export function SalesOrdersManager({
     }
     const lines = form.lines
       .filter((l) => l.service_id.trim())
-      .map((l) => ({
-        service_id: l.service_id.trim(),
-        quantity_ordered: Number(l.quantity_ordered),
-        // Convert the major-unit price to the currency's integer minor units (JPY ×1, USD ×100).
-        unit_price: toMinorUnits(Number(l.unit_price || 0), undefined, form.currency_code),
-        fulfillment_type: l.fulfillment_type,
-      }));
+      .map((l) => {
+        const unitPrice = toMinorUnits(Number(l.unit_price || 0), undefined, form.currency_code);
+        return {
+          service_id: l.service_id.trim(),
+          quantity_ordered: Number(l.quantity_ordered),
+          // A kit price is omitted unless the user deliberately changed this order line. The
+          // server then resolves untouched kit lines again inside the create transaction.
+          unit_price: l.is_kit ? undefined : unitPrice,
+          kit_unit_price_override: l.is_kit && l.price_overridden ? unitPrice : undefined,
+          fulfillment_type: l.fulfillment_type,
+        };
+      });
     for (const l of lines) {
       if (!(l.quantity_ordered > 0)) {
         toast.error(t('salesOrders.lineQtyPositive', 'Each line quantity must be greater than 0'));
@@ -733,7 +789,7 @@ export function SalesOrdersManager({
                         </p>
                       )}
                     </div>
-                    <div className="w-32">
+                    <div className="w-56">
                       <Input
                         id={`sales-order-line-price-${idx}`}
                         type="number"
@@ -741,8 +797,49 @@ export function SalesOrdersManager({
                         step="0.01"
                         className="text-right tabular-nums"
                         value={line.unit_price}
-                        onChange={(e) => setLine(idx, { unit_price: e.target.value })}
+                        onChange={(e) => setLine(idx, {
+                          unit_price: e.target.value,
+                          price_overridden: line.is_kit ? true : line.price_overridden,
+                        })}
                       />
+                      {line.is_kit && (
+                        <div className="mt-1 flex items-start justify-between gap-2 text-xs">
+                          <span className={line.price_overridden ? 'text-[rgb(var(--color-accent-600))]' : 'text-[rgb(var(--color-text-500))]'}>
+                            {line.kit_currency && line.kit_currency.toUpperCase() !== currency.toUpperCase() && !line.price_overridden
+                              ? t('salesOrders.kitPrice.currencyMismatch', 'Kit price is configured in {{kitCurrency}}. Enter a {{orderCurrency}} price for this sales order.', {
+                                  kitCurrency: line.kit_currency,
+                                  orderCurrency: currency,
+                                })
+                              : line.price_overridden && line.resolved_unit_price === null
+                                ? t('salesOrders.kitPrice.currencyOverride', 'Order-specific {{currency}} price', { currency })
+                              : line.price_overridden && line.resolved_unit_price !== null
+                              ? t('salesOrders.kitPrice.overridden', 'Overridden from {{price}} for this sales order', {
+                                  price: money(
+                                    toMinorUnits(Number(line.resolved_unit_price), undefined, currency),
+                                    currency,
+                                  ),
+                                })
+                              : line.kit_pricing_mode === 'fixed'
+                                ? t('salesOrders.kitPrice.configured', 'Configured kit price')
+                                : t('salesOrders.kitPrice.calculated', 'Calculated from components')}
+                          </span>
+                          {line.price_overridden && line.resolved_unit_price !== null && (
+                            <Button
+                              id={`sales-order-line-price-reset-${idx}`}
+                              variant="ghost"
+                              size="sm"
+                              className="h-auto shrink-0 px-1 py-0 text-xs"
+                              onClick={() => setLine(idx, {
+                                unit_price: line.resolved_unit_price ?? '',
+                                price_overridden: false,
+                              })}
+                            >
+                              <RotateCcw className="mr-1 h-3 w-3" />
+                              {t('salesOrders.kitPrice.reset', 'Reset to kit price')}
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="w-8 flex justify-center pt-2">
                       <Button

@@ -10,7 +10,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import knexLib, { Knex } from 'knex';
-import { explodeKitOntoSalesOrder } from '../actions/kitActions';
+import { explodeKitOntoSalesOrder, resolveKitPriceInTransaction } from '../actions/kitActions';
+import { resolveKitSalesOrderUnitPrice } from '../actions/salesOrderActions';
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => fn,
@@ -74,6 +75,96 @@ async function inTx(fn: (trx: Knex.Transaction) => Promise<void>) {
 }
 
 describe('kit explosion + contract no-consume (real server DB, rolled back)', () => {
+  it('T007: resolves sum pricing from component selling prices without a kit catalog fallback', async () => {
+    await inTx(async (trx) => {
+      await trx('kit_components').where({ tenant: TENANT, kit_service_id: KIT_SERVICE }).del();
+      await trx('product_inventory_settings')
+        .insert({
+          tenant: TENANT,
+          service_id: KIT_SERVICE,
+          track_stock: true,
+          is_serialized: false,
+          is_kit: true,
+          kit_pricing_mode: 'sum',
+          kit_fixed_price: null,
+          cost_currency: 'USD',
+        })
+        .onConflict(['tenant', 'service_id'])
+        .merge({ is_kit: true, kit_pricing_mode: 'sum', kit_fixed_price: null });
+      await trx('service_catalog').where({ tenant: TENANT, service_id: KIT_SERVICE }).update({ default_rate: 99999 });
+      await trx('service_catalog').where({ tenant: TENANT, service_id: COMP_A }).update({ default_rate: 1250 });
+      await trx('service_catalog').where({ tenant: TENANT, service_id: COMP_B }).update({ default_rate: 300 });
+      await trx('kit_components').insert([
+        { tenant: TENANT, kit_service_id: KIT_SERVICE, component_service_id: COMP_A, quantity: 2 },
+        { tenant: TENANT, kit_service_id: KIT_SERVICE, component_service_id: COMP_B, quantity: 3 },
+      ]);
+
+      expect(await resolveKitPriceInTransaction(trx, TENANT, KIT_SERVICE)).toBe(3400);
+    });
+  });
+
+  it('T007: resolves fixed pricing from the configured fixed amount', async () => {
+    await inTx(async (trx) => {
+      await trx('product_inventory_settings')
+        .insert({
+          tenant: TENANT,
+          service_id: KIT_SERVICE,
+          track_stock: true,
+          is_serialized: false,
+          is_kit: true,
+          kit_pricing_mode: 'fixed',
+          kit_fixed_price: 42500,
+          cost_currency: 'USD',
+        })
+        .onConflict(['tenant', 'service_id'])
+        .merge({ is_kit: true, kit_pricing_mode: 'fixed', kit_fixed_price: 42500 });
+      await trx('service_catalog').where({ tenant: TENANT, service_id: KIT_SERVICE }).update({ default_rate: 99999 });
+
+      expect(await resolveKitPriceInTransaction(trx, TENANT, KIT_SERVICE)).toBe(42500);
+    });
+  });
+
+  it('T008: re-resolves an untouched order line in the transaction and preserves an explicit override', async () => {
+    await inTx(async (trx) => {
+      await trx('kit_components').where({ tenant: TENANT, kit_service_id: KIT_SERVICE }).del();
+      await trx('product_inventory_settings')
+        .insert({
+          tenant: TENANT,
+          service_id: KIT_SERVICE,
+          track_stock: true,
+          is_serialized: false,
+          is_kit: true,
+          kit_pricing_mode: 'sum',
+          kit_fixed_price: null,
+          cost_currency: 'USD',
+        })
+        .onConflict(['tenant', 'service_id'])
+        .merge({ is_kit: true, kit_pricing_mode: 'sum', kit_fixed_price: null });
+      await trx('service_catalog').where({ tenant: TENANT, service_id: COMP_A }).update({ default_rate: 1250 });
+      await trx('service_catalog').where({ tenant: TENANT, service_id: COMP_B }).update({ default_rate: 300 });
+      await trx('kit_components').insert([
+        { tenant: TENANT, kit_service_id: KIT_SERVICE, component_service_id: COMP_A, quantity: 2 },
+        { tenant: TENANT, kit_service_id: KIT_SERVICE, component_service_id: COMP_B, quantity: 3 },
+      ]);
+
+      expect(await resolveKitSalesOrderUnitPrice(trx, TENANT, KIT_SERVICE, undefined, 'USD')).toBe(3400);
+
+      // Simulate a component price changing after the browser loaded but before order save.
+      await trx('service_catalog').where({ tenant: TENANT, service_id: COMP_A }).update({ default_rate: 2000 });
+      expect(await resolveKitSalesOrderUnitPrice(trx, TENANT, KIT_SERVICE, undefined, 'USD')).toBe(4900);
+      await expect(resolveKitSalesOrderUnitPrice(trx, TENANT, KIT_SERVICE, undefined, 'EUR'))
+        .rejects.toThrow('Kit pricing is configured in USD');
+      expect(await resolveKitSalesOrderUnitPrice(trx, TENANT, KIT_SERVICE, 7777, 'EUR')).toBe(7777);
+
+      const settings = await trx('product_inventory_settings')
+        .where({ tenant: TENANT, service_id: KIT_SERVICE })
+        .select('kit_pricing_mode', 'kit_fixed_price')
+        .first();
+      expect(settings.kit_pricing_mode).toBe('sum');
+      expect(settings.kit_fixed_price).toBeNull();
+    });
+  });
+
   it('T020: actual sales-order kit explosion creates one priced parent and zero-dollar child lines', async () => {
     await inTx(async (trx) => {
       await trx('product_inventory_settings')

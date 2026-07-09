@@ -602,21 +602,33 @@
       "label": "Kit list"
     },
     "pricing": {
+      "addComponentsToCalculate": "Add components to calculate a price.",
+      "calculatedBasis": "Component selling prices × quantity",
+      "calculatedPrice": "Calculated kit price",
       "componentCost": "Component cost",
+      "createSumHint": "Price will be calculated after components are added.",
       "currency": "Currency",
+      "each": "each",
       "extCost": "Ext. cost",
+      "extended": "extended",
       "fixed": "Fixed price",
       "fixedAmount": "Fixed kit price",
+      "grossMargin": "Gross margin",
+      "grossProfit": "Gross profit",
       "kitCostOptional": "Kit cost (optional)",
       "kitPrice": "Kit price",
+      "kitPriceWithCurrency": "Kit price ({{currency}})",
       "margin": "Margin",
+      "marginUnavailable": "Add component costs in the kit currency to calculate margin.",
       "mode": "Pricing mode",
       "salesOrderPrice": "Sales-order kit price",
       "save": "Save pricing",
       "saved": "Pricing saved.",
-      "sum": "Sum of components",
+      "sellingPrice": "Selling price",
+      "sum": "Sum of component prices",
       "title": "Pricing and margin",
       "unitCost": "Unit cost",
+      "unsaved": "Save pricing before creating a sales order.",
       "validation": {
         "fixedRequired": "Fixed kit price must be greater than 0.",
         "priceRequired": "Kit price must be greater than 0."
@@ -1130,6 +1142,14 @@
     "invoiceMode": {
       "manual": "Manuale",
       "onFulfillment": "All'evasione"
+    },
+    "kitPrice": {
+      "calculated": "Calculated from components",
+      "configured": "Configured kit price",
+      "currencyMismatch": "Kit price is configured in {{kitCurrency}}. Enter a {{orderCurrency}} price for this sales order.",
+      "currencyOverride": "Order-specific {{currency}} price",
+      "overridden": "Overridden from {{price}} for this sales order",
+      "reset": "Reset to kit price"
     },
     "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
     "invoicedItems": "Fatturati {{count}} articoli.",

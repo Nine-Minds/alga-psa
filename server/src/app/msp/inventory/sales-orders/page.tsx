@@ -1,4 +1,4 @@
-import { listSalesOrders, listStockLocations } from '@alga-psa/inventory/actions';
+import { listKitSummaries, listSalesOrders, listStockLocations } from '@alga-psa/inventory/actions';
 import { SalesOrdersManager } from '@alga-psa/inventory/components';
 // Billing owns SO invoicing (billing → inventory dependency direction); the server
 // action references are passed down to the client component as props (F008).
@@ -57,12 +57,20 @@ export default async function SalesOrdersPage() {
   // beside the other prop loads — inventory can't import billing's getServices directly.
   let services: SalesOrderServiceOption[] = [];
   try {
-    const paginated = await getServices(1, 999, { item_kind: 'any' });
+    const [paginated, kits] = await Promise.all([
+      getServices(1, 999, { item_kind: 'any' }),
+      listKitSummaries(),
+    ]);
+    const kitByServiceId = new Map(kits.map((kit) => [kit.service_id, kit]));
     services = paginated.services.map((s) => ({
       service_id: s.service_id,
       service_name: s.service_name,
       sku: s.sku ?? null,
       default_rate: s.default_rate ?? null,
+      is_kit: kitByServiceId.has(s.service_id),
+      kit_pricing_mode: kitByServiceId.get(s.service_id)?.kit_pricing_mode ?? null,
+      resolved_kit_price: kitByServiceId.get(s.service_id)?.computed_price ?? null,
+      kit_currency: kitByServiceId.get(s.service_id)?.cost_currency ?? null,
     }));
   } catch (error) {
     console.error('Failed to load services:', error);

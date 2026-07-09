@@ -37,20 +37,20 @@
   },
   {
     "id": "T007",
-    "description": "DB-backed resolver test proves sum mode uses the exact BOM component selling-price sum with no catalog-rate fallback and fixed mode uses the configured fixed amount.",
-    "implemented": false,
-    "featureIds": ["F016", "F017", "F018", "F022"]
+    "description": "Pricing tests prove sum mode uses the exact BOM component selling-price sum with no catalog-rate fallback, fixed mode uses the configured amount, and incomplete or mixed-currency costs suppress margin.",
+    "implemented": true,
+    "featureIds": ["F016", "F017", "F018", "F022", "F023", "F027"]
   },
   {
     "id": "T008",
-    "description": "DB-backed sales-order test proves a kit parent defaults to the canonical resolved price while an explicit one-order override affects only that sales-order line.",
-    "implemented": false,
-    "featureIds": ["F014", "F016", "F020", "F021"]
+    "description": "DB-backed sales-order test proves a kit parent defaults to the canonical resolved price, re-resolves after a component price change, rejects a silent currency mismatch, and preserves an explicit one-order override.",
+    "implemented": true,
+    "featureIds": ["F014", "F016", "F020", "F021", "F026"]
   },
   {
     "id": "T009",
     "description": "Component/UI test proves sum mode has no editable kit-price field, fixed mode has exactly one, Create kit requests price only for fixed mode, and a changed sales-order kit price shows override and reset controls.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017", "F018", "F019", "F021", "F022", "F023", "F024", "F025"]
   }
 ]

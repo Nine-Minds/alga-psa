@@ -195,6 +195,10 @@ For `sum` pricing, show the calculated component-derived price/cost basis. For
 Component cost is not a selling-price input. It remains a separate value used to
 calculate margin.
 
+If any component cost is missing or uses a different currency, do not substitute
+zero. Show component cost, gross profit, and gross margin as unavailable and
+explain that component costs must be set in the kit currency.
+
 Enable `Save pricing` only when the selected mode or fixed price differs from the
 saved policy. The calculated sum does not need an operator save.
 
@@ -213,6 +217,10 @@ but that edit is a transaction-scoped override: it affects only that order and
 does not change the kit's pricing mode or saved price. The sales-order UI should
 identify an override relative to the resolved kit price and offer a reset to the
 resolved amount.
+
+Kit configuration does not perform currency conversion. When the sales-order
+currency differs from the kit currency, require an explicit order-specific price
+instead of silently relabeling the configured amount.
 
 The preview should support at least quantity 1 and a user-entered quantity so the
 operator can see multiplied component quantities before creating a sales order.

@@ -54,6 +54,8 @@ The screen must make the kit pricing policy singular and predictable.
 - Removing unit-price overrides from sales orders.
 - Persisting a new historical price-source audit record for saved sales-order
   lines in this pass.
+- Converting kit prices between currencies. A cross-currency sales order requires
+  an explicit order-specific price.
 - Replacing Billing -> Products as the advanced catalog admin screen.
 
 ## Users and Primary Flows
@@ -93,6 +95,8 @@ Primary flow:
   sum mode.
 - Pricing separates component cost, gross profit, and gross margin rather than
   combining the latter two under one label.
+- Margin is unavailable when a component cost is missing or is not in the kit
+  currency; the UI explains what must be corrected.
 - `Save pricing` is enabled only when the pricing policy has unsaved changes.
 - The create dialog does not ask for a separate kit cost because margin is based
   on component cost.
@@ -115,6 +119,8 @@ Primary flow:
 - Resolve fixed pricing from the configured fixed kit price.
 - Seed sales-order kit lines from the canonical resolver and distinguish an
   explicit order override from the resolved default.
+- Reject an untouched kit default when the sales-order currency differs from the
+  kit currency; accept a deliberate order-specific amount instead.
 - Keep component selling-price basis separate from component cost and margin.
 - Map known server errors to user-facing explanations.
 - Link to advanced product settings and sales-order surfaces.
@@ -185,6 +191,7 @@ the current screen.
   resolver.
 - A sales-order override is visibly identified, resettable before save, and does
   not mutate the kit's saved pricing policy.
+- Missing or mixed-currency component costs never render as zero-cost margin.
 - BOM rows show stock and cost context.
 - The sales-order preview matches backend expansion behavior.
 - Existing kit sales-order and invoice behavior does not regress.

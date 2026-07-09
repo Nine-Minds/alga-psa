@@ -602,21 +602,33 @@
       "label": "55555"
     },
     "pricing": {
+      "addComponentsToCalculate": "55555",
+      "calculatedBasis": "55555",
+      "calculatedPrice": "55555",
       "componentCost": "55555",
+      "createSumHint": "55555",
       "currency": "55555",
+      "each": "55555",
       "extCost": "55555",
+      "extended": "55555",
       "fixed": "55555",
       "fixedAmount": "55555",
+      "grossMargin": "55555",
+      "grossProfit": "55555",
       "kitCostOptional": "55555",
       "kitPrice": "55555",
+      "kitPriceWithCurrency": "55555 {{currency}} 55555",
       "margin": "55555",
+      "marginUnavailable": "55555",
       "mode": "55555",
       "salesOrderPrice": "55555",
       "save": "55555",
       "saved": "55555",
+      "sellingPrice": "55555",
       "sum": "55555",
       "title": "55555",
       "unitCost": "55555",
+      "unsaved": "55555",
       "validation": {
         "fixedRequired": "55555",
         "priceRequired": "55555"
@@ -1130,6 +1142,14 @@
     "invoiceMode": {
       "manual": "55555",
       "onFulfillment": "55555"
+    },
+    "kitPrice": {
+      "calculated": "55555",
+      "configured": "55555",
+      "currencyMismatch": "55555 {{kitCurrency}} 55555 {{orderCurrency}} 55555",
+      "currencyOverride": "55555 {{currency}} 55555",
+      "overridden": "55555 {{price}} 55555",
+      "reset": "55555"
     },
     "invoiceModeHelp": "55555",
     "invoicedItems": "55555 {{count}} 55555",
