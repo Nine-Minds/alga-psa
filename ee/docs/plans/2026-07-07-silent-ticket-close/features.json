@@ -13,7 +13,7 @@
   { "id": "F012", "description": "[Shared] Workflow event on the default channel carries the flags in payload (eventBus/index.ts:786-824 conversion preserves them)", "implemented": true, "prdRefs": ["FR6"] },
   { "id": "F013", "description": "[Shared] writeTicketActivity records suppression metadata on the close/update activity entry", "implemented": true, "prdRefs": ["FR7"] },
   { "id": "F014", "description": "[Shared] Timeline UI renders a muted 'silent' annotation on close/update entries carrying suppression metadata", "implemented": true, "prdRefs": ["FR7"] },
-  { "id": "F015", "description": "[Shared] Client-portal update/close paths strip/reject the flags for client users (TicketDetailsContainer client wrapper + client-portal actions)", "implemented": false, "prdRefs": ["FR8"] },
+  { "id": "F015", "description": "[Shared] Client-portal update/close paths strip/reject the flags for client users (TicketDetailsContainer client wrapper + client-portal actions)", "implemented": true, "prdRefs": ["FR8"] },
 
   { "id": "F016", "description": "[A] handleTicketClosed skips primary contact/client close email and bundle-child requester emails on contact suppression", "implemented": false, "prdRefs": ["FR9"] },
   { "id": "F017", "description": "[A] handleTicketClosed skips assignee, additional-agent, internal-watcher emails on internal suppression, and external-watcher emails on contact suppression", "implemented": false, "prdRefs": ["FR9"] },

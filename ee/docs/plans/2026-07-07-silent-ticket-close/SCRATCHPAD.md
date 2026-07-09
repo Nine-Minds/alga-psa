@@ -172,3 +172,17 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
 - Verification:
   - `npx vitest run src/actions/optimizedTicketActions.liveUpdates.test.ts src/components/ticket/TicketActivityTimeline.silentAnnotation.test.tsx` from `packages/tickets` passed: 2 files, 14 tests.
   - `npm -w @alga-psa/tickets run typecheck` passed.
+
+## 2026-07-09 — Client portal suppression guard (F015, T016)
+
+- Client-callable MSP wrapper:
+  - `packages/tickets/src/actions/optimizedTicketActions.ts` already keeps `updateTicketWithCacheForCurrentUser(id, data)` limited to `id` + `data` and calls `updateTicketWithCache(id, data)` without options, so extra client-side suppression args cannot be forwarded through that wrapper.
+  - Added a guard in `packages/tickets/src/actions/ticketActions.suppressionMirror.contract.test.ts` to keep that wrapper from accepting/forwarding suppression options.
+- Client portal status update path:
+  - `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts` already exposes `updateTicketStatus(ticketId, newStatusId)` only, and its `TICKET_CLOSED`/`TICKET_UPDATED` payloads omit suppression fields. With schema defaults, client-portal changes remain non-silent and notify normally.
+  - Added `packages/client-portal/src/actions/client-portal-actions/client-tickets.suppression.contract.test.ts` to guard the action signature and event payload blocks.
+- Verification:
+  - `npx vitest run src/actions/ticketActions.suppressionMirror.contract.test.ts` from `packages/tickets` passed: 1 file, 5 tests.
+  - `npx vitest run src/actions/client-portal-actions/client-tickets.suppression.contract.test.ts` from `packages/client-portal` passed: 1 file, 3 tests.
+  - `npm -w @alga-psa/tickets run typecheck` passed.
+  - `npm -w @alga-psa/client-portal run typecheck` passed.

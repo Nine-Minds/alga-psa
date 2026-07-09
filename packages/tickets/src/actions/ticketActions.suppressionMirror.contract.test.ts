@@ -33,4 +33,17 @@ describe('ticket update notification suppression mirror contract', () => {
       expect(source).toContain('suppressInternalNotifications requires suppressContactNotifications');
     }
   });
+
+  it('keeps the client-safe current-user wrapper from accepting or forwarding suppression options', () => {
+    const wrapperStart = optimizedSource.indexOf('export async function updateTicketWithCacheForCurrentUser');
+    expect(wrapperStart).toBeGreaterThan(-1);
+
+    const wrapperEnd = optimizedSource.indexOf('/**', wrapperStart + 1);
+    const wrapper = optimizedSource.slice(wrapperStart, wrapperEnd === -1 ? undefined : wrapperEnd);
+
+    expect(wrapper).toContain('id: string, data: Partial<ITicket>');
+    expect(wrapper).toContain('return updateTicketWithCache(id, data);');
+    expect(wrapper).not.toContain('suppressContactNotifications');
+    expect(wrapper).not.toContain('suppressInternalNotifications');
+  });
 });

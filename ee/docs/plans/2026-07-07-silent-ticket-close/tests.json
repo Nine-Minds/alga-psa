@@ -14,7 +14,7 @@
   { "id": "T013", "description": "[Shared] Workflow event on the Redis stream includes the flags for a silent op; SLA recording still occurs", "implemented": true, "featureIds": ["F012"] },
   { "id": "T014", "description": "[Shared] Activity entry for a silent close/update carries suppression metadata; a normal op carries none", "implemented": true, "featureIds": ["F013", "F066"] },
   { "id": "T015", "description": "[Shared] Timeline UI shows the 'silent' annotation on suppressed entries and none on normal ones", "implemented": true, "featureIds": ["F014"] },
-  { "id": "T016", "description": "[Shared] Client-portal update/close request with suppression flags has them stripped/rejected; contact still notified", "implemented": false, "featureIds": ["F015"] },
+  { "id": "T016", "description": "[Shared] Client-portal update/close request with suppression flags has them stripped/rejected; contact still notified", "implemented": true, "featureIds": ["F015"] },
 
   { "id": "T017", "description": "[A] handleTicketClosed with contact suppression sends no contact/client close email and no bundle-child requester email", "implemented": false, "featureIds": ["F016"] },
   { "id": "T018", "description": "[A] handleTicketClosed with contact-only suppression still emails assignee, internal watchers, additional agents", "implemented": false, "featureIds": ["F016", "F017"] },
