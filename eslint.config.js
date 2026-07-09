@@ -316,6 +316,11 @@ export default [
             // Cross-package barrels inside action files re-close the graph over every package,
             // so every server-action file is held to the same rule.
             "packages/*/src/actions/**/*.{ts,tsx}",
+            // The /msp/settings tree renders every feature's settings surface on one route,
+            // so barrel imports here concentrate the whole product into a single manifest.
+            "server/src/app/msp/settings/**/*.{ts,tsx}",
+            "server/src/components/settings/**/*.{ts,tsx}",
+            "packages/*/src/components/settings/**/*.{ts,tsx}",
         ],
         ignores: ["**/*.test.*", "**/*.spec.*", "**/__tests__/**"],
         rules: {
