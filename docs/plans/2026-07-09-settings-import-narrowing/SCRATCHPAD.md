@@ -98,11 +98,16 @@ npx eslint "server/src/app/msp/settings/**/*.{ts,tsx}" "server/src/components/se
 - Do NOT force non-productive narrowings — if the canary doesn't move for a group, note it and move on (Phase-1 discipline: revert what doesn't pay).
 - Do NOT touch profile/**, security/**, TicketNumberingSettings.tsx (out of scope; see PRD N2/N3).
 
-## RESULTS (fill in)
+## RESULTS (measured 2026-07-09, all tiers landed together; authenticated glinda session, normal auth mode)
 | Group | /msp/settings partial | modules | notes |
 |---|---|---|---|
 | baseline | 31.85 MB | 237 | clients+tickets+projects+scheduling dominate |
-| after T1 | ? | ? | — |
-| after T2 | ? | ? | — |
-| after T3 | ? | ? | — |
-| final | target <~15 MB | <~150 | — |
+| final (T1+T2+T3+subroutes) | **18 MB** | **185** | −43% size, −52 modules |
+
+- Post-narrowing package breakdown: clients 24, integrations 23, tickets 22, tenancy 13, auth 11, billing 10, user-composition 6 — remaining weight is the tabs' OWN legitimate feature trees (users tab quick-add chain, integrations settings page, ticketing settings components), no barrels left.
+- Other routes improved: profile 4.9MB/112, security-settings 5.3MB/114, settings/sla 4.9MB/109, settings/notifications 4.5MB/105.
+- **AC1 residual (honest):** target was <~15MB/<150; landed 18MB/185. The remaining delta is not import hygiene — it's tab content. Next lever is OQ1 (promote ticketing/integrations/users tabs to route segments, precedent settings/sla) — flagged, NOT implemented (F063).
+- **Browser verification:** authenticated as glinda (password scraped from startup log per initializeApp), 23/23 surfaces clean — all 19 settings tabs + sla/notifications/profile/security-settings render with content, zero console errors/pageerrors/5xx. CRUD-level smokes (T021/T031, F062) NOT performed — render-level only; left unflipped.
+- F042 (documentBlockContentActions secondary) not needed: documents contribution is 5 modules post-narrowing.
+- Offload note: executed via codex/GPT-5.5 (3 lanes; cursor-agent unavailable on this machine), reviewed + gated (typecheck exit 0 ×2, guard 0 violations — the 14 pre-cleanup violations in profile/security doubled as the guard's negative test).
+- Patch synergy: merged manifest in this normal-auth session = 1.0MB with __moduleIdTable active.
