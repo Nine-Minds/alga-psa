@@ -133,3 +133,22 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
   - `npm -w @alga-psa/event-schemas run typecheck` passed.
   - `cd server && npm run typecheck -- --pretty false` was first attempted but Node hit heap OOM near 8GB after ~94s.
   - `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -- --pretty false` from `server` passed.
+
+## 2026-07-09 — Webhook/workflow propagation batch (F011-F012, T012-T013)
+
+- Webhook payload propagation (F011/T012):
+  - `server/src/lib/eventBus/subscribers/webhook/webhookTicketPayload.ts`
+    - `TicketWebhookPayload` now includes `suppress_contact_notifications` and `suppress_internal_notifications`, defaulting false when the source event omits them.
+    - The cached DB-derived payload explicitly excludes operation-level suppression fields; the builder adds them per event so cached ticket data cannot leak a previous operation's flags.
+  - `server/src/lib/eventBus/subscribers/webhook/__tests__/webhookTicketPayload.test.ts`
+    - Added default-false assertions to the documented field-set test.
+    - Added update/close cases proving silent source events carry the two flags into the webhook payload.
+- Workflow stream propagation (F012/T013):
+  - No production code change was needed in `server/src/lib/eventBus/index.ts`; default-channel publish already runs `convertToWorkflowEvent(fullEvent, ...)`, and `convertToWorkflowEvent` keeps `payload: event.payload`.
+  - Added `server/src/lib/eventBus/index.suppressionPayload.test.ts`, which mocks Redis, publishes a silent `TICKET_UPDATED`, and verifies the `workflow:events:global` `payload_json` includes both suppression flags.
+  - Extended `packages/tickets/src/actions/optimizedTicketActions.liveUpdates.test.ts` silent-close coverage so a suppressed close still publishes the SLA stage completion event when the SLA builder returns one.
+- Verification:
+  - `npx vitest run src/actions/optimizedTicketActions.liveUpdates.test.ts` from `packages/tickets` passed: 1 file, 11 tests.
+  - `npx vitest run --config vitest.config.ts src/lib/eventBus/subscribers/webhook/__tests__/webhookTicketPayload.test.ts src/lib/eventBus/index.suppressionPayload.test.ts` from `server` passed: 2 files, 7 tests.
+  - `npm -w @alga-psa/tickets run typecheck` passed.
+  - `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -- --pretty false` from `server` passed.

@@ -494,6 +494,19 @@ describe('updateTicketWithCache live updates', () => {
 
   it('publishes suppression flags on TICKET_CLOSED', async () => {
     const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    const slaEvents = await import('../lib/workflowTicketSlaStageEvents');
+    (slaEvents.buildTicketResolutionSlaStageCompletionEvent as any).mockReturnValueOnce({
+      eventType: 'TICKET_SLA_STAGE_MET',
+      payload: {
+        tenantId: 'tenant-1',
+        ticketId: 'ticket-1',
+        stage: 'resolution',
+        occurredAt: '2026-05-07T12:00:00.000Z',
+        targetAt: '2026-05-08T12:00:00.000Z',
+        completedAt: '2026-05-07T12:00:00.000Z',
+      },
+      idempotencyKey: 'sla:ticket-1:resolution:met',
+    });
 
     await expect(
       updateTicketWithCache(
@@ -511,6 +524,16 @@ describe('updateTicketWithCache live updates', () => {
           suppressContactNotifications: true,
           suppressInternalNotifications: false,
         }),
+      })
+    );
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_SLA_STAGE_MET',
+        payload: expect.objectContaining({
+          ticketId: 'ticket-1',
+          stage: 'resolution',
+        }),
+        idempotencyKey: 'sla:ticket-1:resolution:met',
       })
     );
   });
