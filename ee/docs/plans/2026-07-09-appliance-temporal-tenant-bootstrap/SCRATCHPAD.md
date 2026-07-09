@@ -30,6 +30,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   the Job waits for the worker.
 - (2026-07-09) The single-node profile uses `bootstrap.mode: recover`, so the
   partially migrated local database can be retried safely when no user exists.
+- (2026-07-09) `helm template` renders the bootstrap Job with the `.mjs`
+  client, local Temporal frontend, `default` namespace, and
+  `tenant-workflows` queue. The queue comes from the chart default rather than
+  the single-node profile.
 
 ## Commands / Runbooks
 
@@ -40,6 +44,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   `WorkflowTemplate/temporal-worker-build`; publish config with
   `WorkflowTemplate/alga-appliance-config-publish` without promotion; perform
   the final move from the immutable config release.
+- (2026-07-09) Render the effective Job with
+  `helm template alga-core ./helm --namespace msp -f ee/appliance/flux/profiles/single-node/values/alga-core.single-node.yaml --show-only templates/jobs.yaml`.
 
 ## Links / References
 
