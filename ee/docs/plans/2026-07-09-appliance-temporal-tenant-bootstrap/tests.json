@@ -1,0 +1,12 @@
+[
+  {"id":"T001","description":"Temporal workflow test adopts the tenant id and password and skips hosted-only activities.","implemented":true,"featureIds":["F002","F003","F004","F005"]},
+  {"id":"T002","description":"Temporal workflow test preserves the hosted behavior when appliance-only inputs are absent.","implemented":true,"featureIds":["F005"]},
+  {"id":"T003","description":"Chart-render contract test proves the appliance bootstrap command is appliance-create-tenant.mjs and contains no legacy TSX invocation.","implemented":false,"featureIds":["F001","F007"]},
+  {"id":"T004","description":"Chart-render contract test proves Temporal address, namespace, and task queue are injected for appliance bootstrap.","implemented":false,"featureIds":["F008"]},
+  {"id":"T005","description":"Release workflow dry-run accepts a complete same-revision app, Temporal worker, config, and chart set.","implemented":false,"featureIds":["F009","F010","F011","F012"]},
+  {"id":"T006","description":"Release workflow dry-run rejects missing Temporal worker and stale config/chart artifacts without moving stable.","implemented":false,"featureIds":["F014","F015","F016"]},
+  {"id":"T007","description":"Registry verification resolves stable to the expected app, Temporal worker, config, chart, and control-plane digests.","implemented":false,"featureIds":["F013","F017"]},
+  {"id":"T008","description":"Clean-appliance smoke test observes workflow appliance-initial-tenant complete on local Temporal and verifies the DB tenant id.","implemented":false,"featureIds":["F018","F019"]},
+  {"id":"T009","description":"Clean-appliance smoke test signs in with the configured initial administrator after bootstrap.","implemented":false,"featureIds":["F020"]},
+  {"id":"T010","description":"Recover-mode retry test confirms a failed workflow can rerun without creating a duplicate tenant.","implemented":false,"featureIds":["F006","F018"]}
+]
