@@ -15,6 +15,10 @@ import {
 } from './common';
 
 const MAX_TICKET_COMMENT_LENGTH = 5000;
+const ticketNotificationSuppressionSchema = {
+  suppressContactNotifications: z.boolean().optional(),
+  suppressInternalNotifications: z.boolean().optional(),
+};
 
 function getVisibleCommentLength(value: string): number {
   return formatBlockNoteContent(value).text.trim().length;
@@ -43,6 +47,7 @@ export const createTicketSchema = z.object({
 // Update ticket schema (all fields optional; contact_name_id is nullable so it can be cleared)
 export const updateTicketSchema = createUpdateSchema(createTicketSchema).extend({
   contact_name_id: uuidSchema.nullable().optional(),
+  ...ticketNotificationSuppressionSchema,
   // Close despite unmet close rules; honored only when the caller's user holds
   // ticket:close_override. Stripped before the row update.
   override_close_rules: z.boolean().optional(),
@@ -54,13 +59,15 @@ export const updateTicketStatusSchema = z.object({
   status_id: uuidSchema,
   closed_at: z.string().datetime().optional(),
   closed_by: uuidSchema.optional(),
+  ...ticketNotificationSuppressionSchema,
   override_close_rules: z.boolean().optional(),
   override_close_rules_reason: z.string().nullable().optional()
 });
 
 // Ticket assignment schema
 export const updateTicketAssignmentSchema = z.object({
-  assigned_to: uuidSchema.nullable().optional()
+  assigned_to: uuidSchema.nullable().optional(),
+  ...ticketNotificationSuppressionSchema,
 });
 
 export const createTicketMaterialSchema = z.object({

@@ -266,6 +266,34 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
   - `cd packages/tickets && npx vitest run src/components/ticket/bento/BentoResolutionClose.contract.test.ts src/components/ticket/bento/BentoHero.unsavedChanges.test.tsx src/components/ticket/TicketNotificationSuppressionControl.test.tsx`
   - `npm -w @alga-psa/tickets run typecheck`
 
+## 2026-07-09 — Platform and final regression pass (F061-F066, T025, T032, T068-T077)
+
+- i18n/platform:
+  - Added missing suppression and bento resolution-close keys to `server/public/locales/*/features/tickets.json`.
+  - Re-ran `node scripts/generate-pseudo-locales.cjs`; generated pseudo-locale updates are included.
+  - Added `server/src/test/unit/ticketsSilentPlatform.contract.test.ts` to guard locale keys, pseudo-locale structure, kebab-case IDs, suppression debug logs, v1 API suppression handling, and workflow/event-catalog schema exposure.
+- REST API v1:
+  - `server/src/lib/api/schemas/ticket.ts` now accepts optional `suppressContactNotifications` / `suppressInternalNotifications` on generic update, status update, and assignment update bodies.
+  - `TicketService.update` strips the flags before row writes, validates `internal => contact`, and publishes them on `TICKET_CLOSED` / `TICKET_UPDATED`.
+  - `SdkGeneratorService` exposes the optional fields on `UpdateTicketRequest`.
+- Workflow/event catalog:
+  - `shared/workflow/runtime/schemas/ticketEventSchemas.ts` now includes the suppression fields on ticket assigned/closed/updated runtime schemas.
+  - Legacy workflow catalog initialization in `ee/packages/workflows/src/models/eventCatalog.ts` includes the fields for ticket update/close JSON payload schemas. Modern catalog rows use `payload_schema_ref`; the existing domain catalog migration already points ticket assigned/updated/closed at schema refs.
+- Regression coverage:
+  - Tagged the normal close notification policy test as T025.
+  - Added T032 to `ticketActions.moveToBoard.test.ts` so non-silent bulk status updates pass `{}` options and therefore keep normal notification behavior.
+  - Tagged the grid hero silent-save test as T068; it combines with subscriber gates to cover contact suppression from grid saves.
+- Verification:
+  - `node scripts/generate-pseudo-locales.cjs`
+  - `cd packages/tickets && npx vitest run src/actions/optimizedTicketActions.liveUpdates.test.ts src/actions/ticketActions.moveToBoard.test.ts src/actions/close-rules/closeRuleActions.suppression.contract.test.ts src/components/ticket/bento/BentoHero.unsavedChanges.test.tsx src/components/ticket/bento/BentoResolutionClose.contract.test.ts src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx src/components/ticket/TicketActivityTimeline.silentAnnotation.test.tsx src/components/ticket/TicketNotificationSuppressionControl.test.tsx`
+  - `cd server && npx vitest run --config vitest.config.ts src/lib/eventBus/subscribers/__tests__/ticketEmailSubscriber.suppression.test.ts src/lib/eventBus/subscribers/__tests__/surveySubscriber.suppression.test.ts src/lib/eventBus/subscribers/__tests__/internalNotificationSubscriber.suppression.test.ts src/lib/eventBus/subscribers/webhook/__tests__/webhookTicketPayload.test.ts src/lib/eventBus/index.suppressionPayload.test.ts src/test/unit/migrations/autoCloseSuppressionMigration.test.ts src/test/unit/ticketsSilentPlatform.contract.test.ts`
+  - `cd packages/jobs && npx vitest run src/lib/handlers/autoCloseTicketsHandlerTenantScoped.contract.test.ts`
+  - `npm -w @alga-psa/tickets run typecheck`
+  - `npm -w @alga-psa/jobs run typecheck`
+  - `npm -w @alga-psa/shared run typecheck`
+  - `npm -w @alga-psa/workflows run typecheck`
+  - `cd server && NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -- --pretty false`
+
 ## 2026-07-09 — Bulk Update Suppression Surfaces (F030-F037, T029/T038-T043)
 
 - Completed the eligible bulk-update surfaces:

@@ -378,6 +378,31 @@ describe('ticketActions bulk notification suppression options', () => {
     );
   });
 
+  it('T032: non-silent bulk status update forwards default options for normal notifications', async () => {
+    const { bulkUpdateTicketStatus } = await import('./ticketActions');
+    const result = await bulkUpdateTicketStatus(['ticket-normal-1', 'ticket-normal-2'], 'status-normal');
+
+    expect(result).toEqual({ updatedIds: ['ticket-normal-1', 'ticket-normal-2'], failed: [] });
+    expect(updateTicketInTransactionMock).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      expect.objectContaining({ user_id: 'internal-user-1' }),
+      'tenant-1',
+      'ticket-normal-1',
+      { status_id: 'status-normal' },
+      {},
+    );
+    expect(updateTicketInTransactionMock).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      expect.objectContaining({ user_id: 'internal-user-1' }),
+      'tenant-1',
+      'ticket-normal-2',
+      { status_id: 'status-normal' },
+      {},
+    );
+  });
+
   it('T038-T041: bulk priority, due-date, and user assignment forward suppression options', async () => {
     const options = {
       suppressContactNotifications: true,

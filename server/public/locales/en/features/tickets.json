@@ -1648,7 +1648,9 @@
       "logged": "logged",
       "monitoringActor": "Monitoring",
       "occurrence": "(occurrence {{count}})",
-      "loadError": "Could not load the timeline"
+      "loadError": "Could not load the timeline",
+      "closeStatus": "Close status",
+      "noStatusChange": "Do not change status"
     }
   }
 }

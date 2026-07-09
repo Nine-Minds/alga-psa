@@ -1212,8 +1212,21 @@ export class TicketService extends BaseService<ITicket> {
       // Close-rule override flags are request options, not ticket columns.
       const overrideCloseRules = (cleanedData as any).override_close_rules === true;
       const overrideCloseRulesReason = (cleanedData as any).override_close_rules_reason ?? null;
+      const suppressContactNotifications = (cleanedData as any).suppressContactNotifications === true;
+      const suppressInternalNotifications = (cleanedData as any).suppressInternalNotifications === true;
       delete (cleanedData as any).override_close_rules;
       delete (cleanedData as any).override_close_rules_reason;
+      delete (cleanedData as any).suppressContactNotifications;
+      delete (cleanedData as any).suppressInternalNotifications;
+
+      if (suppressInternalNotifications && !suppressContactNotifications) {
+        throw new ValidationError('Validation failed', [
+          {
+            path: ['suppressInternalNotifications'],
+            message: 'suppressInternalNotifications requires suppressContactNotifications',
+          },
+        ]);
+      }
 
       const isBoardChange =
         cleanedData.board_id !== undefined &&
@@ -1343,6 +1356,8 @@ export class TicketService extends BaseService<ITicket> {
             ticketId: ticket.ticket_id,
             closedByUserId: context.userId,
             closedAt: new Date().toISOString(),
+            suppressContactNotifications,
+            suppressInternalNotifications,
           });
         }
       }
@@ -1374,6 +1389,8 @@ export class TicketService extends BaseService<ITicket> {
         ticketId: ticket.ticket_id,
         updatedByUserId: context.userId,
         changes: structuredChanges,
+        suppressContactNotifications,
+        suppressInternalNotifications,
       });
 
       // Activity-timeline row for REST API updates. Uses curated diff so

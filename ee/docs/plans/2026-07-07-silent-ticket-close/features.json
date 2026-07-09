@@ -67,10 +67,10 @@
   { "id": "F059", "description": "[D] Grid hero ports save keyboard shortcut and onLiveDirtyFieldsChange dirty-field reporting for parity", "implemented": true, "prdRefs": ["FR29"] },
   { "id": "F060", "description": "[D] Grid live-conflict 'take theirs' for board clears coupled fields (board_id, status_id, category_id, subcategory_id)", "implemented": true, "prdRefs": ["FR30"] },
 
-  { "id": "F061", "description": "[Platform] All new UI strings use i18n keys; pseudo-locale generation + validation pass", "implemented": false, "prdRefs": ["NFR3"] },
-  { "id": "F062", "description": "[Platform] All new interactive elements have kebab-case ids", "implemented": false, "prdRefs": ["UX / UI Notes"] },
-  { "id": "F063", "description": "[Platform] Subscriber gate points log a one-line 'skipped due to suppression' at existing debug level", "implemented": false, "prdRefs": ["Observability"] },
-  { "id": "F064", "description": "[Platform] v1 REST API update/close endpoint (if present) accepts the optional flags; else documented N/A in SCRATCHPAD", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F065", "description": "[Platform] event_catalog payload schema for the three ticket events updated if the catalog stores schemas; else documented N/A", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F066", "description": "[Platform] Default behavior unchanged with flags off: close/update/assign produce the exact pre-change notification set (regression-guarded)", "implemented": false, "prdRefs": ["FR14", "NFR1"] }
+  { "id": "F061", "description": "[Platform] All new UI strings use i18n keys; pseudo-locale generation + validation pass", "implemented": true, "prdRefs": ["NFR3"] },
+  { "id": "F062", "description": "[Platform] All new interactive elements have kebab-case ids", "implemented": true, "prdRefs": ["UX / UI Notes"] },
+  { "id": "F063", "description": "[Platform] Subscriber gate points log a one-line 'skipped due to suppression' at existing debug level", "implemented": true, "prdRefs": ["Observability"] },
+  { "id": "F064", "description": "[Platform] v1 REST API update/close endpoint (if present) accepts the optional flags; else documented N/A in SCRATCHPAD", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
+  { "id": "F065", "description": "[Platform] event_catalog payload schema for the three ticket events updated if the catalog stores schemas; else documented N/A", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
+  { "id": "F066", "description": "[Platform] Default behavior unchanged with flags off: close/update/assign produce the exact pre-change notification set (regression-guarded)", "implemented": true, "prdRefs": ["FR14", "NFR1"] }
 ]

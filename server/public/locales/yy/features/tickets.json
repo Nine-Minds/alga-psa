@@ -35,6 +35,13 @@
   },
   "title": "55555",
   "subtitle": "55555",
+  "notifications": {
+    "suppression": {
+      "contactLabel": "55555",
+      "contactHelper": "55555",
+      "internalLabel": "55555"
+    }
+  },
   "backToTickets": "55555",
   "createNew": "55555",
   "createButton": "55555",
@@ -1641,7 +1648,9 @@
       "logged": "55555",
       "monitoringActor": "55555",
       "occurrence": "55555 {{count}} 55555",
-      "loadError": "55555"
+      "loadError": "55555",
+      "closeStatus": "55555",
+      "noStatusChange": "55555"
     }
   }
 }

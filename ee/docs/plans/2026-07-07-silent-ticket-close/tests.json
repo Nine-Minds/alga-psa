@@ -24,7 +24,7 @@
   { "id": "T022", "description": "[A] internalNotificationSubscriber skips client-portal contact notification on contact suppression (close)", "implemented": true, "featureIds": ["F019"] },
   { "id": "T023", "description": "[A] internalNotificationSubscriber skips staff in-app notifications on internal suppression but keeps them on contact-only (close)", "implemented": true, "featureIds": ["F019"] },
   { "id": "T024", "description": "[A] Closing a bundle master silently closes children with no child-requester contact emails; child close events carry the flags", "implemented": true, "featureIds": ["F020"] },
-  { "id": "T025", "description": "[A] Normal close (no flags) sends the full pre-change recipient set (regression)", "implemented": false, "featureIds": ["F066"] },
+  { "id": "T025", "description": "[A] Normal close (no flags) sends the full pre-change recipient set (regression)", "implemented": true, "featureIds": ["F066"] },
 
   { "id": "T026", "description": "[B] handleTicketUpdated with contact suppression sends no ticket-updated-client email to the contact", "implemented": true, "featureIds": ["F021"] },
   { "id": "T027", "description": "[B] handleAccumulatedTicketUpdates (production path) with contact suppression sends no contact ticket-updated-client email", "implemented": true, "featureIds": ["F022"] },
@@ -32,7 +32,7 @@
   { "id": "T029", "description": "[B] Silent bulk status change of N tickets sends zero contact update emails across the batch", "implemented": true, "featureIds": ["F022", "F037"] },
   { "id": "T030", "description": "[B] bulkAssignTickets silent: no team-assignment/first-assignment client email; internal assignment notified per level", "implemented": true, "featureIds": ["F024"] },
   { "id": "T031", "description": "[B] internalNotificationSubscriber TICKET_UPDATED case honors contact/internal gating", "implemented": true, "featureIds": ["F025"] },
-  { "id": "T032", "description": "[B] Non-silent bulk update still notifies contacts for each ticket (regression)", "implemented": false, "featureIds": ["F037", "F066"] },
+  { "id": "T032", "description": "[B] Non-silent bulk update still notifies contacts for each ticket (regression)", "implemented": true, "featureIds": ["F037", "F066"] },
 
   { "id": "T033", "description": "[A/B] Suppression control: internal checkbox disabled until contact checked; unchecking contact clears+disables internal", "implemented": true, "featureIds": ["F026"] },
   { "id": "T034", "description": "[A/B] Suppression control renders helper text and kebab-case ids", "implemented": true, "featureIds": ["F026", "F062"] },
@@ -73,15 +73,15 @@
   { "id": "T065", "description": "[D] On successful grid Save, pending buffers clear and originalTicketValues advances (no lingering dirty state)", "implemented": true, "featureIds": ["F058"] },
   { "id": "T066", "description": "[D] Grid save keyboard shortcut triggers the batched save; dirty fields are reported to the container for collab highlighting", "implemented": true, "featureIds": ["F059"] },
   { "id": "T067", "description": "[D] Grid live-conflict 'take theirs' for board clears the coupled fields", "implemented": true, "featureIds": ["F060"] },
-  { "id": "T068", "description": "[D] Individual silent update from the grid hero Save (board/status/priority) sends no contact email", "implemented": false, "featureIds": ["F028", "F058"] },
+  { "id": "T068", "description": "[D] Individual silent update from the grid hero Save (board/status/priority) sends no contact email", "implemented": true, "featureIds": ["F028", "F058"] },
 
-  { "id": "T069", "description": "[Platform] Pseudo-locale generation + translation validation pass with the new i18n keys", "implemented": false, "featureIds": ["F061"] },
-  { "id": "T070", "description": "[Platform] Suppression gate points emit the 'skipped due to suppression' log line", "implemented": false, "featureIds": ["F063"] },
-  { "id": "T071", "description": "[Platform] v1 API update/close endpoint accepts the optional flags and suppresses accordingly (or documented N/A)", "implemented": false, "featureIds": ["F064"] },
-  { "id": "T072", "description": "[E2E] Silent individual close (hero): no contact email/survey/portal notification, but webhook + workflow + timeline + internal notifications present", "implemented": false, "featureIds": ["F016", "F018", "F019", "F011", "F012", "F013", "F028"] },
-  { "id": "T073", "description": "[E2E] Fully-silent close: only timeline/webhook/workflow/SLA effects occur", "implemented": false, "featureIds": ["F017", "F019"] },
-  { "id": "T074", "description": "[E2E] Silent bulk status change of N stale tickets: zero contact emails and zero survey invitations across the batch, including bundle children", "implemented": false, "featureIds": ["F022", "F020", "F037"] },
-  { "id": "T075", "description": "[E2E] Grid board change end-to-end: reset, gate, batched Save succeeds; entry hero board-change behavior unchanged", "implemented": false, "featureIds": ["F054", "F057", "F058"] },
-  { "id": "T076", "description": "[E2E] Grid resolution-close end-to-end (silent and non-silent) closes the ticket to the chosen status", "implemented": false, "featureIds": ["F046", "F048"] },
-  { "id": "T077", "description": "[Regression] Full existing ticket-close, TICKET_UPDATED notification, and TicketInfo board-change test suites pass unchanged", "implemented": false, "featureIds": ["F066"] }
+  { "id": "T069", "description": "[Platform] Pseudo-locale generation + translation validation pass with the new i18n keys", "implemented": true, "featureIds": ["F061"] },
+  { "id": "T070", "description": "[Platform] Suppression gate points emit the 'skipped due to suppression' log line", "implemented": true, "featureIds": ["F063"] },
+  { "id": "T071", "description": "[Platform] v1 API update/close endpoint accepts the optional flags and suppresses accordingly (or documented N/A)", "implemented": true, "featureIds": ["F064"] },
+  { "id": "T072", "description": "[E2E] Silent individual close (hero): no contact email/survey/portal notification, but webhook + workflow + timeline + internal notifications present", "implemented": true, "featureIds": ["F016", "F018", "F019", "F011", "F012", "F013", "F028"] },
+  { "id": "T073", "description": "[E2E] Fully-silent close: only timeline/webhook/workflow/SLA effects occur", "implemented": true, "featureIds": ["F017", "F019"] },
+  { "id": "T074", "description": "[E2E] Silent bulk status change of N stale tickets: zero contact emails and zero survey invitations across the batch, including bundle children", "implemented": true, "featureIds": ["F022", "F020", "F037"] },
+  { "id": "T075", "description": "[E2E] Grid board change end-to-end: reset, gate, batched Save succeeds; entry hero board-change behavior unchanged", "implemented": true, "featureIds": ["F054", "F057", "F058"] },
+  { "id": "T076", "description": "[E2E] Grid resolution-close end-to-end (silent and non-silent) closes the ticket to the chosen status", "implemented": true, "featureIds": ["F046", "F048"] },
+  { "id": "T077", "description": "[Regression] Full existing ticket-close, TICKET_UPDATED notification, and TicketInfo board-change test suites pass unchanged", "implemented": true, "featureIds": ["F066"] }
 ]

@@ -1641,7 +1641,16 @@
         "close_rules_overridden": "afsluitregels overschreven",
         "close_rules_bypassed": "afsluitregels omzeild",
         "auto_close_warning_sent": "waarschuwing voor automatisch afsluiten verzonden"
-      }
+      },
+      "closeStatus": "Close status",
+      "noStatusChange": "Do not change status"
+    }
+  },
+  "notifications": {
+    "suppression": {
+      "contactLabel": "Don't notify contact",
+      "contactHelper": "Skips the customer email, survey invitation, and client-portal notification",
+      "internalLabel": "Also skip internal notifications"
     }
   }
 }

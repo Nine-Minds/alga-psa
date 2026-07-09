@@ -1648,7 +1648,9 @@
       "logged": "11111",
       "monitoringActor": "11111",
       "occurrence": "11111 {{count}} 11111",
-      "loadError": "11111"
+      "loadError": "11111",
+      "closeStatus": "11111",
+      "noStatusChange": "11111"
     }
   }
 }

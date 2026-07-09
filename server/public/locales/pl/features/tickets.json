@@ -1783,7 +1783,16 @@
         "close_rules_overridden": "nadpisano reguły zamykania",
         "close_rules_bypassed": "pominięto reguły zamykania",
         "auto_close_warning_sent": "wysłano ostrzeżenie o automatycznym zamknięciu"
-      }
+      },
+      "closeStatus": "Close status",
+      "noStatusChange": "Do not change status"
+    }
+  },
+  "notifications": {
+    "suppression": {
+      "contactLabel": "Don't notify contact",
+      "contactHelper": "Skips the customer email, survey invitation, and client-portal notification",
+      "internalLabel": "Also skip internal notifications"
     }
   }
 }

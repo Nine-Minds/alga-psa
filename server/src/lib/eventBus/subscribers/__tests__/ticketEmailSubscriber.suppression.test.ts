@@ -49,7 +49,7 @@ describe('ticketEmailSubscriber suppression policy', () => {
     expect(shouldSendTicketClosedWatcherEmail(suppression, false)).toBe(false);
   });
 
-  it('normal close leaves all close recipient classes enabled', () => {
+  it('T025: normal close leaves all close recipient classes enabled', () => {
     const suppression = resolveTicketNotificationSuppression({});
 
     expect(shouldSendContactFacingTicketEmail(suppression)).toBe(true);

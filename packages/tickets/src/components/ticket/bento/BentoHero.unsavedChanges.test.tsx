@@ -230,7 +230,7 @@ describe('BentoHero unsaved change model', () => {
     }));
   });
 
-  it('T036/T056: buffers field edits and sends suppression options only on Save', async () => {
+  it('T036/T056/T068: buffers field edits and sends suppression options only on Save', async () => {
     const onBatchSelectChange = vi.fn().mockResolvedValue(true);
     renderHero({ onBatchSelectChange });
 
