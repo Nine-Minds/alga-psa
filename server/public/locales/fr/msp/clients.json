@@ -333,7 +333,8 @@
     "created": "« {{name}} » a été créé. Ajoutez un autre client ci-dessous.",
     "createAndAddAnother": "Créer + Ajouter un autre",
     "createAndView": "Créer + Voir le client",
-    "additionalDetails": "Informations supplémentaires"
+    "additionalDetails": "Informations supplémentaires",
+    "createFailed": "Failed to create client. Please try again."
   },
   "clientCreatedDialog": {
     "title": "Client créé",
@@ -451,7 +452,8 @@
     "formattingError": "Erreur de formatage",
     "removeAssignmentTitle": "Supprimer l'affectation de ligne de contrat",
     "removeAssignmentMessage": "Êtes-vous sûr de vouloir supprimer cette attribution de ligne de contrat du client ? La ligne de contrat elle-même ne sera pas supprimée.",
-    "contracts": "Contrats"
+    "contracts": "Contrats",
+    "taxRatesLoadError": "Failed to load tax rate configuration."
   },
   "clientBillingSchedule": {
     "title": "Calendrier de facturation",
@@ -599,7 +601,8 @@
     "startDate": "Date de début",
     "startDateRequired": "La date de début est requise",
     "updateAssignment": "Mettre à jour l'affectation",
-    "useTenantRenewalDefaults": "Utiliser les paramètres par défaut de renouvellement du locataire"
+    "useTenantRenewalDefaults": "Utiliser les paramètres par défaut de renouvellement du locataire",
+    "saveError": "Failed to save contract. Please try again."
   },
   "clientContractLineDashboard": {
     "title": "Métriques d'utilisation (30 derniers jours)",
@@ -908,7 +911,10 @@
     "skippedExistingMessage": "{{count}} clients ont été ignorés car ils existent déjà. Activez « Mettre à jour les clients existants » pour les remplacer.",
     "error": "Erreur",
     "updateExistingTitle": "Mettre à jour les clients existants",
-    "updateExistingMessage": "Les clients {{count}} existent déjà. Voulez-vous les mettre à jour avec les nouvelles données ?"
+    "updateExistingMessage": "Les clients {{count}} existent déjà. Voulez-vous les mettre à jour avec les nouvelles données ?",
+    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
+    "noValidRows": "There are no valid client rows to import.",
+    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
   },
   "clientsList": {
     "name": "Nom",
@@ -1065,7 +1071,8 @@
     "retry": "Réessayer",
     "loadError": "Les notes n'ont pas pu être chargées",
     "unknownError": "Erreur inconnue",
-    "loadErrorTitle": "Les notes n'ont pas pu être chargées"
+    "loadErrorTitle": "Les notes n'ont pas pu être chargées",
+    "loadErrorDescription": "Could not load notes. Please try again."
   },
   "actions": {
     "cancel": "Annuler",
@@ -1229,7 +1236,9 @@
         "endRequired": "L'heure de fin est requise pour créer une réunion Teams",
         "startRequired": "L'heure de début est requise pour créer une réunion Teams",
         "unavailable": "La création de réunions Teams n'est pas disponible pour ce locataire."
-      }
+      },
+      "loadFailed": "Interaction options could not be loaded. Please try again.",
+      "saveFailed": "The interaction could not be saved. Please try again."
     },
     "feed": {
       "addInteraction": "Ajouter une interaction",
@@ -1242,7 +1251,9 @@
       "searchPlaceholder": "Rechercher des interactions",
       "startDate": "Date de début",
       "title": "Interactions",
-      "typePlaceholder": "Type d'interaction"
+      "typePlaceholder": "Type d'interaction",
+      "loadFailed": "Interactions could not be loaded. Please try again.",
+      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
     },
     "overall": {
       "allContacts": "Tous les contacts",
@@ -1259,7 +1270,8 @@
       "startTimeLabel": "Heure de début de l'interaction",
       "startTimePlaceholder": "Filtrer à partir de cette heure de début",
       "statusPlaceholder": "Statut",
-      "title": "Interactions récentes"
+      "title": "Interactions récentes",
+      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
     }
   },
   "clientDrawer": {

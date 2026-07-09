@@ -295,7 +295,9 @@
     "deleteTimeEntryFailed": "Échec de la suppression de l'entrée de temps",
     "timeEntryDeleted": "Entrée de temps supprimée",
     "closeFailed": "Échec de la fermeture du ticket",
-    "scheduleVisitFailed": "Échec de l'ouverture du planificateur"
+    "scheduleVisitFailed": "Échec de l'ouverture du planificateur",
+    "loadCommentsFailed": "Failed to load comments",
+    "updateTicketFailed": "Failed to update ticket"
   },
   "conversation": {
     "comments": "Commentaires",

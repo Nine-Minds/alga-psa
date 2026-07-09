@@ -333,7 +333,8 @@
     "created": "\"{{name}}\" criado. Adicione outro cliente abaixo.",
     "createAndAddAnother": "Criar + Adicionar Outro",
     "createAndView": "Criar + Visualizar Cliente",
-    "additionalDetails": "Detalhes Adicionais"
+    "additionalDetails": "Detalhes Adicionais",
+    "createFailed": "Failed to create client. Please try again."
   },
   "clientCreatedDialog": {
     "title": "Cliente criado",
@@ -451,7 +452,8 @@
     "formattingError": "Erro de formatação",
     "removeAssignmentTitle": "Remover atribuição de linha de contrato",
     "removeAssignmentMessage": "Tem certeza de que deseja remover esta atribuição de item de contrato do cliente? A linha de contrato em si não será excluída.",
-    "contracts": "Contratos"
+    "contracts": "Contratos",
+    "taxRatesLoadError": "Failed to load tax rate configuration."
   },
   "clientBillingSchedule": {
     "title": "Cronograma de cobrança",
@@ -599,7 +601,8 @@
     "startDate": "Data de início",
     "startDateRequired": "A data de início é obrigatória",
     "updateAssignment": "Atualizar tarefa",
-    "useTenantRenewalDefaults": "Use padrões de renovação de locatário"
+    "useTenantRenewalDefaults": "Use padrões de renovação de locatário",
+    "saveError": "Failed to save contract. Please try again."
   },
   "clientContractLineDashboard": {
     "title": "Métricas de uso (últimos 30 dias)",
@@ -908,7 +911,10 @@
     "skippedExistingMessage": "{{count}} clientes foram ignorados porque já existem. Ative \"Atualizar clientes existentes\" para sobrescrevê-los.",
     "error": "Erro",
     "updateExistingTitle": "Atualizar clientes existentes",
-    "updateExistingMessage": "Os clientes {{count}} já existem. Deseja atualizá-los com os novos dados?"
+    "updateExistingMessage": "Os clientes {{count}} já existem. Deseja atualizá-los com os novos dados?",
+    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
+    "noValidRows": "There are no valid client rows to import.",
+    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
   },
   "clientsList": {
     "name": "Nome",
@@ -1065,7 +1071,8 @@
     "retry": "Tentar novamente",
     "loadError": "As notas não foram carregadas",
     "unknownError": "Erro desconhecido",
-    "loadErrorTitle": "As notas não foram carregadas"
+    "loadErrorTitle": "As notas não foram carregadas",
+    "loadErrorDescription": "Could not load notes. Please try again."
   },
   "actions": {
     "cancel": "Cancelar",
@@ -1229,7 +1236,9 @@
         "endRequired": "O horário de término é necessário para criar uma reunião do Teams",
         "startRequired": "A hora de início é necessária para criar uma reunião do Teams",
         "unavailable": "A criação de reuniões do Teams não está disponível para este locatário."
-      }
+      },
+      "loadFailed": "Interaction options could not be loaded. Please try again.",
+      "saveFailed": "The interaction could not be saved. Please try again."
     },
     "feed": {
       "addInteraction": "Adicionar interação",
@@ -1242,7 +1251,9 @@
       "searchPlaceholder": "Interações de pesquisa",
       "startDate": "Data de início",
       "title": "Interações",
-      "typePlaceholder": "Tipo de interação"
+      "typePlaceholder": "Tipo de interação",
+      "loadFailed": "Interactions could not be loaded. Please try again.",
+      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
     },
     "overall": {
       "allContacts": "Todos os contatos",
@@ -1259,7 +1270,8 @@
       "startTimeLabel": "Hora de início da interação",
       "startTimePlaceholder": "Filtrar a partir deste horário de início",
       "statusPlaceholder": "Status",
-      "title": "Interações recentes"
+      "title": "Interações recentes",
+      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
     }
   },
   "clientDrawer": {

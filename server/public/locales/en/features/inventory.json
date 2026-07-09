@@ -1066,7 +1066,8 @@
     "title": "Sales Orders",
     "total": "Total",
     "unassignedBackorder": "{{count}} backordered line(s) have no preferred vendor — create those POs manually.",
-    "unnamedService": "Unnamed"
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found."
   },
   "stock": {
     "actions": {

@@ -1506,5 +1506,6 @@
     "done": "Done",
     "edit": "Edit",
     "save": "Save"
-  }
+  },
+  "loadError": "Failed to load projects"
 }

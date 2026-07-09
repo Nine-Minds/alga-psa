@@ -11,7 +11,8 @@
       "resyncing": "Risincronizzazione {{providerName}} in corso...",
       "resyncError": "Impossibile risincronizzare il provider IMAP",
       "resyncStarted": "La risincronizzazione è iniziata per {{providerName}}.",
-      "enterpriseOnly": "La posta elettronica in entrata di Microsoft 365 è disponibile solo in Enterprise Edition."
+      "enterpriseOnly": "La posta elettronica in entrata di Microsoft 365 è disponibile solo in Enterprise Edition.",
+      "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {
       "title": "Modifica provider di posta elettronica",
@@ -293,7 +294,8 @@
         "popupBlocked": "Impossibile aprire il popup OAuth. Si prega di consentire i popup per questo sito.",
         "closedEarly": "La finestra di autorizzazione è stata chiusa prima del completamento.",
         "authorizationFailed": "Autorizzazione fallita",
-        "popupFailed": "Il popup OAuth non è riuscito"
+        "popupFailed": "Il popup OAuth non è riuscito",
+        "configureFailed": "Failed to configure Gmail provider"
       },
       "messages": {
         "setupIncomplete": "Fornitore salvato ma configurazione incompleta: {{error}}",

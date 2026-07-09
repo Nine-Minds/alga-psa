@@ -1344,7 +1344,8 @@
         "makeDefault": "11111",
         "noDefault": "11111",
         "saving": "11111",
-        "undepositedFunds": "11111"
+        "undepositedFunds": "11111",
+        "catalogLoadError": "11111"
       }
     },
     "rmm": {

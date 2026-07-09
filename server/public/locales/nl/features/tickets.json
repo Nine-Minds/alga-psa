@@ -295,7 +295,9 @@
     "deleteTimeEntryFailed": "Kan tijdregistratie niet verwijderen",
     "timeEntryDeleted": "Tijdregistratie verwijderd",
     "closeFailed": "Ticket sluiten is mislukt",
-    "scheduleVisitFailed": "Kan de planner niet openen"
+    "scheduleVisitFailed": "Kan de planner niet openen",
+    "loadCommentsFailed": "Failed to load comments",
+    "updateTicketFailed": "Failed to update ticket"
   },
   "conversation": {
     "comments": "Reacties",

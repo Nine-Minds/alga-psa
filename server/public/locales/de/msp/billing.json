@@ -253,7 +253,8 @@
       "secondaryApproverRequired": "Bitte geben Sie den Namen und die E-Mail-Adresse des sekundären Genehmigers ein",
       "invalidVerificationCode": "Ungültiger Bestätigungscode",
       "unknown": "Es ist ein unbekannter Fehler aufgetreten",
-      "reportNotFound": "Abgleichsbericht nicht gefunden. Der Bericht wurde möglicherweise gelöscht oder Sie haben keine Berechtigung, ihn anzuzeigen."
+      "reportNotFound": "Abgleichsbericht nicht gefunden. Der Bericht wurde möglicherweise gelöscht oder Sie haben keine Berechtigung, ihn anzuzeigen.",
+      "resolveFailed": "Failed to resolve reconciliation report."
     }
   },
   "discrepancy": {
@@ -334,7 +335,8 @@
       "resolveReport": "Bericht auflösen"
     },
     "errors": {
-      "unknown": "Es ist ein unbekannter Fehler aufgetreten"
+      "unknown": "Es ist ein unbekannter Fehler aufgetreten",
+      "resolveFailed": "Failed to resolve reconciliation report. Please refresh and try again."
     }
   },
   "recommendedFix": {
@@ -387,7 +389,8 @@
     "errors": {
       "notesRequired": "Bitte machen Sie Notizen, in denen Sie den Grund für diese Korrektur erläutern",
       "invalidAmount": "Bitte geben Sie einen gültigen Betrag ein",
-      "unknown": "Es ist ein unbekannter Fehler aufgetreten"
+      "unknown": "Es ist ein unbekannter Fehler aufgetreten",
+      "applyFailed": "Failed to apply reconciliation fix. Please refresh and try again."
     }
   },
   "usage": {

@@ -448,7 +448,8 @@
     "taskUpdated": "Aufgabe erfolgreich aktualisiert",
     "saveChangesFailed": "Änderungen konnten nicht gespeichert werden",
     "changesSaved": "Änderungen erfolgreich gespeichert",
-    "workItemDeleted": "Arbeitsposten erfolgreich gelöscht"
+    "workItemDeleted": "Arbeitsposten erfolgreich gelöscht",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
     "withNumber": "Dieses Ticket ist unter {{number}} gebündelt. Die Zeit für Bündel wird üblicherweise auf dem Master-Ticket erfasst.",

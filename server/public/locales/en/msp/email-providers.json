@@ -11,7 +11,8 @@
       "resyncing": "Resyncing {{providerName}}...",
       "resyncError": "Failed to resync IMAP provider",
       "resyncStarted": "Resync started for {{providerName}}.",
-      "enterpriseOnly": "Microsoft 365 inbound email is only available in Enterprise Edition."
+      "enterpriseOnly": "Microsoft 365 inbound email is only available in Enterprise Edition.",
+      "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {
       "title": "Edit Email Provider",
@@ -293,7 +294,8 @@
         "popupBlocked": "Failed to open OAuth popup. Please allow popups for this site.",
         "closedEarly": "Authorization window was closed before completing.",
         "authorizationFailed": "Authorization failed",
-        "popupFailed": "OAuth popup failed"
+        "popupFailed": "OAuth popup failed",
+        "configureFailed": "Failed to configure Gmail provider"
       },
       "messages": {
         "setupIncomplete": "Provider saved but setup incomplete: {{error}}",

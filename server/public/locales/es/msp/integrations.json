@@ -1344,7 +1344,8 @@
         "makeDefault": "Establecer como predeterminado",
         "noDefault": "Sin valor predeterminado",
         "saving": "Guardando…",
-        "undepositedFunds": "Fondos sin depositar (predeterminado)"
+        "undepositedFunds": "Fondos sin depositar (predeterminado)",
+        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
       }
     },
     "rmm": {

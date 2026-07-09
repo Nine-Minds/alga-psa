@@ -657,6 +657,9 @@
       "single": "Only this event",
       "future": "This and future events",
       "all": "All events"
+    },
+    "errors": {
+      "loadWorkItem": "Failed to load work item."
     }
   },
   "actions": {

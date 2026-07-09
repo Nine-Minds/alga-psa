@@ -35,7 +35,6 @@ export const downloadSalesOrderPDF = withAuth(
     soId: string,
     documentType: SalesOrderDocumentType = 'sales-order',
   ): Promise<{ pdfData: number[]; soNumber: string; documentType: SalesOrderDocumentType } | SalesOrderDocumentActionError> => {
-  ): Promise<{ pdfData: number[]; soNumber: string; documentType: SalesOrderDocumentType } | SalesOrderDocumentActionError> => {
     const { t } = await getServerTranslation(undefined, 'features/inventory');
 
     if (!(await hasPermission(user, 'sales_order', 'read'))) {

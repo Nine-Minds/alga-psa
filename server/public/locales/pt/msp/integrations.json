@@ -1344,7 +1344,8 @@
         "makeDefault": "Tornar padrão",
         "noDefault": "Sem padrão",
         "saving": "Salvando…",
-        "undepositedFunds": "Fundos não depositados (padrão)"
+        "undepositedFunds": "Fundos não depositados (padrão)",
+        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
       }
     },
     "rmm": {

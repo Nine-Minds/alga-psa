@@ -11,7 +11,8 @@
       "resyncing": "{{providerName}} wird erneut synchronisiert...",
       "resyncError": "Die Neusynchronisierung des IMAP-Anbieters ist fehlgeschlagen",
       "resyncStarted": "Neusynchronisierung für {{providerName}} gestartet.",
-      "enterpriseOnly": "Eingehende E-Mails von Microsoft 365 sind nur in der Enterprise Edition verfügbar."
+      "enterpriseOnly": "Eingehende E-Mails von Microsoft 365 sind nur in der Enterprise Edition verfügbar.",
+      "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {
       "title": "E-Mail-Anbieter bearbeiten",
@@ -293,7 +294,8 @@
         "popupBlocked": "Das OAuth-Popup konnte nicht geöffnet werden. Bitte erlauben Sie Popups für diese Website.",
         "closedEarly": "Das Autorisierungsfenster wurde vor dem Abschluss geschlossen.",
         "authorizationFailed": "Die Autorisierung ist fehlgeschlagen",
-        "popupFailed": "OAuth-Popup ist fehlgeschlagen"
+        "popupFailed": "OAuth-Popup ist fehlgeschlagen",
+        "configureFailed": "Failed to configure Gmail provider"
       },
       "messages": {
         "setupIncomplete": "Anbieter gespeichert, aber Einrichtung unvollständig: {{error}}",

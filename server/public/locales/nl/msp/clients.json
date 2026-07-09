@@ -333,7 +333,8 @@
     "created": "\"{{name}}\" aangemaakt. Voeg hieronder een andere klant toe.",
     "createAndAddAnother": "Aanmaken + Nog een toevoegen",
     "createAndView": "Aanmaken + Klant bekijken",
-    "additionalDetails": "Aanvullende gegevens"
+    "additionalDetails": "Aanvullende gegevens",
+    "createFailed": "Failed to create client. Please try again."
   },
   "clientCreatedDialog": {
     "title": "Klant gemaakt",
@@ -451,7 +452,8 @@
     "formattingError": "Formatteringsfout",
     "removeAssignmentTitle": "Contractregeltoewijzing verwijderen",
     "removeAssignmentMessage": "Weet u zeker dat u deze contractregeltoewijzing van de klant wilt verwijderen? De contractregel zelf wordt niet verwijderd.",
-    "contracts": "Contracten"
+    "contracts": "Contracten",
+    "taxRatesLoadError": "Failed to load tax rate configuration."
   },
   "clientBillingSchedule": {
     "title": "Factureringsschema",
@@ -599,7 +601,8 @@
     "startDate": "Startdatum",
     "startDateRequired": "Startdatum is vereist",
     "updateAssignment": "Opdracht bijwerken",
-    "useTenantRenewalDefaults": "Gebruik de standaardwaarden voor huurderverlenging"
+    "useTenantRenewalDefaults": "Gebruik de standaardwaarden voor huurderverlenging",
+    "saveError": "Failed to save contract. Please try again."
   },
   "clientContractLineDashboard": {
     "title": "Gebruiksstatistieken (afgelopen 30 dagen)",
@@ -908,7 +911,10 @@
     "skippedExistingMessage": "{{count}} klanten zijn overgeslagen omdat ze al bestaan. Schakel \"Update bestaande klanten\" in om ze te overschrijven.",
     "error": "Fout",
     "updateExistingTitle": "Update bestaande klanten",
-    "updateExistingMessage": "{{count}}-clients bestaan ​​al. Wilt u ze updaten met de nieuwe gegevens?"
+    "updateExistingMessage": "{{count}}-clients bestaan ​​al. Wilt u ze updaten met de nieuwe gegevens?",
+    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
+    "noValidRows": "There are no valid client rows to import.",
+    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
   },
   "clientsList": {
     "name": "Naam",
@@ -1065,7 +1071,8 @@
     "retry": "Opnieuw proberen",
     "loadError": "Notities kunnen niet worden geladen",
     "unknownError": "Onbekende fout",
-    "loadErrorTitle": "Notities kunnen niet worden geladen"
+    "loadErrorTitle": "Notities kunnen niet worden geladen",
+    "loadErrorDescription": "Could not load notes. Please try again."
   },
   "actions": {
     "cancel": "Annuleren",
@@ -1229,7 +1236,9 @@
         "endRequired": "Eindtijd is vereist om een Teams-vergadering aan te maken",
         "startRequired": "Starttijd is vereist om een Teams-vergadering aan te maken",
         "unavailable": "Het aanmaken van Teams-vergaderingen is niet beschikbaar voor deze tenant."
-      }
+      },
+      "loadFailed": "Interaction options could not be loaded. Please try again.",
+      "saveFailed": "The interaction could not be saved. Please try again."
     },
     "feed": {
       "addInteraction": "Interactie toevoegen",
@@ -1242,7 +1251,9 @@
       "searchPlaceholder": "Interacties zoeken",
       "startDate": "Startdatum",
       "title": "Interacties",
-      "typePlaceholder": "Interactietype"
+      "typePlaceholder": "Interactietype",
+      "loadFailed": "Interactions could not be loaded. Please try again.",
+      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
     },
     "overall": {
       "allContacts": "Alle contacten",
@@ -1259,7 +1270,8 @@
       "startTimeLabel": "Starttijd interactie",
       "startTimePlaceholder": "Filteren vanaf deze starttijd",
       "statusPlaceholder": "Status",
-      "title": "Recente interacties"
+      "title": "Recente interacties",
+      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
     }
   },
   "clientDrawer": {

@@ -333,7 +333,8 @@
     "created": "11111 {{name}} 11111",
     "createAndAddAnother": "11111",
     "createAndView": "11111",
-    "additionalDetails": "11111"
+    "additionalDetails": "11111",
+    "createFailed": "11111"
   },
   "clientCreatedDialog": {
     "title": "11111",
@@ -451,7 +452,8 @@
     "formattingError": "11111",
     "removeAssignmentTitle": "11111",
     "removeAssignmentMessage": "11111",
-    "contracts": "11111"
+    "contracts": "11111",
+    "taxRatesLoadError": "11111"
   },
   "clientBillingSchedule": {
     "title": "11111",
@@ -599,7 +601,8 @@
     "startDate": "11111",
     "startDateRequired": "11111",
     "updateAssignment": "11111",
-    "useTenantRenewalDefaults": "11111"
+    "useTenantRenewalDefaults": "11111",
+    "saveError": "11111"
   },
   "clientContractLineDashboard": {
     "title": "11111",
@@ -908,7 +911,10 @@
     "skippedExistingMessage": "{{count}} 11111",
     "error": "11111",
     "updateExistingTitle": "11111",
-    "updateExistingMessage": "11111 {{count}} 11111"
+    "updateExistingMessage": "11111 {{count}} 11111",
+    "invalidRowsBlocked": "11111",
+    "noValidRows": "11111",
+    "serverFailures": "11111"
   },
   "clientsList": {
     "name": "11111",
@@ -1065,7 +1071,8 @@
     "retry": "11111",
     "loadError": "11111",
     "unknownError": "11111",
-    "loadErrorTitle": "11111"
+    "loadErrorTitle": "11111",
+    "loadErrorDescription": "11111"
   },
   "actions": {
     "cancel": "11111",
@@ -1229,7 +1236,9 @@
         "endRequired": "11111",
         "startRequired": "11111",
         "unavailable": "11111"
-      }
+      },
+      "loadFailed": "11111",
+      "saveFailed": "11111"
     },
     "feed": {
       "addInteraction": "11111",
@@ -1242,7 +1251,9 @@
       "searchPlaceholder": "11111",
       "startDate": "11111",
       "title": "11111",
-      "typePlaceholder": "11111"
+      "typePlaceholder": "11111",
+      "loadFailed": "11111",
+      "typesLoadFailed": "11111"
     },
     "overall": {
       "allContacts": "11111",
@@ -1259,7 +1270,8 @@
       "startTimeLabel": "11111",
       "startTimePlaceholder": "11111",
       "statusPlaceholder": "11111",
-      "title": "11111"
+      "title": "11111",
+      "statusesLoadFailed": "11111"
     }
   },
   "clientDrawer": {

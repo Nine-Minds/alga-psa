@@ -1344,7 +1344,8 @@
         "makeDefault": "Als Standard festlegen",
         "noDefault": "Kein Standard",
         "saving": "Speichern…",
-        "undepositedFunds": "Nicht eingezahlte Mittel (Standard)"
+        "undepositedFunds": "Nicht eingezahlte Mittel (Standard)",
+        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
       }
     },
     "rmm": {
