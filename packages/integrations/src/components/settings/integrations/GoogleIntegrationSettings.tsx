@@ -1,6 +1,6 @@
 /**
  * Google Integration Settings
- * Tenant-owned Google Cloud OAuth + Pub/Sub configuration
+ * Tenant-owned Google Cloud OAuth and Gmail notification configuration
  */
 
 'use client';
@@ -123,7 +123,7 @@ export function GoogleIntegrationSettings({ onStatusChange }: GoogleIntegrationS
             <div className="space-y-2">
               <CardTitle>{t('integrations.google.settings.title', { defaultValue: 'Google' })}</CardTitle>
               <CardDescription>
-                {t('integrations.google.settings.description', { defaultValue: 'Configure tenant-owned Google Cloud credentials for Gmail inbound email and Google Calendar.' })}
+                {t('integrations.google.settings.description', { defaultValue: "Enter your company's Google OAuth app credentials for staff sign-in, Gmail inbound email, and Google Calendar." })}
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -164,7 +164,10 @@ export function GoogleIntegrationSettings({ onStatusChange }: GoogleIntegrationS
                   {t('integrations.google.settings.oauthValues.title', { defaultValue: 'Google OAuth app values' })}
                 </summary>
                 <div className="mt-4 space-y-2">
-                  <div className="text-sm font-medium">{t('integrations.google.settings.redirectUrisLabel', { defaultValue: 'Redirect URIs (copy into Google OAuth client)' })}</div>
+                  <div className="text-sm font-medium">{t('integrations.google.settings.redirectUrisLabel', { defaultValue: 'Gmail and Calendar redirect URIs' })}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t('integrations.google.settings.redirectUrisHelp', { defaultValue: 'Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud.' })}
+                  </div>
                   <div className="text-sm font-mono break-all">{status?.redirectUris?.gmail}</div>
                   <div className="text-sm font-mono break-all">{status?.redirectUris?.calendar}</div>
                   <div className="text-sm font-medium mt-2">{t('integrations.google.settings.scopes', { defaultValue: 'Scopes' })}</div>
@@ -186,17 +189,20 @@ export function GoogleIntegrationSettings({ onStatusChange }: GoogleIntegrationS
                     onChange={(e) => setProjectId(e.target.value)}
                     placeholder={t('integrations.google.settings.fields.projectIdPlaceholder', { defaultValue: 'my-project-id' })}
                   />
-                  <p className="text-xs text-muted-foreground">{t('integrations.google.settings.fields.projectIdHelp', { defaultValue: 'Used for Gmail Pub/Sub provisioning (tenant-owned service account).' })}</p>
+                  <p className="text-xs text-muted-foreground">{t('integrations.google.settings.fields.projectIdHelp', { defaultValue: 'Required for inbound Gmail notifications. Find it in the project picker at the top of Google Cloud.' })}</p>
                 </div>
               </div>
 
               <div className="rounded-lg border p-4 space-y-4">
                 <div className="text-sm font-medium">{t('integrations.google.settings.oauth.sectionTitle', { defaultValue: 'OAuth app' })}</div>
+                <p className="text-xs text-muted-foreground">
+                  {t('integrations.google.settings.oauth.locationHelp', { defaultValue: 'Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs.' })}
+                </p>
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <div className="text-sm font-medium">{t('integrations.google.settings.oauth.shareApp', { defaultValue: 'Use the same OAuth app for Gmail + Calendar' })}</div>
-                    <div className="text-xs text-muted-foreground">{t('integrations.google.settings.oauth.shareAppHelp', { defaultValue: 'Recommended. You can still authorize separate Google accounts per integration.' })}</div>
+                    <div className="text-sm font-medium">{t('integrations.google.settings.oauth.shareApp', { defaultValue: 'Use the Google OAuth client for Calendar too' })}</div>
+                    <div className="text-xs text-muted-foreground">{t('integrations.google.settings.oauth.shareAppHelp', { defaultValue: 'Staff sign-in and Gmail always use the OAuth client below. Turn this on to share it with Calendar; turn it off to enter separate Calendar credentials.' })}</div>
                   </div>
                   <Switch
                     id="google-same-app"
@@ -207,7 +213,7 @@ export function GoogleIntegrationSettings({ onStatusChange }: GoogleIntegrationS
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="google-gmail-client-id">{t('integrations.google.settings.oauth.gmailClientId', { defaultValue: 'Gmail OAuth Client ID' })}</Label>
+                    <Label htmlFor="google-gmail-client-id">{t('integrations.google.settings.oauth.gmailClientId', { defaultValue: 'Google OAuth Client ID for staff sign-in and Gmail' })}</Label>
                     <Input
                       id="google-gmail-client-id"
                       value={gmailClientId}
@@ -220,7 +226,7 @@ export function GoogleIntegrationSettings({ onStatusChange }: GoogleIntegrationS
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="google-gmail-client-secret">{t('integrations.google.settings.oauth.gmailClientSecret', { defaultValue: 'Gmail OAuth Client Secret' })}</Label>
+                    <Label htmlFor="google-gmail-client-secret">{t('integrations.google.settings.oauth.gmailClientSecret', { defaultValue: 'Google OAuth Client Secret for staff sign-in and Gmail' })}</Label>
                     <Input
                       id="google-gmail-client-secret"
                       type="password"
@@ -258,9 +264,12 @@ export function GoogleIntegrationSettings({ onStatusChange }: GoogleIntegrationS
               </div>
 
               <div className="rounded-lg border p-4 space-y-2">
-                <div className="text-sm font-medium">{t('integrations.google.settings.serviceAccount.title', { defaultValue: 'Pub/Sub service account (required for Gmail)' })}</div>
+                <div className="text-sm font-medium">{t('integrations.google.settings.serviceAccount.title', { defaultValue: 'Gmail notification service account' })}</div>
                 <p className="text-xs text-muted-foreground">
-                  {t('integrations.google.settings.serviceAccount.description', { defaultValue: 'Paste the service account key JSON for the tenant-owned service account used to provision Pub/Sub.' })}
+                  {t('integrations.google.settings.serviceAccount.description', { defaultValue: 'Required for inbound Gmail notifications. Not used for staff sign-in.' })}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t('integrations.google.settings.serviceAccount.locationHelp', { defaultValue: 'Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON.' })}
                 </p>
                 {status?.config?.hasServiceAccountKey && (
                   <p className="text-xs text-muted-foreground">{t('integrations.google.settings.serviceAccount.alreadyStored', { defaultValue: 'A service account key is already stored (not shown).' })}</p>
@@ -295,7 +304,7 @@ export function GoogleIntegrationSettings({ onStatusChange }: GoogleIntegrationS
 
               <Alert variant="info">
                 <AlertDescription>
-                  {t('integrations.google.settings.afterSaveNotice', { defaultValue: 'After saving, go to Inbound Email and Calendar integrations and re-authorize providers. Existing Google providers are not migrated.' })}
+                  {t('integrations.google.settings.afterSaveNotice', { defaultValue: 'After saving, re-authorize Gmail and Calendar from their integration screens. Existing Google email and calendar connections are not migrated. Staff sign-in uses the saved Google OAuth client and secret.' })}
                 </AlertDescription>
               </Alert>
             </>

@@ -42,7 +42,7 @@ describe('IntegrationsSettingsPage providers tab', () => {
       'Connect inbox and collaboration surfaces for ticket processing, operator workflows, and Microsoft Teams access.'
     );
     expect(settingsLocale.integrations.categories.providers.description.ee).toBe(
-      'Configure shared provider credentials used by email, calendar, MSP SSO, and other integrations.'
+      'Set up Google or Microsoft for staff sign-in, email, calendar, and other integrations.'
     );
     expect(source).not.toContain('Configure Teams from the Providers tab');
   });

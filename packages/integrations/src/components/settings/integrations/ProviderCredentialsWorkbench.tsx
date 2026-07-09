@@ -6,7 +6,6 @@ import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
-  CheckCircle2,
   Cloud,
   ExternalLink,
   Mail,
@@ -148,7 +147,7 @@ export function ProviderCredentialsWorkbench({
       id: 'google' as const,
       icon: Mail,
       label: t('integrations.providersWorkbench.google.label', { defaultValue: 'Google' }),
-      description: t('integrations.providersWorkbench.google.description', { defaultValue: 'Gmail inbound email and Google Calendar.' }),
+      description: t('integrations.providersWorkbench.google.description', { defaultValue: 'Staff sign-in with Google, Gmail inbound email, and Google Calendar.' }),
       badge: getGoogleBadge(googleStatus, t),
     },
     {
@@ -156,8 +155,8 @@ export function ProviderCredentialsWorkbench({
       icon: ShieldCheck,
       label: t('integrations.providersWorkbench.microsoft.label', { defaultValue: 'Microsoft' }),
       description: isEnterpriseEdition
-        ? t('integrations.providersWorkbench.microsoft.descriptionEe', { defaultValue: 'MSP SSO, Outlook email, calendar sync, and Teams.' })
-        : t('integrations.providersWorkbench.microsoft.descriptionCe', { defaultValue: 'MSP SSO, Microsoft sign-in, and login-domain discovery.' }),
+        ? t('integrations.providersWorkbench.microsoft.descriptionEe', { defaultValue: 'Staff sign-in with Microsoft, Outlook email, Outlook calendar sync, and Teams.' })
+        : t('integrations.providersWorkbench.microsoft.descriptionCe', { defaultValue: 'Staff sign-in with Microsoft.' }),
       badge: getMicrosoftBadge(microsoftStatus, t),
     },
   ];
@@ -172,15 +171,15 @@ export function ProviderCredentialsWorkbench({
           </div>
           <div>
             <h2 className="text-2xl font-semibold text-[rgb(var(--color-text-900))]">
-              {t('integrations.providersWorkbench.title', { defaultValue: 'Provider Credentials' })}
+              {t('integrations.providersWorkbench.title', { defaultValue: 'Google or Microsoft setup' })}
             </h2>
             <p className="mt-2 text-sm text-[rgb(var(--color-text-600))]">
               {isEnterpriseEdition
                 ? t('integrations.providersWorkbench.descriptionEe', {
-                    defaultValue: 'Set up the provider path your tenant uses. Configure both only when email, calendar, SSO, or Teams workflows require both ecosystems.',
+                    defaultValue: 'Most companies set up one: Google or Microsoft. Set up both only if your company uses both.',
                   })
                 : t('integrations.providersWorkbench.descriptionCe', {
-                    defaultValue: 'Set up the provider path your tenant uses. Configure both only when email or SSO workflows require both ecosystems.',
+                    defaultValue: 'Most companies set up one: Google or Microsoft. Set up both only if your company uses both.',
                   })}
             </p>
           </div>
@@ -200,7 +199,7 @@ export function ProviderCredentialsWorkbench({
       <div
         id="provider-credentials-selector"
         role="tablist"
-        aria-label={t('integrations.providersWorkbench.selectorLabel', { defaultValue: 'Provider credential paths' })}
+        aria-label={t('integrations.providersWorkbench.selectorLabel', { defaultValue: 'Google or Microsoft setup options' })}
         className="grid gap-3 md:grid-cols-2"
       >
         {providerOptions.map((option) => {
@@ -236,12 +235,6 @@ export function ProviderCredentialsWorkbench({
               <p className="mt-3 text-sm text-[rgb(var(--color-text-600))]">
                 {option.description}
               </p>
-              {selected && (
-                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-primary">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  {t('integrations.providersWorkbench.selected', { defaultValue: 'Selected provider path' })}
-                </div>
-              )}
             </button>
           );
         })}

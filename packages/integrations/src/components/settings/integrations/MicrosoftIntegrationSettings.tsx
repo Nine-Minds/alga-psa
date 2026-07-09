@@ -86,7 +86,7 @@ function getReadinessMessages(profile: MicrosoftProfile, t: TranslateFn): string
   const messages: string[] = [];
 
   if (profile.isArchived) {
-    messages.push(t('integrations.microsoft.settings.readiness.archived', { defaultValue: 'Archived profiles cannot be used for new Microsoft bindings.' }));
+    messages.push(t('integrations.microsoft.settings.readiness.archived', { defaultValue: 'Archived apps cannot be selected for Microsoft services.' }));
   }
   if (!profile.readiness.clientIdConfigured) {
     messages.push(t('integrations.microsoft.settings.readiness.clientIdMissing', { defaultValue: 'Client ID is missing.' }));
@@ -161,28 +161,28 @@ function getConsumerDescriptors(showTeamsUi: boolean, t: TranslateFn): Microsoft
       case 'msp_sso':
         return {
           consumerType,
-          consumerLabel: t('integrations.microsoft.settings.consumers.mspSso.label', { defaultValue: 'MSP SSO' }),
-          description: t('integrations.microsoft.settings.consumers.mspSso.description', { defaultValue: 'Select the Microsoft profile for MSP SSO login domains, Microsoft sign-in, and tenant discovery.' }),
+          consumerLabel: t('integrations.microsoft.settings.consumers.mspSso.label', { defaultValue: 'Staff sign-in' }),
+          description: t('integrations.microsoft.settings.consumers.mspSso.description', { defaultValue: 'Choose the Microsoft app for staff sign-in and login-domain discovery.' }),
         };
       case 'email':
         return {
           consumerType,
-          consumerLabel: t('integrations.microsoft.settings.consumers.email.label', { defaultValue: 'Email' }),
-          description: t('integrations.microsoft.settings.consumers.email.description', { defaultValue: 'Select the Microsoft profile for Outlook inbound email.' }),
-          reconnectMessage: t('integrations.microsoft.settings.consumers.email.reconnect', { defaultValue: 'Existing Outlook email connections may need re-authorization after changing the bound profile.' }),
+          consumerLabel: t('integrations.microsoft.settings.consumers.email.label', { defaultValue: 'Outlook email' }),
+          description: t('integrations.microsoft.settings.consumers.email.description', { defaultValue: 'Choose the Microsoft app for Outlook inbound email.' }),
+          reconnectMessage: t('integrations.microsoft.settings.consumers.email.reconnect', { defaultValue: 'Existing Outlook email connections may need re-authorization after changing the Microsoft app.' }),
         };
       case 'calendar':
         return {
           consumerType,
-          consumerLabel: t('integrations.microsoft.settings.consumers.calendar.label', { defaultValue: 'Calendar' }),
-          description: t('integrations.microsoft.settings.consumers.calendar.description', { defaultValue: 'Select the Microsoft profile for Outlook calendar sync.' }),
-          reconnectMessage: t('integrations.microsoft.settings.consumers.calendar.reconnect', { defaultValue: 'Existing Microsoft calendar connections may need re-authorization after changing the bound profile.' }),
+          consumerLabel: t('integrations.microsoft.settings.consumers.calendar.label', { defaultValue: 'Outlook Calendar' }),
+          description: t('integrations.microsoft.settings.consumers.calendar.description', { defaultValue: 'Choose the Microsoft app for Outlook calendar sync.' }),
+          reconnectMessage: t('integrations.microsoft.settings.consumers.calendar.reconnect', { defaultValue: 'Existing Outlook calendar connections may need re-authorization after changing the Microsoft app.' }),
         };
       case 'teams':
         return {
           consumerType,
           consumerLabel: t('integrations.microsoft.settings.consumers.teams.label', { defaultValue: 'Teams' }),
-          description: t('integrations.microsoft.settings.consumers.teams.description', { defaultValue: 'Select the Microsoft profile for Microsoft Teams installation and auth flows.' }),
+          description: t('integrations.microsoft.settings.consumers.teams.description', { defaultValue: 'Choose the Microsoft app for Teams installation and auth flows.' }),
         };
     }
   });
@@ -194,10 +194,28 @@ function getCapabilityDescriptors(showTeamsUi: boolean, t: TranslateFn): Microso
   );
 }
 
-function getVisibleProfileConsumers(profile: MicrosoftProfile, showTeamsUi: boolean): string[] {
-  return showTeamsUi
+function getVisibleProfileConsumers(
+  profile: MicrosoftProfile,
+  showTeamsUi: boolean,
+  descriptors: MicrosoftConsumerDescriptor[]
+): string[] {
+  const labelByConsumerType = new Map(
+    descriptors.map((descriptor) => [descriptor.consumerType, descriptor.consumerLabel])
+  );
+  const legacyConsumerTypeByLabel: Record<string, MicrosoftConsumerType> = {
+    'MSP SSO': 'msp_sso',
+    Email: 'email',
+    Calendar: 'calendar',
+    Teams: 'teams',
+  };
+  const visibleConsumers = showTeamsUi
     ? profile.consumers
     : profile.consumers.filter((consumer) => consumer !== 'Teams');
+
+  return visibleConsumers.map((consumer) => {
+    const consumerType = legacyConsumerTypeByLabel[consumer];
+    return consumerType ? labelByConsumerType.get(consumerType) ?? consumer : consumer;
+  });
 }
 
 function profileSupportsConsumer(
@@ -215,23 +233,27 @@ function getBindingWarning(
   t: TranslateFn
 ): string | null {
   if (!binding || !binding.profileId) {
-    return t('integrations.microsoft.settings.bindings.warningNoBinding', { defaultValue: 'No {{consumer}} binding is configured yet.', consumer: consumerLabel });
+    return t('integrations.microsoft.settings.bindings.warningNoBinding', { defaultValue: 'No {{consumer}} app is selected. Enable {{consumer}} on a Microsoft app, then choose it here.', consumer: consumerLabel });
   }
 
   if (!profile) {
-    return t('integrations.microsoft.settings.bindings.warningProfileMissing', { defaultValue: '{{consumer}} is bound to a profile that is no longer available. Rebind it to an active profile.', consumer: consumerLabel });
+    return t('integrations.microsoft.settings.bindings.warningProfileMissing', { defaultValue: 'The selected Microsoft app is no longer available. Choose another app.', consumer: consumerLabel });
   }
 
   if (profile.isArchived) {
-    return t('integrations.microsoft.settings.bindings.warningArchived', { defaultValue: '{{consumer}} is still bound to an archived profile. Rebind it to an active profile.', consumer: consumerLabel });
+    return t('integrations.microsoft.settings.bindings.warningArchived', { defaultValue: 'Current: {{profile}} is archived. Choose an active Microsoft app.', consumer: consumerLabel, profile: profile.displayName });
   }
 
   if (!profileSupportsConsumer(profile, consumerType)) {
-    return t('integrations.microsoft.settings.bindings.warningMissingCapability', { defaultValue: '{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities.', consumer: consumerLabel });
+    return t('integrations.microsoft.settings.bindings.warningMissingCapability', {
+      defaultValue: 'Current: {{profile}}. It is not enabled for {{consumer}}. Enable {{consumer}} on that app, choose another app, or leave {{consumer}} unassigned.',
+      consumer: consumerLabel,
+      profile: profile.displayName,
+    });
   }
 
   if (!profile.readiness.ready) {
-    return t('integrations.microsoft.settings.bindings.warningNotReady', { defaultValue: '{{consumer}} is bound to {{profile}}, but that profile still needs configuration.', consumer: consumerLabel, profile: profile.displayName });
+    return t('integrations.microsoft.settings.bindings.warningNotReady', { defaultValue: 'Current: {{profile}}. Finish configuring that app before {{consumer}} will work.', consumer: consumerLabel, profile: profile.displayName });
   }
 
   return null;
@@ -244,14 +266,14 @@ function getBindingSummary(
   t: TranslateFn
 ): string {
   if (!binding || !binding.profileId) {
-    return t('integrations.microsoft.settings.bindings.summaryNone', { defaultValue: 'No Microsoft profile is currently bound to {{consumer}}.', consumer: consumerLabel });
+    return t('integrations.microsoft.settings.bindings.summaryNone', { defaultValue: 'No {{consumer}} app selected.', consumer: consumerLabel });
   }
 
   if (!profile) {
-    return t('integrations.microsoft.settings.bindings.summaryUnavailable', { defaultValue: '{{consumer}} is bound to an unavailable profile.', consumer: consumerLabel });
+    return t('integrations.microsoft.settings.bindings.summaryUnavailable', { defaultValue: 'Selected app unavailable.', consumer: consumerLabel });
   }
 
-  return t('integrations.microsoft.settings.bindings.summaryBound', { defaultValue: '{{consumer}} is bound to {{profile}}.', consumer: consumerLabel, profile: profile.displayName });
+  return t('integrations.microsoft.settings.bindings.summaryBound', { defaultValue: 'Current: {{profile}}.', consumer: consumerLabel, profile: profile.displayName });
 }
 
 function getGuidanceBlocks(
@@ -268,7 +290,7 @@ function getGuidanceBlocks(
 
   const blocks: Array<{ title: string; items: Array<{ label: string; value: string }> }> = [
     {
-      title: t('integrations.microsoft.settings.guidance.mspSsoTitle', { defaultValue: 'MSP SSO' }),
+      title: t('integrations.microsoft.settings.guidance.mspSsoTitle', { defaultValue: 'Staff sign-in' }),
       items: [
         { label: t('integrations.microsoft.settings.guidance.redirectUri', { defaultValue: 'Redirect URI' }), value: status?.redirectUris?.sso || unavailable },
         { label: t('integrations.microsoft.settings.guidance.scopes', { defaultValue: 'Scopes' }), value: (status?.scopes?.sso || []).join(', ') || unavailable },
@@ -312,7 +334,7 @@ function getGuidanceBlocks(
   }
 
   blocks.push({
-    title: t('integrations.microsoft.settings.guidance.currentProfileTitle', { defaultValue: 'Current profile values' }),
+    title: t('integrations.microsoft.settings.guidance.currentProfileTitle', { defaultValue: 'Saved app values' }),
     items: [
       { label: t('integrations.microsoft.settings.guidance.clientId', { defaultValue: 'Client ID' }), value: profile.clientId || notConfigured },
       { label: t('integrations.microsoft.settings.guidance.tenantId', { defaultValue: 'Tenant ID' }), value: profile.tenantId },
@@ -450,7 +472,7 @@ export function MicrosoftIntegrationSettings({
   );
 
   const validateForm = React.useCallback(() => {
-    if (!formState.displayName.trim()) return t('integrations.microsoft.settings.validation.displayNameRequired', { defaultValue: 'Microsoft profile display name is required' });
+    if (!formState.displayName.trim()) return t('integrations.microsoft.settings.validation.displayNameRequired', { defaultValue: 'Microsoft app display name is required' });
     if (!formState.clientId.trim()) return t('integrations.microsoft.settings.validation.clientIdRequired', { defaultValue: 'Microsoft OAuth Client ID is required' });
     if (!formState.tenantId.trim()) return t('integrations.microsoft.settings.validation.tenantIdRequired', { defaultValue: 'Microsoft Tenant ID is required' });
     if (dialogMode === 'create' && !formState.clientSecret.trim()) {
@@ -507,10 +529,10 @@ export function MicrosoftIntegrationSettings({
             });
 
       if (!result.success) {
-        const message = t('integrations.microsoft.settings.errors.saveProfile', { defaultValue: 'Failed to save Microsoft profile' });
+        const message = t('integrations.microsoft.settings.errors.saveProfile', { defaultValue: 'Failed to save Microsoft app' });
         setFormError(message);
         toast({
-          title: t('integrations.microsoft.settings.toasts.saveFailedTitle', { defaultValue: 'Unable to save Microsoft profile' }),
+          title: t('integrations.microsoft.settings.toasts.saveFailedTitle', { defaultValue: 'Unable to save Microsoft app' }),
           description: message,
           variant: 'destructive',
         });
@@ -519,12 +541,12 @@ export function MicrosoftIntegrationSettings({
 
       toast({
         title: dialogMode === 'create'
-          ? t('integrations.microsoft.settings.toasts.profileCreated', { defaultValue: 'Microsoft profile created' })
-          : t('integrations.microsoft.settings.toasts.profileUpdated', { defaultValue: 'Microsoft profile updated' }),
+          ? t('integrations.microsoft.settings.toasts.profileCreated', { defaultValue: 'Microsoft app created' })
+          : t('integrations.microsoft.settings.toasts.profileUpdated', { defaultValue: 'Microsoft app updated' }),
         description:
           dialogMode === 'create'
-            ? t('integrations.microsoft.settings.toasts.profileCreatedDescription', { defaultValue: 'The Microsoft profile is ready to be bound to visible Microsoft services.' })
-            : t('integrations.microsoft.settings.toasts.profileUpdatedDescription', { defaultValue: 'The Microsoft profile changes were saved successfully.' }),
+            ? t('integrations.microsoft.settings.toasts.profileCreatedDescription', { defaultValue: 'Choose which services can use this Microsoft app.' })
+            : t('integrations.microsoft.settings.toasts.profileUpdatedDescription', { defaultValue: 'Microsoft app changes saved.' }),
       });
       closeDialog();
       await load();
@@ -543,10 +565,10 @@ export function MicrosoftIntegrationSettings({
 
       const result = await archiveMicrosoftProfile(archiveTarget.profileId);
       if (!result.success) {
-        const message = t('integrations.microsoft.settings.errors.archive', { defaultValue: 'Failed to archive Microsoft profile' });
+        const message = t('integrations.microsoft.settings.errors.archive', { defaultValue: 'Failed to archive Microsoft app' });
         setError(message);
         toast({
-          title: t('integrations.microsoft.settings.toasts.archiveFailedTitle', { defaultValue: 'Unable to archive Microsoft profile' }),
+          title: t('integrations.microsoft.settings.toasts.archiveFailedTitle', { defaultValue: 'Unable to archive Microsoft app' }),
           description: message,
           variant: 'destructive',
         });
@@ -554,7 +576,7 @@ export function MicrosoftIntegrationSettings({
       }
 
       toast({
-        title: t('integrations.microsoft.settings.toasts.archivedTitle', { defaultValue: 'Microsoft profile archived' }),
+        title: t('integrations.microsoft.settings.toasts.archivedTitle', { defaultValue: 'Microsoft app archived' }),
         description: t('integrations.microsoft.settings.toasts.archivedDescription', { defaultValue: '{{name}} was archived successfully.', name: archiveTarget.displayName }),
       });
       setArchiveTarget(null);
@@ -570,10 +592,10 @@ export function MicrosoftIntegrationSettings({
         setSettingDefaultId(profile.profileId);
         const result = await setDefaultMicrosoftProfile(profile.profileId);
         if (!result.success) {
-          const message = t('integrations.microsoft.settings.errors.setDefault', { defaultValue: 'Failed to set default Microsoft profile' });
+          const message = t('integrations.microsoft.settings.errors.setDefault', { defaultValue: 'Failed to set default Microsoft app' });
           setError(message);
           toast({
-            title: t('integrations.microsoft.settings.toasts.setDefaultFailedTitle', { defaultValue: 'Unable to set default profile' }),
+            title: t('integrations.microsoft.settings.toasts.setDefaultFailedTitle', { defaultValue: 'Unable to set default app' }),
             description: message,
             variant: 'destructive',
           });
@@ -581,8 +603,8 @@ export function MicrosoftIntegrationSettings({
         }
 
         toast({
-          title: t('integrations.microsoft.settings.toasts.defaultUpdatedTitle', { defaultValue: 'Default Microsoft profile updated' }),
-          description: t('integrations.microsoft.settings.toasts.defaultUpdatedDescription', { defaultValue: '{{name}} is now the default Microsoft profile record.', name: profile.displayName }),
+          title: t('integrations.microsoft.settings.toasts.defaultUpdatedTitle', { defaultValue: 'Default Microsoft app updated' }),
+          description: t('integrations.microsoft.settings.toasts.defaultUpdatedDescription', { defaultValue: '{{name}} is now the default Microsoft app.', name: profile.displayName }),
         });
         await load();
       } finally {
@@ -637,10 +659,10 @@ export function MicrosoftIntegrationSettings({
         });
 
         if (!result.success) {
-          const message = t('integrations.microsoft.settings.errors.updateBinding', { defaultValue: 'Failed to update Microsoft binding' });
+          const message = t('integrations.microsoft.settings.errors.updateBinding', { defaultValue: 'Failed to update Microsoft service choice' });
           setError(message);
           toast({
-            title: t('integrations.microsoft.settings.toasts.bindingFailedTitle', { defaultValue: 'Unable to update {{consumer}} binding', consumer: consumer.consumerLabel }),
+            title: t('integrations.microsoft.settings.toasts.bindingFailedTitle', { defaultValue: 'Unable to update {{consumer}} app choice', consumer: consumer.consumerLabel }),
             description: message,
             variant: 'destructive',
           });
@@ -650,9 +672,9 @@ export function MicrosoftIntegrationSettings({
         const reconnectMessage = consumer.reconnectMessage
           ? ` ${consumer.reconnectMessage}`
           : '';
-        const profileLabel = result.binding?.profileDisplayName || t('integrations.microsoft.settings.toasts.selectedProfile', { defaultValue: 'the selected profile' });
+        const profileLabel = result.binding?.profileDisplayName || t('integrations.microsoft.settings.toasts.selectedProfile', { defaultValue: 'the selected app' });
         toast({
-          title: t('integrations.microsoft.settings.toasts.bindingUpdatedTitle', { defaultValue: '{{consumer}} binding updated', consumer: consumer.consumerLabel }),
+          title: t('integrations.microsoft.settings.toasts.bindingUpdatedTitle', { defaultValue: '{{consumer}} app choice updated', consumer: consumer.consumerLabel }),
           description: `${t('integrations.microsoft.settings.toasts.bindingUpdatedDescription', { defaultValue: '{{consumer}} now uses {{profile}}.', consumer: consumer.consumerLabel, profile: profileLabel })}${reconnectMessage}`,
         });
         await load();
@@ -664,8 +686,8 @@ export function MicrosoftIntegrationSettings({
   );
 
   const dialogTitle = dialogMode === 'create'
-    ? t('integrations.microsoft.settings.dialog.createTitle', { defaultValue: 'Create Microsoft Profile' })
-    : t('integrations.microsoft.settings.dialog.editTitle', { defaultValue: 'Edit Microsoft Profile' });
+    ? t('integrations.microsoft.settings.dialog.createTitle', { defaultValue: 'Create Microsoft app registration' })
+    : t('integrations.microsoft.settings.dialog.editTitle', { defaultValue: 'Edit Microsoft app registration' });
   const currentSecretMasked = editingProfile?.clientSecretMasked;
 
   return (
@@ -677,8 +699,8 @@ export function MicrosoftIntegrationSettings({
               <CardTitle>{t('integrations.microsoft.settings.title', { defaultValue: 'Microsoft' })}</CardTitle>
               <CardDescription>
                 {isEnterpriseEdition
-                  ? t('integrations.microsoft.settings.descriptionEe', { defaultValue: 'Manage tenant-owned Microsoft profiles for MSP SSO, Outlook email, calendar sync, and Microsoft Teams.' })
-                  : t('integrations.microsoft.settings.descriptionCe', { defaultValue: 'Manage tenant-owned Microsoft profiles for MSP SSO, Microsoft sign-in, and login-domain discovery.' })}
+                  ? t('integrations.microsoft.settings.descriptionEe', { defaultValue: "Manage your company's Microsoft app registrations for staff sign-in, Outlook email, calendar sync, and Teams." })
+                  : t('integrations.microsoft.settings.descriptionCe', { defaultValue: "Manage your company's Microsoft app registration for staff sign-in." })}
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -703,7 +725,7 @@ export function MicrosoftIntegrationSettings({
               </Button>
               <Button id="microsoft-settings-add-profile" type="button" onClick={openCreateDialog} disabled={loading}>
                 <Plus className="mr-2 h-4 w-4" />
-                {t('integrations.microsoft.settings.actions.newProfile', { defaultValue: 'New Profile' })}
+                {t('integrations.microsoft.settings.actions.newProfile', { defaultValue: 'New app registration' })}
               </Button>
             </div>
           </div>
@@ -715,22 +737,13 @@ export function MicrosoftIntegrationSettings({
             </Alert>
           )}
 
-          <Alert>
-            <CheckCircle2 className="h-4 w-4" />
-            <AlertDescription>
-              {isEnterpriseEdition
-                ? t('integrations.microsoft.settings.bindingsAlertEe', { defaultValue: 'Each service uses the Microsoft profile selected below for MSP SSO, email, calendar, and Teams.' })
-                : t('integrations.microsoft.settings.bindingsAlertCe', { defaultValue: 'MSP SSO uses the Microsoft profile selected below. Configure login domains separately in Security.' })}
-            </AlertDescription>
-          </Alert>
-
           {isEnterpriseEdition && (
             <div className="rounded-lg border bg-muted/20 p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <div className="text-sm font-medium">{t('integrations.microsoft.settings.providerReconnect.title', { defaultValue: 'Provider reconnection' })}</div>
+                  <div className="text-sm font-medium">{t('integrations.microsoft.settings.providerReconnect.title', { defaultValue: 'Reconnect Microsoft services' })}</div>
                   <div className="text-sm text-muted-foreground">
-                    {t('integrations.microsoft.settings.providerReconnect.description', { defaultValue: 'Use this if you rotate credentials or intentionally rebind Outlook email or calendar to a different Microsoft profile.' })}
+                    {t('integrations.microsoft.settings.providerReconnect.description', { defaultValue: 'Use after rotating Microsoft credentials or moving Outlook email/calendar to another Microsoft app.' })}
                   </div>
                 </div>
                 <Button
@@ -750,11 +763,11 @@ export function MicrosoftIntegrationSettings({
 
           <div className="overflow-hidden rounded-lg border bg-muted/10">
             <div className="space-y-1 p-4">
-              <div className="text-sm font-medium">{t('integrations.microsoft.settings.consumerBindings.title', { defaultValue: 'Service profile bindings' })}</div>
+              <div className="text-sm font-medium">{t('integrations.microsoft.settings.consumerBindings.title', { defaultValue: 'Which Microsoft app each service uses' })}</div>
               <div className="text-sm text-muted-foreground">
                 {isEnterpriseEdition
-                  ? t('integrations.microsoft.settings.consumerBindings.descriptionEe', { defaultValue: 'Each service uses the Microsoft profile selected below. Reassigning one service does not change the others.' })
-                  : t('integrations.microsoft.settings.consumerBindings.descriptionCe', { defaultValue: 'MSP SSO uses the Microsoft profile selected below for sign-in and login-domain usage.' })}
+                  ? t('integrations.microsoft.settings.consumerBindings.descriptionEe', { defaultValue: 'Changing Outlook email will not change staff sign-in, Calendar, or Teams.' })
+                  : t('integrations.microsoft.settings.consumerBindings.descriptionCe', { defaultValue: 'This does not affect Google sign-in.' })}
               </div>
             </div>
             <div className="divide-y divide-[rgb(var(--color-border-200))]">
@@ -784,23 +797,25 @@ export function MicrosoftIntegrationSettings({
                         <div className="text-sm font-medium">{consumer.consumerLabel}</div>
                       </div>
                       <div className="text-sm text-muted-foreground">{consumer.description}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {getBindingSummary(consumer.consumerLabel, binding, boundProfile, t)}
-                      </div>
+                      {!warning && (
+                        <div className="text-xs text-muted-foreground">
+                          {getBindingSummary(consumer.consumerLabel, binding, boundProfile, t)}
+                        </div>
+                      )}
                     </div>
 
                     <CustomSelect
                       id={`microsoft-binding-select-${consumer.consumerType}`}
-                      label={t('integrations.microsoft.settings.binding.boundProfileLabel', { defaultValue: 'Bound profile' })}
+                      label={t('integrations.microsoft.settings.binding.boundProfileLabel', { defaultValue: 'Microsoft app' })}
                       options={options}
                       value={activeBoundProfile?.profileId ?? ''}
                       onValueChange={(profileId) => void handleBindingChange(consumer, profileId)}
                       placeholder={
                         capableProfiles.length > 0
-                          ? t('integrations.microsoft.settings.binding.selectProfile', { defaultValue: 'Select a profile' })
+                          ? t('integrations.microsoft.settings.binding.selectProfile', { defaultValue: 'Select an app' })
                           : activeProfiles.length > 0
-                            ? t('integrations.microsoft.settings.binding.noCapablePlaceholder', { defaultValue: 'No enabled profile' })
-                            : t('integrations.microsoft.settings.binding.createFirst', { defaultValue: 'Create a profile first' })
+                            ? t('integrations.microsoft.settings.binding.noCapablePlaceholder', { defaultValue: 'No enabled app' })
+                            : t('integrations.microsoft.settings.binding.createFirst', { defaultValue: 'Create an app first' })
                       }
                       disabled={savingBindingConsumer === consumer.consumerType || capableProfiles.length === 0}
                     />
@@ -823,14 +838,14 @@ export function MicrosoftIntegrationSettings({
 
                     {(noCapableProfiles || warning) && (
                       <div className="space-y-2 lg:col-span-3">
-                        {noCapableProfiles && (
+                        {noCapableProfiles && !warning && (
                           <div className="text-xs text-muted-foreground">
                             {consumer.consumerType === 'email'
                               ? t('integrations.microsoft.settings.binding.noEmailCapableProfiles', {
-                                  defaultValue: 'No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app.',
+                                  defaultValue: 'No Microsoft app is enabled for Outlook email. Enable it on an app registration, or leave Outlook email on the hosted app.',
                                 })
                               : t('integrations.microsoft.settings.binding.noCapableProfiles', {
-                                  defaultValue: 'No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.',
+                                  defaultValue: 'No Microsoft app is enabled for {{consumer}}. Enable it on an app registration, or leave {{consumer}} unassigned.',
                                   consumer: consumer.consumerLabel,
                                 })}
                           </div>
@@ -852,10 +867,10 @@ export function MicrosoftIntegrationSettings({
 
           <div className="space-y-1">
             <div className="text-sm font-medium">
-              {t('integrations.microsoft.settings.profileLibrary.title', { defaultValue: 'Profile library' })}
+              {t('integrations.microsoft.settings.profileLibrary.title', { defaultValue: 'Microsoft app registrations' })}
             </div>
             <div className="text-sm text-muted-foreground">
-              {t('integrations.microsoft.settings.profileLibrary.description', { defaultValue: 'Named Microsoft app registrations that services can bind to.' })}
+              {t('integrations.microsoft.settings.profileLibrary.description', { defaultValue: 'Create or edit the Microsoft apps used by sign-in, Outlook, Calendar, and Teams.' })}
             </div>
           </div>
 
@@ -866,15 +881,15 @@ export function MicrosoftIntegrationSettings({
             </div>
           ) : !hasProfiles ? (
             <div className="rounded-xl border border-dashed p-8 text-center">
-              <div className="text-lg font-semibold">{t('integrations.microsoft.settings.empty.title', { defaultValue: 'No Microsoft profiles yet' })}</div>
+              <div className="text-lg font-semibold">{t('integrations.microsoft.settings.empty.title', { defaultValue: 'No Microsoft apps yet' })}</div>
               <div className="mt-2 text-sm text-muted-foreground">
                 {isEnterpriseEdition
-                  ? t('integrations.microsoft.settings.empty.descriptionEe', { defaultValue: 'Create a named profile first, then bind it to MSP SSO, Outlook email, calendar sync, and Teams.' })
-                  : t('integrations.microsoft.settings.empty.descriptionCe', { defaultValue: 'Create a named profile first, then bind it to MSP SSO and login-domain sign-in flows.' })}
+                  ? t('integrations.microsoft.settings.empty.descriptionEe', { defaultValue: 'Create a Microsoft app registration, then choose which services can use it.' })
+                  : t('integrations.microsoft.settings.empty.descriptionCe', { defaultValue: 'Create a Microsoft app registration for staff sign-in.' })}
               </div>
               <Button className="mt-4" id="microsoft-empty-state-create" type="button" onClick={openCreateDialog}>
                 <Plus className="mr-2 h-4 w-4" />
-                {t('integrations.microsoft.settings.empty.createButton', { defaultValue: 'Create Microsoft Profile' })}
+                {t('integrations.microsoft.settings.empty.createButton', { defaultValue: 'Create Microsoft app' })}
               </Button>
             </div>
           ) : (
@@ -882,7 +897,7 @@ export function MicrosoftIntegrationSettings({
               {profiles.map((profile) => {
                 const statusBadge = getProfileStatusBadge(profile, t);
                 const readinessMessages = getReadinessMessages(profile, t);
-                const visibleConsumers = getVisibleProfileConsumers(profile, showTeamsUi);
+                const visibleConsumers = getVisibleProfileConsumers(profile, showTeamsUi, consumerDescriptors);
 
                 return (
                   <div
@@ -928,7 +943,7 @@ export function MicrosoftIntegrationSettings({
                               <ShieldCheck className="mr-2 h-4 w-4" />
                               {settingDefaultId === profile.profileId
                                 ? t('integrations.microsoft.settings.profileCard.updating', { defaultValue: 'Updating…' })
-                                : t('integrations.microsoft.settings.profileCard.setDefault', { defaultValue: 'Set Default' })}
+                                : t('integrations.microsoft.settings.profileCard.setDefault', { defaultValue: 'Set default' })}
                             </Button>
                           )}
                           {!profile.isArchived && (
@@ -967,7 +982,7 @@ export function MicrosoftIntegrationSettings({
                         </div>
                         <div className="rounded-lg border bg-muted/10 p-3">
                           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            {t('integrations.microsoft.settings.profileCard.activeBindings', { defaultValue: 'Active bindings' })}
+                            {t('integrations.microsoft.settings.profileCard.activeBindings', { defaultValue: 'Used by' })}
                           </div>
                           <div className="mt-2 flex flex-wrap gap-2">
                             {visibleConsumers.length > 0 ? (
@@ -977,7 +992,7 @@ export function MicrosoftIntegrationSettings({
                                 </Badge>
                               ))
                             ) : (
-                              <span className="text-xs text-muted-foreground">{t('integrations.microsoft.settings.profileCard.noVisibleBindings', { defaultValue: 'No visible service bindings' })}</span>
+                              <span className="text-xs text-muted-foreground">{t('integrations.microsoft.settings.profileCard.noVisibleBindings', { defaultValue: 'Not used yet' })}</span>
                             )}
                           </div>
                         </div>
@@ -998,7 +1013,7 @@ export function MicrosoftIntegrationSettings({
                         <Alert variant={profile.isArchived ? 'default' : 'destructive'}>
                           <AlertTriangle className="h-4 w-4" />
                           <AlertDescription>
-                            <div className="font-medium">{t('integrations.microsoft.settings.profileCard.readinessTitle', { defaultValue: 'Profile readiness' })}</div>
+                            <div className="font-medium">{t('integrations.microsoft.settings.profileCard.readinessTitle', { defaultValue: 'App readiness' })}</div>
                             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
                               {readinessMessages.map((message) => (
                                 <li key={`${profile.profileId}-${message}`}>{message}</li>
@@ -1012,16 +1027,16 @@ export function MicrosoftIntegrationSettings({
                           <AlertDescription>
                             {isEnterpriseEdition
                               ? showTeamsUi
-                                ? t('integrations.microsoft.settings.profileCard.readyEeTeams', { defaultValue: 'This profile is ready for MSP SSO, Outlook email, calendar sync, and Teams service bindings.' })
-                                : t('integrations.microsoft.settings.profileCard.readyEe', { defaultValue: 'This profile is ready for MSP SSO, Outlook email, and calendar service bindings.' })
-                              : t('integrations.microsoft.settings.profileCard.readyCe', { defaultValue: 'This profile is ready for MSP SSO and login-domain sign-in flows.' })}
+                                ? t('integrations.microsoft.settings.profileCard.readyEeTeams', { defaultValue: 'This app is ready for staff sign-in, Outlook email, calendar sync, and Teams.' })
+                                : t('integrations.microsoft.settings.profileCard.readyEe', { defaultValue: 'This app is ready for staff sign-in, Outlook email, and calendar sync.' })
+                              : t('integrations.microsoft.settings.profileCard.readyCe', { defaultValue: 'This app is ready for staff sign-in.' })}
                           </AlertDescription>
                         </Alert>
                       )}
 
                       <div className="rounded-lg border bg-muted/10 p-3">
                         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          {t('integrations.microsoft.settings.profileCard.enabledCapabilities', { defaultValue: 'Enabled capabilities' })}
+                          {t('integrations.microsoft.settings.profileCard.enabledCapabilities', { defaultValue: 'Services this app can handle' })}
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {capabilityDescriptors
@@ -1033,7 +1048,7 @@ export function MicrosoftIntegrationSettings({
                             ))}
                           {capabilityDescriptors.every((capability) => !profileSupportsConsumer(profile, capability.consumerType)) && (
                             <span className="text-xs text-muted-foreground">
-                              {t('integrations.microsoft.settings.profileCard.noEnabledCapabilities', { defaultValue: 'No enabled capabilities' })}
+                              {t('integrations.microsoft.settings.profileCard.noEnabledCapabilities', { defaultValue: 'No services enabled' })}
                             </span>
                           )}
                         </div>
@@ -1041,7 +1056,7 @@ export function MicrosoftIntegrationSettings({
 
                       <details className="rounded-lg border p-4">
                         <summary className="cursor-pointer text-sm font-medium">
-                          {t('integrations.microsoft.settings.profileCard.guidanceSummary', { defaultValue: 'Microsoft Entra app values' })}
+                          {t('integrations.microsoft.settings.profileCard.guidanceSummary', { defaultValue: 'Values to copy into Microsoft Entra' })}
                         </summary>
                         <div className="mt-4 grid gap-4 lg:grid-cols-2">
                           {getGuidanceBlocks(status, profile, showTeamsUi, t).map((block) => (
@@ -1078,7 +1093,7 @@ export function MicrosoftIntegrationSettings({
               {saving
                 ? t('integrations.microsoft.settings.dialog.saving', { defaultValue: 'Saving…' })
                 : dialogMode === 'create'
-                  ? t('integrations.microsoft.settings.dialog.createProfile', { defaultValue: 'Create Profile' })
+                  ? t('integrations.microsoft.settings.dialog.createProfile', { defaultValue: 'Create app registration' })
                   : t('integrations.microsoft.settings.dialog.saveChanges', { defaultValue: 'Save Changes' })}
             </Button>
           </div>
@@ -1089,8 +1104,8 @@ export function MicrosoftIntegrationSettings({
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>
               {dialogMode === 'create'
-                ? t('integrations.microsoft.settings.dialog.descriptionCreate', { defaultValue: 'Create a tenant-owned Microsoft profile, then bind it to the Microsoft services you want to use.' })
-                : t('integrations.microsoft.settings.dialog.descriptionEdit', { defaultValue: 'Update the selected Microsoft profile. Leave the secret blank to keep the existing value.' })}
+                ? t('integrations.microsoft.settings.dialog.descriptionCreate', { defaultValue: 'Create a Microsoft app registration, then choose which services can use it.' })
+                : t('integrations.microsoft.settings.dialog.descriptionEdit', { defaultValue: 'Update this Microsoft app registration. Leave the secret blank to keep the existing value.' })}
             </DialogDescription>
           </DialogHeader>
 
@@ -1101,7 +1116,7 @@ export function MicrosoftIntegrationSettings({
                 id="microsoft-profile-display-name"
                 value={formState.displayName}
                 onChange={(event) => setFormValue('displayName', event.target.value)}
-                placeholder={t('integrations.microsoft.settings.dialog.displayNamePlaceholder', { defaultValue: 'Acme production tenant' })}
+                placeholder={t('integrations.microsoft.settings.dialog.displayNamePlaceholder', { defaultValue: 'Acme production app' })}
               />
             </div>
 
@@ -1151,19 +1166,19 @@ export function MicrosoftIntegrationSettings({
                   id="microsoft-profile-set-default"
                   checked={formState.setAsDefault}
                   onCheckedChange={(checked) => setFormValue('setAsDefault', checked)}
-                  label={t('integrations.microsoft.settings.dialog.setDefault', { defaultValue: 'Set this profile as the default Microsoft profile' })}
+                  label={t('integrations.microsoft.settings.dialog.setDefault', { defaultValue: 'Set this as the default Microsoft app' })}
                 />
                 <p className="mt-2 text-xs text-muted-foreground">
-                  {t('integrations.microsoft.settings.dialog.setDefaultHelp', { defaultValue: 'Default profiles stay available for profile-management workflows and migration-safe metadata, not consumer routing.' })}
+                  {t('integrations.microsoft.settings.dialog.setDefaultHelp', { defaultValue: 'Some setup flows still need a default app. Service choices above decide which app each service uses.' })}
                 </p>
               </div>
             )}
 
             <div className="space-y-3 md:col-span-2">
               <div>
-                <Label>{t('integrations.microsoft.settings.dialog.capabilities', { defaultValue: 'Enabled capabilities' })}</Label>
+                <Label>{t('integrations.microsoft.settings.dialog.capabilities', { defaultValue: 'Services this app can handle' })}</Label>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {t('integrations.microsoft.settings.dialog.capabilitiesHelp', { defaultValue: 'Only enabled services can bind to this Microsoft app.' })}
+                  {t('integrations.microsoft.settings.dialog.capabilitiesHelp', { defaultValue: 'Only checked services can use this Microsoft app.' })}
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -1198,7 +1213,7 @@ export function MicrosoftIntegrationSettings({
         onConfirm={handleResetProviders}
         title={t('integrations.microsoft.settings.disconnectDialog.title', { defaultValue: 'Disconnect Microsoft providers?' })}
         message={t('integrations.microsoft.settings.disconnectDialog.message', {
-          defaultValue: 'Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft profiles and service bindings stay in place.',
+          defaultValue: 'Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft app registrations and service choices stay in place.',
         })}
         confirmLabel={
           resetting
@@ -1214,16 +1229,16 @@ export function MicrosoftIntegrationSettings({
         isOpen={archiveTarget !== null}
         onClose={() => setArchiveTarget(null)}
         onConfirm={handleArchive}
-        title={t('integrations.microsoft.settings.archiveDialog.title', { defaultValue: 'Archive Microsoft profile?' })}
+        title={t('integrations.microsoft.settings.archiveDialog.title', { defaultValue: 'Archive Microsoft app?' })}
         message={
           archiveTarget
-            ? t('integrations.microsoft.settings.archiveDialog.message', { defaultValue: 'Archive {{name}}? Existing historical references stay intact, but the profile will no longer be available for new bindings.', name: archiveTarget.displayName })
+            ? t('integrations.microsoft.settings.archiveDialog.message', { defaultValue: 'Archive {{name}}? Existing history stays intact. This app will no longer be available for new service choices.', name: archiveTarget.displayName })
             : ''
         }
         confirmLabel={isArchiving
           ? t('integrations.microsoft.settings.archiveDialog.archiving', { defaultValue: 'Archiving…' })
-          : t('integrations.microsoft.settings.archiveDialog.confirm', { defaultValue: 'Archive Profile' })}
-        cancelLabel={t('integrations.microsoft.settings.archiveDialog.cancel', { defaultValue: 'Keep Profile' })}
+          : t('integrations.microsoft.settings.archiveDialog.confirm', { defaultValue: 'Archive app' })}
+        cancelLabel={t('integrations.microsoft.settings.archiveDialog.cancel', { defaultValue: 'Keep app' })}
         isConfirming={isArchiving}
       />
     </>
