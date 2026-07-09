@@ -114,7 +114,13 @@ export interface TicketBentoLayoutProps {
   editorKey: number;
   isSubmitting?: boolean;
   onNewCommentContentChange: (content: PartialBlock[]) => void;
-  onAddNewComment: (isInternal: boolean, isResolution: boolean) => Promise<boolean>;
+  onAddNewComment: (
+    isInternal: boolean,
+    isResolution: boolean,
+    closeStatusId?: string | null,
+    options?: TicketNotificationSuppressionValue
+  ) => Promise<boolean>;
+  closedStatusOptions?: { value: string; label: string }[];
   // Comment affordances on timeline nodes (reactions, edit, delete).
   currentUser?: { id: string; name: string; email?: string } | null;
   isEditing: boolean;
@@ -944,6 +950,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             isSubmitting={props.isSubmitting}
             onNewCommentContentChange={props.onNewCommentContentChange}
             onAddNewComment={props.onAddNewComment}
+            closedStatusOptions={props.closedStatusOptions}
             onAddReplyComment={props.onAddReplyComment}
             currentUser={props.currentUser}
             isEditing={props.isEditing}

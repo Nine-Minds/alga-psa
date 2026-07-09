@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic';
 import type { PartialBlock } from '@blocknote/core';
 import { Activity, AlertTriangle, ArrowDownUp, CheckCircle, Clock, Lock, MessageSquare } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Label } from '@alga-psa/ui/components/Label';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -33,6 +35,9 @@ import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/comme
 import type { TicketReactionsBootstrap } from '../../../lib/ticketScreenBootstrap';
 import { filterHiddenNoiseComments } from '../../../lib/commentNoise';
 import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
+import TicketNotificationSuppressionControl, {
+  type TicketNotificationSuppressionValue,
+} from '../TicketNotificationSuppressionControl';
 
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
   loading: () => <RichTextEditorSkeleton height="120px" />,
@@ -73,7 +78,13 @@ interface BentoTimelineTileProps {
   editorKey: number;
   isSubmitting?: boolean;
   onNewCommentContentChange: (content: PartialBlock[]) => void;
-  onAddNewComment: (isInternal: boolean, isResolution: boolean) => Promise<boolean>;
+  onAddNewComment: (
+    isInternal: boolean,
+    isResolution: boolean,
+    closeStatusId?: string | null,
+    options?: TicketNotificationSuppressionValue
+  ) => Promise<boolean>;
+  closedStatusOptions?: { value: string; label: string }[];
   /** Threaded reply pipeline (same handler the conversation view gets). */
   onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
   /** Server-started non-comment timeline entries; resolved via use() so the tile suspends into its skeleton. */
@@ -104,6 +115,13 @@ interface BentoTimelineTileProps {
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   className?: string;
 }
+
+const NO_STATUS_CHANGE = '__no_status_change__';
+
+const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
+  suppressContactNotifications: false,
+  suppressInternalNotifications: false,
+});
 
 function formatClock(iso: string): string {
   const d = new Date(iso);
@@ -283,6 +301,7 @@ export function BentoTimelineTile({
   isSubmitting,
   onNewCommentContentChange,
   onAddNewComment,
+  closedStatusOptions = [],
   onAddReplyComment,
   initialEntries,
   initialReactions,
@@ -324,6 +343,10 @@ export function BentoTimelineTile({
   const [order, setOrder] = useState<'asc' | 'desc'>(initialOrder);
   const [composerLane, setComposerLane] = useState<'client' | 'internal' | 'resolution'>('client');
   const [hasDraft, setHasDraft] = useState(false);
+  const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
+  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(
+    defaultNotificationSuppression
+  );
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
   // Threading: which comment currently has its inline reply composer open.
@@ -540,13 +563,34 @@ export function BentoTimelineTile({
   }, [order]);
 
   const handleSend = useCallback(async () => {
-    const success = await onAddNewComment(composerLane === 'internal', composerLane === 'resolution');
+    const isResolution = composerLane === 'resolution';
+    const closeStatusId =
+      isResolution && resolutionCloseStatusId !== NO_STATUS_CHANGE
+        ? resolutionCloseStatusId
+        : null;
+    const success = await onAddNewComment(
+      composerLane === 'internal',
+      isResolution,
+      closeStatusId,
+      closeStatusId && notificationSuppression.suppressContactNotifications
+        ? notificationSuppression
+        : undefined
+    );
     if (success) {
       setHasDraft(false);
+      setResolutionCloseStatusId(NO_STATUS_CHANGE);
+      setNotificationSuppression(defaultNotificationSuppression());
       composeUploadSession.resetDraftTracking();
     }
     return success;
-  }, [onAddNewComment, composerLane, composeUploadSession]);
+  }, [onAddNewComment, composerLane, resolutionCloseStatusId, notificationSuppression, composeUploadSession]);
+
+  useEffect(() => {
+    if (composerLane !== 'resolution') {
+      setResolutionCloseStatusId(NO_STATUS_CHANGE);
+      setNotificationSuppression(defaultNotificationSuppression());
+    }
+  }, [composerLane]);
 
   // Keyboard parity with the conversation view: "c" focuses the composer, and
   // mod+s/mod+Enter sends the draft. The dialog scope only activates while a
@@ -680,6 +724,38 @@ export function BentoTimelineTile({
           {isSubmitting ? t('bento.timeline.sending', 'Sending…') : t('bento.timeline.send', 'Send')}
         </Button>
       </div>
+      {composerLane === 'resolution' ? (
+        <div
+          id={`${id}-composer-resolution-options`}
+          className="mt-3 flex flex-wrap items-start gap-3 border-t border-[rgb(var(--color-border-100))] pt-3"
+        >
+          <div className="flex items-center gap-2">
+            <Label htmlFor={`${id}-composer-close-status-select`}>
+              {t('bento.timeline.closeStatus', 'Close status')}
+            </Label>
+            <CustomSelect
+              id={`${id}-composer-close-status-select`}
+              value={resolutionCloseStatusId}
+              options={[
+                {
+                  value: NO_STATUS_CHANGE,
+                  label: t('bento.timeline.noStatusChange', 'Do not change status'),
+                },
+                ...closedStatusOptions,
+              ]}
+              onValueChange={setResolutionCloseStatusId}
+              className="!w-64"
+              disabled={closedStatusOptions.length === 0}
+            />
+          </div>
+          <TicketNotificationSuppressionControl
+            idPrefix={`${id}-composer-notification-suppression`}
+            value={notificationSuppression}
+            onChange={setNotificationSuppression}
+            disabled={resolutionCloseStatusId === NO_STATUS_CHANGE}
+          />
+        </div>
+      ) : null}
     </div>
   );
 

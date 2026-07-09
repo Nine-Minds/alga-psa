@@ -1840,7 +1840,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleAddNewComment = async (
         isInternal: boolean,
         isResolution: boolean,
-        closeStatusId: string | null = null
+        closeStatusId: string | null = null,
+        options?: TicketNotificationSuppressionValue
     ): Promise<boolean> => {
         // Check if content is empty
         const contentStr = JSON.stringify(newCommentContent);
@@ -1919,7 +1920,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 if (isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
                     // Backend clears response_state when closing; keep UI consistent.
                     setTicket((prev: any) => ({ ...prev, response_state: null }));
-                    await handleSelectChange('status_id', closeStatusId);
+                    if (options?.suppressContactNotifications) {
+                        await handleBatchSaveChanges({ status_id: closeStatusId }, options);
+                    } else {
+                        await handleSelectChange('status_id', closeStatusId);
+                    }
                 }
                 
                 // Reset the comment input
@@ -1972,7 +1977,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
                         if (isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
                             setTicket((prev: any) => ({ ...prev, response_state: null }));
-                            await handleSelectChange('status_id', closeStatusId);
+                            if (options?.suppressContactNotifications) {
+                                await handleBatchSaveChanges({ status_id: closeStatusId }, options);
+                            } else {
+                                await handleSelectChange('status_id', closeStatusId);
+                            }
                         }
                         
                         // Reset the comment input
@@ -3424,6 +3433,7 @@ const handleClose = () => {
                     isSubmitting={isSubmitting}
                     onNewCommentContentChange={setNewCommentContent}
                     onAddNewComment={handleAddNewComment}
+                    closedStatusOptions={closedStatusOptions}
                     onAddReplyComment={handleAddReplyComment}
                     bentoStreams={bootstrap?.streams ?? undefined}
                     currentUser={currentUser ? {

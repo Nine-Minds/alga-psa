@@ -248,6 +248,24 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
   - `npm -w @alga-psa/tickets run typecheck` passed.
   - `npm -w @alga-psa/client-portal run typecheck` passed.
 
+## 2026-07-09 — Resolution-comment close restore (F029, F043-F050, T037, T049-T055)
+
+- Completed the grid composer close-status chain:
+  - `TicketBentoLayout.onAddNewComment` and `BentoTimelineTile.onAddNewComment` now accept `closeStatusId` plus optional notification-suppression options.
+  - `TicketDetails` threads `closedStatusOptions` into the grid layout, and `BentoTimelineTile` renders a resolution-only close-status select populated from those options.
+  - Sending a grid resolution comment with a close status calls the shared `TicketDetails.handleAddNewComment` close path; that path still sets `metadata.closes_ticket` and closes through the same status-update path, preserving close-rule validation.
+- Silent resolution-close:
+  - Grid and entry resolution composers now show the shared two-level suppression control.
+  - Suppression options are only forwarded when a close status is selected; a comment-only resolution remains unchanged and does not imply a silent comment notification.
+  - Suppression state resets to unchecked after successful send and whenever the composer leaves resolution mode/closes.
+- No-sticky suppression:
+  - Added a source-level regression covering false defaults and resets across hero save bars, bulk dialogs, bulk move, and resolution composers. Auto-close rules are excluded from the no-sticky interpretation because their suppression flags are intentionally persisted rule settings.
+- Test added:
+  - `packages/tickets/src/components/ticket/bento/BentoResolutionClose.contract.test.ts`
+- Verification:
+  - `cd packages/tickets && npx vitest run src/components/ticket/bento/BentoResolutionClose.contract.test.ts src/components/ticket/bento/BentoHero.unsavedChanges.test.tsx src/components/ticket/TicketNotificationSuppressionControl.test.tsx`
+  - `npm -w @alga-psa/tickets run typecheck`
+
 ## 2026-07-09 — Bulk Update Suppression Surfaces (F030-F037, T029/T038-T043)
 
 - Completed the eligible bulk-update surfaces:
