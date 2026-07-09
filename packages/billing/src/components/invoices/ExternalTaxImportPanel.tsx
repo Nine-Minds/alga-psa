@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -41,6 +41,9 @@ const ADAPTER_NAME_KEYS: Record<string, 'quickbooks' | 'xero' | 'sage'> = {
   xero: 'xero',
   sage: 'sage',
 };
+
+const isExternalTaxActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function ExternalTaxImportPanel({
   invoiceId,
@@ -85,6 +88,11 @@ export function ExternalTaxImportPanel({
     setIsLoadingHistory(true);
     try {
       const history = await getExternalTaxImportHistory(invoiceId);
+      if (isExternalTaxActionError(history)) {
+        console.error('Failed to load import history:', getErrorMessage(history));
+        setImportHistory([]);
+        return;
+      }
       setImportHistory(history as ImportHistoryItem[]);
     } catch (error) {
       console.error('Failed to load import history:', error);
@@ -97,6 +105,11 @@ export function ExternalTaxImportPanel({
     if (taxSource === 'external') {
       try {
         const result = await getInvoiceTaxReconciliation(invoiceId);
+        if (isExternalTaxActionError(result)) {
+          console.error('Failed to load reconciliation:', getErrorMessage(result));
+          setReconciliation(null);
+          return;
+        }
         if (result) {
           setReconciliation({
             internalTax: result.internalTax,
@@ -125,6 +138,10 @@ export function ExternalTaxImportPanel({
     setIsImporting(true);
     try {
       const result = await importExternalTaxForInvoice(invoiceId);
+      if (isExternalTaxActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
 
       if (result.success) {
         toast.success(t('externalTax.toasts.taxImportedFromAdapter', {

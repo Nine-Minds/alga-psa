@@ -16,7 +16,7 @@ import { IClient, IContact, IProject } from '@alga-psa/types';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getServiceTypesForSelection } from '@alga-psa/billing/actions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export type QuickCreateType = 'ticket' | 'client' | 'contact' | 'project' | 'asset' | 'service' | 'product' | null;
@@ -55,7 +55,14 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
     if (type === 'service') {
       setIsLoadingServiceTypes(true);
       getServiceTypesForSelection()
-        .then(setServiceTypes)
+        .then((types) => {
+          if (isActionMessageError(types) || isActionPermissionError(types)) {
+            handleError(getErrorMessage(types));
+            setServiceTypes([]);
+            return;
+          }
+          setServiceTypes(types);
+        })
         .catch((error) => {
           handleError(
             error,
@@ -151,7 +158,14 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
   const handleServiceTypesChange = () => {
     // Refresh service types after inline create/update/delete
     getServiceTypesForSelection()
-      .then(setServiceTypes)
+      .then((types) => {
+        if (isActionMessageError(types) || isActionPermissionError(types)) {
+          handleError(getErrorMessage(types));
+          setServiceTypes([]);
+          return;
+        }
+        setServiceTypes(types);
+      })
       .catch((error) => {
         console.error('Failed to refresh service types:', error);
       });

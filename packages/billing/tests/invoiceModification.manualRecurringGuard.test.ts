@@ -133,8 +133,7 @@ describe('manual invoice edits preserve recurring provenance', () => {
   it('T207: rejects updates that would manually mutate recurring invoice charges backed by canonical detail periods', async () => {
     const { updateInvoiceManualItems } = await import('../src/actions/invoiceModification.ts');
 
-    await expect(
-      updateInvoiceManualItems('invoice-1', {
+    const result = await updateInvoiceManualItems('invoice-1', {
         updatedItems: [
           {
             item_id: 'recurring-1',
@@ -144,10 +143,12 @@ describe('manual invoice edits preserve recurring provenance', () => {
         ],
         newItems: [],
         removedItemIds: [],
-      } as any)
-    ).rejects.toThrow(
+      } as any);
+
+    expect(result).toEqual({
+      actionError:
       'Cannot manually edit recurring invoice charges once canonical detail periods exist. Add an adjustment as a manual item or cancel and regenerate the invoice instead.'
-    );
+    });
 
     expect(state.queriedTables).toContain('invoice_charges as ic');
     expect(recalculateInvoiceMock).not.toHaveBeenCalled();

@@ -4,8 +4,8 @@ import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { permissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { assertBoardScopedTicketStatusSelection } from '@shared/lib/boardScopedTicketStatusValidation';
 import { CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE } from '@shared/billingClients/cadenceOwnerRollout';
 import { updateClientBillingSettings as updateClientBillingSettingsShared } from '@shared/billingClients/billingSettings';
@@ -28,6 +28,7 @@ const DEFAULT_NOTICE_PERIOD_DAYS = 30;
 const DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY: RenewalDueDateActionPolicy = 'create_ticket';
 const DEFAULT_RECURRING_CADENCE_OWNER: CadenceOwner = 'client';
 const DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE: RecurringCadenceRolloutState = 'mixed_enabled';
+type BillingSettingsActionError = ActionMessageError | ActionPermissionError;
 const requireBillingSettingsUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing_settings', 'update')) {
     return permissionError('Permission denied: Cannot update billing settings');
@@ -57,9 +58,9 @@ export interface BillingSettings {
 export const getDefaultBillingSettings = withAuth(async (
   user,
   { tenant }
-): Promise<BillingSettings> => {
+): Promise<BillingSettings | BillingSettingsActionError> => {
   if (!await hasPermission(user as any, 'billing_settings', 'read')) {
-    throw new Error('Permission denied: Cannot read billing settings');
+    return permissionError('Permission denied: Cannot read billing settings');
   }
   const { knex } = await createTenantKnex();
 
@@ -127,15 +128,16 @@ export const updateDefaultBillingSettings = withAuth(async (
   user,
   { tenant },
   data: BillingSettings
-): Promise<{ success: boolean } | ActionPermissionError> => {
+): Promise<{ success: boolean } | BillingSettingsActionError> => {
   const denied = await requireBillingSettingsUpdatePermission(user);
   if (denied) return denied;
 
   const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const existingSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
-      .first();
+  try {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const existingSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
+        .first();
 
     await assertBoardScopedTicketStatusSelection({
       trx,
@@ -196,7 +198,13 @@ export const updateDefaultBillingSettings = withAuth(async (
         ...columnValues,
       });
     }
-  });
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'BoardScopedTicketStatusSelectionError') {
+      return actionError(error.message);
+    }
+    throw error;
+  }
 
   return { success: true };
 });
@@ -205,9 +213,9 @@ export const getClientContractLineSettings = withAuth(async (
   user,
   { tenant },
   clientId: string
-): Promise<BillingSettings | null> => {
+): Promise<BillingSettings | null | BillingSettingsActionError> => {
   if (!await hasPermission(user as any, 'billing_settings', 'read')) {
-    throw new Error('Permission denied: Cannot read client billing settings');
+    return permissionError('Permission denied: Cannot read client billing settings');
   }
   const { knex } = await createTenantKnex();
 
@@ -240,9 +248,9 @@ export const updateClientContractLineSettings = withAuth(async (
   { tenant },
   clientId: string,
   data: BillingSettings | null // null to remove override
-): Promise<{ success: boolean }> => {
+): Promise<{ success: boolean } | BillingSettingsActionError> => {
   if (!await hasPermission(user as any, 'billing_settings', 'update')) {
-    throw new Error('Permission denied: Cannot update client billing settings');
+    return permissionError('Permission denied: Cannot update client billing settings');
   }
   const { knex } = await createTenantKnex();
 

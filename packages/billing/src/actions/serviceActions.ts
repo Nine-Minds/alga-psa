@@ -20,6 +20,84 @@ type ServiceCatalogSearchEventType =
   | 'SERVICE_CATALOG_UPDATED'
   | 'SERVICE_CATALOG_DELETED';
 
+export type ServiceActionError = ActionMessageError | ActionPermissionError;
+
+function isServiceActionError(value: unknown): value is ServiceActionError {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      ('actionError' in value || 'permissionError' in value)
+  );
+}
+
+function serviceActionErrorFrom(error: unknown): ServiceActionError | null {
+  if (error && typeof error === 'object') {
+    const candidate = error as { permissionError?: unknown; actionError?: unknown };
+    if (typeof candidate.permissionError === 'string') {
+      return permissionError(candidate.permissionError);
+    }
+    if (typeof candidate.actionError === 'string') {
+      return actionError(candidate.actionError);
+    }
+  }
+
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.includes('Permission denied') || message === 'user is not logged in') {
+      return permissionError(message);
+    }
+    if (message === 'Service type name is required') {
+      return actionError(message);
+    }
+    if (message === 'custom_service_type_id is required to create a service.') {
+      return actionError('Select a service type before saving.');
+    }
+    if (message.includes('ServiceType ID') && message.includes('not found')) {
+      return actionError('The selected service type was not found. Please refresh and choose another service type.');
+    }
+    if (message === 'billing_method is required to create a service.') {
+      return actionError('Select a billing method before saving.');
+    }
+    if (message.includes('Service with id') && message.includes('not found')) {
+      return actionError('Service not found. It may have been deleted. Please refresh and try again.');
+    }
+    if (message === 'Product not found') {
+      return actionError('Product not found. It may have already been deleted.');
+    }
+    if (message === 'Service type already exists') {
+      return actionError('A service type with this name already exists.');
+    }
+    if (message.includes('Service type with id') && message.includes('not found')) {
+      return actionError('Service type not found. It may have been deleted. Please refresh and try again.');
+    }
+    if (message === 'Service type not found.') {
+      return actionError('Service type not found. It may have been deleted. Please refresh and try again.');
+    }
+    if (message.includes('currently in use')) {
+      return actionError(message);
+    }
+  }
+
+  const dbError = error as { code?: string; constraint?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected service values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required service field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected service, category, tax rate, or service type is no longer available. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    if (dbError.constraint?.includes('service_catalog_product_sku_unique')) {
+      return actionError('A product with this SKU already exists. Use a different SKU or edit the existing product.');
+    }
+    return actionError('A service or product with these values already exists.');
+  }
+
+  return null;
+}
+
 function buildHasCurrencyPricesSubquery(
   facade: ReturnType<typeof tenantDb>,
 ): Knex.QueryBuilder {
@@ -201,7 +279,7 @@ export const getServices = withAuth(async (
   page: number = 1,
   pageSize: number = 999,
   options: ServiceListOptions = {}
-): Promise<PaginatedServicesResponse> => {
+): Promise<PaginatedServicesResponse | ServiceActionError> => {
     try {
         const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -372,12 +450,14 @@ export const getServices = withAuth(async (
             };
         });
     } catch (error) {
+        const expected = serviceActionErrorFrom(error);
+        if (expected) return expected;
         console.error('Error fetching services:', error)
-        throw new Error('Failed to fetch services')
+        throw error
     }
 });
 
-export const getServiceById = withAuth(async (user, { tenant }, serviceId: string): Promise<IService | null> => {
+export const getServiceById = withAuth(async (user, { tenant }, serviceId: string): Promise<IService | null | ServiceActionError> => {
     const { knex: db } = await createTenantKnex();
     try {
         return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -385,8 +465,10 @@ export const getServiceById = withAuth(async (user, { tenant }, serviceId: strin
             return service
         });
     } catch (error) {
+        const expected = serviceActionErrorFrom(error);
+        if (expected) return expected;
         console.error(`Error fetching service with id ${serviceId}:`, error)
-        throw new Error('Failed to fetch service')
+        throw error
     }
 });
 
@@ -582,7 +664,7 @@ export interface ProductAssociationCheck {
  * Check if a product/service can be permanently deleted.
  * Returns information about any associations that would block deletion.
  */
-export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, serviceId: string): Promise<ProductAssociationCheck> => {
+export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, serviceId: string): Promise<ProductAssociationCheck | ServiceActionError> => {
     const { knex: db } = await createTenantKnex();
 
     try {
@@ -712,8 +794,10 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
             };
         });
     } catch (error) {
+        const expected = serviceActionErrorFrom(error);
+        if (expected) return expected;
         console.error(`Error checking product associations for ${serviceId}:`, error);
-        throw new Error('Failed to check product associations');
+        throw error;
     }
 });
 
@@ -721,7 +805,11 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
  * Permanently delete a product/service.
  * Will fail if the product has any associations (invoices, contracts, etc.)
  */
-export const deleteProductPermanently = withAuth(async (user, { tenant }, serviceId: string): Promise<void | ActionPermissionError> => {
+export const deleteProductPermanently = withAuth(async (
+  user,
+  { tenant },
+  serviceId: string
+): Promise<void | ActionPermissionError | ActionMessageError> => {
     const canDelete = await hasPermission(user, 'service', 'delete');
     if (!canDelete) {
       return permissionError('Permission denied: Cannot delete services/products');
@@ -730,12 +818,15 @@ export const deleteProductPermanently = withAuth(async (user, { tenant }, servic
     const { knex: db } = await createTenantKnex();
 
     try {
-        await withTransaction(db, async (trx: Knex.Transaction) => {
+        return await withTransaction(db, async (trx: Knex.Transaction): Promise<void | ActionMessageError> => {
             // Re-check associations within the transaction to prevent race conditions
             const check = await checkProductCanBeDeleted(serviceId);
+            if (isServiceActionError(check)) {
+                return check;
+            }
             if (!check.canDelete) {
                 const reasons = check.associations.map(a => a.description).join(', ');
-                throw new Error(`Cannot delete product: ${reasons}`);
+                return actionError(`Cannot delete product: ${reasons}`);
             }
 
             // Delete related records that are safe to remove (pricing, config records)
@@ -768,7 +859,7 @@ export const deleteProductPermanently = withAuth(async (user, { tenant }, servic
                 .del();
 
             if (deletedCount === 0) {
-                throw new Error('Product not found');
+                return actionError('Product not found');
             }
 
             await publishServiceCatalogSearchEvent('SERVICE_CATALOG_DELETED', tenant, serviceId, {
@@ -780,14 +871,19 @@ export const deleteProductPermanently = withAuth(async (user, { tenant }, servic
         });
     } catch (error) {
         console.error(`Error permanently deleting product ${serviceId}:`, error);
-        if (error instanceof Error) {
-            throw error;
+        const expected = serviceActionErrorFrom(error);
+        if (expected) return expected;
+        if (error instanceof Error && (
+            error.message.startsWith('Cannot delete product:') ||
+            error.message === 'Product not found'
+        )) {
+            return actionError(error.message);
         }
-        throw new Error('Failed to delete product');
+        throw error;
     }
 });
 
-export const getServicesByCategory = withAuth(async (user, { tenant }, categoryId: string): Promise<IService[]> => {
+export const getServicesByCategory = withAuth(async (user, { tenant }, categoryId: string): Promise<IService[] | ServiceActionError> => {
     const { knex: db } = await createTenantKnex();
     try {
         return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -795,13 +891,15 @@ export const getServicesByCategory = withAuth(async (user, { tenant }, categoryI
             return services
         });
     } catch (error) {
+        const expected = serviceActionErrorFrom(error);
+        if (expected) return expected;
         console.error(`Error fetching services for category ${categoryId}:`, error)
-        throw new Error('Failed to fetch services by category')
+        throw error
     }
 });
 
 // New action to get combined service types for UI selection
-export const getServiceTypesForSelection = withAuth(async (user, { tenant }): Promise<{ id: string; name: string; is_standard: boolean }[]> => {
+export const getServiceTypesForSelection = withAuth(async (user, { tenant }): Promise<{ id: string; name: string; is_standard: boolean }[] | ServiceActionError> => {
    try {
        const { knex: db } = await createTenantKnex();
        const serviceTypes = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -810,8 +908,10 @@ export const getServiceTypesForSelection = withAuth(async (user, { tenant }): Pr
        // No validation needed here as it's directly from the model method designed for this
        return serviceTypes;
    } catch (error) {
+       const expected = serviceActionErrorFrom(error);
+       if (expected) return expected;
        console.error('Error fetching service types for selection:', error);
-       throw new Error('Failed to fetch service types');
+       throw error;
    }
 });
 
@@ -821,7 +921,7 @@ export const createServiceType = withAuth(async (
   user,
   { tenant },
   data: Omit<IServiceType, 'id' | 'created_at' | 'updated_at' | 'tenant'>
-): Promise<IServiceType | ActionPermissionError> => {
+): Promise<IServiceType | ServiceActionError> => {
   if (!await hasPermission(user, 'service', 'create')) {
     return permissionError('Permission denied: Cannot create service types');
   }
@@ -837,8 +937,10 @@ export const createServiceType = withAuth(async (
       // revalidatePath('/path/to/service/type/management');
       return newServiceType;
   } catch (error) {
+      const expected = serviceActionErrorFrom(error);
+      if (expected) return expected;
       console.error('Error creating service type:', error);
-      throw new Error('Failed to create service type');
+      throw error;
   }
 });
 
@@ -847,7 +949,7 @@ export const updateServiceType = withAuth(async (
   { tenant },
   id: string,
   data: Partial<Omit<IServiceType, 'id' | 'tenant' | 'created_at' | 'updated_at'>>
-): Promise<IServiceType | ActionPermissionError> => {
+): Promise<IServiceType | ServiceActionError> => {
   if (!await hasPermission(user, 'service', 'update')) {
     return permissionError('Permission denied: Cannot update service types');
   }
@@ -866,12 +968,14 @@ export const updateServiceType = withAuth(async (
       // revalidatePath('/path/to/service/type/management');
       return updatedServiceType;
   } catch (error) {
+      const expected = serviceActionErrorFrom(error);
+      if (expected) return expected;
       console.error(`Error updating service type ${id}:`, error);
-      throw new Error('Failed to update service type');
+      throw error;
   }
 });
 
-export const getAllServiceTypes = withAuth(async (user, { tenant }): Promise<IServiceType[]> => {
+export const getAllServiceTypes = withAuth(async (user, { tenant }): Promise<IServiceType[] | ServiceActionError> => {
   try {
     // ServiceTypeModel is imported at the top of the file
     const { knex: db } = await createTenantKnex();
@@ -880,12 +984,18 @@ export const getAllServiceTypes = withAuth(async (user, { tenant }): Promise<ISe
     });
     return serviceTypes;
   } catch (error) {
+    const expected = serviceActionErrorFrom(error);
+    if (expected) return expected;
     console.error('Error fetching all service types:', error);
-    throw new Error('Failed to fetch service types');
+    throw error;
   }
 });
 
-export const deleteServiceType = withAuth(async (user, { tenant }, id: string): Promise<void | ActionPermissionError> => {
+export const deleteServiceType = withAuth(async (
+  user,
+  { tenant },
+  id: string
+): Promise<void | ActionPermissionError | ActionMessageError> => {
   if (!await hasPermission(user, 'service', 'delete')) {
     return permissionError('Permission denied: Cannot delete service types');
   }
@@ -898,7 +1008,7 @@ export const deleteServiceType = withAuth(async (user, { tenant }, id: string): 
 
     const tenantId = tenant;
 
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    return withTransaction(db, async (trx: Knex.Transaction): Promise<void | ActionMessageError> => {
       // Check if any services are using this service type
       const servicesUsingType = await tenantDb(trx, tenantId).table('service_catalog')
         .where({ custom_service_type_id: id })
@@ -906,14 +1016,14 @@ export const deleteServiceType = withAuth(async (user, { tenant }, id: string): 
         .first();
 
       if (servicesUsingType && parseInt(String(servicesUsingType.count)) > 0) {
-        throw new Error(`Cannot delete service type because it is currently in use by ${servicesUsingType.count} service(s).`);
+        return actionError(`Cannot delete service type because it is currently in use by ${servicesUsingType.count} service(s).`);
       }
 
       // Tenant context is handled within the model method
       const deleted = await ServiceTypeModel.delete(trx, tenantId, id);
       if (!deleted) {
         // Handle the case where the type wasn't found
-        throw new Error(`Service type with ID ${id} not found.`);
+        return actionError('Service type not found.');
       }
 
       // Revalidate paths for the service type management page
@@ -924,16 +1034,19 @@ export const deleteServiceType = withAuth(async (user, { tenant }, id: string): 
 
       // Check for PostgreSQL foreign key constraint violation
       if (error.code === '23503' || (error.message && error.message.includes('foreign key constraint'))) {
-          throw new Error('Cannot delete service type because it is currently in use by one or more services.');
+          return actionError('Cannot delete service type because it is currently in use by one or more services.');
       }
 
       // If we already have a specific error message, use it
-      if (error instanceof Error) {
-          throw error;
+      if (error instanceof Error && (
+          error.message.includes('currently in use') ||
+          error.message.includes('not found')
+      )) {
+          return actionError(error.message);
       }
 
       // Fallback to generic error
-      throw new Error('Failed to delete service type');
+      throw error;
   }
 });
 
@@ -947,7 +1060,7 @@ export const createServiceTypeInline = withAuth(async (
   user,
   { tenant },
   name: string
-): Promise<IServiceType | ActionPermissionError> => {
+): Promise<IServiceType | ServiceActionError> => {
   if (!await hasPermission(user, 'service', 'create')) {
     return permissionError('Permission denied: Cannot create service types');
   }
@@ -996,7 +1109,7 @@ export const createServiceTypeInline = withAuth(async (
       // Insert was skipped due to conflict; fetch and return the existing row.
       const afterConflict = await tenantDb(trx, tenant).table<IServiceType>('service_types').where({ name: normalizedName }).first();
       if (!afterConflict) {
-        throw new Error('Failed to create service type');
+        throw new Error('Service type insert conflicted but the existing row could not be found.');
       }
 
       safeRevalidate('/msp/settings/billing');
@@ -1007,17 +1120,19 @@ export const createServiceTypeInline = withAuth(async (
 
     // If we somehow still hit a unique constraint, surface a friendlier message
     if ((error as any)?.code === '23505') {
-      throw new Error('Service type already exists');
+      return actionError('A service type with this name already exists.');
     }
 
-    throw new Error('Failed to create service type');
+    const expected = serviceActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
 /**
  * Update a service type name (inline editing)
  */
-export const updateServiceTypeInline = withAuth(async (user, { tenant }, id: string, name: string): Promise<IServiceType | ActionPermissionError> => {
+export const updateServiceTypeInline = withAuth(async (user, { tenant }, id: string, name: string): Promise<IServiceType | ServiceActionError> => {
   if (!await hasPermission(user, 'service', 'update')) {
     return permissionError('Permission denied: Cannot update service types');
   }
@@ -1037,15 +1152,21 @@ export const updateServiceTypeInline = withAuth(async (user, { tenant }, id: str
       safeRevalidate('/msp/settings/billing');
     return updatedServiceType;
   } catch (error) {
+    const expected = serviceActionErrorFrom(error);
+    if (expected) return expected;
     console.error(`Error updating service type ${id}:`, error);
-    throw new Error('Failed to update service type');
+    throw error;
   }
 });
 
 /**
  * Delete a service type (inline deletion with usage check)
  */
-export const deleteServiceTypeInline = withAuth(async (user, { tenant }, id: string): Promise<void | ActionPermissionError> => {
+export const deleteServiceTypeInline = withAuth(async (
+  user,
+  { tenant },
+  id: string
+): Promise<void | ActionPermissionError | ActionMessageError> => {
   if (!await hasPermission(user, 'service', 'delete')) {
     return permissionError('Permission denied: Cannot delete service types');
   }
@@ -1059,30 +1180,34 @@ export const deleteServiceTypeInline = withAuth(async (user, { tenant }, id: str
 /**
  * Get all prices for a service
  */
-export const getServicePrices = withAuth(async (user, { tenant }, serviceId: string): Promise<IServicePrice[]> => {
+export const getServicePrices = withAuth(async (user, { tenant }, serviceId: string): Promise<IServicePrice[] | ServiceActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       return await Service.getPrices(trx, serviceId);
     });
   } catch (error) {
+    const expected = serviceActionErrorFrom(error);
+    if (expected) return expected;
     console.error(`Error fetching prices for service ${serviceId}:`, error);
-    throw new Error('Failed to fetch service prices');
+    throw error;
   }
 });
 
 /**
  * Get a specific price for a service in a given currency
  */
-export const getServicePrice = withAuth(async (user, { tenant }, serviceId: string, currencyCode: string): Promise<IServicePrice | null> => {
+export const getServicePrice = withAuth(async (user, { tenant }, serviceId: string, currencyCode: string): Promise<IServicePrice | null | ServiceActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       return await Service.getPrice(trx, serviceId, currencyCode);
     });
   } catch (error) {
+    const expected = serviceActionErrorFrom(error);
+    if (expected) return expected;
     console.error(`Error fetching price for service ${serviceId} in ${currencyCode}:`, error);
-    throw new Error('Failed to fetch service price');
+    throw error;
   }
 });
 
@@ -1172,14 +1297,16 @@ export const validateServiceCurrencyPrices = withAuth(async (
   { tenant },
   serviceIds: string[],
   requiredCurrency: string
-): Promise<{ valid: boolean; missingServices: Array<{ service_id: string; service_name: string }> }> => {
+): Promise<{ valid: boolean; missingServices: Array<{ service_id: string; service_name: string }> } | ServiceActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       return await Service.validateCurrencyPrices(trx, serviceIds, requiredCurrency);
     });
   } catch (error) {
+    const expected = serviceActionErrorFrom(error);
+    if (expected) return expected;
     console.error(`Error validating currency prices for services:`, error);
-    throw new Error('Failed to validate service currency prices');
+    throw error;
   }
 });

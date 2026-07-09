@@ -21,7 +21,7 @@ import {
   RequestTimeEntryChangesData
 } from '../schemas/timeEntry';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
-import { ForbiddenError, ValidationError } from '../middleware/apiMiddleware';
+import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError, ValidationError } from '../middleware/apiMiddleware';
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'server/src/lib/utils/workDate';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
 import { hasPermission } from '../../auth/rbac';
@@ -304,9 +304,7 @@ export class TimeEntryService extends BaseService<any> {
       .first();
 
     if (overlapping) {
-      const error = new Error('Time entry overlaps with existing entry');
-      (error as any).statusCode = 400;
-      throw error;
+      throw new ConflictError('Time entry overlaps with existing entry');
     }
 
     // Get or create time sheet for the period
@@ -384,14 +382,12 @@ export class TimeEntryService extends BaseService<any> {
 
     // Check if user can update this entry
     if (existing.user_id !== context.userId && !await this.canManageTimeEntries(context)) {
-      throw new Error('Permission denied: Cannot update this time entry');
+      throw new ForbiddenError('Permission denied: Cannot update this time entry');
     }
 
     // Check if entry is approved (prevent modification)
     if (existing.approval_status === 'APPROVED') {
-      const error = new Error('Cannot modify approved time entries');
-      (error as any).statusCode = 400;
-      throw error;
+      throw new ConflictError('Cannot modify approved time entries');
     }
 
     this.assertServiceIdPresent(data.service_id ?? existing.service_id);
@@ -469,19 +465,17 @@ export class TimeEntryService extends BaseService<any> {
     const { knex } = await this.getKnex();
     const existing = await this.getById(id, context);
     if (!existing) {
-      throw new Error('Time entry not found');
+      throw new NotFoundError('Time entry not found');
     }
 
     // Check permissions
     if (existing.user_id !== context.userId && !await this.canManageTimeEntries(context)) {
-      throw new Error('Permission denied: Cannot delete this time entry');
+      throw new ForbiddenError('Permission denied: Cannot delete this time entry');
     }
 
     // Check if entry is approved
     if (existing.approval_status === 'APPROVED') {
-      const error = new Error('Cannot delete approved time entries');
-      (error as any).statusCode = 400;
-      throw error;
+      throw new ConflictError('Cannot delete approved time entries');
     }
 
     await this.buildTenantScopedQuery(knex, context)
@@ -562,7 +556,7 @@ export class TimeEntryService extends BaseService<any> {
       .first();
 
     if (existingSession) {
-      throw new Error('Active time tracking session already exists. Please stop the current session first.');
+      throw new ConflictError('Active time tracking session already exists. Please stop the current session first.');
     }
 
     // Stamp the session start at minute granularity. Start and stop fire at different
@@ -615,7 +609,7 @@ export class TimeEntryService extends BaseService<any> {
       .first();
 
     if (!session) {
-      throw new Error('Active session not found');
+      throw new NotFoundError('Active session not found');
     }
 
     this.assertServiceIdPresent(data.service_id ?? session.service_id);
@@ -702,7 +696,7 @@ export class TimeEntryService extends BaseService<any> {
   async createTemplate(data: CreateTimeTemplateData, context: ServiceContext): Promise<any> {
     // TODO: Implement time_entry_templates table and functionality
     // For now, throw error indicating feature is not implemented
-    throw new Error('Time entry templates feature is not yet implemented');
+    throw new NotImplementedError('Time entry templates feature is not yet implemented');
   }
 
   async getTemplates(context: ServiceContext): Promise<any[]> {
@@ -1080,7 +1074,7 @@ export class TimeEntryService extends BaseService<any> {
     const period = await this.getTimePeriodForWorkDate(workDate, context);
     
     if (!period) {
-      throw new Error('No time period found for this date');
+      throw new ValidationError('No time period found for this date');
     }
 
     // Check for existing time sheet

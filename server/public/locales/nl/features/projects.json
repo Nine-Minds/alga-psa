@@ -1506,5 +1506,6 @@
     "done": "Klaar",
     "edit": "Bewerken",
     "save": "Opslaan"
-  }
+  },
+  "loadError": "Failed to load projects"
 }

@@ -10,6 +10,7 @@ import {
 } from '@alga-psa/billing/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getSession } from '@alga-psa/auth';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
 import type { IClient, ISalesOrder, IStockLocation } from '@alga-psa/types';
 import type { SalesOrderServiceOption } from '@alga-psa/inventory/components';
@@ -32,15 +33,26 @@ export default async function SalesOrdersPage() {
   }
 
   let initialSos: ISalesOrder[] = [];
+  let loadErrorMessage: string | undefined;
   try {
-    initialSos = await listSalesOrders({});
+    const result = await listSalesOrders({});
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      loadErrorMessage = getErrorMessage(result);
+    } else {
+      initialSos = result;
+    }
   } catch (error) {
     console.error('Failed to load sales orders:', error);
   }
 
   let locations: IStockLocation[] = [];
   try {
-    locations = await listStockLocations();
+    const result = await listStockLocations();
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      console.error('Failed to load stock locations:', getErrorMessage(result));
+    } else {
+      locations = result;
+    }
   } catch (error) {
     console.error('Failed to load stock locations:', error);
   }
@@ -78,6 +90,7 @@ export default async function SalesOrdersPage() {
   return (
     <SalesOrdersManager
       initialSos={initialSos}
+      loadErrorMessage={loadErrorMessage}
       locations={locations}
       clients={clients}
       services={services}

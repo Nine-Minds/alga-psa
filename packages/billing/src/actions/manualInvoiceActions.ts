@@ -16,6 +16,7 @@ import { getAnalyticsAsync } from '../lib/authHelpers';
 import { tenantDb } from '@alga-psa/db';
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
 import { getDueDate } from './billingAndTax';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export interface ManualInvoiceItem { // Add export
   service_id: string;
@@ -45,13 +46,17 @@ export type ManualInvoiceResult =
   | { success: true; invoice: InvoiceViewModel }
   | { success: false; error: string };
 
+export type ManualInvoiceUpdateResult =
+  | { success: true; invoice: InvoiceViewModel }
+  | { success: false; error: string };
+
 export const generateManualInvoice = withAuth(async (
   user,
   { tenant },
   request: ManualInvoiceRequest
 ): Promise<ManualInvoiceResult> => {
   if (!await hasPermission(user, 'billing', 'create')) {
-    throw new Error('Permission denied: billing create required');
+    return { success: false, error: 'Permission denied: billing create required' };
   }
 
   // Validate session and tenant context
@@ -80,6 +85,9 @@ export const generateManualInvoice = withAuth(async (
 
   const currentDate = Temporal.Now.plainDateISO().toString();
   const dueDate = await getDueDate(clientId, currentDate);
+  if (isActionMessageError(dueDate) || isActionPermissionError(dueDate)) {
+    return { success: false, error: getErrorMessage(dueDate) };
+  }
 
   // Generate invoice number and create invoice record
   const invoiceNumber = await generateInvoiceNumber();
@@ -87,6 +95,9 @@ export const generateManualInvoice = withAuth(async (
 
   // Determine tax source based on client settings
   const taxSource = await getInitialInvoiceTaxSource(clientId);
+  if (isActionMessageError(taxSource) || isActionPermissionError(taxSource)) {
+    return { success: false, error: getErrorMessage(taxSource) };
+  }
 
   // Set invoice type based on isPrepayment flag
   const invoice = {
@@ -169,9 +180,9 @@ export const updateManualInvoice = withAuth(async (
   { tenant },
   invoiceId: string,
   request: ManualInvoiceRequest
-): Promise<InvoiceViewModel> => {
+): Promise<ManualInvoiceUpdateResult> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+    return { success: false, error: 'Permission denied: billing update required' };
   }
 
   const { session, knex } = await invoiceService.validateSessionAndTenant();
@@ -187,7 +198,7 @@ export const updateManualInvoice = withAuth(async (
     .first();
 
   if (!existingInvoice) {
-    throw new Error('Manual invoice not found');
+    return { success: false, error: 'Manual invoice not found. It may have been updated or deleted. Please refresh and try again.' };
   }
 
   // Get client details
@@ -227,5 +238,8 @@ export const updateManualInvoice = withAuth(async (
   // Recalculate the entire invoice
   await billingEngine.recalculateInvoice(invoiceId);
 
-  return await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
+  return {
+    success: true,
+    invoice: await Invoice.getFullInvoiceById(knex, tenant, invoiceId),
+  };
 });

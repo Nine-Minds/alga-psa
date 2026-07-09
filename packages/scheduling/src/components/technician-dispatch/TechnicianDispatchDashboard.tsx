@@ -15,11 +15,16 @@ import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { searchDispatchWorkItems, getWorkItemById, DispatchSearchOptions } from '@alga-psa/scheduling/actions';
 import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry, ScheduleActionResult } from '@alga-psa/scheduling/actions';
-import { getWorkItemStatusOptions, StatusOption } from '@alga-psa/reference-data/actions';
+import { getWorkItemStatusOptions, isStatusActionError, statusActionErrorMessage, StatusOption } from '@alga-psa/reference-data/actions';
 import { checkCurrentUserPermission, checkCurrentUserPermissions } from '@alga-psa/auth/actions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { DragState } from '@alga-psa/types';
 import { HighlightedSlot } from '@alga-psa/types';
 import { DropEvent } from '@alga-psa/types';
@@ -39,6 +44,10 @@ const calculateDateRange = (date: Date, viewMode: 'day' | 'week') => {
     return { start: startOfWeek(date), end: endOfWeek(date) };
   }
 };
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 
 interface TechnicianDispatchDashboardProps {
@@ -143,6 +152,14 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
 
 
       const result = await searchDispatchWorkItems(searchOptions);
+      if (isReturnedActionError(result)) {
+        const message = getErrorMessage(result);
+        setError(message);
+        toast.error(message);
+        setWorkItems([]);
+        setTotalItems(0);
+        return;
+      }
       setWorkItems(result.items);
       setTotalItems(result.total);
     } catch (err) {
@@ -156,6 +173,20 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     const fetchStatusOptions = async () => {
       try {
         const options = await getWorkItemStatusOptions(['ticket']);
+        if (isStatusActionError(options)) {
+          handleError(statusActionErrorMessage(options));
+          setStatusFilterOptions([
+            {
+              value: 'all_open',
+              label: t('dashboard.filters.allOpen', { defaultValue: 'All Open' }),
+            },
+            {
+              value: 'all_closed',
+              label: t('dashboard.filters.allClosed', { defaultValue: 'All Closed' }),
+            },
+          ]);
+          return;
+        }
         setStatusFilterOptions(options);
       } catch (err) {
         handleError(err, t('dashboard.errors.loadStatusFilterOptions', { defaultValue: 'Failed to load status filter options.' }));
@@ -783,6 +814,11 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       }
       
       const workItemDetails = await getWorkItemById(workItemId, event.work_item_type);
+
+      if (isReturnedActionError(workItemDetails)) {
+        toast.error(getErrorMessage(workItemDetails));
+        return;
+      }
 
       if (!workItemDetails) {
         toast.error(t('dashboard.messages.couldNotLoadWorkItemDetails', { defaultValue: 'Could not load work item details.' }));

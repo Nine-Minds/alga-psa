@@ -4,13 +4,24 @@ import React from 'react';
 import toast from 'react-hot-toast';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Cloud } from 'lucide-react';
 import {
   dismissTaxDelegationNudge,
   getTaxDelegationNudgeState,
   updateTenantTaxSettings,
 } from '@alga-psa/billing/actions';
+
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function TaxDelegationBanner(): React.JSX.Element | null {
   const [adapterLabel, setAdapterLabel] = React.useState<string | null>(null);
@@ -40,10 +51,14 @@ export function TaxDelegationBanner(): React.JSX.Element | null {
   const handleEnable = async () => {
     setBusy('enable');
     try {
-      await updateTenantTaxSettings({
+      const result = await updateTenantTaxSettings({
         default_tax_source: 'external',
         allow_external_tax_override: true,
       });
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
+      }
       toast.success(
         adapterLabel
           ? `${adapterLabel} will calculate tax on new invoices.`
@@ -60,7 +75,11 @@ export function TaxDelegationBanner(): React.JSX.Element | null {
   const handleDismiss = async () => {
     setBusy('dismiss');
     try {
-      await dismissTaxDelegationNudge();
+      const result = await dismissTaxDelegationNudge();
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
+      }
       setShouldShow(false);
     } catch (err) {
       handleError(err, 'Failed to dismiss the banner.');

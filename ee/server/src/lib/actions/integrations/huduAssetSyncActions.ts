@@ -26,6 +26,13 @@ export interface SyncHuduClientAssetsInput {
 
 type HuduActionPermission = 'read' | 'update';
 
+function huduSyncActionErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.startsWith('Forbidden')) {
+    return 'You do not have permission to sync Hudu assets.';
+  }
+  return 'Unable to sync Hudu assets. Check the Hudu connection and try again.';
+}
+
 function withHuduAssetAccess<TArgs extends unknown[], TResult>(
   requiredPermission: HuduActionPermission,
   handler: (user: IUserWithRoles, context: { tenant: string }, ...args: TArgs) => Promise<TResult>
@@ -60,7 +67,7 @@ export const syncHuduClientAssets = withHuduAssetAccess(
         clientId: input?.clientId,
         error: error instanceof Error ? error.message : String(error),
       });
-      return { state: 'error', error: error instanceof Error ? error.message : String(error) };
+      return { state: 'error', error: huduSyncActionErrorMessage(error) };
     }
   }
 );

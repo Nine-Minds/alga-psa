@@ -12,6 +12,7 @@ import {
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { ExternalEntityMapping } from '@alga-psa/integrations/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import {
   AccountingMappingContext,
   AccountingMappingModule,
@@ -63,9 +64,7 @@ export function AccountingMappingModuleView({
       const display = enrichMappings(result.mappings, result.algaEntities, result.externalEntities);
       setMappings(display);
     } catch (loadError) {
-      const message =
-        t('integrations.accounting.moduleView.errors.loadFailed', { defaultValue: 'Failed to load mappings.' });
-      setError(message);
+      setError(getErrorMessage(loadError));
     } finally {
       setIsLoading(false);
     }
@@ -130,9 +129,7 @@ export function AccountingMappingModuleView({
       setConfirmOpen(false);
       await loadData();
     } catch (deleteError) {
-      const message =
-        t('integrations.accounting.moduleView.errors.deleteFailed', { defaultValue: 'Failed to delete mapping.' });
-      setError(message);
+      setError(getErrorMessage(deleteError));
     }
   }, [context, loadData, module, overrides, pendingDeleteId, t]);
 

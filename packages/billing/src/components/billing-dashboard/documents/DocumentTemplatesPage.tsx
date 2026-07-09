@@ -10,6 +10,11 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Tabs, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -39,6 +44,9 @@ type ViewState =
   | { mode: 'list' }
   | { mode: 'editor'; draft: DocumentTemplateDraft };
 
+const isDocumentTemplateActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
 const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentType }) => {
   const router = useRouter();
   const registryEntry = useMemo(
@@ -62,6 +70,11 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
   const fetchTemplates = useCallback(async () => {
     try {
       const result = await getDocumentTemplates(documentType);
+      if (isDocumentTemplateActionError(result)) {
+        setTemplates([]);
+        setError(getErrorMessage(result));
+        return;
+      }
       setTemplates(result);
       setError(null);
     } catch (loadError) {
@@ -117,6 +130,10 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
         templateAst: record.templateAst,
         isClone: true,
       });
+      if (isDocumentTemplateActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       if (!result.success) {
         toast.error(result.error ?? 'Failed to clone template');
         return;
@@ -125,7 +142,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
       await fetchTemplates();
     } catch (err) {
       console.error('Error cloning template:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to clone template');
+      toast.error('Failed to clone template');
     }
   }, [documentType, fetchTemplates]);
 
@@ -135,27 +152,39 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
         if (!record.code) {
           throw new Error('Standard template is missing a template code');
         }
-        await setDefaultDocumentTemplate(documentType, {
+        const result = await setDefaultDocumentTemplate(documentType, {
           templateSource: 'standard',
           standardTemplateCode: record.code,
         });
+        if (isDocumentTemplateActionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
       } else {
-        await setDefaultDocumentTemplate(documentType, {
+        const result = await setDefaultDocumentTemplate(documentType, {
           templateSource: 'custom',
           templateId: record.template_id,
         });
+        if (isDocumentTemplateActionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
       }
       toast.success('Default template updated');
       await fetchTemplates();
     } catch (err) {
       console.error('Error setting default template:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to set default template');
+      toast.error('Failed to set default template');
     }
   }, [documentType, fetchTemplates]);
 
   const handleDeleteTemplate = useCallback(async (record: DocumentTemplateListItem) => {
     try {
       const result = await deleteDocumentTemplate(documentType, record.template_id);
+      if (isDocumentTemplateActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       if (!result.success) {
         toast.error(result.error ?? 'Failed to delete template');
         return;
@@ -165,7 +194,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
       await fetchTemplates();
     } catch (err) {
       console.error('Error deleting template:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to delete template');
+      toast.error('Failed to delete template');
     }
   }, [documentType, fetchTemplates]);
 

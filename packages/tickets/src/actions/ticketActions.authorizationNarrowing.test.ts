@@ -234,7 +234,7 @@ function buildTrx(params: {
   listTickets: Record<string, unknown>[];
   detailTicketsById: Record<string, Record<string, unknown>>;
 }) {
-  return ((table: string) => {
+  const trx = ((table: string) => {
     if (table === 'tickets as t') {
       const whereClauses: Array<Record<string, unknown>> = [];
       const queryBuilder: any = {
@@ -243,6 +243,8 @@ function buildTrx(params: {
         where: vi.fn((...args: any[]) => {
           if (args.length > 0 && args[0] && typeof args[0] === 'object') {
             whereClauses.push(args[0]);
+          } else if (args.length >= 2 && typeof args[0] === 'string') {
+            whereClauses.push({ [args[0]]: args[1] });
           }
           return queryBuilder;
         }),
@@ -286,11 +288,21 @@ function buildTrx(params: {
 
     if (table === 'users') {
       return {
+        orderBy: vi.fn().mockResolvedValue([]),
         where: vi.fn().mockReturnValue({
           select: vi.fn().mockResolvedValue([]),
           orderBy: vi.fn().mockResolvedValue([]),
         }),
       };
+    }
+
+    if (table === 'statuses') {
+      const builder: any = {
+        select: vi.fn(() => builder),
+        whereRaw: vi.fn(() => builder),
+        andWhere: vi.fn(() => builder),
+      };
+      return builder;
     }
 
     if (table === 'ticket_resources') {
@@ -308,6 +320,8 @@ function buildTrx(params: {
 
     throw new Error(`Unexpected table: ${table}`);
   }) as any;
+  trx.raw = vi.fn((value: string) => value);
+  return trx;
 }
 
 describe('ticket authorization narrowing for migrated list/detail paths', () => {
@@ -363,7 +377,9 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
     const tickets = await getTicketsForList({ boardFilterState: 'all' } as any);
     expect(tickets.map((ticket) => ticket.ticket_id)).toEqual(['ticket-allow']);
 
-    await expect(getTicketById('ticket-deny-board')).rejects.toThrow('Failed to fetch ticket');
+    await expect(getTicketById('ticket-deny-board')).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot view ticket',
+    });
     const allowed = await getTicketById('ticket-allow');
     expect(allowed.ticket_id).toBe('ticket-allow');
   });
@@ -407,8 +423,12 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
     const tickets = await getTicketsForList({ boardFilterState: 'all' } as any);
     expect(tickets.map((ticket) => ticket.ticket_id)).toEqual(['ticket-allow']);
 
-    await expect(getTicketById('ticket-deny-client')).rejects.toThrow('Failed to fetch ticket');
-    await expect(getTicketById('ticket-deny-board')).rejects.toThrow('Failed to fetch ticket');
+    await expect(getTicketById('ticket-deny-client')).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot view ticket',
+    });
+    await expect(getTicketById('ticket-deny-board')).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot view ticket',
+    });
     const allowed = await getTicketById('ticket-allow');
     expect(allowed.ticket_id).toBe('ticket-allow');
   });

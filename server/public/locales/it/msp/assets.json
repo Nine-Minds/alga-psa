@@ -1004,7 +1004,8 @@
     "description": "Pannello delle note in formato rich-text per note specifiche sulle risorse e un rapido contesto operativo",
     "errors": {
       "loadTitle": "Impossibile caricare le note",
-      "unknown": "Errore sconosciuto"
+      "unknown": "Errore sconosciuto",
+      "loadDescription": "Could not load notes. Please try again."
     },
     "lastUpdated": "Ultimo aggiornamento: {{value}}"
   },

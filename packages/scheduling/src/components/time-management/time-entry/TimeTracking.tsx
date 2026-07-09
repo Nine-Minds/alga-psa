@@ -16,6 +16,7 @@ import { fetchEligibleTimeEntrySubjects } from '../../../actions/timeEntryDelega
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 
 interface TimeTrackingProps {
@@ -111,6 +112,11 @@ export default function TimeTracking({ currentUser, isManager }: TimeTrackingPro
   const loadTimePeriods = async () => {
     try {
       const periods = await fetchTimePeriods(subjectUserId);
+      if (isActionMessageError(periods) || isActionPermissionError(periods)) {
+        toast.error(getErrorMessage(periods));
+        setTimePeriods([]);
+        return;
+      }
       setTimePeriods(periods);
     } finally {
       setIsLoading(false);
@@ -170,6 +176,10 @@ export default function TimeTracking({ currentUser, isManager }: TimeTrackingPro
   const handleSelectTimePeriod = async (timePeriod: ITimePeriodWithStatusView) => {
     try {
       const timeSheet = await fetchOrCreateTimeSheet(subjectUserId, timePeriod.period_id);
+      if (isActionMessageError(timeSheet) || isActionPermissionError(timeSheet)) {
+        toast.error(getErrorMessage(timeSheet));
+        return;
+      }
       const params = new URLSearchParams();
       if (subjectUserId !== currentUser.user_id) {
         params.set('subjectUserId', subjectUserId);

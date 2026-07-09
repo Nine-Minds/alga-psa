@@ -253,7 +253,8 @@
       "secondaryApproverRequired": "Please enter the name and email of the secondary approver",
       "invalidVerificationCode": "Invalid verification code",
       "unknown": "An unknown error occurred",
-      "reportNotFound": "Reconciliation report not found. The report may have been deleted or you may not have permission to view it."
+      "reportNotFound": "Reconciliation report not found. The report may have been deleted or you may not have permission to view it.",
+      "resolveFailed": "Failed to resolve reconciliation report."
     }
   },
   "discrepancy": {
@@ -334,7 +335,8 @@
       "resolveReport": "Resolve Report"
     },
     "errors": {
-      "unknown": "An unknown error occurred"
+      "unknown": "An unknown error occurred",
+      "resolveFailed": "Failed to resolve reconciliation report. Please refresh and try again."
     }
   },
   "recommendedFix": {
@@ -387,7 +389,8 @@
     "errors": {
       "notesRequired": "Please provide notes explaining the reason for this correction",
       "invalidAmount": "Please enter a valid amount",
-      "unknown": "An unknown error occurred"
+      "unknown": "An unknown error occurred",
+      "applyFailed": "Failed to apply reconciliation fix. Please refresh and try again."
     }
   },
   "usage": {

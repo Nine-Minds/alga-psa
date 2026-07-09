@@ -11,6 +11,10 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { IClientLocation } from '@alga-psa/types';
+import {
+  permissionError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * Subset of IClientLocation fields that billing surfaces (quote/invoice/contract UI and PDFs)
@@ -57,9 +61,9 @@ export const getActiveClientLocationsForBilling = withAuth(async (
   user,
   { tenant },
   clientId: string,
-): Promise<BillingLocationSummary[]> => {
+): Promise<BillingLocationSummary[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'client', 'read')) {
-    throw new Error('Permission denied: client read required');
+    return permissionError('Permission denied: client read required');
   }
   if (!clientId) {
     return [];

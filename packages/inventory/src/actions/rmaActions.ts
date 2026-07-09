@@ -5,6 +5,12 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IRmaCase, IStockUnit, RmaStatus } from '@alga-psa/types';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { publishInventoryEvent, recordStockMovement, timestampPayload } from '../lib';
 import { resolveTenantCurrency } from '../lib';
 
@@ -23,6 +29,67 @@ import { resolveTenantCurrency } from '../lib';
 async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'inventory', action))) {
     throw new Error(`Permission denied: inventory ${action} required`);
+  }
+}
+
+export type RmaActionError = ActionMessageError | ActionPermissionError;
+
+function rmaActionErrorFrom(error: unknown): RmaActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+
+    switch (error.message) {
+      case 'returned_unit_id is required':
+        return actionError('Returned unit ID is required.');
+      case 'dead_unit_due_date is required':
+        return actionError('Choose a due date for the returned dead unit.');
+      case 'serial_number is required for the replacement unit':
+        return actionError('Enter the replacement unit serial number.');
+      case 'location_id is required for the replacement unit':
+        return actionError('Select the receiving location for the replacement unit.');
+      case 'location_id is required':
+        return actionError('Select a location before receiving the return.');
+      case 'vendor_id is required':
+        return actionError('Select a vendor before sending the RMA.');
+      case 'No replacement unit recorded for this RMA':
+        return actionError('This RMA has no replacement unit recorded. Please refresh and try again.');
+      case 'RMA case not found':
+        return actionError('RMA case not found. It may have been updated or deleted. Please refresh and try again.');
+      case 'Stock unit not found':
+        return actionError('Returned stock unit not found. Please refresh and choose another unit.');
+      case 'RMA case has no associated product service_id':
+        return actionError('This RMA is missing product details. Please refresh and try again.');
+      case 'RMA case has no returned unit':
+        return actionError('This RMA has no returned unit recorded. Please refresh and try again.');
+    }
+
+    if (error.message.startsWith('RMA is in status')) {
+      return actionError(`RMA status changed. ${error.message}`);
+    }
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected RMA records is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A stock unit with that serial number or MAC address already exists.');
+  }
+
+  return null;
+}
+
+async function withRmaActionErrors<T>(operation: () => Promise<T>): Promise<T | RmaActionError> {
+  try {
+    return await operation();
+  } catch (error) {
+    const expected = rmaActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
 }
 
@@ -204,7 +271,7 @@ export const openRma = withAuth(
     user,
     { tenant },
     input: { returned_unit_id: string; reason?: string | null },
-  ): Promise<IRmaCase> => {
+  ): Promise<IRmaCase | RmaActionError> => withRmaActionErrors(async () => {
     await requireInvPerm(user, 'create');
     if (!input?.returned_unit_id) throw new Error('returned_unit_id is required');
     const { knex: db } = await createTenantKnex();
@@ -239,12 +306,12 @@ export const openRma = withAuth(
 
     await publishInventoryEvent('INVENTORY_RMA_CREATED', result.event);
     return result.rma;
-  },
+  }),
 );
 
 /** Client returns the defective unit. delivered → returned (NOT sellable). */
 export const receiveReturn = withAuth(
-  async (user, { tenant }, rmaId: string, input: { location_id: string }): Promise<IRmaCase> => {
+  async (user, { tenant }, rmaId: string, input: { location_id: string }): Promise<IRmaCase | RmaActionError> => withRmaActionErrors(async () => {
     await requireInvPerm(user, 'update');
     if (!input?.location_id) throw new Error('location_id is required');
     const { knex: db } = await createTenantKnex();
@@ -276,7 +343,7 @@ export const receiveReturn = withAuth(
 
     await publishStockUnitUpdated(tenant, result.unit_id, result.service_id, user.user_id, ['status', 'location_id']);
     return result.rma;
-  },
+  }),
 );
 
 /** Ship the returned unit out to the vendor. returned → in_rma. */
@@ -286,7 +353,7 @@ export const sendToVendor = withAuth(
     { tenant },
     rmaId: string,
     input: { vendor_id: string; rma_reference?: string | null },
-  ): Promise<IRmaCase> => {
+  ): Promise<IRmaCase | RmaActionError> => withRmaActionErrors(async () => {
     await requireInvPerm(user, 'update');
     if (!input?.vendor_id) throw new Error('vendor_id is required');
     const { knex: db } = await createTenantKnex();
@@ -323,12 +390,12 @@ export const sendToVendor = withAuth(
 
     await publishStockUnitUpdated(tenant, result.unit_id, result.service_id, user.user_id, ['status']);
     return result.rma;
-  },
+  }),
 );
 
 /** Vendor ships a brand-new replacement unit. Receive it (rma_in → in_stock); status 'replaced'. */
 export const resolveReplacement = withAuth(
-  async (user, { tenant }, rmaId: string, input: NewUnitInput): Promise<IRmaCase> => {
+  async (user, { tenant }, rmaId: string, input: NewUnitInput): Promise<IRmaCase | RmaActionError> => withRmaActionErrors(async () => {
     await requireInvPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -350,12 +417,12 @@ export const resolveReplacement = withAuth(
 
     await publishStockUnitCreated(tenant, result.unit_id, result.service_id, user.user_id);
     return result.rma;
-  },
+  }),
 );
 
 /** Vendor repairs the same unit and returns it. in_rma → in_stock; case closed. */
 export const resolveRepair = withAuth(
-  async (user, { tenant }, rmaId: string, input: { location_id: string }): Promise<IRmaCase> => {
+  async (user, { tenant }, rmaId: string, input: { location_id: string }): Promise<IRmaCase | RmaActionError> => withRmaActionErrors(async () => {
     await requireInvPerm(user, 'update');
     if (!input?.location_id) throw new Error('location_id is required');
     const { knex: db } = await createTenantKnex();
@@ -387,12 +454,12 @@ export const resolveRepair = withAuth(
 
     await publishStockUnitUpdated(tenant, result.unit_id, result.service_id, user.user_id, ['status', 'location_id', 'client_id', 'asset_id']);
     return result.rma;
-  },
+  }),
 );
 
 /** Vendor credits us for the dead unit (unit retired); status 'credited'. */
 export const resolveCredit = withAuth(
-  async (user, { tenant }, rmaId: string): Promise<IRmaCase> => {
+  async (user, { tenant }, rmaId: string): Promise<IRmaCase | RmaActionError> => withRmaActionErrors(async () => {
     await requireInvPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -424,12 +491,12 @@ export const resolveCredit = withAuth(
 
     await publishStockUnitUpdated(tenant, result.unit_id, result.service_id, user.user_id, ['status']);
     return result.rma;
-  },
+  }),
 );
 
 /** No replacement/credit — scrap the dead unit (retired); case closed. */
 export const resolveScrap = withAuth(
-  async (user, { tenant }, rmaId: string): Promise<IRmaCase> => {
+  async (user, { tenant }, rmaId: string): Promise<IRmaCase | RmaActionError> => withRmaActionErrors(async () => {
     await requireInvPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -461,7 +528,7 @@ export const resolveScrap = withAuth(
 
     await publishStockUnitUpdated(tenant, result.unit_id, result.service_id, user.user_id, ['status']);
     return result.rma;
-  },
+  }),
 );
 
 // ---------------------------------------------------------------------------
@@ -474,7 +541,7 @@ export const openAdvanceRma = withAuth(
     user,
     { tenant },
     input: { returned_unit_id: string; reason?: string | null; vendor_id?: string | null },
-  ): Promise<IRmaCase> => {
+  ): Promise<IRmaCase | RmaActionError> => withRmaActionErrors(async () => {
     await requireInvPerm(user, 'create');
     if (!input?.returned_unit_id) throw new Error('returned_unit_id is required');
     const { knex: db } = await createTenantKnex();
@@ -510,12 +577,12 @@ export const openAdvanceRma = withAuth(
 
     await publishInventoryEvent('INVENTORY_RMA_CREATED', result.event);
     return result.rma;
-  },
+  }),
 );
 
 /** Replacement arrives first. Receive it into stock (rma_in → in_stock); status 'replacement_received'. */
 export const recordReplacementReceived = withAuth(
-  async (user, { tenant }, rmaId: string, input: NewUnitInput): Promise<IRmaCase> => {
+  async (user, { tenant }, rmaId: string, input: NewUnitInput): Promise<IRmaCase | RmaActionError> => withRmaActionErrors(async () => {
     await requireInvPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -537,7 +604,7 @@ export const recordReplacementReceived = withAuth(
 
     await publishStockUnitCreated(tenant, result.unit_id, result.service_id, user.user_id);
     return result.rma;
-  },
+  }),
 );
 
 /**
@@ -546,7 +613,7 @@ export const recordReplacementReceived = withAuth(
  * is cleared. Replacement unit in_stock → delivered. Status 'replacement_deployed'.
  */
 export const deployReplacement = withAuth(
-  async (user, { tenant }, rmaId: string): Promise<IRmaCase> => {
+  async (user, { tenant }, rmaId: string): Promise<IRmaCase | RmaActionError> => withRmaActionErrors(async () => {
     await requireInvPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -620,12 +687,12 @@ export const deployReplacement = withAuth(
     ]);
     await publishStockUnitUpdated(tenant, result.returned_unit_id, result.service_id, user.user_id, ['asset_id']);
     return result.rma;
-  },
+  }),
 );
 
 /** Start the dead-unit-owed clock: client still holds the dead unit, due back by `due_date`. */
 export const markDeadUnitOwed = withAuth(
-  async (user, { tenant }, rmaId: string, dueDate: string | Date): Promise<IRmaCase> => {
+  async (user, { tenant }, rmaId: string, dueDate: string | Date): Promise<IRmaCase | RmaActionError> => withRmaActionErrors(async () => {
     await requireInvPerm(user, 'update');
     if (!dueDate) throw new Error('dead_unit_due_date is required');
     const { knex: db } = await createTenantKnex();
@@ -637,12 +704,12 @@ export const markDeadUnitOwed = withAuth(
         dead_unit_due_date: dueDate,
       });
     });
-  },
+  }),
 );
 
 /** The dead unit comes back and is forwarded to the vendor (return_defective → rma_out); case closed. */
 export const recordDeadUnitReturned = withAuth(
-  async (user, { tenant }, rmaId: string): Promise<IRmaCase> => {
+  async (user, { tenant }, rmaId: string): Promise<IRmaCase | RmaActionError> => withRmaActionErrors(async () => {
     await requireInvPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -689,12 +756,12 @@ export const recordDeadUnitReturned = withAuth(
 
     await publishStockUnitUpdated(tenant, result.unit_id, result.service_id, user.user_id, ['status', 'client_id']);
     return result.rma;
-  },
+  }),
 );
 
 /** Deadline missed — bill the client for the unreturned dead unit. Status 'charged' (then closeRma). */
 export const chargeForUnreturned = withAuth(
-  async (user, { tenant }, rmaId: string): Promise<IRmaCase> => {
+  async (user, { tenant }, rmaId: string): Promise<IRmaCase | RmaActionError> => withRmaActionErrors(async () => {
     await requireInvPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -702,12 +769,12 @@ export const chargeForUnreturned = withAuth(
       assertStatus(rma, ['dead_unit_owed']);
       return patchRma(trx, tenant, rmaId, { status: 'charged' });
     });
-  },
+  }),
 );
 
 /** Terminal close for any resolved-but-open case (replaced / credited / charged / returned ...). */
 export const closeRma = withAuth(
-  async (user, { tenant }, rmaId: string): Promise<IRmaCase> => {
+  async (user, { tenant }, rmaId: string): Promise<IRmaCase | RmaActionError> => withRmaActionErrors(async () => {
     await requireInvPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -715,7 +782,7 @@ export const closeRma = withAuth(
       if (rma.status === 'closed') return rma;
       return patchRma(trx, tenant, rmaId, { status: 'closed', closed_at: trx.fn.now() });
     });
-  },
+  }),
 );
 
 // ---------------------------------------------------------------------------
@@ -728,14 +795,16 @@ export const listRmaCases = withAuth(
     user,
     { tenant },
     filter?: { status?: RmaStatus; rma_type?: IRmaCase['rma_type'] },
-  ): Promise<IRmaCase[]> => {
-    await requireInvPerm(user, 'read');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const query = trx('rma_cases').where({ tenant });
-      if (filter?.status) query.andWhere({ status: filter.status });
-      if (filter?.rma_type) query.andWhere({ rma_type: filter.rma_type });
-      return (await query.orderBy('opened_at', 'desc')) as IRmaCase[];
+  ): Promise<IRmaCase[] | RmaActionError> => {
+    return withRmaActionErrors(async () => {
+      await requireInvPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const query = trx('rma_cases').where({ tenant });
+        if (filter?.status) query.andWhere({ status: filter.status });
+        if (filter?.rma_type) query.andWhere({ rma_type: filter.rma_type });
+        return (await query.orderBy('opened_at', 'desc')) as IRmaCase[];
+      });
     });
   },
 );
@@ -743,19 +812,21 @@ export const listRmaCases = withAuth(
 export type DeadUnitOwedRow = IRmaCase & { days_remaining: number | null };
 
 /** Dashboard report: dead units owed to vendors, soonest-due first, with days remaining. */
-export const deadUnitsOwedReport = withAuth(async (user, { tenant }): Promise<DeadUnitOwedRow[]> => {
-  await requireInvPerm(user, 'read');
-  const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const rows = (await trx('rma_cases')
-      .where({ tenant, status: 'dead_unit_owed' })
-      .orderBy('dead_unit_due_date', 'asc')) as IRmaCase[];
-    const now = Date.now();
-    return rows.map((r) => ({
-      ...r,
-      days_remaining: r.dead_unit_due_date
-        ? Math.ceil((new Date(r.dead_unit_due_date).getTime() - now) / 86400000)
-        : null,
-    }));
+export const deadUnitsOwedReport = withAuth(async (user, { tenant }): Promise<DeadUnitOwedRow[] | RmaActionError> => {
+  return withRmaActionErrors(async () => {
+    await requireInvPerm(user, 'read');
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const rows = (await trx('rma_cases')
+        .where({ tenant, status: 'dead_unit_owed' })
+        .orderBy('dead_unit_due_date', 'asc')) as IRmaCase[];
+      const now = Date.now();
+      return rows.map((r) => ({
+        ...r,
+        days_remaining: r.dead_unit_due_date
+          ? Math.ceil((new Date(r.dead_unit_due_date).getTime() - now) / 86400000)
+          : null,
+      }));
+    });
   });
 });

@@ -82,8 +82,13 @@ function getStatusForErrorCode(code: string): number {
 function mapError(error: unknown): NextResponse {
   if (error instanceof StorageServiceError || error instanceof StorageValidationError) {
     const status = getStatusForErrorCode(error.code);
+    const isServerError = status >= 500;
     return NextResponse.json(
-      { error: error.message, code: error.code, details: error.details ?? null },
+      {
+        error: isServerError ? 'Storage operation failed.' : error.message,
+        code: error.code,
+        details: isServerError ? null : error.details ?? null,
+      },
       { status }
     );
   }

@@ -83,6 +83,26 @@ function appendJoinUrlToNotes(notes: string | null | undefined, joinUrl: string)
   return `${baseNotes}\n\nJoin Teams Meeting: ${joinUrl}`;
 }
 
+function teamsSchedulingActionErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (
+    message === 'startDateTime is required' ||
+    message === 'startDateTime must be a valid date/time' ||
+    message === 'endDateTime is required' ||
+    message === 'endDateTime must be a valid date/time' ||
+    message === 'Online Meeting interaction type is not configured'
+  ) {
+    return message;
+  }
+
+  if (/^Users .+ not found/.test(message)) {
+    return 'One or more assigned users could not be found.';
+  }
+
+  return 'Failed to schedule Teams meeting.';
+}
+
 export const scheduleTeamsMeeting = withAuth(async (
   user,
   { tenant },
@@ -280,7 +300,7 @@ export const scheduleTeamsMeeting = withAuth(async (
     console.error('[scheduleTeamsMeeting] Error scheduling Teams meeting:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to schedule Teams meeting.',
+      error: teamsSchedulingActionErrorMessage(error),
     };
   }
 });

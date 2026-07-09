@@ -690,10 +690,10 @@ This indicates a problem with the OAuth token saving process.`;
       }
 
       return { success: true };
-    } catch (error: any) {
+    } catch {
       return {
         success: false,
-        error: error.message || 'Failed to connect to Gmail API'
+        error: 'Gmail connection test failed. Check mailbox permissions and OAuth credentials.'
       };
     }
   }

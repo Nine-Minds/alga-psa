@@ -93,11 +93,29 @@ import {
   insertResolutionComment,
   type CloseRulesFixture,
 } from './helpers/closeRulesFixture';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const HOOK_TIMEOUT = 240_000;
 
 let db: Knex;
 let fixture: CloseRulesFixture;
+
+function isReturnedActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
+function expectActionSuccess<T>(result: T | ActionMessageError | ActionPermissionError): T {
+  if (isReturnedActionError(result)) {
+    throw new Error(getErrorMessage(result));
+  }
+  return result;
+}
 
 function scopedDb() {
   return tenantDb(db, fixture.tenantId);
@@ -220,62 +238,62 @@ describe('ticket close rules', () => {
     expect(defaults.require_time_entry).toBe(false);
     expect(defaults.required_fields).toEqual([]);
 
-    const saved = await upsertBoardCloseRules(fixture.boardId, {
+    const saved = expectActionSuccess(await upsertBoardCloseRules(fixture.boardId, {
       require_time_entry: true,
       required_fields: ['category_id', 'assigned_to'],
-    });
+    }));
     expect(saved.require_time_entry).toBe(true);
     expect(saved.required_fields.sort()).toEqual(['assigned_to', 'category_id']);
 
     const reloaded = await getBoardCloseRules(fixture.boardId);
     expect(reloaded.require_time_entry).toBe(true);
 
-    await expect(
-      upsertBoardCloseRules(fixture.boardId, { required_fields: ['nonsense_field'] })
-    ).rejects.toThrow(/Invalid required fields/);
+    expect(
+      await upsertBoardCloseRules(fixture.boardId, { required_fields: ['nonsense_field'] })
+    ).toMatchObject({ actionError: expect.stringMatching(/Invalid required fields/) });
   });
 
   it('T005: auto-close rule validation rejects bad configurations', async () => {
-    await expect(
-      createBoardAutoCloseRule(fixture.boardId, {
+    expect(
+      await createBoardAutoCloseRule(fixture.boardId, {
         trigger_status_id: fixture.waitingStatusId,
         inactivity_days: 7,
         close_to_status_id: fixture.openStatusId, // not a closed status
       })
-    ).rejects.toThrow(/closed status/);
+    ).toMatchObject({ actionError: expect.stringMatching(/closed status/) });
 
-    await expect(
-      createBoardAutoCloseRule(fixture.boardId, {
+    expect(
+      await createBoardAutoCloseRule(fixture.boardId, {
         trigger_status_id: fixture.closedStatusId, // closed trigger
         inactivity_days: 7,
         close_to_status_id: fixture.closedStatusId,
       })
-    ).rejects.toThrow(/open status/);
+    ).toMatchObject({ actionError: expect.stringMatching(/open status/) });
 
-    await expect(
-      createBoardAutoCloseRule(fixture.boardId, {
+    expect(
+      await createBoardAutoCloseRule(fixture.boardId, {
         trigger_status_id: fixture.waitingStatusId,
         inactivity_days: 5,
         warning_days_before: 5, // must be < inactivity
         close_to_status_id: fixture.closedStatusId,
       })
-    ).rejects.toThrow(/Warning lead time/);
+    ).toMatchObject({ actionError: expect.stringMatching(/Warning lead time/) });
 
-    const created = await createBoardAutoCloseRule(fixture.boardId, {
+    const created = expectActionSuccess(await createBoardAutoCloseRule(fixture.boardId, {
       trigger_status_id: fixture.waitingStatusId,
       inactivity_days: 5,
       warning_days_before: 2,
       close_to_status_id: fixture.closedStatusId,
-    });
+    }));
     expect(created.rule_id).toBeTruthy();
 
-    await expect(
-      createBoardAutoCloseRule(fixture.boardId, {
+    expect(
+      await createBoardAutoCloseRule(fixture.boardId, {
         trigger_status_id: fixture.waitingStatusId, // duplicate
         inactivity_days: 9,
         close_to_status_id: fixture.closedStatusId,
       })
-    ).rejects.toThrow(/already exists/);
+    ).toMatchObject({ actionError: expect.stringMatching(/already exists/) });
 
     await scopedDb().table('board_auto_close_rules').where({ rule_id: created.rule_id }).del();
   });

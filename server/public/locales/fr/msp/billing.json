@@ -253,7 +253,8 @@
       "secondaryApproverRequired": "Veuillez saisir le nom et l'adresse e-mail de l'approbateur secondaire",
       "invalidVerificationCode": "Code de vérification invalide",
       "unknown": "Une erreur inconnue s'est produite",
-      "reportNotFound": "Rapport de rapprochement introuvable. Le rapport a peut-être été supprimé ou vous n'êtes peut-être pas autorisé à le consulter."
+      "reportNotFound": "Rapport de rapprochement introuvable. Le rapport a peut-être été supprimé ou vous n'êtes peut-être pas autorisé à le consulter.",
+      "resolveFailed": "Failed to resolve reconciliation report."
     }
   },
   "discrepancy": {
@@ -334,7 +335,8 @@
       "resolveReport": "Résoudre le rapport"
     },
     "errors": {
-      "unknown": "Une erreur inconnue s'est produite"
+      "unknown": "Une erreur inconnue s'est produite",
+      "resolveFailed": "Failed to resolve reconciliation report. Please refresh and try again."
     }
   },
   "recommendedFix": {
@@ -387,7 +389,8 @@
     "errors": {
       "notesRequired": "Veuillez fournir des notes expliquant la raison de cette correction.",
       "invalidAmount": "Veuillez entrer un montant valide",
-      "unknown": "Une erreur inconnue s'est produite"
+      "unknown": "Une erreur inconnue s'est produite",
+      "applyFailed": "Failed to apply reconciliation fix. Please refresh and try again."
     }
   },
   "usage": {

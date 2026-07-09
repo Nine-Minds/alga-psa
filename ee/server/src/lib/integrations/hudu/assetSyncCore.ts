@@ -14,7 +14,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import type { Knex } from 'knex';
 import { updateAssetRecord } from '@alga-psa/assets/actions/assetActions';
 import { fetchHuduCompanyAssets } from './huduDataCore';
-import type { HuduErrorKind } from './huduClient';
+import { HuduRequestError, type HuduErrorKind } from './huduClient';
 import type { HuduAsset } from './contracts';
 import {
   getHuduAssetMappingRows,
@@ -34,6 +34,31 @@ export type HuduAssetSyncResult =
 
 function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function huduSyncUserMessage(error: unknown, errorKind?: HuduErrorKind): { error: string; errorKind?: HuduErrorKind } {
+  const kind = errorKind ?? (error instanceof HuduRequestError ? error.hudu.kind : undefined);
+
+  switch (kind) {
+    case 'invalid_key':
+      return { error: 'Hudu rejected the API key. Verify the key and base URL.', errorKind: kind };
+    case 'no_password_access':
+      return { error: 'The Hudu API key does not have access to this Hudu resource.', errorKind: kind };
+    case 'not_found':
+      return { error: 'Hudu resource not found. Verify the base URL and mapping.', errorKind: kind };
+    case 'validation':
+      return { error: 'Hudu rejected the sync request. Verify the client mapping and try again.', errorKind: kind };
+    case 'rate_limited':
+      return { error: 'Hudu rate limit exceeded (429).', errorKind: kind };
+    case 'server_error':
+      return { error: 'Hudu is temporarily unavailable. Please try again later.', errorKind: kind };
+    case 'network_error':
+      return { error: 'Unable to reach Hudu. Check the Hudu base URL and network connectivity.', errorKind: kind };
+    case 'unknown':
+      return { error: 'Unable to sync Hudu assets. Check the Hudu connection and try again.', errorKind: kind };
+    default:
+      return { error: 'Unable to sync Hudu assets. Check the Hudu connection and try again.' };
+  }
 }
 
 async function listMappedAssets(
@@ -95,10 +120,13 @@ export async function syncHuduClientAssetsCore(
       return { state: 'unmapped' };
     }
     if (assetsResult.state !== 'ok') {
+      const error = huduSyncUserMessage(
+        assetsResult.state === 'error' ? assetsResult.error : assetsResult.state,
+        assetsResult.state === 'error' ? assetsResult.errorKind : undefined
+      );
       return {
         state: 'error',
-        error: assetsResult.state === 'error' ? assetsResult.error : assetsResult.state,
-        ...(assetsResult.state === 'error' && assetsResult.errorKind ? { errorKind: assetsResult.errorKind } : {}),
+        ...error,
       };
     }
 
@@ -182,6 +210,6 @@ export async function syncHuduClientAssetsCore(
       clientId,
       error: toErrorMessage(error),
     });
-    return { state: 'error', error: toErrorMessage(error) };
+    return { state: 'error', ...huduSyncUserMessage(error) };
   }
 }

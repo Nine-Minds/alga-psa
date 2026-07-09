@@ -8,13 +8,50 @@ import { createTenantKnex } from '@alga-psa/db'
 import { Knex } from 'knex'
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+export type ServiceRateTierActionError = ActionMessageError | ActionPermissionError;
+
+function serviceRateTierActionErrorFrom(error: unknown): ServiceRateTierActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied')) {
+      return permissionError(error.message);
+    }
+
+    if (error.message.includes('Overlapping tier ranges')) {
+      return actionError('Tier ranges cannot overlap.');
+    }
+
+    if (error.message.includes('not found') || error.message.includes("couldn't be updated") || error.message.includes("couldn't be deleted")) {
+      return actionError('Rate tier not found. Refresh the service and try again.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('The selected rate tier is invalid. Refresh the service and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required rate tier field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected service for this rate tier is no longer valid. Refresh the service and try again.');
+  }
+
+  return null;
+}
 
 /**
  * Get all rate tiers for a specific service
  */
-export const getServiceRateTiers = withAuth(async (user, { tenant }, serviceId: string): Promise<IServiceRateTier[]> => {
+export const getServiceRateTiers = withAuth(async (user, { tenant }, serviceId: string): Promise<IServiceRateTier[] | ServiceRateTierActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   try {
     const { knex } = await createTenantKnex()
@@ -24,16 +61,18 @@ export const getServiceRateTiers = withAuth(async (user, { tenant }, serviceId: 
     return tiers
   } catch (error) {
     console.error(`Error fetching rate tiers for service ${serviceId}:`, error)
-    throw new Error('Failed to fetch service rate tiers')
+    const expected = serviceRateTierActionErrorFrom(error);
+    if (expected) return expected;
+    throw error
   }
 });
 
 /**
  * Get a specific rate tier by ID
  */
-export const getServiceRateTierById = withAuth(async (user, { tenant }, tierId: string): Promise<IServiceRateTier | null> => {
+export const getServiceRateTierById = withAuth(async (user, { tenant }, tierId: string): Promise<IServiceRateTier | null | ServiceRateTierActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   try {
     const { knex } = await createTenantKnex()
@@ -43,7 +82,9 @@ export const getServiceRateTierById = withAuth(async (user, { tenant }, tierId: 
     return tier
   } catch (error) {
     console.error(`Error fetching rate tier with id ${tierId}:`, error)
-    throw new Error('Failed to fetch rate tier')
+    const expected = serviceRateTierActionErrorFrom(error);
+    if (expected) return expected;
+    throw error
   }
 });
 
@@ -54,9 +95,9 @@ export const createServiceRateTier = withAuth(async (
   user,
   { tenant },
   tierData: ICreateServiceRateTier
-): Promise<IServiceRateTier> => {
+): Promise<IServiceRateTier | ServiceRateTierActionError> => {
   if (!await hasPermission(user, 'billing', 'create')) {
-    throw new Error('Permission denied: billing create required');
+    return permissionError('Permission denied: billing create required');
   }
   const { knex: db } = await createTenantKnex()
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -68,6 +109,8 @@ export const createServiceRateTier = withAuth(async (
       return tier
     } catch (error) {
       console.error('[serviceRateTierActions] Error creating rate tier:', error)
+      const expected = serviceRateTierActionErrorFrom(error);
+      if (expected) return expected;
       throw error
     }
   })
@@ -81,9 +124,9 @@ export const updateServiceRateTier = withAuth(async (
   { tenant },
   tierId: string,
   tierData: IUpdateServiceRateTier
-): Promise<IServiceRateTier | null> => {
+): Promise<IServiceRateTier | null | ServiceRateTierActionError> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required');
   }
   const { knex: db } = await createTenantKnex()
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -92,12 +135,14 @@ export const updateServiceRateTier = withAuth(async (
       revalidatePath('/msp/billing') // Revalidate the billing page
 
       if (updatedTier === null) {
-        throw new Error(`Rate tier with id ${tierId} not found or couldn't be updated`)
+        return actionError('Rate tier not found. Refresh the service and try again.')
       }
 
       return updatedTier
     } catch (error) {
       console.error(`Error updating rate tier with id ${tierId}:`, error)
+      const expected = serviceRateTierActionErrorFrom(error);
+      if (expected) return expected;
       throw error
     }
   })
@@ -106,9 +151,9 @@ export const updateServiceRateTier = withAuth(async (
 /**
  * Delete a rate tier
  */
-export const deleteServiceRateTier = withAuth(async (user, { tenant }, tierId: string): Promise<void> => {
+export const deleteServiceRateTier = withAuth(async (user, { tenant }, tierId: string): Promise<void | ServiceRateTierActionError> => {
   if (!await hasPermission(user, 'billing', 'delete')) {
-    throw new Error('Permission denied: billing delete required');
+    return permissionError('Permission denied: billing delete required');
   }
   const { knex: db } = await createTenantKnex()
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -117,10 +162,12 @@ export const deleteServiceRateTier = withAuth(async (user, { tenant }, tierId: s
       revalidatePath('/msp/billing') // Revalidate the billing page
 
       if (!success) {
-        throw new Error(`Rate tier with id ${tierId} not found or couldn't be deleted`)
+        return actionError('Rate tier not found. Refresh the service and try again.')
       }
     } catch (error) {
       console.error(`Error deleting rate tier with id ${tierId}:`, error)
+      const expected = serviceRateTierActionErrorFrom(error);
+      if (expected) return expected;
       throw error
     }
   })
@@ -129,9 +176,9 @@ export const deleteServiceRateTier = withAuth(async (user, { tenant }, tierId: s
 /**
  * Delete all rate tiers for a service
  */
-export const deleteServiceRateTiersByServiceId = withAuth(async (user, { tenant }, serviceId: string): Promise<void> => {
+export const deleteServiceRateTiersByServiceId = withAuth(async (user, { tenant }, serviceId: string): Promise<void | ServiceRateTierActionError> => {
   if (!await hasPermission(user, 'billing', 'delete')) {
-    throw new Error('Permission denied: billing delete required');
+    return permissionError('Permission denied: billing delete required');
   }
   const { knex: db } = await createTenantKnex()
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -140,6 +187,8 @@ export const deleteServiceRateTiersByServiceId = withAuth(async (user, { tenant 
       revalidatePath('/msp/billing') // Revalidate the billing page
     } catch (error) {
       console.error(`Error deleting rate tiers for service ${serviceId}:`, error)
+      const expected = serviceRateTierActionErrorFrom(error);
+      if (expected) return expected;
       throw error
     }
   })
@@ -154,9 +203,9 @@ export const updateServiceRateTiers = withAuth(async (
   { tenant },
   serviceId: string,
   tiers: Omit<ICreateServiceRateTier, 'service_id'>[]
-): Promise<IServiceRateTier[]> => {
+): Promise<IServiceRateTier[] | ServiceRateTierActionError> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required');
   }
   const { knex: db } = await createTenantKnex()
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -178,6 +227,8 @@ export const updateServiceRateTiers = withAuth(async (
       return createdTiers
     } catch (error) {
       console.error(`Error updating rate tiers for service ${serviceId}:`, error)
+      const expected = serviceRateTierActionErrorFrom(error);
+      if (expected) return expected;
       throw error
     }
   })

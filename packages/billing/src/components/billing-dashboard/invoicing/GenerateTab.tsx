@@ -11,6 +11,11 @@ import SuccessDialog from '@alga-psa/ui/components/SuccessDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from 'react-i18next';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export type InvoiceType = 'automatic' | 'manual' | 'prepayment';
 
@@ -51,7 +56,19 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
         getServices(1, 999, { item_kind: 'any' })
       ]);
 
+      if (isActionMessageError(clientsData) || isActionPermissionError(clientsData)) {
+        setClients([]);
+        setError(getErrorMessage(clientsData));
+        return;
+      }
+
       setClients(clientsData);
+
+      if (isActionMessageError(servicesData) || isActionPermissionError(servicesData)) {
+        setServices([]);
+        setError(getErrorMessage(servicesData));
+        return;
+      }
 
       if (servicesData && Array.isArray(servicesData.services)) {
         setServices(servicesData.services);

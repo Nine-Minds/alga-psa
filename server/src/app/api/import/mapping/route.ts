@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getImportFieldMapping } from '@/lib/imports/importActions';
+import { importErrorResponse } from '../importRouteErrors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,9 +18,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(template ?? {});
   } catch (error) {
     console.error('[API] /import/mapping', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to load field mapping' },
-      { status: 500 }
-    );
+    return importErrorResponse(error, 'Failed to load field mapping');
   }
 }

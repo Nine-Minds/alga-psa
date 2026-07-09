@@ -1506,5 +1506,6 @@
     "done": "Terminé",
     "edit": "Modifier",
     "save": "Enregistrer"
-  }
+  },
+  "loadError": "Failed to load projects"
 }

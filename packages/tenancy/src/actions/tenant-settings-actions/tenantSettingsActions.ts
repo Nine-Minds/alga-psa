@@ -7,6 +7,12 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export interface TenantSettings {
   tenant: string;
@@ -22,6 +28,36 @@ export interface TenantSettings {
 
 export interface ExperimentalFeatures {
   aiAssistant: boolean;
+}
+
+export type TenantSettingsActionError = ActionMessageError | ActionPermissionError;
+
+function tenantSettingsActionErrorFrom(error: unknown): TenantSettingsActionError | null {
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.startsWith('Permission denied') || message === 'user is not logged in') {
+      return permissionError(message);
+    }
+    if (message === 'Only admin users can clear onboarding data') {
+      return permissionError('Permission denied: Only admin users can clear onboarding data.');
+    }
+    if (message === 'tenantId is required') {
+      return actionError('Tenant id is required.');
+    }
+    if (message.startsWith('Invalid timezone:')) {
+      return actionError(message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected tenant setting values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required tenant settings field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+
+  return null;
 }
 
 const DEFAULT_EXPERIMENTAL_FEATURES: ExperimentalFeatures = {
@@ -108,15 +144,15 @@ export const updateExperimentalFeatures = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
   features: Partial<ExperimentalFeatures>
-): Promise<void> => {
+): Promise<void | TenantSettingsActionError> => {
   try {
     const permissions = await getCurrentUserPermissions();
     if (!permissions.includes('settings:update')) {
-      throw new Error('Permission denied: Cannot update settings');
+      return permissionError('Permission denied: Cannot update settings');
     }
 
     if (features.aiAssistant === true && !(await canTenantActivateAiAssistant(tenant, user))) {
-      throw new Error('Permission denied: Cannot enable AI Assistant for this tenant');
+      return permissionError('Permission denied: Cannot enable AI Assistant for this tenant');
     }
 
     const current = await getExperimentalFeaturesForTenant(tenant, user);
@@ -130,6 +166,8 @@ export const updateExperimentalFeatures = withAuth(async (
     });
   } catch (error) {
     console.error('Error updating experimental features:', error);
+    const expected = tenantSettingsActionErrorFrom(error);
+    if (expected) return expected;
     throw error;
   }
 });
@@ -243,11 +281,11 @@ export const saveTenantOnboardingProgress = withAuth(async (
 export const clearTenantOnboardingData = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext
-): Promise<void> => {
+): Promise<void | TenantSettingsActionError> => {
   try {
     // Check if user has admin permissions
     if (!user.roles.some((role: any) => role.role_name === 'admin')) {
-      throw new Error('Only admin users can clear onboarding data');
+      return permissionError('Permission denied: Only admin users can clear onboarding data.');
     }
 
     const { knex } = await createTenantKnex();
@@ -263,6 +301,8 @@ export const clearTenantOnboardingData = withAuth(async (
 
   } catch (error) {
     console.error('Error clearing tenant onboarding data:', error);
+    const expected = tenantSettingsActionErrorFrom(error);
+    if (expected) return expected;
     throw error;
   }
 });
@@ -392,12 +432,12 @@ export const getTenantTimezoneAuth = withAuth(async (
  */
 export async function setTenantTimezone(
   timezone: string
-): Promise<void> {
+): Promise<void | TenantSettingsActionError> {
   // Validate the timezone is a valid IANA timezone
   try {
     Intl.DateTimeFormat(undefined, { timeZone: timezone });
   } catch {
-    throw new Error(`Invalid timezone: ${timezone}`);
+    return actionError(`Invalid timezone: ${timezone}`);
   }
   return updateTenantSettings({ timezone });
 }

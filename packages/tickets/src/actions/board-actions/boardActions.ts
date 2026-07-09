@@ -10,6 +10,7 @@ import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { v4 as uuidv4 } from 'uuid';
 import { BoardTicketStatusInput, saveBoardTicketStatusesForBoard } from './boardTicketStatusActions';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { boardActionErrorFrom, type BoardActionError } from './boardActionErrors';
 
 export interface FindBoardByNameOutput {
   id: string;
@@ -144,7 +145,7 @@ export async function copyBoardTicketStatuses(
   return clonedStatuses.length;
 }
 
-export const findBoardById = withAuth(async (_user, { tenant }, id: string): Promise<IBoard | undefined> => {
+export const findBoardById = withAuth(async (_user, { tenant }, id: string): Promise<IBoard | undefined | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -152,8 +153,12 @@ export const findBoardById = withAuth(async (_user, { tenant }, id: string): Pro
       return board ? normalizeBoardLiveTimerSetting(board) : board;
     });
   } catch (error) {
+    const expected = boardActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error(error);
-    throw new Error('Failed to find board');
+    throw error;
   }
 });
 
@@ -248,7 +253,7 @@ export const getBoardListStats = withAuth(async (_user, { tenant }): Promise<Rec
   }
 });
 
-export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBoardInput): Promise<IBoard> => {
+export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBoardInput): Promise<IBoard | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -341,7 +346,7 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
         .returning('*')) as IBoard[];
       const newBoardId = newBoard.board_id;
       if (!newBoardId) {
-        throw new Error('Failed to create board');
+        throw new Error('Board insert completed without returning a board ID.');
       }
 
       // If ITIL types are configured, copy the standards to tenant tables
@@ -393,8 +398,12 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
       return normalizeBoardLiveTimerSetting(newBoard);
     });
   } catch (error) {
+    const expected = boardActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error creating new board:', error);
-    throw new Error('Failed to create new board');
+    throw error;
   }
 });
 
@@ -469,7 +478,11 @@ export const deleteBoard = withAuth(async (
   cleanupItil = false
 ): Promise<DeleteBoardResult> => {
   if (!await hasPermission(user, 'ticket', 'delete')) {
-    throw new Error('Permission denied: Cannot delete boards');
+    return {
+      success: false,
+      code: 'PERMISSION_DENIED',
+      message: 'Permission denied: Cannot delete boards',
+    };
   }
 
   const { knex: db } = await createTenantKnex();
@@ -728,12 +741,12 @@ export const deleteBoard = withAuth(async (
 export async function deleteBoardLegacy(boardId: string): Promise<boolean> {
   const result = await deleteBoard(boardId, false);
   if (!result.success) {
-    throw new Error(result.message || 'Failed to delete board');
+    throw new Error(result.message || 'Board deletion returned an unsuccessful result without a message.');
   }
   return true;
 }
 
-export const updateBoard = withAuth(async (user, { tenant }, boardId: string, boardData: UpdateBoardInput): Promise<IBoard> => {
+export const updateBoard = withAuth(async (user, { tenant }, boardId: string, boardData: UpdateBoardInput): Promise<IBoard | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -848,13 +861,12 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
       return normalizeBoardLiveTimerSetting(updatedBoard);
     });
   } catch (error) {
-    console.error('Error updating board:', error);
-    // Re-throw the original error to provide specific feedback to the frontend
-    if (error instanceof Error) {
-      throw error;
+    const expected = boardActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    // Fallback for non-Error types (though less likely here)
-    throw new Error('Failed to update board due to an unexpected error.');
+    console.error('Error updating board:', error);
+    throw error;
   }
 });
 

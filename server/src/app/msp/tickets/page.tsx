@@ -1,7 +1,7 @@
 import { getConsolidatedTicketListData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { getCurrentUser, getCurrentUserPermissions, getUserPreference } from '@alga-psa/user-composition/actions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
-import { getTeams } from '@alga-psa/teams/actions';
+import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITicketListFilters } from '@alga-psa/types';
 import MspTicketsPageClient from '@alga-psa/msp-composition/tickets/MspTicketsPageClient';
 import {
@@ -18,6 +18,18 @@ export const metadata: Metadata = {
 
 interface TicketsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (
+      typeof candidate.actionError === 'string' ||
+      typeof candidate.permissionError === 'string'
+    )
+  );
 }
 
 export default async function TicketsPage({ searchParams }: TicketsPageProps) {
@@ -236,6 +248,14 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     ]);
 
     const canUpdateTickets = userPermissions.includes('ticket:update');
+    const initialTeams = isTeamActionError(teams) ? [] : teams;
+
+    if (isReturnedActionError(consolidatedData)) {
+      const message = 'permissionError' in consolidatedData
+        ? consolidatedData.permissionError
+        : consolidatedData.actionError;
+      return <div id="tickets-error-message">{message}</div>;
+    }
 
     return (
       <div id="tickets-page-container" className="bg-gray-100">
@@ -247,7 +267,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
           initialPage={page}
           initialPageSize={pageSize}
           displaySettings={displaySettings}
-          initialTeams={teams}
+          initialTeams={initialTeams}
           canUpdateTickets={canUpdateTickets}
           allowSlaStatusFilter={allowSlaStatusFilter}
           useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}

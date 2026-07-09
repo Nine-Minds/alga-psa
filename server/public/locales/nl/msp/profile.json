@@ -583,7 +583,8 @@
         "description": "Beschrijving",
         "descriptionPlaceholder": "bijv. Ontwikkelings-API-sleutel",
         "expiration": "Vervaldatum (optioneel)",
-        "submit": "Nieuwe API-sleutel genereren"
+        "submit": "Nieuwe API-sleutel genereren",
+        "createFailed": "Failed to create API key"
       },
       "list": {
         "title": "Uw API-sleutels",
@@ -609,7 +610,8 @@
           "active": "Actief",
           "inactive": "Inactief"
         },
-        "deactivate": "Deactiveren"
+        "deactivate": "Deactiveren",
+        "deactivateFailed": "Failed to deactivate API key"
       },
       "newKeyDialog": {
         "title": "API-sleutel gegenereerd",

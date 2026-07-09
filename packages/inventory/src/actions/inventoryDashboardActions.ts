@@ -5,6 +5,10 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
+  permissionError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   queryBillCreep,
   queryCountApprovals,
   queryDeadStock,
@@ -168,6 +172,20 @@ export interface InventoryDashboardData {
 
 const OPEN_PO_STATUSES = ['draft', 'open', 'partially_received'];
 
+export type InventoryDashboardActionError = ActionPermissionError;
+
+function etaLabel(expected: Date | string | null | undefined): string | null {
+  if (!expected) return null;
+  const d = new Date(expected);
+  if (Number.isNaN(d.getTime())) return null;
+  const today = new Date();
+  const days = Math.round((d.getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 86_400_000);
+  if (days < 0) return `${Math.abs(days)}d overdue`;
+  if (days === 0) return 'ETA today';
+  if (days === 1) return 'ETA tomorrow';
+  return `ETA ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+}
+
 const ROUTES = {
   salesOrders: '/msp/inventory/sales-orders',
   purchaseOrders: '/msp/inventory/purchase-orders',
@@ -199,9 +217,9 @@ function sameLocalDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-export const getInventoryDashboardData = withAuth(async (user, { tenant }): Promise<InventoryDashboardData> => {
+export const getInventoryDashboardData = withAuth(async (user, { tenant }): Promise<InventoryDashboardData | InventoryDashboardActionError> => {
   if (!(await hasPermission(user, 'inventory', 'read'))) {
-    throw new Error('Permission denied: inventory read required');
+    return permissionError('Permission denied: inventory read required');
   }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {

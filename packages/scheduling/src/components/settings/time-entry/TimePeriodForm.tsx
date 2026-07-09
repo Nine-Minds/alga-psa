@@ -13,6 +13,12 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { toPlainDate } from '@alga-psa/core';
 import { TimePeriodSuggester } from '../../../lib/timePeriodSuggester';
 import { Temporal } from '@js-temporal/polyfill';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+const isTimePeriodActionError = (
+    value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+    isActionMessageError(value) || isActionPermissionError(value);
 
 // Helper to convert Temporal.PlainDate to Date (for DatePicker)
 function plainDateToDate(plainDate: Temporal.PlainDate | null): Date | undefined {
@@ -253,6 +259,13 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                     start_date: startDate.toString(),
                     end_date: endDate!.toString()
                 });
+                if (isTimePeriodActionError(modelPeriod)) {
+                    dispatch({
+                        type: 'SET_ERROR',
+                        payload: getErrorMessage(modelPeriod)
+                    });
+                    return;
+                }
                 // Convert model type to view type
                 updatedPeriod = {
                     ...modelPeriod,
@@ -265,6 +278,13 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                     start_date: startDate.toString(),
                     end_date: endDate!.toString()
                 });
+                if (isTimePeriodActionError(modelPeriod)) {
+                    dispatch({
+                        type: 'SET_ERROR',
+                        payload: getErrorMessage(modelPeriod)
+                    });
+                    return;
+                }
                 // Convert model type to view type
                 updatedPeriod = {
                     ...modelPeriod,
@@ -340,7 +360,15 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                 onClick={async () => {
                     try {
                         if (selectedPeriod?.period_id) {
-                            await deleteTimePeriod(selectedPeriod.period_id);
+                            const result = await deleteTimePeriod(selectedPeriod.period_id);
+                            if (isTimePeriodActionError(result)) {
+                                dispatch({
+                                    type: 'SET_ERROR',
+                                    payload: getErrorMessage(result)
+                                });
+                                setShowDeleteConfirm(false);
+                                return;
+                            }
                             setShowDeleteConfirm(false);
                             onTimePeriodDeleted?.();
                             onClose();

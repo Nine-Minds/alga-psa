@@ -2,6 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import type { ITicket, IBoard } from '@alga-psa/types';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export interface AssetQuickAddTicketRenderProps {
   open: boolean;
@@ -30,7 +31,7 @@ export interface CreateTicketFromAssetData {
 export interface AssetCrossFeatureCallbacks {
   renderQuickAddTicket: (props: AssetQuickAddTicketRenderProps) => ReactNode;
   openTicketDetailsDrawer: (props: AssetTicketDetailsRenderProps) => Promise<void>;
-  createTicketFromAsset: (data: CreateTicketFromAssetData) => Promise<ITicket>;
+  createTicketFromAsset: (data: CreateTicketFromAssetData) => Promise<ITicket | ActionMessageError | ActionPermissionError>;
   getAllBoards: (includeAll: boolean) => Promise<IBoard[]>;
 }
 

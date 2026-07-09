@@ -21,6 +21,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { runHuduTenantSync } from '../../integrations/hudu/tenantSync';
 import type { HuduTenantSyncSummary } from '../../integrations/hudu/tenantSync';
 import { mergeHuduSettings } from '../../integrations/hudu/huduIntegrationRepository';
+import { huduActionErrorMessage } from './huduActionErrors';
 
 export type HuduCadence = 'daily';
 
@@ -71,7 +72,7 @@ export const importAllHuduClients = withHuduAccess(
       return { success: true, data: summary };
     } catch (error) {
       logger.error('[HuduTenantSyncActions] importAllHuduClients failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to import Hudu assets. Please try again.') };
     }
   }
 );
@@ -85,7 +86,7 @@ export const syncAllHuduClients = withHuduAccess(
       return { success: true, data: summary };
     } catch (error) {
       logger.error('[HuduTenantSyncActions] syncAllHuduClients failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to sync Hudu assets. Please try again.') };
     }
   }
 );
@@ -127,7 +128,7 @@ export const setHuduAutoSync = withHuduAccess(
       return { success: true, data: autoSync };
     } catch (error) {
       logger.error('[HuduTenantSyncActions] setHuduAutoSync failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to update Hudu auto-sync settings. Please try again.') };
     }
   }
 );

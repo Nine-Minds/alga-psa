@@ -36,9 +36,15 @@ import {
   type ListClientAssetsResponse,
 } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useSetClientPortalHeader } from '../layout/ClientPortalPageContext';
 import { AssetDetails } from './AssetDetails';
 import { ClientAddTicket } from '../tickets/ClientAddTicket';
+
+const isReturnedActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 type TranslateFn = ReturnType<typeof useTranslation>['t'];
 
@@ -133,13 +139,18 @@ export function ClientDevicesPage() {
           sort_direction: sortDirection,
         });
         if (requestIdRef.current === id) {
+          if (isReturnedActionError(result)) {
+            setResponse(null);
+            setError(getErrorMessage(result));
+            return;
+          }
           setResponse(result);
           setError(null);
         }
       } catch (err) {
         console.error('Failed to load assets', err);
         if (requestIdRef.current === id) {
-          setError(err instanceof Error ? err.message : 'Failed to load devices');
+          setError('Failed to load devices');
         }
       } finally {
         if (requestIdRef.current === id) setLoading(false);

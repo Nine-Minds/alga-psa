@@ -31,6 +31,7 @@ import {
   setHuduIntegrationActive,
   upsertHuduIntegration,
 } from '../../integrations/hudu/huduIntegrationRepository';
+import { huduActionErrorMessage } from './huduActionErrors';
 import type { HuduSyncStatus } from '../../integrations/hudu/huduIntegrationRepository';
 import type { HuduTenantSyncSummary } from '../../integrations/hudu/tenantSync';
 
@@ -246,7 +247,7 @@ export const connectHudu = withHuduSettingsAccess(
       };
     } catch (error) {
       logger.error('[HuduActions] connectHudu failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to connect Hudu. Please try again.') };
     }
   }
 );
@@ -288,7 +289,7 @@ export const testHuduConnection = withHuduSettingsAccess(
       };
     } catch (error) {
       logger.error('[HuduActions] testHuduConnection failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to test the Hudu connection. Please try again.') };
     }
   }
 );
@@ -341,7 +342,7 @@ export const getHuduConnectionStatus = withHuduSettingsAccess(
       };
     } catch (error) {
       logger.error('[HuduActions] getHuduConnectionStatus failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to load Hudu connection status. Please try again.') };
     }
   }
 );
@@ -374,7 +375,7 @@ export const disconnectHudu = withHuduSettingsAccess(
       return { success: true, data: { disconnected: true } };
     } catch (error) {
       logger.error('[HuduActions] disconnectHudu failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to disconnect Hudu. Please try again.') };
     }
   }
 );

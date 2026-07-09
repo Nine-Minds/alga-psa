@@ -24,6 +24,10 @@ import { createCeGmailProviderSchema } from './providers/gmail/schemas';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
 import { getGoogleIntegrationStatus } from '@alga-psa/integrations/actions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type GmailProviderFormData = import('./providers/gmail/schemas').CEGmailProviderFormData;
 
@@ -171,6 +175,11 @@ export function GmailProviderForm({
         ? await updateEmailProvider(provider.id, payload, false) // skipAutomation: false
         : await createEmailProvider(payload, false); // skipAutomation: false
 
+      if (isActionMessageError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+
       // Check for setup errors or warnings
       if (result.setupError) {
         setError(t('forms.gmail.messages.setupIncomplete', {
@@ -186,8 +195,9 @@ export function GmailProviderForm({
       // The user can see the error/warning state in the UI
       onSuccess(result.provider);
 
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      console.error('Failed to configure Gmail provider:', err);
+      setError(t('forms.gmail.validation.configureFailed', { defaultValue: 'Failed to configure Gmail provider' }));
     } finally {
       setLoading(false);
     }
@@ -240,6 +250,9 @@ export function GmailProviderForm({
           }
         };
         const result = await upsertEmailProvider(payload); // allow automation for initial setup
+        if (isActionMessageError(result)) {
+          throw new Error(getErrorMessage(result));
+        }
         providerId = result.provider.id;
       }
 
@@ -265,9 +278,10 @@ export function GmailProviderForm({
         onError: (message) => setError(message),
       });
 
-    } catch (err: any) {
+    } catch (err) {
       setOauthStatus('error');
-      setError(err.message);
+      console.error('Failed to start Gmail authorization:', err);
+      setError(t('forms.gmail.validation.authorizationFailed', { defaultValue: 'Authorization failed' }));
     }
   };
 

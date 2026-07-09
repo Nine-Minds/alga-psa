@@ -16,6 +16,7 @@ import {
   createLevelIoClient,
   DEFAULT_LEVELIO_BASE_URL,
   LevelIoApiClient,
+  LevelIoApiError,
   LEVELIO_API_KEY_SECRET,
   LEVELIO_WEBHOOK_SECRET_KEY,
 } from '../../integrations/levelio/levelApiClient';
@@ -34,8 +35,50 @@ import {
 
 const PROVIDER = 'levelio' as const;
 
-function sanitizeError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+function sanitizeError(error: unknown, fallback = 'Unable to complete the Level request.'): string {
+  if (error instanceof LevelIoApiError) {
+    if (!error.status) {
+      return error.message;
+    }
+
+    if (error.status === 401 || error.status === 403) {
+      return 'Level rejected the API key. Generate a valid key in Level and save it in the integration settings.';
+    }
+
+    if (error.status === 404) {
+      return 'The requested Level resource was not found. Refresh the integration and try again.';
+    }
+
+    if (error.status === 429) {
+      return 'Level rate limit reached. Please try again later.';
+    }
+
+    if (error.status >= 500) {
+      return 'Level is temporarily unavailable. Please try again later.';
+    }
+
+    return fallback;
+  }
+
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (!message) {
+    return fallback;
+  }
+
+  if (message === 'Forbidden' || message.startsWith('Forbidden:')) {
+    return 'You do not have permission to manage Level settings.';
+  }
+
+  if (message === 'Level integration is not configured.') {
+    return message;
+  }
+
+  if (message.includes('fetch failed') || message.includes('ECONNREFUSED') || message.includes('ENOTFOUND')) {
+    return 'Unable to reach Level. Check network connectivity and try again.';
+  }
+
+  return fallback;
 }
 
 function withAdvancedAssetsAccess<TArgs extends unknown[], TResult>(
@@ -164,7 +207,7 @@ export const getLevelIoSettings = withAdvancedAssetsAccess(async (user, { tenant
       },
     };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to load Level settings.') };
   }
 });
 
@@ -209,7 +252,7 @@ export const saveLevelIoConfiguration = withAdvancedAssetsAccess(async (
 
     return { success: true, integrationId: row.integration_id as string };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to save Level configuration.') };
   }
 });
 
@@ -237,14 +280,14 @@ export const testLevelIoConnection = withAdvancedAssetsAccess(async (user, { ten
         .where({ provider: PROVIDER })
         .update({
           is_active: false,
-          sync_error: sanitizeError(error),
+          sync_error: sanitizeError(error, 'Unable to test the Level connection.'),
           updated_at: knex.fn.now(),
         });
     } catch {
       // Best effort.
     }
 
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to test the Level connection.') };
   }
 });
 
@@ -298,7 +341,7 @@ export const disconnectLevelIoIntegration = withAdvancedAssetsAccess(async (user
 
     return { success: true };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to disconnect Level.') };
   }
 });
 
@@ -309,7 +352,7 @@ export const syncLevelIoOrganizations = withAdvancedAssetsAccess(async (user, { 
   try {
     return await runLevelIoSyncOperation({ tenant, operation: 'scope_sync', syncType: 'organizations' });
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to sync Level groups.') };
   }
 });
 
@@ -320,7 +363,7 @@ export const triggerLevelIoFullSync = withAdvancedAssetsAccess(async (user, { te
   try {
     return await runLevelIoSyncOperation({ tenant, operation: 'full_sync', syncType: 'full' });
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to sync Level devices.') };
   }
 });
 
@@ -331,7 +374,7 @@ export const backfillLevelIoAlerts = withAdvancedAssetsAccess(async (user, { ten
   try {
     return await runLevelIoSyncOperation({ tenant, operation: 'alerts_backfill', syncType: 'alerts' });
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to backfill Level alerts.') };
   }
 });
 
@@ -370,7 +413,7 @@ export const syncLevelIoSingleDevice = withAdvancedAssetsAccess(async (
 
     return { success: true, outcome };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to sync the selected Level device.') };
   }
 });
 
@@ -410,7 +453,7 @@ export const listLevelIoOrganizationMappings = withAdvancedAssetsAccess(async (u
 
     return { success: true, mappings: rows, clients };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to load Level organization mappings.') };
   }
 });
 
@@ -445,7 +488,7 @@ export const updateLevelIoOrganizationMapping = withAdvancedAssetsAccess(async (
 
     return { success: true };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to update the Level organization mapping.') };
   }
 });
 
@@ -486,7 +529,7 @@ export const getLevelIoWebhookInfo = withAdvancedAssetsAccess(async (user, { ten
       },
     };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to load Level webhook details.') };
   }
 });
 
@@ -520,6 +563,6 @@ export const getLevelIoConnectionSummary = withAdvancedAssetsAccess(async (user,
       },
     };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to load Level connection summary.') };
   }
 });

@@ -15,6 +15,10 @@ import Invoice from '@alga-psa/billing/models/invoice';
 import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  permissionError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 // Types for paginated invoice fetching
 export interface FetchInvoicesOptions {
@@ -142,9 +146,9 @@ export const fetchInvoicesPaginated = withAuth(async (
   user,
   { tenant },
   options: FetchInvoicesOptions = {}
-): Promise<PaginatedInvoicesResult> => {
+): Promise<PaginatedInvoicesResult | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
 
   const {
@@ -389,9 +393,9 @@ export const fetchInvoicesByClient = withAuth(async (
   user,
   { tenant },
   clientId: string
-): Promise<InvoiceViewModel[]> => {
+): Promise<InvoiceViewModel[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
 
   try {
@@ -499,9 +503,9 @@ export const fetchInvoicesByContract = withAuth(async (
   user,
   { tenant },
   contractId: string
-): Promise<InvoiceViewModel[]> => {
+): Promise<InvoiceViewModel[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
 
   try {
@@ -564,9 +568,9 @@ export const getInvoiceForRendering = withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<InvoiceViewModel> => {
+): Promise<InvoiceViewModel | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
 
   try {
@@ -587,9 +591,9 @@ export const getEnrichedInvoiceViewModel = withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<import('@alga-psa/types').WasmInvoiceViewModel | null> => {
+): Promise<import('@alga-psa/types').WasmInvoiceViewModel | null | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
 
   const { knex } = await createTenantKnex();
@@ -667,9 +671,9 @@ export const getInvoicePurchaseOrderSummary = withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<InvoicePurchaseOrderSummary | null> => {
+): Promise<InvoicePurchaseOrderSummary | null | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
 
   const { knex } = await createTenantKnex();
@@ -719,9 +723,9 @@ export const getInvoiceLineItems = withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<IInvoiceCharge[]> => {
+): Promise<IInvoiceCharge[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
 
   try {

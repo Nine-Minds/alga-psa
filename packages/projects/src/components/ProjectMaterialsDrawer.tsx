@@ -11,7 +11,12 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { Package, Plus, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type { IProjectMaterial, IServicePrice, IStockUnit } from '@alga-psa/types';
 import {
   listProjectMaterials,
@@ -33,6 +38,10 @@ interface ProjectMaterialsDrawerProps {
   projectId: string;
   clientId?: string | null;
 }
+
+const isReturnedActionError = (result: unknown) => (
+  isActionMessageError(result) || isActionPermissionError(result)
+);
 
 // On-hand badge for tracked products in the picker (F016): red at zero, amber at/below
 // reorder point, plain otherwise. Untracked products and rows whose stock fields haven't
@@ -81,6 +90,11 @@ export default function ProjectMaterialsDrawer({
     setIsLoading(true);
     try {
       const data = await listProjectMaterials(projectId);
+      if (isReturnedActionError(data)) {
+        handleError(data, materialsT('loadFailed', 'Failed to load materials'));
+        setMaterials([]);
+        return;
+      }
       setMaterials(data);
     } catch (error) {
       handleError(error, materialsT('loadFailed', 'Failed to load materials'));
@@ -232,7 +246,7 @@ export default function ProjectMaterialsDrawer({
     setIsAdding(true);
     setAddError(null);
     try {
-      await addProjectMaterial({
+      const result = await addProjectMaterial({
         project_id: projectId,
         client_id: clientId,
         service_id: selectedProductId,
@@ -242,6 +256,10 @@ export default function ProjectMaterialsDrawer({
         description: description.trim() || null,
         unit_id: selectedUnitId || null,
       });
+      if (isReturnedActionError(result)) {
+        setAddError(getErrorMessage(result));
+        return;
+      }
 
       toast.success(materialsT('addedSuccess', 'Material added'));
       resetAddForm();
@@ -261,7 +279,12 @@ export default function ProjectMaterialsDrawer({
     const previousMaterials = materials;
     setMaterials(prev => prev.filter(m => m.project_material_id !== materialId));
     try {
-      await deleteProjectMaterial(materialId);
+      const result = await deleteProjectMaterial(materialId);
+      if (isReturnedActionError(result)) {
+        setMaterials(previousMaterials);
+        handleError(result, materialsT('removeFailed', 'Failed to remove material'));
+        return;
+      }
       toast.success(materialsT('removedSuccess', 'Material removed'));
     } catch (error) {
       // Revert on failure

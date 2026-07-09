@@ -10,6 +10,10 @@ import {
   ReconciliationResult
 } from '../services/externalTaxImportService';
 import type { IExternalTaxImport } from '@alga-psa/types';
+import {
+  permissionError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * Import external tax for a single invoice.
@@ -19,9 +23,9 @@ export const importExternalTaxForInvoice = withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<SingleImportResult> => {
+): Promise<SingleImportResult | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required');
   }
   const service = getExternalTaxImportService();
   return service.importTaxForInvoice(invoiceId, user.user_id);
@@ -34,9 +38,9 @@ export const importExternalTaxForInvoice = withAuth(async (
 export const batchImportExternalTaxes = withAuth(async (
   user,
   { tenant }
-): Promise<BatchImportResult> => {
+): Promise<BatchImportResult | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required');
   }
   const service = getExternalTaxImportService();
   return service.batchImportPendingTaxes(user.user_id);
@@ -50,9 +54,9 @@ export const getExternalTaxImportHistory = withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<IExternalTaxImport[]> => {
+): Promise<IExternalTaxImport[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const service = getExternalTaxImportService();
   return service.getImportHistory(invoiceId);
@@ -65,9 +69,9 @@ export const getInvoiceTaxReconciliation = withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<ReconciliationResult | null> => {
+): Promise<ReconciliationResult | null | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const service = getExternalTaxImportService();
   return service.reconcileTaxDifferences(invoiceId);
@@ -98,10 +102,10 @@ export const getInvoicesPendingExternalTax = withAuth(async (
     total_amount: number;
     created_at: string;
     adapter_type?: string;
-  }>
+  }> | ActionPermissionError
 > => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
   const facade = tenantDb(knex, tenant);

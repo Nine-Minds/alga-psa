@@ -6,6 +6,7 @@ import { resolveMicrosoftCredentialsForTenant } from '@enterprise/lib/integratio
 import { refreshEntraDirectToken } from '@enterprise/lib/integrations/entra/auth/refreshDirectToken';
 import { ENTRA_DIRECT_SECRET_KEYS } from '@enterprise/lib/integrations/entra/secrets';
 import { updateEntraConnectionValidation } from '@enterprise/lib/integrations/entra/connectionRepository';
+import { entraRouteErrorMessage } from '../_errors';
 
 export { dynamic, runtime };
 
@@ -136,7 +137,7 @@ export async function POST(): Promise<Response> {
       }
     }
 
-    const message = error instanceof Error ? error.message : 'Direct Entra validation failed.';
+    const message = entraRouteErrorMessage(error, 'Direct Entra validation failed.');
     await updateEntraConnectionValidation({
       tenant: tenantId,
       connectionType: 'direct',

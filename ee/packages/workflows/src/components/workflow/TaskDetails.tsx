@@ -84,8 +84,7 @@ export function TaskDetailsComponent({
       });
     } catch (err) {
       setError(t('taskDetails.errors.claimFailed', {
-        defaultValue: 'Failed to claim task: {{error}}',
-        error: err instanceof Error ? err.message : t('taskDetails.errors.unknown', { defaultValue: 'Unknown error' }),
+        defaultValue: 'Failed to claim task. Please try again.',
       }));
       console.error('Error claiming task:', err);
     } finally {
@@ -110,8 +109,7 @@ export function TaskDetailsComponent({
       });
     } catch (err) {
       setError(t('taskDetails.errors.unclaimFailed', {
-        defaultValue: 'Failed to unclaim task: {{error}}',
-        error: err instanceof Error ? err.message : t('taskDetails.errors.unknown', { defaultValue: 'Unknown error' }),
+        defaultValue: 'Failed to unclaim task. Please try again.',
       }));
       console.error('Error unclaiming task:', err);
     } finally {

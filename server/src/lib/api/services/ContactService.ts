@@ -14,7 +14,7 @@ import {
   buildContactCreatedPayload,
   buildContactUpdatedPayload,
 } from '@alga-psa/workflow-streams';
-import { NotFoundError } from '../middleware/apiMiddleware';
+import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import {
   ContactFilterData,
   ContactSearchData,
@@ -79,6 +79,33 @@ function applyDefaultPhoneJoins(query: Knex.QueryBuilder, knex: Knex, tenant: st
     rootTenantColumn: 'cpn_default.tenant',
   });
   return query;
+}
+
+function throwContactModelApiError(error: unknown): never {
+  if (!(error instanceof Error)) {
+    throw error;
+  }
+
+  const message = error.message;
+  const [, prefix, rawDetail] = message.match(/^([A-Z_]+):\s*(.*)$/) ?? [];
+  const detail = rawDetail || message;
+
+  switch (prefix) {
+    case 'VALIDATION_ERROR':
+      throw new ValidationError('Validation failed', [
+        { path: [], message: detail },
+      ]);
+    case 'EMAIL_EXISTS':
+      throw new ConflictError(detail);
+    case 'FOREIGN_KEY_ERROR':
+      throw new ValidationError('Validation failed', [
+        { path: ['client_id'], message: detail },
+      ]);
+    case 'NOT_FOUND':
+      throw new NotFoundError(detail || 'Contact not found');
+    default:
+      throw error;
+  }
 }
 
 export class ContactService extends BaseService<IContact> {
@@ -230,7 +257,7 @@ export class ContactService extends BaseService<IContact> {
       }
 
       return ContactModel.getContactById(created.contact_name_id, context.tenant, trx);
-    });
+    }).catch(throwContactModelApiError);
 
     if (!contact) {
       throw new NotFoundError('Contact not found');
@@ -286,7 +313,7 @@ export class ContactService extends BaseService<IContact> {
 
       const updatedFieldKeys = Object.keys(data).filter((key) => (data as Record<string, unknown>)[key] !== undefined);
       return { before, after, updatedFieldKeys };
-    });
+    }).catch(throwContactModelApiError);
 
     const occurredAt = result.after.updated_at ?? new Date().toISOString();
     const actor = maybeUserActorFromContext(context);

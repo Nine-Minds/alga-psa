@@ -6,7 +6,12 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Download, Check, FileSpreadsheet } from 'lucide-react';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { exportTicketsToCSV } from '../actions/ticketExportActions';
 import type { ITicketListFilters } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -20,6 +25,10 @@ interface TicketExportDialogProps {
 }
 
 type ExportStep = 'configure' | 'exporting' | 'complete';
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 const EXPORT_FIELDS = [
   { key: 'ticket_number', labelKey: 'fields.ticketNumber', fallback: 'Ticket Number' },
@@ -103,11 +112,18 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
 
     try {
       const orderedFields = ALL_FIELD_KEYS.filter(k => selectedFields.has(k));
-      const { csv, count } = await exportTicketsToCSV(
+      const result = await exportTicketsToCSV(
         filters,
         orderedFields,
         selectedTicketIds,
       );
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        setStep('configure');
+        return;
+      }
+
+      const { csv, count } = result;
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -123,7 +139,7 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
       setExportedCount(count);
       setStep('complete');
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('export.failed', 'Failed to export tickets'));
+      setError(t('export.failed', 'Failed to export tickets'));
       setStep('configure');
       handleError(err, t('export.failed', 'Failed to export tickets'));
     }

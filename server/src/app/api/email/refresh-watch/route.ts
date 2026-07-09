@@ -17,7 +17,14 @@ export async function POST(request: NextRequest) {
     console.log(`👤 User requesting refresh: ${user.email || 'unknown'}`);
     
     // Get the email provider ID from request body
-    const { providerId } = await request.json();
+    let body: { providerId?: unknown };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Request body must be valid JSON' }, { status: 400 });
+    }
+
+    const providerId = typeof body.providerId === 'string' ? body.providerId.trim() : '';
     
     if (!providerId) {
       return NextResponse.json({ error: 'Provider ID is required' }, { status: 400 });
@@ -57,12 +64,20 @@ export async function POST(request: NextRequest) {
     // Use the new configureGmailProvider orchestrator with force=true
     // This will refresh both Pub/Sub setup and Gmail watch subscription
     console.log('🔄 Starting complete Gmail provider refresh (Pub/Sub + Watch)...');
-    await configureGmailProvider({
+    const result = await configureGmailProvider({
       tenant: provider.tenant,
       providerId: providerId,
       projectId: googleConfig.project_id,
       force: true // Force refresh even if recently initialized
     });
+
+    if (!result.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Gmail provider refresh failed. Check Pub/Sub and Gmail watch configuration, then try again.',
+        warnings: result.warnings
+      }, { status: 409 });
+    }
     
     console.log('✅ Gmail provider refresh completed successfully');
     
@@ -70,7 +85,8 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Gmail provider refreshed successfully (Pub/Sub + Watch)',
       providerId: providerId,
-      mailbox: provider.mailbox
+      mailbox: provider.mailbox,
+      warnings: result.warnings
     });
     
   } catch (error: any) {
@@ -81,7 +97,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({
       success: false,
-      error: error.message
+      error: 'Failed to refresh Gmail provider. Please try again.'
     }, { status: 500 });
   }
 }

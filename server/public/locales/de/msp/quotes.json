@@ -231,7 +231,8 @@
       "notFound": "Angebot nicht gefunden",
       "save": "Angebot konnte nicht gespeichert werden",
       "saveFailed": "Das Speichern des Angebots ist fehlgeschlagen",
-      "workflowAction": "{{action}} fehlgeschlagen"
+      "workflowAction": "{{action}} fehlgeschlagen",
+      "removeItem": "Failed to remove quote item"
     },
     "loading": "Angebotsformular wird geladen...",
     "notices": {
@@ -556,7 +557,10 @@
       "contact": "Kontakt",
       "internal": "Intern"
     },
-    "removeAriaLabel": "{{email}} entfernen"
+    "removeAriaLabel": "{{email}} entfernen",
+    "errors": {
+      "contactsLoadFailed": "Could not load client contacts."
+    }
   },
   "quoteConversion": {
     "title": "Angebot konvertieren",

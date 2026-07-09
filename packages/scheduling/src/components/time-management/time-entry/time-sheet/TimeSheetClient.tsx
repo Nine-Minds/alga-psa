@@ -18,7 +18,12 @@ import { fetchTimeSheet, reverseTimeSheetApproval } from '@alga-psa/scheduling/a
 import { TimeSheet } from './TimeSheet';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface TimeSheetClientProps {
@@ -88,9 +93,15 @@ export default function TimeSheetClient({
       timeEntry.time_sheet_id = timeSheet.id;
       timeEntry.user_id = timeSheet.user_id;
       const savedTimeEntry = await saveTimeEntry(timeEntry);
+      if (isActionMessageError(savedTimeEntry) || isActionPermissionError(savedTimeEntry)) {
+        throw new Error(getErrorMessage(savedTimeEntry));
+      }
       console.log('Time entry saved successfully:', savedTimeEntry);
 
       const updatedTimeSheet = await fetchOrCreateTimeSheet(timeSheet.user_id, timeSheet.period_id);
+      if (isActionMessageError(updatedTimeSheet) || isActionPermissionError(updatedTimeSheet)) {
+        throw new Error(getErrorMessage(updatedTimeSheet));
+      }
       setTimeSheet(updatedTimeSheet);
     } catch (error) {
       console.error('Error saving time entry:', error);
@@ -109,10 +120,16 @@ export default function TimeSheetClient({
   const confirmReopenForEdits = async () => {
     setIsReopening(true);
     try {
-      await reverseTimeSheetApproval(timeSheet.id, currentUser.user_id, t('timeSheetClient.reopen.reason', {
+      const reopenResult = await reverseTimeSheetApproval(timeSheet.id, currentUser.user_id, t('timeSheetClient.reopen.reason', {
         defaultValue: 'Reopened for edits'
       }));
+      if (isActionMessageError(reopenResult) || isActionPermissionError(reopenResult)) {
+        throw new Error(getErrorMessage(reopenResult));
+      }
       const updatedTimeSheet = await fetchTimeSheet(timeSheet.id);
+      if (isActionMessageError(updatedTimeSheet) || isActionPermissionError(updatedTimeSheet)) {
+        throw new Error(getErrorMessage(updatedTimeSheet));
+      }
       setTimeSheet(updatedTimeSheet);
       setIsReopenDialogOpen(false);
       toast.success(t('timeSheetClient.reopen.success', { defaultValue: 'Time sheet reopened for edits' }));

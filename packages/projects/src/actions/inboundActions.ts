@@ -5,7 +5,11 @@ import type { Knex } from 'knex';
 import ProjectModel from '../models/project';
 import ProjectTaskModel from '../models/projectTask';
 
-import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
+import {
+  registerAction,
+  type InboundActionDefinition,
+  type InboundActionResult,
+} from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
 
 interface CreateProjectTaskMappedValues extends Record<string, unknown> {
@@ -37,6 +41,42 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+class ExpectedInboundActionFailure extends Error {
+  constructor(readonly result: InboundActionResult) {
+    super(result.message ?? 'Inbound action failed');
+  }
+}
+
+function inboundFailure(
+  code: 'VALIDATION_ERROR' | 'LOOKUP_MISS',
+  message: string,
+  entityType: string,
+  externalId?: string,
+  metadata: Record<string, unknown> = {},
+): InboundActionResult {
+  return {
+    success: false,
+    entityType,
+    externalId,
+    message,
+    metadata: { code, ...metadata },
+  };
+}
+
+function throwInboundFailure(
+  code: 'VALIDATION_ERROR' | 'LOOKUP_MISS',
+  message: string,
+  entityType: string,
+  externalId?: string,
+  metadata: Record<string, unknown> = {},
+): never {
+  throw new ExpectedInboundActionFailure(inboundFailure(code, message, entityType, externalId, metadata));
+}
+
+function toExpectedInboundActionResult(error: unknown): InboundActionResult | null {
+  return error instanceof ExpectedInboundActionFailure ? error.result : null;
+}
+
 const createProjectTaskAction: InboundActionDefinition<CreateProjectTaskMappedValues> = {
   name: 'createProjectTask',
   entityType: 'project_task',
@@ -65,46 +105,62 @@ const createProjectTaskAction: InboundActionDefinition<CreateProjectTaskMappedVa
   ],
   async handle(ctx, mappedValues) {
     const { knex } = await createTenantKnex(ctx.tenant);
-    const task = await withTransaction(knex, async (trx) => {
-      const projectId = await resolveProjectId(trx, ctx.tenant, ctx.webhookSlug, mappedValues);
-      const project = await tenantScopedTable(trx, 'projects', ctx.tenant)
-        .where({ project_id: projectId })
-        .first('project_id');
-      if (!project) {
-        throw new Error(`VALIDATION_ERROR: project_id "${projectId}" does not exist`);
+    let task;
+    try {
+      task = await withTransaction(knex, async (trx) => {
+        const projectId = await resolveProjectId(trx, ctx.tenant, ctx.webhookSlug, mappedValues);
+        const project = await tenantScopedTable(trx, 'projects', ctx.tenant)
+          .where({ project_id: projectId })
+          .first('project_id');
+        if (!project) {
+          throwInboundFailure(
+            'VALIDATION_ERROR',
+            `VALIDATION_ERROR: project_id "${projectId}" does not exist`,
+            'project_task',
+            mappedValues.external_id,
+            { field: 'project_id' },
+          );
+        }
+
+        const phaseId = await resolvePhaseId(trx, ctx.tenant, projectId, mappedValues.phase_id, mappedValues.external_id);
+        const statusMappingId = await resolveStatusMappingId(
+          trx,
+          ctx.tenant,
+          projectId,
+          phaseId,
+          mappedValues.project_status_mapping_id,
+          mappedValues.external_id,
+        );
+
+        const created = await ProjectTaskModel.addTask(trx, ctx.tenant, phaseId, {
+          task_name: mappedValues.task_name,
+          description: mappedValues.description ?? null,
+          assigned_to: mappedValues.assigned_to ?? null,
+          estimated_hours: mappedValues.estimated_hours ?? null,
+          actual_hours: null,
+          due_date: mappedValues.due_date ? new Date(mappedValues.due_date) : null,
+          project_status_mapping_id: statusMappingId,
+          priority_id: mappedValues.priority_id ?? null,
+          task_type_key: mappedValues.task_type_key ?? 'task',
+          service_id: mappedValues.service_id ?? null,
+        } as Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code'>);
+
+        if (mappedValues.external_id) {
+          await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'project_task', created.task_id, mappedValues.external_id, {
+            knex: trx,
+            metadata: { source: 'inbound_webhook', delivery_id: ctx.deliveryId },
+          });
+        }
+
+        return created;
+      });
+    } catch (error) {
+      const expectedResult = toExpectedInboundActionResult(error);
+      if (expectedResult) {
+        return expectedResult;
       }
-
-      const phaseId = await resolvePhaseId(trx, ctx.tenant, projectId, mappedValues.phase_id);
-      const statusMappingId = await resolveStatusMappingId(
-        trx,
-        ctx.tenant,
-        projectId,
-        phaseId,
-        mappedValues.project_status_mapping_id,
-      );
-
-      const created = await ProjectTaskModel.addTask(trx, ctx.tenant, phaseId, {
-        task_name: mappedValues.task_name,
-        description: mappedValues.description ?? null,
-        assigned_to: mappedValues.assigned_to ?? null,
-        estimated_hours: mappedValues.estimated_hours ?? null,
-        actual_hours: null,
-        due_date: mappedValues.due_date ? new Date(mappedValues.due_date) : null,
-        project_status_mapping_id: statusMappingId,
-        priority_id: mappedValues.priority_id ?? null,
-        task_type_key: mappedValues.task_type_key ?? 'task',
-        service_id: mappedValues.service_id ?? null,
-      } as Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code'>);
-
-      if (mappedValues.external_id) {
-        await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'project_task', created.task_id, mappedValues.external_id, {
-          knex: trx,
-          metadata: { source: 'inbound_webhook', delivery_id: ctx.deliveryId },
-        });
-      }
-
-      return created;
-    });
+      throw error;
+    }
 
     return {
       success: true,
@@ -136,47 +192,57 @@ const updateProjectTaskStatusByExternalIdAction: InboundActionDefinition<UpdateP
   ],
   async handle(ctx, mappedValues) {
     const { knex } = await createTenantKnex(ctx.tenant);
-    const updatedTask = await withTransaction(knex, async (trx) => {
-      const lookup = await lookupAlgaEntityByExternalId(
-        ctx.tenant,
-        ctx.webhookSlug,
-        'project_task',
-        mappedValues.external_id,
-        { knex: trx },
-      );
+    let updatedTask;
+    try {
+      updatedTask = await withTransaction(knex, async (trx) => {
+        const lookup = await lookupAlgaEntityByExternalId(
+          ctx.tenant,
+          ctx.webhookSlug,
+          'project_task',
+          mappedValues.external_id,
+          { knex: trx },
+        );
 
-      if (!lookup) {
-        return null;
+        if (!lookup) {
+          return null;
+        }
+
+        const taskQuery = tenantScopedTable(trx, 'project_tasks as pt', ctx.tenant);
+        tenantDb(trx, ctx.tenant).tenantJoin(taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+        const task = await taskQuery
+          .where({ 'pt.task_id': lookup.algaEntityId })
+          .first<{
+            task_id: string;
+            phase_id: string;
+            project_id: string;
+          }>('pt.task_id', 'pt.phase_id', 'pp.project_id');
+
+        if (!task) {
+          return null;
+        }
+
+        await assertStatusMappingValidForTaskProject(
+          trx,
+          ctx.tenant,
+          task.project_id,
+          mappedValues.project_status_mapping_id,
+          mappedValues.external_id,
+        );
+
+        return ProjectTaskModel.updateTaskStatus(
+          trx,
+          ctx.tenant,
+          task.task_id,
+          mappedValues.project_status_mapping_id,
+        );
+      });
+    } catch (error) {
+      const expectedResult = toExpectedInboundActionResult(error);
+      if (expectedResult) {
+        return expectedResult;
       }
-
-      const taskQuery = tenantScopedTable(trx, 'project_tasks as pt', ctx.tenant);
-      tenantDb(trx, ctx.tenant).tenantJoin(taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
-      const task = await taskQuery
-        .where({ 'pt.task_id': lookup.algaEntityId })
-        .first<{
-          task_id: string;
-          phase_id: string;
-          project_id: string;
-        }>('pt.task_id', 'pt.phase_id', 'pp.project_id');
-
-      if (!task) {
-        return null;
-      }
-
-      await assertStatusMappingValidForTaskProject(
-        trx,
-        ctx.tenant,
-        task.project_id,
-        mappedValues.project_status_mapping_id,
-      );
-
-      return ProjectTaskModel.updateTaskStatus(
-        trx,
-        ctx.tenant,
-        task.task_id,
-        mappedValues.project_status_mapping_id,
-      );
-    });
+      throw error;
+    }
 
     if (!updatedTask) {
       return {
@@ -184,6 +250,7 @@ const updateProjectTaskStatusByExternalIdAction: InboundActionDefinition<UpdateP
         entityType: 'project_task',
         externalId: mappedValues.external_id,
         message: `lookup_miss: project_task external_id "${mappedValues.external_id}" is not mapped for webhook "${ctx.webhookSlug}"`,
+        metadata: { code: 'LOOKUP_MISS' },
       };
     }
 
@@ -225,12 +292,22 @@ async function resolveProjectId(
     if (lookup) {
       return lookup.algaEntityId;
     }
-    throw new Error(
+    throwInboundFailure(
+      'LOOKUP_MISS',
       `lookup_miss: project external_id "${mappedValues.project_external_id}" is not mapped for webhook "${webhookSlug}"`,
+      'project_task',
+      mappedValues.external_id ?? mappedValues.project_external_id,
+      { lookup_entity_type: 'project', lookup_external_id: mappedValues.project_external_id },
     );
   }
 
-  throw new Error('VALIDATION_ERROR: createProjectTask requires project_id or project_external_id');
+  throwInboundFailure(
+    'VALIDATION_ERROR',
+    'VALIDATION_ERROR: createProjectTask requires project_id or project_external_id',
+    'project_task',
+    mappedValues.external_id,
+    { field: 'project_id' },
+  );
 }
 
 async function resolvePhaseId(
@@ -238,13 +315,20 @@ async function resolvePhaseId(
   tenant: string,
   projectId: string,
   phaseId?: string,
+  externalId?: string,
 ): Promise<string> {
   if (phaseId) {
     const phase = await tenantScopedTable(trx, 'project_phases', tenant)
       .where({ project_id: projectId, phase_id: phaseId })
       .first('phase_id');
     if (!phase) {
-      throw new Error(`VALIDATION_ERROR: phase_id "${phaseId}" does not belong to project "${projectId}"`);
+      throwInboundFailure(
+        'VALIDATION_ERROR',
+        `VALIDATION_ERROR: phase_id "${phaseId}" does not belong to project "${projectId}"`,
+        'project_task',
+        externalId,
+        { field: 'phase_id', project_id: projectId },
+      );
     }
     return phase.phase_id;
   }
@@ -252,7 +336,13 @@ async function resolvePhaseId(
   const phases = await ProjectModel.getPhases(trx, tenant, projectId);
   const firstPhase = phases[0];
   if (!firstPhase) {
-    throw new Error(`VALIDATION_ERROR: project "${projectId}" has no phases`);
+    throwInboundFailure(
+      'VALIDATION_ERROR',
+      `VALIDATION_ERROR: project "${projectId}" has no phases`,
+      'project_task',
+      externalId,
+      { field: 'phase_id', project_id: projectId },
+    );
   }
   return firstPhase.phase_id;
 }
@@ -263,6 +353,7 @@ async function resolveStatusMappingId(
   projectId: string,
   phaseId: string,
   statusMappingId?: string,
+  externalId?: string,
 ): Promise<string> {
   if (statusMappingId) {
     const mapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
@@ -272,7 +363,13 @@ async function resolveStatusMappingId(
       })
       .first('project_status_mapping_id');
     if (!mapping) {
-      throw new Error(`VALIDATION_ERROR: project_status_mapping_id "${statusMappingId}" is not valid for project "${projectId}"`);
+      throwInboundFailure(
+        'VALIDATION_ERROR',
+        `VALIDATION_ERROR: project_status_mapping_id "${statusMappingId}" is not valid for project "${projectId}"`,
+        'project_task',
+        externalId,
+        { field: 'project_status_mapping_id', project_id: projectId },
+      );
     }
     return mapping.project_status_mapping_id;
   }
@@ -280,7 +377,13 @@ async function resolveStatusMappingId(
   const mappings = await ProjectModel.getEffectiveStatusMappings(trx, tenant, projectId, phaseId);
   const firstMapping = mappings[0];
   if (!firstMapping) {
-    throw new Error(`VALIDATION_ERROR: project "${projectId}" has no task status mappings`);
+    throwInboundFailure(
+      'VALIDATION_ERROR',
+      `VALIDATION_ERROR: project "${projectId}" has no task status mappings`,
+      'project_task',
+      externalId,
+      { field: 'project_status_mapping_id', project_id: projectId },
+    );
   }
   return firstMapping.project_status_mapping_id;
 }
@@ -290,6 +393,7 @@ async function assertStatusMappingValidForTaskProject(
   tenant: string,
   projectId: string,
   statusMappingId: string,
+  externalId?: string,
 ): Promise<void> {
   const mapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
     .where({ project_status_mapping_id: statusMappingId })
@@ -299,6 +403,12 @@ async function assertStatusMappingValidForTaskProject(
     .first('project_status_mapping_id');
 
   if (!mapping) {
-    throw new Error(`VALIDATION_ERROR: project_status_mapping_id "${statusMappingId}" is not valid for project "${projectId}"`);
+    throwInboundFailure(
+      'VALIDATION_ERROR',
+      `VALIDATION_ERROR: project_status_mapping_id "${statusMappingId}" is not valid for project "${projectId}"`,
+      'project_task',
+      externalId,
+      { field: 'project_status_mapping_id', project_id: projectId },
+    );
   }
 }

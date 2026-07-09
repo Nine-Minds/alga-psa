@@ -44,6 +44,39 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+function phaseTaskImportErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.message.includes('Permission denied')) {
+      return error.message;
+    }
+    if (
+      error.message === 'Project not found' ||
+      error.message === 'No status mappings found for project. Please configure task statuses first.'
+    ) {
+      return error.message;
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return 'One of the selected project, phase, status, task, or tag values is invalid. Please refresh and try again.';
+  }
+  if (dbError?.code === '23502') {
+    return `Missing required imported task field${dbError.column ? `: ${dbError.column}` : ''}.`;
+  }
+  if (dbError?.code === '23503') {
+    return 'One of the selected project import records no longer exists. Please refresh and try again.';
+  }
+  if (dbError?.code === '23505') {
+    return 'The import conflicts with an existing project task or phase. Please refresh and try again.';
+  }
+  if (dbError?.code === '23514') {
+    return 'One of the imported task values is not allowed. Please review the CSV and try again.';
+  }
+
+  return 'Failed to import phases and tasks. Please check the file and try again.';
+}
+
 async function resolveProjectStatusInfo(
   trx: Knex.Transaction,
   tenant: string,
@@ -822,12 +855,13 @@ export const importPhasesAndTasks = withAuth(async (
   defaultStatusMappingId?: string,
   defaultPhaseName?: string
 ): Promise<IPhaseTaskImportResult> => {
-  const { knex: db } = await createTenantKnex();
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  return await withTransaction(db, async (trx: Knex.Transaction) => {
-    if (!await hasPermission(user, 'project', 'update')) {
-      throw new Error('Permission denied: Cannot update projects');
-    }
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'project', 'update')) {
+        throw new Error('Permission denied: Cannot update projects');
+      }
 
     // Verify project exists
     const project = await ProjectModel.getById(trx, tenant, projectId);
@@ -1181,7 +1215,16 @@ export const importPhasesAndTasks = withAuth(async (
       tasksCreated,
       errors,
     };
-  });
+    });
+  } catch (error) {
+    console.error('Error importing phases and tasks:', error);
+    return {
+      success: false,
+      phasesCreated: 0,
+      tasksCreated: 0,
+      errors: [phaseTaskImportErrorMessage(error)],
+    };
+  }
 });
 
 /**

@@ -16,9 +16,16 @@ import type { ColumnDefinition } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import toast from 'react-hot-toast';
 
 type ViewMode = 'msp' | 'client';
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 // viewOptions is defined inside the component to access translations
 
@@ -73,7 +80,11 @@ export default function UserRoleAssignment() {
   const handleAssignRole = async () => {
     if (selectedUser && selectedRole) {
       try {
-        await assignRoleToUser(selectedUser, selectedRole);
+        const result = await assignRoleToUser(selectedUser, selectedRole);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
         await fetchUserRoles(selectedUser);
         // Reset selections
         setSelectedUser('');
@@ -91,7 +102,11 @@ export default function UserRoleAssignment() {
 
   const handleRemoveRole = async (userId: string, roleId: string) => {
     try {
-      await removeRoleFromUser(userId, roleId);
+      const result = await removeRoleFromUser(userId, roleId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchUserRoles(userId);
       toast.success(t('security.userRoles.messages.success.roleRemoved'));
     } catch (error) {

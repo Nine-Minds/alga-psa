@@ -251,6 +251,8 @@ export function UserManagementSettings() {
           EMAIL_ALREADY_EXISTS: 'clientSettings.users.emailAlreadyExists',
           REPORTS_TO_SELF: 'clientSettings.users.reportsToSelf',
           REPORTS_TO_CYCLE: 'clientSettings.users.reportsToCycle',
+          PERMISSION_DENIED: 'clientSettings.users.permissionDenied',
+          USER_UPDATE_FAILED: 'clientSettings.users.updateFailed',
         };
         setError(tProfile(errorKeys[result.code], { defaultValue: result.error }));
         return;

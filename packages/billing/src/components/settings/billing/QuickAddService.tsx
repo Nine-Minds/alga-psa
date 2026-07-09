@@ -158,6 +158,11 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
     const fetchCategories = async () => {
       try {
         const fetchedCategories = await getServiceCategories()
+        if (isActionMessageError(fetchedCategories) || isActionPermissionError(fetchedCategories)) {
+          setError(getErrorMessage(fetchedCategories))
+          setCategories([])
+          return
+        }
         setCategories(fetchedCategories)
       } catch (error) {
         console.error('Error fetching categories:', error)
@@ -176,6 +181,11 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
            const rates = await getTaxRates();
            // Log fetched rates to confirm structure (optional, can be removed later)
            console.log('[QuickAddService] Fetched Tax Rates:', rates);
+           if (isActionMessageError(rates) || isActionPermissionError(rates)) {
+             setErrorTaxRates(getErrorMessage(rates));
+             setTaxRates([]);
+             return;
+           }
            setTaxRates(rates);
        } catch (error) {
            console.error('Error loading tax rates:', error);
@@ -447,15 +457,24 @@ if (createdService?.service_id) {
                 }}
                 serviceTypes={allServiceTypes}
                 onCreateType={async (name) => {
-                  await createServiceTypeInline(name);
+                  const result = await createServiceTypeInline(name);
+                  if (isActionMessageError(result) || isActionPermissionError(result)) {
+                    throw new Error(getErrorMessage(result));
+                  }
                   onServiceTypesChange(); // Refresh the service types list
                 }}
                 onUpdateType={async (id, name) => {
-                  await updateServiceTypeInline(id, name);
+                  const result = await updateServiceTypeInline(id, name);
+                  if (isActionMessageError(result) || isActionPermissionError(result)) {
+                    throw new Error(getErrorMessage(result));
+                  }
                   onServiceTypesChange(); // Refresh the service types list
                 }}
                 onDeleteType={async (id) => {
-                  await deleteServiceTypeInline(id);
+                  const result = await deleteServiceTypeInline(id);
+                  if (isActionMessageError(result) || isActionPermissionError(result)) {
+                    throw new Error(getErrorMessage(result));
+                  }
                   onServiceTypesChange(); // Refresh the service types list
                 }}
                 placeholder={t('quickAddService.fields.serviceType.placeholder', {

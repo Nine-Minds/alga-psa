@@ -85,7 +85,7 @@ export function TemplateRenderer({ template, invoiceData, renderOverride = null 
 
       } catch (err) {
         console.error("Error rendering invoice template:", err);
-        setError(err instanceof Error ? err.message : 'Failed to render template using Wasm.');
+        setError('Failed to render template using Wasm.');
         setRenderedHtml(null); // Clear on error
         setRenderedCss(null);
       } finally {

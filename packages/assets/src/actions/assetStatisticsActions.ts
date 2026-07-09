@@ -2,17 +2,18 @@
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * F313: tenant-wide asset counts keyed by asset_type slug (built-in or
  * custom registry slug). Label resolution happens on the client via the
  * registry so the dashboard breakdown can show registry names.
  */
-export const getAssetCountsByType = withAuth(async (user, { tenant }): Promise<Record<string, number>> => {
+export const getAssetCountsByType = withAuth(async (user, { tenant }): Promise<Record<string, number> | ActionPermissionError> => {
   const { knex } = await createTenantKnex();
 
   if (!await hasPermission(user, 'asset', 'read')) {
-    throw new Error('Permission denied: Cannot read assets');
+    return permissionError('Permission denied: Cannot read assets');
   }
 
   const rows = await tenantDb(knex, tenant).table('assets')

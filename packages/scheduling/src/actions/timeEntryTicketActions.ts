@@ -20,6 +20,10 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
+import {
+  timeSheetActionErrorFrom,
+  type TimeSheetActionError,
+} from './timeSheetActionErrors';
 
 interface RawRow {
   entry_id: string;
@@ -205,8 +209,14 @@ export const fetchTimeEntriesForTicket = withAuth(async (
   user,
   { tenant },
   ticketId: string,
-): Promise<TicketTimeEntriesSummary> => {
-  await assertPsaOnlyTenantAccess(tenant, 'scheduling_time_actions');
-  const { knex: db } = await createTenantKnex();
-  return fetchTimeEntriesForTicketCore(user, tenant, db, ticketId);
+): Promise<TicketTimeEntriesSummary | TimeSheetActionError> => {
+  try {
+    await assertPsaOnlyTenantAccess(tenant, 'scheduling_time_actions');
+    const { knex: db } = await createTenantKnex();
+    return fetchTimeEntriesForTicketCore(user, tenant, db, ticketId);
+  } catch (error) {
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });

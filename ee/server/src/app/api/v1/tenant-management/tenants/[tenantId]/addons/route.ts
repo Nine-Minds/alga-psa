@@ -11,6 +11,7 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 import { ADD_ON_LABELS, ADD_ONS, type AddOnKey } from '@alga-psa/types';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { observabilityLogger } from '@/lib/observability/logging';
+import { tenantManagementRouteError } from '../../../tenantManagementRouteErrors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -168,13 +169,12 @@ export async function POST(request: NextRequest, context: RouteContext): Promise
       message: `${ADD_ON_LABELS[addonKey as ADD_ONS]} ${action === 'grant' ? 'granted' : 'revoked'} for ${tenant.client_name}`,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    const status = message === 'Unauthorized' ? 401 : message.includes('Forbidden') ? 403 : 500;
+    const routeError = tenantManagementRouteError(error, 'Failed to update tenant add-on.');
 
     observabilityLogger.error('Failed to update tenant add-on', error, {
       event_type: 'tenant_management_error',
     });
 
-    return NextResponse.json({ success: false, error: message }, { status });
+    return NextResponse.json({ success: false, error: routeError.error }, { status: routeError.status });
   }
 }

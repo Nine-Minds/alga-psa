@@ -104,8 +104,8 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
         throw new Error(result.error || t('numbering.errors.save'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('numbering.errors.save'));
       console.error(err);
+      setError(t('numbering.errors.save'));
     }
   };
 

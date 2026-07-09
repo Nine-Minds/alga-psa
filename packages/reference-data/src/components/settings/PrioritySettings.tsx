@@ -5,13 +5,20 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, Palette } from "lucide-react";
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
-import { getAllPriorities, createPriority, deletePriority, updatePriority, validatePriorityDeletion } from '@alga-psa/reference-data/actions';
+import {
+  createPriority,
+  deletePriority,
+  getAllPriorities,
+  isPriorityActionError,
+  updatePriority,
+  validatePriorityDeletion,
+} from '@alga-psa/reference-data/actions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
 import type { IPriority, IStandardPriority, DeletionValidationResult } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError } from '@alga-psa/ui/lib/errorHandling';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -77,7 +84,11 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
 
   const updatePriorityItem = async (updatedPriority: IPriority): Promise<void> => {
     try {
-      await updatePriority(updatedPriority.priority_id, updatedPriority);
+      const result = await updatePriority(updatedPriority.priority_id, updatedPriority);
+      if (isPriorityActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       setPriorities(priorities.map((priority) =>
         'tenant' in priority && priority.priority_id === updatedPriority.priority_id ? updatedPriority : priority
       ));
@@ -139,7 +150,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: error instanceof Error ? error.message : t('ticketing.priorities.messages.error.deleteFailed'),
+        message: t('ticketing.priorities.messages.error.deleteFailed'),
         dependencies: [],
         alternatives: []
       });
@@ -410,12 +421,16 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                   color: priorityColor
                 });
               } else {
-                await createPriority({
+                const createdPriority = await createPriority({
                   priority_name: name,
                   order_number: level,
                   color: priorityColor,
                   item_type: selectedPriorityType
                 });
+                if (isPriorityActionError(createdPriority)) {
+                  toast.error(getErrorMessage(createdPriority));
+                  return;
+                }
               }
 
               // Refresh priorities list

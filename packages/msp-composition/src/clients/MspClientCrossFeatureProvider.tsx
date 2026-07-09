@@ -134,7 +134,21 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       refreshMeetingRecordings,
       getSlaPolicies,
     }),
-    [renderQuickAddTicket, renderSurveySummaryCard, renderClientAssets, renderClientTickets, renderContactTickets, renderContractWizard, renderContractQuickAdd, openTicketDetails]
+    [
+      renderQuickAddTicket,
+      getTicketFormOptions,
+      renderSurveySummaryCard,
+      renderClientAssets,
+      renderClientTickets,
+      renderContactTickets,
+      renderContractWizard,
+      renderContractQuickAdd,
+      openTicketDetails,
+      getTeamsMeetingCapability,
+      scheduleTeamsMeeting,
+      refreshMeetingRecordings,
+      getSlaPolicies,
+    ]
   );
 
   return (

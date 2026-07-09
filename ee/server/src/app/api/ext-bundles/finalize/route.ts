@@ -222,10 +222,11 @@ export async function POST(req: Request) {
         },
       });
     }
+    const publicMessage = httpStatus >= 500 ? "Failed to finalize extension bundle." : message;
     return json(httpStatus, {
-      error: message,
+      error: publicMessage,
       code,
-      ...(err?.details ? { details: err.details } : {}),
+      ...(httpStatus < 500 && err?.details ? { details: err.details } : {}),
     });
   }
 }

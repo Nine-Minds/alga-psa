@@ -1134,7 +1134,8 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load alert automation settings');
+      console.error('Failed to load alert automation settings:', e);
+      setError('Failed to load alert automation settings');
     } finally {
       setLoading(false);
     }

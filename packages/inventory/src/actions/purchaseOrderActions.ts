@@ -5,6 +5,12 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   IPurchaseOrder,
   IPurchaseOrderLine,
   IStockUnit,
@@ -15,6 +21,92 @@ import { publishInventoryEvent, recordStockMovement, timestampPayload } from '..
 async function requirePoPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'purchase_order', action))) {
     throw new Error(`Permission denied: purchase_order ${action} required`);
+  }
+}
+
+type PurchaseOrderActionError = ActionMessageError | ActionPermissionError;
+
+function purchaseOrderActionErrorFrom(error: unknown): PurchaseOrderActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+
+    switch (error.message) {
+      case 'Purchase order not found':
+        return actionError('Purchase order not found. It may have been updated or deleted. Please refresh and try again.');
+      case 'Purchase order line not found':
+        return actionError('Purchase order line not found. It may have been updated or deleted. Please refresh and try again.');
+      case 'vendor_id is required':
+        return actionError('Select a vendor before creating the purchase order.');
+      case 'currency_code is required':
+        return actionError('Select a currency before creating the purchase order.');
+      case 'Vendor not found':
+        return actionError('Vendor not found. It may have been deleted. Please choose another vendor.');
+      case 'quantity_ordered must be greater than 0':
+        return actionError('Each line quantity must be greater than 0.');
+      case 'Cannot submit a purchase order with no lines':
+        return actionError('Add at least one line before submitting this purchase order.');
+      case 'Cannot cancel a fully received purchase order':
+        return actionError('This purchase order is already fully received and cannot be cancelled.');
+      case 'Cannot cancel a purchase order that has already received stock':
+        return actionError('This purchase order has already received stock and cannot be cancelled.');
+      case 'quantity must be greater than 0':
+        return actionError('Quantity must be greater than 0.');
+      case 'location_id is required':
+        return actionError('Select a location before receiving stock.');
+      case 'Cannot receive against a draft purchase order; submit it first':
+        return actionError('Submit this purchase order before receiving stock against it.');
+      case 'Cannot receive against a cancelled purchase order':
+        return actionError('This purchase order is cancelled and cannot receive stock.');
+      case 'Stock location not found':
+        return actionError('Stock location not found. It may have been deleted. Please choose another location.');
+      case 'Inventory is not enabled for this product':
+        return actionError('Inventory is not enabled for this product.');
+      case 'Inventory tracking is disabled for this product':
+        return actionError('Inventory tracking is disabled for this product.');
+      case 'Each serialized unit requires a serial_number':
+        return actionError('Each serialized unit needs a serial number.');
+      case 'Cannot remove a line that has already received stock':
+        return actionError('This line has already received stock and cannot be removed.');
+      case 'Cannot edit a cancelled purchase order':
+        return actionError('This purchase order is cancelled and cannot be edited.');
+      default:
+        if (
+          error.message.startsWith('Line cost_currency') ||
+          error.message.startsWith('Only draft purchase orders can be submitted') ||
+          error.message.startsWith('Cannot add a line to a') ||
+          error.message.startsWith('Cannot edit a line on a') ||
+          error.message.startsWith('Receipt currency') ||
+          error.message.startsWith('Serialized receipt requires exactly') ||
+          error.message.startsWith('Duplicate serial_number in batch:') ||
+          error.message.startsWith('Duplicate mac_address in batch:') ||
+          error.message.startsWith('Serial number already exists:') ||
+          error.message.startsWith('MAC address already exists:')
+        ) {
+          return actionError(error.message);
+        }
+    }
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected purchase order records is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A stock unit with the same serial number or MAC address already exists.');
+  }
+
+  return null;
+}
+
+async function withPurchaseOrderActionErrors<T>(work: () => Promise<T>): Promise<T | PurchaseOrderActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = purchaseOrderActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 }
 
@@ -68,16 +160,18 @@ async function recomputePoStatus(trx: Knex.Transaction, tenant: string, poId: st
 }
 
 export const getPurchaseOrder = withAuth(
-  async (user, { tenant }, poId: string): Promise<IPurchaseOrder | null> => {
-    await requirePoPerm(user, 'read');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const po = await trx('purchase_orders').where({ tenant, po_id: poId }).first();
-      if (!po) return null;
-      const lines = (await trx('purchase_order_lines')
-        .where({ tenant, po_id: poId })
-        .orderBy('created_at', 'asc')) as IPurchaseOrderLine[];
-      return { ...(po as IPurchaseOrder), lines };
+  async (user, { tenant }, poId: string): Promise<IPurchaseOrder | null | PurchaseOrderActionError> => {
+    return withPurchaseOrderActionErrors(async () => {
+      await requirePoPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const po = await trx('purchase_orders').where({ tenant, po_id: poId }).first();
+        if (!po) return null;
+        const lines = (await trx('purchase_order_lines')
+          .where({ tenant, po_id: poId })
+          .orderBy('created_at', 'asc')) as IPurchaseOrderLine[];
+        return { ...(po as IPurchaseOrder), lines };
+      });
     });
   },
 );
@@ -98,47 +192,49 @@ export type PurchaseOrderListRow = IPurchaseOrder & {
 };
 
 export const listPurchaseOrders = withAuth(
-  async (user, { tenant }, opts?: { status?: PurchaseOrderStatus; vendor_id?: string }): Promise<PurchaseOrderListRow[]> => {
-    await requirePoPerm(user, 'read');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      // Per-PO line rollup: committed dollar total and received/ordered progress.
-      const lineAgg = trx('purchase_order_lines')
-        .where({ tenant })
-        .groupBy('po_id')
-        .select('po_id')
-        .select(trx.raw('COALESCE(SUM(unit_cost * quantity_ordered), 0) as total_amount'))
-        .select(trx.raw('COALESCE(SUM(quantity_ordered), 0) as qty_ordered'))
-        .select(trx.raw('COALESCE(SUM(quantity_received), 0) as qty_received'))
-        .select(trx.raw('COUNT(*) as line_count'))
-        .as('la');
+  async (user, { tenant }, opts?: { status?: PurchaseOrderStatus; vendor_id?: string }): Promise<PurchaseOrderListRow[] | PurchaseOrderActionError> => {
+    return withPurchaseOrderActionErrors(async () => {
+      await requirePoPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        // Per-PO line rollup: committed dollar total and received/ordered progress.
+        const lineAgg = trx('purchase_order_lines')
+          .where({ tenant })
+          .groupBy('po_id')
+          .select('po_id')
+          .select(trx.raw('COALESCE(SUM(unit_cost * quantity_ordered), 0) as total_amount'))
+          .select(trx.raw('COALESCE(SUM(quantity_ordered), 0) as qty_ordered'))
+          .select(trx.raw('COALESCE(SUM(quantity_received), 0) as qty_received'))
+          .select(trx.raw('COUNT(*) as line_count'))
+          .as('la');
 
-      const q = trx('purchase_orders as po')
-        .leftJoin(lineAgg, 'la.po_id', 'po.po_id')
-        .leftJoin('vendors as v', function () {
-          this.on('v.vendor_id', '=', 'po.vendor_id').andOn('v.tenant', '=', 'po.tenant');
-        })
-        .where({ 'po.tenant': tenant });
-      if (opts?.status) q.andWhere({ 'po.status': opts.status });
-      if (opts?.vendor_id) q.andWhere({ 'po.vendor_id': opts.vendor_id });
+        const q = trx('purchase_orders as po')
+          .leftJoin(lineAgg, 'la.po_id', 'po.po_id')
+          .leftJoin('vendors as v', function () {
+            this.on('v.vendor_id', '=', 'po.vendor_id').andOn('v.tenant', '=', 'po.tenant');
+          })
+          .where({ 'po.tenant': tenant });
+        if (opts?.status) q.andWhere({ 'po.status': opts.status });
+        if (opts?.vendor_id) q.andWhere({ 'po.vendor_id': opts.vendor_id });
 
-      const rows = await q
-        .select('po.*')
-        .select('v.vendor_name')
-        .select(trx.raw('COALESCE(la.total_amount, 0)::bigint as total_amount'))
-        .select(trx.raw('COALESCE(la.qty_ordered, 0)::int as qty_ordered'))
-        .select(trx.raw('COALESCE(la.qty_received, 0)::int as qty_received'))
-        .select(trx.raw('COALESCE(la.line_count, 0)::int as line_count'))
-        .orderBy('po.order_date', 'desc');
+        const rows = await q
+          .select('po.*')
+          .select('v.vendor_name')
+          .select(trx.raw('COALESCE(la.total_amount, 0)::bigint as total_amount'))
+          .select(trx.raw('COALESCE(la.qty_ordered, 0)::int as qty_ordered'))
+          .select(trx.raw('COALESCE(la.qty_received, 0)::int as qty_received'))
+          .select(trx.raw('COALESCE(la.line_count, 0)::int as line_count'))
+          .orderBy('po.order_date', 'desc');
 
-      // pg returns bigint as a string; coerce the money/count fields to numbers.
-      return rows.map((r: any) => ({
-        ...r,
-        total_amount: Number(r.total_amount),
-        qty_ordered: Number(r.qty_ordered),
-        qty_received: Number(r.qty_received),
-        line_count: Number(r.line_count),
-      })) as PurchaseOrderListRow[];
+        // pg returns bigint as a string; coerce the money/count fields to numbers.
+        return rows.map((r: any) => ({
+          ...r,
+          total_amount: Number(r.total_amount),
+          qty_ordered: Number(r.qty_ordered),
+          qty_received: Number(r.qty_received),
+          line_count: Number(r.line_count),
+        })) as PurchaseOrderListRow[];
+      });
     });
   },
 );
@@ -188,78 +284,80 @@ export const createPurchaseOrder = withAuth(
       notes?: string | null;
       lines?: Array<{ service_id: string; quantity_ordered: number; unit_cost?: number | null; cost_currency?: string }>;
     },
-  ): Promise<IPurchaseOrder> => {
-    await requirePoPerm(user, 'create');
-    if (!input.vendor_id) throw new Error('vendor_id is required');
-    const currency = (input.currency_code ?? '').trim();
-    if (!currency) throw new Error('currency_code is required');
+  ): Promise<IPurchaseOrder | PurchaseOrderActionError> => {
+    return withPurchaseOrderActionErrors(async () => {
+      await requirePoPerm(user, 'create');
+      if (!input.vendor_id) throw new Error('vendor_id is required');
+      const currency = (input.currency_code ?? '').trim();
+      if (!currency) throw new Error('currency_code is required');
 
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const vendor = await trx('vendors').where({ tenant, vendor_id: input.vendor_id }).first();
-      if (!vendor) throw new Error('Vendor not found');
+      const { knex: db } = await createTenantKnex();
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const vendor = await trx('vendors').where({ tenant, vendor_id: input.vendor_id }).first();
+        if (!vendor) throw new Error('Vendor not found');
 
-      const r = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'PURCHASE_ORDER']);
-      const poNumber: string = r.rows[0].number;
+        const r = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'PURCHASE_ORDER']);
+        const poNumber: string = r.rows[0].number;
 
-      const [po] = await trx('purchase_orders')
-        .insert({
-          tenant,
-          po_number: poNumber,
-          vendor_id: input.vendor_id,
-          status: 'draft',
-          order_date: input.order_date ?? trx.fn.now(),
-          expected_date: input.expected_date ?? null,
-          ship_to_location_id: input.ship_to_location_id ?? null,
-          is_drop_ship: input.is_drop_ship ?? false,
-          drop_ship_client_id: input.drop_ship_client_id ?? null,
-          drop_ship_address: input.drop_ship_address ?? null,
-          currency_code: currency,
-          notes: input.notes ?? null,
-          created_by: user.user_id,
-        })
-        .returning('*');
-
-      const lines: IPurchaseOrderLine[] = [];
-      for (const l of input.lines ?? []) {
-        const lineCurrency = (l.cost_currency ?? currency).trim();
-        if (lineCurrency !== currency) {
-          throw new Error(`Line cost_currency (${lineCurrency}) must match PO currency_code (${currency})`);
-        }
-        if (!(Number(l.quantity_ordered) > 0)) throw new Error('quantity_ordered must be greater than 0');
-        const defaults = await resolvePoLineDefaults(
-          trx,
-          tenant,
-          input.vendor_id,
-          l.service_id,
-          currency,
-          l.unit_cost,
-        );
-        const [row] = await trx('purchase_order_lines')
+        const [po] = await trx('purchase_orders')
           .insert({
             tenant,
-            po_id: (po as IPurchaseOrder).po_id,
-            service_id: l.service_id,
-            quantity_ordered: l.quantity_ordered,
-            quantity_received: 0,
-            unit_cost: defaults.unit_cost,
-            vendor_sku: defaults.vendor_sku,
-            cost_currency: lineCurrency,
+            po_number: poNumber,
+            vendor_id: input.vendor_id,
+            status: 'draft',
+            order_date: input.order_date ?? trx.fn.now(),
+            expected_date: input.expected_date ?? null,
+            ship_to_location_id: input.ship_to_location_id ?? null,
+            is_drop_ship: input.is_drop_ship ?? false,
+            drop_ship_client_id: input.drop_ship_client_id ?? null,
+            drop_ship_address: input.drop_ship_address ?? null,
+            currency_code: currency,
+            notes: input.notes ?? null,
+            created_by: user.user_id,
           })
           .returning('*');
-        lines.push(row as IPurchaseOrderLine);
-      }
 
-      return { ...(po as IPurchaseOrder), lines };
+        const lines: IPurchaseOrderLine[] = [];
+        for (const l of input.lines ?? []) {
+          const lineCurrency = (l.cost_currency ?? currency).trim();
+          if (lineCurrency !== currency) {
+            throw new Error(`Line cost_currency (${lineCurrency}) must match PO currency_code (${currency})`);
+          }
+          if (!(Number(l.quantity_ordered) > 0)) throw new Error('quantity_ordered must be greater than 0');
+          const defaults = await resolvePoLineDefaults(
+            trx,
+            tenant,
+            input.vendor_id,
+            l.service_id,
+            currency,
+            l.unit_cost,
+          );
+          const [row] = await trx('purchase_order_lines')
+            .insert({
+              tenant,
+              po_id: (po as IPurchaseOrder).po_id,
+              service_id: l.service_id,
+              quantity_ordered: l.quantity_ordered,
+              quantity_received: 0,
+              unit_cost: defaults.unit_cost,
+              vendor_sku: defaults.vendor_sku,
+              cost_currency: lineCurrency,
+            })
+            .returning('*');
+          lines.push(row as IPurchaseOrderLine);
+        }
+
+        return { ...(po as IPurchaseOrder), lines };
+      });
+
+      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_CREATED', timestampPayload({
+        tenant,
+        po_id: result.po_id,
+        user_id: user.user_id,
+      }));
+
+      return result;
     });
-
-    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_CREATED', timestampPayload({
-      tenant,
-      po_id: result.po_id,
-      user_id: user.user_id,
-    }));
-
-    return result;
   },
 );
 
@@ -388,70 +486,74 @@ export const removePoLine = withAuth(
 );
 
 export const submitPurchaseOrder = withAuth(
-  async (user, { tenant }, poId: string): Promise<IPurchaseOrder> => {
-    await requirePoPerm(user, 'update');
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const po = await getPoOrThrow(trx, tenant, poId);
-      if (po.status !== 'draft') throw new Error(`Only draft purchase orders can be submitted (current: ${po.status})`);
-      const lineCount = await trx('purchase_order_lines').where({ tenant, po_id: poId }).count<{ c: string }>('* as c').first();
-      if (Number(lineCount?.c ?? 0) === 0) throw new Error('Cannot submit a purchase order with no lines');
-      const mixedLine = await trx('purchase_order_lines')
-        .where({ tenant, po_id: poId })
-        .andWhere('cost_currency', '<>', po.currency_code)
-        .first();
-      if (mixedLine) {
-        throw new Error(`Line cost_currency (${mixedLine.cost_currency}) must match PO currency_code (${po.currency_code})`);
-      }
+  async (user, { tenant }, poId: string): Promise<IPurchaseOrder | PurchaseOrderActionError> => {
+    return withPurchaseOrderActionErrors(async () => {
+      await requirePoPerm(user, 'update');
+      const { knex: db } = await createTenantKnex();
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const po = await getPoOrThrow(trx, tenant, poId);
+        if (po.status !== 'draft') throw new Error(`Only draft purchase orders can be submitted (current: ${po.status})`);
+        const lineCount = await trx('purchase_order_lines').where({ tenant, po_id: poId }).count<{ c: string }>('* as c').first();
+        if (Number(lineCount?.c ?? 0) === 0) throw new Error('Cannot submit a purchase order with no lines');
+        const mixedLine = await trx('purchase_order_lines')
+          .where({ tenant, po_id: poId })
+          .andWhere('cost_currency', '<>', po.currency_code)
+          .first();
+        if (mixedLine) {
+          throw new Error(`Line cost_currency (${mixedLine.cost_currency}) must match PO currency_code (${po.currency_code})`);
+        }
 
-      const [row] = await trx('purchase_orders')
-        .where({ tenant, po_id: poId })
-        .update({ status: 'open', updated_at: trx.fn.now() })
-        .returning('*');
-      return row as IPurchaseOrder;
+        const [row] = await trx('purchase_orders')
+          .where({ tenant, po_id: poId })
+          .update({ status: 'open', updated_at: trx.fn.now() })
+          .returning('*');
+        return row as IPurchaseOrder;
+      });
+
+      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
+        tenant,
+        po_id: poId,
+        user_id: user.user_id,
+        changed_fields: ['status'],
+      }));
+
+      return result;
     });
-
-    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
-      tenant,
-      po_id: poId,
-      user_id: user.user_id,
-      changed_fields: ['status'],
-    }));
-
-    return result;
   },
 );
 
 export const cancelPurchaseOrder = withAuth(
-  async (user, { tenant }, poId: string): Promise<IPurchaseOrder> => {
-    await requirePoPerm(user, 'update');
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const po = await getPoOrThrow(trx, tenant, poId, { forUpdate: true });
-      if (po.status === 'cancelled') return po;
-      if (po.status === 'received') throw new Error('Cannot cancel a fully received purchase order');
+  async (user, { tenant }, poId: string): Promise<IPurchaseOrder | PurchaseOrderActionError> => {
+    return withPurchaseOrderActionErrors(async () => {
+      await requirePoPerm(user, 'update');
+      const { knex: db } = await createTenantKnex();
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const po = await getPoOrThrow(trx, tenant, poId, { forUpdate: true });
+        if (po.status === 'cancelled') return po;
+        if (po.status === 'received') throw new Error('Cannot cancel a fully received purchase order');
 
-      const received = await trx('purchase_order_lines')
-        .where({ tenant, po_id: poId })
-        .andWhere('quantity_received', '>', 0)
-        .first();
-      if (received) throw new Error('Cannot cancel a purchase order that has already received stock');
+        const received = await trx('purchase_order_lines')
+          .where({ tenant, po_id: poId })
+          .andWhere('quantity_received', '>', 0)
+          .first();
+        if (received) throw new Error('Cannot cancel a purchase order that has already received stock');
 
-      const [row] = await trx('purchase_orders')
-        .where({ tenant, po_id: poId })
-        .update({ status: 'cancelled', updated_at: trx.fn.now() })
-        .returning('*');
-      return row as IPurchaseOrder;
+        const [row] = await trx('purchase_orders')
+          .where({ tenant, po_id: poId })
+          .update({ status: 'cancelled', updated_at: trx.fn.now() })
+          .returning('*');
+        return row as IPurchaseOrder;
+      });
+
+      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
+        tenant,
+        po_id: poId,
+        user_id: user.user_id,
+        changed_fields: ['status'],
+      }));
+
+      return result;
     });
-
-    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
-      tenant,
-      po_id: poId,
-      user_id: user.user_id,
-      changed_fields: ['status'],
-    }));
-
-    return result;
   },
 );
 
@@ -484,7 +586,8 @@ export const receivePoLine = withAuth(
         warranty_term?: string | null;
       }>;
     },
-  ): Promise<ReceivePoLineResult> => {
+  ): Promise<ReceivePoLineResult | PurchaseOrderActionError> => {
+    return withPurchaseOrderActionErrors(async () => {
     await requirePoPerm(user, 'update');
     const qty = Number(input.quantity);
     if (!(qty > 0)) throw new Error('quantity must be greater than 0');
@@ -681,5 +784,6 @@ export const receivePoLine = withAuth(
 
     const { po_received_event: _poReceivedEvent, ...publicResult } = result;
     return publicResult;
+    });
   },
 );

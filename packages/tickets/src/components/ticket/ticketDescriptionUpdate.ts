@@ -1,3 +1,13 @@
+import {
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
 interface PersistTicketDescriptionOptions {
   sessionUser?: unknown;
   ticketId: string;
@@ -34,10 +44,14 @@ export async function persistTicketDescriptionUpdate({
       ...(currentAttributes || {}),
       description: content,
     };
-    await updateTicket(ticketId, {
+    const result = await updateTicket(ticketId, {
       attributes: updatedAttributes,
       updated_at: new Date().toISOString(),
     });
+    if (isReturnedActionError(result)) {
+      handleError(result, 'Failed to update description');
+      return false;
+    }
 
     toastApi.success('Description updated successfully');
     return true;

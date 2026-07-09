@@ -18,6 +18,11 @@ import type {
   AccountingMappingLoadResult,
   AccountingMappingModule
 } from '@alga-psa/integrations/components';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const ADAPTER_TYPE = 'quickbooks_online';
 
@@ -41,6 +46,12 @@ const PAYMENT_TERMS: PaymentTermOption[] = [
 ];
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+function throwIfActionError(value: unknown): void {
+  if (isActionMessageError(value) || isActionPermissionError(value)) {
+    throw new Error(getErrorMessage(value));
+  }
+}
 
 export function createQboLiveMappingModules(t?: TFn): AccountingMappingModule[] {
   const tab = (key: string, fallback: string) =>
@@ -109,7 +120,9 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
           );
         },
         loadExternalEntities: async (currentContext) => {
-          const items = await getQboItems({ realmId: currentContext.realmId ?? null });
+          const itemsResult = await getQboItems({ realmId: currentContext.realmId ?? null });
+          throwIfActionError(itemsResult);
+          const items = itemsResult as Array<{ id: string; name: string }>;
           return items.map((item) => ({
             id: item.id,
             name: item.name
@@ -134,7 +147,7 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
       return updateMapping(mappingId, input);
     },
     async remove(_context, mappingId) {
-      await deleteExternalEntityMapping(mappingId);
+      throwIfActionError(await deleteExternalEntityMapping(mappingId));
     }
   };
 }
@@ -186,7 +199,9 @@ function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
         algaEntityType: 'tax_code',
         loadAlgaEntities: getTaxRegions,
         loadExternalEntities: async (currentContext) => {
-          const taxCodes = await getQboTaxCodes({ realmId: currentContext.realmId ?? null });
+          const taxCodesResult = await getQboTaxCodes({ realmId: currentContext.realmId ?? null });
+          throwIfActionError(taxCodesResult);
+          const taxCodes = taxCodesResult as Array<{ id: string; name: string }>;
           return taxCodes.map((taxCode) => ({
             id: taxCode.id,
             name: taxCode.name
@@ -209,7 +224,7 @@ function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
       return updateMapping(mappingId, input);
     },
     async remove(_context, mappingId) {
-      await deleteExternalEntityMapping(mappingId);
+      throwIfActionError(await deleteExternalEntityMapping(mappingId));
     }
   };
 }
@@ -258,7 +273,9 @@ function createPaymentTermModule(tabLabel: string): AccountingMappingModule {
         algaEntityType: 'payment_term',
         loadAlgaEntities: async () => PAYMENT_TERMS,
         loadExternalEntities: async (currentContext) => {
-          const terms = await getQboTerms({ realmId: currentContext.realmId ?? null });
+          const termsResult = await getQboTerms({ realmId: currentContext.realmId ?? null });
+          throwIfActionError(termsResult);
+          const terms = termsResult as Array<{ id: string; name: string }>;
           return terms.map((term) => ({
             id: term.id,
             name: term.name
@@ -278,7 +295,7 @@ function createPaymentTermModule(tabLabel: string): AccountingMappingModule {
       return updateMapping(mappingId, input);
     },
     async remove(_context, mappingId) {
-      await deleteExternalEntityMapping(mappingId);
+      throwIfActionError(await deleteExternalEntityMapping(mappingId));
     }
   };
 }
@@ -301,9 +318,10 @@ async function loadMappings<TAlga>({
     loadAlgaEntities(context),
     loadExternalEntities(context)
   ]);
+  throwIfActionError(mappings);
 
   return {
-    mappings,
+    mappings: mappings as ExternalEntityMapping[],
     algaEntities: algaEntities.map(mapAlga),
     externalEntities
   };
@@ -332,7 +350,10 @@ function createMapping({
     sync_status: 'manual_link'
   };
 
-  return createExternalEntityMapping(payload);
+  return createExternalEntityMapping(payload).then((result) => {
+    throwIfActionError(result);
+    return result as ExternalEntityMapping;
+  });
 }
 
 function updateMapping(
@@ -352,7 +373,10 @@ function updateMapping(
     payload.alga_entity_id = input.algaEntityId;
   }
 
-  return updateExternalEntityMapping(mappingId, payload);
+  return updateExternalEntityMapping(mappingId, payload).then((result) => {
+    throwIfActionError(result);
+    return result as ExternalEntityMapping;
+  });
 }
 
 type IServicesResult = Pick<IService, 'service_id' | 'service_name'> & {

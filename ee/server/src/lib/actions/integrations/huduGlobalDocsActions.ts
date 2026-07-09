@@ -21,6 +21,7 @@ import type { HuduErrorKind } from '../../integrations/hudu/huduClient';
 import { getHuduIntegration } from '../../integrations/hudu/huduIntegrationRepository';
 import { getHuduCompanyMappingRows, parseCompaniesCache } from '../../integrations/hudu/companyMapping';
 import { buildHuduRecordUrl } from '../../integrations/hudu/referenceData';
+import { huduActionErrorMessage } from './huduActionErrors';
 
 /** Hudu pages are a fixed 25 items; a full page implies more may follow. */
 const HUDU_ARTICLES_PAGE_SIZE = 25;
@@ -148,7 +149,7 @@ export const listHuduArticlesAcrossCompanies = withHuduClientReadAccess(
       });
       return {
         state: 'error',
-        error: toErrorMessage(error),
+        error: huduActionErrorMessage(error, 'Unable to load Hudu articles. Please try again.'),
         ...(error instanceof HuduRequestError ? { errorKind: error.hudu.kind } : {}),
       };
     }

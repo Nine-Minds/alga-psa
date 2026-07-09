@@ -16,8 +16,59 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 import { getScopedProjectStatusMappings, ProjectStatusMappingDetails } from '../lib/projectStatusMappingUtils';
+
+export type ProjectTaskStatusActionError = ActionMessageError | ActionPermissionError;
+
+const EXPECTED_PROJECT_TASK_STATUS_ERROR_PREFIXES = [
+  'Cannot delete the last status in a project',
+  'Cannot delete status with',
+  'Cannot delete status',
+  'Cannot remove phase statuses without project default statuses',
+  'Phase task status removal could not resolve a replacement status mapping',
+  'Project not found',
+  'Project phase not found',
+  'Project task status not found',
+  'Status mapping not found',
+  'Unable to resolve replacement status mapping for phase task',
+];
+
+function projectTaskStatusActionErrorFrom(error: unknown): ProjectTaskStatusActionError | null {
+  if (error instanceof Error) {
+    if (error.message.includes('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (EXPECTED_PROJECT_TASK_STATUS_ERROR_PREFIXES.some((message) => error.message.startsWith(message))) {
+      return actionError(error.message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected status values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required status field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected project statuses no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A project task status with these settings already exists.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('One of the status values is not allowed. Please review the form and try again.');
+  }
+
+  return null;
+}
 
 type ProjectStatusUsage = {
   count: number;
@@ -248,16 +299,17 @@ export const addStatusToProject = withAuth(async (
     is_visible?: boolean;
   },
   phaseId?: string | null
-): Promise<IProjectStatusMapping> => {
-  // RBAC check
-  if (!await hasPermission(user, 'project', 'update')) {
-    throw new Error('Permission denied: Cannot update project');
-  }
+): Promise<IProjectStatusMapping | ProjectTaskStatusActionError> => {
+  try {
+    // RBAC check
+    if (!await hasPermission(user, 'project', 'update')) {
+      throw new Error('Permission denied: Cannot update project');
+    }
 
-  const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx) => {
-    await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+    return await withTransaction(knex, async (trx) => {
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
     // Get next display_order
     const maxOrderQuery = tenantScopedTable(trx, 'project_status_mappings', tenant)
@@ -289,8 +341,15 @@ export const addStatusToProject = withAuth(async (
       })
       .returning('*');
 
-    return mapping;
-  });
+      return mapping;
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -321,15 +380,16 @@ export const copyProjectStatusesToPhase = withAuth(async (
   { tenant },
   projectId: string,
   phaseId: string
-): Promise<IProjectStatusMapping[]> => {
-  if (!await hasPermission(user, 'project', 'update')) {
-    throw new Error('Permission denied: Cannot update project');
-  }
+): Promise<IProjectStatusMapping[] | ProjectTaskStatusActionError> => {
+  try {
+    if (!await hasPermission(user, 'project', 'update')) {
+      throw new Error('Permission denied: Cannot update project');
+    }
 
-  const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx) => {
-    await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+    return await withTransaction(knex, async (trx) => {
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
     const phase = await tenantScopedTable(trx, 'project_phases', tenant)
       .where({ project_id: projectId, phase_id: phaseId })
@@ -391,8 +451,15 @@ export const copyProjectStatusesToPhase = withAuth(async (
         .update({ project_status_mapping_id: newId });
     }
 
-    return newMappings;
-  });
+      return newMappings;
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -402,15 +469,16 @@ export const removePhaseStatuses = withAuth(async (
   user,
   { tenant },
   phaseId: string
-): Promise<void> => {
-  if (!await hasPermission(user, 'project', 'update')) {
-    throw new Error('Permission denied: Cannot update project');
-  }
+): Promise<void | ProjectTaskStatusActionError> => {
+  try {
+    if (!await hasPermission(user, 'project', 'update')) {
+      throw new Error('Permission denied: Cannot update project');
+    }
 
-  const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx) => {
-    const phase = await tenantScopedTable(trx, 'project_phases', tenant)
+    return await withTransaction(knex, async (trx) => {
+      const phase = await tenantScopedTable(trx, 'project_phases', tenant)
       .where({ phase_id: phaseId })
       .first();
 
@@ -435,7 +503,7 @@ export const removePhaseStatuses = withAuth(async (
       const replacementMapping = resolveReplacementStatusMapping(phaseMapping, defaultMappings);
 
       if (!replacementMapping) {
-        throw new Error('Unable to resolve replacement status mapping for phase task');
+        throw new Error('Phase task status removal could not resolve a replacement status mapping.');
       }
 
       const existing = updatesByReplacement.get(replacementMapping.project_status_mapping_id) || [];
@@ -451,10 +519,17 @@ export const removePhaseStatuses = withAuth(async (
         .update({ project_status_mapping_id: replacementId });
     }
 
-    await tenantScopedTable(trx, 'project_status_mappings', tenant)
-      .where({ phase_id: phaseId })
-      .del();
-  });
+      await tenantScopedTable(trx, 'project_status_mappings', tenant)
+        .where({ phase_id: phaseId })
+        .del();
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -469,16 +544,17 @@ export const updateProjectStatusMapping = withAuth(async (
     display_order?: number;
     is_visible?: boolean;
   }
-): Promise<void> => {
-  // RBAC check
-  if (!await hasPermission(user, 'project', 'update')) {
-    throw new Error('Permission denied: Cannot update project');
-  }
+): Promise<void | ProjectTaskStatusActionError> => {
+  try {
+    // RBAC check
+    if (!await hasPermission(user, 'project', 'update')) {
+      throw new Error('Permission denied: Cannot update project');
+    }
 
-  const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx) => {
-    const existingMapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+    await withTransaction(knex, async (trx) => {
+      const existingMapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
       .where({ project_status_mapping_id: mappingId })
       .first();
 
@@ -488,10 +564,17 @@ export const updateProjectStatusMapping = withAuth(async (
 
     await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, existingMapping.project_id);
 
-    await tenantScopedTable(trx, 'project_status_mappings', tenant)
-      .where({ project_status_mapping_id: mappingId })
-      .update(updates);
-  });
+      await tenantScopedTable(trx, 'project_status_mappings', tenant)
+        .where({ project_status_mapping_id: mappingId })
+        .update(updates);
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -501,28 +584,36 @@ export const getStatusMappingTaskCount = withAuth(async (
   user,
   { tenant },
   mappingId: string
-): Promise<number> => {
-  const { knex } = await createTenantKnex();
-  if (!await hasPermission(user, 'project', 'read', knex)) {
-    throw new Error('Permission denied: Cannot read project');
-  }
-
-  await withTransaction(knex, async (trx) => {
-    const mapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
-      .where({ project_status_mapping_id: mappingId })
-      .first();
-
-    if (!mapping) {
-      throw new Error('Status mapping not found');
+): Promise<number | ProjectTaskStatusActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+    if (!await hasPermission(user, 'project', 'read', knex)) {
+      throw new Error('Permission denied: Cannot read project');
     }
-    await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, mapping.project_id);
-  });
 
-  const result = await tenantScopedTable(knex, 'project_tasks', tenant)
-    .where({ project_status_mapping_id: mappingId })
-    .count('* as count')
-    .first();
-  return parseInt(result?.count as string) || 0;
+    await withTransaction(knex, async (trx) => {
+      const mapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+        .where({ project_status_mapping_id: mappingId })
+        .first();
+
+      if (!mapping) {
+        throw new Error('Status mapping not found');
+      }
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, mapping.project_id);
+    });
+
+    const result = await tenantScopedTable(knex, 'project_tasks', tenant)
+      .where({ project_status_mapping_id: mappingId })
+      .count('* as count')
+      .first();
+    return parseInt(result?.count as string) || 0;
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -533,15 +624,16 @@ export const deleteProjectStatusMapping = withAuth(async (
   { tenant },
   mappingId: string,
   moveTasksToMappingId?: string
-): Promise<void> => {
-  if (!await hasPermission(user, 'project', 'update')) {
-    throw new Error('Permission denied: Cannot update project');
-  }
+): Promise<void | ProjectTaskStatusActionError> => {
+  try {
+    if (!await hasPermission(user, 'project', 'update')) {
+      throw new Error('Permission denied: Cannot update project');
+    }
 
-  const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx) => {
-    const mapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+    return await withTransaction(knex, async (trx) => {
+      const mapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
       .where({ project_status_mapping_id: mappingId })
       .first();
 
@@ -587,10 +679,17 @@ export const deleteProjectStatusMapping = withAuth(async (
       throw new Error('Cannot delete the last status in a project');
     }
 
-    await tenantScopedTable(trx, 'project_status_mappings', tenant)
-      .where({ project_status_mapping_id: mappingId })
-      .del();
-  });
+      await tenantScopedTable(trx, 'project_status_mappings', tenant)
+        .where({ project_status_mapping_id: mappingId })
+        .del();
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -602,16 +701,17 @@ export const reorderProjectStatuses = withAuth(async (
   projectId: string,
   statusOrder: Array<{ mapping_id: string; display_order: number }>,
   phaseId?: string | null
-): Promise<void> => {
-  // RBAC check
-  if (!await hasPermission(user, 'project', 'update')) {
-    throw new Error('Permission denied: Cannot update project');
-  }
+): Promise<void | ProjectTaskStatusActionError> => {
+  try {
+    // RBAC check
+    if (!await hasPermission(user, 'project', 'update')) {
+      throw new Error('Permission denied: Cannot update project');
+    }
 
-  const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx) => {
-    await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+    return await withTransaction(knex, async (trx) => {
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
     for (const { mapping_id, display_order } of statusOrder) {
       const query = tenantScopedTable(trx, 'project_status_mappings', tenant)
@@ -628,8 +728,14 @@ export const reorderProjectStatuses = withAuth(async (
 
       await query.update({ display_order });
     }
-
-  });
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -640,45 +746,53 @@ export const reorderProjectStatuses = withAuth(async (
 export const getTenantProjectStatuses = withAuth(async (
   user,
   { tenant }
-): Promise<IStatus[]> => {
-  const { knex } = await createTenantKnex();
+): Promise<IStatus[] | ProjectTaskStatusActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  if (!await hasPermission(user, 'project', 'read', knex)) {
-    throw new Error('Permission denied: Cannot read project');
+    if (!await hasPermission(user, 'project', 'read', knex)) {
+      throw new Error('Permission denied: Cannot read project');
+    }
+
+    // First try the new statuses table
+    const regularStatuses = await tenantScopedTable(knex, 'statuses', tenant)
+      .where({ status_type: 'project_task' })
+      .orderBy('order_number');
+
+    console.log(`[getTenantProjectStatuses] Found ${regularStatuses.length} statuses in 'statuses' table for tenant ${tenant}`);
+
+    if (regularStatuses.length > 0) {
+      return regularStatuses;
+    }
+
+    // Fall back to standard_statuses table (old system)
+    const standardStatuses = await tenantDb(knex, tenant).table('standard_statuses')
+      .where({ item_type: 'project_task' })
+      .orderBy('display_order');
+
+    console.log(`[getTenantProjectStatuses] Found ${standardStatuses.length} statuses in 'standard_statuses' table for tenant ${tenant}`);
+
+    // Map standard_statuses to IStatus format for compatibility
+    return standardStatuses.map((s: any) => ({
+      status_id: s.standard_status_id,
+      tenant,
+      name: s.name,
+      status_type: 'project_task',
+      item_type: 'project_task',
+      is_closed: s.is_closed,
+      order_number: s.display_order,
+      color: null, // Standard statuses don't have colors
+      icon: null,
+      created_at: s.created_at,
+      updated_at: s.updated_at,
+    }));
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-
-  // First try the new statuses table
-  const regularStatuses = await tenantScopedTable(knex, 'statuses', tenant)
-    .where({ status_type: 'project_task' })
-    .orderBy('order_number');
-
-  console.log(`[getTenantProjectStatuses] Found ${regularStatuses.length} statuses in 'statuses' table for tenant ${tenant}`);
-
-  if (regularStatuses.length > 0) {
-    return regularStatuses;
-  }
-
-  // Fall back to standard_statuses table (old system)
-  const standardStatuses = await tenantDb(knex, tenant).table('standard_statuses')
-    .where({ item_type: 'project_task' })
-    .orderBy('display_order');
-
-  console.log(`[getTenantProjectStatuses] Found ${standardStatuses.length} statuses in 'standard_statuses' table for tenant ${tenant}`);
-
-  // Map standard_statuses to IStatus format for compatibility
-  return standardStatuses.map((s: any) => ({
-    status_id: s.standard_status_id,
-    tenant,
-    name: s.name,
-    status_type: 'project_task',
-    item_type: 'project_task',
-    is_closed: s.is_closed,
-    order_number: s.display_order,
-    color: null, // Standard statuses don't have colors
-    icon: null,
-    created_at: s.created_at,
-    updated_at: s.updated_at,
-  }));
 });
 
 /**
@@ -688,16 +802,17 @@ export const createTenantProjectStatus = withAuth(async (
   user,
   { tenant },
   statusData: { name: string; is_closed: boolean; color?: string; icon?: string }
-): Promise<IStatus> => {
-  // RBAC check
-  if (!await hasPermission(user, 'project', 'update')) {
-    throw new Error('Permission denied: Cannot update project');
-  }
+): Promise<IStatus | ProjectTaskStatusActionError> => {
+  try {
+    // RBAC check
+    if (!await hasPermission(user, 'project', 'update')) {
+      throw new Error('Permission denied: Cannot update project');
+    }
 
-  const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx) => {
-    // Use advisory lock to serialize status creation for this tenant/type combination
+    return await withTransaction(knex, async (trx) => {
+      // Use advisory lock to serialize status creation for this tenant/type combination
     // Create a hash from tenant + item_type + status_type for the lock key
     const lockKey = `${tenant}:project_task:project_task`;
 
@@ -741,9 +856,16 @@ export const createTenantProjectStatus = withAuth(async (
       })
       .returning('*');
 
-    return status;
-    // Advisory lock automatically released at transaction end
-  });
+      return status;
+      // Advisory lock automatically released at transaction end
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -754,17 +876,25 @@ export const updateTenantProjectStatus = withAuth(async (
   { tenant },
   statusId: string,
   updates: { name?: string; is_closed?: boolean; color?: string; icon?: string }
-): Promise<void> => {
-  // RBAC check
-  if (!await hasPermission(user, 'project', 'update')) {
-    throw new Error('Permission denied: Cannot update project');
+): Promise<void | ProjectTaskStatusActionError> => {
+  try {
+    // RBAC check
+    if (!await hasPermission(user, 'project', 'update')) {
+      throw new Error('Permission denied: Cannot update project');
+    }
+
+    const { knex } = await createTenantKnex();
+
+    await tenantScopedTable(knex, 'statuses', tenant)
+      .where({ status_id: statusId, status_type: 'project_task' })
+      .update(updates);
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-
-  const { knex } = await createTenantKnex();
-
-  await tenantScopedTable(knex, 'statuses', tenant)
-    .where({ status_id: statusId, status_type: 'project_task' })
-    .update(updates);
 });
 
 export const validateTenantProjectStatusDeletion = withAuth(async (
@@ -796,16 +926,17 @@ export const deleteTenantProjectStatus = withAuth(async (
   user,
   { tenant },
   statusId: string
-): Promise<void> => {
-  // RBAC check
-  if (!await hasPermission(user, 'project', 'update')) {
-    throw new Error('Permission denied: Cannot update project');
-  }
+): Promise<void | ProjectTaskStatusActionError> => {
+  try {
+    // RBAC check
+    if (!await hasPermission(user, 'project', 'update')) {
+      throw new Error('Permission denied: Cannot update project');
+    }
 
-  const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx) => {
-    const validation = await buildTenantProjectStatusDeletionValidation(trx, tenant, statusId);
+    return await withTransaction(knex, async (trx) => {
+      const validation = await buildTenantProjectStatusDeletionValidation(trx, tenant, statusId);
     if (!validation.canDelete) {
       const dependencyDetails = validation.dependencies
         .map((dependency) => dependency.description)
@@ -815,10 +946,17 @@ export const deleteTenantProjectStatus = withAuth(async (
     }
 
     // Delete the status
-    await tenantScopedTable(trx, 'statuses', tenant)
-      .where({ status_id: statusId, status_type: 'project_task' })
-      .del();
-  });
+      await tenantScopedTable(trx, 'statuses', tenant)
+        .where({ status_id: statusId, status_type: 'project_task' })
+        .del();
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -828,22 +966,30 @@ export const reorderTenantProjectStatuses = withAuth(async (
   user,
   { tenant },
   statusOrder: Array<{ status_id: string; order_number: number }>
-): Promise<void> => {
-  // RBAC check
-  if (!await hasPermission(user, 'project', 'update')) {
-    throw new Error('Permission denied: Cannot update project');
-  }
-
-  const { knex } = await createTenantKnex();
-
-  return await withTransaction(knex, async (trx) => {
-    for (const { status_id, order_number } of statusOrder) {
-      await tenantScopedTable(trx, 'statuses', tenant)
-        .where({
-          status_id,
-          status_type: 'project_task'
-        })
-        .update({ order_number });
+): Promise<void | ProjectTaskStatusActionError> => {
+  try {
+    // RBAC check
+    if (!await hasPermission(user, 'project', 'update')) {
+      throw new Error('Permission denied: Cannot update project');
     }
-  });
+
+    const { knex } = await createTenantKnex();
+
+    return await withTransaction(knex, async (trx) => {
+      for (const { status_id, order_number } of statusOrder) {
+        await tenantScopedTable(trx, 'statuses', tenant)
+          .where({
+            status_id,
+            status_type: 'project_task'
+          })
+          .update({ order_number });
+      }
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });

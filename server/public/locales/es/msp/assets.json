@@ -1004,7 +1004,8 @@
     "description": "Panel de notas de texto enriquecido para notas específicas de activos y contexto operativo rápido",
     "errors": {
       "loadTitle": "No se pudieron cargar las notas",
-      "unknown": "Error desconocido"
+      "unknown": "Error desconocido",
+      "loadDescription": "Could not load notes. Please try again."
     },
     "lastUpdated": "Última actualización: {{value}}"
   },

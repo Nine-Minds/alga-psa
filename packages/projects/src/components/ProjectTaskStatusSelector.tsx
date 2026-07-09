@@ -6,6 +6,11 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { ChevronUp, ChevronDown, Plus, X, ChevronRight, Circle } from 'lucide-react';
 import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
 import { createTenantProjectStatus } from '../actions/projectTaskStatusActions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
 
 interface ProjectTaskStatusSelectorProps {
@@ -15,6 +20,10 @@ interface ProjectTaskStatusSelectorProps {
   phaseId?: string | null;
   onStatusCreated?: (status: IStatus) => void;
   error?: string;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export function ProjectTaskStatusSelector({
@@ -369,9 +378,13 @@ export function ProjectTaskStatusSelector({
         onOpenChange={setShowQuickAddStatus}
         onStatusCreated={handleStatusCreated}
         statusType="project_task"
-        createStatus={async ({ name, isClosed, color }) =>
-          createTenantProjectStatus({ name, is_closed: isClosed, color })
-        }
+        createStatus={async ({ name, isClosed, color }) => {
+          const result = await createTenantProjectStatus({ name, is_closed: isClosed, color });
+          if (isReturnedActionError(result)) {
+            throw new Error(getErrorMessage(result));
+          }
+          return result;
+        }}
         existingStatuses={availableStatuses}
       />
     </div>

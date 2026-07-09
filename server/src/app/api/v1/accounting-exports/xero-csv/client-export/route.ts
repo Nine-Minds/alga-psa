@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     logger.error('[XeroCsvClientExport] Error', { error: error.message });
     return NextResponse.json(
-      { error: error.message ?? 'Internal server error' },
+      { error: 'Failed to export Xero CSV client data.' },
       { status: 500 }
     );
   }

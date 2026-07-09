@@ -52,7 +52,7 @@ export const getRmmIntegrationStatuses = withAuth(async (user, { tenant }): Prom
     }
 
     return { success: true, statuses };
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  } catch {
+    return { success: false, error: 'Unable to load RMM integration statuses.' };
   }
 });

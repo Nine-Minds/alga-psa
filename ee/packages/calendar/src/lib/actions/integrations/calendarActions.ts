@@ -54,6 +54,48 @@ function isClientPortalUser(user: AuthenticatedUser): boolean {
   return user?.user_type === 'client';
 }
 
+function calendarActionErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  const lowerMessage = message.toLowerCase();
+
+  if (!message) {
+    return fallback;
+  }
+
+  if (
+    lowerMessage.includes('forbidden') ||
+    lowerMessage.includes('permission') ||
+    lowerMessage.includes('not owned')
+  ) {
+    return 'Permission denied: calendar provider not found or not owned by user.';
+  }
+
+  if (
+    lowerMessage.includes('oauth tokens not found') ||
+    lowerMessage.includes('no refresh token') ||
+    lowerMessage.includes('credentials not configured') ||
+    lowerMessage.includes('invalid_grant') ||
+    lowerMessage.includes('unauthorized') ||
+    lowerMessage.includes('401')
+  ) {
+    return 'Calendar authentication failed. Reconnect the calendar provider and try again.';
+  }
+
+  if (
+    lowerMessage.includes('webhook') ||
+    lowerMessage.includes('subscription') ||
+    lowerMessage.includes('notification url')
+  ) {
+    return 'Calendar webhook setup failed. Check the calendar permissions and webhook URL, then try again.';
+  }
+
+  if (lowerMessage.includes('provider not found')) {
+    return 'Calendar provider not found.';
+  }
+
+  return fallback;
+}
+
 async function getOwnedCalendarProviderOrNull(params: {
   tenant: string;
   userId: string;
@@ -174,7 +216,7 @@ export async function initiateCalendarOAuthImpl(
       state: encodedState,
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to initiate OAuth' };
+    return { success: false, error: calendarActionErrorMessage(err, 'Failed to initiate calendar OAuth.') };
   }
 }
 
@@ -195,7 +237,7 @@ export async function getCalendarProvidersImpl(
 
     return { success: true, providers };
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to fetch calendar providers' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to fetch calendar providers.') };
   }
 }
 
@@ -276,7 +318,7 @@ export async function createCalendarProviderImpl(
         // fall through
       }
     }
-    return { success: false, error: error?.message || 'Failed to create calendar provider' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to create calendar provider.') };
   }
 }
 
@@ -303,7 +345,7 @@ export async function updateCalendarProviderImpl(
 
     return { success: true, provider };
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to update calendar provider' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to update calendar provider.') };
   }
 }
 
@@ -328,7 +370,7 @@ export async function deleteCalendarProviderImpl(
 
     return { success: true };
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to delete calendar provider' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to delete calendar provider.') };
   }
 }
 
@@ -352,7 +394,7 @@ export async function syncScheduleEntryToCalendarImpl(
     const syncService = new CalendarSyncService();
     return await syncService.syncScheduleEntryToExternal(entryId, calendarProviderId);
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to sync schedule entry' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to sync schedule entry.') };
   }
 }
 
@@ -376,7 +418,7 @@ export async function syncExternalEventToScheduleImpl(
     const syncService = new CalendarSyncService();
     return await syncService.syncExternalEventToSchedule(externalEventId, calendarProviderId);
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to sync external event' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to sync external event.') };
   }
 }
 
@@ -412,7 +454,7 @@ export async function resolveCalendarConflictImpl(
       resolution.mergeData
     );
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to resolve conflict' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to resolve calendar conflict.') };
   }
 }
 
@@ -468,7 +510,7 @@ export async function getScheduleEntrySyncStatusImpl(
 
     return { success: true, status: statuses };
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to get sync status' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to get calendar sync status.') };
   }
 }
 
@@ -602,7 +644,7 @@ export async function syncCalendarProviderImpl(
                 await adapter.registerWebhookSubscription();
               } catch (subscriptionError: any) {
                 failures.push(
-                  `Webhook registration failed: ${subscriptionError?.message || 'unknown error'}`
+                  `Webhook registration failed: ${calendarActionErrorMessage(subscriptionError, 'Calendar webhook setup failed.')}`
                 );
               }
             }
@@ -629,7 +671,7 @@ export async function syncCalendarProviderImpl(
           console.warn(`[calendarActions] Background sync completed with errors in ${duration}ms: ${summary}`);
         }
       } catch (error: any) {
-        const message = error?.message || 'Failed to sync calendar provider';
+        const message = calendarActionErrorMessage(error, 'Failed to sync calendar provider.');
         console.error('[calendarActions] Background sync failed:', error);
         try {
           await providerService.updateProviderStatus(calendarProviderId, {
@@ -644,7 +686,7 @@ export async function syncCalendarProviderImpl(
 
     return { success: true, started: true };
   } catch (error: any) {
-    return { success: false, error: error?.message || 'Failed to start calendar sync' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to start calendar sync.') };
   }
 }
 
@@ -697,6 +739,6 @@ export async function retryMicrosoftCalendarSubscriptionRenewalImpl(
     return { success: false, error: result.error || 'Renewal failed' };
   } catch (error: any) {
     console.error('[calendarActions] Manual renewal failed:', error);
-    return { success: false, error: error.message || 'Internal server error' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Calendar subscription renewal failed.') };
   }
 }

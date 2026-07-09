@@ -4,6 +4,7 @@ import type { ITicketListFilters, ITicketListItem, ITag } from '@alga-psa/types'
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { getTicketsForList } from './optimizedTicketActions';
+import type { TicketActionError } from './ticketActionErrors';
 
 const MAX_EXPORT_ROWS = 10000;
 
@@ -87,6 +88,18 @@ interface NameLookups {
   contacts: Record<string, string>;
   users: Record<string, string>;
   categories: Record<string, string>;
+}
+
+function isTicketActionError(value: unknown): value is TicketActionError {
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (
+      typeof candidate.actionError === 'string' ||
+      typeof candidate.permissionError === 'string'
+    )
+  );
 }
 
 function ticketToRow(
@@ -211,8 +224,11 @@ export const exportTicketsToCSV = withAuth(async (
   filters: ITicketListFilters,
   selectedFields?: string[],
   ticketIds?: string[]
-): Promise<{ csv: string; count: number }> => {
+): Promise<{ csv: string; count: number } | TicketActionError> => {
   const result = await getTicketsForList(filters, 1, MAX_EXPORT_ROWS);
+  if (isTicketActionError(result)) {
+    return result;
+  }
 
   // Filter to only selected tickets if IDs are provided
   const tickets = ticketIds && ticketIds.length > 0

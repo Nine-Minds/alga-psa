@@ -158,7 +158,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, recorded: true, outcome: result.outcome }, { status: 200 });
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Webhook error' }, { status: 500 });
+    console.error('[Level.io webhook] Failed to process webhook:', err);
+    return NextResponse.json({ error: 'Webhook could not be processed.' }, { status: 500 });
   }
 }
 

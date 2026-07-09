@@ -8,11 +8,23 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import { IStatus, ItemType } from '@alga-psa/types';
 import { createWorkItemStatusNameFilterValue } from './workItemStatusFilter';
+import { actionError } from '@alga-psa/ui/lib/errorHandling';
+import { statusActionErrorFrom, type StatusActionError } from './statusActionErrors';
 
 type StatusSearchEventType = 'STATUS_CREATED' | 'STATUS_UPDATED' | 'STATUS_DELETED';
 
 const statusesQuery = (trx: Knex | Knex.Transaction, tenant: string) =>
   tenantDb(trx, tenant).table<IStatus>('statuses');
+
+function statusDeleteErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (message === 'Status not found') {
+    return message;
+  }
+
+  return 'Failed to delete status';
+}
 
 // Keeps the app-wide search index in sync when project / project_task statuses
 // change. Failures are swallowed: the daily search reconcile job is the backstop.
@@ -95,13 +107,13 @@ export const getTicketStatuses = withAuth(async (_user, { tenant }, boardId?: st
   }
 });
 
-export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<IStatus, 'status_id' | 'tenant'>): Promise<IStatus> => {
+export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<IStatus, 'status_id' | 'tenant'>): Promise<IStatus | StatusActionError> => {
   if (!statusData.name || statusData.name.trim() === '') {
-    throw new Error('Status name is required');
+    return actionError('Status name is required');
   }
 
   if (statusData.status_type === ('ticket' as ItemType)) {
-    throw new Error('Ticket statuses must be managed from board settings');
+    return actionError('Ticket statuses must be managed from board settings');
   }
 
   const {knex: db} = await createTenantKnex();
@@ -182,20 +194,19 @@ export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<I
 
   } catch (error) {
     console.error('Error creating status:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to create status');
+    const expected = statusActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const updateStatus = withAuth(async (_user, { tenant }, statusId: string, statusData: Partial<IStatus>) => {
+export const updateStatus = withAuth(async (_user, { tenant }, statusId: string, statusData: Partial<IStatus>): Promise<IStatus | StatusActionError> => {
   if (!statusId) {
-    throw new Error('Status ID is required');
+    return actionError('Status ID is required');
   }
 
   if (statusData.name && statusData.name.trim() === '') {
-    throw new Error('Status name cannot be empty');
+    return actionError('Status name cannot be empty');
   }
 
   const {knex: db} = await createTenantKnex();
@@ -295,10 +306,9 @@ export const updateStatus = withAuth(async (_user, { tenant }, statusId: string,
     return updatedStatus;
   } catch (error) {
     console.error('Error updating status:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to update status');
+    const expected = statusActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -311,7 +321,7 @@ export interface StatusOption {
   className?: string;
 }
 
-export const getWorkItemStatusOptions = withAuth(async (_user, { tenant }, itemType?: ItemType | ItemType[]): Promise<StatusOption[]> => {
+export const getWorkItemStatusOptions = withAuth(async (_user, { tenant }, itemType?: ItemType | ItemType[]): Promise<StatusOption[] | StatusActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -357,7 +367,9 @@ export const getWorkItemStatusOptions = withAuth(async (_user, { tenant }, itemT
 
   } catch (error) {
     console.error('Error fetching work item status options:', error);
-    throw new Error('Failed to fetch work item status options');
+    const expected = statusActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -429,7 +441,7 @@ export const deleteStatus = withAuth(async (
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: error instanceof Error ? error.message : 'Failed to delete status',
+      message: statusDeleteErrorMessage(error),
       dependencies: [],
       alternatives: []
     };

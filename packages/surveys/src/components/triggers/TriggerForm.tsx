@@ -20,6 +20,13 @@ import {
 } from '@alga-psa/surveys/actions/surveyActions';
 import type { IBoard, IPriority, IStatus } from '@alga-psa/types';
 import { useTriggerReferenceData } from '../hooks/useTriggerReferenceData';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 import type { SurveyTriggerConditions } from '@alga-psa/surveys/actions/surveyActions';
 
@@ -47,6 +54,8 @@ const TRIGGER_TYPE_FALLBACK_LABELS: Record<TriggerType, string> = {
   ticket_closed: 'Ticket closed',
   project_completed: 'Project completed',
 };
+const isSurveyActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface SelectionChipsProps {
   items: string[];
@@ -397,12 +406,16 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
       let result: SurveyTrigger;
 
       if (trigger) {
-        result = await updateSurveyTrigger(trigger.triggerId, {
+        const updated = await updateSurveyTrigger(trigger.triggerId, {
           templateId: formState.templateId,
           triggerType: formState.triggerType,
           triggerConditions: payloadConditions,
           enabled: formState.enabled,
         });
+        if (isSurveyActionError(updated)) {
+          throw new Error(getErrorMessage(updated));
+        }
+        result = updated;
         toast({
           title: t('settings.triggerList.toasts.updated', {
             defaultValue: 'Trigger updated',
@@ -410,12 +423,16 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           description: templateDescription,
         });
       } else {
-        result = await createSurveyTrigger({
+        const created = await createSurveyTrigger({
           templateId: formState.templateId,
           triggerType: formState.triggerType,
           triggerConditions: payloadConditions,
           enabled: formState.enabled,
         });
+        if (isSurveyActionError(created)) {
+          throw new Error(getErrorMessage(created));
+        }
+        result = created;
         toast({
           title: t('settings.triggerList.toasts.created', {
             defaultValue: 'Trigger created',
@@ -456,7 +473,10 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
 
     setIsDeleting(true);
     try {
-      await deleteSurveyTrigger(trigger.triggerId);
+      const result = await deleteSurveyTrigger(trigger.triggerId);
+      if (isSurveyActionError(result)) {
+        throw new Error(getErrorMessage(result));
+      }
       toast({
         title: t('settings.triggerList.toasts.deleted', {
           defaultValue: 'Trigger deleted',

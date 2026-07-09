@@ -65,8 +65,8 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
       setCompanies(companiesResult);
       setContacts(contactsResult ?? []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('integrations.rmm.ninjaone.errors.load', { defaultValue: 'Failed to load organization mappings' });
-      setError(message);
+      console.error('Failed to load NinjaOne organization mappings:', err);
+      setError(t('integrations.rmm.ninjaone.errors.load', { defaultValue: 'Failed to load organization mappings' }));
     } finally {
       setIsLoading(false);
     }
@@ -105,8 +105,8 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
           setError(result.errors?.join('; ') ?? t('integrations.rmm.ninjaone.errors.sync', { defaultValue: 'Failed to sync organizations' }));
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : t('integrations.rmm.ninjaone.errors.sync', { defaultValue: 'Failed to sync organizations' });
-        setError(message);
+        console.error('NinjaOne organization sync failed:', err);
+        setError(t('integrations.rmm.ninjaone.errors.sync', { defaultValue: 'Failed to sync organizations' }));
       }
     });
   };
@@ -135,8 +135,8 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
         setError(result.error ?? t('integrations.rmm.ninjaone.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('integrations.rmm.ninjaone.errors.updateMapping', { defaultValue: 'Failed to update mapping' });
-      setError(message);
+      console.error('NinjaOne organization mapping update failed:', err);
+      setError(t('integrations.rmm.ninjaone.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
     } finally {
       setSavingMappingId(null);
     }
@@ -164,8 +164,8 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
         setError(result.error ?? t('integrations.rmm.ninjaone.errors.updateContact', { defaultValue: 'Failed to update default contact' }));
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('integrations.rmm.ninjaone.errors.updateContact', { defaultValue: 'Failed to update default contact' });
-      setError(message);
+      console.error('NinjaOne default contact update failed:', err);
+      setError(t('integrations.rmm.ninjaone.errors.updateContact', { defaultValue: 'Failed to update default contact' }));
     } finally {
       setSavingMappingId(null);
     }
@@ -190,8 +190,8 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
         setError(result.error ?? t('integrations.rmm.ninjaone.errors.updateAutoSync', { defaultValue: 'Failed to update auto-sync setting' }));
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('integrations.rmm.ninjaone.errors.updateAutoSync', { defaultValue: 'Failed to update auto-sync setting' });
-      setError(message);
+      console.error('NinjaOne auto-sync update failed:', err);
+      setError(t('integrations.rmm.ninjaone.errors.updateAutoSync', { defaultValue: 'Failed to update auto-sync setting' }));
     } finally {
       setSavingMappingId(null);
     }

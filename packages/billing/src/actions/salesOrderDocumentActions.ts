@@ -11,7 +11,12 @@ import {
   buildSalesOrderConfirmationEmailContent,
   dedupeRecipients,
 } from '../lib/salesOrderConfirmationEmail';
-import { SalesOrderDocumentError } from '../lib/salesOrderDocumentError';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * Generate a Sales Order document (Phase 1: the standard Order Confirmation) as a PDF.
@@ -19,6 +24,7 @@ import { SalesOrderDocumentError } from '../lib/salesOrderDocumentError';
  * Lives in billing because the render pipeline does; inventory cannot depend on billing.
  */
 export type SalesOrderDocumentType = 'sales-order' | 'packing-slip' | 'pick-list';
+export type SalesOrderDocumentActionError = ActionMessageError | ActionPermissionError;
 
 // Note: a 'use server' file may only export async functions (plus erased types) — no object/const
 // exports, or Next throws "use server file can only export async functions".
@@ -28,25 +34,23 @@ export const downloadSalesOrderPDF = withAuth(
     { tenant },
     soId: string,
     documentType: SalesOrderDocumentType = 'sales-order',
-  ): Promise<{ pdfData: number[]; soNumber: string; documentType: SalesOrderDocumentType }> => {
+  ): Promise<{ pdfData: number[]; soNumber: string; documentType: SalesOrderDocumentType } | SalesOrderDocumentActionError> => {
     const { t } = await getServerTranslation(undefined, 'features/inventory');
 
     if (!(await hasPermission(user, 'sales_order', 'read'))) {
-      throw new SalesOrderDocumentError(
+      return permissionError(
         t(
           'salesOrders.errors.downloadPermissionDenied',
           'Permission denied: cannot download sales order documents',
         ),
-        'permission_denied',
       );
     }
 
     const { knex } = await createTenantKnex();
     const so = await knex('sales_orders').where({ tenant, so_id: soId }).first();
     if (!so) {
-      throw new SalesOrderDocumentError(
+      return actionError(
         t('salesOrders.errors.notFound', 'Sales order not found'),
-        'not_found',
       );
     }
 
@@ -98,22 +102,24 @@ export const emailSalesOrderConfirmation = withAuth(
     const { t } = await getServerTranslation(undefined, 'features/inventory');
 
     if (!(await hasPermission(user, 'sales_order', 'update'))) {
-      throw new SalesOrderDocumentError(
-        t(
+      return {
+        success: false,
+        recipients: [],
+        error: t(
           'salesOrders.errors.emailPermissionDenied',
           'Permission denied: cannot email sales order documents',
         ),
-        'permission_denied',
-      );
+      };
     }
 
     const { knex } = await createTenantKnex();
     const so = await knex('sales_orders').where({ tenant, so_id: soId }).first();
     if (!so) {
-      throw new SalesOrderDocumentError(
-        t('salesOrders.errors.notFound', 'Sales order not found'),
-        'not_found',
-      );
+      return {
+        success: false,
+        recipients: [],
+        error: t('salesOrders.errors.notFound', 'Sales order not found'),
+      };
     }
 
     const { recipients, clientName } = await resolveSalesOrderRecipients(

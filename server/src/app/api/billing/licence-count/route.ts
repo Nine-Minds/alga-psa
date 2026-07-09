@@ -43,16 +43,25 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    const data = JSON.parse(body);
+    let data: { tenant_id?: unknown; license_count?: unknown; event_id?: unknown };
+    try {
+      data = JSON.parse(body);
+    } catch {
+      return NextResponse.json(
+        { error: 'Request body must be valid JSON' },
+        { status: 400 }
+      );
+    }
     const { tenant_id, license_count, event_id } = data;
     
     // Validate input
-    if (!tenant_id || typeof license_count !== 'number') {
+    if (typeof tenant_id !== 'string' || !tenant_id.trim() || typeof license_count !== 'number') {
       return NextResponse.json(
         { error: 'Invalid input: tenant_id and license_count are required' },
         { status: 400 }
       );
     }
+    const eventId = typeof event_id === 'string' && event_id.trim() ? event_id.trim() : null;
     
     console.log(`Updating license count for tenant ${tenant_id} to ${license_count}`);
     
@@ -61,17 +70,17 @@ export async function POST(req: NextRequest) {
     await knex.transaction(async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant_id);
       // Check for idempotency if event ID is provided
-      if (event_id) {
+      if (eventId) {
         const existing = await db.table('tenants')
-          .where({ 
-            stripe_event_id: event_id 
+          .where({
+            stripe_event_id: eventId
           })
           .first();
-        
+
         if (existing) {
-          console.log('Event already processed, skipping update', { 
+          console.log('Event already processed, skipping update', {
             tenantId: tenant_id,
-            eventId: event_id 
+            eventId
           });
           return;
         }
@@ -82,12 +91,12 @@ export async function POST(req: NextRequest) {
         .update({
           licensed_user_count: license_count,
           last_license_update: knex.fn.now(),
-          stripe_event_id: event_id || null,
+          stripe_event_id: eventId,
           updated_at: knex.fn.now()
         });
       
       if (result === 0) {
-        throw new Error(`Tenant not found: ${tenant_id}`);
+        throw new TenantLicenseTargetNotFoundError(tenant_id);
       }
       
       console.log(`Successfully updated tenant ${tenant_id} license count to ${license_count}`);
@@ -103,9 +112,9 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error updating license count:', error);
     
-    if (error instanceof Error && error.message.includes('Tenant not found')) {
+    if (error instanceof TenantLicenseTargetNotFoundError) {
       return NextResponse.json(
-        { error: error.message },
+        { error: 'License target not found.' },
         { status: 404 }
       );
     }
@@ -114,6 +123,13 @@ export async function POST(req: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  }
+}
+
+class TenantLicenseTargetNotFoundError extends Error {
+  constructor(tenantId: string) {
+    super(`Tenant not found: ${tenantId}`);
+    this.name = 'TenantLicenseTargetNotFoundError';
   }
 }
 

@@ -253,7 +253,8 @@
       "secondaryApproverRequired": "Voer de naam en het e-mailadres van de secundaire goedkeurder in",
       "invalidVerificationCode": "Ongeldige verificatiecode",
       "unknown": "Er is een onbekende fout opgetreden",
-      "reportNotFound": "Afstemmingsrapport niet gevonden. Het rapport is mogelijk verwijderd of u heeft mogelijk geen toestemming om het te bekijken."
+      "reportNotFound": "Afstemmingsrapport niet gevonden. Het rapport is mogelijk verwijderd of u heeft mogelijk geen toestemming om het te bekijken.",
+      "resolveFailed": "Failed to resolve reconciliation report."
     }
   },
   "discrepancy": {
@@ -334,7 +335,8 @@
       "resolveReport": "Rapport oplossen"
     },
     "errors": {
-      "unknown": "Er is een onbekende fout opgetreden"
+      "unknown": "Er is een onbekende fout opgetreden",
+      "resolveFailed": "Failed to resolve reconciliation report. Please refresh and try again."
     }
   },
   "recommendedFix": {
@@ -387,7 +389,8 @@
     "errors": {
       "notesRequired": "Geef opmerkingen op waarin de reden voor deze correctie wordt uitgelegd",
       "invalidAmount": "Voer een geldig bedrag in",
-      "unknown": "Er is een onbekende fout opgetreden"
+      "unknown": "Er is een onbekende fout opgetreden",
+      "applyFailed": "Failed to apply reconciliation fix. Please refresh and try again."
     }
   },
   "usage": {

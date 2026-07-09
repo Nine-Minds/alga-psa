@@ -20,6 +20,11 @@ import {
 import ChartSkeleton from '@alga-psa/ui/components/skeletons/ChartSkeleton';
 import { BucketUsageChart } from '@alga-psa/ui/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type {
   PolarAngleAxisProps,
   RadialBarProps,
@@ -31,6 +36,9 @@ import type { CategoricalChartProps } from 'recharts/types/chart/generateCategor
 // Keep the cast bounded to each exported prop type instead of erasing props to any.
 const rechartsComponent = <P,>(component: unknown): React.ComponentType<P> =>
   component as React.ComponentType<P>;
+
+const isReturnedActionError = (value: unknown): value is { actionError: string } | { permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const ResponsiveContainer = dynamic<ResponsiveContainerProps>(
   () => import('recharts').then(mod => rechartsComponent<ResponsiveContainerProps>(mod.ResponsiveContainer)),
@@ -224,12 +232,23 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
   const [hoursError, setHoursError] = useState(false);
   const [bucketsError, setBucketsError] = useState(false);
   const [usageError, setUsageError] = useState(false);
+  const [invoicesErrorMessage, setInvoicesErrorMessage] = useState<string | null>(null);
+  const [hoursErrorMessage, setHoursErrorMessage] = useState<string | null>(null);
+  const [bucketsErrorMessage, setBucketsErrorMessage] = useState<string | null>(null);
+  const [usageErrorMessage, setUsageErrorMessage] = useState<string | null>(null);
 
   const fetchInvoices = useCallback(async () => {
     try {
       setLoadingInvoices(true);
       setInvoicesError(false);
+      setInvoicesErrorMessage(null);
       const fetchedInvoices = await getRecentClientInvoices({ clientId }); // Default limit is 10
+      if (isReturnedActionError(fetchedInvoices)) {
+        setInvoices([]);
+        setInvoicesErrorMessage(getErrorMessage(fetchedInvoices));
+        setInvoicesError(true);
+        return;
+      }
       setInvoices(fetchedInvoices);
     } catch (error) {
       console.error("Error fetching recent invoices:", error);
@@ -245,12 +264,19 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
     try {
       setLoadingHours(true);
       setHoursError(false);
+      setHoursErrorMessage(null);
       const fetchedHours = await getHoursByServiceType({
         clientId,
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
         groupByServiceType: false // Explicitly set to false
       });
+      if (isReturnedActionError(fetchedHours)) {
+        setHoursData([]);
+        setHoursErrorMessage(getErrorMessage(fetchedHours));
+        setHoursError(true);
+        return;
+      }
       setHoursData(fetchedHours);
     } catch (error) {
       console.error("Error fetching hours by service:", error);
@@ -266,11 +292,18 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
     try {
       setLoadingBuckets(true);
       setBucketsError(false);
+      setBucketsErrorMessage(null);
       const currentDate = format(new Date(), 'yyyy-MM-dd'); // Get current date in YYYY-MM-DD format
       const fetchedBuckets = await getRemainingBucketUnits({
         clientId,
         currentDate,
       });
+      if (isReturnedActionError(fetchedBuckets)) {
+        setBucketData([]);
+        setBucketsErrorMessage(getErrorMessage(fetchedBuckets));
+        setBucketsError(true);
+        return;
+      }
       setBucketData(fetchedBuckets);
     } catch (error) {
       console.error("Error fetching bucket usage:", error);
@@ -286,11 +319,18 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
     try {
       setLoadingUsage(true);
       setUsageError(false);
+      setUsageErrorMessage(null);
       const fetchedUsage = await getUsageDataMetrics({
         clientId,
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
       });
+      if (isReturnedActionError(fetchedUsage)) {
+        setUsageData([]);
+        setUsageErrorMessage(getErrorMessage(fetchedUsage));
+        setUsageError(true);
+        return;
+      }
       setUsageData(fetchedUsage);
     } catch (error) {
       console.error("Error fetching usage metrics:", error);
@@ -321,7 +361,7 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
               <Skeleton className="h-8 w-full" />
             </div>
           ) : invoicesError ? (
-            <SectionLoadError id="client-dashboard-invoices-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={fetchInvoices} />
+            <SectionLoadError id="client-dashboard-invoices-retry" message={invoicesErrorMessage || loadErrorMessage} retryLabel={retryLabel} onRetry={fetchInvoices} />
           ) : invoices.length > 0 ? (
             <DataTable
               id="client-contract-line-dashboard-table"
@@ -351,7 +391,7 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
              <Skeleton className="h-8 w-full" />
            </div>
          ) : hoursError ? (
-           <SectionLoadError id="client-dashboard-hours-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={fetchHours} />
+           <SectionLoadError id="client-dashboard-hours-retry" message={hoursErrorMessage || loadErrorMessage} retryLabel={retryLabel} onRetry={fetchHours} />
          ) : hoursData.length > 0 ? (
            <DataTable
              id="hours-by-service-table"
@@ -382,7 +422,7 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
              ))}
            </div>
          ) : bucketsError ? (
-           <SectionLoadError id="client-dashboard-buckets-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={fetchBuckets} />
+           <SectionLoadError id="client-dashboard-buckets-retry" message={bucketsErrorMessage || loadErrorMessage} retryLabel={retryLabel} onRetry={fetchBuckets} />
          ) : bucketData.length > 0 ? (
            // Render enhanced bucket usage charts in a grid
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -452,7 +492,7 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
              <Skeleton className="h-8 w-full" />
            </div>
          ) : usageError ? (
-           <SectionLoadError id="client-dashboard-usage-retry" message={loadErrorMessage} retryLabel={retryLabel} onRetry={fetchUsage} />
+           <SectionLoadError id="client-dashboard-usage-retry" message={usageErrorMessage || loadErrorMessage} retryLabel={retryLabel} onRetry={fetchUsage} />
          ) : usageData.length > 0 ? (
            <DataTable
              id="usage-metrics-table"

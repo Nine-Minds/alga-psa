@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical } from "lucide-react";
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { getStatuses, deleteStatus, updateStatus } from '@alga-psa/reference-data/actions';
+import { getStatuses, deleteStatus, isStatusActionError, statusActionErrorMessage, updateStatus } from '@alga-psa/reference-data/actions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
 import { IStatus, IStandardStatus } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -99,7 +99,11 @@ const InteractionStatusSettings = (): React.JSX.Element => {
     }
 
     try {
-      await updateStatus(updatedStatus.status_id!, updatedStatus);
+      const result = await updateStatus(updatedStatus.status_id!, updatedStatus);
+      if (isStatusActionError(result)) {
+        toast.error(statusActionErrorMessage(result));
+        return;
+      }
       setStatuses(statuses.map((status): IStatus =>
         status.status_id === updatedStatus.status_id ? updatedStatus : status
       ));

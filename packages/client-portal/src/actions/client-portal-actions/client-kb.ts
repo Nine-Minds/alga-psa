@@ -9,6 +9,7 @@ import type {
   ArticleType,
 } from '@alga-psa/types';
 import { getAuthenticatedClientId } from '../../lib/clientAuth';
+import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 
 export interface ClientKBFilters {
   search?: string;
@@ -42,11 +43,12 @@ export const getClientKBArticles = withAuth(
     page: number = 1,
     pageSize: number = 20,
     filters: ClientKBFilters = {}
-  ): Promise<PaginatedClientKBArticles> => {
-    // Enforce client portal access only
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
-    }
+  ): Promise<PaginatedClientKBArticles | ClientPortalActionError> => {
+    try {
+      // Enforce client portal access only
+      if (user.user_type !== 'client') {
+        throw new Error('Access denied: Client portal actions are restricted to client users');
+      }
 
     // Cap pageSize to prevent excessive queries
     const effectivePageSize = Math.min(Math.max(pageSize, 1), 100);
@@ -70,7 +72,7 @@ export const getClientKBArticles = withAuth(
       throw new Error('Insufficient permissions to view knowledge base');
     }
 
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+      return withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
 
       // Build query for client-visible published articles
@@ -137,7 +139,14 @@ export const getClientKBArticles = withAuth(
         pageSize: effectivePageSize,
         totalPages: Math.ceil(total / effectivePageSize),
       };
-    });
+      });
+    } catch (error) {
+      const expected = clientPortalActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
@@ -151,11 +160,12 @@ export const getClientKBArticle = withAuth(
     user,
     { tenant },
     articleIdOrSlug: string
-  ): Promise<IKBArticleWithDocument | null> => {
-    // Enforce client portal access only
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
-    }
+  ): Promise<IKBArticleWithDocument | null | ClientPortalActionError> => {
+    try {
+      // Enforce client portal access only
+      if (user.user_type !== 'client') {
+        throw new Error('Access denied: Client portal actions are restricted to client users');
+      }
 
     const db = await getConnection(tenant);
 
@@ -176,7 +186,7 @@ export const getClientKBArticle = withAuth(
       throw new Error('Insufficient permissions to view knowledge base');
     }
 
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+      return withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
 
       // Try to find by ID first, then by slug
@@ -224,7 +234,14 @@ export const getClientKBArticle = withAuth(
         ...article,
         view_count: article.view_count + 1,
       } as IKBArticleWithDocument;
-    });
+      });
+    } catch (error) {
+      const expected = clientPortalActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
@@ -237,15 +254,16 @@ export const recordClientKBFeedback = withAuth(
     { tenant },
     articleId: string,
     helpful: boolean
-  ): Promise<boolean> => {
-    // Enforce client portal access only
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
-    }
+  ): Promise<boolean | ClientPortalActionError> => {
+    try {
+      // Enforce client portal access only
+      if (user.user_type !== 'client') {
+        throw new Error('Access denied: Client portal actions are restricted to client users');
+      }
 
     const db = await getConnection(tenant);
 
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+      return withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
 
       // Verify article exists and is accessible
@@ -265,7 +283,14 @@ export const recordClientKBFeedback = withAuth(
         .increment(column, 1);
 
       return true;
-    });
+      });
+    } catch (error) {
+      const expected = clientPortalActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
@@ -277,15 +302,16 @@ export const getClientKBCategories = withAuth(
   async (
     user,
     { tenant }
-  ): Promise<ClientKBCategory[]> => {
-    // Enforce client portal access only
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
-    }
+  ): Promise<ClientKBCategory[] | ClientPortalActionError> => {
+    try {
+      // Enforce client portal access only
+      if (user.user_type !== 'client') {
+        throw new Error('Access denied: Client portal actions are restricted to client users');
+      }
 
     const db = await getConnection(tenant);
 
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+      return withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
 
       // standard_categories is a global reference table (no tenant column) — no tenant filter needed.
@@ -306,7 +332,14 @@ export const getClientKBCategories = withAuth(
         .orderBy('sc.display_order', 'asc');
 
       return categoriesWithArticles as ClientKBCategory[];
-    });
+      });
+    } catch (error) {
+      const expected = clientPortalActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
@@ -317,14 +350,15 @@ export const getClientKBTags = withAuth(
   async (
     user,
     { tenant }
-  ): Promise<Array<{ tag_id: string; tag_text: string; tagged_id: string; tagged_type: string; background_color: string | null; text_color: string | null }>> => {
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
-    }
+  ): Promise<Array<{ tag_id: string; tag_text: string; tagged_id: string; tagged_type: string; background_color: string | null; text_color: string | null }> | ClientPortalActionError> => {
+    try {
+      if (user.user_type !== 'client') {
+        throw new Error('Access denied: Client portal actions are restricted to client users');
+      }
 
     const db = await getConnection(tenant);
 
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+      return withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       const tagMappingsQuery = scopedDb.table('tag_mappings as tm')
         .select(trx.raw('1'))
@@ -350,6 +384,13 @@ export const getClientKBTags = withAuth(
         background_color: tag.background_color,
         text_color: tag.text_color,
       }));
-    });
+      });
+    } catch (error) {
+      const expected = clientPortalActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );

@@ -11,6 +11,11 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { CURRENCY_OPTIONS, toMinorUnits } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { IVendor, IVendorProduct } from '@alga-psa/types';
 import { listVendorProducts, upsertVendorProduct, deleteVendorProduct, listInventoryProducts } from '../actions';
@@ -59,7 +64,13 @@ export function VendorPriceList({
   const load = useCallback(async () => {
     if (!vendor) return;
     try {
-      setOffers(await listVendorProducts({ vendor_id: vendor.vendor_id }));
+      const result = await listVendorProducts({ vendor_id: vendor.vendor_id });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setOffers([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setOffers(result);
     } catch (e: any) {
       toast.error(e?.message || t('vendorPriceList.loadError', "Couldn't load the price list."));
     }
@@ -71,7 +82,14 @@ export function VendorPriceList({
     load();
     if (vendor) {
       listInventoryProducts()
-        .then((rows: any[]) => setProducts(rows.map((r) => ({ service_id: r.service_id, service_name: r.service_name, sku: r.sku }))))
+        .then((rows) => {
+          if (isActionMessageError(rows) || isActionPermissionError(rows)) {
+            setProducts([]);
+            toast.error(getErrorMessage(rows));
+            return;
+          }
+          setProducts(rows.map((r) => ({ service_id: r.service_id, service_name: r.service_name, sku: r.sku })));
+        })
         .catch(() => setProducts([]));
     }
   }, [defaultCurrencyCode, vendor, load]);
@@ -90,7 +108,7 @@ export function VendorPriceList({
     const leadDays = form.lead_time_days.trim() === '' ? null : Number(form.lead_time_days);
     setSaving(true);
     try {
-      await upsertVendorProduct({
+      const result = await upsertVendorProduct({
         vendor_id: vendor.vendor_id,
         service_id: form.service_id,
         vendor_sku: form.vendor_sku.trim() || null,
@@ -99,6 +117,10 @@ export function VendorPriceList({
         lead_time_days: leadDays,
         is_preferred: form.is_preferred,
       });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('vendorPriceList.offerSaved', 'Offer saved.'));
       setForm(emptyOffer(defaultCurrencyCode));
       await load();
@@ -112,7 +134,11 @@ export function VendorPriceList({
   const remove = async (offer: OfferRow) => {
     if (!vendor) return;
     try {
-      await deleteVendorProduct(vendor.vendor_id, offer.service_id);
+      const result = await deleteVendorProduct(vendor.vendor_id, offer.service_id);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('vendorPriceList.offerRemoved', 'Offer removed.'));
       await load();
     } catch (e: any) {

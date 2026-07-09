@@ -9,7 +9,12 @@ import { getCurrentUser, getAllUsersBasic } from '@alga-psa/user-composition/act
 import { getScheduleEntries } from '@alga-psa/scheduling/actions';
 import { getSchedulingInteractionById } from '../../actions/clientInteractionLookupActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+    getErrorMessage,
+    handleError,
+    isActionMessageError,
+    isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import EntryPopup from '@alga-psa/scheduling/components/schedule/EntryPopup';
 import { SchedulingInteractionDetails } from '../shared/SchedulingInteractionDetails';
 import { SchedulingTicketDetails } from '../shared/SchedulingTicketDetails';
@@ -24,6 +29,10 @@ interface WorkItemDetailsDrawerProps {
     onClose: () => void;
     onTaskUpdate: (updatedTask: IProjectTask | null) => Promise<void>;
     onScheduleUpdate: (entryData: Omit<IScheduleEntry, "tenant">) => Promise<void>;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+    return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export function WorkItemDetailsDrawer({
@@ -114,6 +123,11 @@ export function WorkItemDetailsDrawer({
 
                 case 'ad_hoc': {
                     const adHocData = await getWorkItemById(workItem.work_item_id, 'ad_hoc');
+                    if (isReturnedActionError(adHocData)) {
+                        toast.error(getErrorMessage(adHocData));
+                        return null;
+                    }
+
                     if (!adHocData) {
                         toast.error(t('details.toasts.failedToLoadAdHocEntryData', { defaultValue: 'Failed to load ad-hoc entry data' }));
                         return null;

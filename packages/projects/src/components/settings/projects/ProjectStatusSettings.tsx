@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical } from "lucide-react";
-import { getStatuses, deleteStatus, updateStatus } from '@alga-psa/reference-data/actions';
+import { getStatuses, deleteStatus, isStatusActionError, statusActionErrorMessage, updateStatus } from '@alga-psa/reference-data/actions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
 import type { IStatus, IStandardStatus, DeletionValidationResult } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -100,7 +100,11 @@ export function ProjectStatusSettings(): React.JSX.Element {
     }
 
     try {
-      await updateStatus(updatedStatus.status_id!, updatedStatus);
+      const result = await updateStatus(updatedStatus.status_id!, updatedStatus);
+      if (isStatusActionError(result)) {
+        toast.error(statusActionErrorMessage(result));
+        return;
+      }
       setStatuses(statuses.map((status): IStatus =>
         status.status_id === updatedStatus.status_id ? updatedStatus : status
       ));

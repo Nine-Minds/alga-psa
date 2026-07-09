@@ -5,6 +5,11 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import type { IDocument, IDocumentAssociation, IDocumentAssociationInput } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+    assetActionErrorFrom,
+    type AssetActionError,
+} from './assetActionErrors';
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder<any, any> {
     return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
@@ -14,12 +19,12 @@ export const associateDocumentWithAsset = withAuth(async (
     user,
     { tenant },
     input: IDocumentAssociationInput
-): Promise<IDocumentAssociation> => {
+): Promise<IDocumentAssociation | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset updating (document associations are considered update operations)
     if (!await hasPermission(user, 'asset', 'update')) {
-        throw new Error('Permission denied: Cannot associate documents with assets');
+        return permissionError('Permission denied: Cannot associate documents with assets');
     }
 
     try {
@@ -41,7 +46,11 @@ export const associateDocumentWithAsset = withAuth(async (
         return association;
     } catch (error) {
         console.error('Error associating document with asset:', error);
-        throw new Error('Failed to associate document with asset');
+        const expectedError = assetActionErrorFrom(error);
+        if (expectedError) {
+            return expectedError;
+        }
+        throw error;
     }
 });
 
@@ -49,12 +58,12 @@ export const removeDocumentFromAsset = withAuth(async (
     user,
     { tenant },
     association_id: string
-): Promise<void> => {
+): Promise<void | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset deletion
     if (!await hasPermission(user, 'asset', 'delete')) {
-        throw new Error('Permission denied: Cannot remove documents from assets');
+        return permissionError('Permission denied: Cannot remove documents from assets');
     }
 
     try {
@@ -75,7 +84,11 @@ export const removeDocumentFromAsset = withAuth(async (
         });
     } catch (error) {
         console.error('Error removing document from asset:', error);
-        throw new Error('Failed to remove document from asset');
+        const expectedError = assetActionErrorFrom(error);
+        if (expectedError) {
+            return expectedError;
+        }
+        throw error;
     }
 });
 
@@ -83,12 +96,12 @@ export const getAssetDocuments = withAuth(async (
     user,
     { tenant },
     asset_id: string
-): Promise<(IDocument & { association_id: string, notes?: string })[]> => {
+): Promise<(IDocument & { association_id: string, notes?: string })[] | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset reading
     if (!await hasPermission(user, 'asset', 'read')) {
-        throw new Error('Permission denied: Cannot read asset documents');
+        return permissionError('Permission denied: Cannot read asset documents');
     }
 
     try {
@@ -126,7 +139,11 @@ export const getAssetDocuments = withAuth(async (
         });
     } catch (error) {
         console.error('Error getting asset documents:', error);
-        throw new Error('Failed to get asset documents');
+        const expectedError = assetActionErrorFrom(error);
+        if (expectedError) {
+            return expectedError;
+        }
+        throw error;
     }
 });
 
@@ -135,12 +152,12 @@ export const updateAssetDocumentNotes = withAuth(async (
     { tenant },
     association_id: string,
     notes: string
-): Promise<IDocumentAssociation> => {
+): Promise<IDocumentAssociation | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset updating
     if (!await hasPermission(user, 'asset', 'update')) {
-        throw new Error('Permission denied: Cannot update asset document notes');
+        return permissionError('Permission denied: Cannot update asset document notes');
     }
 
     try {
@@ -151,11 +168,17 @@ export const updateAssetDocumentNotes = withAuth(async (
 
         if (association) {
             revalidatePath(`/assets/${association.entity_id}`);
+        } else {
+            return assetActionErrorFrom(new Error('Asset document association not found'))!;
         }
 
         return association;
     } catch (error) {
         console.error('Error updating asset document notes:', error);
-        throw new Error('Failed to update asset document notes');
+        const expectedError = assetActionErrorFrom(error);
+        if (expectedError) {
+            return expectedError;
+        }
+        throw error;
     }
 });

@@ -18,6 +18,10 @@ import {
   updateBlockContent,
 } from '@alga-psa/block-content/actions';
 import type { IDocument } from '@alga-psa/types';
+import {
+  assetActionErrorFrom,
+  type AssetActionError,
+} from './assetActionErrors';
 
 export interface AssetNoteContent {
   document: IDocument | null;
@@ -33,7 +37,7 @@ function tenantScopedTable(conn: Knex | Knex.Transaction, tenant: string, table:
  * Get note content for an asset
  * Returns the BlockNote content if the asset has a linked notes document
  */
-export const getAssetNoteContent = withAuth(async (_user, { tenant }, assetId: string): Promise<AssetNoteContent> => {
+export const getAssetNoteContent = withAuth(async (_user, { tenant }, assetId: string): Promise<AssetNoteContent | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -44,7 +48,7 @@ export const getAssetNoteContent = withAuth(async (_user, { tenant }, assetId: s
       .first();
 
     if (!asset) {
-      throw new Error('Asset not found');
+      return assetActionErrorFrom(new Error('Asset not found'))!;
     }
 
     // If no notes document exists yet, return empty content
@@ -71,6 +75,10 @@ export const getAssetNoteContent = withAuth(async (_user, { tenant }, assetId: s
 
     // Get the block content
     const blockContent = await getBlockContent(asset.notes_document_id);
+    const blockContentError = assetActionErrorFrom(blockContent);
+    if (blockContentError) {
+      return blockContentError;
+    }
 
     let parsedBlockData: unknown | null = null;
     if (blockContent?.block_data) {
@@ -94,7 +102,11 @@ export const getAssetNoteContent = withAuth(async (_user, { tenant }, assetId: s
     };
   } catch (error) {
     console.error('Error getting asset note content:', error);
-    throw new Error('Failed to get asset note content');
+    const expectedError = assetActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -107,7 +119,7 @@ export const saveAssetNote = withAuth(async (
   { tenant },
   assetId: string,
   blockData: unknown
-): Promise<{ document_id: string }> => {
+): Promise<{ document_id: string } | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -118,26 +130,36 @@ export const saveAssetNote = withAuth(async (
       .first();
 
     if (!asset) {
-      throw new Error('Asset not found');
+      return assetActionErrorFrom(new Error('Asset not found'))!;
     }
 
     if (asset.notes_document_id) {
       // Update existing document
-      await updateBlockContent(asset.notes_document_id, {
+      const updateResult = await updateBlockContent(asset.notes_document_id, {
         block_data: blockData,
         user_id: user.user_id,
       });
+      const updateError = assetActionErrorFrom(updateResult);
+      if (updateError) {
+        return updateError;
+      }
 
       return { document_id: asset.notes_document_id };
     } else {
       // Create new document and link to asset
-      const { document_id } = await createBlockDocument({
+      const createResult = await createBlockDocument({
         document_name: `${asset.name} Notes`,
         user_id: user.user_id,
         block_data: blockData,
         entityId: assetId,
         entityType: 'asset',
       });
+      const createError = assetActionErrorFrom(createResult);
+      if (createError) {
+        return createError;
+      }
+
+      const { document_id } = createResult;
 
       // Update asset with notes_document_id
       await tenantScopedTable(knex, tenant, 'assets')
@@ -151,7 +173,11 @@ export const saveAssetNote = withAuth(async (
     }
   } catch (error) {
     console.error('Error saving asset note:', error);
-    throw new Error('Failed to save asset note');
+    const expectedError = assetActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -164,7 +190,7 @@ export const deleteAssetNote = withAuth(async (
   { tenant },
   assetId: string,
   deleteDocument: boolean = false
-): Promise<void> => {
+): Promise<void | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -174,7 +200,11 @@ export const deleteAssetNote = withAuth(async (
       .select('notes_document_id')
       .first();
 
-    if (!asset || !asset.notes_document_id) {
+    if (!asset) {
+      return assetActionErrorFrom(new Error('Asset not found'))!;
+    }
+
+    if (!asset.notes_document_id) {
       return; // No notes to delete
     }
 
@@ -207,6 +237,10 @@ export const deleteAssetNote = withAuth(async (
     });
   } catch (error) {
     console.error('Error deleting asset note:', error);
-    throw new Error('Failed to delete asset note');
+    const expectedError = assetActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });

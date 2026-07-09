@@ -25,6 +25,33 @@ const isMissingColumnError = (error: unknown) =>
   'code' in error &&
   (error as { code?: string }).code === '42703';
 
+const EXPECTED_CHAT_PERSISTENCE_ERROR_CODES = new Set([
+  '22P02',
+  '23502',
+  '23503',
+  '23505',
+]);
+
+const isMissingTenantError = (error: unknown) =>
+  error instanceof Error && error.message === 'Missing tenant for chat persistence';
+
+const isExpectedChatPersistenceError = (error: unknown) =>
+  isMissingRelationError(error) ||
+  isMissingColumnError(error) ||
+  isMissingTenantError(error) ||
+  (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    EXPECTED_CHAT_PERSISTENCE_ERROR_CODES.has(String((error as { code?: string }).code))
+  );
+
+function markPersistenceUnavailableIfSchemaMissing(error: unknown): void {
+  if (isMissingRelationError(error)) {
+    markPersistenceStatus(false);
+  }
+}
+
 const shouldRecheckPersistence = () => {
   if (cachedPersistenceStatus === null) {
     return true;
@@ -85,15 +112,16 @@ export async function createNewChatAction(data: Omit<IChat, 'tenant'>) {
     const conversation = await runWithTenant(tenant, () => Chat.insert(chatPayload as IChat));
     return { _id: conversation.id, persisted: true };
   } catch (error) {
-    if (isMissingRelationError(error)) {
-      markPersistenceStatus(false);
+    if (isExpectedChatPersistenceError(error)) {
+      markPersistenceUnavailableIfSchemaMissing(error);
       console.warn(
-        '[chatActions] Chat table missing during insert; continuing without persistence.',
+        '[chatActions] Chat insert could not be persisted; continuing without persistence.',
+        error,
       );
       return { _id: chatId, persisted: false };
     }
     console.error(error);
-    throw new Error('Failed to create new chat');
+    throw error;
   }
 }
 
@@ -136,15 +164,16 @@ export async function addMessageToChatAction(data: Omit<IMessage, 'tenant'>) {
     });
     return { _id: message.id, persisted: true };
   } catch (error) {
-    if (isMissingRelationError(error)) {
-      markPersistenceStatus(false);
+    if (isExpectedChatPersistenceError(error)) {
+      markPersistenceUnavailableIfSchemaMissing(error);
       console.warn(
-        '[chatActions] Messages table missing during insert; continuing without persistence.',
+        '[chatActions] Message insert could not be persisted; continuing without persistence.',
+        error,
       );
       return { _id: uuidv4(), persisted: false };
     }
     console.error(error);
-    throw new Error('Failed to add message to chat');
+    throw error;
   }
 }
 
@@ -160,15 +189,16 @@ export async function getChatMessagesAction(chatId: string) {
   try {
     return await Message.getByChatId(chatId);
   } catch (error) {
-    if (isMissingRelationError(error)) {
-      markPersistenceStatus(false);
+    if (isExpectedChatPersistenceError(error)) {
+      markPersistenceUnavailableIfSchemaMissing(error);
       console.warn(
-        '[chatActions] Messages table missing during chat fetch; continuing without persistence.',
+        '[chatActions] Messages could not be fetched; continuing without persisted history.',
+        error,
       );
       return [];
     }
     console.error(error);
-    throw new Error('Failed to fetch chat messages');
+    throw error;
   }
 }
 
@@ -190,15 +220,16 @@ export async function listCurrentUserChatsAction(limit = 20): Promise<ChatHistor
   try {
     return await Chat.getRecentByUser(user.user_id, limit, user.tenant);
   } catch (error) {
-    if (isMissingRelationError(error)) {
-      markPersistenceStatus(false);
+    if (isExpectedChatPersistenceError(error)) {
+      markPersistenceUnavailableIfSchemaMissing(error);
       console.warn(
-        '[chatActions] Chat table missing during chat listing; continuing without persistence.',
+        '[chatActions] Chat listing unavailable; continuing without persisted history.',
+        error,
       );
       return [];
     }
     console.error(error);
-    throw new Error('Failed to list chats');
+    throw error;
   }
 }
 
@@ -223,17 +254,16 @@ export async function searchCurrentUserChatsAction(
   try {
     return await Chat.searchByUser(user.user_id, trimmedQuery, limit, user.tenant);
   } catch (error) {
-    if (isMissingRelationError(error) || isMissingColumnError(error)) {
-      if (isMissingRelationError(error)) {
-        markPersistenceStatus(false);
-      }
+    if (isExpectedChatPersistenceError(error)) {
+      markPersistenceUnavailableIfSchemaMissing(error);
       console.warn(
         '[chatActions] Chat search unavailable during rollout; continuing without search results.',
+        error,
       );
       return [];
     }
     console.error(error);
-    throw new Error('Failed to search chats');
+    throw error;
   }
 }
 
@@ -259,15 +289,16 @@ export async function renameCurrentUserChatAction(chatId: string, title: string)
   try {
     return await Chat.updateTitleForUser(chatId, user.user_id, nextTitle);
   } catch (error) {
-    if (isMissingRelationError(error)) {
-      markPersistenceStatus(false);
+    if (isExpectedChatPersistenceError(error)) {
+      markPersistenceUnavailableIfSchemaMissing(error);
       console.warn(
-        '[chatActions] Chat table missing during rename; continuing without persistence.',
+        '[chatActions] Chat rename could not be persisted; continuing without persistence.',
+        error,
       );
       return false;
     }
     console.error(error);
-    throw new Error('Failed to rename chat');
+    throw error;
   }
 }
 
@@ -288,15 +319,16 @@ export async function deleteCurrentUserChatAction(chatId: string): Promise<boole
   try {
     return await Chat.deleteForUser(chatId, user.user_id);
   } catch (error) {
-    if (isMissingRelationError(error)) {
-      markPersistenceStatus(false);
+    if (isExpectedChatPersistenceError(error)) {
+      markPersistenceUnavailableIfSchemaMissing(error);
       console.warn(
-        '[chatActions] Chat/messages table missing during delete; continuing without persistence.',
+        '[chatActions] Chat delete could not be persisted; continuing without persistence.',
+        error,
       );
       return false;
     }
     console.error(error);
-    throw new Error('Failed to delete chat');
+    throw error;
   }
 }
 
@@ -309,14 +341,15 @@ export async function updateMessageAction(id: string, data: Partial<IMessage>) {
     await Message.update(id, data);
     return 'success';
   } catch (error) {
-    if (isMissingRelationError(error)) {
-      markPersistenceStatus(false);
+    if (isExpectedChatPersistenceError(error)) {
+      markPersistenceUnavailableIfSchemaMissing(error);
       console.warn(
-        '[chatActions] Messages table missing during update; continuing without persistence.',
+        '[chatActions] Message update could not be persisted; continuing without persistence.',
+        error,
       );
       return 'skipped';
     }
     console.error(error);
-    throw new Error('Failed to update message');
+    throw error;
   }
 }

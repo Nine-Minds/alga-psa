@@ -30,7 +30,14 @@ import { ITaxRate } from '@alga-psa/types';
 import { IService, IServiceCategory, KitPricingMode } from '@alga-psa/types';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
 import { getServiceCategories } from '@alga-psa/billing/actions';
-import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
@@ -47,6 +54,12 @@ const DEFAULT_ASSET_TYPE_OPTIONS = [
   { value: 'mobile_device', label: 'Mobile device' },
   { value: 'printer', label: 'Printer' },
 ];
+
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+function isReturnedActionError(value: unknown): value is ReturnedActionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 type PriceDraft = { currency_code: string; rate: number };
 
@@ -170,7 +183,13 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
   useEffect(() => {
     if (isOpen && product && (product.item_kind ?? 'product') === 'product') {
       listVendorProducts({ service_id: product.service_id })
-        .then(setVendorOffers)
+        .then((offers) => {
+          if (isReturnedActionError(offers)) {
+            setVendorOffers([]);
+            return;
+          }
+          setVendorOffers(offers);
+        })
         .catch(() => setVendorOffers([])); // decoration only — never block the dialog
     } else {
       setVendorOffers([]);
@@ -182,6 +201,13 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     if (isOpen && product && (product.item_kind ?? 'product') === 'product') {
       getProductInventorySettings(product.service_id)
         .then((s) => {
+          if (isReturnedActionError(s)) {
+            setError(getErrorMessage(s));
+            setInventoryEnabled(false);
+            setTrackInventory(false);
+            setInv(defaultInvDraft());
+            return;
+          }
           if (s) {
             setInventoryEnabled(true);
             setTrackInventory(!!s.track_stock);
@@ -212,9 +238,15 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
   // Persist a partial inventory patch (edit mode, once a settings row exists).
   const persistInventoryPatch = (patch: Parameters<typeof updateInventorySettings>[1]) => {
     if (!isEditMode || !inventoryServiceId || !inventoryEnabled) return;
-    updateInventorySettings(inventoryServiceId, patch).catch((e) => {
-      toast.error(e?.message || 'Failed to update inventory settings');
-    });
+    updateInventorySettings(inventoryServiceId, patch)
+      .then((result) => {
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+        }
+      })
+      .catch((e) => {
+        toast.error(e?.message || 'Failed to update inventory settings');
+      });
   };
 
   const handleTrackInventoryChange = async (checked: boolean) => {
@@ -225,17 +257,27 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     }
     try {
       if (checked && !inventoryEnabled) {
-        await enableInventory(inventoryServiceId, {
+        const result = await enableInventory(inventoryServiceId, {
           is_serialized: inv.is_serialized,
           is_kit: inv.is_kit,
           creates_asset_on_delivery: inv.creates_asset_on_delivery,
           reorder_point: reorderToNum(inv.reorder_point),
           reorder_quantity: reorderToNum(inv.reorder_quantity),
         });
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          setTrackInventory(!checked);
+          return;
+        }
         setInventoryEnabled(true);
         toast.success('Inventory tracking enabled');
       } else if (inventoryEnabled) {
-        await updateInventorySettings(inventoryServiceId, { track_stock: checked });
+        const result = await updateInventorySettings(inventoryServiceId, { track_stock: checked });
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          setTrackInventory(!checked);
+          return;
+        }
       }
     } catch (e: any) {
       toast.error(e?.message || 'Failed to update inventory tracking');
@@ -247,7 +289,12 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     setInv((prev) => ({ ...prev, is_serialized: checked }));
     if (isEditMode && inventoryServiceId && inventoryEnabled) {
       try {
-        await setProductSerialized(inventoryServiceId, checked);
+        const result = await setProductSerialized(inventoryServiceId, checked);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          setInv((prev) => ({ ...prev, is_serialized: !checked }));
+          return;
+        }
       } catch (e: any) {
         toast.error(e?.message || 'Failed to update serialization');
         setInv((prev) => ({ ...prev, is_serialized: !checked }));
@@ -259,7 +306,12 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     setInv((prev) => ({ ...prev, is_kit: checked }));
     if (isEditMode && inventoryServiceId && inventoryEnabled) {
       try {
-        await setProductKit(inventoryServiceId, checked);
+        const result = await setProductKit(inventoryServiceId, checked);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          setInv((prev) => ({ ...prev, is_kit: !checked }));
+          return;
+        }
       } catch (e: any) {
         toast.error(e?.message || 'Failed to update kit flag');
         setInv((prev) => ({ ...prev, is_kit: !checked }));
@@ -284,6 +336,11 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
 
   const fetchServiceTypes = async () => {
     const types = await getServiceTypesForSelection();
+    if (isActionMessageError(types) || isActionPermissionError(types)) {
+      setError(getErrorMessage(types));
+      setAllServiceTypes([]);
+      return;
+    }
     setAllServiceTypes(types);
   };
 
@@ -291,6 +348,11 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     setIsLoadingTaxRates(true);
     try {
       const rates = await getTaxRates();
+      if (isActionMessageError(rates) || isActionPermissionError(rates)) {
+        setError(getErrorMessage(rates));
+        setTaxRates([]);
+        return;
+      }
       setTaxRates(rates);
     } finally {
       setIsLoadingTaxRates(false);
@@ -301,7 +363,12 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     setIsLoadingCategories(true);
     try {
       const cats = await getServiceCategories();
-      setCategories(Array.isArray(cats) ? cats : []);
+      if (isActionMessageError(cats) || isActionPermissionError(cats)) {
+        setError(getErrorMessage(cats));
+        setCategories([]);
+        return;
+      }
+      setCategories(cats);
     } finally {
       setIsLoadingCategories(false);
     }
@@ -449,18 +516,23 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
         // Apply inventory settings collected in the panel (create mode).
         if (trackInventory) {
           try {
-            await enableInventory(created.service_id, {
+            const inventoryResult = await enableInventory(created.service_id, {
               is_serialized: inv.is_serialized,
               is_kit: inv.is_kit,
               creates_asset_on_delivery: inv.creates_asset_on_delivery,
               reorder_point: reorderToNum(inv.reorder_point),
               reorder_quantity: reorderToNum(inv.reorder_quantity),
             });
-            if (inv.kit_pricing_mode !== 'sum') {
-              await updateInventorySettings(created.service_id, { kit_pricing_mode: inv.kit_pricing_mode });
+            if (isReturnedActionError(inventoryResult)) {
+              toast.error(`Product created, but ${getErrorMessage(inventoryResult)}`);
+            } else if (inv.kit_pricing_mode !== 'sum') {
+              const pricingResult = await updateInventorySettings(created.service_id, { kit_pricing_mode: inv.kit_pricing_mode });
+              if (isReturnedActionError(pricingResult)) {
+                toast.error(`Product created, but ${getErrorMessage(pricingResult)}`);
+              }
             }
           } catch (invErr: any) {
-            toast.error(invErr?.message || 'Product created, but inventory settings could not be applied');
+            toast.error(`Product created, but ${getErrorMessage(invErr)}`);
           }
         }
       }
@@ -647,15 +719,24 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               onChange={(value) => setFormProduct({ ...formProduct, custom_service_type_id: value })}
               serviceTypes={productServiceTypes}
               onCreateType={async (name) => {
-                await createServiceTypeInline(name);
+                const result = await createServiceTypeInline(name);
+                if (isActionMessageError(result) || isActionPermissionError(result)) {
+                  throw new Error(getErrorMessage(result));
+                }
                 await fetchServiceTypes();
               }}
               onUpdateType={async (id, name) => {
-                await updateServiceTypeInline(id, name);
+                const result = await updateServiceTypeInline(id, name);
+                if (isActionMessageError(result) || isActionPermissionError(result)) {
+                  throw new Error(getErrorMessage(result));
+                }
                 await fetchServiceTypes();
               }}
               onDeleteType={async (id) => {
-                await deleteServiceTypeInline(id);
+                const result = await deleteServiceTypeInline(id);
+                if (isActionMessageError(result) || isActionPermissionError(result)) {
+                  throw new Error(getErrorMessage(result));
+                }
                 await fetchServiceTypes();
               }}
               placeholder={t('quickAddProduct.fields.type.placeholder', {

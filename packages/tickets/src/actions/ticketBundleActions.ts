@@ -10,9 +10,14 @@ import { withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent, type WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError } from '@alga-psa/ui/lib/errorHandling';
+import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function ticketBundleActionErrorFrom(error: unknown): TicketActionError | null {
+  return ticketActionErrorFrom(error);
 }
 
 function tenantScopedTable(
@@ -76,6 +81,7 @@ const findTicketByNumberSchema = z.object({
 });
 
 export const findTicketByNumberAction = withAuth(async (user, { tenant }, input: z.input<typeof findTicketByNumberSchema>) => {
+  try {
   const data = findTicketByNumberSchema.parse(input);
   const { knex: db } = await createTenantKnex();
 
@@ -89,6 +95,11 @@ export const findTicketByNumberAction = withAuth(async (user, { tenant }, input:
       .first();
     return ticket || null;
   });
+  } catch (error) {
+    const expected = ticketBundleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 type BundleTicketsResult = { masterTicketId: string; childTicketIds: string[]; mode: 'link_only' | 'sync_updates' };
@@ -103,7 +114,8 @@ export const bundleTicketsAction = withAuth(async (
   user,
   { tenant },
   input: z.input<typeof bundleTicketsSchema>
-): Promise<BundleTicketsResult | ActionMessageError> => {
+): Promise<BundleTicketsResult | TicketActionError> => {
+  try {
   const data = bundleTicketsSchema.parse(input);
   const uniqueChildIds = Array.from(new Set(data.childTicketIds)).filter((id) => id !== data.masterTicketId);
   if (uniqueChildIds.length === 0) {
@@ -212,6 +224,11 @@ export const bundleTicketsAction = withAuth(async (
   revalidatePath('/msp/tickets');
 
   return result;
+  } catch (error) {
+    const expected = ticketBundleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 const addChildrenSchema = z.object({
@@ -226,7 +243,8 @@ export const addChildrenToBundleAction = withAuth(async (
   user,
   { tenant },
   input: z.input<typeof addChildrenSchema>
-): Promise<AddChildrenResult | ActionMessageError> => {
+): Promise<AddChildrenResult | TicketActionError> => {
+  try {
   const data = addChildrenSchema.parse(input);
   const childIds = Array.from(new Set(data.childTicketIds)).filter((id) => id !== data.masterTicketId);
   if (childIds.length === 0) {
@@ -300,6 +318,11 @@ export const addChildrenToBundleAction = withAuth(async (
   }
 
   return result;
+  } catch (error) {
+    const expected = ticketBundleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 const promoteMasterSchema = z.object({
@@ -308,6 +331,7 @@ const promoteMasterSchema = z.object({
 });
 
 export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input: z.input<typeof promoteMasterSchema>) => {
+  try {
   const data = promoteMasterSchema.parse(input);
   if (data.oldMasterTicketId === data.newMasterTicketId) {
     throw new Error('New master ticket must be different from the current master.');
@@ -409,6 +433,11 @@ export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input
   });
 
   return result;
+  } catch (error) {
+    const expected = ticketBundleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 const updateBundleSettingsSchema = z.object({
@@ -418,6 +447,7 @@ const updateBundleSettingsSchema = z.object({
 });
 
 export const updateBundleSettingsAction = withAuth(async (user, { tenant }, input: z.input<typeof updateBundleSettingsSchema>) => {
+  try {
   const data = updateBundleSettingsSchema.parse(input);
   const { knex: db } = await createTenantKnex();
 
@@ -450,6 +480,11 @@ export const updateBundleSettingsAction = withAuth(async (user, { tenant }, inpu
 
     return updated;
   });
+  } catch (error) {
+    const expected = ticketBundleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 const removeChildSchema = z.object({
@@ -457,6 +492,7 @@ const removeChildSchema = z.object({
 });
 
 export const removeChildFromBundleAction = withAuth(async (user, { tenant }, input: z.input<typeof removeChildSchema>) => {
+  try {
   const data = removeChildSchema.parse(input);
   const { knex: db } = await createTenantKnex();
   const occurredAt = nowIso();
@@ -512,6 +548,11 @@ export const removeChildFromBundleAction = withAuth(async (user, { tenant }, inp
   });
 
   return result;
+  } catch (error) {
+    const expected = ticketBundleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 const unbundleSchema = z.object({
@@ -526,7 +567,8 @@ export const getBundleMasterStatusAction = withAuth(async (
   user,
   { tenant },
   input: z.input<typeof getBundleMasterStatusSchema>
-): Promise<{ masterTicketIds: string[] }> => {
+): Promise<{ masterTicketIds: string[] } | TicketActionError> => {
+  try {
   const data = getBundleMasterStatusSchema.parse(input);
   const { knex: db } = await createTenantKnex();
 
@@ -537,6 +579,11 @@ export const getBundleMasterStatusAction = withAuth(async (
     const masterTicketIds = await findBundleMasterIds(trx, tenant, data.ticketIds);
     return { masterTicketIds };
   });
+  } catch (error) {
+    const expected = ticketBundleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 const searchEligibleChildTicketsSchema = z.object({
@@ -554,7 +601,8 @@ export type EligibleChildTicket = {
   client_name?: string;
 };
 
-export const searchEligibleChildTicketsAction = withAuth(async (user, { tenant }, input: z.input<typeof searchEligibleChildTicketsSchema>): Promise<EligibleChildTicket[]> => {
+export const searchEligibleChildTicketsAction = withAuth(async (user, { tenant }, input: z.input<typeof searchEligibleChildTicketsSchema>): Promise<EligibleChildTicket[] | TicketActionError> => {
+  try {
   const data = searchEligibleChildTicketsSchema.parse(input);
   const { knex: db } = await createTenantKnex();
 
@@ -607,9 +655,15 @@ export const searchEligibleChildTicketsAction = withAuth(async (user, { tenant }
     const tickets = await query;
     return tickets;
   });
+  } catch (error) {
+    const expected = ticketBundleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, input: z.input<typeof unbundleSchema>) => {
+  try {
   const data = unbundleSchema.parse(input);
   const { knex: db } = await createTenantKnex();
   const occurredAt = nowIso();
@@ -663,4 +717,9 @@ export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, inpu
   }
 
   return result;
+  } catch (error) {
+    const expected = ticketBundleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });

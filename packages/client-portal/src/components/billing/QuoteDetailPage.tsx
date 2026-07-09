@@ -22,6 +22,7 @@ import {
   type ClientPortalLocationSummary,
 } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
   draft: 'warning',
@@ -40,6 +41,11 @@ const STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
 function itemIsIncluded(item: IQuoteItem): boolean {
   return !item.is_optional || item.is_selected !== false;
 }
+
+const isBillingActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface QuoteDetailPageProps {
   quoteId: string;
@@ -153,6 +159,21 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
           getClientQuoteById(quoteId),
           getLocationsForClientQuote(quoteId).catch(() => [] as ClientPortalLocationSummary[]),
         ]);
+
+        if (isBillingActionError(fetched)) {
+          setQuote(null);
+          setClientLocations([]);
+          setError(getErrorMessage(fetched));
+          return;
+        }
+
+        if (isBillingActionError(locations)) {
+          setQuote(null);
+          setClientLocations([]);
+          setError(getErrorMessage(locations));
+          return;
+        }
+
         setQuote(fetched);
         setClientLocations(Array.isArray(locations) ? locations : []);
       } catch (err) {
@@ -195,6 +216,10 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
 
     try {
       const persistedQuote = await updateClientQuoteSelections(quote.quote_id, nextSelectedList);
+      if (isBillingActionError(persistedQuote)) {
+        setSelectionError(getErrorMessage(persistedQuote));
+        return;
+      }
       setQuote(persistedQuote);
     } catch (err) {
       console.error('Error updating optional quote selections:', err);
@@ -212,6 +237,11 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
 
     try {
       const acceptedQuote = await acceptClientQuote(quote.quote_id, optionalSelectedItemIds);
+      if (isBillingActionError(acceptedQuote)) {
+        setDecisionError(getErrorMessage(acceptedQuote));
+        setConfirmAction(null);
+        return;
+      }
       setQuote(acceptedQuote);
       setRejectionReason('');
       setConfirmAction(null);
@@ -237,6 +267,11 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
 
     try {
       const rejectedQuote = await rejectClientQuote(quote.quote_id, rejectionReason);
+      if (isBillingActionError(rejectedQuote)) {
+        setDecisionError(getErrorMessage(rejectedQuote));
+        setConfirmAction(null);
+        return;
+      }
       setQuote(rejectedQuote);
       setRejectionReason('');
       setConfirmAction(null);
@@ -254,6 +289,10 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
     setIsDownloadingPdf(true);
     try {
       const result = await downloadClientQuotePdf(quote.quote_id);
+      if (isBillingActionError(result)) {
+        setDecisionError(getErrorMessage(result));
+        return;
+      }
       if (result.success && result.fileId) {
         const downloadUrl = `/api/documents/download/${result.fileId}`;
         const link = document.createElement('a');

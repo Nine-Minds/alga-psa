@@ -17,6 +17,11 @@ import {
   XeroCsvSettings as XeroCsvSettingsType
 } from '@alga-psa/integrations/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * Xero CSV Integration Settings Component
@@ -61,6 +66,11 @@ const XeroCsvIntegrationSettings: React.FC = () => {
     startSave(async () => {
       try {
         const result = await updateXeroCsvSettings(updates);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          setError(getErrorMessage(result));
+          setSuccessMessage(null);
+          return;
+        }
         setSettings(result);
         setSuccessMessage(t('integrations.xero.csv.settings.savedMessage', { defaultValue: 'Settings saved successfully' }));
         setError(null);

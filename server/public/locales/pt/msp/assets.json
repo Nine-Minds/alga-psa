@@ -1004,7 +1004,8 @@
     "description": "Painel de notas em rich text para notas específicas de ativos e contexto operacional rápido",
     "errors": {
       "loadTitle": "As notas não foram carregadas",
-      "unknown": "Erro desconhecido"
+      "unknown": "Erro desconhecido",
+      "loadDescription": "Could not load notes. Please try again."
     },
     "lastUpdated": "Última atualização: {{value}}"
   },

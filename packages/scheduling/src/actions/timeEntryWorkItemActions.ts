@@ -11,6 +11,10 @@ import {
   addWorkItemParamsSchema,
   AddWorkItemParams
 } from './timeEntrySchemas'; // Import schemas
+import {
+  timeSheetActionErrorFrom,
+  type TimeSheetActionError,
+} from './timeSheetActionErrors';
 
 const NON_BILLABLE_FALLBACK_WORK_ITEM_ID = '__non_billable__';
 
@@ -22,7 +26,8 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   user,
   { tenant },
   timeSheetId: string
-): Promise<IExtendedWorkItem[]> => {
+): Promise<IExtendedWorkItem[] | TimeSheetActionError> => {
+  try {
   const {knex: db} = await createTenantKnex();
   const scopedDb = tenantDb(db, tenant) as any;
 
@@ -166,13 +171,19 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
     is_billable: item.type !== 'non_billable_category',
     ticket_number: item.type === 'ticket' ? item.ticket_number : undefined
   }));
+  } catch (error) {
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 export const addWorkItem = withAuth(async (
   user,
   { tenant },
   workItem: Omit<IWorkItem, 'tenant'>
-): Promise<IWorkItem> => {
+): Promise<IWorkItem | TimeSheetActionError> => {
+  try {
   const {knex: db} = await createTenantKnex();
   const scopedDb = tenantDb(db, tenant) as any;
 
@@ -204,6 +215,11 @@ export const addWorkItem = withAuth(async (
     ...newWorkItem,
     is_billable: newWorkItem.type !== 'non_billable_category', // Inferring billable status
   };
+  } catch (error) {
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 
@@ -211,7 +227,8 @@ export const deleteWorkItem = withAuth(async (
   user,
   { tenant },
   workItemId: string
-): Promise<void> => {
+): Promise<void | TimeSheetActionError> => {
+  try {
   const {knex: db} = await createTenantKnex();
 
   // Check permission for time entry deletion (deleting work items affects time entries)
@@ -219,7 +236,6 @@ export const deleteWorkItem = withAuth(async (
     throw new Error('Permission denied: Cannot delete work items for time entries');
   }
 
-  try {
     await db.transaction(async (trx) => {
       const scopedDb = tenantDb(trx, tenant) as any;
       // First delete all time entries associated with this work item
@@ -234,6 +250,8 @@ export const deleteWorkItem = withAuth(async (
     });
   } catch (error) {
     console.error('Error deleting work item (associated time entries):', error);
-    throw new Error('Failed to delete work item (associated time entries)');
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });

@@ -39,6 +39,7 @@ import type {
   HuduAssetMappingMetadata,
   HuduAssetMappingWriteResult,
 } from '../../integrations/hudu/assetMapping';
+import { huduActionErrorMessage } from './huduActionErrors';
 
 export type HuduAssetMappingActionResult<T> =
   | { success: true; data: T }
@@ -194,7 +195,7 @@ export const getHuduAssetMappings = withHuduAssetAccess(
         clientId,
         error: toErrorMessage(error),
       });
-      return { state: 'error', error: toErrorMessage(error) };
+      return { state: 'error', error: huduActionErrorMessage(error, 'Unable to load Hudu asset mappings. Please try again.') };
     }
   }
 );
@@ -261,7 +262,7 @@ export const setHuduAssetMapping = withHuduAssetAccess(
       return { success: true, data: { mapping_id: result.mapping.id } };
     } catch (error) {
       logger.error('[HuduAssetMappingActions] setHuduAssetMapping failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to save Hudu asset mapping. Please try again.') };
     }
   }
 );
@@ -291,7 +292,7 @@ export const clearHuduAssetMapping = withHuduAssetAccess(
       return { success: true, data: { cleared } };
     } catch (error) {
       logger.error('[HuduAssetMappingActions] clearHuduAssetMapping failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to clear Hudu asset mapping. Please try again.') };
     }
   }
 );

@@ -11,8 +11,23 @@ import {
   buildExternalMappingChangedPublishParams,
   type TenantExternalEntityMappingRow,
 } from '../lib/externalMappingWorkflowEvents';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const MAPPING_CACHE_TTL_MS = 30_000;
+
+type ExternalMappingActionError = ActionMessageError | ActionPermissionError;
+
+class ExpectedExternalMappingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ExpectedExternalMappingError';
+  }
+}
 
 type MappingCacheEntry = {
   value: ExternalEntityMapping[];
@@ -122,11 +137,11 @@ export const getExternalEntityMappings = withAuth(async (
   user,
   { tenant },
   params: GetMappingsParams
-): Promise<ExternalEntityMapping[]> => {
+): Promise<ExternalEntityMapping[] | ExternalMappingActionError> => {
   const { knex } = await createTenantKnex();
   const allowed = await hasPermission(user, 'billing_settings', 'read', knex);
   if (!allowed) {
-    throw new Error('Forbidden: You do not have permission to view accounting mappings.');
+    return permissionError('Permission denied: You do not have permission to view accounting mappings.');
   }
 
   const cacheKey = buildCacheKey(tenant, params);
@@ -189,7 +204,7 @@ export const getExternalEntityMappings = withAuth(async (
       tenantId: tenant,
       error
     });
-    throw new Error('Unable to load mapping data. Please try again.');
+    return actionError('Unable to load mapping data. Please try again.');
   }
 });
 
@@ -197,11 +212,11 @@ export const createExternalEntityMapping = withAuth(async (
   user,
   { tenant },
   mappingData: CreateMappingData
-): Promise<ExternalEntityMapping> => {
+): Promise<ExternalEntityMapping | ExternalMappingActionError> => {
   const { knex } = await createTenantKnex();
   const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
   if (!allowed) {
-    throw new Error('Forbidden: You do not have permission to manage accounting mappings.');
+    return permissionError('Permission denied: You do not have permission to manage accounting mappings.');
   }
 
 
@@ -244,7 +259,7 @@ export const createExternalEntityMapping = withAuth(async (
     });
 
     if (!newMapping) {
-      throw new Error('Failed to create mapping, insert operation did not return the new record.');
+      throw new ExpectedExternalMappingError('Unable to save mapping. Please try again.');
     }
 
     logger.info('External mapping created', {
@@ -283,12 +298,16 @@ export const createExternalEntityMapping = withAuth(async (
     });
 
     if (error?.code === '23505') {
-      throw new Error(
+      return actionError(
         'A mapping already exists for this entity. Edit the existing mapping instead.'
       );
     }
 
-    throw new Error('Unable to save mapping. Please try again.');
+    if (error instanceof ExpectedExternalMappingError) {
+      return actionError(error.message);
+    }
+
+    return actionError('Unable to save mapping. Please try again.');
   }
 });
 
@@ -297,18 +316,18 @@ export const updateExternalEntityMapping = withAuth(async (
   { tenant },
   mappingId: string,
   updates: UpdateMappingData
-): Promise<ExternalEntityMapping> => {
+): Promise<ExternalEntityMapping | ExternalMappingActionError> => {
   const { knex } = await createTenantKnex();
   const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
   if (!allowed) {
-    throw new Error('Forbidden: You do not have permission to manage accounting mappings.');
+    return permissionError('Permission denied: You do not have permission to manage accounting mappings.');
   }
 
   if (!mappingId) {
-    throw new Error('Mapping ID is required for update.');
+    return actionError('Mapping ID is required for update.');
   }
   if (Object.keys(updates).length === 0) {
-    throw new Error('No update data provided.');
+    return actionError('No update data provided.');
   }
 
   logger.info('Updating external mapping', {
@@ -340,14 +359,10 @@ export const updateExternalEntityMapping = withAuth(async (
 
     if (!after) {
       if (!before) {
-        throw new Error(
-          `Mapping with ID ${mappingId} not found for the current tenant (${tenant}).`
-        );
+        throw new ExpectedExternalMappingError('Mapping not found. Refresh mappings and try again.');
       }
 
-      throw new Error(
-        `Failed to update mapping ID ${mappingId}. Record exists but update failed.`
-      );
+      throw new ExpectedExternalMappingError('Unable to update mapping. Please try again.');
     }
 
     logger.info('External mapping updated', {
@@ -381,7 +396,13 @@ export const updateExternalEntityMapping = withAuth(async (
       mappingId,
       error
     });
-    throw new Error('Unable to update mapping. Please try again.');
+    if (error instanceof ExpectedExternalMappingError) {
+      return actionError(error.message);
+    }
+    if ((error as { code?: string } | null)?.code === '23505') {
+      return actionError('A mapping already exists for this entity. Edit the existing mapping instead.');
+    }
+    return actionError('Unable to update mapping. Please try again.');
   }
 });
 
@@ -389,15 +410,15 @@ export const deleteExternalEntityMapping = withAuth(async (
   user,
   { tenant },
   mappingId: string
-): Promise<void> => {
+): Promise<{ success: true } | ExternalMappingActionError> => {
   const { knex } = await createTenantKnex();
   const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
   if (!allowed) {
-    throw new Error('Forbidden: You do not have permission to manage accounting mappings.');
+    return permissionError('Permission denied: You do not have permission to manage accounting mappings.');
   }
 
   if (!mappingId) {
-    throw new Error('Mapping ID is required for deletion.');
+    return actionError('Mapping ID is required for deletion.');
   }
 
   logger.info('Deleting external mapping', { tenantId: tenant, mappingId });
@@ -424,11 +445,11 @@ export const deleteExternalEntityMapping = withAuth(async (
           tenantId: tenant,
           mappingId
         });
-        return;
+        return actionError('Mapping not found. Refresh mappings and try again.');
     }
 
     if (deletedCount === 0) {
-      throw new Error(`Failed to delete mapping ID ${mappingId}. Record exists but deletion failed.`);
+      throw new ExpectedExternalMappingError('Unable to delete mapping. Please try again.');
     }
 
     logger.info('External mapping deleted', { tenantId: tenant, mappingId });
@@ -452,12 +473,16 @@ export const deleteExternalEntityMapping = withAuth(async (
     });
 
     invalidateTenantMappingCache(tenant);
+    return { success: true };
   } catch (error: unknown) {
     logger.error('Failed to delete external entity mapping', {
       tenantId: tenant,
       mappingId,
       error
     });
-    throw new Error('Unable to delete mapping. Please try again.');
+    if (error instanceof ExpectedExternalMappingError) {
+      return actionError(error.message);
+    }
+    return actionError('Unable to delete mapping. Please try again.');
   }
 });

@@ -8,6 +8,7 @@ import { ImageDocumentHandler } from './ImageDocumentHandler';
 import { OfficeDocumentHandler } from './OfficeDocumentHandler';
 import { VideoDocumentHandler } from '@alga-psa/documents/handlers/VideoDocumentHandler';
 import { GenericFileDocumentHandler } from './GenericFileDocumentHandler';
+import { documentPreviewErrorMessage } from './previewErrors';
 
 /**
  * Registry for document type handlers
@@ -87,7 +88,7 @@ export class DocumentHandlerRegistry {
       console.error(`[DocumentHandlerRegistry] Error generating preview for document ${document.document_id}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to generate document preview'
+        error: documentPreviewErrorMessage(error, 'Failed to generate document preview')
       };
     }
   }

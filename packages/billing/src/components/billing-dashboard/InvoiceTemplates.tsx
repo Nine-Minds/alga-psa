@@ -25,6 +25,10 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const InvoiceTemplates: React.FC = () => {
   const { t } = useTranslation('msp/invoicing');
@@ -53,6 +57,11 @@ const InvoiceTemplates: React.FC = () => {
     setIsLoading(true);
     try {
       const templates = await getInvoiceTemplates();
+      if (isReturnedActionError(templates)) {
+        setInvoiceTemplates([]);
+        setError(getErrorMessage(templates));
+        return;
+      }
       setInvoiceTemplates(templates);
       setError(null);
     } catch (fetchError) {
@@ -129,24 +138,34 @@ const InvoiceTemplates: React.FC = () => {
           throw new Error('Standard template is missing a template code');
         }
 
-        await setDefaultTemplate({
+        const result = await setDefaultTemplate({
           templateSource: 'standard',
           standardTemplateCode: template.standard_invoice_template_code,
         });
+        if (isReturnedActionError(result)) {
+          throw new Error(getErrorMessage(result));
+        }
       } else {
-        await setDefaultTemplate({
+        const result = await setDefaultTemplate({
           templateSource: 'custom',
           templateId: template.template_id,
         });
+        if (isReturnedActionError(result)) {
+          throw new Error(getErrorMessage(result));
+        }
       }
 
       await fetchTemplates();
       setError(null);
     } catch (setDefaultError) {
       console.error('Error setting default template:', setDefaultError);
-      setError(t('templates.errors.setDefaultFailed', {
-        defaultValue: 'Failed to set template as default.',
-      }));
+      setError(
+        setDefaultError instanceof Error
+          ? setDefaultError.message
+          : t('templates.errors.setDefaultFailed', {
+              defaultValue: 'Failed to set template as default.',
+            }),
+      );
     }
   };
 

@@ -6,6 +6,15 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { chargeForUnreturned } from '@alga-psa/inventory/actions';
 import { generateManualInvoice } from './manualInvoiceActions';
+import {
+  actionError,
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * Advance-replacement RMA: the dead-unit-owed deadline passed, so actually BILL the
@@ -20,23 +29,53 @@ import { generateManualInvoice } from './manualInvoiceActions';
  * If invoicing fails, the status flip is compensated back to dead_unit_owed so the
  * charge can be retried.
  */
+export type RmaChargeActionError = ActionMessageError | ActionPermissionError;
+
+function rmaChargeActionErrorFrom(error: unknown): RmaChargeActionError | null {
+  if (isActionMessageError(error) || isActionPermissionError(error)) {
+    return error as RmaChargeActionError;
+  }
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+    if (
+      error.message === 'RMA case has no client to charge' ||
+      error.message === 'RMA case has no product to charge for' ||
+      error.message === 'Invoice generation failed' ||
+      error.message === 'Quantity must be greater than 0' ||
+      error.message.startsWith('Client not found') ||
+      error.message.startsWith('Service not found') ||
+      error.message.startsWith('RMA status changed.') ||
+      error.message.startsWith('RMA is in status')
+    ) {
+      return actionError(error.message);
+    }
+  }
+  return null;
+}
+
 export const chargeRmaForUnreturned = withAuth(
   async (
     user,
     { tenant },
     rmaId: string,
-  ): Promise<{ rma_id: string; status: string; invoiceId?: string; invoiced_amount_cents: number }> => {
+  ): Promise<{ rma_id: string; status: string; invoiceId?: string; invoiced_amount_cents: number } | RmaChargeActionError> => {
     if (!(await hasPermission(user, 'billing', 'create'))) {
-      throw new Error('Permission denied: billing create required');
+      return permissionError('Permission denied: billing create required');
     }
 
     // Step 1 — locked status flip (throws unless dead_unit_owed → idempotent).
     const rma: any = await chargeForUnreturned(rmaId);
-    if (!rma?.client_id) throw new Error('RMA case has no client to charge');
-    if (!rma?.service_id) throw new Error('RMA case has no product to charge for');
+    if (isActionMessageError(rma) || isActionPermissionError(rma)) {
+      return rma as RmaChargeActionError;
+    }
 
     const { knex: db } = await createTenantKnex();
     try {
+      if (!rma?.client_id) throw new Error('RMA case has no client to charge');
+      if (!rma?.service_id) throw new Error('RMA case has no product to charge for');
+
       const { rate, currency, serviceName } = await withTransaction(db, async (trx: Knex.Transaction) => {
         const svc = await trx('service_catalog')
           .where({ tenant, service_id: rma.service_id })
@@ -65,6 +104,9 @@ export const chargeRmaForUnreturned = withAuth(
           },
         ],
       } as any);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        throw new Error(getErrorMessage(result));
+      }
       if (result && result.success === false) {
         throw new Error(result.error || 'Invoice generation failed');
       }
@@ -84,6 +126,8 @@ export const chargeRmaForUnreturned = withAuth(
           .where({ tenant, rma_id: rmaId, status: 'charged' })
           .update({ status: 'dead_unit_owed', updated_at: trx.fn.now() });
       });
+      const expected = rmaChargeActionErrorFrom(e);
+      if (expected) return expected;
       throw e;
     }
   },

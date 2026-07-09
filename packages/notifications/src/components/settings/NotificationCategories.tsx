@@ -8,11 +8,12 @@ import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "@alga-psa/types";
 import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Lock } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { handleError } from "@alga-psa/ui/lib/errorHandling";
+import { getErrorMessage, handleError } from "@alga-psa/ui/lib/errorHandling";
 import { useUserPreference } from "@alga-psa/user-composition/hooks";
 import {
   getCategoriesAction,
   getCategoryWithSubtypesAction,
+  isNotificationActionError,
   updateCategoryAction,
   updateSubtypeAction
 } from "../../actions";
@@ -71,7 +72,8 @@ export function NotificationCategories() {
         const currentCategories = await getCategoriesAction();
         setCategories(currentCategories);
       } catch (err) {
-        setError(err instanceof Error ? err.message : t('notifications.categoriesUi.errors.loadCategories', 'Failed to load categories'));
+        console.error('Failed to load notification categories:', err);
+        setError(t('notifications.categoriesUi.errors.loadCategories', 'Failed to load categories'));
       }
     }
     init();
@@ -151,7 +153,12 @@ function NotificationCategoriesContent({
 
     setLoadingSubtypes(prev => new Set(prev).add(categoryId));
     try {
-      const { subtypes } = await getCategoryWithSubtypesAction(categoryId);
+      const result = await getCategoryWithSubtypesAction(categoryId);
+      if (isNotificationActionError(result)) {
+        handleError(result, t('notifications.categoriesUi.errors.loadSubtypes', 'Failed to load notification subtypes'));
+        return;
+      }
+      const { subtypes } = result;
       setSubtypesByCategory(prev => ({ ...prev, [categoryId]: subtypes }));
       setOriginalSubtypes(prev => ({ ...prev, [categoryId]: subtypes }));
     } catch (error) {
@@ -257,7 +264,12 @@ function NotificationCategoriesContent({
         })
       );
 
-      await Promise.all([...categoryPromises, ...subtypePromises]);
+      const results = await Promise.all([...categoryPromises, ...subtypePromises]);
+      const firstError = results.find(isNotificationActionError);
+      if (firstError) {
+        toast.error(getErrorMessage(firstError));
+        return;
+      }
 
       // Update original state to current state
       setOriginalCategories([...categories]);

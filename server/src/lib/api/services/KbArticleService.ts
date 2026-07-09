@@ -7,7 +7,7 @@ import { randomUUID } from 'crypto';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { convertMarkdownToBlocks, type BlockNoteBlock } from '@shared/lib/utils/markdownToBlocks';
 import { ListOptions } from '../controllers/types';
-import { NotFoundError } from '../middleware/apiMiddleware';
+import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import type { CreateKbArticleData, UpdateKbArticleData, UpdateKbArticleContentData } from '../schemas/kbArticle';
 
 const KB_ARTICLE_SELECT_COLUMNS = [
@@ -81,6 +81,16 @@ function blocksToText(blocks: BlockNoteBlock[]): string {
   }
 
   return lines.join('\n');
+}
+
+function parseApiBlockNoteContent(content: string): BlockNoteBlock[] {
+  try {
+    return JSON.parse(content);
+  } catch {
+    throw new ValidationError('Invalid BlockNote content', [
+      { path: ['content'], message: 'content must be valid JSON when format is blocknote' },
+    ]);
+  }
 }
 
 export class KbArticleService extends BaseService<any> {
@@ -192,7 +202,7 @@ export class KbArticleService extends BaseService<any> {
     const db = tenantDb(knex, context.tenant);
 
     if (!data.title?.trim()) {
-      throw new Error('Title is required');
+      throw new ValidationError('Title is required');
     }
 
     let slug = data.slug?.trim() || generateSlug(data.title);
@@ -203,7 +213,7 @@ export class KbArticleService extends BaseService<any> {
     const existingSlug = await this.buildTenantScopedQuery(knex, context).where('slug', slug).first();
     if (existingSlug) {
       if (data.slug?.trim()) {
-        throw new Error('An article with this slug already exists');
+        throw new ConflictError('An article with this slug already exists');
       }
       let suffix = 2;
       while (true) {
@@ -237,7 +247,7 @@ export class KbArticleService extends BaseService<any> {
     if (data.content) {
       let blocks: BlockNoteBlock[];
       if (data.content_format === 'blocknote') {
-        blocks = JSON.parse(data.content);
+        blocks = parseApiBlockNoteContent(data.content);
       } else {
         blocks = convertMarkdownToBlocks(data.content);
       }
@@ -315,7 +325,7 @@ export class KbArticleService extends BaseService<any> {
         .whereNot('article_id', id)
         .first();
       if (collision) {
-        throw new Error('An article with this slug already exists');
+        throw new ConflictError('An article with this slug already exists');
       }
       updates.slug = newSlug;
     }
@@ -469,7 +479,7 @@ export class KbArticleService extends BaseService<any> {
 
     let blocks: BlockNoteBlock[];
     if (data.format === 'blocknote') {
-      blocks = JSON.parse(data.content);
+      blocks = parseApiBlockNoteContent(data.content);
     } else {
       blocks = convertMarkdownToBlocks(data.content);
     }

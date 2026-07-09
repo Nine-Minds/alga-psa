@@ -4,6 +4,10 @@ import type { IScheduleEntry } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import { getScheduleActivityEntriesForUser } from './scheduleActivityCore';
+import {
+  permissionError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * Fetch schedule entries (with recurrence/virtual-occurrence expansion) for the
@@ -35,7 +39,7 @@ export const getScheduleActivityEntries = withAuth(async (
   targetUserId: string,
   start: Date,
   end: Date
-): Promise<IScheduleEntry[]> => {
+): Promise<IScheduleEntry[] | ActionPermissionError> => {
   if (targetUserId !== user.user_id) {
     const { knex } = await createTenantKnex();
     const [canUpdate, canReadAll] = await Promise.all([
@@ -43,7 +47,7 @@ export const getScheduleActivityEntries = withAuth(async (
       hasPermission(user, 'user_schedule', 'read_all', knex),
     ]);
     if (!canUpdate && !canReadAll) {
-      throw new Error("Permission denied: cannot view another user's schedule activities");
+      return permissionError("Permission denied: cannot view another user's schedule activities");
     }
   }
 

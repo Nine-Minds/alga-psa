@@ -9,6 +9,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockLocation, IStockMovement, IStockUnit } from '@alga-psa/types';
 import {
@@ -21,6 +22,7 @@ import {
 
 type SearchMode = 'serial' | 'mac';
 type UnitDetail = { unit: IStockUnit; movements: IStockMovement[] };
+const isReturnedActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
 
 function fmtDate(v?: string | Date | null): string {
   if (!v) return '';
@@ -113,7 +115,13 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      setUnits(await listStockUnits({}));
+      const result = await listStockUnits({});
+      if (isReturnedActionError(result)) {
+        setUnits([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setUnits(result);
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || t('stockUnits.loadFailed', 'Failed to load units'));
@@ -134,6 +142,11 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
         searchMode === 'serial'
           ? await searchUnitsBySerial(term)
           : await searchUnitsByMac(term);
+      if (isReturnedActionError(results)) {
+        setUnits([]);
+        toast.error(getErrorMessage(results));
+        return;
+      }
       setUnits(results);
     } catch (e: any) {
       console.error(e);
@@ -156,11 +169,19 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
           getUnitDetail(unitId),
           locations === null ? listStockLocations() : Promise.resolve(locations),
         ]);
+        if (isReturnedActionError(detail)) {
+          toast.error(getErrorMessage(detail));
+          return;
+        }
         if (!detail) {
           toast.error(t('stockUnits.historyNotFound', 'Unit history not found'));
           return;
         }
         if (locations === null) {
+          if (isReturnedActionError(loadedLocations)) {
+            toast.error(getErrorMessage(loadedLocations));
+            return;
+          }
           setLocations(loadedLocations);
         }
         setHistoryDetail(detail);

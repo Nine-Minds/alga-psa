@@ -27,7 +27,7 @@ import {
 } from "@alga-psa/types";
 import { ITag } from "@alga-psa/types";
 import { TagManager } from "@alga-psa/tags/components";
-import { findTagsByEntityId } from "@alga-psa/tags/actions";
+import { findTagsByEntityId, isTagActionError } from "@alga-psa/tags/actions";
 import { useTags } from '@alga-psa/tags/context';
 import TicketInfo from "./TicketInfo";
 import TicketProperties from "./TicketProperties";
@@ -37,7 +37,14 @@ import TicketConversation from "./TicketConversation";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
+import {
+    handleError,
+    isActionPermissionError,
+    isActionMessageError,
+    getErrorMessage,
+    type ActionMessageError,
+    type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useDrawer } from "@alga-psa/ui";
 import { useCatalogShortcut } from "@alga-psa/ui/keyboard-shortcuts";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
@@ -62,7 +69,7 @@ import { getTicketStatuses } from "@alga-psa/reference-data/actions";
 import { getAllPriorities } from "@alga-psa/reference-data/actions";
 import { addTicketResource, getTicketResources, removeTicketResource } from "../../actions/ticketResourceActions";
 import { assignTeamToTicket, removeTeamFromTicket } from "../../actions/teamAssignmentActions";
-import { getTeamById, getTeams } from '@alga-psa/teams/actions';
+import { getTeamById, getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
 import { Button } from "@alga-psa/ui/components/Button";
 import Drawer from '@alga-psa/ui/components/Drawer';
@@ -123,6 +130,17 @@ interface PendingCommentDelete {
 
 const LIVE_UPDATE_REFETCH_DEBOUNCE_MS = 200;
 const LIVE_UPDATE_HIGHLIGHT_MS = 600;
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+    isActionMessageError(value) || isActionPermissionError(value);
+
+const handleTicketActionError = (error: unknown, fallback: string) => {
+    if (isReturnedActionError(error)) {
+        toast.error(getErrorMessage(error));
+        return;
+    }
+    handleError(error, fallback);
+};
 
 interface TicketDetailsProps {
     id?: string; // Made optional to maintain backward compatibility
@@ -387,16 +405,19 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         if (!closeBlockedDialog.statusId || !ticket.ticket_id) return;
         setIsSubmittingCloseOverride(true);
         try {
-            await updateTicketWithCache(ticket.ticket_id, { status_id: closeBlockedDialog.statusId }, {
+            const result = await updateTicketWithCache(ticket.ticket_id, { status_id: closeBlockedDialog.statusId }, {
                 overrideCloseRules: true,
                 overrideCloseRulesReason: closeOverrideReason.trim() || null,
             });
+            if (isReturnedActionError(result)) {
+                throw result;
+            }
             setTicket((prev: any) => ({ ...prev, status_id: closeBlockedDialog.statusId, response_state: null }));
             setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
             setCloseOverrideReason('');
             toast.success(t('messages.ticketClosed', 'Ticket closed'));
         } catch (error) {
-            handleError(error, t('messages.closeFailed', 'Failed to close ticket'));
+            handleTicketActionError(error, t('messages.closeFailed', 'Failed to close ticket'));
         } finally {
             setIsSubmittingCloseOverride(false);
         }
@@ -479,6 +500,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         getTicketLayoutPreference()
             .then((prefs) => {
                 if (cancelled) return;
+                if (isReturnedActionError(prefs)) {
+                    console.warn('Unable to load ticket layout preference:', getErrorMessage(prefs));
+                    return;
+                }
                 setLayoutMode(prefs.layout);
                 setTimelinePrefOrder(prefs.timelineOrder);
             })
@@ -490,7 +515,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const handleLayoutModeChange = useCallback((next: TicketDetailLayout) => {
         setLayoutMode(next);
-        void setTicketLayoutPreference({ layout: next }).catch(() => undefined);
+        void setTicketLayoutPreference({ layout: next })
+            .then((result) => {
+                if (isReturnedActionError(result)) {
+                    console.warn('Unable to save ticket layout preference:', getErrorMessage(result));
+                }
+            })
+            .catch(() => undefined);
     }, []);
 
     const useGridLayout = layoutMode === 'grid' && !isInDrawer;
@@ -696,6 +727,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
         try {
             const latestTicket = await getTicketById(ticket.ticket_id);
+            if (isReturnedActionError(latestTicket)) {
+                throw latestTicket;
+            }
             const normalizedUpdatedFields = new Set(updatedFields.map((field) => normalizeTicketLiveField(field)));
 
             setTicket(latestTicket);
@@ -747,7 +781,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
 
             if (normalizedUpdatedFields.has('comments')) {
-                setConversations(await findCommentsByTicketId(ticket.ticket_id));
+                const comments = await findCommentsByTicketId(ticket.ticket_id);
+                if (isReturnedActionError(comments)) {
+                    handleTicketActionError(comments, t('messages.loadCommentsFailed', 'Failed to load comments'));
+                } else {
+                    setConversations(comments);
+                }
             }
 
             if (normalizedUpdatedFields.has('comment_reactions')) {
@@ -931,6 +970,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
             try {
                 const fetchedBoard = await findBoardById(savedBoardId);
+                if (isReturnedActionError(fetchedBoard)) {
+                    if (!cancelled) {
+                        setBoard(null);
+                    }
+                    handleError(fetchedBoard, getErrorMessage(fetchedBoard));
+                    return;
+                }
                 if (!cancelled) {
                     setBoard(fetchedBoard ?? null);
                 }
@@ -1116,6 +1162,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         const loadTeams = async () => {
             try {
                 const fetchedTeams = await getTeams();
+                if (isTeamActionError(fetchedTeams)) {
+                    console.warn('Cannot load teams for ticket details:', fetchedTeams);
+                    setTeams([]);
+                    return;
+                }
                 setTeams(fetchedTeams);
             } catch (error) {
                 console.error('Failed to load teams:', error);
@@ -1139,6 +1190,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         const loadTeam = async () => {
             try {
                 const fetchedTeam = await getTeamById(ticket.assigned_team_id!);
+                if (isTeamActionError(fetchedTeam)) {
+                    console.warn('Cannot load assigned team:', fetchedTeam);
+                    setTeam(null);
+                    return;
+                }
                 setTeam(fetchedTeam);
             } catch (error) {
                 console.error('Failed to load assigned team:', error);
@@ -1217,6 +1273,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             
             try {
                 const ticketTags = await findTagsByEntityId(ticket.ticket_id, 'ticket');
+                if (isTagActionError(ticketTags)) {
+                    console.error('Error fetching tags:', ticketTags);
+                    setTags([]);
+                    return;
+                }
                 setTags(ticketTags);
             } catch (error) {
                 console.error('Error fetching tags:', error);
@@ -1531,6 +1592,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleAddAgent = async (userId: string) => {
         try {
             const result = await addTicketResource(ticket.ticket_id!, userId, 'support');
+            if (isReturnedActionError(result)) {
+                throw result;
+            }
 
             if (result) {
                 setAdditionalAgents(prev => [...prev, result]);
@@ -1543,17 +1607,20 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 toast.success(t('messages.agentAssigned'));
             }
         } catch (error) {
-            handleError(error, t('messages.addAgentFailed'));
+            handleTicketActionError(error, t('messages.addAgentFailed'));
         }
     };  
     
     const handleRemoveAgent = async (assignmentId: string) => {
         try {
-            await removeTicketResource(assignmentId);
+            const result = await removeTicketResource(assignmentId);
+            if (isReturnedActionError(result)) {
+                throw result;
+            }
             setAdditionalAgents(prev => prev.filter(agent => agent.assignment_id !== assignmentId));
             toast.success(t('messages.agentRemoved'));
         } catch (error) {
-            handleError(error, t('messages.removeAgentFailed'));
+            handleTicketActionError(error, t('messages.removeAgentFailed'));
         }
     };
 
@@ -1608,6 +1675,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 } else {
                     // Fallback to the original implementation if no optimized handler is provided
                     const result = await updateTicket(ticket.ticket_id || '', { [field]: normalizedValue });
+                    if (isReturnedActionError(result)) {
+                        throw result;
+                    }
 
                     if (result === 'success') {
                         updateSucceeded = true;
@@ -1621,6 +1691,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                             try {
                                 // Refresh the additional resources
                                 const resources = await getTicketResources(ticket.ticket_id!);
+                                if (isReturnedActionError(resources)) {
+                                    handleTicketActionError(resources, t('messages.updateTicketFailed', 'Failed to update ticket'));
+                                    return;
+                                }
                                 setAdditionalAgents(resources);
                                 console.log('Additional resources refreshed after assignment change');
                             } catch (resourceError) {
@@ -1647,6 +1721,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             console.error(`Error updating ticket ${field}:`, error);
             // Revert to previous value on error
             setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
+            handleTicketActionError(error, t('messages.updateTicketFailed', 'Failed to update ticket'));
         }
     };
 
@@ -1669,16 +1744,25 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
 
         try {
-            await assignTeamToTicket(ticket.ticket_id || '', teamId);
+            const result = await assignTeamToTicket(ticket.ticket_id || '', teamId);
+            if (isReturnedActionError(result)) {
+                throw result;
+            }
 
             // If we didn't have team details from local state, fetch them
             if (!teamDetails) {
                 const fetchedTeam = await getTeamById(teamId);
+                if (isTeamActionError(fetchedTeam)) {
+                    throw fetchedTeam;
+                }
                 setTeam(fetchedTeam || null);
             }
 
             if (ticket.ticket_id) {
                 const resources = await getTicketResources(ticket.ticket_id);
+                if (isReturnedActionError(resources)) {
+                    throw resources;
+                }
                 setAdditionalAgents(resources);
             }
 
@@ -1689,7 +1773,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setTicket(previousTicket);
             setTeam(previousTeam);
             setAdditionalAgents(previousAgents);
-            toast.error(t('messages.teamAssignFailed'));
+            handleTicketActionError(error, t('messages.teamAssignFailed'));
         }
     }, [ticket, team, additionalAgents, teams]);
 
@@ -1698,7 +1782,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         keepUserIds?: string[]
     ) => {
         try {
-            await removeTeamFromTicket(ticket.ticket_id || '', { mode, keepUserIds });
+            const result = await removeTeamFromTicket(ticket.ticket_id || '', { mode, keepUserIds });
+            if (isReturnedActionError(result)) {
+                throw result;
+            }
 
             setTicket(prevTicket => ({
                 ...prevTicket,
@@ -1708,13 +1795,16 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
             if (ticket.ticket_id) {
                 const resources = await getTicketResources(ticket.ticket_id);
+                if (isReturnedActionError(resources)) {
+                    throw resources;
+                }
                 setAdditionalAgents(resources);
             }
 
             toast.success(t('messages.teamRemoveSuccess'));
         } catch (error) {
             console.error('Error removing team assignment:', error);
-            toast.error(t('messages.teamRemoveFailed'));
+            handleTicketActionError(error, t('messages.teamRemoveFailed'));
         }
     }, [ticket.ticket_id]);
 
@@ -1811,7 +1901,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 if (ticket.ticket_id) {
                     try {
                         const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
-                        setConversations(updatedComments);
+                        if (isReturnedActionError(updatedComments)) {
+                            handleTicketActionError(updatedComments, t('messages.loadCommentsFailed', 'Failed to load comments'));
+                        } else {
+                            setConversations(updatedComments);
+                        }
                     } catch (e) {
                         console.error('Failed to refresh comments after add:', e);
                     }
@@ -1858,10 +1952,18 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         // See email-subscriber suppression note above.
                         ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {})
                     });
+                    if (isReturnedActionError(newComment)) {
+                        handleTicketActionError(newComment, t('messages.addCommentFailed', 'Failed to add comment'));
+                        return false;
+                    }
                     
                     if (newComment) {
                         // Refresh comments after adding
                         const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
+                        if (isReturnedActionError(updatedComments)) {
+                            handleTicketActionError(updatedComments, t('messages.loadCommentsFailed', 'Failed to load comments'));
+                            return false;
+                        }
                         setConversations(updatedComments);
 
                         if (isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
@@ -1898,6 +2000,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
         } catch (error) {
             console.error("Error adding new note:", error);
+            handleTicketActionError(error, t('messages.addCommentFailed', 'Failed to add comment'));
             return false;
         }
     };
@@ -1927,7 +2030,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
 
         try {
-            await createComment({
+            const result = await createComment({
                 ticket_id: ticket.ticket_id,
                 note: contentStr,
                 is_internal: isInternal,
@@ -1936,8 +2039,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 author_type: 'internal',
                 parent_comment_id: parentCommentId
             });
+            if (isReturnedActionError(result)) {
+                throw result;
+            }
 
             const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
+            if (isReturnedActionError(updatedComments)) {
+                throw updatedComments;
+            }
             setConversations(updatedComments);
 
             if (!isInternal && responseStateTrackingEnabled) {
@@ -1949,7 +2058,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
             return true;
         } catch (error) {
-            handleError(error, t('messages.addCommentFailed', 'Failed to add comment'));
+            handleTicketActionError(error, t('messages.addCommentFailed', 'Failed to add comment'));
             return false;
         }
     };
@@ -2001,9 +2110,15 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 updates.markdown_content = markdownContent;
             }
 
-            await updateComment(currentComment.comment_id!, updates);
+            const updateResult = await updateComment(currentComment.comment_id!, updates);
+            if (isReturnedActionError(updateResult)) {
+                throw updateResult;
+            }
 
             const updatedCommentData = await findCommentById(currentComment.comment_id!);
+            if (isReturnedActionError(updatedCommentData)) {
+                throw updatedCommentData;
+            }
             if (updatedCommentData) {
                 setConversations(prevConversations =>
                     prevConversations.map((conv):IComment =>
@@ -2015,7 +2130,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setIsEditing(false);
             setCurrentComment(null);
         } catch (error) {
-            handleError(error, t('messages.saveCommentFailed'));
+            handleTicketActionError(error, t('messages.saveCommentFailed'));
         }
     };
 const handleClose = () => {
@@ -2031,7 +2146,10 @@ const handleClose = () => {
         if (!comment.comment_id) return;
         
         try {
-            await deleteComment(comment.comment_id);
+            const result = await deleteComment(comment.comment_id);
+            if (isReturnedActionError(result)) {
+                throw result;
+            }
             setConversations(prevConversations =>
                 prevConversations.filter(conv => conv.comment_id !== comment.comment_id)
             );
@@ -2083,10 +2201,13 @@ const handleClose = () => {
                 };
 
                 // Update the ticket
-                await updateTicket(ticket.ticket_id, {
+                const result = await updateTicket(ticket.ticket_id, {
                     attributes: updatedAttributes,
                     updated_at: new Date().toISOString()
                 });
+                if (isReturnedActionError(result)) {
+                    throw result;
+                }
 
                 // Update the local ticket state
                 setTicket(prev => ({
@@ -2100,7 +2221,7 @@ const handleClose = () => {
                 return true;
             }
         } catch (error) {
-            handleError(error, t('messages.updateDescriptionFailed'));
+            handleTicketActionError(error, t('messages.updateDescriptionFailed'));
             return false;
         }
     };
@@ -2133,7 +2254,7 @@ const handleClose = () => {
                 },
             });
         } catch (error) {
-            handleError(error, t('messages.prepareTimeEntryFailed'));
+            handleTicketActionError(error, t('messages.prepareTimeEntryFailed'));
         }
     };
 
@@ -2156,7 +2277,7 @@ const handleClose = () => {
                 onComplete: () => setNextVisitRefreshKey((value) => value + 1),
             });
         } catch (error) {
-            handleError(error, t('messages.scheduleVisitFailed', { defaultValue: 'Failed to open the scheduler' }));
+            handleTicketActionError(error, t('messages.scheduleVisitFailed', { defaultValue: 'Failed to open the scheduler' }));
         }
     };
 
@@ -2183,7 +2304,7 @@ const handleClose = () => {
                 },
             });
         } catch (error) {
-            handleError(error, t('messages.prepareTimeEntryFailed'));
+            handleTicketActionError(error, t('messages.prepareTimeEntryFailed'));
         }
     };
 
@@ -2197,11 +2318,15 @@ const handleClose = () => {
         if (!pendingDeleteTimeEntry) return;
         setIsDeletingTimeEntry(true);
         try {
-            await deleteTimeEntry(pendingDeleteTimeEntry.entry_id);
+            const result = await deleteTimeEntry(pendingDeleteTimeEntry.entry_id);
+            if (isReturnedActionError(result)) {
+                handleTicketActionError(result, t('messages.deleteTimeEntryFailed', { defaultValue: 'Failed to delete time entry' }));
+                return;
+            }
             toast.success(t('messages.timeEntryDeleted', { defaultValue: 'Time entry deleted' }));
             setTimeEntriesRefreshKey((value) => value + 1);
         } catch (error) {
-            handleError(error, t('messages.deleteTimeEntryFailed', { defaultValue: 'Failed to delete time entry' }));
+            handleTicketActionError(error, t('messages.deleteTimeEntryFailed', { defaultValue: 'Failed to delete time entry' }));
         } finally {
             setIsDeletingTimeEntry(false);
             setPendingDeleteTimeEntry(null);
@@ -2213,12 +2338,15 @@ const handleClose = () => {
             return false;
         }
 
-        setIsWatchListSaving(true);
+            setIsWatchListSaving(true);
         try {
             const updatedAttributes = setTicketWatchListOnAttributes(ticket.attributes, watchList);
-            await updateTicketWithCache(ticket.ticket_id, {
+            const result = await updateTicketWithCache(ticket.ticket_id, {
                 attributes: updatedAttributes ?? null,
             });
+            if (isReturnedActionError(result)) {
+                throw result;
+            }
 
             setTicket((prevTicket) => ({
                 ...prevTicket,
@@ -2228,7 +2356,7 @@ const handleClose = () => {
             return true;
         } catch (error) {
             console.error('Error updating watch list:', error);
-            toast.error(t('messages.watchListUpdateFailed'));
+            handleTicketActionError(error, t('messages.watchListUpdateFailed'));
             return false;
         } finally {
             setIsWatchListSaving(false);
@@ -2266,7 +2394,13 @@ const handleClose = () => {
 
     const handleContactChange = async (newContactId: string | null) => {
         try {
-            await runWithPendingLiveFields(['contact_name_id'], () => updateTicket(ticket.ticket_id!, { contact_name_id: newContactId }));
+            await runWithPendingLiveFields(['contact_name_id'], async () => {
+                const result = await updateTicket(ticket.ticket_id!, { contact_name_id: newContactId });
+                if (isReturnedActionError(result)) {
+                    throw result;
+                }
+                return result;
+            });
             
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
@@ -2278,7 +2412,7 @@ const handleClose = () => {
             setIsChangeContactDialogOpen(false);
             toast.success(t('messages.contactUpdated'));
         } catch (error) {
-            handleError(error, t('messages.updateContactFailed'));
+            handleTicketActionError(error, t('messages.updateContactFailed'));
         }
     };
 
@@ -2310,7 +2444,13 @@ const handleClose = () => {
 
             // NOTE: Category management is now unified through the CategoryPicker
 
-            await runWithPendingLiveFields([field], () => updateTicketWithCache(ticket.ticket_id!, updateData));
+            await runWithPendingLiveFields([field], async () => {
+                const result = await updateTicketWithCache(ticket.ticket_id!, updateData);
+                if (isReturnedActionError(result)) {
+                    throw result;
+                }
+                return result;
+            });
 
             // Update local ticket state to reflect the change
             setTicket(prevTicket => ({
@@ -2325,9 +2465,9 @@ const handleClose = () => {
             }
         } catch (error) {
             if (field === 'itil_urgency') {
-                handleError(error, t('messages.itilUrgencyUpdateFailed'));
+                handleTicketActionError(error, t('messages.itilUrgencyUpdateFailed'));
             } else {
-                handleError(error, t('messages.itilImpactUpdateFailed'));
+                handleTicketActionError(error, t('messages.itilImpactUpdateFailed'));
             }
         }
     };
@@ -2371,11 +2511,17 @@ const handleClose = () => {
 
     const handleClientChange = async (newClientId: string) => {
         try {
-            await runWithPendingLiveFields(['client_id', 'contact_name_id', 'location_id'], () => updateTicket(ticket.ticket_id!, {
-                client_id: newClientId,
-                contact_name_id: null, // Reset contact when client changes
-                location_id: null // Reset location when client changes
-            }));
+            await runWithPendingLiveFields(['client_id', 'contact_name_id', 'location_id'], async () => {
+                const result = await updateTicket(ticket.ticket_id!, {
+                    client_id: newClientId,
+                    contact_name_id: null, // Reset contact when client changes
+                    location_id: null // Reset location when client changes
+                });
+                if (isReturnedActionError(result)) {
+                    throw result;
+                }
+                return result;
+            });
             
             const [clientData, contactsData, locationData] = await Promise.all([
                 getClientById(newClientId),
@@ -2391,15 +2537,21 @@ const handleClose = () => {
             setIsChangeClientDialogOpen(false);
             toast.success(t('messages.clientUpdated'));
         } catch (error) {
-            handleError(error, t('messages.updateClientFailed'));
+            handleTicketActionError(error, t('messages.updateClientFailed'));
         }
     };
     
     const handleLocationChange = async (newLocationId: string | null) => {
         try {
-            await runWithPendingLiveFields(['location_id'], () => updateTicket(ticket.ticket_id!, {
-                location_id: newLocationId
-            }));
+            await runWithPendingLiveFields(['location_id'], async () => {
+                const result = await updateTicket(ticket.ticket_id!, {
+                    location_id: newLocationId
+                });
+                if (isReturnedActionError(result)) {
+                    throw result;
+                }
+                return result;
+            });
             
             // Update the ticket state with the new location
             setTicket(prevTicket => ({
@@ -2410,7 +2562,7 @@ const handleClose = () => {
 
             toast.success(t('messages.locationUpdated'));
         } catch (error) {
-            handleError(error, t('messages.updateLocationFailed'));
+            handleTicketActionError(error, t('messages.updateLocationFailed'));
         }
     };
 
@@ -2432,7 +2584,10 @@ const handleClose = () => {
 
         setIsDeletingComment(true);
         try {
-            await deleteComment(commentToDelete.commentId);
+            const result = await deleteComment(commentToDelete.commentId);
+            if (isReturnedActionError(result)) {
+                throw result;
+            }
             setConversations(prevConversations =>
                 prevConversations.filter(conv => conv.comment_id !== commentToDelete.commentId)
             );
@@ -2467,7 +2622,7 @@ const handleClose = () => {
                 toast.success(t('messages.commentDeleteSuccess'));
             }
         } catch (error) {
-            handleError(error, t('messages.deleteCommentFailed'));
+            handleTicketActionError(error, t('messages.deleteCommentFailed'));
         } finally {
             resetCommentDeleteState();
         }
@@ -2491,29 +2646,37 @@ const handleClose = () => {
 
     const handleRemoveChildFromBundle = useCallback(async (childTicketId: string) => {
         try {
-            await removeChildFromBundleAction({ childTicketId });
+            const result = await removeChildFromBundleAction({ childTicketId });
+            if (isReturnedActionError(result)) {
+                handleTicketActionError(result, t('messages.removeFromBundleFailed'));
+                return;
+            }
             toast.success(t('messages.removedFromBundle'));
             router.refresh();
         } catch (error) {
-            handleError(error, t('messages.removeFromBundleFailed'));
+            handleTicketActionError(error, t('messages.removeFromBundleFailed'));
         }
     }, [router]);
 
     const handleUnbundleMaster = useCallback(async () => {
         if (!ticket.ticket_id) return;
         try {
-            await unbundleMasterTicketAction({ masterTicketId: ticket.ticket_id });
+            const result = await unbundleMasterTicketAction({ masterTicketId: ticket.ticket_id });
+            if (isReturnedActionError(result)) {
+                handleTicketActionError(result, t('messages.unbundleFailed'));
+                return;
+            }
             toast.success(t('messages.bundleRemoved'));
             router.refresh();
         } catch (error) {
-            handleError(error, t('messages.unbundleFailed'));
+            handleTicketActionError(error, t('messages.unbundleFailed'));
         }
     }, [ticket.ticket_id, router]);
 
     const performAddChildToBundle = useCallback(async (childTicketId: string) => {
         if (!ticket.ticket_id) return;
         const result = await addChildrenToBundleAction({ masterTicketId: ticket.ticket_id, childTicketIds: [childTicketId] });
-        if (isActionMessageError(result)) {
+        if (isReturnedActionError(result)) {
             toast.error(getErrorMessage(result));
             return;
         }
@@ -2547,6 +2710,10 @@ const handleClose = () => {
         // Fallback: search by exact ticket number
         try {
             const found = await findTicketByNumberAction({ ticketNumber: normalized });
+            if (isReturnedActionError(found)) {
+                handleTicketActionError(found, t('messages.addToBundleFailed'));
+                return;
+            }
             if (!found) {
                 toast.error(t('messages.ticketNotFound'));
                 return;
@@ -2568,7 +2735,7 @@ const handleClose = () => {
 
             await performAddChildToBundle(found.ticket_id);
         } catch (error) {
-            handleError(error, t('messages.addToBundleFailed'));
+            handleTicketActionError(error, t('messages.addToBundleFailed'));
         }
     }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, selectedChildTicket, performAddChildToBundle]);
 
@@ -2600,6 +2767,11 @@ const handleClose = () => {
                 limit: 10
             });
             if (searchSeq !== childTicketSearchSeqRef.current) return;
+            if (isReturnedActionError(results)) {
+                setSearchResults([]);
+                toast.error(getErrorMessage(results));
+                return;
+            }
             setSearchResults(results);
         } catch (error) {
             console.error('Failed to search tickets:', error);
@@ -2679,12 +2851,16 @@ const handleClose = () => {
     const handlePromoteChildToMaster = useCallback(async (childTicketId: string) => {
         if (!ticket.ticket_id) return;
         try {
-            await promoteBundleMasterAction({ oldMasterTicketId: ticket.ticket_id, newMasterTicketId: childTicketId });
+            const result = await promoteBundleMasterAction({ oldMasterTicketId: ticket.ticket_id, newMasterTicketId: childTicketId });
+            if (isReturnedActionError(result)) {
+                handleTicketActionError(result, t('messages.promoteMasterFailed'));
+                return;
+            }
             toast.success(t('messages.promotedMaster'));
             router.push(`/msp/tickets/${childTicketId}`);
             router.refresh();
         } catch (error) {
-            handleError(error, t('messages.promoteMasterFailed'));
+            handleTicketActionError(error, t('messages.promoteMasterFailed'));
         }
     }, [ticket.ticket_id, router]);
 
@@ -2693,11 +2869,15 @@ const handleClose = () => {
         try {
             setIsUpdatingBundleSettings(true);
             const nextMode = bundle.mode === 'link_only' ? 'sync_updates' : 'link_only';
-            await updateBundleSettingsAction({ masterTicketId: ticket.ticket_id, mode: nextMode });
+            const result = await updateBundleSettingsAction({ masterTicketId: ticket.ticket_id, mode: nextMode });
+            if (isReturnedActionError(result)) {
+                handleTicketActionError(result, t('messages.updateBundleSettingsFailed'));
+                return;
+            }
             toast.success(t('messages.bundleSettingsUpdated'));
             router.refresh();
         } catch (error) {
-            handleError(error, t('messages.updateBundleSettingsFailed'));
+            handleTicketActionError(error, t('messages.updateBundleSettingsFailed'));
         } finally {
             setIsUpdatingBundleSettings(false);
         }
@@ -3155,7 +3335,7 @@ const handleClose = () => {
                         try {
                             await performAddChildToBundle(pendingChildToAdd.ticket_id);
                         } catch (error) {
-                            handleError(error, t('messages.addToBundleFailed'));
+                            handleTicketActionError(error, t('messages.addToBundleFailed'));
                         } finally {
                             setIsAddChildMultiClientConfirmOpen(false);
                             setPendingChildToAdd(null);

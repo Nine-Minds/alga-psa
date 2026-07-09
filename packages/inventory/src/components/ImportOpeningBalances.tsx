@@ -6,6 +6,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { toast } from 'react-hot-toast';
 import {
@@ -30,6 +31,7 @@ const TEMPLATE_CSV = [
 
 const MAX_LISTED_ISSUES = 20;
 const MAX_SAMPLE_ROWS = 8;
+const isReturnedActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
 
 export function ImportOpeningBalances({
   onApplied,
@@ -94,12 +96,15 @@ export function ImportOpeningBalances({
     }
     setBusy('validate');
     try {
-      setPreview(
-        await validateOpeningBalanceImport(csvText, {
-          batch_label: batchLabel,
-          create_missing_settings: createSettings,
-        }),
-      );
+      const result = await validateOpeningBalanceImport(csvText, {
+        batch_label: batchLabel,
+        create_missing_settings: createSettings,
+      });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setPreview(result);
     } catch (e: any) {
       toast.error(e?.message || t('import_.validationFailed', 'Validation failed.'));
     } finally {
@@ -115,6 +120,10 @@ export function ImportOpeningBalances({
         batch_label: batchLabel,
         create_missing_settings: createSettings,
       });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       const receiptsText =
         result.receipts === 1
           ? t('import_.apply.receipt', '{{count}} receipt', { count: result.receipts })

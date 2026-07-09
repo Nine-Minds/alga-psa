@@ -8,6 +8,10 @@ import {
   IStatusSlaPauseConfig,
   SlaPauseReason
 } from '../types';
+import {
+  SlaActionError,
+  slaActionErrorFrom,
+} from './slaActionErrors';
 
 export interface ISlaPauseConfigStatusOption {
   status_id: string;
@@ -86,7 +90,7 @@ export const getSlaSettings = withAuth(async (_user, { tenant }): Promise<ISlaSe
       } as ISlaSettings;
     } catch (error) {
       console.error(`Error fetching SLA settings for tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch SLA settings for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -95,7 +99,7 @@ export const getSlaSettings = withAuth(async (_user, { tenant }): Promise<ISlaSe
  * Update SLA settings for the current tenant.
  * Creates settings if they don't exist (upsert pattern).
  */
-export const updateSlaSettings = withAuth(async (_user, { tenant }, settings: Partial<ISlaSettings>): Promise<ISlaSettings> => {
+export const updateSlaSettings = withAuth(async (_user, { tenant }, settings: Partial<ISlaSettings>): Promise<ISlaSettings | SlaActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -137,8 +141,13 @@ export const updateSlaSettings = withAuth(async (_user, { tenant }, settings: Pa
         updated_at: result.updated_at,
       } as ISlaSettings;
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error updating SLA settings for tenant ${tenant}:`, error);
-      throw new Error(`Failed to update SLA settings for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -175,7 +184,7 @@ export const getStatusSlaPauseConfigs = withAuth(async (_user, { tenant }): Prom
       }));
     } catch (error) {
       console.error(`Error fetching status SLA pause configs for tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch status SLA pause configs for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -214,7 +223,7 @@ export const getSlaPauseConfigForStatus = withAuth(async (_user, { tenant }, sta
       } as IStatusSlaPauseConfig;
     } catch (error) {
       console.error(`Error fetching SLA pause config for status ${statusId}:`, error);
-      throw new Error(`Failed to fetch SLA pause config for status ${statusId}`);
+      throw error;
     }
   });
 });
@@ -228,15 +237,13 @@ export const setStatusSlaPauseConfig = withAuth(async (
   { tenant },
   statusId: string,
   pausesSla: boolean
-): Promise<IStatusSlaPauseConfig> => {
+): Promise<IStatusSlaPauseConfig | SlaActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    // Outside the try: validation errors must reach callers verbatim; the
-    // catch below is for operational failures only.
-    await assertBoardOwnedTicketStatus(trx, tenant, statusId);
-
     try {
+      await assertBoardOwnedTicketStatus(trx, tenant, statusId);
+
       const scopedDb = tenantDb(trx, tenant);
 
       // Check if config exists for this status
@@ -277,8 +284,13 @@ export const setStatusSlaPauseConfig = withAuth(async (
         created_at: result.created_at,
       } as IStatusSlaPauseConfig;
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error setting SLA pause config for status ${statusId}:`, error);
-      throw new Error(`Failed to set SLA pause config for status ${statusId}`);
+      throw error;
     }
   });
 });
@@ -291,7 +303,7 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
   _user,
   { tenant },
   configs: Array<{ statusId: string; pausesSla: boolean }>
-): Promise<IStatusSlaPauseConfig[]> => {
+): Promise<IStatusSlaPauseConfig[] | SlaActionError> => {
   const { knex: db } = await createTenantKnex();
 
   if (configs.length === 0) {
@@ -350,8 +362,13 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
 
       return results;
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error bulk updating SLA pause configs for tenant ${tenant}:`, error);
-      throw new Error(`Failed to bulk update SLA pause configs for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -400,7 +417,7 @@ export const getBoardOwnedTicketStatusesForSlaPauseConfig = withAuth(async (
       }));
     } catch (error) {
       console.error(`Error fetching board-owned ticket statuses for tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch board-owned ticket statuses for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -480,7 +497,7 @@ export const shouldSlaBePaused = withAuth(async (
         throw error;
       }
       console.error(`Error checking SLA pause status for ticket ${ticketId}:`, error);
-      throw new Error(`Failed to check SLA pause status for ticket ${ticketId}`);
+      throw error;
     }
   });
 });
@@ -489,7 +506,7 @@ export const shouldSlaBePaused = withAuth(async (
  * Delete a status SLA pause configuration.
  * Useful when a status is deleted or when you want to remove the override.
  */
-export const deleteStatusSlaPauseConfig = withAuth(async (_user, { tenant }, statusId: string): Promise<boolean> => {
+export const deleteStatusSlaPauseConfig = withAuth(async (_user, { tenant }, statusId: string): Promise<boolean | SlaActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -500,8 +517,13 @@ export const deleteStatusSlaPauseConfig = withAuth(async (_user, { tenant }, sta
 
       return deleted > 0;
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error deleting SLA pause config for status ${statusId}:`, error);
-      throw new Error(`Failed to delete SLA pause config for status ${statusId}`);
+      throw error;
     }
   });
 });

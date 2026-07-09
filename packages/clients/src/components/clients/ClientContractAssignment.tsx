@@ -18,6 +18,7 @@ import {
   getDetailedClientContract,
   updateClientContract,
   deactivateClientContract,
+  type ClientContractMutationResult,
 } from '@alga-psa/clients/actions';
 import { getClientById } from '@alga-psa/clients/actions';
 import { useClientCrossFeature } from '@alga-psa/clients/context/ClientCrossFeatureContext';
@@ -25,6 +26,11 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ClientContractDialog, ClientContractDialogSubmission } from './ClientContractDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface ClientContractAssignmentProps {
   clientId: string;
@@ -37,6 +43,12 @@ interface DetailedClientContract extends IClientContract {
   contract_line_count: number;
   contract_line_names?: string[];
 }
+
+const isClientContractActionError = (
+  result: ClientContractMutationResult,
+): result is Exclude<ClientContractMutationResult, IClientContract> => (
+  isActionMessageError(result) || isActionPermissionError(result)
+);
 
 const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ clientId, onAssignmentsChanged }) => {
   const { t } = useTranslation('msp/clients');
@@ -113,25 +125,35 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     await onAssignmentsChanged?.();
   };
 
+  const formatActionError = (error: unknown, fallback: string) => {
+    let errorMsg = fallback;
+    const actionMessage = getErrorMessage(error);
+
+    if (actionMessage !== 'An unexpected error occurred') {
+      errorMsg = actionMessage;
+    } else if ((error as any)?.response?.data?.message) {
+      errorMsg = (error as any).response.data.message;
+    }
+
+    if (clientName && errorMsg.includes(clientId)) {
+      errorMsg = errorMsg.replaceAll(clientId, clientName);
+    }
+
+    return errorMsg;
+  };
+
   const handleDeactivateContract = async (clientContractId: string) => {
     try {
-      await deactivateClientContract(clientContractId);
+      const result = await deactivateClientContract(clientContractId);
+      if (isClientContractActionError(result)) {
+        setError(formatActionError(result, t('clientContractAssignment.deactivateError', { defaultValue: 'Failed to deactivate contract' })));
+        return;
+      }
       await fetchData(); // Refresh data
       await onAssignmentsChanged?.();
     } catch (error: any) {
       console.error('Error deactivating client contract:', error);
-      let errorMsg = t('clientContractAssignment.deactivateError', { defaultValue: 'Failed to deactivate contract' });
-      if (error?.message) {
-        errorMsg = error.message;
-      } else if (typeof error === 'string') {
-        errorMsg = error;
-      } else if (error?.response?.data?.message) {
-        errorMsg = error.response.data.message;
-      }
-      if (clientName && errorMsg.includes(clientId)) {
-        errorMsg = errorMsg.replaceAll(clientId, clientName);
-      }
-      setError(errorMsg);
+      setError(formatActionError(error, t('clientContractAssignment.deactivateError', { defaultValue: 'Failed to deactivate contract' })));
     }
   };
 
@@ -144,7 +166,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     payload: ClientContractDialogSubmission
   ) => {
     try {
-      await updateClientContract(clientContractId, { 
+      const result = await updateClientContract(clientContractId, {
         start_date: payload.startDate,
         end_date: payload.endDate,
         use_tenant_renewal_defaults: payload.endDate ? payload.use_tenant_renewal_defaults : undefined,
@@ -152,23 +174,17 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
         notice_period_days: payload.endDate ? payload.notice_period_days : undefined,
         renewal_term_months: payload.endDate ? payload.renewal_term_months : undefined,
       });
+      if (isClientContractActionError(result)) {
+        throw new Error(formatActionError(result, t('clientContractAssignment.updateError', { defaultValue: 'Failed to update contract' })));
+      }
       await fetchData(); // Refresh data
       setEditingContract(null);
       await onAssignmentsChanged?.();
     } catch (error: any) {
       console.error('Error updating client contract:', error);
-      let errorMsg = t('clientContractAssignment.updateError', { defaultValue: 'Failed to update contract' });
-      if (error?.message) {
-        errorMsg = error.message;
-      } else if (typeof error === 'string') {
-        errorMsg = error;
-      } else if (error?.response?.data?.message) {
-        errorMsg = error.response.data.message;
-      }
-      if (clientName && errorMsg.includes(clientId)) {
-        errorMsg = errorMsg.replaceAll(clientId, clientName);
-      }
+      const errorMsg = formatActionError(error, t('clientContractAssignment.updateError', { defaultValue: 'Failed to update contract' }));
       setError(errorMsg);
+      throw new Error(errorMsg);
     }
   };
 

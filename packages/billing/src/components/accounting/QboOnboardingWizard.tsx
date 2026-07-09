@@ -323,7 +323,8 @@ function StepGoLive({ onDone }: StepGoLiveProps) {
       await completeOnboardingWizard({ autoSyncStartDate, enableAutoSync });
       onDone();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete wizard.');
+      console.error('Failed to complete QBO onboarding wizard:', err);
+      setError('Failed to complete wizard.');
     } finally {
       setSaving(false);
     }

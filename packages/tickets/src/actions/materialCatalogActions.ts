@@ -9,10 +9,54 @@ import {
   addMaterial,
   deleteMaterial,
   listMaterials,
+  MaterialValidationError,
   queryAvailableStockUnits,
   queryCatalogPickerItems,
   queryServicePrices,
 } from '@alga-psa/inventory/lib';
+import { InsufficientStockError } from '@alga-psa/inventory/lib/consume';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+type TicketMaterialActionError = ActionMessageError | ActionPermissionError;
+
+function ticketMaterialActionErrorFrom(error: unknown): TicketMaterialActionError | null {
+  if (error instanceof Error) {
+    if (error.message.includes('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (
+      error instanceof MaterialValidationError ||
+      error instanceof InsufficientStockError ||
+      error.message === 'Cannot delete a billed material.'
+    ) {
+      return actionError(error.message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected material values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required material field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected ticket, client, product, or stock unit is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This material conflicts with an existing ticket material or stock assignment. Please refresh and try again.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('One of the material values is not allowed. Please review the form and try again.');
+  }
+
+  return null;
+}
 
 export interface CatalogPickerSearchOptions {
   search?: string;
@@ -57,12 +101,20 @@ export const listTicketMaterials = withAuth(async (
   user,
   { tenant },
   ticketId: string
-): Promise<ITicketMaterial[]> => {
-  if (!await hasPermission(user, 'ticket', 'read')) {
-    throw new Error('Permission denied: ticket read required');
+): Promise<ITicketMaterial[] | TicketMaterialActionError> => {
+  try {
+    if (!await hasPermission(user, 'ticket', 'read')) {
+      throw new Error('Permission denied: ticket read required');
+    }
+    const { knex: db } = await createTenantKnex();
+    return (await listMaterials(db, tenant, 'ticket', ticketId)) as ITicketMaterial[];
+  } catch (error) {
+    const expected = ticketMaterialActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex: db } = await createTenantKnex();
-  return (await listMaterials(db, tenant, 'ticket', ticketId)) as ITicketMaterial[];
 });
 
 export const addTicketMaterial = withAuth(async (
@@ -78,17 +130,25 @@ export const addTicketMaterial = withAuth(async (
     description?: string | null;
     unit_id?: string | null; // serialized: the picked stock unit to deliver
   }
-): Promise<ITicketMaterial> => {
-  if (!await hasPermission(user, 'ticket', 'update')) {
-    throw new Error('Permission denied: ticket update required');
+): Promise<ITicketMaterial | TicketMaterialActionError> => {
+  try {
+    if (!await hasPermission(user, 'ticket', 'update')) {
+      throw new Error('Permission denied: ticket update required');
+    }
+    const { knex: db } = await createTenantKnex();
+    return (await addMaterial(
+      db,
+      tenant,
+      { ...input, parent_type: 'ticket', parent_id: input.ticket_id },
+      (user as any)?.user_id ?? null,
+    )) as ITicketMaterial;
+  } catch (error) {
+    const expected = ticketMaterialActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex: db } = await createTenantKnex();
-  return (await addMaterial(
-    db,
-    tenant,
-    { ...input, parent_type: 'ticket', parent_id: input.ticket_id },
-    (user as any)?.user_id ?? null,
-  )) as ITicketMaterial;
 });
 
 /** In-stock serialized units available to pick when adding a serialized product as a material. */
@@ -108,10 +168,18 @@ export const deleteTicketMaterial = withAuth(async (
   user,
   { tenant },
   ticketMaterialId: string
-): Promise<void> => {
-  if (!await hasPermission(user, 'ticket', 'update')) {
-    throw new Error('Permission denied: ticket update required');
+): Promise<void | TicketMaterialActionError> => {
+  try {
+    if (!await hasPermission(user, 'ticket', 'update')) {
+      throw new Error('Permission denied: ticket update required');
+    }
+    const { knex: db } = await createTenantKnex();
+    await deleteMaterial(db, tenant, 'ticket', ticketMaterialId, (user as any)?.user_id ?? null);
+  } catch (error) {
+    const expected = ticketMaterialActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex: db } = await createTenantKnex();
-  await deleteMaterial(db, tenant, 'ticket', ticketMaterialId, (user as any)?.user_id ?? null);
 });

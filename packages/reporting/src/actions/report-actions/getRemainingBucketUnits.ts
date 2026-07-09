@@ -5,6 +5,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex'; // Import Knex type for query builder
+import { reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
 
 // Define the schema for the input parameters
 const InputSchema = z.object({
@@ -40,12 +41,11 @@ export const getRemainingBucketUnits = withAuth(async (
   _user,
   { tenant },
   input: z.infer<typeof InputSchema>
-): Promise<RemainingBucketUnitsResult[]> => {
+): Promise<RemainingBucketUnitsResult[] | ReportingActionError> => {
   // Validate input
   const validationResult = InputSchema.safeParse(input);
   if (!validationResult.success) {
-    const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
-    throw new Error(`Validation Error: ${errorMessages}`);
+    return reportingActionErrorFrom(validationResult.error)!;
   }
   const { clientId, currentDate } = validationResult.data;
 
@@ -141,7 +141,9 @@ export const getRemainingBucketUnits = withAuth(async (
     return results;
 
   } catch (error) {
+    const expected = reportingActionErrorFrom(error);
+    if (expected) return expected;
     console.error(`Error fetching remaining bucket units for client ${clientId} in tenant ${tenant}:`, error);
-    throw new Error(`Failed to fetch remaining bucket units: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error;
   }
 });

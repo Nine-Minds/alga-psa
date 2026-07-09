@@ -24,7 +24,7 @@ import {
   PrinterAssetData
 } from '../schemas/asset';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
-import { NotFoundError, ConflictError } from '../middleware/apiMiddleware';
+import { NotFoundError, ConflictError, ValidationError } from '../middleware/apiMiddleware';
 
 function scopedTable<Row extends object = Record<string, any>>(
   conn: Knex | Knex.Transaction,
@@ -289,13 +289,13 @@ export class AssetService extends BaseService<any> {
       : null;
 
     if (needsCurrent && !current) {
-      throw new Error('Asset not found');
+      throw new NotFoundError('Asset not found');
     }
 
     if (data.location_id) {
       const clientId = data.client_id || current?.client_id;
       if (!clientId) {
-        throw new Error('Asset not found');
+        throw new NotFoundError('Asset not found');
       }
       await this.assertLocationBelongsToClient(knex, context.tenant, clientId, data.location_id);
     } else if (
@@ -312,9 +312,13 @@ export class AssetService extends BaseService<any> {
 
     updateData.updated_at = new Date();
 
-    await scopedTable(knex, context.tenant, this.tableName)
+    const updated = await scopedTable(knex, context.tenant, this.tableName)
       .where({ [this.primaryKey]: id })
       .update(updateData);
+
+    if (!updated) {
+      throw new NotFoundError('Asset not found');
+    }
 
     // Publish event
     await publishEvent({
@@ -328,7 +332,12 @@ export class AssetService extends BaseService<any> {
       }
     });
 
-    return this.getById(id, context);
+    const asset = await this.getById(id, context);
+    if (!asset) {
+      throw new NotFoundError('Asset not found');
+    }
+
+    return asset;
   }
 
   private async assertLocationBelongsToClient(
@@ -346,7 +355,70 @@ export class AssetService extends BaseService<any> {
       .first('location_id');
 
     if (!location) {
-      throw new Error('Selected location is not available for this client');
+      throw new ValidationError('Selected location is not available for this client');
+    }
+  }
+
+  private async assertAssetExists(
+    knex: Knex | Knex.Transaction,
+    tenant: string,
+    assetId: string,
+    message = 'Asset not found'
+  ): Promise<void> {
+    const asset = await scopedTable(knex, tenant, this.tableName)
+      .where({ [this.primaryKey]: assetId })
+      .first(this.primaryKey);
+
+    if (!asset) {
+      throw new NotFoundError(message);
+    }
+  }
+
+  private async assertDocumentExists(
+    knex: Knex | Knex.Transaction,
+    tenant: string,
+    documentId: string
+  ): Promise<void> {
+    const document = await scopedTable(knex, tenant, 'documents')
+      .where({ document_id: documentId })
+      .first('document_id');
+
+    if (!document) {
+      throw new NotFoundError('Document not found');
+    }
+  }
+
+  private async assertUserExists(
+    knex: Knex | Knex.Transaction,
+    tenant: string,
+    userId: string,
+    message: string
+  ): Promise<void> {
+    const user = await scopedTable(knex, tenant, 'users')
+      .where({ user_id: userId })
+      .first('user_id');
+
+    if (!user) {
+      throw new NotFoundError(message);
+    }
+  }
+
+  private async assertMaintenanceScheduleForAsset(
+    knex: Knex | Knex.Transaction,
+    tenant: string,
+    scheduleId: string,
+    assetId: string
+  ): Promise<void> {
+    const schedule = await scopedTable(knex, tenant, 'asset_maintenance_schedules')
+      .where({ schedule_id: scheduleId })
+      .first('schedule_id', 'asset_id');
+
+    if (!schedule) {
+      throw new NotFoundError('Maintenance schedule not found');
+    }
+
+    if (schedule.asset_id !== assetId) {
+      throw new ValidationError('Maintenance schedule does not belong to this asset');
     }
   }
 
@@ -354,7 +426,7 @@ export class AssetService extends BaseService<any> {
     // Get asset type for cleanup
     const asset = await this.getById(id, context);
     if (!asset) {
-      throw new Error('Asset not found');
+      throw new NotFoundError('Asset not found');
     }
 
     // Delete extension data
@@ -564,11 +636,14 @@ export class AssetService extends BaseService<any> {
   async createRelationship(assetId: string, data: CreateAssetRelationshipData, context: ServiceContext): Promise<any> {
     // Prevent circular relationships
     if (assetId === data.related_asset_id) {
-      throw new Error('Cannot create relationship with self');
+      throw new ValidationError('Cannot create relationship with self');
     }
 
     // Check for existing relationship
     const knex = await this.getDbForContext(context);
+    await this.assertAssetExists(knex, context.tenant, assetId);
+    await this.assertAssetExists(knex, context.tenant, data.related_asset_id, 'Related asset not found');
+
     const existing = await scopedTable(knex, context.tenant, 'asset_relationships')
       .where({
         asset_id: assetId,
@@ -577,7 +652,7 @@ export class AssetService extends BaseService<any> {
       .first();
 
     if (existing) {
-      throw new Error('Relationship already exists');
+      throw new ConflictError('Relationship already exists');
     }
 
     const relationshipData = {
@@ -596,9 +671,13 @@ export class AssetService extends BaseService<any> {
 
   async deleteRelationship(relationshipId: string, context: ServiceContext): Promise<void> {
     const knex = await this.getDbForContext(context);
-    await scopedTable(knex, context.tenant, 'asset_relationships')
+    const deleted = await scopedTable(knex, context.tenant, 'asset_relationships')
       .where({ relationship_id: relationshipId })
       .del();
+
+    if (!deleted) {
+      throw new NotFoundError('Asset relationship not found');
+    }
   }
 
   // Asset documents
@@ -622,6 +701,10 @@ export class AssetService extends BaseService<any> {
   }
 
   async associateDocument(assetId: string, data: CreateAssetDocumentData, context: ServiceContext): Promise<any> {
+    const knex = await this.getDbForContext(context);
+    await this.assertAssetExists(knex, context.tenant, assetId);
+    await this.assertDocumentExists(knex, context.tenant, data.document_id);
+
     const associationData = {
       entity_type: 'asset',
       entity_id: assetId,
@@ -631,7 +714,6 @@ export class AssetService extends BaseService<any> {
       created_at: new Date()
     };
 
-    const knex = await this.getDbForContext(context);
     const [association] = await tenantDb(knex, context.tenant).table('document_associations')
       .insert(associationData)
       .returning('*');
@@ -641,9 +723,13 @@ export class AssetService extends BaseService<any> {
 
   async removeDocumentAssociation(associationId: string, context: ServiceContext): Promise<void> {
     const knex = await this.getDbForContext(context);
-    await scopedTable(knex, context.tenant, 'document_associations')
+    const deleted = await scopedTable(knex, context.tenant, 'document_associations')
       .where({ association_id: associationId })
       .del();
+
+    if (!deleted) {
+      throw new NotFoundError('Asset document association not found');
+    }
   }
 
   // Maintenance management
@@ -664,6 +750,12 @@ export class AssetService extends BaseService<any> {
   }
 
   async createMaintenanceSchedule(assetId: string, data: CreateMaintenanceScheduleData, context: ServiceContext): Promise<any> {
+    const knex = await this.getDbForContext(context);
+    await this.assertAssetExists(knex, context.tenant, assetId);
+    if (data.assigned_to) {
+      await this.assertUserExists(knex, context.tenant, data.assigned_to, 'Assigned user not found');
+    }
+
     const scheduleData = {
       ...data,
       asset_id: assetId,
@@ -679,7 +771,6 @@ export class AssetService extends BaseService<any> {
       data.frequency_interval
     );
 
-    const knex = await this.getDbForContext(context);
     const [schedule] = await tenantDb(knex, context.tenant).table('asset_maintenance_schedules')
       .insert(scheduleData)
       .returning('*');
@@ -688,6 +779,19 @@ export class AssetService extends BaseService<any> {
   }
 
   async updateMaintenanceSchedule(scheduleId: string, data: UpdateMaintenanceScheduleData, context: ServiceContext): Promise<any> {
+    const knex = await this.getDbForContext(context);
+    const existing = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+      .where({ schedule_id: scheduleId })
+      .first();
+
+    if (!existing) {
+      throw new NotFoundError('Maintenance schedule not found');
+    }
+
+    if (data.assigned_to) {
+      await this.assertUserExists(knex, context.tenant, data.assigned_to, 'Assigned user not found');
+    }
+
     const updateData = {
       ...data,
       updated_at: new Date()
@@ -695,37 +799,50 @@ export class AssetService extends BaseService<any> {
 
     // Recalculate next maintenance if frequency changed
     if (data.frequency || data.frequency_interval || data.start_date) {
-      const knex = await this.getDbForContext(context);
-      const existing = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-        .where({ schedule_id: scheduleId })
-        .first();
-      
-      if (existing) {
-        const startDate = data.start_date || existing.start_date;
-        const frequency = data.frequency || existing.frequency;
-        const interval = data.frequency_interval || existing.frequency_interval;
-        (updateData as any).next_maintenance = this.calculateNextMaintenanceDate(startDate, frequency, interval);
-      }
+      const startDate = data.start_date || existing.start_date;
+      const frequency = data.frequency || existing.frequency;
+      const interval = data.frequency_interval || existing.frequency_interval;
+      (updateData as any).next_maintenance = this.calculateNextMaintenanceDate(startDate, frequency, interval);
     }
 
-    const knex = await this.getDbForContext(context);
-    await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+    const updated = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
       .where({ schedule_id: scheduleId })
       .update(updateData);
 
-    return scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+    if (!updated) {
+      throw new NotFoundError('Maintenance schedule not found');
+    }
+
+    const schedule = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
       .where({ schedule_id: scheduleId })
       .first();
+
+    if (!schedule) {
+      throw new NotFoundError('Maintenance schedule not found');
+    }
+
+    return schedule;
   }
 
   async deleteMaintenanceSchedule(scheduleId: string, context: ServiceContext): Promise<void> {
     const knex = await this.getDbForContext(context);
-    await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+    const deleted = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
       .where({ schedule_id: scheduleId })
       .del();
+
+    if (!deleted) {
+      throw new NotFoundError('Maintenance schedule not found');
+    }
   }
 
   async recordMaintenance(assetId: string, data: RecordMaintenanceData, context: ServiceContext): Promise<any> {
+    const knex = await this.getDbForContext(context);
+    await this.assertAssetExists(knex, context.tenant, assetId);
+    await this.assertUserExists(knex, context.tenant, data.performed_by, 'Maintenance performer not found');
+    if (data.schedule_id) {
+      await this.assertMaintenanceScheduleForAsset(knex, context.tenant, data.schedule_id, assetId);
+    }
+
     const maintenanceData = {
       ...data,
       asset_id: assetId,
@@ -733,7 +850,6 @@ export class AssetService extends BaseService<any> {
       created_at: new Date()
     };
 
-    const knex = await this.getDbForContext(context);
     const [maintenance] = await tenantDb(knex, context.tenant).table('asset_maintenance_history')
       .insert(maintenanceData)
       .returning('*');

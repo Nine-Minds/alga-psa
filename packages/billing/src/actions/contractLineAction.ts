@@ -22,6 +22,50 @@ import {
     normalizeTemplateRecurringStorage,
 } from '@shared/billingClients/recurrenceStorageModel';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+import { actionError, getErrorMessage, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+type ContractLineActionError = ActionMessageError | ActionPermissionError;
+
+function contractLineActionErrorFrom(error: unknown): ContractLineActionError | null {
+    if (error instanceof Error && error.message.startsWith('Permission denied:')) {
+        return permissionError(error.message);
+    }
+
+    if (error instanceof Error) {
+        if (error.message.includes('not found')) {
+            return actionError('The selected contract line is no longer available. Please refresh and try again.');
+        }
+        if (error.message === 'System-managed default contracts are attribution-only; contract-line authoring is disabled.') {
+            return actionError(error.message);
+        }
+        if (error.message === 'Advance billing is only supported for fixed contract lines.') {
+            return actionError(error.message);
+        }
+        if (error.message.startsWith('Cannot update fixed')) {
+            return actionError(error.message);
+        }
+    }
+
+    const dbError = error as { code?: string; column?: string };
+    if (dbError?.code === '22P02') {
+        return actionError('One of the selected contract line values is invalid. Please refresh and try again.');
+    }
+    if (dbError?.code === '23502') {
+        return actionError(`Missing required contract line field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    }
+    if (dbError?.code === '23503') {
+        return actionError('The selected contract or contract line no longer exists. Please refresh and try again.');
+    }
+    if (dbError?.code === '23505') {
+        return actionError('This contract line change conflicts with an existing record. Please refresh and try again.');
+    }
+    if (dbError?.code === '23514') {
+        return actionError('One of the contract line values is not allowed. Please review the form and try again.');
+    }
+
+    return null;
+}
 
 async function assertContractLineIsAuthorable(
     trx: Knex.Transaction,
@@ -44,7 +88,7 @@ async function assertContractLineIsAuthorable(
 export const getContractLines = withAuth(async (
     user,
     { tenant }
-): Promise<IContractLine[]> => {
+): Promise<IContractLine[] | ContractLineActionError> => {
     try {
         const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
 
@@ -65,10 +109,11 @@ export const getContractLines = withAuth(async (
         });
     } catch (error) {
         console.error('Error fetching contract lines:', error);
-        if (error instanceof Error) {
-            throw error; // Preserve specific error messages
+        const expected = contractLineActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to fetch client contract lines: ${error}`);
+        throw error;
     }
 });
 
@@ -77,8 +122,7 @@ export const getContractLineById = withAuth(async (
     user,
     { tenant },
     planId: string
-): Promise<IContractLine | null> => {
-    let tenant_copy: string = '';
+): Promise<IContractLine | ContractLineActionError | null> => {
     try {
         const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
 
@@ -86,7 +130,6 @@ export const getContractLineById = withAuth(async (
         if (!tenant) {
             throw new Error("tenant context not found");
         }
-        tenant_copy = tenant;
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!isBypass && !await hasPermission(user, 'billing', 'read')) {
@@ -132,14 +175,11 @@ export const getContractLineById = withAuth(async (
         });
     } catch (error) {
         console.error(`Error fetching contract line with ID ${planId}:`, error);
-        if (error instanceof Error) {
-            // Handle specific errors like 'not found' if the model throws them
-            if (error.message.includes('not found')) { // Example check
-                return null;
-            }
-            throw error;
+        const expected = contractLineActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to fetch contract line ${planId} in tenant ${tenant_copy}: ${error}`);
+        throw error;
     }
 });
 
@@ -147,7 +187,7 @@ export const createContractLine = withAuth(async (
     user,
     { tenant },
     planData: Omit<IContractLine, 'contract_line_id'>
-): Promise<IContractLine> => {
+): Promise<IContractLine | ContractLineActionError> => {
     try {
         const { knex } = await createTenantKnex();
         if (!tenant) {
@@ -191,10 +231,11 @@ export const createContractLine = withAuth(async (
         });
     } catch (error) {
         console.error('Error creating contract line:', error);
-        if (error instanceof Error) {
-            throw error; // Preserve specific error messages
+        const expected = contractLineActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to create contract line: ${error}`);
+        throw error;
     }
 });
 
@@ -203,7 +244,7 @@ export const updateContractLine = withAuth(async (
     { tenant },
     planId: string,
     updateData: Partial<IContractLine>
-): Promise<IContractLine> => {
+): Promise<IContractLine | ContractLineActionError> => {
     try {
         const { knex } = await createTenantKnex();
         if (!tenant) {
@@ -264,14 +305,11 @@ export const updateContractLine = withAuth(async (
         });
     } catch (error) {
         console.error('Error updating contract line:', error);
-        if (error instanceof Error) {
-            // Re-throw specific errors like 'not found' if they weren't caught above
-            if (error.message.includes('not found')) {
-                 throw new Error(`Contract Line with ID ${planId} not found during update.`);
-            }
-            throw error; // Preserve other specific error messages
+        const expected = contractLineActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to update contract line ${planId}: ${error}`);
+        throw error;
     }
 });
 
@@ -280,43 +318,50 @@ export const upsertContractLineTerms = withAuth(async (
     { tenant },
     contractLineId: string,
     billingTiming: 'arrears' | 'advance'
-): Promise<void> => {
-    const { knex } = await createTenantKnex();
-    if (!tenant) {
-        throw new Error("tenant context not found");
-    }
-
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-        if (!await hasPermission(user, 'billing', 'update')) {
-            throw new Error('Permission denied: Cannot update contract line terms');
+): Promise<void | ContractLineActionError> => {
+    try {
+        const { knex } = await createTenantKnex();
+        if (!tenant) {
+            throw new Error("tenant context not found");
         }
 
-        const contractLine = await ContractLine.findById(trx, contractLineId);
-        if (!contractLine) {
-            throw new Error(`Contract line ${contractLineId} not found.`);
-        }
-        await assertContractLineIsAuthorable(trx, tenant, contractLineId);
+        await withTransaction(knex, async (trx: Knex.Transaction) => {
+            if (!await hasPermission(user, 'billing', 'update')) {
+                throw new Error('Permission denied: Cannot update contract line terms');
+            }
 
-        if (billingTiming === 'advance' && contractLine.contract_line_type !== 'Fixed') {
-            throw new Error('Advance billing is only supported for fixed contract lines.');
-        }
+            const contractLine = await ContractLine.findById(trx, contractLineId);
+            if (!contractLine) {
+                throw new Error(`Contract line ${contractLineId} not found.`);
+            }
+            await assertContractLineIsAuthorable(trx, tenant, contractLineId);
 
-        // Update billing_timing directly on contract_lines table
-        // (migration 20251025120000 added this column)
-        await tenantDb(trx, tenant).table('contract_lines')
-            .where({ contract_line_id: contractLineId })
-            .update({
-                billing_timing: billingTiming,
-                updated_at: trx.fn.now(),
+            if (billingTiming === 'advance' && contractLine.contract_line_type !== 'Fixed') {
+                throw new Error('Advance billing is only supported for fixed contract lines.');
+            }
+
+            await tenantDb(trx, tenant).table('contract_lines')
+                .where({ contract_line_id: contractLineId })
+                .update({
+                    billing_timing: billingTiming,
+                    updated_at: trx.fn.now(),
+                });
+
+            await syncRecurringServicePeriodsForContractLine(trx, {
+                tenant,
+                contractLineId,
+                sourceRunPrefix: 'contract_line_terms_update',
             });
 
-        await syncRecurringServicePeriodsForContractLine(trx, {
-            tenant,
-            contractLineId,
-            sourceRunPrefix: 'contract_line_terms_update',
         });
-
-    });
+    } catch (error) {
+        console.error(`Error upserting contract line terms for ${contractLineId}:`, error);
+        const expected = contractLineActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
+        throw error;
+    }
 });
 
 export const deleteContractLine = withAuth(async (
@@ -381,11 +426,12 @@ export const deleteContractLine = withAuth(async (
         };
     } catch (error) {
         console.error('Error deleting contract line:', error);
+        const expected = contractLineActionErrorFrom(error);
         return {
             success: false,
             canDelete: false,
-            code: 'VALIDATION_FAILED',
-            message: 'Failed to delete contract line',
+            code: expected && 'permissionError' in expected ? 'PERMISSION_DENIED' : 'VALIDATION_FAILED',
+            message: expected ? getErrorMessage(expected) : 'Failed to delete contract line',
             dependencies: [],
             alternatives: []
         };
@@ -407,7 +453,7 @@ export const getCombinedFixedPlanConfiguration = withAuth(async (
     enable_proration: boolean;
     billing_cycle_alignment: 'start' | 'end' | 'prorated';
     config_id?: string; // Service-specific config ID
-} | null> => {
+} | ContractLineActionError | null> => {
     try {
         const { knex } = await createTenantKnex(); // Get knex instance
         if (!tenant) {
@@ -459,10 +505,11 @@ export const getCombinedFixedPlanConfiguration = withAuth(async (
 
     } catch (error) {
         console.error('Error fetching combined fixed plan configuration:', error);
-        if (error instanceof Error) {
-            throw error; // Preserve specific error messages
+        const expected = contractLineActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to fetch combined fixed plan configuration for plan ${planId}, service ${serviceId}: ${error}`);
+        throw error;
     }
 });
 
@@ -473,7 +520,7 @@ export const getContractLineFixedConfig = withAuth(async (
     user,
     { tenant },
     planId: string
-): Promise<IContractLineFixedConfig | null> => {
+): Promise<IContractLineFixedConfig | ContractLineActionError | null> => {
     try {
         const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
 
@@ -492,10 +539,11 @@ export const getContractLineFixedConfig = withAuth(async (
         });
     } catch (error) {
         console.error(`Error fetching contract_line_fixed_config for plan ${planId}:`, error);
-        if (error instanceof Error) {
-            throw error;
+        const expected = contractLineActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to fetch contract_line_fixed_config for plan ${planId}: ${error}`);
+        throw error;
     }
 });
 
@@ -509,7 +557,7 @@ export const updateContractLineFixedConfig = withAuth(async (
     { tenant },
     planId: string,
     configData: Partial<Omit<IContractLineFixedConfig, 'contract_line_id' | 'tenant' | 'created_at' | 'updated_at'>>
-): Promise<boolean> => {
+): Promise<boolean | ContractLineActionError> => {
     try {
         const { knex } = await createTenantKnex();
         if (!tenant) {
@@ -553,10 +601,11 @@ export const updateContractLineFixedConfig = withAuth(async (
 
     } catch (error) {
         console.error(`Error upserting contract_line_fixed_config for plan ${planId}:`, error);
-        if (error instanceof Error) {
-            throw error;
+        const expected = contractLineActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to upsert contract_line_fixed_config for plan ${planId}: ${error}`);
+        throw error;
     }
 });
 
@@ -572,7 +621,7 @@ export const updatePlanServiceFixedConfigRate = withAuth(async (
     planId: string,
     serviceId: string,
     baseRate: number | null // Only accept base_rate
-): Promise<boolean> => {
+): Promise<boolean | ContractLineActionError> => {
     try {
         const { knex } = await createTenantKnex();
         if (!tenant) {
@@ -637,9 +686,10 @@ export const updatePlanServiceFixedConfigRate = withAuth(async (
         });
     } catch (error) {
         console.error('Error updating fixed plan service config rate:', error);
-        if (error instanceof Error) {
-            throw error; // Preserve specific error messages
+        const expected = contractLineActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to update fixed plan service config rate for plan ${planId}, service ${serviceId}: ${error}`);
+        throw error;
     }
 });

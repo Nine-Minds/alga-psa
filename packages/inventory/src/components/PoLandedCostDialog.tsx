@@ -10,6 +10,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toMinorUnits } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { IPurchaseOrder, IPurchaseOrderLine, IPoLandedCost } from '@alga-psa/types';
 import { listPoLandedCosts, addPoLandedCost, removePoLandedCost, applyPoLandedCosts, getPurchaseOrder } from '../actions';
@@ -22,6 +23,7 @@ interface EntryForm {
 }
 
 const emptyEntry = (): EntryForm => ({ cost_type: 'freight', amount: '', allocation_method: 'value', description: '' });
+const isReturnedActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
 
 /**
  * Landed cost per PO (F070/F074): manage freight/duty entries, preview the
@@ -75,8 +77,18 @@ export function PoLandedCostDialog({
     if (!po) return;
     try {
       const [entryRows, full] = await Promise.all([listPoLandedCosts(po.po_id), getPurchaseOrder(po.po_id)]);
-      setEntries(entryRows);
-      setLines(((full as any)?.lines ?? []).filter((l: IPurchaseOrderLine) => Number(l.quantity_received) > 0));
+      if (isReturnedActionError(entryRows)) {
+        setEntries([]);
+        toast.error(getErrorMessage(entryRows));
+      } else {
+        setEntries(entryRows);
+      }
+      if (isActionMessageError(full) || isActionPermissionError(full)) {
+        setLines([]);
+        toast.error(getErrorMessage(full));
+        return;
+      }
+      setLines((full?.lines ?? []).filter((l: IPurchaseOrderLine) => Number(l.quantity_received) > 0));
     } catch (e: any) {
       toast.error(e?.message || t('poLandedCost.loadError', "Couldn't load landed costs."));
     }
@@ -124,13 +136,17 @@ export function PoLandedCostDialog({
     }
     setBusy('add');
     try {
-      await addPoLandedCost(po.po_id, {
+      const result = await addPoLandedCost(po.po_id, {
         cost_type: form.cost_type,
         amount: toMinorUnits(dollars, undefined, currency),
         allocation_method: form.allocation_method,
         currency_code: currency,
         description: form.description.trim() || null,
       });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('poLandedCost.entryAdded', 'Landed-cost entry added.'));
       setForm(emptyEntry());
       await load();
@@ -144,7 +160,11 @@ export function PoLandedCostDialog({
   const remove = async (entry: IPoLandedCost) => {
     setBusy(`remove:${entry.landed_cost_id}`);
     try {
-      await removePoLandedCost(entry.landed_cost_id);
+      const result = await removePoLandedCost(entry.landed_cost_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await load();
     } catch (e: any) {
       toast.error(e?.message || t('poLandedCost.removeFailed', "Couldn't remove the entry."));
@@ -158,6 +178,10 @@ export function PoLandedCostDialog({
     setBusy('apply');
     try {
       const result = await applyPoLandedCosts(po.po_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       if (result.applied_entries === 0) {
         toast.success(t('poLandedCost.nothingToApply', 'Nothing to apply.'));
       } else {

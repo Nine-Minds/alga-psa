@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError, teamActionErrorMessage } from '@alga-psa/teams/actions';
 import type { IUser, ITeam } from '@alga-psa/types';
 import { useTranslation } from 'react-i18next';
 import type { BulkTicketAssignSelection } from '../actions/ticketActions';
@@ -37,16 +37,24 @@ export default function BulkAssignTicketsDialog({
   const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
+  const [teamsLoadError, setTeamsLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
     setPickerValue('');
     setPendingTeamId(null);
+    setTeamsLoadError(null);
     let cancelled = false;
     setIsLoadingTeams(true);
     getTeams()
       .then((fetched) => {
-        if (!cancelled) setTeams(fetched);
+        if (cancelled) return;
+        if (isTeamActionError(fetched)) {
+          setTeams([]);
+          setTeamsLoadError(teamActionErrorMessage(fetched));
+          return;
+        }
+        setTeams(fetched);
       })
       .catch((error) => {
         console.error('[BulkAssignTicketsDialog] Failed to load teams:', error);
@@ -102,6 +110,11 @@ export default function BulkAssignTicketsDialog({
                 ))}
               </ul>
             </AlertDescription>
+          </Alert>
+        )}
+        {teamsLoadError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{teamsLoadError}</AlertDescription>
           </Alert>
         )}
         <div className="mb-3 text-sm text-gray-600">

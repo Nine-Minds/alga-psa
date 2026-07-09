@@ -75,7 +75,12 @@ import { getAllUsers } from '@alga-psa/user-composition/actions';
 import { ITaskType } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { ApplyTemplateDialog } from './ApplyTemplateDialog';
 import { TemplateTaskForm } from './TemplateTaskForm';
 import { TemplateStatusManager } from './TemplateStatusManager';
@@ -93,7 +98,7 @@ import styles from '../ProjectDetail.module.css';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITeam } from '@alga-psa/types';
 import {
   DropdownMenu,
@@ -103,6 +108,17 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useTranslation } from 'react-i18next';
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
+function unwrapTemplateActionResult<T>(value: T | { actionError: string } | { permissionError: string }): T {
+  if (isReturnedActionError(value)) {
+    throw new Error(getErrorMessage(value));
+  }
+  return value;
+}
 
 // Task type icons mapping (fallback icons when database doesn't specify)
 // Helper to lighten hex color (for background)
@@ -388,7 +404,11 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           }))
         );
         setUsers(userList);
-        setTaskTypes(taskTypeList);
+        if (isReturnedActionError(taskTypeList)) {
+          handleError(taskTypeList);
+        } else {
+          setTaskTypes(taskTypeList);
+        }
       } catch (error) {
         console.error('Failed to load reference data:', error);
       }
@@ -430,6 +450,10 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     const fetchTeams = async () => {
       try {
         const fetchedTeams = await getTeams();
+        if (isTeamActionError(fetchedTeams)) {
+          console.warn('Cannot load teams for template assignment display:', fetchedTeams);
+          return;
+        }
         const names: Record<string, string> = {};
         fetchedTeams.forEach((t: ITeam) => { names[t.team_id] = t.team_name; });
         setTeamNames(names);
@@ -459,7 +483,11 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   async function handleDeleteTemplate() {
     try {
       setIsDeleting(true);
-      await deleteTemplate(template.template_id);
+      const result = await deleteTemplate(template.template_id);
+      if (isReturnedActionError(result)) {
+        handleError(getErrorMessage(result));
+        return;
+      }
       toast.success(t('templates.editor.deletedSuccess', 'Template deleted successfully'));
       router.push('/msp/projects/templates');
     } catch (error) {
@@ -473,7 +501,11 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const handleClientPortalConfigChange = async (config: IClientPortalConfig) => {
     try {
       setClientPortalConfig(config);
-      await updateTemplate(template.template_id, { client_portal_config: config });
+      const result = await updateTemplate(template.template_id, { client_portal_config: config });
+      if (isReturnedActionError(result)) {
+        handleError(getErrorMessage(result));
+        return;
+      }
       toast.success(t('templates.editor.clientPortalSaved', 'Client portal settings saved'));
     } catch (error) {
       handleError(error, t('templates.editor.clientPortalSaveFailed', 'Failed to save client portal settings'));
@@ -486,12 +518,12 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
 
   const handleAddPhase = async () => {
     try {
-      const newPhase = await addTemplatePhase(template.template_id, {
+      const newPhase = unwrapTemplateActionResult(await addTemplatePhase(template.template_id, {
         phase_name: '',
         description: '',
         duration_days: undefined,
         start_offset_days: 0,
-      });
+      }));
       setPhases((prev) => [...prev, newPhase]);
       setSelectedPhase(newPhase);
       // Start editing immediately with empty name
@@ -515,12 +547,12 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
 
   const handleSavePhase = async (phase: IProjectTemplatePhase) => {
     try {
-      const updated = await updateTemplatePhase(phase.template_phase_id, {
+      const updated = unwrapTemplateActionResult(await updateTemplatePhase(phase.template_phase_id, {
         phase_name: editingPhaseName,
         description: editingPhaseDescription || undefined,
         duration_days: editingPhaseDuration,
         start_offset_days: editingPhaseOffset,
-      });
+      }));
       setPhases((prev) =>
         prev.map((p) => (p.template_phase_id === phase.template_phase_id ? updated : p))
       );
@@ -544,7 +576,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const handleDeletePhase = async () => {
     if (!deletePhaseConfirmation) return;
     try {
-      await deleteTemplatePhase(deletePhaseConfirmation.phaseId);
+      unwrapTemplateActionResult(await deleteTemplatePhase(deletePhaseConfirmation.phaseId));
       setPhases((prev) => prev.filter((p) => p.template_phase_id !== deletePhaseConfirmation.phaseId));
       setTasks((prev) => prev.filter((t) => t.template_phase_id !== deletePhaseConfirmation.phaseId));
       if (selectedPhase?.template_phase_id === deletePhaseConfirmation.phaseId) {
@@ -594,9 +626,9 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
 
       try {
         // Move task to the target phase
-        const updated = await updateTemplateTask(draggedTaskId, {
+        const updated = unwrapTemplateActionResult(await updateTemplateTask(draggedTaskId, {
           template_phase_id: targetPhase.template_phase_id,
-        });
+        }));
         setTasks((prev) =>
           prev.map((t) => (t.template_task_id === draggedTaskId ? updated : t))
         );
@@ -638,7 +670,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         afterPhaseId = targetPhase.template_phase_id;
       }
 
-      const updated = await reorderTemplatePhase(draggedPhaseId, beforePhaseId, afterPhaseId);
+      const updated = unwrapTemplateActionResult(await reorderTemplatePhase(draggedPhaseId, beforePhaseId, afterPhaseId));
 
       setPhases((prev) =>
         prev.map((p) => (p.template_phase_id === draggedPhaseId ? updated : p))
@@ -688,7 +720,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
 
       if (editingTask) {
         // Update existing task
-        const updated = await updateTemplateTask(editingTask.template_task_id, taskData);
+        const updated = unwrapTemplateActionResult(await updateTemplateTask(editingTask.template_task_id, taskData));
         setTasks((prev) =>
           prev.map((t) => (t.template_task_id === editingTask.template_task_id ? updated : t))
         );
@@ -697,7 +729,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       } else if (selectedPhase) {
         // Create new task - use newTaskStatusMappingId if set, otherwise from taskData or first status
         const statusMappingIdToUse = taskData.template_status_mapping_id || newTaskStatusMappingId || statusMappings[0]?.template_status_mapping_id;
-        const newTask = await addTemplateTask(selectedPhase.template_phase_id, {
+        const newTask = unwrapTemplateActionResult(await addTemplateTask(selectedPhase.template_phase_id, {
           task_name: taskData.task_name || t('templates.editor.newTaskFallback', 'New Task'),
           description: taskData.description,
           estimated_hours: taskData.estimated_hours,
@@ -708,7 +740,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           assigned_team_id: taskData.assigned_team_id,
           template_status_mapping_id: statusMappingIdToUse,
           service_id: taskData.service_id,
-        });
+        }));
         setTasks((prev) => [...prev, newTask]);
         taskId = newTask.template_task_id;
         toast.success(t('templates.editor.taskCreated', 'Task created'));
@@ -718,7 +750,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
 
       // Save additional agents if provided
       if (additionalAgents !== undefined) {
-        await setTaskAdditionalAgents(taskId, additionalAgents);
+        unwrapTemplateActionResult(await setTaskAdditionalAgents(taskId, additionalAgents));
         // Update local state
         setTaskAssignments((prev) => {
           // Remove old assignments for this task
@@ -738,7 +770,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       // Handle checklist items - all operations in a single transaction
       // Note: Items with "temp_" prefix ids are client-generated temporary ids for new items
       if (localChecklistItems) {
-        const savedItems = await saveTemplateChecklistItems(taskId, localChecklistItems);
+        const savedItems = unwrapTemplateActionResult(await saveTemplateChecklistItems(taskId, localChecklistItems));
 
         // Update local state - remove old items for this task and add saved ones
         setChecklistItems((prev) => {
@@ -751,18 +783,18 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       if (dependencyChanges) {
         // Remove dependencies
         for (const depId of dependencyChanges.removed) {
-          await removeTemplateDependency(depId);
+          unwrapTemplateActionResult(await removeTemplateDependency(depId));
           setDependencies((prev) => prev.filter((d) => d.template_dependency_id !== depId));
         }
 
         // Add new dependencies (current task is the successor)
         for (const dep of dependencyChanges.added) {
-          const newDep = await addTemplateDependency(
+          const newDep = unwrapTemplateActionResult(await addTemplateDependency(
             template.template_id,
             dep.predecessorTaskId,
             taskId,
             dep.dependencyType
-          );
+          ));
           setDependencies((prev) => [...prev, newDep]);
         }
       }
@@ -781,7 +813,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const handleDeleteTask = async () => {
     if (!taskToDelete) return;
     try {
-      await deleteTemplateTask(taskToDelete.template_task_id);
+      unwrapTemplateActionResult(await deleteTemplateTask(taskToDelete.template_task_id));
       setTasks((prev) => prev.filter((t) => t.template_task_id !== taskToDelete.template_task_id));
       toast.success(t('templates.editor.taskDeleted', 'Task deleted'));
     } catch (error) {
@@ -825,7 +857,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     }
 
     try {
-      const updated = await updateTemplateTaskStatus(draggedTaskId, targetStatusMappingId, beforeTaskId, afterTaskId);
+      const updated = unwrapTemplateActionResult(await updateTemplateTaskStatus(draggedTaskId, targetStatusMappingId, beforeTaskId, afterTaskId));
       setTasks((prev) =>
         prev.map((t) => (t.template_task_id === draggedTaskId ? updated : t))
       );
@@ -858,16 +890,16 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     try {
       // If phase is changing, use updateTemplateTask which can update both phase and status
       if (isPhaseChanging) {
-        const updated = await updateTemplateTask(taskId, {
+        const updated = unwrapTemplateActionResult(await updateTemplateTask(taskId, {
           template_phase_id: newPhaseId,
           template_status_mapping_id: newStatusMappingId,
-        });
+        }));
         setTasks((prev) =>
           prev.map((t) => (t.template_task_id === taskId ? updated : t))
         );
       } else {
         // Just status/order change
-        const updated = await updateTemplateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
+        const updated = unwrapTemplateActionResult(await updateTemplateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId));
         setTasks((prev) =>
           prev.map((t) => (t.template_task_id === taskId ? updated : t))
         );
@@ -879,7 +911,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
 
   const handleAssigneeChange = async (taskId: string, assigneeId: string | null) => {
     try {
-      const updated = await updateTemplateTask(taskId, { assigned_to: assigneeId });
+      const updated = unwrapTemplateActionResult(await updateTemplateTask(taskId, { assigned_to: assigneeId }));
       setTasks((prev) => prev.map((t) => (t.template_task_id === taskId ? updated : t)));
     } catch (error) {
       handleError(error, t('templates.editor.updateAssigneeFailed', 'Failed to update assignee'));

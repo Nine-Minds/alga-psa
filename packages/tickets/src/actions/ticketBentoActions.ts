@@ -5,6 +5,7 @@ import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -158,7 +159,8 @@ export const getTicketScheduleEntries = withAuth(
     user,
     { tenant },
     ticketId: string,
-  ): Promise<TicketScheduleEntrySummary[]> => {
+  ): Promise<TicketScheduleEntrySummary[] | TicketActionError> => {
+    try {
     if (!tenant) {
       throw new Error('Tenant required');
     }
@@ -215,6 +217,11 @@ export const getTicketScheduleEntries = withAuth(
         };
       });
     });
+    } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
   },
 );
 
@@ -224,7 +231,8 @@ export const getTicketInteractions = withAuth(
     { tenant },
     ticketId: string,
     opts?: { limit?: number },
-  ): Promise<TicketInteractionSummary[]> => {
+  ): Promise<TicketInteractionSummary[] | TicketActionError> => {
+    try {
     if (!tenant) {
       throw new Error('Tenant required');
     }
@@ -271,6 +279,11 @@ export const getTicketInteractions = withAuth(
         actorDisplayName: (row.actor_display_name as string | null) ?? null,
       }));
     });
+    } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
   },
 );
 
@@ -279,7 +292,8 @@ export const getTicketBillingRollup = withAuth(
     user,
     { tenant },
     ticketId: string,
-  ): Promise<TicketBillingRollup> => {
+  ): Promise<TicketBillingRollup | TicketActionError> => {
+    try {
     if (!tenant) {
       throw new Error('Tenant required');
     }
@@ -344,6 +358,11 @@ export const getTicketBillingRollup = withAuth(
         contractName,
       };
     });
+    } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
   },
 );
 
@@ -391,7 +410,8 @@ export const getTicketAppointmentRequests = withAuth(
     user,
     { tenant },
     ticketId: string,
-  ): Promise<TicketAppointmentRequestSummary[]> => {
+  ): Promise<TicketAppointmentRequestSummary[] | TicketActionError> => {
+    try {
     if (!tenant) {
       throw new Error('Tenant required');
     }
@@ -432,6 +452,11 @@ export const getTicketAppointmentRequests = withAuth(
         requesterTimezone: (row.requester_timezone as string | null) ?? null,
       }));
     });
+    } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
   },
 );
 
@@ -444,7 +469,8 @@ export const getTicketSlaPolicyName = withAuth(
     user,
     { tenant },
     ticketId: string,
-  ): Promise<{ policyName: string | null }> => {
+  ): Promise<{ policyName: string | null } | TicketActionError> => {
+    try {
     if (!tenant) {
       throw new Error('Tenant required');
     }
@@ -469,5 +495,10 @@ export const getTicketSlaPolicyName = withAuth(
 
       return { policyName: row?.policy_name ?? null };
     });
+    } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
   },
 );

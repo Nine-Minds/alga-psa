@@ -24,6 +24,7 @@ import { tenantDb } from '@alga-psa/db';
 import {
   AuthenticatedApiRequest,
   ForbiddenError,
+  NotImplementedError,
   handleApiError
 } from '../middleware/apiMiddleware';
 import { BaseService, ListOptions } from './types';
@@ -37,19 +38,19 @@ type AccountingExportPermission = 'create' | 'read' | 'update' | 'execute';
 
 const noopService: BaseService = {
   async list(_options: ListOptions): Promise<{ data: any[]; total: number }> {
-    throw new Error('Accounting export controller does not use base list service');
+    throw new NotImplementedError('Accounting export controller does not support base list operations');
   },
   async getById(): Promise<any> {
-    throw new Error('Accounting export controller does not use base get service');
+    throw new NotImplementedError('Accounting export controller does not support base get operations');
   },
   async create(): Promise<any> {
-    throw new Error('Accounting export controller does not use base create service');
+    throw new NotImplementedError('Accounting export controller does not support base create operations');
   },
   async update(): Promise<any> {
-    throw new Error('Accounting export controller does not use base update service');
+    throw new NotImplementedError('Accounting export controller does not support base update operations');
   },
   async delete(): Promise<void> {
-    throw new Error('Accounting export controller does not use base delete service');
+    throw new NotImplementedError('Accounting export controller does not support base delete operations');
   }
 };
 

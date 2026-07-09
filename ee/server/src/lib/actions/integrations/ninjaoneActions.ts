@@ -110,6 +110,117 @@ function extractErrorInfo(error: unknown): object {
   return { message: String(error) };
 }
 
+function ninjaOneActionErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+
+    if (!status) {
+      return 'Unable to reach NinjaOne. Check the selected region and try again.';
+    }
+
+    if (status === 400) {
+      return 'NinjaOne rejected the request. Check the integration settings and try again.';
+    }
+
+    if (status === 401) {
+      return 'NinjaOne credentials are invalid or expired. Reconnect the integration.';
+    }
+
+    if (status === 403) {
+      return 'The connected NinjaOne account does not have permission for this operation.';
+    }
+
+    if (status === 404) {
+      return 'The requested NinjaOne resource was not found. Refresh the integration and try again.';
+    }
+
+    if (status === 429) {
+      return 'NinjaOne rate limit reached. Please try again later.';
+    }
+
+    if (status >= 500) {
+      return 'NinjaOne is temporarily unavailable. Please try again later.';
+    }
+
+    return fallback;
+  }
+
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : '';
+
+  if (!message) {
+    return fallback;
+  }
+
+  if (message.startsWith('Insufficient permissions')) {
+    return 'You do not have permission to perform this NinjaOne action.';
+  }
+
+  if (message === 'Client ID is required' || message === 'Client Secret is required') {
+    return message;
+  }
+
+  if (message === 'NinjaOne integration not configured' || message === 'No active NinjaOne integration found') {
+    return 'NinjaOne is not connected. Connect the integration before running this action.';
+  }
+
+  if (message.includes('client ID not configured')) {
+    return 'NinjaOne client ID is not configured. Save the client ID before starting OAuth.';
+  }
+
+  if (message.includes('client credentials not configured')) {
+    return 'NinjaOne client credentials are not configured. Save the client ID and client secret before continuing.';
+  }
+
+  if (
+    message === 'No refresh token available' ||
+    message === 'NinjaOne reconnect required' ||
+    message.includes('requires reconnection')
+  ) {
+    return 'NinjaOne needs to be reconnected before this action can continue.';
+  }
+
+  if (message.startsWith('Invalid region:')) {
+    return 'Selected NinjaOne region is not supported.';
+  }
+
+  if (message === 'Asset not found') {
+    return 'Asset not found. It may have been deleted or moved.';
+  }
+
+  if (message === 'Asset is not managed by NinjaOne') {
+    return 'This asset is not managed by NinjaOne.';
+  }
+
+  if (message === 'Alert not found') {
+    return 'Alert not found. It may have already been cleared.';
+  }
+
+  if (message === 'Sync is already in progress') {
+    return 'A NinjaOne sync is already in progress. Please wait for it to finish.';
+  }
+
+  if (message.startsWith('No client mapping found for organization')) {
+    return 'One or more NinjaOne organizations must be mapped to clients before devices can sync.';
+  }
+
+  if (message.startsWith('Invalid device ID:')) {
+    return 'One or more selected assets has an invalid NinjaOne device ID.';
+  }
+
+  if (
+    message === 'Software inventory only available for workstations and servers' ||
+    message === 'Patch status only available for workstations and servers'
+  ) {
+    return message;
+  }
+
+  return fallback;
+}
+
 /**
  * Save NinjaOne API credentials for a tenant
  * These credentials are used for OAuth authentication with NinjaOne
@@ -145,7 +256,7 @@ export const saveNinjaOneCredentials = withAdvancedAssetsAccess(async (
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to save NinjaOne credentials.');
     logger.error('[NinjaOneActions] Error saving NinjaOne credentials:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -211,7 +322,7 @@ export const clearNinjaOneCredentials = withAdvancedAssetsAccess(async (user, { 
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to clear NinjaOne credentials.');
     logger.error('[NinjaOneActions] Error clearing NinjaOne credentials:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -434,7 +545,7 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to disconnect NinjaOne.');
     logger.error('[NinjaOneActions] Error disconnecting NinjaOne:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -456,12 +567,12 @@ export const testNinjaOneConnection = withAdvancedAssetsAccess(async (user, { te
     const isConnected = await client.testConnection();
 
     if (!isConnected) {
-      return { success: false, error: 'Failed to connect to NinjaOne API' };
+      return { success: false, error: 'Unable to connect to NinjaOne. Verify the credentials and selected region.' };
     }
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to test the NinjaOne connection.');
     logger.error('[NinjaOneActions] Error testing NinjaOne connection:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -501,7 +612,7 @@ export const syncNinjaOneOrganizations = withAdvancedAssetsAccess(async (user, {
 
     return result;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to sync NinjaOne organizations.');
     logger.error('[NinjaOneActions] Error syncing organizations:', extractErrorInfo(error));
 
     // Try to update sync status to error
@@ -631,7 +742,7 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to update the NinjaOne organization mapping.');
     logger.error('[NinjaOneActions] Error updating organization mapping:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -640,45 +751,55 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
 /**
  * Get connect URL for NinjaOne OAuth
  */
-export const getNinjaOneConnectUrl = withAdvancedAssetsAccess(async (user, { tenant }, region: NinjaOneRegion = 'US'): Promise<string> => {
-  if (!NINJAONE_REGIONS[region]) {
-    throw new Error(`Invalid region: ${region}`);
+export const getNinjaOneConnectUrl = withAdvancedAssetsAccess(async (user, { tenant }, region: NinjaOneRegion = 'US'): Promise<{
+  success: boolean;
+  url?: string;
+  error?: string;
+}> => {
+  try {
+    if (!NINJAONE_REGIONS[region]) {
+      throw new Error(`Invalid region: ${region}`);
+    }
+
+    const canView = await hasPermission(user, 'settings', 'read');
+    if (!canView) {
+      throw new Error('Insufficient permissions to view NinjaOne settings');
+    }
+
+    const secretProvider = await getSecretProviderInstance();
+    const clientId = await secretProvider.getTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
+    if (!clientId) {
+      throw new Error('NinjaOne client ID not configured for this tenant.');
+    }
+
+    const csrfToken = crypto.randomBytes(16).toString('hex');
+    const statePayload = {
+      tenantId: tenant,
+      region,
+      csrf: csrfToken,
+      timestamp: Date.now(),
+    };
+    // Persisted so the OAuth callback can verify the state round-tripped from
+    // this tenant's own connect request (one-time use; the callback deletes it).
+    await secretProvider.setTenantSecret(tenant, 'ninjaone_oauth_state', csrfToken);
+    const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
+
+    const instanceUrl = NINJAONE_REGIONS[region];
+    const redirectUri = getRedirectUri();
+    const params = new URLSearchParams({
+      client_id: clientId,
+      response_type: 'code',
+      scope: NINJAONE_SCOPES,
+      redirect_uri: redirectUri,
+      state,
+    });
+
+    return { success: true, url: `${instanceUrl}/oauth/authorize?${params.toString()}` };
+  } catch (error) {
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to start NinjaOne authorization.');
+    logger.error('[NinjaOneActions] Error creating connect URL:', extractErrorInfo(error));
+    return { success: false, error: errorMessage };
   }
-
-  const canView = await hasPermission(user, 'settings', 'read');
-  if (!canView) {
-    throw new Error('Insufficient permissions to view NinjaOne settings');
-  }
-
-  const secretProvider = await getSecretProviderInstance();
-  const clientId = await secretProvider.getTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
-  if (!clientId) {
-    throw new Error('NinjaOne client ID not configured for this tenant.');
-  }
-
-  const csrfToken = crypto.randomBytes(16).toString('hex');
-  const statePayload = {
-    tenantId: tenant,
-    region,
-    csrf: csrfToken,
-    timestamp: Date.now(),
-  };
-  // Persisted so the OAuth callback can verify the state round-tripped from
-  // this tenant's own connect request (one-time use; the callback deletes it).
-  await secretProvider.setTenantSecret(tenant, 'ninjaone_oauth_state', csrfToken);
-  const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
-
-  const instanceUrl = NINJAONE_REGIONS[region];
-  const redirectUri = getRedirectUri();
-  const params = new URLSearchParams({
-    client_id: clientId,
-    response_type: 'code',
-    scope: NINJAONE_SCOPES,
-    redirect_uri: redirectUri,
-    state,
-  });
-
-  return `${instanceUrl}/oauth/authorize?${params.toString()}`;
 });
 
 /**
@@ -723,7 +844,7 @@ export const triggerNinjaOneFullSync = withAdvancedAssetsAccess(async (
 
     return result;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to start the NinjaOne full sync.');
     logger.error('[NinjaOneActions] Error triggering full sync:', extractErrorInfo(error));
     return {
       success: false,
@@ -782,7 +903,7 @@ export const triggerNinjaOneIncrementalSync = withAdvancedAssetsAccess(async (us
 
     return result;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to start the NinjaOne incremental sync.');
     logger.error('[NinjaOneActions] Error triggering incremental sync:', extractErrorInfo(error));
     return {
       success: false,
@@ -839,8 +960,8 @@ export const syncNinjaOneDevice = withAdvancedAssetsAccess(async (user, { tenant
 
     return { success: true, asset };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error syncing device:', { deviceId, error });
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to sync this NinjaOne device.');
+    logger.error('[NinjaOneActions] Error syncing device:', { deviceId, error: extractErrorInfo(error) });
     return { success: false, error: errorMessage };
   }
 });
@@ -914,8 +1035,8 @@ export const getNinjaOneRemoteAccessUrl = withAdvancedAssetsAccess(async (user, 
 
     return { success: true, url };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error getting remote access URL:', { assetId, error });
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to start NinjaOne remote access.');
+    logger.error('[NinjaOneActions] Error getting remote access URL:', { assetId, error: extractErrorInfo(error) });
     return { success: false, error: errorMessage };
   }
 });
@@ -966,8 +1087,8 @@ export const getAssetAlerts = withAdvancedAssetsAccess(async (user, { tenant }, 
       })),
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error getting asset alerts:', { assetId, error });
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to load NinjaOne alerts for this asset.');
+    logger.error('[NinjaOneActions] Error getting asset alerts:', { assetId, error: extractErrorInfo(error) });
     return { success: false, error: errorMessage };
   }
 });
@@ -1007,8 +1128,8 @@ export const acknowledgeRmmAlert = withAdvancedAssetsAccess(async (user, { tenan
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error acknowledging alert:', { alertId, error });
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to acknowledge this alert.');
+    logger.error('[NinjaOneActions] Error acknowledging alert:', { alertId, error: extractErrorInfo(error) });
     return { success: false, error: errorMessage };
   }
 });
@@ -1037,8 +1158,8 @@ export const createTicketFromRmmAlert = withAdvancedAssetsAccess(async (user, { 
 
     return { success: true, ticketId: ticket.ticket_id };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error creating ticket from alert:', { alertId, error });
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to create a ticket from this alert.');
+    logger.error('[NinjaOneActions] Error creating ticket from alert:', { alertId, error: extractErrorInfo(error) });
     return { success: false, error: errorMessage };
   }
 });
@@ -1080,8 +1201,8 @@ export const getNinjaOneDeviceDetails = withAdvancedAssetsAccess(async (user, { 
 
     return { success: true, device };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error getting device details:', { assetId, error });
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to load NinjaOne device details.');
+    logger.error('[NinjaOneActions] Error getting device details:', { assetId, error: extractErrorInfo(error) });
     return { success: false, error: errorMessage };
   }
 });
@@ -1138,7 +1259,7 @@ export const triggerPatchStatusSync = withAdvancedAssetsAccess(async (user, { te
       },
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to sync NinjaOne patch status.');
     logger.error('[NinjaOneActions] Error triggering patch sync:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -1200,7 +1321,7 @@ export const triggerSoftwareInventorySync = withAdvancedAssetsAccess(async (user
       },
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to sync NinjaOne software inventory.');
     logger.error('[NinjaOneActions] Error triggering software sync:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -1252,7 +1373,7 @@ export const searchSoftware = withAdvancedAssetsAccess(async (
 
     return { success: true, results };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to search NinjaOne software inventory.');
     logger.error('[NinjaOneActions] Error searching software:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -1359,7 +1480,7 @@ export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { t
       },
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to load NinjaOne compliance summary.');
     logger.error('[NinjaOneActions] Error getting compliance summary:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }

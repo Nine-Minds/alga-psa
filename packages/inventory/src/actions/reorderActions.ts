@@ -5,11 +5,51 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IPurchaseOrder } from '@alga-psa/types';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { availableQuantity, resolveTenantCurrency } from '../lib';
 
 async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'inventory', action))) {
     throw new Error(`Permission denied: inventory ${action} required`);
+  }
+}
+
+export type ReorderActionError = ActionMessageError | ActionPermissionError;
+
+function reorderActionErrorFrom(error: unknown): ReorderActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+
+    switch (error.message) {
+      case 'Load list source and destination are required':
+        return actionError('Choose both a load destination and a source shelf.');
+      case 'Load list source and destination must differ':
+        return actionError('Choose different source and destination locations.');
+    }
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected load-list records is no longer valid. Please refresh and try again.');
+  }
+
+  return null;
+}
+
+async function withReorderActionErrors<T>(work: () => Promise<T>): Promise<T | ReorderActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = reorderActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 }
 
@@ -37,10 +77,11 @@ export interface LowStockRow {
  * when present, otherwise the product default (product_inventory_settings.reorder_point).
  * Rows with no threshold on either side are not low-stock and are excluded.
  */
-export const lowStockReport = withAuth(async (user, { tenant }): Promise<LowStockRow[]> => {
-  await requireInvPerm(user, 'read');
-  const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+export const lowStockReport = withAuth(async (user, { tenant }): Promise<LowStockRow[] | ReorderActionError> => {
+  return withReorderActionErrors(async () => {
+    await requireInvPerm(user, 'read');
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
     const rows = await trx('stock_levels as sl')
       .join('product_inventory_settings as pis', function () {
         this.on('sl.service_id', '=', 'pis.service_id').andOn('sl.tenant', '=', 'pis.tenant');
@@ -95,6 +136,7 @@ export const lowStockReport = withAuth(async (user, { tenant }): Promise<LowStoc
       });
     }
     return out;
+    });
   });
 });
 
@@ -111,24 +153,28 @@ export interface LowStockAlertTarget {
  * recipient to that location's stock_locations.manager_user_id. Routing is strictly
  * per-location: each manager hears only about their own location, never a global blast.
  */
-export const lowStockAlertTargets = withAuth(async (user, { tenant }): Promise<LowStockAlertTarget[]> => {
-  await requireInvPerm(user, 'read');
-  const rows = await (lowStockReport as any)();
-  const byLocation = new Map<string, LowStockAlertTarget>();
-  for (const r of rows as LowStockRow[]) {
-    let target = byLocation.get(r.location_id);
-    if (!target) {
-      target = {
-        location_id: r.location_id,
-        location_name: r.location_name,
-        manager_user_id: r.manager_user_id,
-        rows: [],
-      };
-      byLocation.set(r.location_id, target);
+export const lowStockAlertTargets = withAuth(async (user, { tenant }): Promise<LowStockAlertTarget[] | ReorderActionError> => {
+  return withReorderActionErrors(async () => {
+    await requireInvPerm(user, 'read');
+    const rows = await (lowStockReport as any)();
+    const expected = reorderActionErrorFrom(rows);
+    if (expected) return expected;
+    const byLocation = new Map<string, LowStockAlertTarget>();
+    for (const r of rows as LowStockRow[]) {
+      let target = byLocation.get(r.location_id);
+      if (!target) {
+        target = {
+          location_id: r.location_id,
+          location_name: r.location_name,
+          manager_user_id: r.manager_user_id,
+          rows: [],
+        };
+        byLocation.set(r.location_id, target);
+      }
+      target.rows.push(r);
     }
-    target.rows.push(r);
-  }
-  return Array.from(byLocation.values());
+    return Array.from(byLocation.values());
+  });
 });
 
 export interface CreatePoFromLowStockResult {
@@ -143,12 +189,15 @@ export interface CreatePoFromLowStockResult {
  * back to (reorder_point - available). Rows with no preferred vendor are skipped and
  * reported back. This is a suggestion only: POs are created in 'draft' for review.
  */
-export const createPoFromLowStock = withAuth(async (user, { tenant }): Promise<CreatePoFromLowStockResult> => {
-  await requireInvPerm(user, 'create');
-  const lowRows = await (lowStockReport as any)() as LowStockRow[];
+export const createPoFromLowStock = withAuth(async (user, { tenant }): Promise<CreatePoFromLowStockResult | ReorderActionError> => {
+  return withReorderActionErrors(async () => {
+    await requireInvPerm(user, 'create');
+    const lowRows = await (lowStockReport as any)() as LowStockRow[] | ReorderActionError;
+    const expected = reorderActionErrorFrom(lowRows);
+    if (expected) return expected;
 
-  const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
     const skipped: LowStockRow[] = [];
     const defaultCurrency = await resolveTenantCurrency(trx, tenant);
 
@@ -181,7 +230,7 @@ export const createPoFromLowStock = withAuth(async (user, { tenant }): Promise<C
     // its lines and every suggested PO is actually receivable (F043; a hardcoded-USD
     // header made non-USD suggestions fail the receipt currency guard forever).
     const byVendorCurrency = new Map<string, Map<string, { qty: number; unitCost: number }>>();
-    for (const r of lowRows) {
+    for (const r of lowRows as LowStockRow[]) {
       if (!r.preferred_vendor_id) {
         skipped.push(r);
         continue;
@@ -245,6 +294,7 @@ export const createPoFromLowStock = withAuth(async (user, { tenant }): Promise<C
     }
 
     return { created, skipped_no_vendor: skipped };
+    });
   });
 });
 
@@ -277,108 +327,110 @@ export const computeLoadList = withAuth(
     { tenant },
     toLocationId: string,
     fromLocationId: string,
-  ): Promise<LoadListResult> => {
-    await requireInvPerm(user, 'read');
-    if (!toLocationId || !fromLocationId) {
-      throw new Error('Load list source and destination are required');
-    }
-    if (toLocationId === fromLocationId) {
-      throw new Error('Load list source and destination must differ');
-    }
-
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const lowRows = await trx('stock_levels as sl')
-        .join('product_inventory_settings as pis', function () {
-          this.on('sl.service_id', '=', 'pis.service_id').andOn('sl.tenant', '=', 'pis.tenant');
-        })
-        .leftJoin('service_catalog as sc', function () {
-          this.on('sl.service_id', '=', 'sc.service_id').andOn('sl.tenant', '=', 'sc.tenant');
-        })
-        .where({ 'sl.tenant': tenant, 'sl.location_id': toLocationId, 'pis.track_stock': true })
-        .select(
-          'sl.service_id as service_id',
-          'sc.service_name as service_name',
-          'sc.sku as sku',
-          'sl.quantity_on_hand as quantity_on_hand',
-          'sl.reserved_quantity as reserved_quantity',
-          'sl.held_quantity as held_quantity',
-          trx.raw('COALESCE(sl.reorder_point, pis.reorder_point) as reorder_point'),
-          'pis.reorder_quantity as reorder_quantity',
-          trx.raw('COALESCE(pis.is_serialized, false) as is_serialized'),
-        );
-
-      const rows: LoadListRow[] = [];
-      for (const r of lowRows as any[]) {
-        const threshold = r.reorder_point;
-        if (threshold === null || threshold === undefined) continue;
-
-        const destinationLevel = {
-          quantity_on_hand: Number(r.quantity_on_hand ?? 0),
-          reserved_quantity: Number(r.reserved_quantity ?? 0),
-          held_quantity: Number(r.held_quantity ?? 0),
-        };
-        const available = availableQuantity(destinationLevel);
-        const reorderPoint = Number(threshold);
-        if (available > reorderPoint) continue;
-
-        const reorderQuantity = r.reorder_quantity != null ? Number(r.reorder_quantity) : null;
-        const needed =
-          reorderQuantity != null && reorderQuantity > 0
-            ? reorderQuantity
-            : Math.max(0, reorderPoint - available);
-        if (needed <= 0) continue;
-
-        const sourceLevel = await trx('stock_levels')
-          .where({ tenant, service_id: r.service_id, location_id: fromLocationId })
-          .select('quantity_on_hand', 'reserved_quantity', 'held_quantity')
-          .first();
-        const sourceAvailable = sourceLevel
-          ? availableQuantity({
-              quantity_on_hand: Number(sourceLevel.quantity_on_hand ?? 0),
-              reserved_quantity: Number(sourceLevel.reserved_quantity ?? 0),
-              held_quantity: Number(sourceLevel.held_quantity ?? 0),
-            })
-          : 0;
-        const sourceAvailableSafe = Math.max(0, sourceAvailable);
-        const loadQty = Math.min(needed, sourceAvailableSafe);
-        const isSerialized = Boolean(r.is_serialized);
-        const units = isSerialized && loadQty > 0
-          ? ((await trx('stock_units')
-              .where({
-                tenant,
-                service_id: r.service_id,
-                location_id: fromLocationId,
-                status: 'in_stock',
-              })
-              .select('unit_id', 'serial_number')
-              .orderByRaw('received_at ASC NULLS LAST, created_at ASC')
-              .limit(loadQty)) as Array<{ unit_id: string; serial_number: string }>)
-          : [];
-
-        rows.push({
-          service_id: r.service_id,
-          service_name: r.service_name ?? null,
-          sku: r.sku ?? null,
-          is_serialized: isSerialized,
-          needed,
-          source_available: sourceAvailableSafe,
-          load_qty: loadQty,
-          short_at_source: needed - loadQty,
-          units: units.map((u) => ({ unit_id: u.unit_id, serial_number: u.serial_number })),
-        });
+  ): Promise<LoadListResult | ReorderActionError> => {
+    return withReorderActionErrors(async () => {
+      await requireInvPerm(user, 'read');
+      if (!toLocationId || !fromLocationId) {
+        throw new Error('Load list source and destination are required');
+      }
+      if (toLocationId === fromLocationId) {
+        throw new Error('Load list source and destination must differ');
       }
 
-      rows.sort((a, b) => {
-        const byName = (a.service_name ?? '').localeCompare(b.service_name ?? '');
-        return byName !== 0 ? byName : a.service_id.localeCompare(b.service_id);
-      });
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const lowRows = await trx('stock_levels as sl')
+          .join('product_inventory_settings as pis', function () {
+            this.on('sl.service_id', '=', 'pis.service_id').andOn('sl.tenant', '=', 'pis.tenant');
+          })
+          .leftJoin('service_catalog as sc', function () {
+            this.on('sl.service_id', '=', 'sc.service_id').andOn('sl.tenant', '=', 'sc.tenant');
+          })
+          .where({ 'sl.tenant': tenant, 'sl.location_id': toLocationId, 'pis.track_stock': true })
+          .select(
+            'sl.service_id as service_id',
+            'sc.service_name as service_name',
+            'sc.sku as sku',
+            'sl.quantity_on_hand as quantity_on_hand',
+            'sl.reserved_quantity as reserved_quantity',
+            'sl.held_quantity as held_quantity',
+            trx.raw('COALESCE(sl.reorder_point, pis.reorder_point) as reorder_point'),
+            'pis.reorder_quantity as reorder_quantity',
+            trx.raw('COALESCE(pis.is_serialized, false) as is_serialized'),
+          );
 
-      return {
-        to_location_id: toLocationId,
-        from_location_id: fromLocationId,
-        rows,
-      };
+        const rows: LoadListRow[] = [];
+        for (const r of lowRows as any[]) {
+          const threshold = r.reorder_point;
+          if (threshold === null || threshold === undefined) continue;
+
+          const destinationLevel = {
+            quantity_on_hand: Number(r.quantity_on_hand ?? 0),
+            reserved_quantity: Number(r.reserved_quantity ?? 0),
+            held_quantity: Number(r.held_quantity ?? 0),
+          };
+          const available = availableQuantity(destinationLevel);
+          const reorderPoint = Number(threshold);
+          if (available > reorderPoint) continue;
+
+          const reorderQuantity = r.reorder_quantity != null ? Number(r.reorder_quantity) : null;
+          const needed =
+            reorderQuantity != null && reorderQuantity > 0
+              ? reorderQuantity
+              : Math.max(0, reorderPoint - available);
+          if (needed <= 0) continue;
+
+          const sourceLevel = await trx('stock_levels')
+            .where({ tenant, service_id: r.service_id, location_id: fromLocationId })
+            .select('quantity_on_hand', 'reserved_quantity', 'held_quantity')
+            .first();
+          const sourceAvailable = sourceLevel
+            ? availableQuantity({
+                quantity_on_hand: Number(sourceLevel.quantity_on_hand ?? 0),
+                reserved_quantity: Number(sourceLevel.reserved_quantity ?? 0),
+                held_quantity: Number(sourceLevel.held_quantity ?? 0),
+              })
+            : 0;
+          const sourceAvailableSafe = Math.max(0, sourceAvailable);
+          const loadQty = Math.min(needed, sourceAvailableSafe);
+          const isSerialized = Boolean(r.is_serialized);
+          const units = isSerialized && loadQty > 0
+            ? ((await trx('stock_units')
+                .where({
+                  tenant,
+                  service_id: r.service_id,
+                  location_id: fromLocationId,
+                  status: 'in_stock',
+                })
+                .select('unit_id', 'serial_number')
+                .orderByRaw('received_at ASC NULLS LAST, created_at ASC')
+                .limit(loadQty)) as Array<{ unit_id: string; serial_number: string }>)
+            : [];
+
+          rows.push({
+            service_id: r.service_id,
+            service_name: r.service_name ?? null,
+            sku: r.sku ?? null,
+            is_serialized: isSerialized,
+            needed,
+            source_available: sourceAvailableSafe,
+            load_qty: loadQty,
+            short_at_source: needed - loadQty,
+            units: units.map((u) => ({ unit_id: u.unit_id, serial_number: u.serial_number })),
+          });
+        }
+
+        rows.sort((a, b) => {
+          const byName = (a.service_name ?? '').localeCompare(b.service_name ?? '');
+          return byName !== 0 ? byName : a.service_id.localeCompare(b.service_id);
+        });
+
+        return {
+          to_location_id: toLocationId,
+          from_location_id: fromLocationId,
+          rows,
+        };
+      });
     });
   },
 );

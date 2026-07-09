@@ -28,6 +28,7 @@ import { PaginatedResponse, SuccessResponse } from '../../types/api';
 import { validateTenantAccess } from '@alga-psa/validation';
 import { EventBusService } from './EventBusService';
 import { AuditLogService } from './AuditLogService';
+import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 export class AutomationService {
   constructor(
@@ -113,7 +114,7 @@ export class AutomationService {
     });
 
     if (!rule) {
-      throw new Error('Automation rule not found');
+      throw new NotFoundError('Automation rule not found');
     }
 
     // Get execution statistics
@@ -140,7 +141,7 @@ export class AutomationService {
     });
 
     if (!existing) {
-      throw new Error('Automation rule not found');
+      throw new NotFoundError('Automation rule not found');
     }
 
     // Validate configurations if updated
@@ -214,7 +215,7 @@ export class AutomationService {
     });
 
     if (!existing) {
-      throw new Error('Automation rule not found');
+      throw new NotFoundError('Automation rule not found');
     }
 
     // Check for running executions
@@ -224,7 +225,7 @@ export class AutomationService {
     });
 
     if (runningExecutions > 0) {
-      throw new Error('Cannot delete rule with running executions');
+      throw new ConflictError('Cannot delete rule with running executions');
     }
 
     // Unschedule if active
@@ -308,11 +309,11 @@ export class AutomationService {
     });
 
     if (!rule) {
-      throw new Error('Automation rule not found');
+      throw new NotFoundError('Automation rule not found');
     }
 
     if (rule.status !== 'active' && !executionData.override_conditions) {
-      throw new Error('Automation rule is not active');
+      throw new ConflictError('Automation rule is not active');
     }
 
     const executionId = crypto.randomUUID();
@@ -391,7 +392,7 @@ export class AutomationService {
     });
 
     if (!execution) {
-      throw new Error('Automation execution not found');
+      throw new NotFoundError('Automation execution not found');
     }
 
     return {
@@ -446,11 +447,11 @@ export class AutomationService {
     });
 
     if (!execution) {
-      throw new Error('Automation execution not found');
+      throw new NotFoundError('Automation execution not found');
     }
 
     if (execution.status !== 'failed') {
-      throw new Error('Only failed executions can be retried');
+      throw new ConflictError('Only failed executions can be retried');
     }
 
     // Reset execution state
@@ -504,7 +505,7 @@ export class AutomationService {
       });
   
       if (!rule) {
-        throw new Error('Automation rule not found');
+        throw new NotFoundError('Automation rule not found');
       }
   
       const templateId = crypto.randomUUID();
@@ -584,7 +585,7 @@ export class AutomationService {
     });
 
     if (!template) {
-      throw new Error('Automation template not found');
+      throw new NotFoundError('Automation template not found');
     }
 
     return {
@@ -640,7 +641,7 @@ export class AutomationService {
     });
 
     if (!template) {
-      throw new Error('Automation template not found');
+      throw new NotFoundError('Automation template not found');
     }
 
     // Apply template variables to configuration
@@ -752,8 +753,8 @@ export class AutomationService {
         try {
           await this.updateAutomationRule(ruleId, { status: data.status }, tenantId, userId);
           results.updated++;
-        } catch (error) {
-          results.errors.push(`${ruleId}: ${error instanceof Error ? error.message : String(error)}`);
+        } catch {
+          results.errors.push(`${ruleId}: Failed to update automation rule.`);
         }
       }
   
@@ -785,10 +786,10 @@ export class AutomationService {
             },
             tenantId,
             userId
-          );
+        );
           results.started++;
-        } catch (error) {
-          results.errors.push(`${ruleId}: ${error instanceof Error ? error.message : String(error)}`);
+        } catch {
+          results.errors.push(`${ruleId}: Failed to execute automation rule.`);
         }
       };
   
@@ -818,12 +819,12 @@ export class AutomationService {
     switch (triggerType) {
       case 'time_based':
         if (!config.schedule_type) {
-          throw new Error('Schedule type is required for time-based triggers');
+          throw new ValidationError('Schedule type is required for time-based triggers');
         }
         break;
       case 'event_based':
         if (!config.event_type) {
-          throw new Error('Event type is required for event-based triggers');
+          throw new ValidationError('Event type is required for event-based triggers');
         }
         break;
       // Add other validations
@@ -835,12 +836,12 @@ export class AutomationService {
     switch (actionType) {
       case 'email_notification':
         if (!config.to || config.to.length === 0) {
-          throw new Error('Recipients are required for email notifications');
+          throw new ValidationError('Recipients are required for email notifications');
         }
         break;
       case 'webhook_call':
         if (!config.url) {
-          throw new Error('URL is required for webhook calls');
+          throw new ValidationError('URL is required for webhook calls');
         }
         break;
       // Add other validations

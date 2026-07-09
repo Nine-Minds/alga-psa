@@ -8,6 +8,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { writeOffReport, type WriteOffReportData, type WriteOffRow, type WriteOffByUser } from '../actions';
 
@@ -31,7 +32,13 @@ export function WriteOffsReport({ initialData }: { initialData: WriteOffReportDa
   const run = useCallback(async () => {
     setLoading(true);
     try {
-      setData(await writeOffReport({ from: from || null, to: to || null }));
+      const result = await writeOffReport({ from: from || null, to: to || null });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setData(null);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setData(result);
     } catch (e: any) {
       toast.error(e?.message || t('writeOffs.runFailed', "Couldn't run the write-off report."));
     } finally {

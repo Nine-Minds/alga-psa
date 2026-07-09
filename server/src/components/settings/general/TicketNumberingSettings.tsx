@@ -112,8 +112,8 @@ const TicketNumberingSettings = () => {
       setIsEditing(false);
       setShowConfirmation(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('ticketing.numbering.messages.error.updateFailed'));
       console.error(err);
+      setError(t('ticketing.numbering.messages.error.updateFailed'));
     }
   };
 

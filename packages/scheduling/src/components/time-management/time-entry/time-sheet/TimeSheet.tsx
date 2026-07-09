@@ -17,7 +17,12 @@ import { AddWorkItemDialog } from './AddWorkItemDialog';
 import { fetchTimeEntriesForTimeSheet, fetchWorkItemsForTimeSheet, submitTimeSheet, deleteWorkItem } from '../../../../actions/timeEntryActions';
 import { updateScheduleEntry } from '@alga-psa/scheduling/actions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+    getErrorMessage,
+    handleError,
+    isActionMessageError,
+    isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { fetchTimeSheet, fetchTimeSheetComments, addCommentToTimeSheet } from '../../../../actions/timeSheetActions';
 import { useDrawer } from "@alga-psa/ui";
@@ -568,6 +573,12 @@ export function TimeSheet({
             fetchTimeEntriesForTimeSheet(timeSheet.id),
             fetchWorkItemsForTimeSheet(timeSheet.id)
         ]);
+        if (isActionMessageError(fetchedTimeEntries) || isActionPermissionError(fetchedTimeEntries)) {
+            throw fetchedTimeEntries;
+        }
+        if (isActionMessageError(fetchedWorkItems) || isActionPermissionError(fetchedWorkItems)) {
+            throw fetchedWorkItems;
+        }
 
         const fetchedWorkItemsByType = groupWorkItemsByType(fetchedWorkItems);
         setWorkItemsByType(fetchedWorkItemsByType);
@@ -639,14 +650,23 @@ export function TimeSheet({
 
     const handleSubmitTimeSheet = async () => {
         try {
-            await submitTimeSheet(timeSheet.id);
+            const result = await submitTimeSheet(timeSheet.id);
+            if (isActionMessageError(result) || isActionPermissionError(result)) {
+                toast.error(getErrorMessage(result));
+                return;
+            }
             const updatedTimeSheet = await fetchTimeSheet(timeSheet.id);
+            if (isActionMessageError(updatedTimeSheet) || isActionPermissionError(updatedTimeSheet)) {
+                toast.error(getErrorMessage(updatedTimeSheet));
+                return;
+            }
             setTimeSheet(updatedTimeSheet);
             if (onSubmitTimeSheet) {
                 await onSubmitTimeSheet();
             }
         } catch (error) {
             console.error('Error submitting time sheet:', error);
+            handleError(error, t('messages.submitFailed', { defaultValue: 'Failed to submit time sheet' }));
         }
     };
 
@@ -722,13 +742,21 @@ export function TimeSheet({
 
     const handleAddComment = async (comment: string) => {
         try {
-            await addCommentToTimeSheet(
+            const addedComment = await addCommentToTimeSheet(
                 timeSheet.id,
                 timeSheet.user_id,
                 comment,
                 false
             );
+            if (isActionMessageError(addedComment) || isActionPermissionError(addedComment)) {
+                toast.error(getErrorMessage(addedComment));
+                return;
+            }
             const fetchedComments = await fetchTimeSheetComments(timeSheet.id);
+            if (isActionMessageError(fetchedComments) || isActionPermissionError(fetchedComments)) {
+                toast.error(getErrorMessage(fetchedComments));
+                return;
+            }
             setComments(fetchedComments);
         } catch (error) {
             console.error('Failed to add comment:', error);
@@ -772,7 +800,11 @@ export function TimeSheet({
 
     const handleDeleteWorkItem = useCallback(async (workItemId: string) => {
         try {
-            await deleteWorkItem(workItemId);
+            const result = await deleteWorkItem(workItemId);
+            if (isActionMessageError(result) || isActionPermissionError(result)) {
+                toast.error(getErrorMessage(result));
+                return;
+            }
             await refreshTimeSheetData();
             setPersistedListFocusFilter((currentFilter) =>
                 currentFilter?.workItemId === workItemId ? null : currentFilter

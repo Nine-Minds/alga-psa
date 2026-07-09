@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     if (error instanceof TenantProvisioningError) {
       return NextResponse.json(
-        { error: error.message, details: error.details },
+        { error: error.message },
         { status: 400 }
       );
     }

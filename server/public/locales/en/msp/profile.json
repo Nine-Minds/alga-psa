@@ -583,7 +583,8 @@
         "description": "Description",
         "descriptionPlaceholder": "e.g., Development API Key",
         "expiration": "Expiration Date (Optional)",
-        "submit": "Generate New API Key"
+        "submit": "Generate New API Key",
+        "createFailed": "Failed to create API key"
       },
       "list": {
         "title": "Your API Keys",
@@ -609,7 +610,8 @@
           "active": "Active",
           "inactive": "Inactive"
         },
-        "deactivate": "Deactivate"
+        "deactivate": "Deactivate",
+        "deactivateFailed": "Failed to deactivate API key"
       },
       "newKeyDialog": {
         "title": "API Key Generated",

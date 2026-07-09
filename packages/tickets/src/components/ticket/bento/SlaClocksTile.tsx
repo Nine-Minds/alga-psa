@@ -4,8 +4,19 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Clock } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
+import {
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { getTicketSlaPolicyName } from '../../../actions/ticketBentoActions';
 import { computeSlaClocks, formatSlaLabel, type SlaClock, type TicketSlaFields } from './slaClocks';
+
+type SlaPolicyNameResult = string | null | ActionMessageError | ActionPermissionError;
+
+const isActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const STATE_TEXT: Record<string, string> = {
   met: 'text-green-700 dark:text-green-400',
@@ -56,7 +67,7 @@ interface SlaClocksTileProps {
   id: string;
   ticket: TicketSlaFields & { ticket_id?: string };
   /** Server-started policy-name promise (decoration; resolved in an effect, never suspends). */
-  initialPolicyName?: Promise<string | null>;
+  initialPolicyName?: Promise<SlaPolicyNameResult>;
 }
 
 /** "SLA clocks" tile — response + resolution targets from the sla_* columns. */
@@ -76,7 +87,7 @@ export function SlaClocksTile({ id, ticket, initialPolicyName }: SlaClocksTilePr
     if (!initialPolicyName) return;
     let cancelled = false;
     initialPolicyName.then((name) => {
-      if (!cancelled) setPolicyName(name);
+      if (!cancelled && !isActionError(name)) setPolicyName(name);
     });
     return () => {
       cancelled = true;
@@ -91,7 +102,7 @@ export function SlaClocksTile({ id, ticket, initialPolicyName }: SlaClocksTilePr
     if (!ticket.ticket_id || !ticket.sla_policy_id) return;
     getTicketSlaPolicyName(ticket.ticket_id)
       .then((result) => {
-        if (!cancelled) setPolicyName(result.policyName);
+        if (!cancelled && !isActionError(result)) setPolicyName(result.policyName);
       })
       .catch(() => undefined);
     return () => {

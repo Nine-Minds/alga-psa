@@ -452,7 +452,8 @@
     "taskUpdated": "Zadanie zaktualizowane pomyślnie",
     "saveChangesFailed": "Nie udało się zapisać zmian",
     "changesSaved": "Zmiany zapisane pomyślnie",
-    "workItemDeleted": "Element pracy usunięty pomyślnie"
+    "workItemDeleted": "Element pracy usunięty pomyślnie",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
     "withNumber": "To zgłoszenie jest częścią pakietu {{number}}. Czas pakietu jest zwykle rejestrowany na zgłoszeniu głównym.",

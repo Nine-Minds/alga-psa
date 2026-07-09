@@ -61,6 +61,14 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const formatDate = (value?: string | Date | null): string => {
   if (!value) {
@@ -533,6 +541,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       const selectedClientContract = clientContractId
         ? await getClientContractByIdForBilling(clientContractId)
         : null;
+      if (isReturnedActionError(selectedClientContract)) {
+        setError(getErrorMessage(selectedClientContract));
+        setContract(null);
+        setSummary(null);
+        setAssignments([]);
+        setDocuments([]);
+        return;
+      }
       const detailContractId = selectedClientContract?.contract_id ?? contractId;
 
       if (!detailContractId) {
@@ -549,6 +565,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         getContractSummary(detailContractId),
         getContractAssignments(detailContractId),
       ]);
+      const expectedLoadError = [contractData, summaryData, assignmentData].find(isReturnedActionError);
+      if (expectedLoadError) {
+        setError(getErrorMessage(expectedLoadError));
+        setContract(null);
+        setSummary(null);
+        setAssignments([]);
+        setDocuments([]);
+        return;
+      }
 
       // Load documents separately - permission errors should not prevent contract viewing
       let documentsData: any[] = [];
@@ -600,6 +625,17 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         getInvoiceTemplates()
       ]);
 
+      if (isReturnedActionError(invoices)) {
+        setInvoiceError(getErrorMessage(invoices));
+        setContractInvoices([]);
+        return;
+      }
+      if (isReturnedActionError(templates)) {
+        setInvoiceError(getErrorMessage(templates));
+        setInvoiceTemplates([]);
+        return;
+      }
+
       setContractInvoices(invoices);
       setInvoiceTemplates(templates);
     } catch (err) {
@@ -621,11 +657,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     if (!detailContractId) return;
     setIsDeleting(true);
     try {
-      await deleteContract(detailContractId);
+      const result = await deleteContract(detailContractId);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       router.push('/msp/billing?tab=client-contracts');
     } catch (err) {
       console.error('Error deleting contract:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete contract');
+      setError('Failed to delete contract');
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
@@ -643,6 +683,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         getContractSummary(detailContractId),
         getContractAssignments(detailContractId)
       ]);
+      const expectedRefreshError = [summaryData, assignmentData].find(isReturnedActionError);
+      if (expectedRefreshError) {
+        setError(getErrorMessage(expectedRefreshError));
+        return;
+      }
       setSummary(summaryData);
       setAssignments(assignmentData);
     } catch (error) {
@@ -669,6 +714,10 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     );
     try {
       const clientData = await getClientByIdForBilling(clientId);
+      if (isReturnedActionError(clientData)) {
+        replaceDrawer(<div className="p-4 text-sm text-gray-600">{getErrorMessage(clientData)}</div>);
+        return;
+      }
       if (!clientData) {
         replaceDrawer(<div className="p-4 text-sm text-gray-600">Client not found.</div>);
         return;
@@ -796,7 +845,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       }
 
       // Update contract
-      await updateContract(contractId, contractUpdatePayload);
+      const contractUpdateResult = await updateContract(contractId, contractUpdatePayload);
+      if (isReturnedActionError(contractUpdateResult)) {
+        setError(getErrorMessage(contractUpdateResult));
+        return;
+      }
 
       // Update any edited assignments
       for (const [assignmentId, editedAssignment] of Object.entries(editAssignments)) {
@@ -852,7 +905,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
         // Only update if there are changes
         if (Object.keys(updatePayload).length > 1) { // More than just tenant
-          await updateClientContractForBilling(assignmentId, updatePayload);
+          const updateResult = await updateClientContractForBilling(assignmentId, updatePayload);
+          if (isReturnedActionError(updateResult)) {
+            setError(getErrorMessage(updateResult));
+            return;
+          }
         }
       }
 

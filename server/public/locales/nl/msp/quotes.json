@@ -231,7 +231,8 @@
       "notFound": "Offerte niet gevonden",
       "save": "Kan offerte niet opslaan",
       "saveFailed": "Het opslaan van de offerte is mislukt",
-      "workflowAction": "Kan {{action}} niet gebruiken"
+      "workflowAction": "Kan {{action}} niet gebruiken",
+      "removeItem": "Failed to remove quote item"
     },
     "loading": "Offerteformulier laden...",
     "notices": {
@@ -556,7 +557,10 @@
       "contact": "Contactpersoon",
       "internal": "Intern"
     },
-    "removeAriaLabel": "{{email}} verwijderen"
+    "removeAriaLabel": "{{email}} verwijderen",
+    "errors": {
+      "contactsLoadFailed": "Could not load client contacts."
+    }
   },
   "quoteConversion": {
     "title": "Offerte converteren",

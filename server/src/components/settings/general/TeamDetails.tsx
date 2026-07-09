@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Pencil, Check, X } from 'lucide-react';
 import {
   getTeamById,
+  isTeamActionError,
+  teamActionErrorMessage,
   updateTeam,
   saveTeamChanges,
   uploadTeamAvatar,
@@ -25,6 +27,13 @@ import { Card } from '@alga-psa/ui/components/Card';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface TeamDetailsProps {
   teamId: string;
@@ -40,6 +49,9 @@ function parseAvatarUrlsMap(avatarUrls: Map<string, string | null> | Record<stri
   }
   return result;
 }
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
@@ -85,6 +97,11 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
     try {
       setLoading(true);
       const fetchedTeam = await getTeamById(teamId);
+      if (isTeamActionError(fetchedTeam)) {
+        setError(teamActionErrorMessage(fetchedTeam));
+        onUpdate(null);
+        return;
+      }
 
       // Batch fetch user avatars alongside team details to prevent flashing
       const userIds = new Set<string>();
@@ -131,6 +148,10 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
     if (team && teamName.trim() !== '' && teamName.trim() !== team.team_name) {
       try {
         const updatedTeam = await updateTeam(team.team_id, { team_name: teamName.trim() });
+        if (isReturnedActionError(updatedTeam)) {
+          setError(getErrorMessage(updatedTeam));
+          return;
+        }
         setTeam(updatedTeam);
         onUpdate(updatedTeam);
         setError(null);
@@ -196,11 +217,15 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
     setIsSaving(true);
     setError(null);
     try {
-      await saveTeamChanges(team.team_id, {
+      const updatedTeam = await saveTeamChanges(team.team_id, {
         managerId: managerChanged && selectedManagerId ? selectedManagerId : undefined,
         removeUserIds: Array.from(pendingRemovals),
         addUserIds: pendingAdditions,
       });
+      if (isReturnedActionError(updatedTeam)) {
+        setError(getErrorMessage(updatedTeam));
+        return;
+      }
       setPendingAdditions([]);
       setPendingRemovals(new Set());
       await fetchTeamDetails();

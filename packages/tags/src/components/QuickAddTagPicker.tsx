@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, X } from 'lucide-react';
 import type { TaggedEntityType, ITag, PendingTag } from '@alga-psa/types';
 import { generateEntityColor } from '@alga-psa/ui/lib/colorUtils';
-import { getAllTags } from '../actions';
+import { getAllTags, isTagActionError } from '../actions';
 import { useTags } from '../context/TagContext';
 
 interface QuickAddTagPickerProps {
@@ -55,6 +55,10 @@ export const QuickAddTagPicker: React.FC<QuickAddTagPickerProps> = ({
       setIsLoadingTags(true);
       try {
         const tags = await getAllTags();
+        if (isTagActionError(tags)) {
+          console.error('Failed to load existing tags:', tags);
+          return;
+        }
         setLocalTags(tags);
       } catch (error) {
         console.error('Failed to load existing tags:', error);

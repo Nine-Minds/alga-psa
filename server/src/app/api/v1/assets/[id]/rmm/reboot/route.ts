@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { triggerRmmReboot } from '@/lib/actions/asset-actions/rmmActions';
+import { rmmErrorResponse, rmmRouteErrorFrom } from '../rmmRouteErrors';
 
 export async function POST(
   request: Request,
@@ -21,12 +22,13 @@ export async function POST(
     const result = await triggerRmmReboot(id);
 
     if (!result.success) {
+      const expectedError = rmmRouteErrorFrom(result.message);
       return NextResponse.json(
         {
           success: false,
           message: result.message,
         },
-        { status: 400 }
+        { status: expectedError?.status ?? 400 }
       );
     }
 
@@ -41,6 +43,10 @@ export async function POST(
     });
   } catch (error) {
     console.error('Failed to trigger device reboot:', error);
+    const expectedError = rmmRouteErrorFrom(error);
+    if (expectedError) {
+      return rmmErrorResponse(expectedError);
+    }
     return NextResponse.json(
       { error: 'Failed to trigger device reboot' },
       { status: 500 }

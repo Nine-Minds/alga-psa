@@ -113,7 +113,7 @@ export async function getUserClientIdForRegistration(userId: string): Promise<st
     });
   } catch (error) {
     console.error('Error getting user client ID for registration:', error);
-    throw new Error('Failed to get user client ID for registration');
+    throw error;
   }
 }
 

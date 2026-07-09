@@ -8,6 +8,11 @@ import { ServiceRateTiers } from './ServiceRateTiers';
 import { IService } from '@alga-psa/types';
 import { getServiceById } from '@alga-psa/billing/actions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface ServiceConfigurationPanelProps {
   serviceId: string;
@@ -29,6 +34,11 @@ export function ServiceConfigurationPanel({ serviceId, onUpdate }: ServiceConfig
         
         // Fetch service data
         const serviceData = await getServiceById(serviceId);
+        if (isActionMessageError(serviceData) || isActionPermissionError(serviceData)) {
+          setError(getErrorMessage(serviceData));
+          setService(null);
+          return;
+        }
         if (serviceData) {
           setService(serviceData);
         } else {
@@ -53,6 +63,11 @@ export function ServiceConfigurationPanel({ serviceId, onUpdate }: ServiceConfig
     try {
       setLoading(true);
       const updatedService = await getServiceById(serviceId);
+      if (isActionMessageError(updatedService) || isActionPermissionError(updatedService)) {
+        setError(getErrorMessage(updatedService));
+        setService(null);
+        return;
+      }
       if (updatedService) {
         setService(updatedService);
       }

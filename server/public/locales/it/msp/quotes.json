@@ -231,7 +231,8 @@
       "notFound": "Citazione non trovata",
       "save": "Impossibile salvare il preventivo",
       "saveFailed": "Salvataggio del preventivo non riuscito",
-      "workflowAction": "Impossibile {{action}}"
+      "workflowAction": "Impossibile {{action}}",
+      "removeItem": "Failed to remove quote item"
     },
     "loading": "Caricamento modulo preventivo...",
     "notices": {
@@ -556,7 +557,10 @@
       "contact": "Contatto",
       "internal": "Interno"
     },
-    "removeAriaLabel": "Rimuovi {{email}}"
+    "removeAriaLabel": "Rimuovi {{email}}",
+    "errors": {
+      "contactsLoadFailed": "Could not load client contacts."
+    }
   },
   "quoteConversion": {
     "title": "Converti preventivo",

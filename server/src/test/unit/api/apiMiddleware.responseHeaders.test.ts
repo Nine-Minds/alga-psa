@@ -24,6 +24,23 @@ describe('apiMiddleware response headers', () => {
     expect(body.error.code).toBe('RATE_LIMITED');
   });
 
+  it('maps known application error codes to meaningful HTTP statuses', async () => {
+    const response = handleApiError({
+      name: 'AppError',
+      code: 'QBO_SETUP_INCOMPLETE',
+      message: 'Connect QuickBooks before syncing invoices',
+      details: { realmId: 'realm-1' },
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error).toMatchObject({
+      code: 'QBO_SETUP_INCOMPLETE',
+      message: 'Connect QuickBooks before syncing invoices',
+      details: { realmId: 'realm-1' },
+    });
+  });
+
   it('adds extra headers to success responses', () => {
     const response = createSuccessResponse(
       { ok: true },

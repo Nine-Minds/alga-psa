@@ -334,9 +334,13 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
           errorDescription = submitError.message.replace('FOREIGN_KEY_ERROR:', '').trim();
         } else if (submitError.message.includes('SYSTEM_ERROR:')) {
           errorTitle = t('quickAddContact.errors.systemTitle', { defaultValue: 'System Error' });
-          errorDescription = submitError.message.replace('SYSTEM_ERROR:', '').trim();
+          errorDescription = t('quickAddContact.errors.unexpected', {
+            defaultValue: 'An unexpected error occurred. Please try again.'
+          });
         } else {
-          errorDescription = submitError.message;
+          errorDescription = t('quickAddContact.errors.unexpected', {
+            defaultValue: 'An unexpected error occurred. Please try again.'
+          });
         }
 
         toast({
@@ -345,7 +349,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
           variant: 'destructive'
         });
 
-        setError(submitError.message);
+        setError(errorDescription);
         setIsSubmitting(false);
         return;
       }
@@ -403,9 +407,13 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
           errorDescription = submitError.message.replace('FOREIGN_KEY_ERROR:', '').trim();
         } else if (submitError.message.includes('SYSTEM_ERROR:')) {
           errorTitle = t('quickAddContact.errors.systemTitle', { defaultValue: 'System Error' });
-          errorDescription = submitError.message.replace('SYSTEM_ERROR:', '').trim();
+          errorDescription = t('quickAddContact.errors.unexpected', {
+            defaultValue: 'An unexpected error occurred. Please try again.'
+          });
         } else {
-          errorDescription = submitError.message;
+          errorDescription = t('quickAddContact.errors.unexpected', {
+            defaultValue: 'An unexpected error occurred. Please try again.'
+          });
         }
 
         toast({
@@ -414,7 +422,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
           variant: 'destructive'
         });
 
-        setError(submitError.message);
+        setError(errorDescription);
       } else {
         const fallbackError = t('quickAddContact.errors.unexpected', {
           defaultValue: 'An unexpected error occurred. Please try again.'

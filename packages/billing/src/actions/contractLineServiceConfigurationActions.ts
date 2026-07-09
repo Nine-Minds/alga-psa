@@ -12,6 +12,44 @@ import {
 } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+export type ContractLineServiceConfigActionError = ActionMessageError | ActionPermissionError;
+
+function contractLineServiceConfigActionErrorFrom(error: unknown): ContractLineServiceConfigActionError | null {
+  if (error instanceof Error && error.message.startsWith('Permission denied:')) {
+    return permissionError(error.message);
+  }
+
+  if (error instanceof Error) {
+    if (error.message === 'System-managed default contracts are attribution-only; contract-line service configuration authoring is disabled.') {
+      return actionError(error.message);
+    }
+    if (error.message.includes('not found')) {
+      return actionError('The selected service configuration is no longer available. Please refresh and try again.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected service configuration values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required service configuration field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected contract line or service no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This service configuration already exists for the selected contract line.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('One of the service configuration values is not allowed. Please review the form and try again.');
+  }
+
+  return null;
+}
 
 async function assertContractLineIsAuthorableByLineId(
   knex: any,
@@ -57,15 +95,24 @@ export const getConfigurationWithDetails = withAuth(async (
   { tenant },
   configId: string
 ) => {
-  if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+  try {
+    if (!await hasPermission(user, 'billing', 'read')) {
+      return permissionError('Permission denied: billing read required');
+    }
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+    const service = new ContractLineServiceConfigurationService(knex, tenant);
+    return service.getConfigurationWithDetails(configId);
+  } catch (error) {
+    console.error(`Error fetching service configuration ${configId}:`, error);
+    const expected = contractLineServiceConfigActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  const service = new ContractLineServiceConfigurationService(knex, tenant);
-  return service.getConfigurationWithDetails(configId);
 });
 
 export const getConfigurationsForPlan = withAuth(async (
@@ -73,15 +120,24 @@ export const getConfigurationsForPlan = withAuth(async (
   { tenant },
   contractLineId: string
 ) => {
-  if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+  try {
+    if (!await hasPermission(user, 'billing', 'read')) {
+      return permissionError('Permission denied: billing read required');
+    }
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+    const service = new ContractLineServiceConfigurationService(knex, tenant);
+    return service.getConfigurationsForPlan(contractLineId);
+  } catch (error) {
+    console.error(`Error fetching service configurations for contract line ${contractLineId}:`, error);
+    const expected = contractLineServiceConfigActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  const service = new ContractLineServiceConfigurationService(knex, tenant);
-  return service.getConfigurationsForPlan(contractLineId);
 });
 
 export const getConfigurationForService = withAuth(async (
@@ -90,15 +146,24 @@ export const getConfigurationForService = withAuth(async (
   contractLineId: string,
   serviceId: string
 ) => {
-  if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+  try {
+    if (!await hasPermission(user, 'billing', 'read')) {
+      return permissionError('Permission denied: billing read required');
+    }
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+    const service = new ContractLineServiceConfigurationService(knex, tenant);
+    return service.getConfigurationForService(contractLineId, serviceId);
+  } catch (error) {
+    console.error(`Error fetching service configuration for contract line ${contractLineId} and service ${serviceId}:`, error);
+    const expected = contractLineServiceConfigActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  const service = new ContractLineServiceConfigurationService(knex, tenant);
-  return service.getConfigurationForService(contractLineId, serviceId);
 });
 
 export const createConfiguration = withAuth(async (
@@ -109,16 +174,25 @@ export const createConfiguration = withAuth(async (
   rateTiers?: IContractLineServiceRateTierInput[],
   userTypeRates?: Array<Omit<IUserTypeRate, 'created_at' | 'updated_at' | 'config_id' | 'rate_id'>>
 ) => {
-  if (!await hasPermission(user, 'billing', 'create')) {
-    throw new Error('Permission denied: billing create required');
+  try {
+    if (!await hasPermission(user, 'billing', 'create')) {
+      return permissionError('Permission denied: billing create required');
+    }
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+    await assertContractLineIsAuthorableByLineId(knex, tenant, baseConfig.contract_line_id);
+    const service = new ContractLineServiceConfigurationService(knex, tenant);
+    return service.createConfiguration(baseConfig, typeConfig, rateTiers as any, userTypeRates);
+  } catch (error) {
+    console.error(`Error creating service configuration for contract line ${baseConfig.contract_line_id}:`, error);
+    const expected = contractLineServiceConfigActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  await assertContractLineIsAuthorableByLineId(knex, tenant, baseConfig.contract_line_id);
-  const service = new ContractLineServiceConfigurationService(knex, tenant);
-  return service.createConfiguration(baseConfig, typeConfig, rateTiers as any, userTypeRates);
 });
 
 export const updateConfiguration = withAuth(async (
@@ -129,16 +203,25 @@ export const updateConfiguration = withAuth(async (
   typeConfig?: Partial<IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | Record<string, unknown>>,
   rateTiers?: IContractLineServiceRateTierInput[]
 ) => {
-  if (!await hasPermission(user, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+  try {
+    if (!await hasPermission(user, 'billing', 'update')) {
+      return permissionError('Permission denied: billing update required');
+    }
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+    await assertContractLineIsAuthorableByConfigId(knex, tenant, configId);
+    const service = new ContractLineServiceConfigurationService(knex, tenant);
+    return service.updateConfiguration(configId, baseConfig, typeConfig, rateTiers as any);
+  } catch (error) {
+    console.error(`Error updating service configuration ${configId}:`, error);
+    const expected = contractLineServiceConfigActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  await assertContractLineIsAuthorableByConfigId(knex, tenant, configId);
-  const service = new ContractLineServiceConfigurationService(knex, tenant);
-  return service.updateConfiguration(configId, baseConfig, typeConfig, rateTiers as any);
 });
 
 export const deleteConfiguration = withAuth(async (
@@ -146,16 +229,25 @@ export const deleteConfiguration = withAuth(async (
   { tenant },
   configId: string
 ) => {
-  if (!await hasPermission(user, 'billing', 'delete')) {
-    throw new Error('Permission denied: billing delete required');
+  try {
+    if (!await hasPermission(user, 'billing', 'delete')) {
+      return permissionError('Permission denied: billing delete required');
+    }
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+    await assertContractLineIsAuthorableByConfigId(knex, tenant, configId);
+    const service = new ContractLineServiceConfigurationService(knex, tenant);
+    return service.deleteConfiguration(configId);
+  } catch (error) {
+    console.error(`Error deleting service configuration ${configId}:`, error);
+    const expected = contractLineServiceConfigActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  await assertContractLineIsAuthorableByConfigId(knex, tenant, configId);
-  const service = new ContractLineServiceConfigurationService(knex, tenant);
-  return service.deleteConfiguration(configId);
 });
 
 export const upsertPlanServiceHourlyConfiguration = withAuth(async (
@@ -165,16 +257,25 @@ export const upsertPlanServiceHourlyConfiguration = withAuth(async (
   serviceId: string,
   hourlyConfigData: Partial<IContractLineServiceHourlyConfig>
 ) => {
-  if (!await hasPermission(user, 'billing', 'create')) {
-    throw new Error('Permission denied: billing create required');
+  try {
+    if (!await hasPermission(user, 'billing', 'create')) {
+      return permissionError('Permission denied: billing create required');
+    }
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+    await assertContractLineIsAuthorableByLineId(knex, tenant, contractLineId);
+    const service = new ContractLineServiceConfigurationService(knex, tenant);
+    return service.upsertPlanServiceHourlyConfiguration(contractLineId, serviceId, hourlyConfigData);
+  } catch (error) {
+    console.error(`Error upserting hourly configuration for contract line ${contractLineId} and service ${serviceId}:`, error);
+    const expected = contractLineServiceConfigActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  await assertContractLineIsAuthorableByLineId(knex, tenant, contractLineId);
-  const service = new ContractLineServiceConfigurationService(knex, tenant);
-  return service.upsertPlanServiceHourlyConfiguration(contractLineId, serviceId, hourlyConfigData);
 });
 
 export const upsertPlanServiceBucketConfigurationAction = withAuth(async (
@@ -184,16 +285,25 @@ export const upsertPlanServiceBucketConfigurationAction = withAuth(async (
   serviceId: string,
   bucketConfigData: Partial<IContractLineServiceBucketConfig>
 ) => {
-  if (!await hasPermission(user, 'billing', 'create')) {
-    throw new Error('Permission denied: billing create required');
+  try {
+    if (!await hasPermission(user, 'billing', 'create')) {
+      return permissionError('Permission denied: billing create required');
+    }
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+    await assertContractLineIsAuthorableByLineId(knex, tenant, contractLineId);
+    const service = new ContractLineServiceConfigurationService(knex, tenant);
+    return service.upsertPlanServiceBucketConfiguration(contractLineId, serviceId, bucketConfigData);
+  } catch (error) {
+    console.error(`Error upserting bucket configuration for contract line ${contractLineId} and service ${serviceId}:`, error);
+    const expected = contractLineServiceConfigActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  await assertContractLineIsAuthorableByLineId(knex, tenant, contractLineId);
-  const service = new ContractLineServiceConfigurationService(knex, tenant);
-  return service.upsertPlanServiceBucketConfiguration(contractLineId, serviceId, bucketConfigData);
 });
 
 type UsageConfigPayload = {
@@ -211,48 +321,57 @@ export const upsertPlanServiceConfiguration = withAuth(async (
   { tenant },
   payload: UsageConfigPayload
 ) => {
-  if (!await hasPermission(user, 'billing', 'create')) {
-    throw new Error('Permission denied: billing create required');
-  }
-  const { knex } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  await assertContractLineIsAuthorableByLineId(knex, tenant, payload.contractLineId);
-  const service = new ContractLineServiceConfigurationService(knex, tenant);
-  const existing = await service.getConfigurationForService(payload.contractLineId, payload.serviceId);
+  try {
+    if (!await hasPermission(user, 'billing', 'create')) {
+      return permissionError('Permission denied: billing create required');
+    }
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+    await assertContractLineIsAuthorableByLineId(knex, tenant, payload.contractLineId);
+    const service = new ContractLineServiceConfigurationService(knex, tenant);
+    const existing = await service.getConfigurationForService(payload.contractLineId, payload.serviceId);
 
-  const usageConfig: Partial<IContractLineServiceUsageConfig> = {
-    unit_of_measure: payload.unit_of_measure ?? 'Unit',
-    enable_tiered_pricing: payload.enable_tiered_pricing ?? false,
-    minimum_usage: payload.minimum_usage ?? undefined,
-    base_rate: payload.base_rate ?? undefined
-  };
+    const usageConfig: Partial<IContractLineServiceUsageConfig> = {
+      unit_of_measure: payload.unit_of_measure ?? 'Unit',
+      enable_tiered_pricing: payload.enable_tiered_pricing ?? false,
+      minimum_usage: payload.minimum_usage ?? undefined,
+      base_rate: payload.base_rate ?? undefined
+    };
 
-  const rateTiers: IContractLineServiceRateTierInput[] | undefined = payload.enable_tiered_pricing
-    ? (payload.tiers || []).map(tier => ({
+    const rateTiers: IContractLineServiceRateTierInput[] | undefined = payload.enable_tiered_pricing
+      ? (payload.tiers || []).map(tier => ({
         min_quantity: tier.min_quantity,
         max_quantity: tier.max_quantity,
         rate: tier.rate
       }))
-    : undefined;
+      : undefined;
 
-  if (existing) {
-    await service.updateConfiguration(existing.config_id, undefined, usageConfig, rateTiers as any);
-    return existing.config_id;
+    if (existing) {
+      await service.updateConfiguration(existing.config_id, undefined, usageConfig, rateTiers as any);
+      return existing.config_id;
+    }
+
+    const baseConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
+      contract_line_id: payload.contractLineId,
+      service_id: payload.serviceId,
+      configuration_type: 'Usage',
+      custom_rate: undefined,
+      quantity: undefined,
+      instance_name: undefined,
+      tenant
+    };
+
+    return service.createConfiguration(baseConfig, usageConfig, rateTiers as any);
+  } catch (error) {
+    console.error(`Error upserting usage configuration for contract line ${payload.contractLineId} and service ${payload.serviceId}:`, error);
+    const expected = contractLineServiceConfigActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-
-  const baseConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
-    contract_line_id: payload.contractLineId,
-    service_id: payload.serviceId,
-    configuration_type: 'Usage',
-    custom_rate: undefined,
-    quantity: undefined,
-    instance_name: undefined,
-    tenant
-  };
-
-  return service.createConfiguration(baseConfig, usageConfig, rateTiers as any);
 });
 
 export const upsertUserTypeRatesForConfig = withAuth(async (
@@ -261,16 +380,25 @@ export const upsertUserTypeRatesForConfig = withAuth(async (
   configId: string,
   rates: Array<Omit<IUserTypeRate, 'rate_id' | 'config_id' | 'created_at' | 'updated_at' | 'tenant'>>
 ) => {
-  if (!await hasPermission(user, 'billing', 'create')) {
-    throw new Error('Permission denied: billing create required');
+  try {
+    if (!await hasPermission(user, 'billing', 'create')) {
+      return permissionError('Permission denied: billing create required');
+    }
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+    await assertContractLineIsAuthorableByConfigId(knex, tenant, configId);
+    const service = new ContractLineServiceConfigurationService(knex, tenant);
+    return service.upsertUserTypeRates(configId, rates);
+  } catch (error) {
+    console.error(`Error upserting user type rates for service configuration ${configId}:`, error);
+    const expected = contractLineServiceConfigActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  await assertContractLineIsAuthorableByConfigId(knex, tenant, configId);
-  const service = new ContractLineServiceConfigurationService(knex, tenant);
-  return service.upsertUserTypeRates(configId, rates);
 });
 
 export const getConfigurationsForContractLine = getConfigurationsForPlan;

@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { marginReport, type MarginReport as MarginReportData, type MarginReportRow } from '../actions';
 import { CurrencyFormatProvider, useCurrencyFormat } from './dashboard/shared';
 
@@ -88,7 +89,13 @@ export function MarginReport() {
   const run = async () => {
     setLoading(true);
     try {
-      setReport(await marginReport({ from: from || undefined, to: to || undefined }));
+      const result = await marginReport({ from: from || undefined, to: to || undefined });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setReport(null);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setReport(result);
     } catch (e: any) {
       toast.error(e?.message || t('margin.runFailed', "Couldn't run the margin report."));
     } finally {

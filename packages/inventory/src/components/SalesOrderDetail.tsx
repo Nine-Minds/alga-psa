@@ -9,6 +9,13 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { ISalesOrder, IStockLocation, IVendor } from '@alga-psa/types';
 import {
@@ -46,7 +53,7 @@ export type FulfillAndInvoiceFn = (
     asset_ids: string[];
   };
   invoice: { success: boolean; invoiced: number; invoiceId?: string; error?: string } | null;
-}>;
+} | ActionMessageError | ActionPermissionError>;
 export type GenerateInvoiceFn = (
   soId: string,
   opts?: { mode?: 'fulfilled' | 'ordered' },
@@ -57,7 +64,10 @@ export type ConfirmDropShipFn = (
 ) => Promise<{
   shipment: { quantity_fulfilled: number; sales_order_status: string; warnings: string[] };
   invoice: { success: boolean; invoiced: number; invoiceId?: string; error?: string } | null;
-}>;
+} | ActionMessageError | ActionPermissionError>;
+
+const isActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const STATUS_VARIANTS: Record<string, BadgeVariant> = {
   draft: 'secondary',
@@ -149,10 +159,27 @@ export function SalesOrderDetail({
     setLoading(true);
     try {
       const detail = await getSalesOrder(soId);
+      if (isActionError(detail)) {
+        setSo(null);
+        toast.error(getErrorMessage(detail));
+        return;
+      }
+      if (!detail) {
+        setSo(null);
+        setBackorder(new Map());
+        setInvoices([]);
+        toast.error(t('salesOrders.notFound', 'Sales order not found.'));
+        return;
+      }
       setSo(detail);
       try {
         const rows = await computeBackorder(soId);
-        setBackorder(new Map(rows.map((r) => [r.so_line_id, r])));
+        if (isActionError(rows)) {
+          setBackorder(new Map());
+          toast.error(getErrorMessage(rows));
+        } else {
+          setBackorder(new Map(rows.map((r) => [r.so_line_id, r])));
+        }
       } catch {
         setBackorder(new Map()); // backorder is decoration; the detail still renders
       }
@@ -193,6 +220,11 @@ export function SalesOrderDetail({
       setCandidatesLoading(true);
       try {
         const units = await listFulfillmentCandidateUnits(line.so_line_id);
+        if (isActionError(units)) {
+          setCandidates([]);
+          toast.error(getErrorMessage(units));
+          return;
+        }
         setCandidates(units);
         // FIFO preselect (F003): this line's allocated units first, then unallocated,
         // skipping other orders' claims — mirroring the server's own default pick.
@@ -243,6 +275,10 @@ export function SalesOrderDetail({
     setBusy(`fulfill:${line.so_line_id}`);
     try {
       const result = await fulfillAndInvoice(line.so_line_id, input);
+      if (isActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(
         t('salesOrders.fulfilledUnits', 'Fulfilled {{count}} unit(s).', {
           count: result.fulfillment.quantity_fulfilled,
@@ -298,6 +334,11 @@ export function SalesOrderDetail({
     setBusy(`dropship:${line.so_line_id}`);
     try {
       const result = await confirmDropShip({ so_line_id: line.so_line_id }, { serials });
+      if (isActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+
       toast.success(
         t('salesOrders.shipmentConfirmed', 'Shipment confirmed — {{count}} unit(s) delivered.', {
           count: result.shipment.quantity_fulfilled,
@@ -333,6 +374,11 @@ export function SalesOrderDetail({
     setCreatePoVendorId('');
     try {
       const v = await listVendors({});
+      if (isActionMessageError(v) || isActionPermissionError(v)) {
+        setVendors([]);
+        toast.error(getErrorMessage(v));
+        return;
+      }
       setVendors(v);
       if (v.length === 1) setCreatePoVendorId(v[0].vendor_id);
     } catch (e: any) {
@@ -349,6 +395,11 @@ export function SalesOrderDetail({
     setBusy(`create-po:${createPoLine.so_line_id}`);
     try {
       const po = await createDropShipForSoLine(createPoLine.so_line_id, { vendor_id: createPoVendorId });
+      if (isActionError(po)) {
+        toast.error(getErrorMessage(po));
+        return;
+      }
+
       toast.success(
         t('salesOrders.dropShipPoCreated', 'Drop-ship PO {{number}} created — confirm the shipment once the vendor ships.', {
           number: po.po_number,
@@ -392,6 +443,10 @@ export function SalesOrderDetail({
     setBusy('backorder-po');
     try {
       const result = await suggestPoFromBackorder(so.so_id);
+      if (isActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       const poNumbers = result.purchaseOrders.map((po) => po.po_number).join(', ');
       if (result.purchaseOrders.length > 0) {
         toast.success(
@@ -425,7 +480,12 @@ export function SalesOrderDetail({
     if (!so || busy) return;
     setBusy('reopen');
     try {
-      await reopenSalesOrder(so.so_id);
+      const result = await reopenSalesOrder(so.so_id);
+      if (isActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await changed();
+        return;
+      }
       toast.success(t('salesOrders.reopened', 'Sales order reopened — it is a draft again.'));
       await changed();
     } catch (e: any) {

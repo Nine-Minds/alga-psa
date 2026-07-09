@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { ApiContext, ApiRequest } from '../middleware/apiMiddleware';
+import { ApiContext, ApiRequest, UnauthorizedError } from '../middleware/apiMiddleware';
 
 /**
  * Get the request context from a NextRequest
@@ -32,7 +32,7 @@ export function setRequestContext(req: NextRequest, context: ApiContext): void {
 export function requireRequestContext(req: NextRequest | ApiRequest): ApiContext {
   const context = getRequestContext(req);
   if (!context) {
-    throw new Error('Request context not available');
+    throw new UnauthorizedError('Authentication context required');
   }
   return context;
 }

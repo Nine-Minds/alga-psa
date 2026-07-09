@@ -6,6 +6,7 @@
  */
 
 import { revalidatePath } from 'next/cache';
+import axios from 'axios';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -35,6 +36,34 @@ import {
 import type { RmmOrganizationMapping } from '../../../interfaces/rmm.interfaces';
 
 const SETTINGS_PATH = '/msp/settings';
+
+function huntressActionErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+    if (!status) {
+      return 'Unable to reach Huntress. Check network connectivity and try again.';
+    }
+    if (status === 401 || status === 403) {
+      return 'Huntress rejected the API credentials. Check the API key and secret.';
+    }
+    if (status === 404) {
+      return 'The requested Huntress resource was not found. Refresh the integration and try again.';
+    }
+    if (status === 429) {
+      return 'Huntress rate limit reached. Please try again later.';
+    }
+    if (status >= 500) {
+      return 'Huntress is temporarily unavailable. Please try again later.';
+    }
+    return fallback;
+  }
+
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  if (message.startsWith('You do not have permission')) {
+    return message;
+  }
+  return fallback;
+}
 
 // Huntress visibility in the UI is EE-gated (requiresEnterprise); server
 // actions enforce tier + permissions only.
@@ -325,8 +354,11 @@ export const syncHuntressOrganizationMappings = withHuntressAccess(
       revalidatePath(SETTINGS_PATH);
       return { success: true, created: result.created, autoMatched: result.autoMatched };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.error('[Huntress] Organization sync failed', { tenant, error: message });
+      const message = huntressActionErrorMessage(error, 'Unable to sync Huntress organizations.');
+      logger.error('[Huntress] Organization sync failed', {
+        tenant,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return { success: false, error: message };
     }
   }

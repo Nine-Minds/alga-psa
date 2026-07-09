@@ -253,7 +253,8 @@
       "secondaryApproverRequired": "11111",
       "invalidVerificationCode": "11111",
       "unknown": "11111",
-      "reportNotFound": "11111"
+      "reportNotFound": "11111",
+      "resolveFailed": "11111"
     }
   },
   "discrepancy": {
@@ -334,7 +335,8 @@
       "resolveReport": "11111"
     },
     "errors": {
-      "unknown": "11111"
+      "unknown": "11111",
+      "resolveFailed": "11111"
     }
   },
   "recommendedFix": {
@@ -387,7 +389,8 @@
     "errors": {
       "notesRequired": "11111",
       "invalidAmount": "11111",
-      "unknown": "11111"
+      "unknown": "11111",
+      "applyFailed": "11111"
     }
   },
   "usage": {

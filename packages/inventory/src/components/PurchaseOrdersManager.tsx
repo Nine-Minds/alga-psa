@@ -15,6 +15,13 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { CURRENCY_OPTIONS, toMinorUnits } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import { PoLandedCostDialog } from './PoLandedCostDialog';
 import type {
@@ -89,6 +96,12 @@ function errMessage(e: unknown, fallback: string): string {
   return e instanceof Error && e.message ? e.message : fallback;
 }
 
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+function isReturnedActionError(value: unknown): value is ReturnedActionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
 /** Turn a raw enum value ("partially_received") into a sentence-case label ("Partially received"). */
 function humanize(value?: string | null): string {
   if (!value) return '';
@@ -120,10 +133,12 @@ const OUTSTANDING_STATUSES = new Set(['open', 'partially_received']);
 export function PurchaseOrdersManager({
   initialPos,
   loadError = false,
+  loadErrorMessage,
   defaultCurrencyCode = 'USD',
 }: {
   initialPos: PurchaseOrderListRow[];
   loadError?: boolean;
+  loadErrorMessage?: string;
   defaultCurrencyCode?: string;
 }) {
   const { t } = useTranslation('features/inventory');
@@ -170,7 +185,14 @@ export function PurchaseOrdersManager({
 
   const reload = useCallback(async () => {
     try {
-      setPos(await listPurchaseOrders({}));
+      const result = await listPurchaseOrders({});
+      if (isReturnedActionError(result)) {
+        setPos([]);
+        setLoadFailed(true);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setPos(result);
       setLoadFailed(false);
     } catch (e) {
       console.error(e);
@@ -181,7 +203,13 @@ export function PurchaseOrdersManager({
 
   const loadVendors = useCallback(async () => {
     try {
-      setVendors(await listVendors({}));
+      const result = await listVendors({});
+      if (isReturnedActionError(result)) {
+        setVendors([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setVendors(result);
     } catch (e) {
       console.error(e);
       toast.error(t('purchaseOrders.vendorsLoadError', "Couldn't load vendors."));
@@ -190,7 +218,13 @@ export function PurchaseOrdersManager({
 
   const loadProducts = useCallback(async () => {
     try {
-      setProducts((await listInventoryProducts()) as ProductOption[]);
+      const result = await listInventoryProducts();
+      if (isReturnedActionError(result)) {
+        setProducts([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setProducts(result as ProductOption[]);
     } catch (e) {
       console.error(e);
       toast.error(t('purchaseOrders.productsLoadError', "Couldn't load products."));
@@ -263,12 +297,16 @@ export function PurchaseOrdersManager({
     }
     setSaving(true);
     try {
-      await createPurchaseOrder({
+      const result = await createPurchaseOrder({
         vendor_id: form.vendor_id,
         currency_code: form.currency_code.trim(),
         expected_date: form.expected_date || null,
         lines,
       });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('purchaseOrders.created', 'Purchase order created.'));
       setDialogOpen(false);
       await reload();
@@ -281,7 +319,12 @@ export function PurchaseOrdersManager({
 
   const submit = async (po: IPurchaseOrder) => {
     try {
-      await submitPurchaseOrder(po.po_id);
+      const result = await submitPurchaseOrder(po.po_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('purchaseOrders.submitted', 'Purchase order submitted.'));
       await reload();
     } catch (e) {
@@ -291,7 +334,12 @@ export function PurchaseOrdersManager({
 
   const cancel = async (po: IPurchaseOrder) => {
     try {
-      await cancelPurchaseOrder(po.po_id);
+      const result = await cancelPurchaseOrder(po.po_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('purchaseOrders.cancelled', 'Purchase order cancelled.'));
       await reload();
     } catch (e) {
@@ -308,8 +356,18 @@ export function PurchaseOrdersManager({
         getPurchaseOrder(po.po_id),
         listStockLocations({ includeInactive: false }),
       ]);
+      if (isReturnedActionError(full)) {
+        toast.error(getErrorMessage(full));
+        setReceiveOpen(false);
+        return;
+      }
       if (!full) {
         toast.error(t('purchaseOrders.notFound', 'Purchase order not found'));
+        setReceiveOpen(false);
+        return;
+      }
+      if (isReturnedActionError(locs)) {
+        toast.error(getErrorMessage(locs));
         setReceiveOpen(false);
         return;
       }
@@ -363,6 +421,11 @@ export function PurchaseOrdersManager({
         quantity,
         serials,
       });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       if (result.over_receipt) {
         toast(t('purchaseOrders.overReceived', "Received {{quantity}}. You've now received more than was ordered.", { quantity }), { icon: '⚠️' });
       } else {
@@ -370,6 +433,12 @@ export function PurchaseOrdersManager({
       }
       // Refresh the open dialog and the list.
       const full = await getPurchaseOrder(line.po_id);
+      if (isReturnedActionError(full)) {
+        toast.error(getErrorMessage(full));
+        setReceivePo(null);
+        await reload();
+        return;
+      }
       if (full) {
         setReceivePo(full);
         setReceiveForms((prev) => {
@@ -585,7 +654,7 @@ export function PurchaseOrdersManager({
       {loadFailed ? (
         <EmptyState
           title={t('purchaseOrders.loadErrorTitle', "Couldn't load purchase orders")}
-          description={t('purchaseOrders.loadErrorDescription', 'Something went wrong loading this page. Try again.')}
+          description={loadErrorMessage ?? t('purchaseOrders.loadErrorDescription', 'Something went wrong loading this page. Try again.')}
           action={
             <Button id="purchase-orders-retry" onClick={reload}>
               {t('common.retry', 'Retry')}

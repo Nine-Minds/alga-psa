@@ -4,6 +4,8 @@ import type { Knex } from 'knex';
 
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, UserPreferences, withTransaction } from '@alga-psa/db';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { TicketActionError } from './ticketActionErrors';
 
 export type TicketDetailLayout = 'grid' | 'entry';
 
@@ -19,6 +21,42 @@ const DEFAULT_LAYOUT_PREFERENCE: TicketLayoutPreference = {
 
 const LAYOUT_SETTING = 'ticket_detail_layout';
 const TIMELINE_ORDER_SETTING = 'ticket_timeline_order';
+
+function ticketLayoutActionErrorFrom(error: unknown): TicketActionError | null {
+  if (error instanceof Error) {
+    if (error.message.includes('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (error.message === 'Tenant required' || error.message === 'user.user_id required') {
+      return actionError('Your session is missing required ticket preference context. Please refresh and try again.');
+    }
+    if (error.message === 'Current user not found') {
+      return actionError('Current user not found. Please refresh and sign in again.');
+    }
+    if (error.message.startsWith('Invalid ticket detail layout')) {
+      return actionError('Invalid ticket detail layout. Please refresh and try again.');
+    }
+    if (error.message.startsWith('Invalid ticket timeline order')) {
+      return actionError('Invalid ticket timeline order. Please refresh and try again.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the ticket layout preference values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required ticket preference field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The current user for these ticket preferences no longer exists. Please refresh and sign in again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('Ticket layout preferences were updated concurrently. Please refresh and try again.');
+  }
+
+  return null;
+}
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -71,7 +109,8 @@ export const getTicketLayoutPreference = withAuth(
   async (
     user,
     { tenant },
-  ): Promise<TicketLayoutPreference> => {
+  ): Promise<TicketLayoutPreference | TicketActionError> => {
+    try {
     if (!tenant) {
       throw new Error('Tenant required');
     }
@@ -99,6 +138,13 @@ export const getTicketLayoutPreference = withAuth(
           : DEFAULT_LAYOUT_PREFERENCE.timelineOrder,
       };
     });
+    } catch (error) {
+      const expected = ticketLayoutActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   },
 );
 
@@ -107,7 +153,8 @@ export const setTicketLayoutPreference = withAuth(
     user,
     { tenant },
     prefs: Partial<TicketLayoutPreference>,
-  ): Promise<{ success: true }> => {
+  ): Promise<{ success: true } | TicketActionError> => {
+    try {
     if (!tenant) {
       throw new Error('Tenant required');
     }
@@ -149,5 +196,12 @@ export const setTicketLayoutPreference = withAuth(
 
       return { success: true };
     });
+    } catch (error) {
+      const expected = ticketLayoutActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   },
 );
