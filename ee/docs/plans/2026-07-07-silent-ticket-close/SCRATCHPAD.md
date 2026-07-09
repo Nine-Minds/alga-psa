@@ -123,6 +123,17 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
   - `cd packages/tickets && npx vitest run src/actions/optimizedTicketActions.liveUpdates.test.ts`
   - `npm -w @alga-psa/tickets run typecheck`
 
+## 2026-07-09 Implementation Notes — Update/Assignment Email Gates
+
+- Completed F021-F024 (F025 was completed with the close gate commit):
+  - Direct `handleTicketUpdated` gates `ticket-updated-client` contact sends on contact suppression; assignee/additional/internal watcher emails on internal suppression; external watcher emails on contact suppression.
+  - `handleAccumulatedTicketUpdates` resolves a conservative batch-level suppression policy: any contact-suppressed event suppresses the combined contact email, and any full-suppressed event suppresses combined staff emails.
+  - `sendTicketAssignedNotifications`, used by direct and accumulated assignment handling, gates client team/first-agent assignment emails and team watcher emails on contact suppression; assigned-user/additional-agent emails on internal suppression.
+- Tests extended in `server/src/lib/eventBus/subscribers/__tests__/ticketEmailSubscriber.suppression.test.ts` for T026-T028/T030.
+- Verification:
+  - `cd server && npx vitest run --config vitest.config.ts src/lib/eventBus/subscribers/__tests__/ticketEmailSubscriber.suppression.test.ts src/lib/eventBus/subscribers/__tests__/internalNotificationSubscriber.suppression.test.ts`
+  - `cd server && NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -- --pretty false`
+
 ## 2026-07-09 — Shared suppression plumbing batch (F001-F010, T001-T011)
 
 - Implemented the base operation-level suppression option pair:

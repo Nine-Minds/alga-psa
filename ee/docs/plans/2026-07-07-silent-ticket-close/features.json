@@ -21,10 +21,10 @@
   { "id": "F019", "description": "[A] internalNotificationSubscriber skips client-portal contact notification on contact suppression and staff in-app on internal suppression (TICKET_CLOSED case)", "implemented": true, "prdRefs": ["FR13"] },
   { "id": "F020", "description": "[A] Bundle master close propagates the suppression flags to child-ticket closes", "implemented": true, "prdRefs": ["FR18"] },
 
-  { "id": "F021", "description": "[B] handleTicketUpdated skips the ticket-updated-client contact/client send (:1416) on contact suppression", "implemented": false, "prdRefs": ["FR10"] },
-  { "id": "F022", "description": "[B] handleAccumulatedTicketUpdates skips the ticket-updated-client contact send (:1820) on contact suppression", "implemented": false, "prdRefs": ["FR10"] },
-  { "id": "F023", "description": "[B] TICKET_UPDATED external-watcher client send (:1483) skipped on contact suppression; internal assignee/additional/internal-watcher sends skipped on internal suppression", "implemented": false, "prdRefs": ["FR10"] },
-  { "id": "F024", "description": "[B] TICKET_ASSIGNED contact sends (team-assignment client :2136, first individual :2156, watcher team :2232) gated on contact suppression; internal assignment notifications gated on internal suppression", "implemented": false, "prdRefs": ["FR11"] },
+  { "id": "F021", "description": "[B] handleTicketUpdated skips the ticket-updated-client contact/client send (:1416) on contact suppression", "implemented": true, "prdRefs": ["FR10"] },
+  { "id": "F022", "description": "[B] handleAccumulatedTicketUpdates skips the ticket-updated-client contact send (:1820) on contact suppression", "implemented": true, "prdRefs": ["FR10"] },
+  { "id": "F023", "description": "[B] TICKET_UPDATED external-watcher client send (:1483) skipped on contact suppression; internal assignee/additional/internal-watcher sends skipped on internal suppression", "implemented": true, "prdRefs": ["FR10"] },
+  { "id": "F024", "description": "[B] TICKET_ASSIGNED contact sends (team-assignment client :2136, first individual :2156, watcher team :2232) gated on contact suppression; internal assignment notifications gated on internal suppression", "implemented": true, "prdRefs": ["FR11"] },
   { "id": "F025", "description": "[B] internalNotificationSubscriber applies the same contact/internal gating for the TICKET_UPDATED case", "implemented": true, "prdRefs": ["FR13"] },
 
   { "id": "F026", "description": "[A/B] Reusable two-level suppression control component (contact checkbox + indented internal checkbox with coupling, helper text, kebab-case ids, i18n)", "implemented": false, "prdRefs": ["UX / UI Notes"] },
